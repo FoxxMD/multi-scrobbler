@@ -9,7 +9,6 @@ import { MusicBrainzApi } from 'musicbrainz-api';
 import { SourceType } from './config/source/sources.js';
 import { ClientType, clientTypes } from './config/client/clients.js';
 import assert, { AssertionError } from 'assert';
-import { SimpleError } from '../errors/MSErrors.js';
 
 export const lowGranularitySources: SourceType[] = ['subsonic', 'ytmusic'];
 
@@ -269,7 +268,7 @@ export const asCacheConfig = (val: Record<string, any>): val is CacheConfigType 
     if(asCacheConnectableConfig(val) || asCacheEphemeralConfig(val)) {
         return true;
     }
-    throw new SimpleError(`${val.provider} must have a connection property that is a string`);
+    throw new Error(`${val.provider} must have a connection property that is a string`);
 }
 export const asCacheMetadataProvider = (val: any): val is CacheScrobbleProvider => asCacheProvider(val);
 export type CacheScrobbleProvider = CacheProvider;
