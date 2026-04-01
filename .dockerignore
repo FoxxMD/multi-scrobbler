@@ -31,3 +31,5 @@ tmp-*
 *.env
 .storybook
 .stories
+*.db
+*.db-*
