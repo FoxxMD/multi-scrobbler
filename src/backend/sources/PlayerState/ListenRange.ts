@@ -15,6 +15,10 @@ export abstract class ListenRange {
         this.end = e;
     }
 
+    [Symbol.dispose]() {
+        
+    }
+
     public abstract isPositional(): boolean;
     public abstract isInitial(): boolean;
     public abstract seeked(position?: number, reportedTS?: Dayjs): [boolean, Second?];
@@ -98,6 +102,11 @@ export class ListenRangePositional extends ListenRange {
             this.rtPlayer.play();
         }
         this.finalized = false;
+    }
+
+    [Symbol.dispose]() {
+        super[Symbol.dispose]()
+        this.rtPlayer[Symbol.dispose]();
     }
 
     isPositional(): boolean {

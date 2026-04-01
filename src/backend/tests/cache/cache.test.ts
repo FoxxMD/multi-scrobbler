@@ -4,9 +4,8 @@ import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
 import dayjs from "dayjs";
 import withLocalTmpDir from 'with-local-tmp-dir';
-import path from 'path';
 import { initFileCache, initMemoryCache, initValkeyCache, MSCache } from "../../common/Cache.js";
-import { generatePlay, generatePlayerStateData, generatePlays, normalizePlays } from "../../../core/PlayTestUtils.js";
+import { generatePlays } from "../../../core/PlayTestUtils.js";
 import { ListenProgressPositional, ListenProgressTS } from "../../sources/PlayerState/ListenProgress.js";
 import { isPortReachableConnect } from "../../utils/NetworkUtils.js";
 import { getRoot } from "../../ioc.js";
@@ -165,7 +164,7 @@ describe('#Caching', function () {
                 const root = getRoot();
                 root.upsert({ cache: () => () => new MSCache(loggerTest, { scrobble: { provider: 'file', connection: process.cwd(), persistInterval: 100 } }) });
 
-                const test = new TestScrobbler();
+                await using test = new TestScrobbler();
                 await test.initialize();
                 const plays = generatePlays(100);
                 await test.queueScrobble(plays, 'testSource');
@@ -174,13 +173,11 @@ describe('#Caching', function () {
                 const dirContents = await promises.readdir('.');
                 const hasCache = dirContents.some(x => x === 'ms-scrobble.cache');
                 expect(hasCache).is.true;
-                test.scheduler.stop();
 
-                const newTest = new TestScrobbler();
+                await using newTest = new TestScrobbler();
                 await newTest.initialize();
                 expect(newTest.queuedScrobbles.length).to.eq(plays.length);
                 expect(newTest.queuedScrobbles[0].play.data.track).to.eq(queued[0].data.track);
-                newTest.scheduler.stop();
 
             }, { unsafeCleanup: true });
 

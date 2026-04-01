@@ -33,6 +33,13 @@ export abstract class RealtimePlayer {
         this.scheduler.stop();
     }
 
+    [Symbol.dispose]() {
+        this.scheduler.stop();
+        for(const job of this.scheduler.getAllJobs()) {
+            this.scheduler.removeById(job.id);
+        }
+    }
+
     public play(position?: number) {
         if (position !== undefined) {
             this.position = position;

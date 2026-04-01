@@ -198,6 +198,18 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.existingScrobble = (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => existingScrobble(playObjPre, existingScrobbles, existingScrobbleOpts, log);
     }
 
+    [Symbol.dispose]() {
+        this.scheduler.stop();
+        for(const job of this.scheduler.getAllJobs()) {
+            this.scheduler.removeById(job.id);
+        }
+        
+    }
+    async [Symbol.asyncDispose]() {
+        this[Symbol.dispose]();
+        await this.tryStopScrobbling();
+    }
+
     protected async postCache(): Promise<void> {
         await super.postCache();
         this.generateStaggerMappers();

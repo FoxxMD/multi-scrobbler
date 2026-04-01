@@ -117,6 +117,12 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.discoveredCounter = getRoot().items.sourceMetics.discovered;
     }
 
+    async [Symbol.asyncDispose]() {
+        if(this.canPoll) {
+            await this.tryStopPolling();
+        }
+    }
+
     protected async postCache(): Promise<void> {
         await super.postCache();
         this.generateStaggerMappers();

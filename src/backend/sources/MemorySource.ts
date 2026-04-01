@@ -71,6 +71,25 @@ export default class MemorySource extends AbstractSource {
         })));
     }
 
+    [Symbol.dispose]() {
+        this.scheduler.stop();
+        for(const job of this.scheduler.getAllJobs()) {
+            this.scheduler.removeById(job.id);
+        }
+        for(const p of this.players.keys()) {
+            this.deletePlayer(p);
+        }
+    }
+
+    async [Symbol.asyncDispose]() {
+        await super[Symbol.asyncDispose]();
+        this.scheduler.stop();
+        for(const job of this.scheduler.getAllJobs()) {
+            this.scheduler.removeById(job.id);
+        }
+        this[Symbol.dispose]();
+    }
+
     cleanupPlayers = () => {
         for (const key of this.players.keys()) {
             this.cleanupPlayer(key);
@@ -188,6 +207,8 @@ export default class MemorySource extends AbstractSource {
         if(reason !== undefined) {
             this.players.get(id)?.logger.debug(reason);
         }
+        using player = this.players.get(id);
+        player[Symbol.dispose]();
         this.players.delete(id);
         this.playerState.delete(id);
         this.emitEvent('playerDelete', {platformId: id});

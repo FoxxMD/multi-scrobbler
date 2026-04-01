@@ -99,6 +99,15 @@ export abstract class AbstractPlayerState {
         this.stateIntervalOptions = {staleInterval, orphanedInterval: orphanedInterval};
     }
 
+    [Symbol.dispose]() {
+        if(this.currentListenRange !== undefined) {
+            this.currentListenRange[Symbol.dispose]();
+        }
+        for(const lr of this.listenRanges) {
+            lr[Symbol.dispose]();
+        }
+    }
+
     protected abstract newListenProgress(data?: Partial<PlayProgress>): ListenProgress;
     protected abstract newListenRange(start?: ListenProgress, end?: ListenProgress, options?: object): ListenRange;
 
