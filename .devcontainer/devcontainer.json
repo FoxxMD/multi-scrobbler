@@ -20,7 +20,7 @@
 	"forwardPorts": [9078,3000],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "npm install",
+	"postCreateCommand": ".devcontainer/postCreate.sh",
 
 	// Configure tool-specific properties.
 	"customizations": {
@@ -41,8 +41,7 @@
 		"9078": {
 			"label": "App"
 		}
-	},
-	"onCreateCommand": "export PATH=/workspaces/node_modules/.bin:/workspaces/docsite/node_modules/.bin:$PATH"
+	}
 
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root"
