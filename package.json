@@ -202,7 +202,7 @@
     "mockdate": "^3.0.5",
     "msw": "^2.12.10",
     "neotraverse": "^0.6.18",
-    "nodemon": "^3.0.3",
+    "nodemon": "^3.1.14",
     "playwright": "^1.58.2",
     "sinon": "^21.0.2",
     "storybook": "10.2.0",
