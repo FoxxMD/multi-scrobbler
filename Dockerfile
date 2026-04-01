@@ -1,7 +1,7 @@
 FROM ghcr.io/linuxserver/baseimage-debian:bookworm AS base
 
 ENV TZ=Etc/GMT
-ENV NODE_VERSION=20.19.2
+ENV NODE_VERSION=24.14.0
 
 # borrowing openssl header removal trick from offical docker-node
 # https://github.com/nodejs/docker-node/blob/main/18/bookworm-slim/Dockerfile#L8
@@ -48,6 +48,8 @@ RUN \
         /tmp/*
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+RUN echo "Node: $(node -v)\nNPM: $(npm -v)"
 
 RUN npm install -g concurrently
 
