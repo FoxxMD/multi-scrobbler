@@ -489,7 +489,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
         client.logger.verbose(`User requested${force ? ' a FORCED' :''} (re)init via API call`);
 
         client.logger.info('Checking (and trying) to stop scrobbler if already running...');
-        if(false === (await client.tryStopScrobbling())) {
+        if(false === (await client.tryStopScrobbling(new SimpleError('user initiated', {simple: true, shortStack: true})))) {
             return res.status(500).send();
         }
 

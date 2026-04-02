@@ -64,9 +64,10 @@ import { comparePlayArtistsNormalized, comparePlayTracksNormalized, existingScro
 import { lifecyclelessInvariantTransform } from "../../core/PlayUtils.js";
 import { normalizeStr } from "../utils/StringUtils.js";
 import prom, { Counter, Gauge } from 'prom-client';
-import { ScrobbleSubmitError, SimpleError } from "../common/errors/MSErrors.js";
+import { generateLoggableAbortReason, ScrobbleSubmitError, SimpleError } from "../common/errors/MSErrors.js";
 import {serializeError} from 'serialize-error';
 import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetchUtils.js";
+import { spawn, catchAbortError, isAbortError, rethrowAbortError, delay, forever, AbortError, throwIfAborted } from 'abort-controller-x';
 
 type PlatformMappedPlays = Map<string, {player: SourcePlayerObj, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
@@ -95,9 +96,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     scrobbleDelay: number = 1000;
     scrobbleSleep: number = 2000;
     scrobbleWaitStopInterval: number = 2000;
+    protected scrobbleQueueAbortController: AbortController | undefined;
+    protected scrobbleQueuePromise: Promise<void> | undefined;
     scrobbleRetries: number =  0;
     scrobbling: boolean = false;
-    userScrobblingStopSignal: undefined | any;
     queuedScrobbles: QueuedScrobble<PlayObject>[] = [];
     deadLetterScrobbles: DeadLetterScrobble<PlayObject>[] = [];
 
@@ -518,15 +520,20 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return [matchPlayDate, dtInvariantMatches];
     }
 
-    public scrobble = async (playObj: PlayObject, opts?: { delay?: number | false }): Promise<PlayObject> => {
-        const {delay} = opts || {};
-        const scrobbleDelay = delay === undefined ? this.scrobbleDelay : (delay === false ? 0 : delay);
+    public scrobble = async (playObj: PlayObject, opts?: { delay?: number | false, signal?: AbortSignal }): Promise<PlayObject> => {
+        const {delay: delayDuration, signal} = opts || {};
+        const scrobbleDelay = delayDuration === undefined ? this.scrobbleDelay : (delayDuration === false ? 0 : delayDuration);
         if (scrobbleDelay !== 0) {
             const lastScrobbleDiff = dayjs().diff(this.lastScrobbleAttempt, 'ms');
             const remainingDelay = scrobbleDelay - lastScrobbleDiff;
             if (remainingDelay > 0) {
                 this.logger.debug(`Waiting ${remainingDelay}ms to scrobble so time passed since previous scrobble is at least ${scrobbleDelay}ms`);
-                await sleep(scrobbleDelay);
+                if(signal !== undefined) {
+                    await delay(signal, scrobbleDelay);
+                } else {
+                    await sleep(scrobbleDelay);
+                }
+                
             }
         }
         try {
@@ -566,13 +573,32 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }
         }
 
-        this.startScrobbling().catch((e) => {
-            // do nothing, should have already been caught and logged
+        this.scrobbleQueueAbortController = new AbortController();
+        this.scrobbleQueuePromise = spawn(this.scrobbleQueueAbortController.signal, async (signal, { defer, fork }) => {
+
+            defer(async () => {
+                this.scrobbling = false;
+                this.emitEvent('statusChange', {status: 'Idle'});
+            });
+
+            await this.startScrobbling(signal);
+        }).catch((e) => {
+            if (isAbortError(e)) {
+                const err = generateLoggableAbortReason('Scrobble processing stopped', this.scrobbleQueueAbortController.signal);
+                this.logger.info(err);
+                this.logger.trace(e)
+            } else {
+                this.logger.warn(new Error('Scrobble processing stopped with error', { cause: e }));
+            }
+        }).finally(() => {
+            this.scrobbleQueueAbortController = undefined;
+            this.scrobbleQueuePromise = undefined;
         });
-        return;
     }
 
-    startScrobbling = async () => {
+    startScrobbling = async (signal: AbortSignal) => {
+        signal.throwIfAborted();
+
         // reset poll attempts if already previously run
         this.scrobbleRetries = 0;
 
@@ -591,14 +617,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             return;
         }
 
-        let pollRes: boolean | undefined = undefined;
-        while (pollRes === undefined && this.scrobbleRetries <= maxRetries) {
+        while (this.scrobbleRetries <= maxRetries) {
             try {
-                pollRes = await this.doProcessing();
-                if(pollRes === true) {
-                    break;
-                }
+                await this.doProcessing(signal);
             } catch (e) {
+                if(isAbortError(e)) {
+                    throw e;
+                }
                 if(!this.isUsable()) {
                     this.logger.warn('Stopping scrobble processing due to client no longer usable.');
                     await this.notify({title: `${this.getIdentifier()} - Processing Error`, message: `Encountered error while scrobble processing and client is no longer usable, stopping processing!. | Error: ${e.message}`, priority: 'error'});
@@ -621,38 +646,31 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
     }
 
-    tryStopScrobbling = async () => {
+    tryStopScrobbling = async (reason?: string | Error) => {
         if(this.scrobbling === false) {
             this.logger.warn(`Polling is already stopped!`);
             return;
         }
-        this.userScrobblingStopSignal = true;
+        if(this.scrobbleQueueAbortController === undefined) {
+            this.logger.error('No abort controller found! Nothing to stop.');
+            return false;
+        }
+        this.scrobbleQueueAbortController.abort(reason)
         let timePasssed = 0;
-        while(this.userScrobblingStopSignal !== undefined && timePasssed < (this.scrobbleWaitStopInterval * 10)) {
+        while(this.scrobbling === true && timePasssed < (this.scrobbleWaitStopInterval * 10)) {
             await sleep(this.scrobbleWaitStopInterval);
             timePasssed += this.scrobbleWaitStopInterval;
             this.logger.verbose(`Waiting for scrobble processing stop signal to be acknowledged (waited ${timePasssed}ms)`);
         }
-        if(this.userScrobblingStopSignal !== undefined) {
+        if(this.scrobbling === true) {
             this.logger.warn('Could not stop scrobble processing! Or signal was lost :(');
             return false;
         }
         return true;
     }
 
-    protected doStopScrobbling = (reason: string = 'system') => {
-        this.scrobbling = false;
-        this.userScrobblingStopSignal = undefined;
-        this.emitEvent('statusChange', {status: 'Idle'});
-        this.logger.info(`Stopped scrobble processing due to: ${reason}`);
-    }
-
-    protected shouldStopScrobbleProcessing = () => this.scrobbling === false || this.userScrobblingStopSignal !== undefined;
-
-    protected doProcessing = async (): Promise<true | undefined> => {
-        if (this.scrobbling === true) {
-            return true;
-        }
+    protected doProcessing = async (signal: AbortSignal): Promise<true | undefined> => {
+        signal.throwIfAborted();
         this.logger.info('Scrobble processing started');
         this.emitEvent('statusChange', {status: 'Running'});
 
@@ -661,101 +679,130 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             if(!this.upstreamRefresh.refreshEnabled) {
                 this.logger.verbose('Scrobble refresh is DISABLED. All queued scrobbles will likely always be scrobbled (nothing to check duplicates against).');
             }
-            while (!this.shouldStopScrobbleProcessing()) {
+            while (true) {
+                signal.throwIfAborted();
                 let queueEmpty = this.queuedScrobbles.length === 0;
                 while (this.queuedScrobbles.length > 0) {
-                    this.handleQueuedScrobbleRanges();
-                    if(!this.upstreamRefresh.refreshEnabled) {
-                        this.logger.trace('Scrobble refresh is DISABLED.');
-                    }
-
-                    const currQueuedPlay = this.queuedScrobbles.shift();
-
-                    let historicalPlays: PlayObject[] = [];
-                    let historicalError: Error | undefined;
-
-                    if(this.upstreamRefresh.refreshEnabled) {
-                        try {
-                            historicalPlays = await this.getSOTScrobblesForPlay(currQueuedPlay.play);
-                        } catch (e) {
-                            historicalError = e;
-                            if(e.message === 'Cannot get historical plays due to cached error') {
-                                this.logger.warn(`${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' => Previous error while getting historical scrobbles means this scrobble cannot be compared, will queue as dead for now.`);
-                                this.logger.trace(e);
-                            } else {
-                                this.logger.warn(new SimpleError(`${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' => cannot get historical scrobbles, will queue as dead for now.`, {cause: e, shortStack: true}));
-                            }
-                            this.addDeadLetterScrobble(currQueuedPlay, e);
-                        }
-                    }
-                    if(historicalError === undefined) {
-                        const {summary, ...matchResult} = await this.existingScrobble(currQueuedPlay.play, historicalPlays);
-                        const {
-                            scrobble = {},
-                            ...lifeRest
-                        } = currQueuedPlay.play.meta.lifecycle ?? {steps: [], original: currQueuedPlay.play};
-                        currQueuedPlay.play.meta.lifecycle = {
-                            ...lifeRest,
-                            scrobble: {
-                                ...scrobble,
-                                match: matchResult
-                            }
-                        }
-                        if(!matchResult.match) {
-                            const transformedScrobble = await this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.postCompare);
-                            if(transformedScrobble.meta.lifecycle === undefined) {
-                                transformedScrobble.meta.lifecycle = {
-                                    original: transformedScrobble,
-                                    steps: []
-                                };
-                            }
-                            try {
-                                const scrobbledPlay = await this.scrobble(transformedScrobble);
-                                this.emitEvent('scrobble', {play: transformedScrobble});
-                                this.addScrobbledTrack(scrobbledPlay, scrobbledPlay.meta.lifecycle.scrobble.mergedScrobble ?? scrobbledPlay);
-                            } catch (e) {
-                                currQueuedPlay.play.meta.lifecycle.scrobble = {
-                                };
-
-                                const submitError = findCauseByReference(e, ScrobbleSubmitError);
-                                if(submitError !== undefined) {
-                                    currQueuedPlay.play.meta.lifecycle.scrobble.payload = submitError.payload;
-                                    currQueuedPlay.play.meta.lifecycle.scrobble.response = submitError.responseBody;
-                                    currQueuedPlay.play.meta.lifecycle.scrobble.error = serializeError(submitError);
-                                } else {
-                                    currQueuedPlay.play.meta.lifecycle.scrobble.payload = this.playToClientPayload(transformedScrobble);
-                                    currQueuedPlay.play.meta.lifecycle.scrobble.error = serializeError(e);
-                                }
-
-                                if (hasUpstreamError(e, false)) {
-                                    this.addDeadLetterScrobble(currQueuedPlay, e);
-                                    this.logger.warn(new Error(`Could not scrobble ${buildTrackString(transformedScrobble)} from Source '${currQueuedPlay.source}' but error was not show stopping. Adding scrobble to Dead Letter Queue and will retry on next heartbeat.`, {cause: e}));
-                                } else {
-                                    this.queuedScrobbles.unshift(currQueuedPlay);
-                                    this.updateQueuedScrobblesCache();
-                                    throw new Error('Error occurred while trying to scrobble', {cause: e});
-                                }
-                            }
-                        }
-                    }
-                    this.updateQueuedScrobblesCache();
-                    this.queuedGauge.labels(this.getPrometheusLabels()).set(this.queuedScrobbles.length);
-                    this.emitEvent('scrobbleDequeued', {queuedScrobble: currQueuedPlay})
+                    await this.processQueueCurrentScrobble(signal);
                 }
                 if(!queueEmpty) {
                     this.emitEvent('queueEmptied', {});
                 }
-                await sleep(this.scrobbleSleep);
-            }
-            if (this.shouldStopScrobbleProcessing()) {
-                this.doStopScrobbling(this.userScrobblingStopSignal !== undefined ? 'user input' : undefined);
-                return true;
+                await delay(signal, this.scrobbleSleep);
             }
         } catch (e) {
-            this.logger.error('Scrobble processing interrupted');
-            this.logger.error(e);
+            if(!isAbortError(e)) {
+                this.logger.error('Scrobble processing interrupted');
+                this.logger.error(e);
+            }
             this.emitEvent('statusChange', {status: 'Idle'});
             this.scrobbling = false;
+            throw e;
+        }
+    }
+
+    protected processQueueCurrentScrobble = async (signal: AbortSignal) => {
+        signal.throwIfAborted();
+        if (this.queuedScrobbles.length === 0) {
+            return;
+        }
+
+        this.handleQueuedScrobbleRanges();
+        if (!this.upstreamRefresh.refreshEnabled) {
+            // TODO add signal for this to scrobble match
+            this.logger.trace('Scrobble refresh is DISABLED.');
+        }
+
+        let handledShiftedPlay = false;
+        const currQueuedPlay = this.queuedScrobbles.shift();
+
+        let historicalPlays: PlayObject[] = [];
+        let historicalError: Error | undefined;
+
+        try {
+
+            if (this.upstreamRefresh.refreshEnabled) {
+                try {
+                    historicalPlays = await this.getSOTScrobblesForPlay(currQueuedPlay.play);
+                } catch (e) {
+                    historicalError = e;
+                    if (e.message === 'Cannot get historical plays due to cached error') {
+                        this.logger.warn(`${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' => Previous error while getting historical scrobbles means this scrobble cannot be compared, will queue as dead for now.`);
+                        this.logger.trace(e);
+                    } else {
+                        this.logger.warn(new SimpleError(`${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' => cannot get historical scrobbles, will queue as dead for now.`, { cause: e, shortStack: true }));
+                    }
+                    this.addDeadLetterScrobble(currQueuedPlay, e);
+                    handledShiftedPlay = true;
+                }
+                signal.throwIfAborted();
+            }
+            if (historicalError === undefined) {
+                const { summary, ...matchResult } = await this.existingScrobble(currQueuedPlay.play, historicalPlays);
+                signal.throwIfAborted();
+                const {
+                    scrobble = {},
+                    ...lifeRest
+                } = currQueuedPlay.play.meta.lifecycle ?? { steps: [], original: currQueuedPlay.play };
+                currQueuedPlay.play.meta.lifecycle = {
+                    ...lifeRest,
+                    scrobble: {
+                        ...scrobble,
+                        match: matchResult
+                    }
+                }
+                if (!matchResult.match) {
+                    const transformedScrobble = await this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.postCompare);
+                    signal.throwIfAborted();
+                    if (transformedScrobble.meta.lifecycle === undefined) {
+                        transformedScrobble.meta.lifecycle = {
+                            original: transformedScrobble,
+                            steps: []
+                        };
+                    }
+                    try {
+                        const scrobbledPlay = await this.scrobble(transformedScrobble, {signal});
+                        this.emitEvent('scrobble', { play: transformedScrobble });
+                        this.addScrobbledTrack(scrobbledPlay, scrobbledPlay.meta.lifecycle.scrobble.mergedScrobble ?? scrobbledPlay);
+                        handledShiftedPlay = true;
+                        signal.throwIfAborted();
+                    } catch (e) {
+                        currQueuedPlay.play.meta.lifecycle.scrobble = {
+                        };
+
+                        const submitError = findCauseByReference(e, ScrobbleSubmitError);
+                        if (submitError !== undefined) {
+                            currQueuedPlay.play.meta.lifecycle.scrobble.payload = submitError.payload;
+                            currQueuedPlay.play.meta.lifecycle.scrobble.response = submitError.responseBody;
+                            currQueuedPlay.play.meta.lifecycle.scrobble.error = serializeError(submitError);
+                        } else {
+                            currQueuedPlay.play.meta.lifecycle.scrobble.payload = this.playToClientPayload(transformedScrobble);
+                            currQueuedPlay.play.meta.lifecycle.scrobble.error = serializeError(e);
+                        }
+
+                        if (hasUpstreamError(e, false)) {
+                            this.addDeadLetterScrobble(currQueuedPlay, e);
+                            handledShiftedPlay = true;
+                            this.logger.warn(new Error(`Could not scrobble ${buildTrackString(transformedScrobble)} from Source '${currQueuedPlay.source}' but error was not show stopping. Adding scrobble to Dead Letter Queue and will retry on next heartbeat.`, { cause: e }));
+                        } else {
+                            this.queuedScrobbles.unshift(currQueuedPlay);
+                            handledShiftedPlay = true;
+                            this.updateQueuedScrobblesCache();
+                            throw new Error('Error occurred while trying to scrobble', { cause: e });
+                        }
+                    }
+                }
+            }
+            this.updateQueuedScrobblesCache();
+            this.queuedGauge.labels(this.getPrometheusLabels()).set(this.queuedScrobbles.length);
+            this.emitEvent('scrobbleDequeued', { queuedScrobble: currQueuedPlay })
+            signal.throwIfAborted();
+            // reset retries if we've made this far
+            this.scrobbleRetries = 0;
+        } catch (e) {
+            if(!handledShiftedPlay) {
+                this.queuedScrobbles.unshift(currQueuedPlay);            
+            }
             throw e;
         }
     }
