@@ -265,11 +265,13 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return existing !== undefined;
     }
 
-    discover = async (plays: PlayObject[], options: { checkAll?: boolean, [key: string]: any } = {}): Promise<PlayObject[]> => {
+    discover = async (plays: PlayObject[], options: { checkAll?: boolean, signal?: AbortSignal, [key: string]: any } = {}): Promise<PlayObject[]> => {
         const newDiscoveredPlays: PlayObject[] = [];
 
         for await(const play of pMapIterable(plays, this.staggerMappers.preCompare(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 2})) {
+            options.signal?.throwIfAborted();
             if(!(await this.alreadyDiscovered(play, options))) {
+                options.signal?.throwIfAborted()
                 this.addPlayToDiscovered(play);
                 newDiscoveredPlays.push(play);
             }
@@ -342,7 +344,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             } catch (e) {
                 throw new Error('Error occurred while fetching backlogged plays', {cause: e});
             }
-            const discovered = await this.discover(backlogPlays, {discoverLocation: 'backlog'});
+            const discovered = await this.discover(backlogPlays, {discoverLocation: 'backlog', signal});
 
             if (scrobbleBacklog) {
                 if (discovered.length > 0) {
@@ -561,7 +563,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                         this.logger.info(`Potential plays were discovered close to polling interval! Delaying scrobble clients refresh by ${maxDelay} seconds so other clients have time to scrobble first`);
                         await sleep(maxDelay * 1000);
                     }
-                    newDiscovered = await this.discover(playObjs);
+                    newDiscovered = await this.discover(playObjs, {signal});
                     signal.throwIfAborted();
                     this.scrobble(newDiscovered,
                         {
