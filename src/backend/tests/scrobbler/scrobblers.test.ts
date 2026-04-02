@@ -525,7 +525,7 @@ describe('Upstream Scrobbles', function() {
         const play = generatePlay({playDate: dayjs().subtract(60, 's')});
         await scrobbler.queueScrobble(play, 'test');
         const emptied = pEvent(scrobbler.emitter, 'queueEmptied');
-        scrobbler.startScrobbling().then(() => null);
+        scrobbler.startScrobbling(new AbortController().signal).then(() => null);
         await emptied;
         scrobbler.tryStopScrobbling().then(() => null);
         expect(sp.called).is.true;
@@ -545,7 +545,7 @@ describe('Upstream Scrobbles', function() {
         const play2 = generatePlay({playDate: dayjs().subtract(1, 'm')});
         await scrobbler.queueScrobble([play1, play2], 'test');
         const emptied = pEvent(scrobbler.emitter, 'queueEmptied');
-        scrobbler.startScrobbling().then(() => null);
+        scrobbler.startScrobbling(new AbortController().signal).then(() => null);
         await emptied;
         scrobbler.tryStopScrobbling().then(() => null);
         expect(sp.callCount).to.eq(1);
@@ -566,7 +566,7 @@ describe('Upstream Scrobbles', function() {
         const play3 = generatePlay({playDate: dayjs().subtract(DEFAULT_CONSOLIDATE_DURATION.add(4, 'm'))});
         await scrobbler.queueScrobble([play1, play2, play3], 'test');
         const emptied = pEvent(scrobbler.emitter, 'queueEmptied');
-        scrobbler.startScrobbling().then(() => null);
+        scrobbler.startScrobbling(new AbortController().signal).then(() => null);
         await emptied;
         scrobbler.tryStopScrobbling().then(() => null);
         expect(sp.callCount).to.eq(2);
@@ -586,7 +586,7 @@ describe('Upstream Scrobbles', function() {
         const play2 = generatePlay({playDate: dayjs().subtract(1, 'm')});
         await scrobbler.queueScrobble([play1], 'test');
         const emptied = pEvent(scrobbler.emitter, 'queueEmptied');
-        scrobbler.startScrobbling().then(() => null);
+        scrobbler.startScrobbling(new AbortController().signal).then(() => null);
         await emptied;
         expect(sp.calledOnce).is.true;
 

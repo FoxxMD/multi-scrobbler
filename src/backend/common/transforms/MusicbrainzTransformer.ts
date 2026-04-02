@@ -356,8 +356,8 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         super(config, options);
         this.clientCache = options.clientCache;
         this.staggerOpts = {
-            initialInterval: 300,
-            maxRandomStagger: 300
+            initialInterval: 0,
+            maxRandomStagger: 100
         }
     }
 

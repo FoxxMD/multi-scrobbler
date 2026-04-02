@@ -18,9 +18,9 @@ import { nanoid } from "nanoid";
 import { stripIndents } from "common-tags";
 import { getNodeNetworkException, hasNodeNetworkException, isNodeNetworkException } from '../../errors/NodeErrors.js';
 import { SimpleError } from '../../errors/MSErrors.js';
-import { resourceLimits } from 'worker_threads';
 import { baseFormatPlayObj } from '../../../utils/PlayTransformUtils.js';
 import { IRecordingMSList } from '../../transforms/MusicbrainzTransformer.js';
+import dayjs, { Dayjs } from 'dayjs';
 
 export interface SubmitResponse {
     payload?: {
@@ -33,6 +33,8 @@ export interface SubmitResponse {
 export interface MusicbrainzApiConfig extends MusicbrainzApiConfigData {
     api: MusicBrainzApi,
     hostname: string
+    minRequestIntervalDuration: number
+    lastRequest: Dayjs
 }
 
 export interface MusicbrainzApiClientConfig {
@@ -66,13 +68,18 @@ export class MusicbrainzApiClient extends AbstractApiClient {
         for(const mbConfig of this.config.apis) {
             const u = normalizeWebAddress(mbConfig.url ?? MUSICBRAINZ_URL);
             let mb = mbMap.get(u.url.hostname);
+            const mbApiConfig: Omit<MusicbrainzApiConfig, 'api'> = {
+                ...mbConfig, 
+                hostname: u.url.hostname, 
+                minRequestIntervalDuration: 1000, 
+                lastRequest: dayjs().subtract(1000 + 1000, 'ms')
+            }
             if(mb === undefined) {
                 const api = new MusicBrainzApi({
                     appName: 'multi-scrobbler',
                     appVersion: version,
                     appContactInfo: mbConfig.contact,
                     baseUrl: u.url.toString(),
-                    rateLimit: mbConfig.rateLimit ?? [1,1],
                     preRequest: options.logUrl === true || isDebugMode() ? (method, url, headers) => {
                         const cacheKey = this.asyncStore.getStore() ?? nanoid();
                         this.cache.set(`${cacheKey}-url`, `${method} - ${url}`);
@@ -84,11 +91,17 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                     requestTimeout: mbConfig.requestTimeout ?? 6000,
                     retryLimit: 2
                 });
-                mbApis[u.url.hostname] = {api, ...mbConfig, hostname: u.url.hostname};
+                mbApis[u.url.hostname] = {
+                    ...mbApiConfig,
+                    api, 
+                };
                 mbMap.set(u.url.hostname, api);
                 mb = api;
             } else if(mbApis[u.url.hostname] === undefined) {
-                mbApis[u.url.hostname] = {api: mb, ...mbConfig, hostname: u.url.hostname};
+                mbApis[u.url.hostname] = {
+                    ...mbApiConfig,
+                    api: mb,
+                };
             }
         }
 
@@ -126,6 +139,17 @@ export class MusicbrainzApiClient extends AbstractApiClient {
 
         const triedHosts: string[] = [];
         while(!triedHosts.includes(apiConfig.hostname)) {
+
+            // keep track of last request init at and wait until at least 1 second since that
+            // to help prevent rate limiting
+            let waitTime = 0;
+            const sinceLast = dayjs().diff(apiConfig.lastRequest, 'ms');
+            waitTime = Math.max(0, apiConfig.minRequestIntervalDuration - sinceLast);
+            apiConfig.lastRequest = dayjs().add(waitTime, 'ms');
+            //this.logger.trace(`Waiting ${waitTime}ms to call ${apiConfig.hostname} request at ${apiConfig.lastRequest.toISOString()}`)
+            if(waitTime > 0) {
+                await sleep(waitTime);
+            }
 
             try {
                 const res = await this.callApiEndpoint(apiConfig.api, func, options);

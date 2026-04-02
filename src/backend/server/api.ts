@@ -33,6 +33,7 @@ import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.js";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
 import prom from 'prom-client';
+import { SimpleError } from "../common/errors/MSErrors.js";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -435,7 +436,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
 
         if(source.polling) {
             source.logger.info('Source is already polling! Restarting polling...');
-            const stopRes = await source.tryStopPolling();
+            const stopRes = await source.tryStopPolling(new SimpleError('user initiated', {simple: true, shortStack: true}));
             if(stopRes === true) {
                 source.poll({force, notify: false}).catch(e => source.logger.error(e));
             }
@@ -488,7 +489,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
         client.logger.verbose(`User requested${force ? ' a FORCED' :''} (re)init via API call`);
 
         client.logger.info('Checking (and trying) to stop scrobbler if already running...');
-        if(false === (await client.tryStopScrobbling())) {
+        if(false === (await client.tryStopScrobbling(new SimpleError('user initiated', {simple: true, shortStack: true})))) {
             return res.status(500).send();
         }
 
