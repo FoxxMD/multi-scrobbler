@@ -1,3 +1,4 @@
+import { isAbortError } from "abort-controller-x";
 import { truncateStringToLength } from "../../core/StringUtils.js";
 
 /**
@@ -117,3 +118,5 @@ export const messageWithCausesTruncated = (length: number) => {
 }
 
 export const messageWithCausesTruncatedDefault = messageWithCausesTruncated(100);
+
+export const isAbortReasonErrorLike = (signal: AbortSignal) => signal.aborted && signal.reason !== undefined && (isAbortError(signal.reason) || signal.reason instanceof Error);

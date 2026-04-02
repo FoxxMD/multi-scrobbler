@@ -38,12 +38,14 @@ import { todayAwareFormat } from "../../core/TimeUtils.js";
 import { getRoot } from '../ioc.js';
 import { componentFileLogger } from '../common/logging.js';
 import { WebhookPayload } from '../common/infrastructure/config/health/webhooks.js';
-import { messageWithCauses, messageWithCausesTruncatedDefault } from '../utils/ErrorUtils.js';
+import { isAbortReasonErrorLike, messageWithCauses, messageWithCausesTruncatedDefault } from '../utils/ErrorUtils.js';
 import { genericSourcePlayMatch } from '../utils/PlayComparisonUtils.js';
 import { findAsync, staggerMapper, StaggerOptions } from '../utils/AsyncUtils.js';
 import pMap, {pMapIterable} from 'p-map';
 import prom, { Counter, Gauge } from 'prom-client';
 import { normalizeStr } from '../utils/StringUtils.js';
+import { spawn, catchAbortError, isAbortError, rethrowAbortError, delay, forever, AbortError, throwIfAborted } from 'abort-controller-x';
+import { AbortedError, generateLoggableAbortReason } from '../common/errors/MSErrors.js';
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -71,7 +73,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
     canPoll: boolean = false;
     polling: boolean = false;
     canBacklog: boolean = false;
-    userPollingStopSignal: undefined | any;
+    protected abortController: AbortController | undefined;
+    protected pollingPromise: Promise<void> | undefined;
+    stopPollingWaitInterval: number = 200;
     pollRetries: number = 0;
     tracksDiscovered: number = 0;
 
@@ -119,7 +123,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     async [Symbol.asyncDispose]() {
         if(this.canPoll) {
-            await this.tryStopPolling();
+            await this.tryStopPolling('Source is being disposed');
         }
     }
 
@@ -307,7 +311,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         }
     }
 
-    protected processBacklog = async () => {
+    protected processBacklog = async (signal: AbortSignal) => {
         if (this.canBacklog) {
 
             const {
@@ -334,6 +338,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             try {
                 this.logger.verbose(`Fetching the last ${backlogLimit}${backlogLimit === this.SCROBBLE_BACKLOG_COUNT ? ' (max) ' : ''} listens to check for backlogging...`);
                 backlogPlays = await this.getBackloggedPlays({limit: backlogLimit});
+                signal.throwIfAborted();
             } catch (e) {
                 throw new Error('Error occurred while fetching backlogged plays', {cause: e});
             }
@@ -342,6 +347,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             if (scrobbleBacklog) {
                 if (discovered.length > 0) {
                     this.logger.info('Scrobbling backlogged tracks...');
+                    signal.throwIfAborted();
                     await this.scrobble(discovered);
                     this.logger.info('Backlog scrobbling complete.');
                 } else {
@@ -351,6 +357,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 this.logger.info('Backlog scrobbling is disabled by config, skipping...');
             }
         }
+        return;
     }
 
     protected getBackloggedPlays = async (options: RecentlyPlayedOptions): Promise<PlayObject[]> => {
@@ -368,6 +375,11 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     poll = async (options: {force?: boolean, notify?: boolean} = {}) => {
         const {force = false, notify = false} = options;
+
+        if(this.polling) {
+            this.logger.error('Already polling!');
+            return;
+        }
 
         // TODO refactor to only use tryInitialize
         if(!this.isReady() || force) {
@@ -387,22 +399,45 @@ export default abstract class AbstractSource extends AbstractComponent implement
         if(!(await this.onPollPostAuthCheck())) {
             return;
         }
-        try {
-            await this.processBacklog();
-        } catch (e) {
-            this.logger.error(new Error('Cannot start polling because error occurred while processing backlog', {cause: e}));
-            await this.notify({
-                title: `${this.getIdentifier()} - Polling Error`,
-                message: 'Cannot start polling because error occurred while processing backlog.',
-                priority: 'error'
-            });
-            return;
-        }
 
-        await this.startPolling();
+        this.abortController = new AbortController();
+        this.pollingPromise = spawn(this.abortController.signal, async (signal, { defer, fork }) => {
+            defer(async () => {
+                this.polling = false;
+                this.isSleeping = false;
+                this.emitEvent('statusChange', {status: 'Idle'});
+            });
+
+            fork(async (fSignal) => {
+                try {
+                    await this.processBacklog(fSignal);
+                } catch (e) {
+                    throwIfAborted(fSignal);
+                    await this.notify({
+                        title: `${this.getIdentifier()} - Polling Error`,
+                        message: 'Polling interrupted because error occurred while processing backlog.',
+                        priority: 'error'
+                    });
+                    throw new Error('Polling interrupted because error occurred while processing backlog', { cause: e });
+                }
+            });
+            await this.startPolling(signal);
+        }).catch((e) => {
+            if (isAbortError(e)) {
+                const err = generateLoggableAbortReason('Polling stopped', this.abortController.signal);
+                this.logger.info(err);
+                this.logger.trace(e)
+            } else {
+                this.logger.warn(new Error('Polling stopped with error', { cause: e }));
+            }
+        }).finally(() => {
+            this.abortController = undefined;
+            this.pollingPromise = undefined;
+        });
     }
 
-    startPolling = async () => {
+    startPolling = async (signal: AbortSignal) => {
+        signal.throwIfAborted();
         // reset poll attempts if already previously run
         this.pollRetries = 0;
 
@@ -421,8 +456,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             return;
         }
 
-        let pollRes: boolean | undefined = undefined;
-        while (pollRes === undefined && this.pollRetries <= maxRetries) {
+        while (this.pollRetries <= maxRetries) {
             try {
                 if(!this.isReady() && this.buildOK) {
                     this.logger.verbose(`Source is no longer ready! Will attempt to reinitialize => Connection OK: ${this.connectionOK} | Auth OK: ${this.authed}`);
@@ -430,58 +464,57 @@ export default abstract class AbstractSource extends AbstractComponent implement
                     if(init === false) {
                         throw new Error('Source failed reinitialization');
                     }
+                    signal.throwIfAborted();
                 }
-                pollRes = await this.doPolling();
-                if(pollRes === true) {
-                    break;
-                }
+                await this.doPolling(signal);
             } catch (e) {
+                if(isAbortError(e)) {
+                    throw e;
+                }
                 if (this.pollRetries < maxRetries) {
                     const delayFor = pollingBackoff(this.pollRetries + 1, retryMultiplier);
                     this.logger.info(`Poll retries (${this.pollRetries}) less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay...`);
                     await this.notify({title: `${this.getIdentifier()} - Polling Retry`, message: `Encountered error while polling but retries (${this.pollRetries}) are less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay. | Error: ${e.message}`, priority: 'warn'});
                     await sleep((delayFor) * 1000);
+                    this.pollRetries++;
                 } else {
                     this.logger.warn(`Poll retries (${this.pollRetries}) equal to max poll retries (${maxRetries}), stopping polling!`);
                     await this.notify({title: `${this.getIdentifier()} - Polling Error`, message: `Encountered error while polling and retries (${this.pollRetries}) are equal to max poll retries (${maxRetries}), stopping polling!. | Error: ${e.message}`, priority: 'error'});
+                    throw e;
                 }
-                this.pollRetries++;
             }
         }
     }
 
-    tryStopPolling = async () => {
+    tryStopPolling = async (reason?: string | Error) => {
         if(this.polling === false) {
             this.logger.warn(`Polling is already stopped!`);
-            return;
+            return true;
         }
-        this.userPollingStopSignal = true;
-        let secsPassed = 0;
-        while(this.userPollingStopSignal !== undefined && secsPassed < 10) {
-            await sleep(2000);
-            secsPassed += 2;
-            this.logger.verbose(`Waiting for polling stop signal to be acknowledged (waited ${secsPassed}s)`);
+        if(this.abortController === undefined) {
+            this.logger.error('No abort controller found! Nothing to stop.');
+            return false;
         }
-        if(this.userPollingStopSignal !== undefined) {
+        this.abortController.abort(reason);
+        let elapsed = 0;
+        let lastlog: Dayjs;
+        while(this.polling && elapsed < 10) {
+            if(lastlog === undefined || dayjs().diff(lastlog, 's') >= 2) {
+                this.logger.verbose(`Waiting for polling stop signal to be acknowledged (waited ${formatNumber(elapsed/1000)}s)`);
+            }
+            await sleep(this.stopPollingWaitInterval);
+            elapsed += this.stopPollingWaitInterval;
+        }
+        if(this.polling) {
             this.logger.warn('Could not stop polling! Or polling signal was lost :(');
             return false;
         }
         return true;
     }
 
-    protected doStopPolling = (reason: string = 'system') => {
-        this.polling = false;
-        this.userPollingStopSignal = undefined;
-        this.emitEvent('statusChange', {status: 'Idle'});
-        this.logger.info(`Stopped polling due to: ${reason}`);
-    }
+    protected doPolling = async (signal: AbortSignal): Promise<true | undefined> => {
+        signal.throwIfAborted();
 
-    protected shouldStopPolling = () => this.polling === false || this.userPollingStopSignal !== undefined;
-
-    protected doPolling = async (): Promise<true | undefined> => {
-        if (this.polling === true) {
-            return true;
-        }
         this.logger.info('Polling started');
         this.emitEvent('statusChange', {status: 'Running'});
         await this.notify({title: `${this.getIdentifier()} - Polling Started`, message: 'Polling Started', priority: 'info'});
@@ -494,7 +527,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
         try {
             this.polling = true;
-            while (!this.shouldStopPolling()) {
+            while (true) {
+                signal.throwIfAborted();
                 const pollFrom = dayjs();
                 let lastActivityLogLevel: LogLevel = 'trace';
 
@@ -503,6 +537,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
                     playObjs = await this.getRecentlyPlayed({formatted: true});
                 } catch (e) {
                     throw new Error('Error occurred while refreshing recently played', {cause: e});
+                } finally {
+                    signal.throwIfAborted();
                 }
             
 
@@ -526,6 +562,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                         await sleep(maxDelay * 1000);
                     }
                     newDiscovered = await this.discover(playObjs);
+                    signal.throwIfAborted();
                     this.scrobble(newDiscovered,
                         {
                             forceRefresh: closeToInterval
@@ -571,25 +608,22 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 this.logger[lastActivityLogLevel](activityMsgs.join(' | '));
                 this.setWakeAt(pollFrom.add(sleepTime, 'seconds'));
                 this.setIsSleeping(true);
-                while(!this.shouldStopPolling() && dayjs().isBefore(this.getWakeAt())) {
+                while(dayjs().isBefore(this.getWakeAt())) {
                     // check for polling status every half second and wait till wake up time
-                    await sleep(500);
+                   await delay(signal, 500);
                 }
                 this.setIsSleeping(false);
-
-            }
-            if(this.shouldStopPolling()) {
-                this.doStopPolling(this.userPollingStopSignal !== undefined ?  'user input' : undefined);
-                return true;
+                // if we have made it this far in the loop we can reset poll retries
+                this.pollRetries = 0;
             }
         } catch (e) {
-            this.logger.error(new Error('Error occurred while polling', {cause: e}));
+            if(!isAbortError(e)) {
+                this.logger.error(new Error('Error occurred while polling', {cause: e}));
+            }
             if(e.message.includes('Status code: 401')) {
                 this.authed = false;
                 this.authFailure = true;
             }
-            this.emitEvent('statusChange', {status: 'Idle'});
-            this.polling = false;
             throw e;
         } finally {
             this.setIsSleeping(false);
