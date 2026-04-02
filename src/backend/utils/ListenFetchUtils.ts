@@ -20,11 +20,10 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
     const logger = childLogger(pLogger, ['Pagination']); 
     const reqLabel = () => `Request ${requestCount}`;
     const reqLogger = childLogger(logger, [reqLabel]);
- 
-    let plays: PlayObject[] = [];
 
     if (hasPagelessTimeRangeListens(fetcher)) {
         return async (opts: PaginatedTimeRangeCommonOptions): Promise<PlayObject[]> => {
+            let plays: PlayObject[] = [];
             requestCount = 0;
             let more = true;
             let currOpts = { ...opts };
@@ -108,6 +107,7 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
         }
     } else if (hasPaginatedTimeRangeListens(fetcher)) {
         return async (opts: PaginatedListensTimeRangeOptions): Promise<PlayObject[]> => {
+            let plays: PlayObject[] = [];
             requestCount = 0;
             let more = true;
             let currOpts: PaginatedListensTimeRangeOptions = opts;
