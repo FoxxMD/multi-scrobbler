@@ -31,7 +31,7 @@ import {
     sleep,
     sortByOldestPlayDate,
 } from "../utils.js";
-import { sortByNewestPlayDate } from '../../core/PlayUtils.js';
+import { genGroupIdStr, sortByNewestPlayDate } from '../../core/PlayUtils.js';
 import { formatNumber } from '../../core/DataUtils.js';
 import { timeToHumanTimestamp } from "../../core/TimeUtils.js";
 import { todayAwareFormat } from "../../core/TimeUtils.js";
@@ -198,11 +198,15 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     protected addPlayToDiscovered = (play: PlayObject) => {
         const platformId = this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID;
-        const list = this.recentDiscoveredPlays.get(platformId) ?? new FixedSizeList<ProgressAwarePlayObject>(200);
+        let list: FixedSizeList<ProgressAwarePlayObject> = this.recentDiscoveredPlays.get(platformId);
+        if(list === undefined) {
+            this.logger.trace(`Creating new discovered list for platform ${genGroupIdStr(platformId)}`);
+            list = new FixedSizeList<ProgressAwarePlayObject>(200);
+            this.recentDiscoveredPlays.set(platformId, list);
+        }
+        this.logger.trace(`Adding new discovered play to discovered list ${genGroupIdStr(platformId)} with ${list.length} existing`);
         list.add(play);
-        this.recentDiscoveredPlays.set(platformId, list);
         this.tracksDiscovered++;
-        this.logger.trace(new Error('addPlayToDiscovered Call site trace'));
         this.logger.info(`Discovered => ${buildTrackString(play)}`);
         this.emitEvent('discovered', {play});
         this.discoveredCounter.labels(this.getPrometheusLabels()).inc();
@@ -219,16 +223,21 @@ export default abstract class AbstractSource extends AbstractComponent implement
             data.sort(sortByOldestPlayDate);
             return data;
         }
+        this.logger.trace(`Tried to get non-existent recently discovered for platform ${genGroupIdStr(platformId)}`);
         return [];
     }
 
     protected getExistingDiscoveredLists = (play: PlayObject, opts: {checkAll?: boolean} = {}): PlayObject[][] => {
         const lists: PlayObject[][] = [];
-        if(opts.checkAll !== true) {
-            lists.push(this.getRecentlyDiscoveredPlaysByPlatform(this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID));
+        if(opts.checkAll !== true || !this.multiPlatform) {
+            const plat = this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID;
+            lists.push(this.getRecentlyDiscoveredPlaysByPlatform(plat));
+            if(lists.every(x => x.length === 0)) {
+                this.logger.trace(`Got empty discovered list for platform ${genGroupIdStr(plat)}`);
+            }
         } else {
             // get as many as we can, optionally filtering by user
-            this.recentDiscoveredPlays.forEach((list, platformId) => {
+            this.recentDiscoveredPlays.keys().forEach((platformId) => {
                 if(play.meta.user !== undefined) {
                     if(platformId[1] === NO_USER || platformId[1] === play.meta.user) {
                         lists.push(this.getRecentlyDiscoveredPlaysByPlatform(platformId));
@@ -264,7 +273,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     discover = async (plays: PlayObject[], options: { checkAll?: boolean, [key: string]: any } = {}): Promise<PlayObject[]> => {
 
-        this.logger.trace(new Error('discover Call site trace'));
+        this.logger.trace(`Discover on ${plays.length} plays`);
         const newDiscoveredPlays: PlayObject[] = [];
 
         for await(const play of pMapIterable(plays, this.staggerMappers.preCompare(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 2})) {
