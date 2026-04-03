@@ -1,0 +1,340 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "id": "96a2050a-7d06-4db1-b989-3082b6374e1f",
+  "prevIds": [
+    "00000000-0000-0000-0000-000000000000"
+  ],
+  "ddl": [
+    {
+      "name": "play_inputs",
+      "entityType": "tables"
+    },
+    {
+      "name": "plays",
+      "entityType": "tables"
+    },
+    {
+      "name": "play_queue_state",
+      "entityType": "tables"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "play_inputs"
+    },
+    {
+      "type": "text(30)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "playId",
+      "entityType": "columns",
+      "table": "play_inputs"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "data",
+      "entityType": "columns",
+      "table": "play_inputs"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "play",
+      "entityType": "columns",
+      "table": "play_inputs"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "createdAt",
+      "entityType": "columns",
+      "table": "play_inputs"
+    },
+    {
+      "type": "text(30)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "plays"
+    },
+    {
+      "type": "text(50)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "componentType",
+      "entityType": "columns",
+      "table": "plays"
+    },
+    {
+      "type": "text(200)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "componentName",
+      "entityType": "columns",
+      "table": "plays"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "error",
+      "entityType": "columns",
+      "table": "plays"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "playedAt",
+      "entityType": "columns",
+      "table": "plays"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "seenAt",
+      "entityType": "columns",
+      "table": "plays"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "play",
+      "entityType": "columns",
+      "table": "plays"
+    },
+    {
+      "type": "text(30)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "parentId",
+      "entityType": "columns",
+      "table": "plays"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "play_queue_state"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "playId",
+      "entityType": "columns",
+      "table": "play_queue_state"
+    },
+    {
+      "type": "text(200)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "queueName",
+      "entityType": "columns",
+      "table": "play_queue_state"
+    },
+    {
+      "type": "text(30)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "queueStatus",
+      "entityType": "columns",
+      "table": "play_queue_state"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "error",
+      "entityType": "columns",
+      "table": "play_queue_state"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "createdAt",
+      "entityType": "columns",
+      "table": "play_queue_state"
+    },
+    {
+      "columns": [
+        "playId"
+      ],
+      "tableTo": "plays",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "CASCADE",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_play_inputs_playId_plays_id_fk",
+      "entityType": "fks",
+      "table": "play_inputs"
+    },
+    {
+      "columns": [
+        "playId"
+      ],
+      "tableTo": "plays",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "CASCADE",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_play_queue_state_playId_plays_id_fk",
+      "entityType": "fks",
+      "table": "play_queue_state"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "play_inputs_pk",
+      "table": "play_inputs",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "plays_pk",
+      "table": "plays",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "play_queue_state_pk",
+      "table": "play_queue_state",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        {
+          "value": "playId",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "play_input_id_idx",
+      "entityType": "indexes",
+      "table": "play_inputs"
+    },
+    {
+      "columns": [
+        {
+          "value": "parentId",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "play_parent_id_idx",
+      "entityType": "indexes",
+      "table": "plays"
+    },
+    {
+      "columns": [
+        {
+          "value": "playedAt",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "play_playedAt_idx",
+      "entityType": "indexes",
+      "table": "plays"
+    },
+    {
+      "columns": [
+        {
+          "value": "seenAt",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "play_seenAt_idx",
+      "entityType": "indexes",
+      "table": "plays"
+    },
+    {
+      "columns": [
+        {
+          "value": "playId",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "play_queue_state_id_idx",
+      "entityType": "indexes",
+      "table": "play_queue_state"
+    }
+  ],
+  "renames": []
+}

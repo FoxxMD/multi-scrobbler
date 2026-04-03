@@ -8,9 +8,10 @@ import {Provider} from "../client/components/Provider";
 import { generateJsonPlays, normalizePlays } from "../core/PlayTestUtils.js";
 import { ErrorLike, JsonPlayObject } from "../core/Atomic.js";
 import {examplePlay, lastfmErrorExample} from './storyUtils.js';
-import {playWithLifecycleScrobble, generatePlayWithLifecycle, asJsonPlayObject} from '../core/tests/utils/fixtures'
+import {playWithLifecycleScrobble, generatePlayWithLifecycle} from '../core/tests/utils/fixtures'
 import { generateArray } from "../core/DataUtils.js";
 import dayjs from "dayjs";
+import { asJsonPlayObject } from "../core/PlayMarshalUtils.js";
 
 const stack = "Scrobble Submit Error: Failed to submit to Listenbrainz (listen_type single)\n    at ListenbrainzApiClient.submitListen (/app/src/backend/common/vendor/ListenbrainzApiClient.ts:246:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async ListenbrainzScrobbler.doScrobble (/app/src/backend/scrobblers/ListenbrainzScrobbler.ts:87:28)\n    at async ListenbrainzScrobbler.scrobble (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:679:28)\n    at async ListenbrainzScrobbler.processDeadLetterScrobble (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:920:39)\n    at async ListenbrainzScrobbler.processDeadLetterQueue (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:894:43)\n    at async PromisePoolExecutor.handler (/app/src/backend/tasks/heartbeatClients.ts:35:21)\n    at async PromisePoolExecutor.waitForActiveTaskToFinish (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:375:9)\n    at async PromisePoolExecutor.waitForProcessingSlot (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:368:13)\n    at async PromisePoolExecutor.process (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:354:13)";
 
