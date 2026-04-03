@@ -268,7 +268,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     discover = async (plays: PlayObject[], options: { checkAll?: boolean, signal?: AbortSignal, [key: string]: any } = {}): Promise<PlayObject[]> => {
         const newDiscoveredPlays: PlayObject[] = [];
 
-        for await(const play of pMapIterable(plays, this.staggerMappers.preCompare(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 2})) {
+        for await(const play of pMapIterable(plays, this.staggerMappers.preCompare(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 3})) {
             options.signal?.throwIfAborted();
             if(!(await this.alreadyDiscovered(play, options))) {
                 options.signal?.throwIfAborted()
@@ -302,7 +302,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             }
             newDiscoveredPlays.sort(sortByOldestPlayDate);
             this.emitter.emit('discoveredToScrobble', {
-                data: await pMap(newDiscoveredPlays, this.staggerMappers.postCompare(async (x) =>  await this.transformPlay(x, TRANSFORM_HOOK.postCompare)), {concurrency: 2}),
+                data: await pMap(newDiscoveredPlays, this.staggerMappers.postCompare(async (x) =>  await this.transformPlay(x, TRANSFORM_HOOK.postCompare)), {concurrency: 3}),
                 options: {
                     ...options,
                     checkTime: newDiscoveredPlays[newDiscoveredPlays.length-1].data.playDate.add(2, 'second'),

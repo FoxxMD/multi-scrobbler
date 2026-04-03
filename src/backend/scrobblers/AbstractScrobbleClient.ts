@@ -234,7 +234,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 pcInits.push(t.staggerOpts?.initialInterval ?? 0);
                 pcMaxStagger.push(t.staggerOpts?.maxRandomStagger ?? 0)
             }
-            this.staggerMappers.preCompare = staggerMapper<PlayObject, PlayObject>({initialInterval: Math.max(...pcInits), maxRandomStagger: Math.max(...pcMaxStagger), concurrency: 2});
+            this.staggerMappers.preCompare = staggerMapper<PlayObject, PlayObject>({initialInterval: Math.max(...pcInits), maxRandomStagger: Math.max(...pcMaxStagger), concurrency: 3});
         }
 
         if(existing.length > 0) {
@@ -245,7 +245,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 eInits.push(t.staggerOpts?.initialInterval ?? 0);
                 eMaxStagger.push(t.staggerOpts?.maxRandomStagger ?? 0)
             }
-            this.staggerMappers.existing = staggerMapper<ScrobbledPlayObject, ScrobbledPlayObject>({initialInterval: Math.max(...eInits), maxRandomStagger: Math.max(...eMaxStagger), concurrency: 2});
+            this.staggerMappers.existing = staggerMapper<ScrobbledPlayObject, ScrobbledPlayObject>({initialInterval: Math.max(...eInits), maxRandomStagger: Math.max(...eMaxStagger), concurrency: 3});
         }
     }
 
@@ -505,7 +505,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
         const playObj = await this.transformPlay(playObjPre, TRANSFORM_HOOK.candidate);
 
-        const dtInvariantMatches = (await pMap(this.scrobbledPlayObjs.data, this.staggerMappers.existing(async x => ({...x, play: await this.transformPlay(x.play, TRANSFORM_HOOK.existing)})), {concurrency: 2}))
+        const dtInvariantMatches = (await pMap(this.scrobbledPlayObjs.data, this.staggerMappers.existing(async x => ({...x, play: await this.transformPlay(x.play, TRANSFORM_HOOK.existing)})), {concurrency: 3}))
             .filter(x => playObjDataMatch(playObj, x.play));
 
         if (dtInvariantMatches.length === 0) {
@@ -950,7 +950,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     queueScrobble = async (data: PlayObject | PlayObject[], source: string) => {
         const plays = (Array.isArray(data) ? data : [data]).map(x => ({...x, meta: {...x.meta, seenAt: dayjs()}}));
-        for await(const play of pMapIterable(plays, this.staggerMappers.preCompare(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 2})) {
+        for await(const play of pMapIterable(plays, this.staggerMappers.preCompare(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 3})) {
             try {
                 const existingQueued = await this.existingScrobble(play, this.queuedScrobbles.map(x => x.play), false);
                 // want to be very confident of this
