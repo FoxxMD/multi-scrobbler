@@ -68,11 +68,13 @@ import { generateLoggableAbortReason, ScrobbleSubmitError, SimpleError } from ".
 import {serializeError} from 'serialize-error';
 import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetchUtils.js";
 import { spawn, catchAbortError, isAbortError, rethrowAbortError, delay, forever, AbortError, throwIfAborted } from 'abort-controller-x';
+import { Queue, MemoryStorage } from '@platformatic/job-queue'
 
 type PlatformMappedPlays = Map<string, {player: SourcePlayerObj, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
 
 const platformTruncate = truncateStringToLength(10);
+
 
 export default abstract class AbstractScrobbleClient extends AbstractComponent implements Authenticatable {
 
@@ -116,6 +118,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     dupeLogger: Logger;
     deadLogger: Logger;
 
+    scrobbleQueue: Queue<{payload: QueuedScrobble<PlayObject>}, {scrobbled: ScrobbledPlayObject}>;
+
     existingScrobble: (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => Promise<PlayMatchResult>
 
     declare config: CommonClientConfig;
@@ -145,6 +149,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.notifier = notifier;
         this.emitter = emitter;
         this.scrobbledPlayObjs = new FixedSizeList<ScrobbledPlayObject>(this.MAX_STORED_SCROBBLES);
+        this.scrobbleQueue = new Queue<{payload: QueuedScrobble<PlayObject>}, {scrobbled: ScrobbledPlayObject}>({
+            storage: new MemoryStorage(),
+            concurrency: 1
+        });
 
         const {
             options: {

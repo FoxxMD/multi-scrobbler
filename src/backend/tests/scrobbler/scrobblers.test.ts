@@ -20,7 +20,7 @@ import { PaginatedTimeRangeOptions, PlayPlatformId, REFRESH_STALE_DEFAULT } from
 import { defaultLifecycle } from '../../utils/PlayTransformUtils.js';
 import { shuffleArray } from '../../utils/DataUtils.js';
 import { DEFAULT_CONSOLIDATE_DURATION, DEFAULT_GROUP_DURATION, groupPlaysToTimeRanges } from '../../utils/ListenFetchUtils.js';
-import { asPlay } from '../../../core/tests/utils/fixtures.js';
+import { asPlay } from '../../../core/PlayMarshalUtils.js';
 import { nanoid } from 'nanoid';
 import { getRoot } from '../../ioc.js';
 import { transientCache } from '../utils/CacheTestUtils.js';
