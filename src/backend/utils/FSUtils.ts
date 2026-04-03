@@ -33,6 +33,7 @@ export async function readText(path: any) {
     //     });
     // });
 }
+
 export const fileOrDirectoryIsWriteable = (location: string) => {
     const pathInfo = pathUtil.parse(location);
     const isDir = pathInfo.ext === '';
@@ -63,3 +64,20 @@ export const fileOrDirectoryIsWriteable = (location: string) => {
     }
 };
 
+export const fileExists = (location: string) => {
+    const pathInfo = pathUtil.parse(location);
+    const isDir = pathInfo.ext === '';
+    try {
+        accessSync(location, constants.R_OK);
+        return true;
+    } catch (err: any) {
+        const { code } = err;
+        if (code === 'ENOENT') {
+            return false;
+        } else if (code === 'EACCES') {
+            throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application does not have permission to write to it.`);
+        } else {
+            throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application is unable to access it due to a system error`, { cause: err });
+        }
+    }
+};

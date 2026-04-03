@@ -1,0 +1,60 @@
+diff --git a/node_modules/kysely-node-native-sqlite/dist/index.cjs b/node_modules/kysely-node-native-sqlite/dist/index.cjs
+index 1015da7..0679a95 100644
+--- a/node_modules/kysely-node-native-sqlite/dist/index.cjs
++++ b/node_modules/kysely-node-native-sqlite/dist/index.cjs
+@@ -55,7 +55,11 @@ var import_node_sqlite = require("node:sqlite");
+ var NodeNativeSqliteConnection = class {
+   #db;
+   constructor(...args) {
+-    this.#db = new import_node_sqlite.DatabaseSync(...args);
++    if (args[0] instanceof import_node_sqlite.DatabaseSync) {
++      this.#db = args[0];
++    } else {
++      this.#db = new import_node_sqlite.DatabaseSync(...args);
++    }
+   }
+   [Symbol.dispose]() {
+     this.#db.close();
+diff --git a/node_modules/kysely-node-native-sqlite/dist/index.d.cts b/node_modules/kysely-node-native-sqlite/dist/index.d.cts
+index 72366bb..32e8464 100644
+--- a/node_modules/kysely-node-native-sqlite/dist/index.d.cts
++++ b/node_modules/kysely-node-native-sqlite/dist/index.d.cts
+@@ -3,7 +3,7 @@ import { Dialect, SqliteAdapter, Driver, Kysely, DatabaseIntrospector, SqliteQue
+ 
+ declare class NodeNativeSqliteDialect implements Dialect {
+     #private;
+-    constructor(...args: ConstructorParameters<typeof DatabaseSync>);
++    constructor(...args: ConstructorParameters<typeof DatabaseSync> | [DatabaseSync]);
+     createAdapter(): SqliteAdapter;
+     createDriver(): Driver;
+     createIntrospector(db: Kysely<unknown>): DatabaseIntrospector;
+diff --git a/node_modules/kysely-node-native-sqlite/dist/index.d.ts b/node_modules/kysely-node-native-sqlite/dist/index.d.ts
+index 72366bb..32e8464 100644
+--- a/node_modules/kysely-node-native-sqlite/dist/index.d.ts
++++ b/node_modules/kysely-node-native-sqlite/dist/index.d.ts
+@@ -3,7 +3,7 @@ import { Dialect, SqliteAdapter, Driver, Kysely, DatabaseIntrospector, SqliteQue
+ 
+ declare class NodeNativeSqliteDialect implements Dialect {
+     #private;
+-    constructor(...args: ConstructorParameters<typeof DatabaseSync>);
++    constructor(...args: ConstructorParameters<typeof DatabaseSync> | [DatabaseSync]);
+     createAdapter(): SqliteAdapter;
+     createDriver(): Driver;
+     createIntrospector(db: Kysely<unknown>): DatabaseIntrospector;
+diff --git a/node_modules/kysely-node-native-sqlite/dist/index.js b/node_modules/kysely-node-native-sqlite/dist/index.js
+index 8c2b8cf..17b7eb1 100644
+--- a/node_modules/kysely-node-native-sqlite/dist/index.js
++++ b/node_modules/kysely-node-native-sqlite/dist/index.js
+@@ -32,7 +32,11 @@ import { DatabaseSync } from "node:sqlite";
+ var NodeNativeSqliteConnection = class {
+   #db;
+   constructor(...args) {
+-    this.#db = new DatabaseSync(...args);
++    if (args[0] instanceof DatabaseSync) {
++      this.#db = args[0];
++    } else {
++      this.#db = new DatabaseSync(...args);
++    }
+   }
+   [Symbol.dispose]() {
+     this.#db.close();

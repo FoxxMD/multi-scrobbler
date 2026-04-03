@@ -43,12 +43,14 @@ export class SimpleError extends Error implements HasSimpleError {
     stackShortened: boolean = false;
 
     shortenStack() {
-        const atIndex = parseRegexSingle(STACK_AT_REGEX,this.stack);
-        if(atIndex !== undefined) {
-            const firstn = this.stack.indexOf('\n', atIndex.index + atIndex.match.length);
-            if(firstn !== -1) {
-                this.stack = this.stack.slice(0, firstn);
-                this.stackShortened = true;
+        if(this.stack !== undefined) {
+            const atIndex = parseRegexSingle(STACK_AT_REGEX, this.stack);
+            if(atIndex !== undefined) {
+                const firstn = this.stack.indexOf('\n', atIndex.index + atIndex.match.length);
+                if(firstn !== -1) {
+                    this.stack = this.stack.slice(0, firstn);
+                    this.stackShortened = true;
+                }
             }
         }
     }
