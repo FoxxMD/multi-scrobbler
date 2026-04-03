@@ -24,6 +24,7 @@ import { readJson } from './utils/DataUtils.js';
 import ScrobbleClients from './scrobblers/ScrobbleClients.js';
 import ScrobbleSources from './sources/ScrobbleSources.js';
 import { Notifiers } from './notifier/Notifiers.js';
+import { migrateToLatest } from './common/database/Database.js';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -95,6 +96,8 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
 
         const root = getRoot({...config, logger, loggingConfig: logging, loggerStream: appLoggerStream});
         initLogger.info(`Version: ${root.get('version')}`);
+
+        await migrateToLatest('ms', initLogger);
 
         //initLogger.info('Generating schema definitions...');
         //createVegaGenerator()
