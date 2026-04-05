@@ -6,6 +6,7 @@ import { PlayObject, PlayObjectLifecycleless, URLData } from "../../core/Atomic.
 import {
     InternalConfig,
     PlayerStateData,
+    PlayerStateDataMaybePlay,
     REPORTED_PLAYER_STATUSES,
 } from "../common/infrastructure/Atomic.js";
 import { YandexMusicBridgeSourceConfig } from "../common/infrastructure/config/source/ymbridge.js";
@@ -41,6 +42,7 @@ interface SyntheticPlaybackState {
     lastSeenAtMs: number
     lastPositionSec: number
     durationSec?: number
+    reachedTrackEndAtMs?: number
 }
 
 export default class YandexMusicBridgeSource extends MemoryPositionalSource {
@@ -54,6 +56,7 @@ export default class YandexMusicBridgeSource extends MemoryPositionalSource {
     private keepAliveMinSec = 90;
     private keepAlivePaddingSec = 120;
     private keepAliveHardCapSec = 600;
+    private postEndStopGraceSec = 20;
 
     constructor(name: string, config: YandexMusicBridgeSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('ymbridge', name, config, internal, emitter);
@@ -146,10 +149,11 @@ export default class YandexMusicBridgeSource extends MemoryPositionalSource {
                 lastSeenAtMs: now,
                 lastPositionSec: initialPosition,
                 durationSec,
+                reachedTrackEndAtMs: durationSec !== undefined && durationSec > 0 && initialPosition >= durationSec ? now : undefined,
             };
             return {
                 status: REPORTED_PLAYER_STATUSES.playing,
-                position: initialPosition,
+                position: durationSec !== undefined && durationSec > 0 ? Math.min(initialPosition, durationSec) : initialPosition,
             };
         }
 
@@ -161,8 +165,14 @@ export default class YandexMusicBridgeSource extends MemoryPositionalSource {
         let nextPosition = startingPoint + elapsedSec;
 
         if (durationSec !== undefined && durationSec > 0) {
-            const overrun = keepAlive ? this.keepAlivePaddingSec : 15;
-            nextPosition = Math.min(nextPosition, durationSec + overrun);
+            // Never let synthetic time run past track duration. Once it reaches the end
+            // we will keep the player alive briefly and then emit a synthetic STOP.
+            if (nextPosition >= durationSec) {
+                nextPosition = durationSec;
+                if (this.syntheticPlayback.reachedTrackEndAtMs === undefined) {
+                    this.syntheticPlayback.reachedTrackEndAtMs = now;
+                }
+            }
         }
 
         this.syntheticPlayback.lastSeenAtMs = now;
@@ -199,15 +209,55 @@ export default class YandexMusicBridgeSource extends MemoryPositionalSource {
         return false;
     }
 
+    private shouldFinalizeSyntheticTrack(nowMs: number = Date.now()): boolean {
+        if (this.syntheticPlayback === undefined || this.lastPlay === undefined) {
+            return false;
+        }
+        const durationSec = this.syntheticPlayback.durationSec ?? this.lastPlay.data.duration;
+        if (durationSec === undefined || durationSec <= 0) {
+            return false;
+        }
+        if (this.syntheticPlayback.lastPositionSec < durationSec) {
+            return false;
+        }
+        if (this.syntheticPlayback.reachedTrackEndAtMs === undefined) {
+            this.syntheticPlayback.reachedTrackEndAtMs = nowMs;
+            return false;
+        }
+        const sinceEndSec = Math.max(0, (nowMs - this.syntheticPlayback.reachedTrackEndAtMs) / 1000);
+        return sinceEndSec >= this.postEndStopGraceSec;
+    }
+
+    private buildStoppedState(): PlayerStateDataMaybePlay | undefined {
+        if (this.lastBridgeData === undefined) {
+            return undefined;
+        }
+        return {
+            platformId: [this.lastBridgeData.queue_id ?? 'YandexMusicBridge', 'SingleUser'],
+            sessionId: this.lastBridgeData.queue_id ?? this.lastBridgeData.track_id,
+            status: REPORTED_PLAYER_STATUSES.stopped,
+        };
+    }
+
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
         const payload = await this.callBridge();
         const bridgeData = payload.data;
+        const nowMs = Date.now();
+
         if (payload.ok && bridgeData !== undefined && bridgeData !== null && bridgeData.title) {
             const play = formatPlayObj(bridgeData);
             const playbackState = this.getPlaybackState(bridgeData, play);
             this.lastBridgeData = bridgeData;
             this.lastPlay = play;
-            this.lastBridgeSeenAtMs = Date.now();
+            this.lastBridgeSeenAtMs = nowMs;
+
+            if (this.shouldFinalizeSyntheticTrack(nowMs)) {
+                const durationSec = this.syntheticPlayback?.durationSec ?? play.data.duration ?? 0;
+                this.logger.info(`Synthetic playback exceeded track duration for '${play.data.artists?.join(', ') ?? 'Unknown'} - ${play.data.track ?? 'Unknown'}'; emitting STOP after ${this.postEndStopGraceSec}s past track end at ${durationSec.toFixed(0)}s.`);
+                const stoppedState = this.buildStoppedState();
+                this.resetSyntheticPlayback();
+                return await this.processRecentPlays(stoppedState !== undefined ? [stoppedState] : []);
+            }
 
             const playerState: PlayerStateData = {
                 platformId: [bridgeData.queue_id ?? 'YandexMusicBridge', 'SingleUser'],
@@ -220,10 +270,18 @@ export default class YandexMusicBridgeSource extends MemoryPositionalSource {
             return await this.processRecentPlays([playerState]);
         }
 
-        if (this.shouldKeepAliveSynthetic()) {
+        if (this.shouldKeepAliveSynthetic(nowMs)) {
             const bridgeDataForKeepAlive = this.lastBridgeData!;
             const playForKeepAlive = this.lastPlay!;
             const playbackState = this.getPlaybackState(bridgeDataForKeepAlive, playForKeepAlive, { keepAlive: true });
+
+            if (this.shouldFinalizeSyntheticTrack(nowMs)) {
+                const durationSec = this.syntheticPlayback?.durationSec ?? playForKeepAlive.data.duration ?? 0;
+                this.logger.info(`Synthetic keepalive exceeded track duration for '${playForKeepAlive.data.artists?.join(', ') ?? 'Unknown'} - ${playForKeepAlive.data.track ?? 'Unknown'}'; emitting STOP after ${this.postEndStopGraceSec}s past track end at ${durationSec.toFixed(0)}s.`);
+                const stoppedState = this.buildStoppedState();
+                this.resetSyntheticPlayback();
+                return await this.processRecentPlays(stoppedState !== undefined ? [stoppedState] : []);
+            }
 
             this.logger.trace(`Bridge returned no current track; keeping synthetic playback alive for ${playForKeepAlive.data.artists?.join(', ') ?? 'Unknown'} - ${playForKeepAlive.data.track ?? 'Unknown'}`);
 
