@@ -1,0 +1,18 @@
+[
+  {
+    "name": "Yandex Music",
+    "type": "ymbridge",
+    "data": {
+      "url": "http://192.168.1.161:9980",
+      "apiKey": "change-me",
+      "interval": 5,
+      "maxInterval": 20,
+    },
+    "options": {
+      "scrobbleThresholds": {
+        "percent": 50,
+        "duration": 240
+      }
+    }
+  }
+]
