@@ -33,6 +33,7 @@ import { SubsonicData, SubSonicSourceConfig } from "../common/infrastructure/con
 import { VLCData, VLCSourceConfig } from "../common/infrastructure/config/source/vlc.js";
 import { WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.js";
 import { YTMusicData, YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
+import { YandexMusicBridgeSourceConfig } from "../common/infrastructure/config/source/ymbridge.js";
 import { SonosData, SonosSourceConfig } from "../common/infrastructure/config/source/sonos.js";
 import { WildcardEmitter } from "../common/WildcardEmitter.js";
 import { parseBool } from "../utils.js";
@@ -128,6 +129,8 @@ export default class ScrobbleSources {
                     return "LibrefmSourceConfig";
                 case 'ytmusic':
                     return "YTMusicSourceConfig";
+                case 'ymbridge':
+                    return "YandexMusicBridgeSourceConfig";
                 case 'maloja':
                     return "MalojaSourceConfig";
                 case 'mpris':
@@ -943,6 +946,10 @@ export default class ScrobbleSources {
             case 'ytmusic':
                 const YTMusicSource = (await import('./YTMusicSource.js')).default;
                 newSource = await new YTMusicSource(name, compositeConfig as YTMusicSourceConfig, this.internalConfig, this.emitter);
+                break;
+            case 'ymbridge':
+                const YandexMusicBridgeSource = (await import('./YandexMusicBridgeSource.js')).default;
+                newSource = await new YandexMusicBridgeSource(name, compositeConfig as YandexMusicBridgeSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'mpris':
                 const {MPRISSource} = (await import('./MPRISSource.js'));
