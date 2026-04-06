@@ -206,7 +206,7 @@
     "nodemon": "^3.0.3",
     "playwright": "^1.58.2",
     "sinon": "^21.0.2",
-    "storybook": "10.2.0",
+    "storybook": "10.3.4",
     "ts-essentials": "^10.1.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^7.0.1",
