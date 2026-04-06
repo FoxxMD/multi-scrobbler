@@ -55,7 +55,7 @@ jobs:
           user_email: 41898282+github-actions[bot]@users.noreply.github.com
 
       - name: Trigger dependent build
-        if: ${{ secrets.DOCS_DISPATCH_TOKEN != '' && vars.DOCS_REPO  !== ''}}
+        if: ${{ vars.DOCS_REPO  != ''}}
         run: |
           # Trigger builds in dependent repositories
           curl -X POST \
