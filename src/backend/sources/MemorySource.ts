@@ -9,7 +9,8 @@ import {
     CALCULATED_PLAYER_STATUSES,
     InternalConfig, PlayerStateDataMaybePlay,
     PlayPlatformId,
-    ProgressAwarePlayObject} from "../common/infrastructure/Atomic.js";
+    ProgressAwarePlayObject,
+    SINGLE_USER_PLATFORM_ID} from "../common/infrastructure/Atomic.js";
 import { SourceType, SourceConfig } from '../common/infrastructure/config/source/sources.js';
 import { PollingOptions } from "../common/infrastructure/config/common.js";
 import {
@@ -341,7 +342,7 @@ export default class MemorySource extends AbstractSource {
                         }
                         return [false, `${stPrefix} ${EXPECTED_NON_DISCOVERED_REASON}`]
                     } else {
-                        const discoveredPlays = this.getRecentlyDiscoveredPlaysByPlatform(genGroupId(candidate));
+                        const discoveredPlays = this.getRecentlyDiscoveredPlaysByPlatform(this.multiPlatform ? genGroupId(candidate) : SINGLE_USER_PLATFORM_ID);
                         if (discoveredPlays.length === 0 || !playObjDataMatch(discoveredPlays[0], candidate)) {
                             // if most recent stateful play is not this track we'll add it
                             return [true,`${stPrefix} added after ${thresholdResultSummary(thresholdResults)}. Matched other recent play but could not determine time frame due to missing duration. Allowed due to not being last played track.`];
