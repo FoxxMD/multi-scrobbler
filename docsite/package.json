@@ -1,6 +1,6 @@
 {
-  "name": "my-website",
-  "version": "0.0.0",
+  "name": "multi-scrobbler-docs",
+  "version": "0.12.1",
   "private": true,
   "scripts": {
     "start": "docusaurus start --host 0.0.0.0",
@@ -15,10 +15,10 @@
     "postinstall": "patch-package"
   },
   "dependencies": {
-    "@docusaurus/core": "3.8.1",
-    "@docusaurus/faster": "3.8.1",
-    "@docusaurus/plugin-client-redirects": "^3.8.1",
-    "@docusaurus/preset-classic": "3.8.1",
+    "@docusaurus/core": "3.9.2",
+    "@docusaurus/faster": "3.9.2",
+    "@docusaurus/plugin-client-redirects": "^3.9.2",
+    "@docusaurus/preset-classic": "3.9.2",
     "@easyops-cn/docusaurus-search-local": "0.51.1",
     "@mdx-js/react": "^3.0.0",
     "ajv": "^8.18.0",
@@ -39,10 +39,10 @@
     "sass": "^1.97.0"
   },
   "devDependencies": {
-    "@docusaurus/module-type-aliases": "^3.6.3",
-    "@docusaurus/tsconfig": "^3.6.3",
-    "@docusaurus/types": "^3.6.3",
-    "@types/react": "^18.2.29",
+    "@docusaurus/module-type-aliases": "^3.9.2",
+    "@docusaurus/tsconfig": "^3.9.2",
+    "@docusaurus/types": "^3.9.2",
+    "@types/react": "^19.2.4",
     "typescript": "~5.6.2"
   },
   "browserslist": {
@@ -60,5 +60,8 @@
   "engines": {
     "node": ">=24.14.0",
     "npm": ">=11.12.1"
+  },
+  "overrides": {
+    "lodash": "4.18.1"
   }
 }
