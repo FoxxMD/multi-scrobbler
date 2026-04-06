@@ -12,7 +12,7 @@ export interface CommonConfig {
     enable?: boolean
 }
 
-export type CommonData = keyOmit<{ [key: string]: any }, "options">
+export type CommonData = Record<string, any>; // keyOmit<{ [key: string]: any }, "options">
 
 export interface RequestRetryOptions {
     /**

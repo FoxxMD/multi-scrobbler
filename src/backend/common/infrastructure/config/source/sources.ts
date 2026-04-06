@@ -2,7 +2,7 @@ import { AzuracastSourceAIOConfig, AzuracastSourceConfig } from "./azuracast.js"
 import { ChromecastSourceAIOConfig, ChromecastSourceConfig } from "./chromecast.js";
 import { ListenbrainzEndpointSourceAIOConfig, ListenbrainzEndpointSourceConfig } from "./endpointlz.js";
 import { LastFMEndpointSourceAIOConfig, LastFMEndpointSourceConfig } from "./endpointlfm.js";
-import { DeezerInternalSourceConfig, DeezerInternalAIOConfig, DeezerSourceAIOConfig, DeezerSourceConfig, DeezerCompatConfig } from "./deezer.js";
+import { DeezerInternalSourceConfig, DeezerInternalAIOConfig, DeezerSourceAIOConfig, DeezerSourceConfig, DeezerCompatConfig, DeezerAIOCompatConfig } from "./deezer.js";
 import { JellyApiSourceAIOConfig, JellyApiSourceConfig } from "./jellyfin.js";
 import { JRiverSourceAIOConfig, JRiverSourceConfig } from "./jriver.js";
 import { KodiSourceAIOConfig, KodiSourceConfig } from "./kodi.js";
@@ -32,8 +32,7 @@ import { SonosSourceAIOConfig, SonosSourceConfig } from "./sonos.js";
 export type SourceConfig =
     SpotifySourceConfig
     | PlexApiSourceConfig
-    | DeezerSourceConfig
-    | DeezerInternalSourceConfig
+    | DeezerCompatConfig
     | ListenbrainzEndpointSourceConfig
     | LastFMEndpointSourceConfig
     | SubSonicSourceConfig
@@ -64,8 +63,7 @@ export type SourceConfig =
 export type SourceAIOConfig =
     SpotifySourceAIOConfig
     | PlexApiSourceAIOConfig
-    | DeezerSourceAIOConfig
-    | DeezerInternalAIOConfig
+    | DeezerAIOCompatConfig
     | ListenbrainzEndpointSourceAIOConfig
     | LastFMEndpointSourceAIOConfig
     | SubsonicSourceAIOConfig

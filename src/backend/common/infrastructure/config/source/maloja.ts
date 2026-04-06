@@ -12,7 +12,7 @@ export interface MalojaSourceConfig extends CommonSourceConfig {
      * @default source
      * @examples ["source"]
      * */
-    configureAs?: 'source'
+    configureAs: 'source'
     data: MalojaSourceData
 }
 

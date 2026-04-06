@@ -523,8 +523,12 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.lastActivityAt = dayjs();
         let checkCount = 0;
         let checksOverThreshold = 0;
+        let checkActiveFor = 120;
+        let maxInterval = DEFAULT_POLLING_MAX_INTERVAL;
 
-        const {checkActiveFor = 120, maxInterval = DEFAULT_POLLING_MAX_INTERVAL} = this.config.data;
+        if('maxInterval' in this.config.data) {
+            maxInterval = this.config.data.maxInterval;
+        }
         let isInactive = false;
 
         try {
@@ -649,13 +653,21 @@ export default abstract class AbstractSource extends AbstractComponent implement
     }
 
     protected getInterval() {
-        const {interval = DEFAULT_POLLING_INTERVAL} = this.config.data;
+        let interval = DEFAULT_POLLING_INTERVAL;
+
+        if('interval' in this.config.data) {
+            interval = this.config.data.interval;
+        }
         return interval;
     }
 
     protected getMaxBackoff() {
-        const {interval = DEFAULT_POLLING_INTERVAL, maxInterval = DEFAULT_POLLING_MAX_INTERVAL} = this.config.data;
-        return maxInterval - interval;
+        let maxInterval = DEFAULT_POLLING_MAX_INTERVAL;
+
+        if('maxInterval' in this.config.data) {
+            maxInterval = this.config.data.maxInterval;
+        }
+        return maxInterval - this.getInterval();
     }
 
     public emitEvent = (eventName: string, payload: object = {}) => {

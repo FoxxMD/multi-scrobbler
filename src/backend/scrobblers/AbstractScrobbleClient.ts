@@ -603,14 +603,14 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.scrobbleRetries = 0;
 
         const {
-            data: {
-                maxPollRetries = 5,
+            options: {
+                maxRequestRetries = 5,
                 retryMultiplier = DEFAULT_RETRY_MULTIPLIER,
             } = {},
         } = this.config;
 
         // can't have negative retries!
-        const maxRetries = Math.max(0, maxPollRetries);
+        const maxRetries = Math.max(0, maxRequestRetries);
 
         if(this.scrobbling === true) {
             this.logger.warn(`Already scrobble processing! Processing needs to be stopped before it can be started`);

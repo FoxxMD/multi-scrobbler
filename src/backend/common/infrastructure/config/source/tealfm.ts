@@ -15,7 +15,7 @@ export interface TealSourceConfig extends CommonSourceConfig {
      * @default source
      * @examples ["source"]
      * */
-    configureAs?: 'source'
+    configureAs: 'source'
     data: TealSourceData
     options?: TealSourceOptions
 }

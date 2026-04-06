@@ -61,7 +61,7 @@ export class RockSkyApiClient extends AbstractApiClient {
 
     doCallLZApi = async <T = Response>(req: Request, retries = 0): Promise<T> => {
         try {
-            req.set('Authorization', `Token ${this.config.key ?? this.config.token}`);
+            req.set('Authorization', `Token ${this.config.key}`);
             return await req as T;
         } catch (e) {
             const {

@@ -119,7 +119,7 @@ export interface ManualListeningOptions {
     systemScrobble?: boolean
 }
 
-export interface CommonSourceData extends CommonData {
+export interface CommonSourceData  {
 
 }
 

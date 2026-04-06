@@ -1,13 +1,13 @@
 /* eslint-disable no-case-declarations */
 import { childLogger, Logger } from '@foxxmd/logging';
 import EventEmitter from "events";
-import { ConfigMeta, InternalConfig, InternalConfigOptional } from "../common/infrastructure/Atomic.js";
+import { ConfigMeta, CONFIGURE_AS, ConfigureAs, ConfigureAsSource, InternalConfig, InternalConfigOptional } from "../common/infrastructure/Atomic.js";
 import { isSourceType } from '../common/infrastructure/config/source/sources.js';
 import { sourceTypes } from '../common/infrastructure/config/source/sources.js';
 import { SourceType } from '../common/infrastructure/config/source/sources.js';
 import { AIOConfig, SourceDefaults } from "../common/infrastructure/config/aioConfig.js";
 import { AzuracastData, AzuracastSourceConfig } from "../common/infrastructure/config/source/azuracast.js";
-import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
+import { ChromecastData, ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
 import { DeezerData, DeezerSourceConfig, DeezerInternalSourceConfig, DeezerCompatConfig, DeezerInternalData } from "../common/infrastructure/config/source/deezer.js";
 import { ListenbrainzEndpointSourceConfig, ListenbrainzEndpointData } from "../common/infrastructure/config/source/endpointlz.js";
 import { LastFMEndpointSourceConfig, LastFMEndpointData } from "../common/infrastructure/config/source/endpointlfm.js";
@@ -25,13 +25,13 @@ import { IcecastData, IcecastSourceConfig, IcecastSourceOptions } from "../commo
 import { MPDData, MPDSourceConfig } from "../common/infrastructure/config/source/mpd.js";
 import { MPRISData, MPRISSourceConfig } from "../common/infrastructure/config/source/mpris.js";
 import { MusikcubeData, MusikcubeSourceConfig } from "../common/infrastructure/config/source/musikcube.js";
-import { PlexApiSourceConfig } from "../common/infrastructure/config/source/plex.js";
+import { PlexApiData, PlexApiSourceConfig } from "../common/infrastructure/config/source/plex.js";
 import { MalojaSourceConfig } from "../common/infrastructure/config/source/maloja.js";
 import { SourceAIOConfig, SourceConfig } from "../common/infrastructure/config/source/sources.js";
 import { SpotifySourceConfig, SpotifySourceData } from "../common/infrastructure/config/source/spotify.js";
 import { SubsonicData, SubSonicSourceConfig } from "../common/infrastructure/config/source/subsonic.js";
 import { VLCData, VLCSourceConfig } from "../common/infrastructure/config/source/vlc.js";
-import { WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.js";
+import { WebScrobblerData, WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.js";
 import { YTMusicData, YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
 import { YandexMusicBridgeData, YandexMusicBridgeSourceConfig } from "../common/infrastructure/config/source/ymbridge.js";
 import { SonosData, SonosSourceConfig } from "../common/infrastructure/config/source/sonos.js";
@@ -47,6 +47,13 @@ import { RockskySourceConfig } from '../common/infrastructure/config/source/rock
 import { CommonSourceOptions } from '../common/infrastructure/config/source/index.js';
 import { ExternalMetadataTerm, PlayTransformHooks, PlayTransformOptions } from '../common/infrastructure/Transform.js';
 import { LibrefmSourceConfig } from '../common/infrastructure/config/source/librefm.js';
+import { LastfmData } from '../common/infrastructure/config/client/lastfm.js';
+import { MalojaData } from '../common/infrastructure/config/client/maloja.js';
+import { LibrefmData } from '../common/infrastructure/config/client/librefm.js';
+import { ListenBrainzData } from '../common/infrastructure/config/client/listenbrainz.js';
+import { KoitoData } from '../common/infrastructure/config/client/koito.js';
+import { TealData } from '../common/infrastructure/config/client/tealfm.js';
+import { RockSkyData } from '../common/infrastructure/config/client/rocksky.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -263,16 +270,14 @@ export default class ScrobbleSources {
         }
 
         for (const sourceType of sourceTypes) {
-            let defaultConfigureAs = 'source';
+            let defaultConfigureAs: ConfigureAsSource = CONFIGURE_AS.source;
             // env builder for single user mode
             switch (sourceType) {
                 case 'spotify':
-                    const s = {
-                        accessToken: process.env.SPOTIFY_ACCESS_TOKEN,
-                        clientId: process.env.SPOTIFY_CLIENT_ID,
-                        clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+                    const s: SpotifySourceData = {
+                        clientId: process.env.SPOTIFY_CLIENT_ID as string,
+                        clientSecret: process.env.SPOTIFY_CLIENT_SECRET as string,
                         redirectUri: process.env.SPOTIFY_REDIRECT_URI,
-                        refreshToken: process.env.SPOTIFY_REFRESH_TOKEN,
                     };
                     if (!Object.values(s).every(x => x === undefined && x !== null)) {
                         configs.push({
@@ -281,20 +286,19 @@ export default class ScrobbleSources {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: s as SpotifySourceData,
+                            data: s,
                             options: transformPresetEnv('SPOTIFY')
                         })
                     }
                     break;
                 case 'plex':
-                    const p = {
-                        user: process.env.PLEX_USER,
+                    const p: PlexApiData = {
                         url: process.env.PLEX_URL,
                         token: process.env.PLEX_TOKEN,
                         usersAllow: process.env.PLEX_USERS_ALLOW,
                         usersBlock: process.env.PLEX_USERS_BLOCK,
                         devicesAllow: process.env.PLEX_DEVICES_ALLOW,
-                        deviceBlock: process.env.PLEX_DEVICES_BLOCK,
+                        devicesBlock: process.env.PLEX_DEVICES_BLOCK,
                         librariesAllow: process.env.PLEX_LIBRARIES_ALLOW,
                         librariesBlock: process.env.PLEX_LIBRARIES_BLOCK
                     };
@@ -311,7 +315,7 @@ export default class ScrobbleSources {
                     }
                     break;
                 case 'subsonic':
-                    const sub = {
+                    const sub: SubsonicData = {
                         user: process.env.SUBSONIC_USER,
                         password: process.env.SUBSONIC_PASSWORD,
                         url: process.env.SUBSONIC_URL,
@@ -357,7 +361,7 @@ export default class ScrobbleSources {
                     break;
                 case 'lastfm':
                         {
-                        const lfm = {
+                        const lfm: LastfmData = {
                             apiKey: process.env.SOURCE_LASTFM_API_KEY,
                             secret: process.env.SOURCE_LASTFM_SECRET,
                             redirectUri: process.env.SOURCE_LASTFM_REDIRECT_URI,
@@ -392,14 +396,14 @@ export default class ScrobbleSources {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: d as DeezerData,
+                            data: d,
                             options: transformPresetEnv('DEEZER')
                         });
                     }
                     break;
                 case 'mpris':
                     const shouldUse = parseBool(process.env.MPRIS_ENABLE);
-                    const mp = {
+                    const mp: MPRISData = {
                         blacklist: process.env.MPRIS_BLACKLIST,
                         whitelist: process.env.MPRIS_WHITELIST
                     }
@@ -420,16 +424,17 @@ export default class ScrobbleSources {
                     const url = process.env.SOURCE_MALOJA_URL;
                     const apiKey = process.env.SOURCE_MALOJA_API_KEY;
                     if (url !== undefined || apiKey !== undefined) {
+                        const malojaData: MalojaData = {
+                            url,
+                            apiKey
+                        }
                         configs.push({
                             type: 'maloja',
                             name: 'unnamed-mlj-source',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'source',
-                            data: {
-                                url,
-                                apiKey
-                            },
+                            data: malojaData,
                             options: transformPresetEnv('SOURCE_MALOJA')
                         })
                     }
@@ -437,7 +442,7 @@ export default class ScrobbleSources {
                     break;
                 case 'librefm':{
                     const shouldUse = parseBool(process.env.LIBRFM_ENABLE)
-                    const libre = {
+                    const libre: LibrefmData = {
                         apiKey: process.env.SOURCE_LIBREFM_API_KEY,
                         secret: process.env.SOURCE_LIBREFM_SECRET,
                         redirectUri: process.env.SOURCE_LIBREFM_REDIRECT_URI,
@@ -458,7 +463,7 @@ export default class ScrobbleSources {
                 }
                     break;
                 case 'listenbrainz': {
-                    const lz = {
+                    const lz: ListenBrainzData = {
                         url: process.env.SOURCE_LZ_URL,
                         token: process.env.SOURCE_LZ_TOKEN,
                         username: process.env.SOURCE_LZ_USER
@@ -477,7 +482,7 @@ export default class ScrobbleSources {
                 }
                     break;
                 case 'koito': {
-                    const koit = {
+                    const koit: KoitoData = {
                         url: process.env.SOURCE_KOITO_URL,
                         token: process.env.SOURCE_KOITO_TOKEN,
                         username: process.env.SOURCE_KOITO_USER
@@ -496,10 +501,9 @@ export default class ScrobbleSources {
                 }
                     break;
                 case 'tealfm': {
-                    const teal = {
+                    const teal: TealData = {
                         identifier: process.env.SOURCE_TEALFM_IDENTIFIER,
                         appPassword: process.env.SOURCE_TEALFM_APP_PW,
-                        pds: process.env.SOURCE_TEALFM_PDS
                     };
                     if (!Object.values(teal).every(x => x === undefined)) {
                         configs.push({
@@ -515,7 +519,7 @@ export default class ScrobbleSources {
                 }
                     break;
                 case 'rocksky': {
-                    const rocksky = {
+                    const rocksky: RockSkyData = {
                         key: process.env.SOURCE_ROCKSKY_KEY,
                         handle: process.env.SOURCE_ROCKSKY_HANDLE
                     };
@@ -534,7 +538,7 @@ export default class ScrobbleSources {
                     break;
                 case 'endpointlz':
                     const lzShouldUse = parseBool(process.env.LZENDPOINT_ENABLE);
-                    const lze = {
+                    const lze: ListenbrainzEndpointData = {
                         slug: process.env.LZE_SLUG,
                         token: process.env.LZE_TOKEN
                     }
@@ -552,7 +556,7 @@ export default class ScrobbleSources {
                     break;
                 case 'endpointlfm':
                     const lfmShouldUse = parseBool(process.env.LFMENDPOINT_ENABLE);
-                    const lfme = {
+                    const lfme: LastFMEndpointData = {
                         slug: process.env.LFM_SLUG,
                     }
                     if (!Object.values(lfme).every(x => x === undefined) || lfmShouldUse) {
@@ -567,10 +571,10 @@ export default class ScrobbleSources {
                         });
                     }
                     break;
-                case 'icecast':
-                    const icecast = {
+                case 'icecast': {
+                    const scrobbleStart = parseBool(process.env.ICECAST_SCROBBLE_START);
+                    const icecast: IcecastData = {
                         url: process.env.ICECAST_URL,
-                        scrobbleOnStart: process.env.ICECAST_SCROBBLE_START,
                     }
                     if (!Object.values(icecast).every(x => x === undefined)) {
                         configs.push({
@@ -581,13 +585,13 @@ export default class ScrobbleSources {
                             configureAs: defaultConfigureAs,
                             data: icecast as IcecastData,
                             options: transformPresetEnv<IcecastSourceOptions>('ICECAST', {
-                                systemScrobble: parseBool(icecast.scrobbleOnStart)
+                                systemScrobble: scrobbleStart
                             })
                         });
                     }
-                    break;
+                    }    break;
                 case 'jriver':
-                    const jr = {
+                    const jr: JRiverData = {
                         url: process.env.JRIVER_URL,
                         username: process.env.JRIVER_USER,
                         password: process.env.JRIVER_PASSWORD
@@ -605,7 +609,7 @@ export default class ScrobbleSources {
                     }
                     break;
                 case 'kodi':
-                    const ko = {
+                    const ko: KodiData = {
                         url: process.env.KODI_URL,
                         username: process.env.KODI_USER,
                         password: process.env.KODI_PASSWORD
@@ -624,7 +628,7 @@ export default class ScrobbleSources {
                     break;
                 case 'webscrobbler':
                     const wsShouldUse = parseBool(process.env.WS_ENABLE);
-                    const ws = {
+                    const ws: WebScrobblerData = {
                         blacklist: process.env.WS_BLACKLIST,
                         whitelist: process.env.WS_WHITELIST
                     }
@@ -636,8 +640,8 @@ export default class ScrobbleSources {
                             mode: 'single',
                             configureAs: defaultConfigureAs,
                             data: {
-                                blacklist: ws.blacklist !== undefined ? ws.blacklist.split(',') : [],
-                                whitelist: ws.whitelist !== undefined ? ws.whitelist.split(',') : [],
+                                blacklist: ws.blacklist !== undefined ? (ws.blacklist as string).split(',') : [],
+                                whitelist: ws.whitelist !== undefined ? (ws.whitelist as string).split(',') : [],
                             },
                             options: transformPresetEnv('WS')
                         });
@@ -645,7 +649,7 @@ export default class ScrobbleSources {
                     break;
                 case 'chromecast':
                     const ccShouldUse = parseBool(process.env.CC_ENABLE);
-                    const cc = {
+                    const cc: ChromecastData = {
                         blacklistDevices: process.env.CC_BLACKLIST_DEVICES,
                         whitelistDevices: process.env.CC_WHITELIST_DEVICES,
                         blacklistApps: process.env.CC_BLACKLIST_APPS,
@@ -659,17 +663,17 @@ export default class ScrobbleSources {
                             mode: 'single',
                             configureAs: defaultConfigureAs,
                             data: {
-                                blacklistDevices: cc.blacklistDevices !== undefined ? cc.blacklistDevices.split(',') : [],
-                                whitelistDevices: cc.whitelistDevices !== undefined ? cc.whitelistDevices.split(',') : [],
-                                blacklistApps: cc.blacklistApps !== undefined ? cc.blacklistApps.split(',') : [],
-                                whitelistApps: cc.whitelistApps !== undefined ? cc.whitelistApps.split(',') : [],
+                                blacklistDevices: cc.blacklistDevices !== undefined ? (cc.blacklistDevices as string).split(',') : [],
+                                whitelistDevices: cc.whitelistDevices !== undefined ? (cc.whitelistDevices as string).split(',') : [],
+                                blacklistApps: cc.blacklistApps !== undefined ? (cc.blacklistApps as string).split(',') : [],
+                                whitelistApps: cc.whitelistApps !== undefined ? (cc.whitelistApps as string).split(',') : [],
                             },
                             options: transformPresetEnv('CC')
                         });
                     }
                     break;
                 case 'musiccast':
-                    const musecase = {
+                    const musecase: MusicCastData = {
                         url: process.env.MCAST_URL,
                     }
                     if (!Object.values(musecase).every(x => x === undefined)) {
@@ -685,7 +689,7 @@ export default class ScrobbleSources {
                     }
                     break;
                 case 'musikcube':
-                    const mc = {
+                    const mc: MusikcubeData = {
                         url: process.env.MC_URL,
                         password: process.env.MC_PASSWORD
                     }
@@ -702,7 +706,7 @@ export default class ScrobbleSources {
                     }
                     break;
                 case 'mpd':
-                    const mpd = {
+                    const mpd: MPDData = {
                         url: process.env.MPD_URL,
                         password: process.env.MPD_PASSWORD
                     }
@@ -719,7 +723,7 @@ export default class ScrobbleSources {
                     }
                     break;
                 case 'vlc':
-                    const vlc = {
+                    const vlc: VLCData = {
                         url: process.env.VLC_URL,
                         password: process.env.VLC_PASSWORD
                     }
@@ -736,7 +740,7 @@ export default class ScrobbleSources {
                     }
                     break;
                 case 'ytmusic':
-                    const ytm = {
+                    const ytm: YTMusicData = {
                         redirectUri: process.env.YTM_REDIRECT_URI,
                         clientId: process.env.YTM_CLIENT_ID,
                         clientSecret: process.env.YTM_CLIENT_SECRET,
@@ -754,13 +758,19 @@ export default class ScrobbleSources {
                         });
                     }
                     break;
-                case 'azuracast':
-                    const azura = {
+                case 'azuracast': {
+                    const azura: AzuracastData = {
                         station: process.env.AZURA_STATION,
                         url: process.env.AZURA_URL,
-                        monitorWhenListeners: process.env.AZURA_LISTENERS_NUM,
-                        monitorWhenLive: process.env.AZURA_LIVE,
                         apiKey: process.env.AZURA_KEY
+                    }
+                    const listenerNum = process.env.AZURA_LISTENERS_NUM ?? '';
+                    if(listenerNum.trim() !== '') {
+                        azura.monitorWhenListeners = !isNaN(Number.parseInt(listenerNum)) ? Number.parseInt(listenerNum) : parseBool(listenerNum);
+                    }
+                    const live = process.env.AZURA_LIVE ?? '';
+                    if(live.trim() !== '') {
+                        azura.monitorWhenLive = parseBool(live);
                     }
                     if (!Object.values(azura).every(x => x === undefined)) {
                         configs.push({
@@ -773,14 +783,14 @@ export default class ScrobbleSources {
                             options: transformPresetEnv('AZURA')
                         });
                     }
-                    break;
+                    }    break;
                 case 'sonos': {
-                    const sonos = {
+                    const sonos: SonosData = {
                         host: process.env.SONOS_HOST,
                         devicesAllow: process.env.SONOS_DEVICES_ALLOW,
                         devicesBlock: process.env.SONOS_DEVICES_BLOCK,
                         groupsAllow: process.env.SONOS_GROUPS_ALLOW,
-                        groupsBlocks: process.env.SONOS_GROUPS_BLOCK
+                        groupsBlock: process.env.SONOS_GROUPS_BLOCK
                     }
                     if (!Object.values(sonos).every(x => x === undefined)) {
                         configs.push({
@@ -921,6 +931,7 @@ export default class ScrobbleSources {
         }
         
         // add defaults
+        // @ts-expect-error idk why this has so many issues
         const compositeConfig: SourceConfig = {...clientConfig, data: d, options: {...defaults, ...clientOptions}};
 
         this.logger.debug({labels: [`${type} - ${name}`]},`Constructing Source from ${source}...`);
@@ -952,7 +963,7 @@ export default class ScrobbleSources {
                 break;
             case 'deezer':
                 const deezerConfig = compositeConfig as DeezerCompatConfig;
-                if(deezerConfig.data.arl !== undefined) {
+                if('arl' in deezerConfig.data && deezerConfig.data.arl !== undefined) {
                     const DeezerInternalSource = (await import('./DeezerInternalSource.js')).default;
                     newSource = await new DeezerInternalSource(name, compositeConfig as DeezerInternalSourceConfig, this.internalConfig, this.emitter);
                 } else {

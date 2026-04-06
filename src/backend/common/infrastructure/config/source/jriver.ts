@@ -1,7 +1,7 @@
-import { PollingOptions } from "../common.js";
+import { PollingOptions, RequestRetryOptions } from "../common.js";
 import { CommonSourceConfig, CommonSourceData } from "./index.js";
 
-export interface JRiverData extends CommonSourceData, PollingOptions {
+export interface JRiverData extends CommonSourceData, PollingOptions, RequestRetryOptions {
     /**
      * URL of the JRiver HTTP server to connect to
      *

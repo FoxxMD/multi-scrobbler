@@ -16,7 +16,7 @@ export interface RockskySourceConfig extends CommonSourceConfig {
      * @default source
      * @examples ["source"]
      * */
-    configureAs?: 'source'
+    configureAs: 'source'
     data: RockskySourceData
     options?: RockskySourceOptions
 }

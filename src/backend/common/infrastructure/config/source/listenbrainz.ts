@@ -12,7 +12,7 @@ export interface ListenBrainzSourceConfig extends CommonSourceConfig {
      * @default source
      * @examples ["source"]
      * */
-    configureAs?: 'source'
+    configureAs: 'source'
     data: ListenBrainzSourceData
 }
 

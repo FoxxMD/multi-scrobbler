@@ -22,6 +22,8 @@ export interface DeezerData extends CommonSourceData, PollingOptions {
      * @examples ["http://localhost:9078/deezer/callback"]
      * */
     redirectUri?: string
+
+    accessToken?: string
 }
 export interface DeezerSourceConfig extends CommonSourceConfig {
     data: DeezerData
@@ -58,6 +60,8 @@ export interface DeezerInternalAIOConfig extends DeezerInternalSourceConfig {
 }
 
 export type DeezerCompatConfig = DeezerSourceConfig | DeezerInternalSourceConfig;
+
+export type DeezerAIOCompatConfig = DeezerSourceAIOConfig | DeezerInternalAIOConfig;
 
 export interface DeezerInternalTrackData {
     /** Song Id */

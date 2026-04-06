@@ -28,7 +28,7 @@ export interface MatchLoggingOptions {
     confidenceBreakdown?: boolean
 }
 
-export interface CommonClientData extends CommonData {
+export interface CommonClientData {
 }
 
 export interface UpstreamRefreshOptions {

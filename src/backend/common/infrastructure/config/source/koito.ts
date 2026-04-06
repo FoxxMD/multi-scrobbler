@@ -13,7 +13,7 @@ export interface KoitoSourceConfig extends CommonSourceConfig {
      * @default source
      * @examples ["source"]
      * */
-    configureAs?: 'source'
+    configureAs: 'source'
     data: KoitoSourceData
 }
 

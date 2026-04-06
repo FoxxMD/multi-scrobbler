@@ -11,7 +11,7 @@ export interface LastfmSourceConfig extends CommonSourceConfig {
      * @default source
      * @examples ["source"]
      * */
-    configureAs?: 'source'
+    configureAs: 'source'
     data: LastFmSourceData
 }
 

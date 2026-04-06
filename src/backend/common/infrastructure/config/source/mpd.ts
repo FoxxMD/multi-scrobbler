@@ -1,6 +1,7 @@
+import { PollingOptions } from "../common.js";
 import { CommonSourceConfig, CommonSourceData, CommonSourceOptions } from "./index.js";
 
-export interface MPDData extends CommonSourceData {
+export interface MPDData extends CommonSourceData, PollingOptions {
     /**
      * URL:PORT of the MPD server to connect to
      *

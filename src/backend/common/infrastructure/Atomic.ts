@@ -66,10 +66,19 @@ export const CALCULATED_PLAYER_STATUSES = {
     orphaned: 'orphaned' as CalculatedPlayerStatus,
 }
 
+export type ConfigureAsSource = 'source';
+export type ConfigureAsClient = 'client';
+export type ConfigureAs = ConfigureAsSource | ConfigureAsClient;
+
+export const CONFIGURE_AS = {
+    source: 'source',
+    client: 'client'
+} as const satisfies Record<string, ConfigureAs>
+
 export interface ConfigMeta {
     source: string
     mode?: string
-    configureAs: string
+    configureAs: ConfigureAs
 }
 
 export type SourceData = (PlayObject | PlayerStateData);
