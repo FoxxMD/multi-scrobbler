@@ -334,7 +334,7 @@ export default class ScrobbleSources {
                         usersAllow: process.env.JELLYFIN_USERS_ALLOW,
                         usersBlock: process.env.JELLYFIN_USERS_BLOCK,
                         devicesAllow: process.env.JELLYFIN_DEVICES_ALLOW,
-                        deviceBlock: process.env.JELLYFIN_DEVICES_BLOCK,
+                        devicesBlock: process.env.JELLYFIN_DEVICES_BLOCK,
                         librariesAllow: process.env.JELLYFIN_LIBRARIES_ALLOW,
                         librariesBlock: process.env.JELLYFIN_LIBRARIES_BLOCK,
                         frontendUrlOverride: process.env.JELLYFIN_FRONTEND_URL_OVERRIDE,
