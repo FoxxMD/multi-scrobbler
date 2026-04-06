@@ -5,6 +5,7 @@ import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { PlayObject, PlayObjectLifecycleless, URLData } from "../../core/Atomic.js";
 import {
     InternalConfig,
+    NO_USER,
     PlayerStateData,
     PlayerStateDataMaybePlay,
     REPORTED_PLAYER_STATUSES,
@@ -12,6 +13,7 @@ import {
 import { YandexMusicBridgeSourceConfig } from "../common/infrastructure/config/source/ymbridge.js";
 import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
+import { UpstreamError } from "../common/errors/UpstreamError.js";
 
 interface BridgeTrackData {
     title?: string
@@ -88,10 +90,10 @@ export default class YandexMusicBridgeSource extends MemoryPositionalSource {
                 this.logger.info(`Yandex Music bridge is reachable at ${this.urlData.url.host}`);
                 return true;
             }
-            throw new Error('Bridge health endpoint did not return JSON');
+            throw new UpstreamError('Bridge health endpoint did not return JSON', {responseBody: resp.body, showStopper: true});
         } catch (e: any) {
             const hint = e?.response?.text ?? e?.message ?? undefined;
-            throw new Error(`Could not connect to Yandex Music bridge${hint !== undefined ? ` (${hint})` : ''}`, { cause: e });
+            throw new UpstreamError(`Could not connect to Yandex Music bridge${hint !== undefined ? ` (${hint})` : ''}`, { cause: e, responseBody: e?.response?.text, showStopper: true });
         }
     }
 
@@ -102,11 +104,15 @@ export default class YandexMusicBridgeSource extends MemoryPositionalSource {
         if (apiKey !== undefined && apiKey.trim() !== '') {
             req.set('X-API-Key', apiKey);
         }
-        const resp = await req;
-        if (resp.body === undefined || typeof resp.body !== 'object') {
-            throw new Error('Bridge returned no JSON payload');
+        try {
+            const resp = await req;
+            if (resp.body === undefined || typeof resp.body !== 'object') {
+                throw new UpstreamError('Bridge returned no JSON payload', {responseBody: resp.body, showStopper: true});
+            }
+            return resp.body as BridgeNowPlayingResponse;
+        } catch (e) {
+            throw new UpstreamError('Bridge not return an expected response', {responseBody: e?.response?.text, cause: e, showStopper: true});
         }
-        return resp.body as BridgeNowPlayingResponse;
     }
 
     private resetSyntheticPlayback() {
@@ -233,7 +239,7 @@ export default class YandexMusicBridgeSource extends MemoryPositionalSource {
             return undefined;
         }
         return {
-            platformId: [this.lastBridgeData.queue_id ?? 'YandexMusicBridge', 'SingleUser'],
+            platformId: [this.lastBridgeData.queue_id ?? 'YandexMusicBridge', NO_USER],
             sessionId: this.lastBridgeData.queue_id ?? this.lastBridgeData.track_id,
             status: REPORTED_PLAYER_STATUSES.stopped,
         };
