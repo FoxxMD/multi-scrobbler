@@ -6,23 +6,23 @@ import { ConfigMeta, InternalConfig, InternalConfigOptional, isClientType, Sourc
 import { clientTypes, ClientType } from '../common/infrastructure/config/client/clients.js';
 import { AIOConfig } from "../common/infrastructure/config/aioConfig.js";
 import { ClientAIOConfig, ClientConfig } from "../common/infrastructure/config/client/clients.js";
-import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
-import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz.js";
-import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja.js";
+import { LastfmClientConfig, LastfmData } from "../common/infrastructure/config/client/lastfm.js";
+import { ListenBrainzClientConfig, ListenBrainzData } from "../common/infrastructure/config/client/listenbrainz.js";
+import { MalojaClientConfig, MalojaData } from "../common/infrastructure/config/client/maloja.js";
 import { WildcardEmitter } from "../common/WildcardEmitter.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 import { isDebugMode, parseBool } from "../utils.js";
 import { readJson } from '../utils/DataUtils.js';
 import { validateJson } from "../utils/ValidationUtils.js";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
-import { KoitoClientConfig } from '../common/infrastructure/config/client/koito.js';
-import { TealClientConfig } from '../common/infrastructure/config/client/tealfm.js';
-import { RockSkyClientConfig } from '../common/infrastructure/config/client/rocksky.js';
+import { KoitoClientConfig, KoitoData } from '../common/infrastructure/config/client/koito.js';
+import { TealClientConfig, TealData } from '../common/infrastructure/config/client/tealfm.js';
+import { RockSkyClientConfig, RockSkyData } from '../common/infrastructure/config/client/rocksky.js';
 import { CommonClientOptions } from '../common/infrastructure/config/client/index.js';
 import { ExternalMetadataTerm, PlayTransformHooks } from '../common/infrastructure/Transform.js';
-import { LibrefmClientConfig } from '../common/infrastructure/config/client/librefm.js';
+import { LibrefmClientConfig, LibrefmData } from '../common/infrastructure/config/client/librefm.js';
 import clone from 'clone';
-import { DiscordClientConfig } from '../common/infrastructure/config/client/discord.js';
+import { DiscordClientConfig, DiscordData } from '../common/infrastructure/config/client/discord.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -173,22 +173,23 @@ export default class ScrobbleClients {
                     const url = process.env.MALOJA_URL;
                     const apiKey = process.env.MALOJA_API_KEY;
                     if (url !== undefined || apiKey !== undefined) {
+                        const malojaData: MalojaData = {
+                            url,
+                            apiKey
+                        }
                         configs.push({
                             type: 'maloja',
                             name: 'unnamed-mlj',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'client',
-                            data: {
-                                url,
-                                apiKey
-                            },
+                            data: malojaData,
                             options: transformPresetEnv('MALOJA')
                         })
                     }
                     break;
                 case 'lastfm':
-                    const lfm = {
+                    const lfm: LastfmData = {
                         apiKey: process.env.LASTFM_API_KEY,
                         secret: process.env.LASTFM_SECRET,
                         redirectUri: process.env.LASTFM_REDIRECT_URI,
@@ -208,7 +209,7 @@ export default class ScrobbleClients {
                     break;
                 case 'librefm': {
                     const shouldUse = parseBool(process.env.LIBRFM_ENABLE)
-                    const libre = {
+                    const libre: LibrefmData = {
                         apiKey: process.env.LIBREFM_API_KEY,
                         secret: process.env.LIBREFM_SECRET,
                         redirectUri: process.env.LIBREFM_REDIRECT_URI,
@@ -228,7 +229,7 @@ export default class ScrobbleClients {
                     }
                 }    break;
                 case 'listenbrainz':
-                    const lz = {
+                    const lz: ListenBrainzData = {
                         url: process.env.LZ_URL,
                         token: process.env.LZ_TOKEN,
                         username: process.env.LZ_USER
@@ -246,7 +247,7 @@ export default class ScrobbleClients {
                     }
                     break;
                 case 'koito':
-                    const koit = {
+                    const koit: KoitoData = {
                         url: process.env.KOITO_URL,
                         token: process.env.KOITO_TOKEN,
                         username: process.env.KOITO_USER
@@ -264,10 +265,9 @@ export default class ScrobbleClients {
                     }
                     break;
                 case 'tealfm':
-                    const teal = {
+                    const teal: TealData = {
                         identifier: process.env.TEALFM_IDENTIFIER,
                         appPassword: process.env.TEALFM_APP_PW,
-                        pds: process.env.TEALFM_PDS
                     };
                     if (!Object.values(teal).every(x => x === undefined)) {
                         configs.push({
@@ -282,7 +282,7 @@ export default class ScrobbleClients {
                     }
                     break;
                 case 'rocksky':
-                    const rocksky = {
+                    const rocksky: RockSkyData = {
                         key: process.env.ROCKSKY_KEY,
                         handle: process.env.ROCKSKY_HANDLE
                     };
@@ -299,7 +299,7 @@ export default class ScrobbleClients {
                     }
                     break;
                 case 'discord': {
-                    const discord = {
+                    const discord: DiscordData = {
                         token: process.env.DISCORD_TOKEN,
                         artwork: process.env.DISCORD_ARTWORK,
                         applicationId: process.env.DISCORD_APPLICATION_ID,
