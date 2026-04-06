@@ -1,7 +1,8 @@
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import mergeErrorCause from 'merge-error-cause';
-import { findCauseByFunc, findCauseByReference } from "../../utils/ErrorUtils.js";
+import { findCauseByFunc, findCauseByReference, isAbortReasonErrorLike } from "../../utils/ErrorUtils.js";
 import { UpstreamError, UpstreamErrorOptions } from "./UpstreamError.js";
+import { isAbortError } from "abort-controller-x";
 
 export abstract class NamedError extends Error {
     public abstract name: string;
@@ -39,6 +40,19 @@ export class SimpleError extends Error implements HasSimpleError {
     simple: boolean;
     name = 'Error';
 
+    stackShortened: boolean = false;
+
+    shortenStack() {
+        const atIndex = parseRegexSingle(STACK_AT_REGEX,this.stack);
+        if(atIndex !== undefined) {
+            const firstn = this.stack.indexOf('\n', atIndex.index + atIndex.match.length);
+            if(firstn !== -1) {
+                this.stack = this.stack.slice(0, firstn);
+                this.stackShortened = true;
+            }
+        }
+    }
+
     public constructor(msg: string, options?: ErrorOptions & { simple?: boolean, shortStack?: boolean }) {
         super(msg, options);
         const {
@@ -46,14 +60,9 @@ export class SimpleError extends Error implements HasSimpleError {
             shortStack = false
         } = options || {};
         this.simple = simple;
+        Error.captureStackTrace(this, this.constructor);
         if(shortStack) {
-            const atIndex = parseRegexSingle(STACK_AT_REGEX,this.stack);
-            if(atIndex !== undefined) {
-                const firstn = this.stack.indexOf('\n', atIndex.index + atIndex.match.length);
-                if(firstn !== -1) {
-                    this.stack = this.stack.slice(0, firstn);
-                }
-            }
+            this.shortenStack();
         }
     }
 }
@@ -104,4 +113,19 @@ export class ScrobbleSubmitError<T extends (object | string) = object> extends U
         super(message, options);
         this.payload = options?.payload;
     }
+}
+
+export class AbortedError extends SimpleError {
+    name = 'Aborted Operation';
+}
+export const generateLoggableAbortReason = (msg: string, signal: AbortSignal): AbortedError => {
+    const reason = signal.reason;
+    let err: AbortedError;
+    if(isAbortReasonErrorLike(signal)) {
+        err = new AbortedError(msg, {cause: reason});
+    } else {
+        err = new AbortedError(`${msg} => ${reason ?? 'No Reason Given'}`, {simple: true, shortStack: true});
+    }
+    Error.captureStackTrace(err, generateLoggableAbortReason);
+    return err;
 }
