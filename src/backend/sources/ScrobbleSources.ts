@@ -33,7 +33,7 @@ import { SubsonicData, SubSonicSourceConfig } from "../common/infrastructure/con
 import { VLCData, VLCSourceConfig } from "../common/infrastructure/config/source/vlc.js";
 import { WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.js";
 import { YTMusicData, YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
-import { YandexMusicBridgeSourceConfig } from "../common/infrastructure/config/source/ymbridge.js";
+import { YandexMusicBridgeData, YandexMusicBridgeSourceConfig } from "../common/infrastructure/config/source/ymbridge.js";
 import { SonosData, SonosSourceConfig } from "../common/infrastructure/config/source/sonos.js";
 import { WildcardEmitter } from "../common/WildcardEmitter.js";
 import { parseBool } from "../utils.js";
@@ -793,7 +793,24 @@ export default class ScrobbleSources {
                             options: transformPresetEnv('SONOS')
                         });
                     }
-                }    break;                       
+                }    break;
+                case 'ymbridge': {
+                    const yandex: YandexMusicBridgeData = {
+                        url: process.env.YMBRIDGE_URL,
+                        apiKey: process.env.YMBRIDGE_API_KEY,
+                    }
+                    if (!Object.values(yandex).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'ymbridge',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: yandex,
+                            options: transformPresetEnv('YMBRIDGE')
+                        });
+                    }
+                }    break;
                 default:
                     break;
             }
