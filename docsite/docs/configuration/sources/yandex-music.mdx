@@ -1,0 +1,79 @@
+---
+title: Yandex Music
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import JsonConfig from '!!raw-loader!@site/../config/ymbridge.json.example';
+
+Monitor your [**Yandex Music**](https://music.yandex.com) listening activity in real-time.
+
+This Source requires a third party docker container to communicate with Yandex Music, [`yandex-music-bridge`](https://github.com/Druidblack/yandex-music-bridge).
+
+<details>
+
+<summary>Example Docker Compose with `yandex-music-bridge`</summary>
+
+```yaml title="~/msData/docker-compose.yml"
+services:
+  multi-scrobbler:
+    image: foxxmd/multi-scrobbler
+    container_name: multi-scrobbler
+    environment:
+      - TZ=Etc/GMT
+      # ...your other sources/clients here
+
+      # add for yandex music
+      // highlight-start
+      - YMBRIDGE_URL=http://yandex-music-bridge:9980
+      - YMBRIDGE_API_KEY=change-me
+      // highlight-end
+
+    volumes:
+      - "./config:/config"
+    ports:
+      - "9078:9078"
+    restart: unless-stopped
+
+  // highlight-start
+  yandex-music-bridge:
+    image: ghcr.io/druidblack/yandex-music-bridge:latest
+    environment:
+      - TZ=Europe/Moscow
+      - YM_TOKEN=AgAAAAACO3_345345
+      - YM_API_KEY=change-me
+      - YM_PORT=9980
+      - YM_LANGUAGE=ru
+      - YM_ENABLE_YNISON=true
+      - YM_PUSH_TTL=45
+      - YM_QUEUE_CACHE_TTL=15
+      - YM_LOG_LEVEL=INFO
+    ports:
+      - "9980:9980"
+    restart: unless-stopped
+   // highlight-end
+```
+
+You will need to acquire your own token for `YM_TOKEN` used in [`yandex-music-bridge`](https://github.com/Druidblack/yandex-music-bridge) using the instructions provided there.
+
+</details>
+
+<DetailsAdmo type="tip" summary="Need Help?">
+
+If your issue is specifically related to [`yandex-music-bridge`](https://github.com/Druidblack/yandex-music-bridge) (errors in the container, usage instructions, general Yandex setup like token etc...) please open an issue on **that repository** instead of Multi-Scrobbler's.
+
+If you have issues specifically with the MS Source please mention [**Druidblack**](https://github.com/Druidblack) (`@Druidblack`) when opening an [issue](https://github.com/FoxxMD/multi-scrobbler/issues/new/choose) or [discussion](https://github.com/FoxxMD/multi-scrobbler/discussions/new/choose). Yandex Music is [not available](https://en.wikipedia.org/wiki/Yandex_Music) in the country of the main Multi-Scrobbler developer (FoxxMD) so they can only help troubleshooting general MS issues related to Yandex Music.
+
+</DetailsAdmo>
+
+## Configuration
+
+<Config config="YandexMusicBridgeSourceConfig" fileContent={JsonConfig} name="ymbridge">
+        | Environmental Variable | Required? | Default | Description                                                               |
+        | :--------------------- | :-------- | ------- | :------------------------------------------------------------------------ |
+        | `YMBRIDGE_URL`         | Yes       |         | `http://URL:PORT` for the `yandex-music-bridge` container                 |
+        | `YMBRIDGE_API_KEY`     | No        |         | The same key used for `YM_API_KEY` on the `yandex-music-bridge` container |
+</Config>
