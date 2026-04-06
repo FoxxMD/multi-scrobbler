@@ -5,6 +5,7 @@ import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { PlayObject, PlayObjectLifecycleless, URLData } from "../../core/Atomic.js";
 import {
     InternalConfig,
+    NO_DEVICE,
     NO_USER,
     PlayerStateData,
     PlayerStateDataMaybePlay,
@@ -239,7 +240,7 @@ export default class YandexMusicBridgeSource extends MemoryPositionalSource {
             return undefined;
         }
         return {
-            platformId: [this.lastBridgeData.queue_id ?? 'YandexMusicBridge', NO_USER],
+            platformId: [NO_DEVICE, NO_USER],
             sessionId: this.lastBridgeData.queue_id ?? this.lastBridgeData.track_id,
             status: REPORTED_PLAYER_STATUSES.stopped,
         };
@@ -266,7 +267,7 @@ export default class YandexMusicBridgeSource extends MemoryPositionalSource {
             }
 
             const playerState: PlayerStateData = {
-                platformId: [bridgeData.queue_id ?? 'YandexMusicBridge', 'SingleUser'],
+                platformId: [NO_DEVICE, NO_USER],
                 sessionId: bridgeData.queue_id ?? bridgeData.track_id,
                 status: playbackState.status,
                 play,
@@ -292,7 +293,7 @@ export default class YandexMusicBridgeSource extends MemoryPositionalSource {
             this.logger.trace(`Bridge returned no current track; keeping synthetic playback alive for ${playForKeepAlive.data.artists?.join(', ') ?? 'Unknown'} - ${playForKeepAlive.data.track ?? 'Unknown'}`);
 
             const playerState: PlayerStateData = {
-                platformId: [bridgeDataForKeepAlive.queue_id ?? 'YandexMusicBridge', 'SingleUser'],
+                platformId: [NO_DEVICE, NO_USER],
                 sessionId: bridgeDataForKeepAlive.queue_id ?? bridgeDataForKeepAlive.track_id,
                 status: REPORTED_PLAYER_STATUSES.playing,
                 play: playForKeepAlive,
@@ -323,7 +324,7 @@ const formatPlayObj = (obj: BridgeTrackData): PlayObject => {
         },
         meta: {
             trackProgressPosition: obj.progress_ms !== undefined && obj.progress_ms !== null ? obj.progress_ms / 1000 : undefined,
-            deviceId: obj.queue_id ?? 'YandexMusicBridge',
+            deviceId: NO_DEVICE,
             mediaPlayerName: 'Yandex Music',
             mediaPlayerVersion: 'bridge',
             comment: obj.track_id !== undefined ? `Yandex Track ${obj.track_id}` : undefined,
