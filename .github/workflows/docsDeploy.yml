@@ -28,13 +28,11 @@ jobs:
       - name: Install docusaurus dependencies
         run: npm ci
         working-directory: ./docsite
+
       - name: Build website
         env:
-          ANALYTICS: ${{ vars.ANALYTICS }}
-          ANALYTICS_DOMAIN: ${{ vars.ANALYTICS_DOMAIN }}
           RY_ANALYTICS: ${{ vars.RY_ANALYTICS }}
           RY_ANALYTICS_SITEID: ${{ vars.RY_ANALYTICS_SITEID }}
-          RY_ANALYTICS_REPLAY: ${{ vars.RY_ANALYTICS_REPLAY }}
           GSITEVERIFICATION: ${{ vars.GSITEVERIFICATION }}
           DOCS_BASE: '/multi-scrobbler'
         run: npm run build
@@ -43,7 +41,7 @@ jobs:
       # Popular action to deploy to GitHub Pages:
       # Docs: https://github.com/peaceiris/actions-gh-pages#%EF%B8%8F-docusaurus
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@373f7f263a76c20808c831209c920827a82a2847 #3.9.3
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e #4.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           # Build output to publish to the `gh-pages` branch:
@@ -55,3 +53,18 @@ jobs:
           # You can swap them out with your own user credentials.
           user_name: github-actions[bot]
           user_email: 41898282+github-actions[bot]@users.noreply.github.com
+
+      - name: Trigger dependent build
+        if: ${{ secrets.DOCS_DISPATCH_TOKEN != '' && vars.DOCS_REPO  !== ''}}
+        run: |
+          # Trigger builds in dependent repositories
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.DOCS_DISPATCH_TOKEN }}" \
+            "https://api.github.com/repos/${{ vars.DOCS_REPO }}/dispatches" \
+            -d "{
+              \"event_type\": \"release\",
+              \"client_payload\": {
+                \"commit\": \"${{ github.sha }}\"
+              }
+            }"
