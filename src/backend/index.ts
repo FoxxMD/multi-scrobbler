@@ -24,7 +24,10 @@ import { readJson } from './utils/DataUtils.js';
 import ScrobbleClients from './scrobblers/ScrobbleClients.js';
 import ScrobbleSources from './sources/ScrobbleSources.js';
 import { Notifiers } from './notifier/Notifiers.js';
-import { migrateToLatest } from './common/database/Database.js';
+import { getDb, getKyselyDb, migrateToLatest } from './common/database/Database.js';
+import { nanoid } from 'nanoid';
+import { generatePlay } from '../core/PlayTestUtils.js';
+import { asJsonPlayObject } from '../core/tests/utils/fixtures.js';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -98,6 +101,19 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         initLogger.info(`Version: ${root.get('version')}`);
 
         await migrateToLatest('ms', initLogger);
+
+        const db = getKyselyDb(getDb('ms'));
+
+        const res = await db.insertInto('play').values({
+            playedAt: dayjs().toISOString(),
+            seenAt: dayjs().toISOString(),
+            id: nanoid(),
+            lifecycleStage: 'queued',
+            componentName: 'mySpot',
+            componentType: 'spotify',
+            hasError: false,
+            data: JSON.stringify(generatePlay())
+        }).execute();
 
         //initLogger.info('Generating schema definitions...');
         //createVegaGenerator()

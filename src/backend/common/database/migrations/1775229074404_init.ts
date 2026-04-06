@@ -7,7 +7,7 @@ export async function up(db: Kysely<any>): Promise<void> {
 	.addColumn('id', 'text', (col) => col.primaryKey())
 	.addColumn('component_type', 'text', (col) => col.notNull())
 	.addColumn('component_name', 'text', (col) => col.notNull())
-	.addColumn('lifecycle_staged', 'text', (col) => col.notNull())
+	.addColumn('lifecycle_stage', 'text', (col) => col.notNull())
 	.addColumn('has_error', 'integer', (col) => col.notNull())
 	.addColumn('error', 'text')
 	.addColumn('played_at', 'text', (col) => col.notNull())
