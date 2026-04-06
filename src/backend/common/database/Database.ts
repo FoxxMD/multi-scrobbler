@@ -10,6 +10,7 @@ import {
 } from 'kysely'
 import { Database } from './kyselyTypes.js'
 import { NodeNativeSqliteDialect } from 'kysely-node-native-sqlite'
+import { SqliteDialect } from '@takinprofit/kysely-node-sqlite'
 import { childLogger, Logger } from '@foxxmd/logging';
 import { loggerNoop } from '../MaybeLogger.js';
 import { fileExists, fileOrDirectoryIsWriteable } from '../../utils/FSUtils.js';
@@ -34,8 +35,19 @@ export const getDb = (dbName: string = ':memory:'): DatabaseSync => {
 
 export const getKyselyDb = (nodeDb: DatabaseSync) => {
     return new Kysely<Database>({
-        dialect: new NodeNativeSqliteDialect(nodeDb),
-        plugins: [new CamelCasePlugin()]
+        // https://github.com/Takin-Profit/kysely-node-sqlite
+        dialect: new SqliteDialect({
+            database: nodeDb,
+            mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
+            stmntCache: {
+                maxSize: 100,
+                maxAge: 1000 * 60 * 1 // 1 minutes
+            }
+        }),
+        //dialect: new NodeNativeSqliteDialect(nodeDb),
+        plugins: [
+            new CamelCasePlugin()
+        ]
     });
 }
 
