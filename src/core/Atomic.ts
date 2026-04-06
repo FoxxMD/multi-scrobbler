@@ -22,6 +22,7 @@ export interface SourceStatusData {
     | 'endpointlz'
     | 'endpointlfm'
     | 'ytmusic'
+    | 'ymbridge'
     | 'mpris'
     | 'mopidy'
     | 'musiccast'

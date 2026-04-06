@@ -19,6 +19,7 @@ import { SubsonicSourceAIOConfig, SubSonicSourceConfig } from "./subsonic.js";
 import { VLCSourceAIOConfig, VLCSourceConfig } from "./vlc.js";
 import { WebScrobblerSourceAIOConfig, WebScrobblerSourceConfig } from "./webscrobbler.js";
 import { YTMusicSourceAIOConfig, YTMusicSourceConfig } from "./ytmusic.js";
+import { YandexMusicBridgeSourceAIOConfig, YandexMusicBridgeSourceConfig } from "./ymbridge.js";
 import { IcecastSourceAIOConfig, IcecastSourceConfig } from "./icecast.js";
 import { KoitoSourceAIOConfig, KoitoSourceConfig } from "./koito.js";
 import { MalojaSourceAIOConfig, MalojaSourceConfig } from "./maloja.js";
@@ -40,6 +41,7 @@ export type SourceConfig =
     | LastfmSourceConfig
     | LibrefmSourceConfig
     | YTMusicSourceConfig
+    | YandexMusicBridgeSourceConfig
     | MPRISSourceConfig
     | MopidySourceConfig
     | ListenBrainzSourceConfig
@@ -71,6 +73,7 @@ export type SourceAIOConfig =
     | LastFmSouceAIOConfig
     | LibrefmSouceAIOConfig
     | YTMusicSourceAIOConfig
+    | YandexMusicBridgeSourceAIOConfig
     | MPRISSourceAIOConfig
     | MopidySourceAIOConfig
     | ListenBrainzSourceAIOConfig
@@ -108,6 +111,7 @@ export type JellyApiSourceConfigs = JellyApiSourceConfig[];
 export type LastfmSourceConfigs = LastfmSourceConfig[];
 export type LibrefmSourceConfigs = LibrefmSourceConfig[];
 export type YTMusicSourceConfigs = YTMusicSourceConfig[];
+export type YandexMusicBridgeSourceConfigs = YandexMusicBridgeSourceConfig[];
 export type MPRISSourceConfigs = MPRISSourceConfig[];
 export type MopidySourceConfigs = MopidySourceConfig[];
 export type ListenBrainzSourceConfigs = ListenBrainzSourceConfig[];
@@ -139,6 +143,7 @@ export type SourceType =
     | 'endpointlz'
     | 'endpointlfm'
     | 'ytmusic'
+    | 'ymbridge'
     | 'mpris'
     | 'mopidy'
     | 'musiccast'
@@ -169,6 +174,7 @@ export const sourceTypes: SourceType[] = [
     'endpointlz',
     'endpointlfm',
     'ytmusic',
+    'ymbridge',
     'mpris',
     'mopidy',
     'musiccast',
@@ -201,6 +207,7 @@ export const atomicSourceInterfaces = [
     'LastfmSourceConfig',
     'LibrefmSourceConfig',
     'YTMusicSourceConfig',
+    'YandexMusicBridgeSourceConfig',
     'MalojaSourceConfig',
     'MPRISSourceConfig',
     'MopidySourceConfig',

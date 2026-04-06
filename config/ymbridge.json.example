@@ -1,0 +1,11 @@
+[
+  {
+    "name": "Yandex Music",
+    "type": "ymbridge",
+    "data": {
+      "url": "http://192.168.1.161:9980",
+      "apiKey": "change-me",
+      "interval": 5
+    }
+  }
+]
