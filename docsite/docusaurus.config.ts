@@ -220,28 +220,22 @@ const config: Config = {
         showRunmeLink: false,
         runmeLinkLabel: 'Checkout via Runme'
       }
-    } satisfies Preset.ThemeConfig,
-    headTags: [
-      {
-        tagName: 'meta',
-        attributes: {
-          name: 'google-site-verification',
-          content: process.env.GSITEVERIFICATION ?? 'none'
-        }
-      }
-    ]
+    } satisfies Preset.ThemeConfig
 };
 
-if (process.env.ANALYTICS !== undefined && process.env.ANALYTICS !== '') {
-  const script = {
-    src: process.env.ANALYTICS,
-    defer: true
-  }
-  if (process.env.ANALYTICS_DOMAIN !== undefined && process.env.ANALYTICS_DOMAIN !== '') {
-    script['data-domain'] = process.env.ANALYTICS_DOMAIN;
-  }
-  config.scripts.push(script)
+const gverify = process.env.GSITEVERIFICATION;
+if(gverify !== undefined && gverify !== null && gverify.trim() !== '') {
+  config.headTags = [
+    {
+      tagName: 'meta',
+      attributes: {
+        name: 'google-site-verification',
+        content: gverify
+      }
+    }
+  ]
 }
+
 if (process.env.RY_ANALYTICS !== undefined && process.env.RY_ANALYTICS !== '') {
   const script = {
     src: process.env.RY_ANALYTICS,
@@ -249,9 +243,6 @@ if (process.env.RY_ANALYTICS !== undefined && process.env.RY_ANALYTICS !== '') {
   }
   if (process.env.RY_ANALYTICS_SITEID !== undefined && process.env.RY_ANALYTICS_SITEID !== '') {
     script['data-site-id'] = process.env.RY_ANALYTICS_SITEID;
-  }
-  if (process.env.RY_ANALYTICS_REPLAY !== undefined && process.env.RY_ANALYTICS_REPLAY !== '') {
-    script['data-session-replay'] = process.env.RY_ANALYTICS_REPLAY;
   }
   config.scripts.push(script)
 }
