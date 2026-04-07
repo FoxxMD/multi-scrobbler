@@ -1,6 +1,7 @@
 import type * as Preset from '@docusaurus/preset-classic';
 import type { Config } from '@docusaurus/types';
 import * as themes from 'prism-react-renderer';
+import * as Renderers from './lib/ImageRenderers.js';
 //import sidebars from './sidebars';
 
 let baseSite = 'https://foxxmd.github.io';
@@ -132,7 +133,17 @@ const config: Config = {
           },
         ]
       }
-    ]
+    ],
+          [
+        '@bony_chops/docusaurus-og',
+        {
+          path: './preview-images', // relative to the build directory
+          imageRenderers: {
+              'docusaurus-plugin-content-docs': Renderers.docs,
+              'docusaurus-plugin-content-pages': Renderers.docs,
+          },
+        },
+        ],
   ],
   themeConfig:
     {

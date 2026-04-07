@@ -4,7 +4,7 @@ import { useColorMode } from '@docusaurus/theme-common';
 
 const STRINGIFY_JSON = (json: unknown) => JSON.stringify(json, null, "\t");
 import "../modern-json-react-styles.css";
-import { JSONSchema, ReactJsonEditor, createAjvValidator, type Content, type Validator } from 'modern-react-json-editor';
+import { JSONSchema, Mode, ReactJsonEditor, createAjvValidator, type Content, type Validator } from 'modern-react-json-editor';
 import f from "ajv-formats"
 import json5 from 'json5';
 
@@ -58,7 +58,7 @@ function SchemaEditorInner(props: SchemaEditorProps): JSX.Element {
             <ReactJsonEditor
                 validator={validator}
                 theme={colorMode}
-                mode="text"
+                mode={"text" as Mode.text}
                 content={initialData}
                 style={{height: 'initial'}}
             />
