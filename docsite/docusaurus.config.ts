@@ -5,7 +5,7 @@ import * as themes from 'prism-react-renderer';
 
 let baseSite = 'https://foxxmd.github.io';
 const baseSiteEnv = process.env.BASE_SITE;
-if(baseSite !== undefined && baseSite !== null && baseSite.trim() !== '') {
+if(baseSiteEnv !== undefined && baseSiteEnv !== null && baseSiteEnv.trim() !== '') {
   baseSite = baseSiteEnv;
 }
 
