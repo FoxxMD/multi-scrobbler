@@ -6,7 +6,7 @@ export interface VLCData extends CommonSourceData, PollingOptions {
     /**
      * URL:PORT of the VLC server to connect to
      *
-     * To use this you must have the Web (http) interface module enabled and a password set https://foxxmd.github.io/multi-scrobbler/docs/configuration#vlc
+     * To use this you must have the Web (http) interface module enabled and a password set
      *
      * @examples ["localhost:8080"]
      * @default "localhost:8080"

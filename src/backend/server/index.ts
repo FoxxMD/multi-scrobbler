@@ -59,7 +59,7 @@ export const initServer = async (parentLogger: Logger, appLoggerStream: PassThro
             dockerHint = stripIndents`
             --- HINT ---
             MS is likely being run in a container with BRIDGE networking which means the above addresses are not accessible from outside this container.
-            To ensure the container is accessible make sure you have mapped the *container* port ${port} to a *host* port. https://foxxmd.github.io/multi-scrobbler/docs/installation#networking
+            To ensure the container is accessible make sure you have mapped the *container* port ${port} to a *host* port. https://docs.multi-scrobbler.app/installation/?dockerSetting=networking#recommended-settings
             The container will then be accessible at http://HOST_MACHINE_IP:HOST_PORT${localDefined ? ` (or ${local} since you defined this!)` : ''}
             --- HINT ---
             `;
