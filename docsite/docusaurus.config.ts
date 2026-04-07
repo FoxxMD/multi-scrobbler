@@ -3,6 +3,12 @@ import type { Config } from '@docusaurus/types';
 import * as themes from 'prism-react-renderer';
 //import sidebars from './sidebars';
 
+let baseSite = 'https://foxxmd.github.io';
+const baseSiteEnv = process.env.BASE_SITE;
+if(baseSite !== undefined && baseSite !== null && baseSite.trim() !== '') {
+  baseSite = baseSiteEnv;
+}
+
 const config: Config = {
   future: {
     v4: {
@@ -19,7 +25,7 @@ const config: Config = {
   favicon: 'img/favicon.ico',
 
   // Set the production url of your site here
-  url: 'https://foxxmd.github.io',
+  url: baseSite,
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: process.env.DOCS_BASE !== undefined && process.env.DOCS_BASE !== '' ? process.env.DOCS_BASE : '/docs',
@@ -158,7 +164,7 @@ const config: Config = {
             position: 'right',
           },
           {
-            href: 'https://foxxmd.github.io/multi-scrobbler/',
+            href: 'https://multi-scrobbler.app',
             label: 'Website',
             position: 'right',
           },
@@ -197,7 +203,7 @@ const config: Config = {
               },
               {
                 label: 'Website',
-                href: 'https://foxxmd.github.io/multi-scrobbler/',
+                href: 'https://multi-scrobbler.app',
               },
             ],
           },
