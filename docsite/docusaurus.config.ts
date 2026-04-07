@@ -1,4 +1,4 @@
-import type * as Preset from '@docusaurus/preset-classic';
+import * as Preset from '@docusaurus/preset-classic';
 import type { Config } from '@docusaurus/types';
 import * as themes from 'prism-react-renderer';
 import * as Renderers from './lib/ImageRenderers.js';
@@ -134,16 +134,16 @@ const config: Config = {
         ]
       }
     ],
-          [
-        '@bony_chops/docusaurus-og',
-        {
-          path: './preview-images', // relative to the build directory
-          imageRenderers: {
-              'docusaurus-plugin-content-docs': Renderers.docs,
-              'docusaurus-plugin-content-pages': Renderers.docs,
-          },
+    [
+      '@bony_chops/docusaurus-og',
+      {
+        path: './preview-images', // relative to the build directory
+        imageRenderers: {
+            'docusaurus-plugin-content-docs': Renderers.docs,
+            'docusaurus-plugin-content-pages': Renderers.docs,
         },
-        ],
+      },
+    ]
   ],
   themeConfig:
     {

@@ -23,23 +23,39 @@ const DocContent = (props: { data: DocsPageData }) => {
       width: '100%',
       display: 'flex',
       textAlign: 'center',
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: 'flex-start',
+      backgroundColor: "#1b1b1d",
+      color: 'white',
+      justifyContent: 'flex-start',
       flexDirection: 'column',
-      flexWrap: 'nowrap',
+      flexWrap: 'wrap',
+      padding: '2rem 0 0 2rem',
     }}>
 
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'space-between',
+        gap: '10px',
+        marginBottom: '2rem'
       }}>
-        {logo}
+        <img src="https://docs.multi-scrobbler.app/img/icon.png" width={64} height={64} />
+        <div style={{fontSize: 46, fontWeight: 600}}>Multi-Scrobbler Docs</div>
       </div>
-      <div style={{ display: 'flex' }}>title: {data.metadata.title}</div>
-      <div style={{ display: 'flex' }}>description: {data.metadata.description}</div>
-      <div style={{ display: 'flex' }}>frontmatter description: {data.metadata.frontMatter?.description}</div>
-      <div style={{ display: 'flex' }}>sidebar: {data.metadata.sidebar}</div>
+      <div style={{
+        display: 'flex',
+        alignContent: 'flex-start',
+        justifyContent: 'flex-start',
+        flexDirection: 'column',
+        gap: '10px',
+        paddingLeft: '1rem',
+        fontSize: 28
+      }}>
+      <div style={{ display: 'flex' }}>{data.metadata.title}</div>
+      {/* <div style={{ display: 'flex' }}>description: {data.metadata.description}</div> */}
+      {data.metadata.frontMatter?.description !== undefined ? <div style={{ display: 'flex' }}>frontmatter description: {data.metadata.frontMatter?.description}</div> : null}
+      {/* <div style={{ display: 'flex' }}>sidebar: {data.metadata.frontMatter?.sidebar_custom_props !== undefined ? JSON.stringify(data.metadata.frontMatter?.sidebar_custom_props) : ''}</div> */}
+      </div>
     </div>
   );
 }
