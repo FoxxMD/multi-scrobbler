@@ -6,9 +6,8 @@ import { ErrorAlert } from "./ErrorAlert";
 import { IoMdCodeDownload } from "react-icons/io";
 import { BiWrench } from "react-icons/bi";
 import { IoMusicalNoteOutline } from "react-icons/io5";
-import { PiMagnifyingGlassDuotone } from "react-icons/pi";
+import { HiMiniMagnifyingGlass } from "react-icons/hi2";
 import { TbDatabaseEdit } from "react-icons/tb";
-import { MdFiberNew } from "react-icons/md";
 import { capitalize } from "../../core/StringUtils";
 import { shortTodayAwareFormat, todayAwareFormat } from "../../core/TimeUtils";
 import dayjs from "dayjs";
@@ -156,7 +155,7 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                         <Timeline.Separator />
                         <Timeline.Indicator>
                             <Icon fontSize="lg" color={`${match.match ? 'orange' : 'green'}.focusRing`}>
-                                <PiMagnifyingGlassDuotone />
+                                <HiMiniMagnifyingGlass />
                             </Icon>
                         </Timeline.Indicator>
                     </Timeline.Connector>

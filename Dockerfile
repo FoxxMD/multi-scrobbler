@@ -115,6 +115,12 @@ RUN npm ci --omit=dev --no-audit \
     && npm uninstall ts-json-schema-generator \
     && npm cache clean --force \
     && chown -R abc:abc node_modules \
+    # added superflously https://github.com/Borewit/rate-limit-threshold/issues/110
+    && rm -R node_modules/@biomejs \
+    # unneeded icons
+    && rm -R node_modules/react-icons/gi \
+    && rm -R node_modules/react-icons/pi \
+    && rm -R node_modules/react-icons/si \
     && rm -rf /root/.cache
 
 

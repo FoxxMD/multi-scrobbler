@@ -3,12 +3,9 @@ import { Timeline, Icon, Span, Stack, Heading, Box, Text } from '@chakra-ui/reac
 import { JsonPlayObject, LifecycleStep } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
 import { ErrorAlert } from "./ErrorAlert";
-import { BiWrench } from "react-icons/bi";
 import { BsSkipForward } from "react-icons/bs";
-import { LuCheck, LuCircleX } from "react-icons/lu";
 import { BsStoplights } from "react-icons/bs";
 import { BsExclamationTriangle, BsExclamationOctagon } from "react-icons/bs";
-import { FaStop } from "react-icons/fa";
 import { MdMusicNote } from "react-icons/md";
 import { ChakraCodeBlockShort, ChakraPlainBlockShort } from "./CodeBlock";
 import { JsonDiffPatch } from "./JsonDiff";
