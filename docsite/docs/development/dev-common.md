@@ -3,7 +3,7 @@ toc_min_heading_level: 2
 toc_max_heading_level: 5
 sidebar_position: 1
 title: Common Development
-description: Start here for MS development
+description: Common Development Knowledge
 ---
 
 # Development
@@ -177,7 +177,7 @@ For more refer to the TS documentation for `PlayObject` or [`AmbPlayObject`](htt
 ## Creating Clients and Sources
 
 * [Source Development and Tutorial](dev-source.md)
-* [Client Development and Tutorial](dev-client.md)
+* Client Development and Tutorial (TBD)
 
 ## Profiling
 

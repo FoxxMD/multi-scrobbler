@@ -3,6 +3,7 @@ toc_min_heading_level: 2
 toc_max_heading_level: 5
 sidebar_position: 2
 title: Source Development/Tutorial
+description: Developing a new Source
 ---
 
 This document will provide a step-by-step guide for creating a (trivial) new Source in MS alongside describing what aspects of the Source need to be implemented based on the service you use. Before using this document you should review [Common Development](dev-common.md#common-development).
