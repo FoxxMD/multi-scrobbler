@@ -3,7 +3,7 @@ toc_min_heading_level: 2
 toc_max_heading_level: 5
 sidebar_position: 4
 title: Flatpak
-description: Building Flatpak App locally
+description: Building Flatpak App
 ---
 
 ## Install Requirements

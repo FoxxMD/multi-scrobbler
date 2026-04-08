@@ -151,3 +151,4 @@ tmp-*
 
 *storybook.log
 storybook-static
+lib

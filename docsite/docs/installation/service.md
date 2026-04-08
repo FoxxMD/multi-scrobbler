@@ -1,6 +1,7 @@
 ---
 sidebar_position: 2
-title: 'As a Service'
+title: As a Service
+description: Local Install as a Service
 ---
 
 If you have multi-scrobbler installed [locally](installation.mdx#nodejs) you can enable it to run as a background service when you login.

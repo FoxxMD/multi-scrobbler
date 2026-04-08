@@ -6,10 +6,10 @@ import CodeBlock from '@theme/CodeBlock';
 import Schema from "@site/static/schemas/aio.json";
 import ConfigExample from "@site/static/configExample.json";
 import './Playground.scss';
-import { JsonSchemaViewer } from 'cf-json-schema-viz';
+import { JSONSchema, JsonSchemaViewer } from 'cf-json-schema-viz';
 import "./json-schema-viewer-styles.css";
 import "./modern-json-react-styles.css";
-import { ReactJsonEditor, createAjvValidator, type Content  } from 'modern-react-json-editor';
+import { Mode, ReactJsonEditor, createAjvValidator, type Content  } from 'modern-react-json-editor';
 import f from "ajv-formats"
 import DetailsAdmo from "./AdmonitionDetails";
 
@@ -47,10 +47,9 @@ function PlaygroundInner(): JSX.Element {
                     <p>Use this to understand how to write a valid config.</p>
                 </DetailsAdmo>
                 <JsonSchemaViewer
-                name="Todos Model"
-                schema={Schema}
-                expanded={false}
-                hideTopBar={false}
+                schema={Schema as JSONSchema}
+                // expanded={false}
+                // hideTopBar={false}
                 renderRootTreeLines={true}
                 emptyText="No schema defined"
                 defaultExpandedDepth={0}
@@ -93,7 +92,7 @@ function PlaygroundInner(): JSX.Element {
     validator={validator} 
     theme={colorMode} 
     content={data}
-    mode="text"
+    mode={"text" as Mode.text}
     style={{height: 'initial'}}
      />
                 )}

@@ -1,12 +1,19 @@
-import type * as Preset from '@docusaurus/preset-classic';
+import * as Preset from '@docusaurus/preset-classic';
 import type { Config } from '@docusaurus/types';
 import * as themes from 'prism-react-renderer';
+import * as Renderers from './lib/socialCard/ImageRenderers.js';
 //import sidebars from './sidebars';
 
 let baseSite = 'https://foxxmd.github.io';
-const baseSiteEnv = process.env.BASE_SITE;
-if(baseSiteEnv !== undefined && baseSiteEnv !== null && baseSiteEnv.trim() !== '') {
-  baseSite = baseSiteEnv;
+// https://docs.netlify.com/build/configure-builds/environment-variables/#deploy-urls-and-metadata
+const netlifyDeploy = process.env.DEPLOY_PRIME_URL;
+if(netlifyDeploy !== undefined && netlifyDeploy !== null && netlifyDeploy.trim() !== '') {
+  baseSite = netlifyDeploy;
+} else {
+  const baseSiteEnv = process.env.BASE_SITE;
+  if(baseSiteEnv !== undefined && baseSiteEnv !== null && baseSiteEnv.trim() !== '') {
+    baseSite = baseSiteEnv;
+  }
 }
 
 const config: Config = {
@@ -132,6 +139,16 @@ const config: Config = {
           },
         ]
       }
+    ],
+    [
+      '@bony_chops/docusaurus-og',
+      {
+        path: './preview-images', // relative to the build directory
+        imageRenderers: {
+            'docusaurus-plugin-content-docs': Renderers.docs,
+            'docusaurus-plugin-content-pages': Renderers.docs,
+        },
+      },
     ]
   ],
   themeConfig:

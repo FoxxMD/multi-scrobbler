@@ -32,7 +32,7 @@ export default function Playground(): JSX.Element {
     return (
         <Layout
             title={`Playground`}
-            description="Config Playground"
+            description="Playground"
         >
             <PlaygroundComponent />
         </Layout>
