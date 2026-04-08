@@ -121,6 +121,7 @@ RUN npm ci --omit=dev --no-audit \
     && rm -R node_modules/react-icons/gi \
     && rm -R node_modules/react-icons/pi \
     && rm -R node_modules/react-icons/si \
+    && npx @usex/prune-mod -w \
     && rm -rf /root/.cache
 
 
