@@ -16,7 +16,7 @@
     "build:backend": "tsc -p src/backend && npm run -s schema:app",
     "build": "npm run -s build:backend && npm run -s build:frontend && npm run -s docs:build",
     "build:parallel": "concurrently --kill-others-on-fail --names backend,frontend,docs \"npm run -s build:backend\" \"npm run -s build:frontend\" \"npm run docs:build\"",
-    "docs:install": "cd docsite && npm ci --no-audit",
+    "docs:install": "cd docsite && npm install --no-audit",
     "docs:start": "cd docsite && npm start",
     "docs:build": "npm run -s schema:docs && cd docsite && npm run build",
     "docs:netlify": "npm run -s docs:install && npm run -s docs:build",

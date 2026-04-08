@@ -65,7 +65,8 @@ FROM base AS build
 
 COPY --chown=abc:abc package*.json tsconfig.json ./
 COPY --chown=abc:abc patches ./patches
-COPY --chown=abc:abc docsite/package*.json tsconfig.json ./docsite/
+COPY --chown=abc:abc docsite/patches ./docsite/patches
+COPY --chown=abc:abc docsite/package*.json docsite/tsconfig* ./docsite/
 
 # for debugging, so the build fails faster when timing out (arm64)
 #RUN npm config set fetch-retries 1 && \
