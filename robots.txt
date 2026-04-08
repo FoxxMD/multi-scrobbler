@@ -1,4 +1,4 @@
-Sitemap: https://foxxmd.github.io/multi-scrobbler/sitemap.xml
+Sitemap: https://docs.multi-scrobbler.app/sitemap.xml
 
 User-agent: *
 Allow: /
