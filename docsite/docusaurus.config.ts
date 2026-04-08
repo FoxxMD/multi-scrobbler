@@ -1,7 +1,7 @@
 import * as Preset from '@docusaurus/preset-classic';
 import type { Config } from '@docusaurus/types';
 import * as themes from 'prism-react-renderer';
-import * as Renderers from './lib/ImageRenderers.js';
+import * as Renderers from './lib/socialCard/ImageRenderers.js';
 //import sidebars from './sidebars';
 
 let baseSite = 'https://foxxmd.github.io';
