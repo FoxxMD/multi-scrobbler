@@ -5,9 +5,15 @@ import * as Renderers from './lib/socialCard/ImageRenderers.js';
 //import sidebars from './sidebars';
 
 let baseSite = 'https://foxxmd.github.io';
-const baseSiteEnv = process.env.BASE_SITE;
-if(baseSiteEnv !== undefined && baseSiteEnv !== null && baseSiteEnv.trim() !== '') {
-  baseSite = baseSiteEnv;
+// https://docs.netlify.com/build/configure-builds/environment-variables/#deploy-urls-and-metadata
+const netlifyDeploy = process.env.DEPLOY_PRIME_URL;
+if(netlifyDeploy !== undefined && netlifyDeploy !== null && netlifyDeploy.trim() !== '') {
+  baseSite = netlifyDeploy;
+} else {
+  const baseSiteEnv = process.env.BASE_SITE;
+  if(baseSiteEnv !== undefined && baseSiteEnv !== null && baseSiteEnv.trim() !== '') {
+    baseSite = baseSiteEnv;
+  }
 }
 
 const config: Config = {
