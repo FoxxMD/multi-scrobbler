@@ -109,6 +109,7 @@ COPY --from=base /usr/lib /usr/lib
 
 ENV NODE_ENV=production
 ENV IS_DOCKER=true
+ENV COLORED_STD=true
 
 # https://stackoverflow.com/a/63640896/1469797
 ARG APP_BUILD_VERSION
