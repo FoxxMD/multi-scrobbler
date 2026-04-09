@@ -1,7 +1,7 @@
 /* eslint-disable no-case-declarations */
 import { childLogger, Logger } from '@foxxmd/logging';
 import EventEmitter from "events";
-import { ConfigMeta, CONFIGURE_AS, ConfigureAs, ConfigureAsSource, InternalConfig, InternalConfigOptional } from "../common/infrastructure/Atomic.js";
+import { ConfigMeta, ConfigureAs, ConfigureAsSource, InternalConfig, InternalConfigOptional } from "../common/infrastructure/Atomic.js";
 import { isSourceType } from '../common/infrastructure/config/source/sources.js';
 import { sourceTypes } from '../common/infrastructure/config/source/sources.js';
 import { SourceType } from '../common/infrastructure/config/source/sources.js';
@@ -270,7 +270,7 @@ export default class ScrobbleSources {
         }
 
         for (const sourceType of sourceTypes) {
-            let defaultConfigureAs: ConfigureAsSource = CONFIGURE_AS.source;
+            let defaultConfigureAs: ConfigureAsSource = 'source';
             // env builder for single user mode
             switch (sourceType) {
                 case 'spotify':
