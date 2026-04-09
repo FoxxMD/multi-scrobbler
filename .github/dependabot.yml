@@ -32,5 +32,8 @@ updates:
       interval: "weekly"
   - package-ecosystem: "github-actions"
     directory: "/"
+    groups:
+      sec-updates:
+        applies-to: "security-updates"
     schedule:
       interval: "weekly"
