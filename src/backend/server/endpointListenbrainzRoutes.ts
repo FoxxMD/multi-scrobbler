@@ -1,5 +1,5 @@
 /* eslint-disable prefer-arrow-functions/prefer-arrow-functions */
-import { ExpressWithAsync } from "@awaitjs/express";
+import { Express } from 'express';
 import { childLogger, Logger } from "@foxxmd/logging";
 import bodyParser from "body-parser";
 import { EndpointListenbrainzSource, playStateFromRequest, parseDisplayIdentifiersFromRequest } from "../sources/EndpointListenbrainzSource.js";
@@ -10,7 +10,7 @@ import { isDebugMode } from "../utils.js";
 
 const TEXT_WILDCARD_REGEX = new RegExp(/text\/.+/);
 
-export const setupLZEndpointRoutes = (app: ExpressWithAsync, parentLogger: Logger, scrobbleSources: ScrobbleSources) => {
+export const setupLZEndpointRoutes = (app: Express, parentLogger: Logger, scrobbleSources: ScrobbleSources) => {
 
     const logger = childLogger(parentLogger, ['Ingress', 'Listenbrainz']);
 
@@ -30,7 +30,7 @@ export const setupLZEndpointRoutes = (app: ExpressWithAsync, parentLogger: Logge
     const nonEmptyCheck = nonEmptyBody(logger, 'LZ Endpoint');
 
     const webhookIngress = new LZEndpointNotifier(logger);
-    app.useAsync(/(\/api\/listenbrainz.*)|(\/1\/submit-listens\/?$)/,
+    app.use(/(\/api\/listenbrainz.*)|(\/1\/submit-listens\/?$)/,
         async function (req, res, next) {
             // track request before parsing body to ensure we at least log that something is happening
             // (in the event body parsing does not work or request is not POST/PATCH)
@@ -67,7 +67,7 @@ export const setupLZEndpointRoutes = (app: ExpressWithAsync, parentLogger: Logge
                 await source.handle(playerState);
             }
         });
-    app.getAsync('/1/validate-token', async function (req, res) {
+    app.get('/1/validate-token', async function (req, res) {
         //https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-validate-token
         logger.info('Validated token');
         return res.status(200).json({
@@ -77,7 +77,7 @@ export const setupLZEndpointRoutes = (app: ExpressWithAsync, parentLogger: Logge
             user_name: "Multi-Scrobbler"
         })
     });
-    app.useAsync(/\/1\/.*/, async function (req, res) {
+    app.use(/\/1\/.*/, async function (req, res) {
         logger.warn(`Received what looks like a Listenbrainz Endpoint request but it was to an invalid URL route: ${req.originalUrl}\nMake sure base URL path to MS endpoint is correct.`);
         res.status(404);
     });

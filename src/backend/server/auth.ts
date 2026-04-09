@@ -1,4 +1,4 @@
-import { ExpressWithAsync } from "@awaitjs/express";
+import { Express } from 'express';
 import { Logger } from "@foxxmd/logging";
 import passport from "passport";
 import { ExpressHandler } from "../common/infrastructure/Atomic.js";
@@ -18,9 +18,9 @@ import LibrefmSource from "../sources/LibrefmSource.js";
 import e from "express";
 import AbstractSource from "../sources/AbstractSource.js";
 
-export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMiddle: ExpressHandler, clientMiddle: ExpressHandler, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
+export const setupAuthRoutes = (app: Express, logger: Logger, sourceMiddle: ExpressHandler, clientMiddle: ExpressHandler, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
     app.use('/api/client/auth', clientMiddle);
-    app.getAsync('/api/client/auth', async (req, res) => {
+    app.get('/api/client/auth', async (req, res) => {
         const {
             scrobbleClient,
         } = req as any;
@@ -40,7 +40,7 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
     });
 
     app.use('/api/source/auth', sourceMiddle);
-    app.getAsync('/api/source/auth', async (req, res, next) => {
+    app.get('/api/source/auth', async (req, res, next) => {
         const {
             // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleSource: source,
@@ -74,7 +74,7 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
         }
     });
 
-    app.getAsync(/.*callback$/, async (req, res, next) => {
+    app.get(/.*callback$/, async (req, res, next) => {
         if(req.url.indexOf('/api') !== 0) {
             return res.redirect(307, `/api${req.url}`);
         }
@@ -155,7 +155,7 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
         }
     });
 
-    app.getAsync(/(\/api\/tealfm\/.*)/, async function (req, res) {
+    app.get(/(\/api\/tealfm\/.*)/, async function (req, res) {
 
         const clients = scrobbleClients.getByType('tealfm') as TealScrobbler[];
         if (clients.length === 0) {
