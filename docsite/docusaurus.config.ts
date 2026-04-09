@@ -2,6 +2,7 @@ import * as Preset from '@docusaurus/preset-classic';
 import type { Config } from '@docusaurus/types';
 import * as themes from 'prism-react-renderer';
 import * as Renderers from './lib/socialCard/ImageRenderers.js';
+import path from 'node:path';
 //import sidebars from './sidebars';
 
 let baseSite = 'https://foxxmd.github.io';
@@ -69,8 +70,15 @@ const config: Config = {
           routeBasePath: '/',
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+          editUrl: (params: {
+              version: string;
+              versionDocsDirPath: string;
+              docPath: string;
+              permalink: string;
+              locale: string;
+            }) => {
+              return `${path.join('https://github.com/FoxxMD/multi-scrobbler/blob/master/docsite', params.versionDocsDirPath, params.docPath)}?plain=1`;
+            }
         },
         // blog: {
         //   showReadingTime: true,
