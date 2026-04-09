@@ -97,8 +97,12 @@ LABEL org.opencontainers.image.source="https://github.com/FoxxMD/multi-scrobbler
 
 COPY --chown=abc:abc *.json *.js *.ts index.html ./
 COPY --chown=abc:abc patches ./patches
+# frontend build from vite/esbuild
 COPY --from=build --chown=abc:abc /app/dist /app/dist
-COPY --from=build --chown=abc:abc /app/src /app/src
+# backend
+COPY --from=build --chown=abc:abc /app/src/backend /app/src/backend
+COPY --from=build --chown=abc:abc /app/src/core /app/src/core
+# docusaurus docs
 COPY --from=build --chown=abc:abc /app/docsite /app/docsite
 COPY --from=base /usr/bin /usr/bin
 COPY --from=base /usr/lib /usr/lib
@@ -117,10 +121,6 @@ RUN npm ci --omit=dev --no-audit \
     && chown -R abc:abc node_modules \
     # added superflously https://github.com/Borewit/rate-limit-threshold/issues/110
     && rm -R node_modules/@biomejs \
-    # unneeded icons
-    && rm -R node_modules/react-icons/gi \
-    && rm -R node_modules/react-icons/pi \
-    && rm -R node_modules/react-icons/si \
     && npx @usex/prune-mod -w \
     && rm -rf /root/.cache
 
