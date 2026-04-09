@@ -7,18 +7,14 @@ version: 2
 updates:
   - package-ecosystem: "npm" # See documentation for possible values
     groups:
-      production-sec-dependencies:
-        dependency-type: "production"
+      sec-updates:
         applies-to: "security-updates"
-      development-sec-dependencies:
-        dependency-type: "development"
-        applies-to: "security-updates"
-      production-version-dependencies:
-        dependency-type: "production"
+        patterns:
+          - "*"
+      version-updates:
         applies-to: "version-updates"
-      development-version-dependencies:
-        dependency-type: "development"
-        applies-to: "version-updates"
+        patterns:
+          - "*"
     directories:
       - "/"
       - "/docsite"
