@@ -42,9 +42,6 @@ import {
 from "@jellyfin/sdk/lib/index.js";
 import dayjs from "dayjs";
 import EventEmitter from "events";
-import { nanoid } from "nanoid";
-import pEvent from "p-event";
-import { Simulate } from "react-dom/test-utils";
 import { BrainzMeta, PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
 import { buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import {

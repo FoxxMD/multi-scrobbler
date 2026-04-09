@@ -83,16 +83,24 @@ export const initServer = async (parentLogger: Logger, appLoggerStream: PassThro
             process.env.USE_HASH_ROUTER = root.get('isSubPath').toString();
         }
 
-        const conf = await ViteExpress.getViteConfig();
+        
 
-        ViteExpress.config({
+        const viteExpressOptions: Parameters<typeof ViteExpress.config>[0] = {
             mode: isProd ? 'production' : 'development',
             inlineViteConfig: {
-                ...conf,
                 base: localDefined && local.pathname !== '/' ? local.toString() : '/'
             }
-        });
-        ViteExpress.getViteConfig
+        };
+
+        if(!isProd) {
+            const conf = await ViteExpress.getViteConfig();
+            viteExpressOptions.inlineViteConfig = {
+                ...viteExpressOptions.inlineViteConfig,
+                ...conf
+            };
+        }
+
+        ViteExpress.config(viteExpressOptions);
         try {
             ViteExpress.listen(app, port, () => {
                 const start = stripIndents`\n
@@ -115,3 +123,14 @@ export const initServer = async (parentLogger: Logger, appLoggerStream: PassThro
         throw new Error('Server crashed with uncaught exception', {cause: e});
     }
 }
+
+type ViteConfig = {
+    root: string;
+    base: string;
+    build: {
+        outDir: string;
+    };
+    server?: {
+        hmr?: boolean;
+    };
+};

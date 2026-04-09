@@ -2,9 +2,6 @@ import React, { Fragment, useMemo } from "react"
 import CodeBlock, {Props as CodeBlockProps} from '@theme/CodeBlock';
 import Admonition from '@theme/Admonition';
 import ErrorBoundary from "@docusaurus/ErrorBoundary"
-import Error from "@theme/Error"
-import { Simulate } from "react-dom/test-utils";
-import error = Simulate.error;
 import json5 from 'json5';
 import FileExample, { FileProps } from "./FileExample";
 

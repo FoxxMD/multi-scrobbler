@@ -1,9 +1,7 @@
 import { childLogger, Logger } from "@foxxmd/logging";
-import { Simulate } from "react-dom/test-utils";
 import {truncateStringToLength } from "../../core/StringUtils.js";
 import { hasNodeNetworkException } from "./errors/NodeErrors.js";
 import { hasUpstreamError } from "./errors/UpstreamError.js";
-import play = Simulate.play;
 import { WebhookPayload } from "./infrastructure/config/health/webhooks.js";
 import { AuthCheckError, BuildDataError, ConnectionCheckError, ParseCacheError, PostInitError, StageError, TransformRulesError } from "./errors/MSErrors.js";
 import { messageWithCauses, messageWithCausesTruncatedDefault } from "../utils/ErrorUtils.js";

@@ -13,6 +13,7 @@ config/*.json
 config/*.bak
 config/*.p8
 /docs
+dist
 /logs
 .flatpak-builder
 **/generated-sources.*
