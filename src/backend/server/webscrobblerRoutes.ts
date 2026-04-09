@@ -25,13 +25,13 @@ export const setupWebscrobblerRoutes = (app: Express, parentLogger: Logger, scro
         // }
     });
     const webhookIngress = new WebhookNotifier(logger);
-    app.options('/api/webscrobbler*', async (req, res, next) => {
+    app.options('/api/webscrobbler*path', async (req, res, next) => {
         webhookIngress.trackIngress(req, true);
         next();
     },
         cors(corsOpts));
 
-    app.post('/api/webscrobbler*',
+    app.post('/api/webscrobbler*path',
         async (req, res, next) => {
             webhookIngress.trackIngress(req, true);
             next();

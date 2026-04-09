@@ -563,7 +563,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
        return res.json({version: root.get('version')});
     });
 
-    app.use('/api/*', async (req, res) => {
+    app.use('/api/*path', async (req, res) => {
         const remote = req.connection.remoteAddress;
         const proxyRemote = req.headers["x-forwarded-for"];
         const ua = req.headers["user-agent"];
