@@ -35,5 +35,7 @@ updates:
     groups:
       sec-updates:
         applies-to: "security-updates"
+        patterns:
+          - "*"
     schedule:
       interval: "weekly"
