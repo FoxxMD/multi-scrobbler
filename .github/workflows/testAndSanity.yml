@@ -6,7 +6,7 @@ on:
       node-version:
         description: "Node version"
         required: false
-        default: '20.x'
+        default: '24.x'
         type: string
       ref:
         description: "Ref to checkout"
