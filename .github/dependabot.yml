@@ -37,5 +37,9 @@ updates:
         applies-to: "security-updates"
         patterns:
           - "*"
+      version-updates:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
     schedule:
       interval: "weekly"
