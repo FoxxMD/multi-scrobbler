@@ -3,7 +3,6 @@ import {
     cacheFunctions,
 } from "@foxxmd/regex-buddy-core";
 import deepEqual from 'fast-deep-equal';
-import { Simulate } from "react-dom/test-utils";
 import { LifecycleStep, PlayData, PlayObject, TransformResult } from "../../core/Atomic.js";
 import { buildPlayHumanDiffable, buildTrackString } from "../../core/StringUtils.js";
 import { CommonClientConfig } from "./infrastructure/config/client/index.js";

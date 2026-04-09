@@ -2,9 +2,6 @@ import React, { Fragment } from "react"
 import CodeBlock from '@theme/CodeBlock';
 import Admonition from '@theme/Admonition';
 import ErrorBoundary from "@docusaurus/ErrorBoundary"
-import Error from "@theme/Error"
-import { Simulate } from "react-dom/test-utils";
-import error = Simulate.error;
 import json5 from 'json5';
 
 export interface AIOProps {

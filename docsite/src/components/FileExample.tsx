@@ -1,9 +1,6 @@
 import React, { Fragment, useMemo } from "react"
 import CodeBlock, { Props as CodeBlockProps } from '@theme/CodeBlock';
-import Admonition from '@theme/Admonition';
 import ErrorBoundary from "@docusaurus/ErrorBoundary"
-import Error from "@theme/Error"
-import { Simulate } from "react-dom/test-utils";
 import { useTypedLocalStorage } from "./useLocalStorage";
 import ButtonGroup from "./ButtonGroup";
 import EditorFetch from '@site/src/components/Schema/SchemaEditorFetch';
