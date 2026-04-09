@@ -18,12 +18,12 @@
   },
   "dependencies": {
     "@bony_chops/docusaurus-og": "^1.0.3-beta.3",
-    "@docusaurus/core": "3.9.2",
-    "@docusaurus/faster": "3.9.2",
-    "@docusaurus/plugin-client-redirects": "^3.9.2",
-    "@docusaurus/preset-classic": "3.9.2",
-    "@easyops-cn/docusaurus-search-local": "0.51.1",
-    "@mdx-js/react": "^3.0.0",
+    "@docusaurus/core": "3.10.0",
+    "@docusaurus/faster": "3.10.0",
+    "@docusaurus/plugin-client-redirects": "^3.10.0",
+    "@docusaurus/preset-classic": "3.10.0",
+    "@easyops-cn/docusaurus-search-local": "0.55.1",
+    "@mdx-js/react": "^3.1.1",
     "ajv": "^8.18.0",
     "ajv-formats": "^3.0.1",
     "cf-json-schema-viz": "^0.3.0",
@@ -31,22 +31,22 @@
     "docusaurus-plugin-sass": "^0.2.6",
     "docusaurus-theme-github-codeblock": "^2.0.2",
     "json5": "^2.2.3",
-    "micromark-extension-directive": "^3.0.1",
+    "micromark-extension-directive": "^4.0.0",
     "modern-react-json-editor": "^1.0.2",
     "patch-package": "^8.0.1",
     "prism-react-renderer": "^2.3.0",
     "raw-loader": "^4.0.2",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
     "react-markdown": "^10.1.0",
-    "sass": "^1.97.0"
+    "sass": "^1.99.0"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.9.2",
-    "@docusaurus/tsconfig": "^3.9.2",
+    "@docusaurus/tsconfig": "^3.10.0",
     "@docusaurus/types": "^3.9.2",
     "@types/react": "^19.2.4",
-    "typescript": "~5.6.2"
+    "typescript": "~6.0.2"
   },
   "browserslist": {
     "production": [
