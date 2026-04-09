@@ -229,7 +229,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         if(preCompare.length > 0) {
             let pcInits: number[] = [0],
             pcMaxStagger: number[] = [];
-            for(const hook of this.transformRules.preCompare) {
+            for(const hook of preCompare) {
                 const t = this.transformManager.getTransformerByStage({type: hook.type, name: hook.name});
                 pcInits.push(t.staggerOpts?.initialInterval ?? 0);
                 pcMaxStagger.push(t.staggerOpts?.maxRandomStagger ?? 0)
@@ -240,7 +240,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         if(existing.length > 0) {
             let eInits: number[] = [0],
             eMaxStagger: number[] = [];
-            for(const hook of this.transformRules.postCompare) {
+            for(const hook of existing) {
                 const t = this.transformManager.getTransformerByStage({type: hook.type, name: hook.name});
                 eInits.push(t.staggerOpts?.initialInterval ?? 0);
                 eMaxStagger.push(t.staggerOpts?.maxRandomStagger ?? 0)
