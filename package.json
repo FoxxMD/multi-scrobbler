@@ -128,7 +128,7 @@
     "toad-scheduler": "^3.0.0",
     "tough-cookie": "^5.1.2",
     "ts-json-schema-generator": "^2.3.0",
-    "tsx": "^4.7.0",
+    "tsx": "^4.21.0",
     "typeson": "^9.0.4",
     "typeson-registry": "^11.1.1",
     "undici": "7.24.6",
