@@ -1,11 +1,11 @@
-import { ExpressWithAsync } from "@awaitjs/express";
+import { Express } from 'express';
 import { Logger } from "@foxxmd/logging";
 import passport from "passport";
 import DeezerSource from "../sources/DeezerSource.js";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import { sleep } from "../utils.js";
 
-export const setupDeezerRoutes = (app: ExpressWithAsync, logger: Logger, scrobbleSources: ScrobbleSources) => {
+export const setupDeezerRoutes = (app: Express, logger: Logger, scrobbleSources: ScrobbleSources) => {
 
     // initialize deezer strategies
     // const deezerSources = scrobbleSources.getByType('deezer') as DeezerSource[];
@@ -15,7 +15,7 @@ export const setupDeezerRoutes = (app: ExpressWithAsync, logger: Logger, scrobbl
 
     // something about the deezer passport strategy makes express continue with the response even though it should wait for accesstoken callback and userprofile fetching
     // so to get around this add an additional middleware that loops/sleeps until we should have fetched everything ¯\_(ツ)_/¯
-    app.getAsync(/.*deezer\/callback*$/, (req, res, next) => {
+    app.get(/.*deezer\/callback*$/, (req, res, next) => {
         if(req.url.indexOf('/api') !== 0) {
             return res.redirect(307, `/api${req.url}`);
         }

@@ -1,8 +1,7 @@
-import { addAsync, Router } from '@awaitjs/express';
+import express, { Router } from 'express';
 import { childLogger, LogDataPretty, Logger } from "@foxxmd/logging";
 import bodyParser from 'body-parser';
 import { stripIndents } from "common-tags";
-import express from 'express';
 import session from 'express-session';
 import { PassThrough } from "node:stream";
 import passport from 'passport';
@@ -16,7 +15,7 @@ import { setupApi } from "./api.js";
 import ScrobbleSources from '../sources/ScrobbleSources.js';
 import ScrobbleClients from '../scrobblers/ScrobbleClients.js';
 
-const app = addAsync(express());
+const app = express();
 const router = Router();
 
 export const initServer = async (parentLogger: Logger, appLoggerStream: PassThrough, initialOutput: LogDataPretty[] = [], sources: ScrobbleSources, clients: ScrobbleClients) => {

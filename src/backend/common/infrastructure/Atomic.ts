@@ -1,7 +1,7 @@
 import { Logger } from '@foxxmd/logging';
 import { Dayjs, ManipulateType } from "dayjs";
 import { Request, Response } from "express";
-import { NextFunction, ParamsDictionary, Query } from "express-serve-static-core";
+import { type NextFunction, type ParamsDictionary, type Query } from "express-serve-static-core";
 import { FixedSizeList } from 'fixed-size-list';
 import { isPlayObject, PlayMetaLifecycleless, PlayObject, PlayObjectLifecycleless, UnixTimestamp } from "../../../core/Atomic.js";
 import TupleMap from "../TupleMap.js";

@@ -1,4 +1,4 @@
-import { ExpressWithAsync } from "@awaitjs/express";
+import { Express } from 'express';
 import { childLogger, Logger } from "@foxxmd/logging";
 import bodyParser from "body-parser";
 import cors from 'cors';
@@ -12,7 +12,7 @@ const corsOpts: cors.CorsOptions = {
     methods: ['POST']
 }
 
-export const setupWebscrobblerRoutes = (app: ExpressWithAsync, parentLogger: Logger, scrobbleSources: ScrobbleSources) => {
+export const setupWebscrobblerRoutes = (app: Express, parentLogger: Logger, scrobbleSources: ScrobbleSources) => {
 
     const logger = childLogger(parentLogger, ['Ingress', 'WebScrobbler']);
 
@@ -25,13 +25,13 @@ export const setupWebscrobblerRoutes = (app: ExpressWithAsync, parentLogger: Log
         // }
     });
     const webhookIngress = new WebhookNotifier(logger);
-    app.options('/api/webscrobbler*', async (req, res, next) => {
+    app.options('/api/webscrobbler*path', async (req, res, next) => {
         webhookIngress.trackIngress(req, true);
         next();
     },
         cors(corsOpts));
 
-    app.postAsync('/api/webscrobbler*',
+    app.post('/api/webscrobbler*path',
         async (req, res, next) => {
             webhookIngress.trackIngress(req, true);
             next();

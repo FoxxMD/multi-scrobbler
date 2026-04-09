@@ -1,5 +1,5 @@
-import { ExpressWithAsync } from "@awaitjs/express";
 import { LogDataPretty, Logger, LogLevel } from "@foxxmd/logging";
+import { Express } from 'express';
 import bsseDef from 'better-sse';
 import bodyParser from "body-parser";
 import { FixedSizeList } from 'fixed-size-list';
@@ -55,7 +55,7 @@ const getLogs = (minLevel: number, limit: number = maxBufferSize, sort: 'asc' | 
     return allLogs.flat(1).sort((a, b) => a.time - b.time).slice(0, limit);
 }
 
-export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream: PassThrough, initialLogOutput: LogDataPretty[] = [], scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
+export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThrough, initialLogOutput: LogDataPretty[] = [], scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
     for(const level of Object.keys(logger.levels.labels)) {
         output[level] = new FixedSizeList<LeveledLogData>(maxBufferSize);
     }
@@ -155,17 +155,17 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
     setupLastfmEndpointRoutes(app, logger, scrobbleSources);
     setupAuthRoutes(app, logger, sourceRequiredMiddle, clientRequiredMiddle, scrobbleSources, scrobbleClients);
 
-    app.putAsync('/api/webscrobbler', bodyParser.json({type: ['text/*', 'application/json']}), async (req, res) => {
+    app.put('/api/webscrobbler', bodyParser.json({type: ['text/*', 'application/json']}), async (req, res) => {
         logger.info(req.body);
         res.sendStatus(200);
     });
 
-    app.getAsync('/api/webscrobbler', bodyParser.json({type: ['text/*', 'application/json']}), async (req, res) => {
+    app.get('/api/webscrobbler', bodyParser.json({type: ['text/*', 'application/json']}), async (req, res) => {
         logger.info(req.body);
         res.sendStatus(200);
     });
 
-    app.getAsync('/api/status', async (req, res, next) => {
+    app.get('/api/status', async (req, res, next) => {
 
         const sourceData = scrobbleSources.sources.map((x) => {
             const {
@@ -257,7 +257,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
         return res.json({sources: sourceData, clients: clientData});
     });
 
-    app.getAsync('/api/recent', sourceMiddleFunc(false), async (req, res, next) => {
+    app.get('/api/recent', sourceMiddleFunc(false), async (req, res, next) => {
         const {
             // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleSource: source,
@@ -285,7 +285,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
         return res.json(result);
     });
 
-    app.getAsync('/api/source/art', sourceMiddleFunc(false), async (req, res, next) => {
+    app.get('/api/source/art', sourceMiddleFunc(false), async (req, res, next) => {
         const {
             // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleSource,
@@ -313,7 +313,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
         }
     });
 
-    app.getAsync('/api/dead', clientMiddleFunc(true), async (req, res, next) => {
+    app.get('/api/dead', clientMiddleFunc(true), async (req, res, next) => {
         const {
             // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleClient: client,
@@ -324,7 +324,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
         return res.json(result);
     });
 
-    app.putAsync('/api/dead', clientMiddleFunc(true), async (req, res, next) => {
+    app.put('/api/dead', clientMiddleFunc(true), async (req, res, next) => {
         const {
             // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleClient: client,
@@ -337,7 +337,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
         await ((client as AbstractScrobbleClient).processDeadLetterQueue(1000));
     });
 
-    app.putAsync('/api/dead/:id', clientMiddleFunc(true), async (req, res, next) => {
+    app.put('/api/dead/:id', clientMiddleFunc(true), async (req, res, next) => {
         const {
             // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleClient: client,
@@ -366,7 +366,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
         return res.json(dead);
     });
 
-    app.deleteAsync('/api/dead', clientMiddleFunc(true), async (req, res, next) => {
+    app.delete('/api/dead', clientMiddleFunc(true), async (req, res, next) => {
         const {
             // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleClient: client,
@@ -379,7 +379,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
         return res.json([]);
     });
 
-    app.deleteAsync('/api/dead/:id', clientMiddleFunc(true), async (req, res, next) => {
+    app.delete('/api/dead/:id', clientMiddleFunc(true), async (req, res, next) => {
         const {
             // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleClient: client,
@@ -403,7 +403,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
         return res.status(200).send();
     });
 
-    app.getAsync('/api/scrobbled', clientMiddleFunc(false), async (req, res, next) => {
+    app.get('/api/scrobbled', clientMiddleFunc(false), async (req, res, next) => {
         const {
             // @ts-expect-error scrobbleClient not part of req
             scrobbleClient: client,
@@ -418,7 +418,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
     });
 
     app.use('/api/source/init', sourceRequiredMiddle);
-    app.postAsync('/api/source/init', async (req, res) => {
+    app.post('/api/source/init', async (req, res) => {
         // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
         const source = req.scrobbleSource as AbstractSource;
 
@@ -446,7 +446,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
     });
 
     app.use('/api/source/listen', sourceRequiredMiddle);
-    app.postAsync('/api/source/listen', async (req, res) => {
+    app.post('/api/source/listen', async (req, res) => {
         // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
         const source = req.scrobbleSource as AbstractSource;
 
@@ -474,7 +474,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
     });
 
     app.use('/api/client/init', clientRequiredMiddle);
-    app.postAsync('/api/client/init', async (req, res) => {
+    app.post('/api/client/init', async (req, res) => {
         // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
         const client = req.scrobbleClient as AbstractScrobbleClient;
 
@@ -498,8 +498,8 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
         res.status(200).send('OK');
     });
 
-    app.getAsync('/health', async (req, res) => res.redirect(307, `/api/${req.url.slice(1)}`));
-    app.getAsync('/api/health', async (req, res) => {
+    app.get('/health', async (req, res) => res.redirect(307, `/api/${req.url.slice(1)}`));
+    app.get('/api/health', async (req, res) => {
         const {
             type,
             name
@@ -549,7 +549,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
         prom.collectDefaultMetrics();
     }
 
-    app.getAsync('/api/metrics', async (req, res) => {
+    app.get('/api/metrics', async (req, res) => {
 
         const metricsString = await prom.register.metrics();
         return res
@@ -559,11 +559,11 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
 
     });
 
-    app.getAsync('/api/version', async (req, res) => {
+    app.get('/api/version', async (req, res) => {
        return res.json({version: root.get('version')});
     });
 
-    app.useAsync('/api/*', async (req, res) => {
+    app.use('/api/*path', async (req, res) => {
         const remote = req.connection.remoteAddress;
         const proxyRemote = req.headers["x-forwarded-for"];
         const ua = req.headers["user-agent"];

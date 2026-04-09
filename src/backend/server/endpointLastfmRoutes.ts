@@ -1,5 +1,5 @@
 /* eslint-disable prefer-arrow-functions/prefer-arrow-functions */
-import { ExpressWithAsync } from "@awaitjs/express";
+import { Express } from 'express';
 import { childLogger, Logger } from "@foxxmd/logging";
 import bodyParser from "body-parser";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
@@ -8,14 +8,14 @@ import { LFMEndpointNotifier } from "../sources/ingressNotifiers/LFMEndpointNoti
 import { EndpointLastfmSource, playStateFromRequest, parseDisplayIdentifiersFromRequest } from "../sources/EndpointLastfmSource.js";
 import { LastFMScrobbleRequestPayload } from "../common/vendor/LastfmApiClient.js";
 
-export const setupLastfmEndpointRoutes = (app: ExpressWithAsync, parentLogger: Logger, scrobbleSources: ScrobbleSources) => {
+export const setupLastfmEndpointRoutes = (app: Express, parentLogger: Logger, scrobbleSources: ScrobbleSources) => {
 
     const logger = childLogger(parentLogger, ['Ingress', 'LFM']);
 
     const nonEmptyCheck = nonEmptyBody(logger, 'LFM Endpoint');
 
     const webhookIngress = new LFMEndpointNotifier(logger);
-    app.useAsync(/(\/api\/lastfm(?!\/callback))|(\/2.0\/?)$/,
+    app.use(/(\/api\/lastfm(?!\/callback))|(\/2.0\/?)$/,
         async function (req, res, next) {
             // track request before parsing body to ensure we at least log that something is happening
             // (in the event body parsing does not work or request is not POST/PATCH)
