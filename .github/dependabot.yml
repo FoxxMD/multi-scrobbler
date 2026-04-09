@@ -6,8 +6,38 @@
 version: 2
 updates:
   - package-ecosystem: "npm" # See documentation for possible values
+    groups:
+      production-sec-dependencies:
+        dependency-type: "production"
+        applies-to: "security-updates"
+      development-sec-dependencies:
+        dependency-type: "development"
+        applies-to: "security-updates"
+      production-version-dependencies:
+        dependency-type: "production"
+        applies-to: "version-updates"
+      development-version-dependencies:
+        dependency-type: "development"
+        applies-to: "version-updates"
     directories:
       - "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "npm" # See documentation for possible values
+    groups:
+      production-sec-dependencies:
+        dependency-type: "production"
+        applies-to: "security-updates"
+      development-sec-dependencies:
+        dependency-type: "development"
+        applies-to: "security-updates"
+      production-version-dependencies:
+        dependency-type: "production"
+        applies-to: "version-updates"
+      development-version-dependencies:
+        dependency-type: "development"
+        applies-to: "version-updates"
+    directories:
       - "/docsite"
     schedule:
       interval: "weekly"
