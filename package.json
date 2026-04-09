@@ -205,7 +205,7 @@
     "sass": "^1.99.0",
     "shiki": "^4.0.2",
     "sinon": "^21.0.2",
-    "storybook": "10.2.0",
+    "storybook": "10.3.5",
     "tailwindcss": "^4.2.2",
     "ts-essentials": "^10.1.1",
     "typescript": "^5.9.3",
