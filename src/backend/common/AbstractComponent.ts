@@ -166,6 +166,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     public transformPlay = async (play: PlayObject, hookType: TransformHook, log?: boolean | 'all') => {
 
+        let logger: Logger;
+
         try {
             let hook: StageConfig[];
 
@@ -189,7 +191,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             }
 
             const asyncId = nanoid(6);
-            let logger = childLogger(this.logger, ['Play Transform', hookType, asyncId]);
+            logger = childLogger(this.logger, ['Play Transform', hookType, asyncId]);
 
             const shouldLog = log ?? this.config.options?.playTransform?.log ?? isDebugMode();
 
@@ -315,7 +317,12 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
             return transformedPlay;
         } catch (e) {
-            logger.warn(new Error(`Unexpected error occurred, returning original play.`, {cause: e}));
+            const err = new Error(`Unexpected error occurred, returning original play.`, {cause: e});
+            if(logger === undefined) {
+                this.logger.warn(err);
+            } else {
+                logger.warn(err);
+            }
             return play;
         }
     }
