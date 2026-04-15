@@ -166,10 +166,6 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     public transformPlay = async (play: PlayObject, hookType: TransformHook, log?: boolean | 'all') => {
 
-
-        const asyncId = nanoid(6);
-        let logger = childLogger(this.logger, ['Play Transform', hookType, asyncId]);
-
         try {
             let hook: StageConfig[];
 
@@ -191,6 +187,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             if (hook === undefined) {
                 return play;
             }
+
+            const asyncId = nanoid(6);
+            let logger = childLogger(this.logger, ['Play Transform', hookType, asyncId]);
 
             const shouldLog = log ?? this.config.options?.playTransform?.log ?? isDebugMode();
 
