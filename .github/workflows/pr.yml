@@ -51,7 +51,9 @@ jobs:
           strings=("${VARS_DOCKERHUB_SLUG}" "${VARS_GHCR_SLUG}")
           for i in ${!strings[@]}; do [[ -z ${strings[i]} ]] && unset strings[i]; done
           joined_string=$(IFS=, ; echo "${strings[*]}")
-          echo "REGISTRIES_JOINED=$joined_string" >> $GITHUB_ENV 
+          echo "REGISTRIES_JOINED=$joined_string" >> $GITHUB_ENV
+          date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          echo "BUILD_DATE=$date" >> $GITHUB_ENV
         env:
           VARS_DOCKERHUB_SLUG: ${{ vars.DOCKERHUB_SLUG }}
           VARS_GHCR_SLUG: ${{vars.GHCR_SLUG}}
@@ -104,6 +106,7 @@ jobs:
           context: ${{github.event.pull_request.head.repo.clone_url}}#${{github.event.pull_request.head.sha}}
           build-args: |
             APP_BUILD_VERSION=${{steps.appversion.outputs.appversion}}
+            BUILD_DATE=${{ env.BUILD_DATE }}
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,"name=${{ env.REGISTRIES_JOINED }}",push-by-digest=true,name-canonical=true,push=true
