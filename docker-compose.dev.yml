@@ -4,6 +4,8 @@ services:
   multi-scrobbler:
     build:
       context: .
+      args:
+        BUILD_DATE: "${BUILD_DATE}"
     env_file:
       - path: ./.env
         required: false

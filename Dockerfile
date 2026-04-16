@@ -93,8 +93,6 @@ RUN npm run build:parallel && rm -rf node_modules && rm -rf docsite/node_modules
 
 FROM base AS app
 
-LABEL org.opencontainers.image.source="https://github.com/FoxxMD/multi-scrobbler"
-
 COPY --chown=abc:abc *.json *.js *.ts index.html ./
 COPY --chown=abc:abc patches ./patches
 # frontend build from vite/esbuild
@@ -125,6 +123,19 @@ RUN npm ci --omit=dev --no-audit \
     && npx @usex/prune-mod -w \
     && rm -rf /root/.cache
 
+ARG BUILD_DATE=0
+
+LABEL org.opencontainers.image.version="$APP_BUILD_VERSION" \
+      org.opencontainers.image.source="https://github.com/FoxxMD/multi-scrobbler" \
+      org.opencontainers.image.documentation="https://docs.multi-scrobbler.app" \
+      org.opencontainers.image.description="Scrobble from multiple sources to multiple clients" \
+      org.opencontainers.image.title="Multi-Scrobbler" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.authors="FoxxMD" \
+      org.opencontainers.image.created="$BUILD_DATE" \
+      org.opencontainers.image.url="https://docs.multi-scrobbler.app" \
+      maintainer="FoxxMD" \
+      build_version="$APP_BUILD_VERSION"
 
 ARG webPort=9078
 ENV PORT=$webPort
