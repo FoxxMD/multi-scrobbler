@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
-title: 'Overview'
-description: Updating
+title: Overview
+description: Updating Multi-Scrobbler
 ---
 
 import Tabs from '@theme/Tabs';
@@ -10,38 +10,78 @@ import CodeBlock from '@theme/CodeBlock';
 
 ## Updating
 
-Currently, multi-scrobbler does not have any databases or dependencies that require additional interaction/consideration when updating.
+Currently, multi-scrobbler does not have any databases or dependencies that require additional interaction when updating.
 
-The majority of major/minor version releases introduce only *new* functionality but occasionally may also include breaking changes in behavior or configuration. These changes, and how to update configs accordingly, are detailed in [Github Release Notes](https://github.com/FoxxMD/multi-scrobbler/releases). It is recommended to check this page before upgrading.
+Any **breaking changes** will be related to [configuration](/configuration) that has been deprecated/changed, or tooling that usually only affects [Local Installations.](/installation#local-installation)
 
-Alternatively, multi-scrobbler version can be pinned using [git tags](https://github.com/FoxxMD/multi-scrobbler/tags) or docker image tags that match release versions IE `foxxmd/multi-scrobbler:0.9.7`
+These changes, and how to update configs accordingly, are detailed in [**Github Release Notes**](https://github.com/FoxxMD/multi-scrobbler/releases). It is recommended to check this page before upgrading [minor or major versions.](#versioning)
 
-### Docker
-
-<Tabs groupId="runType" queryString>
-    <TabItem value="docker" label="Docker">
-        ```shell
-        docker image pull foxxmd/multi-scrobbler:latest
-        docker container stop multi-scrobbler
-        docker container rm multi-scrobbler
-        docker run --name multi-scrobbler ...
-        ```
-        The last command is the [same as the command used to initialy run multi-scrobbler.](../installation/installation.mdx?runType=docker#docker-usage-example)
-    </TabItem>
+<Tabs groupId="installType" queryString>
     <TabItem value="docker-compose" label="Docker Compose">
         ```shell
         docker compose pull
         docker compose up -d
         ```
     </TabItem>
+    <TabItem value="local" query="Local (Nodejs)">
+        Assuming the [repository was used for initial installation with `git clone`](/installation#local-installation), update by pulling the latest commit:
+
+        ```
+        git pull
+        ```
+
+        and restart multi-scrobbler.
+    </TabItem>
 </Tabs>
 
-### Nodejs
+## Versioning
 
-Assuming the [repository was used for initial installation with `git clone`](../installation/installation.mdx#nodejs), update by pulling the latest commit:
+Multi-scrobbler versioning uses **semver** without a major version (for now):
+
+* **Minor** version bumps (`0.12.2` => `0.13.0`) **may have breaking changes** or include major new behavior
+* **Patch** version bumps (`0.12.2` => `0.12.3`) may have new behavior or fix bugs, but have no breaking changes. These can be safely upgraded unattended.
+
+Check the [**Github Release Notes**](https://github.com/FoxxMD/multi-scrobbler/releases) for breaking changes, changelogs, and any migration steps required between minor versions.
+
+### Git
+
+The default [`master`](https://github.com/FoxxMD/multi-scrobbler/tree/master/) branch is **not stable**. The goal is to have it be *functional* bleeding-edge development with non-functioning development isolated to pull requests and other branches.
+
+For a stable release use the latest [git tag](https://github.com/FoxxMD/multi-scrobbler/tags) EX:
+
+```shell
+git clone --branch 0.13.0 https://github.com/FoxxMD/multi-scrobbler.git
+```
+
+### Docker
+
+Docker image tags use this pattern:
+
+* `:latest` is the latest **stable** [release](https://github.com/FoxxMD/multi-scrobbler/releases)
+    * IE If the latest released version was `0.13.0` then `:latest` is also `0.13.0`
+    * `:latest` will *always* be the latest release. Before pulling a new image you should check if the version bump has breaking changes.
+* `:edge` is built automatically from the [`master` branch](#git)
+* Pinned semver tags are published alongside [releases](https://github.com/FoxxMD/multi-scrobbler/releases) EX `:0.12.2`
+
+Additionally, [Pull Requests](https://github.com/FoxxMD/multi-scrobbler/pulls) may have docker images published with tags like `:pr-521`. These are not guaranteed to be stable and should only be used for testing.
+
+## What Version Am I Using?
+
+The current version of Multi-Scrobbler can be found in several places:
+
+* Open the Web Dashboard, the version is displayed next the Multi-Scrobbler logo in the top left corner
+* On startup the version is immediately printed to logs EX:
+    * `[2026-04-16 09:17:32.428 -0400] INFO   : [Init] Version: 0.13.0`
+* Checking the running docker container or image for the `org.opencontainers.image.version` label
+
+When running MS from a non-pinned source (like `:edge` tag, a pull request, or git branch) the version will be shown as the **branch** name and **short commit hash** EX
 
 ```
-git pull
+master-1c78da79
 ```
 
-and restart multi-scrobbler.
+:::tip
+
+Using the above information you can verify if you have pulled and successfully recreated a docker container with a new version. If the version string does not change from the previous version running then you are still running the old container
+
+:::
