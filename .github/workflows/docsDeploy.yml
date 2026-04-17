@@ -68,3 +68,9 @@ jobs:
                 \"commit\": \"${{ github.sha }}\"
               }
             }"
+      - name: Trigger CF Pages build
+        if: ${{ vars.CF_PAGES == 'true' }}
+        run: |
+          # trigger CF pages hook deployment
+          curl -d "" \
+            "${{ secrets.CF_PAGES_HOOK }}"
