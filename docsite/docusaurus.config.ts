@@ -8,14 +8,15 @@ import path from 'node:path';
 let baseSite: string = 'https://foxxmd.github.io';
 
 const baseUrlEnvs = [
+  // To build with base URL via normal docker build with build-args/env
+  // or if specified, to override the subsequent set ENVs
+  process.env.BASE_SITE,
   // To build with base URL set via netlify CI
   // https://docs.netlify.com/build/configure-builds/environment-variables/#deploy-urls-and-metadata
   process.env.DEPLOY_PRIME_URL,
   // To build with base URL set via cloudflare pages CI
   // https://developers.cloudflare.com/pages/configuration/build-configuration/#environment-variables  
-  process.env.CF_PAGES_URL,
-  // To build with base URL via normal docker build with build-args/env
-  process.env.BASE_SITE
+  process.env.CF_PAGES_URL
 ];
 
 for(const baseUrlVal of baseUrlEnvs) {
