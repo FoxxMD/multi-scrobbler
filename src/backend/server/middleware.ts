@@ -63,4 +63,5 @@ export const nonEmptyBody = (logger: Logger, origin: string = 'Origin'): Express
         res.status(400).send('Invalid Content-Type. Must be either application/json or a text wildcard (like text/plain)');
         return;
     }
+    next();
 }
