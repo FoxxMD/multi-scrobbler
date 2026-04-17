@@ -291,6 +291,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
                 '@attr': {
                     total,
                     totalPages,
+                    perPage,
                     page
                 }
             } = {},
@@ -331,7 +332,21 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             }
         }, []);
 
-        return { data: plays, meta: { ...fetchOptions, total: parseInt(total, 10), more: fetchOptions.cursor < parseInt(totalPages, 10) } };
+        let totalNum: number | undefined;
+        // libre.fm does not return total, only perPage and totalPages
+        if(total !== undefined) {
+            if(typeof total === 'string') {
+                totalNum = parseInt(total, 10);
+            } else {
+                totalNum = total;
+            }
+        } else if(perPage !== undefined && totalPages !== undefined) {
+            const pp = typeof perPage === 'string' ? parseInt(perPage, 10) : perPage;
+            const tp = typeof totalPages === 'string' ? parseInt(totalPages, 10): totalPages;
+            totalNum = pp * tp;
+        }
+
+        return { data: plays, meta: { ...fetchOptions, total: totalNum, more: fetchOptions.cursor < parseInt(totalPages, 10) } };
 
     }
 
