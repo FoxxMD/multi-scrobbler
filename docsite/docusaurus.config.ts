@@ -5,17 +5,26 @@ import * as Renderers from './lib/socialCard/ImageRenderers.js';
 import path from 'node:path';
 //import sidebars from './sidebars';
 
-let baseSite = 'https://foxxmd.github.io';
-// https://docs.netlify.com/build/configure-builds/environment-variables/#deploy-urls-and-metadata
-const netlifyDeploy = process.env.DEPLOY_PRIME_URL;
-if(netlifyDeploy !== undefined && netlifyDeploy !== null && netlifyDeploy.trim() !== '') {
-  baseSite = netlifyDeploy;
-} else {
-  const baseSiteEnv = process.env.BASE_SITE;
-  if(baseSiteEnv !== undefined && baseSiteEnv !== null && baseSiteEnv.trim() !== '') {
-    baseSite = baseSiteEnv;
+let baseSite: string = 'https://foxxmd.github.io';
+
+const baseUrlEnvs = [
+  // To build with base URL set via netlify CI
+  // https://docs.netlify.com/build/configure-builds/environment-variables/#deploy-urls-and-metadata
+  process.env.DEPLOY_PRIME_URL,
+  // To build with base URL set via cloudflare pages CI
+  // https://developers.cloudflare.com/pages/configuration/build-configuration/#environment-variables  
+  process.env.CF_PAGES_URL,
+  // To build with base URL via normal docker build with build-args/env
+  process.env.BASE_SITE
+];
+
+for(const baseUrlVal of baseUrlEnvs) {
+  if(baseUrlVal !== undefined && baseUrlVal !== null && baseUrlVal.trim() !== '') {
+    baseSite = baseUrlVal;
+    break;
   }
 }
+console.log(`Base URL => ${baseSite}`);
 
 const config: Config = {
   future: {
