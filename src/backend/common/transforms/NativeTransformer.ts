@@ -214,7 +214,7 @@ export const nativeParse = (play: PlayObject, options?: NativeTransformerDataStr
 
                 for(const artist of play.data.artists) {
                 
-                    const matchedIgnoreArtists = ignoreArtistsRegex.map(x => ({reg: x.toString(), res: parseRegexSingle(x, artist)})).filter(x => x !== undefined);
+                    const matchedIgnoreArtists = ignoreArtistsRegex.map(x => ({reg: x.toString(), res: parseRegexSingle(x, artist)})).filter(x => x.res !== undefined);
                     if(matchedIgnoreArtists.length > 0) {
                         logger.debug(`Will not parse artist because it matched an ignore regex:\n${matchedIgnoreArtists.map(x => `Reg: ${x.reg} => ${x.res.match}`).join('\n')}`);
                         artists.push(artist);
