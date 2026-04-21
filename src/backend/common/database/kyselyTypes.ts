@@ -6,7 +6,7 @@ import {
   Selectable,
   Updateable
 } from 'kysely'
-import { PlayObject } from '../../../core/Atomic.js'
+import { JsonPlayObject, PlayObject } from '../../../core/Atomic.js'
 
 export interface Database {
   play: PlayTable
@@ -38,7 +38,7 @@ export interface PlayTable {
   // is the type of the JSON object/array retrieved from the database,
   // and the insert and update types are always `string` since you're
   // always stringifying insert/update values.
-  data: JSONColumnType<PlayObject>
+  play: JSONColumnType<JsonPlayObject>
 
   /** If the Play is cloned from a Source (scrobbling) or another Client (migration) then we can reference the original Play here
    * without having to duplicate data into input/original -- we only use this for debugging/showing in ui timeline

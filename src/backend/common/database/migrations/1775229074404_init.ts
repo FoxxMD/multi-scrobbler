@@ -5,6 +5,7 @@ export async function up(db: Kysely<any>): Promise<void> {
 	await db.schema
 	.createTable('play')
 	.addColumn('id', 'text', (col) => col.primaryKey())
+	.addColumn('parent_id', 'text')
 	.addColumn('component_type', 'text', (col) => col.notNull())
 	.addColumn('component_name', 'text', (col) => col.notNull())
 	.addColumn('lifecycle_stage', 'text', (col) => col.notNull())
@@ -12,8 +13,14 @@ export async function up(db: Kysely<any>): Promise<void> {
 	.addColumn('error', 'text')
 	.addColumn('played_at', 'text', (col) => col.notNull())
 	.addColumn('seen_at', 'text', (col) => col.notNull())
-	.addColumn('data', 'text', (col) => col.notNull())
+	.addColumn('play', 'text', (col) => col.notNull())
 	.execute();
+
+	await db.schema
+    .createIndex('play_parentId_index')
+    .on('play')
+    .column('parent_id')
+    .execute();
 
 	await db.schema
     .createIndex('play_playedAt_index')

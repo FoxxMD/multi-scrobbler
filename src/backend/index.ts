@@ -27,6 +27,10 @@ import { Notifiers } from './notifier/Notifiers.js';
 import { getDb, getKyselyDb, migrateToLatest } from './common/database/Database.js';
 import { nanoid } from 'nanoid';
 import { generatePlay } from '../core/PlayTestUtils.js';
+import { hydrate, querySet } from "kysely-hydrate";
+import { asPlay } from '../core/PlayMarshalUtils.js';
+import { mapTimestamps } from './common/database/Hydration.js';
+import { Play } from './common/database/kyselyTypes.js';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -110,9 +114,18 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             lifecycleStage: 'queued',
             componentName: 'mySpot',
             componentType: 'spotify',
-            hasError: false,
-            data: JSON.stringify(generatePlay())
+            hasError: 0,
+            play: JSON.stringify(generatePlay())
         }).execute();
+
+        const selectResults = await querySet(db).selectAs('play', db.selectFrom('play').selectAll())
+        .extras(
+            {
+                    play: (data) => asPlay(data.play)
+            }
+        )
+        .map((x) => <Play>mapTimestamps(x))
+        .execute();
 
         //initLogger.info('Generating schema definitions...');
         //createVegaGenerator()
