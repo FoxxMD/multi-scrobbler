@@ -27,7 +27,6 @@ import { Notifiers } from './notifier/Notifiers.js';
 import { getDb, getKyselyDb, migrateToLatest } from './common/database/Database.js';
 import { nanoid } from 'nanoid';
 import { generatePlay } from '../core/PlayTestUtils.js';
-import { asJsonPlayObject } from '../core/tests/utils/fixtures.js';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
