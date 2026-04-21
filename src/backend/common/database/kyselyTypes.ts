@@ -72,3 +72,13 @@ export interface PlayInputTable {
   play: JSONColumnType<PlayObject>
   createdAt: ColumnType<Date, string | undefined, never>
 }
+
+
+export interface PlayQueueStateTable {
+  id: number
+  playId: string
+  queueName: string
+  queueStatus: string
+  error: string | null
+  createdAt: ColumnType<Date, string | undefined, never>
+}
