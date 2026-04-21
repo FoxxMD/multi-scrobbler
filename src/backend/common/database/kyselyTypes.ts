@@ -39,6 +39,11 @@ export interface PlayTable {
   // and the insert and update types are always `string` since you're
   // always stringifying insert/update values.
   data: JSONColumnType<PlayObject>
+
+  /** If the Play is cloned from a Source (scrobbling) or another Client (migration) then we can reference the original Play here
+   * without having to duplicate data into input/original -- we only use this for debugging/showing in ui timeline
+   */
+  parentId: string | null
 }
 
 // You should not use the table schema interfaces directly. Instead, you should
@@ -50,3 +55,20 @@ export interface PlayTable {
 export type Play = Selectable<PlayTable>
 export type NewPlay = Insertable<PlayTable>
 export type PlayUpdate = Updateable<PlayTable>
+
+
+/**
+ * Original/Input is recorded so we have a source of truth for what we recieved and parsed-as from original, external data.
+ * 
+ * After we have stored it we don't actually use it again *during a Play's lifetime*. It's basically just for
+ * debugging and showing in the UI as part of the timeline.
+ * 
+ * I think making this a separate table that can optionally joined on will minimize the amount of data we need to serialize/deserialize
+ * for regular Play usage as well as make PlayLifecycle simpler
+ */
+export interface PlayInputTable {
+  id: string
+  data: JSONColumnType<object>
+  play: JSONColumnType<PlayObject>
+  createdAt: ColumnType<Date, string | undefined, never>
+}
