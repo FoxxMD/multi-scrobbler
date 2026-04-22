@@ -43,31 +43,31 @@ export const playInputs = sqliteTable("play_inputs", {
   playId: text({ length: 30 }).references(() => plays.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
   data: text({ mode: 'json' }),
   play: text({ mode: 'json' }),
-  createdAt: DayjsTimestamp('createdAt') // integer({ mode: 'timestamp_ms' })
+  createdAt: DayjsTimestamp('createdAt').$defaultFn(() => dayjs()) // integer({ mode: 'timestamp_ms' })
 }, (table) => [
   index('play_input_id_idx').on(table.playId)
 ]);
 
-export const playParentRelations = defineRelations({plays}, (r) => ({
-  plays: {
-    parent: r.one.plays({
-      from: r.plays.parentId,
-      to: r.plays.id
-    }),
-    children: r.many.plays()
-  }
-}))
+// export const playParentRelations = defineRelations({plays}, (r) => ({
+//   plays: {
+//     parent: r.one.plays({
+//       from: r.plays.parentId,
+//       to: r.plays.id
+//     }),
+//     children: r.many.plays()
+//   }
+// }))
 
 
-export const playInputRelations = defineRelations({ plays, playInputs }, (r) => ({
-  plays: {
-    input: r.one.playInputs({
-      from: r.plays.id,
-      to: r.playInputs.playId,
-      optional: false,
-    })
-  }
-}));
+// export const playInputRelations = defineRelations({ plays, playInputs }, (r) => ({
+//   plays: {
+//     input: r.one.playInputs({
+//       from: r.plays.id,
+//       to: r.playInputs.playId,
+//       optional: false,
+//     })
+//   }
+// }));
 
 export const queueStates = sqliteTable("play_queue_state", {
   id: integer({ mode: 'number' }).primaryKey(),
@@ -75,14 +75,36 @@ export const queueStates = sqliteTable("play_queue_state", {
   queueName: text({length: 200}),
   queueStatus: text({length: 30}),
   error: text({ mode: 'json' }),
-  createdAt: DayjsTimestamp('createdAt') // integer({ mode: 'timestamp_ms' })
+  createdAt: DayjsTimestamp('createdAt').$defaultFn(() => dayjs()) // integer({ mode: 'timestamp_ms' })
 }, (table) => [
   index('play_queue_state_id_idx').on(table.playId)
 ]);
 
-export const playQueueRelations = defineRelations({ plays, queueStates }, (r) => ({
+// export const playQueueRelations = defineRelations({ plays, queueStates }, (r) => ({
+//   plays: {
+//     queueStates: r.many.queueStates()
+//   },
+//   queueStates: {
+//     play: r.one.plays({
+//       from: r.queueStates.playId,
+//       to: r.plays.id
+//     })
+//   }
+// }));
+
+export const playRelations = defineRelations({ plays, queueStates, playInputs }, (r) => ({
   plays: {
-    queueStates: r.many.queueStates()
+    queueStates: r.many.queueStates(),
+    input: r.one.playInputs({
+      from: r.plays.id,
+      to: r.playInputs.playId,
+      optional: false,
+    }),
+    parent: r.one.plays({
+      from: r.plays.parentId,
+      to: r.plays.id
+    }),
+    children: r.many.plays()
   },
   queueStates: {
     play: r.one.plays({
@@ -92,3 +114,4 @@ export const playQueueRelations = defineRelations({ plays, queueStates }, (r) =>
   }
 }));
 
+export const relations = playRelations;

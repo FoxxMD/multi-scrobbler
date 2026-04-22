@@ -8,6 +8,7 @@ import { fileExists } from '../../../utils/FSUtils.js';
 import { childLogger, Logger } from '@foxxmd/logging';
 import { loggerNoop } from '../../MaybeLogger.js';
 import { projectDir } from '../../index.js';
+import { relations } from './schema/drizzlePlaysTable.js';
 
 export async function shouldBackupDb(dbPath: string, parentLogger: Logger = loggerNoop): Promise<boolean> {
 
@@ -65,7 +66,7 @@ export const getDb = (dbName: string = 'ms', opts: { logger?: Logger, workingDir
   } = opts;
   const dbPath = getDbPath(dbName, workingDirectory);
   logger.info(`Using database at ${dbPath}`);
-  return drizzle(dbPath);
+  return drizzle(dbPath, {relations: relations});
 }
 
 export const migrateDb = async (db: ReturnType<typeof drizzle>, parentLogger: Logger = loggerNoop) => {
