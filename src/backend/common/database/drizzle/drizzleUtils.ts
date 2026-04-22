@@ -1,0 +1,59 @@
+import { drizzle } from 'drizzle-orm/node-sqlite';
+import { sql as dsl } from 'drizzle-orm';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import { getDbPath } from '../Database.js';
+import { fileExists } from '../../../utils/FSUtils.js';
+import { childLogger, Logger } from '@foxxmd/logging';
+import { loggerNoop } from '../../MaybeLogger.js';
+import { projectDir } from '../../index.js';
+
+export async function shouldBackupDb(dbName: string = 'ms', parentLogger: Logger = loggerNoop): Promise<boolean> {
+
+  const logger = childLogger(parentLogger, 'Migrations');
+
+  const dbPath = getDbPath(dbName);
+  logger.info(`Checking database at ${dbPath}`);
+  if (!fileExists(dbPath)) {
+    logger.info(`No database exists!`);
+    return false;
+  }
+
+  const db = drizzle(dbPath);
+
+  try {
+    // Ensure the migrations table exists
+    // https://github.com/drizzle-team/drizzle-orm/issues/1953
+    const res = db.all(dsl`
+      SELECT count(*) FROM sqlite_master WHERE type='table' AND name='__drizzle_migrations';
+      `);
+
+    if (res[0]['count(*)'] === 0) {
+      logger.info(`Database exists but there is no __drizzle_migrations table??`);
+      return false;
+    }
+
+    const dbMigrations = await db.all(dsl`SELECT id, hash, created_at, name, applied_at FROM "__drizzle_migrations" ORDER BY created_at DESC`);
+    const appliedMigrations = new Set(dbMigrations.map((m: any) => m.name));
+
+    const allFiles = await fs.readdir(path.resolve(projectDir, 'src/backend/common/database/drizzleMigrations'));
+    const migrationFiles = allFiles
+      .sort();
+
+    const pendingMigrations = migrationFiles.filter(file => {
+      return !appliedMigrations.has(file);
+    });
+
+    //console.log('Applied migrations:', Array.from(appliedMigrations));
+    if (pendingMigrations.length > 0) {
+      logger.info(`${pendingMigrations.length} pending migrations:\n${pendingMigrations.join('\n')}`);
+      return true;
+    } else {
+      logger.info('No pending migrations.');
+      return false;
+    }
+  } catch (error) {
+    logger.error(new Error('Failed to get pending migrations', { cause: error }));
+    return true;
+  }
+}

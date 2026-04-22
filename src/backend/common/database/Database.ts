@@ -51,6 +51,33 @@ export const getKyselyDb = (nodeDb: DatabaseSync) => {
     });
 }
 
+export const backupDb = async (dbName: string, parentLogger: Logger = loggerNoop): Promise<void> => {
+
+    const logger = childLogger(parentLogger, 'Migrations');
+
+    const dbPath = getDbPath(dbName);
+    let newDb = false;
+
+    if(dbPath !== MEMORY_DB_NAME) {
+        if(!fileExists(dbPath)) {
+            logger.info(`Database at ${dbPath} does not exist, will create it.`);
+            newDb = true;
+        }
+        try {
+            fileOrDirectoryIsWriteable(dbPath);
+        } catch (e) {
+            throw new Error('Cannot access database path for migrations', {cause: e});
+        }
+    }
+
+    if(dbPath !== MEMORY_DB_NAME && !newDb) {
+        const backupPath = `${getDbPath(`${Date.now()}-${dbName}`)}.bak`;
+        logger.info(`Backing up database before migrating => ${backupPath}`);
+        await fs.copyFile(dbPath, backupPath)
+        logger.info('Backed up!');
+    }
+}
+
 
 export async function migrateToLatest(dbName: string, parentLogger: Logger = loggerNoop) {
 
