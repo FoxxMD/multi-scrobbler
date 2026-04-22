@@ -18,7 +18,7 @@ import { parseVersion } from "./version.js";
 import { initServer } from "./server/index.js";
 import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
 import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
-import { isDebugMode, parseBool, retry, sleep } from "./utils.js";
+import { isDebugMode, parseBool, retry } from "./utils.js";
 import { readJson } from './utils/DataUtils.js';
 //import { createVegaGenerator } from './utils/SchemaUtils.js';
 import ScrobbleClients from './scrobblers/ScrobbleClients.js';
