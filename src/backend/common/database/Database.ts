@@ -18,11 +18,11 @@ import { fileExists, fileOrDirectoryIsWriteable } from '../../utils/FSUtils.js';
 export const MEMORY_DB_NAME = ':memory:';
 export const isMemoryDb = (name: string): boolean => name === MEMORY_DB_NAME;
 
-export const getDbPath = (name: string): string => {
+export const getDbPath = (name: string = 'ms', workingDirectory?: string): string => {
     if(isMemoryDb(name)) {
         return MEMORY_DB_NAME;
     }
-    return path.resolve(configDir, `${name}.db`);
+    return path.resolve(workingDirectory ?? configDir, `${name}.db`);
 }
 
 export const getDb = (dbName: string = ':memory:'): DatabaseSync => {

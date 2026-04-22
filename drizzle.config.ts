@@ -4,7 +4,7 @@ import { configDir, projectDir } from './src/backend/common/index.js';
 import * as path from 'path';
 
 export default defineConfig({
-  schema: path.resolve(projectDir, 'src/backend/common/database/drizzleSchema'),
+  schema: path.resolve(projectDir, 'src/backend/common/database/drizzle/schema'),
   out: path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations'),
   dialect: 'sqlite',
   dbCredentials: {
