@@ -107,8 +107,8 @@ export interface ListenRangeDataAmb {
 }
 
 export interface ListenRangeData extends ListenRangeDataAmb {
-    start: ListenProgress
-    end: ListenProgress
+    start: PlayProgress
+    end: PlayProgress
 }
 
 /** https://musicbrainz.org/doc/MusicBrainz_Database/Schema#Overview */

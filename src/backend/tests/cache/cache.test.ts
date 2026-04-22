@@ -166,7 +166,7 @@ describe('#Caching', function () {
 
                 await using test = new TestScrobbler();
                 await test.initialize();
-                const plays = generatePlays(100);
+                const plays = generatePlays(100, {}, {}, {listenRanges: true});
                 await test.queueScrobble(plays, 'testSource');
                 const queued = test.queuedScrobbles.map(x => x.play);
                 await sleep(101);

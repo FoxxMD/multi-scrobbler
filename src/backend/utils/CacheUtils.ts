@@ -20,10 +20,9 @@ export const rehydratePlay = (obj: AmbPlayObject): PlayObject => {
         if(obj.data.playDateCompleted !== undefined) {
             obj.data.playDateCompleted = dayjs(obj.data.playDateCompleted);
         }
-    
-        if(obj.data.listenRanges !== undefined) {
-            obj.data.listenRanges = obj.data.listenRanges.map(rehydrateListenRangeData);
-        }
+    }
+    if(obj.data.listenRanges !== undefined) {
+        obj.data.listenRanges = obj.data.listenRanges.map(rehydrateListenRangeData);
     }
     return obj as PlayObject;
 }
