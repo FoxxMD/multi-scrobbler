@@ -554,6 +554,8 @@ export interface TransformResult {
 
 export const KNOWN_MEDIA_PROVIDER_URLS = [
 'spotify.com',
+// spotify cdn
+'scdn.co',
 'bandcamp.com',
 'youtube.com',
 'deezer.com',
