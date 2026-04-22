@@ -16,6 +16,7 @@ import { nanoid } from 'nanoid';
 import { LastFMTrackObject } from '../backend/common/vendor/LastfmApiClient.js';
 import { MarkOptional } from 'ts-essentials';
 import { defaultLifecycle } from '../backend/utils/PlayTransformUtils.js';
+import clone from 'clone';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -161,11 +162,13 @@ export const generatePlayerStateData = (options: Omit<PlayerStateDataMaybePlay, 
 }
 
 export interface GeneratePlayOpts {
-    playDateCompleted?: boolean
+    playDateCompleted?: boolean,
+    listenRanges?: boolean
 }
 export const generatePlay = (data: ObjectPlayData = {}, meta: MarkOptional<PlayMeta, 'lifecycle'> = {}, opts: GeneratePlayOpts = {}): PlayObject => {
     const {
-        playDateCompleted = false
+        playDateCompleted = false,
+        listenRanges = false,
     } = opts;
 
     const duration = faker.number.int({min: 30, max: 300});
@@ -199,6 +202,35 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: MarkOptional<PlayM
 
     if(play.data.playDateCompleted === undefined && playDateCompleted) {
         play.data.playDateCompleted = play.data.playDate.add(play.data.duration)
+    }
+
+    if(listenRanges) {
+        play.data.listenRanges = [];
+        const lf = play.data.listenedFor;
+        const sessions = faker.number.int({min: 1, max: 3});
+        const sessionTime = lf / sessions;
+        let nextTime = play.data.playDate;
+        switch(faker.number.int({min: 1, max: 2})) {
+            case 1:
+                // timestamps only
+                for(let i = 0; i < sessions; i++) {
+                    const newTime = nextTime.add(sessionTime, 's');
+                    play.data.listenRanges.push({start: {timestamp: clone(nextTime)}, end: {timestamp: newTime}});
+                    nextTime = newTime;
+                }
+                break;
+            case 2:
+                // timestamps + position
+                let position = 0;
+                for(let i = 0; i < sessions; i++) {
+                    const newTime = nextTime.add(sessionTime, 's');
+                    const nextPosition = position + sessionTime;
+                    play.data.listenRanges.push({start: {timestamp: clone(nextTime), position}, end: {timestamp: newTime, position: nextPosition}});
+                    nextTime = newTime;
+                    position = nextPosition;
+                }
+                break;
+        }
     }
 
     return play;
@@ -262,8 +294,8 @@ export const generatePlayPlatformId = (deviceId?: string, userId?: string): Play
     return [did, uid];
 }
 
-export const generatePlays = (numberOfPlays: number, data: ObjectPlayData = {}, meta: MarkOptional<PlayMeta, 'lifecycle'> = {}): PlayObject[] => {
-    return Array.from(Array(numberOfPlays), () => generatePlay(data, meta));
+export const generatePlays = (numberOfPlays: number, data: ObjectPlayData = {}, meta: MarkOptional<PlayMeta, 'lifecycle'> = {}, opts: GeneratePlayOpts = {}): PlayObject[] => {
+    return Array.from(Array(numberOfPlays), () => generatePlay(data, meta, opts));
 }
 
 export const generateArtist = () => faker.music.artist;

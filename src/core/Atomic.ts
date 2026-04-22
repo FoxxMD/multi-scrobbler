@@ -107,8 +107,8 @@ export interface ListenRangeDataAmb {
 }
 
 export interface ListenRangeData extends ListenRangeDataAmb {
-    start: ListenProgress
-    end: ListenProgress
+    start: PlayProgress
+    end: PlayProgress
 }
 
 /** https://musicbrainz.org/doc/MusicBrainz_Database/Schema#Overview */
@@ -554,6 +554,8 @@ export interface TransformResult {
 
 export const KNOWN_MEDIA_PROVIDER_URLS = [
 'spotify.com',
+// spotify cdn
+'scdn.co',
 'bandcamp.com',
 'youtube.com',
 'deezer.com',

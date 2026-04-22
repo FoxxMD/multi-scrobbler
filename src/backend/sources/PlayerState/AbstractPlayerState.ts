@@ -298,7 +298,7 @@ export abstract class AbstractPlayerState {
                     ...this.currentPlay.data,
                     playDate: this.playFirstSeenAt,
                     listenedFor: this.getListenDuration(),
-                    listenRanges: ranges,
+                    listenRanges: ranges.map(x => ({start: x.start, end: x.end})),
                     playDateCompleted: completed ? dayjs() : undefined,
                     repeat: this.isRepeatPlay
                 },

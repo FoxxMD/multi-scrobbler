@@ -62,7 +62,7 @@ export function staggerMapper<Element, NewElement>(options: StaggerOptions) {
 
   return (mapper: Mapper<Element, NewElement>) => async (x: Element, index: number) => {
     if (index < concurrency) {
-      sleep(initialStagger);
+      await sleep(initialStagger);
       initialStagger += initialInterval;
     } else {
       const s = Math.min((Math.random() * 1000), maxRandomStagger)
