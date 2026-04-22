@@ -1,6 +1,7 @@
 import JSON5 from "json5";
 import { constants, promises } from "fs";
 import { MaybeLogger } from '../common/MaybeLogger.js';
+import { deepEqual } from 'fast-equals';
 
 export const asArray = <T>(data: T | T[]): T[] => {
     if (Array.isArray(data)) {
@@ -165,5 +166,13 @@ export const shuffleArray = (array: any[]): void => {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+export const objectsEqual = (a: object, b: object) => {
+    try {
+        return deepEqual(a, b);
+    } catch (e) {
+        throw new Error('Could not compare objects', {cause: e});
     }
 }

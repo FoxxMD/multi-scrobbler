@@ -2,7 +2,6 @@ import { childLogger, Logger } from "@foxxmd/logging";
 import {
     cacheFunctions,
 } from "@foxxmd/regex-buddy-core";
-import deepEqual from 'fast-deep-equal';
 import { LifecycleStep, PlayData, PlayObject, TransformResult } from "../../core/Atomic.js";
 import { buildPlayHumanDiffable, buildTrackString } from "../../core/StringUtils.js";
 import { CommonClientConfig } from "./infrastructure/config/client/index.js";
@@ -27,6 +26,7 @@ import { MSCache } from "./Cache.js";
 import { diffObjects, diffObjectsConsoleOutput, patchObject } from "../../core/DataUtils.js";
 import clone from "clone";
 import { loggerNoop } from "./MaybeLogger.js";
+import { objectsEqual } from "../utils/DataUtils.js";
 
 export type AbstractComponentConfig = (CommonClientConfig | CommonSourceConfig) & { transformManager?: TransformerManager };
 
@@ -406,7 +406,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         } else {
             step.flowResult = onSuccess;
 
-            if (!deepEqual(playTruth.data, newTransformedPlay.data)) {
+            if (!objectsEqual(playTruth.data, newTransformedPlay.data)) {
                 const o = JSON.parse(JSON.stringify(playTruth.data));
                 const t = JSON.parse(JSON.stringify(newTransformedPlay.data));
                 const patch = diffObjects(o, t); // jdiff.diff(o, t);
