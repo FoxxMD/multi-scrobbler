@@ -3,21 +3,24 @@ import { migrate } from 'drizzle-orm/node-sqlite/migrator';
 import { sql as dsl } from 'drizzle-orm';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { getDbPath } from '../Database.js';
+import { getDbPath, MEMORY_DB_NAME } from '../Database.js';
 import { fileExists } from '../../../utils/FSUtils.js';
 import { childLogger, Logger } from '@foxxmd/logging';
 import { loggerNoop } from '../../MaybeLogger.js';
 import { projectDir } from '../../index.js';
 import { relations } from './schema/drizzlePlaysTable.js';
 
-export async function shouldBackupDb(dbPath: string, parentLogger: Logger = loggerNoop): Promise<boolean> {
-
+export async function shouldBackupDb(dbPath: string, opts: {parentLogger?: Logger, migrationsFolder?: string} = {}): Promise<[boolean, string[]]> {
+  const {
+    parentLogger = loggerNoop,
+    migrationsFolder = path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations')
+  } = opts;
   const logger = childLogger(parentLogger, 'Migrations');
-
+  
   logger.info(`Checking database at ${dbPath}`);
-  if (!fileExists(dbPath)) {
+  if (dbPath !== MEMORY_DB_NAME && !fileExists(dbPath)) {
     logger.info(`No database exists!`);
-    return false;
+    return [false, []];
   }
 
   const db = drizzle(dbPath);
@@ -31,13 +34,13 @@ export async function shouldBackupDb(dbPath: string, parentLogger: Logger = logg
 
     if (res[0]['count(*)'] === 0) {
       logger.info(`Database exists but there is no __drizzle_migrations table??`);
-      return false;
+      return [true, []];
     }
 
     const dbMigrations = await db.all(dsl`SELECT id, hash, created_at, name, applied_at FROM "__drizzle_migrations" ORDER BY created_at DESC`);
     const appliedMigrations = new Set(dbMigrations.map((m: any) => m.name));
 
-    const allFiles = await fs.readdir(path.resolve(projectDir, 'src/backend/common/database/drizzleMigrations'));
+    const allFiles = await fs.readdir(migrationsFolder);
     const migrationFiles = allFiles
       .sort();
 
@@ -48,14 +51,14 @@ export async function shouldBackupDb(dbPath: string, parentLogger: Logger = logg
     //console.log('Applied migrations:', Array.from(appliedMigrations));
     if (pendingMigrations.length > 0) {
       logger.info(`${pendingMigrations.length} pending migrations:\n${pendingMigrations.join('\n')}`);
-      return true;
+      return [true, pendingMigrations];
     } else {
       logger.info('No pending migrations.');
-      return false;
+      return [false, []];
     }
   } catch (error) {
     logger.error(new Error('Failed to get pending migrations', { cause: error }));
-    return true;
+    return [true, []];
   }
 }
 
@@ -69,11 +72,15 @@ export const getDb = (dbName: string = 'ms', opts: { logger?: Logger, workingDir
   return drizzle(dbPath, {relations: relations});
 }
 
-export const migrateDb = async (db: ReturnType<typeof drizzle>, parentLogger: Logger = loggerNoop) => {
+export const migrateDb = async (db: ReturnType<typeof drizzle>, opts: {parentLogger?: Logger, migrationsFolder?: string} = {}) => {
+  const {
+    migrationsFolder,
+    parentLogger = loggerNoop
+  } = opts;
   const logger = childLogger(parentLogger, 'Migrations');
 
   try {
-    await migrate(db, { migrationsFolder: path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations') });
+    await migrate(db, { migrationsFolder: migrationsFolder ?? path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations') });
     logger.info('Migrations complete');
   } catch (e) {
     throw new Error('Failed to migrate database', { cause: e });
