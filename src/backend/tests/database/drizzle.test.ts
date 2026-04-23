@@ -7,14 +7,57 @@ import { nanoid } from 'nanoid';
 import dayjs from 'dayjs';
 import { generatePlay } from '../../../core/PlayTestUtils.js';
 import { getDbPath } from '../../common/database/Database.js';
+import { x } from 'tinyexec';
+import * as path from 'path';
+import * as fs from 'fs/promises';
+import { projectDir } from '../../common/index.js';
 
-// it('Detects pending migrations', async function () {
+it('Detects pending migrations', async function () {
 
-//     const res = await shouldBackupDb(getDbPath(undefined, process.cwd()));
+    const allFiles = await fs.readdir(path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations'));
+    const migrationFiles = allFiles
+        .sort();
 
-//     expect(res).to.be.undefined;
+    await withLocalTmpDir(async () => {
 
-// });
+        // copy first migration
+        await fs.mkdir('migrations');
+        try {
+            await fs.cp(path.resolve(projectDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
+            const mf = path.resolve('./migrations');
+            const db = getDb('ms', { workingDirectory: process.cwd() });
+            await migrateDb(db, { migrationsFolder: mf });
+            const res = await x('drizzle-kit', [
+                'generate',
+                '--name',
+                'newMigration',
+                '--out',
+                `${mf}`,
+                '--custom',
+                '--schema',
+                path.resolve(projectDir, 'src/backend/common/database/drizzle/schema'),
+                '--dialect',
+                'sqlite'
+            ]);
+            const [shouldBackup, pending] = await shouldBackupDb(getDbPath('ms', process.cwd()), { migrationsFolder: mf });
+            expect(shouldBackup).is.true;
+            expect(pending).length(1);
+            expect(pending[0]).includes('newMigration');
+        } catch (e) {
+            throw e;
+        }
+    }, { unsafeCleanup: true });
+});
+
+it('Detects non-existent db', async function () {
+
+    await withLocalTmpDir(async () => {
+        const [shouldBackup, pending] = await shouldBackupDb(getDbPath('notreal', process.cwd()));
+        expect(shouldBackup).is.false;
+        expect(pending).length(0);
+    });
+
+});
 
 describe('Basic DB Operations', function () {
 
