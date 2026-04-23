@@ -30,7 +30,8 @@
 				"dbaeumer.vscode-eslint",
 				"unifiedjs.vscode-mdx",
 				"bradlc.vscode-tailwindcss",
-				"TakumiI.markdowntable"
+				"TakumiI.markdowntable",
+				"YoavBls.pretty-ts-errors"
 			]
 		}
 	},
