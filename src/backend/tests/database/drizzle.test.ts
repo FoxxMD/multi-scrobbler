@@ -13,6 +13,9 @@ import * as fs from 'fs/promises';
 import { projectDir } from '../../common/index.js';
 import { DatabaseSync } from 'node:sqlite';
 
+// would be great to push migrations directly from schema but doesn't seem supported in newest beta
+// https://github.com/drizzle-team/drizzle-orm/discussions/4373
+
 describe('Migrations', function () {
 
     it('Detects non-existent db', async function () {
@@ -132,46 +135,55 @@ describe('Basic DB Operations', function () {
             const db = getDb(':memory:', { workingDirectory: process.cwd() });
             await migrateDb(db);
 
-            const id = nanoid();
-            const playRow = await db.insert(plays).values({
-                id,
-                componentName: 'mySpot',
-                componentType: 'spotify',
-                playedAt: dayjs(),
-                seenAt: dayjs(),
-                play: generatePlay()
-            }).returning();
+            const uid = nanoid();
+            try {
 
-            const input = await db.insert(playInputs).values({
-                playId: playRow[0].id,
-                play: playRow[0].play,
-                data: { anything: 'foo' }
-            }).returning();
 
-            const twoQueues = await db.insert(queueStates).values([
-                {
-                    playId: id,
-                    queueName: 'foo',
-                    queueStatus: 'queued'
-                },
-                {
-                    playId: id,
-                    queueName: 'bar',
-                    queueStatus: 'completed'
-                }
-            ]);
+                const playRow = await db.insert(plays).values({
+                    uid,
+                    componentName: 'mySpot',
+                    componentType: 'spotify',
+                    state: 'queued',
+                    playedAt: dayjs(),
+                    seenAt: dayjs(),
+                    play: generatePlay()
+                }).returning();
 
-            const fullPlay = await db.query.plays.findFirst({
-                with: {
-                    input: true,
-                    queueStates: true,
-                },
-            });
+                const input = await db.insert(playInputs).values({
+                    playId: playRow[0].id,
+                    play: playRow[0].play,
+                    data: { anything: 'foo' }
+                }).returning();
 
-            expect(fullPlay.queueStates).to.not.be.undefined;
-            expect(fullPlay.queueStates).length(2);
+                const twoQueues = await db.insert(queueStates).values([
+                    {
+                        playId: playRow[0].id,
+                        queueName: 'foo',
+                        queueStatus: 'queued'
+                    },
+                    {
+                        playId: playRow[0].id,
+                        queueName: 'bar',
+                        queueStatus: 'completed'
+                    }
+                ]);
 
-            expect(fullPlay.input).to.not.be.undefined;
+                const fullPlay = await db.query.plays.findFirst({
+                    with: {
+                        input: true,
+                        queueStates: true,
+                    },
+                });
+
+
+                expect(fullPlay.queueStates).to.not.be.undefined;
+                expect(fullPlay.queueStates).length(2);
+
+                expect(fullPlay.input).to.not.be.undefined;
+
+            } catch (e) {
+                throw e;
+            }
             db.$client.close();
         }, { unsafeCleanup: true });
     });

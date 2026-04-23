@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "7c59deda-bffc-4163-9eeb-4c9ba4e9dcd3",
+  "id": "8f540406-ea02-467b-bb53-3eee43a37acd",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -29,7 +29,7 @@
       "table": "play_inputs"
     },
     {
-      "type": "text(30)",
+      "type": "integer",
       "notNull": false,
       "autoincrement": false,
       "default": null,
@@ -69,12 +69,22 @@
       "table": "play_inputs"
     },
     {
-      "type": "text(30)",
+      "type": "integer",
       "notNull": false,
       "autoincrement": false,
       "default": null,
       "generated": null,
       "name": "id",
+      "entityType": "columns",
+      "table": "plays"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "uid",
       "entityType": "columns",
       "table": "plays"
     },
@@ -139,7 +149,17 @@
       "table": "plays"
     },
     {
-      "type": "text(30)",
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "state",
+      "entityType": "columns",
+      "table": "plays"
+    },
+    {
+      "type": "integer",
       "notNull": false,
       "autoincrement": false,
       "default": null,
@@ -159,7 +179,7 @@
       "table": "play_queue_state"
     },
     {
-      "type": "text",
+      "type": "integer",
       "notNull": false,
       "autoincrement": false,
       "default": null,
@@ -189,6 +209,16 @@
       "table": "play_queue_state"
     },
     {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "retries",
+      "entityType": "columns",
+      "table": "play_queue_state"
+    },
+    {
       "type": "text",
       "notNull": false,
       "autoincrement": false,
@@ -205,6 +235,16 @@
       "default": null,
       "generated": null,
       "name": "createdAt",
+      "entityType": "columns",
+      "table": "play_queue_state"
+    },
+    {
+      "type": "number",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updatedAt",
       "entityType": "columns",
       "table": "play_queue_state"
     },
@@ -287,7 +327,7 @@
           "isExpression": false
         }
       ],
-      "isUnique": false,
+      "isUnique": true,
       "where": null,
       "origin": "manual",
       "name": "play_input_id_idx",
@@ -305,6 +345,20 @@
       "where": null,
       "origin": "manual",
       "name": "play_parent_id_idx",
+      "entityType": "indexes",
+      "table": "plays"
+    },
+    {
+      "columns": [
+        {
+          "value": "uid",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "play_uid_idx",
       "entityType": "indexes",
       "table": "plays"
     },
