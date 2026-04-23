@@ -1,5 +1,6 @@
 import { drizzle } from 'drizzle-orm/node-sqlite';
 import { migrate } from 'drizzle-orm/node-sqlite/migrator';
+import { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import { sql as dsl } from 'drizzle-orm';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -86,3 +87,43 @@ export const migrateDb = async (db: ReturnType<typeof drizzle>, opts: {parentLog
     throw new Error('Failed to migrate database', { cause: e });
   }
 }
+
+
+
+// cannot really use transactions right now because async isn't supporting for sqlite
+// https://github.com/drizzle-team/drizzle-orm/issues/1472
+// https://github.com/drizzle-team/drizzle-orm/issues/2275
+// so use this workaround for now
+// https://github.com/drizzle-team/drizzle-orm/issues/2275#issuecomment-2496503801
+let currentTransaction: null | Promise<void> = null;
+export const runTransaction = async <
+    T,
+    TQueryResult,
+    TSchema extends Record<string, unknown> = Record<string, never>
+>(
+    db: BaseSQLiteDatabase<"sync", TQueryResult, TSchema>,
+    executor: () => Promise<T>
+) => {
+    while (currentTransaction !== null) {
+        await currentTransaction;
+    }
+    let resolve!: () => void;
+    currentTransaction = new Promise<void>(_resolve => {
+        resolve = _resolve;
+    });
+    try {
+        db.run(dsl.raw(`BEGIN`))
+
+        try {
+            const result = await executor();
+            await db.run(dsl.raw(`COMMIT`));
+            return result;
+        } catch (error) {
+            await db.run(dsl.raw(`ROLLBACK`));
+            throw error;
+        }
+    } finally {
+        resolve();
+        currentTransaction = null;
+    }
+};

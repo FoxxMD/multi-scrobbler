@@ -244,13 +244,14 @@ export interface RandomObjOptions {
   maxKeyLength?: number
   keyCount?: number
   maxDepth?: number
+  allowUndefined?: boolean
 }
 
 const generateRandomVal = (depth: number = 0, opt: RandomObjOptions = {}, typeId?: number) => {
   const i = typeId ?? faker.number.int({ min: 1, max: depth > (opt.maxDepth ?? 3) ? 6 : 8 });
   switch (i) {
     case 1:
-      return undefined;
+      return (opt.allowUndefined ?? true) ? undefined : null;
     case 2:
       return faker.datatype.boolean();
     case 3:

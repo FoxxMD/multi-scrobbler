@@ -82,7 +82,7 @@ export const formatNumber = (val: number | string, options?: numberFormatOptions
     return `${prefixStr}${localeString}${suffix}`;
 };
 
-export const generateArray = (size: number, gen: (index: number) => any) => {
+export const generateArray = <T = any>(size: number, gen: (index: number) => T): T[] => {
     return Array.from(Array(size), (v,k) => gen(k));
 }
 

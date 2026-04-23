@@ -13,6 +13,10 @@ import * as fs from 'fs/promises';
 import { projectDir } from '../../common/index.js';
 import { DatabaseSync } from 'node:sqlite';
 import { fixtureCreateComponent, fixtureCreateInput, fixtureCreatePlay } from '../utils/databaseFixtures.js';
+import { DrizzleRepository, RepositoryCreatePlayOpts } from '../../common/database/drizzle/repository.js';
+import { generateRandomObj } from '../../../core/tests/utils/fixtures.js';
+import { generateArray } from '../../../core/DataUtils.js';
+import { objectsEqual } from '../../utils/DataUtils.js';
 
 // would be great to push migrations directly from schema but doesn't seem supported in newest beta
 // https://github.com/drizzle-team/drizzle-orm/discussions/4373
@@ -141,7 +145,7 @@ describe('Basic DB Operations', function () {
 
                 const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
-                const playRow = await db.insert(plays).values(fixtureCreatePlay({componentId: component[0].id})).returning();
+                const playRow = await db.insert(plays).values(fixtureCreatePlay({ componentId: component[0].id })).returning();
 
                 const input = await db.insert(playInputs).values(fixtureCreateInput({
                     playId: playRow[0].id,
@@ -180,6 +184,40 @@ describe('Basic DB Operations', function () {
             }
             db.$client.close();
         }, { unsafeCleanup: true });
+    });
+
+});
+
+describe('Repository Operations', function () {
+
+    it('creates Plays and inputs', async function () {
+
+        const db = getDb(':memory:');
+        await migrateDb(db);
+
+        const component = await db.insert(components).values(fixtureCreateComponent()).returning();
+
+        const repo = new DrizzleRepository(db);
+
+        const numPlays = 3;
+
+        const playData = generateArray<RepositoryCreatePlayOpts>(numPlays, () => ({ ...fixtureCreatePlay(), componentId: component[0].id, state: 'queued', input: { data: generateRandomObj(undefined, {allowUndefined: false}) } }))
+
+        const rows = await repo.createPlays(playData);
+        expect(rows).length(numPlays);
+        const fullPlays = await db.query.plays.findMany({
+            with: {
+                input: true
+            }
+        });
+        fullPlays.forEach((play, index) => {
+            const ref = playData[index];
+
+            expect(play.play.data.track).eq(ref.play.data.track);
+            expect(play.input).to.not.undefined;
+            expect(objectsEqual(play.input.data, ref.input.data)).is.true;
+        })
+        
     });
 
 });
