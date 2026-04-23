@@ -299,5 +299,52 @@ describe('Repository Operations', function () {
         expect(bwPlays[1].play.data.track).eq(playData[2].play.data.track);
     });
 
+        it('finds Plays by component', async function () {
+
+        const db = getDb(':memory:');
+        await migrateDb(db);
+
+        const component1 = await db.insert(components).values(fixtureCreateComponent()).returning();
+        const component2 = await db.insert(components).values(fixtureCreateComponent({uid: 'test2', name: 'jelly2'})).returning();
+        const component3 = await db.insert(components).values(fixtureCreateComponent({uid: 'test3', name: 'jelly3'})).returning();
+
+        const repo = new DrizzlePlayRepository(db);
+
+        const playData: RepositoryCreatePlayOpts[] = [
+            {
+                ...fixtureCreatePlay(),
+                componentId: component1[0].id,
+                state: 'queued' as 'queued',
+                input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
+            },
+            {
+                ...fixtureCreatePlay(),
+                componentId: component3[0].id,
+                state: 'queued' as 'queued',
+                input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
+            },
+            {
+                ...fixtureCreatePlay(),
+                componentId: component3[0].id,
+                state: 'queued' as 'queued',
+                input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
+            }
+        ]
+
+        await repo.createPlays(playData);
+
+        const plays = await repo.findPlays({ componentId: component3[0].id });
+        expect(plays).length(2);
+        expect(plays[0].play.data.track).eq(playData[1].play.data.track);
+        expect(plays[1].play.data.track).eq(playData[2].play.data.track);
+
+        const plays1 = await repo.findPlays({ componentId: component1[0].id });
+        expect(plays1).length(1);
+        expect(plays1[0].play.data.track).eq(playData[0].play.data.track);
+
+        const noPlays = await repo.findPlays({ componentId: component2[0].id });
+        expect(noPlays).length(0);
+    });
+
 });
 
