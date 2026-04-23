@@ -40,9 +40,6 @@ export const plays = sqliteTable("plays", {
   index("play_seenAt_idx").on(table.seenAt),
 ]);
 
-export type PlayNew = typeof plays.$inferInsert;
-export type PlaySelect = typeof plays.$inferSelect;
-
 export const playInputs = sqliteTable("play_inputs", {
   id: integer({ mode: 'number' }).primaryKey(),
   playId: integer().notNull().references(() => plays.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
@@ -52,9 +49,6 @@ export const playInputs = sqliteTable("play_inputs", {
 }, (table) => [
   uniqueIndex('play_input_id_idx').on(table.playId)
 ]);
-
-export type PlayInputNew = typeof playInputs.$inferInsert;
-export type PlayInputSelect = typeof playInputs.$inferSelect;
 
 // export const playParentRelations = defineRelations({plays}, (r) => ({
 //   plays: {
@@ -91,9 +85,6 @@ export const queueStates = sqliteTable("play_queue_states", {
   index('play_queue_state_id_idx').on(table.playId)
 ]);
 
-export type QueueStateNew = typeof queueStates.$inferInsert;
-export type QueueStateSelect = typeof queueStates.$inferSelect;
-
 // export const playQueueRelations = defineRelations({ plays, queueStates }, (r) => ({
 //   plays: {
 //     queueStates: r.many.queueStates()
@@ -123,10 +114,7 @@ export const components = sqliteTable("components", {
   createdAt: DayjsTimestamp('createdAt').$defaultFn(() => dayjs())
 });
 
-export type ComponentNew = typeof components.$inferInsert;
-export type ComponentSelect = typeof components.$inferSelect;
-
-export const playRelations = defineRelations({ plays, queueStates, playInputs, components }, (r) => ({
+const playRelations = defineRelations({ plays, queueStates, playInputs, components }, (r) => ({
   plays: {
     queueStates: r.many.queueStates(),
     input: r.one.playInputs({

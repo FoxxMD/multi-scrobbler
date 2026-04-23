@@ -2,7 +2,7 @@ import chai, { assert, expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { getDb, migrateDb, shouldBackupDb } from '../../common/database/drizzle/drizzleUtils.js';
 import withLocalTmpDir from 'with-local-tmp-dir';
-import { components, playInputs, plays, queueStates } from '../../common/database/drizzle/schema/drizzlePlaysTable.js';
+import { components, playInputs, plays, queueStates } from '../../common/database/drizzle/schema/schema.js';
 import { nanoid } from 'nanoid';
 import dayjs from 'dayjs';
 import { generatePlay } from '../../../core/PlayTestUtils.js';
@@ -13,7 +13,7 @@ import * as fs from 'fs/promises';
 import { projectDir } from '../../common/index.js';
 import { DatabaseSync } from 'node:sqlite';
 import { fixtureCreateComponent, fixtureCreateInput, fixtureCreatePlay } from '../utils/databaseFixtures.js';
-import { DrizzleRepository, RepositoryCreatePlayOpts } from '../../common/database/drizzle/repository.js';
+import { DrizzlePlayRepository, RepositoryCreatePlayOpts } from '../../common/database/drizzle/repositories/PlayRepository.js';
 import { generateRandomObj } from '../../../core/tests/utils/fixtures.js';
 import { generateArray } from '../../../core/DataUtils.js';
 import { objectsEqual } from '../../utils/DataUtils.js';
@@ -197,7 +197,7 @@ describe('Repository Operations', function () {
 
         const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
-        const repo = new DrizzleRepository(db);
+        const repo = new DrizzlePlayRepository(db);
 
         const numPlays = 3;
 
@@ -218,6 +218,38 @@ describe('Repository Operations', function () {
             expect(objectsEqual(play.input.data, ref.input.data)).is.true;
         })
         
+    });
+
+        it('finds Plays', async function () {
+
+        const db = getDb(':memory:');
+        await migrateDb(db);
+
+        const component = await db.insert(components).values(fixtureCreateComponent()).returning();
+
+        const repo = new DrizzlePlayRepository(db);
+
+        const numPlays = 3;
+
+        const playData = generateArray<RepositoryCreatePlayOpts>(numPlays, () => ({ 
+            ...fixtureCreatePlay(), 
+            componentId: component[0].id, 
+            state: 'queued', 
+            input: { data: generateRandomObj(undefined, {allowUndefined: false}) } 
+        }));
+        const discovered = { 
+            ...fixtureCreatePlay(), 
+            componentId: component[0].id, 
+            state: 'discovered' as 'discovered', 
+            input: { data: generateRandomObj(undefined, {allowUndefined: false}) } 
+        };
+        playData.push(discovered)
+
+        await repo.createPlays(playData);
+        
+        const plays = await repo.findPlays({state: ['discovered']});
+        expect(plays).length(1);
+        expect(plays[0].play.data.track).eq(discovered.play.data.track);
     });
 
 });
