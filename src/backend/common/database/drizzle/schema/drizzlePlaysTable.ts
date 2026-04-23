@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text, index, customType } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text, index, customType, AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import { defineRelations } from 'drizzle-orm';
 import dayjs, { Dayjs } from "dayjs";
 
@@ -27,8 +27,8 @@ export const plays = sqliteTable("plays", {
   playedAt: DayjsTimestamp('playedAt'), // integer({ mode: 'timestamp_ms' }),
   seenAt: DayjsTimestamp('seenAt'), // integer({ mode: 'timestamp_ms' }),
   play: text({ mode: 'json' }).notNull(),
-  // TODO can this have a reference with cascade?
-  parentId: text({ length: 30 })
+  // https://orm.drizzle.team/docs/indexes-constraints#foreign-key
+  parentId: text({ length: 30 }).references((): AnySQLiteColumn => plays.id)
 }, (table) => [
   index("play_parent_id_idx").on(table.parentId),
   index("play_playedAt_idx").on(table.playedAt),

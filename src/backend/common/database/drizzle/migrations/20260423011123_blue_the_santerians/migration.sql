@@ -3,7 +3,7 @@ CREATE TABLE `play_inputs` (
 	`playId` text(30),
 	`data` text,
 	`play` text,
-	`createdAt` integer,
+	`createdAt` number,
 	CONSTRAINT `fk_play_inputs_playId_plays_id_fk` FOREIGN KEY (`playId`) REFERENCES `plays`(`id`) ON UPDATE CASCADE ON DELETE CASCADE
 );
 --> statement-breakpoint
@@ -12,10 +12,11 @@ CREATE TABLE `plays` (
 	`componentType` text(50) NOT NULL,
 	`componentName` text(200) NOT NULL,
 	`error` text,
-	`playedAt` integer,
-	`seenAt` integer,
+	`playedAt` number,
+	`seenAt` number,
 	`play` text NOT NULL,
-	`parentId` text(30)
+	`parentId` text(30),
+	CONSTRAINT `fk_plays_parentId_plays_id_fk` FOREIGN KEY (`parentId`) REFERENCES `plays`(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `play_queue_state` (
@@ -24,7 +25,7 @@ CREATE TABLE `play_queue_state` (
 	`queueName` text(200),
 	`queueStatus` text(30),
 	`error` text,
-	`createdAt` integer,
+	`createdAt` number,
 	CONSTRAINT `fk_play_queue_state_playId_plays_id_fk` FOREIGN KEY (`playId`) REFERENCES `plays`(`id`) ON UPDATE CASCADE ON DELETE CASCADE
 );
 --> statement-breakpoint

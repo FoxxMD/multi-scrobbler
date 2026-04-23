@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "96a2050a-7d06-4db1-b989-3082b6374e1f",
+  "id": "7c59deda-bffc-4163-9eeb-4c9ba4e9dcd3",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -59,7 +59,7 @@
       "table": "play_inputs"
     },
     {
-      "type": "integer",
+      "type": "number",
       "notNull": false,
       "autoincrement": false,
       "default": null,
@@ -109,7 +109,7 @@
       "table": "plays"
     },
     {
-      "type": "integer",
+      "type": "number",
       "notNull": false,
       "autoincrement": false,
       "default": null,
@@ -119,7 +119,7 @@
       "table": "plays"
     },
     {
-      "type": "integer",
+      "type": "number",
       "notNull": false,
       "autoincrement": false,
       "default": null,
@@ -199,7 +199,7 @@
       "table": "play_queue_state"
     },
     {
-      "type": "integer",
+      "type": "number",
       "notNull": false,
       "autoincrement": false,
       "default": null,
@@ -222,6 +222,21 @@
       "name": "fk_play_inputs_playId_plays_id_fk",
       "entityType": "fks",
       "table": "play_inputs"
+    },
+    {
+      "columns": [
+        "parentId"
+      ],
+      "tableTo": "plays",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_plays_parentId_plays_id_fk",
+      "entityType": "fks",
+      "table": "plays"
     },
     {
       "columns": [
