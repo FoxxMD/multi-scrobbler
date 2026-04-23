@@ -1,11 +1,15 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "8f540406-ea02-467b-bb53-3eee43a37acd",
+  "id": "3afdf43c-1cbb-4f51-a776-9a432e102fc6",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
   "ddl": [
+    {
+      "name": "components",
+      "entityType": "tables"
+    },
     {
       "name": "play_inputs",
       "entityType": "tables"
@@ -15,8 +19,88 @@
       "entityType": "tables"
     },
     {
-      "name": "play_queue_state",
+      "name": "play_queue_states",
       "entityType": "tables"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "components"
+    },
+    {
+      "type": "text(200)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "uid",
+      "entityType": "columns",
+      "table": "components"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "mode",
+      "entityType": "columns",
+      "table": "components"
+    },
+    {
+      "type": "text(50)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "type",
+      "entityType": "columns",
+      "table": "components"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "components"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "countLive",
+      "entityType": "columns",
+      "table": "components"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "countNonLive",
+      "entityType": "columns",
+      "table": "components"
+    },
+    {
+      "type": "number",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "createdAt",
+      "entityType": "columns",
+      "table": "components"
     },
     {
       "type": "integer",
@@ -30,7 +114,7 @@
     },
     {
       "type": "integer",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -50,7 +134,7 @@
     },
     {
       "type": "text",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -89,22 +173,12 @@
       "table": "plays"
     },
     {
-      "type": "text(50)",
-      "notNull": true,
+      "type": "integer",
+      "notNull": false,
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "componentType",
-      "entityType": "columns",
-      "table": "plays"
-    },
-    {
-      "type": "text(200)",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "componentName",
+      "name": "componentId",
       "entityType": "columns",
       "table": "plays"
     },
@@ -176,37 +250,47 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
-      "table": "play_queue_state"
+      "table": "play_queue_states"
     },
     {
       "type": "integer",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
       "name": "playId",
       "entityType": "columns",
-      "table": "play_queue_state"
+      "table": "play_queue_states"
     },
     {
-      "type": "text(200)",
-      "notNull": false,
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "componentId",
+      "entityType": "columns",
+      "table": "play_queue_states"
+    },
+    {
+      "type": "text(50)",
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
       "name": "queueName",
       "entityType": "columns",
-      "table": "play_queue_state"
+      "table": "play_queue_states"
     },
     {
-      "type": "text(30)",
-      "notNull": false,
+      "type": "text",
+      "notNull": true,
       "autoincrement": false,
-      "default": null,
+      "default": "'queued'",
       "generated": null,
       "name": "queueStatus",
       "entityType": "columns",
-      "table": "play_queue_state"
+      "table": "play_queue_states"
     },
     {
       "type": "integer",
@@ -216,7 +300,7 @@
       "generated": null,
       "name": "retries",
       "entityType": "columns",
-      "table": "play_queue_state"
+      "table": "play_queue_states"
     },
     {
       "type": "text",
@@ -226,27 +310,27 @@
       "generated": null,
       "name": "error",
       "entityType": "columns",
-      "table": "play_queue_state"
+      "table": "play_queue_states"
     },
     {
       "type": "number",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
       "name": "createdAt",
       "entityType": "columns",
-      "table": "play_queue_state"
+      "table": "play_queue_states"
     },
     {
       "type": "number",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
       "name": "updatedAt",
       "entityType": "columns",
-      "table": "play_queue_state"
+      "table": "play_queue_states"
     },
     {
       "columns": [
@@ -262,6 +346,21 @@
       "name": "fk_play_inputs_playId_plays_id_fk",
       "entityType": "fks",
       "table": "play_inputs"
+    },
+    {
+      "columns": [
+        "componentId"
+      ],
+      "tableTo": "components",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "CASCADE",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_plays_componentId_components_id_fk",
+      "entityType": "fks",
+      "table": "plays"
     },
     {
       "columns": [
@@ -289,9 +388,33 @@
       "onUpdate": "CASCADE",
       "onDelete": "CASCADE",
       "nameExplicit": false,
-      "name": "fk_play_queue_state_playId_plays_id_fk",
+      "name": "fk_play_queue_states_playId_plays_id_fk",
       "entityType": "fks",
-      "table": "play_queue_state"
+      "table": "play_queue_states"
+    },
+    {
+      "columns": [
+        "componentId"
+      ],
+      "tableTo": "components",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "CASCADE",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_play_queue_states_componentId_components_id_fk",
+      "entityType": "fks",
+      "table": "play_queue_states"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "components_pk",
+      "table": "components",
+      "entityType": "pks"
     },
     {
       "columns": [
@@ -316,8 +439,8 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "play_queue_state_pk",
-      "table": "play_queue_state",
+      "name": "play_queue_states_pk",
+      "table": "play_queue_states",
       "entityType": "pks"
     },
     {
@@ -345,6 +468,20 @@
       "where": null,
       "origin": "manual",
       "name": "play_parent_id_idx",
+      "entityType": "indexes",
+      "table": "plays"
+    },
+    {
+      "columns": [
+        {
+          "value": "componentId",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "play_component_id_idx",
       "entityType": "indexes",
       "table": "plays"
     },
@@ -402,7 +539,16 @@
       "origin": "manual",
       "name": "play_queue_state_id_idx",
       "entityType": "indexes",
-      "table": "play_queue_state"
+      "table": "play_queue_states"
+    },
+    {
+      "columns": [
+        "uid"
+      ],
+      "nameExplicit": false,
+      "name": "components_uid_unique",
+      "entityType": "uniques",
+      "table": "components"
     }
   ],
   "renames": []

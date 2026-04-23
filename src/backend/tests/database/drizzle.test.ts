@@ -2,7 +2,7 @@ import chai, { assert, expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { getDb, migrateDb, shouldBackupDb } from '../../common/database/drizzle/drizzleUtils.js';
 import withLocalTmpDir from 'with-local-tmp-dir';
-import { playInputs, plays, queueStates } from '../../common/database/drizzle/schema/drizzlePlaysTable.js';
+import { components, playInputs, plays, queueStates } from '../../common/database/drizzle/schema/drizzlePlaysTable.js';
 import { nanoid } from 'nanoid';
 import dayjs from 'dayjs';
 import { generatePlay } from '../../../core/PlayTestUtils.js';
@@ -12,6 +12,7 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import { projectDir } from '../../common/index.js';
 import { DatabaseSync } from 'node:sqlite';
+import { fixtureCreateComponent, fixtureCreateInput, fixtureCreatePlay } from '../utils/databaseFixtures.js';
 
 // would be great to push migrations directly from schema but doesn't seem supported in newest beta
 // https://github.com/drizzle-team/drizzle-orm/discussions/4373
@@ -114,10 +115,11 @@ describe('Basic DB Operations', function () {
             const db = getDb(':memory:', { workingDirectory: process.cwd() });
             await migrateDb(db);
 
+            const component = await db.insert(components).values(fixtureCreateComponent()).returning();
+
             const playRow = await db.insert(plays).values({
-                id: nanoid(),
-                componentName: 'mySpot',
-                componentType: 'spotify',
+                componentId: component[0].id,
+                state: 'queued',
                 playedAt: dayjs(),
                 seenAt: dayjs(),
                 play: generatePlay()
@@ -135,34 +137,26 @@ describe('Basic DB Operations', function () {
             const db = getDb(':memory:', { workingDirectory: process.cwd() });
             await migrateDb(db);
 
-            const uid = nanoid();
             try {
 
+                const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
-                const playRow = await db.insert(plays).values({
-                    uid,
-                    componentName: 'mySpot',
-                    componentType: 'spotify',
-                    state: 'queued',
-                    playedAt: dayjs(),
-                    seenAt: dayjs(),
-                    play: generatePlay()
-                }).returning();
+                const playRow = await db.insert(plays).values(fixtureCreatePlay({componentId: component[0].id})).returning();
 
-                const input = await db.insert(playInputs).values({
+                const input = await db.insert(playInputs).values(fixtureCreateInput({
                     playId: playRow[0].id,
-                    play: playRow[0].play,
-                    data: { anything: 'foo' }
-                }).returning();
+                    play: playRow[0].play
+                })).returning();
 
                 const twoQueues = await db.insert(queueStates).values([
                     {
                         playId: playRow[0].id,
-                        queueName: 'foo',
-                        queueStatus: 'queued'
+                        componentId: component[0].id,
+                        queueName: 'foo'
                     },
                     {
                         playId: playRow[0].id,
+                        componentId: component[0].id,
                         queueName: 'bar',
                         queueStatus: 'completed'
                     }
