@@ -1,5 +1,8 @@
 import assert from "node:assert";
-import { ComponentNew, PlayInputNew, PlayNew, QueueStateNew } from "./schema/drizzlePlaysTable.js";
+import { PlayNew } from "./drizzleTypes.js";
+import { PlayInputNew } from "./drizzleTypes.js";
+import { QueueStateNew } from "./drizzleTypes.js";
+import { ComponentNew } from "./drizzleTypes.js";
 import { MarkOptional } from "ts-essentials";
 import { ErrorLike, PlayObject } from "../../../../core/Atomic.js";
 import dayjs, { Dayjs } from "dayjs";
