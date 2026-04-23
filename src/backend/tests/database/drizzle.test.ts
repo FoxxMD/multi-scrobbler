@@ -11,50 +11,93 @@ import { x } from 'tinyexec';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { projectDir } from '../../common/index.js';
+import { DatabaseSync } from 'node:sqlite';
 
-it('Detects pending migrations', async function () {
+describe('Migrations', function () {
 
-    const allFiles = await fs.readdir(path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations'));
-    const migrationFiles = allFiles
-        .sort();
+    it('Detects non-existent db', async function () {
 
-    await withLocalTmpDir(async () => {
+        await withLocalTmpDir(async () => {
+            const [shouldBackup, pending] = await shouldBackupDb(getDbPath('notreal', process.cwd()));
+            expect(shouldBackup).is.false;
+            expect(pending).length(0);
+        });
 
-        // copy first migration
-        await fs.mkdir('migrations');
-        try {
-            await fs.cp(path.resolve(projectDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
-            const mf = path.resolve('./migrations');
-            const db = getDb('ms', { workingDirectory: process.cwd() });
-            await migrateDb(db, { migrationsFolder: mf });
-            const res = await x('drizzle-kit', [
-                'generate',
-                '--name',
-                'newMigration',
-                '--out',
-                `${mf}`,
-                '--custom',
-                '--schema',
-                path.resolve(projectDir, 'src/backend/common/database/drizzle/schema'),
-                '--dialect',
-                'sqlite'
-            ]);
-            const [shouldBackup, pending] = await shouldBackupDb(getDbPath('ms', process.cwd()), { migrationsFolder: mf });
+    });
+
+    it('Detects abnormal db', async function () {
+
+        withLocalTmpDir(async () => {
+            const otherdb = new DatabaseSync(path.resolve('./', 'other.db'));
+            const [shouldBackup, pending] = await shouldBackupDb(getDbPath('other', process.cwd()));
             expect(shouldBackup).is.true;
-            expect(pending).length(1);
-            expect(pending[0]).includes('newMigration');
-        } catch (e) {
-            throw e;
-        }
-    }, { unsafeCleanup: true });
-});
+            expect(pending).length(0);
+            otherdb.close();
+        }, { unsafeCleanup: true });
 
-it('Detects non-existent db', async function () {
+    });
 
-    await withLocalTmpDir(async () => {
-        const [shouldBackup, pending] = await shouldBackupDb(getDbPath('notreal', process.cwd()));
-        expect(shouldBackup).is.false;
-        expect(pending).length(0);
+    it('Detects pending migrations', async function () {
+
+        const allFiles = await fs.readdir(path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations'));
+        const migrationFiles = allFiles
+            .sort();
+
+        await withLocalTmpDir(async () => {
+
+            // copy first migration
+            await fs.mkdir('migrations');
+            try {
+                await fs.cp(path.resolve(projectDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
+                const mf = path.resolve('./migrations');
+                const db = getDb('ms', { workingDirectory: process.cwd() });
+                await migrateDb(db, { migrationsFolder: mf });
+                const res = await x('drizzle-kit', [
+                    'generate',
+                    '--name',
+                    'newMigration',
+                    '--out',
+                    `${mf}`,
+                    '--custom',
+                    '--schema',
+                    path.resolve(projectDir, 'src/backend/common/database/drizzle/schema'),
+                    '--dialect',
+                    'sqlite'
+                ]);
+                const [shouldBackup, pending] = await shouldBackupDb(getDbPath('ms', process.cwd()), { migrationsFolder: mf });
+                expect(shouldBackup).is.true;
+                expect(pending).length(1);
+                expect(pending[0]).includes('newMigration');
+                db.$client.close();
+            } catch (e) {
+                throw e;
+            }
+        }, { unsafeCleanup: true });
+    });
+
+    it('Detects no pending migrations correctly', async function () {
+
+        const allFiles = await fs.readdir(path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations'));
+        const migrationFiles = allFiles
+            .sort();
+
+        await withLocalTmpDir(async () => {
+
+            // copy first migration
+            await fs.mkdir('migrations');
+            try {
+                await fs.cp(path.resolve(projectDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
+                const mf = path.resolve('./migrations');
+                const db = getDb('ms', { workingDirectory: process.cwd() });
+                await migrateDb(db, { migrationsFolder: mf });
+                const [shouldBackup, pending] = await shouldBackupDb(getDbPath('ms', process.cwd()), { migrationsFolder: mf });
+                expect(shouldBackup).is.false;
+                expect(pending).length(0);
+                db.$client.close();
+            } catch (e) {
+                throw e;
+            }
+        }, { unsafeCleanup: true });
     });
 
 });
@@ -78,7 +121,7 @@ describe('Basic DB Operations', function () {
             });
 
             expect(playRow.changes).eq(1);
-
+            db.$client.close();
         }, { unsafeCleanup: true });
     });
 
@@ -129,7 +172,7 @@ describe('Basic DB Operations', function () {
             expect(fullPlay.queueStates).length(2);
 
             expect(fullPlay.input).to.not.be.undefined;
-
+            db.$client.close();
         }, { unsafeCleanup: true });
     });
 
