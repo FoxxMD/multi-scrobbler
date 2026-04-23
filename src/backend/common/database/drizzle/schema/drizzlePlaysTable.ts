@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text, index, customType, AnySQLiteColumn } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text, index, uniqueIndex, customType, AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import { defineRelations } from 'drizzle-orm';
 import dayjs, { Dayjs } from "dayjs";
 
@@ -20,17 +20,20 @@ const DayjsTimestamp = customType<
 });
 
 export const plays = sqliteTable("plays", {
-  id: text({ length: 30 }).primaryKey(),
+  id: integer().primaryKey(),
+  uid: text({ length: 30 }).notNull().unique(),
   componentType: text({ length: 50 }).notNull(),
   componentName: text({ length: 200 }).notNull(),
   error: text({ mode: 'json' }),
-  playedAt: DayjsTimestamp('playedAt'), // integer({ mode: 'timestamp_ms' }),
-  seenAt: DayjsTimestamp('seenAt'), // integer({ mode: 'timestamp_ms' }),
+  playedAt: DayjsTimestamp('playedAt'),
+  seenAt: DayjsTimestamp('seenAt'),
   play: text({ mode: 'json' }).notNull(),
+  state: text({enum: ['queued','discovered','scrobbled','failed','duped']}).notNull(),
   // https://orm.drizzle.team/docs/indexes-constraints#foreign-key
-  parentId: text({ length: 30 }).references((): AnySQLiteColumn => plays.id)
+  parentId: integer().references((): AnySQLiteColumn => plays.id)
 }, (table) => [
   index("play_parent_id_idx").on(table.parentId),
+  uniqueIndex("play_uid_idx").on(table.uid),
   index("play_playedAt_idx").on(table.playedAt),
   index("play_seenAt_idx").on(table.seenAt),
 ]);
@@ -40,12 +43,12 @@ export type SelectPlay = typeof plays.$inferSelect;
 
 export const playInputs = sqliteTable("play_inputs", {
   id: integer({ mode: 'number' }).primaryKey(),
-  playId: text({ length: 30 }).references(() => plays.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
+  playId: integer().references(() => plays.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
   data: text({ mode: 'json' }),
   play: text({ mode: 'json' }),
-  createdAt: DayjsTimestamp('createdAt').$defaultFn(() => dayjs()) // integer({ mode: 'timestamp_ms' })
+  createdAt: DayjsTimestamp('createdAt').$defaultFn(() => dayjs())
 }, (table) => [
-  index('play_input_id_idx').on(table.playId)
+  uniqueIndex('play_input_id_idx').on(table.playId)
 ]);
 
 // export const playParentRelations = defineRelations({plays}, (r) => ({
@@ -71,11 +74,13 @@ export const playInputs = sqliteTable("play_inputs", {
 
 export const queueStates = sqliteTable("play_queue_state", {
   id: integer({ mode: 'number' }).primaryKey(),
-  playId: text().references(() => plays.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
+  playId: integer().references(() => plays.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
   queueName: text({length: 200}),
   queueStatus: text({length: 30}),
+  retries: integer().notNull().default(0),
   error: text({ mode: 'json' }),
-  createdAt: DayjsTimestamp('createdAt').$defaultFn(() => dayjs()) // integer({ mode: 'timestamp_ms' })
+  createdAt: DayjsTimestamp('createdAt').$defaultFn(() => dayjs()),
+  updatedAt: DayjsTimestamp('updatedAt').$defaultFn(() => dayjs())
 }, (table) => [
   index('play_queue_state_id_idx').on(table.playId)
 ]);
