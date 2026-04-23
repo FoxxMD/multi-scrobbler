@@ -4,9 +4,11 @@ import { loggerNoop } from "../../../MaybeLogger.js";
 import { PlayObject } from "../../../../../core/Atomic.js";
 import { generateInputEntity, generatePlayEntity, PlayEntityOpts } from "../entityUtils.js";
 import { playInputs, plays, relations } from "../schema/schema.js";
-import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany } from "../drizzleTypes.js";;
+import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, CompareOpKey } from "../drizzleTypes.js";;
 import { MarkOptional, MarkRequired, PathValue } from "ts-essentials";
 import { removeUndefinedKeys } from "../../../../utils.js";
+import dayjs, { Dayjs } from "dayjs";
+import { RelationsFieldFilter } from "drizzle-orm";
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 
@@ -14,9 +16,20 @@ export interface DrizzleRepositoryOpts {
     logger?: Logger
 }
 
+type CompareDateOp = {
+    type: CompareOpKey<Dayjs>
+    date: Dayjs
+} | {
+    type: 'between',
+    range: [Dayjs, Dayjs],
+    inclusive?: boolean
+}
+
 export interface PlayWhereOpts {
     state?: PlaySelect['state'][]
     componentId?: number
+    seenAt?: CompareDateOp
+    playedAt?: CompareDateOp
 }
 
 export interface QueryPlaysOpts extends PlayWhereOpts {
@@ -91,6 +104,10 @@ export class DrizzlePlayRepository {
             query.orderBy = {
                 [args.sort]: args.order ?? 'desc'
             }
+        } else {
+            query.orderBy = {
+                id: 'asc'
+            }
         }
         query = removeUndefinedKeys(query);
         const results = await this.db.query.plays.findMany(query);
@@ -110,5 +127,32 @@ export const buildPlayWhere = (args: PlayWhereOpts): FindWhere<'plays'> => {
             in: args.state
         }
     }
+    if (args.seenAt !== undefined) {
+        where.seenAt = buildDateCompare(args.seenAt);
+    }
+    if(args.playedAt !== undefined) {
+        where.playedAt = buildDateCompare(args.playedAt);
+    }
     return where;
+}
+
+const buildDateCompare = (data: CompareDateOp): RelationsFieldFilter<Dayjs> => {
+    let q: RelationsFieldFilter<Dayjs> = {};
+    if (data.type !== 'between') {
+        q = {
+            [data.type]: data.date
+        }
+    } else {
+        q = {
+            AND: [
+                {
+                    [data.inclusive ?? true ? 'gte' : 'gt']: data.range[0]
+                },
+                {
+                    [data.inclusive ?? true ? 'lte' : 'lt']: data.range[1]
+                },
+            ]
+        }
+    }
+    return q;
 }

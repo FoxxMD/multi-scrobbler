@@ -114,76 +114,70 @@ describe('Basic DB Operations', function () {
 
     it('Should create a play', async function () {
 
-        withLocalTmpDir(async () => {
+        const db = getDb(':memory:', { workingDirectory: process.cwd() });
+        await migrateDb(db);
 
-            const db = getDb(':memory:', { workingDirectory: process.cwd() });
-            await migrateDb(db);
+        const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
-            const component = await db.insert(components).values(fixtureCreateComponent()).returning();
+        const playRow = await db.insert(plays).values({
+            componentId: component[0].id,
+            state: 'queued',
+            playedAt: dayjs(),
+            seenAt: dayjs(),
+            play: generatePlay()
+        });
 
-            const playRow = await db.insert(plays).values({
-                componentId: component[0].id,
-                state: 'queued',
-                playedAt: dayjs(),
-                seenAt: dayjs(),
-                play: generatePlay()
-            });
-
-            expect(playRow.changes).eq(1);
-            db.$client.close();
-        }, { unsafeCleanup: true });
+        expect(playRow.changes).eq(1);
+        db.$client.close();
     });
 
     it('Should create a play with relations', async function () {
 
-        withLocalTmpDir(async () => {
+        const db = getDb(':memory:', { workingDirectory: process.cwd() });
+        await migrateDb(db);
 
-            const db = getDb(':memory:', { workingDirectory: process.cwd() });
-            await migrateDb(db);
+        try {
 
-            try {
+            const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
-                const component = await db.insert(components).values(fixtureCreateComponent()).returning();
+            const playRow = await db.insert(plays).values(fixtureCreatePlay({ componentId: component[0].id })).returning();
 
-                const playRow = await db.insert(plays).values(fixtureCreatePlay({ componentId: component[0].id })).returning();
+            const input = await db.insert(playInputs).values(fixtureCreateInput({
+                playId: playRow[0].id,
+                play: playRow[0].play
+            })).returning();
 
-                const input = await db.insert(playInputs).values(fixtureCreateInput({
+            const twoQueues = await db.insert(queueStates).values([
+                {
                     playId: playRow[0].id,
-                    play: playRow[0].play
-                })).returning();
+                    componentId: component[0].id,
+                    queueName: 'foo'
+                },
+                {
+                    playId: playRow[0].id,
+                    componentId: component[0].id,
+                    queueName: 'bar',
+                    queueStatus: 'completed'
+                }
+            ]);
 
-                const twoQueues = await db.insert(queueStates).values([
-                    {
-                        playId: playRow[0].id,
-                        componentId: component[0].id,
-                        queueName: 'foo'
-                    },
-                    {
-                        playId: playRow[0].id,
-                        componentId: component[0].id,
-                        queueName: 'bar',
-                        queueStatus: 'completed'
-                    }
-                ]);
-
-                const fullPlay = await db.query.plays.findFirst({
-                    with: {
-                        input: true,
-                        queueStates: true,
-                    },
-                });
+            const fullPlay = await db.query.plays.findFirst({
+                with: {
+                    input: true,
+                    queueStates: true,
+                },
+            });
 
 
-                expect(fullPlay.queueStates).to.not.be.undefined;
-                expect(fullPlay.queueStates).length(2);
+            expect(fullPlay.queueStates).to.not.be.undefined;
+            expect(fullPlay.queueStates).length(2);
 
-                expect(fullPlay.input).to.not.be.undefined;
+            expect(fullPlay.input).to.not.be.undefined;
 
-            } catch (e) {
-                throw e;
-            }
-            db.$client.close();
-        }, { unsafeCleanup: true });
+        } catch (e) {
+            throw e;
+        }
+        db.$client.close();
     });
 
 });
@@ -201,7 +195,7 @@ describe('Repository Operations', function () {
 
         const numPlays = 3;
 
-        const playData = generateArray<RepositoryCreatePlayOpts>(numPlays, () => ({ ...fixtureCreatePlay(), componentId: component[0].id, state: 'queued', input: { data: generateRandomObj(undefined, {allowUndefined: false}) } }))
+        const playData = generateArray<RepositoryCreatePlayOpts>(numPlays, () => ({ ...fixtureCreatePlay(), componentId: component[0].id, state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } }))
 
         const rows = await repo.createPlays(playData);
         expect(rows).length(numPlays);
@@ -217,10 +211,10 @@ describe('Repository Operations', function () {
             expect(play.input).to.not.undefined;
             expect(objectsEqual(play.input.data, ref.input.data)).is.true;
         })
-        
+
     });
 
-        it('finds Plays', async function () {
+    it('finds Plays by state', async function () {
 
         const db = getDb(':memory:');
         await migrateDb(db);
@@ -231,25 +225,78 @@ describe('Repository Operations', function () {
 
         const numPlays = 3;
 
-        const playData = generateArray<RepositoryCreatePlayOpts>(numPlays, () => ({ 
-            ...fixtureCreatePlay(), 
-            componentId: component[0].id, 
-            state: 'queued', 
-            input: { data: generateRandomObj(undefined, {allowUndefined: false}) } 
+        const playData = generateArray<RepositoryCreatePlayOpts>(numPlays, () => ({
+            ...fixtureCreatePlay(),
+            componentId: component[0].id,
+            state: 'queued',
+            input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
         }));
-        const discovered = { 
-            ...fixtureCreatePlay(), 
-            componentId: component[0].id, 
-            state: 'discovered' as 'discovered', 
-            input: { data: generateRandomObj(undefined, {allowUndefined: false}) } 
+        const discovered = {
+            ...fixtureCreatePlay(),
+            componentId: component[0].id,
+            state: 'discovered' as 'discovered',
+            input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
         };
         playData.push(discovered)
 
         await repo.createPlays(playData);
-        
-        const plays = await repo.findPlays({state: ['discovered']});
+
+        const plays = await repo.findPlays({ state: ['discovered'] });
         expect(plays).length(1);
         expect(plays[0].play.data.track).eq(discovered.play.data.track);
+    });
+
+    it('finds Plays by date range', async function () {
+
+        const db = getDb(':memory:');
+        await migrateDb(db);
+
+        const component = await db.insert(components).values(fixtureCreateComponent()).returning();
+
+        const repo = new DrizzlePlayRepository(db);
+
+        const playData: RepositoryCreatePlayOpts[] = [
+            {
+                ...fixtureCreatePlay({ play: generatePlay({ playDate: dayjs().subtract(2, 'm') }) }),
+                componentId: component[0].id,
+                state: 'queued' as 'queued',
+                input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
+            },
+            {
+                ...fixtureCreatePlay({ play: generatePlay({ playDate: dayjs().subtract(6, 'm') }) }),
+                componentId: component[0].id,
+                state: 'queued' as 'queued',
+                input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
+            },
+            {
+                ...fixtureCreatePlay({ play: generatePlay({ playDate: dayjs().subtract(8, 'm') }) }),
+                componentId: component[0].id,
+                state: 'queued' as 'queued',
+                input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
+            },
+            {
+                ...fixtureCreatePlay({ play: generatePlay({ playDate: dayjs().subtract(10, 'm') }) }),
+                componentId: component[0].id,
+                state: 'queued' as 'queued',
+                input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
+            },
+        ]
+
+        await repo.createPlays(playData);
+
+        const newerPlays = await repo.findPlays({ playedAt: { type: 'gt', date: dayjs().subtract(3, 'm') } });
+        expect(newerPlays).length(1);
+        expect(newerPlays[0].play.data.track).eq(playData[0].play.data.track);
+
+        const olderPlays = await repo.findPlays({ playedAt: { type: 'lt', date: dayjs().subtract(6, 'm').subtract(5, 's') } });
+        expect(olderPlays).length(2);
+        expect(olderPlays[0].play.data.track).eq(playData[2].play.data.track);
+        expect(olderPlays[1].play.data.track).eq(playData[3].play.data.track);
+
+        const bwPlays = await repo.findPlays({ playedAt: { type: 'between', range: [dayjs().subtract(9, 'm'), dayjs().subtract(3, 'm')] } });
+        expect(bwPlays).length(2);
+        expect(bwPlays[0].play.data.track).eq(playData[1].play.data.track);
+        expect(bwPlays[1].play.data.track).eq(playData[2].play.data.track);
     });
 
 });

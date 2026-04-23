@@ -1,4 +1,4 @@
-import { DBQueryConfig, ExtractTablesFromSchema, KnownKeysOnly } from "drizzle-orm";
+import { DBQueryConfig, ExtractTablesFromSchema, KnownKeysOnly, RelationFieldsFilterInternals } from "drizzle-orm";
 import { components, playInputs, plays, queueStates, relations } from "./schema/schema.js";
 import * as schema from "./schema/schema.js";
 
@@ -22,6 +22,7 @@ export type PlayNew = typeof plays.$inferInsert;
 // https://gist.github.com/ikupenov/10bc89d92d92eaba8cc5569013e04069
 // https://github.com/drizzle-team/drizzle-orm/issues/695 most examples
 // https://github.com/drizzle-team/drizzle-orm/discussions/2316 relation focused
+// https://github.com/drizzle-team/drizzle-orm/issues/1319
 type TSchema = typeof relations;
 type Schema = typeof schema;
 type TableName = keyof TSchema;
@@ -29,3 +30,6 @@ export type QueryConfig<T extends TableName> = DBQueryConfig<"many", TSchema, TS
 export type FindMany<T extends TableName> = Pick<KnownKeysOnly<QueryConfig<T>, DBQueryConfig<"many", TSchema, TSchema[T]>>, 'where' | 'orderBy' | 'limit' | 'offset' | 'extras'>
 export type FindOne<T extends TableName> = Pick<KnownKeysOnly<QueryConfig<T>, DBQueryConfig<"one", TSchema, TSchema[T]>>, 'where' | 'orderBy' | 'limit' | 'offset' | 'extras'>
 export type FindWhere<T extends TableName> = QueryConfig<T>['where'];
+
+export type CompareOp<T> = Pick<RelationFieldsFilterInternals<T>, 'gt' | 'gte' | 'eq' | 'lt' | 'lte' | 'ne'>
+export type CompareOpKey<T> = keyof CompareOp<T>;
