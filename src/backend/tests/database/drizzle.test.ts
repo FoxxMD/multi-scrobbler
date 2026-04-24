@@ -1,9 +1,8 @@
 import chai, { assert, expect } from 'chai';
 import asPromised from 'chai-as-promised';
-import { getDb, migrateDb, shouldBackupDb } from '../../common/database/drizzle/drizzleUtils.js';
+import { getDb, migrateDb, performDbMigrationWithBackup, shouldBackupDb } from '../../common/database/drizzle/drizzleUtils.js';
 import withLocalTmpDir from 'with-local-tmp-dir';
 import { components, playInputs, plays, queueStates } from '../../common/database/drizzle/schema/schema.js';
-import { nanoid } from 'nanoid';
 import dayjs from 'dayjs';
 import { generatePlay } from '../../../core/PlayTestUtils.js';
 import { getDbPath } from '../../common/database/Database.js';
@@ -36,7 +35,7 @@ describe('Migrations', function () {
 
     it('Detects abnormal db', async function () {
 
-        withLocalTmpDir(async () => {
+        await withLocalTmpDir(async () => {
             const otherdb = new DatabaseSync(path.resolve('./', 'other.db'));
             const [shouldBackup, pending] = await shouldBackupDb(getDbPath('other', process.cwd()));
             expect(shouldBackup).is.true;
@@ -103,6 +102,48 @@ describe('Migrations', function () {
                 expect(shouldBackup).is.false;
                 expect(pending).length(0);
                 db.$client.close();
+            } catch (e) {
+                throw e;
+            }
+        }, { unsafeCleanup: true });
+    });
+
+    it('Backs up database when migrations are pending', async function () {
+
+        const allFiles = await fs.readdir(path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations'));
+        const migrationFiles = allFiles
+            .sort();
+
+        await withLocalTmpDir(async () => {
+
+            // copy first migration
+            await fs.mkdir('migrations');
+            try {
+                await fs.cp(path.resolve(projectDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
+                const mf = path.resolve('./migrations');
+                const db = getDb('ms', { workingDirectory: process.cwd() });
+                await migrateDb(db, { migrationsFolder: mf });
+                const res = await x('drizzle-kit', [
+                    'generate',
+                    '--name',
+                    'newMigration',
+                    '--out',
+                    `${mf}`,
+                    '--custom',
+                    '--schema',
+                    path.resolve(projectDir, 'src/backend/common/database/drizzle/schema'),
+                    '--dialect',
+                    'sqlite'
+                ]);
+                db.$client.close();
+
+                // add dummy data to migration so migrate() doesn't fail
+                const newMigrationFolder = (await fs.readdir(path.resolve('./migrations/'))).find(x => x.includes('newMigration'));
+                await fs.appendFile(path.resolve('./migrations/',newMigrationFolder, 'migration.sql'),`\nselect count(*) from plays;`);
+
+                await performDbMigrationWithBackup('ms', {workingDirectory: process.cwd(), migrationsFolder: mf});      
+                const contents = await fs.readdir(path.resolve('./'));
+                expect(contents.some(x => x.includes('ms.db.bak')));
             } catch (e) {
                 throw e;
             }

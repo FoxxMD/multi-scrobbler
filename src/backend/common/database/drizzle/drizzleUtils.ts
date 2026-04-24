@@ -4,16 +4,16 @@ import { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import { sql as dsl, LogWriter, Logger as DrizzleLogger } from 'drizzle-orm';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { getDbPath, MEMORY_DB_NAME } from '../Database.js';
+import { backupDb, getDbPath, MEMORY_DB_NAME } from '../Database.js';
 import { fileExists } from '../../../utils/FSUtils.js';
 import { childLogger, Logger, LogLevel } from '@foxxmd/logging';
 import { loggerNoop } from '../../MaybeLogger.js';
 import { projectDir } from '../../index.js';
 import { relations } from './schema/schema.js';
 
-export async function shouldBackupDb(dbPath: string, opts: {parentLogger?: Logger, migrationsFolder?: string} = {}): Promise<[boolean, string[]]> {
+export async function shouldBackupDb(dbPath: string, opts: {logger?: Logger, migrationsFolder?: string} = {}): Promise<[boolean, string[]]> {
   const {
-    parentLogger = loggerNoop,
+    logger: parentLogger = loggerNoop,
     migrationsFolder = path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations')
   } = opts;
   const logger = childLogger(parentLogger, 'Migrations');
@@ -60,6 +60,10 @@ export async function shouldBackupDb(dbPath: string, opts: {parentLogger?: Logge
   } catch (error) {
     logger.error(new Error('Failed to get pending migrations', { cause: error }));
     return [true, []];
+  } finally {
+    if(db.$client.isOpen) {
+      db.$client.close();
+    }
   }
 }
 
@@ -75,10 +79,10 @@ export const getDb = (dbName: string = 'ms', opts: { logger?: Logger, workingDir
 
 export type DbConcrete = ReturnType<typeof getDb>;
 
-export const migrateDb = async (db: ReturnType<typeof drizzle>, opts: {parentLogger?: Logger, migrationsFolder?: string} = {}) => {
+export const migrateDb = async (db: ReturnType<typeof drizzle>, opts: {logger?: Logger, migrationsFolder?: string} = {}) => {
   const {
     migrationsFolder,
-    parentLogger = loggerNoop
+    logger: parentLogger = loggerNoop
   } = opts;
   const logger = childLogger(parentLogger, 'Migrations');
 
@@ -88,6 +92,17 @@ export const migrateDb = async (db: ReturnType<typeof drizzle>, opts: {parentLog
   } catch (e) {
     throw new Error('Failed to migrate database', { cause: e });
   }
+}
+
+export const performDbMigrationWithBackup = async (dbName: string = 'ms', opts: { logger?: Logger, workingDirectory?: string, migrationsFolder?: string } = {}) => {
+  const dbPath = getDbPath(dbName, opts.workingDirectory);
+
+  const [shouldBackup, pendingMigrations] = await shouldBackupDb(dbPath, opts);
+  if(shouldBackup) {
+    await backupDb(dbName, opts);
+  }
+  const db = getDb(dbName, opts);
+  await migrateDb(db, opts);
 }
 
 export const createDrizzleLogger = (parentLogger: Logger, opts: {level?: LogLevel, query?: boolean} = {}): LogWriter & DrizzleLogger => {

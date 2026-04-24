@@ -1,4 +1,3 @@
-import { DatabaseSync } from 'node:sqlite';
 import { configDir } from '../index.js';
 import * as path from 'path';
 import { promises as fs } from 'fs'
@@ -16,11 +15,16 @@ export const getDbPath = (name: string = 'ms', workingDirectory?: string): strin
     return path.resolve(workingDirectory ?? configDir, `${name}.db`);
 }
 
-export const backupDb = async (dbName: string, parentLogger: Logger = loggerNoop): Promise<void> => {
+export const backupDb = async (dbName: string, opts: { logger?: Logger, workingDirectory?: string } = {}): Promise<void> => {
+
+    const {
+        logger: parentLogger = loggerNoop,
+        workingDirectory
+    } = opts;
 
     const logger = childLogger(parentLogger, 'Migrations');
 
-    const dbPath = getDbPath(dbName);
+    const dbPath = getDbPath(dbName, workingDirectory);
     let newDb = false;
 
     if(dbPath !== MEMORY_DB_NAME) {
@@ -31,12 +35,12 @@ export const backupDb = async (dbName: string, parentLogger: Logger = loggerNoop
         try {
             fileOrDirectoryIsWriteable(dbPath);
         } catch (e) {
-            throw new Error('Cannot access database path for migrations', {cause: e});
+            throw new Error('Database path/folder is not writeable, cannot backup database', {cause: e});
         }
     }
 
     if(dbPath !== MEMORY_DB_NAME && !newDb) {
-        const backupPath = `${getDbPath(`${Date.now()}-${dbName}`)}.bak`;
+        const backupPath = `${getDbPath(`${Date.now()}-${dbName}`, workingDirectory)}.bak`;
         logger.info(`Backing up database before migrating => ${backupPath}`);
         await fs.copyFile(dbPath, backupPath)
         logger.info('Backed up!');
