@@ -5,8 +5,9 @@ import { RequestRetryOptions } from "./common.js";
 import { WebhookConfig } from "./health/webhooks.js";
 import { CommonSourceOptions, SourceRetryOptions } from "./source/index.js";
 import { SourceAIOConfig } from "./source/sources.js";
-import { CacheConfigOptions } from "../Atomic.js";
+import { CacheConfigOptions, DurationValue } from "../Atomic.js";
 import { TransformerCommonConfig } from "../../../../core/Atomic.js";
+import { RetentionOptions } from "./database.js";
 
 
 export interface SourceDefaults extends CommonSourceOptions {
@@ -69,6 +70,10 @@ export interface AIOConfig {
     cache?: CacheConfigOptions
 
     transformers?: TransformerCommonConfig[]
+
+    database?: {
+        retention?: RetentionOptions<DurationValue>
+    }
 }
 
 export interface AIOClientConfig {

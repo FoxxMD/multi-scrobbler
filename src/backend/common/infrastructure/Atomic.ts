@@ -414,3 +414,15 @@ export interface ScrobbleRangeResult {
 }
 
 export const REFRESH_STALE_DEFAULT = 60;
+
+/**
+ * A duration of time
+ * 
+ * May be either:
+ * 
+ * * a `number` of seconds
+ * * a `string` containing a number and a unit of time compatible with dayjs
+ * 
+ * @example [60, 3600, "1 hour", "4 days"]
+ */
+export type DurationValue = number | string;

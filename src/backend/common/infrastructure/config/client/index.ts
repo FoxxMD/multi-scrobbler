@@ -1,5 +1,7 @@
+import { DurationValue } from "../../Atomic.js";
 import { PlayTransformConfig, PlayTransformOptions } from "../../Transform.js";
 import { CommonConfig, CommonData, RequestRetryOptions } from "../common.js";
+import { RetentionOptions } from "../database.js";
 
 /**
  * Scrobble matching (between new source track and existing client scrobbles) logging options. Used for debugging.
@@ -105,6 +107,8 @@ export interface CommonClientOptions extends RequestRetryOptions, UpstreamRefres
     deadLetterRetries?: number
 
     playTransform?: PlayTransformOptions
+
+    retention?: RetentionOptions<DurationValue>
 }
 
 export interface CommonClientConfig extends CommonConfig {
