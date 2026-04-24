@@ -1,12 +1,12 @@
 import { drizzle } from 'drizzle-orm/node-sqlite';
 import { migrate } from 'drizzle-orm/node-sqlite/migrator';
 import { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
-import { sql as dsl } from 'drizzle-orm';
+import { sql as dsl, LogWriter, Logger as DrizzleLogger } from 'drizzle-orm';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { getDbPath, MEMORY_DB_NAME } from '../Database.js';
 import { fileExists } from '../../../utils/FSUtils.js';
-import { childLogger, Logger } from '@foxxmd/logging';
+import { childLogger, Logger, LogLevel } from '@foxxmd/logging';
 import { loggerNoop } from '../../MaybeLogger.js';
 import { projectDir } from '../../index.js';
 import { relations } from './schema/schema.js';
@@ -70,7 +70,7 @@ export const getDb = (dbName: string = 'ms', opts: { logger?: Logger, workingDir
   } = opts;
   const dbPath = getDbPath(dbName, workingDirectory);
   logger.info(`Using database at ${dbPath}`);
-  return drizzle(dbPath, {relations: relations});
+  return drizzle(dbPath, {relations: relations, logger: createDrizzleLogger(logger)});
 }
 
 export type DbConcrete = ReturnType<typeof getDb>;
@@ -90,6 +90,26 @@ export const migrateDb = async (db: ReturnType<typeof drizzle>, opts: {parentLog
   }
 }
 
+export const createDrizzleLogger = (parentLogger: Logger, opts: {level?: LogLevel, query?: boolean} = {}): LogWriter & DrizzleLogger => {
+  const {
+    level = 'trace',
+    query = false,
+  } = opts;
+
+  const logger = childLogger(parentLogger, 'Drizzle');
+
+  let queryFunc: (query: string, params: unknown[]) => void = (_, __) => {};
+  if(query) {
+    queryFunc = (query: string, params: unknown[]) => logger[level]({params}, `SQL Query => ${query}`);
+  }
+
+  return {
+    write(message: string) {
+      logger[level](message);
+    },
+    logQuery: queryFunc
+  }
+}
 
 
 // cannot really use transactions right now because async isn't supporting for sqlite
