@@ -10,6 +10,7 @@ import { childLogger, Logger, LogLevel } from '@foxxmd/logging';
 import { loggerNoop } from '../../MaybeLogger.js';
 import { projectDir } from '../../index.js';
 import { relations } from './schema/schema.js';
+import { addToContext, executeQuery } from './logContext.js';
 
 export async function shouldBackupDb(dbPath: string, opts: {logger?: Logger, migrationsFolder?: string} = {}): Promise<[boolean, string[]]> {
   const {
@@ -70,10 +71,9 @@ export async function shouldBackupDb(dbPath: string, opts: {logger?: Logger, mig
 export const getDb = (dbName: string = 'ms', opts: { logger?: Logger, workingDirectory?: string } = {}) => {
   const {
     workingDirectory,
-    logger = loggerNoop
+    logger = loggerNoop,
   } = opts;
   const dbPath = getDbPath(dbName, workingDirectory);
-  logger.info(`Using database at ${dbPath}`);
   return drizzle(dbPath, {relations: relations, logger: createDrizzleLogger(logger)});
 }
 
@@ -87,7 +87,8 @@ export const migrateDb = async (db: ReturnType<typeof drizzle>, opts: {logger?: 
   const logger = childLogger(parentLogger, 'Migrations');
 
   try {
-    await migrate(db, { migrationsFolder: migrationsFolder ?? path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations') });
+    logger.info('Starting migrations...');
+    await executeQuery('migrations', async () => migrate(db, { migrationsFolder: migrationsFolder ?? path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations') }), logger, process.env.LOG_MIGRATION === 'true' ? true : 'error');
     logger.info('Migrations complete');
   } catch (e) {
     throw new Error('Failed to migrate database', { cause: e });
@@ -105,24 +106,11 @@ export const performDbMigrationWithBackup = async (dbName: string = 'ms', opts: 
   await migrateDb(db, opts);
 }
 
-export const createDrizzleLogger = (parentLogger: Logger, opts: {level?: LogLevel, query?: boolean} = {}): LogWriter & DrizzleLogger => {
-  const {
-    level = 'trace',
-    query = false,
-  } = opts;
-
-  const logger = childLogger(parentLogger, 'Drizzle');
-
-  let queryFunc: (query: string, params: unknown[]) => void = (_, __) => {};
-  if(query) {
-    queryFunc = (query: string, params: unknown[]) => logger[level]({params}, `SQL Query => ${query}`);
-  }
-
+export const createDrizzleLogger = (parentLogger: Logger, opts: {level?: LogLevel} = {}): DrizzleLogger => {
   return {
-    write(message: string) {
-      logger[level](message);
-    },
-    logQuery: queryFunc
+    logQuery: (query: string, params: unknown[]) => {
+      addToContext({sql: query, params})
+    }
   }
 }
 
