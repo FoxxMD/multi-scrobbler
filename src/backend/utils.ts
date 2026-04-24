@@ -338,46 +338,6 @@ export const pollingBackoff = (attempt: number, scaleFactor: number = 1): number
     return Math.round(backoffStrat(attempt + 1) / 1000);
 }
 
-export const parseRegex = (reg: RegExp, val: string): RegExResult[] | undefined => {
-
-    if (reg.global) {
-        const g = Array.from(val.matchAll(reg));
-        if (g.length === 0) {
-            return undefined;
-        }
-        return g.map(x => {
-            return {
-                match: x[0],
-                index: x.index,
-                groups: x.slice(1),
-                named: x.groups || {},
-            } as RegExResult;
-        });
-    }
-
-    const m = val.match(reg)
-    if (m === null) {
-        return undefined;
-    }
-    return [{
-        match: m[0],
-        index: m.index as number,
-        groups: m.slice(1),
-        named: m.groups || {}
-    }];
-}
-
-export const parseRegexSingleOrFail = (reg: RegExp, val: string): RegExResult | undefined => {
-    const results = parseRegex(reg, val);
-    if (results !== undefined) {
-        if (results.length > 1) {
-            throw new Error(`Expected Regex to match once but got ${results.length} results. Either Regex must NOT be global (using 'g' flag) or parsed value must only match regex once. Given: ${val} || Regex: ${reg.toString()}`);
-        }
-        return results[0];
-    }
-    return undefined;
-}
-
 export const intersect = (a: Array<any>, b: Array<any>) => {
     const setA = new Set(a);
     const setB = new Set(b);

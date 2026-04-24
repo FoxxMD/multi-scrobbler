@@ -4,7 +4,7 @@ import address from "address";
 import net from 'node:net';
 import normalizeUrl from "normalize-url";
 import { join as joinPath } from "path";
-import { getFirstNonEmptyVal, isDebugMode, parseRegexSingleOrFail } from "../utils.js";
+import { getFirstNonEmptyVal, isDebugMode} from "../utils.js";
 import { URLData } from "../../core/Atomic.js";
 import { CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket'
 import { WEBSOCKET_CLOSE_CODE_REASONS } from "../common/infrastructure/Atomic.js";
@@ -225,7 +225,7 @@ export const getAddress = (host = '0.0.0.0', logger?: Logger): { v4?: string, v6
 }
 const IPV4_REGEX = new RegExp(/^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$/);
 export const isIPv4 = (address: string): boolean => {
-    return parseRegexSingleOrFail(IPV4_REGEX, address) !== undefined;
+    return parseRegexSingle(IPV4_REGEX, address) !== undefined;
 }
 
 export const formatWebsocketClose = (e: CloseEvent): string => {
