@@ -20,10 +20,11 @@ import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
 import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
 import { isDebugMode, parseBool, retry } from "./utils.js";
 import { readJson } from './utils/DataUtils.js';
-//import { createVegaGenerator } from './utils/SchemaUtils.js';
 import ScrobbleClients from './scrobblers/ScrobbleClients.js';
 import ScrobbleSources from './sources/ScrobbleSources.js';
 import { Notifiers } from './notifier/Notifiers.js';
+import { getDb, performDbMigrationWithBackup } from './common/database/drizzle/drizzleUtils.js';
+import { getDbPath } from './common/database/Database.js';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -88,17 +89,23 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
 
         initLogger.info(`Debug Mode: ${isDebugMode() ? 'YES' : 'NO'}`);
 
-        await parseVersion();
+        const version = await parseVersion();
+
+        initLogger.info(`Version: ${version}`);
 
         const [aLogger, appLoggerStream] = await appLogger(logging)
         logger = childLogger(aLogger, 'App');
+        
+        logger.info(`Using database at ${getDbPath('ms')}`);
+        await performDbMigrationWithBackup('ms', {logger});
 
-        const root = getRoot({...config, logger, loggingConfig: logging, loggerStream: appLoggerStream});
-        initLogger.info(`Version: ${root.get('version')}`);
-
-        //initLogger.info('Generating schema definitions...');
-        //createVegaGenerator()
-        //initLogger.info('Schema definitions generated');
+        const root = getRoot({
+            ...config,
+            logger,
+            loggingConfig: logging,
+            loggerStream: appLoggerStream,
+            db: getDb('ms', {logger})
+        });
 
         const internalConfigOptional = {
              localUrl: root.get('localUrl'),
