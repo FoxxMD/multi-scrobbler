@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "3afdf43c-1cbb-4f51-a776-9a432e102fc6",
+  "id": "c2744e30-39a9-4d83-8b7c-229ab78fe6e5",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -370,8 +370,8 @@
       "columnsTo": [
         "id"
       ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
+      "onUpdate": "CASCADE",
+      "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_plays_parentId_plays_id_fk",
       "entityType": "fks",

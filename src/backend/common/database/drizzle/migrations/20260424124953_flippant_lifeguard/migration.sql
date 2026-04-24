@@ -29,7 +29,7 @@ CREATE TABLE `plays` (
 	`state` text NOT NULL,
 	`parentId` integer,
 	CONSTRAINT `fk_plays_componentId_components_id_fk` FOREIGN KEY (`componentId`) REFERENCES `components`(`id`) ON UPDATE CASCADE ON DELETE CASCADE,
-	CONSTRAINT `fk_plays_parentId_plays_id_fk` FOREIGN KEY (`parentId`) REFERENCES `plays`(`id`)
+	CONSTRAINT `fk_plays_parentId_plays_id_fk` FOREIGN KEY (`parentId`) REFERENCES `plays`(`id`) ON UPDATE CASCADE ON DELETE SET NULL
 );
 --> statement-breakpoint
 CREATE TABLE `play_queue_states` (
