@@ -15,6 +15,7 @@ import prom, { Counter, Gauge } from 'prom-client';
 import { CoverArtApiClient } from "./common/vendor/musicbrainz/CoverArtApiClient.js";
 import { version } from "./version.js";
 import { StaggerOptions } from "./utils/AsyncUtils.js";
+import { DbConcrete } from "./common/database/drizzle/drizzleUtils.js";
 
 let root: ReturnType<typeof createRoot>;
 export interface RootOptions {
@@ -27,6 +28,7 @@ export interface RootOptions {
     cache?: CacheConfigOptions | MSCache | (() => MSCache)
     mbMap?: MusicBrainzSingletonMap | (() => MusicBrainzSingletonMap)
     transformers?: TransformerCommonConfig[]
+    db?: DbConcrete
 }
 
 const discovered = new prom.Counter({
@@ -60,6 +62,7 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         logger,
         cache,
         mbMap,
+        db,
         transformers = []
     } = options || {};
     const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
@@ -148,6 +151,7 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         cache: () => maybeSingletonCache !== undefined ? () => maybeSingletonCache : cacheFunc,
         mbMap: () => maybeSingletonMb !== undefined ? () => maybeSingletonMb : mbFunc,
         coverArtApi,
+        db: db as DbConcrete
     }).add((items) => {
         const localUrl = generateBaseURL(baseUrl, items.port)
         return {
