@@ -2,6 +2,8 @@ import { FileLogOptions, LogLevel } from "@foxxmd/logging";
 
 import { PlayTransformConfig, PlayTransformOptions } from "../../Transform.js";
 import { CommonConfig, CommonData, RequestRetryOptions } from "../common.js";
+import { RetentionOptions } from "../database.js";
+import { DurationValue } from "../../Atomic.js";
 
 export interface SourceRetryOptions extends RequestRetryOptions {
     /**
@@ -108,6 +110,8 @@ export interface CommonSourceOptions extends SourceRetryOptions {
     scrobbleBacklogCount?: number
 
     playTransform?: PlayTransformOptions
+
+    retention?: RetentionOptions<DurationValue>
 }
 
 export interface ManualListeningOptions {

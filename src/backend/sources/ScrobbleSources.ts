@@ -54,6 +54,7 @@ import { ListenBrainzData } from '../common/infrastructure/config/client/listenb
 import { KoitoData } from '../common/infrastructure/config/client/koito.js';
 import { TealData } from '../common/infrastructure/config/client/tealfm.js';
 import { RockSkyData } from '../common/infrastructure/config/client/rocksky.js';
+import { DEFAULT_RETENTION_DELETE_AFTER } from '../common/infrastructure/config/database.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -230,8 +231,11 @@ export default class ScrobbleSources {
             const {
                 sources: mainConfigSourcesConfigs = [],
                 sourceDefaults: sd = {},
+                database: {
+                    retention
+                } = {},
             } = aioConfig;
-            sourceDefaults = this.buildSourceDefaults(sd);
+            sourceDefaults = this.buildSourceDefaults({retention, ...sd});
             for (const [index, c] of mainConfigSourcesConfigs.entries()) {
                 const {name = 'unnamed'} = c;
                 if(c.type === undefined) {

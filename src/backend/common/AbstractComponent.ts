@@ -27,6 +27,8 @@ import { diffObjects, diffObjectsConsoleOutput, patchObject } from "../../core/D
 import clone from "clone";
 import { loggerNoop } from "./MaybeLogger.js";
 import { objectsEqual } from "../utils/DataUtils.js";
+import { RetentionOptionsFull } from "./infrastructure/config/database.js";
+import { parseRetentionOptions } from "./database/Database.js";
 
 export type AbstractComponentConfig = (CommonClientConfig | CommonSourceConfig) & { transformManager?: TransformerManager };
 
@@ -38,11 +40,13 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     regexCache!: ReturnType<typeof cacheFunctions>;
     protected transformManager: TransformerManager;
     protected cache: MSCache;
+    protected retentionOpts: RetentionOptionsFull;
 
     protected constructor(config: AbstractComponentConfig) {
         super(config);
         this.transformManager = config.transformManager ?? getRoot().items.transformerManager;
         this.cache = getRoot().items.cache();
+        this.retentionOpts = parseRetentionOptions(config.options.retention);
     }
 
     protected postCache(): Promise<void> {

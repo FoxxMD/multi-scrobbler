@@ -130,8 +130,11 @@ export default class ScrobbleClients {
             const {
                 clients: mainConfigClientConfigs = [],
                 clientDefaults: cd = {},
+                database: {
+                    retention
+                } = {},
             } = aioConfig;
-            clientDefaults = cd;
+            clientDefaults = {retention, ...cd};
             for (const [index, c] of mainConfigClientConfigs.entries()) {
                 const {name = 'unnamed'} = c;
                 if(c.type === undefined) {
@@ -414,7 +417,7 @@ ${sources.join('\n')}`);
         if (isValidConfig !== true) {
             throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
         }*/
-        const {type, name, enable = true, source, data: d = {}} = clientConfig;
+        const {type, name, enable = true, source, data: d = {}, options = {}} = clientConfig;
 
         if(enable === false) {
             this.logger.warn({labels: [`${type} - ${name}`]}, `Client from ${source} was disabled by config`);
@@ -422,41 +425,41 @@ ${sources.join('\n')}`);
         }
 
         // add defaults
-        const data = {...defaults, ...d};
+        const compositeOptions = {...defaults, ...options};
         let newClient;
         this.logger.debug({labels: [`${type} - ${name}`]}, `Constructing Client from ${source}`);
         switch (type) {
             case 'maloja':
                 const MalojaScrobbler = (await import('./MalojaScrobbler.js')).default;
-                newClient = new MalojaScrobbler(name, ({...clientConfig, data} as unknown as MalojaClientConfig), notifier, this.emitter, this.logger);
+                newClient = new MalojaScrobbler(name, ({...clientConfig, data: d, options: compositeOptions} as unknown as MalojaClientConfig), notifier, this.emitter, this.logger);
                 break;
             case 'lastfm':
                 const LastfmScrobbler = (await import('./LastfmScrobbler.js')).default;
-                newClient = new LastfmScrobbler(name, {...clientConfig, data } as unknown as LastfmClientConfig, this.internalConfig, notifier, this.emitter, this.logger);
+                newClient = new LastfmScrobbler(name, {...clientConfig, data: d, options: compositeOptions } as unknown as LastfmClientConfig, this.internalConfig, notifier, this.emitter, this.logger);
                 break;
             case 'librefm':
                 const LibrefmScrobbler = (await import('./LibrefmScrobbler.js')).default;
-                newClient = new LibrefmScrobbler(name, {...clientConfig, data } as unknown as LibrefmClientConfig, this.internalConfig, notifier, this.emitter, this.logger);
+                newClient = new LibrefmScrobbler(name, {...clientConfig, data: d, options: compositeOptions } as unknown as LibrefmClientConfig, this.internalConfig, notifier, this.emitter, this.logger);
                 break;
             case 'listenbrainz':
                 const ListenbrainzScrobbler = (await import('./ListenbrainzScrobbler.js')).default;
-                newClient = new ListenbrainzScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...data} } as unknown as ListenBrainzClientConfig, {}, notifier, this.emitter, this.logger);
+                newClient = new ListenbrainzScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...d}, options: compositeOptions } as unknown as ListenBrainzClientConfig, {}, notifier, this.emitter, this.logger);
                 break;
             case 'koito':
                 const KoitoScrobbler = (await import('./KoitoScrobbler.js')).default;
-                newClient = new KoitoScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...data} } as unknown as KoitoClientConfig, {}, notifier, this.emitter, this.logger);
+                newClient = new KoitoScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...d}, options: compositeOptions } as unknown as KoitoClientConfig, {}, notifier, this.emitter, this.logger);
                 break;
             case 'tealfm':
                 const TealScrobbler = (await import('./TealfmScrobbler.js')).default;
-                newClient = new TealScrobbler(name, {...clientConfig, data: {...data}} as unknown as TealClientConfig, {}, notifier, this.emitter, this.logger);
+                newClient = new TealScrobbler(name, {...clientConfig, data: d, options: compositeOptions} as unknown as TealClientConfig, {}, notifier, this.emitter, this.logger);
                 break;
             case 'rocksky':
                 const RockskyScrobbler = (await import('./RockskyScrobbler.js')).default;
-                newClient = new RockskyScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...data} } as unknown as RockSkyClientConfig, {}, notifier, this.emitter, this.logger);
+                newClient = new RockskyScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...d}, options: compositeOptions } as unknown as RockSkyClientConfig, {}, notifier, this.emitter, this.logger);
                 break;
             case 'discord':
                 const DiscordScrobbler = (await import('./DiscordScrobbler.js')).default;
-                newClient = new DiscordScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...data} } as unknown as DiscordClientConfig, {}, notifier, this.emitter, this.logger);
+                newClient = new DiscordScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...d}, options: compositeOptions } as unknown as DiscordClientConfig, {}, notifier, this.emitter, this.logger);
                 break;                
             default:
                 break;
