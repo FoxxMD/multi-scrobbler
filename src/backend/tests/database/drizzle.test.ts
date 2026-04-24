@@ -371,14 +371,14 @@ describe('Repository Operations', function () {
         expect(bwPlays[1].play.data.track).eq(playData[2].play.data.track);
     });
 
-        it('finds Plays by component', async function () {
+    it('finds Plays by component', async function () {
 
         const db = getDb(':memory:');
         await migrateDb(db);
 
         const component1 = await db.insert(components).values(fixtureCreateComponent()).returning();
-        const component2 = await db.insert(components).values(fixtureCreateComponent({uid: 'test2', name: 'jelly2'})).returning();
-        const component3 = await db.insert(components).values(fixtureCreateComponent({uid: 'test3', name: 'jelly3'})).returning();
+        const component2 = await db.insert(components).values(fixtureCreateComponent({ uid: 'test2', name: 'jelly2' })).returning();
+        const component3 = await db.insert(components).values(fixtureCreateComponent({ uid: 'test3', name: 'jelly3' })).returning();
 
         const repo = new DrizzlePlayRepository(db);
 
@@ -416,6 +416,77 @@ describe('Repository Operations', function () {
 
         const noPlays = await repo.findPlays({ componentId: component2[0].id });
         expect(noPlays).length(0);
+    });
+
+    it('finds purgable Plays', async function () {
+
+        const db = getDb(':memory:');
+        await migrateDb(db);
+
+        const component1 = await db.insert(components).values(fixtureCreateComponent()).returning();
+        const component2 = await db.insert(components).values(fixtureCreateComponent({ uid: 'test2', name: 'jelly2' })).returning();
+
+        const repo = new DrizzlePlayRepository(db);
+
+        const playData: RepositoryCreatePlayOpts[] = [
+            {
+                ...fixtureCreatePlay(),
+                componentId: component1[0].id,
+                seenAt: dayjs().subtract(25, 'h'),
+                state: 'queued' as 'queued',
+                input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
+            },
+            {
+                ...fixtureCreatePlay(),
+                componentId: component1[0].id,
+                seenAt: dayjs().subtract(26, 'h'),
+                state: 'queued' as 'queued',
+                input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
+            },
+            {
+                ...fixtureCreatePlay(),
+                componentId: component2[0].id,
+                seenAt: dayjs().subtract(26, 'h'),
+                state: 'queued' as 'queued',
+                input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
+            },
+            {
+                ...fixtureCreatePlay(),
+                componentId: component1[0].id,
+                seenAt: dayjs().subtract(25, 'h').subtract(1, 'm'),
+                state: 'queued' as 'queued',
+                input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
+            },
+        ]
+
+        const initialPlays = await repo.createPlays(playData);
+
+        const childPlays = await repo.createPlays([
+            {
+                ...fixtureCreatePlay(),
+                componentId: component2[0].id,
+                seenAt: dayjs().subtract(25, 'h'),
+                parentId: initialPlays[1].id,
+                state: 'queued' as 'queued',
+                input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
+            },
+        ])
+
+        // does not return newer plays
+        expect((await repo.findPurgablePlayIds(1, dayjs().subtract(27, 'h')))).length(0);
+
+        const pPlays = await repo.findPurgablePlayIds(1, dayjs().subtract(24, 'h'));
+        // only returns plays that do not have children
+        expect(pPlays).length(2);
+        expect(pPlays[0]).to.eq(initialPlays[0].id);
+        expect(pPlays[1]).to.eq(initialPlays[3].id);
+
+        // only finds plays by component
+        // and allows purging if they have parent id
+        const p2Plays = await repo.findPurgablePlayIds(2, dayjs().subtract(23, 'h'));
+        expect(p2Plays).length(2);
+        expect(p2Plays[0]).to.eq(initialPlays[2].id);
+        expect(p2Plays[1]).to.eq(childPlays[0].id);
     });
 
 });
