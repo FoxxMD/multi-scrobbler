@@ -118,6 +118,48 @@ export class DrizzlePlayRepository {
         const ids = playsData.map(x => typeof x === 'number' ? x : x.id);
         await this.db.delete(plays).where(inArray(plays.id, ids));
     }
+
+    findPurgablePlayIds = async (componentId: number, olderThanDate: Dayjs, opts: { countOnly?: boolean, states?: PlaySelect['state'][] } = {}) => {
+
+        const {
+            countOnly = false,
+            states
+        } = opts;
+
+        let where: FindWhere<'plays'> = {
+            component: {
+                id: componentId
+            },
+            seenAt: {
+                lte: olderThanDate
+            },
+            NOT: {
+                children: {}
+            }
+        };
+
+        if (states !== undefined) {
+            where.state = {
+                in: states
+            }
+        }
+
+        const rows = await this.db.query.plays.findMany({
+            columns: {
+                id: true
+            },
+            where,
+            orderBy: {
+                id: 'asc'
+            }
+        });
+
+        if (countOnly) {
+            return rows.length;
+        }
+
+        return rows.map(x => x.id);
+    }
 }
 
 export const buildPlayWhere = (args: PlayWhereOpts): FindWhere<'plays'> => {
@@ -135,7 +177,7 @@ export const buildPlayWhere = (args: PlayWhereOpts): FindWhere<'plays'> => {
     if (args.seenAt !== undefined) {
         where.seenAt = buildDateCompare(args.seenAt);
     }
-    if(args.playedAt !== undefined) {
+    if (args.playedAt !== undefined) {
         where.playedAt = buildDateCompare(args.playedAt);
     }
     return where;
