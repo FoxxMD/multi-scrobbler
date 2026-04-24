@@ -8,7 +8,7 @@ import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, CompareOpKey } 
 import { MarkOptional, MarkRequired, PathValue } from "ts-essentials";
 import { removeUndefinedKeys } from "../../../../utils.js";
 import dayjs, { Dayjs } from "dayjs";
-import { RelationsFieldFilter } from "drizzle-orm";
+import { RelationsFieldFilter, eq, inArray } from "drizzle-orm";
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 
@@ -112,6 +112,11 @@ export class DrizzlePlayRepository {
         query = removeUndefinedKeys(query);
         const results = await this.db.query.plays.findMany(query);
         return results;
+    }
+
+    deletePlays = async (playsData: (Pick<PlaySelect, 'id'> | number)[]) => {
+        const ids = playsData.map(x => typeof x === 'number' ? x : x.id);
+        await this.db.delete(plays).where(inArray(plays.id, ids));
     }
 }
 

@@ -17,6 +17,7 @@ import { DrizzlePlayRepository, RepositoryCreatePlayOpts } from '../../common/da
 import { generateRandomObj } from '../../../core/tests/utils/fixtures.js';
 import { generateArray } from '../../../core/DataUtils.js';
 import { objectsEqual } from '../../utils/DataUtils.js';
+import { eq } from 'drizzle-orm';
 
 // would be great to push migrations directly from schema but doesn't seem supported in newest beta
 // https://github.com/drizzle-team/drizzle-orm/discussions/4373
@@ -174,6 +175,77 @@ describe('Basic DB Operations', function () {
 
             expect(fullPlay.input).to.not.be.undefined;
 
+        } catch (e) {
+            throw e;
+        }
+        db.$client.close();
+    });
+
+    it('deletes all dependent relations when a Play is deleted', async function () {
+
+        const db = getDb(':memory:', { workingDirectory: process.cwd() });
+        await migrateDb(db);
+
+        try {
+
+            const component = await db.insert(components).values(fixtureCreateComponent()).returning();
+
+            const playRow = await db.insert(plays).values(fixtureCreatePlay({ componentId: component[0].id })).returning();
+
+            const input = await db.insert(playInputs).values(fixtureCreateInput({
+                playId: playRow[0].id,
+                play: playRow[0].play
+            })).returning();
+
+            const twoQueues = await db.insert(queueStates).values([
+                {
+                    playId: playRow[0].id,
+                    componentId: component[0].id,
+                    queueName: 'foo'
+                },
+                {
+                    playId: playRow[0].id,
+                    componentId: component[0].id,
+                    queueName: 'bar',
+                    queueStatus: 'completed'
+                }
+            ]).returning();
+
+            const fullPlay = await db.query.plays.findFirst({
+                with: {
+                    input: true,
+                    queueStates: true,
+                },
+            });
+
+
+            expect(fullPlay.queueStates).to.not.be.undefined;
+            expect(fullPlay.queueStates).length(2);
+            expect(fullPlay.input).to.not.be.undefined;
+
+            await db.delete(plays).where(eq(plays.id, fullPlay.id));
+            const deletedPlay = await db.query.plays.findFirst({
+                where: {
+                    id: fullPlay.id
+                }
+            });
+            expect(deletedPlay).to.be.undefined;
+
+            const deletedInput = await db.query.playInputs.findFirst({
+                where: {
+                    id: input[0].id
+                }
+            });
+            expect(deletedInput).to.be.undefined;
+
+            const deletedQueues = await db.query.queueStates.findMany({
+                where: {
+                    id: {
+                        in: [twoQueues[0].id, twoQueues[1].id]
+                    }
+                }
+            });
+            expect(deletedQueues).length(0);
         } catch (e) {
             throw e;
         }
