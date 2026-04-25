@@ -30,7 +30,12 @@ import { objectsEqual } from "../utils/DataUtils.js";
 import { RetentionOptions } from "./infrastructure/config/database.js";
 import { getRetentionCompactAfterFromEnv, getRetentionDeleteAfterFromEnv, isCompactableProperty, parseRetentionOptions, parseRetentionOptionsDurations } from "./database/Database.js";
 import { DbConcrete } from "./database/drizzle/drizzleUtils.js";
-import { ComponentSelect } from "./database/drizzle/drizzleTypes.js";
+import { ComponentSelect, FindWhere, PlaySelect } from "./database/drizzle/drizzleTypes.js";
+import { DrizzlePlayRepository } from "./database/drizzle/repositories/PlayRepository.js";
+import { ClientType } from "./infrastructure/config/client/clients.js";
+import { SourceType } from "./infrastructure/config/source/sources.js";
+import { generateComponentEntity } from "./database/drizzle/entityUtils.js";
+import { components } from "./database/drizzle/schema/schema.js";
 
 export type AbstractComponentConfig = (CommonClientConfig | CommonSourceConfig) & { transformManager?: TransformerManager };
 
@@ -45,6 +50,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     protected db: DbConcrete;
     protected dbComponent: ComponentSelect;
     protected retentionOpts: RetentionOptions;
+
+    protected componentType: 'source' | 'client';
+    type: ClientType | SourceType;
 
     protected constructor(config: AbstractComponentConfig) {
         super(config);
@@ -73,7 +81,25 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     protected async doBuildDatabase(): Promise<true | string | undefined> {
         super.doBuildDatabase();
-        return;
+        let where: FindWhere<'components'> = {
+            mode: this.componentType,
+            type: this.type,
+            uid: this.config.id ?? this.config.name
+        };
+        const component = await this.db.query.components.findFirst({
+            where
+        });
+        if(component !== undefined) {
+            this.dbComponent = component;
+            return;
+        }
+
+        this.dbComponent = (await this.db.insert(components).values(generateComponentEntity({
+            uid: this.config.id ?? this.config.name,
+            mode: 'source',
+            type: this.type,
+            name: this.config.name
+        })).returning())[0];
     }
 
     public buildTransformRules() {
@@ -173,6 +199,15 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 existing,
             },
             postCompare,
+        }
+    }
+
+    public retentionCleanup = async () => {
+        try {
+            const repo = new DrizzlePlayRepository(this.db, {logger: this.logger});
+            await repo.retentionCleanup(this.dbComponent.id, this.componentType, this.retentionOpts);
+        } catch (e) {
+            this.logger.warn(new Error('Failed to do retention cleanup', {cause: e}));
         }
     }
 

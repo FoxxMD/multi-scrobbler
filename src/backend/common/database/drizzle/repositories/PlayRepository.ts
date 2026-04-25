@@ -1,4 +1,4 @@
-import { Logger, LoggerAppExtras } from "@foxxmd/logging";
+import { childLogger, Logger, LoggerAppExtras } from "@foxxmd/logging";
 import { DbConcrete, getDb, runTransaction } from "../drizzleUtils.js";
 import { loggerNoop } from "../../../MaybeLogger.js";
 import { PlayObject } from "../../../../../core/Atomic.js";
@@ -9,6 +9,8 @@ import { MarkOptional, MarkRequired, PathValue } from "ts-essentials";
 import { removeUndefinedKeys } from "../../../../utils.js";
 import dayjs, { Dayjs } from "dayjs";
 import { RelationsFieldFilter, eq, inArray } from "drizzle-orm";
+import { CompactableProperty, RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.js";
+import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.js";
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 
@@ -119,11 +121,11 @@ export class DrizzlePlayRepository {
         await this.db.delete(plays).where(inArray(plays.id, ids));
     }
 
-    findPurgablePlayIds = async (componentId: number, olderThanDate: Dayjs, opts: { countOnly?: boolean, states?: PlaySelect['state'][] } = {}) => {
+    findPurgablePlayIds = async (componentId: number, olderThanDate: Dayjs, opts: { states?: PlaySelect['state'][], compacted?: string } = {}): Promise<number[]> => {
 
         const {
-            countOnly = false,
-            states
+            states,
+            compacted
         } = opts;
 
         let where: FindWhere<'plays'> = {
@@ -144,6 +146,21 @@ export class DrizzlePlayRepository {
             }
         }
 
+        if(compacted !== undefined) {
+            where.compacted = {
+                OR: [
+                    {
+                        isNull: true
+                    },
+                    {
+                        NOT: {
+                            eq: compacted
+                        }
+                    }
+                ]
+            }
+        }
+
         const rows = await this.db.query.plays.findMany({
             columns: {
                 id: true
@@ -154,11 +171,121 @@ export class DrizzlePlayRepository {
             }
         });
 
-        if (countOnly) {
-            return rows.length;
+        return rows.map(x => x.id);
+    }
+
+    public retentionCleanup = async (componentId: number, componentType: string, retentionOpts: RetentionOptions) => {
+
+        const loggerDel = childLogger(this.logger, ['Retention', 'Delete']);
+        const loggerCom = childLogger(this.logger, ['Retention', 'Compact']);
+        let summaryDelStates: string[] = [];
+        let summaryCompactStates: string[] = [];
+
+        loggerDel.debug('Starting cleanup...');
+        for(const retentionType of retentionPlayTypes) {
+            try {
+                const date = dayjs().subtract(retentionOpts.deleteAfter[retentionType].asMilliseconds());
+                let state: PlaySelect['state'];
+                if(retentionType === 'completed') {
+                    state = componentType === 'source' ? 'discovered' : 'scrobbled';
+                } else {
+                    state = retentionType;
+                }
+                loggerDel.trace(`Finding '${retentionType}' plays older than ${shortTodayAwareFormat(date)}...`);
+                const ids = await this.findPurgablePlayIds(componentId, date, {states: [state]});
+                loggerDel.trace(`Found ${ids.length} '${retentionType}' plays`);
+                if(ids.length === 0) {
+                    summaryDelStates.push(`No '${retentionType}' Plays older than ${shortTodayAwareFormat(date)}`);
+                } else {
+                    loggerDel.trace(`Deleting ${ids.length} '${retentionType}' plays`);
+                    await this.deletePlays(ids);
+                    loggerDel.trace(`'${retentionType}' plays deleted!`);
+                    summaryDelStates.push(`${ids.length} '${retentionType}' Plays older than ${shortTodayAwareFormat(date)}`)
+                }
+            } catch (e) {
+                loggerDel.warn(new Error(`Failed to perform retention cleanup on '${retentionType}' type`, {cause: e}));
+            }
+        }
+        loggerDel.verbose(`Cleanup done! Summary:\n${summaryDelStates.join(' | ')}`);
+
+        if(retentionOpts.compact.length === 0) {
+            loggerCom.debug('Compacting is disabled, skipping cleanup.');
+            return;
         }
 
-        return rows.map(x => x.id);
+        const compactTypes = retentionOpts.compact;
+        let compactedFlags: CompactableProperty[] = [];
+        if(compactTypes.includes('input')) {
+            compactedFlags.push('input');
+        }
+        if(compactTypes.includes('transform')) {
+            compactedFlags.push('transform');
+        }
+
+        loggerCom.debug('Starting cleanup...');
+        for(const retentionType of retentionPlayTypes) {
+            if(retentionOpts.compactAfter[retentionType] === false) {
+                summaryCompactStates.push(`Skipped ${retentionType}`);
+                continue;
+            }
+            try {
+                const date = dayjs().subtract(retentionOpts.compactAfter[retentionType].asMilliseconds());
+                let state: PlaySelect['state'];
+                if(retentionType === 'completed') {
+                    state = componentType === 'source' ? 'discovered' : 'scrobbled';
+                } else {
+                    state = retentionType;
+                }
+                loggerCom.trace(`Finding '${retentionType}' plays older than ${shortTodayAwareFormat(date)}...`);
+                const ids = await this.findPurgablePlayIds(componentId, date, {compacted: compactedFlags.join('-'), states: [state]});
+                loggerCom.trace(`Found ${ids.length} '${retentionType}' plays`);
+                if(ids.length === 0) {
+                    summaryDelStates.push(`No '${retentionType}' Plays older than ${shortTodayAwareFormat(date)}`);
+                } else {
+                    for(const id of ids) {
+                        let compactedPlay: PlayObject;
+                        if(compactTypes.includes('input')) {
+                            this.db.update(playInputs).set({
+                                data: {removedReason: 'Removed by compaction'}
+                            }).where(eq(playInputs.playId, id));
+                        }
+                        if(compactTypes.includes('transform')) {
+                            const playRow = await this.db.query.plays.findFirst({where: {id: id}});
+                            if(playRow === undefined) {
+                                // uhh shouldn't be
+                                loggerCom.warn(`No Play found with ID ${id}, but it should have been...`);
+                                continue;
+                            }
+
+                            const compactedPlay: PlayObject = playRow.play;
+                            compactedPlay.meta.lifecycle.steps = compactedPlay.meta.lifecycle.steps.map(x => {
+                                if(x.inputs == undefined) {
+                                    return x;
+                                }
+                                return {...x, inputs: x.inputs.map(y => ({type: y.type, input: 'Removed by compaction'}))};
+                            });
+                        }
+
+                        const updater = this.db.update(plays);
+                        const vals: Parameters<typeof updater.set>[0] = {
+                            compacted: compactedFlags.join('-')
+                        };
+                        if(compactedPlay !== undefined) {
+                            vals.play = compactedPlay;
+                        }
+                        this.db.update(plays).set(vals)
+                    }
+                    loggerCom.trace(`Compacted ${ids.length} '${retentionType}' plays`);
+                    await this.deletePlays(ids);
+                    loggerCom.trace(`'${retentionType}' plays deleted!`);
+                    summaryCompactStates.push(`${ids.length} '${retentionType}' Plays older than ${shortTodayAwareFormat(date)}`)
+                }
+            } catch (e) {
+                loggerCom.warn(new Error(`Failed to perform retention cleanup on '${retentionType}' type`, {cause: e}));
+            }
+        }
+
+        loggerCom.verbose(`Cleanup done! Summary:\n${summaryDelStates.join(' | ')}`);
     }
 }
 

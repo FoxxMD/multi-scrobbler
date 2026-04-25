@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "c2744e30-39a9-4d83-8b7c-229ab78fe6e5",
+  "id": "7a00c1dc-5940-4e2a-8d13-a15faadbe71c",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -239,6 +239,16 @@
       "default": null,
       "generated": null,
       "name": "parentId",
+      "entityType": "columns",
+      "table": "plays"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "compacted",
       "entityType": "columns",
       "table": "plays"
     },
