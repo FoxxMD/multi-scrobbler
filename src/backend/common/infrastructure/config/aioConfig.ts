@@ -7,7 +7,7 @@ import { CommonSourceOptions, SourceRetryOptions } from "./source/index.js";
 import { SourceAIOConfig } from "./source/sources.js";
 import { CacheConfigOptions, DurationValue } from "../Atomic.js";
 import { TransformerCommonConfig } from "../../../../core/Atomic.js";
-import { RetentionOptions } from "./database.js";
+import { RetentionConfig } from "./database.js";
 
 
 export interface SourceDefaults extends CommonSourceOptions {
@@ -72,7 +72,7 @@ export interface AIOConfig {
     transformers?: TransformerCommonConfig[]
 
     database?: {
-        retention?: RetentionOptions<DurationValue>
+        retention?: RetentionConfig<DurationValue>
     }
 }
 

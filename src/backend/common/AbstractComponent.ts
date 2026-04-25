@@ -6,7 +6,7 @@ import { LifecycleStep, PlayData, PlayObject, TransformResult } from "../../core
 import { buildPlayHumanDiffable, buildTrackString } from "../../core/StringUtils.js";
 import { CommonClientConfig } from "./infrastructure/config/client/index.js";
 import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
-import { mergeSimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError, TransformRulesError } from "./errors/MSErrors.js";
+import { mergeSimpleError, SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError, TransformRulesError } from "./errors/MSErrors.js";
 import {
     FLOW_CONTROL_TERM,
     PlayTransformRules,
@@ -20,15 +20,15 @@ import { getRoot } from "../ioc.js";
 import { nanoid } from "nanoid";
 import { isDebugMode } from "../utils.js";
 import { findCauseByReference } from "../utils/ErrorUtils.js";
-import { hashObject } from "../utils/StringUtils.js";
+import { hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.js";
 import { metaInvariantTransform, playContentInvariantTransform } from "../utils/PlayComparisonUtils.js";
 import { MSCache } from "./Cache.js";
 import { diffObjects, diffObjectsConsoleOutput, patchObject } from "../../core/DataUtils.js";
 import clone from "clone";
 import { loggerNoop } from "./MaybeLogger.js";
 import { objectsEqual } from "../utils/DataUtils.js";
-import { RetentionOptionsFull } from "./infrastructure/config/database.js";
-import { parseRetentionOptions } from "./database/Database.js";
+import { RetentionOptions } from "./infrastructure/config/database.js";
+import { getRetentionCompactAfterFromEnv, getRetentionDeleteAfterFromEnv, isCompactableProperty, parseRetentionOptions, parseRetentionOptionsDurations } from "./database/Database.js";
 
 export type AbstractComponentConfig = (CommonClientConfig | CommonSourceConfig) & { transformManager?: TransformerManager };
 
@@ -40,13 +40,21 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     regexCache!: ReturnType<typeof cacheFunctions>;
     protected transformManager: TransformerManager;
     protected cache: MSCache;
-    protected retentionOpts: RetentionOptionsFull;
+    protected retentionOpts: RetentionOptions;
 
     protected constructor(config: AbstractComponentConfig) {
         super(config);
         this.transformManager = config.transformManager ?? getRoot().items.transformerManager;
         this.cache = getRoot().items.cache();
-        this.retentionOpts = parseRetentionOptions(config.options.retention);
+        const cProps = config.options?.retention?.compact ?? parseArrayFromMaybeString(process.env.COMPACT_PROPERTIES, {lower: true});
+        if(!cProps.every(isCompactableProperty)) {
+            throw new SimpleError(`Compactable properties must be one of 'transform' or 'input'. Given: ${cProps.join(',')}`);
+        }
+        this.retentionOpts = {
+            deleteAfter: parseRetentionOptionsDurations(config.options?.retention?.deleteAfter, getRetentionDeleteAfterFromEnv()),
+            compactAfter: parseRetentionOptions(config.options?.retention?.compactAfter, getRetentionCompactAfterFromEnv()),
+            compact: cProps
+        };
     }
 
     protected postCache(): Promise<void> {
