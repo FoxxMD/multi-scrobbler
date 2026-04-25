@@ -1,6 +1,9 @@
 import { Duration } from "dayjs/plugin/duration.js";
 import { DurationValue } from "../Atomic.js";
 
+export type RetentionPlayType = 'failed' | 'completed' | 'duped';
+export const retentionPlayTypes: RetentionPlayType[] = ['failed','completed','duped'];
+
 export type RetentionValueUnparsed = DurationValue | Duration | false;
 export type RetentionValue = Duration | false;
 export interface RententionGranular<T extends RetentionValueUnparsed> {
