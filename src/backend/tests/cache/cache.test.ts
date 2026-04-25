@@ -9,7 +9,7 @@ import { generatePlays } from "../../../core/PlayTestUtils.js";
 import { ListenProgressPositional, ListenProgressTS } from "../../sources/PlayerState/ListenProgress.js";
 import { isPortReachableConnect } from "../../utils/NetworkUtils.js";
 import { getRoot } from "../../ioc.js";
-import { transientCache } from "../utils/CacheTestUtils.js";
+import { transientCache } from "../utils/TransientTestUtils.js";
 import { TestScrobbler } from "../scrobbler/TestScrobbler.js";
 import { sleep } from "../../utils.js";
 import {promises} from 'node:fs';

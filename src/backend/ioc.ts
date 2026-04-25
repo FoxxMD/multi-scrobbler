@@ -28,7 +28,7 @@ export interface RootOptions {
     cache?: CacheConfigOptions | MSCache | (() => MSCache)
     mbMap?: MusicBrainzSingletonMap | (() => MusicBrainzSingletonMap)
     transformers?: TransformerCommonConfig[]
-    db?: DbConcrete
+    db?: DbConcrete | (() => DbConcrete)
 }
 
 const discovered = new prom.Counter({
@@ -92,6 +92,13 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         maybeSingletonMb = new Map();
     }
 
+    let dbFunc: () => DbConcrete;
+    let maybeSingletonDb: DbConcrete;
+    if(typeof db === 'function') {
+        dbFunc = db;
+    } else {
+        maybeSingletonDb = db;
+    }
 
     const cEmitter = new WildcardEmitter();
     // do nothing, just catch
@@ -151,7 +158,7 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         cache: () => maybeSingletonCache !== undefined ? () => maybeSingletonCache : cacheFunc,
         mbMap: () => maybeSingletonMb !== undefined ? () => maybeSingletonMb : mbFunc,
         coverArtApi,
-        db: db as DbConcrete
+        db: () => maybeSingletonDb !== undefined ? () => maybeSingletonDb : dbFunc
     }).add((items) => {
         const localUrl = generateBaseURL(baseUrl, items.port)
         return {

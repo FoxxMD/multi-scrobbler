@@ -15,7 +15,7 @@ import { initMemoryCache } from "../../common/Cache.js";
 import { Cacheable } from "cacheable";
 import { TransformerCommonConfig } from "../../../core/Atomic.js";
 import TransformerManager from "../../common/transforms/TransformerManager.js";
-import { transientCache } from "../utils/CacheTestUtils.js";
+import { transientCache } from "../utils/TransientTestUtils.js";
 import dayjs from "dayjs";
 import clone from "clone";
 

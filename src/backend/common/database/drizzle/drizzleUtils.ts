@@ -95,6 +95,22 @@ export const migrateDb = async (db: ReturnType<typeof drizzle>, opts: {logger?: 
   }
 }
 
+export const migrateDbSync = (db: ReturnType<typeof drizzle>, opts: {logger?: Logger, migrationsFolder?: string} = {}) => {
+  const {
+    migrationsFolder,
+    logger: parentLogger = loggerNoop
+  } = opts;
+  const logger = childLogger(parentLogger, 'Migrations');
+
+  try {
+    logger.info('Starting migrations...');
+    migrate(db, { migrationsFolder: migrationsFolder ?? path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations') });
+    logger.info('Migrations complete');
+  } catch (e) {
+    throw new Error('Failed to migrate database', { cause: e });
+  }
+}
+
 export const performDbMigrationWithBackup = async (dbName: string = 'ms', opts: { logger?: Logger, workingDirectory?: string, migrationsFolder?: string } = {}) => {
   const dbPath = getDbPath(dbName, opts.workingDirectory);
 

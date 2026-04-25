@@ -13,6 +13,7 @@ export default abstract class AbstractInitializable {
     authFailure?: boolean;
 
     buildOK?: boolean | null;
+    databaseOK?: boolean | null;
     connectionOK?: boolean | null;
     cacheOK?: boolean | null;
 
@@ -41,6 +42,7 @@ export default abstract class AbstractInitializable {
             if(this.componentLogger === undefined) {
                 await this.buildComponentLogger();
             }
+            await this.buildDatabase(force);
             await this.buildInitData(force);
             await this.parseCache(force);
             try {
@@ -96,13 +98,13 @@ export default abstract class AbstractInitializable {
             if(!force) {
                 return;
             }
-            this.logger.debug('Cache OK but step was forced');
+            this.logger.verbose('Cache OK but step was forced');
         }
         try {
             const res = await this.doParseCache();
             if(res === undefined) {
                 this.cacheOK = null;
-                this.logger.debug('No cache to parse.');
+                this.logger.trace('No cache to parse.');
                 return;
             }
             if (res === true) {
@@ -139,13 +141,13 @@ export default abstract class AbstractInitializable {
             if(!force) {
                 return;
             }
-            this.logger.debug('Build OK but step was forced');
+            this.logger.verbose('Build OK but step was forced');
         }
         try {
             const res = await this.doBuildInitData();
             if(res === undefined) {
                 this.buildOK = null;
-                this.logger.debug('No required data to build.');
+                this.logger.trace('No required data to build.');
                 return;
             }
             if (res === true) {
@@ -169,6 +171,44 @@ export default abstract class AbstractInitializable {
      * * Throw error on failure
      * */
     protected async doBuildInitData(): Promise<true | string | undefined> {
+        return;
+    }
+
+    public async buildDatabase(force: boolean = false) {
+        if(this.databaseOK) {
+            if(!force) {
+                return;
+            }
+            this.logger.verbose('Database OK but step was forced');
+        }
+        try {
+            const res = await this.doBuildDatabase();
+            if(res === undefined) {
+                this.databaseOK = null;
+                this.logger.trace('No required database steps.');
+                return;
+            }
+            if (res === true) {
+                this.logger.verbose('Required database init succeeded');
+            } else if (typeof res === 'string') {
+                this.logger.verbose(`Required database init succeeded => ${res}`);
+            }
+            this.databaseOK = true;
+        } catch (e) {
+            this.databaseOK = false;
+            throw new BuildDataError('Required database init failed', {cause: e});
+        }
+    }
+
+    /**
+     * Run/fetch/create any database data needed for this component to operate when ready
+     *
+     * * Return undefined if not possible or not required
+     * * Return TRUE if database steps succeeded
+     * * Return string if database steps succeeded and should log result
+     * * Throw error on failure
+     * */
+    protected async doBuildDatabase(): Promise<true | string | undefined> {
         return;
     }
 
@@ -252,12 +292,14 @@ export default abstract class AbstractInitializable {
 
     public isReady() {
         return (this.buildOK === null || this.buildOK === true) &&
+            (this.databaseOK === null || this.databaseOK === true) &&
             (this.connectionOK === null || this.connectionOK === true)
             && !this.authGated();
     }
 
     public isUsable() {
         return (this.buildOK === null || this.buildOK === true) &&
+            (this.databaseOK === null || this.databaseOK === true) &&
             (this.connectionOK === null || this.connectionOK === true);
     }
 

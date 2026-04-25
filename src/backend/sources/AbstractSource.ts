@@ -46,6 +46,9 @@ import prom, { Counter, Gauge } from 'prom-client';
 import { normalizeStr } from '../utils/StringUtils.js';
 import { spawn, catchAbortError, isAbortError, rethrowAbortError, delay, forever, AbortError, throwIfAborted } from 'abort-controller-x';
 import { AbortedError, generateLoggableAbortReason } from '../common/errors/MSErrors.js';
+import { FindWhere } from '../common/database/drizzle/drizzleTypes.js';
+import { components } from '../common/database/drizzle/schema/schema.js';
+import { generateComponentEntity } from '../common/database/drizzle/entityUtils.js';
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -125,6 +128,29 @@ export default abstract class AbstractSource extends AbstractComponent implement
         if(this.canPoll) {
             await this.tryStopPolling('Source is being disposed');
         }
+    }
+
+    protected async doBuildDatabase(): Promise<true | string | undefined> {
+        super.doBuildDatabase();
+        let where: FindWhere<'components'> = {
+            mode: 'source',
+            type: this.type,
+            uid: this.config.id ?? this.config.name
+        };
+        const component = await this.db.query.components.findFirst({
+            where
+        });
+        if(component !== undefined) {
+            this.dbComponent = component;
+            return;
+        }
+
+        this.dbComponent = (await this.db.insert(components).values(generateComponentEntity({
+            uid: this.config.id ?? this.config.name,
+            mode: 'source',
+            type: this.type,
+            name: this.config.name
+        })).returning())[0];
     }
 
     protected async postCache(): Promise<void> {
