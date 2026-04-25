@@ -293,7 +293,10 @@ export function parseBool(value: any, prev: any = false): boolean {
     throw new Error(`'${value.toString()}' is not a boolean value.`);
 }
 
-export function parseBoolStrict(value: string): boolean {
+export function parseBoolStrict(value: string | boolean): boolean {
+    if(typeof value === 'boolean') {
+        return value;
+    }
     const strTrue = ['1', 'true', 'yes'].includes(value.toLocaleLowerCase().trim());
     if (strTrue) {
         return strTrue;
