@@ -23,7 +23,7 @@ import { DEFAULT_CONSOLIDATE_DURATION, DEFAULT_GROUP_DURATION, groupPlaysToTimeR
 import { asPlay } from '../../../core/PlayMarshalUtils.js';
 import { nanoid } from 'nanoid';
 import { getRoot } from '../../ioc.js';
-import { transientCache } from '../utils/CacheTestUtils.js';
+import { transientCache } from '../utils/TransientTestUtils.js';
 
 chai.use(asPromised);
 

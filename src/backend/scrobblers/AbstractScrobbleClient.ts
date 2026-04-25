@@ -69,6 +69,9 @@ import {serializeError} from 'serialize-error';
 import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetchUtils.js";
 import { spawn, catchAbortError, isAbortError, rethrowAbortError, delay, forever, AbortError, throwIfAborted } from 'abort-controller-x';
 import { Queue, MemoryStorage } from '@platformatic/job-queue'
+import { FindOne, FindWhere } from "../common/database/drizzle/drizzleTypes.js";
+import { components } from "../common/database/drizzle/schema/schema.js";
+import { generateComponentEntity } from "../common/database/drizzle/entityUtils.js";
 
 type PlatformMappedPlays = Map<string, {player: SourcePlayerObj, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
@@ -430,6 +433,29 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.deadLetterScrobbles = cachedDead.map(x => ({...x, play: rehydratePlay(x.play), lastRetry: x.lastRetry !== undefined ? dayjs(x.lastRetry) : undefined}));
 
         return `Scrobbles from Cache: ${cachedQLength} Queue | ${cachedDLength} Dead Letter`;
+    }
+
+    protected async doBuildDatabase(): Promise<true | string | undefined> {
+        super.doBuildDatabase();
+        let where: FindWhere<'components'> = {
+            mode: 'client',
+            type: this.type,
+            uid: this.config.id ?? this.config.name
+        };
+        const component = await this.db.query.components.findFirst({
+            where
+        });
+        if(component !== undefined) {
+            this.dbComponent = component;
+            return;
+        }
+
+        this.dbComponent = (await this.db.insert(components).values(generateComponentEntity({
+            uid: this.config.id ?? this.config.name,
+            mode: 'client',
+            type: this.type,
+            name: this.config.name
+        })).returning())[0];
     }
 
     protected async postInitialize(): Promise<void> {

@@ -29,6 +29,8 @@ import { loggerNoop } from "./MaybeLogger.js";
 import { objectsEqual } from "../utils/DataUtils.js";
 import { RetentionOptions } from "./infrastructure/config/database.js";
 import { getRetentionCompactAfterFromEnv, getRetentionDeleteAfterFromEnv, isCompactableProperty, parseRetentionOptions, parseRetentionOptionsDurations } from "./database/Database.js";
+import { DbConcrete } from "./database/drizzle/drizzleUtils.js";
+import { ComponentSelect } from "./database/drizzle/drizzleTypes.js";
 
 export type AbstractComponentConfig = (CommonClientConfig | CommonSourceConfig) & { transformManager?: TransformerManager };
 
@@ -40,12 +42,15 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     regexCache!: ReturnType<typeof cacheFunctions>;
     protected transformManager: TransformerManager;
     protected cache: MSCache;
+    protected db: DbConcrete;
+    protected dbComponent: ComponentSelect;
     protected retentionOpts: RetentionOptions;
 
     protected constructor(config: AbstractComponentConfig) {
         super(config);
         this.transformManager = config.transformManager ?? getRoot().items.transformerManager;
         this.cache = getRoot().items.cache();
+        this.db = getRoot().items.db();
         const cProps = config.options?.retention?.compact ?? parseArrayFromMaybeString(process.env.COMPACT_PROPERTIES, {lower: true});
         if(!cProps.every(isCompactableProperty)) {
             throw new SimpleError(`Compactable properties must be one of 'transform' or 'input'. Given: ${cProps.join(',')}`);
@@ -64,6 +69,11 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         } catch (e) {
             throw e;
         }
+    }
+
+    protected async doBuildDatabase(): Promise<true | string | undefined> {
+        super.doBuildDatabase();
+        return;
     }
 
     public buildTransformRules() {
