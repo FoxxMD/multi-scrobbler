@@ -101,7 +101,7 @@ export const queueStates = sqliteTable("play_queue_states", {
 export const components = sqliteTable("components", {
   id: integer({ mode: 'number' }).primaryKey(),
   // user-provided id
-  uid: text({ length: 200 }).notNull().unique(),
+  uid: text({ length: 200 }).notNull(),
   mode: text({enum: ['source','client']}).notNull(),
   // spotify, lastfm, etc...
   type: text({length: 50}).notNull(),
@@ -113,7 +113,10 @@ export const components = sqliteTable("components", {
   // number of discovered/scrobbled plays from backlog/jobs
   countNonLive: integer().notNull().default(0),
   createdAt: DayjsTimestamp('createdAt').$defaultFn(() => dayjs())
-});
+},
+(table) => [
+  uniqueIndex('uid_mode_type_idx').on(table.uid,table.mode,table.type)
+]);
 
 const playRelations = defineRelations({ plays, queueStates, playInputs, components }, (r) => ({
   plays: {
