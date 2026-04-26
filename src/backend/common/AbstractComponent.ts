@@ -203,6 +203,10 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     }
 
     public retentionCleanup = async () => {
+        if(this.databaseOK !== true) {
+            this.logger.warn(`Cannot run retention cleanup because ${this.componentType} database state is not OK`);
+            return;
+        }
         try {
             const repo = new DrizzlePlayRepository(this.db, {logger: this.logger});
             await repo.retentionCleanup(this.dbComponent.id, this.componentType, this.retentionOpts);
