@@ -279,7 +279,13 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 newDiscoveredPlays.push(play);
             }
         }
-
+        if(newDiscoveredPlays.length > 0) {
+            try {
+                await this.componentRepo.updateById(this.dbComponent.id, {countLive: this.dbComponent.countLive + newDiscoveredPlays.length});
+            } catch (e) {
+                this.logger.warn(new Error('Unable to update discovered count', {cause: e}));
+            }
+        }
         newDiscoveredPlays.sort(sortByOldestPlayDate);
 
         return newDiscoveredPlays;

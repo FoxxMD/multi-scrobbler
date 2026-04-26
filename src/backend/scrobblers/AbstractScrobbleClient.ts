@@ -774,6 +774,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     try {
                         const scrobbledPlay = await this.scrobble(transformedScrobble, {signal});
                         this.emitEvent('scrobble', { play: transformedScrobble });
+                        try {
+                            await this.componentRepo.updateById(this.dbComponent.id, {countLive: this.dbComponent.countLive + 1});
+                        } catch (e) {
+                            this.logger.warn(new Error('Unable to update scrobble count', {cause: e}));
+                        }
                         this.addScrobbledTrack(scrobbledPlay, scrobbledPlay.meta.lifecycle.scrobble.mergedScrobble ?? scrobbledPlay);
                         handledShiftedPlay = true;
                         signal.throwIfAborted();
