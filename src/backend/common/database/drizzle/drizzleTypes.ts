@@ -1,6 +1,6 @@
 import { DBQueryConfig, ExtractTablesFromSchema, KnownKeysOnly, RelationFieldsFilterInternals } from "drizzle-orm";
 import { components, playInputs, plays, queueStates, relations } from "./schema/schema.js";
-import * as schema from "./schema/schema.js";
+import {TSchema, TableName, Schema } from "./schema/schema.js";
 
 
 export type ComponentNew = typeof components.$inferInsert;
@@ -23,9 +23,6 @@ export type PlayNew = typeof plays.$inferInsert;
 // https://github.com/drizzle-team/drizzle-orm/issues/695 most examples
 // https://github.com/drizzle-team/drizzle-orm/discussions/2316 relation focused
 // https://github.com/drizzle-team/drizzle-orm/issues/1319
-type TSchema = typeof relations;
-type Schema = typeof schema;
-type TableName = keyof TSchema;
 export type QueryConfig<T extends TableName> = DBQueryConfig<"many", TSchema, TSchema[T]>;
 export type FindMany<T extends TableName> = Pick<KnownKeysOnly<QueryConfig<T>, DBQueryConfig<"many", TSchema, TSchema[T]>>, 'where' | 'orderBy' | 'limit' | 'offset' | 'extras'>
 export type FindOne<T extends TableName> = Pick<KnownKeysOnly<QueryConfig<T>, DBQueryConfig<"one", TSchema, TSchema[T]>>, 'where' | 'orderBy' | 'limit' | 'offset' | 'extras'>
