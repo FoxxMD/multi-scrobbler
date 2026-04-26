@@ -18,13 +18,14 @@ import { parseVersion } from "./version.js";
 import { initServer } from "./server/index.js";
 import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
 import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
-import { isDebugMode, parseBool, retry } from "./utils.js";
+import { isDebugMode, parseBool, retry, sleep } from "./utils.js";
 import { readJson } from './utils/DataUtils.js';
 import ScrobbleClients from './scrobblers/ScrobbleClients.js';
 import ScrobbleSources from './sources/ScrobbleSources.js';
 import { Notifiers } from './notifier/Notifiers.js';
 import { getDb, performDbMigrationWithBackup } from './common/database/drizzle/drizzleUtils.js';
 import { getDbPath } from './common/database/Database.js';
+import { createRetentionCleanupTask } from './tasks/retentionCleanup.js';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -177,8 +178,34 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             minutes: 20,
             runImmediately: true
         }, sourceTask, {id: 'sources_heart'}));
+        logger.debug('Added Source Heartbeat task to scheduler');
+
+        let runRetentionNow = parseBool(process.env.RETENTION_IMMEDIATE, false);
+
+        const retentionTask = createRetentionCleanupTask(scrobbleSources, scrobbleClients, logger);
+        let retentionJobAdded = false;
+        const addJob = () => { 
+            retentionJobAdded = true;
+            scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
+                minutes: 60,
+                runImmediately: runRetentionNow
+            }, retentionTask, {id: 'retention', preventOverrun: true}));
+            logger.debug('Added Retention Cleanup task to scheduler');
+        };
+        logger.debug('Added Client Heartbeat task to scheduler');
+
+        if(runRetentionNow === false || (scrobbleClients.clients.every(x => x.isReady()) && scrobbleSources.sources.every(x => x.isReady()))) {
+            addJob();
+        }
 
         logger.info('Scheduler started.');
+
+        if(runRetentionNow === true && !retentionJobAdded) {
+            logger.info('Detected that Retention Cleanup should run immediately but all sources/clients have not started yet! Delaying retention cleanup by 1 minute to allow all sources/clients to finish starting.');
+            await sleep(60 * 1000);
+            addJob();
+        }
+
 
     } catch (e) {
         const appError = new Error('Exited with uncaught error', {cause: e});
