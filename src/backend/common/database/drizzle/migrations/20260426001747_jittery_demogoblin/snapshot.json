@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "7a00c1dc-5940-4e2a-8d13-a15faadbe71c",
+  "id": "c9d77fe1-7dce-4014-bd6e-10174b7ebccc",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -456,6 +456,28 @@
     {
       "columns": [
         {
+          "value": "uid",
+          "isExpression": false
+        },
+        {
+          "value": "mode",
+          "isExpression": false
+        },
+        {
+          "value": "type",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "uid_mode_type_idx",
+      "entityType": "indexes",
+      "table": "components"
+    },
+    {
+      "columns": [
+        {
           "value": "playId",
           "isExpression": false
         }
@@ -550,15 +572,6 @@
       "name": "play_queue_state_id_idx",
       "entityType": "indexes",
       "table": "play_queue_states"
-    },
-    {
-      "columns": [
-        "uid"
-      ],
-      "nameExplicit": false,
-      "name": "components_uid_unique",
-      "entityType": "uniques",
-      "table": "components"
     }
   ],
   "renames": []

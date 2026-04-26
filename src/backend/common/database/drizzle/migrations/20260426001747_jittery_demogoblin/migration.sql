@@ -1,6 +1,6 @@
 CREATE TABLE `components` (
 	`id` integer PRIMARY KEY,
-	`uid` text(200) NOT NULL UNIQUE,
+	`uid` text(200) NOT NULL,
 	`mode` text NOT NULL,
 	`type` text(50) NOT NULL,
 	`name` text NOT NULL,
@@ -47,6 +47,7 @@ CREATE TABLE `play_queue_states` (
 	CONSTRAINT `fk_play_queue_states_componentId_components_id_fk` FOREIGN KEY (`componentId`) REFERENCES `components`(`id`) ON UPDATE CASCADE ON DELETE CASCADE
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX `uid_mode_type_idx` ON `components` (`uid`,`mode`,`type`);--> statement-breakpoint
 CREATE UNIQUE INDEX `play_input_id_idx` ON `play_inputs` (`playId`);--> statement-breakpoint
 CREATE INDEX `play_parent_id_idx` ON `plays` (`parentId`);--> statement-breakpoint
 CREATE INDEX `play_component_id_idx` ON `plays` (`componentId`);--> statement-breakpoint

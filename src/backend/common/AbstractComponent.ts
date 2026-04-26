@@ -96,7 +96,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
         this.dbComponent = (await this.db.insert(components).values(generateComponentEntity({
             uid: this.config.id ?? this.config.name,
-            mode: 'source',
+            mode: this.componentType,
             type: this.type,
             name: this.config.name
         })).returning())[0];
