@@ -30,12 +30,11 @@ import { objectsEqual } from "../utils/DataUtils.js";
 import { RetentionOptions } from "./infrastructure/config/database.js";
 import { getRetentionCompactAfterFromEnv, getRetentionDeleteAfterFromEnv, isCompactableProperty, parseRetentionOptions, parseRetentionOptionsDurations } from "./database/Database.js";
 import { DbConcrete } from "./database/drizzle/drizzleUtils.js";
-import { ComponentSelect, FindWhere, PlaySelect } from "./database/drizzle/drizzleTypes.js";
+import { ComponentSelect } from "./database/drizzle/drizzleTypes.js";
 import { DrizzlePlayRepository } from "./database/drizzle/repositories/PlayRepository.js";
 import { ClientType } from "./infrastructure/config/client/clients.js";
 import { SourceType } from "./infrastructure/config/source/sources.js";
-import { generateComponentEntity } from "./database/drizzle/entityUtils.js";
-import { components } from "./database/drizzle/schema/schema.js";
+import { DrizzleComponentRepository } from "./database/drizzle/repositories/ComponentRepository.js";
 
 export type AbstractComponentConfig = (CommonClientConfig | CommonSourceConfig) & { transformManager?: TransformerManager };
 
@@ -48,6 +47,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     protected transformManager: TransformerManager;
     protected cache: MSCache;
     protected db: DbConcrete;
+    protected componentRepo: DrizzleComponentRepository;
     protected dbComponent: ComponentSelect;
     protected retentionOpts: RetentionOptions;
 
@@ -59,6 +59,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         this.transformManager = config.transformManager ?? getRoot().items.transformerManager;
         this.cache = getRoot().items.cache();
         this.db = getRoot().items.db();
+        this.componentRepo = new DrizzleComponentRepository(this.db, {logger: this.logger});
         const cProps = config.options?.retention?.compact ?? parseArrayFromMaybeString(process.env.COMPACT_PROPERTIES, {lower: true});
         if(!cProps.every(isCompactableProperty)) {
             throw new SimpleError(`Compactable properties must be one of 'transform' or 'input'. Given: ${cProps.join(',')}`);
@@ -81,25 +82,13 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     protected async doBuildDatabase(): Promise<true | string | undefined> {
         super.doBuildDatabase();
-        let where: FindWhere<'components'> = {
+
+        this.dbComponent = await this.componentRepo.findOrInsert({
             mode: this.componentType,
             type: this.type,
             uid: this.config.id ?? this.config.name
-        };
-        const component = await this.db.query.components.findFirst({
-            where
         });
-        if(component !== undefined) {
-            this.dbComponent = component;
-            return;
-        }
-
-        this.dbComponent = (await this.db.insert(components).values(generateComponentEntity({
-            uid: this.config.id ?? this.config.name,
-            mode: this.componentType,
-            type: this.type,
-            name: this.config.name
-        })).returning())[0];
+        return true;
     }
 
     public buildTransformRules() {

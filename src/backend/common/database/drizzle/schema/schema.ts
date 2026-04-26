@@ -154,3 +154,22 @@ const playRelations = defineRelations({ plays, queueStates, playInputs, componen
 }));
 
 export const relations = playRelations;
+
+export const getConfigByTableName = (name: TableName) => {
+  switch(name) {
+    case 'plays':
+      return plays;
+    case 'components':
+      return components;
+    case 'playInputs':
+      return playInputs;
+    case 'queueStates':
+      return queueStates;
+  }
+}
+
+const schema = {playInputs, plays, components, queueStates};
+
+export type TSchema = typeof relations;
+export type Schema = typeof schema;
+export type TableName = keyof TSchema;

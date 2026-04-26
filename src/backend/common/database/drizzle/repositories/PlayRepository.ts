@@ -11,22 +11,13 @@ import dayjs, { Dayjs } from "dayjs";
 import { RelationsFieldFilter, eq, inArray } from "drizzle-orm";
 import { CompactableProperty, RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.js";
 import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.js";
+import { buildDateCompare, CompareDateOp, DrizzleBaseRepository } from "./BaseRepository.js";
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 
 export interface DrizzleRepositoryOpts {
     logger?: Logger
 }
-
-type CompareDateOp = {
-    type: CompareOpKey<Dayjs>
-    date: Dayjs
-} | {
-    type: 'between',
-    range: [Dayjs, Dayjs],
-    inclusive?: boolean
-}
-
 export interface PlayWhereOpts {
     state?: PlaySelect['state'][]
     componentId?: number
@@ -46,14 +37,10 @@ export type RepositoryCreatePlayOpts = PlayEntityOpts
         input: MarkOptional<PlayInputNew, 'playId' | 'play'>
     }
     & MarkRequired<Pick<PlayNew, 'play' | 'componentId'>, 'componentId'>;
-export class DrizzlePlayRepository {
-
-    logger: Logger;
-    db: ReturnType<typeof getDb>;
+export class DrizzlePlayRepository extends DrizzleBaseRepository {
 
     constructor(db: ReturnType<typeof getDb>, opts: DrizzleRepositoryOpts = {}) {
-        this.db = db;
-        this.logger = opts.logger ?? loggerNoop;
+        super(db, 'plays', 'Plays', opts);
     }
 
     createPlays = async (entitiesOpts: RepositoryCreatePlayOpts[]) => {
@@ -310,23 +297,3 @@ export const buildPlayWhere = (args: PlayWhereOpts): FindWhere<'plays'> => {
     return where;
 }
 
-const buildDateCompare = (data: CompareDateOp): RelationsFieldFilter<Dayjs> => {
-    let q: RelationsFieldFilter<Dayjs> = {};
-    if (data.type !== 'between') {
-        q = {
-            [data.type]: data.date
-        }
-    } else {
-        q = {
-            AND: [
-                {
-                    [data.inclusive ?? true ? 'gte' : 'gt']: data.range[0]
-                },
-                {
-                    [data.inclusive ?? true ? 'lte' : 'lt']: data.range[1]
-                },
-            ]
-        }
-    }
-    return q;
-}
