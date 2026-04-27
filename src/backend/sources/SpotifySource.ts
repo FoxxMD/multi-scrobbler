@@ -232,7 +232,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
                 }
             },
             meta: {
-                deviceId: deviceId ?? `${NO_DEVICE}-${NO_USER}`,
+                deviceId: deviceId ?? `${NO_DEVICE}`,
                 source: 'Spotify',
                 musicService: 'Spotify',
                 trackId: id,
