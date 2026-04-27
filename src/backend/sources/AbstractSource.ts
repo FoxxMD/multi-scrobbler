@@ -2,7 +2,7 @@ import { childLogger, LogDataPretty, LogLevel } from '@foxxmd/logging';
 import dayjs, { Dayjs } from "dayjs";
 import { EventEmitter } from "events";
 import { FixedSizeList } from "fixed-size-list";
-import { PlayObject } from "../../core/Atomic.js";
+import { JsonPlayObject, PlayObject } from "../../core/Atomic.js";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
 import AbstractComponent from "../common/AbstractComponent.js";
 import {
@@ -31,7 +31,7 @@ import {
     sleep,
     sortByOldestPlayDate,
 } from "../utils.js";
-import { sortByNewestPlayDate } from '../../core/PlayUtils.js';
+import { genGroupIdStr, sortByNewestPlayDate } from '../../core/PlayUtils.js';
 import { formatNumber } from '../../core/DataUtils.js';
 import { timeToHumanTimestamp } from "../../core/TimeUtils.js";
 import { todayAwareFormat } from "../../core/TimeUtils.js";
@@ -46,6 +46,8 @@ import prom, { Counter, Gauge } from 'prom-client';
 import { normalizeStr } from '../utils/StringUtils.js';
 import { spawn, catchAbortError, isAbortError, rethrowAbortError, delay, forever, AbortError, throwIfAborted } from 'abort-controller-x';
 import { AbortedError, generateLoggableAbortReason } from '../common/errors/MSErrors.js';
+import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts } from '../common/database/drizzle/repositories/PlayRepository.js';
+import { asPlay } from '../../core/PlayMarshalUtils.js';
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -105,6 +107,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     declare protected componentType: 'source';
 
+    protected playRepo: DrizzlePlayRepository;
+
     constructor(type: SourceType, name: string, config: SourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super(config);
         this.componentType = 'source';
@@ -122,6 +126,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.emitter = emitter;
         
         this.discoveredCounter = getRoot().items.sourceMetics.discovered;
+        this.playRepo = new DrizzlePlayRepository(this.db, {logger: this.logger});
     }
 
     async [Symbol.asyncDispose]() {
@@ -133,6 +138,10 @@ export default abstract class AbstractSource extends AbstractComponent implement
     protected async postCache(): Promise<void> {
         await super.postCache();
         this.generateStaggerMappers();
+    }
+
+    protected async postDatabase(): Promise<void> {
+        this.tracksDiscovered = this.dbComponent.countLive;
     }
 
     protected generateStaggerMappers() {
@@ -203,52 +212,98 @@ export default abstract class AbstractSource extends AbstractComponent implement
     // TODO make this more descriptive? or move it elsewhere
     recentlyPlayedTrackIsValid = (playObj: PlayObject) => true
 
-    protected addPlayToDiscovered = (play: PlayObject) => {
+    protected addPlayToDiscovered = async (play: PlayObject) => {
         const platformId = this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID;
-        const list = this.recentDiscoveredPlays.get(platformId) ?? new FixedSizeList<ProgressAwarePlayObject>(200);
-        list.add(play);
-        this.recentDiscoveredPlays.set(platformId, list);
+        const playRow = await this.playRepo.createPlays([(playToRepositoryCreatePlayOpts({play, componentId: this.dbComponent.id, state: 'discovered'}))]);
+        const recentPlays = await this.getRecentlyDiscoveredPlaysByPlatform(platformId, false);
+        // only need to update if its already in memory,
+        // and better to update in-memory than clear cache so we aren't refetching from db on every discover
+        if(recentPlays !== undefined) {
+            recentPlays.push(play);
+            recentPlays.sort(sortByOldestPlayDate);
+            this.cache.cacheDb.set(this.recentDiscoveredCacheKey(platformId), recentPlays, '2m');
+        }
+        const platformIds = await this.getRecentPlatformIds(false);
+        if(platformIds !== undefined && !platformIds.includes(genGroupIdStr(platformId))) {
+            this.cache.cacheDb.set(this.recentPlatformsCacheKey(), platformIds, '10m');
+        }
         this.tracksDiscovered++;
         this.logger.info(`Discovered => ${buildTrackString(play)}`);
         this.emitEvent('discovered', {play});
         this.discoveredCounter.labels(this.getPrometheusLabels()).inc();
     }
 
-    getFlatRecentlyDiscoveredPlays = (): PlayObject[] =>
-         Array.from(this.recentDiscoveredPlays.values()).map(x => x.data).flat(3).sort(sortByNewestPlayDate)
-    
-
-    getRecentlyDiscoveredPlaysByPlatform = (platformId: PlayPlatformId): PlayObject[] => {
-        const list = this.recentDiscoveredPlays.get(platformId);
-        if (list !== undefined) {
-            const data = [...list.data];
-            data.sort(sortByOldestPlayDate);
-            return data;
+    getFlatRecentlyDiscoveredPlays = async (): Promise<PlayObject[]> => {
+        const platforms = await this.getRecentPlatformIds();
+        const list: PlayObject[][] = [];
+        for(const platformId of platforms) {
+            list.push(await this.getRecentlyDiscoveredPlaysByPlatform(platformId));
         }
-        return [];
+        return list.flat().sort(sortByNewestPlayDate);
+        //Array.from(this.recentDiscoveredPlays.values()).map(x => x.data).flat(3).sort(sortByNewestPlayDate)
     }
 
-    protected getExistingDiscoveredLists = (play: PlayObject, opts: {checkAll?: boolean} = {}): PlayObject[][] => {
+    protected recentDiscoveredCacheKey = (platformId: PlayPlatformId | string) => {
+        const platformStr = typeof platformId === 'string' ? platformId : genGroupIdStr(platformId);
+        return `recent-${this.dbComponent.id}-${platformStr}`;
+    }
+    protected recentPlatformsCacheKey = () => {
+        return `recentPlatformIds-${this.dbComponent.id}`;
+    }
+
+    getRecentlyDiscoveredPlaysByPlatform = async (platformId: PlayPlatformId | string, hydrate: boolean = true): Promise<PlayObject[]> => {
+
+        const platformStr = typeof platformId === 'string' ? platformId : genGroupIdStr(platformId);
+        const cacheKey = this.recentDiscoveredCacheKey(platformId);
+
+        let list = await this.cache.cacheDb.get<PlayObject[]>(cacheKey);
+        if(list === undefined && hydrate) {
+            list = (await this.playRepo.findPlays({
+                platformId: platformStr,
+                componentId: this.dbComponent.id,
+                stateNot: ['queued'],
+                order: 'desc',
+                sort: 'playedAt',
+                limit: 200
+            })).map(x => asPlay(x.play))
+            list.sort(sortByOldestPlayDate);
+            await this.cache.cacheDb.set<PlayObject[]>(cacheKey, list, '2m');
+        }
+        return list;
+    }
+
+    protected getRecentPlatformIds = async (hydrate: boolean = true) => {
+        const cacheKey = this.recentPlatformsCacheKey();
+        let list = await this.cache.cacheDb.get<string[]>(cacheKey);
+        if(list === undefined && hydrate) {
+            list = await this.playRepo.selectRecentDistinctPlatforms(this.dbComponent.id);
+            await this.cache.cacheDb.set<string[]>(cacheKey, list, '10m');
+        }
+        return list;
+    }
+
+    protected getExistingDiscoveredLists = async (play: PlayObject, opts: {checkAll?: boolean} = {}): Promise<PlayObject[][]> => {
         const lists: PlayObject[][] = [];
         if(opts.checkAll !== true) {
-            lists.push(this.getRecentlyDiscoveredPlaysByPlatform(this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID));
+            lists.push(await this.getRecentlyDiscoveredPlaysByPlatform(this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID));
         } else {
+            const platforms = await this.getRecentPlatformIds();
             // get as many as we can, optionally filtering by user
-            this.recentDiscoveredPlays.forEach((list, platformId) => {
+            for(const platformId of platforms) {
                 if(play.meta.user !== undefined) {
                     if(platformId[1] === NO_USER || platformId[1] === play.meta.user) {
-                        lists.push(this.getRecentlyDiscoveredPlaysByPlatform(platformId));
+                        lists.push(await this.getRecentlyDiscoveredPlaysByPlatform(platformId));
                     }
                 } else {
-                    lists.push(this.getRecentlyDiscoveredPlaysByPlatform(platformId));
+                    lists.push(await this.getRecentlyDiscoveredPlaysByPlatform(platformId));
                 }
-            });
+            }
         }
         return lists;
     }
 
     existingDiscovered = async (play: PlayObject, opts: {checkAll?: boolean} = {}): Promise<PlayObject | undefined> => {
-        const lists: PlayObject[][] = this.getExistingDiscoveredLists(play, opts);
+        const lists: PlayObject[][] = await this.getExistingDiscoveredLists(play, opts);
         const candidate = await this.transformPlay(play, TRANSFORM_HOOK.candidate);
         for(const list of lists) {
             
@@ -275,7 +330,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             options.signal?.throwIfAborted();
             if(!(await this.alreadyDiscovered(play, options))) {
                 options.signal?.throwIfAborted()
-                this.addPlayToDiscovered(play);
+                await this.addPlayToDiscovered(play);
                 newDiscoveredPlays.push(play);
             }
         }
@@ -693,7 +748,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     }
 
     protected async doBuildComponentLogger(): Promise<void> {
-        if(this.config.options.logToFile) {
+        if(this.config?.options?.logToFile) {
             this.logger.debug('Enabling component logger...');
             const root = getRoot();
             const stream = root.get('loggerStream');

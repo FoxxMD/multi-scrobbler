@@ -56,7 +56,7 @@ export const asJsonPlayObject = (play: AmbPlayObject): JsonPlayObject => {
   return cloned as unknown as JsonPlayObject;
 };
 
-export const asPlay = (data: JsonPlayObject): PlayObject => {
+export const asPlay = (data: JsonPlayObject | PlayObject): PlayObject => {
   const cloned = clone(data);
   new Traverse(cloned).forEach((ctx, x) => {
     if (shouldBlock(ctx)) {

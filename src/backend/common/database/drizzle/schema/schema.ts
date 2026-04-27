@@ -29,9 +29,10 @@ export const plays = sqliteTable("plays", {
   playedAt: DayjsTimestamp('playedAt'),
   seenAt: DayjsTimestamp('seenAt'),
   play: text({ mode: 'json' }).notNull().$type<PlayObject>(),
-  state: text({enum: ['queued','discovered','scrobbled','failed','duped']}).notNull(),
+  state: text({enum: ['queued','discovered','discarded','scrobbled','failed','duped']}).notNull(),
   // https://orm.drizzle.team/docs/indexes-constraints#foreign-key
   parentId: integer().references((): AnySQLiteColumn => plays.id, {onDelete: 'set null', onUpdate: 'cascade'}),
+  platformId: text(),
   compacted: text()
 }, (table) => [
   index("play_parent_id_idx").on(table.parentId),
@@ -39,6 +40,7 @@ export const plays = sqliteTable("plays", {
   uniqueIndex("play_uid_idx").on(table.uid),
   index("play_playedAt_idx").on(table.playedAt),
   index("play_seenAt_idx").on(table.seenAt),
+  index("play_platform_idx").on(table.platformId)
 ]);
 
 export const playInputs = sqliteTable("play_inputs", {

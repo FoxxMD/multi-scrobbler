@@ -24,19 +24,23 @@ chai.use(asPromised);
 
 
 const emitter = new EventEmitter();
-const generateSource = () => {
-    return new TestSource('spotify', 'test', {}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
+const generateSource = async () => {
+    const source = new TestSource('spotify', 'test-basic', {}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
+    await source.tryInitialize();
+    return source;
 }
-const generateMemorySource = (config: SourceConfig = {}) => {
-    const s = new TestMemorySource('spotify', 'test', config, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
-    s.buildTransformRules();
+const generateMemorySource = async (config: SourceConfig = {}) => {
+    const s = new TestMemorySource('spotify', 'test-memory', config, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
+    await s.tryInitialize();
+   // s.buildTransformRules();
     s.scheduler.stop();
     return s;
 }
 
-const generateMemoryPositionalSource = (config: SourceConfig = {}) => {
-    const s = new TestMemoryPositionalSource('spotify', 'test', config, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
-    s.buildTransformRules();
+const generateMemoryPositionalSource = async (config: SourceConfig = {}) => {
+    const s = new TestMemoryPositionalSource('spotify', 'test-positional', config, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
+    await s.tryInitialize();
+    //s.buildTransformRules();
     s.scheduler.stop();
     return s;
 }
@@ -44,7 +48,7 @@ const generateMemoryPositionalSource = (config: SourceConfig = {}) => {
 describe('Sources use transform plays correctly', function () {
 
     it('Transforms play on preCompare', async function() {
-        await using source = generateSource();
+        await using source = await generateSource();
         source.config.options = {
             playTransform: {
                 preCompare: {
@@ -67,7 +71,7 @@ describe('Sources use transform plays correctly', function () {
     });
 
     it('Transforms play on postCompare', async function() {
-        await using source = generateSource();
+        await using source = await generateSource();
         source.config.options = {
             playTransform: {
                 postCompare: {
@@ -96,7 +100,7 @@ describe('Sources use transform plays correctly', function () {
     });
 
     it('Transforms play existing comparison', async function() {
-        await using source = generateSource();
+        await using source = await generateSource();
         source.config.options = {
             playTransform: {
                 compare: {
@@ -123,7 +127,7 @@ describe('Sources use transform plays correctly', function () {
     });
 
     it('Transforms play candidate comparison', async function() {
-        await using source = generateSource();
+        await using source = await generateSource();
         source.config.options = {
             playTransform: {
                 compare: {
@@ -192,8 +196,8 @@ describe('Player Cleanup', function () {
         setRtTick(1);
     });
 
-    const cleanedUpDuration = async (generateSource: (config: SourceConfig) => MemorySource) => {
-        await using source = generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
+    const cleanedUpDuration = async (generateSource: (config: SourceConfig) => Promise<MemorySource>) => {
+        await using source = await generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
         const initialDate = dayjs();
         const initialState = generatePlayerStateData({position: 0, playData: {duration: 50}, timestamp: initialDate, status: REPORTED_PLAYER_STATUSES.playing});
         expect((await source.processRecentPlays([initialState])).length).to.be.eq(0);
@@ -235,9 +239,9 @@ describe('Player Cleanup', function () {
         await cleanedUpDuration(generateMemoryPositionalSource);
     });
 
-    const noScrobbleRediscoveryOnActive = async (generateSource: (config: SourceConfig) => MemorySource) => {
+    const noScrobbleRediscoveryOnActive = async (generateSource: (config: SourceConfig) => Promise<MemorySource>) => {
 
-        await using source = generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
+        await using source = await generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
         const initialDate = dayjs();
         const initialState = generatePlayerStateData({position: 0, playData: {duration: 50}, timestamp: initialDate, status: REPORTED_PLAYER_STATUSES.playing});
         expect((await source.processRecentPlays([initialState])).length).to.be.eq(0);
@@ -303,9 +307,9 @@ describe('Player Cleanup', function () {
         await noScrobbleRediscoveryOnActive(generateMemoryPositionalSource);
     });
 
-    const noScrobbleStale = async (generateSource: (config: SourceConfig) => MemorySource) => {
+    const noScrobbleStale = async (generateSource: (config: SourceConfig) => Promise<MemorySource>) => {
 
-        await using source = generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
+        await using source = await generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
         const initialDate = dayjs();
 
         // if player incorrectly counted stale time then 30s of actual play + 20s of stale time > scrobble threshold of 50% of 90s
@@ -348,9 +352,9 @@ describe('Player Cleanup', function () {
         await noScrobbleStale(generateMemoryPositionalSource);
     });
 
-    const scrobbleRediscoveryOnActive = async (generateSource: (config: SourceConfig) => MemorySource) => {
+    const scrobbleRediscoveryOnActive = async (generateSource: (config: SourceConfig) => Promise<MemorySource>) => {
 
-        await using source = generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
+        await using source = await generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
         const initialDate = dayjs();
 
         // if player incorrectly counted stale time then 30s of actual play + 20s of stale time > scrobble threshold of 50% of 90s
@@ -421,8 +425,10 @@ describe('Player Cleanup', function () {
     });
 });
 
-const generateDeezerSource = (options: DeezerInternalSourceOptions = {}) => {
-    return new DeezerInternalSource('test', {data: {arl: 'test'}, options}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
+const generateDeezerSource = async (options: DeezerInternalSourceOptions = {}) => {
+    const source = new DeezerInternalSource('test', {data: {arl: 'test'}, options}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
+    await source.tryInitialize();
+    return source;
 }
 const firstPlayDate = dayjs().subtract(1, 'hour');
 const normalizedPlays = normalizePlays(generatePlays(6), {initialDate: firstPlayDate});
@@ -438,7 +444,7 @@ describe('Deezer Internal Source', function() {
             const fuzzyPlay = clone(targetPlay);
             fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
 
-            const source = generateDeezerSource();
+            const source = await generateDeezerSource();
             source.discover([...normalizedPlays, interimPlay]);
 
             const discovered = await source.discover([fuzzyPlay]);
@@ -455,7 +461,7 @@ describe('Deezer Internal Source', function() {
             const fuzzyPlay = clone(targetPlay);
             fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
 
-            await using source = generateDeezerSource({fuzzyDiscoveryIgnore: true});
+            await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: true});
             await source.discover([...normalizedPlays, interimPlay]);
 
             const discovered = await source.discover([fuzzyPlay]);
@@ -468,7 +474,7 @@ describe('Deezer Internal Source', function() {
             const fuzzyPlay = clone(targetPlay);
             fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
 
-            await using source = generateDeezerSource({fuzzyDiscoveryIgnore: true});
+            await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: true});
             await source.discover(normalizedPlays);
 
             const discovered = await source.discover([fuzzyPlay]);
@@ -482,7 +488,7 @@ describe('Deezer Internal Source', function() {
             fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
             const morePlays = normalizePlays([...normalizedPlays, fuzzyPlay, ...generatePlays(2)], {initialDate: firstPlayDate});
 
-            await using source = generateDeezerSource({fuzzyDiscoveryIgnore: true});
+            await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: true});
             const discovered = await source.discover(morePlays);
 
             expect(discovered.length).to.eq(morePlays.length);
@@ -497,7 +503,7 @@ describe('Deezer Internal Source', function() {
                 const fuzzyPlay = clone(targetPlay);
                 fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
 
-                await using source = generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
+                await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
                 await source.discover([...normalizedPlays, interimPlay]);
 
                 const discovered = await source.discover([fuzzyPlay]);
@@ -511,7 +517,7 @@ describe('Deezer Internal Source', function() {
                 const duringPlay = clone(targetPlay);
                 duringPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration * 0.5, 's');
 
-                await using source = generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
+                await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
                 await source.discover([...normalizedPlays, interimPlay]);
 
                 const discovered = await source.discover([duringPlay]);
@@ -525,7 +531,7 @@ describe('Deezer Internal Source', function() {
                 const fuzzyPlay = clone(targetPlay);
                 fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration + 39, 's');
 
-                await using source = generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
+                await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
                 await source.discover([...normalizedPlays, interimPlay]);
 
                 const discovered = await source.discover([fuzzyPlay]);
@@ -538,7 +544,7 @@ describe('Deezer Internal Source', function() {
                 const fuzzyPlay = clone(targetPlay);
                 fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
 
-                await using source = generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
+                await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
                 await source.discover(normalizedPlays);
 
                 const discovered = await source.discover([fuzzyPlay]);
@@ -552,7 +558,7 @@ describe('Deezer Internal Source', function() {
                 fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
                 const morePlays = normalizePlays([...normalizedPlays, fuzzyPlay, ...generatePlays(2)], {initialDate: firstPlayDate});
 
-                await using source = generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
+                await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
                 const discovered = await source.discover(morePlays);
 
                 expect(discovered.length).to.eq(morePlays.length - 1);

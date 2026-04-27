@@ -330,7 +330,7 @@ export default class DeezerInternalSource extends MemorySource {
 
 
     existingDiscovered = async (play: PlayObject, opts: {checkAll?: boolean} = {}): Promise<PlayObject | undefined> => {
-        const lists: PlayObject[][] = this.getExistingDiscoveredLists(play, opts);
+        const lists: PlayObject[][] = await this.getExistingDiscoveredLists(play, opts);
         const candidate = await this.transformPlay(play, TRANSFORM_HOOK.candidate);
         for(const list of lists) {
             const existing = await findAsync(list, async x => {

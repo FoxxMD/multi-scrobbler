@@ -198,6 +198,20 @@ export default abstract class AbstractInitializable {
             this.databaseOK = false;
             throw new BuildDataError('Required database init failed', {cause: e});
         }
+
+        try {
+            await this.postDatabase();
+        } catch (e) {
+            if(e instanceof StageError) {
+                throw e;
+            } else {
+                throw new Error('Error occurred during post-database hook', {cause: e});
+            }
+        }
+    }
+
+    protected async postDatabase(): Promise<void> {
+        return;
     }
 
     /**

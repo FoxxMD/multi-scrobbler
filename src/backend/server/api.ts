@@ -278,7 +278,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
                     return res.status(500).json({message: e.message});
                 }
             } else {
-                result = (source as AbstractSource).getFlatRecentlyDiscoveredPlays();
+                result = await (source as AbstractSource).getFlatRecentlyDiscoveredPlays();
             }
         }
 

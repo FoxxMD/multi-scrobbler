@@ -341,7 +341,7 @@ export default class MemorySource extends AbstractSource {
                         }
                         return [false, `${stPrefix} ${EXPECTED_NON_DISCOVERED_REASON}`]
                     } else {
-                        const discoveredPlays = this.getRecentlyDiscoveredPlaysByPlatform(genGroupId(candidate));
+                        const discoveredPlays = await this.getRecentlyDiscoveredPlaysByPlatform(genGroupId(candidate));
                         if (discoveredPlays.length === 0 || !playObjDataMatch(discoveredPlays[0], candidate)) {
                             // if most recent stateful play is not this track we'll add it
                             return [true,`${stPrefix} added after ${thresholdResultSummary(thresholdResults)}. Matched other recent play but could not determine time frame due to missing duration. Allowed due to not being last played track.`];

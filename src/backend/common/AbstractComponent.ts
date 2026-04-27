@@ -83,10 +83,16 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     protected async doBuildDatabase(): Promise<true | string | undefined> {
         super.doBuildDatabase();
 
+        let name: string;
+        if('name' in this) {
+            name = this.name as string;
+        }
+
         this.dbComponent = await this.componentRepo.findOrInsert({
             mode: this.componentType,
             type: this.type,
-            uid: this.config.id ?? this.config.name
+            uid: this.config.id ?? this.config.name ?? name,
+            name: this.config.name ?? name
         });
         return true;
     }

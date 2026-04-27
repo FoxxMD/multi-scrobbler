@@ -304,7 +304,7 @@ export interface ScrobbleResult<D extends DateLike = Dayjs> {
 
 export interface PlayLifecycle<D extends DateLike = Dayjs> {
     input?: object
-    original: PlayObjectLifecycleless<D>
+    original?: PlayObjectLifecycleless<D>
     steps: LifecycleStep[]
     scrobble?: ScrobbleResult<D>
 }
