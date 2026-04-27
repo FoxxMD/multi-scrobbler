@@ -262,7 +262,9 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
             // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleSource: source,
             query: {
-                upstream = 'false'
+                upstream = 'false',
+                next: queryNext = 'false',
+                ...rest
             }
         } = req;
 
@@ -278,7 +280,11 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
                     return res.status(500).json({message: e.message});
                 }
             } else {
+                if(queryNext === 'true') {
+                    return res.json(await (source as AbstractSource).getRecentPlaysApi(rest));
+                }
                 result = await (source as AbstractSource).getFlatRecentlyDiscoveredPlays();
+                
             }
         }
 

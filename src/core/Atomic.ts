@@ -202,6 +202,9 @@ export interface PlayMeta<D extends DateLike = Dayjs> {
 
     seenAt?: D
 
+    dbUid?: string
+    dbId?: number
+
     /*
     * If applicable, the name of the Service providing the track (Spotify, Tidal, etc...)
     */

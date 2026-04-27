@@ -225,6 +225,20 @@ export const removeUndefinedKeys = <T extends Record<string, any>>(obj: T): T | 
     return newObj;
 }
 
+export const removeEmptyArrays = <T extends Record<string, any>>(obj: T): T => {
+    const newObj: any = {};
+    Object.keys(obj).forEach((key) => {
+        if(Array.isArray(obj[key])) {
+            if(obj[key].length !== 0) {
+                newObj[key] = obj[key];
+            }
+        } else {
+            newObj[key] = obj[key];
+        }
+    });
+    return newObj;
+}
+
 export const remoteHostIdentifiers = (req: Request): RemoteIdentityParts => {
     const remote = req.connection.remoteAddress;
     const proxyRemote = Array.isArray(req.headers["x-forwarded-for"]) ? req.headers["x-forwarded-for"][0] : req.headers["x-forwarded-for"];

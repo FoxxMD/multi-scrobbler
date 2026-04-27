@@ -46,7 +46,7 @@ import prom, { Counter, Gauge } from 'prom-client';
 import { normalizeStr } from '../utils/StringUtils.js';
 import { spawn, catchAbortError, isAbortError, rethrowAbortError, delay, forever, AbortError, throwIfAborted } from 'abort-controller-x';
 import { AbortedError, generateLoggableAbortReason } from '../common/errors/MSErrors.js';
-import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts } from '../common/database/drizzle/repositories/PlayRepository.js';
+import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, queryArgsFromRequest, QueryPlaysOpts, RequestPlayQuery } from '../common/database/drizzle/repositories/PlayRepository.js';
 import { asPlay } from '../../core/PlayMarshalUtils.js';
 
 export interface RecentlyPlayedOptions {
@@ -212,7 +212,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     // TODO make this more descriptive? or move it elsewhere
     recentlyPlayedTrackIsValid = (playObj: PlayObject) => true
 
-    protected addPlayToDiscovered = async (play: PlayObject) => {
+    protected addPlayToDiscovered = async (play: PlayObject): Promise<PlayObject> => {
         const platformId = this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID;
         const playRow = await this.playRepo.createPlays([(playToRepositoryCreatePlayOpts({play, componentId: this.dbComponent.id, state: 'discovered'}))]);
         const recentPlays = await this.getRecentlyDiscoveredPlaysByPlatform(platformId, false);
@@ -231,6 +231,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.logger.info(`Discovered => ${buildTrackString(play)}`);
         this.emitEvent('discovered', {play});
         this.discoveredCounter.labels(this.getPrometheusLabels()).inc();
+        play.meta.dbId = playRow[0].id;
+        return play;
     }
 
     getFlatRecentlyDiscoveredPlays = async (): Promise<PlayObject[]> => {
@@ -241,6 +243,18 @@ export default abstract class AbstractSource extends AbstractComponent implement
         }
         return list.flat().sort(sortByNewestPlayDate);
         //Array.from(this.recentDiscoveredPlays.values()).map(x => x.data).flat(3).sort(sortByNewestPlayDate)
+    }
+
+    getRecentPlaysApi = async (query: RequestPlayQuery) => {
+        const res = await this.playRepo.findPlays({
+            componentId: this.dbComponent.id,
+            limit: 100,
+            ...queryArgsFromRequest(query)
+        });
+        return res.map((x) => {
+            const {id, ...rest} = x;
+            return rest;
+        })
     }
 
     protected recentDiscoveredCacheKey = (platformId: PlayPlatformId | string) => {
@@ -330,8 +344,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
             options.signal?.throwIfAborted();
             if(!(await this.alreadyDiscovered(play, options))) {
                 options.signal?.throwIfAborted()
-                await this.addPlayToDiscovered(play);
-                newDiscoveredPlays.push(play);
+                const hydratedPlay = await this.addPlayToDiscovered(play);
+                newDiscoveredPlays.push(hydratedPlay);
             }
         }
         if(newDiscoveredPlays.length > 0) {
@@ -362,6 +376,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
         if(newDiscoveredPlays.length > 0) {
             if(!this.shouldScrobble(options.discoverLocation)) {
+                await this.playRepo.setStateById('discarded', newDiscoveredPlays.map(x => x.meta.dbId));
                 return;
             }
             newDiscoveredPlays.sort(sortByOldestPlayDate);
