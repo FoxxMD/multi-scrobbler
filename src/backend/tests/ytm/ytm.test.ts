@@ -14,7 +14,7 @@ import { ApiResponse } from 'youtubei.js';
 
 chai.use(asPromised);
 
-const createYtSource = (opts?: {
+const createYtSource = async (opts?: {
     config?: YTMusicSourceConfig
     emitter?: EventEmitter
 }) => {
@@ -27,6 +27,7 @@ const createYtSource = (opts?: {
         emitter = new EventEmitter
     } = opts || {};
     const source = new YTMusicSource('test', config, { localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test' }, emitter);
+    await source.buildDatabase();
     source.buildTransformRules();
     return source;
 }
@@ -48,7 +49,7 @@ describe('Handles temporal inconsistency in history', function () {
 
     it(`Adds new, prepended track`, async function () {
 
-        const source = createYtSource();
+        const source = await createYtSource();
 
         const plays = [...generatePlays(10, {playDate: dayjs().subtract(10, 'minutes')}, { comment: 'Today' }), ...generatePlays(10, {playDate: dayjs().subtract(10, 'minutes')}, { comment: 'Yesterday' })];
 
@@ -72,7 +73,7 @@ describe('Handles temporal inconsistency in history', function () {
 
     it(`Adds bumped, prepended track`, async function () {
 
-        const source = createYtSource();
+        const source = await createYtSource();
 
         const plays = [...generatePlays(10, {playDate: dayjs().subtract(10, 'minutes')}, { comment: 'Today' }), ...generatePlays(10, {playDate: dayjs().subtract(10, 'minutes')}, { comment: 'Yesterday' })];
 
@@ -98,7 +99,7 @@ describe('Handles temporal inconsistency in history', function () {
 
     it(`Does not add appended track`, async function () {
 
-        const source = createYtSource();
+        const source = await createYtSource();
 
         const plays = [...generatePlays(10, {playDate: dayjs().subtract(10, 'minutes')}, { comment: 'Today' }), ...generatePlays(10, {playDate: dayjs().subtract(10, 'minutes')}, { comment: 'Yesterday' })];
 
@@ -122,7 +123,7 @@ describe('Handles temporal inconsistency in history', function () {
 
         this.timeout(3700);
 
-        const source = createYtSource();
+        const source = await createYtSource();
 
         const plays = [...generatePlays(10, {playDate: dayjs().subtract(10, 'minutes')}, { comment: 'Today' }), ...generatePlays(10, {playDate: dayjs().subtract(10, 'minutes')}, { comment: 'Yesterday' })];
 
@@ -166,7 +167,7 @@ describe('Handles interim tracks', function () {
 
     it(`Does not add skipped plays`, async function () {
 
-        const source = createYtSource();
+        const source = await createYtSource();
 
         const plays = [...generatePlays(10, {playDate: dayjs().subtract(20, 'seconds')}, { comment: 'Today' }), ...generatePlays(10, {playDate: dayjs().subtract(20, 'seconds')}, { comment: 'Yesterday' })];
 
@@ -193,7 +194,7 @@ describe('Handles interim tracks', function () {
 
     it(`Adds interim plays when discover time is plausible`, async function () {
 
-        const source = createYtSource();
+        const source = await createYtSource();
 
         const plays = [...generatePlays(10, {playDate: dayjs().subtract(2, 'minutes')}, { comment: 'Today' }), ...generatePlays(10, {playDate: dayjs().subtract(2, 'minutes')}, { comment: 'Yesterday' })];
 

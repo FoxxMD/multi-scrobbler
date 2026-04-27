@@ -48,6 +48,7 @@ export class MSCache {
 
     cacheMetadata: Cacheable;
     cacheScrobble: Cacheable;
+    cacheDb: Cacheable;
     cacheAuth: Cacheable;
     regexCache: ReturnType<typeof cacheFunctions>;
     cacheTransform: Cacheable;
@@ -114,6 +115,7 @@ export class MSCache {
         this.cacheAuth = inMemory;
         this.cacheScrobble = inMemory;
         this.cacheApi = inMemory;
+        this.cacheDb = new Cacheable({primary: initMemoryCache({lruSize: 500, ttl: '1m'})});
     }
 
     init = async (enableCollectors: boolean = false) => {
@@ -133,7 +135,8 @@ export class MSCache {
             { cache: this.cacheScrobble, name: 'queued_scrobbles' },
             { cache: this.cacheTransform, name: 'transformer' },
             { cache: this.cacheClientScrobbles, name: 'historical_scrobbles' },
-            { cache: this.cacheApi, name: 'external_apis' }
+            { cache: this.cacheApi, name: 'external_apis' },
+            { cache: this.cacheDb, name: 'database' }
         ];
 
         this.cacheHits = new prom.Gauge({

@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "c9d77fe1-7dce-4014-bd6e-10174b7ebccc",
+  "id": "2a0aea39-bc8a-436a-a84c-6041c2b63c3f",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -239,6 +239,16 @@
       "default": null,
       "generated": null,
       "name": "parentId",
+      "entityType": "columns",
+      "table": "plays"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "platformId",
       "entityType": "columns",
       "table": "plays"
     },
@@ -556,6 +566,20 @@
       "where": null,
       "origin": "manual",
       "name": "play_seenAt_idx",
+      "entityType": "indexes",
+      "table": "plays"
+    },
+    {
+      "columns": [
+        {
+          "value": "platformId",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "play_platform_idx",
       "entityType": "indexes",
       "table": "plays"
     },

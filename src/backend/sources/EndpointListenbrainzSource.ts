@@ -82,7 +82,7 @@ export class EndpointListenbrainzSource extends MemorySource {
     }
 
     getRecentlyPlayed = async (options = {}) => {
-        return this.getFlatRecentlyDiscoveredPlays();
+        return await this.getFlatRecentlyDiscoveredPlays();
     }
 
     isValidScrobble = (playObj: PlayObject) => {

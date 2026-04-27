@@ -16,7 +16,8 @@ import { DrizzlePlayRepository, RepositoryCreatePlayOpts } from '../../common/da
 import { generateRandomObj } from '../../../core/tests/utils/fixtures.js';
 import { generateArray } from '../../../core/DataUtils.js';
 import { objectsEqual } from '../../utils/DataUtils.js';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
+import { PlaySelect } from '../../common/database/drizzle/drizzleTypes.js';
 
 // would be great to push migrations directly from schema but doesn't seem supported in newest beta
 // https://github.com/drizzle-team/drizzle-orm/discussions/4373
@@ -528,6 +529,35 @@ describe('Repository Operations', function () {
         expect(p2Plays).length(2);
         expect(p2Plays[0]).to.eq(initialPlays[2].id);
         expect(p2Plays[1]).to.eq(childPlays[0].id);
+    });
+
+        it('Get json property from play', async function () {
+
+        const db = getDb(':memory:', { workingDirectory: process.cwd() });
+        await migrateDb(db);
+
+        try {
+
+            const component = await db.insert(components).values(fixtureCreateComponent()).returning();
+
+            const playRows = await db.insert(plays).values([
+                fixtureCreatePlay({ componentId: component[0].id, play: generatePlay({}, {source: 'test1'}) }),
+                fixtureCreatePlay({ componentId: component[0].id, play: generatePlay({}, {source: 'test2'}) })
+            ]).returning();
+
+            let result: PlaySelect[];
+            // https://github.com/drizzle-team/drizzle-orm/discussions/938#discussioncomment-6542336
+            result = await db.select().from(plays).where(
+                sql`json_extract(${plays.play}, '$.meta.source') = 'test1'`
+            );
+
+            expect(result).length(1);
+            expect(result[0].play.meta.source).eq('test1');
+
+        } catch (e) {
+            throw e;
+        }
+        db.$client.close();
     });
 
 });

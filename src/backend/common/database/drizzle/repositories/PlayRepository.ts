@@ -6,9 +6,9 @@ import { generateInputEntity, generatePlayEntity, PlayEntityOpts } from "../enti
 import { playInputs, plays, relations } from "../schema/schema.js";
 import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, CompareOpKey } from "../drizzleTypes.js";;
 import { MarkOptional, MarkRequired, PathValue } from "ts-essentials";
-import { removeUndefinedKeys } from "../../../../utils.js";
+import { genGroupIdStrFromPlay, removeUndefinedKeys } from "../../../../utils.js";
 import dayjs, { Dayjs } from "dayjs";
-import { RelationsFieldFilter, eq, inArray } from "drizzle-orm";
+import { RelationsFieldFilter, eq, inArray, ne, notInArray, desc, asc, and } from "drizzle-orm";
 import { CompactableProperty, RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.js";
 import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.js";
 import { buildDateCompare, CompareDateOp, DrizzleBaseRepository } from "./BaseRepository.js";
@@ -20,7 +20,9 @@ export interface DrizzleRepositoryOpts {
 }
 export interface PlayWhereOpts {
     state?: PlaySelect['state'][]
+    stateNot?: PlaySelect['state'][]
     componentId?: number
+    platformId?: string
     seenAt?: CompareDateOp
     playedAt?: CompareDateOp
 }
@@ -274,6 +276,19 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository {
 
         loggerCom.verbose(`Cleanup done! Summary:\n${summaryDelStates.join(' | ')}`);
     }
+
+    public selectRecentDistinctPlatforms = async (componentId: number, limitPlays: number = 500): Promise<string[]> => {
+
+        const recentPlatformIds = await this.db.selectDistinct({platformId: plays.platformId}).from(plays)
+        .where(
+            and(
+                eq(plays.componentId, componentId),
+                ne(plays.state, 'queued'))
+        )
+        .orderBy(desc(plays.playedAt))
+        .limit(limitPlays);
+        return recentPlatformIds.map(x => x.platformId);
+    }
 }
 
 export const buildPlayWhere = (args: PlayWhereOpts): FindWhere<'plays'> => {
@@ -288,12 +303,57 @@ export const buildPlayWhere = (args: PlayWhereOpts): FindWhere<'plays'> => {
             in: args.state
         }
     }
+    if(args.stateNot !== undefined) {
+        where.state = {
+            NOT: {
+                in: args.stateNot
+            }
+        }
+    }
     if (args.seenAt !== undefined) {
         where.seenAt = buildDateCompare(args.seenAt);
     }
     if (args.playedAt !== undefined) {
         where.playedAt = buildDateCompare(args.playedAt);
     }
+    if(args.platformId !== undefined) {
+        where.platformId = args.platformId
+    }
     return where;
 }
 
+export const playToRepositoryCreatePlayOpts = (data: MarkOptional<RepositoryCreatePlayOpts, 'input'>): RepositoryCreatePlayOpts => {
+    const {
+        play: {
+            meta: {
+                lifecycle: {
+                    input,
+                    original,
+                    ...lifecycleRest
+                } = {},
+                ...metaRest
+            },
+            ...playRest
+        },
+        ...rest
+    } = data;
+
+    return {
+        play: {
+            ...playRest,
+            meta: {
+                ...metaRest,
+                // @ts-expect-error
+                lifecycle: {
+                    ...lifecycleRest
+                }
+            }
+        },
+        ...rest,
+        input: {
+            play: original,
+            data: input
+        },
+        platformId: genGroupIdStrFromPlay(data.play)
+    }
+}
