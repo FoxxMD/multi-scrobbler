@@ -610,7 +610,7 @@ describe('Dead Scrobbles', function() {
 
         const deadPlays = generatePlays(3);
         for(const dead of deadPlays) {
-            testScrobbler.addDeadLetterScrobble({source: 'test', play: dead, id: nanoid()});
+            await testScrobbler.addDeadLetterScrobble({source: 'test', play: dead, id: nanoid()});
         }
         await testScrobbler.processDeadLetterQueue();
         await testScrobbler.tryStopScrobbling()
