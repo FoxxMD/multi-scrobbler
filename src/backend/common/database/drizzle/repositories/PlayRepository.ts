@@ -2,16 +2,19 @@ import { childLogger, Logger, LoggerAppExtras } from "@foxxmd/logging";
 import { DbConcrete, getDb, runTransaction } from "../drizzleUtils.js";
 import { loggerNoop } from "../../../MaybeLogger.js";
 import { PlayObject } from "../../../../../core/Atomic.js";
-import { generateInputEntity, generatePlayEntity, PlayEntityOpts } from "../entityUtils.js";
+import { generateInputEntity, generatePlayEntity, PlayEntityOpts, hydratePlaySelect, PlayHydateOptions } from "../entityUtils.js";
 import { playInputs, plays, relations } from "../schema/schema.js";
 import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, CompareOpKey } from "../drizzleTypes.js";;
 import { MarkOptional, MarkRequired, PathValue } from "ts-essentials";
-import { genGroupIdStrFromPlay, removeUndefinedKeys } from "../../../../utils.js";
+import { genGroupIdStrFromPlay, removeEmptyArrays, removeUndefinedKeys } from "../../../../utils.js";
 import dayjs, { Dayjs } from "dayjs";
 import { RelationsFieldFilter, eq, inArray, ne, notInArray, desc, asc, and } from "drizzle-orm";
 import { CompactableProperty, RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.js";
 import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.js";
 import { buildDateCompare, CompareDateOp, DrizzleBaseRepository } from "./BaseRepository.js";
+import { asPlay } from "../../../../../core/PlayMarshalUtils.js";
+import assert from "node:assert";
+import { parseArrayFromMaybeString } from "../../../../utils/StringUtils.js";
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 
@@ -25,11 +28,14 @@ export interface PlayWhereOpts {
     platformId?: string
     seenAt?: CompareDateOp
     playedAt?: CompareDateOp
+    uid?: string[]
 }
 
+export type WithPlayRelation = 'input' | 'parent' | 'parent-input';
 export interface QueryPlaysOpts extends PlayWhereOpts {
     sort?: 'seenAt' | 'playedAt'
     order?: 'asc' | 'desc'
+    with?: WithPlayRelation[]
     limit?: number
     offset?: number
 }
@@ -45,8 +51,11 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository {
         super(db, 'plays', 'Plays', opts);
     }
 
-    createPlays = async (entitiesOpts: RepositoryCreatePlayOpts[]) => {
+    createPlays = async (entitiesOpts: RepositoryCreatePlayOpts[], opts: {hydrate?: PlayHydateOptions[]} = {}) => {
 
+        const {
+            hydrate = []
+        } = opts;
         let playRows: PlaySelect[];
 
         await runTransaction(this.db, async () => {
@@ -79,11 +88,21 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository {
 
         });
 
-        return playRows;
+        return playRows.map(x => ({...x, play: hydratePlaySelect(x, hydrate)}));
     }
 
-    findPlays = async (args: QueryPlaysOpts): Promise<PlaySelect[]> => {
-        //let oldQuery: Parameters<typeof this.db.query.plays.findMany>[0] = {};
+    findPlays = async (args: QueryPlaysOpts, opts: {hydrate?: PlayHydateOptions[]} = {}): Promise<PlaySelect[]> => {
+        const {
+            hydrate = []
+        } = opts;
+        // this does not work as type for query variable
+        // it erases the result type for some reason
+        //
+        // Parameters<typeof this.db.query.plays.findMany>[0]
+        
+        // this does work but it is also integrated into FindWith
+        //let withQuery: Parameters<typeof this.db.query.plays.findMany>[0]['with'] = undefined;
+
         let query: FindMany<'plays'> = {
             limit: args.limit,
             offset: args.offset
@@ -100,9 +119,41 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository {
                 id: 'asc'
             }
         }
+
+        if(args.with !== undefined) {
+            query.with = {};
+            for(const w of args.with) {
+                switch (w) {
+                    case 'input':
+                        query.with.input = true;
+                        break;
+                    case 'parent':
+                        query.with.parent = true;
+                        break;
+                    case 'parent-input':
+                        query.with.parent = {
+                            with: {
+                                input: true
+                            }
+                        };
+                        break;
+                    default:
+                        throw new Error(`Unknown relation ${w}`);
+                }
+            }
+        }
         query = removeUndefinedKeys(query);
         const results = await this.db.query.plays.findMany(query);
+        if(hydrate.length > 0) {
+            return results.map((x) => ({...x, play: hydratePlaySelect(x, hydrate)}));
+        }
         return results;
+    }
+
+    setStateById = async (state: PlayNew['state'], ids: number[]): Promise<void> => {
+        const validIds = ids.filter(x => x !== undefined && x !== null);
+        assert(validIds.length > 0, `Should not pass empty array of ids, after filtering, to update state. Original ids list: ${ids}`);
+        await this.db.update(plays).set({state}).where(inArray(plays.id, ids));
     }
 
     deletePlays = async (playsData: (Pick<PlaySelect, 'id'> | number)[]) => {
@@ -319,6 +370,11 @@ export const buildPlayWhere = (args: PlayWhereOpts): FindWhere<'plays'> => {
     if(args.platformId !== undefined) {
         where.platformId = args.platformId
     }
+    if(args.uid !== undefined) {
+        where.uid = {
+            in: args.uid
+        }
+    }
     return where;
 }
 
@@ -356,4 +412,43 @@ export const playToRepositoryCreatePlayOpts = (data: MarkOptional<RepositoryCrea
         },
         platformId: genGroupIdStrFromPlay(data.play)
     }
+}
+
+export type RequestPlayQuery = Partial< Record<keyof Exclude<QueryPlaysOpts, 'componentId' | 'platformId'>, string>>;
+
+export const queryArgsFromRequest = (rec: RequestPlayQuery): QueryPlaysOpts => {
+
+    const {
+        state,
+        stateNot,
+        uid,
+        with: withQuery,
+        seenAt,
+        playedAt,
+        limit,
+        sort,
+        order,
+        offset,
+        componentId,
+        ...rest
+    } = rec;
+
+    let queryArgs: QueryPlaysOpts = removeEmptyArrays<QueryPlaysOpts>({
+        state: parseArrayFromMaybeString(state) as PlaySelect['state'][],
+        stateNot: parseArrayFromMaybeString(stateNot) as PlaySelect['state'][],
+        uid: parseArrayFromMaybeString(uid),
+        with: parseArrayFromMaybeString(withQuery) as WithPlayRelation[],
+        sort: sort as 'playedAt' | 'seenAt',
+        order: order as 'asc' | 'desc',
+        ...rest
+    });
+
+    if(limit !== undefined) {
+        queryArgs.limit = Number.parseInt(limit);
+    }
+    if(offset !== undefined) {
+        queryArgs.offset = Number.parseInt(offset);
+    }
+
+    return queryArgs;
 }
