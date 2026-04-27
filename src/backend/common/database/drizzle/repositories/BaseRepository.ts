@@ -20,12 +20,12 @@ export type CompareDateOp = {
     inclusive?: boolean
 }
 
-export abstract class DrizzleBaseRepository {
+export abstract class DrizzleBaseRepository<T extends TableName> {
 
     logger: Logger;
     displayName: string;
     tableName: TableName;
-    table: ReturnType<typeof getConfigByTableName>
+    table: ReturnType<typeof getConfigByTableName<T>>
     db: ReturnType<typeof getDb>;
 
     constructor(db: ReturnType<typeof getDb>, tableName: TableName, displayName: string, opts: DrizzleRepositoryOpts = {}) {
@@ -36,20 +36,25 @@ export abstract class DrizzleBaseRepository {
         this.logger = childLogger(opts.logger ?? loggerNoop, ['Database', capitalize(displayName)]);
     }
 
-    deleteByIds = async (ids: number[]): Promise<void> => {
+    async deleteByIds(ids: number[]): Promise<void> {
         await this.db.delete(this.table).where(inArray(this.table.id, ids));
     }
 
-    updateById = async (id: number, data: Partial<typeof this.table.$inferInsert>): Promise<void> => {
+    async updateById(id: number, data: Partial<typeof this.table.$inferInsert>): Promise<void> {
         await this.db.update(this.table).set(data).where(eq(this.table.id, id));
     }
 
-    create = async (data: typeof this.table.$inferInsert): Promise<typeof this.table.$inferSelect> => {
+    async create(data: typeof this.table.$inferInsert): Promise<typeof this.table.$inferSelect> {
         const res = await this.db.insert(this.table).values([data]).returning();
         return res[0];
     }
 
-    findById = async (id: number): Promise<typeof this.table.$inferSelect | undefined> => {
+    async createMany(data: typeof this.table.$inferInsert[]): Promise<typeof this.table.$inferSelect[]> {
+        const res = await this.db.insert(this.table).values(data).returning();
+        return res;
+    }
+
+    async findById(id: number): Promise<typeof this.table.$inferSelect | undefined> {
         // const res = await this.db.query[this.tableName].findFirst({
         //     where: {
         //         id
@@ -61,6 +66,10 @@ export abstract class DrizzleBaseRepository {
         }
         return res[0];
     }
+}
+
+export class GenericRepository<T extends TableName> extends DrizzleBaseRepository<T> {
+
 }
 
 export const buildDateCompare = (data: CompareDateOp): RelationsFieldFilter<Dayjs> => {

@@ -157,7 +157,7 @@ const playRelations = defineRelations({ plays, queueStates, playInputs, componen
 
 export const relations = playRelations;
 
-export const getConfigByTableName = (name: TableName) => {
+export const getConfigByTableName = <T extends TableName>(name: T) => {
   switch(name) {
     case 'plays':
       return plays;

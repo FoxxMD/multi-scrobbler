@@ -1,9 +1,9 @@
 import { childLogger, Logger, LoggerAppExtras } from "@foxxmd/logging";
 import { DbConcrete, getDb, runTransaction } from "../drizzleUtils.js";
 import { loggerNoop } from "../../../MaybeLogger.js";
-import { PlayObject } from "../../../../../core/Atomic.js";
+import { ErrorLike, PlayObject } from "../../../../../core/Atomic.js";
 import { generateInputEntity, generatePlayEntity, PlayEntityOpts, hydratePlaySelect, PlayHydateOptions } from "../entityUtils.js";
-import { playInputs, plays, relations } from "../schema/schema.js";
+import { playInputs, plays, queueStates, relations } from "../schema/schema.js";
 import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, CompareOpKey } from "../drizzleTypes.js";;
 import { MarkOptional, MarkRequired, PathValue } from "ts-essentials";
 import { genGroupIdStrFromPlay, removeEmptyArrays, removeUndefinedKeys } from "../../../../utils.js";
@@ -45,7 +45,7 @@ export type RepositoryCreatePlayOpts = PlayEntityOpts
         input: MarkOptional<PlayInputNew, 'playId' | 'play'>
     }
     & MarkRequired<Pick<PlayNew, 'play' | 'componentId'>, 'componentId'>;
-export class DrizzlePlayRepository extends DrizzleBaseRepository {
+export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
     constructor(db: ReturnType<typeof getDb>, opts: DrizzleRepositoryOpts = {}) {
         super(db, 'plays', 'Plays', opts);
@@ -148,6 +148,13 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository {
             return results.map((x) => ({...x, play: hydratePlaySelect(x, hydrate)}));
         }
         return results;
+    }
+
+    async updateById(id: number, data: Partial<PlayNew>): Promise<void> {
+        if(data.play !== undefined) {
+            data.play = withoutDbAwareness(data.play);
+        }
+        super.updateById(id, data);
     }
 
     setStateById = async (state: PlayNew['state'], ids: number[]): Promise<void> => {
@@ -340,6 +347,36 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository {
         .limit(limitPlays);
         return recentPlatformIds.map(x => x.platformId);
     }
+
+    public getQueueCount = async (componentId: number, queueNames: string[]): Promise<number> => {
+        // this.db.select({id: queueStates.id}).from(queueStates).where(and(
+        //     eq(queueStates.componentId, componentId),
+        //     inArray(queueStates.queueName, states)
+        // ))
+        return await this.db.$count(queueStates, and(
+            eq(queueStates.componentId, componentId),
+            inArray(queueStates.queueName, queueNames),
+            eq(queueStates.queueStatus, 'queued')
+        ));
+
+    //    return await this.db.$count(plays, and(
+    //         eq(plays.componentId, componentId),
+    //         inArray(plays.state, states)
+    //     ));
+    }
+
+    public getQueueNext = async (componentId: number, state: PlaySelect['state']): Promise<PlaySelect | undefined> => {
+        const res = await this.db.query.plays.findFirst({
+                where: {
+                    componentId,
+                    state
+                },
+                orderBy: {
+                    seenAt: 'asc'
+                }
+        });
+        return res;
+    }
 }
 
 export const buildPlayWhere = (args: PlayWhereOpts): FindWhere<'plays'> => {
@@ -411,6 +448,22 @@ export const playToRepositoryCreatePlayOpts = (data: MarkOptional<RepositoryCrea
             data: input
         },
         platformId: genGroupIdStrFromPlay(data.play)
+    }
+}
+
+const withoutDbAwareness = (play: PlayObject): PlayObject => {
+    const {
+        meta: {
+            dbUid,
+            dbId,
+            ...metaRest
+        } = {},
+        ...playRest
+    } = play;
+
+    return {
+        ...playRest,
+        meta: metaRest
     }
 }
 

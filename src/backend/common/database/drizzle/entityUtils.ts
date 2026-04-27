@@ -29,7 +29,7 @@ export const generatePlayEntity = (play: PlayObject, opts: PlayEntityOpts = {}):
         play,
         state,
         playedAt,
-        seenAt,
+        seenAt: play.meta.seenAt ?? seenAt,
         ...restOpts
     }
 }

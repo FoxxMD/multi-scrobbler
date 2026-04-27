@@ -236,8 +236,8 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
                 hasAuthInteraction: requiresAuthInteraction,
                 authed,
                 initialized: x.isReady(),
-                deadLetterScrobbles: x.deadLetterScrobbles.length,
-                queued: x.queuedScrobbles.length
+                deadLetterScrobbles: x.deadLetterLength, // x.deadLetterScrobbles.length,
+                queued: x.queuedLength // x.queuedScrobbles.length
             };
             if (!base.initialized) {
                 if(x.buildOK === false) {
