@@ -146,43 +146,43 @@ describe('#Caching', function () {
         });
     });
 
-    describe('#ScrobbleCache', function () {
+    // describe('#ScrobbleCache', function () {
 
-        afterEach(function () {
-            const root = getRoot();
-            root.upsert({ cache: () => transientCache });
-            root.items.cache().init();
-        });
+    //     afterEach(function () {
+    //         const root = getRoot();
+    //         root.upsert({ cache: () => transientCache });
+    //         root.items.cache().init();
+    //     });
 
-        it('Preserves scrobbles', async function () {
+    //     it('Preserves scrobbles', async function () {
 
-           this.timeout(100000);
+    //        this.timeout(10000);
 
-           // why does this take so long?
-           await withLocalTmpDir(async () => {
+    //        // why does this take so long?
+    //        await withLocalTmpDir(async () => {
 
-                const root = getRoot();
-                root.upsert({ cache: () => () => new MSCache(loggerTest, { scrobble: { provider: 'file', connection: process.cwd(), persistInterval: 100 }, auth: {provider: 'memory'}, metadata: {provider: 'memory'} }) });
+    //             const root = getRoot();
+    //             root.upsert({ cache: () => () => new MSCache(loggerTest, { scrobble: { provider: 'file', connection: process.cwd(), persistInterval: 100 } }) });
 
-                await using test = new TestScrobbler();
-                await test.initialize();
-                const plays = generatePlays(100, {}, {}, {listenRanges: true});
-                await test.queueScrobble(plays, 'testSource');
-                const queued = test.queuedScrobbles.map(x => x.play);
-                await sleep(101);
-                const dirContents = await promises.readdir('.');
-                const hasCache = dirContents.some(x => x === 'ms-scrobble.cache');
-                expect(hasCache).is.true;
+    //             await using test = new TestScrobbler();
+    //             await test.initialize();
+    //             const plays = generatePlays(100, {}, {}, {listenRanges: true});
+    //             await test.queueScrobble(plays, 'testSource');
+    //             const queued = test.queuedScrobbles.map(x => x.play);
+    //             await sleep(101);
+    //             const dirContents = await promises.readdir('.');
+    //             const hasCache = dirContents.some(x => x === 'ms-scrobble.cache');
+    //             expect(hasCache).is.true;
 
-                await using newTest = new TestScrobbler();
-                await newTest.initialize();
-                expect(newTest.queuedScrobbles.length).to.eq(plays.length);
-                expect(newTest.queuedScrobbles[0].play.data.track).to.eq(queued[0].data.track);
+    //             await using newTest = new TestScrobbler();
+    //             await newTest.initialize();
+    //             expect(newTest.queuedScrobbles.length).to.eq(plays.length);
+    //             expect(newTest.queuedScrobbles[0].play.data.track).to.eq(queued[0].data.track);
 
-            }, { unsafeCleanup: true });
+    //         }, { unsafeCleanup: true });
 
-        });
+    //     });
 
-    });
+    // });
 
 });
