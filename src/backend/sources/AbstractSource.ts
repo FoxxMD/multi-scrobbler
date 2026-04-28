@@ -142,6 +142,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     protected async postDatabase(): Promise<void> {
         this.tracksDiscovered = this.dbComponent.countLive;
+        this.playRepo.componentId = this.dbComponent.id;
     }
 
     protected generateStaggerMappers() {
@@ -214,7 +215,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     protected addPlayToDiscovered = async (play: PlayObject): Promise<PlayObject> => {
         const platformId = this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID;
-        const playRow = await this.playRepo.createPlays([(playToRepositoryCreatePlayOpts({play, componentId: this.dbComponent.id, state: 'discovered'}))]);
+        const playRow = await this.playRepo.createPlays([(playToRepositoryCreatePlayOpts({play, state: 'discovered'}))]);
         const recentPlays = await this.getRecentlyDiscoveredPlaysByPlatform(platformId, false);
         // only need to update if its already in memory,
         // and better to update in-memory than clear cache so we aren't refetching from db on every discover
@@ -247,7 +248,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     getRecentPlaysApi = async (query: RequestPlayQuery) => {
         const res = await this.playRepo.findPlays({
-            componentId: this.dbComponent.id,
             limit: 100,
             ...queryArgsFromRequest(query)
         });
@@ -274,7 +274,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
         if(list === undefined && hydrate) {
             list = (await this.playRepo.findPlays({
                 platformId: platformStr,
-                componentId: this.dbComponent.id,
                 stateNot: ['queued'],
                 order: 'desc',
                 sort: 'playedAt',
@@ -290,7 +289,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         const cacheKey = this.recentPlatformsCacheKey();
         let list = await this.cache.cacheDb.get<string[]>(cacheKey);
         if(list === undefined && hydrate) {
-            list = await this.playRepo.selectRecentDistinctPlatforms(this.dbComponent.id);
+            list = await this.playRepo.selectRecentDistinctPlatforms();
             await this.cache.cacheDb.set<string[]>(cacheKey, list, '10m');
         }
         return list;

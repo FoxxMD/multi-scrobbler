@@ -305,11 +305,11 @@ describe('Repository Operations', function () {
 
         const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
-        const repo = new DrizzlePlayRepository(db);
+        const repo = new DrizzlePlayRepository(db, {componentId: component[0].id});
 
         const numPlays = 3;
 
-        const playData = generateArray<RepositoryCreatePlayOpts>(numPlays, () => ({ ...fixtureCreatePlay(), componentId: component[0].id, state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } }))
+        const playData = generateArray<RepositoryCreatePlayOpts>(numPlays, () => ({ ...fixtureCreatePlay(), state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } }))
 
         const rows = await repo.createPlays(playData);
         expect(rows).length(numPlays);
@@ -335,19 +335,17 @@ describe('Repository Operations', function () {
 
         const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
-        const repo = new DrizzlePlayRepository(db);
+        const repo = new DrizzlePlayRepository(db, {componentId: component[0].id});
 
         const numPlays = 3;
 
         const playData = generateArray<RepositoryCreatePlayOpts>(numPlays, () => ({
             ...fixtureCreatePlay(),
-            componentId: component[0].id,
             state: 'queued',
             input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
         }));
         const discovered = {
             ...fixtureCreatePlay(),
-            componentId: component[0].id,
             state: 'discovered' as 'discovered',
             input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
         };
@@ -367,30 +365,26 @@ describe('Repository Operations', function () {
 
         const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
-        const repo = new DrizzlePlayRepository(db);
+        const repo = new DrizzlePlayRepository(db, {componentId: component[0].id});
 
         const playData: RepositoryCreatePlayOpts[] = [
             {
                 ...fixtureCreatePlay({ play: generatePlay({ playDate: dayjs().subtract(2, 'm') }) }),
-                componentId: component[0].id,
                 state: 'queued' as 'queued',
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
             },
             {
                 ...fixtureCreatePlay({ play: generatePlay({ playDate: dayjs().subtract(6, 'm') }) }),
-                componentId: component[0].id,
                 state: 'queued' as 'queued',
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
             },
             {
                 ...fixtureCreatePlay({ play: generatePlay({ playDate: dayjs().subtract(8, 'm') }) }),
-                componentId: component[0].id,
                 state: 'queued' as 'queued',
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
             },
             {
                 ...fixtureCreatePlay({ play: generatePlay({ playDate: dayjs().subtract(10, 'm') }) }),
-                componentId: component[0].id,
                 state: 'queued' as 'queued',
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
             },
@@ -472,30 +466,26 @@ describe('Repository Operations', function () {
 
         const playData: RepositoryCreatePlayOpts[] = [
             {
-                ...fixtureCreatePlay(),
+                ...fixtureCreatePlay({play: generatePlay({},{seenAt: dayjs().subtract(25, 'h')})}),
                 componentId: component1[0].id,
-                seenAt: dayjs().subtract(25, 'h'),
                 state: 'queued' as 'queued',
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
             },
             {
-                ...fixtureCreatePlay(),
+                ...fixtureCreatePlay({play: generatePlay({},{seenAt: dayjs().subtract(26, 'h')})}),
                 componentId: component1[0].id,
-                seenAt: dayjs().subtract(26, 'h'),
                 state: 'queued' as 'queued',
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
             },
             {
-                ...fixtureCreatePlay(),
+                ...fixtureCreatePlay({play: generatePlay({},{seenAt: dayjs().subtract(26, 'h')})}),
                 componentId: component2[0].id,
-                seenAt: dayjs().subtract(26, 'h'),
                 state: 'queued' as 'queued',
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
             },
             {
-                ...fixtureCreatePlay(),
+                ...fixtureCreatePlay({play: generatePlay({},{seenAt: dayjs().subtract(25, 'h').subtract(1, 'm')})}),
                 componentId: component1[0].id,
-                seenAt: dayjs().subtract(25, 'h').subtract(1, 'm'),
                 state: 'queued' as 'queued',
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
             },
@@ -505,9 +495,8 @@ describe('Repository Operations', function () {
 
         const childPlays = await repo.createPlays([
             {
-                ...fixtureCreatePlay(),
+                ...fixtureCreatePlay({play: generatePlay({},{seenAt: dayjs().subtract(25, 'h')})}),
                 componentId: component2[0].id,
-                seenAt: dayjs().subtract(25, 'h'),
                 parentId: initialPlays[1].id,
                 state: 'queued' as 'queued',
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
@@ -515,9 +504,9 @@ describe('Repository Operations', function () {
         ])
 
         // does not return newer plays
-        expect((await repo.findPurgablePlayIds(1, dayjs().subtract(27, 'h')))).length(0);
+        expect((await repo.findPurgablePlayIds(dayjs().subtract(27, 'h'), {componentId: 1}))).length(0);
 
-        const pPlays = await repo.findPurgablePlayIds(1, dayjs().subtract(24, 'h'));
+        const pPlays = await repo.findPurgablePlayIds(dayjs().subtract(24, 'h'), {componentId: 1});
         // only returns plays that do not have children
         expect(pPlays).length(2);
         expect(pPlays[0]).to.eq(initialPlays[0].id);
@@ -525,7 +514,7 @@ describe('Repository Operations', function () {
 
         // only finds plays by component
         // and allows purging if they have parent id
-        const p2Plays = await repo.findPurgablePlayIds(2, dayjs().subtract(23, 'h'));
+        const p2Plays = await repo.findPurgablePlayIds(dayjs().subtract(23, 'h'), {componentId: 2});
         expect(p2Plays).length(2);
         expect(p2Plays[0]).to.eq(initialPlays[2].id);
         expect(p2Plays[1]).to.eq(childPlays[0].id);

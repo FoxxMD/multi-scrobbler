@@ -9,6 +9,7 @@ import { getConfigByTableName, relations, TableName } from "../schema/schema.js"
 
 export interface DrizzleRepositoryOpts {
     logger?: Logger
+    componentId?: number
 }
 
 export type CompareDateOp = {
@@ -25,6 +26,10 @@ export interface PaginatedQueryResponse {
     offset: number
 }
 
+export interface ComponentConstrainedRepoOpts {
+    componentId?: number
+}
+
 export abstract class DrizzleBaseRepository<T extends TableName> {
 
     logger: Logger;
@@ -32,6 +37,7 @@ export abstract class DrizzleBaseRepository<T extends TableName> {
     tableName: TableName;
     table: ReturnType<typeof getConfigByTableName<T>>
     db: ReturnType<typeof getDb>;
+    componentId?: number
 
     constructor(db: ReturnType<typeof getDb>, tableName: TableName, displayName: string, opts: DrizzleRepositoryOpts = {}) {
         this.db = db;
@@ -39,6 +45,7 @@ export abstract class DrizzleBaseRepository<T extends TableName> {
         this.tableName = tableName;
         this.table = getConfigByTableName(this.tableName);
         this.logger = childLogger(opts.logger ?? loggerNoop, ['Database', capitalize(displayName)]);
+        this.componentId = opts.componentId;
     }
 
     async deleteByIds(ids: number[]): Promise<void> {

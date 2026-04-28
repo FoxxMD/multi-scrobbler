@@ -7,11 +7,16 @@ import { CommonClientConfig, CommonClientOptions, NowPlayingOptions } from "../.
 import clone from "clone";
 import { TimeRangeListensFetcher } from "../../common/infrastructure/Atomic.js";
 import { loggerNoop } from "../../common/MaybeLogger.js";
+import { DrizzlePlayRepository } from "../../common/database/drizzle/repositories/PlayRepository.js";
+import { DrizzleQueueRepository } from "../../common/database/drizzle/repositories/QueueRepository.js";
 
 export class TestScrobbler extends AbstractScrobbleClient {
 
     testRecentScrobbles: PlayObject[] = [];
     getScrobblesForTimeRange: TimeRangeListensFetcher;
+
+    public playRepoTest: DrizzlePlayRepository;
+    public queueRepoTest: DrizzleQueueRepository;
 
     constructor(config: CommonClientConfig = {name: 'test'}) {
         const logger = loggerNoop;
@@ -22,6 +27,8 @@ export class TestScrobbler extends AbstractScrobbleClient {
         this.scrobbleDelay = 10;
         this.scrobbleSleep = 20;
         this.scrobbleWaitStopInterval = 20;
+        this.playRepoTest = this.playRepo;
+        this.queueRepoTest = this.queueRepo;
     }
 
     doScrobble(playObj: PlayObject) {
