@@ -3,7 +3,6 @@ import { defineRelations } from 'drizzle-orm';
 import dayjs, { Dayjs } from "dayjs";
 import { nanoid } from "nanoid";
 import { ErrorLike, PlayObject } from "../../../../../core/Atomic.js";
-import { string } from "drizzle-orm/cockroach-core/columns/string";
 
 const DayjsTimestamp = customType<
   {

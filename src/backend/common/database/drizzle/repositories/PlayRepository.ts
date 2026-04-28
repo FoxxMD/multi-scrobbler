@@ -52,6 +52,20 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         super(db, 'plays', 'Plays', opts);
     }
 
+    findByUid = async (componentId: number, uid: string, opts: {hydrate?: PlayHydateOptions[]} = {}): Promise<PlaySelect & {queueStates: QueueStateSelect[]}> => {
+        const res = await this.db.query.plays.findFirst({
+            where: {
+                uid,
+                componentId
+            },
+            with: {
+                queueStates: true
+            }
+        });
+        res.play = hydratePlaySelect(res, opts.hydrate);
+        return res;
+    }
+
     createPlays = async (entitiesOpts: RepositoryCreatePlayOpts[], opts: {hydrate?: PlayHydateOptions[]} = {}) => {
 
         const {
@@ -349,23 +363,6 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return recentPlatformIds.map(x => x.platformId);
     }
 
-    public getQueueCount = async (componentId: number, queueNames: string[]): Promise<number> => {
-        // this.db.select({id: queueStates.id}).from(queueStates).where(and(
-        //     eq(queueStates.componentId, componentId),
-        //     inArray(queueStates.queueName, states)
-        // ))
-        return await this.db.$count(queueStates, and(
-            eq(queueStates.componentId, componentId),
-            inArray(queueStates.queueName, queueNames),
-            eq(queueStates.queueStatus, 'queued')
-        ));
-
-    //    return await this.db.$count(plays, and(
-    //         eq(plays.componentId, componentId),
-    //         inArray(plays.state, states)
-    //     ));
-    }
-
     public getQueueNext = async (componentId: number, queueName: string, opts: {order?: 'asc' | 'desc', retries?: number} = {}): Promise<PlaySelect & {queueStates: QueueStateSelect[]} | undefined> => {
         const {
             retries,
@@ -400,6 +397,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                     queueStates: true
                 }
         });
+        res.play = asPlay(res.play);
         return res;
     }
 
