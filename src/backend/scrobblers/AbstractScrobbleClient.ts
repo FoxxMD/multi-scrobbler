@@ -520,8 +520,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         // only refresh ranges if we've consumed at least 5 queued/dead
         // (so that there are potentially at least 5 new scrobbles to check ranges for)
         if(this.queuedConsumedSinceLastRangeRefresh >= 5) {
-            const queued = (await this.playRepo.getQueued(this.dbComponent.id, 'queued', {limit: 50})).data.map(x => asPlay(x.play));
-            const dead = (await this.playRepo.getQueued(this.dbComponent.id, CLIENT_DEAD_QUEUE, {limit: 50, retries: deadRetries})).data.map(x => asPlay(x.play));
+            const queued = (await this.playRepo.getQueued('queued', {limit: 50})).data.map(x => asPlay(x.play));
+            const dead = (await this.playRepo.getQueued(CLIENT_DEAD_QUEUE, {limit: 50, retries: deadRetries})).data.map(x => asPlay(x.play));
             this.scrobbleSOTRanges = groupPlaysToTimeRanges(queued.concat(dead), this.scrobbleSOTRanges, {staleNowBuffer: this.config.options?.refreshStaleAfter});
         }
     }
@@ -780,7 +780,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     protected processQueueCurrentScrobble = async (signal: AbortSignal) => {
         signal.throwIfAborted();
-        if (this.queuedScrobbles.length === 0) {
+        if (this.queuedLength === 0) {
             return;
         }
 
@@ -1160,7 +1160,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 // then chunked queued plays
                 let offset = 0;
                 while(true) {
-                    const {data, meta} = await this.playRepo.getQueued(this.dbComponent.id, CLIENT_INGRESS_QUEUE, {offset});
+                    const {data, meta} = await this.playRepo.getQueued(CLIENT_INGRESS_QUEUE, {offset});
                     const existingQueued = await this.existingScrobble(play, data.map(x => asPlay(x.play)), false);
                      // want to be very confident of this
                     if(existingQueued.match && existingQueued.score > 0.99) {
@@ -1215,18 +1215,18 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.updateQueuedScrobblesCache();
     }
 
-    cancelQueuedItemsBySource = (source: string): number => {
-        const beforeMain = this.queuedScrobbles.length;
-        const beforeDead = this.deadLetterScrobbles.length;
+    // cancelQueuedItemsBySource = (source: string): number => {
+    //     const beforeMain = this.queuedScrobbles.length;
+    //     const beforeDead = this.deadLetterScrobbles.length;
 
-        this.queuedScrobbles = this.queuedScrobbles.filter(item => item.source !== source);
-        this.deadLetterScrobbles = this.deadLetterScrobbles.filter(item => item.source !== source);
+    //     this.queuedScrobbles = this.queuedScrobbles.filter(item => item.source !== source);
+    //     this.deadLetterScrobbles = this.deadLetterScrobbles.filter(item => item.source !== source);
 
-        this.updateQueuedScrobblesCache();
-        this.updateDeadLetterCache();
+    //     this.updateQueuedScrobblesCache();
+    //     this.updateDeadLetterCache();
 
-        return (beforeMain + beforeDead) - (this.queuedScrobbles.length + this.deadLetterScrobbles.length);
-    }
+    //     return (beforeMain + beforeDead) - (this.queuedScrobbles.length + this.deadLetterScrobbles.length);
+    // }
 
     addDeadLetterScrobble = async (data: PlaySelect, error: (Error | string) = 'Unspecified error') => {
         let eString = '';
