@@ -29,6 +29,8 @@ CREATE TABLE `plays` (
 	`state` text NOT NULL,
 	`parentId` integer,
 	`platformId` text,
+	`playHash` text,
+	`mbidIdentifier` text,
 	`compacted` text,
 	CONSTRAINT `fk_plays_componentId_components_id_fk` FOREIGN KEY (`componentId`) REFERENCES `components`(`id`) ON UPDATE CASCADE ON DELETE CASCADE,
 	CONSTRAINT `fk_plays_parentId_plays_id_fk` FOREIGN KEY (`parentId`) REFERENCES `plays`(`id`) ON UPDATE CASCADE ON DELETE SET NULL

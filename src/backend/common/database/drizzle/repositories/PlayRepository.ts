@@ -4,17 +4,18 @@ import { loggerNoop } from "../../../MaybeLogger.js";
 import { ErrorLike, PlayObject } from "../../../../../core/Atomic.js";
 import { generateInputEntity, generatePlayEntity, PlayEntityOpts, hydratePlaySelect, PlayHydateOptions } from "../entityUtils.js";
 import { playInputs, plays, queueStates, relations } from "../schema/schema.js";
-import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, CompareOpKey } from "../drizzleTypes.js";;
+import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, CompareOpKey, QueueStateSelect } from "../drizzleTypes.js";;
 import { MarkOptional, MarkRequired, PathValue } from "ts-essentials";
 import { genGroupIdStrFromPlay, removeEmptyArrays, removeUndefinedKeys } from "../../../../utils.js";
 import dayjs, { Dayjs } from "dayjs";
 import { RelationsFieldFilter, eq, inArray, ne, notInArray, desc, asc, and } from "drizzle-orm";
 import { CompactableProperty, RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.js";
 import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.js";
-import { buildDateCompare, CompareDateOp, DrizzleBaseRepository } from "./BaseRepository.js";
+import { buildDateCompare, CompareDateOp, DrizzleBaseRepository, PaginatedQueryResponse } from "./BaseRepository.js";
 import { asPlay } from "../../../../../core/PlayMarshalUtils.js";
 import assert from "node:assert";
-import { parseArrayFromMaybeString } from "../../../../utils/StringUtils.js";
+import { hashObject, parseArrayFromMaybeString } from "../../../../utils/StringUtils.js";
+import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../../utils/PlayComparisonUtils.js";
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 
@@ -365,17 +366,124 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
     //     ));
     }
 
-    public getQueueNext = async (componentId: number, state: PlaySelect['state']): Promise<PlaySelect | undefined> => {
+    public getQueueNext = async (componentId: number, queueName: string, opts: {order?: 'asc' | 'desc', retries?: number} = {}): Promise<PlaySelect & {queueStates: QueueStateSelect[]} | undefined> => {
+        const {
+            retries,
+            order = 'asc'
+        } = opts;
+
+        let where: FindWhere<'plays'> = {
+            componentId
+        }
+
+        if(retries !== undefined) {
+            where.queueStates = {
+                queueName,
+                queueStatus: 'queued',
+                retries: {
+                    lte: retries
+                }
+            }
+        } else {
+            where.queueStates = {
+                queueName,
+                queueStatus: 'queued'
+            }
+        }
+
         const res = await this.db.query.plays.findFirst({
-                where: {
-                    componentId,
-                    state
-                },
+                where: where,
                 orderBy: {
-                    seenAt: 'asc'
+                    seenAt: order
+                },
+                with: {
+                    queueStates: true
                 }
         });
         return res;
+    }
+
+    public getQueued = async (componentId: number, queueName: string, opts: {
+        order?: 'asc' | 'desc',
+        limit?: number,
+        offset?: number,
+        retries?: number
+    } = {}
+    ): Promise<{data: PlaySelect[], meta: PaginatedQueryResponse}> => {
+        const {
+            order = 'asc',
+            limit = 100,
+            offset = 0,
+            retries
+        } = opts;
+        let where: FindWhere<'plays'> = {
+            componentId
+        }
+        if(retries !== undefined) {
+            where.queueStates = {
+                queueName,
+                queueStatus: 'queued',
+                retries: {
+                    lte: retries
+                }
+            }
+        } else {
+            where.queueStates = {
+                queueName,
+                queueStatus: 'queued'
+            }
+        }
+        const res = await this.db.query.plays.findMany({
+            where,
+            orderBy: {
+                seenAt: order
+            },
+            limit,
+            offset
+        });
+        return {data: res, meta: {limit, offset}};
+    }
+
+    public checkExistingQuick = async (componentId: number, play: PlayObject, queueName?: string): Promise<PlaySelect & {queueStates: QueueStateSelect[]} | undefined> => {
+        const hash = hashObject(playContentBasicInvariantTransform(play).data);
+
+        let where: FindWhere<'plays'> = {
+            componentId,
+            playedAt: {
+                eq: play.data.playDate
+            },
+        };
+        if(queueName !== undefined) {
+            where.queueStates = {
+                queueName,
+                queueStatus: 'queued'
+            }
+        }
+
+        const mbidId = playMbidIdentifier(play);
+        if(mbidId !== undefined) {
+            where.AND = [
+                {
+                    OR: [
+                        {
+                            playHash: hash
+                        },
+                        {
+                            mbidIdentifier: mbidId
+                        }
+                    ]
+                }
+            ]
+        } else {
+            where.playHash = hash;
+        }
+
+        return this.db.query.plays.findFirst({
+            where,
+            with: {
+                queueStates: true
+            }
+        })
     }
 }
 

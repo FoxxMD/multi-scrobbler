@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "2a0aea39-bc8a-436a-a84c-6041c2b63c3f",
+  "id": "69eeda8c-8c71-441f-b7ce-4b0d3ce6d361",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -249,6 +249,26 @@
       "default": null,
       "generated": null,
       "name": "platformId",
+      "entityType": "columns",
+      "table": "plays"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "playHash",
+      "entityType": "columns",
+      "table": "plays"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "mbidIdentifier",
       "entityType": "columns",
       "table": "plays"
     },
