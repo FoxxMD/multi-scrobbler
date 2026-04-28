@@ -61,6 +61,52 @@ export const playContentInvariantTransform = (play: PlayObject): PlayObjectLifec
     }
 }
 
+export const playContentBasicInvariantTransform = (play: PlayObject): PlayObjectLifecycleless => {
+    const {
+        data: {
+            playDate,
+            playDateCompleted,
+            listenRanges,
+            listenedFor,
+            meta,
+            ...rest
+        }
+    } = play;
+    return {
+        data: {
+            ...rest
+        },
+        meta: {}
+    }
+}
+
+export const playMbidIdentifier = (play: PlayObject): string | undefined => {
+    const {
+        data: {
+            meta: {
+                brainz: {
+                    recording,
+                    album,
+                    track
+                } = {}
+            } = {}
+        } = {}
+    } = play;
+
+    // track mbid is a unique combo of recording on release
+    // so we only need it to identifier what should be track + album + artist
+    if(track !== undefined) {
+        return track;
+    }
+    // recording is independent of release
+    // so to make sure the corresponding track + album is the same
+    // we need both recording and release
+    if(recording !== undefined && album !== undefined) {
+        return `${recording}-${album}`
+    }
+    return undefined;
+}
+
 export type PlayTransformer = (play: PlayObject) => PlayObjectLifecycleless;
 export type ListTransformers = PlayTransformer[];
 

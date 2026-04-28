@@ -7,6 +7,8 @@ import { MarkOptional } from "ts-essentials";
 import { ErrorLike, PlayObject } from "../../../../core/Atomic.js";
 import dayjs, { Dayjs } from "dayjs";
 import { asPlay } from "../../../../core/PlayMarshalUtils.js";
+import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../utils/PlayComparisonUtils.js";
+import { hashObject } from "../../../utils/StringUtils.js";
 
 export const generateComponentEntity = (data: MarkOptional<ComponentNew, 'uid'>): ComponentNew => {
     assert(data.name !== undefined, 'Must provide name');
@@ -25,13 +27,25 @@ export const generatePlayEntity = (play: PlayObject, opts: PlayEntityOpts = {}):
         playedAt = play.data.playDate,
         ...restOpts
     } = opts;
-    return {
+    let playHash: string = undefined;
+    try {
+        playHash = hashObject(playContentBasicInvariantTransform(play).data);
+    } catch (e) {
+        // swallow
+    }
+    const data: PlayNew = {
         play,
+        playHash,
         state,
         playedAt,
         seenAt: play.meta.seenAt ?? seenAt,
         ...restOpts
+    };
+    const mbidId = playMbidIdentifier(play);
+    if(mbidId !== undefined) {
+        data.mbidIdentifier = mbidId;
     }
+    return data;
 }
 
 export type PlayHydateOptions = 'asPlay' | 'id' | 'uid';

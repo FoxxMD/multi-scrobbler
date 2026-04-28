@@ -20,6 +20,11 @@ export type CompareDateOp = {
     inclusive?: boolean
 }
 
+export interface PaginatedQueryResponse {
+    limit: number,
+    offset: number
+}
+
 export abstract class DrizzleBaseRepository<T extends TableName> {
 
     logger: Logger;
