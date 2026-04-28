@@ -495,13 +495,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
 
     handleQueuedScrobbleRanges = async (deadRetries: number = 3) => {
-        // only refresh ranges if we've consumed at least 5 queued/dead
-        // (so that there are potentially at least 5 new scrobbles to check ranges for)
-        if(this.queuedConsumedSinceLastRangeRefresh >= 5) {
-            const queued = (await this.playRepo.getQueued('queued', {limit: 50})).data.map(x => asPlay(x.play));
-            const dead = (await this.playRepo.getQueued(CLIENT_DEAD_QUEUE, {limit: 50, retries: deadRetries})).data.map(x => asPlay(x.play));
+            const queued = (await this.playRepo.getQueued(CLIENT_INGRESS_QUEUE, {limit: 30})).data.map(x => asPlay(x.play));
+            const dead = (await this.playRepo.getQueued(CLIENT_DEAD_QUEUE, {limit: 30, retries: deadRetries})).data.map(x => asPlay(x.play));
             this.scrobbleSOTRanges = groupPlaysToTimeRanges(queued.concat(dead), this.scrobbleSOTRanges, {staleNowBuffer: this.config.options?.refreshStaleAfter});
-        }
     }
 
     getSOTScrobblesForPlay = async (play: PlayObject): Promise<PlayObject[]> => {
@@ -761,7 +757,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         if (this.queuedLength === 0) {
             return;
         }
-
+        this.queuedConsumedSinceLastRangeRefresh++;
         await this.handleQueuedScrobbleRanges();
         if (!this.upstreamRefresh.refreshEnabled) {
             // TODO add signal for this to scrobble match
@@ -991,6 +987,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         //const deadScrobble = this.deadLetterScrobbles[deadScrobbleIndex];
         this.deadLogger.trace(deadLabel, `Processing dead scrobble => ${buildTrackString(deadScrobble.play)}`);
 
+        this.queuedConsumedSinceLastRangeRefresh++;
         await this.handleQueuedScrobbleRanges();
         signal?.throwIfAborted();
 
@@ -1137,29 +1134,35 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 }
                 // then chunked queued plays
                 let offset = 0;
+                let inQueue = false;
                 while(true) {
                     const {data, meta} = await this.playRepo.getQueued(CLIENT_INGRESS_QUEUE, {offset});
                     const existingQueued = await this.existingScrobble(play, data.map(x => asPlay(x.play)), false);
                      // want to be very confident of this
                     if(existingQueued.match && existingQueued.score > 0.99) {
                         this.logger.trace(`Not adding to queue because it is already in the queue\n${existingQueued.summary}`);
-                        continue;
+                        inQueue = true;
+                        break;
                     }
                     if(data.length < meta.limit) {
                         break;
                     }
                     offset += meta.limit;
                 }
+
+                if(inQueue) {
+                    continue;
+                }
                 
                 // not in queue!
                 const {
-                meta: {
-                    dbId,
-                    dbUid,
-                    lifecycle,
-                    ...metaRest
-                },
-            } = play
+                    meta: {
+                        dbId,
+                        dbUid,
+                        lifecycle,
+                        ...metaRest
+                    },
+                } = play
             const createPlayData = playToRepositoryCreatePlayOpts({
                 play: {
                     ...play,
