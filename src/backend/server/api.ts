@@ -6,6 +6,7 @@ import { FixedSizeList } from 'fixed-size-list';
 import { PassThrough } from "node:stream";
 import { Transform } from "stream";
 import {
+    CLIENT_DEAD_QUEUE,
     ClientStatusData,
     DeadLetterScrobble,
     LeveledLogData,
@@ -34,6 +35,7 @@ import ScrobbleSources from "../sources/ScrobbleSources.js";
 import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
 import prom from 'prom-client';
 import { SimpleError } from "../common/errors/MSErrors.js";
+import { QueryPlaysOpts } from "../common/database/drizzle/repositories/PlayRepository.js";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -323,9 +325,11 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         const {
             // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleClient: client,
+            query
         } = req;
 
-        const result: DeadLetterScrobble<PlayObject>[] = (client as AbstractScrobbleClient).deadLetterScrobbles;
+        // @ts-ignore
+        const result: DeadLetterScrobble<PlayObject>[] = (await (client as AbstractScrobbleClient).getPlays(query as Partial<QueryPlaysOpts>)).data.map(x => ({play: x.play, source: x.play.meta.source, retries: x.queueStates.find(x => x.queueName === CLIENT_DEAD_QUEUE)?.retries ?? 0 }));
 
         return res.json(result);
     });

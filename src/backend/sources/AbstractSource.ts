@@ -748,6 +748,18 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return maxInterval - this.getInterval();
     }
 
+    public getPlays = (args: QueryPlaysOpts) => {
+        const {
+            limit,
+            offset,
+            with: withQuery = ['input','parent-input','queues'],
+            ...rest
+        } = args;
+        let parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
+        let parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
+        return this.playRepo.findPlaysPaginated({limit: parsedLimit, offset: parsedOffset, with: withQuery, ...rest});
+    }
+
     public emitEvent = (eventName: string, payload: object = {}) => {
         this.emitter.emit(eventName, {
             type: this.type,
