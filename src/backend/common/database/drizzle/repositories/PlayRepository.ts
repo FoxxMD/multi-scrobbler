@@ -4,7 +4,7 @@ import { loggerNoop } from "../../../MaybeLogger.js";
 import { ErrorLike, PlayObject } from "../../../../../core/Atomic.js";
 import { generateInputEntity, generatePlayEntity, PlayEntityOpts, hydratePlaySelect, PlayHydateOptions } from "../entityUtils.js";
 import { playInputs, plays, queueStates, relations } from "../schema/schema.js";
-import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, CompareOpKey, QueueStateSelect } from "../drizzleTypes.js";;
+import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, CompareOpKey, QueueStateSelect, PlayInputSelect } from "../drizzleTypes.js";;
 import { MarkOptional, MarkRequired, PathValue } from "ts-essentials";
 import { genGroupIdStrFromPlay, removeEmptyArrays, removeUndefinedKeys } from "../../../../utils.js";
 import dayjs, { Dayjs } from "dayjs";
@@ -26,10 +26,11 @@ export interface PlayWhereOpts {
     platformId?: string
     seenAt?: CompareDateOp
     playedAt?: CompareDateOp
+    queueCriteria?: {queueName: string, states?: QueueStateSelect['queueStatus'][]}
     uid?: string[]
 }
 
-export type WithPlayRelation = 'input' | 'parent' | 'parent-input';
+export type WithPlayRelation = 'input' | 'parent' | 'parent-input' | 'queues';
 export interface QueryPlaysOpts extends PlayWhereOpts {
     sort?: 'seenAt' | 'playedAt'
     order?: 'asc' | 'desc'
@@ -154,6 +155,9 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                             }
                         };
                         break;
+                    case 'queues':
+                        query.with.queueStates = true;
+                        break;
                     default:
                         throw new Error(`Unknown relation ${w}`);
                 }
@@ -165,6 +169,21 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             return results.map((x) => ({...x, play: hydratePlaySelect(x, hydrate)}));
         }
         return results;
+    }
+
+    findPlaysPaginated = async (args: QueryPlaysOpts, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<{data: (PlaySelect & {
+        queueStates?: QueueStateSelect[]
+        input?: PlayInputSelect
+        parent?: PlaySelect
+    })[], meta: {offset: number, limit: number}}> => {
+        const {
+            limit,
+            offset = 0,
+            ...rest
+        } = args;
+        const clampedLimit = Math.min(limit, 100);
+        const res = await this.findPlays({limit: clampedLimit, offset, ...rest}, opts);
+        return {data: res, meta: {limit: clampedLimit, offset}};
     }
 
     async updateById(id: number, data: Partial<PlayNew>): Promise<void> {
@@ -412,7 +431,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         order?: 'asc' | 'desc',
         limit?: number,
         offset?: number,
-        retries?: number
+        retries?: number,
     } & ComponentConstrainedRepoOpts = {}
     ): Promise<{data: PlaySelect[], meta: PaginatedQueryResponse}> => {
         const {
@@ -601,6 +620,7 @@ export const queryArgsFromRequest = (rec: RequestPlayQuery): QueryPlaysOpts => {
         order,
         offset,
         componentId,
+        queueCriteria,
         ...rest
     } = rec;
 

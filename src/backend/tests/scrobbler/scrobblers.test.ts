@@ -675,8 +675,8 @@ describe('Scrobble client uses transform plays correctly', function() {
             track: 'my cool track'
         });
         await testScrobbler.queueScrobble(newScrobble, 'test');
-        const queuedPlayed = await testScrobbler.playRepoTest.getQueued(CLIENT_INGRESS_QUEUE);
-        expect(queuedPlayed[0].play.data.track).is.eq('my cool track');
+        const queuedPlayedData = await testScrobbler.playRepoTest.getQueued(CLIENT_INGRESS_QUEUE);
+        expect(queuedPlayedData.data[0].play.data.track).is.eq('my cool track');
         testScrobbler.scrobbleSleep = 100;
         testScrobbler.initScrobbleMonitoring().catch(console.error);
 
