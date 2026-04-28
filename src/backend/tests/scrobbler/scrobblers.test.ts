@@ -24,6 +24,9 @@ import { asPlay } from '../../../core/PlayMarshalUtils.js';
 import { nanoid } from 'nanoid';
 import { getRoot } from '../../ioc.js';
 import { transientCache } from '../utils/TransientTestUtils.js';
+import { generateArray } from '../../../core/DataUtils.js';
+import { RepositoryCreatePlayOpts } from '../../common/database/drizzle/repositories/PlayRepository.js';
+import { fixtureCreatePlay } from '../utils/databaseFixtures.js';
 
 chai.use(asPromised);
 
@@ -608,13 +611,16 @@ describe('Dead Scrobbles', function() {
         await testScrobbler.initialize();
         testScrobbler.testRecentScrobbles = [];
 
-        const deadPlays = generatePlays(3);
-        for(const dead of deadPlays) {
-            await testScrobbler.addDeadLetterScrobble({source: 'test', play: dead, id: nanoid()});
+        const queuedPlayed = await testScrobbler.playRepoTest.createPlays(generateArray<RepositoryCreatePlayOpts>(3, () => ({ ...fixtureCreatePlay(), state: 'queued', input: {} })))
+
+        for(const dead of queuedPlayed) {
+            await testScrobbler.addDeadLetterScrobble(dead);
         }
+
         await testScrobbler.processDeadLetterQueue();
-        await testScrobbler.tryStopScrobbling()
-        expect(testScrobbler.deadLetterScrobbles.length).eq(0);
+        await pEvent(testScrobbler.emitter, 'queueState');
+
+        expect(testScrobbler.deadLetterQueued).eq(0);
     });
 
 });

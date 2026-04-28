@@ -363,7 +363,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
             return res.status(404).send();
         }
 
-        const [scrobbled, dead] = await ((client as AbstractScrobbleClient).processDeadLetterScrobble(deadId));
+        const [scrobbled, dead] = await ((client as AbstractScrobbleClient).processDeadLetterScrobble(undefined, deadId));
 
         if(scrobbled) {
             return res.status(200).send();
@@ -405,7 +405,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
             return res.status(404).send();
         }
 
-        (client as AbstractScrobbleClient).removeDeadLetterScrobble(deadId);
+        (client as AbstractScrobbleClient).removeDeadLetterScrobble(deadId,'failed', false);
         return res.status(200).send();
     });
 

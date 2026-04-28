@@ -204,7 +204,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
         try {
             const repo = new DrizzlePlayRepository(this.db, {logger: this.logger});
-            await repo.retentionCleanup(this.dbComponent.id, this.componentType, this.retentionOpts);
+            await repo.retentionCleanup(this.componentType, this.retentionOpts);
         } catch (e) {
             this.logger.warn(new Error('Failed to do retention cleanup', {cause: e}));
         }

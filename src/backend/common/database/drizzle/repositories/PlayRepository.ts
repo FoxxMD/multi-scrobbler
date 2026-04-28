@@ -11,7 +11,7 @@ import dayjs, { Dayjs } from "dayjs";
 import { RelationsFieldFilter, eq, inArray, ne, notInArray, desc, asc, and } from "drizzle-orm";
 import { CompactableProperty, RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.js";
 import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.js";
-import { buildDateCompare, CompareDateOp, DrizzleBaseRepository, PaginatedQueryResponse } from "./BaseRepository.js";
+import { buildDateCompare, CompareDateOp, ComponentConstrainedRepoOpts, DrizzleBaseRepository, DrizzleRepositoryOpts, PaginatedQueryResponse } from "./BaseRepository.js";
 import { asPlay } from "../../../../../core/PlayMarshalUtils.js";
 import assert from "node:assert";
 import { hashObject, parseArrayFromMaybeString } from "../../../../utils/StringUtils.js";
@@ -19,9 +19,6 @@ import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../..
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 
-export interface DrizzleRepositoryOpts {
-    logger?: Logger
-}
 export interface PlayWhereOpts {
     state?: PlaySelect['state'][]
     stateNot?: PlaySelect['state'][]
@@ -41,22 +38,26 @@ export interface QueryPlaysOpts extends PlayWhereOpts {
     offset?: number
 }
 
+export interface HydrateOpts {
+   hydrate?: PlayHydateOptions[] 
+}
+
 export type RepositoryCreatePlayOpts = PlayEntityOpts
     & {
         input: MarkOptional<PlayInputNew, 'playId' | 'play'>
     }
-    & MarkRequired<Pick<PlayNew, 'play' | 'componentId'>, 'componentId'>;
+    & Pick<PlayNew, 'play' | 'componentId'>;
 export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
     constructor(db: ReturnType<typeof getDb>, opts: DrizzleRepositoryOpts = {}) {
         super(db, 'plays', 'Plays', opts);
     }
 
-    findByUid = async (componentId: number, uid: string, opts: {hydrate?: PlayHydateOptions[]} = {}): Promise<PlaySelect & {queueStates: QueueStateSelect[]}> => {
+    findByUid = async (uid: string, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PlaySelect & {queueStates: QueueStateSelect[]}> => {
         const res = await this.db.query.plays.findFirst({
             where: {
                 uid,
-                componentId
+                componentId: opts.componentId ?? this.componentId
             },
             with: {
                 queueStates: true
@@ -66,7 +67,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return res;
     }
 
-    createPlays = async (entitiesOpts: RepositoryCreatePlayOpts[], opts: {hydrate?: PlayHydateOptions[]} = {}) => {
+    createPlays = async (entitiesOpts: RepositoryCreatePlayOpts[], opts: HydrateOpts = {}) => {
 
         const {
             hydrate = []
@@ -81,7 +82,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                     input,
                     ...rest
                 } = data;
-                return generatePlayEntity(play, { ...rest });
+                return generatePlayEntity(play, { componentId: this.componentId, ...rest });
             });
 
             playRows = await this.db.insert(plays).values(entitiesData).returning();
@@ -106,9 +107,10 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return playRows.map(x => ({...x, play: hydratePlaySelect(x, hydrate)}));
     }
 
-    findPlays = async (args: QueryPlaysOpts, opts: {hydrate?: PlayHydateOptions[]} = {}): Promise<PlaySelect[]> => {
+    findPlays = async (args: QueryPlaysOpts, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PlaySelect[]> => {
         const {
-            hydrate = []
+            hydrate = [],
+            componentId = this.componentId
         } = opts;
         // this does not work as type for query variable
         // it erases the result type for some reason
@@ -123,7 +125,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             offset: args.offset
         };
 
-        query.where = buildPlayWhere(args);
+        query.where = buildPlayWhere({componentId: componentId,  ...args});
 
         if (args.sort !== undefined) {
             query.orderBy = {
@@ -183,11 +185,12 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         await this.db.delete(plays).where(inArray(plays.id, ids));
     }
 
-    findPurgablePlayIds = async (componentId: number, olderThanDate: Dayjs, opts: { states?: PlaySelect['state'][], compacted?: string } = {}): Promise<number[]> => {
+    findPurgablePlayIds = async (olderThanDate: Dayjs, opts: { states?: PlaySelect['state'][], compacted?: string } & ComponentConstrainedRepoOpts = {}): Promise<number[]> => {
 
         const {
             states,
-            compacted
+            compacted,
+            componentId = this.componentId
         } = opts;
 
         let where: FindWhere<'plays'> = {
@@ -236,7 +239,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return rows.map(x => x.id);
     }
 
-    public retentionCleanup = async (componentId: number, componentType: string, retentionOpts: RetentionOptions) => {
+    public retentionCleanup = async (componentType: string, retentionOpts: RetentionOptions & ComponentConstrainedRepoOpts) => {
 
         const loggerDel = childLogger(this.logger, ['Retention', 'Delete']);
         const loggerCom = childLogger(this.logger, ['Retention', 'Compact']);
@@ -254,7 +257,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                     state = retentionType;
                 }
                 loggerDel.trace(`Finding '${retentionType}' plays older than ${shortTodayAwareFormat(date)}...`);
-                const ids = await this.findPurgablePlayIds(componentId, date, {states: [state]});
+                const ids = await this.findPurgablePlayIds(date, {states: [state], componentId: retentionOpts.componentId});
                 loggerDel.trace(`Found ${ids.length} '${retentionType}' plays`);
                 if(ids.length === 0) {
                     summaryDelStates.push(`No '${retentionType}' Plays older than ${shortTodayAwareFormat(date)}`);
@@ -299,7 +302,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                     state = retentionType;
                 }
                 loggerCom.trace(`Finding '${retentionType}' plays older than ${shortTodayAwareFormat(date)}...`);
-                const ids = await this.findPurgablePlayIds(componentId, date, {compacted: compactedFlags.join('-'), states: [state]});
+                const ids = await this.findPurgablePlayIds(date, {compacted: compactedFlags.join('-'), states: [state], componentId: retentionOpts.componentId});
                 loggerCom.trace(`Found ${ids.length} '${retentionType}' plays`);
                 if(ids.length === 0) {
                     summaryDelStates.push(`No '${retentionType}' Plays older than ${shortTodayAwareFormat(date)}`);
@@ -350,7 +353,10 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         loggerCom.verbose(`Cleanup done! Summary:\n${summaryDelStates.join(' | ')}`);
     }
 
-    public selectRecentDistinctPlatforms = async (componentId: number, limitPlays: number = 500): Promise<string[]> => {
+    public selectRecentDistinctPlatforms = async (limitPlays: number = 500, opts: ComponentConstrainedRepoOpts = {}): Promise<string[]> => {
+        const {
+            componentId = this.componentId
+        } = opts;
 
         const recentPlatformIds = await this.db.selectDistinct({platformId: plays.platformId}).from(plays)
         .where(
@@ -363,10 +369,11 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return recentPlatformIds.map(x => x.platformId);
     }
 
-    public getQueueNext = async (componentId: number, queueName: string, opts: {order?: 'asc' | 'desc', retries?: number} = {}): Promise<PlaySelect & {queueStates: QueueStateSelect[]} | undefined> => {
+    public getQueueNext = async (queueName: string, opts: {order?: 'asc' | 'desc', retries?: number} & ComponentConstrainedRepoOpts = {}): Promise<PlaySelect & {queueStates: QueueStateSelect[]} | undefined> => {
         const {
             retries,
-            order = 'asc'
+            order = 'asc',
+            componentId = this.componentId
         } = opts;
 
         let where: FindWhere<'plays'> = {
@@ -442,7 +449,11 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return {data: res, meta: {limit, offset}};
     }
 
-    public checkExistingQuick = async (componentId: number, play: PlayObject, queueName?: string): Promise<PlaySelect & {queueStates: QueueStateSelect[]} | undefined> => {
+    public checkExistingQuick = async (play: PlayObject, opts: {queueName?: string} & ComponentConstrainedRepoOpts = {}): Promise<PlaySelect & {queueStates: QueueStateSelect[]} | undefined> => {
+        const {
+            queueName,
+            componentId = this.componentId
+        } = opts;
         const hash = hashObject(playContentBasicInvariantTransform(play).data);
 
         let where: FindWhere<'plays'> = {
@@ -521,7 +532,7 @@ export const buildPlayWhere = (args: PlayWhereOpts): FindWhere<'plays'> => {
     return where;
 }
 
-export const playToRepositoryCreatePlayOpts = (data: MarkOptional<RepositoryCreatePlayOpts, 'input'>): RepositoryCreatePlayOpts => {
+export const playToRepositoryCreatePlayOpts = (data: MarkOptional<RepositoryCreatePlayOpts, 'input' | 'componentId'>): RepositoryCreatePlayOpts => {
     const {
         play: {
             meta: {
