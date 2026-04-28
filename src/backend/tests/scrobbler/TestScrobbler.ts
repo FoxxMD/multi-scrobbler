@@ -23,7 +23,9 @@ export class TestScrobbler extends AbstractScrobbleClient {
         const notifier = new Notifiers(new EventEmitter(), new EventEmitter(), new EventEmitter(), logger);
         super('test', 'Test', {name: 'test', ...config}, notifier, new EventEmitter(), logger);
         this.supportsNowPlaying = false;
-        this.getScrobblesForTimeRange = async (_) =>  this.testRecentScrobbles;
+        this.getScrobblesForTimeRange = async (_) =>  {
+            return this.testRecentScrobbles;
+        }
         this.scrobbleDelay = 10;
         this.scrobbleSleep = 20;
         this.scrobbleWaitStopInterval = 20;
