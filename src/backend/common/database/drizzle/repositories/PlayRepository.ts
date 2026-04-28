@@ -408,18 +408,19 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return res;
     }
 
-    public getQueued = async (componentId: number, queueName: string, opts: {
+    public getQueued = async (queueName: string, opts: {
         order?: 'asc' | 'desc',
         limit?: number,
         offset?: number,
         retries?: number
-    } = {}
+    } & ComponentConstrainedRepoOpts = {}
     ): Promise<{data: PlaySelect[], meta: PaginatedQueryResponse}> => {
         const {
             order = 'asc',
             limit = 100,
             offset = 0,
-            retries
+            retries,
+            componentId = this.componentId
         } = opts;
         let where: FindWhere<'plays'> = {
             componentId
