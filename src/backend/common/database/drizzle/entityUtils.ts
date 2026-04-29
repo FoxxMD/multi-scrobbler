@@ -1,14 +1,15 @@
 import assert from "node:assert";
-import { PlayNew, PlaySelect } from "./drizzleTypes.js";
+import { PlayNew, PlaySelect, PlaySelectRel } from "./drizzleTypes.js";
 import { PlayInputNew } from "./drizzleTypes.js";
 import { QueueStateNew } from "./drizzleTypes.js";
 import { ComponentNew } from "./drizzleTypes.js";
-import { MarkOptional } from "ts-essentials";
-import { ErrorLike, PlayObject } from "../../../../core/Atomic.js";
+import { MarkOptional, MarkRequired } from "ts-essentials";
+import { CLIENT_DEAD_QUEUE, DeadLetterScrobble, ErrorLike, PlayObject } from "../../../../core/Atomic.js";
 import dayjs, { Dayjs } from "dayjs";
 import { asPlay } from "../../../../core/PlayMarshalUtils.js";
 import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../utils/PlayComparisonUtils.js";
 import { hashObject } from "../../../utils/StringUtils.js";
+import { messageWithCauses } from "../../../utils/ErrorUtils.js";
 
 export const generateComponentEntity = (data: MarkOptional<ComponentNew, 'uid'>): ComponentNew => {
     assert(data.name !== undefined, 'Must provide name');
@@ -66,6 +67,17 @@ export const hydratePlaySelect = (select: PlaySelect, opts: PlayHydateOptions[])
         res.meta.dbId = select.id;
     }
     return res;
+}
+
+export const playSelectToDeadScrobble = (select: MarkRequired<PlaySelectRel, 'queueStates'>): DeadLetterScrobble<PlayObject> => {
+    const deadQueue = select.queueStates.find(x => x.queueName === CLIENT_DEAD_QUEUE);
+    return {
+        play: select.play,
+        id: select.uid,
+        source: select.play.meta.source,
+        retries: deadQueue.retries,
+        error: messageWithCauses(deadQueue.error as Error)
+    }
 }
 
 export const generateInputEntity = (data: PlayInputNew): PlayInputNew => {

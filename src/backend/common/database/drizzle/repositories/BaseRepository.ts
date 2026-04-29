@@ -26,6 +26,11 @@ export interface PaginatedQueryResponse {
     offset: number
 }
 
+export interface PaginatedResponse<T> {
+    data: T[]
+    meta: PaginatedQueryResponse
+}
+
 export interface ComponentConstrainedRepoOpts {
     componentId?: number
 }

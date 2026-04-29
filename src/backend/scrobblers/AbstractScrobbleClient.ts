@@ -549,8 +549,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.tracksScrobbled++;
     }
 
-    getScrobbledPlays = () => this.scrobbledPlayObjs.data.map(x => x.play)
-
     findExistingSubmittedPlayObj = async (playObjPre: PlayObject): Promise<([undefined, undefined] | [ScrobbledPlayObject, ScrobbledPlayObject[]])> => {
 
         const playObj = await this.transformPlay(playObjPre, TRANSFORM_HOOK.candidate);
@@ -1309,7 +1307,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return this.playRepo.getQueued(queueName, {offset});
     }
 
-    public getPlays = (args: QueryPlaysOpts) => {
+    public getPlaysPaginated = (args: QueryPlaysOpts) => {
         const {
             limit,
             offset,
