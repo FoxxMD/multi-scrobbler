@@ -34,6 +34,7 @@ import { formatNumber } from '../../core/DataUtils.js';
 import { InvalidRegexError, SimpleError } from "../common/errors/MSErrors.js";
 import { NamedGroup, parseRegex } from "@foxxmd/regex-buddy-core";
 import { Duration } from "dayjs/plugin/duration.js";
+import { SourceType } from "../common/infrastructure/config/source/sources.js";
 
 //dayjs.extend(isToday);
 
@@ -109,7 +110,7 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
     const [candidateTsSOCDate, candidateTsSOC] = getScrobbleTsSOCDateWithContext(candidatePlay);
 
     const {
-        diffThreshold = lowGranularitySources.some(x => x.toLocaleLowerCase() === source) ? 60 : 10,
+        diffThreshold = getTemporalAccuracyCloseVal(source as SourceType),
         fuzzyDuration = false,
         fuzzyDiffThreshold = 10,
         duringReferences = ['range']
@@ -257,6 +258,10 @@ export const temporalAccuracyToString = (acc: TemporalAccuracy): string => {
         case 99:
             return 'no correlation';
     }
+}
+
+export const getTemporalAccuracyCloseVal = (source: SourceType): number => {
+    return lowGranularitySources.includes(source) ? 60 : 10;
 }
 
 export const getScrobbleTsSOCDateWithContext = (data: PlayObject): [Dayjs, ScrobbleTsSOC] => {

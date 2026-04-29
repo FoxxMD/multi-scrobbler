@@ -202,8 +202,8 @@ export interface PlayMeta<D extends DateLike = Dayjs> {
 
     seenAt?: D
 
-    dbUid?: string
-    dbId?: number
+    //dbUid?: string
+    //dbId?: number
 
     /*
     * If applicable, the name of the Service providing the track (Spotify, Tidal, etc...)
@@ -353,6 +353,8 @@ export const SCROBBLE_TS_SOC_END: ScrobbleTsSOC = 2;
 export type DateLike = Dayjs | string
 
 export interface AmbPlayObject<D extends DateLike = Dayjs> {
+    id?: number
+    uid?: string
     data: PlayData<D>,
     meta: PlayMetaLifecycleless
 }

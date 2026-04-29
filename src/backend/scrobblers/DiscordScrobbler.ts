@@ -120,7 +120,7 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
         // discord does not handle scrobbles, only Now Playing
         // so don't bother queueing any scrobbles as we don't want to cache them
         // or give the user the impression they are used (in UI as a number of queued scrobbles)
-        return;
+        return [];
     }
 
     alreadyScrobbled = async (playObj: PlayObject, log = false): Promise<[boolean, PlayMatchResult]> => ([false, {match: false, breakdowns: [], score: 0}])

@@ -1,21 +1,23 @@
 import { childLogger, Logger, LoggerAppExtras } from "@foxxmd/logging";
 import { DbConcrete, getDb, runTransaction } from "../drizzleUtils.js";
 import { loggerNoop } from "../../../MaybeLogger.js";
-import { ErrorLike, PlayObject } from "../../../../../core/Atomic.js";
+import { ErrorLike, PlayObject, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, TemporalAccuracy } from "../../../../../core/Atomic.js";
 import { generateInputEntity, generatePlayEntity, PlayEntityOpts, hydratePlaySelect, PlayHydateOptions } from "../entityUtils.js";
 import { playInputs, plays, queueStates, relations } from "../schema/schema.js";
-import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, CompareOpKey, QueueStateSelect, PlayInputSelect, PlaySelectRel } from "../drizzleTypes.js";;
+import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, CompareOpKey, QueueStateSelect, PlayInputSelect, PlaySelectRel, FindWith } from "../drizzleTypes.js";;
 import { MarkOptional, MarkRequired, PathValue } from "ts-essentials";
 import { genGroupIdStrFromPlay, removeEmptyArrays, removeUndefinedKeys } from "../../../../utils.js";
 import dayjs, { Dayjs } from "dayjs";
-import { RelationsFieldFilter, eq, inArray, ne, notInArray, desc, asc, and } from "drizzle-orm";
+import { RelationsFieldFilter, eq, inArray, ne, notInArray, desc, asc, and, sql } from "drizzle-orm";
 import { CompactableProperty, RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.js";
 import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.js";
 import { buildDateCompare, CompareDateOp, ComponentConstrainedRepoOpts, DrizzleBaseRepository, DrizzleRepositoryOpts, PaginatedQueryResponse, PaginatedResponse } from "./BaseRepository.js";
 import { asPlay } from "../../../../../core/PlayMarshalUtils.js";
-import assert from "node:assert";
+import assert, { Assert } from "node:assert";
 import { hashObject, parseArrayFromMaybeString } from "../../../../utils/StringUtils.js";
 import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../../utils/PlayComparisonUtils.js";
+import { comparePlayTemporally, getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext, getTemporalAccuracyCloseVal, hasAcceptableTemporalAccuracy } from "../../../../utils/TimeUtils.js";
+import { SourceType } from "../../../infrastructure/config/source/sources.js";
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 
@@ -50,6 +52,8 @@ export type RepositoryCreatePlayOpts = PlayEntityOpts
     & Pick<PlayNew, 'play' | 'componentId'>;
 export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
+    protected hasQueueNextPrepared?: ReturnType<typeof this.prepareHasQueueNext>
+
     constructor(db: ReturnType<typeof getDb>, opts: DrizzleRepositoryOpts = {}) {
         super(db, 'plays', 'Plays', opts);
     }
@@ -71,7 +75,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
     createPlays = async (entitiesOpts: RepositoryCreatePlayOpts[], opts: HydrateOpts = {}) => {
 
         const {
-            hydrate = []
+            hydrate
         } = opts;
         let playRows: PlaySelect[];
 
@@ -110,7 +114,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
     findPlays = async (args: QueryPlaysOpts, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PlaySelect[]> => {
         const {
-            hydrate = [],
+            hydrate,
             componentId = this.componentId
         } = opts;
         // this does not work as type for query variable
@@ -165,10 +169,11 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         }
         query = removeUndefinedKeys(query);
         const results = await this.db.query.plays.findMany(query);
-        if(hydrate.length > 0) {
-            return results.map((x) => ({...x, play: hydratePlaySelect(x, hydrate)}));
-        }
-        return results;
+        return results.map((x) => ({...x, play: hydratePlaySelect(x, hydrate)}));
+        // if(hydrate.length > 0) {
+        //     return results.map((x) => ({...x, play: hydratePlaySelect(x, hydrate)}));
+        // }
+        // return results;
     }
 
     findPlaysPaginated = async <T = PlaySelectRel>(args: QueryPlaysOpts, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PaginatedResponse<T>> => {
@@ -182,12 +187,12 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return {data: res, meta: {limit: clampedLimit, offset}};
     }
 
-    async updateById(id: number, data: Partial<PlayNew>): Promise<void> {
-        if(data.play !== undefined) {
-            data.play = withoutDbAwareness(data.play);
-        }
-        super.updateById(id, data);
-    }
+    // async updateById(id: number, data: Partial<PlayNew>): Promise<void> {
+    //     if(data.play !== undefined) {
+    //         data.play = withoutDbAwareness(data.play);
+    //     }
+    //     super.updateById(id, data);
+    // }
 
     setStateById = async (state: PlayNew['state'], ids: number[]): Promise<void> => {
         const validIds = ids.filter(x => x !== undefined && x !== null);
@@ -384,7 +389,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return recentPlatformIds.map(x => x.platformId);
     }
 
-    public getQueueNext = async (queueName: string, opts: {order?: 'asc' | 'desc', retries?: number} & ComponentConstrainedRepoOpts = {}): Promise<PlaySelect & {queueStates: QueueStateSelect[]} | undefined> => {
+    public getQueueNext = async (queueName: string, opts: {order?: 'asc' | 'desc', retries?: number} & ComponentConstrainedRepoOpts = {}): Promise<MarkRequired<PlaySelectRel, 'queueStates'> | undefined> => {
         const {
             retries,
             order = 'asc',
@@ -419,8 +424,35 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                     queueStates: true
                 }
         });
-        res.play = asPlay(res.play);
+        if(res === undefined) {
+            return undefined;
+        }
+        res.play = hydratePlaySelect(res); // asPlay(res.play);
         return res;
+    }
+
+    protected prepareHasQueueNext = () => this.db.query.plays.findFirst({
+        columns: {
+                    id: true
+        },
+        where: {
+            componentId: this.componentId,
+            queueStates: {
+                queueName: sql.placeholder('queueName'),
+                queueStatus: 'queued',
+                retries: {
+                    lte: sql.placeholder('retries')
+                }
+            }
+        }
+    }).prepare()
+
+    public hasQueueNext = async (queueName: string, retries: number = 0): Promise<boolean> => {
+        if(this.hasQueueNextPrepared === undefined) {
+            this.hasQueueNextPrepared = this.prepareHasQueueNext();
+        }
+        const nextId = await this.hasQueueNextPrepared.execute({queueName, retries});
+        return nextId !== undefined;
     }
 
     public getQueued = async (queueName: string, opts: {
@@ -428,14 +460,15 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         limit?: number,
         offset?: number,
         retries?: number,
-    } & ComponentConstrainedRepoOpts = {}
+    } & ComponentConstrainedRepoOpts & HydrateOpts = {}
     ): Promise<{data: PlaySelect[], meta: PaginatedQueryResponse}> => {
         const {
             order = 'asc',
             limit = 100,
             offset = 0,
             retries,
-            componentId = this.componentId
+            componentId = this.componentId,
+            hydrate
         } = opts;
         let where: FindWhere<'plays'> = {
             componentId
@@ -462,26 +495,45 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             limit,
             offset
         });
-        return {data: res, meta: {limit, offset}};
+        return {data: res.map(x => ({...x, play: hydratePlaySelect(x, hydrate)})), meta: {limit, offset}};
     }
 
-    public checkExistingQuick = async (play: PlayObject, opts: {queueName?: string} & ComponentConstrainedRepoOpts = {}): Promise<PlaySelect & {queueStates: QueueStateSelect[]} | undefined> => {
+    public checkExisting = async (play: PlayObject, opts: {queueName?: string, states?: PlaySelect['state'][], taAccuracy?: TemporalAccuracy[]} & ComponentConstrainedRepoOpts = {}): Promise<MarkRequired<PlaySelectRel, 'queueStates'> | undefined> => {
         const {
             queueName,
-            componentId = this.componentId
+            componentId = this.componentId,
+            taAccuracy = TA_DEFAULT_ACCURACY,
+            states
         } = opts;
         const hash = hashObject(playContentBasicInvariantTransform(play).data);
 
+        // we get all plays with a play date between playdate - (source accuracy) AND (playDateCompleted or playDate) + (source accuracy)
+        // which we can then use with temporal comparison to make sure we are comparing the correct dates
+        //
+        // this isn't as fast as just comparing playDate directly but its still much faster/cheaper than paginating plays and doing everything in-memory
+        const dateGranularity = getTemporalAccuracyCloseVal(play.meta.source as SourceType);
+        let endRange: Dayjs;
+        if(play.data.playDateCompleted !== undefined) {
+            // this will be present if source reports it
+            // or we tracked it live with MemorySource
+            endRange = play.data.playDateCompleted.add(dateGranularity, 's');
+        } else {
+            endRange = play.data.playDate.add(dateGranularity, 's');
+        }
         let where: FindWhere<'plays'> = {
             componentId,
-            playedAt: {
-                eq: play.data.playDate
-            },
+            playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play)),
         };
+        
         if(queueName !== undefined) {
             where.queueStates = {
                 queueName,
                 queueStatus: 'queued'
+            }
+        }
+        if(states !== undefined) {
+            where.state = {
+                in: states
             }
         }
 
@@ -503,13 +555,98 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             where.playHash = hash;
         }
 
-        return this.db.query.plays.findFirst({
+        const res = await this.db.query.plays.findMany({
             where,
             with: {
                 queueStates: true
             }
+        });
+        if(res.length === 0) {
+            return undefined;
+        }
+        return res.map(x => ({...x, play: hydratePlaySelect(x)})).find(x => {
+            const temporalComparison = comparePlayTemporally(x.play, play);
+            return hasAcceptableTemporalAccuracy(temporalComparison.match, taAccuracy)
         })
     }
+
+    public getTemporallyClosePlays = async (play: PlayObject, opts: {states?: PlaySelect['state'][], bufferTime?: number} & { with?: WithPlayRelation[] } & ComponentConstrainedRepoOpts = {}): Promise<PlaySelectRel[]> => {
+        const {
+            componentId = this.componentId,
+            bufferTime,
+            states,
+            with: qWith
+        } = opts;
+
+        let query: FindMany<'plays'> = {};
+
+        let where: FindWhere<'plays'> = {
+            componentId,
+            playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play, {bufferTime})),
+        };
+        if(states !== undefined) {
+            where.state = {
+                in: states
+            }
+        }
+        query.where = where;
+
+        return ((await this.db.query.plays.findMany({
+            where,
+            with: buildPlayWith(qWith)
+        })) as PlaySelectRel[]).map(x => ({...x, play: hydratePlaySelect(x)}));
+    }
+}
+
+export const getTemporallyCloseDateCompareOp = (play: PlayObject, opts: {bufferTime?: number, useCompleted?: boolean} = {}): CompareDateOp => {
+    const {
+        // use either provided arg or default to using source granularity
+        bufferTime = getTemporalAccuracyCloseVal(play.meta.source as SourceType),
+        useCompleted = true
+    } = opts;
+        // we get all plays with a play date between playdate - (buffer) AND (playDateCompleted or playDate) + (buffer)
+        let endRange: Dayjs;
+        if(play.data.playDateCompleted !== undefined && useCompleted) {
+            // this will be present if source reports it
+            // or we tracked it live with MemorySource
+            endRange = play.data.playDateCompleted.add(bufferTime, 's');
+        } else {
+            endRange = play.data.playDate.add(bufferTime, 's');
+        }
+        return {
+            type: 'between',
+            range: [play.data.playDate.subtract(bufferTime, 's'), endRange]
+        }
+}
+
+export const buildPlayWith = (args: WithPlayRelation[] | undefined): FindWith<'plays'> | undefined => {
+    if(args === undefined) {
+        return undefined;
+    }
+    const qWith: FindWith<'plays'> = {};
+    for(const w of args) {
+        switch (w) {
+            case 'input':
+                qWith.input = true;
+                break;
+            case 'parent':
+                qWith.parent = true;
+                break;
+            case 'parent-input':
+                qWith.parent = {
+                    with: {
+                        input: true
+                    }
+                };
+                break;
+            case 'queues':
+                qWith.queueStates = true;
+                break;
+            default:
+                throw new Error(`Unknown relation ${w}`);
+        }
+    }
+    return qWith;
 }
 
 export const buildPlayWhere = (args: PlayWhereOpts): FindWhere<'plays'> => {
@@ -581,22 +718,6 @@ export const playToRepositoryCreatePlayOpts = (data: MarkOptional<RepositoryCrea
             data: input
         },
         platformId: genGroupIdStrFromPlay(data.play)
-    }
-}
-
-const withoutDbAwareness = (play: PlayObject): PlayObject => {
-    const {
-        meta: {
-            dbUid,
-            dbId,
-            ...metaRest
-        } = {},
-        ...playRest
-    } = play;
-
-    return {
-        ...playRest,
-        meta: metaRest
     }
 }
 

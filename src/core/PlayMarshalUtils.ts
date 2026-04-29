@@ -66,7 +66,7 @@ export const asPlay = (data: JsonPlayObject | PlayObject): PlayObject => {
 
     if (typeof x === 'string' && REGEX_ISO8601_LOOSE.test(x)) {
       ctx.update(dayjs(x), true);
-    } else if (ctx.key === 'listenRanges') {
+    } /*else if (ctx.key === 'listenRanges') {
       const ranges = x[0].map((y: PlayProgressAmb<string>) => {
         if (y.positionPercent === undefined) {
           return new ListenProgressPositional({ timestamp: dayjs(y.timestamp), position: y.position });
@@ -75,8 +75,29 @@ export const asPlay = (data: JsonPlayObject | PlayObject): PlayObject => {
         }
       });
       ctx.update(ranges, true);
-    }
+    }*/
   });
   return cloned as unknown as PlayObject;
+};
+
+/**
+ * Cheaply convert playobject-like json to playobject with full timestamps etc.
+ * 
+ * If we know the source is a throw-away object (like from drizzle fromDriver) then we don't need to clone it
+ * @param data 
+ * @returns 
+ */
+export const asPlayCheap = (data: JsonPlayObject | PlayObject): PlayObject => {
+  new Traverse(data).forEach((ctx, x) => {
+    if (shouldBlock(ctx)) {
+      ctx.block();
+      return;
+    }
+
+    if (typeof x === 'string' && REGEX_ISO8601_LOOSE.test(x)) {
+      ctx.update(dayjs(x), true);
+    }
+  });
+  return data as unknown as PlayObject;
 };
 

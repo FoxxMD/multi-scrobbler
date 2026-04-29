@@ -232,7 +232,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.logger.info(`Discovered => ${buildTrackString(play)}`);
         this.emitEvent('discovered', {play});
         this.discoveredCounter.labels(this.getPrometheusLabels()).inc();
-        play.meta.dbId = playRow[0].id;
+        play.id = playRow[0].id;
+        play.uid = playRow[0].uid;
         return play;
     }
 
@@ -375,7 +376,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
         if(newDiscoveredPlays.length > 0) {
             if(!this.shouldScrobble(options.discoverLocation)) {
-                await this.playRepo.setStateById('discarded', newDiscoveredPlays.map(x => x.meta.dbId));
+                await this.playRepo.setStateById('discarded', newDiscoveredPlays.map(x => x.id));
                 return;
             }
             newDiscoveredPlays.sort(sortByOldestPlayDate);

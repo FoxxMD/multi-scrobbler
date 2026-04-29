@@ -7,8 +7,10 @@ import { CommonClientConfig, CommonClientOptions, NowPlayingOptions } from "../.
 import clone from "clone";
 import { TimeRangeListensFetcher } from "../../common/infrastructure/Atomic.js";
 import { loggerNoop } from "../../common/MaybeLogger.js";
-import { DrizzlePlayRepository } from "../../common/database/drizzle/repositories/PlayRepository.js";
+import { DrizzlePlayRepository, RepositoryCreatePlayOpts } from "../../common/database/drizzle/repositories/PlayRepository.js";
 import { DrizzleQueueRepository } from "../../common/database/drizzle/repositories/QueueRepository.js";
+import { PlaySelectRel } from "../../common/database/drizzle/drizzleTypes.js";
+import { loggerDebug } from "@foxxmd/logging";
 
 export class TestScrobbler extends AbstractScrobbleClient {
 
@@ -42,10 +44,13 @@ export class TestScrobbler extends AbstractScrobbleClient {
         return super.doParseCache();
     }
 
-
-
     playToClientPayload(playObject: PlayObject): object {
         return playObject;
+    }
+
+    addScrobbled = async (plays: PlayObject[]): Promise<PlaySelectRel[]> => {
+        const newPlayData: RepositoryCreatePlayOpts[] = plays.map(x => ({play: x, state: 'scrobbled', input: {}}));
+        return await this.playRepoTest.createPlays(newPlayData);
     }
 
 }

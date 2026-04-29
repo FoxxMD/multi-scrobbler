@@ -65,6 +65,7 @@ export const playContentBasicInvariantTransform = (play: PlayObject): PlayObject
     const {
         data: {
             playDate,
+            repeat,
             playDateCompleted,
             listenRanges,
             listenedFor,
