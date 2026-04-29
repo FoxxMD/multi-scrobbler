@@ -51,20 +51,22 @@ export const generatePlayEntity = (play: PlayObject, opts: PlayEntityOpts = {}):
 
 export type PlayHydateOptions = 'asPlay' | 'id' | 'uid';
 
-export const hydratePlaySelect = (select: PlaySelect, opts: PlayHydateOptions[]): PlayObject => {
+export const hydratePlaySelect = (select: PlaySelect, opts: PlayHydateOptions[] = ['id','uid']): PlayObject => {
     if(opts.length === 0) {
         return select.play;
     }
 
     let res = select.play;
-    if(opts.includes('asPlay')) {
-        res = asPlay(res);
-    }
+    // if(opts.includes('asPlay')) {
+    //     res = asPlay(res);
+    // }
     if(opts.includes('uid')) {
-        res.meta.dbUid = select.uid;
+        res.uid = select.uid;
+        //res.meta.dbUid = select.uid;
     }
     if(opts.includes('id')) {
-        res.meta.dbId = select.id;
+        res.id = select.id;
+        //res.meta.dbId = select.id;
     }
     return res;
 }

@@ -3,6 +3,7 @@ import { defineRelations } from 'drizzle-orm';
 import dayjs, { Dayjs } from "dayjs";
 import { nanoid } from "nanoid";
 import { ErrorLike, PlayObject } from "../../../../../core/Atomic.js";
+import { asPlay, asPlayCheap } from "../../../../../core/PlayMarshalUtils.js";
 
 const DayjsTimestamp = customType<
   {
@@ -21,6 +22,34 @@ const DayjsTimestamp = customType<
   },
 });
 
+const PlayJson = customType<
+  {
+    data: PlayObject;
+    driverData: string;
+  }
+>({
+  dataType() {
+    return 'text'
+  },
+  toDriver(value: PlayObject): string {
+    const {
+      // meta: {
+      //   // dbId,
+      //   // dbUid,
+      //   ...metaRest
+      // },
+      id,
+      uid,
+      ...rest
+    } = value;
+    return JSON.stringify(rest);
+  },
+  fromDriver(value: string): PlayObject {
+    return asPlayCheap(JSON.parse(value));
+  },
+});
+
+
 export const plays = sqliteTable("plays", {
   id: integer().primaryKey(),
   uid: text({ length: 30 }).notNull().unique().$defaultFn(() => nanoid(20)),
@@ -28,7 +57,7 @@ export const plays = sqliteTable("plays", {
   error: text({ mode: 'json' }).$type<ErrorLike>(),
   playedAt: DayjsTimestamp('playedAt'),
   seenAt: DayjsTimestamp('seenAt'),
-  play: text({ mode: 'json' }).notNull().$type<PlayObject>(),
+  play: PlayJson('play').notNull(), //  text({ mode: 'json' }).notNull().$type<PlayObject>(),
   state: text({enum: ['queued','discovered','discarded','scrobbled','failed','duped']}).notNull(),
   // https://orm.drizzle.team/docs/indexes-constraints#foreign-key
   parentId: integer().references((): AnySQLiteColumn => plays.id, {onDelete: 'set null', onUpdate: 'cascade'}),
@@ -49,7 +78,7 @@ export const playInputs = sqliteTable("play_inputs", {
   id: integer({ mode: 'number' }).primaryKey(),
   playId: integer().notNull().references(() => plays.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
   data: text({ mode: 'json' }).$type<object>(),
-  play: text({ mode: 'json' }).notNull().$type<PlayObject>(),
+  play: PlayJson('play').notNull(),//text({ mode: 'json' }).notNull().$type<PlayObject>(),
   createdAt: DayjsTimestamp('createdAt').$defaultFn(() => dayjs())
 }, (table) => [
   uniqueIndex('play_input_id_idx').on(table.playId)
