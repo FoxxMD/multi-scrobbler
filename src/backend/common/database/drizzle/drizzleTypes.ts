@@ -13,6 +13,7 @@ export type PlayInputNew = typeof playInputs.$inferInsert;
 export type PlayInputSelect = typeof playInputs.$inferSelect;
 
 export type PlaySelect = typeof plays.$inferSelect;
+export type PlaySelectRel = ModelWithRelations<typeof plays>;
 export type PlayNew = typeof plays.$inferInsert;
 
 

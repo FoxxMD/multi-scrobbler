@@ -86,7 +86,7 @@ export const MessageTransformerDefault = (val: string) => val;
 /**
  * Adapted from https://github.com/voxpelli/pony-cause
  * */
-const _messageWithCauses = (err: Error, seen = new Set<Error>(), msgTransform: MessageTransformer = MessageTransformerDefault) => {
+const _messageWithCauses = (err: Error, seen = new Set<Error>(), msgTransform: MessageTransformer = MessageTransformerDefault): string => {
     if (!(err instanceof Error)) return '';
 
     const message = err.message;

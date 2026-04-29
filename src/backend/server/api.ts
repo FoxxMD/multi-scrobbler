@@ -36,6 +36,7 @@ import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
 import prom from 'prom-client';
 import { SimpleError } from "../common/errors/MSErrors.js";
 import { QueryPlaysOpts } from "../common/database/drizzle/repositories/PlayRepository.js";
+import { playSelectToDeadScrobble } from "../common/database/drizzle/entityUtils.js";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -329,7 +330,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         } = req;
 
         // @ts-ignore
-        const result: DeadLetterScrobble<PlayObject>[] = (await (client as AbstractScrobbleClient).getPlays(query as Partial<QueryPlaysOpts>)).data.map(x => ({play: x.play, source: x.play.meta.source, retries: x.queueStates.find(x => x.queueName === CLIENT_DEAD_QUEUE)?.retries ?? 0 }));
+        const result: DeadLetterScrobble<PlayObject>[] = (await (client as AbstractScrobbleClient).getPlaysPaginated(query as Partial<QueryPlaysOpts>)).data.map(x => playSelectToDeadScrobble);
 
         return res.json(result);
     });
@@ -373,7 +374,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
             return res.status(200).send();
         }
 
-        return res.json(dead);
+        return res.json(playSelectToDeadScrobble(dead));
     });
 
     app.delete('/api/dead', clientMiddleFunc(true), async (req, res, next) => {
@@ -417,11 +418,16 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         const {
             // @ts-expect-error scrobbleClient not part of req
             scrobbleClient: client,
+            query
         } = req;
 
         let result: PlayObject[] = [];
         if (client !== undefined) {
-            result = [...(client as AbstractScrobbleClient).getScrobbledPlays()].sort(sortByNewestPlayDate);
+            const q: Partial<QueryPlaysOpts> = {
+                ...query as Partial<QueryPlaysOpts>,
+                state: ['scrobbled']
+            }
+            result = [...(await (client as AbstractScrobbleClient).getPlaysPaginated(q)).data.map(x => x.play)].sort(sortByNewestPlayDate);
         }
 
         return res.json(result);

@@ -4,14 +4,14 @@ import { loggerNoop } from "../../../MaybeLogger.js";
 import { ErrorLike, PlayObject } from "../../../../../core/Atomic.js";
 import { generateInputEntity, generatePlayEntity, PlayEntityOpts, hydratePlaySelect, PlayHydateOptions } from "../entityUtils.js";
 import { playInputs, plays, queueStates, relations } from "../schema/schema.js";
-import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, CompareOpKey, QueueStateSelect, PlayInputSelect } from "../drizzleTypes.js";;
+import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, CompareOpKey, QueueStateSelect, PlayInputSelect, PlaySelectRel } from "../drizzleTypes.js";;
 import { MarkOptional, MarkRequired, PathValue } from "ts-essentials";
 import { genGroupIdStrFromPlay, removeEmptyArrays, removeUndefinedKeys } from "../../../../utils.js";
 import dayjs, { Dayjs } from "dayjs";
 import { RelationsFieldFilter, eq, inArray, ne, notInArray, desc, asc, and } from "drizzle-orm";
 import { CompactableProperty, RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.js";
 import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.js";
-import { buildDateCompare, CompareDateOp, ComponentConstrainedRepoOpts, DrizzleBaseRepository, DrizzleRepositoryOpts, PaginatedQueryResponse } from "./BaseRepository.js";
+import { buildDateCompare, CompareDateOp, ComponentConstrainedRepoOpts, DrizzleBaseRepository, DrizzleRepositoryOpts, PaginatedQueryResponse, PaginatedResponse } from "./BaseRepository.js";
 import { asPlay } from "../../../../../core/PlayMarshalUtils.js";
 import assert from "node:assert";
 import { hashObject, parseArrayFromMaybeString } from "../../../../utils/StringUtils.js";
@@ -171,18 +171,14 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return results;
     }
 
-    findPlaysPaginated = async (args: QueryPlaysOpts, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<{data: (PlaySelect & {
-        queueStates?: QueueStateSelect[]
-        input?: PlayInputSelect
-        parent?: PlaySelect
-    })[], meta: {offset: number, limit: number}}> => {
+    findPlaysPaginated = async <T = PlaySelectRel>(args: QueryPlaysOpts, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PaginatedResponse<T>> => {
         const {
             limit,
             offset = 0,
             ...rest
         } = args;
         const clampedLimit = Math.min(limit, 100);
-        const res = await this.findPlays({limit: clampedLimit, offset, ...rest}, opts);
+        const res = await this.findPlays({limit: clampedLimit, offset, ...rest}, opts) as T[];
         return {data: res, meta: {limit: clampedLimit, offset}};
     }
 
