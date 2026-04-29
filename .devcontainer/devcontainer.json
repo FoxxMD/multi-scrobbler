@@ -31,7 +31,8 @@
 				"unifiedjs.vscode-mdx",
 				"bradlc.vscode-tailwindcss",
 				"TakumiI.markdowntable",
-				"YoavBls.pretty-ts-errors"
+				"YoavBls.pretty-ts-errors",
+				"bowlerr.sqlite-intelliview-vscode"
 			]
 		}
 	},
