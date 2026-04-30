@@ -96,7 +96,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     protected MAX_INITIAL_SCROBBLES_FETCH = this.MAX_STORED_SCROBBLES;
 
     scrobbleSOTRanges: PaginatedTimeRangeOptions[] = [];
-    scrobbledPlayObjs: FixedSizeList<ScrobbledPlayObject>;
     tracksScrobbled: number = 0;
 
     lastScrobbleAttempt: Dayjs = dayjs(0)
@@ -170,7 +169,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.deadLogger = childLogger(this.logger, CLIENT_DEAD_QUEUE);
         this.notifier = notifier;
         this.emitter = emitter;
-        this.scrobbledPlayObjs = new FixedSizeList<ScrobbledPlayObject>(this.MAX_STORED_SCROBBLES);
         this.scrobbleQueue = new Queue<{payload: QueuedScrobble<PlayObject>}, {scrobbled: ScrobbledPlayObject}>({
             storage: new MemoryStorage(),
             concurrency: 1
