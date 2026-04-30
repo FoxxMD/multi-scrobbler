@@ -51,7 +51,7 @@
     "@astronautlabs/mdns": "^1.0.7",
     "@atcute/identity-resolver-node": "^1.0.3",
     "@atproto/api": "^0.18.0",
-    "@atproto/oauth-client-node": "^0.3.10",
+    "@atproto/oauth-client-node": "^0.3.17",
     "@donedeal0/superdiff": "^1.1.1",
     "@ewanc26/tid": "^1.0.2",
     "@foxxmd/chromecast-client": "^1.0.4",
