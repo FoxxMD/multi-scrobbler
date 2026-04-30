@@ -171,7 +171,7 @@ export abstract class AbstractPlayerState {
     }
 
     update(state: PlayerStateDataMaybePlay, reportedTS?: Dayjs) {
-        this.stateLastUpdatedAt = dayjs();
+        this.stateLastUpdatedAt = state.stateUpdatedAt ?? dayjs();
 
         const {play, status} = state;
 
@@ -194,8 +194,8 @@ export abstract class AbstractPlayerState {
     }
 
     protected setPlay(state: PlayerStateData, reportedTS?: Dayjs): [PlayObject, PlayObject?] {
-        const {play, status, sessionId} = state;
-        this.playLastUpdatedAt = reportedTS ?? dayjs();
+        const {play, status, sessionId, playUpdatedAt} = state;
+        this.playLastUpdatedAt = reportedTS ?? playUpdatedAt ?? dayjs();
         if (status !== undefined) {
             this.reportedStatus = status;
         }
@@ -208,7 +208,7 @@ export abstract class AbstractPlayerState {
                 const played = this.getPlayedObject(true);
                 this.isRepeatPlay = false;
                 this.lastPlay = played;
-                this.lastPlayUpdatedAt = dayjs();
+                this.lastPlayUpdatedAt = playUpdatedAt ?? dayjs();
                 this.setCurrentPlay(state, {reportedTS});
                 if (this.calculatedStatus !== CALCULATED_PLAYER_STATUSES.playing) {
                     this.calculatedStatus = CALCULATED_PLAYER_STATUSES.unknown;

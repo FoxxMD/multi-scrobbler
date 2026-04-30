@@ -508,6 +508,10 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         for(const sessionData of nonMSSessions) {
             const validPlay = this.isActivityValid(sessionData[0], sessionData[1]);
             if(validPlay === true) {
+                if(isDebugMode()) {
+                    let stateIdentifyingInfo: string = genGroupIdStr(getPlatformIdFromData(sessionData[0]));
+                    this.logger.trace(`${stateIdentifyingInfo} => Activity Date ${sessionData[1].LastActivityDate} | Playback Checkin: ${sessionData[1].LastPlaybackCheckIn} `)
+                }
                 validSessions.push(sessionData[0]);
             } else if(this.logFilterFailure !== false) {
                 let stateIdentifyingInfo: string = genGroupIdStr(getPlatformIdFromData(sessionData[0]));
@@ -535,9 +539,11 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
             DeviceName,
             Client,
             LastActivityDate,
+            LastPlaybackCheckIn,
             PlayState: {
                 PositionTicks,
-                IsPaused
+                IsPaused,
+                CanSeek
             }
         } = obj;
 
@@ -557,7 +563,9 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
                     ...sessionPlay.meta,
                     user: UserName ?? UserId,
                     deviceId: msDeviceId,
-                    trackProgressPosition: playerPosition
+                    trackProgressPosition: playerPosition,
+                    //lastActivityDate: LastActivityDate,
+                    //lastPlaybackCheckin: LastPlaybackCheckIn
                 }
             }
 
@@ -572,11 +580,15 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
             reportedStatus = IsPaused ? REPORTED_PLAYER_STATUSES.paused : REPORTED_PLAYER_STATUSES.playing;
         }
 
+        const sessionUpdatedAt = LastActivityDate !== undefined ? dayjs(LastActivityDate) : undefined;
+
         return {
             platformId: [msDeviceId, UserName ?? UserId],
             play,
             status: reportedStatus,
             position: playerPosition,
+            stateUpdatedAt: sessionUpdatedAt,
+            playUpdatedAt: sessionUpdatedAt
             //timestamp: LastActivityDate !== undefined ? dayjs(LastActivityDate) : undefined
         }
     }

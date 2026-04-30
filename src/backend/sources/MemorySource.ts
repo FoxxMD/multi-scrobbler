@@ -48,6 +48,8 @@ export default class MemorySource extends AbstractSource {
     playerState: Map<string, string> = new Map();
     playerCleanupDiscoveryAttempt: Map<string, boolean> = new Map();
 
+    deceasedPlayers: Map<string, Dayjs> = new Map();
+
     scheduler: ToadScheduler = new ToadScheduler();
 
     protected isPositional: boolean = false;
@@ -196,6 +198,10 @@ export default class MemorySource extends AbstractSource {
         return this.players.has(id);
     }
 
+    isZombiePlayer = (id: string, lastUpdated: Dayjs): boolean => {
+        return this.deceasedPlayers.has(id) && this.deceasedPlayers.get(id).isSame(lastUpdated);
+    }
+
     genPlayerId = (data: PlayObject | PlayerStateDataMaybePlay): string => {
         return genGroupIdStr(getPlatformIdFromData(data));
     }
@@ -208,6 +214,7 @@ export default class MemorySource extends AbstractSource {
             this.players.get(id)?.logger.debug(reason);
         }
         using player = this.players.get(id);
+        this.deceasedPlayers.set(id, player.stateLastUpdatedAt);
         player[Symbol.dispose]();
         this.players.delete(id);
         this.playerState.delete(id);
@@ -236,6 +243,15 @@ export default class MemorySource extends AbstractSource {
             const id = getPlatformIdFromData(data);
             const idStr = this.genPlayerId(data);
             if (!this.players.has(idStr)) {
+                if(asPlayerStateDataMaybePlay(data) && data.stateUpdatedAt !== undefined) {
+                    if(this.isZombiePlayer(idStr, data.stateUpdatedAt)) {
+                        this.logger.trace(`Not creating player for ${idStr} because last state update timestamp has not changed since it was deleted.`);
+                        continue;
+                    } else {
+                        // cleaning up in case it already existed but has new timestamp
+                        this.deceasedPlayers.delete(idStr);
+                    }
+                }
                 this.setNewPlayer(idStr, this.logger, id);
 
                 if(!this.multiPlatform && this.players.size > 1) {
@@ -257,8 +273,19 @@ export default class MemorySource extends AbstractSource {
                 return player.platformEquals(id);
             });
 
-            // we've received some form of communication from the source for this player
+            let hasFreshState = false;
             if (relevantDatas.length > 0) {
+                hasFreshState = true;
+                this.lastActivityAt = dayjs();
+                incomingData = this.pickPlatformSession(relevantDatas, player);
+                if(asPlayerStateDataMaybePlay(incomingData) && incomingData.stateUpdatedAt !== undefined && player.stateLastUpdatedAt.isSame(incomingData.stateUpdatedAt)) {
+                    hasFreshState = false;
+                    player.logger.trace('Skipping update because it has the same timestamp as the previous update');
+                }
+            }
+
+            // we've received some form of communication from the source for this player
+            if (hasFreshState) {
                 this.lastActivityAt = dayjs();
 
                 // reset any player cleanup state since we got fresh data
