@@ -40,32 +40,3 @@ export interface MPDSourceAIOConfig extends MPDSourceConfig {
 }
 
 export type PlayerState = 'play' | 'stop' | 'pause';
-
-export interface StatusResponse {
-    state: PlayerState
-    /**
-     * Position within the current song in seconds
-     * */
-    elapsed?: number
-    /**
-     * Duration of the current song in seconds
-     * */
-    duration?: number
-    error?: string
-}
-
-export interface CurrentSongResponse {
-    file: string
-    time: number
-    name?: string
-    performer?: string
-    artist?: string
-    album?: string
-    albumartist?: string
-    title?: string
-    musicbrainz_albumartistid?: string
-    musicbrainz_albumid?: string
-    musicbrainz_artistid?: string
-    musicbrainz_releasetrackid?: string
-    musicbrainz_trackid?: string
-}
