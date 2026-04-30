@@ -195,7 +195,7 @@ describe('Player Cleanup', function () {
     const cleanedUpDuration = async (generateSource: (config: SourceConfig) => MemorySource) => {
         await using source = generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
         const initialDate = dayjs();
-        const initialState = generatePlayerStateData({position: 0, playData: {duration: 50}, timestamp: initialDate, status: REPORTED_PLAYER_STATUSES.playing});
+        const initialState = generatePlayerStateData({position: 0, playData: {duration: 50}, stateUpdatedAt: initialDate, status: REPORTED_PLAYER_STATUSES.playing});
         expect((await source.processRecentPlays([initialState])).length).to.be.eq(0);
 
         let position = 0;
@@ -207,7 +207,7 @@ describe('Player Cleanup', function () {
             timeSince += 10;
             MockDate.set(initialDate.add(position, 'seconds').toDate());
             await sleep(1);
-            const advancedState = generatePlayerStateData({play: initialState.play, timestamp: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
+            const advancedState = generatePlayerStateData({play: initialState.play, stateUpdatedAt: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
             expect((await source.processRecentPlays([advancedState])).length).to.be.eq(0);
         }
 
@@ -239,7 +239,7 @@ describe('Player Cleanup', function () {
 
         await using source = generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
         const initialDate = dayjs();
-        const initialState = generatePlayerStateData({position: 0, playData: {duration: 50}, timestamp: initialDate, status: REPORTED_PLAYER_STATUSES.playing});
+        const initialState = generatePlayerStateData({position: 0, playData: {duration: 50}, stateUpdatedAt: initialDate, status: REPORTED_PLAYER_STATUSES.playing});
         expect((await source.processRecentPlays([initialState])).length).to.be.eq(0);
 
         let position = 0;
@@ -251,7 +251,7 @@ describe('Player Cleanup', function () {
             timeSince += 10;
             MockDate.set(initialDate.add(position, 'seconds').toDate());
             await sleep(1);
-            const advancedState = generatePlayerStateData({play: initialState.play, timestamp: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
+            const advancedState = generatePlayerStateData({play: initialState.play, stateUpdatedAt: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
             expect((await source.processRecentPlays([advancedState])).length).to.be.eq(0);
         }
 
@@ -280,7 +280,7 @@ describe('Player Cleanup', function () {
             timeSince += 10;
             MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
             await sleep(1);
-            const advancedState = generatePlayerStateData({play: initialState.play, timestamp: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
+            const advancedState = generatePlayerStateData({play: initialState.play, stateUpdatedAt: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
             expect((await source.processRecentPlays([advancedState])).length).to.be.eq(0);
         }
 
@@ -288,7 +288,7 @@ describe('Player Cleanup', function () {
         MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
         await sleep(1);
         // new Play
-        const advancedState = generatePlayerStateData({timestamp: dayjs(), position: 0, status: REPORTED_PLAYER_STATUSES.playing});
+        const advancedState = generatePlayerStateData({stateUpdatedAt: dayjs(), position: 0, status: REPORTED_PLAYER_STATUSES.playing});
         // should not return play because it has only been played for ~20 seconds, less than 50% of duration
         const plays = await source.processRecentPlays([advancedState])
         expect(plays.length).to.be.eq(0);
@@ -309,7 +309,7 @@ describe('Player Cleanup', function () {
         const initialDate = dayjs();
 
         // if player incorrectly counted stale time then 30s of actual play + 20s of stale time > scrobble threshold of 50% of 90s
-        const initialState = generatePlayerStateData({position: 0, playData: {duration: 90}, timestamp: initialDate, status: REPORTED_PLAYER_STATUSES.playing});
+        const initialState = generatePlayerStateData({position: 0, playData: {duration: 90}, stateUpdatedAt: initialDate, status: REPORTED_PLAYER_STATUSES.playing});
         expect((await source.processRecentPlays([initialState])).length).to.be.eq(0);
 
         let position = 0;
@@ -321,7 +321,7 @@ describe('Player Cleanup', function () {
             timeSince += 10;
             MockDate.set(initialDate.add(position, 'seconds').toDate());
             await sleep(1);
-            const advancedState = generatePlayerStateData({play: initialState.play, timestamp: initialDate, position, status: REPORTED_PLAYER_STATUSES.playing});
+            const advancedState = generatePlayerStateData({play: initialState.play, stateUpdatedAt: initialDate, position, status: REPORTED_PLAYER_STATUSES.playing});
             expect((await source.processRecentPlays([advancedState])).length).to.be.eq(0);
         }
 
@@ -354,7 +354,7 @@ describe('Player Cleanup', function () {
         const initialDate = dayjs();
 
         // if player incorrectly counted stale time then 30s of actual play + 20s of stale time > scrobble threshold of 50% of 90s
-        const initialState = generatePlayerStateData({position: 0, playData: {duration: 90}, timestamp: initialDate, status: REPORTED_PLAYER_STATUSES.playing});
+        const initialState = generatePlayerStateData({position: 0, playData: {duration: 90}, stateUpdatedAt: initialDate, status: REPORTED_PLAYER_STATUSES.playing});
         expect((await source.processRecentPlays([initialState])).length).to.be.eq(0);
 
         let position = 0;
@@ -366,7 +366,7 @@ describe('Player Cleanup', function () {
             timeSince += 10;
             MockDate.set(initialDate.add(position, 'seconds').toDate());
             await sleep(1);
-            const advancedState = generatePlayerStateData({play: initialState.play, timestamp: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
+            const advancedState = generatePlayerStateData({play: initialState.play, stateUpdatedAt: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
             expect((await source.processRecentPlays([advancedState])).length).to.be.eq(0);
         }
 
@@ -396,7 +396,7 @@ describe('Player Cleanup', function () {
             timeSince += 10;
             MockDate.set(initialDate.add(position, 'seconds').toDate());
             await sleep(1);
-            const advancedState = generatePlayerStateData({play: initialState.play, timestamp: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
+            const advancedState = generatePlayerStateData({play: initialState.play, stateUpdatedAt: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
             expect((await source.processRecentPlays([advancedState])).length).to.be.eq(0);
         }
 
@@ -404,7 +404,7 @@ describe('Player Cleanup', function () {
         MockDate.set(initialDate.add(position, 'seconds').toDate());
         await sleep(1);
         // new Play
-        const advancedState = generatePlayerStateData({timestamp: dayjs(), position: 0, status: REPORTED_PLAYER_STATUSES.playing});
+        const advancedState = generatePlayerStateData({stateUpdatedAt: dayjs(), position: 0, status: REPORTED_PLAYER_STATUSES.playing});
         // should return discovered play with ~90 seconds of duration
         const plays = await source.processRecentPlays([advancedState])
         expect(plays.length).to.be.eq(1);

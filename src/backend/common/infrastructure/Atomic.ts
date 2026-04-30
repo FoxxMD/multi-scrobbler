@@ -94,7 +94,8 @@ export interface PlayerStateDataMaybePlay {
     play?: PlayObject
     status?: ReportedPlayerStatus
     position?: number
-    timestamp?: Dayjs
+    stateUpdatedAt?: Dayjs
+    playUpdatedAt?: Dayjs
 }
 
 export const asPlayerStateData = (obj: object): obj is PlayerStateData => asPlayerStateDataMaybePlay(obj) && 'play' in obj && isPlayObject(obj.play)
