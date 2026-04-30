@@ -394,14 +394,14 @@ describe('Player Cleanup', function () {
         for(let i = 0; i < 5; i++) {
             position += 10;
             timeSince += 10;
-            MockDate.set(initialDate.add(position, 'seconds').toDate());
+            MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
             await sleep(1);
             const advancedState = generatePlayerStateData({play: initialState.play, stateUpdatedAt: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
             expect((await source.processRecentPlays([advancedState])).length).to.be.eq(0);
         }
 
         timeSince += 10;
-        MockDate.set(initialDate.add(position, 'seconds').toDate());
+        MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
         await sleep(1);
         // new Play
         const advancedState = generatePlayerStateData({stateUpdatedAt: dayjs(), position: 0, status: REPORTED_PLAYER_STATUSES.playing});
