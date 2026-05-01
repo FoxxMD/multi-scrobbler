@@ -79,7 +79,7 @@ export const setupLZEndpointRoutes = (app: Express, parentLogger: Logger, scrobb
     });
     app.use(/\/1\/.*/, async function (req, res) {
         logger.warn(`Received what looks like a Listenbrainz Endpoint request but it was to an invalid URL route: ${req.originalUrl}\nMake sure base URL path to MS endpoint is correct.`);
-        res.status(404);
+        res.sendStatus(404);
     });
 }
 
