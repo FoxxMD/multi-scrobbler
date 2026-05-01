@@ -110,13 +110,24 @@ export class DiscordAbstractClient extends AbstractApiClient {
 
             if(art === artworkDefaultUrl) {
                 const play = isPlayObject(data) ? data : data.play;
-                if(play.data.meta?.brainz?.album !== undefined) {
-                    const albumArt = await this.covertArtApi.getCoverThumb(play.data.meta?.brainz?.album, {size: 250});
-                    if(albumArt !== undefined) {
-                        art = albumArt;
+                if(play.data.meta?.brainz?.album !== undefined || play.data.meta?.brainz?.releaseGroup !== undefined) {
+                    let usedCAA = false;
+                    if(play.data.meta?.brainz?.album !== undefined) {
+                        const albumArt = await this.covertArtApi.getCoverThumb(play.data.meta?.brainz?.album, 'release', {size: 250});
+                        if(albumArt !== undefined) {
+                            art = albumArt;
+                            usedCAA = true;
+                        }
                     }
-                } else if(isDebugMode()) {
-                    this.logger.debug('No brainz Release MBID to use for cover art archive');
+                    if(!usedCAA && play.data.meta?.brainz?.releaseGroup !== undefined) {
+                        const albumArt = await this.covertArtApi.getCoverThumb(play.data.meta?.brainz?.releaseGroup, 'release-group', {size: 250});
+                        if(albumArt !== undefined) {
+                            art = albumArt;
+                            usedCAA = true;
+                        }
+                    }
+                } else {
+                    this.logger.trace('No brainz Release MBID to use for cover art archive');
                 }
             }
 

@@ -500,6 +500,7 @@ const CA_MOCK_URL_STR = 'http://coverartarchive.org';
 const CA_MOCK_URL = new URL(CA_MOCK_URL_STR);
 const RELEASE = '76df3287-6cda-33eb-8e9a-044b5e15ffdd';
 const INVALID_RELEASE = '76df3287-6cda-33eb-8e9a-044b5e15ffde';
+const RELEASE_GROUP = 'dc7bec45-b321-4dfc-be66-96eab5acb36e';
 
 describe('#CoverArt CoverArtArchive API', function () {
     it('Should get url from response',
@@ -515,7 +516,7 @@ describe('#CoverArt CoverArtArchive API', function () {
             ],
             async function () {
                 const api = createCoverArtApi({url: CA_MOCK_URL});
-                const resp = await api.getCoverThumb(RELEASE, {size: 250});
+                const resp = await api.getCoverThumb(RELEASE, 'release', {size: 250});
                 expect(resp).is.not.undefined;
                 expect(resp).eq(`${CA_MOCK_URL_STR}/cdn/1.jpg`)
             }
@@ -531,7 +532,7 @@ describe('#CoverArt CoverArtArchive API', function () {
             ],
             async function () {
                 const api = createCoverArtApi({url: CA_MOCK_URL});
-                const resp = await api.getCoverThumb(INVALID_RELEASE, {size: 250});
+                const resp = await api.getCoverThumb(INVALID_RELEASE, 'release', {size: 250});
                 expect(resp).is.undefined;
             }
     ));
@@ -544,10 +545,15 @@ describe('#CoverArt CoverArtArchive API', function () {
             }
         });
 
-        it('Returns a response', async function() {
+        it('Returns a response for release', async function() {
                 const api = createCoverArtApi();
-                const resp = await api.getCoverThumb(RELEASE, {size: 250});
+                const resp = await api.getCoverThumb(RELEASE, 'release', {size: 250});
                 expect(resp).is.not.undefined;
+        });
+        it('Returns a response for release-group', async function() {
+            const api = createCoverArtApi();
+            const resp = await api.getCoverThumb(RELEASE_GROUP, 'release-group', {size: 250});
+            expect(resp).is.not.undefined;
         });
     });
 });

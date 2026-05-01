@@ -67,7 +67,7 @@ export class CoverArtApiClient extends AbstractApiClient {
         return 'API - CoverArtArchive';
     }
 
-    getCoverThumb = async (mbid: string, opt: ThumbOptions = {}): Promise<string | undefined> => {
+    getCoverThumb = async (mbid: string, mbidType: 'release' | 'release-group', opt: ThumbOptions = {}): Promise<string | undefined> => {
         const {
             type = 'front',
             size
@@ -77,7 +77,7 @@ export class CoverArtApiClient extends AbstractApiClient {
             throw new Error(`Thumb size given (${size}) is not valid. Must be one of: ${THUMB_SIZES.join(' | ')}`);
         }
         const thumbParams = `${type}${size !== undefined ? `-${size}` : ''}`;
-        const cacheKey = `albumart-${mbid}-${thumbParams}`;
+        const cacheKey = `albumart-${mbidType}-${mbid}-${thumbParams}`;
         const cachedArt = await this.cache.get<string | false>(cacheKey);
         if (cachedArt !== undefined) {
             if(cachedArt === false) {
@@ -88,7 +88,7 @@ export class CoverArtApiClient extends AbstractApiClient {
             let result = undefined,
             err: Error;
 
-            const url = joinedUrl(this.baseUrl, `/release/${mbid}/${thumbParams}`);
+            const url = joinedUrl(this.baseUrl, `/${mbidType}/${mbid}/${thumbParams}`);
 
             try {
                 const resp = await this.coverThumbRequest(url.toString());
@@ -103,7 +103,7 @@ export class CoverArtApiClient extends AbstractApiClient {
             }
 
             if(result === false) {
-                this.logger.debug(`No front album art found for release ${mbid}`);
+                this.logger.debug(`No front album art found for ${mbidType} ${mbid}`);
                 await this.cache.set(cacheKey, false, '1hr');
                 return undefined;
             }
