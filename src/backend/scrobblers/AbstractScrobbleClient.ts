@@ -587,8 +587,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
 
     handleQueuedScrobbleRanges = async (deadRetries: number = 3) => {
-            const queued = (await this.playRepo.getQueued(CLIENT_INGRESS_QUEUE, {limit: 30})).data.map(x => asPlay(x.play));
-            const dead = (await this.playRepo.getQueued(CLIENT_DEAD_QUEUE, {limit: 30, retries: deadRetries})).data.map(x => asPlay(x.play));
+            const queued = await this.playRepo.getQueuedScrobbleRange(CLIENT_INGRESS_QUEUE);
+            const dead = await this.playRepo.getQueuedScrobbleRange(CLIENT_DEAD_QUEUE, {retries: deadRetries});
             this.scrobbleSOTRanges = groupPlaysToTimeRanges(queued.concat(dead), this.scrobbleSOTRanges, {staleNowBuffer: this.config.options?.refreshStaleAfter});
     }
 
