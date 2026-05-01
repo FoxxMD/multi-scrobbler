@@ -31,6 +31,12 @@ export const playStateToActivityData = (data: SourcePlayerObj, opts: { useArt?: 
 
     let activityName = capitalize(play.meta?.musicService ?? play.meta?.mediaPlayerName ?? play.meta?.source ?? 'music')
 
+    // discord requires all fields to be at least 2 characters long or else it returns this error
+    //
+    //  "code": 4000,
+    //  "message": "child \"activity\" fails because [child \"details\" fails because [\"details\" length must be at least 2 characters long]]"
+    //
+    // so we pad all fields with zero-width space to get around this
 
     const activity: ActivityData = removeUndefinedKeys<ActivityData>({
         // https://docs.discord.com/developers/events/gateway-events#activity-object
@@ -38,12 +44,13 @@ export const playStateToActivityData = (data: SourcePlayerObj, opts: { useArt?: 
         // https://docs.discord.com/developers/events/gateway-events#activity-object
         statusDisplayType: 1, // state
         name: activityName,
-        details: play.data.track,
-        state: play.data.artists !== undefined && play.data.artists.length > 0 ? play.data.artists.join(' / ') : undefined,
+        
+        details: play.data.track.padEnd(2,'\u200B'),
+        state: play.data.artists !== undefined && play.data.artists.length > 0 ? play.data.artists.map(x => x.padEnd(2, '\u200B')).join(' / ') : undefined,
         // https://docs.discord.com/developers/events/gateway-events#activity-object-activity-assets
         // https://docs.discord.com/developers/events/gateway-events#activity-object-activity-asset-image
         assets: {
-            largeText: play.data.album
+            largeText: play.data.album.padEnd(2, '\u200B')
         },
         createdAt: dayjs().unix()
     });
