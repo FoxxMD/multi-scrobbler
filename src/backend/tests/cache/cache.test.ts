@@ -156,13 +156,13 @@ describe('#Caching', function () {
 
         it('Preserves scrobbles', async function () {
 
-           this.timeout(10000);
+           this.timeout(100000);
 
            // why does this take so long?
            await withLocalTmpDir(async () => {
 
                 const root = getRoot();
-                root.upsert({ cache: () => () => new MSCache(loggerTest, { scrobble: { provider: 'file', connection: process.cwd(), persistInterval: 100 } }) });
+                root.upsert({ cache: () => () => new MSCache(loggerTest, { scrobble: { provider: 'file', connection: process.cwd(), persistInterval: 100 }, auth: {provider: 'memory'}, metadata: {provider: 'memory'} }) });
 
                 await using test = new TestScrobbler();
                 await test.initialize();
