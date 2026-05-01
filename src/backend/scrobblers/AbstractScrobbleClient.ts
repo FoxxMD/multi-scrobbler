@@ -113,11 +113,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     scrobbling: boolean = false;
     deadQueueProcessing: boolean = false;
     queuedLength: number = 0;
-    deadLetterScrobbles: DeadLetterScrobble<PlayObject>[] = [];
     deadLetterLength: number = 0;
     deadLetterQueued: number  = 0;
-
-    queuedConsumedSinceLastRangeRefresh: number =  0;
 
     supportsNowPlaying: boolean = false;
     nowPlayingEnabled: boolean;
@@ -868,7 +865,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         //     return;
         // }
         this.logger.trace('processing next');
-        this.queuedConsumedSinceLastRangeRefresh++;
         await this.handleQueuedScrobbleRanges();
         if (!this.upstreamRefresh.refreshEnabled) {
             // TODO add signal for this to scrobble match
@@ -1095,7 +1091,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         //const deadScrobble = this.deadLetterScrobbles[deadScrobbleIndex];
         this.deadLogger.trace(deadLabel, `Processing dead scrobble => ${buildTrackString(deadScrobble.play)}`);
 
-        this.queuedConsumedSinceLastRangeRefresh++;
         await this.handleQueuedScrobbleRanges();
         signal?.throwIfAborted();
 
