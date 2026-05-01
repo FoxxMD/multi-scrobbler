@@ -601,3 +601,14 @@ export const REGEX_ISO8601_LOOSE = new RegExp(/\d{4}-[01]\d-[0-3]\dT/);
 
 export const CLIENT_INGRESS_QUEUE = 'ingress';
 export const CLIENT_DEAD_QUEUE = 'dead';
+
+/**
+ * Useful TS type-only utility for testing type equality
+ * 
+ * Usage: type EQ = IfEquals<any[], [number][], "same", "different">; // "different"
+ * 
+ * @see https://stackoverflow.com/a/53808212/1469797
+ */
+export type IfEquals<T, U, Y=unknown, N=never> =
+  (<G>() => G extends T ? 1 : 2) extends
+  (<G>() => G extends U ? 1 : 2) ? Y : N;

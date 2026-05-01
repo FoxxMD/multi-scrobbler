@@ -21,6 +21,11 @@ import { SourceType } from "../../../infrastructure/config/source/sources.js";
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 
+export interface QueueCriteria {
+    queueName: string
+    queueStatus: QueueStateSelect['queueStatus'][] | QueueStateSelect['queueStatus']
+}
+
 export interface PlayWhereOpts {
     state?: PlaySelect['state'][]
     stateNot?: PlaySelect['state'][]
@@ -28,7 +33,7 @@ export interface PlayWhereOpts {
     platformId?: string
     seenAt?: CompareDateOp
     playedAt?: CompareDateOp
-    queueCriteria?: {queueName: string, states?: QueueStateSelect['queueStatus'][]}
+    queues?: QueueCriteria[]
     uid?: string[]
 }
 
@@ -179,7 +184,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
     findPlaysPaginated = async <T = PlaySelectRel>(args: QueryPlaysOpts, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PaginatedResponse<T>> => {
         const {
-            limit,
+            limit = 100,
             offset = 0,
             ...rest
         } = args;
@@ -709,6 +714,35 @@ export const buildPlayWhere = (args: PlayWhereOpts): FindWhere<'plays'> => {
             in: args.uid
         }
     }
+    const {
+        queues = []
+    } = args;
+    if(queues.length > 0) {
+        // need to do this optimistically even if we overwrite with only 1 condition later
+        where.queueStates = {
+            OR: []
+        }
+        // so that we can use this type
+        // or else assigning an array to OR using only `typeof where.queueStates` causes a type error
+        let queueWhere: typeof where.queueStates.OR[0][] = [];
+        for(const q of queues) {
+            queueWhere.push(
+                {
+                    queueName: q.queueName,
+                    queueStatus: typeof q.queueStatus === 'string' ? q.queueStatus : {
+                        in: q.queueStatus
+                    }
+                }
+            )
+        }
+        if(queueWhere.length === 1) {
+            where.queueStates = queueWhere[0];
+        } else {
+            where.queueStates = {
+                OR: queueWhere
+            }
+        }
+    }
     return where;
 }
 
@@ -764,7 +798,7 @@ export const queryArgsFromRequest = (rec: RequestPlayQuery): QueryPlaysOpts => {
         order,
         offset,
         componentId,
-        queueCriteria,
+        queues,
         ...rest
     } = rec;
 
