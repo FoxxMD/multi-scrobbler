@@ -18,7 +18,8 @@ export class DrizzleQueueRepository extends DrizzleBaseRepository<'queueStates'>
             queueName: CLIENT_DEAD_QUEUE
         }).where(and(
             eq(queueStates.componentId, componentId),
-            lte(queueStates.retries, retries)
+            lte(queueStates.retries, retries),
+            eq(queueStates.queueStatus, 'failed')
         ));
     }
 
