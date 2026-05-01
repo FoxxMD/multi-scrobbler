@@ -244,7 +244,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     protected async postDatabase(): Promise<void> {
         this.playRepo.componentId = this.dbComponent.id;
         this.queueRepo.componentId = this.dbComponent.id;
-        this.tracksScrobbled = this.dbComponent.countLive;
+        this.tracksScrobbled = this.dbComponent.countLive + this.dbComponent.countNonLive;
         this.queuedLength = await this.queueRepo.getQueueCount(this.dbComponent.id, [CLIENT_INGRESS_QUEUE]);
         this.queuedGauge.labels(this.getPrometheusLabels()).set(this.queuedLength);
         this.deadLetterLength = await this.queueRepo.getQueueCount(this.dbComponent.id, [CLIENT_DEAD_QUEUE], ['queued', 'failed']);

@@ -239,7 +239,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
                 hasAuthInteraction: requiresAuthInteraction,
                 authed,
                 initialized: x.isReady(),
-                deadLetterScrobbles: x.deadLetterLength, // x.deadLetterScrobbles.length,
+                deadLetterScrobbles: x.deadLetterQueued, // x.deadLetterScrobbles.length,
                 queued: x.queuedLength // x.queuedScrobbles.length
             };
             if (!base.initialized) {
@@ -326,11 +326,21 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         const {
             // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleClient: client,
-            query
+            query = {}
         } = req;
 
+        const deadQuery: QueryPlaysOpts = {
+            ...query as Partial<QueryPlaysOpts>,
+            queues: [
+                {
+                    queueName: CLIENT_DEAD_QUEUE,
+                    queueStatus: 'queued'
+                }
+            ]
+        }
+
         // @ts-ignore
-        const result: DeadLetterScrobble<PlayObject>[] = (await (client as AbstractScrobbleClient).getPlaysPaginated(query as Partial<QueryPlaysOpts>)).data.map(x => playSelectToDeadScrobble);
+        const result: DeadLetterScrobble<PlayObject>[] = (await (client as AbstractScrobbleClient).getPlaysPaginated(deadQuery)).data.map(playSelectToDeadScrobble);
 
         return res.json(result);
     });
@@ -361,20 +371,20 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
 
         (client as AbstractScrobbleClient).logger.verbose(`User requested processing of dead letter scrobble ${deadId} via API call`)
 
-        const deadScrobble = (client as AbstractScrobbleClient).deadLetterScrobbles.find(x => x.id === deadId);
-
-        if(deadScrobble === undefined) {
-            (client as AbstractScrobbleClient).logger.debug(`No dead letter scrobble with ID ${deadId}`)
-            return res.status(404).send();
+        try {
+            const [scrobbled, dead] = await (client as AbstractScrobbleClient).processDeadLetterScrobble(undefined, deadId);
+            if(scrobbled) {
+                return res.status(200).send();
+            }
+            return res.json(playSelectToDeadScrobble(dead));
+        } catch (e) {
+            if(e.message.includes(`Play ${deadId} does not exist`)) {
+                logger.warn(e);
+                return res.status(404).json({error: e});
+            }
+            logger.error(e);
+            return res.status(500).json({error: e});
         }
-
-        const [scrobbled, dead] = await ((client as AbstractScrobbleClient).processDeadLetterScrobble(undefined, deadId));
-
-        if(scrobbled) {
-            return res.status(200).send();
-        }
-
-        return res.json(playSelectToDeadScrobble(dead));
     });
 
     app.delete('/api/dead', clientMiddleFunc(true), async (req, res, next) => {
@@ -403,15 +413,17 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
 
         (client as AbstractScrobbleClient).logger.verbose(`User requested removal of dead letter scrobble ${deadId} via API call`)
 
-        const deadScrobble = (client as AbstractScrobbleClient).deadLetterScrobbles.find(x => x.id === deadId);
-
-        if(deadScrobble === undefined) {
-            (client as AbstractScrobbleClient).logger.verbose(`No dead letter scrobble with ID ${deadId}`)
-            return res.status(404).send();
+        try {
+            await (client as AbstractScrobbleClient).removeDeadLetterScrobble(deadId,'failed', false);
+            return res.status(200).send();
+        } catch (e) {
+            if(e.message.includes(`Play ${deadId} does not exist`)) {
+                logger.warn(e);
+                return res.status(404).json({error: e});
+            }
+            logger.error(e);
+            return res.status(500).json({error: e});
         }
-
-        (client as AbstractScrobbleClient).removeDeadLetterScrobble(deadId,'failed', false);
-        return res.status(200).send();
     });
 
     app.get('/api/scrobbled', clientMiddleFunc(false), async (req, res, next) => {

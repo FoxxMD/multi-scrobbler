@@ -107,6 +107,14 @@ const clientSlice = createSlice({
                 }
             )
             .addMatcher(
+                (action) => clientUpdate.match(action) && action.payload.event === 'removeDeadLetter',
+                (state, action) => {
+                    if(state.entities[action.payload.id] !== undefined) {
+                        state.entities[action.payload.id].deadLetterScrobbles--;
+                    }
+                }
+            )
+            .addMatcher(
                 (action) => clientUpdate.match(action) && action.payload.event === 'statusChange',
                 (state, action) => {
                     if(state.entities[action.payload.id] !== undefined) {
