@@ -59,6 +59,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
     protected hasQueueNextPrepared?: ReturnType<typeof this.prepareHasQueueNext>
     protected getQueueNextPrepared?: ReturnType<typeof this.prepareGetQueueNext>
+    protected getQueuedScrobbleRangePrepared?: ReturnType<typeof this.prepareGetQueuedScrobbleRange>
 
     constructor(db: ReturnType<typeof getDb>, opts: DrizzleRepositoryOpts = {}) {
         super(db, 'plays', 'Plays', opts);
@@ -485,6 +486,31 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         }
         const nextId = await this.hasQueueNextPrepared.execute({queueName, retries});
         return nextId !== undefined;
+    }
+
+    protected prepareGetQueuedScrobbleRange = () => this.db.query.plays.findMany({
+        where: {
+            componentId: this.componentId,
+            queueStates: {
+                queueName: sql.placeholder('queueName'),
+                queueStatus: 'queued',
+                retries: {
+                    lte: sql.placeholder('retries')
+                }
+            },
+        },
+        orderBy: {
+            seenAt: 'asc',
+        },
+        limit: sql.placeholder('limit')
+    }).prepare()
+
+    public getQueuedScrobbleRange = async (queueName: string, opts: {retries?: number, limit?: number} = {}): Promise<PlayObject[]> => {
+        if(this.getQueuedScrobbleRangePrepared === undefined) {
+            this.getQueuedScrobbleRangePrepared = this.prepareGetQueuedScrobbleRange();
+        }
+        const res = await this.getQueuedScrobbleRangePrepared.execute({queueName, retries: opts.retries ?? 0, limit: opts.limit ?? 30});
+        return res.map(x => x.play);
     }
 
     public getQueued = async (queueName: string, opts: {
