@@ -45,7 +45,7 @@ Using the URL path `/apis/listenbrainz` [Koito docs describe](https://koito.io/g
 
 :::tip
 
-Ensure that Koito is configured to allow requests from multi-scrobbler! In Koito config set [`KOITO_ALLOWED_HOSTS`](https://koito.io/reference/configuration/#koito_allowed_hosts) to the IP the multi-scrobbler dashboard is accessible from.
+For Koito versions <=0.1.7, you must have the environment variable `KOITO_ALLOWED_HOSTS` set correctly. Ensure it is set to the IP address or domain name that you use to access Koito with e.g. `https://koito.mydomain.com`. 
 
 :::
 

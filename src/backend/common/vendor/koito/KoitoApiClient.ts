@@ -118,7 +118,7 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
             let allowedHint = '';
             if(e.cause !== undefined && 'response' in e.cause) {
                 if(e.cause.response.status === 403) {
-                    allowedHint = ` HINT: 403 usually means Koito env KOITO_ALLOWED_HOSTS is not configured correctly to allowed requests from multi-scrobbler. Check Koito logs for warnings.`
+                    allowedHint = ` HINT: 403 usually means Koito env KOITO_ALLOWED_HOSTS is not configured correctly. Check Koito logs for warnings.`
                 }
             }
             throw new Error(`A server exists at ${this.url.url.hostname}:${this.url.port} but is not responding to API calls as expected.${allowedHint}`, { cause: e });
@@ -158,7 +158,7 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
 
         let resp: ListensResponse;
         try {
-        resp = await this.getUserListens({...params, page: params.cursor});    
+        resp = await this.getUserListens({...params, page: params.cursor});
     } catch (e) {
         throw new Error('Error occurred while getting Koito paginated listens', { cause: e });
     }
