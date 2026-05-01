@@ -540,7 +540,8 @@ export default class ScrobbleSources {
                     const lzShouldUse = parseBool(process.env.LZENDPOINT_ENABLE);
                     const lze: ListenbrainzEndpointData = {
                         slug: process.env.LZE_SLUG,
-                        token: process.env.LZE_TOKEN
+                        token: process.env.LZE_TOKEN,
+                        username: process.env.LZE_USERNAME
                     }
                     if (!Object.values(lze).every(x => x === undefined) || lzShouldUse) {
                         configs.push({

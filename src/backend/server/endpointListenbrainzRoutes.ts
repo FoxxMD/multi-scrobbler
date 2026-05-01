@@ -7,10 +7,14 @@ import { LZEndpointNotifier } from "../sources/ingressNotifiers/LZEndpointNotifi
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import { nonEmptyBody } from "./middleware.js";
 import { isDebugMode } from "../utils.js";
+import { PlayingNowPayload } from '../common/vendor/listenbrainz/interfaces.js';
+import ScrobbleClients from '../scrobblers/ScrobbleClients.js';
+import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.js';
+import { stringToDeterministicNumber } from '../utils/StringUtils.js';
 
 const TEXT_WILDCARD_REGEX = new RegExp(/text\/.+/);
 
-export const setupLZEndpointRoutes = (app: Express, parentLogger: Logger, scrobbleSources: ScrobbleSources) => {
+export const setupLZEndpointRoutes = (app: Express, parentLogger: Logger, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
 
     const logger = childLogger(parentLogger, ['Ingress', 'Listenbrainz']);
 
@@ -74,23 +78,54 @@ export const setupLZEndpointRoutes = (app: Express, parentLogger: Logger, scrobb
         // and then determine actual playing now by clients that are able to be scrobbled to from this source
         //
         // but for now just stub out empty response so panoscrobbler doesn't complain
+
+        const user = req.params.username;
+        let listens: PlayingNowPayload[];
+
+        const sources = scrobbleSources.getByType('endpointlz') as EndpointListenbrainzSource[];
+        if (sources.length === 0) {
+            logger.warn('Received Listenbrainz endpoint payload but no Listenbrainz endpoint sources are configured');
+        }
+
+        const matchedSource = sources.find(x => x.config.data?.username === user || x.name === user);
+
+        const playObjs = scrobbleClients.getPlayingNow(matchedSource.name, matchedSource.clients);
+        listens = playObjs.map(x => ({playing_now: true, track_metadata: playToListenPayload(x).track_metadata}));
+
         return res.status(200).json({
             payload: {
-                listens: [],
+                listens,
                 playing_now: true,
-                user_id: 1,
-                count: 0
+                user_id: stringToDeterministicNumber(user),
+                count: listens.length
             }
         });
     });  
+
     app.get('/1/validate-token', async function (req, res) {
         //https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-validate-token
+
+        const sources = scrobbleSources.getByType('endpointlz') as EndpointListenbrainzSource[];
+        if (sources.length === 0) {
+            logger.warn('Received Listenbrainz endpoint payload but no Listenbrainz endpoint sources are configured');
+        }
+        const validSources = sources.filter(x => x.matchRequest(req));
+        if (validSources.length === 0) {
+            const [slug, token] = parseDisplayIdentifiersFromRequest(req);
+            logger.warn(`No Listenbrainz endpoint config matched => Token: ${token}`);
+        }
+
+        let username = "Multi-Scrobbler";
+        if(validSources.length > 0) {
+            username = validSources[0].config.data.username ?? validSources[0].name;
+        }
+
         logger.info('Validated token');
         return res.status(200).json({
             code: 200,
             message: "Token valid.",
             valid: true,
-            user_name: "Multi-Scrobbler"
+            user_name: username
         })
     });
     app.use(/\/1\/.*/, async function (req, res) {

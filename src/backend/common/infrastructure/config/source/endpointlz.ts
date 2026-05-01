@@ -13,14 +13,23 @@ export interface ListenbrainzEndpointData extends CommonSourceData {
      *
      * If no slug is found from an extension's incoming webhook event the first Listenbrainz source without a slug will be used
      * */
-    slug?: string | null
+    slug?: string
 
     /**
      * If an LZ submission request contains this token in the Authorization Header it will be used to match the submission with this Source
      *
      * See: https://listenbrainz.readthedocs.io/en/latest/users/api/index.html#add-the-user-token-to-your-requests
      * */
-    token?: string | null
+    token?: string
+
+    /** 
+     * The listenbrainz "username" to associate with this Source
+     * 
+     * Will be returned in validate-token responses and used to determine a response for playing-now, if your client supports it
+     * 
+     * If no value is configured then the Source's name will be used
+     */
+    username?: string
 }
 
 export interface ListenbrainzEndpointSourceConfig extends CommonSourceConfig {

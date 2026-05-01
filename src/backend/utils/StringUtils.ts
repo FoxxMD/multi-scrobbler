@@ -453,4 +453,20 @@ export const hasNonAlphanumericChars = (str: string): boolean => {
     return NON_ALPHANUMWHITESPACE_CHARS.test(str);
 }
 
-
+/**
+ * Produces a deterministic number from a string, DJB2 Hash
+ * 
+ * Not cryptographically secure or probably good for avoiding collisions
+ * but we're only using it for like a set of < 10 to make deterministic user ids for listenbrainz spec
+ * 
+ * @see https://www.xjavascript.com/blog/javascript-generate-unique-number-based-on-string/
+ */
+export const stringToDeterministicNumber = (str: string): number => {
+  let hash = 5381; // Initial value
+  for (let i = 0; i < str.length; i++) {
+    // hash * 33 + charCode (bitwise shift for efficiency: hash << 5 is hash * 32)
+    hash = (hash << 5) + hash + str.charCodeAt(i); 
+  }
+  // Convert to unsigned 32-bit integer to avoid negative values
+  return hash >>> 0; 
+}

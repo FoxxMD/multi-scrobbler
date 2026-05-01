@@ -109,9 +109,10 @@ To troubleshoot any errors, and assuming you are using Home Assistant, view the 
 ## Configuration
 
 <Config config="ListenbrainzEndpointSourceConfig" fileContent={ListenbrainzEndpointConfig} name="endpointlz">
-        | Environmental Variable | Required? | Default | Description                                                                                                       |
-        | :--------------------- | :-------- | ------- | ----------------------------------------------------------------------------------------------------------------- |
-        | `LZENDPOINT_ENABLE`    | No        |         | Use LZ Endpoint as a Source without any other configuration. Only required if slug/token are not provided as ENVs |
-        | `LZE_TOKEN`            | No        |         | LZ "Authentication Token" you provided to the scrobbling application                                              |
-        | `LZE_SLUG`             | No        |         | (Optional) The URL suffix to use for accepting LZ scrobbles                                                       |
+        | Environmental Variable | Required? | Default | Description                                                                                                                                                |
+        | :--------------------- | :-------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+        | `LZENDPOINT_ENABLE`    | No        |         | Use LZ Endpoint as a Source without any other configuration. Only required if slug/token are not provided as ENVs                                          |
+        | `LZE_TOKEN`            | No        |         | LZ "Authentication Token" you provided to the scrobbling application                                                                                       |
+        | `LZE_SLUG`             | No        |         | (Optional) The URL suffix to use for accepting LZ scrobbles                                                                                                |
+        | `LZE_USERNAME`         | No        |         | (Optional) A fake username that will be returned for token validation and on now-playing responses. If none is provided the Source's name is used instead. |
 </Config>

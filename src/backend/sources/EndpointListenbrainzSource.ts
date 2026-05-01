@@ -21,7 +21,7 @@ import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.js";
 import { Logger } from "@foxxmd/logging";
 import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
 
-const noSlugMatch = new RegExp(/(?:\/api\/listenbrainz\/?)$|(?:\/1\/?|\/1\/submit-listens\/?)$/i);
+const noSlugMatch = new RegExp(/(?:\/api\/listenbrainz\/?)$|(?:\/1\/?|\/1\/submit-listens\/?\/1\/validate-token\/|)$/i);
 const slugMatch = new RegExp(/\/api\/listenbrainz\/([^\/]+)$/i);
 
 export const authHeaderRegex = new RegExp(/Token (.+)$/i);

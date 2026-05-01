@@ -270,6 +270,19 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.emitEvent('notify', payload);
     }
 
+    public nowPlayingSourceAllowed(source: string) {
+        if(!this.supportsNowPlaying || !this.nowPlayingEnabled) {
+            return false;
+        }
+        const {
+            options = {},
+        } = this.config;
+        if('nowPlaying' in options && Array.isArray(options.nowPlaying)) {
+            return options.nowPlaying.map(x => x.toLocaleLowerCase()).includes(source.toLocaleLowerCase());
+        }
+        return true;
+    }
+
     protected initializeNowPlaying() {
 
         if (this.supportsNowPlaying) {
