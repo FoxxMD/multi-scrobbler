@@ -67,6 +67,22 @@ export const setupLZEndpointRoutes = (app: Express, parentLogger: Logger, scrobb
                 await source.handle(playerState);
             }
         });
+
+    app.get('/1/user/:username/playing-now', async function (req, res) {
+        // TODO need to implement user names for endpoint configs
+        // so we can identify playing now calls by user
+        // and then determine actual playing now by clients that are able to be scrobbled to from this source
+        //
+        // but for now just stub out empty response so panoscrobbler doesn't complain
+        return res.status(200).json({
+            payload: {
+                listens: [],
+                playing_now: true,
+                user_id: 1,
+                count: 0
+            }
+        });
+    });  
     app.get('/1/validate-token', async function (req, res) {
         //https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-validate-token
         logger.info('Validated token');
