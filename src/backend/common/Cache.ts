@@ -13,7 +13,8 @@ import { childLogger, Logger } from '@foxxmd/logging';
 import { projectDir } from './index.js';
 import path from 'path';
 import { cacheFunctions } from "@foxxmd/regex-buddy-core";
-import { fileOrDirectoryIsWriteable } from '../utils/FSUtils.js';
+import { fileExists, fileOrDirectoryIsWriteable } from '../utils/FSUtils.js';
+import { copyFile } from 'fs/promises';
 import { asCacheAuthProvider, asCacheConfig, asCacheMetadataProvider, asCacheScrobbleProvider, CacheAuthProvider, CacheConfig, CacheConfigOptions, CacheMetadataProvider, CacheProvider, CacheScrobbleProvider } from './infrastructure/Atomic.js';
 import { Typeson } from 'typeson';
 import { builtin } from 'typeson-registry';
@@ -382,6 +383,12 @@ export const flatCacheLoad = async (flatCache: FlatCache, logger: Logger = logge
         fileOrDirectoryIsWriteable(cachePath);
     } catch (e) {
         throw new Error(`Unable to use path for file cache at ${cachePath}`, { cause: e })
+    }
+
+    if(fileExists(cachePath) && !fileExists(`${cachePath}.bak`)) {
+        logger.info(`Backing up ${cachePath} in preparation for migration to database...`);
+        await copyFile(cachePath, `${cachePath}.bak`);
+        logger.info(`Done! Backed up to ${cachePath}.bak\nAll data has been loaded into cache. It will be deleted (from cache) after migrating to database.\nIf there are migration issues or you wish to downgrade then overwrite ${cachePath} with the .bak backup copy`);
     }
 
     const streamPromise = new Promise((resolve, reject) => {

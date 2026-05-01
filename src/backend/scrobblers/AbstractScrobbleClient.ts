@@ -427,14 +427,95 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     protected async doParseCache(): Promise<true | string | undefined> {
         const cachedQueue = (await this.cache.cacheScrobble.get(`${this.getMachineId()}-queue`) as QueuedScrobble<PlayObject>[] ?? []);
-        const cachedQLength = cachedQueue.length;
-        //this.queuedScrobbles = cachedQueue.map(x => ({...x, play: rehydratePlay(x.play)}));
+        if (cachedQueue.length > 0) {
+            this.logger.info('Migrating cached scrobbles to database...');
+            let allGood = true;
+            for (const cachedQueuedScrobble of cachedQueue) {
+                const play = asPlay(cachedQueuedScrobble.play);
+                const {
+                    meta: {
+                        lifecycle,
+                        ...metaRest
+                    },
+                } = play;
+                try {
+                    const res = await this.playRepo.createPlays([
+                        playToRepositoryCreatePlayOpts({
+                            play: {
+                                ...play,
+                                meta: {
+                                    ...metaRest,
+                                    lifecycle: {
+                                        steps: []
+                                    }
+                                }
+                            },
+                            componentId: this.dbComponent.id,
+                            state: 'queued',
+                            parentId: play.id
+                        })
+                    ]);
+                    this.logger.verbose(`Migrated Play ${res[0].uid} => ${buildTrackString(play)}`);
+                } catch (e) {
+                    allGood = false;
+                    this.logger.verbose(new Error(`Failed to migrate Play ${buildTrackString(play)}`, {cause: e}));
+                }
+            }
+            this.logger[allGood ? 'info' : 'warn'](allGood ? 'Finished migrating all queued scrobbles.' : 'Migrated queued scrobbles with errors');
+            await this.cache.cacheScrobble.delete(`${this.getMachineId()}-queue`);
+            this.logger.info('Deleted legacy cached queued scrobbles');
+        }
 
         const cachedDead = (await this.cache.cacheScrobble.get(`${this.getMachineId()}-dead`) as DeadLetterScrobble<PlayObject>[] ?? []);
-        const cachedDLength = cachedDead.length;
-        //this.deadLetterScrobbles = cachedDead.map(x => ({...x, play: rehydratePlay(x.play), lastRetry: x.lastRetry !== undefined ? dayjs(x.lastRetry) : undefined}));
+        if(cachedDead.length > 0) {
+            this.logger.info('Migrating failed scrobbles to database...');
+            let allGood = true;
+            for(const cDeadScrobble of cachedDead) {
+                const play = asPlay(cDeadScrobble.play);
+                const {
+                    meta: {
+                        lifecycle,
+                        ...metaRest
+                    },
+                } = play;
+                try {
+                    const res = await this.playRepo.createPlays([
+                        playToRepositoryCreatePlayOpts({
+                            play: {
+                                ...play,
+                                meta: {
+                                    ...metaRest,
+                                    lifecycle: {
+                                        steps: []
+                                    }
+                                }
+                            },
+                            componentId: this.dbComponent.id,
+                            state: 'failed',
+                            parentId: play.id
+                        })
+                    ]);
+                    this.logger.verbose(`Added Play ${res[0].uid} to database => ${buildTrackString(play)}`);
+                    await this.queueRepo.create({
+                        componentId: this.dbComponent.id,
+                        playId: res[0].id,
+                        queueName: CLIENT_DEAD_QUEUE,
+                        queueStatus: 'queued',
+                        retries: cDeadScrobble.retries,
+                        error: cDeadScrobble.error !== undefined ? {message: cDeadScrobble.error } : undefined
+                    });
+                    this.logger.verbose(`Added Play ${res[0].uid} to Failed Queue`);
+                } catch (e) {
+                    allGood = false;
+                    this.logger.verbose(new Error(`Failed to migrate Play to failed queued ${buildTrackString(play)}`, {cause: e}));
+                }
+                this.logger[allGood ? 'info' : 'warn'](allGood ? 'Finished migrating all failed scrobbles.' : 'Migrated failed scrobbles with errors');
+                await this.cache.cacheScrobble.delete(`${this.getMachineId()}-dead`);
+                this.logger.info('Deleted legacy cached failed scrobbles');
+            }
+        }
 
-        return `Scrobbles from Cache: ${cachedQLength} Queue | ${cachedDLength} Dead Letter`;
+        return;
     }
 
     protected async postInitialize(): Promise<void> {
