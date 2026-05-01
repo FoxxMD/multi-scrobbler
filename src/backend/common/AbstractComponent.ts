@@ -204,7 +204,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
             logger.debug(`Transform start for => ${buildTrackString(play)}`);
             let transformedPlay: PlayObject = clone(play);
-            let cacheOk: boolean = true;
+            let cacheOk: boolean = true,
+            generateSteps = true;
             const steps: LifecycleStep[] = [];
 
             const opts = {
@@ -213,22 +214,29 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             }
 
             if(cachedSteps !== undefined) {
+                generateSteps = false;
                 // don't re-cache cached steps
                 cacheOk = false;
-                // only patch play if steps didn't end in a failure that we are okay with returning partial from
-                let shouldTransform = true;
-                const lastCachedStep = cachedSteps[cachedSteps.length - 1];
-                if(lastCachedStep.error !== undefined && lastCachedStep.flowKnownState !== 'skip' && !lastCachedStep.returnPartial) {
-                    shouldTransform = false;
-                }
-
-                for(const s of cachedSteps) {
-                    steps.push({...s, cached: true});
-                    if(shouldTransform && s.patch !== undefined) {
-                        transformedPlay.data = patchObject(transformedPlay.data, s.patch); // jdiff.patch(clone(transformedPlay.data),s.patch);
+                try {
+                    // only patch play if steps didn't end in a failure that we are okay with returning partial from
+                    let shouldTransform = true;
+                    const lastCachedStep = cachedSteps[cachedSteps.length - 1];
+                    if(lastCachedStep.error !== undefined && lastCachedStep.flowKnownState !== 'skip' && !lastCachedStep.returnPartial) {
+                        shouldTransform = false;
                     }
+
+                    for(const s of cachedSteps) {
+                        steps.push({...s, cached: true});
+                        if(shouldTransform && s.patch !== undefined) {
+                            transformedPlay.data = patchObject(transformedPlay.data, s.patch); // jdiff.patch(clone(transformedPlay.data),s.patch);
+                        }
+                    } 
+                } catch (e) {
+                    logger.warn(new Error('Error occurred while trying to use cached steps. Falling back to generating fresh transform steps', {cause: e}));
+                    generateSteps = true;
                 }
-            } else {
+            }
+            if(generateSteps) {
                 for(const hookItem of hook) {
                     const [step, stepPlay] = await this.generateStepFromStage(transformedPlay, hookItem, hookType, opts);
                     steps.push(step);
@@ -342,7 +350,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
         const stepName = `${hookType} - ${hookItem.type} - ${hookItem.name}`
         const existingStepIndex = playTruth.meta.lifecycle.steps.findIndex(x => x.name === stepName && x.source === this.getIdentifier());
-        const step: LifecycleStep = existingStepIndex !== -1 ? playTruth.meta.lifecycle.steps[existingStepIndex] : {
+        const step: LifecycleStep = existingStepIndex !== -1 && playTruth.meta.lifecycle.steps[existingStepIndex] !== undefined ? playTruth.meta.lifecycle.steps[existingStepIndex] : {
             name: stepName,
             source: this.getIdentifier(),
         }
