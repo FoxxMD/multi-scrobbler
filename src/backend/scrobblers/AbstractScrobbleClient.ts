@@ -72,7 +72,6 @@ import { generateLoggableAbortReason, ScrobbleSubmitError, SimpleError } from ".
 import {isErrorLike, serializeError} from 'serialize-error';
 import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetchUtils.js";
 import { spawn, catchAbortError, isAbortError, rethrowAbortError, delay, forever, AbortError, throwIfAborted } from 'abort-controller-x';
-import { Queue, MemoryStorage } from '@platformatic/job-queue'
 import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, QueryPlaysOpts } from "../common/database/drizzle/repositories/PlayRepository.js";
 import { PlaySelect, PlaySelectRel, QueueStateNew, QueueStateSelect } from "../common/database/drizzle/drizzleTypes.js";
 import { asPlay } from "../../core/PlayMarshalUtils.js";
@@ -133,8 +132,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     dupeLogger: Logger;
     deadLogger: Logger;
 
-    scrobbleQueue: Queue<{payload: QueuedScrobble<PlayObject>}, {scrobbled: ScrobbledPlayObject}>;
-
     existingScrobble: (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => Promise<PlayMatchResult>
 
     declare config: CommonClientConfig;
@@ -169,10 +166,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.deadLogger = childLogger(this.logger, CLIENT_DEAD_QUEUE);
         this.notifier = notifier;
         this.emitter = emitter;
-        this.scrobbleQueue = new Queue<{payload: QueuedScrobble<PlayObject>}, {scrobbled: ScrobbledPlayObject}>({
-            storage: new MemoryStorage(),
-            concurrency: 1
-        });
         this.playRepo = new DrizzlePlayRepository(this.db, {logger: this.logger,});
         this.queueRepo = new DrizzleQueueRepository(this.db, {logger: this.logger});
 
