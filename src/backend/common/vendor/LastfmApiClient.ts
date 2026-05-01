@@ -16,7 +16,8 @@ import { LastFMUser, LastFMAuth, LastFMTrack, LastFMUserGetRecentTracksResponse,
 import clone from 'clone';
 import { IncomingMessage } from "http";
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.js";
-import { ScrobbleSubmitError } from "../errors/MSErrors.js";
+import { ScrobbleSubmitError, SimpleError } from "../errors/MSErrors.js";
+import { redactString } from "@foxxmd/redact-string";
 
 const badErrors = [
     'api key suspended',
@@ -43,8 +44,8 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
     user?: string;
     declare config: LastfmData;
     sessionKey?: string;
+    lastRefreshed?: number
 
-    urlBase: string;
     path: string;
     upstreamName: string = 'Last.fm';
 
@@ -141,23 +142,31 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
 
     getAuthUrl = () => {
 
-        if(this.url.url.host === LASTFM_HOST) {
-            return `http://www.last.fm/api/auth/?api_key=${this.config.apiKey}&cb=${encodeURIComponent(this.redirectUri)}`;
+        const isLastFm = this.url.url.host === LASTFM_HOST;
+        let authUrl: string;
+        if(isLastFm) {
+            this.logger.debug('Detected last.fm host');
+            authUrl = `http://www.last.fm/api/auth/?api_key=${this.config.apiKey}&cb=${encodeURIComponent(this.redirectUri)}`;
+        } else {
+            this.logger.debug('Detected non-last.fm host (probably libre.fm)');
+            const aUrl = new URL(this.url.url.toString());
+            aUrl.search = `?api_key=${this.config.apiKey}&cb=${encodeURIComponent(this.redirectUri)}`;
+            aUrl.pathname = '/api/auth';
+            authUrl = aUrl.toString();
         }
-
-        const aUrl = new URL(this.url.url.toString());
-        aUrl.search = `?api_key=${this.config.apiKey}&cb=${encodeURIComponent(this.redirectUri)}`;
-        aUrl.pathname = '/api/auth';
-        return aUrl.toString();
+        const redactedUrl = authUrl.replace(this.config.apiKey, redactString(this.config.apiKey, 6));
+        this.logger.debug(`Generated auth url: ${redactedUrl}`);
+        return authUrl;
     }
 
     authenticate = async (token: any) => {
-
+        this.logger.debug(`Recieved token from auth callback: ${redactString(token, 10)}`);
         const auth = new LastFMAuth(this.config.apiKey, this.config.secret, undefined, {
                 hostname: this.url.url.host,
                 path: this.url.url.pathname
         });
 
+        this.logger.debug('Trying to get session key from last.fm...');
         const sessionRes = await auth.getSession({token});
         const {
             session: {
@@ -165,18 +174,23 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
                 name, // username
             } = {}
         } = sessionRes;
+        this.lastRefreshed = dayjs().unix();
+        this.logger.debug(`Created session for user ${name}! Session key: ${redactString(sessionKey, 6)} | Refreshed At ${this.lastRefreshed}`);
         this.sessionKey = sessionKey;
-        this.user = name;
+        this.user = name;        
 
         this.initApi();
 
         await writeFile(this.workingCredsPath, JSON.stringify({
             sessionKey,
             name,
+            lastRefreshed: this.lastRefreshed
         }));
+        this.logger.trace(`Wrote session data to ${this.workingCredsPath}`);
     }
 
     protected initApi = () => {
+        this.logger.debug(`Creating new API instances with: API Key ${redactString(this.config.apiKey, 6)} | Secret: ${redactString(this.config.secret, 6)} | Session Key ${redactString(this.sessionKey, 6)} | Host ${this.url.url.host} | Path ${this.url.url.pathname}`);
         this.userApi = new LastFMUser(this.config.apiKey, this.config.secret, this.sessionKey, {
                 hostname: this.url.url.host,
                 path: this.url.url.pathname
@@ -190,12 +204,19 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
     initialize = async (): Promise<true> => {
 
         try {
+            this.logger.debug(`Trying to load credentials from file path: ${this.workingCredsPath}`);
             const creds = await readJson(this.workingCredsPath, {throwOnNotFound: false, interpolateEnvs: false});
-            const {sessionKey, name} = creds || {};
+            const {sessionKey, name, lastRefreshed} = creds || {};
             this.sessionKey = sessionKey;
             this.user = name;
+            if(lastRefreshed !== undefined) {
+                this.lastRefreshed = lastRefreshed;
+            }
             if(this.sessionKey !== undefined) {
+                this.logger.trace('Found session key during initialization, initing api instances');
                 this.initApi();
+            } else {
+                this.logger.trace('No session key found during initialization, not initing api instances');
             }
             return true;
         } catch (e) {
@@ -218,16 +239,20 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
         if (this.sessionKey === undefined) {
             this.logger.warn('No session key found. User interaction for authentication required.');
             this.logger.info(`Redirect URL that will be used on auth callback: '${this.redirectUri}'`);
-            throw new Error('No session key found. User interaction for authentication required.');
+            throw new SimpleError('No session key found. User interaction for authentication required.');
         }
         try {
             // existing lastfm clients are ok with getting user from getInfo
             // but libre throws an error
             // so, if not libre allow empty user and set user from response to comply with new librefm implementation/refactor
-            const infoPayload: Record<string, any> = {};
-            if(this.urlBase !== LASTFM_HOST) {
+            const infoPayload: Record<string, any> = {
+                sk: this.sessionKey,
+            };
+            if(this.url.url.host !== LASTFM_HOST) {
+                this.logger.debug(`Adding ${this.user} to getInfo payload due to non-last.fm host`);
                 infoPayload.user = this.user;
             }
+            this.logger.debug(`Using sk:${redactString(this.sessionKey, 6)} in getInfo payload for auth test...`);
             const resp = await this.callApi<LastFMUserGetInfoResponse>(() => this.userApi.getInfo(infoPayload));
             if(this.user === undefined) {
                 this.user = resp.user.name;
@@ -266,6 +291,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
                 '@attr': {
                     total,
                     totalPages,
+                    perPage,
                     page
                 }
             } = {},
@@ -306,7 +332,21 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             }
         }, []);
 
-        return { data: plays, meta: { ...fetchOptions, total: parseInt(total, 10), more: fetchOptions.cursor < parseInt(totalPages, 10) } };
+        let totalNum: number | undefined;
+        // libre.fm does not return total, only perPage and totalPages
+        if(total !== undefined) {
+            if(typeof total === 'string') {
+                totalNum = parseInt(total, 10);
+            } else {
+                totalNum = total;
+            }
+        } else if(perPage !== undefined && totalPages !== undefined) {
+            const pp = typeof perPage === 'string' ? parseInt(perPage, 10) : perPage;
+            const tp = typeof totalPages === 'string' ? parseInt(totalPages, 10): totalPages;
+            totalNum = pp * tp;
+        }
+
+        return { data: plays, meta: { ...fetchOptions, total: totalNum, more: fetchOptions.cursor < parseInt(totalPages, 10) } };
 
     }
 
