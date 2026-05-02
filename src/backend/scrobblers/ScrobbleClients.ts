@@ -497,6 +497,22 @@ ${sources.join('\n')}`);
         }
     }
 
+    getPlayingNow = (source: string, scrobbleTo: string[]): PlayObject[] => {
+        let playingNow = [];
+        for (const client of this.clients) {
+            if(!client.supportsNowPlaying || !client.nowPlayingEnabled) {
+                continue;
+            }
+            if (scrobbleTo.length > 0 && !scrobbleTo.includes(client.name)) {
+                continue;
+            }
+            if(client.nowPlayingSourceAllowed(source) && client.nowPlayingLastPlay !== undefined) {
+                playingNow.push(client.nowPlayingLastPlay.play);
+            }
+        }
+        return playingNow.filter(x => x !== undefined);
+    }
+
     scrobble = async (data: (PlayObject | PlayObject[]), options: {forceRefresh?: boolean, checkTime?: Dayjs, scrobbleTo?: string[], scrobbleFrom?: string} = {}) => {
         const playObjs = Array.isArray(data) ? data : [data];
         const {

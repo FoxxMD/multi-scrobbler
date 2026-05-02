@@ -151,7 +151,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
 
     setupDeezerRoutes(app, logger, scrobbleSources);
     setupWebscrobblerRoutes(app, logger, scrobbleSources);
-    setupLZEndpointRoutes(app, logger, scrobbleSources);
+    setupLZEndpointRoutes(app, logger, scrobbleSources, scrobbleClients);
     setupLastfmEndpointRoutes(app, logger, scrobbleSources);
     setupAuthRoutes(app, logger, sourceRequiredMiddle, clientRequiredMiddle, scrobbleSources, scrobbleClients);
 

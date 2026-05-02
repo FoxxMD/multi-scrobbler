@@ -18,7 +18,7 @@ import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.js
 
 export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
 
-    api: ListenbrainzApiClient;d
+    api: ListenbrainzApiClient;
     requiresAuth = true;
     requiresAuthInteraction = false;
     getScrobblesForTimeRange: TimeRangeListensFetcher

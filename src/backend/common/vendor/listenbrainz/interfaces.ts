@@ -146,6 +146,12 @@ export interface ListenPayload {
     track_metadata: TrackPayload;
 }
 
+export interface PlayingNowPayload {
+    playing_now: true
+    track_metadata: TrackPayload;
+}
+
+
 // this is what is sent to submit-listens
 export interface SubmitPayload {
     listen_type: ListenType;
