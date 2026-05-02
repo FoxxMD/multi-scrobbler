@@ -90,7 +90,7 @@ export class WebScrobblerSource extends MemorySource {
             platformId: [play.meta.deviceId, NO_USER],
             play,
             status: WebScrobblerSource.webhookEventAsPlayerStatus(eventName),
-            timestamp: dayjs.unix(time)
+            stateUpdatedAt: dayjs.unix(time)
         }
     }
 
