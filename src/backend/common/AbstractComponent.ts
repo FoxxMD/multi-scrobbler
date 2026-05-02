@@ -220,8 +220,14 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 try {
                     // only patch play if steps didn't end in a failure that we are okay with returning partial from
                     let shouldTransform = true;
-                    const lastCachedStep = cachedSteps[cachedSteps.length - 1];
-                    if(lastCachedStep.error !== undefined && lastCachedStep.flowKnownState !== 'skip' && !lastCachedStep.returnPartial) {
+                    // CoverArtArchive (and other transformers) can produce an
+                    // empty cached step list when the API returns no result;
+                    // accessing `.error` on an undefined `lastCachedStep`
+                    // crashed the whole transform stage and poisoned the
+                    // cache for the album (#578). Treat empty cached steps
+                    // as "nothing to apply" rather than throwing.
+                    const lastCachedStep = cachedSteps.length > 0 ? cachedSteps[cachedSteps.length - 1] : undefined;
+                    if(lastCachedStep !== undefined && lastCachedStep.error !== undefined && lastCachedStep.flowKnownState !== 'skip' && !lastCachedStep.returnPartial) {
                         shouldTransform = false;
                     }
 
