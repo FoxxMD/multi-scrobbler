@@ -114,6 +114,12 @@ It means the JSON in your configuration file is not valid. Copy and paste your c
 
 ## Scrobbling Issues
 
+### How do I prevent duplicate scrobbles?
+
+Multi-scrobbler has a [robust duplicate scrobble detection system](/configuration/duplicates#how-duplicates-are-detected) that should handle this for you in the majority of usecases. If you have a [simple setup without any circular dependencies](/configuration/duplicates#valid-configs) then you are already protected against duplicates.
+
+If your scenario is more complex or you have a service(s) acting as **both** a **Client** and **Source** you should refer to the [**Duplicate Scrobble Guidance**](/configuration/duplicates#valid-configs) page to determine if you can avoid a configuration that may result in duplicate scrobbles.
+
 ### Last.fm does not scrobble tracks with multiple artists correctly
 
 This is a limitation of the [Last.fm API](https://www.last.fm/api/show/track.scrobble) where the **artist** field is only one string and Last.fm does not recognize (play well) with "combined" artists.

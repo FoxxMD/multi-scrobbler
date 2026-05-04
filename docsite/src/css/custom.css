@@ -91,3 +91,10 @@ details[class^='details_'].alert--info {
   }
 
 }
+
+/** https://stackoverflow.com/a/79808430/1469797 */
+img.image-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
