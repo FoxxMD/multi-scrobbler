@@ -785,6 +785,7 @@ export const playToRepositoryCreatePlayOpts = (data: MarkOptional<RepositoryCrea
             },
             ...playRest
         },
+        platformId,
         ...rest
     } = data;
 
@@ -804,7 +805,7 @@ export const playToRepositoryCreatePlayOpts = (data: MarkOptional<RepositoryCrea
             play: original,
             data: input
         },
-        platformId: genGroupIdStrFromPlay(data.play)
+        platformId: platformId ?? genGroupIdStrFromPlay(data.play)
     }
 }
 

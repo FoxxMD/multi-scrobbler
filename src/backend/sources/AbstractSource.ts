@@ -215,7 +215,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     protected addPlayToDiscovered = async (play: PlayObject): Promise<PlayObject> => {
         const platformId = this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID;
-        const playRow = await this.playRepo.createPlays([(playToRepositoryCreatePlayOpts({play, state: 'discovered'}))]);
+        const playRow = await this.playRepo.createPlays([(playToRepositoryCreatePlayOpts({play, state: 'discovered', platformId: genGroupIdStr(platformId)}))]);
         const recentPlays = await this.getRecentlyDiscoveredPlaysByPlatform(platformId, false);
         // only need to update if its already in memory,
         // and better to update in-memory than clear cache so we aren't refetching from db on every discover
