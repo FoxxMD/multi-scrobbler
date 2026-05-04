@@ -34,60 +34,9 @@ For each Play, MS fetches (cached) scrobbles from the Client in a time range inc
 * Temporal closeness of the Play's timestamp to the existing scrobble's timestamp
 * Whether MS detected the Play as a repeat (applicable to Sources that report realtime Player data)
 
-Detailed scoring breakdowns against each existing scrobble are logged at the `TRACE` level.
+Detailed scoring breakdowns against each existing scrobble are logged at the `TRACE` logging level or in the [debug data](/help#copy-play-debug-data) for a scrobble.
 
-<details>
-
-<summary>Detailed Explanation</summary>
-
-A **candidate** (to be scrobbled) Play is first transformed using the configured [`compare.candidate` Hook](/configuration/transforms/#hook), if any exists.
-
-Next, MS checks (up to) the last 100 scrobbles *in-memory* scrobbles that it has made. These are *not* from the Client but the actual scrobbles MS made while it has been running. The data from these scrobbles is much richer than what is usually parsed from the Client which makes it easier to detect duplicates from.
-
-If no in-memory scrobble matches then MS starts comparing the candidate against historical scrobbles fetched from an inclusive time range of the candidate's timestamp.
-
-<h3>Matching Title/Artist/Album</h3>
-
-For these string-based values MS uses an [token-order-invariant](https://github.com/FoxxMD/multi-scrobbler/blob/0dfa4c7aad6df98e13aee6d395827665c2414adb/src/backend/utils/StringUtils.ts#L299) method that scores string similarity based on a (token count) weighted average of two [similarity](https://foxxmd.github.io/string-sameness/#md:strategies) algorithms, [Levenshtien Distance](https://en.wikipedia.org/wiki/Levenshtein_distance) and [Dice's Coefficient](https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient). The weighted average ensures that very long strings (Track titles) are scored with a confidence proportional to their length.
-
-<h3>Matching Timestamp</h3>
-
-Timestamps are scored on how temporally close they are. There are four possible scores with decreasing value:
-
-* **Exact** - Timestamps are within 1 second of each other
-* **Close** - Timestamps are within `threshold` seconds of each other
-  * This is determined by the smallest update interval of Source
-    * Some Sources (subsonic) only update every 60 seconds so this is the smallest "close" value possible. Most are 10 seconds. Signified by `(Needed <10s)` in the breakdown example below.
-* **Fuzzy** - One timestamp is within `threshold` seconds of the *end* of the other timestamp
-  * Sources can set the scrobble timestamp at different times. Some do it when the track is started listening to, some when it ends, some when the *player* stops.
-  * Where possible, MS knows and keeps track of when this timestamp *should* be, for each Source. If it's not possible then Fuzzy may be allowed.
-* **None** - There is no correlation between timestamps
-
-<h3>Scoring and Breakdows</h3>
-
-A candidate Play must score >= 1 to be detected as a duplicate of an existing scrobble.
-
-Each score and a breakdown of the scores for its individual components can be see at the `TRACE` logging level or in the [debug data](/help#copy-play-debug-data) for a scrobble. An example:
-
-```
-* Artist: 0.06 * 0.3 = 0.02
-* Title: 0.04 * 0.4 = 0.02
-* Time: (Exact) 1 * 0.5 = 0.50
-  * Existing: 19:13:33-04:00 - Candidate: 19:13:33-04:00
-  * Temporal Sameness: Exact
-  * Play Diff: 0s (Needed <10s)
-  * Range Comparison N/A
-Score 0.54 => No Match
-```
-
-In each component equation, the first number is the similarity (or temporal closeness).
-
-* 0 = no correlation
-* 1 = exactly the same
-
-The second number is the *weight* of that component in the final score.
-
-</details>
+See the [**Duplicate Scrobble Guidance**](/configuration/duplicates#how-duplicates-are-detected) page to learn how duplicates are detected and how you can ensure your configuration avoids possible duplicates.
 
 ### Dead Scrobbles
 
