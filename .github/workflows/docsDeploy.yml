@@ -40,6 +40,7 @@ jobs:
 
       - name: Replace canonical
         working-directory: ./docsite/build
+        # https://stackoverflow.com/a/74211242/1469797
         run: grep '<link data-rh="true" rel="canonical" href="https://foxxmd.github.io' . -lr | xargs sed -i 's/<link data-rh="true" rel="canonical" href="https:\/\/foxxmd.github.io\/docs/<link data-rh="true" rel="canonical" href="https:\/\/docs.multi-scrobbler.app/g'
 
       # Popular action to deploy to GitHub Pages:
