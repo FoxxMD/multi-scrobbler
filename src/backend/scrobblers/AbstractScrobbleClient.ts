@@ -390,10 +390,19 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 if (this.nowPlayingLastPlay !== undefined) {
 
                     for (const [platform, data] of plays) {
-                        if (platform === this.nowPlayingLastPlay.platformId) {
+                        if (platform === this.nowPlayingLastPlay.platformId
+                            // only keep using sticky platform if it hasn't gone stale/orphaned
+                            && (!(data.player.status?.stale ?? false) && !(data.player.status?.orphaned ?? false))) {
                             return data.player;
                         }
                     }
+                }
+
+                // prefer players that are not stale/orphaned
+                let preferredPlays: typeof plays = plays.filter(([platform, data]) => !(data.player.status?.stale ?? false) && !(data.player.status?.orphaned ?? false));
+                if(preferredPlays.length === 0) {
+                    // but if there are none of these then just use whatever players are on-hand
+                    preferredPlays = plays;
                 }
 
                 // otherwise sort platform alphabetically and take first

@@ -116,7 +116,7 @@ export const playStateFromRequest = (obj: SubmitPayload): PlayerStateData => {
         platformId: [play.meta.deviceId, NO_USER],
         play,
         status: listenTypeAsPlayerStatus(listen_type),
-        timestamp: dayjs()
+        stateUpdatedAt: dayjs()
     }
 }
 

@@ -157,7 +157,7 @@ export const generatePlayerStateData = (options: Omit<PlayerStateDataMaybePlay, 
         play,
         status: options.status,
         position: options.position,
-        timestamp: options.timestamp ?? dayjs()
+        stateUpdatedAt: options.stateUpdatedAt ?? dayjs()
     }
 }
 

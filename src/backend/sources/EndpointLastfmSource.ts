@@ -92,7 +92,7 @@ export const playStateFromRequest = (obj: LastFMScrobbleRequestPayload): PlayerS
         platformId: [play.meta.deviceId, NO_USER],
         play,
         status: obj.method === 'track.updateNowPlaying' ? REPORTED_PLAYER_STATUSES.playing : REPORTED_PLAYER_STATUSES.unknown,
-        timestamp: dayjs()
+        stateUpdatedAt: dayjs()
     }
 }
 

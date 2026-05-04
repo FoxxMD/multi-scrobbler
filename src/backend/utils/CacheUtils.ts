@@ -22,7 +22,7 @@ export const rehydratePlay = (obj: AmbPlayObject): PlayObject => {
         }
     }
     if(obj.data.listenRanges !== undefined) {
-        obj.data.listenRanges = obj.data.listenRanges.map(rehydrateListenRangeData);
+        obj.data.listenRanges = obj.data.listenRanges.map(rehydrateListenRangeData).filter(x => x !== undefined);
     }
     return obj as PlayObject;
 }
@@ -30,6 +30,10 @@ export const rehydratePlay = (obj: AmbPlayObject): PlayObject => {
 // this may become problematic since we aren't re-instantiating Progress class, just implementing interface
 // but that may only be an issue if rehydrating source data which isn't in scope so far
 export const rehydrateListenRangeData = (obj: ListenRangeDataAmb): ListenRangeData => {
+    // workaround for incompatible rehydration
+    if(obj.start === undefined || obj.end === undefined) {
+        return undefined;
+    }
     return {
         start: rehydratePlayProgress(obj.start),
         end: rehydratePlayProgress(obj.end)
