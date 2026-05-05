@@ -330,45 +330,43 @@ export default class DeezerInternalSource extends MemorySource {
 
 
     existingDiscovered = async (play: PlayObject, opts: {checkAll?: boolean} = {}): Promise<PlayObject | undefined> => {
-        const lists: PlayObject[][] = await this.getExistingDiscoveredLists(play, opts);
+        const list: PlayObject[] = await this.getRecentlyDiscoveredPlays();
         const candidate = await this.transformPlay(play, TRANSFORM_HOOK.candidate);
-        for(const list of lists) {
-            const existing = await findAsync(list, async x => {
+        const existing = await findAsync(list, async x => {
+            const e = await this.transformPlay(x, TRANSFORM_HOOK.existing);
+            return genericSourcePlayMatch(e, candidate);
+        });
+        if(existing) {
+            return existing;
+        }
+        if(this.config.options?.fuzzyDiscoveryIgnore === true || this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {
+            const fuzzyIndex = await findIndexAsync(list, async x => {
                 const e = await this.transformPlay(x, TRANSFORM_HOOK.existing);
-                return genericSourcePlayMatch(e, candidate);
+                let temporalOptions: TemporalPlayComparisonOptions = {};
+                const temporalAccuracy: TemporalAccuracy[] = [TA_EXACT, TA_CLOSE, TA_FUZZY];
+                if(this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {
+                    temporalOptions = {
+                        fuzzyDiffThreshold: Math.max(100, x.data.duration * 0.5),
+                        duringReferences: ['duration', 'listenedFor', 'range']
+                    }
+                    temporalAccuracy.push(TA_DURING);
+                }
+                return genericSourcePlayMatch(e, candidate, temporalAccuracy, temporalOptions);
             });
-            if(existing) {
-                return existing;
-            }
-            if(this.config.options?.fuzzyDiscoveryIgnore === true || this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {
-                const fuzzyIndex = await findIndexAsync(list, async x => {
-                    const e = await this.transformPlay(x, TRANSFORM_HOOK.existing);
-                    let temporalOptions: TemporalPlayComparisonOptions = {};
-                    const temporalAccuracy: TemporalAccuracy[] = [TA_EXACT, TA_CLOSE, TA_FUZZY];
-                    if(this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {
-                        temporalOptions = {
-                            fuzzyDiffThreshold: Math.max(100, x.data.duration * 0.5),
-                            duringReferences: ['duration', 'listenedFor', 'range']
-                        }
-                        temporalAccuracy.push(TA_DURING);
-                    }
-                    return genericSourcePlayMatch(e, candidate, temporalAccuracy, temporalOptions);
-                });
-                if(fuzzyIndex !== -1) {
-                    if(this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {
-                        // always return fuzzy match as existing
-                        // likely will make MS miss scrobbles for repeated plays
-                        return list[fuzzyIndex];
-                    }
-                    if(fuzzyIndex + 1 === list.length || playObjDataMatch(list[fuzzyIndex], list[fuzzyIndex + 1])) {
-                        // last discovered play was this one, or next played play was also this one
-                        // so we'll assume this means the play is on repeat, don't count as existing
-                        return undefined;
-                    }
-                    // next played play was *not* this one (Deezer reports play between candidate TS and fuzzy match)
-                    // so this is likely a duplicate deezer should not have reported
+            if(fuzzyIndex !== -1) {
+                if(this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {
+                    // always return fuzzy match as existing
+                    // likely will make MS miss scrobbles for repeated plays
                     return list[fuzzyIndex];
                 }
+                if(fuzzyIndex + 1 === list.length || playObjDataMatch(list[fuzzyIndex], list[fuzzyIndex + 1])) {
+                    // last discovered play was this one, or next played play was also this one
+                    // so we'll assume this means the play is on repeat, don't count as existing
+                    return undefined;
+                }
+                // next played play was *not* this one (Deezer reports play between candidate TS and fuzzy match)
+                // so this is likely a duplicate deezer should not have reported
+                return list[fuzzyIndex];
             }
         }
         return undefined;

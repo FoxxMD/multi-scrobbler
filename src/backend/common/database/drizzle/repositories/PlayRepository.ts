@@ -30,7 +30,6 @@ export interface PlayWhereOpts {
     state?: PlaySelect['state'][]
     stateNot?: PlaySelect['state'][]
     componentId?: number
-    platformId?: string
     seenAt?: CompareDateOp
     playedAt?: CompareDateOp
     queues?: QueueCriteria[]
@@ -380,22 +379,6 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         loggerCom.verbose(`Cleanup done! Summary:\n${summaryDelStates.join(' | ')}`);
     }
 
-    public selectRecentDistinctPlatforms = async (limitPlays: number = 500, opts: ComponentConstrainedRepoOpts = {}): Promise<string[]> => {
-        const {
-            componentId = this.componentId
-        } = opts;
-
-        const recentPlatformIds = await this.db.selectDistinct({platformId: plays.platformId}).from(plays)
-        .where(
-            and(
-                eq(plays.componentId, componentId),
-                ne(plays.state, 'queued'))
-        )
-        .orderBy(desc(plays.playedAt))
-        .limit(limitPlays);
-        return recentPlatformIds.map(x => x.platformId);
-    }
-
     protected prepareGetQueueNext = () => this.db.query.plays.findFirst({
         where: {
             componentId: sql.placeholder('componentId'),
@@ -732,9 +715,6 @@ export const buildPlayWhere = (args: PlayWhereOpts): FindWhere<'plays'> => {
     if (args.playedAt !== undefined) {
         where.playedAt = buildDateCompare(args.playedAt);
     }
-    if(args.platformId !== undefined) {
-        where.platformId = args.platformId
-    }
     if(args.uid !== undefined) {
         where.uid = {
             in: args.uid
@@ -785,7 +765,6 @@ export const playToRepositoryCreatePlayOpts = (data: MarkOptional<RepositoryCrea
             },
             ...playRest
         },
-        platformId,
         ...rest
     } = data;
 
@@ -804,12 +783,11 @@ export const playToRepositoryCreatePlayOpts = (data: MarkOptional<RepositoryCrea
         input: {
             play: original,
             data: input
-        },
-        platformId: platformId ?? genGroupIdStrFromPlay(data.play)
+        }
     }
 }
 
-export type RequestPlayQuery = Partial< Record<keyof Exclude<QueryPlaysOpts, 'componentId' | 'platformId'>, string>>;
+export type RequestPlayQuery = Partial< Record<keyof Exclude<QueryPlaysOpts, 'componentId'>, string>>;
 
 export const queryArgsFromRequest = (rec: RequestPlayQuery): QueryPlaysOpts => {
 

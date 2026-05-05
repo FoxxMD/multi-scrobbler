@@ -214,19 +214,14 @@ export default abstract class AbstractSource extends AbstractComponent implement
     recentlyPlayedTrackIsValid = (playObj: PlayObject) => true
 
     protected addPlayToDiscovered = async (play: PlayObject): Promise<PlayObject> => {
-        const platformId = this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID;
-        const playRow = await this.playRepo.createPlays([(playToRepositoryCreatePlayOpts({play, state: 'discovered', platformId: genGroupIdStr(platformId)}))]);
-        const recentPlays = await this.getRecentlyDiscoveredPlaysByPlatform(platformId, false);
+        const playRow = await this.playRepo.createPlays([(playToRepositoryCreatePlayOpts({play, state: 'discovered'}))]);
+        const recentPlays = await this.getRecentlyDiscoveredPlays(false);
         // only need to update if its already in memory,
         // and better to update in-memory than clear cache so we aren't refetching from db on every discover
         if(recentPlays !== undefined) {
             recentPlays.push(play);
             recentPlays.sort(sortByOldestPlayDate);
-            this.cache.cacheDb.set(this.recentDiscoveredCacheKey(platformId), recentPlays, '2m');
-        }
-        const platformIds = await this.getRecentPlatformIds(false);
-        if(platformIds !== undefined && !platformIds.includes(genGroupIdStr(platformId))) {
-            this.cache.cacheDb.set(this.recentPlatformsCacheKey(), platformIds, '10m');
+            this.cache.cacheDb.set(this.recentDiscoveredCacheKey(), recentPlays, '2m');
         }
         this.tracksDiscovered++;
         this.logger.info(`Discovered => ${buildTrackString(play)}`);
@@ -238,13 +233,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
     }
 
     getFlatRecentlyDiscoveredPlays = async (): Promise<PlayObject[]> => {
-        const platforms = await this.getRecentPlatformIds();
-        const list: PlayObject[][] = [];
-        for(const platformId of platforms) {
-            list.push(await this.getRecentlyDiscoveredPlaysByPlatform(platformId));
-        }
-        return list.flat().sort(sortByNewestPlayDate);
-        //Array.from(this.recentDiscoveredPlays.values()).map(x => x.data).flat(3).sort(sortByNewestPlayDate)
+        const list: PlayObject[] = await this.getRecentlyDiscoveredPlays();
+        return list.sort(sortByNewestPlayDate);
     }
 
     getRecentPlaysApi = async (query: RequestPlayQuery) => {
@@ -258,23 +248,15 @@ export default abstract class AbstractSource extends AbstractComponent implement
         })
     }
 
-    protected recentDiscoveredCacheKey = (platformId: PlayPlatformId | string) => {
-        const platformStr = typeof platformId === 'string' ? platformId : genGroupIdStr(platformId);
-        return `recent-${this.dbComponent.id}-${platformStr}`;
-    }
-    protected recentPlatformsCacheKey = () => {
-        return `recentPlatformIds-${this.dbComponent.id}`;
+    protected recentDiscoveredCacheKey = () => {
+        return `recent-${this.dbComponent.id}`;
     }
 
-    getRecentlyDiscoveredPlaysByPlatform = async (platformId: PlayPlatformId | string, hydrate: boolean = true): Promise<PlayObject[]> => {
-
-        const platformStr = typeof platformId === 'string' ? platformId : genGroupIdStr(platformId);
-        const cacheKey = this.recentDiscoveredCacheKey(platformId);
-
+    getRecentlyDiscoveredPlays = async (hydrate: boolean = true): Promise<PlayObject[]> => {
+        const cacheKey = this.recentDiscoveredCacheKey();
         let list = await this.cache.cacheDb.get<PlayObject[]>(cacheKey);
         if(list === undefined && hydrate) {
             list = (await this.playRepo.findPlays({
-                platformId: platformStr,
                 stateNot: ['queued'],
                 order: 'desc',
                 sort: 'playedAt',
@@ -286,49 +268,16 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return list;
     }
 
-    protected getRecentPlatformIds = async (hydrate: boolean = true) => {
-        const cacheKey = this.recentPlatformsCacheKey();
-        let list = await this.cache.cacheDb.get<string[]>(cacheKey);
-        if(list === undefined && hydrate) {
-            list = await this.playRepo.selectRecentDistinctPlatforms();
-            await this.cache.cacheDb.set<string[]>(cacheKey, list, '10m');
-        }
-        return list;
-    }
-
-    protected getExistingDiscoveredLists = async (play: PlayObject, opts: {checkAll?: boolean} = {}): Promise<PlayObject[][]> => {
-        const lists: PlayObject[][] = [];
-        if(opts.checkAll !== true) {
-            lists.push(await this.getRecentlyDiscoveredPlaysByPlatform(this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID));
-        } else {
-            const platforms = await this.getRecentPlatformIds();
-            // get as many as we can, optionally filtering by user
-            for(const platformId of platforms) {
-                if(play.meta.user !== undefined) {
-                    if(platformId[1] === NO_USER || platformId[1] === play.meta.user) {
-                        lists.push(await this.getRecentlyDiscoveredPlaysByPlatform(platformId));
-                    }
-                } else {
-                    lists.push(await this.getRecentlyDiscoveredPlaysByPlatform(platformId));
-                }
-            }
-        }
-        return lists;
-    }
-
     existingDiscovered = async (play: PlayObject, opts: {checkAll?: boolean} = {}): Promise<PlayObject | undefined> => {
-        const lists: PlayObject[][] = await this.getExistingDiscoveredLists(play, opts);
+        const list: PlayObject[] = await this.getRecentlyDiscoveredPlays();
         const candidate = await this.transformPlay(play, TRANSFORM_HOOK.candidate);
-        for(const list of lists) {
-            
-            const existing = await findAsync(list,async x => {
+                const existing = await findAsync(list,async x => {
                 const e = await this.transformPlay(x, TRANSFORM_HOOK.existing);
                 return genericSourcePlayMatch(e, candidate);
             });
             if(existing) {
                 return existing;
             }
-        }
         return undefined;
     }
 
