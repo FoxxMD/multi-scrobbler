@@ -2,7 +2,7 @@ import { childLogger, LogDataPretty, LogLevel } from '@foxxmd/logging';
 import dayjs, { Dayjs } from "dayjs";
 import { EventEmitter } from "events";
 import { FixedSizeList } from "fixed-size-list";
-import { JsonPlayObject, PlayObject } from "../../core/Atomic.js";
+import { JsonPlayObject, PlayMatchResult, PlayObject } from "../../core/Atomic.js";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
 import AbstractComponent from "../common/AbstractComponent.js";
 import {
@@ -39,7 +39,7 @@ import { getRoot } from '../ioc.js';
 import { componentFileLogger } from '../common/logging.js';
 import { WebhookPayload } from '../common/infrastructure/config/health/webhooks.js';
 import { isAbortReasonErrorLike, messageWithCauses, messageWithCausesTruncatedDefault } from '../utils/ErrorUtils.js';
-import { genericSourcePlayMatch } from '../utils/PlayComparisonUtils.js';
+import { existingScrobble, ExistingScrobbleOpts, genericSourcePlayMatch } from '../utils/PlayComparisonUtils.js';
 import { findAsync, staggerMapper, StaggerOptions } from '../utils/AsyncUtils.js';
 import pMap, {pMapIterable} from 'p-map';
 import prom, { Counter, Gauge } from 'prom-client';
@@ -109,6 +109,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     protected playRepo: DrizzlePlayRepository;
 
+    existingDiscoveredPlay: (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => Promise<PlayMatchResult>
+
     constructor(type: SourceType, name: string, config: SourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super(config);
         this.componentType = 'source';
@@ -127,6 +129,15 @@ export default abstract class AbstractSource extends AbstractComponent implement
         
         this.discoveredCounter = getRoot().items.sourceMetics.discovered;
         this.playRepo = new DrizzlePlayRepository(this.db, {logger: this.logger});
+
+        const existingScrobbleOpts: ExistingScrobbleOpts = {
+            logger: this.logger,
+            transformRules: this.transformRules,
+            transformPlay: this.transformPlay,
+            existingSubmitted: async (_) => [undefined, undefined]
+        }
+        this.existingDiscoveredPlay = (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => existingScrobble(playObjPre, existingScrobbles, existingScrobbleOpts, log);
+            
     }
 
     async [Symbol.asyncDispose]() {
@@ -270,20 +281,11 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     existingDiscovered = async (play: PlayObject): Promise<PlayObject | undefined> => {
         const list: PlayObject[] = await this.getRecentlyDiscoveredPlays();
-        const candidate = await this.transformPlay(play, TRANSFORM_HOOK.candidate);
-                const existing = await findAsync(list,async x => {
-                const e = await this.transformPlay(x, TRANSFORM_HOOK.existing);
-                return genericSourcePlayMatch(e, candidate);
-            });
-            if(existing) {
-                return existing;
-            }
+        const matchResults = await this.existingDiscoveredPlay(play, list);
+        if(matchResults.match) {
+            return matchResults.closestMatchedPlay;
+        }
         return undefined;
-    }
-
-    alreadyDiscovered = async (play: PlayObject, opts: {checkAll?: boolean} = {}): Promise<boolean> => {
-        const existing = await this.existingDiscovered(play);
-        return existing !== undefined;
     }
 
     discover = async (plays: PlayObject[], options: { checkAll?: boolean, signal?: AbortSignal, [key: string]: any } = {}): Promise<PlayObject[]> => {
