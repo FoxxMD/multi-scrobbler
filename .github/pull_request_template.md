@@ -1,6 +1,6 @@
 ## Checklist before requesting a review
 
-- [ ] I have read the [contributing guidelines.](../CONTRIBUTING.md)
+- [ ] I have read the [contributing guidelines.](../blob/master/CONTRIBUTING.md)
 
 ## Type of change
 
