@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "6daeb8f1-16a7-46c7-907b-9474e8a3ced0",
+  "id": "48966f21-b4ad-4399-b9a1-8852f8460808",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -209,6 +209,16 @@
       "default": null,
       "generated": null,
       "name": "seenAt",
+      "entityType": "columns",
+      "table": "plays"
+    },
+    {
+      "type": "number",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updatedAt",
       "entityType": "columns",
       "table": "plays"
     },

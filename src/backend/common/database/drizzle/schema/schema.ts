@@ -57,6 +57,7 @@ export const plays = sqliteTable("plays", {
   error: text({ mode: 'json' }).$type<ErrorLike>(),
   playedAt: DayjsTimestamp('playedAt'),
   seenAt: DayjsTimestamp('seenAt'),
+  updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs()),
   play: PlayJson('play').notNull(), //  text({ mode: 'json' }).notNull().$type<PlayObject>(),
   state: text({enum: ['queued','discovered','discarded','scrobbled','failed','duped']}).notNull(),
   // https://orm.drizzle.team/docs/indexes-constraints#foreign-key

@@ -268,7 +268,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return list;
     }
 
-    existingDiscovered = async (play: PlayObject, opts: {checkAll?: boolean} = {}): Promise<PlayObject | undefined> => {
+    existingDiscovered = async (play: PlayObject): Promise<PlayObject | undefined> => {
         const list: PlayObject[] = await this.getRecentlyDiscoveredPlays();
         const candidate = await this.transformPlay(play, TRANSFORM_HOOK.candidate);
                 const existing = await findAsync(list,async x => {
@@ -282,7 +282,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     }
 
     alreadyDiscovered = async (play: PlayObject, opts: {checkAll?: boolean} = {}): Promise<boolean> => {
-        const existing = await this.existingDiscovered(play, opts);
+        const existing = await this.existingDiscovered(play);
         return existing !== undefined;
     }
 
@@ -291,10 +291,13 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
         for await(const play of pMapIterable(plays, this.staggerMappers.preCompare(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 3})) {
             options.signal?.throwIfAborted();
-            if(!(await this.alreadyDiscovered(play, options))) {
+            const existing = await this.existingDiscovered(play);
+            if(existing === undefined) {
                 options.signal?.throwIfAborted()
                 const hydratedPlay = await this.addPlayToDiscovered(play);
                 newDiscoveredPlays.push(hydratedPlay);
+            } else {
+                this.playRepo.updateById(existing.id, {updatedAt: dayjs()});
             }
         }
         if(newDiscoveredPlays.length > 0) {

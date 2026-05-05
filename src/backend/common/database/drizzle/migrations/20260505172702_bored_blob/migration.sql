@@ -25,6 +25,7 @@ CREATE TABLE `plays` (
 	`error` text,
 	`playedAt` number,
 	`seenAt` number,
+	`updatedAt` number NOT NULL,
 	`play` text NOT NULL,
 	`state` text NOT NULL,
 	`parentId` integer,

@@ -211,19 +211,20 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         await this.db.delete(plays).where(inArray(plays.id, ids));
     }
 
-    findPurgablePlayIds = async (olderThanDate: Dayjs, opts: { states?: PlaySelect['state'][], compacted?: string } & ComponentConstrainedRepoOpts = {}): Promise<number[]> => {
+    findPurgablePlayIds = async (olderThanDate: Dayjs, opts: { states?: PlaySelect['state'][], compacted?: string, dateComparer?: 'updatedAt' | 'seenAt' } & ComponentConstrainedRepoOpts = {}): Promise<number[]> => {
 
         const {
             states,
             compacted,
-            componentId = this.componentId
+            componentId = this.componentId,
+            dateComparer = 'updatedAt'
         } = opts;
 
         let where: FindWhere<'plays'> = {
             component: {
                 id: componentId
             },
-            seenAt: {
+            [dateComparer]: {
                 lte: olderThanDate
             },
             NOT: {
@@ -328,7 +329,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                     state = retentionType;
                 }
                 loggerCom.trace(`Finding '${retentionType}' plays older than ${shortTodayAwareFormat(date)}...`);
-                const ids = await this.findPurgablePlayIds(date, {compacted: compactedFlags.join('-'), states: [state], componentId: retentionOpts.componentId});
+                const ids = await this.findPurgablePlayIds(date, {compacted: compactedFlags.join('-'), states: [state], dateComparer: 'seenAt', componentId: retentionOpts.componentId});
                 loggerCom.trace(`Found ${ids.length} '${retentionType}' plays`);
                 if(ids.length === 0) {
                     summaryDelStates.push(`No '${retentionType}' Plays older than ${shortTodayAwareFormat(date)}`);
@@ -336,7 +337,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                     for(const id of ids) {
                         let compactedPlay: PlayObject;
                         if(compactTypes.includes('input')) {
-                            this.db.update(playInputs).set({
+                            await this.db.update(playInputs).set({
                                 data: {removedReason: 'Removed by compaction'}
                             }).where(eq(playInputs.playId, id));
                         }
@@ -348,7 +349,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                                 continue;
                             }
 
-                            const compactedPlay: PlayObject = playRow.play;
+                            compactedPlay = playRow.play;
                             compactedPlay.meta.lifecycle.steps = compactedPlay.meta.lifecycle.steps.map(x => {
                                 if(x.inputs == undefined) {
                                     return x;
@@ -364,11 +365,9 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                         if(compactedPlay !== undefined) {
                             vals.play = compactedPlay;
                         }
-                        this.db.update(plays).set(vals)
+                        await this.db.update(plays).set(vals).where(eq(plays.id, id));
                     }
                     loggerCom.trace(`Compacted ${ids.length} '${retentionType}' plays`);
-                    await this.deletePlays(ids);
-                    loggerCom.trace(`'${retentionType}' plays deleted!`);
                     summaryCompactStates.push(`${ids.length} '${retentionType}' Plays older than ${shortTodayAwareFormat(date)}`)
                 }
             } catch (e) {
