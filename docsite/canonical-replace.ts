@@ -4,7 +4,7 @@ import path from 'node:path';
 
 var args = process.argv.slice(2);
 
-const linkRegex = new RegExp(/<link data-rh="true" rel="\w+"\shref="(https:\/\/foxxmd\.github\.io\/docs)/g,);
+const linkRegex = new RegExp(/<link data-rh="true" rel="\w+"\shref="(https:\/\/foxxmd\.github\.io\/multi-scrobbler)/g,);
 const replacement = process.env.CANONICAL_HREF ?? 'https://docs.multi-scrobbler.app';
 
 /**
