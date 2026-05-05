@@ -28,7 +28,6 @@ CREATE TABLE `plays` (
 	`play` text NOT NULL,
 	`state` text NOT NULL,
 	`parentId` integer,
-	`platformId` text,
 	`playHash` text,
 	`mbidIdentifier` text,
 	`compacted` text,
@@ -57,5 +56,4 @@ CREATE INDEX `play_component_id_idx` ON `plays` (`componentId`);--> statement-br
 CREATE UNIQUE INDEX `play_uid_idx` ON `plays` (`uid`);--> statement-breakpoint
 CREATE INDEX `play_playedAt_idx` ON `plays` (`playedAt`);--> statement-breakpoint
 CREATE INDEX `play_seenAt_idx` ON `plays` (`seenAt`);--> statement-breakpoint
-CREATE INDEX `play_platform_idx` ON `plays` (`platformId`);--> statement-breakpoint
 CREATE INDEX `play_queue_state_id_idx` ON `play_queue_states` (`playId`);
