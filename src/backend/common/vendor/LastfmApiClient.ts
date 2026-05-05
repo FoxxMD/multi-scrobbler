@@ -18,6 +18,7 @@ import { IncomingMessage } from "http";
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.js";
 import { ScrobbleSubmitError, SimpleError } from "../errors/MSErrors.js";
 import { redactString } from "@foxxmd/redact-string";
+import dns from 'node:dns/promises';
 
 const badErrors = [
     'api key suspended',
@@ -226,7 +227,11 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
 
     testConnection = async() => {
         try {
-            await isPortReachableConnect(this.url.port, { host: this.url.url.hostname });
+            this.logger.trace(`Looking up IP for ${this.url.url.hostname}`);
+            const resolved = await dns.lookup(this.url.url.hostname);
+            this.logger.trace(`${this.url.url.hostname} resolved to ${resolved.address}`);
+            this.logger.trace(`Checking if ${this.url.url.hostname}:${this.url.port} is reachable...`);
+            await isPortReachableConnect(this.url.port, { host: this.url.url.hostname, timeout: 2000 });
             this.logger.verbose(`${this.url.url.hostname}:${this.url.port} is reachable.`);
             return true;
         } catch (e) {
