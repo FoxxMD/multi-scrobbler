@@ -118,8 +118,6 @@ RUN npm ci --omit=dev --no-audit \
     && npm uninstall ts-json-schema-generator \
     && npm cache clean --force \
     && chown -R abc:abc node_modules \
-    # added superflously https://github.com/Borewit/rate-limit-threshold/issues/110
-    && rm -R node_modules/@biomejs \
     && npx @usex/prune-mod -w \
     && rm -rf /root/.cache
 

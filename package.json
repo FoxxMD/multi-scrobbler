@@ -227,6 +227,9 @@
   "overrides": {
     "spotify-web-api-node": {
       "superagent": "$superagent"
+    },
+    "musicbrainz-api": {
+      "rate-limit-threshold": "0.2.1"
     }
   }
 }
