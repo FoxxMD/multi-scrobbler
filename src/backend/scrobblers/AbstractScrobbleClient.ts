@@ -864,7 +864,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         //     this.logger.trace('Nothing queued');
         //     return;
         // }
-        this.logger.trace('processing next');
         await this.handleQueuedScrobbleRanges();
         if (!this.upstreamRefresh.refreshEnabled) {
             // TODO add signal for this to scrobble match
