@@ -301,5 +301,9 @@ export const findDelimiters = (str: string, delimiters = DELIMITERS) => {
         return undefined;
     }
     return found;
-};export const containsDelimiters = (str: string) => null !== str.match(/[,&/\\]+/i);
+};
 
+export const containsDelimiters = (str: string) => null !== str.match(/[,&/\\]+/i);
+
+const NUMBERS_REGEX = new RegExp(/^\s*\d+\s*$/);
+export const stringIsOnlyNumbers = (str: string) => NUMBERS_REGEX.test(str);

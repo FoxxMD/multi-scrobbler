@@ -17,7 +17,7 @@ import {
     TemporalPlayComparison,
     UnixTimestamp,
 } from "../../core/Atomic.js";
-import { capitalize } from "../../core/StringUtils.js";
+import { capitalize, stringIsOnlyNumbers } from "../../core/StringUtils.js";
 import {
     DEFAULT_CLOSE_POSITION_ABSOLUTE,
     DEFAULT_CLOSE_POSITION_PERCENT,
@@ -458,7 +458,7 @@ export const parseDurationFromDurationValue = (val: DurationValue): Duration => 
     if(typeof val === 'number') {
         return dayjs.duration(val, 'seconds');
     }
-    if(!isNaN(Number.parseInt(val))) {
+    if(stringIsOnlyNumbers(val) && !isNaN(Number.parseInt(val))) {
         return dayjs.duration(Number.parseInt(val), 'seconds');
     }
 
