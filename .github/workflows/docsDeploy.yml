@@ -39,9 +39,8 @@ jobs:
         working-directory: ./docsite
 
       - name: Replace canonical
-        working-directory: ./docsite/build
-        # https://stackoverflow.com/a/74211242/1469797
-        run: grep '<link data-rh="true" rel="canonical" href="https://foxxmd.github.io' . -lr | xargs sed -i 's/<link data-rh="true" rel="canonical" href="https:\/\/foxxmd.github.io\/docs/<link data-rh="true" rel="canonical" href="https:\/\/docs.multi-scrobbler.app/g'
+        working-directory: ./docsite
+        run: node --experimental-strip-types canonical-replace.ts ./build
 
       # Popular action to deploy to GitHub Pages:
       # Docs: https://github.com/peaceiris/actions-gh-pages#%EF%B8%8F-docusaurus
