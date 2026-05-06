@@ -520,7 +520,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
                         platformId: [combinePartsToString([shortDeviceId(device.id), device.name]), NO_USER],
                         status,
                         play: item !== null && item !== undefined ? SpotifySource.formatPlayObj(res.body, {newFromSource: true}) : undefined,
-                        stateUpdatedAt: dayjs(timestamp),
+                        stateUpdatedAt: dayjs(),
                         position: progress_ms !== null && progress_ms !== undefined ? progress_ms / 1000 : undefined,
                     }
                 }
