@@ -1,4 +1,4 @@
-import { Logger } from "@foxxmd/logging";
+import { Logger, LogLevel } from "@foxxmd/logging";
 import EventEmitter from "events";
 import { PlayMatchResult, PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
 import { CALCULATED_PLAYER_STATUSES, FormatPlayObjectOptions, REPORTED_PLAYER_STATUSES, ReportedPlayerStatus, SINGLE_USER_PLATFORM_ID_STR, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
@@ -156,34 +156,33 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    shouldUpdatePlayingNowPlatformSpecific = async (data: SourcePlayerObj) => {
+    shouldUpdatePlayingNowPlatformSpecific = async (data: SourcePlayerObj): Promise<[boolean, string?, LogLevel?]> => {
         if ([CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused, CALCULATED_PLAYER_STATUSES.playing].includes(data.status.calculated as ReportedPlayerStatus)
             || (data.nowPlayingMode && !CALCULATED_PLAYER_STATUSES.stopped)
             || data.status.stale) {
 
             const [sendOk, reasons, level = 'warn'] = await this.api.checkOkToSend();
             if (!sendOk) {
-                this.npLogger[level](`Cannot update playing now because api client is ${reasons}`);
-                return false;
+                return [false, `Cannot update playing now because api client is ${reasons}`, level as LogLevel];
             }
 
             if(this.api instanceof DiscordWSClient) {
                 const [allowed, reason] = this.api.presenceIsAllowed();
                 if(!allowed) {
                     this.npLogger.debug(reason);
+                    return [false, reason];
                 }
-
-                return true;
             }
 
-            return true;
+            return [true];
         } else {
             if(!data.nowPlayingMode && ![CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused, CALCULATED_PLAYER_STATUSES.playing].includes(data.status.calculated as ReportedPlayerStatus)) {
-                this.npLogger.trace(`Will not update because player is not in state: stopped | paused | playing => Found '${data.status.calculated }'`);
+                return [false,`player is not in state: stopped | paused | playing => Found '${data.status.calculated }'`];
             } else if(data.nowPlayingMode && CALCULATED_PLAYER_STATUSES.stopped) {
                 this.npLogger.trace(`Will not update because now playing player is stopped => Found ${data.status.calculated}`);
+                return [false,`playing player is stopped => Found ${data.status.calculated}` ]
             } else {
-                this.npLogger.trace('Will not update because now player is in an unexpected state for discord usage');
+                return [false, 'player is in an unexpected state for discord usage']
             }
         }
     }

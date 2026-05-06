@@ -1,4 +1,4 @@
-import { childLogger, Logger } from "@foxxmd/logging";
+import { childLogger, Logger, LogLevel } from "@foxxmd/logging";
 import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
 import { FixedSizeList } from 'fixed-size-list';
@@ -1041,10 +1041,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             if(nextQueued !== undefined) {
                 while(nextQueued !== undefined) {
                     const [scrobbled, dead] = await this.processDeadLetterScrobble(nextQueued.uid, signal);
-                await sleep(this.scrobbleSleep);
-                if(scrobbled) {
-                    removedIds.push(dead.id);
-                }
+                    await sleep(this.scrobbleSleep);
+                    if(scrobbled) {
+                        removedIds.push(dead.id);
+                    }
                     nextQueued = await this.playRepo.getQueueNext(CLIENT_DEAD_QUEUE, {retries});
                 }
             }
@@ -1077,8 +1077,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         
         let deadQueueState: QueueStateSelect;
         let deadScrobble: PlaySelectWithQueueStates = await this.playRepo.findByUid(uid, {hydrate: ['asPlay']});
-            if(deadScrobble === undefined) {
-                throw new Error(`Play ${uid} does not exist for ${this.name}`);
+        if(deadScrobble === undefined) {
+            throw new Error(`Play ${uid} does not exist for ${this.name}`);
         }
         deadQueueState = deadScrobble.queueStates.find(x => x.queueName === CLIENT_DEAD_QUEUE && x.queueStatus === 'queued');
         if(deadQueueState === undefined) {
@@ -1354,10 +1354,25 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             if(sourcePlayerData === undefined) {
                 return;
             }
-            if(this.shouldUpdatePlayingNow(sourcePlayerData) && (await this.shouldUpdatePlayingNowPlatformSpecific(sourcePlayerData))) {
+            let shouldUpdate: boolean,
+            clientReason: string | undefined;
+            const [npUpdateTop, npUpdateTopReason] = this.shouldUpdatePlayingNowResult(sourcePlayerData);
+            shouldUpdate = npUpdateTop;
+            if(!npUpdateTop) {
+                this.npLogger.trace(`Not updating because ${npUpdateTopReason}`);
+            } else {
+                const [clientUpdate, clientUpdateReason, level] = await this.shouldUpdatePlayingNowPlatformSpecific(sourcePlayerData);
+                clientReason = clientUpdateReason;
+                shouldUpdate = clientUpdate;
+                if(!clientUpdate) {
+                    this.npLogger[level ?? 'trace'](`Not updating, ${npUpdateTopReason} --BUT-- ${clientUpdateReason}`);
+                }
+            }
+            if(shouldUpdate) {
+                this.npLogger.verbose(`Updating because ${npUpdateTopReason}${clientReason !== undefined ? ` --AND-- ${clientReason}` : ''}`);
                 try {
                     await this.doPlayingNow(sourcePlayerData);
-                    this.npLogger.debug(`Now Playing updated.`);
+                    this.npLogger.trace(`Now Playing updated.`);
                     this.emitEvent('nowPlayingUpdated', sourcePlayerData);
                 } catch (e) {
                     this.npLogger.warn(new Error('Error occurred while trying to update upstream Client, will ignore', {cause: e}));
@@ -1369,12 +1384,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
     }
 
-    shouldUpdatePlayingNow = (data: SourcePlayerObj): boolean => {
+    shouldUpdatePlayingNowResult = (data: SourcePlayerObj): [boolean, string?] => {
         if(this.nowPlayingLastPlay === undefined || this.nowPlayingLastUpdated === undefined) {
-            if(isDebugMode()) {
-                this.npLogger.debug(`Now Playing has not yet been set! Should update`);
-            }
-            return true;
+            return [true, 'Now Playing has not yet been set'];
         }
 
         const lastUpdateDiff = Math.abs(dayjs().diff(this.nowPlayingLastUpdated, 's'));
@@ -1387,28 +1399,23 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         // update if play *has* changed and time since last update is greater than min interval
         // this prevents spamming scrobbler API with updates if user is skipping tracks and source updates frequently
         if(this.nowPlayingMinThreshold(data.play) < lastUpdateDiff && (playExistingDiscrepancy || playerStatusChanged || (bothPlaysExist && !playObjDataMatch(data.play, this.nowPlayingLastPlay.play)))) {
-            if(isDebugMode()) {
-                this.npLogger.debug(`New Play differs from previous Now Playing and time since update ${lastUpdateDiff}s, greater than threshold ${this.nowPlayingMinThreshold(data.play)}. Should update`);
-            }
-            return true;
+            return [true, `New Play differs from previous Now Playing and time since update ${lastUpdateDiff}s, greater than threshold ${this.nowPlayingMinThreshold(data.play)}`];
         }
         // update if play *has not* changed but last update is greater than max interval
         // this keeps scrobbler Now Playing fresh ("active" indicator) in the event play is long
         if(this.nowPlayingMaxThreshold(data.play) < lastUpdateDiff && (bothPlaysExist && playObjDataMatch(data.play, this.nowPlayingLastPlay.play))) {
-            if(isDebugMode()) {
-                this.npLogger.debug(`Now Playing last updated ${lastUpdateDiff}s ago, greater than threshold ${this.nowPlayingMaxThreshold(data.play)}s. Should update`);
-            }
-            return true;
+            return [true, `Now Playing last updated ${lastUpdateDiff}s ago, greater than threshold ${this.nowPlayingMaxThreshold(data.play)}s`];
         }
 
-        if(isDebugMode()) {
-            this.npLogger.debug(`Now Playing ${bothPlaysExist && playObjDataMatch(data.play, this.nowPlayingLastPlay.play) ? 'matches' : 'does not match'} and was last updated ${lastUpdateDiff}s ago (threshold ${this.nowPlayingMaxThreshold(data.play)}s), not updating`);
-        }
-        return false;
+        return [false, `Now Playing ${bothPlaysExist && playObjDataMatch(data.play, this.nowPlayingLastPlay.play) ? 'matches' : 'does not match'} and was last updated ${lastUpdateDiff}s ago (threshold ${this.nowPlayingMaxThreshold(data.play)}s)`];
+    }
+
+    shouldUpdatePlayingNow = (data: SourcePlayerObj): boolean => {
+        return this.shouldUpdatePlayingNowResult(data)[0];
     }
 
     /** Implement this for specific requirements for updating playing now based on the scrobbler platform */
-    protected shouldUpdatePlayingNowPlatformSpecific(data: SourcePlayerObj): Promise<boolean> {
+    protected shouldUpdatePlayingNowPlatformSpecific(data: SourcePlayerObj): Promise<[boolean, string?, LogLevel?]> {
         return shouldUpdatePlayingNowPlatformWhenPlayingOnly(data);
     }
 
@@ -1447,7 +1454,9 @@ export const nowPlayingUpdateByPlayDuration: NowPlayingUpdateThreshold = (play?:
     return (play?.data?.duration ?? 30) + 1;
 }
 
-export const shouldUpdatePlayingNowPlatformWhenPlayingOnly = async (data: SourcePlayerObj): Promise<boolean> => {
-    return (data.status.calculated === CALCULATED_PLAYER_STATUSES.playing)
-    || (data.nowPlayingMode && !CALCULATED_PLAYER_STATUSES.stopped);
+export const shouldUpdatePlayingNowPlatformWhenPlayingOnly = async (data: SourcePlayerObj): Promise<[boolean, string]> => {
+    if(data.status.calculated === CALCULATED_PLAYER_STATUSES.playing || (data.nowPlayingMode && !CALCULATED_PLAYER_STATUSES.stopped)) {
+        return [true, `calculated player status is ${data.status.calculated}`];
+    }
+    return [false, `calculated player status is ${data.status.calculated} but must be played/stopped`];
 }
