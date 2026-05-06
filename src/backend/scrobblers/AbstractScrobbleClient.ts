@@ -90,6 +90,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     declare type: ClientType;
 
     scheduler: ToadScheduler = new ToadScheduler();
+    protected initDeadTimeout: NodeJS.Timeout | undefined;
 
     protected MAX_STORED_SCROBBLES = 40;
     protected MAX_INITIAL_SCROBBLES_FETCH = this.MAX_STORED_SCROBBLES;
@@ -231,6 +232,89 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     async [Symbol.asyncDispose]() {
         this[Symbol.dispose]();
         await this.tryStopScrobbling();
+    }
+
+    public initHeartbeat() {
+        if(this.scheduler.existsById('heartbeat') === false) {
+            this.logger.info('Adding Heartbeat Task and running immediately');
+            this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
+                minutes: 20,
+                runImmediately: true
+            }, new AsyncTask(
+                'Heartbeat',
+                (): Promise<any> => {
+                    return this.heartbeatTask().then(() => null).catch((err) => {
+                        this.logger.error(err);
+                    });
+                },
+                (err: Error) => {
+                    this.logger.error(err);
+                }
+            ), {id: 'heartbeat'}));
+        } else {
+            this.logger.warn('Heartbeat task is already added to scheduler.');
+        }
+
+        if(this.scheduler.existsById('dead') === false && this.initDeadTimeout === undefined) {
+            this.logger.verbose('Delaying Dead Scrobbler Processing Task by 2 minutes');
+            this.initDeadTimeout = setTimeout(() => {
+                this.logger.info('Adding Dead Scrobbler Processing Task and running immediately');
+                this.initDeadTimeout = undefined;
+                this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
+                    minutes: 20,
+                    runImmediately: true
+                }, new AsyncTask(
+                    'Dead',
+                    (): Promise<any> => {
+                        if(this.isReady()) {
+                            return this.processDeadLetterQueue().then(() => null).catch((e) => {
+                                this.logger.error(e);
+                            })
+                        }
+                        return new Promise((resolve, reject) => resolve);
+                    },
+                    (err: Error) => {
+                        this.logger.error(err);
+                    }
+                ), {id: 'dead'}));
+            // delay for 2 minutes
+            }, 120 * 1000);
+
+        } else {
+            if(this.initDeadTimeout !== undefined) {
+                this.logger.warn('Dead scrobble task timeout is already set');
+            } else {
+                this.logger.warn('Dead scrobble task is already added to the scheduler');
+            }
+        }
+    }
+
+    protected async heartbeatTask(): Promise<boolean> {
+        if(!this.isReady()) {
+            if(!this.canAuthUnattended()) {
+                this.logger.warn({labels: 'Heartbeat'}, 'Client is not ready but will not try to initialize because auth state is not good and cannot be corrected unattended.')
+                return false;
+            }
+            try {
+                await this.tryInitialize({force: false, notify: true, notifyTitle: 'Could not initialize automatically'});
+            } catch (e) {
+                this.logger.error(new Error('Could not initialize automatically', {cause: e}));
+                return false;
+            }
+
+            if(!this.canAuthUnattended()) {
+                this.logger.warn({label: 'Heartbeat'}, 'Should be monitoring scrobbles but will not attempt to start because auth state is not good and cannot be correct unattended.');
+                return false;
+            }
+
+            //await client.processDeadLetterQueue();
+            if(!this.scrobbling) {
+                this.logger.info({labels: 'Heartbeat'}, 'Should be processing scrobbles! Attempting to restart scrobbling...');
+                this.initScrobbleMonitoring().catch((e) => this.logger.error('Failed to initialize scrobbler monitoring during heartbeat'));
+                return true;
+            }
+        }
+        return true;
     }
 
     protected async postCache(): Promise<void> {

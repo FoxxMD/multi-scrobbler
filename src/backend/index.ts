@@ -156,22 +156,21 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             logger.warn(`Last.FM source and clients have same names [${nameColl.map(x => x.name).join(',')}] -- this may cause issues`);
         }
 
-        const clientTask = createHeartbeatClientsTask(scrobbleClients, logger);
-        clientTask.execute();
-        try {
-            await retry(() => {
-                if(clientTask.isExecuting) {
-                    throw new Error('Waiting')
-                }
-                return true;
-            },{retries: scrobbleClients.clients.length + 1, retryIntervalMs: 2000});
-        } catch (e) {
-            logger.warn('Waited too long for clients to start! Moving ahead with sources init...');
+        for(const c of scrobbleClients.clients) {
+            c.initHeartbeat();
+            const res = await Promise.race([
+                sleep(2200),
+                (async () => {
+                    while(!c.isReady()) {
+                        await sleep(400)
+                    }
+                    return true;
+                })()
+            ]);
+            if(res === undefined) {
+                logger.debug(`Not waiting for ${c.name} to finish init, moving on to the next client...`);
+            }
         }
-        scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
-            minutes: 20,
-            runImmediately: false
-        }, clientTask, {id: 'clients_heart'}));
 
         const sourceTask = createHeartbeatSourcesTask(scrobbleSources, logger);
         scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
