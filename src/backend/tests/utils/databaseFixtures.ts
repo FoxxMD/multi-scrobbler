@@ -22,7 +22,7 @@ export const fixtureCreatePlay = (data: Partial<PlayNew> = {}): PlayNew => {
         play = generatePlay(),
         ...rest
     } = data;
-    return generatePlayEntity(play, {seenAt: play.data.playDate, ...rest});
+    return generatePlayEntity(play, {seenAt: play.meta.seenAt ?? play.data.playDate, updatedAt: play.meta.seenAt ?? play.data.playDate, ...rest});
 }
 
 export const fixtureCreateInput = (data: PlayInputNew & { data?: object | false }): PlayInputNew => {
