@@ -3,7 +3,9 @@ import { defineRelations } from 'drizzle-orm';
 import dayjs, { Dayjs } from "dayjs";
 import { nanoid } from "nanoid";
 import { ErrorLike, PlayObject } from "../../../../../core/Atomic.js";
-import { asPlay, asPlayCheap } from "../../../../../core/PlayMarshalUtils.js";
+import { asPlayCheap } from "../../../../../core/PlayMarshalUtils.js";
+import { ExternalMetadataTerm, PlayTransformPartsConfig, SearchAndReplaceTerm } from "../../../infrastructure/Transform.js";
+import { JobRangeCount, JobRangeTime } from "../../../infrastructure/Job.js";
 
 const DayjsTimestamp = customType<
   {
@@ -62,6 +64,7 @@ export const plays = sqliteTable("plays", {
   state: text({enum: ['queued','discovered','discarded','scrobbled','failed','duped']}).notNull(),
   // https://orm.drizzle.team/docs/indexes-constraints#foreign-key
   parentId: integer().references((): AnySQLiteColumn => plays.id, {onDelete: 'set null', onUpdate: 'cascade'}),
+  jobId: integer().references(() => jobs.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
   playHash: text(),
   mbidIdentifier: text(),
   compacted: text()
@@ -150,7 +153,26 @@ export const components = sqliteTable("components", {
   uniqueIndex('uid_mode_type_idx').on(table.uid,table.mode,table.type)
 ]);
 
-const playRelations = defineRelations({ plays, queueStates, playInputs, components }, (r) => ({
+export const jobs = sqliteTable("jobs", {
+  id: integer({ mode: 'number' }).primaryKey(),
+  componentFromId: integer().notNull().references(() => components.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
+  componentToId: integer().notNull().references(() => components.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
+  name: text({length: 50}).notNull(),
+  status: text({enum: ['idle','completed','failed','processing']}).notNull().default('idle'),
+  retries: integer().notNull().default(0),
+  error: text({ mode: 'json' }).$type<ErrorLike>(),
+  transformOptions: text({ mode: 'json' }).$type<PlayTransformPartsConfig<SearchAndReplaceTerm[] | ExternalMetadataTerm>>(),
+  initialParameters: text({ mode: 'json' }).$type<JobRangeCount | JobRangeTime>(),
+  cursor: text({ mode: 'json' }),
+  total: integer(),
+  imported: integer().notNull().default(0),
+  scrobbled: integer().notNull().default(0),
+  createdAt: DayjsTimestamp('createdAt').notNull().$defaultFn(() => dayjs()),
+  updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs()),
+  completedAt: DayjsTimestamp('completedAt')
+});
+
+const playRelations = defineRelations({ plays, queueStates, playInputs, components, jobs }, (r) => ({
   plays: {
     queueStates: r.many.queueStates(),
     input: r.one.playInputs({
@@ -167,6 +189,11 @@ const playRelations = defineRelations({ plays, queueStates, playInputs, componen
       from: r.plays.componentId,
       to: r.components.id,
       optional: true
+    }),
+    job: r.one.jobs({
+      from: r.plays.jobId,
+      to: r.jobs.id,
+      optional: true
     })
   },
   queueStates: {
@@ -182,6 +209,9 @@ const playRelations = defineRelations({ plays, queueStates, playInputs, componen
   components: {
     plays: r.many.plays(),
     queueStates: r.many.queueStates(),
+  },
+  jobs: {
+    plays: r.many.plays()
   }
 }));
 
@@ -197,10 +227,12 @@ export const getConfigByTableName = <T extends TableName>(name: T) => {
       return playInputs;
     case 'queueStates':
       return queueStates;
+    case 'jobs':
+      return jobs;
   }
 }
 
-const schema = {playInputs, plays, components, queueStates};
+const schema = {playInputs, plays, components, queueStates, jobs};
 
 export type TSchema = typeof relations;
 export type Schema = typeof schema;

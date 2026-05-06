@@ -1,13 +1,17 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "48966f21-b4ad-4399-b9a1-8852f8460808",
+  "id": "5655103c-e7d9-4026-9e71-9480ce6fb036",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
   "ddl": [
     {
       "name": "components",
+      "entityType": "tables"
+    },
+    {
+      "name": "jobs",
       "entityType": "tables"
     },
     {
@@ -101,6 +105,166 @@
       "name": "createdAt",
       "entityType": "columns",
       "table": "components"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "jobs"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "componentFromId",
+      "entityType": "columns",
+      "table": "jobs"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "componentToId",
+      "entityType": "columns",
+      "table": "jobs"
+    },
+    {
+      "type": "text(50)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "jobs"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'idle'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "jobs"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "retries",
+      "entityType": "columns",
+      "table": "jobs"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "error",
+      "entityType": "columns",
+      "table": "jobs"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "transformOptions",
+      "entityType": "columns",
+      "table": "jobs"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "initialParameters",
+      "entityType": "columns",
+      "table": "jobs"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cursor",
+      "entityType": "columns",
+      "table": "jobs"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "total",
+      "entityType": "columns",
+      "table": "jobs"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "imported",
+      "entityType": "columns",
+      "table": "jobs"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "scrobbled",
+      "entityType": "columns",
+      "table": "jobs"
+    },
+    {
+      "type": "number",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "createdAt",
+      "entityType": "columns",
+      "table": "jobs"
+    },
+    {
+      "type": "number",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updatedAt",
+      "entityType": "columns",
+      "table": "jobs"
+    },
+    {
+      "type": "number",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "completedAt",
+      "entityType": "columns",
+      "table": "jobs"
     },
     {
       "type": "integer",
@@ -253,6 +417,16 @@
       "table": "plays"
     },
     {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "jobId",
+      "entityType": "columns",
+      "table": "plays"
+    },
+    {
       "type": "text",
       "notNull": false,
       "autoincrement": false,
@@ -374,6 +548,36 @@
     },
     {
       "columns": [
+        "componentFromId"
+      ],
+      "tableTo": "components",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "CASCADE",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_jobs_componentFromId_components_id_fk",
+      "entityType": "fks",
+      "table": "jobs"
+    },
+    {
+      "columns": [
+        "componentToId"
+      ],
+      "tableTo": "components",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "CASCADE",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_jobs_componentToId_components_id_fk",
+      "entityType": "fks",
+      "table": "jobs"
+    },
+    {
+      "columns": [
         "playId"
       ],
       "tableTo": "plays",
@@ -419,6 +623,21 @@
     },
     {
       "columns": [
+        "jobId"
+      ],
+      "tableTo": "jobs",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "CASCADE",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_plays_jobId_jobs_id_fk",
+      "entityType": "fks",
+      "table": "plays"
+    },
+    {
+      "columns": [
         "playId"
       ],
       "tableTo": "plays",
@@ -454,6 +673,15 @@
       "nameExplicit": false,
       "name": "components_pk",
       "table": "components",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "jobs_pk",
+      "table": "jobs",
       "entityType": "pks"
     },
     {

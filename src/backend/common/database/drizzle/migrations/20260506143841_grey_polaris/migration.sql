@@ -9,6 +9,27 @@ CREATE TABLE `components` (
 	`createdAt` number
 );
 --> statement-breakpoint
+CREATE TABLE `jobs` (
+	`id` integer PRIMARY KEY,
+	`componentFromId` integer NOT NULL,
+	`componentToId` integer NOT NULL,
+	`name` text(50) NOT NULL,
+	`status` text DEFAULT 'idle' NOT NULL,
+	`retries` integer DEFAULT 0 NOT NULL,
+	`error` text,
+	`transformOptions` text,
+	`initialParameters` text,
+	`cursor` text,
+	`total` integer,
+	`imported` integer DEFAULT 0 NOT NULL,
+	`scrobbled` integer DEFAULT 0 NOT NULL,
+	`createdAt` number NOT NULL,
+	`updatedAt` number NOT NULL,
+	`completedAt` number,
+	CONSTRAINT `fk_jobs_componentFromId_components_id_fk` FOREIGN KEY (`componentFromId`) REFERENCES `components`(`id`) ON UPDATE CASCADE ON DELETE CASCADE,
+	CONSTRAINT `fk_jobs_componentToId_components_id_fk` FOREIGN KEY (`componentToId`) REFERENCES `components`(`id`) ON UPDATE CASCADE ON DELETE CASCADE
+);
+--> statement-breakpoint
 CREATE TABLE `play_inputs` (
 	`id` integer PRIMARY KEY,
 	`playId` integer NOT NULL,
@@ -29,11 +50,13 @@ CREATE TABLE `plays` (
 	`play` text NOT NULL,
 	`state` text NOT NULL,
 	`parentId` integer,
+	`jobId` integer,
 	`playHash` text,
 	`mbidIdentifier` text,
 	`compacted` text,
 	CONSTRAINT `fk_plays_componentId_components_id_fk` FOREIGN KEY (`componentId`) REFERENCES `components`(`id`) ON UPDATE CASCADE ON DELETE CASCADE,
-	CONSTRAINT `fk_plays_parentId_plays_id_fk` FOREIGN KEY (`parentId`) REFERENCES `plays`(`id`) ON UPDATE CASCADE ON DELETE SET NULL
+	CONSTRAINT `fk_plays_parentId_plays_id_fk` FOREIGN KEY (`parentId`) REFERENCES `plays`(`id`) ON UPDATE CASCADE ON DELETE SET NULL,
+	CONSTRAINT `fk_plays_jobId_jobs_id_fk` FOREIGN KEY (`jobId`) REFERENCES `jobs`(`id`) ON UPDATE CASCADE ON DELETE CASCADE
 );
 --> statement-breakpoint
 CREATE TABLE `play_queue_states` (
