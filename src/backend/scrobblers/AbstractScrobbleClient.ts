@@ -73,7 +73,7 @@ import {isErrorLike, serializeError} from 'serialize-error';
 import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetchUtils.js";
 import { spawn, catchAbortError, isAbortError, rethrowAbortError, delay, forever, AbortError, throwIfAborted } from 'abort-controller-x';
 import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, QueryPlaysOpts } from "../common/database/drizzle/repositories/PlayRepository.js";
-import { PlaySelect, PlaySelectRel, QueueStateNew, QueueStateSelect } from "../common/database/drizzle/drizzleTypes.js";
+import { PlaySelect, PlaySelectWithQueueStates, QueueStateNew, QueueStateSelect } from "../common/database/drizzle/drizzleTypes.js";
 import { asPlay } from "../../core/PlayMarshalUtils.js";
 import { DrizzleQueueRepository } from "../common/database/drizzle/repositories/QueueRepository.js";
 import { SourceType } from "../common/infrastructure/config/source/sources.js";
@@ -857,7 +857,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
     }
 
-    protected processQueueCurrentScrobble = async (currQueuedPlay: MarkRequired<PlaySelectRel, "queueStates">, signal: AbortSignal) => {
+    protected processQueueCurrentScrobble = async (currQueuedPlay: PlaySelectWithQueueStates, signal: AbortSignal) => {
         signal.throwIfAborted();
         //const currQueuedPlay = await this.playRepo.getQueueNext(CLIENT_INGRESS_QUEUE);
         // if (currQueuedPlay === undefined) {

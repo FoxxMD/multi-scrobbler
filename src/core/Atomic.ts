@@ -605,10 +605,10 @@ export const CLIENT_DEAD_QUEUE = 'dead';
 /**
  * Useful TS type-only utility for testing type equality
  * 
- * Usage: type EQ = IfEquals<any[], [number][], "same", "different">; // "different"
+ * Usage: type EQ = TypesAreEqual<any[], [number][], "same", "different">; // "different"
  * 
  * @see https://stackoverflow.com/a/53808212/1469797
  */
-export type IfEquals<T, U, Y=unknown, N=never> =
+export type TypesAreEqual<T, U, Y=unknown, N=never> =
   (<G>() => G extends T ? 1 : 2) extends
   (<G>() => G extends U ? 1 : 2) ? Y : N;

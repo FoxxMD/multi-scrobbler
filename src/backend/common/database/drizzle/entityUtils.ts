@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { PlayNew, PlaySelect, PlaySelectRel } from "./drizzleTypes.js";
+import { PlayNew, PlaySelect, PlaySelectWithQueueStates } from "./drizzleTypes.js";
 import { PlayInputNew } from "./drizzleTypes.js";
 import { QueueStateNew } from "./drizzleTypes.js";
 import { ComponentNew } from "./drizzleTypes.js";
@@ -71,7 +71,7 @@ export const hydratePlaySelect = (select: PlaySelect, opts: PlayHydateOptions[] 
     return res;
 }
 
-export const playSelectToDeadScrobble = (select: MarkRequired<PlaySelectRel, 'queueStates'>): DeadLetterScrobble<PlayObject> => {
+export const playSelectToDeadScrobble = (select: PlaySelectWithQueueStates): DeadLetterScrobble<PlayObject> => {
     const deadQueue = select.queueStates.find(x => x.queueName === CLIENT_DEAD_QUEUE);
     return {
         play: select.play,

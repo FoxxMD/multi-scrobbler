@@ -4,7 +4,7 @@ import { loggerNoop } from "../../../MaybeLogger.js";
 import { ErrorLike, PlayObject, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, TemporalAccuracy } from "../../../../../core/Atomic.js";
 import { generateInputEntity, generatePlayEntity, PlayEntityOpts, hydratePlaySelect, PlayHydateOptions } from "../entityUtils.js";
 import { playInputs, plays, queueStates, relations } from "../schema/schema.js";
-import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, CompareOpKey, QueueStateSelect, PlayInputSelect, PlaySelectRel, FindWith } from "../drizzleTypes.js";;
+import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, CompareOpKey, QueueStateSelect, PlayInputSelect, PlaySelectRel, FindWith, PlaySelectWithQueueStates, WhereClause } from "../drizzleTypes.js";;
 import { MarkOptional, MarkRequired, PathValue } from "ts-essentials";
 import { genGroupIdStrFromPlay, removeEmptyArrays, removeUndefinedKeys } from "../../../../utils.js";
 import dayjs, { Dayjs } from "dayjs";
@@ -397,7 +397,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         },
     }).prepare()
 
-    public getQueueNext = async (queueName: string, opts: {order?: 'asc' | 'desc', retries?: number} & ComponentConstrainedRepoOpts = {}): Promise<MarkRequired<PlaySelectRel, 'queueStates'> | undefined> => {
+    public getQueueNext = async (queueName: string, opts: {order?: 'asc' | 'desc', retries?: number} & ComponentConstrainedRepoOpts = {}): Promise<PlaySelectWithQueueStates | undefined> => {
         const {
             retries = 0,
             order = 'asc',
@@ -538,7 +538,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return {data: res.map(x => ({...x, play: hydratePlaySelect(x, hydrate)})), meta: {limit, offset}};
     }
 
-    public checkExisting = async (play: PlayObject, opts: {queueName?: string, states?: PlaySelect['state'][], taAccuracy?: TemporalAccuracy[]} & ComponentConstrainedRepoOpts = {}): Promise<MarkRequired<PlaySelectRel, 'queueStates'> | undefined> => {
+    public checkExisting = async (play: PlayObject, opts: {queueName?: string, states?: PlaySelect['state'][], taAccuracy?: TemporalAccuracy[]} & ComponentConstrainedRepoOpts = {}): Promise<PlaySelectWithQueueStates | undefined> => {
         const {
             queueName,
             componentId = this.componentId,
@@ -689,7 +689,7 @@ export const buildPlayWith = (args: WithPlayRelation[] | undefined): FindWith<'p
     return qWith;
 }
 
-export const buildPlayWhere = (args: PlayWhereOpts): FindWhere<'plays'> => {
+export const buildPlayWhere = (args: PlayWhereOpts): WhereClause<'plays'> => {
     // old way
     // let where: Parameters<(ReturnType<typeof getDb>)['query']['plays']['findMany']>[0]['where'] = {
     // };
