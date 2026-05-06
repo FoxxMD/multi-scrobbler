@@ -46,8 +46,8 @@ export const generatePlayWithLifecycle = (opts: GeneratePlayWithLifecycleOptions
       ...original.meta
     }
   };
-  lplay.meta.lifecycle.original = lifecyclelessInvariantTransform(original);
-  lplay.meta.lifecycle.input = generateRandomObj();
+  //lplay.meta.lifecycle.original = lifecyclelessInvariantTransform(original);
+  //lplay.meta.lifecycle.input = generateRandomObj();
 
   let steps: LifecycleStep[] = [];
   let transformedPlay = clone(original);

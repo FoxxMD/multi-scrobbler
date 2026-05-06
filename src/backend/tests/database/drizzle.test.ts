@@ -13,11 +13,12 @@ import { projectDir } from '../../common/index.js';
 import { DatabaseSync } from 'node:sqlite';
 import { fixtureCreateComponent, fixtureCreateInput, fixtureCreatePlay } from '../utils/databaseFixtures.js';
 import { DrizzlePlayRepository, RepositoryCreatePlayOpts } from '../../common/database/drizzle/repositories/PlayRepository.js';
-import { generateRandomObj } from '../../../core/tests/utils/fixtures.js';
+import { generatePlayWithLifecycle, generateRandomObj } from '../../../core/tests/utils/fixtures.js';
 import { generateArray } from '../../../core/DataUtils.js';
 import { objectsEqual } from '../../utils/DataUtils.js';
 import { eq, sql } from 'drizzle-orm';
 import { PlaySelect } from '../../common/database/drizzle/drizzleTypes.js';
+import { loggerDebug } from '@foxxmd/logging';
 
 // would be great to push migrations directly from schema but doesn't seem supported in newest beta
 // https://github.com/drizzle-team/drizzle-orm/discussions/4373
@@ -551,3 +552,101 @@ describe('Repository Operations', function () {
 
 });
 
+describe('DB Size Stats', function () {
+
+
+    before(function () {
+        if (process.env.DB_SIZE_TEST !== 'true') {
+            this.skip();
+        }
+    });
+
+    it('get empty db size stats', async function () {
+
+        await withLocalTmpDir(async () => {
+            try {
+                let db = getDb('ms', { workingDirectory: process.cwd() });
+                await migrateDb(db);
+                const stats = await fs.stat(path.resolve('./ms.db'));
+                loggerDebug.debug(`Empty => ${stats.size / 1024}kb`);
+            } catch (e) {
+                throw e;
+            }
+        }, { unsafeCleanup: true });
+    });
+
+    it('get db plays size stats', async function () {
+
+        await withLocalTmpDir(async () => {
+            try {
+                let db = getDb('ms', { workingDirectory: process.cwd() });
+                await migrateDb(db);
+                const component = await db.insert(components).values(fixtureCreateComponent()).returning();
+
+                const playRepo = new DrizzlePlayRepository(db);
+                const playData = generateArray<RepositoryCreatePlayOpts>(100, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlay() }), state: 'queued', input: { data: undefined } }));
+                await playRepo.createPlays(playData);
+
+                const Play100Component = await fs.stat(path.resolve('./ms.db'));
+                loggerDebug.debug(`100 Plays => ${Play100Component.size / 1024}kb`);
+
+                const morePlayData = generateArray<RepositoryCreatePlayOpts>(900, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlay() }), state: 'queued', input: { data: undefined }}));
+                await playRepo.createPlays(morePlayData);
+                const Play1000Component = await fs.stat(path.resolve('./ms.db'));
+                loggerDebug.debug(`1000 Plays => ${Play1000Component.size / 1024}kb`);
+            } catch (e) {
+                throw e;
+            }
+        }, { unsafeCleanup: true });
+    });
+    
+    it('get db plays size stats with input', async function () {
+
+        await withLocalTmpDir(async () => {
+            try {
+                let db = getDb('ms', { workingDirectory: process.cwd() });
+                await migrateDb(db);
+                const component = await db.insert(components).values(fixtureCreateComponent()).returning();
+
+                const playRepo = new DrizzlePlayRepository(db);
+                const playData = generateArray<RepositoryCreatePlayOpts>(100, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlay() }), state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } }));
+                await playRepo.createPlays(playData);
+
+                const Play100Component = await fs.stat(path.resolve('./ms.db'));
+                loggerDebug.debug(`100 Plays => ${Play100Component.size / 1024}kb`);
+
+                const morePlayData = generateArray<RepositoryCreatePlayOpts>(900, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlay() }), state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } }));
+                await playRepo.createPlays(morePlayData);
+                const Play1000Component = await fs.stat(path.resolve('./ms.db'));
+                loggerDebug.debug(`1000 Plays => ${Play1000Component.size / 1024}kb`);
+            } catch (e) {
+                throw e;
+            }
+        }, { unsafeCleanup: true });
+    });
+
+    it('get db plays size stats with input and lifecycle', async function () {
+
+        await withLocalTmpDir(async () => {
+            try {
+                let db = getDb('ms', { workingDirectory: process.cwd() });
+                await migrateDb(db);
+                const component = await db.insert(components).values(fixtureCreateComponent()).returning();
+
+                const playRepo = new DrizzlePlayRepository(db);
+                const playData = generateArray<RepositoryCreatePlayOpts>(100, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlayWithLifecycle({lifecycleSteps: {preCompare: 1}}) }), state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } }));
+                await playRepo.createPlays(playData);
+
+                const Play100Component = await fs.stat(path.resolve('./ms.db'));
+                loggerDebug.debug(`100 Plays => ${Play100Component.size / 1024}kb`);
+
+                const morePlayData = generateArray<RepositoryCreatePlayOpts>(900, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlayWithLifecycle({lifecycleSteps: {preCompare: 1}}) }), state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } }));
+                await playRepo.createPlays(morePlayData);
+                const Play1000Component = await fs.stat(path.resolve('./ms.db'));
+                loggerDebug.debug(`1000 Plays => ${Play1000Component.size / 1024}kb`);
+            } catch (e) {
+                throw e;
+            }
+        }, { unsafeCleanup: true });
+    });
+})
