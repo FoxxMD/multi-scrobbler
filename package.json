@@ -72,7 +72,7 @@
     "ajv": "^8.18.0",
     "ajv-formats": "^3.0.1",
     "avahi-browse": "^1.1.4",
-    "better-sse": "^0.8.0",
+    "better-sse": "^0.16.1",
     "body-parser": "^2.2.2",
     "cacheable": "^1.10.4",
     "castv2": "^0.1.10",
