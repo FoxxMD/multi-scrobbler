@@ -1037,13 +1037,16 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }
     //        await this.handleQueuedScrobbleRanges();
 
-            while(this.deadLetterQueued > 0) {
-                const [scrobbled, dead] = await this.processDeadLetterScrobble(signal);
+            let nextQueued: PlaySelectWithQueueStates = await this.playRepo.getQueueNext(CLIENT_DEAD_QUEUE, {retries});
+            if(nextQueued !== undefined) {
+                while(nextQueued !== undefined) {
+                    const [scrobbled, dead] = await this.processDeadLetterScrobble(nextQueued.uid, signal);
                 await sleep(this.scrobbleSleep);
                 if(scrobbled) {
                     removedIds.push(dead.id);
                 }
-                signal.throwIfAborted();
+                    nextQueued = await this.playRepo.getQueueNext(CLIENT_DEAD_QUEUE, {retries});
+                }
             }
 
         }).catch((e) => {
@@ -1063,7 +1066,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         });
     }
 
-    processDeadLetterScrobble = async (signal?: AbortSignal, uid?: string): Promise<[boolean, (PlaySelect & {queueStates: QueueStateSelect[]})?]> => {
+    processDeadLetterScrobble = async (uid: string, signal?: AbortSignal): Promise<[boolean, PlaySelectWithQueueStates?]> => {
         signal?.throwIfAborted();
         // const deadScrobbleIndex = this.deadLetterScrobbles.findIndex(x => x.id === id);
         // if(deadScrobbleIndex === -1) {
@@ -1071,15 +1074,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         //     return [false];
         // }
 
-        let deadScrobble: PlaySelect & {queueStates: QueueStateSelect[]};
+        
         let deadQueueState: QueueStateSelect;
-        if(uid !== undefined) {
-            deadScrobble = await this.playRepo.findByUid(uid, {hydrate: ['asPlay']});
+        let deadScrobble: PlaySelectWithQueueStates = await this.playRepo.findByUid(uid, {hydrate: ['asPlay']});
             if(deadScrobble === undefined) {
                 throw new Error(`Play ${uid} does not exist for ${this.name}`);
-            }
-        } else {
-            deadScrobble = await this.playRepo.getQueueNext(CLIENT_DEAD_QUEUE)
         }
         deadQueueState = deadScrobble.queueStates.find(x => x.queueName === CLIENT_DEAD_QUEUE && x.queueStatus === 'queued');
         if(deadQueueState === undefined) {

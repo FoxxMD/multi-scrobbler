@@ -64,7 +64,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         super(db, 'plays', 'Plays', opts);
     }
 
-    findByUid = async (uid: string, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PlaySelect & {queueStates: QueueStateSelect[]}> => {
+    findByUid = async (uid: string, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PlaySelectWithQueueStates | undefined> => {
         const res = await this.db.query.plays.findFirst({
             where: {
                 uid,

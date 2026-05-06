@@ -372,7 +372,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         (client as AbstractScrobbleClient).logger.verbose(`User requested processing of dead letter scrobble ${deadId} via API call`)
 
         try {
-            const [scrobbled, dead] = await (client as AbstractScrobbleClient).processDeadLetterScrobble(undefined, deadId);
+            const [scrobbled, dead] = await (client as AbstractScrobbleClient).processDeadLetterScrobble(deadId);
             if(scrobbled) {
                 return res.status(200).send();
             }
