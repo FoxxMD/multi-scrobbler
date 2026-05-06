@@ -533,7 +533,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.abortController.abort(reason);
         let elapsed = 0;
         let lastlog: Dayjs;
-        while(this.polling && elapsed < 10) {
+        while(this.polling && elapsed < (10 * this.stopPollingWaitInterval)) {
             if(lastlog === undefined || dayjs().diff(lastlog, 's') >= 2) {
                 this.logger.verbose(`Waiting for polling stop signal to be acknowledged (waited ${formatNumber(elapsed/1000)}s)`);
             }
@@ -581,7 +581,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 }
             
 
-                const interval = this.getInterval();
+                const interval = this.getInterval(true);
                 const maxBackoff = this.getMaxBackoff();
                 let sleepTime = interval;
 
@@ -685,7 +685,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return this.wakeAt;
     }
 
-    protected getInterval() {
+    protected getInterval(log?: boolean) {
         let interval = DEFAULT_POLLING_INTERVAL;
 
         if('interval' in this.config.data) {

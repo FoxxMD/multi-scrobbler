@@ -385,7 +385,7 @@ export default class MemorySource extends AbstractSource {
 
     recentlyPlayedTrackIsValid = (playObj: any) => playObj.data.playDate.isBefore(dayjs().subtract(30, 's'))
 
-    protected getInterval(): number {
+    protected getInterval(log?: boolean): number {
         /**
          * If any player is progressing, reports position, and play has duration
          * then we can modify polling interval so that we check source data just before track is supposed to end
@@ -415,7 +415,7 @@ export default class MemorySource extends AbstractSource {
                 }
             }
         }
-        if(logDecrease !== undefined) {
+        if(logDecrease !== undefined && log) {
             this.logger.debug(logDecrease);
         }
         return interval;
