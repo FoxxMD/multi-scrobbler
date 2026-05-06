@@ -1040,7 +1040,7 @@ describe('Now Playing', function() {
             await using npScrobbler = new NowPlayingScrobbler();
             npScrobbler.nowPlayingTaskInterval = 10;
             await npScrobbler.initialize();
-            npScrobbler.scheduler.startById('pn_task');
+            npScrobbler.initHeartbeat();
 
             await npScrobbler.queuePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}), {type: 'jellyfin', name: 'test'});
 
@@ -1054,7 +1054,7 @@ describe('Now Playing', function() {
             await using npScrobbler = new NowPlayingScrobbler();
             npScrobbler.nowPlayingTaskInterval = 10;
             await npScrobbler.initialize();
-            npScrobbler.scheduler.startById('pn_task');
+            npScrobbler.initHeartbeat();
 
             const now = dayjs();
 

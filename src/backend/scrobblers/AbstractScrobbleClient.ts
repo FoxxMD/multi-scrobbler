@@ -118,6 +118,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     deadLetterQueued: number  = 0;
 
     supportsNowPlaying: boolean = false;
+    nowPlayingInit: boolean = false;
     nowPlayingEnabled: boolean;
     nowPlayingFilter: (queue: NowPlayingQueue) => SourcePlayerObj | undefined;
     nowPlayingMinThreshold: NowPlayingUpdateThreshold = (_) => 10;
@@ -234,7 +235,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         await this.tryStopScrobbling();
     }
 
-    public initHeartbeat() {
+    public initHeartbeat(opts: {deadDelay?: number} = {}) {
         if(this.scheduler.existsById('heartbeat') === false) {
             this.logger.info('Adding Heartbeat Task and running immediately');
             this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
@@ -254,6 +255,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         } else {
             this.logger.warn('Heartbeat task is already added to scheduler.');
         }
+
+        this.initializeNowPlayingSchedule();
 
         if(this.scheduler.existsById('dead') === false && this.initDeadTimeout === undefined) {
             this.logger.verbose('Delaying Dead Scrobbler Processing Task by 2 minutes');
@@ -278,7 +281,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     }
                 ), {id: 'dead'}));
             // delay for 2 minutes
-            }, 120 * 1000);
+            }, (opts.deadDelay ?? 120) * 1000);
 
         } else {
             if(this.initDeadTimeout !== undefined) {
@@ -424,7 +427,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }
 
             this.initializeNowPlayingFilter();
-            this.initializeNowPlayingSchedule();
+            this.nowPlayingInit = true;
         } else {
             this.npLogger.debug('Unsupported feature, disabled.');
         }
@@ -432,18 +435,18 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     protected initializeNowPlayingSchedule() {
 
-        const t = new AsyncTask('Playing Now', (): Promise<any> => {
-            return this.processingPlayingNow();
-        }, (err: Error) => {
-            this.npLogger.error(new Error('Unexpected error while processing Now Playing queue', {cause: err}));
-        });
+        if(this.scheduler.existsById('pn_task') === false) {
+            const t = new AsyncTask('Playing Now', (): Promise<any> => {
+                return this.processingPlayingNow();
+            }, (err: Error) => {
+                this.npLogger.error(new Error('Unexpected error while processing Now Playing queue', {cause: err}));
+            });
 
-        this.scheduler.removeById('pn_task');
-
-        // even though we are processing every 5 seconds the interval that Now Playing is updated at, and that the queue is cleared on,
-        // is still set by shouldUpdatePlayingNow()
-        // 5 seconds makes sure our granularity for updates is decently fast *when* we do need to actually update
-        this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({milliseconds: this.nowPlayingTaskInterval}, t, {id: 'pn_task'}));
+            // even though we are processing every 5 seconds the interval that Now Playing is updated at, and that the queue is cleared on,
+            // is still set by shouldUpdatePlayingNow()
+            // 5 seconds makes sure our granularity for updates is decently fast *when* we do need to actually update
+            this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({milliseconds: this.nowPlayingTaskInterval}, t, {id: 'pn_task'}));
+        }
     }
 
     protected initializeNowPlayingFilter() {
@@ -1433,7 +1436,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
 
     processingPlayingNow = async (): Promise<void> => {
-        if(this.supportsNowPlaying && this.nowPlayingEnabled) {
+        if(!this.supportsNowPlaying || !this.isReady()) {
+            return;
+        }
+        if(this.nowPlayingInit === false) {
+            this.initializeNowPlaying();
+        }
+        if(this.nowPlayingEnabled) {
             const sourcePlayerData = this.nowPlayingFilter(this.nowPlayingQueue);
             if(sourcePlayerData === undefined) {
                 return;
