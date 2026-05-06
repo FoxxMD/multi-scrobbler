@@ -235,7 +235,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         await this.tryStopScrobbling();
     }
 
-    public initHeartbeat(opts: {deadDelay?: number} = {}) {
+    public initTasks(opts: {deadDelay?: number} = {}) {
         if(this.scheduler.existsById('heartbeat') === false) {
             this.logger.info('Adding Heartbeat Task and running immediately');
             this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({

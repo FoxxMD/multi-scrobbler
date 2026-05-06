@@ -16,8 +16,6 @@ import { appLogger, initLogger as getInitLogger } from "./common/logging.js";
 import { getRoot } from "./ioc.js";
 import { parseVersion } from "./version.js";
 import { initServer } from "./server/index.js";
-import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
-import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
 import { isDebugMode, parseBool, retry, sleep } from "./utils.js";
 import { readJson } from './utils/DataUtils.js';
 import ScrobbleClients from './scrobblers/ScrobbleClients.js';
@@ -157,7 +155,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         }
 
         for(const c of scrobbleClients.clients) {
-            c.initHeartbeat();
+            c.initTasks();
             const res = await Promise.race([
                 sleep(2200),
                 (async () => {
@@ -168,16 +166,25 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                 })()
             ]);
             if(res === undefined) {
-                logger.debug(`Not waiting for ${c.name} to finish init, moving on to the next client...`);
+                logger.debug(`Not waiting for Client ${c.name} to finish init, moving on to the next Client...`);
             }
         }
 
-        const sourceTask = createHeartbeatSourcesTask(scrobbleSources, logger);
-        scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
-            minutes: 20,
-            runImmediately: true
-        }, sourceTask, {id: 'sources_heart'}));
-        logger.debug('Added Source Heartbeat task to scheduler');
+        for(const c of scrobbleSources.sources) {
+            c.initTasks();
+            const res = await Promise.race([
+                sleep(2200),
+                (async () => {
+                    while(!c.isReady()) {
+                        await sleep(400)
+                    }
+                    return true;
+                })()
+            ]);
+            if(res === undefined) {
+                logger.debug(`Not waiting for Source ${c.name} to finish init, moving on to the next Source...`);
+            }
+        }
 
         let runRetentionNow = parseBool(process.env.RETENTION_IMMEDIATE, false);
 

@@ -48,6 +48,7 @@ import { spawn, catchAbortError, isAbortError, rethrowAbortError, delay, forever
 import { AbortedError, generateLoggableAbortReason } from '../common/errors/MSErrors.js';
 import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, queryArgsFromRequest, QueryPlaysOpts, RequestPlayQuery } from '../common/database/drizzle/repositories/PlayRepository.js';
 import { asPlay } from '../../core/PlayMarshalUtils.js';
+import { AsyncTask, SimpleIntervalJob, ToadScheduler } from 'toad-scheduler';
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -90,6 +91,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     manualListening?: boolean
 
+    scheduler: ToadScheduler = new ToadScheduler();
     emitter: EventEmitter;
 
     protected SCROBBLE_BACKLOG_COUNT: number = 30;
@@ -144,6 +146,59 @@ export default abstract class AbstractSource extends AbstractComponent implement
         if(this.canPoll) {
             await this.tryStopPolling('Source is being disposed');
         }
+    }
+
+    public initTasks() {
+        if(this.scheduler.existsById('heartbeat') === false) {
+            this.logger.info('Adding Heartbeat Task and running immediately');
+            this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
+                minutes: 20,
+                runImmediately: true
+            }, new AsyncTask(
+                'Heartbeat',
+                (): Promise<any> => {
+                    return this.heartbeatTask().then(() => null).catch((err) => {
+                        this.logger.error(err);
+                    });
+                },
+                (err: Error) => {
+                    this.logger.error(err);
+                }
+            ), {id: 'heartbeat'}));
+        } else {
+            this.logger.warn('Heartbeat task is already added to scheduler.');
+        }
+    }
+
+    protected async heartbeatTask(): Promise<boolean> {
+        if(!this.isReady()) {
+            if(!this.canAuthUnattended()) {
+                this.logger.warn({labels: 'Heartbeat'}, 'Source is not ready but will not try to initialize because auth state is not good and cannot be corrected unattended.')
+                return false;
+            }
+            try {
+                await this.tryInitialize({force: false, notify: true, notifyTitle: 'Could not initialize automatically'});
+            } catch (e) {
+                this.logger.error(new Error('Could not initialize automatically', {cause: e}));
+                return false;
+            }
+
+            if('discoverDevices' in this && typeof this.discoverDevices === 'function') {
+                this.discoverDevices();
+            }
+
+            if (this.canPoll && !this.polling) {
+                if(!this.canAuthUnattended()) {
+                    this.logger.warn({labels: 'Heartbeat'}, 'Should be polling but will not attempt to start because auth state is not good and cannot be correct unattended.');
+                    return false;
+                } else {
+                    this.logger.info({labels: 'Heartbeat'}, 'Should be polling, attempting to start polling...');
+                    this.poll({force: false, notify: true}).catch(e => this.logger.error(e));
+                }
+                return true;
+            }
+        }
+        return true;
     }
 
     protected async postCache(): Promise<void> {
