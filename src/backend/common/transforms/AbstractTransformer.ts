@@ -61,12 +61,13 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
     protected abstract doParseConfig(data: StageConfig): Y;
 
     public async handle(data: Y, play: PlayObject): Promise<PlayObject> {
-        const cacheKey = `${this.configHash}-${hashObject(data)}-${hashObject(playContentInvariantTransform(play))}`
+        const cacheKey = `transformResult-${this.configHash}-${hashObject(data)}-${hashObject(playContentInvariantTransform(play))}`
         try {
-            const cachedTransform = await this.cache.get<PlayObject>(cacheKey);
-            if(cachedTransform !== undefined) {
+            const cachedTransformData = await this.cache.get<T>(cacheKey);
+            if(cachedTransformData !== undefined) {
                 this.logger.debug('Transform cache hit');
-                return cachedTransform;
+                const transformed = await this.doHandle(data, play, cachedTransformData);
+                return transformed;
             }
         } catch (e) {
             this.logger.warn(new Error(`Could not fetch cache key ${cacheKey}`, {cause: e}));
@@ -106,7 +107,7 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
         }
 
         const transformed = await this.doHandle(data, play, transformData);
-        await this.cache.set(cacheKey, transformed, this.config.options?.ttl ?? '15s');
+        await this.cache.set(cacheKey, transformData, this.config.options?.ttl ?? '15s');
         return transformed;
     }
 
