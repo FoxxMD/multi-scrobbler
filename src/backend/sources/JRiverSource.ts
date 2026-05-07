@@ -9,6 +9,7 @@ import { Info, JRiverApiClient, PLAYER_STATE } from "../common/vendor/JRiverApiC
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
+import { artistNamesToCredits } from "../../core/StringUtils.js";
 
 export class JRiverSource extends MemoryPositionalSource {
     declare config: JRiverSourceConfig;
@@ -104,7 +105,7 @@ export class JRiverSource extends MemoryPositionalSource {
             data: {
                 track: Name,
                 album: album,
-                artists,
+                artists: artistNamesToCredits(artists),
                 duration: Math.round(length),
                 playDate: dayjs()
             },

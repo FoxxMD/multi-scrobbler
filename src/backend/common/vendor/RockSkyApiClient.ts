@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import request, { Request, Response } from 'superagent';
 import { PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, URLData } from "../../../core/Atomic.js";
-import { nonEmptyStringOrDefault } from "../../../core/StringUtils.js";
+import { artistNamesToCredits, nonEmptyStringOrDefault } from "../../../core/StringUtils.js";
 import { UpstreamError } from "../errors/UpstreamError.js";
 import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
 import { RockSkyClientData, RockSkyData, RockSkyOptions } from "../infrastructure/config/client/rocksky.js";
@@ -221,8 +221,8 @@ export const rockskyScrobbleToPlay = (obj: RockskyScrobble): PlayObject => {
     const play: PlayObjectLifecycleless = {
         data: {
             track: obj.title,
-            artists: nonEmptyStringOrDefault(obj.artist) ? [obj.artist] : [],
-            albumArtists: nonEmptyStringOrDefault(obj.albumArtist) ? [obj.albumArtist] : [],
+            artists: artistNamesToCredits(nonEmptyStringOrDefault(obj.artist) ? [obj.artist] : []),
+            albumArtists: artistNamesToCredits(nonEmptyStringOrDefault(obj.albumArtist) ? [obj.albumArtist] : []),
             album: nonEmptyStringOrDefault(obj.album),
             playDate: dayjs.utc(obj.createdAt).local()
         },

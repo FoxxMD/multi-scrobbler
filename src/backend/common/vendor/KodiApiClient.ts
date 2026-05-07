@@ -8,6 +8,7 @@ import { AbstractApiOptions, FormatPlayObjectOptions } from "../infrastructure/A
 import { KodiData } from "../infrastructure/config/source/kodi.js";
 import AbstractApiClient from "./AbstractApiClient.js";
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.js";
+import { artistNamesToCredits } from "../../../core/StringUtils.js";
 
 interface KodiDuration {
     hours: number
@@ -109,8 +110,8 @@ export class KodiApiClient extends AbstractApiClient {
             data: {
                 track: title,
                 album: album,
-                albumArtists: albumartist,
-                artists,
+                albumArtists: artistNamesToCredits(albumartist),
+                artists: artistNamesToCredits(artistVal),
                 duration,
                 playDate: dayjs()
             },

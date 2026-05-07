@@ -3,7 +3,7 @@ import EventEmitter from "events";
 import SpotifyWebApi from "spotify-web-api-node";
 import request from 'superagent';
 import { BrainzMeta, PlayObject, PlayObjectLifecycleless, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC, SpotifyMeta } from "../../core/Atomic.js";
-import { combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
+import { artistNamesToCredits, artistNameToCredit, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
 import {
@@ -214,8 +214,8 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
 
         const play: PlayObjectLifecycleless = {
             data: {
-                artists: artists.map(x => x.name),
-                albumArtists: actualAlbumArtists.map(x => x.name),
+                artists: artists.map(x => artistNameToCredit(x.name)),
+                albumArtists: actualAlbumArtists.map(x => artistNameToCredit(x.name)),
                 album: albumName,
                 track: name,
                 duration: duration_ms / 1000,

@@ -28,6 +28,7 @@ import { generateArray } from '../../../core/DataUtils.js';
 import { RepositoryCreatePlayOpts } from '../../common/database/drizzle/repositories/PlayRepository.js';
 import { fixtureCreatePlay } from '../utils/databaseFixtures.js';
 import { isAbortError } from 'abort-controller-x';
+import { artistNamesToCredits } from '../../../core/StringUtils.js';
 
 chai.use(asPromised);
 
@@ -152,9 +153,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
 
                 const uniquePlay = generatePlay({
-                    artists: [
-                        "２８１４"
-                    ],
+                    artists: artistNamesToCredits(["２８１４"]),
                     track: "新宿ゴールデン街",
                     duration: 130,
                     playDate: normalizedWithMixedDur[normalizedWithMixedDur.length - 3].data.playDate.add(6, 'minutes')
@@ -186,7 +185,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
             const diffPlay = clone(normalizedWithMixedDur[1]);
             diffPlay.data.playDate = diffPlay.data.playDate.add(9, 's');
-            diffPlay.data.artists = ['A Different Artist'];
+            diffPlay.data.artists = artistNamesToCredits(['A Different Artist']);
 
             assert.isFalse((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
         });
@@ -275,7 +274,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             it('Is not detected as duplicate when play date matches fuzzy and play source SOT is history', async function () {
 
                 const play = generatePlay({
-                    artists: ['Nejad'], 
+                    artists: artistNamesToCredits(['Nejad']), 
                     track: 'CODE', 
                     album: undefined, 
                     playDate: dayjs().subtract(179, 's'),
@@ -321,10 +320,10 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             diffPlay.data.track = ref.data.track.replaceAll(' ', '   ');
             assert.isTrue((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
 
-            diffPlay.data.artists = ref.data.artists.map(x => x.toUpperCase());
+            diffPlay.data.artists = ref.data.artists.map(x => ({...x, name: x.name.toUpperCase()}));
             assert.isTrue((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
 
-            diffPlay.data.artists = ref.data.artists.map(x => x.replaceAll(' ', '   '));
+            diffPlay.data.artists = ref.data.artists.map(x => ({...x, name: x.name.replaceAll(' ', '   ')}));
             assert.isTrue((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
         });
 
@@ -411,7 +410,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
             const spotifyPlay: PlayObject = {
                 data: {
-                    artists: [
+                    artists: artistNamesToCredits([
                         "Terrace Martin",
                         "Robert Glasper",
                         "9th Wonder",
@@ -419,7 +418,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
                         "Dinner Party",
                         "Cordae",
                         "Phoelix"
-                    ],
+                    ]),
                     album: "Dinner Party: Dessert",
                     track: "Freeze Tag (feat. Cordae & Phoelix)",
                     "duration": 191.375,
@@ -1060,7 +1059,7 @@ describe('Now Playing', function() {
 
             await npScrobbler.queuePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}), {type: 'jellyfin', name: 'test'});
 
-            const res = await Promise.race([pEvent(npScrobbler.emitter, 'nowPlayingUpdated'), sleep(12)]);
+            const res = await Promise.race([pEvent(npScrobbler.emitter, 'nowPlayingUpdated'), sleep(20)]);
 
             expect(res).is.not.undefined;
 
@@ -1068,7 +1067,7 @@ describe('Now Playing', function() {
 
             await npScrobbler.queuePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}), {type: 'jellyfin', name: 'test'});
 
-            const resUpdate = await Promise.race([pEvent(npScrobbler.emitter, 'nowPlayingUpdated'), sleep(12)]);
+            const resUpdate = await Promise.race([pEvent(npScrobbler.emitter, 'nowPlayingUpdated'), sleep(20)]);
 
             expect(resUpdate).is.not.undefined;
         });

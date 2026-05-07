@@ -147,6 +147,11 @@ export interface BrainzMeta {
     track?: string
 }
 
+export interface ArtistCredit {
+    name: string
+    mbid?: string
+}
+
 export interface SpotifyMeta {
     artist?: string[]
     albumArtist?: string[]
@@ -160,8 +165,8 @@ export interface TrackMeta {
 }
 
 export interface TrackData {
-    artists?: string[]
-    albumArtists?: string[]
+    artists?: ArtistCredit[]
+    albumArtists?: ArtistCredit[]
     album?: string
     track?: string
     /**

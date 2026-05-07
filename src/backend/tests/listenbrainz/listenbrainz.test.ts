@@ -25,6 +25,7 @@ import incorrectMultiArtistsTrackName from './incorrectlyMapped/multiArtistsInTr
 import veryWrong from './incorrectlyMapped/veryWrong.json' with { type: "json" };
 import { generatePlay } from "../../../core/PlayTestUtils.js";
 import { defaultLifecycle } from "../../utils/PlayTransformUtils.js";
+import { artistCreditsToNames, artistNamesToCredits } from "../../../core/StringUtils.js";
 
 interface LZTestFixture {
     data: ListenResponse
@@ -37,7 +38,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
             for(const test of noArtistMapping as unknown as LZTestFixture[]) {
                 const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers(play.data.artists, test.expected.artists);
+                assert.sameDeepMembers(artistCreditsToNames(play.data.artists), test.expected.artists);
             }
         });
 
@@ -45,7 +46,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
             for(const test of veryWrong as unknown as LZTestFixture[]) {
                 const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers( play.data.artists, test.expected.artists);
+                assert.sameDeepMembers( artistCreditsToNames(play.data.artists), test.expected.artists);
             }
         });
 
@@ -53,7 +54,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
             for(const test of incorrectMultiArtistsTrackName as unknown as LZTestFixture[]) {
                 const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers(play.data.artists, test.expected.artists);
+                assert.sameDeepMembers(artistCreditsToNames(play.data.artists), test.expected.artists);
             }
         });
     })
@@ -65,7 +66,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
             for(const test of slightlyDifferentNames as unknown as LZTestFixture[]) {
                 const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers(play.data.artists, test.expected.artists);
+                assert.sameDeepMembers(artistCreditsToNames(play.data.artists), test.expected.artists);
             }
         });
 
@@ -73,7 +74,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
             for(const test of multiMappedArtistsWithSingleUserArtist as unknown as LZTestFixture[]) {
                 const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers(play.data.artists, test.expected.artists);
+                assert.sameDeepMembers(artistCreditsToNames(play.data.artists), test.expected.artists);
             }
         });
 
@@ -81,7 +82,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
             for(const test of artistWithProperJoiner as unknown as LZTestFixture[]) {
                 const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers( play.data.artists, test.expected.artists);
+                assert.sameDeepMembers( artistCreditsToNames(play.data.artists), test.expected.artists);
             }
         });
 
@@ -89,7 +90,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
             for(const test of multiArtistInArtistName as unknown as LZTestFixture[]) {
                 const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers(play.data.artists, test.expected.artists);
+                assert.sameDeepMembers(artistCreditsToNames(play.data.artists), test.expected.artists);
             }
         });
 
@@ -97,7 +98,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
             for(const test of multiArtistsInTrackName as unknown as LZTestFixture[]) {
                 const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers( play.data.artists, test.expected.artists);
+                assert.sameDeepMembers(artistCreditsToNames(play.data.artists), test.expected.artists);
             }
         });
 
@@ -105,7 +106,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
             for(const test of normalizedValues as unknown as LZTestFixture[]) {
                 const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers( play.data.artists, test.expected.artists);
+                assert.sameDeepMembers(artistCreditsToNames(play.data.artists), test.expected.artists);
             }
         });
     });
@@ -128,7 +129,7 @@ describe('Listenbrainz Response Behavior', function() {
         async function() {
             const play: PlayObject = {
                 data: {
-                    artists: ['Celldweller'],
+                    artists: artistNamesToCredits(['Celldweller']),
                     album: 'The Complete Cellout, Volume 01',
                     track: 'Frozen',
                     duration: 299,
@@ -172,7 +173,7 @@ describe('Listenbrainz Response Behavior', function() {
         async function() {
             const play: PlayObject = {
                 data: {
-                    artists: ['Celldweller'],
+                    artists: artistNamesToCredits(['Celldweller']),
                     album: 'The Complete Cellout, Volume 01',
                     track: 'Frozen',
                     duration: 299,
@@ -202,7 +203,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
 
     it('Should combine artist and artist_names', function() {
 
-        const play = generatePlay({artists: ['Artist A'], albumArtists: []});
+        const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []});
         const submitPayload = playToListenPayload(play);
 
         const additionalArtists = [...submitPayload.track_metadata.additional_info.artist_names, 'Artist B'];
@@ -211,13 +212,13 @@ describe('Listenbrainz Endpoint Behavior', function() {
 
         const playFromPayload = listenPayloadToPlay(submitPayload);
 
-        expect(playFromPayload.data.artists).to.be.eql(additionalArtists)
+        expect(artistCreditsToNames(playFromPayload.data.artists)).to.be.eql(additionalArtists)
         
     });
 
     it('Should combine artist and artist_names into a unique array', function() {
 
-        const play = generatePlay({artists: ['Artist A'], albumArtists: []});
+        const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []});
         const submitPayload = playToListenPayload(play);
 
         const additionalArtists = ['Artist A', 'Artist B'];
@@ -226,13 +227,13 @@ describe('Listenbrainz Endpoint Behavior', function() {
 
         const playFromPayload = listenPayloadToPlay(submitPayload);
 
-        expect(playFromPayload.data.artists).to.be.eql(['Artist A', 'Artist B'])
+        expect(artistCreditsToNames(playFromPayload.data.artists)).to.be.eql(['Artist A', 'Artist B'])
         
     });
 
     it('Should set music_service_name from source', function() {
 
-        const play = generatePlay({artists: ['Artist A'], albumArtists: []}, {source: 'Plex'});
+        const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {source: 'Plex'});
         const submitPayload = playToListenPayload(play);
 
         expect(submitPayload.track_metadata.additional_info.music_service_name).to.be.eql('Plex')
@@ -243,7 +244,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
 
         const playFromPayload = listenPayloadToPlay(submit);
 
-        expect(playFromPayload.data.artists).to.be.eql(submit.track_metadata.additional_info.artist_names);
+        expect(artistCreditsToNames(playFromPayload.data.artists)).to.be.eql(submit.track_metadata.additional_info.artist_names);
 
     });
 

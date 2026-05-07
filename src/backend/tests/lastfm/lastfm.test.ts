@@ -9,16 +9,17 @@ import { http, HttpResponse, delay } from "msw";
 import { loggerDebug } from '@foxxmd/logging';
 import { configDir, projectDir } from '../../common/index.js';
 import { LastFMGeo } from 'lastfm-ts-api';
+import { artistNamesToCredits } from '../../../core/StringUtils.js';
 
 chai.use(asPromised);
 
 describe('#LFM Scrobble Payload Behavior', function () {
 
         it('Should remove VA from album artist', function() {
-            const play = generatePlay({albumArtists: ['VA']});
+            const play = generatePlay({albumArtists: artistNamesToCredits(['VA'])});
             expect(playToClientPayload(play).albumArtist).to.be.undefined;
 
-            const okPlay = generatePlay({albumArtists: ['My Dude']});
+            const okPlay = generatePlay({albumArtists: artistNamesToCredits(['My Dude'])});
             expect(playToClientPayload(okPlay).albumArtist).eq('My Dude');
         });
 });
@@ -55,17 +56,17 @@ describe('#LFM Track to Play', function() {
         const toArtText = generateLastfmTrackObject();
         delete toArtText.artist.name;
         expect(toArtText.artist['#text']).to.not.be.undefined;
-        expect(formatPlayObj(toArtText).data.artists[0]).to.eq(toArtText.artist['#text']);
+        expect(formatPlayObj(toArtText).data.artists[0].name).to.eq(toArtText.artist['#text']);
 
         const toArtTextEmptyNAme = generateLastfmTrackObject();
         toArtTextEmptyNAme.artist.name = '';
         expect(toArtTextEmptyNAme.artist['#text']).to.not.be.undefined;
-        expect(formatPlayObj(toArtTextEmptyNAme).data.artists[0]).to.eq(toArtTextEmptyNAme.artist['#text']);
+        expect(formatPlayObj(toArtTextEmptyNAme).data.artists[0].name).to.eq(toArtTextEmptyNAme.artist['#text']);
 
         const toArtName = generateLastfmTrackObject();
         delete toArtName.artist['#text'];
         expect(toArtName.artist.name).to.not.be.undefined;
-        expect(formatPlayObj(toArtName).data.artists[0]).to.eq(toArtName.artist.name);
+        expect(formatPlayObj(toArtName).data.artists[0].name).to.eq(toArtName.artist.name);
     });
 
 });

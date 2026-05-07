@@ -1,4 +1,4 @@
-import { PlayObject, TransformerCommon } from "../../../core/Atomic.js";
+import { ArtistCredit, PlayObject, TransformerCommon } from "../../../core/Atomic.js";
 import { isWhenCondition, testWhenConditions } from "../../utils/PlayTransformUtils.js";
 import { WebhookPayload } from "../infrastructure/config/health/webhooks.js";
 import { ExternalMetadataTerm, PlayTransformNativeStage, StageConfig } from "../infrastructure/Transform.js";
@@ -10,6 +10,7 @@ import { DELIMITERS_NO_AMP } from "../infrastructure/Atomic.js";
 import { asArray } from "../../utils/DataUtils.js";
 import { MaybeLogger } from '../MaybeLogger.js';
 import { childLogger } from "@foxxmd/logging";
+import { artistCreditToName, artistNameToCredit } from "../../../core/StringUtils.js";
 
 export type ArtistParseSource = 'artists' | 'title'
 
@@ -167,7 +168,7 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
     protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, _transformData: undefined): Promise<string | undefined> {
         return play.data.track;
     }
-    protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<string[] | undefined> {
+    protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<ArtistCredit[] | undefined> {
         if (parts === false) {
             return play.data.artists;
         }
@@ -182,7 +183,7 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
 
         return transformData.data.artists;
     }
-    protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, _transformData: undefined): Promise<string[] | undefined> {
+    protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, _transformData: undefined): Promise<ArtistCredit[] | undefined> {
         return play.data.albumArtists;
     }
     protected async handleAlbum(play: PlayObject, parts: ExternalMetadataTerm, _transformData: undefined): Promise<string | undefined> {
@@ -205,7 +206,7 @@ export const nativeParse = (play: PlayObject, options?: NativeTransformerDataStr
             logger = new MaybeLogger()
         } = options || {};
 
-        let artists = [];
+        let artists: ArtistCredit[] = [];
         let track = play.data.track;
 
         if(artistsParseFrom.includes('artists')) {
@@ -214,18 +215,18 @@ export const nativeParse = (play: PlayObject, options?: NativeTransformerDataStr
 
                 for(const artist of play.data.artists) {
                 
-                    const matchedIgnoreArtists = ignoreArtistsRegex.map(x => ({reg: x.toString(), res: parseRegexSingle(x, artist)})).filter(x => x.res !== undefined);
+                    const matchedIgnoreArtists = ignoreArtistsRegex.map(x => ({reg: x.toString(), res: parseRegexSingle(x, artist.name)})).filter(x => x.res !== undefined);
                     if(matchedIgnoreArtists.length > 0) {
                         logger.debug(`Will not parse artist because it matched an ignore regex:\n${matchedIgnoreArtists.map(x => `Reg: ${x.reg} => ${x.res.match}`).join('\n')}`);
                         artists.push(artist);
                     } else {
-                        const artistCredits = parseArtistCredits(artist, delimiters);
+                        const artistCredits = parseArtistCredits(artist.name, delimiters);
                         if (artistCredits !== undefined) {
                             if (artistCredits.primary !== undefined) {
-                                artists.push(artistCredits.primary);
+                                artists.push({name: artistCredits.primary});
                             }
                             if (artistCredits.secondary !== undefined) {
-                                artists = artists.concat(artistCredits.secondary);
+                                artists = artists.concat(artistCredits.secondary.map(artistNameToCredit));
                             }
                         } else {
                             // couldn't parse anything from artist string, use as-is
@@ -246,14 +247,14 @@ export const nativeParse = (play: PlayObject, options?: NativeTransformerDataStr
         if(artistsParseFrom.includes('title')) {
             const trackArtists = parseTrackCredits(play.data.track, delimiters);
             if (trackArtists !== undefined && trackArtists.secondary !== undefined) {
-                artists = artists.concat(trackArtists.secondary);
+                artists = artists.concat(trackArtists.secondary.map(artistNameToCredit));
                 if(titleClean) {
                     track = trackArtists.primary;
                 }
             }
         }
 
-        artists = uniqueNormalizedStrArr([...artists]);
+        artists = (uniqueNormalizedStrArr([...artists.map(artistCreditToName)])).map(artistNameToCredit);
 
         return {
             ...play,

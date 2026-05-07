@@ -18,7 +18,7 @@ import {
     playsAreSortConsistent
 } from "../utils/PlayComparisonUtils.js";
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.js";
+import { artistNamesToCredits, buildTrackString, truncateStringToLength } from "../../core/StringUtils.js";
 import { joinedUrl } from "../utils/NetworkUtils.js";
 import { todayAwareFormat } from "../../core/TimeUtils.js";
 import { parseArrayFromMaybeString, parseArtistCredits, parseCredits } from "../utils/StringUtils.js";
@@ -377,7 +377,7 @@ Redirect URI  : ${this.redirectUri}`);
             duration: dur, // string timestamp
         } = obj;
 
-        let artists = [],
+        let artists: string[] = [],
             album = undefined,
         duration = undefined;
         if(artistsData !== undefined) {
@@ -421,8 +421,8 @@ Redirect URI  : ${this.redirectUri}`);
         }
         const play: PlayObjectLifecycleless = {
             data: {
-                artists,
-                albumArtists,
+                artists: artistNamesToCredits(artists),
+                albumArtists: artistNamesToCredits(albumArtists),
                 album,
                 track: title,
                 duration,

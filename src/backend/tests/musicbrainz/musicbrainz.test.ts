@@ -16,6 +16,7 @@ import { generatePlay, withBrainz } from '../../../core/PlayTestUtils.js';
 import { intersect, missingMbidTypes } from '../../utils.js';
 import { defaultLifecycle } from '../../utils/PlayTransformUtils.js';
 import { CoverArtApiClient, CoverArtApiConfig } from '../../common/vendor/musicbrainz/CoverArtApiClient.js';
+import { artistCreditToName, artistNamesToCredits, artistNameToCredit } from '../../../core/StringUtils.js';
 
 const envPath = path.join(projectDir, '.env');
 dotenv.config({ path: envPath });
@@ -62,7 +63,7 @@ describe('Musicbrainz API', function () {
             const play: PlayObject = {
                 data: {
                     track: "Little Joe and Mary ii",
-                    artists: ["Khruangbin"],
+                    artists: artistNamesToCredits(["Khruangbin"]),
                     album: "The Universe Smiles Upon You ii"
                 },
                 meta: {
@@ -89,7 +90,7 @@ describe('Musicbrainz API', function () {
                     track: 'Cyber Space (CrossWorlds Remix): Final Lap (No Chants)',
                     album: "Sonic Racing: CrossWorlds Original Soundtrack - Echoes of Dimensions",
                     artists: [
-                        "Kanon Oguni"
+                        artistNameToCredit("Kanon Oguni")
                     ]
                 },
                 meta: {
@@ -118,7 +119,7 @@ describe('Musicbrainz API', function () {
             const play: PlayObject = {
                 data: {
                     track: "Fake",
-                    artists: ["Fake"],
+                    artists: artistNamesToCredits(["Fake"]),
                     album: "Fake",
                     meta: {
                         brainz: {
@@ -151,7 +152,7 @@ describe('Musicbrainz API', function () {
             const play: PlayObject = {
                 data: {
                     track: "Fake",
-                    artists: ["Fake"],
+                    artists: artistNamesToCredits(["Fake"]),
                     album: "Fake",
                     isrc: 'GBAHT1600302'
                 },
@@ -177,8 +178,8 @@ describe('Musicbrainz API', function () {
             const play: PlayObject = {
                 data: {
                     track: "Berghain",
-                    artists: ["ROSALÍA", "Björk", "Yves Tumor"],
-                    albumArtists: ["ROSALÍA"],
+                    artists: artistNamesToCredits(["ROSALÍA", "Björk", "Yves Tumor"]),
+                    albumArtists: artistNamesToCredits(["ROSALÍA"]),
                     album: "LUX",
                     meta: {
                         brainz: {
@@ -211,8 +212,8 @@ describe('Musicbrainz API', function () {
             const play: PlayObject = {
                 data: {
                     track: "Berghain",
-                    artists: ["ROSALÍA", "Björk", "Yves Tumor"],
-                    albumArtists: ["ROSALÍA"],
+                    artists: artistNamesToCredits(["ROSALÍA", "Björk", "Yves Tumor"]),
+                    albumArtists: artistNamesToCredits(["ROSALÍA"]),
                     album: "LUX",
                     meta: {
                         brainz: {
@@ -246,7 +247,7 @@ describe('Musicbrainz API', function () {
             const play: PlayObject = {
                 data: {
                     track: "Roulette Road (CrossWorlds Remix)",
-                    artists: ["Takahiro Kai, SEGA GAME MUSIC & SEGA SOUND TEAM"],
+                    artists: artistNamesToCredits(["Takahiro Kai, SEGA GAME MUSIC & SEGA SOUND TEAM"]),
                     album: "Sonic Racing: CrossWorlds Original Soundtrack - Echoes of Dimensions"
                 },
                 meta: {
@@ -271,7 +272,7 @@ describe('Musicbrainz API', function () {
             const play: PlayObject = {
                 data: {
                     track: "Undefeatable (feat. Kellin Quinn)",
-                    artists: ["SEGA Sound Team / Tomoya Ohtani"],
+                    artists: artistNamesToCredits(["SEGA Sound Team / Tomoya Ohtani"]),
                 },
                 meta: {
                     lifecycle: defaultLifecycle()
@@ -296,7 +297,7 @@ describe('Musicbrainz API', function () {
             const play: PlayObject = {
                 data: {
                     track: "Bad Apple!! feat.SEKAI",
-                    artists: ["、ナイトコードで。"],
+                    artists: artistNamesToCredits(["、ナイトコードで。"]),
                     album: "25時、ナイトコードで。 SEKAI ALBUM Vol.3"
                 },
                 meta: {
@@ -321,7 +322,7 @@ describe('Musicbrainz API', function () {
             const play: PlayObject = {
                 data: {
                     track: "HIBANA - Reloaded - (feat. 星乃一歌 & Hatsune Miku)",
-                    artists: ["Leo/need"],
+                    artists: artistNamesToCredits(["Leo/need"]),
                     album: "Leo / need SEKAI ALBUM Vol.1"
                 },
                 meta: {
@@ -350,7 +351,7 @@ describe('Musicbrainz API', function () {
             const play: PlayObject = {
                 data: {
                     track: "Price",
-                    artists: ["ATLUS Sound Team"],
+                    artists: artistNamesToCredits(["ATLUS Sound Team"]),
                     album: "PERSONA5 ORIGINAL SOUNDTRACK",
                     isrc: 'JPK651601515'
                 },
@@ -395,7 +396,7 @@ describe('Musicbrainz API', function () {
                 const play: PlayObject = {
                     data: {
                         track: "Little Joe and Mary ii",
-                        artists: ["Khruangbin"],
+                        artists: artistNamesToCredits(["Khruangbin"]),
                         album: "The Universe Smiles Upon You ii"
                     },
                     meta: {
@@ -429,7 +430,7 @@ describe('Musicbrainz API', function () {
                 const play: PlayObject = {
                     data: {
                         track: "Little Joe and Mary ii",
-                        artists: ["Khruangbin"],
+                        artists: artistNamesToCredits(["Khruangbin"]),
                         album: "The Universe Smiles Upon You ii"
                     },
                     meta: {

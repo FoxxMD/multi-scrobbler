@@ -1,6 +1,6 @@
 import EventEmitter from "events";
 import { PlayObject, PlayObjectLifecycleless, URLData } from "../../core/Atomic.js";
-import { buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
+import { artistNamesToCredits, buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import {
     asPlayerStateDataMaybePlay,
     FormatPlayObjectOptions,
@@ -376,8 +376,8 @@ export default class PlexApiSource extends MemoryPositionalSource {
 
         const play: PlayObjectLifecycleless = {
             data: {
-                artists: realArtists,
-                albumArtists,
+                artists: artistNamesToCredits(realArtists),
+                albumArtists: artistNamesToCredits(albumArtists),
                 album,
                 track,
                 // albumArtists: AlbumArtists !== undefined ? AlbumArtists.map(x => x.Name) : undefined,

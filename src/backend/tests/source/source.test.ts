@@ -19,6 +19,7 @@ import { RT_TICK_DEFAULT, setRtTick } from "../../sources/PlayerState/RealtimePl
 import { sleep } from "../../utils.js";
 import DeezerInternalSource from "../../sources/DeezerInternalSource.js";
 import { DeezerInternalSourceOptions } from "../../common/infrastructure/config/source/deezer.js";
+import { artistCreditsToNames } from "../../../core/StringUtils.js";
 
 chai.use(asPromised);
 
@@ -163,7 +164,7 @@ describe('Sources correctly parse incoming payloads', function () {
         const play = SpotifySource.formatPlayObj(noAAPayload as SpotifyApi.CurrentPlaybackResponse);
         expect(play.data.track).eq('The Sandpits Of Zonhoven');
         expect(play.data.album).eq('Bloodbags And Downtube Shifters');
-        expect(play.data.artists).eql(['Dubmood', 'MASTER BOOT RECORD']);
+        expect(artistCreditsToNames(play.data.artists)).eql(['Dubmood', 'MASTER BOOT RECORD']);
         expect(play.data.albumArtists).to.be.empty;
     });
 
@@ -171,8 +172,8 @@ describe('Sources correctly parse incoming payloads', function () {
         const play = SpotifySource.formatPlayObj(spotifyPayload as SpotifyApi.CurrentPlaybackResponse);
         expect(play.data.track).eq('The Sandpits Of Zonhoven');
         expect(play.data.album).eq('Bloodbags And Downtube Shifters');
-        expect(play.data.artists).eql(['Dubmood', 'MASTER BOOT RECORD']);
-        expect(play.data.albumArtists).eql(['Dubmood']);
+        expect(artistCreditsToNames(play.data.artists)).eql(['Dubmood', 'MASTER BOOT RECORD']);
+        expect(artistCreditsToNames(play.data.albumArtists)).eql(['Dubmood']);
     });
 
     it('Spotify parses payload with identical album artists correctly', function() {
@@ -181,8 +182,8 @@ describe('Sources correctly parse incoming payloads', function () {
         const identicalArtistsPlay = SpotifySource.formatPlayObj(identicalArtistsPayload as SpotifyApi.CurrentPlaybackResponse);
         expect(identicalArtistsPlay.data.track).eq('The Sandpits Of Zonhoven');
         expect(identicalArtistsPlay.data.album).eq('Bloodbags And Downtube Shifters');
-        expect(identicalArtistsPlay.data.artists).eql(['Dubmood', 'MASTER BOOT RECORD']);
-        expect(identicalArtistsPlay.data.albumArtists).to.be.empty;
+        expect(artistCreditsToNames(identicalArtistsPlay.data.artists)).eql(['Dubmood', 'MASTER BOOT RECORD']);
+        expect(artistCreditsToNames(identicalArtistsPlay.data.albumArtists)).to.be.empty;
     });
 });
 

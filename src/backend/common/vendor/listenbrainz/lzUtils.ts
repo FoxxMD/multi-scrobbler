@@ -4,6 +4,7 @@ import { getScrobbleTsSOCDate } from "../../../utils/TimeUtils.js";
 import { SubmitOptions } from "../ListenbrainzApiClient.js";
 import { ListenPayload, MinimumTrack, SubmitListenAdditionalTrackInfo, SubmitPayload } from "./interfaces.js";
 import {version as appVersion } from '../../../version.js';
+import { artistCreditsToNames, artistCreditToName } from "../../../../core/StringUtils.js";
 
 export const playToListenPayload = (play: PlayObject, version?: string): ListenPayload => {
     const {
@@ -25,10 +26,10 @@ export const playToListenPayload = (play: PlayObject, version?: string): ListenP
 
     let addInfo: SubmitListenAdditionalTrackInfo = {
         // primary artists
-        artist_names: Array.from(new Set([...artists])),
+        artist_names: Array.from(new Set([...artists.map(artistCreditToName)])),
         // primary artist
-        release_artist_name: albumArtists.length === 1 ? albumArtists[0] : undefined,
-        release_artist_names: albumArtists.length > 0 ? albumArtists : undefined,
+        release_artist_name: albumArtists.length === 1 ? albumArtists[0].name : undefined,
+        release_artist_names: albumArtists.length > 0 ? artistCreditsToNames(albumArtists) : undefined,
         // use data from LZ response, if this Play was originally from LZ Source
         media_player: mediaPlayerName ?? msAdditionalInfo.media_player,
         media_player_version: mediaPlayerVersion ?? msAdditionalInfo.media_player_version,

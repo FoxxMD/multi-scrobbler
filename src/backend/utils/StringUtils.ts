@@ -282,7 +282,7 @@ export const compareScrobbleArtists = (existing: PlayObject, candidate: PlayObje
         }
     } = candidate;
 
-    return compareNormalizedStrings(existingArtists.reduce((acc, curr) => `${acc} ${curr}`, ''), candidateArtists.reduce((acc, curr) => `${acc} ${curr}`, '')).highScore;
+    return compareNormalizedStrings(existingArtists.reduce((acc, curr) => `${acc} ${curr.name}`, ''), candidateArtists.reduce((acc, curr) => `${acc} ${curr.name}`, '')).highScore;
 }
 
 /**

@@ -6,6 +6,7 @@ import timezone from "dayjs/plugin/timezone.js";
 import utc from "dayjs/plugin/utc.js";
 import {
     AmbPlayObject,
+    ArtistCredit,
     PlayData,
     PlayObject,
     SCROBBLE_TS_SOC_END,
@@ -108,7 +109,7 @@ export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: Tr
         strParts.push(`(${trackId})`);
     }
     if (include.includes('artist')) {
-        strParts.push(artistsFunc(artists))
+        strParts.push(artistsFunc(artistCreditsToNames(artists)))
     }
     if (include.includes('track')) {
         strParts.push(trackFunc(track, playObj, strParts.length > 0));
@@ -307,3 +308,8 @@ export const containsDelimiters = (str: string) => null !== str.match(/[,&/\\]+/
 
 const NUMBERS_REGEX = new RegExp(/^\s*\d+\s*$/);
 export const stringIsOnlyNumbers = (str: string) => NUMBERS_REGEX.test(str);
+
+export const artistNamesToCredits = (names: string[] | undefined): ArtistCredit[] => names === undefined ? undefined : names.map((x) => ({name: x}));
+export const artistNameToCredit = (name: string | undefined): ArtistCredit => name === undefined ? undefined : ({ name });
+export const artistCreditToName = (a: ArtistCredit): string => a.name;
+export const artistCreditsToNames = (a: ArtistCredit[]): string[] => a.map((x) => x.name);

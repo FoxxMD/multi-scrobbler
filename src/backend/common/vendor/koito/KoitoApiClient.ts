@@ -13,6 +13,7 @@ import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.js";
 import { ScrobbleSubmitError } from "../../errors/MSErrors.js";
 import { tryApiCall } from "../../../utils/RequestUtils.js";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
+import { artistNamesToCredits } from "../../../../core/StringUtils.js";
 
 interface SubmitOptions {
     log?: boolean
@@ -218,7 +219,7 @@ export const listenObjectResponseToPlay = (obj: ListenObjectResponse, options: {
     const play: PlayObjectLifecycleless = {
         data: {
             track: obj.track.title,
-            artists: (obj.track.artists ?? []).map(x => x.name),
+            artists: artistNamesToCredits((obj.track.artists ?? []).map(x => x.name)),
             duration: obj.track.duration,
             playDate: dayjs(obj.time)
         },

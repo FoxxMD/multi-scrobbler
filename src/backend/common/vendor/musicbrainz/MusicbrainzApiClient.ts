@@ -1,5 +1,5 @@
 import { Response } from 'superagent';
-import { PlayObject, PlayObjectLifecycleless, URLData } from "../../../../core/Atomic.js";
+import { ArtistCredit, PlayObject, PlayObjectLifecycleless, URLData } from "../../../../core/Atomic.js";
 import { UpstreamError } from "../../errors/UpstreamError.js";
 import { AbstractApiOptions, FormatPlayObjectOptions, MUSICBRAINZ_URL, MusicbrainzApiConfigData } from "../../infrastructure/Atomic.js";
 import AbstractApiClient from "../AbstractApiClient.js";
@@ -21,6 +21,7 @@ import { SimpleError } from '../../errors/MSErrors.js';
 import { baseFormatPlayObj } from '../../../utils/PlayTransformUtils.js';
 import { IRecordingMSList } from '../../transforms/MusicbrainzTransformer.js';
 import dayjs, { Dayjs } from 'dayjs';
+import { artistCreditsToNames } from '../../../../core/StringUtils.js';
 
 export interface SubmitResponse {
     payload?: {
@@ -235,7 +236,16 @@ export class MusicbrainzApiClient extends AbstractApiClient {
         // https://wiki.musicbrainz.org/MusicBrainz_API/Search#Recording
         // https://beta.musicbrainz.org/doc/MusicBrainz_API/Search
         const res = await this.callApi<IRecordingList>((mb) => {
-            const query: Record<string, any> = {
+            const query: {
+                recording_mbid?: string
+                track_mbid?: string
+                release_mbid?: string
+                artist_mbids?: string[]
+                isrc?: string
+                recording?: string
+                artist?: string[]
+                release?: string
+            } = {
             };
 
             if(play.data?.meta?.brainz?.recording !== undefined && using.includes('mbidrecording')) {
@@ -257,7 +267,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                 query.recording = play.data.track;
             }
             if(play.data.artists !== undefined && play.data.artists.length > 0 && using.includes('artist')) {
-                query.artist = play.data.artists;
+                query.artist = artistCreditsToNames(play.data.artists);
             }
             if(play.data.album !== undefined && using.includes('album')) {
                 query.release = play.data.album;
@@ -380,17 +390,17 @@ export const recordingToPlay = (data: IRecording, options?: {ignoreVA?: boolean}
 
     let album: IRelease;
 
-    let albumArtists: string[];
+    let albumArtists: ArtistCredit[];
     let albumArtistIds: string[];
-    const artists = (data["artist-credit"] ?? []).map(x => x.name);
+    const artists = (data["artist-credit"] ?? []).map(x => ({ name: x.name, mbid: x.artist.id}));
     if(data.releases !== undefined && data.releases.length > 0) {
         album = data.releases[0];
         if(album["artist-credit"] !== undefined) {
             if(difference(album["artist-credit"].map(x => x.artist.id), (data["artist-credit"] ?? []).map(x => x.artist.id)).length > 0) {
-                albumArtists = album["artist-credit"].map(x => x.artist.name);
+                albumArtists = album["artist-credit"].map(x => ({name: x.artist.name, mbid: x.artist.id}));
                 albumArtistIds = album["artist-credit"].map(x => x.artist.id);
             }
-            if(albumArtists !== undefined && ignoreVA && albumArtists.includes('Various Artists')) {
+            if(albumArtists !== undefined && ignoreVA && albumArtists.map(x => x.name).includes('Various Artists')) {
                 albumArtists = undefined;
                 albumArtistIds = undefined;
             }

@@ -9,7 +9,7 @@ import { BrainzMeta, FEAT, JOINERS, JOINERS_FINAL, JsonPlayObject, MissingMbidTy
 import { genGroupIdStr } from './PlayUtils.js';
 import { sortByNewestPlayDate } from './PlayUtils.js';
 import { CALCULATED_PLAYER_STATUSES, NO_DEVICE, NO_USER, PlayerStateDataMaybePlay, PlayPlatformId, REPORTED_PLAYER_STATUSES, SINGLE_USER_PLATFORM_ID } from '../backend/common/infrastructure/Atomic.js';
-import { arrayListAnd } from './StringUtils.js';
+import { arrayListAnd, artistNamesToCredits } from './StringUtils.js';
 import { findDelimiters } from "./StringUtils.js";
 import { ListRecord, ScrobbleRecord } from '../backend/common/infrastructure/config/client/tealfm.js';
 import { nanoid } from 'nanoid';
@@ -175,7 +175,7 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: MarkOptional<PlayM
     const play: PlayObject = {
         data: {
             track: faker.music.songName(),
-            artists: faker.helpers.multiple(faker.music.artist, {count: {min: 1, max: 3}}),
+            artists: artistNamesToCredits(faker.helpers.multiple(faker.music.artist, {count: {min: 1, max: 3}})),
             duration,
             playDate: dayjs().subtract(faker.number.int({min: 1, max: 800})),
             album: faker.music.album(),

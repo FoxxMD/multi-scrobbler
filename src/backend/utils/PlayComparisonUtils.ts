@@ -312,8 +312,8 @@ export const comparePlayArtistsNormalized = (existing: PlayObject, candidate: Pl
             artists: candidateArtists = [],
         } = {}
     } = candidate;
-    const normExisting = existingArtists.map(x => normalizeStr(x, {keepSingleWhitespace: true}));
-    const candidateExisting = candidateArtists.map(x => normalizeStr(x, {keepSingleWhitespace: true}));
+    const normExisting = existingArtists.map(x => normalizeStr(x.name, {keepSingleWhitespace: true}));
+    const candidateExisting = candidateArtists.map(x => normalizeStr(x.name, {keepSingleWhitespace: true}));
 
     const wholeMatches = setIntersection(new Set(normExisting), new Set(candidateExisting)).size;
     return [Math.min(compareScrobbleArtists(existing, candidate)/100, 1), wholeMatches]

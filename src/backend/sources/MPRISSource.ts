@@ -21,6 +21,7 @@ import { Readable, Writable } from 'stream';
 import net from 'net';
 import pEvent from 'p-event';
 import { baseFormatPlayObj } from '../utils/PlayTransformUtils.js';
+import { artistNamesToCredits } from '../../core/StringUtils.js';
 
 
 export class MPRISSource extends MemorySource {
@@ -76,8 +77,8 @@ export class MPRISSource extends MemorySource {
             data: {
                 track: title,
                 album,
-                artists: artist,
-                albumArtists: actualAlbumArtists,
+                artists: artistNamesToCredits(artist),
+                albumArtists:artistNamesToCredits(actualAlbumArtists),
                 duration: length,
                 playDate: dayjs()
             },

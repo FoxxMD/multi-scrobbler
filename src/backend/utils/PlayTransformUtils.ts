@@ -148,8 +148,8 @@ export const testWhen = (parts: WhenParts<string>, play: PlayObject, options?: S
     }
     if(parts.artists !== undefined) {
         // allows user to test if artists are empty
-        const artists = parts.artists.length === 0 ? [''] : play.data.artists;
-        if(artists.every(x => !testMaybeRegex(parts.artists, x)[0])) {
+        const artists = parts.artists.length === 0 ? [{name: ''}] : play.data.artists;
+        if(artists.every(x => !testMaybeRegex(parts.artists, x.name)[0])) {
             return false;
         }
     }

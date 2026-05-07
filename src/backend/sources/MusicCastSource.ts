@@ -12,6 +12,7 @@ import { isPortReachable, isPortReachableConnect, joinedUrl, normalizeWebAddress
 import { DeviceInfoResponse, DeviceStatusResponse, MusicCastResponseCodes, MusicCastSourceConfig, playbackToReportedStatus, PlayInfoCDResponse, PlayInfoNetResponse } from "../common/infrastructure/config/source/musiccast.js";
 import request, { Request, Response } from 'superagent';
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
+import { artistNamesToCredits } from "../../core/StringUtils.js";
 
 
 export class MusicCastSource extends MemoryPositionalSource {
@@ -149,7 +150,7 @@ const formatPlayObj = (obj: PlayInfoCDResponse | PlayInfoNetResponse, options: F
 
     const play: PlayObjectLifecycleless = {
         data: {
-            artists: artist !== undefined && artist !== '' ? [artist] : [],
+            artists: artistNamesToCredits(artist !== undefined && artist !== '' ? [artist] : []),
             album: album !== '' ? album : undefined,
             track,
             // we should treat 0 time as the same as not being provided

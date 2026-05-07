@@ -22,6 +22,7 @@ import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybe
 import { isDebugMode, playObjDataMatch, sleep } from "../utils.js";
 import dayjs, { Dayjs } from "dayjs";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
+import { artistNamesToCredits } from "../../core/StringUtils.js";
 
 export interface DeviceState {
     device: SonosDevice
@@ -377,7 +378,7 @@ export const formatPlayObj = (obj: SonosState, options: FormatPlayObjectOptions 
         data: {
             track: titleStr,
             album: Album,
-            artists: Artist === undefined ? undefined : [Artist],
+            artists: Artist === undefined ? undefined : artistNamesToCredits([Artist]),
             duration: dur,
         },
         meta: {

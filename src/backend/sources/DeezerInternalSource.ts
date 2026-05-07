@@ -15,6 +15,7 @@ import { TemporalPlayComparisonOptions } from "../utils/TimeUtils.js";
 import { findAsync, findIndexAsync } from "../utils/AsyncUtils.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
+import { artistNamesToCredits } from "../../core/StringUtils.js";
 
 interface DeezerHistoryResponse {
     errors: []
@@ -113,7 +114,7 @@ export default class DeezerInternalSource extends MemorySource {
         const {newFromSource = false} = options;
         const play: PlayObjectLifecycleless = {
             data: {
-                artists: [obj.ART_NAME],
+                artists: artistNamesToCredits([obj.ART_NAME]),
                 album: obj.ALB_TITLE,
                 track: obj.SNG_TITLE,
                 duration: obj.DURATION,
