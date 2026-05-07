@@ -18,7 +18,7 @@ import {
     CLIENT_INGRESS_QUEUE,
     CLIENT_DEAD_QUEUE
 } from "../../core/Atomic.js";
-import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
+import { artistNamesToCredits, buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
 import AbstractComponent from "../common/AbstractComponent.js";
 import { hasUpstreamError } from "../common/errors/UpstreamError.js";
 import {
@@ -549,6 +549,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                         playToRepositoryCreatePlayOpts({
                             play: {
                                 ...play,
+                                data: {
+                                    ...play.data,
+                                    artists: play.data?.artists === undefined ? undefined : artistNamesToCredits(play.data?.artists as unknown as string[]),
+                                    albumArtists: play.data?.albumArtists === undefined ? undefined : artistNamesToCredits(play.data?.albumArtists as unknown as string[])
+                                },
                                 meta: {
                                     ...metaRest,
                                     lifecycle: {
@@ -589,6 +594,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                         playToRepositoryCreatePlayOpts({
                             play: {
                                 ...play,
+                                data: {
+                                    ...play.data,
+                                    artists: play.data?.artists === undefined ? undefined : artistNamesToCredits(play.data?.artists as unknown as string[]),
+                                    albumArtists: play.data?.albumArtists === undefined ? undefined : artistNamesToCredits(play.data?.albumArtists as unknown as string[])
+                                },
                                 meta: {
                                     ...metaRest,
                                     lifecycle: {
