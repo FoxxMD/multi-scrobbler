@@ -36,8 +36,8 @@ import { YTMusicData, YTMusicSourceConfig } from "../common/infrastructure/confi
 import { YandexMusicBridgeData, YandexMusicBridgeSourceConfig } from "../common/infrastructure/config/source/ymbridge.js";
 import { SonosData, SonosSourceConfig } from "../common/infrastructure/config/source/sonos.js";
 import { WildcardEmitter } from "../common/WildcardEmitter.js";
-import { parseBool } from "../utils.js";
-import { readJson } from '../utils/DataUtils.js';
+import { nonEmptyObj, parseBool, removeUndefinedKeys } from "../utils.js";
+import { getCommonComponentEnvConfig, readJson } from '../utils/DataUtils.js';
 import { validateJson } from "../utils/ValidationUtils.js";
 import AbstractSource from "./AbstractSource.js";
 import { nonEmptyStringOrDefault } from '../../core/StringUtils.js';
@@ -277,26 +277,28 @@ export default class ScrobbleSources {
             let defaultConfigureAs: ConfigureAsSource = 'source';
             // env builder for single user mode
             switch (sourceType) {
-                case 'spotify':
-                    const s: SpotifySourceData = {
+                case 'spotify': {
+                    const data: SpotifySourceData = removeUndefinedKeys<SpotifySourceData>({
                         clientId: process.env.SPOTIFY_CLIENT_ID as string,
                         clientSecret: process.env.SPOTIFY_CLIENT_SECRET as string,
                         redirectUri: process.env.SPOTIFY_REDIRECT_URI,
-                    };
-                    if (!Object.values(s).every(x => x === undefined && x !== null)) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('SPOTIFY');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'spotify',
                             name: 'unnamed',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: s,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('SPOTIFY')
                         })
                     }
-                    break;
-                case 'plex':
-                    const p: PlexApiData = {
+                }    break;
+                case 'plex': {
+                    const data: PlexApiData =  removeUndefinedKeys<PlexApiData>({
                         url: process.env.PLEX_URL,
                         token: process.env.PLEX_TOKEN,
                         usersAllow: process.env.PLEX_USERS_ALLOW,
@@ -305,39 +307,43 @@ export default class ScrobbleSources {
                         devicesBlock: process.env.PLEX_DEVICES_BLOCK,
                         librariesAllow: process.env.PLEX_LIBRARIES_ALLOW,
                         librariesBlock: process.env.PLEX_LIBRARIES_BLOCK
-                    };
-                    if (!Object.values(p).every(x => x === undefined)) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('PLEX');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'plex',
                             name: 'unnamed',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: p,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('PLEX')
                         })
                     }
-                    break;
-                case 'subsonic':
-                    const sub: SubsonicData = {
+                }    break;
+                case 'subsonic': {
+                    const data: SubsonicData = removeUndefinedKeys<SubsonicData>({
                         user: process.env.SUBSONIC_USER,
                         password: process.env.SUBSONIC_PASSWORD,
                         url: process.env.SUBSONIC_URL,
-                    };
-                    if (!Object.values(sub).every(x => x === undefined)) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('SUBSONIC');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'subsonic',
                             name: 'unnamed',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: sub as SubsonicData,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('SUBSONIC')
                         })
                     }
-                    break;
-                case 'jellyfin':
-                    const j: JellyApiData = {
+                }    break;
+                case 'jellyfin': {
+                    const data: JellyApiData = removeUndefinedKeys<JellyApiData>({
                         user: process.env.JELLYFIN_USER,
                         password: process.env.JELLYFIN_PASSWORD,
                         apiKey: process.env.JELLYFIN_APIKEY,
@@ -350,294 +356,317 @@ export default class ScrobbleSources {
                         librariesBlock: process.env.JELLYFIN_LIBRARIES_BLOCK,
                         frontendUrlOverride: process.env.JELLYFIN_FRONTEND_URL_OVERRIDE,
                         allowMediaTypes: process.env.JELLYFIN_MEDIATYPES_ALLOW
-                    };
-                    if (!Object.values(j).every(x => x === undefined)) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('JELLYFIN');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'jellyfin',
                             name: 'unnamed',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: j,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('JELLYFIN')
                         })
                     }
-                    break;
+                }    break;
                 case 'lastfm':
                         {
-                        const lfm: LastfmData = {
+                        const data: LastfmData = removeUndefinedKeys<LastfmData>({
                             apiKey: process.env.SOURCE_LASTFM_API_KEY,
                             secret: process.env.SOURCE_LASTFM_SECRET,
                             redirectUri: process.env.SOURCE_LASTFM_REDIRECT_URI,
                             session: process.env.SOURCE_LASTFM_SESSION,
-                        };
-                        if (!Object.values(lfm).every(x => x === undefined)) {
+                        }, false);
+                        const p = getCommonComponentEnvConfig('SOURCE_LASTFM');
+                        if (nonEmptyObj(data) || nonEmptyObj(p)) {
                             configs.push({
                                 type: 'lastfm',
                                 name: 'unnamed-lfm-source',
                                 source: 'ENV',
                                 mode: 'single',
                                 configureAs: 'source',
-                                data: lfm,
+                                data: data,
+                                ...p,
                                 options: transformPresetEnv('SOURCE_LASTFM')
                             })
                         }
                     }
                     break;
-                case 'deezer':
-                    const d = {
+                case 'deezer': {
+                    const data = removeUndefinedKeys({
                         clientId: process.env.DEEZER_CLIENT_ID,
                         clientSecret: process.env.DEEZER_CLIENT_SECRET,
                         redirectUri: process.env.DEEZER_REDIRECT_URI,
                         accessToken: process.env.DEEZER_ACCESS_TOKEN,
                         arl: process.env.DEEZER_ARL,
                         accountId: process.env.DEEZER_ACCOUNT_ID
-                    };
-                    if (!Object.values(d).every(x => x === undefined)) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('DEEZER');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'deezer',
                             name: 'unnamed',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: d,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('DEEZER')
                         });
                     }
-                    break;
-                case 'mpris':
-                    const shouldUse = parseBool(process.env.MPRIS_ENABLE);
-                    const mp: MPRISData = {
+                }   break;
+                case 'mpris': {
+                    const data: MPRISData = removeUndefinedKeys<MPRISData>({
                         blacklist: process.env.MPRIS_BLACKLIST,
                         whitelist: process.env.MPRIS_WHITELIST
-                    }
-                    if (!Object.values(mp).every(x => x === undefined) || shouldUse) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('MPRIS');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'mpris',
                             name: 'unnamed',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: mp as MPRISData,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('MPRIS')
                         });
                     }
-                    break;
+                }    break;
                 case 'maloja': {
-                    // env builder for single user mode
-                    const url = process.env.SOURCE_MALOJA_URL;
-                    const apiKey = process.env.SOURCE_MALOJA_API_KEY;
-                    if (url !== undefined || apiKey !== undefined) {
-                        const malojaData: MalojaData = {
-                            url,
-                            apiKey
-                        }
+                    const data = removeUndefinedKeys<MalojaData>({
+                        url: process.env.MALOJA_URL,
+                        apiKey: process.env.MALOJA_API_KEY
+                    }, false);
+                    const p = getCommonComponentEnvConfig('SOURCE_MALOJA');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'maloja',
                             name: 'unnamed-mlj-source',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'source',
-                            data: malojaData,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('SOURCE_MALOJA')
                         })
                     }
                 }
                     break;
                 case 'librefm':{
-                    const shouldUse = parseBool(process.env.LIBRFM_ENABLE)
-                    const libre: LibrefmData = {
+                    const data: LibrefmData = removeUndefinedKeys<LibrefmData>({
                         apiKey: process.env.SOURCE_LIBREFM_API_KEY,
                         secret: process.env.SOURCE_LIBREFM_SECRET,
                         redirectUri: process.env.SOURCE_LIBREFM_REDIRECT_URI,
                         session: process.env.SOURCE_LIBREFM_SESSION,
                         urlBase: process.env.SOURCE_LIBREFM_URLBASE,
-                    };
-                    if (!Object.values(libre).every(x => x === undefined) || shouldUse) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('SOURCE_LIBREFM');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'librefm',
                             name: 'unnamed-librefm-source',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'source',
-                            data: libre,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('SOURCE_LIBREFM')
                         })
                     }
                 }
                     break;
                 case 'listenbrainz': {
-                    const lz: ListenBrainzData = {
+                    const data: ListenBrainzData = removeUndefinedKeys<ListenBrainzData>({
                         url: process.env.SOURCE_LZ_URL,
                         token: process.env.SOURCE_LZ_TOKEN,
                         username: process.env.SOURCE_LZ_USER
-                    };
-                    if (!Object.values(lz).every(x => x === undefined)) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('SOURCE_LZ');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'listenbrainz',
                             name: 'unnamed-lz-source',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'source',
-                            data: lz,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('SOURCE_LZ')
                         })
                     }
                 }
                     break;
                 case 'koito': {
-                    const koit: KoitoData = {
+                    const data: KoitoData = removeUndefinedKeys<KoitoData>({
                         url: process.env.SOURCE_KOITO_URL,
                         token: process.env.SOURCE_KOITO_TOKEN,
                         username: process.env.SOURCE_KOITO_USER
-                    };
-                    if (!Object.values(koit).every(x => x === undefined)) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('SOURCE_KOITO');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'koito',
                             name: 'unnamed-koito-source',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'source',
-                            data: koit,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('SOURCE_KOITO')
                         })
                     }
                 }
                     break;
                 case 'tealfm': {
-                    const teal: TealData = {
+                    const data: TealData = removeUndefinedKeys<TealData>({
                         identifier: process.env.SOURCE_TEALFM_IDENTIFIER,
                         appPassword: process.env.SOURCE_TEALFM_APP_PW,
-                    };
-                    if (!Object.values(teal).every(x => x === undefined)) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('SOURCE_TEALFM');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'tealfm',
                             name: 'unnamed-tealfm-source',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'source',
-                            data: teal,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('SOURCE_TEALFM')
                         })
                     }
                 }
                     break;
                 case 'rocksky': {
-                    const rocksky: RockSkyData = {
+                    const data: RockSkyData = removeUndefinedKeys<RockSkyData>({
                         key: process.env.SOURCE_ROCKSKY_KEY,
                         handle: process.env.SOURCE_ROCKSKY_HANDLE
-                    };
-                    if (!Object.values(rocksky).every(x => x === undefined)) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('SOURCE_ROCKSKY');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'rocksky',
                             name: 'unnamed-rocksky-source',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'source',
-                            data: rocksky,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('SOURCE_ROCKSKY')
                         })
                     }
                 }
                     break;
-                case 'endpointlz':
-                    const lzShouldUse = parseBool(process.env.LZENDPOINT_ENABLE);
-                    const lze: ListenbrainzEndpointData = {
+                case 'endpointlz': {
+                    const data: ListenbrainzEndpointData = removeUndefinedKeys<ListenbrainzEndpointData>({
                         slug: process.env.LZE_SLUG,
                         token: process.env.LZE_TOKEN,
                         username: process.env.LZE_USERNAME
-                    }
-                    if (!Object.values(lze).every(x => x === undefined) || lzShouldUse) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('LZE');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'endpointlz',
                             name: 'unnamed',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: lze as ListenbrainzEndpointData,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('LZE')
                         });
                     }
-                    break;
-                case 'endpointlfm':
-                    const lfmShouldUse = parseBool(process.env.LFMENDPOINT_ENABLE);
-                    const lfme: LastFMEndpointData = {
+                }    break;
+                case 'endpointlfm': {
+                    const data: LastFMEndpointData = removeUndefinedKeys<LastFMEndpointData>({
                         slug: process.env.LFM_SLUG,
-                    }
-                    if (!Object.values(lfme).every(x => x === undefined) || lfmShouldUse) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('LFM');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'endpointlfm',
                             name: 'unnamed',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: lfme as LastFMEndpointData,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('LFM')
                         });
                     }
-                    break;
+                }    break;
                 case 'icecast': {
                     const scrobbleStart = parseBool(process.env.ICECAST_SCROBBLE_START);
-                    const icecast: IcecastData = {
+                    const data: IcecastData = removeUndefinedKeys<IcecastData>({
                         url: process.env.ICECAST_URL,
-                    }
-                    if (!Object.values(icecast).every(x => x === undefined)) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('ICECAST');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'icecast',
                             name: 'unnamed',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: icecast as IcecastData,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv<IcecastSourceOptions>('ICECAST', {
                                 systemScrobble: scrobbleStart
                             })
                         });
                     }
                     }    break;
-                case 'jriver':
-                    const jr: JRiverData = {
+                case 'jriver': {
+                    const data: JRiverData = removeUndefinedKeys<JRiverData>({
                         url: process.env.JRIVER_URL,
                         username: process.env.JRIVER_USER,
                         password: process.env.JRIVER_PASSWORD
-                    }
-                    if (!Object.values(jr).every(x => x === undefined)) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('JRIVER');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'jriver',
                             name: 'unnamed',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: jr as JRiverData,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('JRIVER')
                         });
                     }
-                    break;
-                case 'kodi':
-                    const ko: KodiData = {
+                }   break;
+                case 'kodi': {
+                    const data: KodiData = removeUndefinedKeys<KodiData>({
                         url: process.env.KODI_URL,
                         username: process.env.KODI_USER,
                         password: process.env.KODI_PASSWORD
-                    }
-                    if (!Object.values(ko).every(x => x === undefined)) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('KODI');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'kodi',
                             name: 'unnamed',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: ko as KodiData,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('KODI')
                         });
                     }
-                    break;
-                case 'webscrobbler':
-                    const wsShouldUse = parseBool(process.env.WS_ENABLE);
-                    const ws: WebScrobblerData = {
+                }    break;
+                case 'webscrobbler': {
+                    const data: WebScrobblerData = removeUndefinedKeys<WebScrobblerData>({
                         blacklist: process.env.WS_BLACKLIST,
                         whitelist: process.env.WS_WHITELIST
-                    }
-                    if (!Object.values(ws).every(x => x === undefined) || wsShouldUse) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('WS');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'webscrobbler',
                             name: 'unnamed',
@@ -645,22 +674,23 @@ export default class ScrobbleSources {
                             mode: 'single',
                             configureAs: defaultConfigureAs,
                             data: {
-                                blacklist: ws.blacklist !== undefined ? (ws.blacklist as string).split(',') : [],
-                                whitelist: ws.whitelist !== undefined ? (ws.whitelist as string).split(',') : [],
+                                blacklist: data.blacklist !== undefined ? (data.blacklist as string).split(',') : [],
+                                whitelist: data.whitelist !== undefined ? (data.whitelist as string).split(',') : [],
                             },
+                            ...p,
                             options: transformPresetEnv('WS')
                         });
                     }
-                    break;
-                case 'chromecast':
-                    const ccShouldUse = parseBool(process.env.CC_ENABLE);
-                    const cc: ChromecastData = {
+                }   break;
+                case 'chromecast': {
+                    const data: ChromecastData = removeUndefinedKeys<ChromecastData>({
                         blacklistDevices: process.env.CC_BLACKLIST_DEVICES,
                         whitelistDevices: process.env.CC_WHITELIST_DEVICES,
                         blacklistApps: process.env.CC_BLACKLIST_APPS,
                         whitelistApps: process.env.CC_WHITELIST_APPS
-                    }
-                    if (!Object.values(cc).every(x => x === undefined) || ccShouldUse) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('CC');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'chromecast',
                             name: 'unnamed',
@@ -668,160 +698,177 @@ export default class ScrobbleSources {
                             mode: 'single',
                             configureAs: defaultConfigureAs,
                             data: {
-                                blacklistDevices: cc.blacklistDevices !== undefined ? (cc.blacklistDevices as string).split(',') : [],
-                                whitelistDevices: cc.whitelistDevices !== undefined ? (cc.whitelistDevices as string).split(',') : [],
-                                blacklistApps: cc.blacklistApps !== undefined ? (cc.blacklistApps as string).split(',') : [],
-                                whitelistApps: cc.whitelistApps !== undefined ? (cc.whitelistApps as string).split(',') : [],
+                                blacklistDevices: data.blacklistDevices !== undefined ? (data.blacklistDevices as string).split(',') : [],
+                                whitelistDevices: data.whitelistDevices !== undefined ? (data.whitelistDevices as string).split(',') : [],
+                                blacklistApps: data.blacklistApps !== undefined ? (data.blacklistApps as string).split(',') : [],
+                                whitelistApps: data.whitelistApps !== undefined ? (data.whitelistApps as string).split(',') : [],
                             },
+                            ...p,
                             options: transformPresetEnv('CC')
                         });
                     }
-                    break;
-                case 'musiccast':
-                    const musecase: MusicCastData = {
+                }    break;
+                case 'musiccast': {
+                    const data: MusicCastData = removeUndefinedKeys<MusicCastData>({
                         url: process.env.MCAST_URL,
-                    }
-                    if (!Object.values(musecase).every(x => x === undefined)) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('MCAST');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'musiccast',
                             name: 'unnamed',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: musecase as MusicCastData,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('MCAST')
                         });
                     }
-                    break;
-                case 'musikcube':
-                    const mc: MusikcubeData = {
+                }    break;
+                case 'musikcube': {
+                    const data: MusikcubeData = removeUndefinedKeys<MusikcubeData>({
                         url: process.env.MC_URL,
                         password: process.env.MC_PASSWORD
-                    }
-                    if (!Object.values(mc).every(x => x === undefined)) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('MC');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'musikcube',
                             name: 'unnamed',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: mc as MusikcubeData,
+                            data: data as MusikcubeData,
+                            ...p,
                             options: transformPresetEnv('MC')
                         });
                     }
-                    break;
-                case 'mpd':
-                    const mpd: MPDData = {
+                }    break;
+                case 'mpd': {
+                    const data: MPDData = removeUndefinedKeys<MPDData>({
                         url: process.env.MPD_URL,
                         password: process.env.MPD_PASSWORD
-                    }
-                    if (!Object.values(mpd).every(x => x === undefined)) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('MPD');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'mpd',
                             name: 'unnamed',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: mpd as MPDData,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('MPD')
                         });
                     }
-                    break;
-                case 'vlc':
-                    const vlc: VLCData = {
+                }   break;
+                case 'vlc': {
+                    const data: VLCData = removeUndefinedKeys<VLCData>({
                         url: process.env.VLC_URL,
                         password: process.env.VLC_PASSWORD
-                    }
-                    if (!Object.values(vlc).every(x => x === undefined)) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('VLC');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'vlc',
                             name: 'unnamed',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: vlc as VLCData,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('VLC')
                         });
                     }
-                    break;
-                case 'ytmusic':
-                    const ytm: YTMusicData = {
+                }    break;
+                case 'ytmusic': {
+                    const data: YTMusicData = removeUndefinedKeys<YTMusicData>({
                         redirectUri: process.env.YTM_REDIRECT_URI,
                         clientId: process.env.YTM_CLIENT_ID,
                         clientSecret: process.env.YTM_CLIENT_SECRET,
                         cookie: process.env.YTM_COOKIE
-                    }
-                    if (!Object.values(ytm).every(x => x === undefined)) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('YTM');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'ytmusic',
                             name: 'unnamed',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: ytm as YTMusicData,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('YTM')
                         });
                     }
-                    break;
+                }    break;
                 case 'azuracast': {
-                    const azura: AzuracastData = {
+                    const data: AzuracastData = removeUndefinedKeys<AzuracastData>({
                         station: process.env.AZURA_STATION,
                         url: process.env.AZURA_URL,
                         apiKey: process.env.AZURA_KEY
-                    }
+                    }, false);
                     const listenerNum = process.env.AZURA_LISTENERS_NUM ?? '';
                     if(listenerNum.trim() !== '') {
-                        azura.monitorWhenListeners = !isNaN(Number.parseInt(listenerNum)) ? Number.parseInt(listenerNum) : parseBool(listenerNum);
+                        data.monitorWhenListeners = !isNaN(Number.parseInt(listenerNum)) ? Number.parseInt(listenerNum) : parseBool(listenerNum);
                     }
                     const live = process.env.AZURA_LIVE ?? '';
                     if(live.trim() !== '') {
-                        azura.monitorWhenLive = parseBool(live);
+                        data.monitorWhenLive = parseBool(live);
                     }
-                    if (!Object.values(azura).every(x => x === undefined)) {
+                    const p = getCommonComponentEnvConfig('AZURA');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'azuracast',
                             name: 'unnamed',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: azura as unknown as AzuracastData,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('AZURA')
                         });
                     }
-                    }    break;
+                }    break;
                 case 'sonos': {
-                    const sonos: SonosData = {
+                    const data: SonosData = removeUndefinedKeys<SonosData>({
                         host: process.env.SONOS_HOST,
                         devicesAllow: process.env.SONOS_DEVICES_ALLOW,
                         devicesBlock: process.env.SONOS_DEVICES_BLOCK,
                         groupsAllow: process.env.SONOS_GROUPS_ALLOW,
                         groupsBlock: process.env.SONOS_GROUPS_BLOCK
-                    }
-                    if (!Object.values(sonos).every(x => x === undefined)) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('SONOS');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'sonos',
                             name: 'unnamed',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: sonos as unknown as SonosData,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('SONOS')
                         });
                     }
                 }    break;
                 case 'ymbridge': {
-                    const yandex: YandexMusicBridgeData = {
+                    const data: YandexMusicBridgeData = removeUndefinedKeys<YandexMusicBridgeData>({
                         url: process.env.YMBRIDGE_URL,
                         apiKey: process.env.YMBRIDGE_API_KEY,
-                    }
-                    if (!Object.values(yandex).every(x => x === undefined)) {
+                    }, false);
+                    const p = getCommonComponentEnvConfig('YMBRIDGE');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'ymbridge',
                             name: 'unnamed',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: yandex,
+                            data: data,
+                            ...p,
                             options: transformPresetEnv('YMBRIDGE')
                         });
                     }

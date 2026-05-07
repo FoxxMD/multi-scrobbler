@@ -1,5 +1,11 @@
 import { keyOmit } from "../Atomic.js";
 
+export interface CommonConfigPrimitives {
+    name?: string
+    id?: string
+    enable?: boolean
+}
+
 export interface CommonConfig {
     name?: string
     /** A UNIQUE identifier for this Source/Client

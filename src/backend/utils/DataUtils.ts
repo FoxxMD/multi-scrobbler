@@ -2,6 +2,9 @@ import JSON5 from "json5";
 import { constants, promises } from "fs";
 import { MaybeLogger } from '../common/MaybeLogger.js';
 import { deepEqual } from 'fast-equals';
+import { CommonConfigPrimitives } from "../common/infrastructure/config/common.js";
+import { parseBoolStrict, removeUndefinedKeys } from "../utils.js";
+import { nonEmptyStringOrDefault } from "../../core/StringUtils.js";
 
 export const asArray = <T>(data: T | T[]): T[] => {
     if (Array.isArray(data)) {
@@ -175,4 +178,13 @@ export const objectsEqual = (a: object, b: object) => {
     } catch (e) {
         throw new Error('Could not compare objects', {cause: e});
     }
+}
+
+export const getCommonComponentEnvConfig = (prefix: string): Partial<CommonConfigPrimitives> => {
+    const e = nonEmptyStringOrDefault(process.env[`${prefix}_ENABLE`], undefined);
+    return removeUndefinedKeys<CommonConfigPrimitives>({
+        id: nonEmptyStringOrDefault(process.env[`${prefix}_ID`], undefined),
+        name: nonEmptyStringOrDefault(process.env[`${prefix}_NAME`], undefined),
+        enable: e !== undefined ? parseBoolStrict(e) : undefined
+    }, false);
 }

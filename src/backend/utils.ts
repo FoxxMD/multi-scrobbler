@@ -200,7 +200,7 @@ export const spreadDelay = (retries: any, multiplier: any) => {
     return s;
 }
 
-export const removeUndefinedKeys = <T extends Record<string, any>>(obj: T): T | undefined => {
+export const removeUndefinedKeys = <T extends Record<string, any>>(obj: T, returnUndefined: boolean = true): T | undefined => {
     const newObj: any = {};
     Object.keys(obj).forEach((key) => {
         if(Array.isArray(obj[key])) {
@@ -214,7 +214,10 @@ export const removeUndefinedKeys = <T extends Record<string, any>>(obj: T): T | 
         }
     });
     if(Object.keys(newObj).length === 0) {
-        return undefined;
+        if(returnUndefined) {
+            return undefined;
+        }
+        return newObj;
     }
     Object.keys(newObj).forEach(key => {
         if(newObj[key] === undefined || (null !== newObj[key] && typeof newObj[key] === 'object' && Object.keys(newObj[key]).length === 0)) {
@@ -524,6 +527,10 @@ export const isEmptyArrayOrUndefined = <T = unknown>(arr: unknown[] | undefined,
         }
     }
     return true;
+}
+
+export const nonEmptyObj = (obj: object): boolean => {
+    return Object.keys(obj).length > 0;
 }
 
   /**
