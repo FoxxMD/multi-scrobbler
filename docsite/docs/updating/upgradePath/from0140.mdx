@@ -1,0 +1,205 @@
+---
+sidebar_position: 1
+title: From < 0.14.0
+description: Upgrading to 0.14.0
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import RequiredUpgrade from "@site/src/components/snippets/_upgrade-required.mdx"
+
+<RequiredUpgrade before='< 0.14.0' current='0.14.0' old='0.13.2' />
+
+## Source/Client IDs
+
+MS `0.14.0` introduces a database for persisting Plays/Scrobbles, queues, and other data **associated with a Source/Client**.
+
+To make this association atomic a Source/Client **ID** is now configurable. This ID is what MS will use to identify the Source/Client in your **config** with the Source/Client in the **database**.
+
+This ID needs to be unique to the client or source type it is used on IE:
+
+* two [Koito Clients](/configuration/clients/koito/) cannot both have the ID `myKoitoID`
+* it is recommended that the ID be *globally* unique among all sources/clients, but it's not required
+
+### Configuring IDs
+
+<Tabs groupId="configType" queryString>
+
+<TabItem value="env" label="ENV">
+
+For each Source/Client in your environmental variables, add a key with the suffix `_ID` and the ID value. EX
+
+```yaml title="compose.yaml"
+services:
+  multi-scrobbler:
+  # ...
+  environment:
+    - KOTIO_TOKEN=...
+    # ...more koito config
+  // highlight-start
+    - KOITO_ID=myKoitoID
+  // highlight-end
+
+    - JELLYFIN_URL=...
+    # ...more jellyin config
+  // highlight-start
+    - JELLYFIN_ID=myJellyfinID
+  // highlight-end    
+```
+
+</TabItem>
+<TabItem value="file" label="File">
+
+Add an `id` to the top-level for each Source/Client configuration, next to `data`:
+
+```json title="koito.json"
+[
+  {
+    "name": "koito-source",
+    "configureAs": "source",
+    // highlight-start
+    "id": "myKoitoID",
+    // highlight-end   
+    "data": {
+      "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",
+      "username": "admin",
+      "url": "http://192.168.0.100:4110" 
+    }
+  }
+]
+```
+
+</TabItem>
+<TabItem value="aio" label="AIO">
+
+Add an `id` to the top-level for each Source/Client configuration, next to `data`:
+
+```json title="koito.json"
+[
+  {
+    "name": "koito-source",
+    "configureAs": "source",
+    "type": "koito",
+    // highlight-start
+    "id": "myKoitoID",
+    // highlight-end    
+    "data": {
+      "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",
+      "username": "admin",
+      "url": "http://192.168.0.100:4110" 
+    }
+  }
+]
+```
+
+</TabItem>
+</Tabs>
+
+:::note[Default ID]
+
+If you do not add an ID then Multi-Scrobbler will automatically use the **name** of the Source/Client as the ID. The name is shown in the Dashboard.
+
+If you decide to add an ID later you must use the name as the ID in order to keep Plays/Scobbles associated with the same config.
+
+:::
+
+## Cached Scrobble Migration
+
+:::tip
+
+Before upgrading, if your MS dashboard shows 0 queued/failed for all [Scrobble Clients](/configuration/clients) then you **skip this step** and can safely delete `ms-scrobble.cache` before the upgrade occurs.
+
+:::
+
+MS `0.14.0` introduces a database for persisting Plays/Scrobbles, queues, and other data. Prior to `0.14.0`, queued/failed scrobbles were stored in a cache **file** inside your [`CONFIG_DIR`](/installation/?dockerSetting=storage#recommended-settings) named `ms-scrobble.cache`.
+
+On first run of `0.14.0`:
+
+* MS will make a copy of `ms-scrobble.cache` named `ms-scrobble.cache.bak`
+  * You may make a manual copy of this file before upgrading, for additional safety
+* Scrobbles in the cache will automatically be migrated to the new database
+* The now "old" cache data will be cleared so that subsequent application starts don't duplicate migrations
+  * the empty `ms-scrobble.cache` file will remain
+
+You can follow progress of this by looking for log lines starting with `Migrating cached scrobbles to database...`
+
+If MS does not report/log any errors during this time and you see your scrobbles processed normally then it is safe to delete `ms-scrobble.cache` the next time MS is stopped/restarted.
+
+## Cache Configuration
+
+In `0.14.0` [Cache](/configuration/cache) has been simplified with much of the required configuration being removed.
+
+:::tip
+
+This only applies to users who have `cache` in their [AIO Config](configuration/?configType=aio#configuration-types) `config.json` or are using `CACHE_*` [ENV Config](configuration/?configType=env#configuration-types)
+
+If you do not have any of the above [Cache](/configuration/cache) configuration defined then you can **skip this step.** 
+
+:::
+
+#### Scrobble Caching Removed
+
+[Scrobble caching has removed and replaced by the new database.](#cached-scrobble-migration)
+
+* Remove any ENV Config starting with `CACHE_SCROBBLE`
+* Remove `cache.scrobble` from the AIO Config
+
+#### Metadata Config Simplified
+
+Metadata caching remains the same but the config has been simplified. If you were using [Valkey for caching](/configuration/#secondary-caching) update your config:
+
+<Tabs groupId="configType" queryString>
+
+<TabItem value="env" label="ENV">
+
+* Remove `CACHE_METADATA`
+* Rename `CACHE_METADATA_CONN` to [`CACHE_VALKEY`](/configuration/#secondary-caching)
+
+</TabItem>
+<TabItem value="aio" label="AIO">
+
+Remove `cache.metadata` and add a new string key `valkey` to the `cache` object, containing your valkey connection string:
+
+```diff
+  "cache": {
++    "valkey": "redis://valkey:6379"
+-    "metadata": {
+-      "provider": "valkey",
+-      "connection": "redis://valkey:6379"
+-    }
+  }
+```
+
+</TabItem>
+</Tabs>
+
+
+#### Auth Config Simplified
+
+Auth caching remains the same but the config has been simplified. The connection option for Auth is no longer configurable. You may specify provider as either `file` (default, uses `CONFIG_DIR`) or `valkey`. If you want to use Valkey for auth it will use the same config as Metadata.
+
+<Tabs groupId="configType" queryString>
+
+<TabItem value="env" label="ENV">
+
+* Remove `CACHE_AUTH_CONN`
+* Add [`CACHE_VALKEY`](/configuration/#secondary-caching) (if using valkey)
+
+</TabItem>
+<TabItem value="aio" label="AIO">
+
+Remove the `connection` property from the `auth` object. If using `file` the entire `auth` object can be removed.
+
+```diff
+  "cache": {
++   "valkey": "redis://valkey:6379",
+    "auth": {
+      "provider": "valkey",
+-     "connection": "redis://valkey:6379"
+    }
+  }
+```
+
+</TabItem>
+</Tabs>
