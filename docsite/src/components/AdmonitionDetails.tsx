@@ -5,9 +5,10 @@ import IconDanger from '@theme/Admonition/Icon/Danger';
 import IconTip from '@theme/Admonition/Icon/Tip';
 import IconNote from '@theme/Admonition/Icon/Note';
 import { ReactElement } from 'react';
+import AdmonitionIconImportant from './ImportantIcon';
 
 export interface DetailsAdmoProps extends DetailProps {
-    type?: 'warning' | 'danger' | 'note' | 'tip'
+    type?: 'warning' | 'danger' | 'note' | 'tip' | 'important'
 }
 
 const DetailsAdmo = (props: DetailsAdmoProps) => {
@@ -32,6 +33,10 @@ const DetailsAdmo = (props: DetailsAdmoProps) => {
             cn = 'alert--success';
             icon = <IconTip/>
             break;
+        case 'important':
+            cn = 'alert--important';
+            icon = <AdmonitionIconImportant/>;
+            break;            
     }
 
     const iconWrapper = icon === undefined ? null : <span className="admoIcon">{icon}</span>;
