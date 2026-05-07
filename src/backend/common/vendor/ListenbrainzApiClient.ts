@@ -548,7 +548,13 @@ export const listenResponseToPlay = (listen: ListenResponse): PlayObject => {
                     ...naivePlay,
                     data: {
                         ...naivePlay.data,
-                        artists: artistNamesToCredits(derivedArtists)
+                        artists: derivedArtists.map(x => {
+                            const mappedArtist = artistMappings.find(y => y.artist_credit_name === x);
+                            if(mappedArtist !== undefined) {
+                                return {name: mappedArtist.artist_credit_name, mbid: mappedArtist.artist_mbid}
+                            }
+                            return {name: x};
+                        })
                     }
                 };
             }
@@ -579,7 +585,13 @@ export const listenResponseToPlay = (listen: ListenResponse): PlayObject => {
             data: {
                 ...naivePlay.data,
                 track: normalTrackName,
-                artists: artistNamesToCredits(derivedArtists)
+                artists: derivedArtists.map(x => {
+                    const mappedArtist = artistMappings.find(y => y.artist_credit_name === x);
+                    if(mappedArtist !== undefined) {
+                        return {name: mappedArtist.artist_credit_name, mbid: mappedArtist.artist_mbid}
+                    }
+                    return {name: x};
+                })
             },
             meta: naivePlay.meta
         }
