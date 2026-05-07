@@ -591,7 +591,7 @@ The output shows the diff between the previous stage (or original Play) and the 
 
 MS uses [caching](/configuration/#caching) to reduce the number of API calls needed for stages like [Musicbrainz](/configuration/transforms/musicbrainz) and to speed up all transforms by caching steps and results. However, the default caching strategy uses a small cache size and very short [TTLs](https://en.wikipedia.org/wiki/Time_to_live) because it is *in-memory*.
 
-**If you are using any Transform stages you should configure [secondary caching with Valkey for Metadata](/configuration/?cacheType=valkey&cachedThings=metadata#secondary-caching-configuration)** to increase the cache size and lifetime of cached items. This will also reduce memory usage in MS.
+**If you are using any Transform stages you should configure [secondary caching](/configuration#secondary-caching)** to increase the cache size and lifetime of cached items. This will also reduce memory usage in MS.
 
 <details>
 

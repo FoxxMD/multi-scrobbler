@@ -24,6 +24,7 @@ import { Notifiers } from './notifier/Notifiers.js';
 import { getDb, performDbMigrationWithBackup } from './common/database/drizzle/drizzleUtils.js';
 import { getDbPath } from './common/database/Database.js';
 import { createRetentionCleanupTask } from './tasks/retentionCleanup.js';
+import { parseUserConfig } from './common/Cache.js';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -75,6 +76,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             webhooks = [],
             logging = {},
             debugMode,
+            cache,
         } = (config || {}) as AIOConfig;
 
         if (process.env.DEBUG_MODE === undefined && debugMode !== undefined) {
@@ -100,6 +102,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
 
         const root = getRoot({
             ...config,
+            cache: parseUserConfig(cache, logger),
             logger,
             loggingConfig: logging,
             loggerStream: appLoggerStream,

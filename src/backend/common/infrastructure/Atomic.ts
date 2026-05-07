@@ -296,6 +296,21 @@ export interface CacheConfigOptions {
     regex?: number
 }
 
+export interface CacheConfigUser {
+    auth?: {
+        provider: 'valkey' | 'file',
+        [key: string]: any
+    };
+    valkey?: string
+    /** Number of regex functions to cache (LRU)
+     * 
+     * @default 200
+     */
+    regex?: number
+    // to allow deprecated scrobble config without having it show up in schema docs
+    [key: string]: any
+}
+
 export interface MusicbrainzApiConfigData {
     url?: string
     contact: string,
