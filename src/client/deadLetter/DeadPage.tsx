@@ -66,8 +66,12 @@ const dead = (props: PropsFromRedux) => {
                 </div>
                 <div className="p-5">
                     {isSuccess && !isLoading && data.length === 0 ? 'No failed scrobbles!' : null}
-                    <ul>{data.map(x => 
+                    <ul>{data.map(x =>
                         {
+                            let errText = x.error;
+                            if(typeof x.error === 'object' && x.error !== null) {
+                                errText = JSON.stringify(x.error);
+                            }
                             const classes = [...baseClass].concat(copiedIndex !== x.id ? ['underline','cursor-pointer'] : []);
                             return (<li className="my-2.5" key={x.id}>
                         <div className="text-lg">
@@ -75,9 +79,10 @@ const dead = (props: PropsFromRedux) => {
                                                                             color="white" icon={faBug}/>}</button>
                             <PlayDisplay data={x.play} buildOptions={displayOpts}/></div>
                         <div><span className="font-semibold">Source</span>:{x.source === undefined ? 'Source - Unknown' : x.source.replace('Source -', '')}</div>
+                        <div><span className="font-semibold">Status</span>:{x.status}</div>
                         <div><span className="font-semibold">Retries</span>: {x.retries}</div>
                         <div><span className="font-semibold">Last Retried</span>: {x.lastRetry === undefined ? 'Never' : dayjs.duration(dayjs(x.lastRetry).diff(dayjs())).humanize(true)}</div>
-                        <div><span className="font-semibold">Error</span>: <span className="font-mono text-sm">{x.error}</span></div>
+                        <div><span className="font-semibold">Error</span>: <span className="font-mono text-sm">{errText}</span></div>
                         <div onClick={() => retryDead(x.id)} className="capitalize underline cursor-pointer max-w-fit">Retry</div>
                         <div onClick={() => removeDead(x.id)} className="capitalize underline cursor-pointer max-w-fit">Remove</div>
                     </li>)

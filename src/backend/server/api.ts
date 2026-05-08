@@ -240,6 +240,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
                 authed,
                 initialized: x.isReady(),
                 deadLetterScrobbles: x.deadLetterQueued, // x.deadLetterScrobbles.length,
+                deadLetterScrobblesTotal: x.deadLetterLength,
                 queued: x.queuedLength // x.queuedScrobbles.length
             };
             if (!base.initialized) {
@@ -334,7 +335,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
             queues: [
                 {
                     queueName: CLIENT_DEAD_QUEUE,
-                    queueStatus: 'queued'
+                    queueStatus: ['queued','failed']
                 }
             ]
         }
@@ -395,9 +396,9 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
 
         (client as AbstractScrobbleClient).logger.verbose('User requested deletion of all dead letter scrobbles via API');
 
-        (client as AbstractScrobbleClient).removeDeadLetterScrobbles();
+        (client as AbstractScrobbleClient).removeDeadLetterScrobbles(['queued', 'failed'], 'failed', false).then(() => null).catch((e) => logger.error(e));
 
-        return res.json([]);
+        return res.sendStatus(200);
     });
 
     app.delete('/api/dead/:id', clientMiddleFunc(true), async (req, res, next) => {

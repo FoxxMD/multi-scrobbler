@@ -92,7 +92,7 @@ export const deadSlice = createSlice({
             }
         )
         builder.addMatcher(
-            (action) => deadApi.endpoints.getDead.matchFulfilled(action) || deadApi.endpoints.removeDead.matchFulfilled(action),
+            (action) => deadApi.endpoints.getDead.matchFulfilled(action),
             (state, action) => {
                 deadAdapter.setAll(state, action.payload);
             }

@@ -78,7 +78,9 @@ export const playSelectToDeadScrobble = (select: PlaySelectWithQueueStates): Dea
         id: select.uid,
         source: select.play.meta.source,
         retries: deadQueue.retries,
-        error: messageWithCauses(deadQueue.error as Error)
+        lastRetry: deadQueue.updatedAt,
+        error: deadQueue.error as unknown as string,
+        status: deadQueue.queueStatus as 'queued' | 'failed'
     }
 }
 

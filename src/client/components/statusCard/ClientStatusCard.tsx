@@ -34,7 +34,8 @@ const ClientStatusCard = (props: ClientStatusCardData) => {
             status,
             scrobbled: scrobbledCount = 0,
             queued = 0,
-            deadLetterScrobbles = 0
+            deadLetterScrobbles = 0,
+            deadLetterScrobblesTotal = 0,
         } = {}
     } = props;
 
@@ -66,7 +67,7 @@ const ClientStatusCard = (props: ClientStatusCardData) => {
         body = (<Fragment>
             <div>{scrobbled}: {scrobbledCount}</div>
             <div>Queued Scrobbles: {queued}</div>
-            <div><Link to={`/dead?type=${type}&name=${name}`}>Failed Scrobbles</Link>: {deadLetterScrobbles}</div>
+            <div><Link to={`/dead?type=${type}&name=${name}`}>Failed Scrobbles</Link>: {deadLetterScrobbles} Queued / {deadLetterScrobblesTotal} Total</div>
             {hasAuthInteraction ? <a target="_blank" href={`/api/client/auth?name=${name}&type=${type}`}>(Re)authenticate</a> : null}
         </Fragment>);
     }

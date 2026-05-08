@@ -46,6 +46,7 @@ import {
     parseBool,
     playObjDataMatch,
     pollingBackoff,
+    removeUndefinedKeys,
     sleep,
     sortByOldestPlayDate,
 } from "../utils.js";
@@ -329,12 +330,20 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.playRepo.componentId = this.dbComponent.id;
         this.queueRepo.componentId = this.dbComponent.id;
         this.tracksScrobbled = this.dbComponent.countLive + this.dbComponent.countNonLive;
-        this.queuedLength = await this.queueRepo.getQueueCount(this.dbComponent.id, [CLIENT_INGRESS_QUEUE]);
-        this.queuedGauge.labels(this.getPrometheusLabels()).set(this.queuedLength);
-        this.deadLetterLength = await this.queueRepo.getQueueCount(this.dbComponent.id, [CLIENT_DEAD_QUEUE], ['queued', 'failed']);
-        this.deadLetterQueued = await this.queueRepo.getQueueCount(this.dbComponent.id, [CLIENT_DEAD_QUEUE], ['queued']);
-        // TODO
-        this.deadLetterGauge.labels(this.getPrometheusLabels()).set(this.deadLetterLength);
+        await this.updateQueueStats([CLIENT_INGRESS_QUEUE, CLIENT_DEAD_QUEUE]);
+    }
+
+    protected async updateQueueStats(queueNames: string[]) {
+        if(queueNames.includes(CLIENT_INGRESS_QUEUE)) {
+            this.queuedLength = await this.queueRepo.getQueueCount(this.dbComponent.id, [CLIENT_INGRESS_QUEUE]);
+            this.queuedGauge.labels(this.getPrometheusLabels()).set(this.queuedLength);
+        }
+        if(queueNames.includes(CLIENT_DEAD_QUEUE)) {
+            this.deadLetterLength = await this.queueRepo.getQueueCount(this.dbComponent.id, [CLIENT_DEAD_QUEUE], ['queued', 'failed']);
+            this.deadLetterQueued = await this.queueRepo.getQueueCount(this.dbComponent.id, [CLIENT_DEAD_QUEUE], ['queued']);
+            // TODO
+            this.deadLetterGauge.labels(this.getPrometheusLabels()).set(this.deadLetterLength);
+        }
     }
 
     protected generateStaggerMappers() {
@@ -1285,7 +1294,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         //     this.deadLogger.warn(`No scrobble found with ID ${id}`);
         //     return;
         // }
-        const deadQueueState = deadScrobble.queueStates.find(x => x.queueName === CLIENT_DEAD_QUEUE && x.queueStatus === 'queued');
+        const deadQueueState = deadScrobble.queueStates.find(x => x.queueName === CLIENT_DEAD_QUEUE && x.queueStatus !== 'completed');
+        const isQueued = deadQueueState.queueStatus === 'queued';
         if(deadQueueState === undefined) {
             throw new Error(`Play ${deadScrobble.uid} is not currently queued in dead letter.`);
         }
@@ -1299,21 +1309,31 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             queueUpdate.error = null;
         }
         await this.queueRepo.updateById(deadQueueState.id, queueUpdate);
-        await this.playRepo.updateById(deadScrobble.id, {state, error: success ? null : undefined});
+        await this.playRepo.updateById(deadScrobble.id, removeUndefinedKeys({state, error: success ? null : undefined}));
         this.deadLogger.info({labels: deadScrobble.uid}, `Scrobble ${buildTrackString(deadScrobble.play)} marked as completed`);
         this.deadLetterLength -= 1;
-        this.deadLetterQueued -= 1;
+        if(isQueued) {
+            this.deadLetterQueued -= 1;
+        }
         if(state === 'scrobbled') {
             this.componentRepo.updateById(this.dbComponent.id, {countLive: this.dbComponent.countLive + 1});
         }
         this.emitEvent('removeDeadLetter', { dead: { id: deadScrobble.uid } });
     }
 
-    removeDeadLetterScrobbles = () => {
-        this.queueRepo.failedQueueToCompleted(this.dbComponent.id);
-        this.deadLetterQueued = 0;
-        this.deadLetterGauge.labels(this.getPrometheusLabels()).set(this.deadLetterQueued);
-        this.deadLogger.info('Removed all scrobbles from queue');
+    removeDeadLetterScrobbles = async (types: QueueStateSelect['queueStatus'][] = ['queued'], state: PlaySelect['state'], success: boolean) => {
+        const ids = await this.playRepo.findPlayIdentifiers({
+            queues: [
+                {
+                    queueName: CLIENT_DEAD_QUEUE,
+                    queueStatus: types
+                }
+            ]
+        }, 'uid');
+        this.deadLogger.info(`Marking ${ids} as completed but unsuccessful...`);
+        await Promise.all(ids.map((x) => this.removeDeadLetterScrobble(x, state, success)));
+        this.deadLogger.info('Finished processing dead scrobbles.');
+        await this.updateQueueStats([CLIENT_DEAD_QUEUE]);
     }
 
     queueScrobble = async (data: PlayObject | PlayObject[], source: string) => {

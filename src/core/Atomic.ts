@@ -62,6 +62,7 @@ export interface ClientStatusData {
     display: string;
     scrobbled: number;
     deadLetterScrobbles: number
+    deadLetterScrobblesTotal: number
     queued: number
     name: string;
     hasAuth: boolean;
@@ -423,6 +424,7 @@ export interface DeadLetterScrobble<PlayType, RetryType = Dayjs> extends QueuedS
     retries: number
     lastRetry?: RetryType
     error: string
+    status: 'queued' | 'failed'
 }
 
 export type Second = number;
