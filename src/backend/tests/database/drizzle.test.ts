@@ -31,7 +31,7 @@ describe('Migrations', function () {
             const [shouldBackup, pending] = await shouldBackupDb(getDbPath('notreal', process.cwd()));
             expect(shouldBackup).is.false;
             expect(pending).length(0);
-        });
+        }, {postfix: 'noDb'});
 
     });
 
@@ -43,7 +43,7 @@ describe('Migrations', function () {
             expect(shouldBackup).is.true;
             expect(pending).length(0);
             otherdb.close();
-        }, { unsafeCleanup: true });
+        }, { unsafeCleanup: true, postfix: 'badDb' });
 
     });
 
@@ -82,7 +82,7 @@ describe('Migrations', function () {
             } catch (e) {
                 throw e;
             }
-        }, { unsafeCleanup: true });
+        }, { unsafeCleanup: true, postfix: 'pendingMigrations' });
     });
 
     it('Detects no pending migrations correctly', async function () {
@@ -107,7 +107,7 @@ describe('Migrations', function () {
             } catch (e) {
                 throw e;
             }
-        }, { unsafeCleanup: true });
+        }, { unsafeCleanup: true, postfix: 'noMigrations' });
     });
 
     it('Backs up database when migrations are pending', async function () {
@@ -149,7 +149,7 @@ describe('Migrations', function () {
             } catch (e) {
                 throw e;
             }
-        }, { unsafeCleanup: true });
+        }, { unsafeCleanup: true, postfix: 'dbBackup' });
     });
 
 });
@@ -572,7 +572,7 @@ describe('DB Size Stats', function () {
             } catch (e) {
                 throw e;
             }
-        }, { unsafeCleanup: true });
+        }, { unsafeCleanup: true, postfix: 'dbStatEmpty' });
     });
 
     it('get db plays size stats', async function () {
@@ -597,7 +597,7 @@ describe('DB Size Stats', function () {
             } catch (e) {
                 throw e;
             }
-        }, { unsafeCleanup: true });
+        }, { unsafeCleanup: true, postfix: 'dbStatPlain' });
     });
     
     it('get db plays size stats with input', async function () {
@@ -622,7 +622,7 @@ describe('DB Size Stats', function () {
             } catch (e) {
                 throw e;
             }
-        }, { unsafeCleanup: true });
+        }, { unsafeCleanup: true, postfix: 'dbStatInput' });
     });
 
     it('get db plays size stats with input and lifecycle', async function () {
@@ -647,6 +647,6 @@ describe('DB Size Stats', function () {
             } catch (e) {
                 throw e;
             }
-        }, { unsafeCleanup: true });
+        }, { unsafeCleanup: true, postfix: 'dbStatAll' });
     });
 })

@@ -19,7 +19,6 @@ import { asCacheConfig, CacheAuthProvider, CacheConfig, CacheConfigOptions, Cach
 import { Typeson } from 'typeson';
 import { builtin } from 'typeson-registry';
 import { loggerNoop } from './MaybeLogger.js';
-import { ListenProgressPositional, ListenProgressTS } from '../sources/PlayerState/ListenProgress.js';
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
 import prom, { Gauge } from 'prom-client';
 import { nonEmptyStringOrDefault } from '../../core/StringUtils.js';
@@ -39,9 +38,7 @@ typeson.register({
         (x) => dayjs.isDayjs(x),
         (d: Dayjs) => d.toJSON(),
         (date) => dayjs(date)
-    ],
-    ListenProgressTS,
-    ListenProgressPositional
+    ]
 });
 
 const unsupportedEnvKeys = [

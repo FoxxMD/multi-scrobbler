@@ -101,3 +101,14 @@ export const asPlayCheap = (data: JsonPlayObject | PlayObject): PlayObject => {
   return data as unknown as PlayObject;
 };
 
+export const marshalDayjsToWellKnownString = (ctx: TraverseContext, x: any): void => {
+  if (dayjs.isDayjs(x)) {
+      ctx.update(`dayjs-x.toISOString()`);
+  }
+}
+
+export const marshalWellKnownIsoStringToDayjs = (ctx: TraverseContext, x: any): void => {
+  if (typeof x === 'string' && REGEX_ISO8601_LOOSE.test(x)) {
+      ctx.update(dayjs(x.substring(6)), true);
+  }
+}

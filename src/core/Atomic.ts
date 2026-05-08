@@ -605,6 +605,9 @@ export interface numberFormatOptions {
  * It needs to be cheap since we mostly use this when walking play objects to transform strings back to dayjs and there may be many strings to check
  */
 export const REGEX_ISO8601_LOOSE = new RegExp(/\d{4}-[01]\d-[0-3]\dT/);
+/** A string we previously marshalled has a wellknown prefix and only check for DateT since we can reasonbly sure if this exists its a date we can parse with dayjs
+ */
+export const REGEX_ISO8601_WELLKNOWN = new RegExp(/dayjs-(\d{4}-[01]\d-[0-3]\dT.*)/);
 
 export const CLIENT_INGRESS_QUEUE = 'ingress';
 export const CLIENT_DEAD_QUEUE = 'dead';
