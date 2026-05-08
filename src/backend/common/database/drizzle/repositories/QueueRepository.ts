@@ -1,11 +1,9 @@
-import { Logger, eq, and, lte, inArray } from "drizzle-orm";
+import { eq, and, lte, inArray } from "drizzle-orm";
 import { DrizzleBaseRepository, DrizzleRepositoryOpts } from "./BaseRepository.js";
 import { getDb } from "../drizzleUtils.js";
-import { ComponentNew, ComponentSelect, FindWhere, QueueStateSelect } from "../drizzleTypes.js";
-import { components, queueStates } from "../schema/schema.js";
-import { generateComponentEntity } from "../entityUtils.js";
+import { QueueStateSelect } from "../drizzleTypes.js";
+import { queueStates } from "../schema/schema.js";
 import { CLIENT_DEAD_QUEUE } from "../../../../../core/Atomic.js";
-
 export class DrizzleQueueRepository extends DrizzleBaseRepository<'queueStates'> {
 
     constructor(db: ReturnType<typeof getDb>, opts: DrizzleRepositoryOpts = {}) {
@@ -15,21 +13,21 @@ export class DrizzleQueueRepository extends DrizzleBaseRepository<'queueStates'>
     public deadFailedToQueue = async (componentId: number, retries: number): Promise<void> => {
         await this.db.update(queueStates).set({
             queueStatus: 'queued',
-            queueName: CLIENT_DEAD_QUEUE
         }).where(and(
             eq(queueStates.componentId, componentId),
             lte(queueStates.retries, retries),
-            eq(queueStates.queueStatus, 'failed')
+            eq(queueStates.queueStatus, 'failed'),
+            eq(queueStates.queueName, CLIENT_DEAD_QUEUE)
         ));
     }
 
     public failedQueueToCompleted = async (componentId: number): Promise<void> => {
         await this.db.update(queueStates).set({
             queueStatus: 'completed',
-            queueName: CLIENT_DEAD_QUEUE
         }).where(and(
             eq(queueStates.componentId, componentId),
-            eq(queueStates.queueStatus, 'queued')
+            eq(queueStates.queueStatus, 'queued'),
+            eq(queueStates.queueName, CLIENT_DEAD_QUEUE)
         ));
     }
 
