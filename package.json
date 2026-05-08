@@ -213,7 +213,7 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^7.0.1",
     "vite": "^5.4.21",
-    "with-local-tmp-dir": "^6.0.0"
+    "with-local-tmp-dir": "^7.0.1"
   },
   "browserslist": {
     "production": [
