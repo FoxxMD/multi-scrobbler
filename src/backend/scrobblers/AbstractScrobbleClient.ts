@@ -259,7 +259,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.initializeNowPlayingSchedule();
 
         if(this.scheduler.existsById('dead') === false && this.initDeadTimeout === undefined) {
-            this.logger.verbose('Delaying Dead Scrobbler Processing Task by 2 minutes');
+            const deadDelay = opts.deadDelay ?? 120;
+            this.logger.verbose(`Delaying Dead Scrobbler Processing Task by ${deadDelay} seconds`);
             this.initDeadTimeout = setTimeout(() => {
                 this.logger.info('Adding Dead Scrobbler Processing Task and running immediately');
                 this.initDeadTimeout = undefined;
@@ -280,8 +281,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                         this.logger.error(err);
                     }
                 ), {id: 'dead'}));
-            // delay for 2 minutes
-            }, (opts.deadDelay ?? 120) * 1000);
+            }, deadDelay * 1000);
 
         } else {
             if(this.initDeadTimeout !== undefined) {
