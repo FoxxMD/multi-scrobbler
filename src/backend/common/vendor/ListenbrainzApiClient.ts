@@ -653,7 +653,7 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
 
         if(artist_names.length > 0) {
             artists = artist_names;
-        } else {
+        } else if(artist_name !== null) {
             artists = [artist_name];
 
             // since we aren't using MB mappings we should be conservative and assume artist string with & are proper names (not joiner)
