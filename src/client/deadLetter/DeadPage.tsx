@@ -74,7 +74,7 @@ const dead = (props: PropsFromRedux) => {
                             <button className={clsx(classes)} onClick={() => copyActionCB(x.play.meta.lifecycle, x.id)}>{copiedIndex === x.id ? 'Copied!' : <FontAwesomeIcon
                                                                             color="white" icon={faBug}/>}</button>
                             <PlayDisplay data={x.play} buildOptions={displayOpts}/></div>
-                        <div><span className="font-semibold">Source</span>:{x.source.replace('Source -', '')}</div>
+                        <div><span className="font-semibold">Source</span>:{x.source === undefined ? 'Source - Unknown' : x.source.replace('Source -', '')}</div>
                         <div><span className="font-semibold">Retries</span>: {x.retries}</div>
                         <div><span className="font-semibold">Last Retried</span>: {x.lastRetry === undefined ? 'Never' : dayjs.duration(dayjs(x.lastRetry).diff(dayjs())).humanize(true)}</div>
                         <div><span className="font-semibold">Error</span>: <span className="font-mono text-sm">{x.error}</span></div>
