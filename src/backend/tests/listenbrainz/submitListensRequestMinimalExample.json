@@ -1,0 +1,16 @@
+{
+  "listen_type": "single",
+  "payload": [
+    {
+      "listened_at": 1778211134,
+      "track_metadata": {
+        "release_name": "Adore (2014 Remaster)",
+        "additional_info": {
+          "duration": 20
+        },
+        "artist_name": "The Smashing Pumpkins",
+        "track_name": "17"
+      }
+    }
+  ]
+}
