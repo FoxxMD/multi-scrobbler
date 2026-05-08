@@ -54,6 +54,15 @@ export type RepositoryCreatePlayOpts = PlayEntityOpts
         input: MarkOptional<PlayInputNew, 'playId' | 'play'>
     }
     & Pick<PlayNew, 'play' | 'componentId'>;
+
+type PlayIdentifierPrimitiveMap = {
+  uid: string;
+  id: number;
+};
+const identifierExtractor: { [K in keyof PlayIdentifierPrimitiveMap]: (play: {id: number, uid: string}) => PlayIdentifierPrimitiveMap[K] } = {
+  id: (play) => play.id,
+  uid: (play) => play.uid,
+};
 export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
     protected hasQueueNextPrepared?: ReturnType<typeof this.prepareHasQueueNext>
@@ -176,10 +185,55 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         query = removeUndefinedKeys(query);
         const results = await this.db.query.plays.findMany(query);
         return results.map((x) => ({...x, play: hydratePlaySelect(x, hydrate)}));
-        // if(hydrate.length > 0) {
-        //     return results.map((x) => ({...x, play: hydratePlaySelect(x, hydrate)}));
-        // }
-        // return results;
+    }
+
+    findPlayIds = async (args: QueryPlaysOpts, opts: ComponentConstrainedRepoOpts = {}): Promise<number[]> => {
+        const {
+            componentId = this.componentId
+        } = opts;
+
+        let query: FindMany<'plays'> = {
+            limit: args.limit,
+            offset: args.offset,
+        };
+
+        query.where = buildPlayWhere({componentId: componentId,  ...args});
+
+        if (args.sort !== undefined) {
+            query.orderBy = {
+                [args.sort]: args.order ?? 'desc'
+            }
+        } else {
+            query.orderBy = {
+                id: 'asc'
+            }
+        }
+
+        query = removeUndefinedKeys(query);
+        const results = await this.db.query.plays.findMany({
+            limit: args.limit,
+            offset: args.offset,
+            columns: {id: true},
+            orderBy: args.sort !== undefined ? {[args.sort]: args.order ?? 'desc'} : {id: 'asc'},
+        });
+        return results.map((x) => x.id);
+    }
+
+    findPlayIdentifiers = async <T extends keyof PlayIdentifierPrimitiveMap>(args: QueryPlaysOpts, identifier: T, opts: ComponentConstrainedRepoOpts = {}): Promise<PlayIdentifierPrimitiveMap[T][]> => {
+        const {
+            componentId = this.componentId,
+        } = opts;
+
+        const results = await this.db.query.plays.findMany({
+            limit: args.limit,
+            offset: args.offset,
+            columns: {id: true, uid: true},
+            orderBy: args.sort !== undefined ? {[args.sort]: args.order ?? 'desc'} : {id: 'asc'},
+            where: buildPlayWhere({componentId: componentId,  ...args})
+        });
+
+        // we getting fancy now
+        return results.map(identifierExtractor[identifier]);
     }
 
     findPlaysPaginated = async <T = PlaySelectRel>(args: QueryPlaysOpts, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PaginatedResponse<T>> => {
