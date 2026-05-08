@@ -1177,7 +1177,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         if(deadScrobble === undefined) {
             throw new Error(`Play ${uid} does not exist for ${this.name}`);
         }
-        deadQueueState = deadScrobble.queueStates.find(x => x.queueName === CLIENT_DEAD_QUEUE && x.queueStatus === 'queued');
+        if(deadScrobble.state === 'scrobbled') {
+            throw new Error(`Play ${uid} is already scrobbled.`);
+        }
+        deadQueueState = deadScrobble.queueStates.find(x => x.queueName === CLIENT_DEAD_QUEUE);
         if(deadQueueState === undefined) {
             throw new Error(`Play ${uid} is not currently queued in dead letter.`);
         }
