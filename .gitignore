@@ -122,6 +122,7 @@ config/*.json
 config/mscache
 config/yti-*
 config/*.cache
+config/msDb
 *.txt
 !robots.txt
 .idea/
