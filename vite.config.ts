@@ -33,7 +33,10 @@ export default defineConfig(() => {
     console.debug(`[VITE] BASE_URL ENV: ${process.env.BASE_URL} | Base Url String: ${baseUrlStr}`);
     return {
         server: {
-            allowedHosts: (true as true)
+            allowedHosts: (true as true),
+            watch: {
+                ignored: ['**/msDb/**', '**/config/**']
+            }
         },
         esbuild: {
             minifyIdentifiers: false
