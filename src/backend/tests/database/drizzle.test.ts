@@ -14,7 +14,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { fixtureCreateComponent, fixtureCreateInput, fixtureCreatePlay } from '../utils/databaseFixtures.js';
 import { DrizzlePlayRepository, RepositoryCreatePlayOpts } from '../../common/database/drizzle/repositories/PlayRepository.js';
 import { generatePlayWithLifecycle, generateRandomObj } from '../../../core/tests/utils/fixtures.js';
-import { generateArray } from '../../../core/DataUtils.js';
+import { formatNumber, generateArray } from '../../../core/DataUtils.js';
 import { objectsEqual } from '../../utils/DataUtils.js';
 import { eq, sql } from 'drizzle-orm';
 import { PlaySelect } from '../../common/database/drizzle/drizzleTypes.js';
@@ -577,6 +577,8 @@ describe('DB Size Stats', function () {
 
     it('get db plays size stats', async function () {
 
+        this.timeout(10000);
+
         await withLocalTmpDir(async () => {
             try {
                 let db = getDb('ms', { workingDirectory: process.cwd() });
@@ -593,7 +595,14 @@ describe('DB Size Stats', function () {
                 const morePlayData = generateArray<RepositoryCreatePlayOpts>(900, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlay() }), state: 'queued', input: { data: undefined }}));
                 await playRepo.createPlays(morePlayData);
                 const Play1000Component = await fs.stat(path.resolve('./ms.db'));
-                loggerDebug.debug(`1000 Plays => ${Play1000Component.size / 1024}kb`);
+                loggerDebug.debug(`1000 Plays => ${formatNumber(Play1000Component.size / 1024 / 1024, {toFixed: 2})}mb`);
+
+                for(let i = 0; i < 9; i++) {
+                    const evenMorePlayData = generateArray<RepositoryCreatePlayOpts>(1000, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlay() }), state: 'queued', input: { data: undefined }}));
+                    await playRepo.createPlays(evenMorePlayData);
+                }
+                const Play10000Component = await fs.stat(path.resolve('./ms.db'));
+                loggerDebug.debug(`10000 Plays => ${formatNumber(Play10000Component.size / 1024 / 1024, {toFixed: 2})}mb`);
             } catch (e) {
                 throw e;
             }
@@ -601,6 +610,8 @@ describe('DB Size Stats', function () {
     });
     
     it('get db plays size stats with input', async function () {
+
+        this.timeout(10000);
 
         await withLocalTmpDir(async () => {
             try {
@@ -618,7 +629,14 @@ describe('DB Size Stats', function () {
                 const morePlayData = generateArray<RepositoryCreatePlayOpts>(900, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlay() }), state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } }));
                 await playRepo.createPlays(morePlayData);
                 const Play1000Component = await fs.stat(path.resolve('./ms.db'));
-                loggerDebug.debug(`1000 Plays => ${Play1000Component.size / 1024}kb`);
+                loggerDebug.debug(`1000 Plays => ${formatNumber(Play1000Component.size / 1024 / 1024, {toFixed: 2})}mb`);
+
+                for(let i = 0; i < 9; i++) {
+                    const evenMorePlayData = generateArray<RepositoryCreatePlayOpts>(1000, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlay() }), state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } }));
+                    await playRepo.createPlays(evenMorePlayData);
+                }
+                const Play10000Component = await fs.stat(path.resolve('./ms.db'));
+                loggerDebug.debug(`10000 Plays => ${formatNumber(Play10000Component.size / 1024 / 1024, {toFixed: 2})}mb`);
             } catch (e) {
                 throw e;
             }
@@ -626,6 +644,8 @@ describe('DB Size Stats', function () {
     });
 
     it('get db plays size stats with input and lifecycle', async function () {
+
+        this.timeout(10000);
 
         await withLocalTmpDir(async () => {
             try {
@@ -643,7 +663,14 @@ describe('DB Size Stats', function () {
                 const morePlayData = generateArray<RepositoryCreatePlayOpts>(900, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlayWithLifecycle({lifecycleSteps: {preCompare: 1}}) }), state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } }));
                 await playRepo.createPlays(morePlayData);
                 const Play1000Component = await fs.stat(path.resolve('./ms.db'));
-                loggerDebug.debug(`1000 Plays => ${Play1000Component.size / 1024}kb`);
+                loggerDebug.debug(`1000 Plays => ${formatNumber(Play1000Component.size / 1024 / 1024, {toFixed: 2})}mb`);
+
+                for(let i = 0; i < 9; i++) {
+                    const evenMorePlayData = generateArray<RepositoryCreatePlayOpts>(1000, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlayWithLifecycle({lifecycleSteps: {preCompare: 1}}) }), state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } }));
+                    await playRepo.createPlays(evenMorePlayData);
+                }
+                const Play10000Component = await fs.stat(path.resolve('./ms.db'));
+                loggerDebug.debug(`10000 Plays => ${formatNumber(Play10000Component.size / 1024 / 1024, {toFixed: 2})}mb`);
             } catch (e) {
                 throw e;
             }
