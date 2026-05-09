@@ -1,6 +1,6 @@
 import chai, { assert, expect } from 'chai';
 import asPromised from 'chai-as-promised';
-import { getDb, migrateDb, performDbMigrationWithBackup, shouldBackupDb } from '../../common/database/drizzle/drizzleUtils.js';
+import { getDb, getMigratedDb, migrateDb, shouldBackupDb } from '../../common/database/drizzle/drizzleUtils.js';
 import withLocalTmpDir from 'with-local-tmp-dir';
 import { components, playInputs, plays, queueStates } from '../../common/database/drizzle/schema/schema.js';
 import dayjs from 'dayjs';
@@ -26,27 +26,23 @@ import { transientDb } from '../utils/TransientTestUtils.js';
 
 describe('Migrations', function () {
 
-    // it('Detects non-existent db', async function () {
+    it('Detects non-existent db', async function () {
 
-    //     await withLocalTmpDir(async () => {
-    //         const [shouldBackup, pending] = await shouldBackupDb(getDbPath('notreal', process.cwd()));
-    //         expect(shouldBackup).is.false;
-    //         expect(pending).length(0);
-    //     }, {postfix: 'noDb'});
+        await withLocalTmpDir(async () => {
+            const [db, isNew] = await getMigratedDb(getDbPath('notreal', process.cwd()));
+            expect(isNew).is.true;
+        }, {postfix: 'noDb'});
 
-    // });
+    });
 
-    // it('Detects abnormal db', async function () {
+    it('Detects abnormal db', async function () {
+        // database exists but there is no __drizzle_migrations table
+        const db = getDb((await getPrepopulatedMemoryPGlite()));
+        const [shouldBackup, pending] = await shouldBackupDb(db);
+        expect(shouldBackup).is.true;
+        expect(pending).length(0);
 
-    //     await withLocalTmpDir(async () => {
-    //         const otherdb = new DatabaseSync(path.resolve('./', 'other.db'));
-    //         const [shouldBackup, pending] = await shouldBackupDb(getDbPath('other', process.cwd()));
-    //         expect(shouldBackup).is.true;
-    //         expect(pending).length(0);
-    //         otherdb.close();
-    //     }, { unsafeCleanup: true, postfix: 'badDb' });
-
-    // });
+    });
 
     it('Detects pending migrations', async function () {
 
@@ -119,12 +115,13 @@ describe('Migrations', function () {
 
         await withLocalTmpDir(async () => {
 
+            const dbPath = getDbPath('msDb', process.cwd());
             // copy first migration
             await fs.mkdir('migrations');
             try {
                 await fs.cp(path.resolve(projectDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
                 const mf = path.resolve('./migrations');
-                const db = getDb('ms', { workingDirectory: process.cwd() });
+                const db =  getDb((await getPrepopulatedFSPGlite(dbPath)));
                 await migrateDb(db, { migrationsFolder: mf });
                 const res = await x('drizzle-kit', [
                     'generate',
@@ -136,7 +133,7 @@ describe('Migrations', function () {
                     '--schema',
                     path.resolve(projectDir, 'src/backend/common/database/drizzle/schema'),
                     '--dialect',
-                    'sqlite'
+                    'postgresql'
                 ]);
                 db.$client.close();
 
@@ -144,9 +141,10 @@ describe('Migrations', function () {
                 const newMigrationFolder = (await fs.readdir(path.resolve('./migrations/'))).find(x => x.includes('newMigration'));
                 await fs.appendFile(path.resolve('./migrations/',newMigrationFolder, 'migration.sql'),`\nselect count(*) from plays;`);
 
-                await performDbMigrationWithBackup('ms', {workingDirectory: process.cwd(), migrationsFolder: mf});      
+                await getMigratedDb(dbPath, {workingDirectory: process.cwd(), migrationsFolder: mf})
                 const contents = await fs.readdir(path.resolve('./'));
-                expect(contents.some(x => x.includes('ms.db.bak')));
+                const backupPattern = new RegExp(/msDb-\d+\.bak/)
+                expect(contents.some(x => backupPattern.test(x))).is.true;
             } catch (e) {
                 throw e;
             }
@@ -562,7 +560,7 @@ describe('DB Size Stats', function () {
 
         await withLocalTmpDir(async () => {
             try {
-                let db = getDb('msDb', { workingDirectory: process.cwd() });
+                let db = getDb(await getPrepopulatedFSPGlite(getDbPath('msDb', process.cwd())));
                 await migrateDb(db);
                 const play100Component = Number.parseInt((await x('du', ['-ksb','.'])).stdout.split('\t')[0]);
                 loggerDebug.debug(`100 Plays => ${formatNumber((play100Component / 1024) / 1024, {toFixed: 2})}mb`);
@@ -578,7 +576,7 @@ describe('DB Size Stats', function () {
 
         await withLocalTmpDir(async () => {
             try {
-                let db = getDb((await getPrepopulatedFSPGlite(getDbPath('msDb', process.cwd()))));
+                let db = getDb(await getPrepopulatedFSPGlite(getDbPath('msDb', process.cwd())));
                 await migrateDb(db);
                 const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
@@ -613,7 +611,7 @@ describe('DB Size Stats', function () {
 
         await withLocalTmpDir(async () => {
             try {
-                let db = getDb('msDb', { workingDirectory: process.cwd() });
+                let db = getDb(await getPrepopulatedFSPGlite(getDbPath('msDb', process.cwd())));
                 await migrateDb(db);
                 const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
@@ -647,7 +645,7 @@ describe('DB Size Stats', function () {
 
         await withLocalTmpDir(async () => {
             try {
-                let db = getDb('msDb', { workingDirectory: process.cwd() });
+                let db = getDb(await getPrepopulatedFSPGlite(getDbPath('msDb', process.cwd())));
                 await migrateDb(db);
                 const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 

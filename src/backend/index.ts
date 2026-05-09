@@ -21,7 +21,7 @@ import { readJson } from './utils/DataUtils.js';
 import ScrobbleClients from './scrobblers/ScrobbleClients.js';
 import ScrobbleSources from './sources/ScrobbleSources.js';
 import { Notifiers } from './notifier/Notifiers.js';
-import { getDb, performDbMigrationWithBackup } from './common/database/drizzle/drizzleUtils.js';
+import { getMigratedDb } from './common/database/drizzle/drizzleUtils.js';
 import { getDbPath } from './common/database/Database.js';
 import { createRetentionCleanupTask } from './tasks/retentionCleanup.js';
 import { parseUserConfig } from './common/Cache.js';
@@ -98,8 +98,9 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         const [aLogger, appLoggerStream] = await appLogger(logging)
         logger = childLogger(aLogger, 'App');
         
-        logger.info(`Using database at ${getDbPath('ms')}`);
-        await performDbMigrationWithBackup('ms', {logger});
+        const dbPath = getDbPath('msDb');
+        logger.info(`Using database at ${getDbPath('msDb')}`);
+        const [db, isNew] = await getMigratedDb(dbPath, {logger: childLogger(logger, 'DB')});
 
         const root = getRoot({
             ...config,
@@ -107,7 +108,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             logger,
             loggingConfig: logging,
             loggerStream: appLoggerStream,
-            db: getDb('ms', {logger})
+            db
         });
 
         const internalConfigOptional = {

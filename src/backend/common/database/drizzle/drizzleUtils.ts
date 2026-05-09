@@ -15,18 +15,26 @@ import { projectDir } from '../../index.js';
 import { relations } from './schema/schema.js';
 import { addToContext, executeQuery } from './logContext.js';
 
-export async function shouldBackupDb(db: DbConcrete, opts: {logger?: Logger, migrationsFolder?: string} = {}): Promise<[boolean, string[]]> {
+export async function shouldBackupDb(dbVal: string | DbConcrete, opts: {logger?: Logger, migrationsFolder?: string} = {}): Promise<[boolean, string[]]> {
   const {
     logger: parentLogger = loggerNoop,
     migrationsFolder = path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations')
   } = opts;
   const logger = childLogger(parentLogger, 'Migrations');
+
+  let db: DbConcrete;
   
-  // logger.info(`Checking database at ${dbPath}`);
-  // if (dbPath !== MEMORY_DB_NAME && !fileExists(dbPath)) {
-  //   logger.info(`No database exists!`);
-  //   return [false, []];
-  // }
+  if(typeof dbVal === 'string') {
+    logger.info(`Checking for database at ${dbVal}`);
+    if (dbVal !== MEMORY_DB_NAME && !fileExists(dbVal)) {
+      logger.info(`No database exists, no backup needed.`);
+      return [false, []];
+    }
+    db = getDb(dbVal);
+  } else {
+    db = dbVal;
+  }
+
 
   // const db = drizzlePglite(dbPath);
 
@@ -79,30 +87,29 @@ export async function shouldBackupDb(db: DbConcrete, opts: {logger?: Logger, mig
   }
 }
 
-export const getDb = (dbName: string | PGlite = 'msDb', opts: { logger?: Logger, workingDirectory?: string } = {}) => {
+export const getDb = (dbVal: string | PGlite, opts: { logger?: Logger } = {}) => {
   const {
-    workingDirectory,
     logger = loggerNoop,
   } = opts;
   let client: PGlite;
 
-  if(typeof dbName === 'string') {
-    const dbPath = getDbPath(dbName, workingDirectory);
+  if(typeof dbVal === 'string') {
+    const dbPath = dbVal;
     
-    if(dbName === MEMORY_DB_NAME) {
+    if(dbVal === MEMORY_DB_NAME) {
       client = new PGlite();
     } else {
       client = new PGlite(dbPath);
     }
   } else {
-    client = dbName;
+    client = dbVal;
   }
   return drizzlePglite({relations: relations, logger: createDrizzleLogger(logger), client});
 }
 
 export type DbConcrete = ReturnType<typeof getDb>;
 
-export const migrateDb = async (db: ReturnType<typeof drizzlePglite>, opts: {logger?: Logger, migrationsFolder?: string} = {}) => {
+export const migrateDb = async (db: DbConcrete, opts: {logger?: Logger, migrationsFolder?: string} = {}) => {
   const {
     migrationsFolder,
     logger: parentLogger = loggerNoop
@@ -134,59 +141,62 @@ export const migrateDbSync = (db: ReturnType<typeof drizzle>, opts: {logger?: Lo
   }
 }
 
-export const performDbMigrationWithBackup = async (dbName: string = 'msDb', opts: { logger?: Logger, workingDirectory?: string, migrationsFolder?: string } = {}) => {
-  const dbPath = getDbPath(dbName, opts.workingDirectory);
-
-  if(fileExists(dbPath)) {
-    const [shouldBackup, pendingMigrations] = await shouldBackupDb(dbPath, opts);
-    if(shouldBackup) {
-      await backupPgDb(dbName, opts);
+export const getMigratedDb = async (dbPath: string, opts: { logger?: Logger, workingDirectory?: string, migrationsFolder?: string } = {}): Promise<[DbConcrete, boolean]> => {
+  const {
+    logger = loggerNoop
+  } = opts;
+  let db: DbConcrete,
+  isNew = false,
+  hasPendingMigrations: boolean = true;
+  if (dbPath !== MEMORY_DB_NAME) {
+    try {
+      fileOrDirectoryIsWriteable(dbPath);
+    } catch (e) {
+      throw new Error('Database directory is not accessible', { cause: e });
     }
+
+    db = getDb(dbPath, opts);
+
+    if (fileExists(dbPath)) {
+      
+      const [shouldBackup, pendingMigrations] = await shouldBackupDb(db, opts);
+      if (shouldBackup) {
+        hasPendingMigrations = true;
+        await backupPgDb(db, dbPath, { logger: opts.logger });
+      }
+    } else {
+      logger.info('Detected no database, creating a new one...');
+      isNew = true;
+    }
+  } else {
+    logger.info('Detected in-memory database');
+    db = getDb(dbPath, opts);
+    isNew = true;
   }
 
-
-  const db = getDb(dbName, opts);
+  if(hasPendingMigrations && dbPath !== MEMORY_DB_NAME) {
+    logger.info('TIP: Migrations may take some time, depending on the size of your database');
+  }
   await migrateDb(db, opts);
+
+  return [db, isNew];
 }
 
-export const backupPgDb = async (dbName: string, opts: { logger?: Logger, workingDirectory?: string } = {}): Promise<void> => {
+export const backupPgDb = async (db: DbConcrete, dbPath: string, opts: { logger?: Logger } = {}): Promise<void> => {
 
     const {
         logger: parentLogger = loggerNoop,
-        workingDirectory
     } = opts;
 
-    const logger = childLogger(parentLogger, 'Migrations');
+    const logger = childLogger(parentLogger, 'Backup');
 
-    const dbPath = getDbPath(dbName, workingDirectory);
-    let newDb = false;
-
-    if (dbPath !== MEMORY_DB_NAME) {
-        if (!fileExists(dbPath)) {
-            logger.info(`Database at ${dbPath} does not exist, will create it.`);
-            newDb = true;
-        }
-        try {
-            fileOrDirectoryIsWriteable(dbPath);
-        } catch (e) {
-            throw new Error('Database path/folder is not writeable, cannot backup database', { cause: e });
-        }
-    }
-
-    if (dbPath !== MEMORY_DB_NAME && !newDb) {
-
-        let client: PGlite;
-        if(dbName === MEMORY_DB_NAME) {
-          client = new PGlite();
-        } else {
-          client = new PGlite(dbName);
-        }
-        const backupPath = `${getDbPath(`${Date.now()}-${dbName}`, workingDirectory)}.bak`;
-        logger.info(`Backing up database before migrating => ${backupPath}`);
-        fs.writeFile(backupPath, Buffer.from(await (await client.dumpDataDir()).arrayBuffer()));
-        await fs.copyFile(dbPath, backupPath)
-        logger.info('Backed up!');
-    }
+    const pathInfo = path.parse(dbPath);
+    // being extra sure there isn't a trailing slash
+    const backupPath = `${path.join(pathInfo.dir, pathInfo.name)}-${Date.now()}.bak`;
+    logger.info(`Backing up database before migrating => ${backupPath}`);
+    fs.writeFile(backupPath, Buffer.from(await (await db.$client.dumpDataDir()).arrayBuffer()));
+    //await fs.copyFile(dbPath, backupPath)
+    logger.info('Backed up!');
 }
 
 export const createDrizzleLogger = (parentLogger: Logger, opts: {level?: LogLevel} = {}): DrizzleLogger => {
