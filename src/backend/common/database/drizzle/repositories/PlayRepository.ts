@@ -94,7 +94,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         } = opts;
         let playRows: PlaySelect[];
 
-        await runTransaction(this.db, async () => {
+        await this.db.transaction(async (tx) => {
 
             const entitiesData = entitiesOpts.map((data) => {
                 const {
@@ -105,7 +105,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                 return generatePlayEntity(play, { componentId: this.componentId, ...rest });
             });
 
-            playRows = await this.db.insert(plays).values(entitiesData).returning();
+            playRows = await tx.insert(plays).values(entitiesData).returning();
 
             const inputDatas = playRows.map((x, index) => {
                 const {
@@ -120,7 +120,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                 return generateInputEntity({ play: inputPlay, playId: x.id, ...restInput });
             });
 
-            const inputRow = await this.db.insert(playInputs).values(inputDatas);
+            const inputRow = await tx.insert(playInputs).values(inputDatas);
 
         });
 

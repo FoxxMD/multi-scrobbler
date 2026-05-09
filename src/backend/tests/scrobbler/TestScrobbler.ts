@@ -31,8 +31,6 @@ export class TestScrobbler extends AbstractScrobbleClient {
         this.scrobbleDelay = 10;
         this.scrobbleSleep = 20;
         this.scrobbleWaitStopInterval = 20;
-        this.playRepoTest = this.playRepo;
-        this.queueRepoTest = this.queueRepo;
     }
 
     doScrobble(playObj: PlayObject) {
@@ -42,6 +40,12 @@ export class TestScrobbler extends AbstractScrobbleClient {
     protected async doParseCache() {
         await this.cache.init();
         return super.doParseCache();
+    }
+
+    protected async postDatabase(): Promise<void> {
+        super.postDatabase();
+        this.playRepoTest = this.playRepo;
+        this.queueRepoTest = this.queueRepo;
     }
 
     playToClientPayload(playObject: PlayObject): object {

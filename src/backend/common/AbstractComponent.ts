@@ -47,8 +47,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     protected transformManager: TransformerManager;
     protected cache: MSCache;
     protected db: DbConcrete;
-    protected componentRepo: DrizzleComponentRepository;
-    protected dbComponent: ComponentSelect;
+    protected componentRepo!: DrizzleComponentRepository;
+    protected dbComponent!: ComponentSelect;
     protected retentionOpts: RetentionOptions;
 
     protected componentType: 'source' | 'client';
@@ -58,8 +58,6 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         super(config);
         this.transformManager = config.transformManager ?? getRoot().items.transformerManager;
         this.cache = getRoot().items.cache();
-        this.db = getRoot().items.db();
-        this.componentRepo = new DrizzleComponentRepository(this.db, {logger: this.logger});
         const cProps = config.options?.retention?.compact ?? parseArrayFromMaybeString(process.env.COMPACT_PROPERTIES, {lower: true});
         if(!cProps.every(isCompactableProperty)) {
             throw new SimpleError(`Compactable properties must be one of 'transform' or 'input'. Given: ${cProps.join(',')}`);
@@ -88,6 +86,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             name = this.name as string;
         }
 
+        this.db = await getRoot().items.db();
+        this.componentRepo = new DrizzleComponentRepository(this.db, {logger: this.logger});
         this.dbComponent = await this.componentRepo.findOrInsert({
             mode: this.componentType,
             type: this.type,

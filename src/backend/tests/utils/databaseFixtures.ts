@@ -5,6 +5,8 @@ import { PlayNew } from "../../common/database/drizzle/drizzleTypes.js";
 import { PlayInputNew } from "../../common/database/drizzle/drizzleTypes.js";
 import { ComponentNew } from "../../common/database/drizzle/drizzleTypes.js";
 import { ObjectPlayData } from "../../../core/Atomic.js";
+import { PGlite } from '@electric-sql/pglite'
+import { dataDir } from '@electric-sql/pglite-prepopulatedfs'
 
 export const fixtureCreateComponent = (data: Partial<ComponentNew> = {}): ComponentNew => {
     return generateComponentEntity(
@@ -35,4 +37,17 @@ export const fixtureCreateInput = (data: PlayInputNew & { data?: object | false 
         realData = inputData;
     }
     return generateInputEntity({...rest, data: realData});
+}
+
+export const getPrepopulatedFSPGlite = async (dir: string) => {
+    return PGlite.create({
+        dataDir: dir,
+        loadDataDir: await dataDir()
+    });
+}
+
+export const getPrepopulatedMemoryPGlite = async () => {
+    return PGlite.create({
+        loadDataDir: await dataDir()
+    });
 }

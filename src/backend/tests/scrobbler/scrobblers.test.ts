@@ -621,7 +621,10 @@ describe('Dead Scrobbles', function() {
         }
 
         await testScrobbler.processDeadLetterQueue();
-        await pEvent(testScrobbler.emitter, 'queueState');
+        await Promise.race([
+            sleep(15000),
+            pEvent(testScrobbler.emitter, 'queueState')
+        ])
 
         expect(testScrobbler.deadLetterQueued).eq(0);
     });

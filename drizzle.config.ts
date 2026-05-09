@@ -6,8 +6,8 @@ import * as path from 'path';
 export default defineConfig({
   schema: path.resolve(projectDir, 'src/backend/common/database/drizzle/schema'),
   out: path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations'),
-  dialect: 'sqlite',
+  dialect: 'postgresql',
   dbCredentials: {
-    url: path.resolve(configDir, process.env.DB_FILE_NAME! ?? 'ms.db'),
+    url: path.resolve(configDir, 'msDb'),
   },
 });

@@ -13,5 +13,6 @@
     "files.associations": {
         "*.css": "tailwindcss"
     },
-    "tailwindCSS.experimental.configFile": "src/client/index.css"
+    "tailwindCSS.experimental.configFile": "src/client/index.css",
+    "pgliteExplorer.databasePaths": []
 }

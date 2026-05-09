@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text, index, uniqueIndex, customType, AnySQLiteColumn } from "drizzle-orm/sqlite-core";
+import { integer, serial as primaryInt, pgTable as table, text, varchar, json, index, uniqueIndex, customType, AnyPgColumn, timestamp } from "drizzle-orm/pg-core";
 import { defineRelations } from 'drizzle-orm';
 import dayjs, { Dayjs } from "dayjs";
 import { nanoid } from "nanoid";
@@ -10,16 +10,16 @@ import { JobRangeCount, JobRangeTime } from "../../../infrastructure/Job.js";
 const DayjsTimestamp = customType<
   {
     data: Dayjs;
-    driverData: number;
+    driverData: string;
   }
 >({
   dataType() {
-    return 'number'
+    return 'timestamp'
   },
-  toDriver(value: Dayjs): number {
-    return value.valueOf();
+  toDriver(value: Dayjs): string {
+    return value.toISOString();
   },
-  fromDriver(value: number): Dayjs {
+  fromDriver(value: string): Dayjs {
     return dayjs(value);
   },
 });
@@ -31,7 +31,7 @@ const PlayJson = customType<
   }
 >({
   dataType() {
-    return 'text'
+    return 'jsonb'
   },
   toDriver(value: PlayObject): string {
     const {
@@ -46,28 +46,28 @@ const PlayJson = customType<
     } = value;
     return JSON.stringify(rest);
   },
-  fromDriver(value: string): PlayObject {
-    return asPlayCheap(JSON.parse(value));
+  fromDriver(value: any): PlayObject {
+    return asPlayCheap(value);
   },
 });
 
 
-export const plays = sqliteTable("plays", {
-  id: integer().primaryKey(),
-  uid: text({ length: 30 }).notNull().unique().$defaultFn(() => nanoid(20)),
+export const plays = table("plays", {
+  id: primaryInt().primaryKey(),
+  uid: varchar({ length: 30 }).notNull().unique().$defaultFn(() => nanoid(20)),
   componentId: integer().references(() => components.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
-  error: text({ mode: 'json' }).$type<ErrorLike>(),
+  error: json().$type<ErrorLike>(),
   playedAt: DayjsTimestamp('playedAt'),
   seenAt: DayjsTimestamp('seenAt'),
   updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs()),
   play: PlayJson('play').notNull(), //  text({ mode: 'json' }).notNull().$type<PlayObject>(),
-  state: text({enum: ['queued','discovered','discarded','scrobbled','failed','duped']}).notNull(),
+  state: varchar({enum: ['queued','discovered','discarded','scrobbled','failed','duped'], length: 20}).notNull(),
   // https://orm.drizzle.team/docs/indexes-constraints#foreign-key
-  parentId: integer().references((): AnySQLiteColumn => plays.id, {onDelete: 'set null', onUpdate: 'cascade'}),
+  parentId: integer().references((): AnyPgColumn => plays.id, {onDelete: 'set null', onUpdate: 'cascade'}),
   jobId: integer().references(() => jobs.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
-  playHash: text(),
-  mbidIdentifier: text(),
-  compacted: text()
+  playHash: varchar({length: 100}),
+  mbidIdentifier: varchar({length: 100}),
+  compacted: varchar({length: 30})
 }, (table) => [
   index("play_parent_id_idx").on(table.parentId),
   index("play_component_id_idx").on(table.componentId),
@@ -76,10 +76,10 @@ export const plays = sqliteTable("plays", {
   index("play_seenAt_idx").on(table.seenAt)
 ]);
 
-export const playInputs = sqliteTable("play_inputs", {
-  id: integer({ mode: 'number' }).primaryKey(),
+export const playInputs = table("play_inputs", {
+  id: primaryInt().primaryKey(),
   playId: integer().notNull().references(() => plays.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
-  data: text({ mode: 'json' }).$type<object>(),
+  data: json().$type<object>(),
   play: PlayJson('play').notNull(),//text({ mode: 'json' }).notNull().$type<PlayObject>(),
   createdAt: DayjsTimestamp('createdAt').$defaultFn(() => dayjs())
 }, (table) => [
@@ -107,14 +107,14 @@ export const playInputs = sqliteTable("play_inputs", {
 //   }
 // }));
 
-export const queueStates = sqliteTable("play_queue_states", {
-  id: integer({ mode: 'number' }).primaryKey(),
+export const queueStates = table("play_queue_states", {
+  id: primaryInt().primaryKey(),
   playId: integer().notNull().references(() => plays.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
   componentId: integer().notNull().references(() => components.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
-  queueName: text({length: 50}).notNull(),
-  queueStatus: text({enum: ['queued','completed','failed']}).notNull().default('queued'),
+  queueName: varchar({length: 50}).notNull(),
+  queueStatus: varchar({enum: ['queued','completed','failed'], length: 20}).notNull().default('queued'),
   retries: integer().notNull().default(0),
-  error: text({ mode: 'json' }).$type<ErrorLike>(),
+  error: json().$type<ErrorLike>(),
   createdAt: DayjsTimestamp('createdAt').notNull().$defaultFn(() => dayjs()),
   updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs())
 }, (table) => [
@@ -133,16 +133,16 @@ export const queueStates = sqliteTable("play_queue_states", {
 //   }
 // }));
 
-export const components = sqliteTable("components", {
-  id: integer({ mode: 'number' }).primaryKey(),
+export const components = table("components", {
+  id: primaryInt().primaryKey(),
   // user-provided id
-  uid: text({ length: 200 }).notNull(),
-  mode: text({enum: ['source','client']}).notNull(),
+  uid: varchar({ length: 200 }).notNull(),
+  mode: varchar({enum: ['source','client'], length: 15}).notNull(),
   // spotify, lastfm, etc...
-  type: text({length: 50}).notNull(),
+  type: varchar({length: 50}).notNull(),
   // vanity display name
   // used as uid if no user-provided id
-  name: text().notNull(),
+  name: varchar().notNull(),
   // number of discovered/scrobbled plays found in real time
   countLive: integer().notNull().default(0),
   // number of discovered/scrobbled plays from backlog/jobs
@@ -153,17 +153,17 @@ export const components = sqliteTable("components", {
   uniqueIndex('uid_mode_type_idx').on(table.uid,table.mode,table.type)
 ]);
 
-export const jobs = sqliteTable("jobs", {
-  id: integer({ mode: 'number' }).primaryKey(),
+export const jobs = table("jobs", {
+  id: primaryInt().primaryKey(),
   componentFromId: integer().notNull().references(() => components.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
   componentToId: integer().notNull().references(() => components.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
-  name: text({length: 50}).notNull(),
-  status: text({enum: ['idle','completed','failed','processing']}).notNull().default('idle'),
+  name: varchar({length: 200}).notNull(),
+  status: varchar({enum: ['idle','completed','failed','processing'], length: 20}).notNull().default('idle'),
   retries: integer().notNull().default(0),
-  error: text({ mode: 'json' }).$type<ErrorLike>(),
-  transformOptions: text({ mode: 'json' }).$type<PlayTransformPartsConfig<SearchAndReplaceTerm[] | ExternalMetadataTerm>>(),
-  initialParameters: text({ mode: 'json' }).$type<JobRangeCount | JobRangeTime>(),
-  cursor: text({ mode: 'json' }),
+  error: json().$type<ErrorLike>(),
+  transformOptions: json().$type<PlayTransformPartsConfig<SearchAndReplaceTerm[] | ExternalMetadataTerm>>(),
+  initialParameters: json().$type<JobRangeCount | JobRangeTime>(),
+  cursor: json(),
   total: integer(),
   imported: integer().notNull().default(0),
   scrobbled: integer().notNull().default(0),
