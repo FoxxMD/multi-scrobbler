@@ -20,6 +20,7 @@ import { eq, sql } from 'drizzle-orm';
 import { PlaySelect } from '../../common/database/drizzle/drizzleTypes.js';
 import { loggerDebug } from '@foxxmd/logging';
 import { transientDb } from '../utils/TransientTestUtils.js';
+import { dataDir } from '@electric-sql/pglite-prepopulatedfs'
 
 // would be great to push migrations directly from schema but doesn't seem supported in newest beta
 // https://github.com/drizzle-team/drizzle-orm/discussions/4373
@@ -29,7 +30,7 @@ describe('Migrations', function () {
     it('Detects non-existent db', async function () {
 
         await withLocalTmpDir(async () => {
-            const [db, isNew] = await getMigratedDb(getDbPath('notreal', process.cwd()));
+            const [db, isNew] = await getMigratedDb(getDbPath('notreal', process.cwd()), { loadDataDir: dataDir() });
             expect(isNew).is.true;
         }, {postfix: 'noDb'});
 
@@ -37,7 +38,7 @@ describe('Migrations', function () {
 
     it('Detects abnormal db', async function () {
         // database exists but there is no __drizzle_migrations table
-        const db = await getDb((await getPrepopulatedMemoryPGlite()));
+        const db = await getDb(':memory:', { loadDataDir: dataDir() });
         const [shouldBackup, pending] = await shouldBackupDb(db);
         expect(shouldBackup).is.true;
         expect(pending).length(0);
@@ -57,7 +58,7 @@ describe('Migrations', function () {
             try {
                 await fs.cp(path.resolve(projectDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
                 const mf = path.resolve('./migrations');
-                const db = await getDb((await getPrepopulatedFSPGlite(getDbPath('msDb', process.cwd()))));
+                const db = await getDb(':memory:', {loadDataDir: dataDir()});
                 await migrateDb(db, { migrationsFolder: mf });
                 const res = await x('drizzle-kit', [
                     'generate',
@@ -95,7 +96,7 @@ describe('Migrations', function () {
             try {
                 await fs.cp(path.resolve(projectDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
                 const mf = path.resolve('./migrations');
-                const db =  await getDb((await getPrepopulatedFSPGlite(getDbPath('msDb', process.cwd()))));
+                const db = await getDb(':memory:', {loadDataDir: dataDir()});
                 await migrateDb(db, { migrationsFolder: mf });
                 const [shouldBackup, pending] = await shouldBackupDb(db, { migrationsFolder: mf });
                 expect(shouldBackup).is.false;
@@ -121,7 +122,7 @@ describe('Migrations', function () {
             try {
                 await fs.cp(path.resolve(projectDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
                 const mf = path.resolve('./migrations');
-                const db =  await getDb((await getPrepopulatedFSPGlite(dbPath)));
+                const db =  await getDb(dbPath, {loadDataDir: dataDir()});
                 await migrateDb(db, { migrationsFolder: mf });
                 const res = await x('drizzle-kit', [
                     'generate',

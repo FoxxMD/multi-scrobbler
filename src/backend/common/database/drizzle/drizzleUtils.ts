@@ -88,10 +88,11 @@ export async function shouldBackupDb(dbVal: string | DbConcrete, opts: {logger?:
   }
 }
 
-export const getDb = async (dbVal: string | PGlite, opts: { logger?: Logger, backupPath?: string } = {}) => {
+export const getDb = async (dbVal: string | PGlite, opts: { logger?: Logger, backupPath?: string, loadDataDir?: Promise<Blob> } = {}) => {
   const {
     logger = loggerNoop,
     backupPath,
+    loadDataDir
   } = opts;
   let client: PGlite;
 
@@ -102,6 +103,11 @@ export const getDb = async (dbVal: string | PGlite, opts: { logger?: Logger, bac
       if(backupPath !== undefined) {
         opts.loadDataDir = new Blob([fsSync.readFileSync(backupPath)]);
       }
+    }
+    // only load one
+    // but this could be for a memory db so don't put it in above if
+    if(loadDataDir !== undefined && backupDb === undefined) {
+      opts.loadDataDir = await loadDataDir
     }
     client = await PGlite.create(opts);
   } else {
@@ -144,7 +150,7 @@ export const migrateDbSync = (db: ReturnType<typeof drizzle>, opts: {logger?: Lo
   }
 }
 
-export const getMigratedDb = async (dbPath: string, opts: { logger?: Logger, workingDirectory?: string, migrationsFolder?: string } = {}): Promise<[DbConcrete, boolean]> => {
+export const getMigratedDb = async (dbPath: string, opts: { logger?: Logger, workingDirectory?: string, migrationsFolder?: string, backupPath?: string, loadDataDir?: Promise<Blob> } = {}): Promise<[DbConcrete, boolean]> => {
   const {
     logger = loggerNoop
   } = opts;
@@ -175,7 +181,7 @@ export const getMigratedDb = async (dbPath: string, opts: { logger?: Logger, wor
       await fs.rename(backupPath, usedBackedPath);
     } else {
       logger.info('Detected no database, creating a new one...');
-      db = await getDb(dbPath);
+      db = await getDb(dbPath, opts);
       isNew = true;
     }
   } else {
