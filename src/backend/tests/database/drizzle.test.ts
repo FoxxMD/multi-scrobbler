@@ -32,6 +32,7 @@ describe('Migrations', function () {
         await withLocalTmpDir(async () => {
             const [db, isNew] = await getMigratedDb(getDbPath('notreal', process.cwd()), { loadDataDir: dataDir() });
             expect(isNew).is.true;
+            db.$client.close();
         }, {postfix: 'noDb'});
 
     });
@@ -41,6 +42,7 @@ describe('Migrations', function () {
         const db = await getDb(':memory:', { loadDataDir: dataDir() });
         const [shouldBackup, pending] = await shouldBackupDb(db);
         expect(shouldBackup).is.true;
+        db.$client.close();
         expect(pending).length(0);
 
     });
@@ -71,7 +73,7 @@ describe('Migrations', function () {
                     path.resolve(projectDir, 'src/backend/common/database/drizzle/schema'),
                     '--dialect',
                     'postgresql'
-                ]);
+                ], {throwOnError: true});
                 const [shouldBackup, pending] = await shouldBackupDb(db, { migrationsFolder: mf });
                 expect(shouldBackup).is.true;
                 expect(pending).length(1);
@@ -110,6 +112,9 @@ describe('Migrations', function () {
 
     it('Backs up database when migrations are pending', async function () {
 
+        // this can be slow due to all the io
+        this.timout(5000);
+
         const allFiles = await fs.readdir(path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations'));
         const migrationFiles = allFiles
             .sort();
@@ -122,8 +127,8 @@ describe('Migrations', function () {
             try {
                 await fs.cp(path.resolve(projectDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
                 const mf = path.resolve('./migrations');
-                const db =  await getDb(dbPath, {loadDataDir: dataDir()});
-                await migrateDb(db, { migrationsFolder: mf });
+                const [db, _] = await getMigratedDb(dbPath, {migrationsFolder: mf, loadDataDir: dataDir()});
+                await db.$client.close();
                 const res = await x('drizzle-kit', [
                     'generate',
                     '--name',
@@ -135,14 +140,13 @@ describe('Migrations', function () {
                     path.resolve(projectDir, 'src/backend/common/database/drizzle/schema'),
                     '--dialect',
                     'postgresql'
-                ]);
-                db.$client.close();
+                ], {throwOnError: true});
 
                 // add dummy data to migration so migrate() doesn't fail
                 const newMigrationFolder = (await fs.readdir(path.resolve('./migrations/'))).find(x => x.includes('newMigration'));
                 await fs.appendFile(path.resolve('./migrations/',newMigrationFolder, 'migration.sql'),`\nselect count(*) from plays;`);
 
-                await getMigratedDb(dbPath, {workingDirectory: process.cwd(), migrationsFolder: mf})
+                await getMigratedDb(dbPath, {migrationsFolder: mf});
                 const contents = await fs.readdir(path.resolve('./'));
                 const backupPattern = new RegExp(/msDb-\d+\.bak/)
                 expect(contents.some(x => backupPattern.test(x))).is.true;
