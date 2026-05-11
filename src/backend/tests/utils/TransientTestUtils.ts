@@ -11,7 +11,7 @@ let baseDb: PGlite;
 export const transientDb = async () => {
     if(baseDb === undefined) {
         baseDb = await getPrepopulatedMemoryPGlite();
-        await migrateDb(getDb(baseDb));
+        await migrateDb(await getDb(baseDb));
     }
     const db = getDb((await baseDb.clone()) as Awaited<PGlite>);
     return db;

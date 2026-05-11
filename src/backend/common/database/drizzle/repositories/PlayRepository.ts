@@ -1,5 +1,5 @@
 import { childLogger, Logger, LoggerAppExtras } from "@foxxmd/logging";
-import { DbConcrete, getDb, runTransaction } from "../drizzleUtils.js";
+import { DbConcrete } from "../drizzleUtils.js";
 import { loggerNoop } from "../../../MaybeLogger.js";
 import { ErrorLike, PlayObject, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, TemporalAccuracy } from "../../../../../core/Atomic.js";
 import { generateInputEntity, generatePlayEntity, PlayEntityOpts, hydratePlaySelect, PlayHydateOptions } from "../entityUtils.js";
@@ -69,7 +69,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
     protected getQueueNextPrepared?: ReturnType<typeof this.prepareGetQueueNext>
     protected getQueuedScrobbleRangePrepared?: ReturnType<typeof this.prepareGetQueuedScrobbleRange>
 
-    constructor(db: ReturnType<typeof getDb>, opts: DrizzleRepositoryOpts = {}) {
+    constructor(db: DbConcrete, opts: DrizzleRepositoryOpts = {}) {
         super(db, 'plays', 'Plays', opts);
     }
 

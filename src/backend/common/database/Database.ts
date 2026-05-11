@@ -23,6 +23,12 @@ export const getDbPath = (name: string = 'msDb', workingDirectory?: string): str
     return path.resolve(workingDirectory ?? configDir, `${name}`);
 }
 
+export const getDbBackupPath = (dbPath: string, suffix?: string): string => {
+    const pathInfo = path.parse(dbPath);
+    const backupPath = `${path.join(pathInfo.dir, pathInfo.name)}.bak${suffix !== undefined ? `.${suffix}` : ''}`;
+    return backupPath;
+}
+
 export const backupDb = async (dbName: string, opts: { logger?: Logger, workingDirectory?: string } = {}): Promise<void> => {
 
     const {

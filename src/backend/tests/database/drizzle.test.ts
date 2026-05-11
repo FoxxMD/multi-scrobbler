@@ -37,7 +37,7 @@ describe('Migrations', function () {
 
     it('Detects abnormal db', async function () {
         // database exists but there is no __drizzle_migrations table
-        const db = getDb((await getPrepopulatedMemoryPGlite()));
+        const db = await getDb((await getPrepopulatedMemoryPGlite()));
         const [shouldBackup, pending] = await shouldBackupDb(db);
         expect(shouldBackup).is.true;
         expect(pending).length(0);
@@ -57,7 +57,7 @@ describe('Migrations', function () {
             try {
                 await fs.cp(path.resolve(projectDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
                 const mf = path.resolve('./migrations');
-                const db = getDb((await getPrepopulatedFSPGlite(getDbPath('msDb', process.cwd()))));
+                const db = await getDb((await getPrepopulatedFSPGlite(getDbPath('msDb', process.cwd()))));
                 await migrateDb(db, { migrationsFolder: mf });
                 const res = await x('drizzle-kit', [
                     'generate',
@@ -95,7 +95,7 @@ describe('Migrations', function () {
             try {
                 await fs.cp(path.resolve(projectDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
                 const mf = path.resolve('./migrations');
-                const db =  getDb((await getPrepopulatedFSPGlite(getDbPath('msDb', process.cwd()))));
+                const db =  await getDb((await getPrepopulatedFSPGlite(getDbPath('msDb', process.cwd()))));
                 await migrateDb(db, { migrationsFolder: mf });
                 const [shouldBackup, pending] = await shouldBackupDb(db, { migrationsFolder: mf });
                 expect(shouldBackup).is.false;
@@ -121,7 +121,7 @@ describe('Migrations', function () {
             try {
                 await fs.cp(path.resolve(projectDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
                 const mf = path.resolve('./migrations');
-                const db =  getDb((await getPrepopulatedFSPGlite(dbPath)));
+                const db =  await getDb((await getPrepopulatedFSPGlite(dbPath)));
                 await migrateDb(db, { migrationsFolder: mf });
                 const res = await x('drizzle-kit', [
                     'generate',
@@ -560,7 +560,7 @@ describe('DB Size Stats', function () {
 
         await withLocalTmpDir(async () => {
             try {
-                let db = getDb(await getPrepopulatedFSPGlite(getDbPath('msDb', process.cwd())));
+                let db = await getDb(await getPrepopulatedFSPGlite(getDbPath('msDb', process.cwd())));
                 await migrateDb(db);
                 const play100Component = Number.parseInt((await x('du', ['-ksb','.'])).stdout.split('\t')[0]);
                 loggerDebug.debug(`100 Plays => ${formatNumber((play100Component / 1024) / 1024, {toFixed: 2})}mb`);
@@ -576,7 +576,7 @@ describe('DB Size Stats', function () {
 
         await withLocalTmpDir(async () => {
             try {
-                let db = getDb(await getPrepopulatedFSPGlite(getDbPath('msDb', process.cwd())));
+                let db = await getDb(await getPrepopulatedFSPGlite(getDbPath('msDb', process.cwd())));
                 await migrateDb(db);
                 const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
@@ -611,7 +611,7 @@ describe('DB Size Stats', function () {
 
         await withLocalTmpDir(async () => {
             try {
-                let db = getDb(await getPrepopulatedFSPGlite(getDbPath('msDb', process.cwd())));
+                let db = await getDb(await getPrepopulatedFSPGlite(getDbPath('msDb', process.cwd())));
                 await migrateDb(db);
                 const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
@@ -645,7 +645,7 @@ describe('DB Size Stats', function () {
 
         await withLocalTmpDir(async () => {
             try {
-                let db = getDb(await getPrepopulatedFSPGlite(getDbPath('msDb', process.cwd())));
+                let db = await getDb(await getPrepopulatedFSPGlite(getDbPath('msDb', process.cwd())));
                 await migrateDb(db);
                 const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 

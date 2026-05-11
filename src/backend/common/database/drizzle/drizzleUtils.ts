@@ -3,11 +3,12 @@ import { drizzle as drizzlePglite } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/node-sqlite/migrator';
 import { migrate as migratePglite } from 'drizzle-orm/pglite/migrator';
 import { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
-import { PGlite } from '@electric-sql/pglite';
+import { PGlite, PGliteOptions } from '@electric-sql/pglite';
 import { sql as dsl, LogWriter, Logger as DrizzleLogger } from 'drizzle-orm';
 import * as fs from 'fs/promises';
+import * as fsSync from 'fs';
 import * as path from 'path';
-import { backupDb, getDbPath, MEMORY_DB_NAME } from '../Database.js';
+import { backupDb, getDbBackupPath, getDbPath, MEMORY_DB_NAME } from '../Database.js';
 import { fileExists, fileOrDirectoryIsWriteable } from '../../../utils/FSUtils.js';
 import { childLogger, Logger, LogLevel } from '@foxxmd/logging';
 import { loggerNoop } from '../../MaybeLogger.js';
@@ -30,7 +31,7 @@ export async function shouldBackupDb(dbVal: string | DbConcrete, opts: {logger?:
       logger.info(`No database exists, no backup needed.`);
       return [false, []];
     }
-    db = getDb(dbVal);
+    db = await getDb(dbVal);
   } else {
     db = dbVal;
   }
@@ -87,27 +88,29 @@ export async function shouldBackupDb(dbVal: string | DbConcrete, opts: {logger?:
   }
 }
 
-export const getDb = (dbVal: string | PGlite, opts: { logger?: Logger } = {}) => {
+export const getDb = async (dbVal: string | PGlite, opts: { logger?: Logger, backupPath?: string } = {}) => {
   const {
     logger = loggerNoop,
+    backupPath,
   } = opts;
   let client: PGlite;
 
   if(typeof dbVal === 'string') {
-    const dbPath = dbVal;
-    
-    if(dbVal === MEMORY_DB_NAME) {
-      client = new PGlite();
-    } else {
-      client = new PGlite(dbPath);
+    const opts: PGliteOptions = {};
+    if(dbVal !== MEMORY_DB_NAME) {
+      opts.dataDir = dbVal;
+      if(backupPath !== undefined) {
+        opts.loadDataDir = new Blob([fsSync.readFileSync(backupPath)]);
+      }
     }
+    client = await PGlite.create(opts);
   } else {
     client = dbVal;
   }
   return drizzlePglite({relations: relations, logger: createDrizzleLogger(logger), client});
 }
 
-export type DbConcrete = ReturnType<typeof getDb>;
+export type DbConcrete = Awaited<ReturnType<typeof getDb>>;
 
 export const migrateDb = async (db: DbConcrete, opts: {logger?: Logger, migrationsFolder?: string} = {}) => {
   const {
@@ -155,22 +158,29 @@ export const getMigratedDb = async (dbPath: string, opts: { logger?: Logger, wor
       throw new Error('Database directory is not accessible', { cause: e });
     }
 
-    db = getDb(dbPath, opts);
+    const backupPath = getDbBackupPath(dbPath);
 
     if (fileExists(dbPath)) {
-      
+      db = await getDb(dbPath, opts);
       const [shouldBackup, pendingMigrations] = await shouldBackupDb(db, opts);
       if (shouldBackup) {
         hasPendingMigrations = true;
         await backupPgDb(db, dbPath, { logger: opts.logger });
       }
+    } else if(fileExists(backupPath)) {
+      logger.info(`Detected no database, using backup to recreate db. Backup file: ${backupPath}`);
+      db = await getDb(dbPath, {...opts, backupPath});
+      const usedBackedPath = getDbBackupPath(dbPath, 'used');
+      logger.info(`Backup loaded! Renaming backup to indicate it has already been used, new path: ${usedBackedPath}`);
+      await fs.rename(backupPath, usedBackedPath);
     } else {
       logger.info('Detected no database, creating a new one...');
+      db = await getDb(dbPath);
       isNew = true;
     }
   } else {
     logger.info('Detected in-memory database');
-    db = getDb(dbPath, opts);
+    db = await getDb(dbPath, opts);
     isNew = true;
   }
 

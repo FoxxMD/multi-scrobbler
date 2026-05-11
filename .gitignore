@@ -139,6 +139,7 @@ docsite/static/schemas/*.json
 
 
 *.bak
+*.bak.used
 *.p8
 .flatpak-builder
 flatpak/generated-sources.json

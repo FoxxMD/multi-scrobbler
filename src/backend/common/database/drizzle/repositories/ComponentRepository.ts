@@ -1,13 +1,13 @@
 import { Logger } from "drizzle-orm";
 import { DrizzleBaseRepository, DrizzleRepositoryOpts } from "./BaseRepository.js";
-import { getDb } from "../drizzleUtils.js";
+import { DbConcrete } from "../drizzleUtils.js";
 import { ComponentNew, ComponentSelect, FindWhere } from "../drizzleTypes.js";
 import { components } from "../schema/schema.js";
 import { generateComponentEntity } from "../entityUtils.js";
 
 export class DrizzleComponentRepository extends DrizzleBaseRepository<'components'> {
 
-    constructor(db: ReturnType<typeof getDb>, opts: DrizzleRepositoryOpts = {}) {
+    constructor(db: DbConcrete, opts: DrizzleRepositoryOpts = {}) {
         super(db, 'components', 'Component', opts);
     }
 

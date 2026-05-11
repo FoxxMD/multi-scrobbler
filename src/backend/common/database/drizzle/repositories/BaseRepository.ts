@@ -1,5 +1,5 @@
 import { childLogger, Logger } from "@foxxmd/logging";
-import { getDb } from "../drizzleUtils.js";
+import { DbConcrete } from "../drizzleUtils.js";
 import { CompareOpKey } from "../drizzleTypes.js";
 import { Dayjs } from "dayjs";
 import { RelationsFieldFilter, eq, inArray } from "drizzle-orm";
@@ -41,10 +41,10 @@ export abstract class DrizzleBaseRepository<T extends TableName> {
     displayName: string;
     tableName: TableName;
     table: ReturnType<typeof getConfigByTableName<T>>
-    db: ReturnType<typeof getDb>;
+    db: DbConcrete;
     componentId?: number
 
-    constructor(db: ReturnType<typeof getDb>, tableName: TableName, displayName: string, opts: DrizzleRepositoryOpts = {}) {
+    constructor(db: DbConcrete, tableName: TableName, displayName: string, opts: DrizzleRepositoryOpts = {}) {
         this.db = db;
         this.displayName = displayName;
         this.tableName = tableName;
