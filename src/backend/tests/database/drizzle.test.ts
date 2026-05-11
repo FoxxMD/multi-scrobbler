@@ -29,6 +29,8 @@ describe('Migrations', function () {
 
     it('Detects non-existent db', async function () {
 
+        this.timeout(5000);
+
         await withLocalTmpDir(async () => {
             const [db, isNew] = await getMigratedDb(getDbPath('notreal', process.cwd()), { loadDataDir: dataDir() });
             expect(isNew).is.true;
@@ -38,6 +40,8 @@ describe('Migrations', function () {
     });
 
     it('Detects abnormal db', async function () {
+        this.timeout(5000);
+
         // database exists but there is no __drizzle_migrations table
         const db = await getDb(':memory:', { loadDataDir: dataDir() });
         const [shouldBackup, pending] = await shouldBackupDb(db);
@@ -48,6 +52,8 @@ describe('Migrations', function () {
     });
 
     it('Detects pending migrations', async function () {
+
+        this.timeout(5000);
 
         const allFiles = await fs.readdir(path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations'));
         const migrationFiles = allFiles
@@ -87,6 +93,8 @@ describe('Migrations', function () {
 
     it('Detects no pending migrations correctly', async function () {
 
+        this.timeout(5000);
+
         const allFiles = await fs.readdir(path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations'));
         const migrationFiles = allFiles
             .sort();
@@ -113,7 +121,7 @@ describe('Migrations', function () {
     it('Backs up database when migrations are pending', async function () {
 
         // this can be slow due to all the io
-        this.timout(5000);
+        this.timeout(5000);
 
         const allFiles = await fs.readdir(path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations'));
         const migrationFiles = allFiles
