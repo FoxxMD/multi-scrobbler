@@ -16,16 +16,18 @@ import { appLogger, initLogger as getInitLogger } from "./common/logging.js";
 import { getRoot } from "./ioc.js";
 import { parseVersion } from "./version.js";
 import { initServer } from "./server/index.js";
-import { isDebugMode, parseBool, retry, sleep } from "./utils.js";
+import { isDebugMode, parseBool, parseBoolStrict, retry, sleep } from "./utils.js";
 import { readJson } from './utils/DataUtils.js';
 import ScrobbleClients from './scrobblers/ScrobbleClients.js';
 import ScrobbleSources from './sources/ScrobbleSources.js';
 import { Notifiers } from './notifier/Notifiers.js';
-import { getMigratedDb } from './common/database/drizzle/drizzleUtils.js';
+import { DbConcrete, getMigratedDb } from './common/database/drizzle/drizzleUtils.js';
 import { getDbPath } from './common/database/Database.js';
 import { createRetentionCleanupTask } from './tasks/retentionCleanup.js';
 import { parseUserConfig } from './common/Cache.js';
 import { nonEmptyStringOrDefault } from '../core/StringUtils.js';
+import { DbExternalMode } from './common/infrastructure/Atomic.js';
+import { PGLiteSocketServer } from '@electric-sql/pglite-socket';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -51,13 +53,48 @@ output = output.slice(0, 301);
 
 let logger: FoxLogger;
 
-process.on('uncaughtExceptionMonitor', (err, origin) => {
+let server: PGLiteSocketServer;
+let db: DbConcrete;
+let dbConnectionsClosed = false;
+
+process.on('uncaughtExceptionMonitor', async (err, origin) => {
     const appError = new Error(`Uncaught exception is crashing the app! :( Type: ${origin}`, {cause: err});
     if(logger !== undefined) {
         logger.error(appError)
     } else {
         initLogger.error(appError);
     }
+    if(!dbConnectionsClosed) {
+        const parts = [];
+        if(server !== undefined) {
+            await server.stop();
+            parts.push('PGLite Socket Server');
+        }
+        if(db !== undefined && !db.$client.closed) {
+            await db.$client.close();
+            parts.push('Database');
+        }
+        if(parts.length > 0 && logger !== undefined) {
+            logger.info(`Closed ${parts.join(' and ')}`);
+        }
+    }
+});
+process.on('SIGINT', async () => {
+    if(!dbConnectionsClosed) {
+        const parts = [];
+        if(server !== undefined) {
+            await server.stop();
+            parts.push('PGLite Socket Server');
+        }
+        if(db !== undefined && !db.$client.closed) {
+            await db.$client.close();
+            parts.push('Database');
+        }
+        if(parts.length > 0 && logger !== undefined) {
+            logger.info(`Closed ${parts.join(' and ')}`);
+        }
+    }
+    process.exit(0);
 })
 
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
@@ -97,125 +134,158 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
 
         const [aLogger, appLoggerStream] = await appLogger(logging)
         logger = childLogger(aLogger, 'App');
+
+        const dbModeVal: string = nonEmptyStringOrDefault(process.env.DB_MODE, undefined);
+        let dbMode: DbExternalMode;
+        if(dbModeVal !== undefined) {
+            if(['none','live','standalone'].includes(dbModeVal.toLocaleLowerCase())) {
+                dbMode = dbModeVal as typeof dbMode;
+            } else {
+                throw new Error(`DB_MODE env must be one of 'none' 'live' 'standalone', found ${dbModeVal}`);
+            }
+        } else {
+            dbMode = 'none';
+        }
+        logger.info(`DB External Mode: ${dbMode}`);
+
         
         const dbPath = getDbPath('msDb');
         logger.info(`Using database at ${getDbPath('msDb')}`);
-        const [db, isNew] = await getMigratedDb(dbPath, {logger: childLogger(logger, 'DB')});
+        const [migratedDb, isNew] = await getMigratedDb(dbPath, {logger: childLogger(logger, 'DB')});
+        db = migratedDb;
 
-        const root = getRoot({
-            ...config,
-            cache: parseUserConfig(cache, logger),
-            logger,
-            loggingConfig: logging,
-            loggerStream: appLoggerStream,
-            db
-        });
+        
 
-        const internalConfigOptional = {
-             localUrl: root.get('localUrl'),
-            configDir: root.get('configDir'),
-             version: root.get('version')
-             };
-
-        const scrobbleClients = new ScrobbleClients(root.get('clientEmitter'), root.get('sourceEmitter'), internalConfigOptional, root.get('logger'));
-        const scrobbleSources = new ScrobbleSources(root.get('sourceEmitter'), internalConfigOptional, root.get('logger'));
-
-        await root.items.cache().init(true);
-
-        initServer(logger, appLoggerStream, output, scrobbleSources, scrobbleClients);
-
-        if(process.env.IS_LOCAL === 'true') {
-            logger.info('multi-scrobbler can be run as a background service! See: https://docs.multi-scrobbler.app/installation/service');
+        if(['live','standalone'].includes(dbMode)) {
+            server = new PGLiteSocketServer({
+                host: '0.0.0.0',
+                port: 5433,
+                db: db.$client,
+                maxConnections: 10,
+                debug: parseBoolStrict(nonEmptyStringOrDefault(process.env.DB_DEBUG, false))
+            });
+            await server.start();
+            logger.info('Started PGLite Socket Server');
         }
 
-        if(appConfigFail !== undefined) {
-            logger.warn('App config file exists but could not be parsed!');
-            logger.warn(appConfigFail);
-        }
+        if (dbMode === 'standalone') {
+            logger.info('MS App startup stopped early due to Standalone DB Mode.');
+        } else {
 
-        const notifiers = new Notifiers(root.get('notifierEmitter'), root.get('clientEmitter'), root.get('sourceEmitter'), root.get('logger')); //root.get('notifiers');
-        await notifiers.buildWebhooks(webhooks);
+            const root = getRoot({
+                ...config,
+                cache: parseUserConfig(cache, logger),
+                logger,
+                loggingConfig: logging,
+                loggerStream: appLoggerStream,
+                db
+            });
 
-        await root.items.transformerManager.registerFromEnv();
-        await root.items.transformerManager.registeryDefaults();
-        await root.items.transformerManager.initTransformers();
+            const internalConfigOptional = {
+                localUrl: root.get('localUrl'),
+                configDir: root.get('configDir'),
+                version: root.get('version')
+            };
 
-        /*
-        * setup clients
-        * */
-        await scrobbleClients.buildClientsFromConfig(notifiers);
-        /*
-        * setup sources
-        * */
-        await scrobbleSources.buildSourcesFromConfig([]);
+            const scrobbleClients = new ScrobbleClients(root.get('clientEmitter'), root.get('sourceEmitter'), internalConfigOptional, root.get('logger'));
+            const scrobbleSources = new ScrobbleSources(root.get('sourceEmitter'), internalConfigOptional, root.get('logger'));
 
-        // check ambiguous client/source types like this for now
-        const lastfmSources = scrobbleSources.getByType('lastfm');
-        const lastfmScrobbles = scrobbleClients.getByType('lastfm');
+            await root.items.cache().init(true);
 
-        const scrobblerNames = lastfmScrobbles.map(x => x.name);
-        const nameColl = lastfmSources.filter(x => scrobblerNames.includes(x.name));
-        if(nameColl.length > 0) {
-            logger.warn(`Last.FM source and clients have same names [${nameColl.map(x => x.name).join(',')}] -- this may cause issues`);
-        }
-        const clientInitOptions = {deadDelay: nonEmptyStringOrDefault(process.env.DEBUG_DEAD_DELAY, undefined) !== undefined ? Number.parseInt(process.env.DEBUG_DEAD_DELAY) : undefined};        for(const c of scrobbleClients.clients) {
-            c.initTasks(clientInitOptions);
-            const res = await Promise.race([
-                sleep(2200),
-                (async () => {
-                    while(!c.isReady()) {
-                        await sleep(400)
-                    }
-                    return true;
-                })()
-            ]);
-            if(res === undefined) {
-                logger.debug(`Not waiting for Client ${c.name} to finish init, moving on to the next Client...`);
+            initServer(logger, appLoggerStream, output, scrobbleSources, scrobbleClients);
+
+            if (process.env.IS_LOCAL === 'true') {
+                logger.info('multi-scrobbler can be run as a background service! See: https://docs.multi-scrobbler.app/installation/service');
+            }
+
+            if (appConfigFail !== undefined) {
+                logger.warn('App config file exists but could not be parsed!');
+                logger.warn(appConfigFail);
+            }
+
+            const notifiers = new Notifiers(root.get('notifierEmitter'), root.get('clientEmitter'), root.get('sourceEmitter'), root.get('logger')); //root.get('notifiers');
+            await notifiers.buildWebhooks(webhooks);
+
+            await root.items.transformerManager.registerFromEnv();
+            await root.items.transformerManager.registeryDefaults();
+            await root.items.transformerManager.initTransformers();
+
+            /*
+            * setup clients
+            * */
+            await scrobbleClients.buildClientsFromConfig(notifiers);
+            /*
+            * setup sources
+            * */
+            await scrobbleSources.buildSourcesFromConfig([]);
+
+            // check ambiguous client/source types like this for now
+            const lastfmSources = scrobbleSources.getByType('lastfm');
+            const lastfmScrobbles = scrobbleClients.getByType('lastfm');
+
+            const scrobblerNames = lastfmScrobbles.map(x => x.name);
+            const nameColl = lastfmSources.filter(x => scrobblerNames.includes(x.name));
+            if (nameColl.length > 0) {
+                logger.warn(`Last.FM source and clients have same names [${nameColl.map(x => x.name).join(',')}] -- this may cause issues`);
+            }
+            const clientInitOptions = { deadDelay: nonEmptyStringOrDefault(process.env.DEBUG_DEAD_DELAY, undefined) !== undefined ? Number.parseInt(process.env.DEBUG_DEAD_DELAY) : undefined }; for (const c of scrobbleClients.clients) {
+                c.initTasks(clientInitOptions);
+                const res = await Promise.race([
+                    sleep(2200),
+                    (async () => {
+                        while (!c.isReady()) {
+                            await sleep(400)
+                        }
+                        return true;
+                    })()
+                ]);
+                if (res === undefined) {
+                    logger.debug(`Not waiting for Client ${c.name} to finish init, moving on to the next Client...`);
+                }
+            }
+
+            for (const c of scrobbleSources.sources) {
+                c.initTasks();
+                const res = await Promise.race([
+                    sleep(2200),
+                    (async () => {
+                        while (!c.isReady()) {
+                            await sleep(400)
+                        }
+                        return true;
+                    })()
+                ]);
+                if (res === undefined) {
+                    logger.debug(`Not waiting for Source ${c.name} to finish init, moving on to the next Source...`);
+                }
+            }
+
+            let runRetentionNow = parseBool(process.env.RETENTION_IMMEDIATE, false);
+
+            const retentionTask = createRetentionCleanupTask(scrobbleSources, scrobbleClients, logger);
+            let retentionJobAdded = false;
+            const addJob = () => {
+                retentionJobAdded = true;
+                scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
+                    minutes: 60,
+                    runImmediately: runRetentionNow
+                }, retentionTask, { id: 'retention', preventOverrun: true }));
+                logger.debug('Added Retention Cleanup task to scheduler');
+            };
+            logger.debug('Added Client Heartbeat task to scheduler');
+
+            if (runRetentionNow === false || (scrobbleClients.clients.every(x => x.isReady()) && scrobbleSources.sources.every(x => x.isReady()))) {
+                addJob();
+            }
+
+            logger.info('Scheduler started.');
+
+            if (runRetentionNow === true && !retentionJobAdded) {
+                logger.info('Detected that Retention Cleanup should run immediately but all sources/clients have not started yet! Delaying retention cleanup by 1 minute to allow all sources/clients to finish starting.');
+                await sleep(60 * 1000);
+                addJob();
             }
         }
-
-        for(const c of scrobbleSources.sources) {
-            c.initTasks();
-            const res = await Promise.race([
-                sleep(2200),
-                (async () => {
-                    while(!c.isReady()) {
-                        await sleep(400)
-                    }
-                    return true;
-                })()
-            ]);
-            if(res === undefined) {
-                logger.debug(`Not waiting for Source ${c.name} to finish init, moving on to the next Source...`);
-            }
-        }
-
-        let runRetentionNow = parseBool(process.env.RETENTION_IMMEDIATE, false);
-
-        const retentionTask = createRetentionCleanupTask(scrobbleSources, scrobbleClients, logger);
-        let retentionJobAdded = false;
-        const addJob = () => { 
-            retentionJobAdded = true;
-            scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
-                minutes: 60,
-                runImmediately: runRetentionNow
-            }, retentionTask, {id: 'retention', preventOverrun: true}));
-            logger.debug('Added Retention Cleanup task to scheduler');
-        };
-        logger.debug('Added Client Heartbeat task to scheduler');
-
-        if(runRetentionNow === false || (scrobbleClients.clients.every(x => x.isReady()) && scrobbleSources.sources.every(x => x.isReady()))) {
-            addJob();
-        }
-
-        logger.info('Scheduler started.');
-
-        if(runRetentionNow === true && !retentionJobAdded) {
-            logger.info('Detected that Retention Cleanup should run immediately but all sources/clients have not started yet! Delaying retention cleanup by 1 minute to allow all sources/clients to finish starting.');
-            await sleep(60 * 1000);
-            addJob();
-        }
-
 
     } catch (e) {
         const appError = new Error('Exited with uncaught error', {cause: e});
@@ -223,6 +293,20 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             logger.error(appError);
         } else {
             initLogger.error(appError);
+        }
+        if(!dbConnectionsClosed) {
+            const parts = [];
+            if(server !== undefined) {
+                await server.stop();
+                parts.push('PGLite Socket Server');
+            }
+            if(db !== undefined && !db.$client.closed) {
+                await db.$client.close();
+                parts.push('Database');
+            }
+            if(parts.length > 0 && logger !== undefined) {
+                logger.info(`Closed ${parts.join(' and ')}`);
+            }
         }
         process.exit(1);
     }

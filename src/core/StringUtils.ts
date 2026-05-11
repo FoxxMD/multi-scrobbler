@@ -230,7 +230,7 @@ export const splitByFirstRegexFound = <T>(str: any, onNotAStringVal: T, delimsRe
 /**
  * Returns value if it is a non-empty string or returns default value
  * */
-export const nonEmptyStringOrDefault = <T>(str: any, defaultVal: T = undefined): string | T => {
+export const nonEmptyStringOrDefault = <T = undefined>(str: any, defaultVal: T = undefined): string | T => {
     if (str === undefined || str === null || typeof str !== 'string' || str.trim() === '') {
         return defaultVal;
     }

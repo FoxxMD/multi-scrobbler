@@ -439,3 +439,5 @@ export const REFRESH_STALE_DEFAULT = 60;
  * @example [60, 3600, "1 hour", "4 days"]
  */
 export type DurationValue = number | string;
+
+export type DbExternalMode = 'none' | 'live' | 'standalone';
