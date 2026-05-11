@@ -28,7 +28,6 @@ const createYtSource = async (opts?: {
     } = opts || {};
     const source = new YTMusicSource('test', config, { localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test' }, emitter);
     await source.buildDatabase();
-    source.buildTransformRules();
     return source;
 }
 
@@ -140,7 +139,7 @@ describe('Handles temporal inconsistency in history', function () {
         const prependedPlays = [newPlay, ...plays];
         expect(source.parseRecentAgainstResponse(prependedPlays).plays).length(1);
 
-        await sleep(1000);
+        await sleep(50);
 
         // YT returns outdated history
         // should be detected as append since "removed" track in last position from previous history is seen again
@@ -148,12 +147,12 @@ describe('Handles temporal inconsistency in history', function () {
         expect(badAppend).to.deep.include({consistent: false, diffType: 'added', plays: []});
         expect(badAppend.diffResults[2]).eq('append');
 
-        await sleep(500);
+        await sleep(10);
 
         // contiuned outdated history
         expect(source.parseRecentAgainstResponse(plays)).to.deep.include({consistent: true, plays: []});
 
-        await sleep(500);
+        await sleep(10);
 
         // correct, current history is finally returned correctly
         const recentHistoryResult = source.parseRecentAgainstResponse(prependedPlays);
