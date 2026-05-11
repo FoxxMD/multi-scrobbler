@@ -426,8 +426,17 @@ describe('Player Cleanup', function () {
     });
 });
 
+class DeezerTestSource extends DeezerInternalSource {
+    protected async doCheckConnection(): Promise<true | string | undefined> {
+        return;
+    }
+    doAuthentication = async () => {
+        return true;
+    }
+}
+
 const generateDeezerSource = async (options: DeezerInternalSourceOptions = {}) => {
-    const source = new DeezerInternalSource('test', {data: {arl: 'test'}, options}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
+    const source = new DeezerTestSource('test', {data: {arl: 'test'}, options}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
     await source.tryInitialize();
     return source;
 }
