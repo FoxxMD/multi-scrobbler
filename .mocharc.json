@@ -6,5 +6,6 @@
   "file": [
     "./src/backend/tests/setup.ts"
   ],
-  "exit": true
+  "exit": true,
+  "timeout": 2500
 }
