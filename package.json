@@ -149,7 +149,7 @@
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
     "@fortawesome/react-fontawesome": "^0.2.6",
     "@gr2m/net-interceptor": "^1.0.0",
-    "@react-nano/use-event-source": "^0.13.0",
+    "@react-nano/use-event-source": "^0.16.0",
     "@reduxjs/toolkit": "^2.11.2",
     "@storybook/addon-a11y": "^10.3.6",
     "@storybook/addon-docs": "^10.3.6",
@@ -235,10 +235,6 @@
       "rate-limit-threshold": "0.2.1"
     },
     "jsondiffpatch-react": {
-      "react": "$react",
-      "react-dom": "$react-dom"
-    },
-    "@curvenote/ansi-to-react": {
       "react": "$react",
       "react-dom": "$react-dom"
     }
