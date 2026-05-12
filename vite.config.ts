@@ -43,6 +43,9 @@ export default defineConfig(() => {
             react(),
             tailwindcss(),
         ],
+        optimizeDeps: {
+            include: ['ansi-to-react']
+        },
         build: {
             sourcemap: true,
             cssCodeSplit: true
