@@ -66,6 +66,7 @@
   },
   "overrides": {
     "lodash": "4.18.1",
-    "satori": "0.25.0"
+    "satori": "0.25.0",
+    "hast-util-to-jsx-runtime": "2.3.6"
   }
 }
