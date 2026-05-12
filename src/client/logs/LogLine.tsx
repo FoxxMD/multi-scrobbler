@@ -1,5 +1,5 @@
 import React, {PropsWithChildren} from 'react';
-import Ansi from "@curvenote/ansi-to-react";
+import Ansi from "ansi-to-react";
 
 const LogLine = (props: PropsWithChildren<{level: number, levelLabel: string, message: string}>) => {
     return (

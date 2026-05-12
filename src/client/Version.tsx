@@ -1,5 +1,5 @@
 import React from 'react';
-import {createApi, fetchBaseQuery} from "@reduxjs/toolkit/dist/query/react/index";
+import {createApi, fetchBaseQuery} from "@reduxjs/toolkit/query/react";
 
 export const versionApi = createApi({
     reducerPath: 'versionApi',

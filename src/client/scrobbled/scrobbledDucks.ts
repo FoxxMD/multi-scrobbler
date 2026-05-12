@@ -1,4 +1,4 @@
-import {createApi, fetchBaseQuery} from "@reduxjs/toolkit/dist/query/react/index";
+import {createApi, fetchBaseQuery} from "@reduxjs/toolkit/query/react";
 import {JsonPlayObject} from "../../core/Atomic";
 
 type ScrobbledResponse = (JsonPlayObject & { index: number })[];
