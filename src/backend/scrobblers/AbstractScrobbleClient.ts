@@ -152,8 +152,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     declare protected componentType: 'client';
 
-    protected playRepo: DrizzlePlayRepository;
-    protected queueRepo: DrizzleQueueRepository;
+    protected playRepo!: DrizzlePlayRepository;
+    protected queueRepo!: DrizzleQueueRepository;
 
     constructor(type: any, name: any, config: CommonClientConfig, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
         super(config);
@@ -166,8 +166,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.deadLogger = childLogger(this.logger, CLIENT_DEAD_QUEUE);
         this.notifier = notifier;
         this.emitter = emitter;
-        this.playRepo = new DrizzlePlayRepository(this.db, {logger: this.logger,});
-        this.queueRepo = new DrizzleQueueRepository(this.db, {logger: this.logger});
 
         const {
             options: {
@@ -327,6 +325,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
 
     protected async postDatabase(): Promise<void> {
+        this.playRepo = new DrizzlePlayRepository(this.db, {logger: this.logger});
+        this.queueRepo = new DrizzleQueueRepository(this.db, {logger: this.logger});
         this.playRepo.componentId = this.dbComponent.id;
         this.queueRepo.componentId = this.dbComponent.id;
         this.tracksScrobbled = this.dbComponent.countLive + this.dbComponent.countNonLive;

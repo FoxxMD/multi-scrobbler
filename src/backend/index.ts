@@ -21,7 +21,7 @@ import { readJson } from './utils/DataUtils.js';
 import ScrobbleClients from './scrobblers/ScrobbleClients.js';
 import ScrobbleSources from './sources/ScrobbleSources.js';
 import { Notifiers } from './notifier/Notifiers.js';
-import { getDb, performDbMigrationWithBackup } from './common/database/drizzle/drizzleUtils.js';
+import { DbConcrete, getMigratedDb } from './common/database/drizzle/drizzleUtils.js';
 import { getDbPath } from './common/database/Database.js';
 import { createRetentionCleanupTask } from './tasks/retentionCleanup.js';
 import { parseUserConfig } from './common/Cache.js';
@@ -51,6 +51,9 @@ output = output.slice(0, 301);
 
 let logger: FoxLogger;
 
+let db: DbConcrete;
+let dbConnectionsClosed = false;
+
 process.on('uncaughtExceptionMonitor', (err, origin) => {
     const appError = new Error(`Uncaught exception is crashing the app! :( Type: ${origin}`, {cause: err});
     if(logger !== undefined) {
@@ -58,7 +61,31 @@ process.on('uncaughtExceptionMonitor', (err, origin) => {
     } else {
         initLogger.error(appError);
     }
+    if(!dbConnectionsClosed) {
+        const parts = [];
+        if(db !== undefined && !db.$client.isOpen) {
+            db.$client.close();
+            parts.push('Database');
+        }
+        if(parts.length > 0 && logger !== undefined) {
+            logger.info(`Closed ${parts.join(' and ')}`);
+        }
+    }
+});
+process.on('SIGINT', async () => {
+    if(!dbConnectionsClosed) {
+        const parts = [];
+        if(db !== undefined && !db.$client.isOpen) {
+            db.$client.close();
+            parts.push('Database');
+        }
+        if(parts.length > 0 && logger !== undefined) {
+            logger.info(`Closed ${parts.join(' and ')}`);
+        }
+    }
+    process.exit(0);
 })
+
 
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
 
@@ -98,8 +125,10 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         const [aLogger, appLoggerStream] = await appLogger(logging)
         logger = childLogger(aLogger, 'App');
         
-        logger.info(`Using database at ${getDbPath('ms')}`);
-        await performDbMigrationWithBackup('ms', {logger});
+        const dbPath = getDbPath('ms');
+        logger.info(`Using database at ${db}`);
+        const [migratedDb, isNew] = await getMigratedDb(dbPath, {logger: childLogger(logger, 'DB')});
+        db = migratedDb;
 
         const root = getRoot({
             ...config,
@@ -107,7 +136,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             logger,
             loggingConfig: logging,
             loggerStream: appLoggerStream,
-            db: getDb('ms', {logger})
+            db
         });
 
         const internalConfigOptional = {
@@ -222,6 +251,16 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             logger.error(appError);
         } else {
             initLogger.error(appError);
+        }
+        if(!dbConnectionsClosed) {
+            const parts = [];
+            if(db !== undefined && !db.$client.isOpen) {
+                db.$client.close();
+                parts.push('Database');
+            }
+            if(parts.length > 0 && logger !== undefined) {
+                logger.info(`Closed ${parts.join(' and ')}`);
+            }
         }
         process.exit(1);
     }

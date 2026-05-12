@@ -1,6 +1,6 @@
 import chai, { assert, expect } from 'chai';
 import asPromised from 'chai-as-promised';
-import { getDb, migrateDb, performDbMigrationWithBackup, shouldBackupDb } from '../../common/database/drizzle/drizzleUtils.js';
+import { getDb, migrateDb, shouldBackupDb, getMigratedDb } from '../../common/database/drizzle/drizzleUtils.js';
 import withLocalTmpDir from 'with-local-tmp-dir';
 import { components, playInputs, plays, queueStates } from '../../common/database/drizzle/schema/schema.js';
 import dayjs from 'dayjs';
@@ -10,7 +10,6 @@ import { x } from 'tinyexec';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { projectDir } from '../../common/index.js';
-import { DatabaseSync } from 'node:sqlite';
 import { fixtureCreateComponent, fixtureCreateInput, fixtureCreatePlay } from '../utils/databaseFixtures.js';
 import { DrizzlePlayRepository, RepositoryCreatePlayOpts } from '../../common/database/drizzle/repositories/PlayRepository.js';
 import { generatePlayWithLifecycle, generateRandomObj } from '../../../core/tests/utils/fixtures.js';
@@ -19,6 +18,7 @@ import { objectsEqual } from '../../utils/DataUtils.js';
 import { eq, sql } from 'drizzle-orm';
 import { PlaySelect } from '../../common/database/drizzle/drizzleTypes.js';
 import { loggerDebug } from '@foxxmd/logging';
+import { transientDb } from '../utils/TransientTestUtils.js';
 
 // would be great to push migrations directly from schema but doesn't seem supported in newest beta
 // https://github.com/drizzle-team/drizzle-orm/discussions/4373
@@ -28,9 +28,9 @@ describe('Migrations', function () {
     it('Detects non-existent db', async function () {
 
         await withLocalTmpDir(async () => {
-            const [shouldBackup, pending] = await shouldBackupDb(getDbPath('notreal', process.cwd()));
-            expect(shouldBackup).is.false;
-            expect(pending).length(0);
+            const [db, isNew] = await getMigratedDb(getDbPath('notreal', process.cwd()));
+            expect(isNew).is.true;
+            db.$client.close();
         }, {postfix: 'noDb'});
 
     });
@@ -38,11 +38,11 @@ describe('Migrations', function () {
     it('Detects abnormal db', async function () {
 
         await withLocalTmpDir(async () => {
-            const otherdb = new DatabaseSync(path.resolve('./', 'other.db'));
-            const [shouldBackup, pending] = await shouldBackupDb(getDbPath('other', process.cwd()));
-            expect(shouldBackup).is.true;
-            expect(pending).length(0);
-            otherdb.close();
+        // database exists but there is no __drizzle_migrations table
+        const db = await getDb(':memory:');
+        const [shouldBackup, pending] = await shouldBackupDb(db);
+        expect(shouldBackup).is.true;
+        db.$client.close();
         }, { unsafeCleanup: true, postfix: 'badDb' });
 
     });
@@ -60,7 +60,7 @@ describe('Migrations', function () {
             try {
                 await fs.cp(path.resolve(projectDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
                 const mf = path.resolve('./migrations');
-                const db = getDb('ms', { workingDirectory: process.cwd() });
+                const db = await getDb(':memory:');
                 await migrateDb(db, { migrationsFolder: mf });
                 const res = await x('drizzle-kit', [
                     'generate',
@@ -73,8 +73,8 @@ describe('Migrations', function () {
                     path.resolve(projectDir, 'src/backend/common/database/drizzle/schema'),
                     '--dialect',
                     'sqlite'
-                ]);
-                const [shouldBackup, pending] = await shouldBackupDb(getDbPath('ms', process.cwd()), { migrationsFolder: mf });
+                ], {throwOnError: true});
+                const [shouldBackup, pending] = await shouldBackupDb(db, { migrationsFolder: mf });
                 expect(shouldBackup).is.true;
                 expect(pending).length(1);
                 expect(pending[0]).includes('newMigration');
@@ -98,9 +98,9 @@ describe('Migrations', function () {
             try {
                 await fs.cp(path.resolve(projectDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
                 const mf = path.resolve('./migrations');
-                const db = getDb('ms', { workingDirectory: process.cwd() });
+                const db = await getDb(':memory:');
                 await migrateDb(db, { migrationsFolder: mf });
-                const [shouldBackup, pending] = await shouldBackupDb(getDbPath('ms', process.cwd()), { migrationsFolder: mf });
+                const [shouldBackup, pending] = await shouldBackupDb(db, { migrationsFolder: mf });
                 expect(shouldBackup).is.false;
                 expect(pending).length(0);
                 db.$client.close();
@@ -118,12 +118,13 @@ describe('Migrations', function () {
 
         await withLocalTmpDir(async () => {
 
+            const dbPath = getDbPath('msDb', process.cwd());
             // copy first migration
             await fs.mkdir('migrations');
             try {
                 await fs.cp(path.resolve(projectDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
                 const mf = path.resolve('./migrations');
-                const db = getDb('ms', { workingDirectory: process.cwd() });
+                const [db, _] = await getMigratedDb(dbPath, {migrationsFolder: mf});
                 await migrateDb(db, { migrationsFolder: mf });
                 const res = await x('drizzle-kit', [
                     'generate',
@@ -136,14 +137,13 @@ describe('Migrations', function () {
                     path.resolve(projectDir, 'src/backend/common/database/drizzle/schema'),
                     '--dialect',
                     'sqlite'
-                ]);
-                db.$client.close();
+                ], {throwOnError: true});
 
                 // add dummy data to migration so migrate() doesn't fail
                 const newMigrationFolder = (await fs.readdir(path.resolve('./migrations/'))).find(x => x.includes('newMigration'));
                 await fs.appendFile(path.resolve('./migrations/',newMigrationFolder, 'migration.sql'),`\nselect count(*) from plays;`);
 
-                await performDbMigrationWithBackup('ms', {workingDirectory: process.cwd(), migrationsFolder: mf});      
+                await getMigratedDb(dbPath, {migrationsFolder: mf});
                 const contents = await fs.readdir(path.resolve('./'));
                 expect(contents.some(x => x.includes('ms.db.bak')));
             } catch (e) {
@@ -158,7 +158,7 @@ describe('Basic DB Operations', function () {
 
     it('Should create a play', async function () {
 
-        const db = getDb(':memory:', { workingDirectory: process.cwd() });
+        const db = await transientDb();
         await migrateDb(db);
 
         const component = await db.insert(components).values(fixtureCreateComponent()).returning();
@@ -177,7 +177,7 @@ describe('Basic DB Operations', function () {
 
     it('Should create a play with relations', async function () {
 
-        const db = getDb(':memory:', { workingDirectory: process.cwd() });
+        const db = await transientDb();
         await migrateDb(db);
 
         try {
@@ -226,7 +226,7 @@ describe('Basic DB Operations', function () {
 
     it('deletes all dependent relations when a Play is deleted', async function () {
 
-        const db = getDb(':memory:', { workingDirectory: process.cwd() });
+        const db = await transientDb();
         await migrateDb(db);
 
         try {
@@ -301,8 +301,7 @@ describe('Repository Operations', function () {
 
     it('creates Plays and inputs', async function () {
 
-        const db = getDb(':memory:');
-        await migrateDb(db);
+        const db = await transientDb();
 
         const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
@@ -331,9 +330,7 @@ describe('Repository Operations', function () {
 
     it('finds Plays by state', async function () {
 
-        const db = getDb(':memory:');
-        await migrateDb(db);
-
+        const db = await transientDb();
         const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
         const repo = new DrizzlePlayRepository(db, {componentId: component[0].id});
@@ -361,8 +358,7 @@ describe('Repository Operations', function () {
 
     it('finds Plays by date range', async function () {
 
-        const db = getDb(':memory:');
-        await migrateDb(db);
+        const db = await transientDb();
 
         const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
@@ -410,8 +406,7 @@ describe('Repository Operations', function () {
 
     it('finds Plays by component', async function () {
 
-        const db = getDb(':memory:');
-        await migrateDb(db);
+        const db = await transientDb();
 
         const component1 = await db.insert(components).values(fixtureCreateComponent()).returning();
         const component2 = await db.insert(components).values(fixtureCreateComponent({ uid: 'test2', name: 'jelly2' })).returning();
@@ -457,8 +452,7 @@ describe('Repository Operations', function () {
 
     it('finds purgable Plays', async function () {
 
-        const db = getDb(':memory:');
-        await migrateDb(db);
+        const db = await transientDb();
 
         const component1 = await db.insert(components).values(fixtureCreateComponent()).returning();
         const component2 = await db.insert(components).values(fixtureCreateComponent({ uid: 'test2', name: 'jelly2' })).returning();
@@ -523,8 +517,7 @@ describe('Repository Operations', function () {
 
         it('Get json property from play', async function () {
 
-        const db = getDb(':memory:', { workingDirectory: process.cwd() });
-        await migrateDb(db);
+        const db = await transientDb();
 
         try {
 
@@ -565,8 +558,7 @@ describe('DB Size Stats', function () {
 
         await withLocalTmpDir(async () => {
             try {
-                let db = getDb('ms', { workingDirectory: process.cwd() });
-                await migrateDb(db);
+                let [db, _] = await getMigratedDb(getDbPath('ms', process.cwd()));
                 const stats = await fs.stat(path.resolve('./ms.db'));
                 loggerDebug.debug(`Empty => ${stats.size / 1024}kb`);
             } catch (e) {
@@ -581,8 +573,7 @@ describe('DB Size Stats', function () {
 
         await withLocalTmpDir(async () => {
             try {
-                let db = getDb('ms', { workingDirectory: process.cwd() });
-                await migrateDb(db);
+                let [db, _] = await getMigratedDb(getDbPath('ms', process.cwd()));
                 const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
                 const playRepo = new DrizzlePlayRepository(db);
@@ -615,8 +606,7 @@ describe('DB Size Stats', function () {
 
         await withLocalTmpDir(async () => {
             try {
-                let db = getDb('ms', { workingDirectory: process.cwd() });
-                await migrateDb(db);
+                let [db, _] = await getMigratedDb(getDbPath('ms', process.cwd()));
                 const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
                 const playRepo = new DrizzlePlayRepository(db);
@@ -649,8 +639,7 @@ describe('DB Size Stats', function () {
 
         await withLocalTmpDir(async () => {
             try {
-                let db = getDb('ms', { workingDirectory: process.cwd() });
-                await migrateDb(db);
+                let [db, _] = await getMigratedDb(getDbPath('ms', process.cwd()));
                 const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
                 const playRepo = new DrizzlePlayRepository(db);

@@ -8,6 +8,6 @@ export default defineConfig({
   out: path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations'),
   dialect: 'sqlite',
   dbCredentials: {
-    url: path.resolve(configDir, process.env.DB_FILE_NAME! ?? 'ms.db'),
+    url: path.resolve(configDir, 'ms.db'),
   },
 });

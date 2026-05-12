@@ -10,6 +10,7 @@ import { Duration } from 'dayjs/plugin/duration.js';
 import dayjs from 'dayjs';
 import { parseDurationFromDurationValue } from '../../utils/TimeUtils.js';
 import assert, { AssertionError } from 'node:assert';
+import * as sqlite from 'node:sqlite';
 import { parseBoolStrict } from '../../utils.js';
 import { SimpleError } from '../errors/MSErrors.js';
 
@@ -23,36 +24,34 @@ export const getDbPath = (name: string = 'ms', workingDirectory?: string): strin
     return path.resolve(workingDirectory ?? configDir, `${name}.db`);
 }
 
-export const backupDb = async (dbName: string, opts: { logger?: Logger, workingDirectory?: string } = {}): Promise<void> => {
+export const getDbBackupPath = (dbPath: string, suffix?: string): string => {
+    const pathInfo = path.parse(dbPath);
+    const backupPath = `${path.join(pathInfo.dir, pathInfo.name)}.db${suffix !== undefined ? `.${suffix}` : ''}.bak`;
+    return backupPath;
+}
+
+export const backupDb = async (db: sqlite.DatabaseSync, dbPath: string, opts: { logger?: Logger, suffix?: string } = {}): Promise<void | Uint8Array> => {
 
     const {
         logger: parentLogger = loggerNoop,
-        workingDirectory
+        suffix,
     } = opts;
 
     const logger = childLogger(parentLogger, 'Migrations');
 
-    const dbPath = getDbPath(dbName, workingDirectory);
-    let newDb = false;
-
-    if (dbPath !== MEMORY_DB_NAME) {
-        if (!fileExists(dbPath)) {
-            logger.info(`Database at ${dbPath} does not exist, will create it.`);
-            newDb = true;
-        }
-        try {
-            fileOrDirectoryIsWriteable(dbPath);
-        } catch (e) {
-            throw new Error('Database path/folder is not writeable, cannot backup database', { cause: e });
-        }
+    if(dbPath === MEMORY_DB_NAME) {
+        // TODO serialize
+        return;
     }
 
-    if (dbPath !== MEMORY_DB_NAME && !newDb) {
-        const backupPath = `${getDbPath(`${Date.now()}-${dbName}`, workingDirectory)}.bak`;
-        logger.info(`Backing up database before migrating => ${backupPath}`);
-        await fs.copyFile(dbPath, backupPath)
-        logger.info('Backed up!');
-    }
+    const backupPath = getDbBackupPath(dbPath, suffix);
+    logger.info(`Backing up database to => ${backupPath}`);
+    await sqlite.backup(db, backupPath, {
+        progress: ({totalPages, remainingPages}) => {
+            logger.debug(`Backup in progress => ${totalPages - remainingPages} / ${totalPages}`);
+        }
+    })
+    logger.info('Backed up!');
 }
 
 const parseRetentionValue = (val: RetentionValueUnparsed): RetentionValue => {

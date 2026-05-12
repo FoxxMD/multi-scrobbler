@@ -109,7 +109,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     declare protected componentType: 'source';
 
-    protected playRepo: DrizzlePlayRepository;
+    protected playRepo!: DrizzlePlayRepository;
 
     existingDiscoveredPlay: (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => Promise<PlayMatchResult>
 
@@ -130,7 +130,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.emitter = emitter;
         
         this.discoveredCounter = getRoot().items.sourceMetics.discovered;
-        this.playRepo = new DrizzlePlayRepository(this.db, {logger: this.logger});
 
         const existingScrobbleOpts: ExistingScrobbleOpts = {
             logger: this.logger,
@@ -207,6 +206,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     }
 
     protected async postDatabase(): Promise<void> {
+        this.playRepo = new DrizzlePlayRepository(this.db, {logger: this.logger});
         this.tracksDiscovered = this.dbComponent.countLive;
         this.playRepo.componentId = this.dbComponent.id;
     }

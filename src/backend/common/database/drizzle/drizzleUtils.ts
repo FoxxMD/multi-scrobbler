@@ -4,28 +4,34 @@ import { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import { sql as dsl, LogWriter, Logger as DrizzleLogger } from 'drizzle-orm';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { backupDb, getDbPath, MEMORY_DB_NAME } from '../Database.js';
-import { fileExists } from '../../../utils/FSUtils.js';
+import { backupDb, getDbPath, getDbBackupPath, MEMORY_DB_NAME } from '../Database.js';
+import { fileExists, fileOrDirectoryIsWriteable } from '../../../utils/FSUtils.js';
 import { childLogger, Logger, LogLevel } from '@foxxmd/logging';
 import { loggerNoop } from '../../MaybeLogger.js';
 import { projectDir } from '../../index.js';
 import { relations } from './schema/schema.js';
 import { addToContext, executeQuery } from './logContext.js';
+import { DatabaseSync } from 'node:sqlite';
 
-export async function shouldBackupDb(dbPath: string, opts: {logger?: Logger, migrationsFolder?: string} = {}): Promise<[boolean, string[]]> {
+export async function shouldBackupDb(dbVal: string | DbConcrete, opts: {logger?: Logger, migrationsFolder?: string} = {}): Promise<[boolean, string[]]> {
   const {
     logger: parentLogger = loggerNoop,
     migrationsFolder = path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations')
   } = opts;
   const logger = childLogger(parentLogger, 'Migrations');
   
-  logger.info(`Checking database at ${dbPath}`);
-  if (dbPath !== MEMORY_DB_NAME && !fileExists(dbPath)) {
-    logger.info(`No database exists!`);
-    return [false, []];
+  let db: DbConcrete;
+  
+  if(typeof dbVal === 'string') {
+    logger.info(`Checking for database at ${dbVal}`);
+    if (dbVal !== MEMORY_DB_NAME && !fileExists(dbVal)) {
+      logger.info(`No database exists, no backup needed.`);
+      return [false, []];
+    }
+    db = await getDb(dbVal);
+  } else {
+    db = dbVal;
   }
-
-  const db = drizzle(dbPath);
 
   try {
     // Ensure the migrations table exists
@@ -61,25 +67,20 @@ export async function shouldBackupDb(dbPath: string, opts: {logger?: Logger, mig
   } catch (error) {
     logger.error(new Error('Failed to get pending migrations', { cause: error }));
     return [true, []];
-  } finally {
-    if(db.$client.isOpen) {
-      db.$client.close();
-    }
   }
 }
 
-export const getDb = (dbName: string = 'ms', opts: { logger?: Logger, workingDirectory?: string } = {}) => {
+// TODO backup path
+export const getDb = (dbVal: string, opts: { logger?: Logger, backupPath?: string } = {}) => {
   const {
-    workingDirectory,
     logger = loggerNoop,
   } = opts;
-  const dbPath = getDbPath(dbName, workingDirectory);
-  return drizzle(dbPath, {relations: relations, logger: createDrizzleLogger(logger)});
+  return drizzle(dbVal, {relations: relations, logger: createDrizzleLogger(logger)});
 }
 
 export type DbConcrete = ReturnType<typeof getDb>;
 
-export const migrateDb = async (db: ReturnType<typeof drizzle>, opts: {logger?: Logger, migrationsFolder?: string} = {}) => {
+export const migrateDb = async (db: DbConcrete, opts: {logger?: Logger, migrationsFolder?: string} = {}) => {
   const {
     migrationsFolder,
     logger: parentLogger = loggerNoop
@@ -111,16 +112,62 @@ export const migrateDbSync = (db: ReturnType<typeof drizzle>, opts: {logger?: Lo
   }
 }
 
-export const performDbMigrationWithBackup = async (dbName: string = 'ms', opts: { logger?: Logger, workingDirectory?: string, migrationsFolder?: string } = {}) => {
-  const dbPath = getDbPath(dbName, opts.workingDirectory);
+export const getMigratedDb = async (dbPath: string, opts: { logger?: Logger, migrationsFolder?: string, backupPath?: string } = {}): Promise<[DbConcrete, boolean]> => {
+  const {
+    logger = loggerNoop
+  } = opts;
+  let db: DbConcrete,
+  isNew = false,
+  hasPendingMigrations: boolean = true;
+  if (dbPath !== MEMORY_DB_NAME) {
+    try {
+      fileOrDirectoryIsWriteable(dbPath);
+    } catch (e) {
+      throw new Error('Database directory is not accessible', { cause: e });
+    }
 
-  const [shouldBackup, pendingMigrations] = await shouldBackupDb(dbPath, opts);
-  if(shouldBackup) {
-    await backupDb(dbName, opts);
+    const backupPath = getDbBackupPath(dbPath);
+
+    if(!fileExists(dbPath) && fileExists(backupPath)) {
+      logger.info(`Detected no database, making a copy of backup to use as new db. Backup file: ${backupPath}`);
+      await fs.copyFile(backupPath, dbPath);
+    }
+    if (fileExists(dbPath)) {
+      db = await getDb(dbPath, opts);
+      const [shouldBackup, pendingMigrations] = await shouldBackupDb(db, opts);
+      if (shouldBackup) {
+        hasPendingMigrations = true;
+        await backupDb(db.$client, dbPath, { logger: opts.logger });
+      }
+    } else {
+      logger.info('Detected no database, creating a new one...');
+      db = await getDb(dbPath, opts);
+      isNew = true;
+    }
+  } else {
+    logger.info('Detected in-memory database');
+    db = await getDb(dbPath, opts);
+    isNew = true;
   }
-  const db = getDb(dbName, opts);
+
+  if(hasPendingMigrations && dbPath !== MEMORY_DB_NAME) {
+    logger.info('TIP: Migrations may take some time, depending on the size of your database');
+  }
   await migrateDb(db, opts);
+
+  return [db, isNew];
 }
+
+// export const performDbMigrationWithBackup = async (dbName: string = 'ms', opts: { logger?: Logger, workingDirectory?: string, migrationsFolder?: string } = {}) => {
+//   const dbPath = getDbPath(dbName, opts.workingDirectory);
+
+//   const [shouldBackup, pendingMigrations] = await shouldBackupDb(dbPath, opts);
+//   if(shouldBackup) {
+//     await backupDb(dbName, opts);
+//   }
+//   const db = getDb(dbName, opts);
+//   await migrateDb(db, opts);
+// }
 
 export const createDrizzleLogger = (parentLogger: Logger, opts: {level?: LogLevel} = {}): DrizzleLogger => {
   return {
