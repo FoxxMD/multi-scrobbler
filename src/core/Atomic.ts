@@ -7,7 +7,7 @@ import { MarkOptional } from "ts-essentials";
 import { ErrorObject } from "serialize-error";
 import { PlayPlatformIdStr } from "../backend/common/infrastructure/Atomic.js";
 import { FlowControlTerm } from "../backend/common/infrastructure/Transform.js";
-import { IJsonDelta } from "json-diff-ts";
+import { Changeset } from "json-diff-ts";
 
 export interface SourceStatusData {
     status: string;
@@ -327,7 +327,7 @@ export interface LifecycleStep {
     flowReason?: string
     flowKnownState?: 'skip' | 'prereq'
     error?: ErrorLike
-    patch?: IJsonDelta
+    patch?: Changeset
     inputs?: LifecycleInput[]
 }
 

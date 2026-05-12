@@ -1,6 +1,6 @@
 import { create as diffCreate } from "jsondiffpatch";
 import { numberFormatOptions } from './Atomic.js';
-import { diffDelta, applyDelta, IJsonDelta, DeltaOptions } from 'json-diff-ts';
+import { diff, applyChangeset, Changeset, Options } from 'json-diff-ts';
 // may want to return to this one day
 // but currently the jsondiffpatch formatter is the best console/ansi diff output for humans :(
 //import {DiffOptions, DiffOptionsColor, diff as jestDiff} from 'jest-diff';
@@ -19,18 +19,17 @@ export const jdiff = diffCreate({
     //omitRemovedValues: true
 });
 
-const diffOptions: DeltaOptions = {
-    /*arrayIdentityKeys: {artists: '$value'},*/ 
-    reversible: false, 
+const diffOptions: Options = {
+    /*arrayIdentityKeys: {artists: '$value'},*/
     keysToSkip: ['playDate','playDateCompleted','listenRanges']
 };
 
 export const diffObjects = (a: object, b: object) => {
-    return diffDelta(a, b, diffOptions);
+    return diff(a, b, diffOptions);
 }
 
-export const patchObject = <T>(a: T, b: IJsonDelta): T => {
-    return applyDelta(clone(a), b);
+export const patchObject = <T>(a: T, b: Changeset): T => {
+    return applyChangeset(clone(a), b);
 }
 
 // const jestDiffOptions: DiffOptions = {
