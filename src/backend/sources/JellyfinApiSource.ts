@@ -472,13 +472,19 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         } else {
             playArtists = artistNamesToCredits(Artists);
         }
+        let playAlbumArtists: ArtistCredit[] = [];
+        if(AlbumArtists.length === 1 && meta.albumArtist.length === 1) {
+            playAlbumArtists.push({name: AlbumArtists[0], mbid: meta.albumArtist[0]});
+        } else {
+            playAlbumArtists = artistNamesToCredits(AlbumArtists);
+        }
 
         const play: PlayObjectLifecycleless = {
             data: {
                 artists: playArtists,
                 album: Album,
                 track: Name,
-                albumArtists: AlbumArtists !== undefined ? AlbumArtists.map(x => x.Name) : undefined,
+                albumArtists: playAlbumArtists,
                 playDate: UserData !== undefined ? dayjs(UserData.LastPlayedDate) : undefined,
                 duration: RunTimeTicks !== undefined ? ticksToSeconds(RunTimeTicks) : undefined
             },

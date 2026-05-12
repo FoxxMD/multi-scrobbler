@@ -94,7 +94,7 @@ export const playToRecord = (play: PlayObject): ScrobbleRecord => {
     const record: ScrobbleRecord = {
         $type: "fm.teal.alpha.feed.play",
         trackName: play.data.track,
-        artists: play.data.artists.map(x => ({ artistName: x.name })),
+        artists: play.data.artists.map(x => removeUndefinedKeys({ artistName: x.name, artistMbId: x.mbid })),
         duration: Math.round(play.data.duration),
         playedTime: getScrobbleTsSOCDateWithContext(play)[0].toISOString(),
         releaseName: play.data.album,
