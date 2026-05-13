@@ -18,17 +18,22 @@ export class DrizzleComponentRepository extends DrizzleBaseRepository<'component
             uid: data.uid ?? data.name
         };
         const component = await this.db.query.components.findFirst({
-            where
+            where,
+            with: {
+                migrations: true
+            }
         });
         if (component !== undefined) {
             return component;
         }
 
-        return (await this.db.insert(components).values(generateComponentEntity({
+        const componentNew = (await this.db.insert(components).values(generateComponentEntity({
             uid: data.uid ?? data.name,
             mode: data.mode,
             type: data.type,
             name: data.name
-        })).returning())[0];
+        })).returning())[0] as ComponentSelect;
+        componentNew.migrations = [];
+        return componentNew;
     }
 }

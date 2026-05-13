@@ -74,10 +74,10 @@ import {isErrorLike, serializeError} from 'serialize-error';
 import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetchUtils.js";
 import { spawn, catchAbortError, isAbortError, rethrowAbortError, delay, forever, AbortError, throwIfAborted } from 'abort-controller-x';
 import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, QueryPlaysOpts } from "../common/database/drizzle/repositories/PlayRepository.js";
-import { PlaySelect, PlaySelectWithQueueStates, QueueStateNew, QueueStateSelect } from "../common/database/drizzle/drizzleTypes.js";
+import { ComponentMigrationNew, PlaySelect, PlaySelectWithQueueStates, QueueStateNew, QueueStateSelect } from "../common/database/drizzle/drizzleTypes.js";
 import { asPlay } from "../../core/PlayMarshalUtils.js";
 import { DrizzleQueueRepository } from "../common/database/drizzle/repositories/QueueRepository.js";
-import { SourceType } from "../common/infrastructure/config/source/sources.js";
+import { GenericRepository } from "../common/database/drizzle/repositories/BaseRepository.js";
 
 type PlatformMappedPlays = Map<string, {player: SourcePlayerObj, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
@@ -154,6 +154,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     protected playRepo!: DrizzlePlayRepository;
     protected queueRepo!: DrizzleQueueRepository;
+    protected migrationRepo!: GenericRepository<'componentMigrations'>;
 
     constructor(type: any, name: any, config: CommonClientConfig, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
         super(config);
@@ -321,12 +322,18 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     protected async postCache(): Promise<void> {
         await super.postCache();
+        try {
+            await this.migrateCachedScrobbles();
+        } catch (e) {
+            this.logger.warn(new Error('Unable to migrate cached scrobbles (if any). Will continue init and ignore this error.', {cause: e}));
+        }
         this.generateStaggerMappers();
     }
 
     protected async postDatabase(): Promise<void> {
         this.playRepo = new DrizzlePlayRepository(this.db, {logger: this.logger});
         this.queueRepo = new DrizzleQueueRepository(this.db, {logger: this.logger});
+        this.migrationRepo = new GenericRepository<'componentMigrations'>(this.db, 'componentMigrations', 'Component Migrations', {logger: this.logger});
         this.playRepo.componentId = this.dbComponent.id;
         this.queueRepo.componentId = this.dbComponent.id;
         this.tracksScrobbled = this.dbComponent.countLive + this.dbComponent.countNonLive;
@@ -540,107 +547,134 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
     }
 
-    protected async doParseCache(): Promise<true | string | undefined> {
-        const cachedQueue = (await this.cache.cacheScrobble.get(`${this.getMachineId()}-queue`) as QueuedScrobble<PlayObject>[] ?? []);
-        if (cachedQueue.length > 0) {
-            this.logger.info('Migrating cached scrobbles to database...');
-            let allGood = true;
-            for (const cachedQueuedScrobble of cachedQueue) {
-                const play = asPlay(cachedQueuedScrobble.play);
-                const {
-                    meta: {
-                        lifecycle,
-                        ...metaRest
-                    },
-                } = play;
-                try {
-                    const res = await this.playRepo.createPlays([
-                        playToRepositoryCreatePlayOpts({
-                            play: {
-                                ...play,
-                                data: {
-                                    ...play.data,
-                                    artists: play.data?.artists === undefined ? undefined : artistNamesToCredits(play.data?.artists as unknown as string[]),
-                                    albumArtists: play.data?.albumArtists === undefined ? undefined : artistNamesToCredits(play.data?.albumArtists as unknown as string[])
-                                },
-                                meta: {
-                                    ...metaRest,
-                                    lifecycle: {
-                                        steps: []
-                                    }
-                                }
-                            },
-                            componentId: this.dbComponent.id,
-                            state: 'queued',
-                            parentId: play.id
-                        })
-                    ]);
-                    this.logger.verbose(`Migrated Play ${res[0].uid} => ${buildTrackString(play)}`);
-                } catch (e) {
-                    allGood = false;
-                    this.logger.verbose(new Error(`Failed to migrate Play ${buildTrackString(play)}`, {cause: e}));
-                }
-            }
-            this.logger[allGood ? 'info' : 'warn'](allGood ? 'Finished migrating all queued scrobbles.' : 'Migrated queued scrobbles with errors');
-            await this.cache.cacheScrobble.delete(`${this.getMachineId()}-queue`);
-            this.logger.info('Deleted legacy cached queued scrobbles');
+    protected async migrateCachedScrobbles(): Promise<void> {
+        let shouldMigrate: boolean = false;
+        const migration = this.dbComponent.migrations.find(x => x.name === 'cachedScrobbles');
+        if (migration === undefined) {
+            this.logger.verbose('No Cached Scrobble Migration has run yet, running now...');
+            shouldMigrate = true;
+        } else if (migration.success === false) {
+            this.logger.verbose('Re-running previously failed Cached Scrobble Migration now...');
+            shouldMigrate = true;
         }
-
-        const cachedDead = (await this.cache.cacheScrobble.get(`${this.getMachineId()}-dead`) as DeadLetterScrobble<PlayObject>[] ?? []);
-        if(cachedDead.length > 0) {
-            this.logger.info('Migrating failed scrobbles to database...');
-            let allGood = true;
-            for(const cDeadScrobble of cachedDead) {
-                const play = asPlay(cDeadScrobble.play);
-                const {
-                    meta: {
-                        lifecycle,
-                        ...metaRest
-                    },
-                } = play;
-                try {
-                    const res = await this.playRepo.createPlays([
-                        playToRepositoryCreatePlayOpts({
-                            play: {
-                                ...play,
-                                data: {
-                                    ...play.data,
-                                    artists: play.data?.artists === undefined ? undefined : artistNamesToCredits(play.data?.artists as unknown as string[]),
-                                    albumArtists: play.data?.albumArtists === undefined ? undefined : artistNamesToCredits(play.data?.albumArtists as unknown as string[])
-                                },
-                                meta: {
-                                    ...metaRest,
-                                    lifecycle: {
-                                        steps: []
-                                    }
-                                }
+        if (shouldMigrate) {
+            const migrationEntry: ComponentMigrationNew = migration !== undefined ? migration : {componentId: this.dbComponent.id, name: 'cachedScrobbles'};
+            try {
+                const cachedQueue = (await this.cache.cacheScrobble.get(`${this.getMachineId()}-queue`) as QueuedScrobble<PlayObject>[] ?? []);
+                if (cachedQueue.length > 0) {
+                    this.logger.info('Migrating cached scrobbles to database...');
+                    let allGood = true;
+                    for (const cachedQueuedScrobble of cachedQueue) {
+                        const play = asPlay(cachedQueuedScrobble.play);
+                        const {
+                            meta: {
+                                lifecycle,
+                                ...metaRest
                             },
-                            componentId: this.dbComponent.id,
-                            state: 'failed',
-                            parentId: play.id
-                        })
-                    ]);
-                    this.logger.verbose(`Added Play ${res[0].uid} to database => ${buildTrackString(play)}`);
-                    await this.queueRepo.create({
-                        componentId: this.dbComponent.id,
-                        playId: res[0].id,
-                        queueName: CLIENT_DEAD_QUEUE,
-                        queueStatus: 'queued',
-                        retries: cDeadScrobble.retries,
-                        error: cDeadScrobble.error !== undefined ? {message: cDeadScrobble.error } : undefined
-                    });
-                    this.logger.verbose(`Added Play ${res[0].uid} to Failed Queue`);
-                } catch (e) {
-                    allGood = false;
-                    this.logger.verbose(new Error(`Failed to migrate Play to failed queued ${buildTrackString(play)}`, {cause: e}));
+                        } = play;
+                        try {
+                            const res = await this.playRepo.createPlays([
+                                playToRepositoryCreatePlayOpts({
+                                    play: {
+                                        ...play,
+                                        data: {
+                                            ...play.data,
+                                            artists: play.data?.artists === undefined ? undefined : artistNamesToCredits(play.data?.artists as unknown as string[]),
+                                            albumArtists: play.data?.albumArtists === undefined ? undefined : artistNamesToCredits(play.data?.albumArtists as unknown as string[])
+                                        },
+                                        meta: {
+                                            ...metaRest,
+                                            lifecycle: {
+                                                steps: []
+                                            }
+                                        }
+                                    },
+                                    componentId: this.dbComponent.id,
+                                    state: 'queued',
+                                    parentId: play.id
+                                })
+                            ]);
+                            this.logger.verbose(`Migrated Play ${res[0].uid} => ${buildTrackString(play)}`);
+                        } catch (e) {
+                            allGood = false;
+                            this.logger.verbose(new Error(`Failed to migrate Play ${buildTrackString(play)}`, { cause: e }));
+                        }
+                    }
+                    this.logger[allGood ? 'info' : 'warn'](allGood ? 'Finished migrating all queued scrobbles.' : 'Migrated queued scrobbles with errors');
+                    await this.cache.cacheScrobble.delete(`${this.getMachineId()}-queue`);
+                    this.logger.info('Deleted legacy cached queued scrobbles');
+                } else {
+                    this.logger.info('No cached scrobbles to migrate');
                 }
-                this.logger[allGood ? 'info' : 'warn'](allGood ? 'Finished migrating all failed scrobbles.' : 'Migrated failed scrobbles with errors');
-                await this.cache.cacheScrobble.delete(`${this.getMachineId()}-dead`);
-                this.logger.info('Deleted legacy cached failed scrobbles');
-            }
-        }
 
-        return;
+                const cachedDead = (await this.cache.cacheScrobble.get(`${this.getMachineId()}-dead`) as DeadLetterScrobble<PlayObject>[] ?? []);
+                if (cachedDead.length > 0) {
+                    this.logger.info('Migrating failed scrobbles to database...');
+                    let allGood = true;
+                    for (const cDeadScrobble of cachedDead) {
+                        const play = asPlay(cDeadScrobble.play);
+                        const {
+                            meta: {
+                                lifecycle,
+                                ...metaRest
+                            },
+                        } = play;
+                        try {
+                            const res = await this.playRepo.createPlays([
+                                playToRepositoryCreatePlayOpts({
+                                    play: {
+                                        ...play,
+                                        data: {
+                                            ...play.data,
+                                            artists: play.data?.artists === undefined ? undefined : artistNamesToCredits(play.data?.artists as unknown as string[]),
+                                            albumArtists: play.data?.albumArtists === undefined ? undefined : artistNamesToCredits(play.data?.albumArtists as unknown as string[])
+                                        },
+                                        meta: {
+                                            ...metaRest,
+                                            lifecycle: {
+                                                steps: []
+                                            }
+                                        }
+                                    },
+                                    componentId: this.dbComponent.id,
+                                    state: 'failed',
+                                    parentId: play.id
+                                })
+                            ]);
+                            this.logger.verbose(`Added Play ${res[0].uid} to database => ${buildTrackString(play)}`);
+                            await this.queueRepo.create({
+                                componentId: this.dbComponent.id,
+                                playId: res[0].id,
+                                queueName: CLIENT_DEAD_QUEUE,
+                                queueStatus: 'queued',
+                                retries: cDeadScrobble.retries,
+                                error: cDeadScrobble.error !== undefined ? { message: cDeadScrobble.error } : undefined
+                            });
+                            this.logger.verbose(`Added Play ${res[0].uid} to Failed Queue`);
+                        } catch (e) {
+                            allGood = false;
+                            this.logger.verbose(new Error(`Failed to migrate Play to failed queued ${buildTrackString(play)}`, { cause: e }));
+                        }
+                        this.logger[allGood ? 'info' : 'warn'](allGood ? 'Finished migrating all failed scrobbles.' : 'Migrated failed scrobbles with errors');
+                        await this.cache.cacheScrobble.delete(`${this.getMachineId()}-dead`);
+                        this.logger.info('Deleted legacy cached failed scrobbles');
+                    }
+                } else {
+                    this.logger.info('No dead scrobbles to migrate');
+                }
+                await this.migrationRepo.create({...migrationEntry, success: true});
+                this.logger.info('Cached Scrobble Migration done');
+            } catch (e) {
+                if(migration === undefined) {
+                    this.migrationRepo.create({...migrationEntry, success: false, error: e});
+                } else {
+                    this.migrationRepo.updateById(migration.id, {success: false, error: e});
+                }
+                throw e;
+            }
+        } else {
+            this.logger.debug('Cached Scrobbles Migration already run!');
+        }
     }
 
     protected async postInitialize(): Promise<void> {

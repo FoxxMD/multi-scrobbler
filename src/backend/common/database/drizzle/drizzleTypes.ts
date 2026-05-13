@@ -1,11 +1,14 @@
 import { DBQueryConfig, DBQueryConfigWith, ExtractTablesFromSchema, KnownKeysOnly, RelationFieldsFilterInternals, Many, InferSelectModel, ExtractTablesWithRelations, type BuildQueryResult, RelationsFilter } from "drizzle-orm";
-import { components, playInputs, plays, queueStates, relations } from "./schema/schema.js";
+import { components, componentMigrations, playInputs, plays, queueStates, relations } from "./schema/schema.js";
 import {TSchema, TableName, Schema } from "./schema/schema.js";
 import { MarkOptional, MarkRequired } from "ts-essentials";
 
 
 export type ComponentNew = typeof components.$inferInsert;
-export type ComponentSelect = typeof components.$inferSelect;
+export type ComponentSelect = GenericRelationResult<'components', 'migrations'>;
+
+export type ComponentMigrationNew = typeof componentMigrations.$inferInsert;
+export type ComponentMigrationSelect = typeof componentMigrations.$inferSelect;
 
 export type QueueStateNew = typeof queueStates.$inferInsert;
 export type QueueStateSelect = typeof queueStates.$inferSelect;

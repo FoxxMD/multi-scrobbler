@@ -153,6 +153,15 @@ export const components = sqliteTable("components", {
   uniqueIndex('uid_mode_type_idx').on(table.uid,table.mode,table.type)
 ]);
 
+export const componentMigrations = sqliteTable("component_migrations", {
+  id: integer({ mode: 'number' }).primaryKey(),
+  componentId: integer().notNull().references(() => components.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
+  name: text().notNull(),
+  success: integer({mode: 'boolean'}),
+  error: text({ mode: 'json' }).$type<ErrorLike>(),
+  attemptedAt: DayjsTimestamp('attemptedAt').notNull().$defaultFn(() => dayjs()),
+});
+
 export const jobs = sqliteTable("jobs", {
   id: integer({ mode: 'number' }).primaryKey(),
   componentFromId: integer().notNull().references(() => components.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
@@ -172,7 +181,7 @@ export const jobs = sqliteTable("jobs", {
   completedAt: DayjsTimestamp('completedAt')
 });
 
-const playRelations = defineRelations({ plays, queueStates, playInputs, components, jobs }, (r) => ({
+const playRelations = defineRelations({ plays, queueStates, playInputs, components, jobs, componentMigrations }, (r) => ({
   plays: {
     queueStates: r.many.queueStates(),
     input: r.one.playInputs({
@@ -209,6 +218,13 @@ const playRelations = defineRelations({ plays, queueStates, playInputs, componen
   components: {
     plays: r.many.plays(),
     queueStates: r.many.queueStates(),
+    migrations: r.many.componentMigrations(),
+  },
+  componentMigrations: {
+    component: r.one.components({
+      from: r.componentMigrations.componentId,
+      to: r.components.id
+    })
   },
   jobs: {
     plays: r.many.plays()
@@ -227,12 +243,14 @@ export const getConfigByTableName = <T extends TableName>(name: T) => {
       return playInputs;
     case 'queueStates':
       return queueStates;
+    case 'componentMigrations':
+      return componentMigrations;
     case 'jobs':
       return jobs;
   }
 }
 
-const schema = {playInputs, plays, components, queueStates, jobs};
+const schema = {playInputs, plays, components, componentMigrations, queueStates, jobs};
 
 export type TSchema = typeof relations;
 export type Schema = typeof schema;
