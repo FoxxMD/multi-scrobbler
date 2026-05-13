@@ -437,6 +437,10 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
         } = playObj;
 
         const scrobblePayload = playToClientPayload(playObj);
+        if(scrobblePayload.duration !== undefined && scrobblePayload.duration < 30) {
+            this.logger.info(`Removing duration of ${scrobblePayload.duration} from payload so that LFM doesn't ignore it.`);
+            delete scrobblePayload.duration;
+        }
 
         try {
             const response = await this.callApi<LastFMTrackScrobbleResponse>(() =>  this.trackApi.scrobble({...scrobblePayload}) as unknown as LastFMTrackScrobbleResponse);
