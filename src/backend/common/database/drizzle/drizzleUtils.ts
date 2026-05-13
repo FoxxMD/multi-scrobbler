@@ -12,8 +12,10 @@ import { projectDir } from '../../index.js';
 import { relations } from './schema/schema.js';
 import { addToContext, executeQuery } from './logContext.js';
 import { DatabaseSync } from 'node:sqlite';
+import { migrateApp, getAppMigrationStatus } from '../appMigrator.js';
+import { MigrationStatus } from '../../infrastructure/Atomic.js';
 
-export async function shouldBackupDb(dbVal: string | DbConcrete, opts: {logger?: Logger, migrationsFolder?: string} = {}): Promise<[boolean, string[]]> {
+export async function getDbMigrationStatus(dbVal: string | DbConcrete, opts: {logger?: Logger, migrationsFolder?: string} = {}): Promise<MigrationStatus> {
   const {
     logger: parentLogger = loggerNoop,
     migrationsFolder = path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations')
@@ -25,8 +27,8 @@ export async function shouldBackupDb(dbVal: string | DbConcrete, opts: {logger?:
   if(typeof dbVal === 'string') {
     logger.info(`Checking for database at ${dbVal}`);
     if (dbVal !== MEMORY_DB_NAME && !fileExists(dbVal)) {
-      logger.info(`No database exists, no backup needed.`);
-      return [false, []];
+      //logger.info(`No database exists, no backup needed.`);
+      return {backupRequired: false, pending: [], reason: 'noDb', log: 'No database exists'};
     }
     db = await getDb(dbVal);
   } else {
@@ -41,8 +43,8 @@ export async function shouldBackupDb(dbVal: string | DbConcrete, opts: {logger?:
       `);
 
     if (res[0]['count(*)'] === 0) {
-      logger.info(`Database exists but there is no __drizzle_migrations table??`);
-      return [true, []];
+      //logger.info(`Database exists but there is no __drizzle_migrations table??`);
+      return {backupRequired: true, pending: [], reason: 'missingTable', log: 'Database exists but there is no __drizzle_migrations table'};
     }
 
     const dbMigrations = await db.all(dsl`SELECT id, hash, created_at, name, applied_at FROM "__drizzle_migrations" ORDER BY created_at DESC`);
@@ -58,15 +60,16 @@ export async function shouldBackupDb(dbVal: string | DbConcrete, opts: {logger?:
 
     //console.log('Applied migrations:', Array.from(appliedMigrations));
     if (pendingMigrations.length > 0) {
-      logger.info(`${pendingMigrations.length} pending migrations:\n${pendingMigrations.join('\n')}`);
-      return [true, pendingMigrations];
+      //logger.info(`${pendingMigrations.length} pending migrations:\n${pendingMigrations.join('\n')}`);
+      return {backupRequired: true, pending: pendingMigrations, log: `${pendingMigrations.length} pending migrations:\n${pendingMigrations.join('\n')}`};
     } else {
-      logger.info('No pending migrations.');
-      return [false, []];
+      //logger.info('No pending migrations.');
+      return {backupRequired: false, pending: [], log: 'No pending migrations'};
     }
   } catch (error) {
-    logger.error(new Error('Failed to get pending migrations', { cause: error }));
-    return [true, []];
+    const e = new Error('Failed to get pending migrations', { cause: error });
+    logger.error(e);
+    return {backupRequired: true, pending: [], error: e};
   }
 }
 
@@ -85,7 +88,7 @@ export const migrateDb = async (db: DbConcrete, opts: {logger?: Logger, migratio
     migrationsFolder,
     logger: parentLogger = loggerNoop
   } = opts;
-  const logger = childLogger(parentLogger, 'Migrations');
+  const logger = childLogger(parentLogger, 'DB');
 
   try {
     logger.info('Starting migrations...');
@@ -112,14 +115,23 @@ export const migrateDbSync = (db: ReturnType<typeof drizzle>, opts: {logger?: Lo
   }
 }
 
-export const getMigratedDb = async (dbPath: string, opts: { logger?: Logger, migrationsFolder?: string, backupPath?: string } = {}): Promise<[DbConcrete, boolean]> => {
+export const getMigratedDb = async (dbPath: string, opts: { 
+  logger?: Logger, 
+  migrationsFolder?: string,
+  migrationsAppFolder?: string,
+  backupPath?: string 
+} = {}): Promise<[DbConcrete, boolean]> => {
   const {
-    logger = loggerNoop
+    logger: parentLogger = loggerNoop
   } = opts;
+  const logger = childLogger(parentLogger, ['Migrations']);
   let db: DbConcrete,
   isNew = false,
-  hasPendingMigrations: boolean = true;
-  if (dbPath !== MEMORY_DB_NAME) {
+  isMemory = dbPath === MEMORY_DB_NAME,
+  dbMigrationStatus: MigrationStatus,
+  appMigrationStatus: MigrationStatus,
+  backedUp = false;
+  if (!isMemory) {
     try {
       fileOrDirectoryIsWriteable(dbPath);
     } catch (e) {
@@ -134,11 +146,6 @@ export const getMigratedDb = async (dbPath: string, opts: { logger?: Logger, mig
     }
     if (fileExists(dbPath)) {
       db = await getDb(dbPath, opts);
-      const [shouldBackup, pendingMigrations] = await shouldBackupDb(db, opts);
-      if (shouldBackup) {
-        hasPendingMigrations = true;
-        await backupDb(db.$client, dbPath, { logger: opts.logger });
-      }
     } else {
       logger.info('Detected no database, creating a new one...');
       db = await getDb(dbPath, opts);
@@ -150,24 +157,36 @@ export const getMigratedDb = async (dbPath: string, opts: { logger?: Logger, mig
     isNew = true;
   }
 
-  if(hasPendingMigrations && dbPath !== MEMORY_DB_NAME) {
+  dbMigrationStatus = await getDbMigrationStatus(db, opts);
+  if(dbMigrationStatus.error !== undefined) {
+    logger.warn(dbMigrationStatus.error);
+  } else if(!isMemory && dbMigrationStatus.log !== undefined) {
+    logger.info({labels: 'DB'}, dbMigrationStatus.log);
+  }
+  if (dbMigrationStatus.backupRequired && !isNew && !isMemory) {
+    await backupDb(db.$client, dbPath, { logger: opts.logger });
+    backedUp = true;
+  }
+
+  if(backedUp) {
     logger.info('TIP: Migrations may take some time, depending on the size of your database');
   }
   await migrateDb(db, opts);
 
+  appMigrationStatus = await getAppMigrationStatus(db, opts);
+  if(!isMemory && appMigrationStatus.log !== undefined) {
+    logger.info({labels: 'App'}, appMigrationStatus.log);
+  }
+  if(appMigrationStatus.pending.length > 0) {
+    if(appMigrationStatus.backupRequired && !isNew && !isMemory && !backedUp) {
+      logger.info(`Database not yet backed up, backing up before app migrations`);
+      await backupDb(db.$client, dbPath, { logger: opts.logger });
+    }
+    await migrateApp(db, opts);
+  }
+
   return [db, isNew];
 }
-
-// export const performDbMigrationWithBackup = async (dbName: string = 'ms', opts: { logger?: Logger, workingDirectory?: string, migrationsFolder?: string } = {}) => {
-//   const dbPath = getDbPath(dbName, opts.workingDirectory);
-
-//   const [shouldBackup, pendingMigrations] = await shouldBackupDb(dbPath, opts);
-//   if(shouldBackup) {
-//     await backupDb(dbName, opts);
-//   }
-//   const db = getDb(dbName, opts);
-//   await migrateDb(db, opts);
-// }
 
 export const createDrizzleLogger = (parentLogger: Logger, opts: {level?: LogLevel} = {}): DrizzleLogger => {
   return {

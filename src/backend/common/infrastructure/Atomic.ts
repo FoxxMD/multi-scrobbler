@@ -3,7 +3,7 @@ import { Dayjs, ManipulateType } from "dayjs";
 import { Request, Response } from "express";
 import { type NextFunction, type ParamsDictionary, type Query } from "express-serve-static-core";
 import { FixedSizeList } from 'fixed-size-list';
-import { isPlayObject, PlayMetaLifecycleless, PlayObject, PlayObjectLifecycleless, UnixTimestamp } from "../../../core/Atomic.js";
+import { ErrorLike, isPlayObject, PlayMetaLifecycleless, PlayObject, PlayObjectLifecycleless, UnixTimestamp } from "../../../core/Atomic.js";
 import TupleMap from "../TupleMap.js";
 import { MusicBrainzApi } from 'musicbrainz-api';
 import { SourceType } from './config/source/sources.js';
@@ -439,3 +439,11 @@ export const REFRESH_STALE_DEFAULT = 60;
  * @example [60, 3600, "1 hour", "4 days"]
  */
 export type DurationValue = number | string;
+
+export type MigrationStatus = {
+    backupRequired: boolean, 
+    pending: string[],
+    reason?: string,
+    log?: string,
+    error?: ErrorLike
+};

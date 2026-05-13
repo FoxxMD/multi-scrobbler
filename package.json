@@ -124,6 +124,7 @@
     "round-robin-js": "^3.0.10",
     "serialize-error": "^13.0.1",
     "spotify-web-api-node": "^5.0.2",
+    "sqlite-up": "^0.5.0",
     "superagent": "^8.0.9",
     "toad-scheduler": "^3.0.0",
     "tough-cookie": "^5.1.2",

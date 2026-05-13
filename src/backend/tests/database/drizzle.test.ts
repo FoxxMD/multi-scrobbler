@@ -1,6 +1,6 @@
 import chai, { assert, expect } from 'chai';
 import asPromised from 'chai-as-promised';
-import { getDb, migrateDb, shouldBackupDb, getMigratedDb } from '../../common/database/drizzle/drizzleUtils.js';
+import { getDb, migrateDb, getDbMigrationStatus, getMigratedDb, DbConcrete } from '../../common/database/drizzle/drizzleUtils.js';
 import withLocalTmpDir from 'with-local-tmp-dir';
 import { components, playInputs, plays, queueStates } from '../../common/database/drizzle/schema/schema.js';
 import dayjs from 'dayjs';
@@ -19,6 +19,9 @@ import { eq, sql } from 'drizzle-orm';
 import { PlaySelect } from '../../common/database/drizzle/drizzleTypes.js';
 import { loggerDebug } from '@foxxmd/logging';
 import { transientDb } from '../utils/TransientTestUtils.js';
+import { getRoot } from '../../ioc.js';
+import { after } from 'mocha';
+import { migrateApp } from '../../common/database/appMigrator.js';
 
 // would be great to push migrations directly from schema but doesn't seem supported in newest beta
 // https://github.com/drizzle-team/drizzle-orm/discussions/4373
@@ -40,8 +43,8 @@ describe('Migrations', function () {
         await withLocalTmpDir(async () => {
         // database exists but there is no __drizzle_migrations table
         const db = await getDb(':memory:');
-        const [shouldBackup, pending] = await shouldBackupDb(db);
-        expect(shouldBackup).is.true;
+        const {backupRequired} = await getDbMigrationStatus(db);
+        expect(backupRequired).is.true;
         db.$client.close();
         }, { unsafeCleanup: true, postfix: 'badDb' });
 
@@ -74,8 +77,8 @@ describe('Migrations', function () {
                     '--dialect',
                     'sqlite'
                 ], {throwOnError: true});
-                const [shouldBackup, pending] = await shouldBackupDb(db, { migrationsFolder: mf });
-                expect(shouldBackup).is.true;
+                const {backupRequired, pending} = await getDbMigrationStatus(db, { migrationsFolder: mf });
+                expect(backupRequired).is.true;
                 expect(pending).length(1);
                 expect(pending[0]).includes('newMigration');
                 db.$client.close();
@@ -100,8 +103,8 @@ describe('Migrations', function () {
                 const mf = path.resolve('./migrations');
                 const db = await getDb(':memory:');
                 await migrateDb(db, { migrationsFolder: mf });
-                const [shouldBackup, pending] = await shouldBackupDb(db, { migrationsFolder: mf });
-                expect(shouldBackup).is.false;
+                const {backupRequired, pending} = await getDbMigrationStatus(db, { migrationsFolder: mf });
+                expect(backupRequired).is.false;
                 expect(pending).length(0);
                 db.$client.close();
             } catch (e) {
@@ -665,4 +668,54 @@ describe('DB Size Stats', function () {
             }
         }, { unsafeCleanup: true, postfix: 'dbStatAll' });
     });
-})
+});
+
+describe('App Migrations', function() {
+
+    // for now we need to provide db as a singleton for each test
+    // because accessing the full, same db instance in the migration files is only possible via DI container
+    // https://github.com/sandrinodimattia/sqlite-up/issues/2
+    let db: DbConcrete;
+
+    beforeEach(function () {
+        const root = getRoot();
+        root.upsert({ db: () => () => db });
+    });
+
+    after(function () {
+        const root = getRoot();
+        root.upsert({ db: () => transientDb });
+    });
+
+    it('does app migrations', async function () {
+
+        db = await transientDb();
+
+        const component1 = await db.insert(components).values(fixtureCreateComponent()).returning();
+
+        const repo = new DrizzlePlayRepository(db);
+
+        const playData: RepositoryCreatePlayOpts[] = [
+            {
+                ...fixtureCreatePlay(),
+                componentId: component1[0].id,
+                state: 'queued' as 'queued',
+                input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
+            },
+            {
+                ...fixtureCreatePlay(),
+                componentId: component1[0].id,
+                state: 'queued' as 'queued',
+                input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
+            }
+        ]
+        await repo.createPlays(playData);
+
+        await migrateApp(db, {migrationsAppFolder: path.resolve(projectDir, `src/backend/tests/database/testAppMigrations`)});
+
+        const plays = await repo.findPlays({});
+
+        expect(plays[0].play.data.track).eq('foo')
+    });
+
+});

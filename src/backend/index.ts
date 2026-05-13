@@ -127,7 +127,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         
         const dbPath = getDbPath('ms');
         logger.info(`Using database at ${db}`);
-        const [migratedDb, isNew] = await getMigratedDb(dbPath, {logger: childLogger(logger, 'DB')});
+        const [migratedDb, isNew] = await getMigratedDb(dbPath, {logger});
         db = migratedDb;
 
         const root = getRoot({
