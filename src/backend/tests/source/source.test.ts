@@ -27,12 +27,12 @@ chai.use(asPromised);
 const emitter = new EventEmitter();
 const generateSource = async () => {
     const source = new TestSource('spotify', 'test-basic', {}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
-    await source.tryInitialize();
+    await source.initialize();
     return source;
 }
 const generateMemorySource = async (config: SourceConfig = {}) => {
     const s = new TestMemorySource('spotify', 'test-memory', config, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
-    await s.tryInitialize();
+    await s.initialize();
    // s.buildTransformRules();
     s.scheduler.stop();
     return s;
@@ -40,7 +40,7 @@ const generateMemorySource = async (config: SourceConfig = {}) => {
 
 const generateMemoryPositionalSource = async (config: SourceConfig = {}) => {
     const s = new TestMemoryPositionalSource('spotify', 'test-positional', config, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
-    await s.tryInitialize();
+    await s.initialize();
     //s.buildTransformRules();
     s.scheduler.stop();
     return s;
@@ -437,7 +437,7 @@ class DeezerTestSource extends DeezerInternalSource {
 
 const generateDeezerSource = async (options: DeezerInternalSourceOptions = {}) => {
     const source = new DeezerTestSource('test', {data: {arl: 'test'}, options}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
-    await source.tryInitialize();
+    await source.initialize();
     return source;
 }
 const firstPlayDate = dayjs().subtract(1, 'hour');

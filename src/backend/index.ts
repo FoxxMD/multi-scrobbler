@@ -186,7 +186,8 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         if(nameColl.length > 0) {
             logger.warn(`Last.FM source and clients have same names [${nameColl.map(x => x.name).join(',')}] -- this may cause issues`);
         }
-        const clientInitOptions = {deadDelay: nonEmptyStringOrDefault(process.env.DEBUG_DEAD_DELAY, undefined) !== undefined ? Number.parseInt(process.env.DEBUG_DEAD_DELAY) : undefined};        for(const c of scrobbleClients.clients) {
+        const clientInitOptions = {deadDelay: nonEmptyStringOrDefault(process.env.DEBUG_DEAD_DELAY, undefined) !== undefined ? Number.parseInt(process.env.DEBUG_DEAD_DELAY) : undefined};
+        for(const c of scrobbleClients.clients) {
             c.initTasks(clientInitOptions);
             const res = await Promise.race([
                 sleep(2200),

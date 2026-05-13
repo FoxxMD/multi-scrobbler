@@ -70,7 +70,7 @@ describe('Musicbrainz API', function () {
                     lifecycle: defaultLifecycle()
                 }
             }
-            await mbTransformer.tryInitialize();
+            await mbTransformer.initialize();
 
             const res = await mbTransformer.getTransformerData(play, {
                 type: "musicbrainz",
@@ -101,7 +101,7 @@ describe('Musicbrainz API', function () {
                     lifecycle: defaultLifecycle()
                 }
             };
-            await mbTransformer.tryInitialize();
+            await mbTransformer.initialize();
 
             const res = await mbTransformer.getTransformerData(play, {
                 type: "musicbrainz",
@@ -131,7 +131,7 @@ describe('Musicbrainz API', function () {
                     lifecycle: defaultLifecycle()
                 }
             }
-            await mbTransformer.tryInitialize();
+            await mbTransformer.initialize();
 
             const res = await mbTransformer.getTransformerData(play, {
                 type: "musicbrainz",
@@ -160,7 +160,7 @@ describe('Musicbrainz API', function () {
                     lifecycle: defaultLifecycle()
                 }
             }
-            await mbTransformer.tryInitialize();
+            await mbTransformer.initialize();
 
             const res = await mbTransformer.getTransformerData(play, {
                 type: "musicbrainz",
@@ -191,7 +191,7 @@ describe('Musicbrainz API', function () {
                     lifecycle: defaultLifecycle()
                 }
             }
-            await mbTransformer.tryInitialize();
+            await mbTransformer.initialize();
 
             const stageConfig: MusicbrainzTransformerDataStage = {
                 type: "musicbrainz",
@@ -225,7 +225,7 @@ describe('Musicbrainz API', function () {
                     lifecycle: defaultLifecycle()
                 }
             }
-            await mbTransformer.tryInitialize();
+            await mbTransformer.initialize();
 
             const stageConfig: MusicbrainzTransformerDataStage = {
                 type: "musicbrainz",
@@ -254,7 +254,7 @@ describe('Musicbrainz API', function () {
                     lifecycle: defaultLifecycle()
                 }
             }
-            await mbTransformer.tryInitialize();
+            await mbTransformer.initialize();
 
             const res = await mbTransformer.getTransformerData(play, {
                 type: "musicbrainz",
@@ -278,7 +278,7 @@ describe('Musicbrainz API', function () {
                     lifecycle: defaultLifecycle()
                 }
             }
-            await mbTransformer.tryInitialize();
+            await mbTransformer.initialize();
 
             const res = await mbTransformer.getTransformerData(play, {
                 type: "musicbrainz",
@@ -304,7 +304,7 @@ describe('Musicbrainz API', function () {
                     lifecycle: defaultLifecycle()
                 }
             }
-            await mbTransformer.tryInitialize();
+            await mbTransformer.initialize();
 
             const res = await mbTransformer.getTransformerData(play, {
                 type: "musicbrainz",
@@ -329,7 +329,7 @@ describe('Musicbrainz API', function () {
                     lifecycle: defaultLifecycle()
                 }
             }
-            await mbTransformer.tryInitialize();
+            await mbTransformer.initialize();
 
             const stageConfig: MusicbrainzTransformerDataStage = {
                 type: "musicbrainz",
@@ -359,7 +359,7 @@ describe('Musicbrainz API', function () {
                     lifecycle: defaultLifecycle()
                 }
             }
-            await mbTransformer.tryInitialize();
+            await mbTransformer.initialize();
 
             const res = await mbTransformer.getTransformerData(play, {
                 type: "musicbrainz",
@@ -403,7 +403,7 @@ describe('Musicbrainz API', function () {
                         lifecycle: defaultLifecycle()
                     }
                 }
-                await multiMb.tryInitialize();
+                await multiMb.initialize();
 
                 const res = await multiMb.getTransformerData(play, {
                     type: "musicbrainz",
@@ -437,7 +437,7 @@ describe('Musicbrainz API', function () {
                         lifecycle: defaultLifecycle()
                     }
                 }
-                await multiMb.tryInitialize();
+                await multiMb.initialize();
 
                 const res = await multiMb.getTransformerData(play, {
                     type: "musicbrainz",

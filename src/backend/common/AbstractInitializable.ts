@@ -5,12 +5,15 @@ import { hasUpstreamError } from "./errors/UpstreamError.js";
 import { WebhookPayload } from "./infrastructure/config/health/webhooks.js";
 import { AuthCheckError, BuildDataError, ConnectionCheckError, ParseCacheError, PostInitError, StageError, TransformRulesError } from "./errors/MSErrors.js";
 import { messageWithCauses, messageWithCausesTruncatedDefault } from "../utils/ErrorUtils.js";
+import { spawn, catchAbortError, isAbortError, rethrowAbortError, delay, forever, AbortError, throwIfAborted } from 'abort-controller-x';
 
 export default abstract class AbstractInitializable {
     requiresAuth: boolean = false;
     requiresAuthInteraction: boolean = false;
     authed: boolean = false;
     authFailure?: boolean;
+
+    private initController: AbortController | undefined;
 
     buildOK?: boolean | null;
     databaseOK?: boolean | null;
@@ -32,45 +35,61 @@ export default abstract class AbstractInitializable {
 
     protected abstract getIdentifier(): string;
 
-    initialize = async (options: {force?: boolean, notify?: boolean, notifyTitle?: string} = {}) => {
+    initialize = async (options: {force?: boolean, notify?: boolean, notifyTitle?: string, internalOnly?: boolean} = {}) => {
 
-        const {force = false, notify = false, notifyTitle = 'Init Error'} = options;
-
-        this.logger.debug('Attempting to initialize...');
-        try {
-            this.initializing = true;
-            if(this.componentLogger === undefined) {
-                await this.buildComponentLogger();
-            }
-            await this.buildDatabase(force);
-            await this.buildInitData(force);
-            await this.parseCache(force);
-            try {
-                await this.postCache();
-            } catch (e) {
-                if(e instanceof StageError) {
-                    throw e;
-                } else {
-                    throw new Error('Error occurred during post-cache hook', {cause: e});
-                }
-            }
-            await this.checkConnection(force);
-            await this.testAuth(force);
-            this.logger.info('Fully Initialized!');
-            try {
-                await this.postInitialize();
-            } catch (e) {
-                throw new PostInitError('Error occurred during post-initialization hook', {cause: e});
-            }
-            return true;
-        } catch(e) {
-            if(notify) {
-                await this.notify({title: `${this.getIdentifier()} - ${notifyTitle}`, message: truncateStringToLength(500)(messageWithCausesTruncatedDefault(e)), priority: 'error'});
-            }
-            throw new Error('Initialization failed', {cause: e});
-        } finally {
-            this.initializing = false;
+        if(this.initController !== undefined) {
+            throw new Error(`Already trying to initialize, cannot attempt while an existing initialization attempt is running.`);
         }
+
+        this.initController = new AbortController();
+        return spawn(this.initController.signal, async (signal, {defer, fork}) => {
+
+            defer(async () => {
+                this.initializing = false;
+                this.initController = undefined;
+            });
+
+            const {force = false, notify = false, notifyTitle = 'Init Error', internalOnly = false} = options;
+
+            this.logger.debug('Attempting to initialize...');
+            try {
+                this.initializing = true;
+                if(this.componentLogger === undefined) {
+                    await this.buildComponentLogger();
+                }
+                await this.buildDatabase(force);
+                await this.buildInitData(force);
+                await this.parseCache(force);
+                try {
+                    await this.postCache();
+                } catch (e) {
+                    if(e instanceof StageError) {
+                        throw e;
+                    } else {
+                        throw new Error('Error occurred during post-cache hook', {cause: e});
+                    }
+                }
+                if(internalOnly) {
+                    return true;
+                }
+                await this.checkConnection(force);
+                await this.testAuth(force);
+                this.logger.info('Fully Initialized!');
+                try {
+                    await this.postInitialize();
+                } catch (e) {
+                    throw new PostInitError('Error occurred during post-initialization hook', {cause: e});
+                }
+                return true;
+            } catch(e) {
+                if(notify) {
+                    await this.notify({title: `${this.getIdentifier()} - ${notifyTitle}`, message: truncateStringToLength(500)(messageWithCausesTruncatedDefault(e)), priority: 'error'});
+                }
+                throw new Error('Initialization failed', {cause: e});
+            } finally {
+                this.initializing = false;
+            }
+        });
     }
 
     protected async buildComponentLogger() {
@@ -80,17 +99,6 @@ export default abstract class AbstractInitializable {
 
     protected async doBuildComponentLogger() {
         return;
-    }
-
-    tryInitialize = async (options: {force?: boolean, notify?: boolean, notifyTitle?: string} = {}) => {
-        if(this.initializing) {
-            throw new Error(`Already trying to initialize, cannot attempt while an existing initialization attempt is running.`)
-        }
-        try {
-            return await this.initialize(options);
-        } catch (e) {
-            throw e;
-        }
     }
 
     public async parseCache(force: boolean = false) {

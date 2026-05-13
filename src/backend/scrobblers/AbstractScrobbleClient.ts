@@ -298,7 +298,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 return false;
             }
             try {
-                await this.tryInitialize({force: false, notify: true, notifyTitle: 'Could not initialize automatically'});
+                await this.initialize({force: false, notify: true, notifyTitle: 'Could not initialize automatically'});
             } catch (e) {
                 this.logger.error(new Error('Could not initialize automatically', {cause: e}));
                 return false;
@@ -823,7 +823,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
         if(!this.isReady() || force) {
             try {
-                await this.tryInitialize(options);
+                await this.initialize(options);
             } catch (e) {
                 this.logger.error(new Error('Cannot start monitoring because Client is not ready', {cause: e}));
                 if(notify) {

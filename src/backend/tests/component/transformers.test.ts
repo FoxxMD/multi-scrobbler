@@ -419,7 +419,7 @@ describe('Play Transforms', function () {
         it('Uses artist parsing functions', async function() {
 
             const t = new NativeTransformer({name: 'test', type: 'native'}, {logger: loggerTest, cache: memorycache()});
-            await t.tryInitialize();
+            await t.initialize();
 
             const [str, primaries, secondaries] = generateArtistsStr({primary: {max: 3, ambiguousJoinedNames: true, trailingAmpersand: true, finalJoiner: false}});
             const play = generatePlay({artists: artistNamesToCredits([str])});
@@ -434,7 +434,7 @@ describe('Play Transforms', function () {
 
             const t = new NativeTransformer({name: 'test', type: 'native', defaults: {artistsIgnore: [str]}}, {logger: loggerTest, cache: memorycache()});
 
-            await t.tryInitialize();
+            await t.initialize();
 
             const play = generatePlay({artists: artistNamesToCredits([str]), track: 'My Test'});
 
@@ -455,7 +455,7 @@ describe('Play Transforms', function () {
 
             const t = new NativeTransformer({name: 'test', type: 'native', defaults: {delimitersExtra: ['•']}}, {logger: loggerTest, cache: memorycache()});
 
-            await t.tryInitialize();
+            await t.initialize();
 
             const play = generatePlay({artists: artistNamesToCredits([str]), track: 'My Test'});
 

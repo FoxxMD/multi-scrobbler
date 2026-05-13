@@ -52,7 +52,7 @@ const generateTestScrobbler = async () => {
             confidenceBreakdown: true
         }
     };
-    await testScrobbler.tryInitialize();
+    await testScrobbler.initialize();
     return testScrobbler;
 }
 
@@ -523,7 +523,7 @@ describe('Upstream Scrobbles', function() {
         const existingPlays = normalizePlays(generatePlays(3), {initialDate: dayjs().subtract(1, 'hour')});
         await using scrobbler = await generateTestScrobbler();
         scrobbler.testRecentScrobbles = [];
-        await scrobbler.tryInitialize();
+        await scrobbler.initialize();
         scrobbler.testRecentScrobbles = existingPlays;
 
         const sp = spy(scrobbler, 'getScrobblesForTimeRange');
@@ -542,7 +542,7 @@ describe('Upstream Scrobbles', function() {
         const existingPlays = normalizePlays(generatePlays(3), {initialDate: dayjs().subtract(1, 'hour')});
         await using scrobbler = await generateTestScrobbler();
         scrobbler.testRecentScrobbles = [];
-        await scrobbler.tryInitialize();
+        await scrobbler.initialize();
         scrobbler.testRecentScrobbles = existingPlays;
 
         const sp = spy(scrobbler, 'getScrobblesForTimeRange');
@@ -562,7 +562,7 @@ describe('Upstream Scrobbles', function() {
         const existingPlays = normalizePlays(generatePlays(3), {initialDate: dayjs().subtract(1, 'hour')});
         await using scrobbler = await generateTestScrobbler();
         scrobbler.testRecentScrobbles = [];
-        await scrobbler.tryInitialize();
+        await scrobbler.initialize();
         scrobbler.testRecentScrobbles = existingPlays;
 
         const sp = spy(scrobbler, 'getScrobblesForTimeRange');
@@ -583,7 +583,7 @@ describe('Upstream Scrobbles', function() {
         const existingPlays = normalizePlays(generatePlays(3), {initialDate: dayjs().subtract(1, 'hour')});
         await using scrobbler = await generateTestScrobbler();
         scrobbler.testRecentScrobbles = [];
-        await scrobbler.tryInitialize();
+        await scrobbler.initialize();
         scrobbler.testRecentScrobbles = existingPlays;
 
         const sp = spy(scrobbler, 'getScrobblesForTimeRange');
