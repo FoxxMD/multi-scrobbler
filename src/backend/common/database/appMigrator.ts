@@ -6,6 +6,11 @@ import { projectDir } from "../index.js";
 import { Migrator } from 'sqlite-up';
 import { MigrationStatus } from "../infrastructure/Atomic.js";
 
+export interface MigrateBaseContext {
+    db: DbConcrete
+    logger: Logger
+}
+
 export const getAppMigrationStatus = async (db: DbConcrete, opts: {logger?: Logger, migrationsAppFolder?: string} = {}): Promise<MigrationStatus> => {
     const {
     logger: parentLogger = loggerNoop,
@@ -37,7 +42,7 @@ export const migrateApp = async (db: DbConcrete, opts: {logger?: Logger, migrati
     } = opts;
     const logger = childLogger(parentLogger, 'App');
 
-    const migrator = new Migrator({
+    const migrator = new Migrator<MigrateBaseContext>({
         db: db.$client,
         migrationsDir: migrationsAppFolder,
         migrationsTable: 'appMigrations'
@@ -48,7 +53,7 @@ export const migrateApp = async (db: DbConcrete, opts: {logger?: Logger, migrati
     });
 
     logger.info('Applying any app migrations...');
-    const result = await migrator.apply();
+    const result = await migrator.apply({db, logger});
 
     if (!result.success) {
         throw new Error('App migration failed', {cause: result.error});
