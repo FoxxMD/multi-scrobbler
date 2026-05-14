@@ -1,6 +1,7 @@
 [
-      {
-    "name": "koito-client",
+  {
+    "name": "Koito Client A",
+    "id": "myKoitoClient",
     "configureAs": "client",
     "data": {
       "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",
@@ -9,7 +10,8 @@
     }
   },
   {
-    "name": "koito-source",
+    "name": "Koito Source B",
+    "id": "myKoitoSource",
     "configureAs": "source",
     "data": {
       "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",

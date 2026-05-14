@@ -1,6 +1,7 @@
 [
   {
-    "name": "MySpotify",
+    "id": "MySpotify",
+    "name": "Foxx Spotify",
     "enable": true,
     "clients": [],
     "data": {

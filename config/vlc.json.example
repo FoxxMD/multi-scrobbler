@@ -1,7 +1,8 @@
 [
   {
     "enable": true,
-    "name": "MyVlc",
+    "id": "myVlc",
+    "name": "Desktop",
     "data": {
       "url": "localhost:8080",
       "password": "changeme"

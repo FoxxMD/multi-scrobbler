@@ -1,6 +1,7 @@
 [
   {
-    "name": "DeezerARL",
+    "name": "Family Account",
+    "id": "myDeezerId"
     "enable": true,
     "clients": [],
     "data": {

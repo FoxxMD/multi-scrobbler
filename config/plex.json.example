@@ -1,6 +1,7 @@
 [
   {
-    "name": "MyPlexApi",
+    "name": "Foxx Plex",
+    "id": "MyPlexApi",
     "enable": true,
     "clients": [],
     "data": {

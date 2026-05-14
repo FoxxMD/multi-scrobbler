@@ -1,7 +1,8 @@
 [
   {
-    "name": "MyJellyfin",
+    "name": "Cool JF Server",
     "enable": true,
+    "id": "myJellyfin",
     "clients": [],
     "data": {
       "url": "http://localhost:8096",

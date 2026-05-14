@@ -1,6 +1,7 @@
 [
   {
-    "name": "MyYTMusic",
+    "id": "myYtMusic",
+    "name": "Foxx YT Music",
     "enable": true,
     "clients": [],
     "data": {

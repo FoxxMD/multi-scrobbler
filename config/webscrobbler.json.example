@@ -1,6 +1,7 @@
 [
   {
-    "name": "MyWebScrobbler",
+    "id": "MyWebScrobbler",
+    "name": "Firefox Laptop",
     "data": {
       "slug": "MyOptionalSlug",
       "whitelist": [],

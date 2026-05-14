@@ -54,6 +54,7 @@ services:
         - JELLYFIN_URL=192.168.0.110:8096 # URL to Jellyfin UI
         - JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56b # Api Key created in previous step
         - JELLYFIN_USER=MyUser # Your username in Jellyfin
+        - JELLYFIN_ID=myJellyin
         ```
     </TabItem>
     <TabItem value="spotify" label="Spotify">
@@ -68,6 +69,7 @@ services:
         - SPOTIFY_CLIENT_ID=yourClientId
         - SPOTIFY_CLIENT_SECRET=yourClientSecret
         - SPOTIFY_REDIRECT_URI=https://multi-scrobbler.mydomain.com/callback
+        - SPOTIFY_ID=mySpotify
         ```
 
         Later, after [starting multi-scrobbler](#start-multi-scrobbler), visit the dashboard at `http://192.168.0.100:9078` and click **(Re)authenticate** on the Spotify card to authorize multi-scrobbler to use your account. Monitoring will begin automatically after authorization is complete.
@@ -83,6 +85,7 @@ services:
 
         ```yaml title="~/msData/docker-compose.yml"
         - LZE_TOKEN=myCoolToken
+        - LZE_ID=navidromeLZ
         ```
 
         The token can be anything. [(Re)start multi-scrobbler](#start-multi-scrobbler) after making this change.
@@ -105,6 +108,7 @@ services:
         ```yaml title="~/msData/docker-compose.yml"
         - PLEX_URL=http://192.168.0.101:32400
         - PLEX_TOKEN=6c0ihz8j7__f5r18oa0zm8
+        - PLEX_ID=myPlex
         # optional, restrict scrobbling to a list of comma-delimited users
         #- PLEX_USERS_ALLOW=myPlexUsername
         ```
@@ -132,6 +136,7 @@ services:
         - SOURCE_LASTFM_API_KEY=MY_API_KEY_PLACEDHOLDER
         - SOURCE_LASTFM_SECRET=MY_SECRET_PLACEHOLDER
         - SOURCE_LASTFM_REDIRECT_URI=http://192.168.0.100:9078/lastfm/callback
+        - SOURCE_LASTFM_ID=myLFMSource
         ```
 
         Later, after [starting multi-scrobbler](#start-multi-scrobbler), visit the dashboard at `http://192.168.0.100:9078` and click **(Re)authenticate** on the **Last.fm (Source)** card to authorize multi-scrobbler to use your account. Monitoring will begin automatically after authorization is complete.
@@ -251,6 +256,7 @@ Modify the `lastfm.json` file you created in the [Setup Sources](#setup-sources)
         - KOITO_TOKEN=myToken
         - KOITO_USER=myUser
         - KOITO_URL=myURL
+        - KOITO_ID=myKoito
         ```
 
         :::tip
@@ -274,6 +280,7 @@ Modify the `lastfm.json` file you created in the [Setup Sources](#setup-sources)
         ```yaml title="~/msData/docker-compose.yml"
         - LASTFM_API_KEY=myApiKey
         - LASTFM_SECRET=myApiSecret
+        - LASTFM_ID=myLfmClient
         ```
     </TabItem>
     <TabItem value="maloja" label="Maloja">
@@ -306,6 +313,7 @@ Modify the `lastfm.json` file you created in the [Setup Sources](#setup-sources)
         ```yaml title="~/msData/docker-compose.yml"
         - MALOJA_URL=http://192.168.0.100:42010
         - MALOJA_API_KEY=myApiKey
+        - MALOJA_ID=myMaloja
         ```
     </TabItem>
 </Tabs>

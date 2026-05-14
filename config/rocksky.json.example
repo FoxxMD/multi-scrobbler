@@ -1,6 +1,7 @@
 [
     {
-    "name": "myRockskyClient",
+    "id": "myRockskyClient",
+    "name": "FoxxMD Rocksky Client",
     "configureAs": "client",
     "data": {
       "key": "7cdr86vis3mpq5b1pi01md0hkm7ykzzxjy81r",
@@ -8,7 +9,8 @@
     }
   },
   {
-    "name": "myRockskySource",
+    "id": "myRockskySource",
+    "name": "FoxxMD Rocksky Source",
     "configureAs": "source",
     "data": {
       "key": "e4xwktm7jxm607x8el1fcda30eu14dzb64h3j",

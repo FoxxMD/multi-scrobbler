@@ -1,6 +1,7 @@
 [
   {
-    "name": "ubuntu",
+    "name": "Desktop",
+    "id": "myMprisUbuntu"
     "enable": true,
     "data": {
       "whitelist": ["vlc", "mpd"],

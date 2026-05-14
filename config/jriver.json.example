@@ -1,6 +1,7 @@
 [
   {
-    "name": "MyJriver",
+    "name": "My JRiver Server",
+    "id": "myRiver",
     "enable": true,
     "data": {
       "url": "0.0.0.0",

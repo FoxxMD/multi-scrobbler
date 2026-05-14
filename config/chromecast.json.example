@@ -1,6 +1,7 @@
 [
   {
-    "name": "MyCast",
+    "name": "My Cast",
+    "id": "myCast",
     "data": {
       "blacklistedDevices": [],
       "whitelistedDevices": [],

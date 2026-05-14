@@ -1,6 +1,7 @@
 [
   {
-    "name": "myLz",
+    "name": "LZ for Navidrome",
+    "id": "myLzNavidrome",
     "enable": true,
     "data": {
       "token": "myToken"

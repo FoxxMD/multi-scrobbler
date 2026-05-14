@@ -1,6 +1,7 @@
 [
   {
-    "name": "brainzClient",
+    "name": "Foxx LZ Client",
+    "id": "brainzClient",
     "enable": true,
     "configureAs": "client",
     "data": {
@@ -10,7 +11,8 @@
     }
   },
   {
-    "name": "brainzSource",
+    "name": "Foxx LZ Source",
+    "id": "brainzSource",
     "enable": true,
     "configureAs": "source",
     "data": {

@@ -1,6 +1,7 @@
 [
   {
-    "name": "myMaloja-client",
+    "name": "Maloja Client",
+    "id": "myMalojaClient",
     "enable": true,
     "configureAs": "client",
     "data": {
@@ -9,7 +10,8 @@
     }
   },
     {
-    "name": "myMaloja-source",
+    "name": "Maloja Source",
+    "id": "myMalojaSource",
     "enable": true,
     "configureAs": "source",
     "data": {

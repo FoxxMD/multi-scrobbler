@@ -1,6 +1,7 @@
 [
     {
-        "name": "myTeal",
+        "id": "myTealClient",
+        "name": "Foxx Teal Client",
         "configureAs": "client",
         "data": {
             "identifier": "alice.bsky.social",
@@ -8,7 +9,8 @@
         }
     },
         {
-        "name": "myTealSource",
+        "id": "myTealSource",
+        "name": "Foxx Teal Source",
         "configureAs": "source",
         "data": {
             "identifier": "alice.bsky.social",

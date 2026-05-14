@@ -1,5 +1,6 @@
 [
   {
+    "id": "myYandex",
     "name": "Yandex Music",
     "type": "ymbridge",
     "data": {

@@ -1,7 +1,8 @@
 [
   {
     "enable": true,
-    "name": "MySonos",
+    "id": "MySonos",
+    "name": "Boom 2",
     "data": {
       "host": "192.168.0.150",
       "devicesAllow": ["move","beam"],

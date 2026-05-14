@@ -1,6 +1,7 @@
 [
   {
-    "name": "myLastFmClient",
+    "name": "Foxx LFM Client",
+    "id": "myLastFmClient",
     "enable": true,
     "configureAs": "client",
     "data": {
@@ -10,7 +11,8 @@
     }
   },
   {
-    "name": "myLastFmSource",
+    "name": "Foxx LFM Source",
+    "id": "myLastFmSource",
     "enable": true,
     "configureAs": "source",
     "data": {
