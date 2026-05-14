@@ -388,11 +388,11 @@ export const flatCacheLoad = async (flatCache: FlatCache, logger: Logger = logge
         throw new Error(`Unable to use path for file cache at ${cachePath}`, { cause: e })
     }
 
-    if(fileExists(cachePath) && !fileExists(`${cachePath}.bak`)) {
-        logger.info(`Backing up ${cachePath} in preparation for migration to database...`);
-        await copyFile(cachePath, `${cachePath}.bak`);
-        logger.info(`Done! Backed up to ${cachePath}.bak\nAll data has been loaded into cache. It will be deleted (from cache) after migrating to database.\nIf there are migration issues or you wish to downgrade then overwrite ${cachePath} with the .bak backup copy`);
-    }
+    // if(fileExists(cachePath) && !fileExists(`${cachePath}.bak`)) {
+    //     logger.info(`Backing up ${cachePath} in preparation for migration to database...`);
+    //     await copyFile(cachePath, `${cachePath}.bak`);
+    //     logger.info(`Done! Backed up to ${cachePath}.bak\nAll data has been loaded into cache. It will be deleted (from cache) after migrating to database.\nIf there are migration issues or you wish to downgrade then overwrite ${cachePath} with the .bak backup copy`);
+    // }
 
     const streamPromise = new Promise((resolve, reject) => {
         flatCache.loadFileStream(cachePath, (progress: number, total: number) => {

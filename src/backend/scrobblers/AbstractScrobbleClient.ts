@@ -548,23 +548,29 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
 
     protected async migrateCachedScrobbles(): Promise<void> {
+        const logger = childLogger(this.logger, ['Cached Scrobble Migration']);
         let shouldMigrate: boolean = false;
         const migration = this.dbComponent.migrations.find(x => x.name === 'cachedScrobbles');
         if (migration === undefined) {
-            this.logger.verbose('No Cached Scrobble Migration has run yet, running now...');
+            logger.verbose('No migration has run yet, running now...');
             shouldMigrate = true;
         } else if (migration.success === false) {
-            this.logger.verbose('Re-running previously failed Cached Scrobble Migration now...');
+            logger.verbose('Re-running previously failed migration now...');
             shouldMigrate = true;
         }
         if (shouldMigrate) {
             const migrationEntry: ComponentMigrationNew = migration !== undefined ? migration : {componentId: this.dbComponent.id, name: 'cachedScrobbles'};
             try {
                 const cachedQueue = (await this.cache.cacheScrobble.get(`${this.getMachineId()}-queue`) as QueuedScrobble<PlayObject>[] ?? []);
+                const migratedQueue: QueuedScrobble<PlayObject>[] = [];
+                let allGood = true;
                 if (cachedQueue.length > 0) {
-                    this.logger.info('Migrating cached scrobbles to database...');
-                    let allGood = true;
+                    logger.info('Migrating cached scrobbles to database...');
                     for (const cachedQueuedScrobble of cachedQueue) {
+                        if(cachedQueuedScrobble.play.meta?.migrated === true) {
+                            logger.debug(`Skipping already migrated play => ${buildTrackString(cachedQueuedScrobble.play)}`);
+                            continue;
+                        }
                         const play = asPlay(cachedQueuedScrobble.play);
                         const {
                             meta: {
@@ -594,24 +600,31 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                                     parentId: play.id
                                 })
                             ]);
-                            this.logger.verbose(`Migrated Play ${res[0].uid} => ${buildTrackString(play)}`);
+                            logger.verbose(`Migrated Play ${res[0].uid} => ${buildTrackString(play)}`);
+                            cachedQueuedScrobble.play.meta.migrated = true;
+                            migratedQueue.push(cachedQueuedScrobble)
                         } catch (e) {
+                            migratedQueue.push(cachedQueuedScrobble);
                             allGood = false;
-                            this.logger.verbose(new Error(`Failed to migrate Play ${buildTrackString(play)}`, { cause: e }));
+                            logger.warn(new Error(`Failed to migrate Play ${buildTrackString(play)}`, { cause: e }));
                         }
                     }
-                    this.logger[allGood ? 'info' : 'warn'](allGood ? 'Finished migrating all queued scrobbles.' : 'Migrated queued scrobbles with errors');
-                    await this.cache.cacheScrobble.delete(`${this.getMachineId()}-queue`);
-                    this.logger.info('Deleted legacy cached queued scrobbles');
+                    await this.cache.cacheScrobble.set(`${this.getMachineId()}-queue`, migratedQueue); 
+                    logger[allGood ? 'info' : 'warn'](allGood ? 'Finished migrating all queued scrobbles.' : 'Migrated queued scrobbles with errors');
                 } else {
-                    this.logger.info('No cached scrobbles to migrate');
+                    logger.info('No scrobbles to migrate');
                 }
 
                 const cachedDead = (await this.cache.cacheScrobble.get(`${this.getMachineId()}-dead`) as DeadLetterScrobble<PlayObject>[] ?? []);
+                const migratedDead: DeadLetterScrobble<PlayObject>[] = [];
                 if (cachedDead.length > 0) {
-                    this.logger.info('Migrating failed scrobbles to database...');
+                    logger.info('Migrating failed scrobbles to database...');
                     let allGood = true;
                     for (const cDeadScrobble of cachedDead) {
+                        if(cDeadScrobble.play.meta?.migrated === true) {
+                            logger.debug(`Skipping already migrated play => ${buildTrackString(cDeadScrobble.play)}`)
+                            continue;
+                        }
                         const play = asPlay(cDeadScrobble.play);
                         const {
                             meta: {
@@ -641,7 +654,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                                     parentId: play.id
                                 })
                             ]);
-                            this.logger.verbose(`Added Play ${res[0].uid} to database => ${buildTrackString(play)}`);
+                            logger.verbose(`Added Play ${res[0].uid} to database => ${buildTrackString(play)}`);
                             await this.queueRepo.create({
                                 componentId: this.dbComponent.id,
                                 playId: res[0].id,
@@ -650,30 +663,37 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                                 retries: cDeadScrobble.retries,
                                 error: cDeadScrobble.error !== undefined ? { message: cDeadScrobble.error } : undefined
                             });
-                            this.logger.verbose(`Added Play ${res[0].uid} to Failed Queue`);
+                            cDeadScrobble.play.meta.migrated = true;
+                            migratedDead.push(cDeadScrobble);
+                            logger.verbose(`Added Play ${res[0].uid} to Failed Queue`);
                         } catch (e) {
+                            migratedDead.push(cDeadScrobble);
                             allGood = false;
-                            this.logger.verbose(new Error(`Failed to migrate Play to failed queued ${buildTrackString(play)}`, { cause: e }));
+                            logger.warn(new Error(`Failed to migrate Play to failed queued ${buildTrackString(play)}`, { cause: e }));
                         }
-                        this.logger[allGood ? 'info' : 'warn'](allGood ? 'Finished migrating all failed scrobbles.' : 'Migrated failed scrobbles with errors');
-                        await this.cache.cacheScrobble.delete(`${this.getMachineId()}-dead`);
-                        this.logger.info('Deleted legacy cached failed scrobbles');
                     }
+                    logger[allGood ? 'info' : 'warn'](allGood ? 'Finished migrating all failed scrobbles.' : 'Migrated failed scrobbles with errors');
+                    await this.cache.cacheScrobble.set(`${this.getMachineId()}-dead`, migratedDead); 
                 } else {
-                    this.logger.info('No dead scrobbles to migrate');
+                    logger.info('No dead scrobbles to migrate');
                 }
-                await this.migrationRepo.create({...migrationEntry, success: true});
-                this.logger.info('Cached Scrobble Migration done');
+
+                if(migration === undefined) {
+                    await this.migrationRepo.create({...migrationEntry, success: allGood});
+                } else {
+                    await this.migrationRepo.updateById(migration.id, {success: allGood});
+                }
+                logger[allGood ? 'info' : 'warn'](`Migration done${allGood === false ? ' with errors' : ''}`);
             } catch (e) {
                 if(migration === undefined) {
                     this.migrationRepo.create({...migrationEntry, success: false, error: e});
                 } else {
                     this.migrationRepo.updateById(migration.id, {success: false, error: e});
                 }
-                throw e;
+                throw new Error('Cached Scrobble Migration failed with unexpected error', {cause: e});
             }
         } else {
-            this.logger.debug('Cached Scrobbles Migration already run!');
+            logger.debug('Cached Scrobbles Migration already run successfully!');
         }
     }
 

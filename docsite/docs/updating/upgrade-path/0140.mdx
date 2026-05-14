@@ -108,23 +108,29 @@ If you decide to add an ID later you must use the name as the ID in order to kee
 
 :::tip
 
-Before upgrading, if your MS dashboard shows 0 queued/failed for all [Scrobble Clients](/configuration/clients) then you **skip this step** and can safely delete `ms-scrobble.cache` before the upgrade occurs.
+Before upgrading, if your MS dashboard shows 0 queued/failed for all [Scrobble Clients](/configuration/clients) then you can **ignore this step.**
 
 :::
 
 MS `0.14.0` introduces a database for persisting Plays/Scrobbles, queues, and other data. Prior to `0.14.0`, queued/failed scrobbles were stored in a cache **file** inside your [`CONFIG_DIR`](/installation/?dockerSetting=storage#recommended-settings) named `ms-scrobble.cache`.
 
-On first run of `0.14.0`:
+When a [Client](/configuration/clients) is created and **enabled** in `0.14.0` it will attempt to automatically migrate scrobbles from this cache into the database.
 
-* MS will make a copy of `ms-scrobble.cache` named `ms-scrobble.cache.bak`
-  * You may make a manual copy of this file before upgrading, for additional safety
-* Scrobbles in the cache will automatically be migrated to the new database
-* The now "old" cache data will be cleared so that subsequent application starts don't duplicate migrations
-  * the empty `ms-scrobble.cache` file will remain
+* You can see progress/results for this process by filtering logs for `[Cached Scrobble Migration]`
+* If the process fails MS will attempt to migrate failed scrobbles, again, the next time it is started
+* Your cached scrobbles **are not deleted** in either the success or failure outcome
+  * If the process succeeds then MS knows to ignore the cache on subsequent startups
 
-You can follow progress of this by looking for log lines starting with `Migrating cached scrobbles to database...`
+:::note
 
-If MS does not report/log any errors during this time and you see your scrobbles processed normally then it is safe to delete `ms-scrobble.cache` the next time MS is stopped/restarted.
+This process only occurs for Clients that are **enabled.**
+
+* If you are using ENV for config then your Clients are automatically enabled
+* If you are using File/AIO make sure that the `enable` property is either `true` or not present in your Client configs
+
+Even if your Client does not start successfully (EX due to authentication) you should still enable and start **all** Clients in order to get all scrobbled migrated.
+
+:::
 
 ## Cache Configuration
 
@@ -134,7 +140,7 @@ In `0.14.0` [Cache](/configuration#caching) has been simplified with much of the
 
 This only applies to users who have `cache` in their [AIO Config](/configuration/?configType=aio#configuration-types) `config.json` or are using `CACHE_*` [ENV Config](/configuration/?configType=env#configuration-types)
 
-If you do not have any of the above [Cache](/configuration#caching) configuration defined then you can **skip this step.** 
+If you do not have any of the above [Cache](/configuration#caching) configuration defined then you can **ignore this step.** 
 
 :::
 
