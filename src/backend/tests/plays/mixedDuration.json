@@ -2,7 +2,7 @@
   {
     "data": {
       "artists": [
-        "Kaidi Tatham"
+        {"name": "Kaidi Tatham"}
       ],
       "track": "Fricassee",
       "duration": 305,
@@ -12,7 +12,7 @@
   {
     "data": {
       "artists": [
-        "Kuna Maze"
+        {"name": "Kuna Maze"}
       ],
       "track": "Jimbó",
       "playDate": "2023-09-20T14:46:00.000Z"
@@ -21,8 +21,8 @@
   {
     "data": {
       "artists": [
-        "Norman Person",
-        "Shamek Farrah"
+        {"name": "Norman Person"},
+        {"name": "Shamek Farrah"}
       ],
       "track": "Aisha",
       "duration": 559,
@@ -32,8 +32,8 @@
   {
     "data": {
       "artists": [
-        "Frédéric Chopin",
-        "Krystian Zimerman"
+        {"name": "Frédéric Chopin"},
+        {"name": "Krystian Zimerman"}
       ],
       "track": "Ballade No. 4 in F Minor, Op. 52",
       "duration": 575,
@@ -43,8 +43,8 @@
   {
     "data": {
       "artists": [
-        "Nidia Gongora",
-        "The Bongo Hop"
+        {"name": "Nidia Gongora"},
+        {"name": "The Bongo Hop"}
       ],
       "track": "Sonora",
       "duration": 327,
@@ -55,7 +55,7 @@
   {
     "data": {
       "artists": [
-        "Cheo Feliciano"
+        {"name": "Cheo Feliciano"}
       ],
       "track": "Aprieta (Oye Cómo Va)",
       "playDate": "2023-09-20T15:38:12.000Z"
@@ -64,7 +64,7 @@
   {
     "data": {
       "artists": [
-        "Pink Floyd"
+        {"name": "Pink Floyd"}
       ],
       "track": "Another Brick in the Wall, Pt. 1",
       "playDate": "2023-09-20T15:39:12.000Z"
@@ -73,8 +73,8 @@
   {
     "data": {
       "artists": [
-        "Frédéric Chopin",
-        "Krystian Zimerman"
+        {"name": "Frédéric Chopin"},
+        {"name": "Krystian Zimerman"}
       ],
       "track": "Ballade No. 1 in G Minor, Op. 23",
       "duration": 575,
@@ -85,9 +85,9 @@
   {
     "data": {
       "artists": [
-        "A Collection of Boogie",
-        "Jazz Funk",
-        "Disco with Mehdi El"
+        {"name": "A Collection of Boogie"},
+        {"name": "Jazz Funk"},
+        {"name": "Disco with Mehdi El"}
       ],
       "track": "Aquil",
       "listenedFor": 300,
@@ -97,7 +97,7 @@
   {
     "data": {
       "artists": [
-        "Outkast"
+        {"name": "Outkast"}
       ],
       "track": "Da Art of Storytellin' (Pt. 1)",
       "duration": 422,
@@ -107,13 +107,13 @@
   {
     "data": {
       "artists": [
-        "9th Wonder",
-        "Cordae",
-        "Dinner Party",
-        "Kamasi Washington",
-        "Phoelix",
-        "Robert Glasper",
-        "Terrace Martin"
+        {"name": "9th Wonder"},
+        {"name": "Cordae"},
+        {"name": "Dinner Party"},
+        {"name": "Kamasi Washington"},
+        {"name": "Phoelix"},
+        {"name": "Robert Glasper"},
+        {"name": "Terrace Martin"}
       ],
       "track": "Freeze Tag",
       "album": "Dinner Party: Dessert",

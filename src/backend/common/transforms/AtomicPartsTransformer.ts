@@ -1,4 +1,4 @@
-import { isPlayObject, ObjectPlayData, PlayObject, TrackMeta } from "../../../core/Atomic.js";
+import { ArtistCredit, isPlayObject, ObjectPlayData, PlayObject, TrackMeta } from "../../../core/Atomic.js";
 import { AtomicStageConfig, StageConfig } from "../infrastructure/Transform.js";
 import AbstractTransformer from "./AbstractTransformer.js";
 
@@ -135,8 +135,8 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
         }
     
         protected abstract handleTitle(play: PlayObject, parts: Y, transformData: T): Promise<string | undefined>;
-        protected abstract handleArtists(play: PlayObject, parts: Y, transformData: T): Promise<string[] | undefined>;
-        protected abstract handleAlbumArtists(play: PlayObject, parts: Y, transformData: T): Promise<string[] | undefined>;
+        protected abstract handleArtists(play: PlayObject, parts: Y, transformData: T): Promise<ArtistCredit[] | undefined>;
+        protected abstract handleAlbumArtists(play: PlayObject, parts: Y, transformData: T): Promise<ArtistCredit[] | undefined>;
         protected abstract handleAlbum(play: PlayObject, parts: Y, transformData: T): Promise<string | undefined>;
         protected async handleDuration(play: PlayObject, parts: Y, transformData: T): Promise<number | undefined> {
             return play.data.duration;

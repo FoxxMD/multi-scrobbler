@@ -11,13 +11,13 @@ import {
     REPORTED_PLAYER_STATUSES,
     ReportedPlayerStatus
 } from "../common/infrastructure/Atomic.js";
-import { parseRegexSingleOrFail } from "../utils.js";
 import MemorySource from "./MemorySource.js";
 import { LastFMEndpointSourceConfig } from "../common/infrastructure/config/source/endpointlfm.js";
 import { LastFMScrobbleRequestPayload, scrobblePayloadToPlay } from "../common/vendor/LastfmApiClient.js";
 import { Logger } from "@foxxmd/logging";
 import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.js";
+import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 
 const noSlugMatch = new RegExp(/(?:\/api\/lastfm\/?)$|(?:\/1\/?|\/2.0\/?)$/i);
 const slugMatch = new RegExp(/\/api\/lastfm\/([^\/]+)$/i);
@@ -62,7 +62,7 @@ export class EndpointLastfmSource extends MemorySource {
     }
 
     getRecentlyPlayed = async (options = {}) => {
-        return this.getFlatRecentlyDiscoveredPlays();
+        return await this.getFlatRecentlyDiscoveredPlays();
     }
 
     isValidScrobble = (playObj: PlayObject) => {
@@ -97,11 +97,11 @@ export const playStateFromRequest = (obj: LastFMScrobbleRequestPayload): PlayerS
 }
 
 export const parseSlugFromString = (path: string): string | false | undefined => {
-    const noSlug = parseRegexSingleOrFail(noSlugMatch, path);
+    const noSlug = parseRegexSingle(noSlugMatch, path);
     if (noSlug !== undefined) {
         return undefined;
     }
-    const slugResult = parseRegexSingleOrFail(slugMatch, path);
+    const slugResult = parseRegexSingle(slugMatch, path);
     if (slugResult !== undefined) {
         return slugResult.groups[0];
     }

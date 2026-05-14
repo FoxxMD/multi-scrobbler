@@ -368,7 +368,7 @@ export default class MemorySource extends AbstractSource {
                         }
                         return [false, `${stPrefix} ${EXPECTED_NON_DISCOVERED_REASON}`]
                     } else {
-                        const discoveredPlays = this.getRecentlyDiscoveredPlaysByPlatform(genGroupId(candidate));
+                        const discoveredPlays = await this.getRecentlyDiscoveredPlays();
                         if (discoveredPlays.length === 0 || !playObjDataMatch(discoveredPlays[0], candidate)) {
                             // if most recent stateful play is not this track we'll add it
                             return [true,`${stPrefix} added after ${thresholdResultSummary(thresholdResults)}. Matched other recent play but could not determine time frame due to missing duration. Allowed due to not being last played track.`];
@@ -385,7 +385,7 @@ export default class MemorySource extends AbstractSource {
 
     recentlyPlayedTrackIsValid = (playObj: any) => playObj.data.playDate.isBefore(dayjs().subtract(30, 's'))
 
-    protected getInterval(): number {
+    protected getInterval(log?: boolean): number {
         /**
          * If any player is progressing, reports position, and play has duration
          * then we can modify polling interval so that we check source data just before track is supposed to end
@@ -415,7 +415,7 @@ export default class MemorySource extends AbstractSource {
                 }
             }
         }
-        if(logDecrease !== undefined) {
+        if(logDecrease !== undefined && log) {
             this.logger.debug(logDecrease);
         }
         return interval;

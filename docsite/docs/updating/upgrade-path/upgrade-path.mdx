@@ -1,0 +1,39 @@
+---
+sidebar_position: 1
+title: Upgrade Path
+description: Updating Multi-Scrobbler
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+
+The majority of changes are detailed in [**Github Release Notes**](https://github.com/FoxxMD/multi-scrobbler/releases), including *most* breaking changes. You should consult the release notes for each version you will be updating through/to.
+
+Upgrade paths for specific version, detailed here, are reserved for:
+
+<Tabs groupId="upgradeType" queryString>
+
+<TabItem value="required" label="Required Upgrades">
+
+:::warning[Required Upgrade]
+
+Versions you **must** upgrade to **before** upgrading to a newer version. Likely due to the codebase containing functionality to upgrade persistent data that cannot be migrating across multiple versions.
+
+:::
+
+</TabItem>
+
+<TabItem value="depth" label="In Depth Upgrades">
+
+:::note[Optional Upgrade]
+
+(Breaking) Changes to configuration/data that require more detail or formatting than is feasible in Github release notes. These upgrades may be skipped.
+
+:::
+
+</TabItem>
+
+</Tabs>
+
+The type of upgrade is shown at the top of each page with the same colored callout shown above.

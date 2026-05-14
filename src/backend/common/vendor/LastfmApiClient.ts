@@ -1,6 +1,6 @@
 import dayjs, { Dayjs, ManipulateType } from "dayjs";
 import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, UnixTimestamp, URLData, Writeable } from "../../../core/Atomic.js";
-import { nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.js";
+import { artistNamesToCredits, artistNameToCredit, nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.js";
 import { removeUndefinedKeys, sleep } from "../../utils.js";
 import { writeFile } from '../../utils/FSUtils.js';
 import { objectIsEmpty, readJson } from '../../utils/DataUtils.js';
@@ -437,6 +437,10 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
         } = playObj;
 
         const scrobblePayload = playToClientPayload(playObj);
+        if(scrobblePayload.duration !== undefined && scrobblePayload.duration < 30) {
+            this.logger.info(`Removing duration of ${scrobblePayload.duration} from payload so that LFM doesn't ignore it.`);
+            delete scrobblePayload.duration;
+        }
 
         try {
             const response = await this.callApi<LastFMTrackScrobbleResponse>(() =>  this.trackApi.scrobble({...scrobblePayload}) as unknown as LastFMTrackScrobbleResponse);
@@ -570,10 +574,10 @@ export const scrobblePayloadToPlay = (obj: LastFMScrobbleRequestPayload): PlayOb
         data: {
             track,
             album: nonEmptyStringOrDefault(album),
-            albumArtists: nonEmptyStringOrDefault(albumArtist) !== undefined ? [albumArtist] : undefined,
+            albumArtists: nonEmptyStringOrDefault(albumArtist) !== undefined ? [artistNameToCredit(albumArtist)] : undefined,
             duration: typeof duration === 'string' ? parseInt(duration, 10) : duration,
             playDate: ts,
-            artists
+            artists: artistNamesToCredits(artists)
         },
         meta: {
             source: 'lastfm',
@@ -615,7 +619,7 @@ export const playToClientPayload = (playObj: PlayObject): LastFMScrobblePayload 
         if (artists.length === 0) {
             artist = "";
         } else {
-            artist = artists[0];
+            artist = artists[0].name;
         }
 
         const additionalRichPayload: Partial<LastFMScrobblePayload> = {};
@@ -634,11 +638,11 @@ export const playToClientPayload = (playObj: PlayObject): LastFMScrobblePayload 
 
         // LFM ignores scrobbles where album artist is VA
         // https://github.com/FoxxMD/multi-scrobbler/issues/340#issuecomment-3220774257
-        const nonVaAlbumArtists = albumArtists.filter(x => x.trim().toLocaleLowerCase() !== 'va');
+        const nonVaAlbumArtists = albumArtists.filter(x => x.name.trim().toLocaleLowerCase() !== 'va');
         // LFM does not support multiple artists in scrobble payload
         // https://www.last.fm/api/show/track.scrobble
         if (nonVaAlbumArtists.length > 0) {
-            rawPayload.albumArtist = nonVaAlbumArtists[0];
+            rawPayload.albumArtist = nonVaAlbumArtists[0].name;
         }
 
         // I don't know if its lastfm-node-client building the request params incorrectly
@@ -694,7 +698,7 @@ export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectO
 
     const play: PlayObjectLifecycleless = {
         data: {
-            artists: [...new Set(artistStrings)] as string[],
+            artists: artistNamesToCredits([...new Set(artistStrings)] as string[]),
             track: title,
             album: al,
             duration,

@@ -20,6 +20,7 @@ import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 import { isDebugMode, sleep } from "../utils.js";
+import { artistNamesToCredits } from "../../core/StringUtils.js";
 
 const CLIENT_PLAYER_STATE: Record<PlayerState, ReportedPlayerStatus> = {
     'play': REPORTED_PLAYER_STATUSES.playing,
@@ -256,8 +257,8 @@ export class MPDSource extends MemoryPositionalSource {
 
         const play: PlayObjectLifecycleless = {
             data: {
-                artists: artists,
-                albumArtists,
+                artists: artistNamesToCredits(artists),
+                albumArtists: artistNamesToCredits(albumArtists),
                 album,
                 track: trackName,
                 duration

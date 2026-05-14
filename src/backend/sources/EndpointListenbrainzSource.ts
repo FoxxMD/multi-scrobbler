@@ -15,11 +15,11 @@ import { ListenbrainzEndpointSourceConfig } from "../common/infrastructure/confi
 import { ListenbrainzApiClient, listenPayloadToPlay } from "../common/vendor/ListenbrainzApiClient.js";
 import { SubmitPayload } from '../common/vendor/listenbrainz/interfaces.js';
 import { ListenPayload } from '../common/vendor/listenbrainz/interfaces.js';
-import { parseRegexSingleOrFail } from "../utils.js";
 import MemorySource from "./MemorySource.js";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.js";
 import { Logger } from "@foxxmd/logging";
 import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
+import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 
 const noSlugMatch = new RegExp(/(?:\/api\/listenbrainz\/?)$|(?:\/1\/?|\/1\/submit-listens\/?\/1\/validate-token\/|)$/i);
 const slugMatch = new RegExp(/\/api\/listenbrainz\/([^\/]+)$/i);
@@ -82,7 +82,7 @@ export class EndpointListenbrainzSource extends MemorySource {
     }
 
     getRecentlyPlayed = async (options = {}) => {
-        return this.getFlatRecentlyDiscoveredPlays();
+        return await this.getFlatRecentlyDiscoveredPlays();
     }
 
     isValidScrobble = (playObj: PlayObject) => {
@@ -131,7 +131,7 @@ export const listenTypeAsPlayerStatus = (event: string): ReportedPlayerStatus =>
 }
 
 export const parseTokenFromString = (str: string): string | undefined => {
-    const tokenMatch = parseRegexSingleOrFail(authHeaderRegex, str);
+    const tokenMatch = parseRegexSingle(authHeaderRegex, str);
     if(tokenMatch !== undefined) {
         return tokenMatch.groups[0];
     }
@@ -151,11 +151,11 @@ export const parseTokenFromRequest = (req: ExpressRequest): string | false | und
 }
 
 export const parseSlugFromString = (path: string): string | false | undefined => {
-    const noSlug = parseRegexSingleOrFail(noSlugMatch, path);
+    const noSlug = parseRegexSingle(noSlugMatch, path);
     if (noSlug !== undefined) {
         return undefined;
     }
-    const slugResult = parseRegexSingleOrFail(slugMatch, path);
+    const slugResult = parseRegexSingle(slugMatch, path);
     if (slugResult !== undefined) {
         return slugResult.groups[0];
     }

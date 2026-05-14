@@ -1,0 +1,39 @@
+import { Logger } from "drizzle-orm";
+import { DrizzleBaseRepository, DrizzleRepositoryOpts } from "./BaseRepository.js";
+import { DbConcrete } from "../drizzleUtils.js";
+import { ComponentNew, ComponentSelect, FindWhere } from "../drizzleTypes.js";
+import { components } from "../schema/schema.js";
+import { generateComponentEntity } from "../entityUtils.js";
+
+export class DrizzleComponentRepository extends DrizzleBaseRepository<'components'> {
+
+    constructor(db: DbConcrete, opts: DrizzleRepositoryOpts = {}) {
+        super(db, 'components', 'Component', opts);
+    }
+
+    findOrInsert = async (data: { mode: 'source' | 'client', type: string, uid?: string, name?: string }): Promise<ComponentSelect> => {
+        const where: FindWhere<'components'> = {
+            mode: data.mode,
+            type: data.type,
+            uid: data.uid ?? data.name
+        };
+        const component = await this.db.query.components.findFirst({
+            where,
+            with: {
+                migrations: true
+            }
+        });
+        if (component !== undefined) {
+            return component;
+        }
+
+        const componentNew = (await this.db.insert(components).values(generateComponentEntity({
+            uid: data.uid ?? data.name,
+            mode: data.mode,
+            type: data.type,
+            name: data.name
+        })).returning())[0] as ComponentSelect;
+        componentNew.migrations = [];
+        return componentNew;
+    }
+}

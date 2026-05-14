@@ -1,0 +1,70 @@
+{
+  "listen_type": "single",
+  "payload": [
+    {
+      "listened_at": 0,
+      "track_metadata": {
+        "release_name": "Adore (2014 Remaster)",
+        "additional_info": {
+          "date": "date",
+          "artist_names": [
+            "artist_names",
+            "artist_names"
+          ],
+          "recording_mbid": "046b6c7f-0b8a-43b9-b35d-6489e6daee91",
+          "release_artist_name": "release_artist_name",
+          "artist_mbids": [
+            "046b6c7f-0b8a-43b9-b35d-6489e6daee91",
+            "046b6c7f-0b8a-43b9-b35d-6489e6daee91"
+          ],
+          "work_mbids": [
+            "046b6c7f-0b8a-43b9-b35d-6489e6daee91",
+            "046b6c7f-0b8a-43b9-b35d-6489e6daee91"
+          ],
+          "duration": 5,
+          "discnumber": 9,
+          "spotify_album_artist_ids": [
+            "spotify_album_artist_ids",
+            "spotify_album_artist_ids"
+          ],
+          "genre": "genre",
+          "media_player_version": "media_player_version",
+          "origin_url": "origin_url",
+          "submission_client": "submission_client",
+          "trackNumber": "trackNumber",
+          "spotify_id": "spotify_id",
+          "spotify_album_id": "spotify_album_id",
+          "submission_client_version": "submission_client_version",
+          "isrc": "isrc",
+          "release_artist_names": [
+            "release_artist_names",
+            "release_artist_names"
+          ],
+          "youtube_id": "youtube_id",
+          "tags": [
+            "tags",
+            "tags"
+          ],
+          "duration_ms": 2,
+          "spotify_artist_ids": [
+            "spotify_artist_ids",
+            "spotify_artist_ids"
+          ],
+          "music_service_name": "music_service_name",
+          "recording_msid": "046b6c7f-0b8a-43b9-b35d-6489e6daee91",
+          "release_group_mbid": "046b6c7f-0b8a-43b9-b35d-6489e6daee91",
+          "comment": "comment",
+          "music_service": "music_service",
+          "track_mbid": "046b6c7f-0b8a-43b9-b35d-6489e6daee91",
+          "listening_from": "listening_from",
+          "media_player": "media_player",
+          "release_mbid": "046b6c7f-0b8a-43b9-b35d-6489e6daee91",
+          "tracknumber": 7,
+          "albumartist": "albumartist"
+        },
+        "artist_name": "The Smashing Pumpkins",
+        "track_name": "17"
+      }
+    }
+  ]
+}

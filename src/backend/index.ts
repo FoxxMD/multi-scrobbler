@@ -16,14 +16,16 @@ import { appLogger, initLogger as getInitLogger } from "./common/logging.js";
 import { getRoot } from "./ioc.js";
 import { parseVersion } from "./version.js";
 import { initServer } from "./server/index.js";
-import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
-import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
-import { isDebugMode, parseBool, retry } from "./utils.js";
+import { isDebugMode, parseBool, retry, sleep } from "./utils.js";
 import { readJson } from './utils/DataUtils.js';
-//import { createVegaGenerator } from './utils/SchemaUtils.js';
 import ScrobbleClients from './scrobblers/ScrobbleClients.js';
 import ScrobbleSources from './sources/ScrobbleSources.js';
 import { Notifiers } from './notifier/Notifiers.js';
+import { DbConcrete, getMigratedDb } from './common/database/drizzle/drizzleUtils.js';
+import { getDbPath } from './common/database/Database.js';
+import { createRetentionCleanupTask } from './tasks/retentionCleanup.js';
+import { parseUserConfig } from './common/Cache.js';
+import { nonEmptyStringOrDefault } from '../core/StringUtils.js';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -49,6 +51,9 @@ output = output.slice(0, 301);
 
 let logger: FoxLogger;
 
+let db: DbConcrete;
+let dbConnectionsClosed = false;
+
 process.on('uncaughtExceptionMonitor', (err, origin) => {
     const appError = new Error(`Uncaught exception is crashing the app! :( Type: ${origin}`, {cause: err});
     if(logger !== undefined) {
@@ -56,7 +61,31 @@ process.on('uncaughtExceptionMonitor', (err, origin) => {
     } else {
         initLogger.error(appError);
     }
+    if(!dbConnectionsClosed) {
+        const parts = [];
+        if(db !== undefined && !db.$client.isOpen) {
+            db.$client.close();
+            parts.push('Database');
+        }
+        if(parts.length > 0 && logger !== undefined) {
+            logger.info(`Closed ${parts.join(' and ')}`);
+        }
+    }
+});
+process.on('SIGINT', async () => {
+    if(!dbConnectionsClosed) {
+        const parts = [];
+        if(db !== undefined && !db.$client.isOpen) {
+            db.$client.close();
+            parts.push('Database');
+        }
+        if(parts.length > 0 && logger !== undefined) {
+            logger.info(`Closed ${parts.join(' and ')}`);
+        }
+    }
+    process.exit(0);
 })
+
 
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
 
@@ -75,6 +104,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             webhooks = [],
             logging = {},
             debugMode,
+            cache,
         } = (config || {}) as AIOConfig;
 
         if (process.env.DEBUG_MODE === undefined && debugMode !== undefined) {
@@ -88,17 +118,26 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
 
         initLogger.info(`Debug Mode: ${isDebugMode() ? 'YES' : 'NO'}`);
 
-        await parseVersion();
+        const version = await parseVersion();
+
+        initLogger.info(`Version: ${version}`);
 
         const [aLogger, appLoggerStream] = await appLogger(logging)
         logger = childLogger(aLogger, 'App');
+        
+        const dbPath = getDbPath('ms');
+        logger.info(`Using database at ${db}`);
+        const [migratedDb, isNew] = await getMigratedDb(dbPath, {logger});
+        db = migratedDb;
 
-        const root = getRoot({...config, logger, loggingConfig: logging, loggerStream: appLoggerStream});
-        initLogger.info(`Version: ${root.get('version')}`);
-
-        //initLogger.info('Generating schema definitions...');
-        //createVegaGenerator()
-        //initLogger.info('Schema definitions generated');
+        const root = getRoot({
+            ...config,
+            cache: parseUserConfig(cache, logger),
+            logger,
+            loggingConfig: logging,
+            loggerStream: appLoggerStream,
+            db
+        });
 
         const internalConfigOptional = {
              localUrl: root.get('localUrl'),
@@ -147,31 +186,65 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         if(nameColl.length > 0) {
             logger.warn(`Last.FM source and clients have same names [${nameColl.map(x => x.name).join(',')}] -- this may cause issues`);
         }
-
-        const clientTask = createHeartbeatClientsTask(scrobbleClients, logger);
-        clientTask.execute();
-        try {
-            await retry(() => {
-                if(clientTask.isExecuting) {
-                    throw new Error('Waiting')
-                }
-                return true;
-            },{retries: scrobbleClients.clients.length + 1, retryIntervalMs: 2000});
-        } catch (e) {
-            logger.warn('Waited too long for clients to start! Moving ahead with sources init...');
+        const clientInitOptions = {deadDelay: nonEmptyStringOrDefault(process.env.DEBUG_DEAD_DELAY, undefined) !== undefined ? Number.parseInt(process.env.DEBUG_DEAD_DELAY) : undefined};
+        for(const c of scrobbleClients.clients) {
+            c.initTasks(clientInitOptions);
+            const res = await Promise.race([
+                sleep(2200),
+                (async () => {
+                    while(!c.isReady()) {
+                        await sleep(400)
+                    }
+                    return true;
+                })()
+            ]);
+            if(res === undefined) {
+                logger.debug(`Not waiting for Client ${c.name} to finish init, moving on to the next Client...`);
+            }
         }
-        scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
-            minutes: 20,
-            runImmediately: false
-        }, clientTask, {id: 'clients_heart'}));
 
-        const sourceTask = createHeartbeatSourcesTask(scrobbleSources, logger);
-        scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
-            minutes: 20,
-            runImmediately: true
-        }, sourceTask, {id: 'sources_heart'}));
+        for(const c of scrobbleSources.sources) {
+            c.initTasks();
+            const res = await Promise.race([
+                sleep(2200),
+                (async () => {
+                    while(!c.isReady()) {
+                        await sleep(400)
+                    }
+                    return true;
+                })()
+            ]);
+            if(res === undefined) {
+                logger.debug(`Not waiting for Source ${c.name} to finish init, moving on to the next Source...`);
+            }
+        }
+
+        let runRetentionNow = parseBool(process.env.RETENTION_IMMEDIATE, false);
+
+        const retentionTask = createRetentionCleanupTask(scrobbleSources, scrobbleClients, logger);
+        let retentionJobAdded = false;
+        const addJob = () => { 
+            retentionJobAdded = true;
+            scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
+                minutes: 60,
+                runImmediately: runRetentionNow
+            }, retentionTask, {id: 'retention', preventOverrun: true}));
+            logger.debug('Added Retention Cleanup task to scheduler');
+        };
+        logger.debug('Added Client Heartbeat task to scheduler');
+
+        if(runRetentionNow === false || (scrobbleClients.clients.every(x => x.isReady()) && scrobbleSources.sources.every(x => x.isReady()))) {
+            addJob();
+        }
 
         logger.info('Scheduler started.');
+
+        if(runRetentionNow === true && !retentionJobAdded) {
+            logger.info('Detected that Retention Cleanup should run immediately but all sources/clients have not started yet! Delaying retention cleanup by 1 minute to allow all sources/clients to finish starting.');
+            await sleep(60 * 1000);
+            addJob();
+        }
+
 
     } catch (e) {
         const appError = new Error('Exited with uncaught error', {cause: e});
@@ -179,6 +252,16 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             logger.error(appError);
         } else {
             initLogger.error(appError);
+        }
+        if(!dbConnectionsClosed) {
+            const parts = [];
+            if(db !== undefined && !db.$client.isOpen) {
+                db.$client.close();
+                parts.push('Database');
+            }
+            if(parts.length > 0 && logger !== undefined) {
+                logger.info(`Closed ${parts.join(' and ')}`);
+            }
         }
         process.exit(1);
     }

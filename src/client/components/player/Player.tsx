@@ -33,7 +33,7 @@ const Player = (props: PlayerProps) => {
         play: {
             data: {
                 track = '???',
-                artists = ['???'],
+                artists = [{name: '???'}],
                 duration = 0
             } = {},
             meta: {
@@ -95,7 +95,7 @@ art = {},
                     <div className="player__info" style={{position: 'relative', zIndex: 0}}>
                         <div className="player-album">{playArt !== undefined ? <img style={{height: '100%', maxWidth: '90px'}} src={playArt}></img> : null}</div>
                         <p className="title">{calculated !== 'stopped' ? track : '-'}</p>
-                        <p className="subtitle">{calculated !== 'stopped' ? artists.join(' / ') : '-'}</p>
+                        <p className="subtitle">{calculated !== 'stopped' ? artists.map(x => x.name).join(' / ') : '-'}</p>
                     </div>
 
                     <PlayerTimestamp duration={duration} indeterminate={(calculated === 'playing' && data.position === undefined) || nowPlayingMode} current={data.position || 0} />

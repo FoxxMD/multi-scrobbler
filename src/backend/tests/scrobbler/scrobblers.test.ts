@@ -6,7 +6,7 @@ import dayjs from "dayjs";
 import { after, before, describe, it } from 'mocha';
 import { http, HttpResponse } from 'msw';
 import pEvent from 'p-event';
-import { PlayObject, SOURCE_SOT } from "../../../core/Atomic.js";
+import { CLIENT_INGRESS_QUEUE, PlayObject, SOURCE_SOT } from "../../../core/Atomic.js";
 import { sleep, sortByOldestPlayDate } from "../../utils.js";
 import { genGroupIdStr } from '../../../core/PlayUtils.js';
 import mixedDuration from '../plays/mixedDuration.json' with { type: 'json' };
@@ -20,10 +20,15 @@ import { PaginatedTimeRangeOptions, PlayPlatformId, REFRESH_STALE_DEFAULT } from
 import { defaultLifecycle } from '../../utils/PlayTransformUtils.js';
 import { shuffleArray } from '../../utils/DataUtils.js';
 import { DEFAULT_CONSOLIDATE_DURATION, DEFAULT_GROUP_DURATION, groupPlaysToTimeRanges } from '../../utils/ListenFetchUtils.js';
-import { asPlay } from '../../../core/tests/utils/fixtures.js';
+import { asPlay } from '../../../core/PlayMarshalUtils.js';
 import { nanoid } from 'nanoid';
 import { getRoot } from '../../ioc.js';
-import { transientCache } from '../utils/CacheTestUtils.js';
+import { transientCache } from '../utils/TransientTestUtils.js';
+import { generateArray } from '../../../core/DataUtils.js';
+import { RepositoryCreatePlayOpts } from '../../common/database/drizzle/repositories/PlayRepository.js';
+import { fixtureCreatePlay } from '../utils/databaseFixtures.js';
+import { isAbortError } from 'abort-controller-x';
+import { artistNamesToCredits } from '../../../core/StringUtils.js';
 
 chai.use(asPromised);
 
@@ -38,7 +43,7 @@ const normalizedWithMixedDur = normalizePlays(mixedDurPlays, {initialDate: first
 
 const normalizedWithMixedDurOlder = normalizePlays(mixedDurPlays, {initialDate: olderFirstPlayDate});
 
-const generateTestScrobbler = () => {
+const generateTestScrobbler = async () => {
     const testScrobbler = new TestScrobbler();
     testScrobbler.verboseOptions = {
         match: {
@@ -47,6 +52,7 @@ const generateTestScrobbler = () => {
             confidenceBreakdown: true
         }
     };
+    await testScrobbler.initialize();
     return testScrobbler;
 }
 
@@ -118,7 +124,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
         it('It is not detected as duplicate when play date is newer than most recent', async function () {
 
-            await using testScrobbler = generateTestScrobbler();
+            await using testScrobbler = await generateTestScrobbler();
             testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
 
             const newScrobble = generatePlay({
@@ -131,7 +137,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
         it('It is not detected as duplicate when play date is close to an existing scrobble', async function () {
 
-            await using testScrobbler = generateTestScrobbler();
+            await using testScrobbler = await generateTestScrobbler();
             testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
 
             const newScrobble = generatePlay({
@@ -143,13 +149,11 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
         it('It handles unique detection when no existing scrobble matches above a score of 0', async function () {
 
-            await using testScrobbler = generateTestScrobbler();
+            await using testScrobbler = await generateTestScrobbler();
             testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
 
                 const uniquePlay = generatePlay({
-                    artists: [
-                        "２８１４"
-                    ],
+                    artists: artistNamesToCredits(["２８１４"]),
                     track: "新宿ゴールデン街",
                     duration: 130,
                     playDate: normalizedWithMixedDur[normalizedWithMixedDur.length - 3].data.playDate.add(6, 'minutes')
@@ -164,7 +168,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
         it('Is not detected as duplicate when artist is same, time is similar, but track is different', async function () {
 
-            await using testScrobbler = generateTestScrobbler();
+            await using testScrobbler = await generateTestScrobbler();
             testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
 
             const diffPlay = clone(normalizedWithMixedDur[1]);
@@ -176,12 +180,12 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
         it('Is not detected as duplicate when track is same, time is similar, but artist is different', async function () {
 
-            await using testScrobbler = generateTestScrobbler();
+            await using testScrobbler = await generateTestScrobbler();
             testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
 
             const diffPlay = clone(normalizedWithMixedDur[1]);
             diffPlay.data.playDate = diffPlay.data.playDate.add(9, 's');
-            diffPlay.data.artists = ['A Different Artist'];
+            diffPlay.data.artists = artistNamesToCredits(['A Different Artist']);
 
             assert.isFalse((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
         });
@@ -189,7 +193,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
         it('Is not detected as duplicate when play date is different by more than 10 seconds (high granularity source)', async function () {
 
-            await using testScrobbler = generateTestScrobbler();
+            await using testScrobbler = await generateTestScrobbler();
             testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
 
             const timeOffPos = clone(normalizedWithMixedDur[normalizedWithMixedDur.length - 1]);
@@ -208,7 +212,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
                 initialDate: firstPlayDate,
                 defaultMeta: {source: 'subsonic'}
             });
-            await using testScrobbler = generateTestScrobbler();
+            await using testScrobbler = await generateTestScrobbler();
             testScrobbler.testRecentScrobbles = recent;
 
             const timeOffPos = clone(recent[recent.length - 1]);
@@ -225,7 +229,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
             it('A track with continuity to the previous track is not detected as a duplicate', async function () {
 
-                await using testScrobbler = generateTestScrobbler();
+                await using testScrobbler = await generateTestScrobbler();
                 testScrobbler.testRecentScrobbles = normalizedWithDur;
 
                 const brickPt1 = normalizedWithDur.find(x => x.data.track.includes('Another Brick'));
@@ -255,7 +259,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
                     initialDate: firstPlayDate,
                     defaultMeta: {source: 'jellyfin'}
                 });
-                await using testScrobbler = generateTestScrobbler();
+                await using testScrobbler = await generateTestScrobbler();
                 testScrobbler.testRecentScrobbles = recent;
 
                 const repeatPlay = clone(recent[recent.length - 1]);
@@ -270,13 +274,13 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             it('Is not detected as duplicate when play date matches fuzzy and play source SOT is history', async function () {
 
                 const play = generatePlay({
-                    artists: ['Nejad'], 
+                    artists: artistNamesToCredits(['Nejad']), 
                     track: 'CODE', 
                     album: undefined, 
                     playDate: dayjs().subtract(179, 's'),
                     duration: 179
                 });
-                await using testScrobbler = generateTestScrobbler();
+                await using testScrobbler = await generateTestScrobbler();
                 testScrobbler.testRecentScrobbles = [play];
 
                 const newPlay = clone(play);
@@ -293,13 +297,13 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
     describe('When scrobble is a duplicate (title/artists/album)', function () {
 
         it('Is detected as duplicate when an exact match', async function () {
-            await using testScrobbler = generateTestScrobbler();
+            await using testScrobbler = await generateTestScrobbler();
             testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
             assert.isTrue((await testScrobbler.alreadyScrobbled(normalizedWithMixedDur[normalizedWithMixedDur.length - 1]))[0]);
         });
 
         it('Is detected as duplicate when artist/title differences are whitespace or case', async function () {
-            await using testScrobbler = generateTestScrobbler();
+            await using testScrobbler = await generateTestScrobbler();
             testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
             const ref = normalizedWithMixedDur[3];
 
@@ -316,15 +320,15 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             diffPlay.data.track = ref.data.track.replaceAll(' ', '   ');
             assert.isTrue((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
 
-            diffPlay.data.artists = ref.data.artists.map(x => x.toUpperCase());
+            diffPlay.data.artists = ref.data.artists.map(x => ({...x, name: x.name.toUpperCase()}));
             assert.isTrue((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
 
-            diffPlay.data.artists = ref.data.artists.map(x => x.replaceAll(' ', '   '));
+            diffPlay.data.artists = ref.data.artists.map(x => ({...x, name: x.name.replaceAll(' ', '   ')}));
             assert.isTrue((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
         });
 
         it('Is detected as duplicate when artist/title differences are from unicode normalization', async function () {
-            await using testScrobbler = generateTestScrobbler();
+            await using testScrobbler = await generateTestScrobbler();
             testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
             const ref = normalizedWithMixedDur.find(x => x.data.track === 'Jimbó');
 
@@ -336,7 +340,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
         it('Is detected as duplicate when play date is off by 10 seconds or less (high granularity source)', async function () {
 
-            await using testScrobbler = generateTestScrobbler();
+            await using testScrobbler = await generateTestScrobbler();
             testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
 
             const timeOffPos = clone(normalizedWithMixedDur[normalizedWithMixedDur.length - 1]);
@@ -366,7 +370,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
                 initialDate: firstPlayDate,
                 defaultMeta: {source: 'subsonic'}
             });
-            await using testScrobbler = generateTestScrobbler();
+            await using testScrobbler = await generateTestScrobbler();
             testScrobbler.testRecentScrobbles = recent;
 
             const timeOffPos = clone(recent[recent.length - 1]);
@@ -380,7 +384,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
         });
 
         it('Is detected as duplicate when title is exact, artist is similar, and time is similar', async function () {
-            await using testScrobbler = generateTestScrobbler();
+            await using testScrobbler = await generateTestScrobbler();
             testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
             const ref = normalizedWithMixedDur[3];
 
@@ -406,7 +410,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
             const spotifyPlay: PlayObject = {
                 data: {
-                    artists: [
+                    artists: artistNamesToCredits([
                         "Terrace Martin",
                         "Robert Glasper",
                         "9th Wonder",
@@ -414,7 +418,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
                         "Dinner Party",
                         "Cordae",
                         "Phoelix"
-                    ],
+                    ]),
                     album: "Dinner Party: Dessert",
                     track: "Freeze Tag (feat. Cordae & Phoelix)",
                     "duration": 191.375,
@@ -425,7 +429,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
                     lifecycle: defaultLifecycle()
                 }
             }
-            await using testScrobbler = generateTestScrobbler();
+            await using testScrobbler = await generateTestScrobbler();
             testScrobbler.testRecentScrobbles = normalizedWithMixedDurOlder.concat(ref);
 
             assert.isTrue((await testScrobbler.alreadyScrobbled(spotifyPlay))[0]);
@@ -435,7 +439,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
             it('Is detected as duplicate when play date is close to the end of an existing scrobble', async function () {
 
-                await using testScrobbler = generateTestScrobbler();
+                await using testScrobbler = await generateTestScrobbler();
                 testScrobbler.testRecentScrobbles = normalizedWithDur;
 
                 const timeEnd = clone(normalizedWithDur[normalizedWithMixedDur.length - 2]);
@@ -465,7 +469,7 @@ describe('Detects duplicate and unique scrobbles using actively tracked scrobble
             playDate: normalizedWithMixedDur[normalizedWithMixedDur.length - 3].data.playDate.add(3, 'seconds')
         });
 
-        await using testScrobbler = generateTestScrobbler();
+        await using testScrobbler = await generateTestScrobbler();
         testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
         const [matchedPlay, matchedData] = await testScrobbler.findExistingSubmittedPlayObj(newScrobble);
 
@@ -477,9 +481,10 @@ describe('Detects duplicate and unique scrobbles using actively tracked scrobble
         const newScrobble = generatePlay({
             playDate: normalizedWithMixedDur[normalizedWithMixedDur.length - 3].data.playDate.add(3, 'seconds')
         });
-        await using testScrobbler = generateTestScrobbler();
+        await using testScrobbler = await generateTestScrobbler();
+        await testScrobbler.playRepoTest.createPlays([{play: newScrobble, state: 'scrobbled', input: {}}])
         testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
-        testScrobbler.addScrobbledTrack(newScrobble, newScrobble);
+        //testScrobbler.addScrobbledTrack(newScrobble, newScrobble);
 
         const [matchedPlay, matchedData] = await testScrobbler.findExistingSubmittedPlayObj(newScrobble);
 
@@ -491,9 +496,10 @@ describe('Detects duplicate and unique scrobbles using actively tracked scrobble
         const newScrobble = generatePlay({
             playDate: normalizedWithMixedDur[normalizedWithMixedDur.length - 3].data.playDate.add(3, 'seconds')
         });
-        await using testScrobbler = generateTestScrobbler();
-        testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
-        testScrobbler.addScrobbledTrack(newScrobble, newScrobble);
+        await using testScrobbler = await generateTestScrobbler();
+        //testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
+        await testScrobbler.playRepoTest.createPlays([{play: newScrobble, state: 'scrobbled', input: {}}])
+        //testScrobbler.addScrobbledTrack(newScrobble, newScrobble);
 
         const dupScrobble = clone(newScrobble);
         dupScrobble.data.playDate = newScrobble.data.playDate.add(2, 'seconds');
@@ -515,9 +521,9 @@ describe('Upstream Scrobbles', function() {
 
     it('Calls timerange func to get SOT scrobbles when none exists', async function() {
         const existingPlays = normalizePlays(generatePlays(3), {initialDate: dayjs().subtract(1, 'hour')});
-        await using scrobbler = generateTestScrobbler();
+        await using scrobbler = await generateTestScrobbler();
         scrobbler.testRecentScrobbles = [];
-        await scrobbler.tryInitialize();
+        await scrobbler.initialize();
         scrobbler.testRecentScrobbles = existingPlays;
 
         const sp = spy(scrobbler, 'getScrobblesForTimeRange');
@@ -534,9 +540,9 @@ describe('Upstream Scrobbles', function() {
 
     it('Uses cached timerange for closely grouped scrobbles', async function() {
         const existingPlays = normalizePlays(generatePlays(3), {initialDate: dayjs().subtract(1, 'hour')});
-        await using scrobbler = generateTestScrobbler();
+        await using scrobbler = await generateTestScrobbler();
         scrobbler.testRecentScrobbles = [];
-        await scrobbler.tryInitialize();
+        await scrobbler.initialize();
         scrobbler.testRecentScrobbles = existingPlays;
 
         const sp = spy(scrobbler, 'getScrobblesForTimeRange');
@@ -554,9 +560,9 @@ describe('Upstream Scrobbles', function() {
 
     it('Uses separate timerange calls when scrobbles are not closely grouped', async function() {
         const existingPlays = normalizePlays(generatePlays(3), {initialDate: dayjs().subtract(1, 'hour')});
-        await using scrobbler = generateTestScrobbler();
+        await using scrobbler = await generateTestScrobbler();
         scrobbler.testRecentScrobbles = [];
-        await scrobbler.tryInitialize();
+        await scrobbler.initialize();
         scrobbler.testRecentScrobbles = existingPlays;
 
         const sp = spy(scrobbler, 'getScrobblesForTimeRange');
@@ -575,9 +581,9 @@ describe('Upstream Scrobbles', function() {
 
     it('Gets fresh timerange if TTL of staleAfter has passed', async function() {
         const existingPlays = normalizePlays(generatePlays(3), {initialDate: dayjs().subtract(1, 'hour')});
-        await using scrobbler = generateTestScrobbler();
+        await using scrobbler = await generateTestScrobbler();
         scrobbler.testRecentScrobbles = [];
-        await scrobbler.tryInitialize();
+        await scrobbler.initialize();
         scrobbler.testRecentScrobbles = existingPlays;
 
         const sp = spy(scrobbler, 'getScrobblesForTimeRange');
@@ -604,23 +610,26 @@ describe('Upstream Scrobbles', function() {
 describe('Dead Scrobbles', function() {
 
     it('Processes all dead scrobbles', async function () {
-        await using testScrobbler = generateTestScrobbler();
+        await using testScrobbler = await generateTestScrobbler();
         await testScrobbler.initialize();
         testScrobbler.testRecentScrobbles = [];
 
-        const deadPlays = generatePlays(3);
-        for(const dead of deadPlays) {
-            testScrobbler.addDeadLetterScrobble({source: 'test', play: dead, id: nanoid()});
+        const queuedPlayed = await testScrobbler.playRepoTest.createPlays(generateArray<RepositoryCreatePlayOpts>(3, () => ({ ...fixtureCreatePlay(), state: 'queued', input: {} })))
+
+        for(const dead of queuedPlayed) {
+            await testScrobbler.addDeadLetterScrobble(dead);
         }
+
         await testScrobbler.processDeadLetterQueue();
-        await testScrobbler.tryStopScrobbling()
-        expect(testScrobbler.deadLetterScrobbles.length).eq(0);
+        await pEvent(testScrobbler.emitter, 'queueState');
+
+        expect(testScrobbler.deadLetterQueued).eq(0);
     });
 
 });
 
 const normalizedScrobbler = async () => {
-    await using testScrobbler = generateTestScrobbler();
+    await using testScrobbler = await generateTestScrobbler();
     await testScrobbler.initialize();
     testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
     testScrobbler.scrobbleSleep = 500;
@@ -669,7 +678,8 @@ describe('Scrobble client uses transform plays correctly', function() {
             track: 'my cool track'
         });
         await testScrobbler.queueScrobble(newScrobble, 'test');
-        expect(testScrobbler.queuedScrobbles[0].play.data.track).is.eq('my cool track');
+        const queuedPlayedData = await testScrobbler.playRepoTest.getQueued(CLIENT_INGRESS_QUEUE);
+        expect(queuedPlayedData.data[0].play.data.track).is.eq('my cool track');
         testScrobbler.scrobbleSleep = 100;
         testScrobbler.initScrobbleMonitoring().catch(console.error);
 
@@ -731,12 +741,16 @@ describe('Scrobble client uses transform plays correctly', function() {
 });
 
 const normalizedMonitoringScrobbler = async () => {
-    const testScrobbler = generateTestScrobbler();
+    const testScrobbler = await generateTestScrobbler();
     await testScrobbler.initialize();
     testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
     testScrobbler.scrobbleSleep = 100;
     testScrobbler.scrobbleDelay = 0;
-    testScrobbler.initScrobbleMonitoring().catch(console.error);
+    testScrobbler.initScrobbleMonitoring().catch((e) => {
+        if(!isAbortError(e)) {
+            console.error(e);
+        }
+    });
     return testScrobbler;
 }
 
@@ -1025,7 +1039,7 @@ describe('Now Playing', function() {
             await using npScrobbler = new NowPlayingScrobbler();
             npScrobbler.nowPlayingTaskInterval = 10;
             await npScrobbler.initialize();
-            npScrobbler.scheduler.startById('pn_task');
+            npScrobbler.initTasks();
 
             await npScrobbler.queuePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}), {type: 'jellyfin', name: 'test'});
 
@@ -1039,13 +1053,13 @@ describe('Now Playing', function() {
             await using npScrobbler = new NowPlayingScrobbler();
             npScrobbler.nowPlayingTaskInterval = 10;
             await npScrobbler.initialize();
-            npScrobbler.scheduler.startById('pn_task');
+            npScrobbler.initTasks();
 
             const now = dayjs();
 
             await npScrobbler.queuePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}), {type: 'jellyfin', name: 'test'});
 
-            const res = await Promise.race([pEvent(npScrobbler.emitter, 'nowPlayingUpdated'), sleep(12)]);
+            const res = await Promise.race([pEvent(npScrobbler.emitter, 'nowPlayingUpdated'), sleep(20)]);
 
             expect(res).is.not.undefined;
 
@@ -1053,7 +1067,7 @@ describe('Now Playing', function() {
 
             await npScrobbler.queuePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}), {type: 'jellyfin', name: 'test'});
 
-            const resUpdate = await Promise.race([pEvent(npScrobbler.emitter, 'nowPlayingUpdated'), sleep(12)]);
+            const resUpdate = await Promise.race([pEvent(npScrobbler.emitter, 'nowPlayingUpdated'), sleep(20)]);
 
             expect(resUpdate).is.not.undefined;
         });

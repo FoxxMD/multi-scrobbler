@@ -14,5 +14,5 @@
     "baseUrl": "./docs",
     "lib": ["DOM"]
   },
-  "include": ["src/socialCard/ImageRenderers.tsx"]
+  "include": ["src/socialCard/ImageRenderers.tsx", "types"]
 }

@@ -2,9 +2,10 @@ import { strategies, stringSameness, StringSamenessResult } from "@foxxmd/string
 import { hasher } from 'node-object-hash';
 import { PlayObject } from "../../core/Atomic.js";
 import { asPlayerStateData, DELIMITERS, DELIMITERS_NO_AMP, PlayerStateDataMaybePlay } from "../common/infrastructure/Atomic.js";
-import { getPlatformIdFromData, intersect, parseBool, parseBoolStrict, parseRegexSingleOrFail } from "../utils.js";
+import { getPlatformIdFromData, intersect, parseBool, parseBoolStrict } from "../utils.js";
 import { genGroupIdStr } from '../../core/PlayUtils.js';
 import { buildTrackString } from "../../core/StringUtils.js";
+import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 
 const {levenStrategy, diceStrategy} = strategies;
 
@@ -104,7 +105,7 @@ export const parseCredits = (str: string, delimiters?: boolean | string[]): Play
     let primary: string | undefined;
     let secondary: string[] = [];
     let suffix: string | undefined;
-    const results = parseRegexSingleOrFail(PRIMARY_SECONDARY_SECTIONS_REGEX, str);
+    const results = parseRegexSingle(PRIMARY_SECONDARY_SECTIONS_REGEX, str);
     if(results !== undefined) {
 
         let delims: string[] | undefined;
@@ -116,7 +117,7 @@ export const parseCredits = (str: string, delimiters?: boolean | string[]): Play
 
         primary = results.named.primary.trim();
         for(const strat of SECONDARY_REGEX_STRATS) {
-            const secCredits = parseRegexSingleOrFail(strat, results.named.secondary);
+            const secCredits = parseRegexSingle(strat, results.named.secondary);
             if(secCredits !== undefined) {
                 secondary = parseContextAwareStringList(secCredits.named.credits as string, delims)
                 suffix = secCredits.named.creditsSuffix;
@@ -281,7 +282,7 @@ export const compareScrobbleArtists = (existing: PlayObject, candidate: PlayObje
         }
     } = candidate;
 
-    return compareNormalizedStrings(existingArtists.reduce((acc, curr) => `${acc} ${curr}`, ''), candidateArtists.reduce((acc, curr) => `${acc} ${curr}`, '')).highScore;
+    return compareNormalizedStrings(existingArtists.reduce((acc, curr) => `${acc} ${curr.name}`, ''), candidateArtists.reduce((acc, curr) => `${acc} ${curr.name}`, '')).highScore;
 }
 
 /**
@@ -437,7 +438,7 @@ export const buildStatePlayerPlayIdententifyingInfo = (data: PlayObject | Player
 export const LZ_VERSION_PATH: RegExp = new RegExp(/\/?1\/?$/);
 
 export const normalizeListenbrainzUrl = (urlVal: string): string | undefined => {
-    if (parseRegexSingleOrFail(LZ_VERSION_PATH, urlVal)) {
+    if (parseRegexSingle(LZ_VERSION_PATH, urlVal)) {
         return urlVal.replace(LZ_VERSION_PATH, '');
     }
     return undefined;

@@ -1,6 +1,6 @@
 import EventEmitter from "events";
-import { PlayObject, PlayObjectLifecycleless, URLData } from "../../core/Atomic.js";
-import { buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
+import { BrainzMeta, PlayObject, PlayObjectLifecycleless, URLData } from "../../core/Atomic.js";
+import { artistNamesToCredits, buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import {
     asPlayerStateDataMaybePlay,
     FormatPlayObjectOptions,
@@ -376,8 +376,8 @@ export default class PlexApiSource extends MemoryPositionalSource {
 
         const play: PlayObjectLifecycleless = {
             data: {
-                artists: realArtists,
-                albumArtists,
+                artists: artistNamesToCredits(realArtists),
+                albumArtists: artistNamesToCredits(albumArtists),
                 album,
                 track,
                 // albumArtists: AlbumArtists !== undefined ? AlbumArtists.map(x => x.Name) : undefined,
@@ -422,28 +422,45 @@ export default class PlexApiSource extends MemoryPositionalSource {
                     sessionData[0].play.data.meta = {};
                 }
                 
-                const prevBrainzMeta = sessionData[0].play.data.meta.brainz ?? {};
-                sessionData[0].play.data.meta.brainz = {
-                    ...prevBrainzMeta,
-                    track: trackMbId,
-                    album: albumMbId,
-                    // Plex doesn't track MBIDs for track artists, so we use the
-                    // album artist MBID instead BUT ONLY if
-                    // * artists aren't populated 
-                    // * or artists == albumArtists
-                    // AND explicitly *do not* allow Various Artists MBID for artists
-                    // --
-                    // otherwise we might accidentally set "Various Artists" like MBIDs as actual artist
-                    artist: albumArtistMbId !== undefined && albumArtistMbId !== MBID_VARIOUS_ARTISTS && (sessionData[0].play.data.artists.length === 0 || sessionData[0].play.data.artists.every(y => (sessionData[0].play.data.albumArtists ?? []).includes(y)))
-                        ? [...new Set([...(prevBrainzMeta.artist ?? []), albumArtistMbId])]
-                        : prevBrainzMeta.artist,
-                    albumArtist: albumArtistMbId !== undefined
-                        ? [...new Set([...(prevBrainzMeta.albumArtist ?? []), albumArtistMbId])]
-                        : prevBrainzMeta.albumArtist,
-                };
+                const computedBrainz: BrainzMeta = {
+                    ...(sessionData[0].play.data.meta.brainz ?? {}),
+                    track: trackMbId ?? sessionData[0].play.data?.meta?.brainz?.track,
+                    album: albumMbId ?? sessionData[0].play.data?.meta?.brainz?.album,
+                }
+                // Plex doesn't store MBIDs for track artists, so we use the
+                // album artist MBID instead BUT ONLY if
+                // * album artists aren't populated 
+                // * or artists == albumArtists
+                // AND explicitly *do not* allow Various Artists MBID for artists
+                // --
+                // otherwise we might accidentally set "Various Artists" like MBIDs as actual artist
+                if(albumArtistMbId !== undefined 
+                    && albumArtistMbId !== MBID_VARIOUS_ARTISTS 
+                    && (sessionData[0].play.data.albumArtists.length === 0 
+                        || sessionData[0].play.data.artists.every(y => (sessionData[0].play.data.albumArtists ?? []).includes(y)))) {
+                    computedBrainz.artist = [...new Set([...(computedBrainz.artist ?? []), albumArtistMbId])];
+
+                    // since we don't get artist and mbid at the same time we only be sure these are actually associated
+                    // if there is only one of each
+                    if(computedBrainz.artist.length === 1 && sessionData[0].play.data.artists.length === 1) {
+                        sessionData[0].play.data.artists[0].mbid = computedBrainz.artist[0];
+                    }
+                }
+
+                if(albumArtistMbId !== undefined) {
+                    computedBrainz.albumArtist = [...new Set([...(computedBrainz.albumArtist ?? []), albumArtistMbId])];
+
+                    // since we don't get albumartist and mbid at the same time we only be sure these are actually associated
+                    // if there is only one of each
+                    if(computedBrainz.albumArtist.length === 1 && sessionData[0].play.data.albumArtists.length === 1) {
+                        sessionData[0].play.data.albumArtists[0].mbid = computedBrainz.albumArtist[0];
+                    }
+                }
+
+                sessionData[0].play.data.meta.brainz = computedBrainz;
 
                 // need to add this to original object since lifecycle has already been set in sessionToPlayerState
-                sessionData[0].play.meta.lifecycle.original = clone(sessionData[0].play);
+                //sessionData[0].play.meta.lifecycle.original = clone(sessionData[0].play);
               
                 validSessions.push(sessionData[0]);
             } else if(this.logFilterFailure !== false) {

@@ -3,7 +3,7 @@ import { Dayjs, ManipulateType } from "dayjs";
 import { Request, Response } from "express";
 import { type NextFunction, type ParamsDictionary, type Query } from "express-serve-static-core";
 import { FixedSizeList } from 'fixed-size-list';
-import { isPlayObject, PlayMetaLifecycleless, PlayObject, PlayObjectLifecycleless, UnixTimestamp } from "../../../core/Atomic.js";
+import { ErrorLike, isPlayObject, PlayMetaLifecycleless, PlayObject, PlayObjectLifecycleless, UnixTimestamp } from "../../../core/Atomic.js";
 import TupleMap from "../TupleMap.js";
 import { MusicBrainzApi } from 'musicbrainz-api';
 import { SourceType } from './config/source/sources.js';
@@ -140,9 +140,6 @@ export interface RemoteIdentityParts {
     proxy: string | undefined,
     agent: string | undefined
 }
-
-// https://stackoverflow.com/questions/40510611/typescript-interface-require-one-of-two-properties-to-exist#comment116238286_49725198
-export type RequireAtLeastOne<T, R extends keyof T = keyof T> = Omit<T, R> & {   [ P in R ] : Required<Pick<T, P>> & Partial<Omit<T, P>> }[R];
 
 /**
  * https://www.last.fm/api/scrobbling (When is a scrobble a scrobble?)
@@ -299,6 +296,21 @@ export interface CacheConfigOptions {
     regex?: number
 }
 
+export interface CacheConfigUser {
+    auth?: {
+        provider: 'valkey' | 'file',
+        [key: string]: any
+    };
+    valkey?: string
+    /** Number of regex functions to cache (LRU)
+     * 
+     * @default 200
+     */
+    regex?: number
+    // to allow deprecated scrobble config without having it show up in schema docs
+    [key: string]: any
+}
+
 export interface MusicbrainzApiConfigData {
     url?: string
     contact: string,
@@ -415,3 +427,23 @@ export interface ScrobbleRangeResult {
 }
 
 export const REFRESH_STALE_DEFAULT = 60;
+
+/**
+ * A duration of time
+ * 
+ * May be either:
+ * 
+ * * a `number` of seconds
+ * * a `string` containing a number and a unit of time compatible with dayjs
+ * 
+ * @example [60, 3600, "1 hour", "4 days"]
+ */
+export type DurationValue = number | string;
+
+export type MigrationStatus = {
+    backupRequired: boolean, 
+    pending: string[],
+    reason?: string,
+    log?: string,
+    error?: ErrorLike
+};

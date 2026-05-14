@@ -15,6 +15,7 @@ import IcecastMetadataStats from "icecast-metadata-stats";
 import { parseArtistCredits, parseTrackCredits } from "../utils/StringUtils.js";
 import { isDebugMode, sleep } from "../utils.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
+import { artistNamesToCredits } from "../../core/StringUtils.js";
 
 
 export class IcecastSource extends MemorySource {
@@ -211,7 +212,7 @@ const formatPlayObj = (obj: IcecastMetadata, options: FormatPlayObjectOptions = 
     const play: PlayObjectLifecycleless = {
         data: {
             track,
-            artists
+            artists: artistNamesToCredits(artists)
         },
         meta: {
             source: 'icecast',

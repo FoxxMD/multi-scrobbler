@@ -17,6 +17,7 @@ import {
 import { AzuracastSourceConfig, AzuraNowPlayingResponse, AzuraStationResponse } from "../common/infrastructure/config/source/azuracast.js";
 import { isPortReachable, normalizeWSAddress } from "../utils/NetworkUtils.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
+import { artistNamesToCredits } from "../../core/StringUtils.js";
 
 
 export class AzuracastSource extends MemorySource {
@@ -250,7 +251,7 @@ const formatPlayObj = (obj: AzuraNowPlayingResponse, options: FormatPlayObjectOp
 
     const play: PlayObjectLifecycleless = {
         data: {
-            artists: artist !== undefined && artist !== '' ? [artist] : [],
+            artists: artistNamesToCredits(artist !== undefined && artist !== '' ? [artist] : []),
             album: album !== '' ? album : undefined,
             track,
             duration

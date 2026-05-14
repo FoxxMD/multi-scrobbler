@@ -8,7 +8,8 @@ import {Provider} from "../client/components/Provider";
 import { generateJsonPlays } from "../core/PlayTestUtils.js";
 import { ErrorLike, JsonPlayObject, PlayLifecycle } from "../core/Atomic.js";
 import { examplePlay, lastfmErrorExample } from "./storyUtils.js";
-import {asJsonPlayObject, generatePlayWithLifecycle} from '../core/tests/utils/fixtures'
+import {generatePlayWithLifecycle} from '../core/tests/utils/fixtures'
+import { asJsonPlayObject } from "../core/PlayMarshalUtils.js";
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({

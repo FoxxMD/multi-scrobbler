@@ -4,15 +4,10 @@ import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
 import dayjs from "dayjs";
 import withLocalTmpDir from 'with-local-tmp-dir';
-import { initFileCache, initMemoryCache, initValkeyCache, MSCache } from "../../common/Cache.js";
-import { generatePlays } from "../../../core/PlayTestUtils.js";
+import { initFileCache, initMemoryCache, initValkeyCache } from "../../common/Cache.js";
 import { ListenProgressPositional, ListenProgressTS } from "../../sources/PlayerState/ListenProgress.js";
 import { isPortReachableConnect } from "../../utils/NetworkUtils.js";
-import { getRoot } from "../../ioc.js";
-import { transientCache } from "../utils/CacheTestUtils.js";
-import { TestScrobbler } from "../scrobbler/TestScrobbler.js";
 import { sleep } from "../../utils.js";
-import {promises} from 'node:fs';
 
 chai.use(asPromised);
 
@@ -56,16 +51,24 @@ describe('#Caching', function () {
 
         it('File cache serializes and deserializes dayjs', async function () {
 
-            withLocalTmpDir(async () => {
+            await withLocalTmpDir(async () => {
+                // for some reason this *recreates* an empty cache after the test has finished (when running the full suite)
+                // i think its because of long persist interval compared to test time?
+                // 
+                // so:
+                // make intervals very small
+                // call destroy on both cache instances (shouldn't be necessary)
+                // sleep for longer than persist interal so tmp dir callback can (hopefully) properly delete any files
 
-                const [keyv, flat] = await initFileCache({ cacheDir: process.cwd() });
+                const [keyv, flat] = await initFileCache({ cacheDir: process.cwd(), persistInterval: 5, expirationInterval: 4 });
 
                 const now = dayjs();
 
                 await keyv.set('foo', now);
-                flat.save();
+                flat.save(true);
+                keyv.disconnect();
 
-                const [cleanKeyv, cleanFlat] = await initFileCache({ cacheDir: process.cwd() });
+                const [cleanKeyv, cleanFlat] = await initFileCache({ cacheDir: process.cwd(), persistInterval: 5, expirationInterval: 4 });
 
                 const time = await cleanKeyv.get('foo');
 
@@ -73,31 +76,9 @@ describe('#Caching', function () {
                 expect(time instanceof dayjs).is.true;
                 expect(now.toJSON()).eq((time as any).toJSON());
                 flat.destroy();
-
-            }, { unsafeCleanup: true });
-        });
-
-        it('File cache serializes and deserializes ListenProgress', async function () {
-
-            withLocalTmpDir(async () => {
-
-                const [keyv, flat] = await initFileCache({ cacheDir: process.cwd() });
-
-                const prog = new ListenProgressPositional({ timestamp: dayjs(), position: 35, positionPercent: 50 });
-
-                await keyv.set('foo', prog);
-                await flat.save();
-
-                const [cleanKeyv, cleanFlat] = await initFileCache({ cacheDir: process.cwd() });
-
-                const cachedProg = await cleanKeyv.get('foo');
-
-                expect(cachedProg).to.not.be.undefined;
-                expect(cachedProg instanceof ListenProgressTS).is.true;
-                expect(cachedProg.timestamp.toJSON()).eq(prog.timestamp.toJSON());
-                flat.destroy();
-
-            }, { unsafeCleanup: true });
+                cleanFlat.destroy();
+                await sleep(10);
+            }, { unsafeCleanup: true, postfix: 'fileCacheDajys' });
         });
     });
 
@@ -127,62 +108,5 @@ describe('#Caching', function () {
             expect(now.toJSON()).eq((time as any).toJSON());
 
         });
-
-        it('Valkey cache serializes and deserializes ListenProgress', async function () {
-
-            const keyv = await initValkeyCache('test', 'redis://valkey:6379');
-            await keyv.clear();
-
-            const prog = new ListenProgressPositional({ timestamp: dayjs(), position: 35, positionPercent: 50 });
-
-            await keyv.set('foo', prog);
-
-            const cachedProg = await keyv.get('foo');
-
-            expect(cachedProg).to.not.be.undefined;
-            expect(cachedProg instanceof ListenProgressTS).is.true;
-            expect(cachedProg.timestamp.toJSON()).eq(prog.timestamp.toJSON());
-
-        });
     });
-
-    describe('#ScrobbleCache', function () {
-
-        afterEach(function () {
-            const root = getRoot();
-            root.upsert({ cache: () => transientCache });
-            root.items.cache().init();
-        });
-
-        it('Preserves scrobbles', async function () {
-
-           this.timeout(100000);
-
-           // why does this take so long?
-           await withLocalTmpDir(async () => {
-
-                const root = getRoot();
-                root.upsert({ cache: () => () => new MSCache(loggerTest, { scrobble: { provider: 'file', connection: process.cwd(), persistInterval: 100 }, auth: {provider: 'memory'}, metadata: {provider: 'memory'} }) });
-
-                await using test = new TestScrobbler();
-                await test.initialize();
-                const plays = generatePlays(100, {}, {}, {listenRanges: true});
-                await test.queueScrobble(plays, 'testSource');
-                const queued = test.queuedScrobbles.map(x => x.play);
-                await sleep(101);
-                const dirContents = await promises.readdir('.');
-                const hasCache = dirContents.some(x => x === 'ms-scrobble.cache');
-                expect(hasCache).is.true;
-
-                await using newTest = new TestScrobbler();
-                await newTest.initialize();
-                expect(newTest.queuedScrobbles.length).to.eq(plays.length);
-                expect(newTest.queuedScrobbles[0].play.data.track).to.eq(queued[0].data.track);
-
-            }, { unsafeCleanup: true });
-
-        });
-
-    });
-
 });

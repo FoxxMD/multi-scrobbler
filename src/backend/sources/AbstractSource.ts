@@ -2,7 +2,7 @@ import { childLogger, LogDataPretty, LogLevel } from '@foxxmd/logging';
 import dayjs, { Dayjs } from "dayjs";
 import { EventEmitter } from "events";
 import { FixedSizeList } from "fixed-size-list";
-import { PlayObject } from "../../core/Atomic.js";
+import { JsonPlayObject, PlayMatchResult, PlayObject } from "../../core/Atomic.js";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
 import AbstractComponent from "../common/AbstractComponent.js";
 import {
@@ -31,21 +31,24 @@ import {
     sleep,
     sortByOldestPlayDate,
 } from "../utils.js";
-import { sortByNewestPlayDate } from '../../core/PlayUtils.js';
+import { genGroupIdStr, sortByNewestPlayDate } from '../../core/PlayUtils.js';
 import { formatNumber } from '../../core/DataUtils.js';
 import { timeToHumanTimestamp } from "../../core/TimeUtils.js";
 import { todayAwareFormat } from "../../core/TimeUtils.js";
 import { getRoot } from '../ioc.js';
 import { componentFileLogger } from '../common/logging.js';
-import { WebhookPayload } from '../common/infrastructure/config/health/webhooks.js';
-import { isAbortReasonErrorLike, messageWithCauses, messageWithCausesTruncatedDefault } from '../utils/ErrorUtils.js';
-import { genericSourcePlayMatch } from '../utils/PlayComparisonUtils.js';
+import { WebhookPayload } from '../common/infrastructure/config/health/webhooks.js';;
+import { messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.js";
+import { existingScrobble, ExistingScrobbleOpts, genericSourcePlayMatch } from '../utils/PlayComparisonUtils.js';
 import { findAsync, staggerMapper, StaggerOptions } from '../utils/AsyncUtils.js';
 import pMap, {pMapIterable} from 'p-map';
 import prom, { Counter, Gauge } from 'prom-client';
 import { normalizeStr } from '../utils/StringUtils.js';
 import { spawn, catchAbortError, isAbortError, rethrowAbortError, delay, forever, AbortError, throwIfAborted } from 'abort-controller-x';
 import { AbortedError, generateLoggableAbortReason } from '../common/errors/MSErrors.js';
+import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, queryArgsFromRequest, QueryPlaysOpts, RequestPlayQuery } from '../common/database/drizzle/repositories/PlayRepository.js';
+import { asPlay } from '../../core/PlayMarshalUtils.js';
+import { AsyncTask, SimpleIntervalJob, ToadScheduler } from 'toad-scheduler';
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -57,7 +60,7 @@ export interface RecentlyPlayedOptions {
 export default abstract class AbstractSource extends AbstractComponent implements Authenticatable {
 
     name: string;
-    type: SourceType;
+    declare type: SourceType;
 
     declare config: SourceConfig;
     clients: string[];
@@ -88,6 +91,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     manualListening?: boolean
 
+    scheduler: ToadScheduler = new ToadScheduler();
     emitter: EventEmitter;
 
     protected SCROBBLE_BACKLOG_COUNT: number = 30;
@@ -103,8 +107,15 @@ export default abstract class AbstractSource extends AbstractComponent implement
         postCompare: staggerMapper<PlayObject, PlayObject>({concurrency: 2})
     }
 
+    declare protected componentType: 'source';
+
+    protected playRepo!: DrizzlePlayRepository;
+
+    existingDiscoveredPlay: (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => Promise<PlayMatchResult>
+
     constructor(type: SourceType, name: string, config: SourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super(config);
+        this.componentType = 'source';
         const {clients = [] } = config;
         this.type = type;
         this.name = name;
@@ -119,6 +130,15 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.emitter = emitter;
         
         this.discoveredCounter = getRoot().items.sourceMetics.discovered;
+
+        const existingScrobbleOpts: ExistingScrobbleOpts = {
+            logger: this.logger,
+            transformRules: this.transformRules,
+            transformPlay: this.transformPlay,
+            existingSubmitted: async (_) => [undefined, undefined]
+        }
+        this.existingDiscoveredPlay = (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => existingScrobble(playObjPre, existingScrobbles, existingScrobbleOpts, log);
+            
     }
 
     async [Symbol.asyncDispose]() {
@@ -127,9 +147,68 @@ export default abstract class AbstractSource extends AbstractComponent implement
         }
     }
 
+    public initTasks() {
+        if(this.scheduler.existsById('heartbeat') === false) {
+            this.logger.info('Adding Heartbeat Task and running immediately');
+            this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
+                minutes: 20,
+                runImmediately: true
+            }, new AsyncTask(
+                'Heartbeat',
+                (): Promise<any> => {
+                    return this.heartbeatTask().then(() => null).catch((err) => {
+                        this.logger.error(err);
+                    });
+                },
+                (err: Error) => {
+                    this.logger.error(err);
+                }
+            ), {id: 'heartbeat'}));
+        } else {
+            this.logger.warn('Heartbeat task is already added to scheduler.');
+        }
+    }
+
+    protected async heartbeatTask(): Promise<boolean> {
+        if(!this.isReady()) {
+            if(!this.canAuthUnattended()) {
+                this.logger.warn({labels: 'Heartbeat'}, 'Source is not ready but will not try to initialize because auth state is not good and cannot be corrected unattended.')
+                return false;
+            }
+            try {
+                await this.initialize({force: false, notify: true, notifyTitle: 'Could not initialize automatically'});
+            } catch (e) {
+                this.logger.error(new Error('Could not initialize automatically', {cause: e}));
+                return false;
+            }
+
+            if('discoverDevices' in this && typeof this.discoverDevices === 'function') {
+                this.discoverDevices();
+            }
+
+            if (this.canPoll && !this.polling) {
+                if(!this.canAuthUnattended()) {
+                    this.logger.warn({labels: 'Heartbeat'}, 'Should be polling but will not attempt to start because auth state is not good and cannot be correct unattended.');
+                    return false;
+                } else {
+                    this.logger.info({labels: 'Heartbeat'}, 'Should be polling, attempting to start polling...');
+                    this.poll({force: false, notify: true}).catch(e => this.logger.error(e));
+                }
+                return true;
+            }
+        }
+        return true;
+    }
+
     protected async postCache(): Promise<void> {
         await super.postCache();
         this.generateStaggerMappers();
+    }
+
+    protected async postDatabase(): Promise<void> {
+        this.playRepo = new DrizzlePlayRepository(this.db, {logger: this.logger});
+        this.tracksDiscovered = this.dbComponent.countLive;
+        this.playRepo.componentId = this.dbComponent.id;
     }
 
     protected generateStaggerMappers() {
@@ -200,69 +279,68 @@ export default abstract class AbstractSource extends AbstractComponent implement
     // TODO make this more descriptive? or move it elsewhere
     recentlyPlayedTrackIsValid = (playObj: PlayObject) => true
 
-    protected addPlayToDiscovered = (play: PlayObject) => {
-        const platformId = this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID;
-        const list = this.recentDiscoveredPlays.get(platformId) ?? new FixedSizeList<ProgressAwarePlayObject>(200);
-        list.add(play);
-        this.recentDiscoveredPlays.set(platformId, list);
+    protected addPlayToDiscovered = async (play: PlayObject): Promise<PlayObject> => {
+        const playRow = await this.playRepo.createPlays([(playToRepositoryCreatePlayOpts({play, state: 'discovered'}))]);
+        const recentPlays = await this.getRecentlyDiscoveredPlays(false);
+        // only need to update if its already in memory,
+        // and better to update in-memory than clear cache so we aren't refetching from db on every discover
+        if(recentPlays !== undefined) {
+            recentPlays.push(play);
+            recentPlays.sort(sortByOldestPlayDate);
+            this.cache.cacheDb.set(this.recentDiscoveredCacheKey(), recentPlays, '2m');
+        }
         this.tracksDiscovered++;
         this.logger.info(`Discovered => ${buildTrackString(play)}`);
         this.emitEvent('discovered', {play});
         this.discoveredCounter.labels(this.getPrometheusLabels()).inc();
+        play.id = playRow[0].id;
+        play.uid = playRow[0].uid;
+        return play;
     }
 
-    getFlatRecentlyDiscoveredPlays = (): PlayObject[] =>
-         Array.from(this.recentDiscoveredPlays.values()).map(x => x.data).flat(3).sort(sortByNewestPlayDate)
-    
+    getFlatRecentlyDiscoveredPlays = async (): Promise<PlayObject[]> => {
+        const list: PlayObject[] = await this.getRecentlyDiscoveredPlays();
+        return list.sort(sortByNewestPlayDate);
+    }
 
-    getRecentlyDiscoveredPlaysByPlatform = (platformId: PlayPlatformId): PlayObject[] => {
-        const list = this.recentDiscoveredPlays.get(platformId);
-        if (list !== undefined) {
-            const data = [...list.data];
-            data.sort(sortByOldestPlayDate);
-            return data;
+    getRecentPlaysApi = async (query: RequestPlayQuery) => {
+        const res = await this.playRepo.findPlays({
+            limit: 100,
+            ...queryArgsFromRequest(query)
+        });
+        return res.map((x) => {
+            const {id, ...rest} = x;
+            return rest;
+        })
+    }
+
+    protected recentDiscoveredCacheKey = () => {
+        return `recent-${this.dbComponent.id}`;
+    }
+
+    getRecentlyDiscoveredPlays = async (hydrate: boolean = true): Promise<PlayObject[]> => {
+        const cacheKey = this.recentDiscoveredCacheKey();
+        let list = await this.cache.cacheDb.get<PlayObject[]>(cacheKey);
+        if(list === undefined && hydrate) {
+            list = (await this.playRepo.findPlays({
+                stateNot: ['queued'],
+                order: 'desc',
+                sort: 'playedAt',
+                limit: 200
+            })).map(x => asPlay(x.play))
+            list.sort(sortByOldestPlayDate);
+            await this.cache.cacheDb.set<PlayObject[]>(cacheKey, list, '2m');
         }
-        return [];
+        return list;
     }
 
-    protected getExistingDiscoveredLists = (play: PlayObject, opts: {checkAll?: boolean} = {}): PlayObject[][] => {
-        const lists: PlayObject[][] = [];
-        if(opts.checkAll !== true) {
-            lists.push(this.getRecentlyDiscoveredPlaysByPlatform(this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID));
-        } else {
-            // get as many as we can, optionally filtering by user
-            this.recentDiscoveredPlays.forEach((list, platformId) => {
-                if(play.meta.user !== undefined) {
-                    if(platformId[1] === NO_USER || platformId[1] === play.meta.user) {
-                        lists.push(this.getRecentlyDiscoveredPlaysByPlatform(platformId));
-                    }
-                } else {
-                    lists.push(this.getRecentlyDiscoveredPlaysByPlatform(platformId));
-                }
-            });
-        }
-        return lists;
-    }
-
-    existingDiscovered = async (play: PlayObject, opts: {checkAll?: boolean} = {}): Promise<PlayObject | undefined> => {
-        const lists: PlayObject[][] = this.getExistingDiscoveredLists(play, opts);
-        const candidate = await this.transformPlay(play, TRANSFORM_HOOK.candidate);
-        for(const list of lists) {
-            
-            const existing = await findAsync(list,async x => {
-                const e = await this.transformPlay(x, TRANSFORM_HOOK.existing);
-                return genericSourcePlayMatch(e, candidate);
-            });
-            if(existing) {
-                return existing;
-            }
+    existingDiscovered = async (play: PlayObject): Promise<PlayObject | undefined> => {
+        const list: PlayObject[] = await this.getRecentlyDiscoveredPlays();
+        const matchResults = await this.existingDiscoveredPlay(play, list);
+        if(matchResults.match) {
+            return matchResults.closestMatchedPlay;
         }
         return undefined;
-    }
-
-    alreadyDiscovered = async (play: PlayObject, opts: {checkAll?: boolean} = {}): Promise<boolean> => {
-        const existing = await this.existingDiscovered(play, opts);
-        return existing !== undefined;
     }
 
     discover = async (plays: PlayObject[], options: { checkAll?: boolean, signal?: AbortSignal, [key: string]: any } = {}): Promise<PlayObject[]> => {
@@ -270,13 +348,22 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
         for await(const play of pMapIterable(plays, this.staggerMappers.preCompare(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 3})) {
             options.signal?.throwIfAborted();
-            if(!(await this.alreadyDiscovered(play, options))) {
+            const existing = await this.existingDiscovered(play);
+            if(existing === undefined) {
                 options.signal?.throwIfAborted()
-                this.addPlayToDiscovered(play);
-                newDiscoveredPlays.push(play);
+                const hydratedPlay = await this.addPlayToDiscovered(play);
+                newDiscoveredPlays.push(hydratedPlay);
+            } else {
+                this.playRepo.updateById(existing.id, {updatedAt: dayjs()});
             }
         }
-
+        if(newDiscoveredPlays.length > 0) {
+            try {
+                await this.componentRepo.updateById(this.dbComponent.id, {countLive: this.dbComponent.countLive + newDiscoveredPlays.length});
+            } catch (e) {
+                this.logger.warn(new Error('Unable to update discovered count', {cause: e}));
+            }
+        }
         newDiscoveredPlays.sort(sortByOldestPlayDate);
 
         return newDiscoveredPlays;
@@ -298,6 +385,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
         if(newDiscoveredPlays.length > 0) {
             if(!this.shouldScrobble(options.discoverLocation)) {
+                await this.playRepo.setStateById('discarded', newDiscoveredPlays.map(x => x.id));
                 return;
             }
             newDiscoveredPlays.sort(sortByOldestPlayDate);
@@ -383,10 +471,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
             return;
         }
 
-        // TODO refactor to only use tryInitialize
         if(!this.isReady() || force) {
             try {
-                await this.tryInitialize(options);
+                await this.initialize(options);
             } catch (e) {
                 this.logger.error(new Error('Cannot start polling because Source is not ready', {cause: e}));
                 if(notify) {
@@ -500,7 +587,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.abortController.abort(reason);
         let elapsed = 0;
         let lastlog: Dayjs;
-        while(this.polling && elapsed < 10) {
+        while(this.polling && elapsed < (10 * this.stopPollingWaitInterval)) {
             if(lastlog === undefined || dayjs().diff(lastlog, 's') >= 2) {
                 this.logger.verbose(`Waiting for polling stop signal to be acknowledged (waited ${formatNumber(elapsed/1000)}s)`);
             }
@@ -548,7 +635,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 }
             
 
-                const interval = this.getInterval();
+                const interval = this.getInterval(true);
                 const maxBackoff = this.getMaxBackoff();
                 let sleepTime = interval;
 
@@ -652,7 +739,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return this.wakeAt;
     }
 
-    protected getInterval() {
+    protected getInterval(log?: boolean) {
         let interval = DEFAULT_POLLING_INTERVAL;
 
         if('interval' in this.config.data) {
@@ -670,6 +757,18 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return maxInterval - this.getInterval();
     }
 
+    public getPlays = (args: QueryPlaysOpts) => {
+        const {
+            limit,
+            offset,
+            with: withQuery = ['input','parent-input','queues'],
+            ...rest
+        } = args;
+        let parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
+        let parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
+        return this.playRepo.findPlaysPaginated({limit: parsedLimit, offset: parsedOffset, with: withQuery, ...rest});
+    }
+
     public emitEvent = (eventName: string, payload: object = {}) => {
         this.emitter.emit(eventName, {
             type: this.type,
@@ -684,7 +783,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     }
 
     protected async doBuildComponentLogger(): Promise<void> {
-        if(this.config.options.logToFile) {
+        if(this.config?.options?.logToFile) {
             this.logger.debug('Enabling component logger...');
             const root = getRoot();
             const stream = root.get('loggerStream');

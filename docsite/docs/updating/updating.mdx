@@ -10,11 +10,37 @@ import CodeBlock from '@theme/CodeBlock';
 
 ## Updating
 
-Currently, multi-scrobbler does not have any databases or dependencies that require additional interaction when updating.
+The majority of Multi-scrobbler updates can be completed without any manual intervention. This is **guaranteed** for [patch version updates](#versioning).
 
-Any **breaking changes** will be related to [configuration](/configuration) that has been deprecated/changed, or tooling that usually only affects [Local Installations.](/installation#local-installation)
+Regardless, it is recommended to consult the [**Github Release Notes**](https://github.com/FoxxMD/multi-scrobbler/releases) before any upgrades. The release notes contain all changelogs as well as most **breaking changes**/notices.
 
-These changes, and how to update configs accordingly, are detailed in [**Github Release Notes**](https://github.com/FoxxMD/multi-scrobbler/releases). It is recommended to check this page before upgrading [minor or major versions.](#versioning)
+The [**Upgrade Path** docs](/updating/upgrade-path) contain information for upgrading through **required versions** or in-depth migration guides. Check this section before upgrading any [minor versions](#versioning).
+
+### Database
+
+Multi-scrobbler depends on a SQLite database (`ms.db`) that is created on first run and stored in the [`CONFIG_DIR`](/installation/?dockerSetting=storage#recommended-settings).
+
+If any database migrations are required for an update then your database is **automatically backed up** before migration occurs. The backup file is created in the same directory.
+
+You can manually make a backup of this database by making a copy of `ms.db` and any similarly named files like `ms.db-journal`.
+
+:::tip
+
+If upgrading a [minor version](#versioning) you may want to make a backup for extra safety.
+
+:::
+
+### Configuration
+
+[Minor versions](#versioning) may have **breaking changes** related to [configuration](/configuration). Consult the [**Github Release Notes**](https://github.com/FoxxMD/multi-scrobbler/releases) and [Upgrade Paths](/updating/upgrade-path) before upgrading.
+
+
+## Update Instructions
+
+Assuming:
+
+* upgrade(s) are only [patch versions](#versioning) and the [Release Notes](https://github.com/FoxxMD/multi-scrobbler/releases) do not contain any other guidance or
+* you have checked the release notes, upgrade paths docs, and completed all migration steps for the specific version upgrade
 
 <Tabs groupId="installType" queryString>
     <TabItem value="docker-compose" label="Docker Compose">

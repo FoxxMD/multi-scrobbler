@@ -6,7 +6,7 @@ import dayjs from "dayjs";
 import { EventEmitter } from "events";
 import e from "express";
 import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
-import { buildTrackString } from "../../core/StringUtils.js";
+import { artistNamesToCredits, buildTrackString } from "../../core/StringUtils.js";
 import { NETWORK_ERROR_FAILURE_CODES } from "../common/errors/NodeErrors.js";
 import {
     FormatPlayObjectOptions,
@@ -722,8 +722,8 @@ export class ChromecastSource extends MemoryPositionalSource {
             data: {
                 track,
                 album,
-                albumArtists,
-                artists,
+                albumArtists: artistNamesToCredits(albumArtists),
+                artists: artistNamesToCredits(artists),
                 duration,
                 playDate: dayjs()
             },

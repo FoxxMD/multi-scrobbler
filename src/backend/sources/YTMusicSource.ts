@@ -18,11 +18,12 @@ import {
     playsAreSortConsistent
 } from "../utils/PlayComparisonUtils.js";
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.js";
+import { artistNamesToCredits, buildTrackString, truncateStringToLength } from "../../core/StringUtils.js";
 import { joinedUrl } from "../utils/NetworkUtils.js";
 import { todayAwareFormat } from "../../core/TimeUtils.js";
 import { parseArrayFromMaybeString, parseArtistCredits, parseCredits } from "../utils/StringUtils.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
+import { FixedSizeList } from "fixed-size-list";
 
 export interface HistoryIngressResult {
     plays: PlayObject[], 
@@ -118,6 +119,7 @@ export default class YTMusicSource extends AbstractSource {
     declare config: YTMusicSourceConfig
 
     recentlyPlayed: PlayObject[] = [];
+    transientDiscovered: FixedSizeList<PlayObject> = new FixedSizeList<PlayObject>(200);
 
     yti: Innertube;
     userCode?: string;
@@ -149,6 +151,10 @@ export default class YTMusicSource extends AbstractSource {
                 this.config.options = {...rest, logDiff: diffVal};
             }
         }
+
+        this.emitter.on('discovered', (play) => {
+            this.transientDiscovered.add(play);
+        })
     }
 
     public additionalApiData(): Record<string, any> {
@@ -371,7 +377,7 @@ Redirect URI  : ${this.redirectUri}`);
             duration: dur, // string timestamp
         } = obj;
 
-        let artists = [],
+        let artists: string[] = [],
             album = undefined,
         duration = undefined;
         if(artistsData !== undefined) {
@@ -415,8 +421,8 @@ Redirect URI  : ${this.redirectUri}`);
         }
         const play: PlayObjectLifecycleless = {
             data: {
-                artists,
-                albumArtists,
+                artists: artistNamesToCredits(artists),
+                albumArtists: artistNamesToCredits(albumArtists),
                 album,
                 track: title,
                 duration,
@@ -588,7 +594,7 @@ Redirect URI  : ${this.redirectUri}`);
             if(consistent && newPlays.length > 1) {
                 const interimPlays = newPlays.slice(0, newPlays.length - 1);
                 // check enough time has passed since last discovery
-                const discovered = this.getFlatRecentlyDiscoveredPlays();
+                const discovered = this.transientDiscovered.data;
                 if(discovered.length > 0) {
                     const lastDiscovered = discovered[0].data.playDate;
                     // the assumption in behavior is that user skips 1 or more tracks which then get recorded to YTM history
@@ -681,10 +687,11 @@ ${humanDiff}`;
             const reversedPlays = [...referencePlays];
             // actual order they were discovered in (oldest to newest)
             reversedPlays.reverse();
-            if(this.getFlatRecentlyDiscoveredPlays().length === 0) {
+            if(this.transientDiscovered.data.length === 0) {
                 // and add to discovered since its empty
                 for(const refPlay of reversedPlays) {
-                    this.addPlayToDiscovered(refPlay);
+                    //this.transientDiscovered.add(refPlay);
+                    await this.addPlayToDiscovered(refPlay);
                 }
             }
         }

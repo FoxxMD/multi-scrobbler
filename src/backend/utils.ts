@@ -200,7 +200,7 @@ export const spreadDelay = (retries: any, multiplier: any) => {
     return s;
 }
 
-export const removeUndefinedKeys = <T extends Record<string, any>>(obj: T): T | undefined => {
+export const removeUndefinedKeys = <T extends Record<string, any>>(obj: T, returnUndefined: boolean = true): T | undefined => {
     const newObj: any = {};
     Object.keys(obj).forEach((key) => {
         if(Array.isArray(obj[key])) {
@@ -214,7 +214,10 @@ export const removeUndefinedKeys = <T extends Record<string, any>>(obj: T): T | 
         }
     });
     if(Object.keys(newObj).length === 0) {
-        return undefined;
+        if(returnUndefined) {
+            return undefined;
+        }
+        return newObj;
     }
     Object.keys(newObj).forEach(key => {
         if(newObj[key] === undefined || (null !== newObj[key] && typeof newObj[key] === 'object' && Object.keys(newObj[key]).length === 0)) {
@@ -222,6 +225,20 @@ export const removeUndefinedKeys = <T extends Record<string, any>>(obj: T): T | 
         }
     });
     //Object.keys(newObj).forEach(key => newObj[key] === undefined || newObj[key] && delete newObj[key])
+    return newObj;
+}
+
+export const removeEmptyArrays = <T extends Record<string, any>>(obj: T): T => {
+    const newObj: any = {};
+    Object.keys(obj).forEach((key) => {
+        if(Array.isArray(obj[key])) {
+            if(obj[key].length !== 0) {
+                newObj[key] = obj[key];
+            }
+        } else {
+            newObj[key] = obj[key];
+        }
+    });
     return newObj;
 }
 
@@ -293,7 +310,10 @@ export function parseBool(value: any, prev: any = false): boolean {
     throw new Error(`'${value.toString()}' is not a boolean value.`);
 }
 
-export function parseBoolStrict(value: string): boolean {
+export function parseBoolStrict(value: string | boolean): boolean {
+    if(typeof value === 'boolean') {
+        return value;
+    }
     const strTrue = ['1', 'true', 'yes'].includes(value.toLocaleLowerCase().trim());
     if (strTrue) {
         return strTrue;
@@ -336,46 +356,6 @@ export const pollingBackoff = (attempt: number, scaleFactor: number = 1): number
 
     // first attempt delay is never enough so always add + 1
     return Math.round(backoffStrat(attempt + 1) / 1000);
-}
-
-export const parseRegex = (reg: RegExp, val: string): RegExResult[] | undefined => {
-
-    if (reg.global) {
-        const g = Array.from(val.matchAll(reg));
-        if (g.length === 0) {
-            return undefined;
-        }
-        return g.map(x => {
-            return {
-                match: x[0],
-                index: x.index,
-                groups: x.slice(1),
-                named: x.groups || {},
-            } as RegExResult;
-        });
-    }
-
-    const m = val.match(reg)
-    if (m === null) {
-        return undefined;
-    }
-    return [{
-        match: m[0],
-        index: m.index as number,
-        groups: m.slice(1),
-        named: m.groups || {}
-    }];
-}
-
-export const parseRegexSingleOrFail = (reg: RegExp, val: string): RegExResult | undefined => {
-    const results = parseRegex(reg, val);
-    if (results !== undefined) {
-        if (results.length > 1) {
-            throw new Error(`Expected Regex to match once but got ${results.length} results. Either Regex must NOT be global (using 'g' flag) or parsed value must only match regex once. Given: ${val} || Regex: ${reg.toString()}`);
-        }
-        return results[0];
-    }
-    return undefined;
 }
 
 export const intersect = (a: Array<any>, b: Array<any>) => {
@@ -547,6 +527,10 @@ export const isEmptyArrayOrUndefined = <T = unknown>(arr: unknown[] | undefined,
         }
     }
     return true;
+}
+
+export const nonEmptyObj = (obj: object): boolean => {
+    return Object.keys(obj).length > 0;
 }
 
   /**

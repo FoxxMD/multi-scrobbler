@@ -1,4 +1,4 @@
-import { asMBReleasePrimaryGroupType, asMBReleaseSecondaryGroupType, asMBReleaseStatus, DEFAULT_MISSING_TYPES, isMBReleasePrimaryGroupType, MBReleaseGroupPrimaryType, MBReleaseGroupSecondaryType, MBReleaseStatus, MissingMbidType, PlayObject, TrackMeta, TransformerCommon, TransformOptions } from "../../../core/Atomic.js";
+import { ArtistCredit, asMBReleasePrimaryGroupType, asMBReleaseSecondaryGroupType, asMBReleaseStatus, DEFAULT_MISSING_TYPES, isMBReleasePrimaryGroupType, MBReleaseGroupPrimaryType, MBReleaseGroupSecondaryType, MBReleaseStatus, MissingMbidType, PlayObject, TrackMeta, TransformerCommon, TransformOptions } from "../../../core/Atomic.js";
 import { isWhenCondition, testWhenConditions } from "../../utils/PlayTransformUtils.js";
 import { WebhookPayload } from "../infrastructure/config/health/webhooks.js";
 import { ExternalMetadataTerm, PlayTransformMetadataStage } from "../infrastructure/Transform.js";
@@ -661,7 +661,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
         return transformData.data.track;
     }
-    protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<string[] | undefined> {
+    protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<ArtistCredit[] | undefined> {
         if (parts === false) {
             return play.data.artists;
         }
@@ -676,7 +676,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
         return transformData.data.artists;
     }
-    protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<string[] | undefined> {
+    protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<ArtistCredit[] | undefined> {
         if (parts === false) {
             return play.data.albumArtists;
         }

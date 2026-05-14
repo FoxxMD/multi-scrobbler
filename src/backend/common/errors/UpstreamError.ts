@@ -1,11 +1,13 @@
 import { Response } from 'superagent';
 
 import { findCauseByFunc } from "../../utils/ErrorUtils.js";
+import { addKnownErrorConstructor } from 'serialize-error';
 
 export type UpstreamErrorOptions = ErrorOptions & { showStopper?: boolean, response?: Response, responseBody?: object | string };
 
 export class UpstreamError extends Error {
 
+    name = 'UpstreamError';
     showStopper: boolean = false;
     response?: Response
     responseBody?: object | string
@@ -35,3 +37,4 @@ export const findUpstreamError = (err: any, showStopping?: boolean): UpstreamErr
         return false;
     });
 }
+addKnownErrorConstructor(UpstreamError, () => new UpstreamError(''))

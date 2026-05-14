@@ -4,6 +4,7 @@ import { after, before, describe, it } from 'mocha';
 import { generateLastfmTrackObject, generateMbid, generatePlay, generateTealPlayRecord } from "../../../core/PlayTestUtils.js";
 import { AbstractBlueSkyApiClient, listRecordToPlay } from '../../common/vendor/bluesky/AbstractBlueSkyApiClient.js';
 import dayjs from 'dayjs';
+import { artistCreditsToNames } from '../../../core/StringUtils.js';
 
 chai.use(asPromised);
 
@@ -19,7 +20,7 @@ describe('#tealfm Record to Play', function() {
         expect(play.data.album).eq(rec.value.releaseName);
         expect(play.data.playDate.unix()).eq(dayjs(rec.value.playedTime).unix());
         expect(play.data.duration).eq(rec.value.duration);
-        expect(play.data.artists).eql(rec.value.artists.map(x => x.artistName));
+        expect(artistCreditsToNames(play.data.artists)).eql(rec.value.artists.map(x => x.artistName));
         expect(play.meta.user).eq(`did:plc:${did}`);
         expect(play.meta.playId).eq(tid);
     });

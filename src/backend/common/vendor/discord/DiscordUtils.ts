@@ -46,7 +46,7 @@ export const playStateToActivityData = (data: SourcePlayerObj, opts: { useArt?: 
         name: activityName,
         
         details: play.data.track.padEnd(2,'\u200B'),
-        state: play.data.artists !== undefined && play.data.artists.length > 0 ? play.data.artists.map(x => x.padEnd(2, '\u200B')).join(' / ') : undefined,
+        state: play.data.artists !== undefined && play.data.artists.length > 0 ? play.data.artists.map(x => x.name.padEnd(2, '\u200B')).join(' / ') : undefined,
         // https://docs.discord.com/developers/events/gateway-events#activity-object-activity-assets
         // https://docs.discord.com/developers/events/gateway-events#activity-object-activity-asset-image
         assets: {

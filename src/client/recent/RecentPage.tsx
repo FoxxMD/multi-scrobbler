@@ -94,7 +94,7 @@ const recent = () => {
                         //     return y;
                         // });
                         return <li key={x.index}>
-                            <button className={clsx(classes)} onClick={() => copyActionCB(x.meta.lifecycle, x.index)}>{copiedIndex === x.index ? 'Copied!' : <FontAwesomeIcon
+                            <button className={clsx(classes)} onClick={() => copyActionCB(x, x.index)}>{copiedIndex === x.index ? 'Copied!' : <FontAwesomeIcon
                         color="white" icon={faBug}/>}</button>
                             <PlayDisplay data={x} buildOptions={displayOpts}/>
                         </li>

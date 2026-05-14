@@ -6,7 +6,7 @@ import { LifecycleStep, PlayData, PlayObject, TransformResult } from "../../core
 import { buildPlayHumanDiffable, buildTrackString } from "../../core/StringUtils.js";
 import { CommonClientConfig } from "./infrastructure/config/client/index.js";
 import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
-import { mergeSimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError, TransformRulesError } from "./errors/MSErrors.js";
+import { mergeSimpleError, SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError, TransformRulesError } from "./errors/MSErrors.js";
 import {
     FLOW_CONTROL_TERM,
     PlayTransformRules,
@@ -20,13 +20,21 @@ import { getRoot } from "../ioc.js";
 import { nanoid } from "nanoid";
 import { isDebugMode } from "../utils.js";
 import { findCauseByReference } from "../utils/ErrorUtils.js";
-import { hashObject } from "../utils/StringUtils.js";
+import { hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.js";
 import { metaInvariantTransform, playContentInvariantTransform } from "../utils/PlayComparisonUtils.js";
 import { MSCache } from "./Cache.js";
 import { diffObjects, diffObjectsConsoleOutput, patchObject } from "../../core/DataUtils.js";
 import clone from "clone";
 import { loggerNoop } from "./MaybeLogger.js";
 import { objectsEqual } from "../utils/DataUtils.js";
+import { RetentionOptions } from "./infrastructure/config/database.js";
+import { getRetentionCompactAfterFromEnv, getRetentionDeleteAfterFromEnv, isCompactableProperty, parseRetentionOptions, parseRetentionOptionsDurations } from "./database/Database.js";
+import { DbConcrete } from "./database/drizzle/drizzleUtils.js";
+import { ComponentSelect } from "./database/drizzle/drizzleTypes.js";
+import { DrizzlePlayRepository } from "./database/drizzle/repositories/PlayRepository.js";
+import { ClientType } from "./infrastructure/config/client/clients.js";
+import { SourceType } from "./infrastructure/config/source/sources.js";
+import { DrizzleComponentRepository } from "./database/drizzle/repositories/ComponentRepository.js";
 
 export type AbstractComponentConfig = (CommonClientConfig | CommonSourceConfig) & { transformManager?: TransformerManager };
 
@@ -38,11 +46,27 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     regexCache!: ReturnType<typeof cacheFunctions>;
     protected transformManager: TransformerManager;
     protected cache: MSCache;
+    protected db: DbConcrete;
+    protected componentRepo!: DrizzleComponentRepository;
+    protected dbComponent!: ComponentSelect;
+    protected retentionOpts: RetentionOptions;
+
+    protected componentType: 'source' | 'client';
+    type: ClientType | SourceType;
 
     protected constructor(config: AbstractComponentConfig) {
         super(config);
         this.transformManager = config.transformManager ?? getRoot().items.transformerManager;
         this.cache = getRoot().items.cache();
+        const cProps = config.options?.retention?.compact ?? parseArrayFromMaybeString(process.env.COMPACT_PROPERTIES, {lower: true});
+        if(!cProps.every(isCompactableProperty)) {
+            throw new SimpleError(`Compactable properties must be one of 'transform' or 'input'. Given: ${cProps.join(',')}`);
+        }
+        this.retentionOpts = {
+            deleteAfter: parseRetentionOptionsDurations(config.options?.retention?.deleteAfter, getRetentionDeleteAfterFromEnv()),
+            compactAfter: parseRetentionOptions(config.options?.retention?.compactAfter, getRetentionCompactAfterFromEnv()),
+            compact: cProps
+        };
     }
 
     protected postCache(): Promise<void> {
@@ -52,6 +76,25 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         } catch (e) {
             throw e;
         }
+    }
+
+    protected async doBuildDatabase(): Promise<true | string | undefined> {
+        super.doBuildDatabase();
+
+        let name: string;
+        if('name' in this) {
+            name = this.name as string;
+        }
+
+        this.db = await getRoot().items.db();
+        this.componentRepo = new DrizzleComponentRepository(this.db, {logger: this.logger});
+        this.dbComponent = await this.componentRepo.findOrInsert({
+            mode: this.componentType,
+            type: this.type,
+            uid: this.config.id ?? this.config.name ?? name,
+            name: this.config.name ?? name
+        });
+        return true;
     }
 
     public buildTransformRules() {
@@ -151,6 +194,19 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 existing,
             },
             postCompare,
+        }
+    }
+
+    public retentionCleanup = async () => {
+        if(this.databaseOK !== true) {
+            this.logger.warn(`Cannot run retention cleanup because ${this.componentType} database state is not OK`);
+            return;
+        }
+        try {
+            const repo = new DrizzlePlayRepository(this.db, {logger: this.logger});
+            await repo.retentionCleanup(this.componentType, this.retentionOpts);
+        } catch (e) {
+            this.logger.warn(new Error('Failed to do retention cleanup', {cause: e}));
         }
     }
 

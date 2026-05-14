@@ -42,8 +42,8 @@ import {
 from "@jellyfin/sdk/lib/index.js";
 import dayjs from "dayjs";
 import EventEmitter from "events";
-import { BrainzMeta, PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
-import { buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
+import { ArtistCredit, BrainzMeta, PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
+import { artistNamesToCredits, buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -466,12 +466,25 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
             meta.albumArtist = [ProviderIds.MusicBrainzAlbumArtist];
         }
 
+        let playArtists: ArtistCredit[] = [];
+        if(Artists.length === 1 && meta.artist !== undefined) {
+            playArtists.push({name: Artists[0], mbid: meta.artist[0]});
+        } else {
+            playArtists = artistNamesToCredits(Artists);
+        }
+        let playAlbumArtists: ArtistCredit[] = [];
+        if(AlbumArtists.length === 1 && meta.albumArtist.length === 1) {
+            playAlbumArtists.push({name: AlbumArtists[0], mbid: meta.albumArtist[0]});
+        } else {
+            playAlbumArtists = artistNamesToCredits(AlbumArtists);
+        }
+
         const play: PlayObjectLifecycleless = {
             data: {
-                artists: Artists,
+                artists: playArtists,
                 album: Album,
                 track: Name,
-                albumArtists: AlbumArtists !== undefined ? AlbumArtists.map(x => x.Name) : undefined,
+                albumArtists: playAlbumArtists,
                 playDate: UserData !== undefined ? dayjs(UserData.LastPlayedDate) : undefined,
                 duration: RunTimeTicks !== undefined ? ticksToSeconds(RunTimeTicks) : undefined
             },

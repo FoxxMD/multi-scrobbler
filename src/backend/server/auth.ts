@@ -113,7 +113,7 @@ export const setupAuthRoutes = (app: Express, logger: Logger, sourceMiddle: Expr
                 if(entity instanceof AbstractSource) {
                     entity.poll().catch((e) => logger.error(e));
                 } else {
-                    entity.tryInitialize()
+                    entity.initialize()
                     .catch((e) => logger.error(e))
                     .then(() => {
                         entity.initScrobbleMonitoring().catch((e) => logger.error(e));

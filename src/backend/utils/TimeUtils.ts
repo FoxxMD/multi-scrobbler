@@ -17,7 +17,7 @@ import {
     TemporalPlayComparison,
     UnixTimestamp,
 } from "../../core/Atomic.js";
-import { capitalize } from "../../core/StringUtils.js";
+import { capitalize, stringIsOnlyNumbers } from "../../core/StringUtils.js";
 import {
     DEFAULT_CLOSE_POSITION_ABSOLUTE,
     DEFAULT_CLOSE_POSITION_PERCENT,
@@ -25,11 +25,16 @@ import {
     DEFAULT_DURATION_REPEAT_PERCENT,
     DEFAULT_SCROBBLE_DURATION_THRESHOLD,
     DEFAULT_SCROBBLE_PERCENT_THRESHOLD,
+    DurationValue,
     lowGranularitySources,
     ScrobbleThresholdResult,
 } from "../common/infrastructure/Atomic.js";
 import { ScrobbleThresholds } from "../common/infrastructure/config/source/index.js";
 import { formatNumber } from '../../core/DataUtils.js';
+import { InvalidRegexError, SimpleError } from "../common/errors/MSErrors.js";
+import { NamedGroup, parseRegex } from "@foxxmd/regex-buddy-core";
+import { Duration } from "dayjs/plugin/duration.js";
+import { SourceType } from "../common/infrastructure/config/source/sources.js";
 
 //dayjs.extend(isToday);
 
@@ -105,7 +110,7 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
     const [candidateTsSOCDate, candidateTsSOC] = getScrobbleTsSOCDateWithContext(candidatePlay);
 
     const {
-        diffThreshold = lowGranularitySources.some(x => x.toLocaleLowerCase() === source) ? 60 : 10,
+        diffThreshold = getTemporalAccuracyCloseVal(source as SourceType),
         fuzzyDuration = false,
         fuzzyDiffThreshold = 10,
         duringReferences = ['range']
@@ -255,6 +260,10 @@ export const temporalAccuracyToString = (acc: TemporalAccuracy): string => {
     }
 }
 
+export const getTemporalAccuracyCloseVal = (source: SourceType): number => {
+    return lowGranularitySources.includes(source) ? 60 : 10;
+}
+
 export const getScrobbleTsSOCDateWithContext = (data: PlayObject): [Dayjs, ScrobbleTsSOC] => {
     const {
         meta: {
@@ -399,4 +408,59 @@ export const repeatDurationPlayed = (play: PlayObject, duration: number, thresho
 /** Convert unix timestamp in microseconds to unix timestamp in seconds */
 export const usecToUnix = (usec: number): UnixTimestamp => {
     return Math.floor(usec / 1000);
+}
+
+// string must only contain ISO8601 optionally wrapped by whitespace
+const ISO8601_REGEX: RegExp = /^\s*((-?)P(?=\d|T\d)(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)([DW]))?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?)\s*$/;
+// finds ISO8601 in any part of a string
+const ISO8601_SUBSTRING_REGEX: RegExp = /((-?)P(?=\d|T\d)(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)([DW]))?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?)/g;
+// string must only duration optionally wrapped by whitespace
+const DURATION_REGEX: RegExp = /^\s*(?<time>\d+)\s*(?<unit>days?|weeks?|months?|years?|hours?|minutes?|seconds?|milliseconds?)\s*$/;
+// finds duration in any part of the string
+const DURATION_SUBSTRING_REGEX: RegExp = /(?<time>\d+)\s*(?<unit>days?|weeks?|months?|years?|hours?|minutes?|seconds?|milliseconds?)/g;
+
+export const parseDurationFromString = (val: string, strict = true): {duration: Duration, original: string}[] => {
+    let matches = parseRegex(strict ? DURATION_REGEX : DURATION_SUBSTRING_REGEX, val);
+    if (matches !== undefined) {
+        return matches.map(x => {
+            const groups = x.named as NamedGroup;
+            const dur: Duration = dayjs.duration(groups.time, groups.unit);
+            if (!dayjs.isDuration(dur)) {
+                throw new SimpleError(`Parsed value '${x.match}' did not result in a valid Dayjs Duration`);
+            }
+            return {duration: dur, original: `${groups.time} ${groups.unit}`};
+        });
+    }
+
+    matches = parseRegex(strict ? ISO8601_REGEX : ISO8601_SUBSTRING_REGEX, val);
+    if (matches !== undefined) {
+        return matches.map(x => {
+            const dur: Duration = dayjs.duration(x.groups[0]);
+            if (!dayjs.isDuration(dur)) {
+                throw new SimpleError(`Parsed value '${x.groups[0]}' did not result in a valid Dayjs Duration`);
+            }
+            return {duration: dur, original: x.groups[0]};
+        });
+    }
+
+    throw new InvalidRegexError([(strict ? DURATION_REGEX : DURATION_SUBSTRING_REGEX), (strict ? ISO8601_REGEX : ISO8601_SUBSTRING_REGEX)], val)
+}
+
+export const parseDuration = (val: string, strict = true): Duration => {
+    const res = parseDurationFromString(val, strict);
+    if(res.length > 1) {
+        throw new SimpleError(`Must only have one Duration value, found ${res.length} in: ${val}`);
+    }
+    return res[0].duration;
+}
+
+export const parseDurationFromDurationValue = (val: DurationValue): Duration => {
+    if(typeof val === 'number') {
+        return dayjs.duration(val, 'seconds');
+    }
+    if(stringIsOnlyNumbers(val) && !isNaN(Number.parseInt(val))) {
+        return dayjs.duration(Number.parseInt(val), 'seconds');
+    }
+
+    return parseDuration(val, true);
 }

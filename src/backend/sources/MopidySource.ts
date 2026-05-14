@@ -6,7 +6,7 @@ import normalizeUrl from 'normalize-url';
 import pEvent from 'p-event';
 import { URL } from "url";
 import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
-import { buildTrackString } from "../../core/StringUtils.js";
+import { artistNamesToCredits, buildTrackString } from "../../core/StringUtils.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -164,8 +164,8 @@ export class MopidySource extends MemoryPositionalSource {
             data: {
                 track: name,
                 album: albumName,
-                albumArtists: actualAlbumArtists.length > 0 ? actualAlbumArtists.map(x => x.name) : [],
-                artists: artists.length > 0 ? artists.map(x => x.name) : [],
+                albumArtists: artistNamesToCredits(actualAlbumArtists.length > 0 ? actualAlbumArtists.map(x => x.name) : []),
+                artists: artistNamesToCredits(artists.length > 0 ? artists.map(x => x.name) : []),
                 duration: Math.round(length / 1000),
                 playDate: dayjs()
             },

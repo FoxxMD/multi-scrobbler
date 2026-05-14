@@ -4,7 +4,7 @@ import { MSErrorBoundary } from './ErrorBoundary';
 import { MarkOptional } from 'ts-essentials';
 import { patchObject } from '../../core/DataUtils';
 import './JsonDiff.css';
-import { IJsonDelta } from 'json-diff-ts';
+import { Changeset } from 'json-diff-ts';
 
 type DiffableVal = [] | object | string;
 
@@ -18,7 +18,7 @@ export interface JsonDiffReactProps {
 }
 
 export type JsonDiffPatchProps = MarkOptional<JsonDiffReactProps, 'right'> & {
-    diff?: IJsonDelta
+    diff?: Changeset
 }
 
 export const JsonDiffPatch = (props: JsonDiffPatchProps) => {

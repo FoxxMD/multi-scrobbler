@@ -9,10 +9,11 @@ import { UpstreamError } from "../../errors/UpstreamError.js";
 import { playToListenPayload } from '../listenbrainz/lzUtils.js';
 import { SubmitPayload } from '../listenbrainz/interfaces.js';
 import { ListenType } from '../listenbrainz/interfaces.js';
-import { parseRegexSingleOrFail } from "../../../utils.js";
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.js";
 import { ScrobbleSubmitError } from "../../errors/MSErrors.js";
 import { tryApiCall } from "../../../utils/RequestUtils.js";
+import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
+import { artistNamesToCredits } from "../../../../core/StringUtils.js";
 
 interface SubmitOptions {
     log?: boolean
@@ -36,7 +37,7 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
         const u = normalizeWebAddress(url);
         if(u.url.pathname === '/') {
             this.url = u;
-        } else if(parseRegexSingleOrFail(KOITO_LZ_PATH, u.url.pathname) !== undefined) {
+        } else if(parseRegexSingle(KOITO_LZ_PATH, u.url.pathname) !== undefined) {
            this.logger.verbose('Detected Koito Server URL path only contains listenbrainz prefix. Removing this for API calls so non-listenbrainz paths work correctly.');
            this.url = normalizeWebAddress(getBaseFromUrl(u.url).toString());
         } else {
@@ -218,7 +219,7 @@ export const listenObjectResponseToPlay = (obj: ListenObjectResponse, options: {
     const play: PlayObjectLifecycleless = {
         data: {
             track: obj.track.title,
-            artists: (obj.track.artists ?? []).map(x => x.name),
+            artists: artistNamesToCredits((obj.track.artists ?? []).map(x => x.name)),
             duration: obj.track.duration,
             playDate: dayjs(obj.time)
         },

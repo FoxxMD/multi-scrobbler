@@ -96,7 +96,7 @@ export default class TransformerManager {
                         transformer.logger.warn({ label: 'Heartbeat' }, 'Transformer is not ready but will not try to initialize because auth state is not good and cannot be correct unattended.');
                     }
                     try {
-                        await transformer.tryInitialize({ force: false, notify: true, notifyTitle: 'Could not initialize automatically' });
+                        await transformer.initialize({ force: false, notify: true, notifyTitle: 'Could not initialize automatically' });
                     } catch (e) {
                         transformer.logger.error(new Error('Could not initialize source automatically', { cause: e }));
                     }

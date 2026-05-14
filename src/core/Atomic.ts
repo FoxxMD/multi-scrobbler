@@ -7,7 +7,7 @@ import { MarkOptional } from "ts-essentials";
 import { ErrorObject } from "serialize-error";
 import { PlayPlatformIdStr } from "../backend/common/infrastructure/Atomic.js";
 import { FlowControlTerm } from "../backend/common/infrastructure/Transform.js";
-import { IJsonDelta } from "json-diff-ts";
+import { Changeset } from "json-diff-ts";
 
 export interface SourceStatusData {
     status: string;
@@ -62,6 +62,7 @@ export interface ClientStatusData {
     display: string;
     scrobbled: number;
     deadLetterScrobbles: number
+    deadLetterScrobblesTotal: number
     queued: number
     name: string;
     hasAuth: boolean;
@@ -147,6 +148,11 @@ export interface BrainzMeta {
     track?: string
 }
 
+export interface ArtistCredit {
+    name: string
+    mbid?: string
+}
+
 export interface SpotifyMeta {
     artist?: string[]
     albumArtist?: string[]
@@ -160,8 +166,8 @@ export interface TrackMeta {
 }
 
 export interface TrackData {
-    artists?: string[]
-    albumArtists?: string[]
+    artists?: ArtistCredit[]
+    albumArtists?: ArtistCredit[]
     album?: string
     track?: string
     /**
@@ -201,6 +207,9 @@ export interface PlayMeta<D extends DateLike = Dayjs> {
     sourceSOT?: SOURCE_SOT_TYPES
 
     seenAt?: D
+
+    //dbUid?: string
+    //dbId?: number
 
     /*
     * If applicable, the name of the Service providing the track (Spotify, Tidal, etc...)
@@ -304,7 +313,7 @@ export interface ScrobbleResult<D extends DateLike = Dayjs> {
 
 export interface PlayLifecycle<D extends DateLike = Dayjs> {
     input?: object
-    original: PlayObjectLifecycleless<D>
+    original?: PlayObjectLifecycleless<D>
     steps: LifecycleStep[]
     scrobble?: ScrobbleResult<D>
 }
@@ -318,7 +327,7 @@ export interface LifecycleStep {
     flowReason?: string
     flowKnownState?: 'skip' | 'prereq'
     error?: ErrorLike
-    patch?: IJsonDelta
+    patch?: Changeset
     inputs?: LifecycleInput[]
 }
 
@@ -350,6 +359,8 @@ export const SCROBBLE_TS_SOC_END: ScrobbleTsSOC = 2;
 export type DateLike = Dayjs | string
 
 export interface AmbPlayObject<D extends DateLike = Dayjs> {
+    id?: number
+    uid?: string
     data: PlayData<D>,
     meta: PlayMetaLifecycleless
 }
@@ -413,6 +424,7 @@ export interface DeadLetterScrobble<PlayType, RetryType = Dayjs> extends QueuedS
     retries: number
     lastRetry?: RetryType
     error: string
+    status: 'queued' | 'failed'
 }
 
 export type Second = number;
@@ -593,3 +605,20 @@ export interface numberFormatOptions {
  * It needs to be cheap since we mostly use this when walking play objects to transform strings back to dayjs and there may be many strings to check
  */
 export const REGEX_ISO8601_LOOSE = new RegExp(/\d{4}-[01]\d-[0-3]\dT/);
+/** A string we previously marshalled has a wellknown prefix and only check for DateT since we can reasonbly sure if this exists its a date we can parse with dayjs
+ */
+export const REGEX_ISO8601_WELLKNOWN = new RegExp(/dayjs-(\d{4}-[01]\d-[0-3]\dT.*)/);
+
+export const CLIENT_INGRESS_QUEUE = 'ingress';
+export const CLIENT_DEAD_QUEUE = 'dead';
+
+/**
+ * Useful TS type-only utility for testing type equality
+ * 
+ * Usage: type EQ = TypesAreEqual<any[], [number][], "same", "different">; // "different"
+ * 
+ * @see https://stackoverflow.com/a/53808212/1469797
+ */
+export type TypesAreEqual<T, U, Y=unknown, N=never> =
+  (<G>() => G extends T ? 1 : 2) extends
+  (<G>() => G extends U ? 1 : 2) ? Y : N;

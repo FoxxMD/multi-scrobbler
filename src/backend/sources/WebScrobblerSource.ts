@@ -23,6 +23,7 @@ import { Logger } from "@foxxmd/logging";
 import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
+import { artistCreditToName, artistNameToCredit } from "../../core/StringUtils.js";
 
 export class WebScrobblerSource extends MemorySource {
 
@@ -127,9 +128,9 @@ export class WebScrobblerSource extends MemorySource {
         const play: PlayObjectLifecycleless = {
             data: {
                 track,
-                artists: [artist],
+                artists: [artistNameToCredit(artist)],
                 album: album === null ? undefined : album,
-                albumArtists: albumArtist === null ? undefined : [albumArtist],
+                albumArtists: albumArtist === null ? undefined : [artistNameToCredit(albumArtist)],
                 playDate: dayjs.unix(startTimestamp),
                 duration: duration === null ? undefined : duration,
                 meta: {
@@ -155,7 +156,7 @@ export class WebScrobblerSource extends MemorySource {
         return baseFormatPlayObj(obj, play);
     }
 
-    getRecentlyPlayed = async (options = {}) => this.getFlatRecentlyDiscoveredPlays()
+    getRecentlyPlayed = async (options = {}) => await this.getFlatRecentlyDiscoveredPlays()
 
     isValidScrobble = (playObj: PlayObject) => {
         if (playObj.meta?.scrobbleAllowed === false) {

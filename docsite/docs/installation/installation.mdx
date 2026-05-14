@@ -132,7 +132,7 @@ services:
 
 </TabItem>
 <TabItem value="caching" label="Caching">
-**Optionally**, add a [Valkey](https://valkey.io/) service to your stack for [secondary caching](/configuration/?cacheType=valkey#secondary-caching-configuration) to take advantage of faster performance and reduced memory usage.
+**Optionally**, add a [Valkey](https://valkey.io/) service to your stack for [secondary caching](/configuration#secondary-caching) to take advantage of faster performance and reduced memory usage.
 
 ```yaml title="docker-compose.yml"
 services:
@@ -142,8 +142,7 @@ services:
     environment:
       # ...
       // highlight-start
-      CACHE_METADATA=valkey
-      CACHE_METADATA_CONN=redis://valkey:6379
+      CACHE_VALKEY=redis://valkey:6379
       // highlight-end
     # ...
 

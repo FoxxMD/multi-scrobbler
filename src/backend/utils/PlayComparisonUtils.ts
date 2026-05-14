@@ -61,6 +61,53 @@ export const playContentInvariantTransform = (play: PlayObject): PlayObjectLifec
     }
 }
 
+export const playContentBasicInvariantTransform = (play: PlayObject): PlayObjectLifecycleless => {
+    const {
+        data: {
+            playDate,
+            repeat,
+            playDateCompleted,
+            listenRanges,
+            listenedFor,
+            meta,
+            ...rest
+        }
+    } = play;
+    return {
+        data: {
+            ...rest
+        },
+        meta: {}
+    }
+}
+
+export const playMbidIdentifier = (play: PlayObject): string | undefined => {
+    const {
+        data: {
+            meta: {
+                brainz: {
+                    recording,
+                    album,
+                    track
+                } = {}
+            } = {}
+        } = {}
+    } = play;
+
+    // track mbid is a unique combo of recording on release
+    // so we only need it to identifier what should be track + album + artist
+    if(track !== undefined) {
+        return track;
+    }
+    // recording is independent of release
+    // so to make sure the corresponding track + album is the same
+    // we need both recording and release
+    if(recording !== undefined && album !== undefined) {
+        return `${recording}-${album}`
+    }
+    return undefined;
+}
+
 export type PlayTransformer = (play: PlayObject) => PlayObjectLifecycleless;
 export type ListTransformers = PlayTransformer[];
 
@@ -265,8 +312,8 @@ export const comparePlayArtistsNormalized = (existing: PlayObject, candidate: Pl
             artists: candidateArtists = [],
         } = {}
     } = candidate;
-    const normExisting = existingArtists.map(x => normalizeStr(x, {keepSingleWhitespace: true}));
-    const candidateExisting = candidateArtists.map(x => normalizeStr(x, {keepSingleWhitespace: true}));
+    const normExisting = existingArtists.map(x => normalizeStr(x.name, {keepSingleWhitespace: true}));
+    const candidateExisting = candidateArtists.map(x => normalizeStr(x.name, {keepSingleWhitespace: true}));
 
     const wholeMatches = setIntersection(new Set(normExisting), new Set(candidateExisting)).size;
     return [Math.min(compareScrobbleArtists(existing, candidate)/100, 1), wholeMatches]

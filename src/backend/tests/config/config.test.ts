@@ -44,7 +44,7 @@ describe('Sample Configs', function () {
             let reset: any;
 
             beforeEach(async function() {
-                reset = await withLocalTmpDir({unsafeCleanup: true});
+                reset = await withLocalTmpDir({unsafeCleanup: true, postfix: 'sourceConfigParse'});
             });
 
             afterEach(async function() {
@@ -78,7 +78,7 @@ describe('Sample Configs', function () {
             let reset: any;
 
             beforeEach(async function() {
-                reset = await withLocalTmpDir({unsafeCleanup: true});
+                reset = await withLocalTmpDir({unsafeCleanup: true, postfix: 'clientConfigParse'});
             });
 
             afterEach(async function() {

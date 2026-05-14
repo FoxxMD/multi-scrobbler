@@ -15,6 +15,7 @@ import { YandexMusicBridgeSourceConfig } from "../common/infrastructure/config/s
 import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
+import { artistNamesToCredits } from "../../core/StringUtils.js";
 
 interface BridgeTrackData {
     title?: string
@@ -437,7 +438,7 @@ const formatPlayObj = (obj: BridgeTrackData, playerId: string): PlayObject => {
 
     const play: PlayObjectLifecycleless = {
         data: {
-            artists,
+            artists: artistNamesToCredits(artists),
             album: obj.album ?? undefined,
             track: obj.title ?? undefined,
             duration: obj.duration_ms !== undefined && obj.duration_ms !== null

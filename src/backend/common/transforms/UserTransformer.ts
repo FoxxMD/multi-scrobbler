@@ -1,5 +1,5 @@
 import { searchAndReplace } from "@foxxmd/regex-buddy-core";
-import { PlayObject } from "../../../core/Atomic.js";
+import { ArtistCredit, PlayObject } from "../../../core/Atomic.js";
 import { configValToSearchReplace, isSearchAndReplaceTerm, isUserStage, testWhenConditions } from "../../utils/PlayTransformUtils.js";
 import { WebhookPayload } from "../infrastructure/config/health/webhooks.js";
 import { ConditionalSearchAndReplaceRegExp, PlayTransformUserStage, StageConfig } from "../infrastructure/Transform.js";
@@ -74,30 +74,30 @@ export default class UserTransformer extends AtomicPartsTransformer<ConditionalS
         }
         return result.trim();
     }
-    protected async handleArtists(play: PlayObject, parts: ConditionalSearchAndReplaceRegExp[], _transformData: undefined): Promise<string[] | undefined> {
+    protected async handleArtists(play: PlayObject, parts: ConditionalSearchAndReplaceRegExp[], _transformData: undefined): Promise<ArtistCredit[] | undefined> {
         if(play.data.artists === undefined || play.data.artists.length === 0) {
             return play.data.artists;
         }
         const mapper = this.generateMapper(play);
         const transformedArtists = [];
         for(const artist of play.data.artists) {
-            const a = searchAndReplace(artist, parts.map(mapper));
+            const a = searchAndReplace(artist.name, parts.map(mapper));
             if(a.trim() !== '') {
-                transformedArtists.push(a);
+                transformedArtists.push({...artist, name: a});
             }
         }
         return transformedArtists;
     }
-    protected async handleAlbumArtists(play: PlayObject, parts: ConditionalSearchAndReplaceRegExp[], _transformData: undefined): Promise<string[] | undefined> {
+    protected async handleAlbumArtists(play: PlayObject, parts: ConditionalSearchAndReplaceRegExp[], _transformData: undefined): Promise<ArtistCredit[] | undefined> {
         if(play.data.albumArtists === undefined || play.data.albumArtists.length === 0) {
             return play.data.albumArtists;
         }
         const mapper = this.generateMapper(play);
         const transformedArtists = [];
         for(const artist of play.data.albumArtists) {
-            const a = searchAndReplace(artist, parts.map(mapper));
+            const a = searchAndReplace(artist.name, parts.map(mapper));
             if(a.trim() !== '') {
-                transformedArtists.push(a);
+                transformedArtists.push({...artist, name: a});
             }
         }
         return transformedArtists;

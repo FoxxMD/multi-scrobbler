@@ -13,14 +13,15 @@ import { childLogger, Logger } from '@foxxmd/logging';
 import { projectDir } from './index.js';
 import path from 'path';
 import { cacheFunctions } from "@foxxmd/regex-buddy-core";
-import { fileOrDirectoryIsWriteable } from '../utils/FSUtils.js';
-import { asCacheAuthProvider, asCacheConfig, asCacheMetadataProvider, asCacheScrobbleProvider, CacheAuthProvider, CacheConfig, CacheConfigOptions, CacheMetadataProvider, CacheProvider, CacheScrobbleProvider } from './infrastructure/Atomic.js';
+import { fileExists, fileOrDirectoryIsWriteable } from '../utils/FSUtils.js';
+import { copyFile } from 'fs/promises';
+import { asCacheConfig, CacheAuthProvider, CacheConfig, CacheConfigOptions, CacheConfigUser, CacheScrobbleProvider } from './infrastructure/Atomic.js';
 import { Typeson } from 'typeson';
 import { builtin } from 'typeson-registry';
 import { loggerNoop } from './MaybeLogger.js';
-import { ListenProgressPositional, ListenProgressTS } from '../sources/PlayerState/ListenProgress.js';
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
 import prom, { Gauge } from 'prom-client';
+import { nonEmptyStringOrDefault } from '../../core/StringUtils.js';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -37,10 +38,16 @@ typeson.register({
         (x) => dayjs.isDayjs(x),
         (d: Dayjs) => d.toJSON(),
         (date) => dayjs(date)
-    ],
-    ListenProgressTS,
-    ListenProgressPositional
+    ]
 });
+
+const unsupportedEnvKeys = [
+    'CACHE_AUTH_CONN',
+    'CACHE_METADATA',
+    'CACHE_SCROBBLE',
+    'CACHE_SCROBBLE_CONN',
+    'CACHE_AUTH_CONN'
+];
 
 export class MSCache {
 
@@ -48,6 +55,7 @@ export class MSCache {
 
     cacheMetadata: Cacheable;
     cacheScrobble: Cacheable;
+    cacheDb: Cacheable;
     cacheAuth: Cacheable;
     regexCache: ReturnType<typeof cacheFunctions>;
     cacheTransform: Cacheable;
@@ -68,19 +76,19 @@ export class MSCache {
 
         const {
             metadata: {
-                provider: mProvider = (process.env.CACHE_METADATA as (CacheMetadataProvider | undefined) ?? false),
-                connection: mConn = process.env.CACHE_METADATA_CONN,
-                ...restMetadata
+                provider: mProvider = false,
+                connection: mConn,
+                //...restMetadata
             } = {},
             scrobble: {
-                provider: sProvider = (process.env.CACHE_SCROBBLE as (CacheScrobbleProvider | undefined) ?? 'file'),
-                connection = (process.env.CACHE_SCROBBLE_CONN ?? configDir),
-                ...restScrobble
+                provider: sProvider = false,
+                connection: sConnection,
+                //...restScrobble
             } = {},
             auth: {
-                provider: aProvider = (process.env.CACHE_AUTH as (CacheAuthProvider | undefined) ?? 'file'),
-                connection: aConn = (process.env.CACHE_AUTH_CONN ?? configDir),
-                ...restAuth
+                provider: aProvider = false,
+                connection: aConn,
+                //...restAuth
             } = {},
             regex = 200,
         } = config;
@@ -89,17 +97,14 @@ export class MSCache {
             metadata: {
                 provider: mProvider,
                 connection: mConn,
-                ...restMetadata,
             },
             scrobble: {
                 provider: sProvider,
-                connection,
-                ...restScrobble
+                connection: sConnection,
             },
             auth: {
                 provider: aProvider,
                 connection: aConn,
-                ...restAuth
             },
             regex
         };
@@ -114,6 +119,7 @@ export class MSCache {
         this.cacheAuth = inMemory;
         this.cacheScrobble = inMemory;
         this.cacheApi = inMemory;
+        this.cacheDb = new Cacheable({primary: initMemoryCache({lruSize: 500, ttl: '1m'})});
     }
 
     init = async (enableCollectors: boolean = false) => {
@@ -133,7 +139,8 @@ export class MSCache {
             { cache: this.cacheScrobble, name: 'queued_scrobbles' },
             { cache: this.cacheTransform, name: 'transformer' },
             { cache: this.cacheClientScrobbles, name: 'historical_scrobbles' },
-            { cache: this.cacheApi, name: 'external_apis' }
+            { cache: this.cacheApi, name: 'external_apis' },
+            { cache: this.cacheDb, name: 'database' }
         ];
 
         this.cacheHits = new prom.Gauge({
@@ -271,10 +278,10 @@ export class MSCache {
             }
         }
         if (config.provider === 'file') {
-            logger.debug(`Building file cache from ${path.join(config.connection, `${namespace}.cache`)}`);
+            logger.debug(`Building file cache from ${path.join(config.connection ?? configDir, `${namespace}.cache`)}`);
 
             try {
-                const [keyvFile] = await initFileCache({ ...config, cacheDir: config.connection, cacheId: `${namespace}.cache` }, {ttl: config.ttl}, logger);
+                const [keyvFile] = await initFileCache({ ...config, cacheDir: config.connection ?? configDir, cacheId: `${namespace}.cache` }, {ttl: config.ttl}, logger);
                 return keyvFile;
             } catch (e) {
                 throw e;
@@ -364,8 +371,8 @@ export const flatCacheCreate = (opts: FlatCacheOptions) => {
     return new FlatCache({
         ttl: 0,
         lruSize: 2000,
-        cacheDir: opts.cacheDir ?? configDir,
-        cacheId: opts.cacheId ?? 'scrobble.cache',
+        cacheDir: opts.cacheDir,
+        cacheId: opts.cacheId ?? 'ms.cache',
         persistInterval: 1 * 1000 * 10,
         expirationInterval: 1 * 1000 * 10, // 10 seconds
         ...opts
@@ -380,6 +387,12 @@ export const flatCacheLoad = async (flatCache: FlatCache, logger: Logger = logge
     } catch (e) {
         throw new Error(`Unable to use path for file cache at ${cachePath}`, { cause: e })
     }
+
+    // if(fileExists(cachePath) && !fileExists(`${cachePath}.bak`)) {
+    //     logger.info(`Backing up ${cachePath} in preparation for migration to database...`);
+    //     await copyFile(cachePath, `${cachePath}.bak`);
+    //     logger.info(`Done! Backed up to ${cachePath}.bak\nAll data has been loaded into cache. It will be deleted (from cache) after migrating to database.\nIf there are migration issues or you wish to downgrade then overwrite ${cachePath} with the .bak backup copy`);
+    // }
 
     const streamPromise = new Promise((resolve, reject) => {
         flatCache.loadFileStream(cachePath, (progress: number, total: number) => {
@@ -497,4 +510,86 @@ const noopKeyv: KeyvStoreAdapter = {
         delete: (_) => undefined,
         clear: () => Promise.resolve(),
         on: (_, __) => undefined
+}
+
+export const parseUserConfig = (config: CacheConfigUser = {}, parentLogger: Logger = loggerNoop): CacheConfigOptions => {
+    const logger = childLogger(parentLogger, 'Cache');
+
+        let valkeyEnvVal: string | undefined = nonEmptyStringOrDefault(process.env.CACHE_VALKEY);
+        if(valkeyEnvVal === undefined) {
+            valkeyEnvVal = nonEmptyStringOrDefault(process.env.CACHE_METADATA_CONN);
+            if(valkeyEnvVal !== undefined) {
+                logger.warn('ENV CACHE_METADATA_CONN is deprecated! Replace it with CACHE_VALKEY');
+            }
+        }
+
+        for(const key of unsupportedEnvKeys) {
+            if(nonEmptyStringOrDefault(process.env[key]) !== undefined) {
+                logger.warn(`ENV ${key} is no longer supported. Refer to the Caching docs.`);
+            }
+        }
+
+        const {
+            valkey = valkeyEnvVal,
+            // metadata: {
+            //     provider: mProvider = (process.env.CACHE_METADATA as (CacheMetadataProvider | undefined) ?? false),
+            //     connection: mConn = process.env.CACHE_METADATA_CONN,
+            //     //...restMetadata
+            // } = {},
+            scrobble: {
+                provider: sProvider = (process.env.CACHE_SCROBBLE as (CacheScrobbleProvider | undefined) ?? 'file'),
+                connection = (process.env.CACHE_SCROBBLE_CONN ?? configDir),
+                ...restScrobble
+            } = {},
+            auth: {
+                provider: aProvider = (process.env.CACHE_AUTH as (CacheAuthProvider | undefined) ?? 'file'),
+                //...restAuth
+            } = {},
+            regex = 200,
+        } = config;
+
+        if(config.metadata !== undefined) {
+            logger.warn('Configuring cache.metadata is no longer supported. Refer to the Caching docs.');
+        }
+        if(config.scrobble !== undefined) {
+            logger.warn('Configuring cache.scrobble is no longer supported. Refer to the Caching docs.');
+        }
+        if(config.auth?.connection !== undefined) {
+            logger.warn('Configuring cache.auth.connection is no longer supported. Refer to the Caching docs.');
+        }
+        
+        let authConn: string,
+        authProvider = aProvider;
+        if(authProvider === 'valkey') {
+            if(valkey === undefined) {
+                logger.warn(`Auth Provider set to 'valkey' but not valkey connection string was not provided, falling back to file.`);
+                authConn = configDir;
+                authProvider = 'file';
+            } else {
+                authConn = valkey;
+            }
+        } else {
+            if(authProvider !== 'file') {
+                logger.warn(`Unsupported provider given for auth: ${authProvider}`);
+            }
+            authConn = configDir;
+            authProvider = 'file';
+        }
+
+        return {
+            metadata: {
+                provider: valkey !== undefined ? 'valkey' : false,
+                connection: valkey,
+            },
+            scrobble: {
+                provider: sProvider,
+                connection,
+                ...restScrobble
+            },
+            auth: {
+                provider: authProvider,
+                connection: authConn,
+            },
+            regex
+        };
 }

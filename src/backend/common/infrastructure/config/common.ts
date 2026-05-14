@@ -1,7 +1,20 @@
 import { keyOmit } from "../Atomic.js";
 
+export interface CommonConfigPrimitives {
+    name?: string
+    id?: string
+    enable?: boolean
+}
+
 export interface CommonConfig {
     name?: string
+    /** A UNIQUE identifier for this Source/Client
+     * 
+     * It should be unique for the given Source/Client type. No other Source/Client of the same type should have this ID. This ID will be used to register this Source/Client in the database so that it can be identified even if you change the name of the component.
+     * 
+     * If no id is given the name of this component will be used.
+     */
+    id?: string
     data?: CommonData
     /**
      * Should MS use this client/source? Defaults to true

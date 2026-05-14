@@ -1,5 +1,5 @@
 import { isAbortError } from "abort-controller-x";
-import { truncateStringToLength } from "../../core/StringUtils.js";
+import { getErrorCause } from "../../core/ErrorUtils.js";
 
 /**
  * Adapted from https://github.com/voxpelli/pony-cause/blob/main/lib/helpers.js to find cause by truthy function
@@ -25,37 +25,12 @@ export const findCauseByFunc = <T extends Error = Error>(err: any, func: (e: Err
             return currentErr as T;
         }
 
-        currentErr = getErrorCause(currentErr);
+        currentErr = getErrorCause(currentErr) as unknown as T;
     }
 };
 export const findCauseByMessage = (err: any, msg: string) => {
     return findCauseByFunc(err, (e => e.message.toLocaleLowerCase().includes(msg.toLocaleLowerCase())));
 }
-/**
- * Adapted from https://github.com/voxpelli/pony-cause
- * */
-export const getErrorCause = (err: Error | {
-    cause?: unknown | (() => Error | {
-        cause?: unknown | (() => Error | any);
-    });
-}): Error | undefined => {
-    if (!err) return;
-
-    const cause = err.cause;
-
-    // VError / NError style causes
-    if (typeof cause === 'function') {
-        const causeResult = cause();
-
-        return causeResult instanceof Error
-            ? causeResult
-            : undefined;
-    } else {
-        return cause instanceof Error
-            ? cause
-            : undefined;
-    }
-};
 /**
  * Adapted from https://github.com/voxpelli/pony-cause
  * */
@@ -77,46 +52,8 @@ export const findCauseByReference = <T extends Error>(err: unknown, reference: n
             return currentErr;
         }
 
-        currentErr = getErrorCause(currentErr);
+        currentErr = getErrorCause(currentErr) as unknown as T;
     }
 };
-
-export type MessageTransformer = (val: string) => string;
-export const MessageTransformerDefault = (val: string) => val;
-/**
- * Adapted from https://github.com/voxpelli/pony-cause
- * */
-const _messageWithCauses = (err: Error, seen = new Set<Error>(), msgTransform: MessageTransformer = MessageTransformerDefault) => {
-    if (!(err instanceof Error)) return '';
-
-    const message = err.message;
-
-    // Ensure we don't go circular or crazily deep
-    if (seen.has(err)) {
-        return msgTransform(message) + ' => ...';
-    }
-
-    const cause = getErrorCause(err);
-
-    if (cause) {
-        seen.add(err);
-
-        return (msgTransform(message) + ' => ' +
-            _messageWithCauses(cause, seen));
-    } else {
-        return msgTransform(message);
-    }
-};
-/**
- * Adapted from https://github.com/voxpelli/pony-cause
- * */
-export const messageWithCauses = (err: Error, msgTransformer?: MessageTransformer) => _messageWithCauses(err, new Set<Error>(), msgTransformer);
-
-export const messageWithCausesTruncated = (length: number) => {
-    const t = truncateStringToLength(length);
-    return (err: Error) => messageWithCauses(err, t);
-}
-
-export const messageWithCausesTruncatedDefault = messageWithCausesTruncated(100);
 
 export const isAbortReasonErrorLike = (signal: AbortSignal) => signal.aborted && signal.reason !== undefined && (isAbortError(signal.reason) || signal.reason instanceof Error);
