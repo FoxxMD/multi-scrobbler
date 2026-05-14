@@ -6,6 +6,7 @@ import { ErrorLike, PlayObject } from "../../../../../core/Atomic.js";
 import { asPlayCheap } from "../../../../../core/PlayMarshalUtils.js";
 import { ExternalMetadataTerm, PlayTransformPartsConfig, SearchAndReplaceTerm } from "../../../infrastructure/Transform.js";
 import { JobRangeCount, JobRangeTime } from "../../../infrastructure/Job.js";
+import { serializeError } from "serialize-error";
 
 const DayjsTimestamp = customType<
   {
@@ -35,11 +36,6 @@ const PlayJson = customType<
   },
   toDriver(value: PlayObject): string {
     const {
-      // meta: {
-      //   // dbId,
-      //   // dbUid,
-      //   ...metaRest
-      // },
       id,
       uid,
       ...rest
@@ -51,12 +47,29 @@ const PlayJson = customType<
   },
 });
 
+const ErrorLikeJson = customType<
+  {
+    data: ErrorLike;
+    driverData: string;
+  }
+>({
+  dataType() {
+    return 'text'
+  },
+  toDriver(value: ErrorLike): string {
+    return JSON.stringify(serializeError(value));
+  },
+  fromDriver(value: string): ErrorLike {
+    return JSON.parse(value)
+  },
+});
+
 
 export const plays = sqliteTable("plays", {
   id: integer().primaryKey(),
   uid: text({ length: 30 }).notNull().unique().$defaultFn(() => nanoid(20)),
   componentId: integer().references(() => components.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
-  error: text({ mode: 'json' }).$type<ErrorLike>(),
+  error: ErrorLikeJson('error'),
   playedAt: DayjsTimestamp('playedAt'),
   seenAt: DayjsTimestamp('seenAt'),
   updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs()),
@@ -114,7 +127,7 @@ export const queueStates = sqliteTable("play_queue_states", {
   queueName: text({length: 50}).notNull(),
   queueStatus: text({enum: ['queued','completed','failed']}).notNull().default('queued'),
   retries: integer().notNull().default(0),
-  error: text({ mode: 'json' }).$type<ErrorLike>(),
+  error: ErrorLikeJson('error'),
   createdAt: DayjsTimestamp('createdAt').notNull().$defaultFn(() => dayjs()),
   updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs())
 }, (table) => [
@@ -158,7 +171,7 @@ export const componentMigrations = sqliteTable("component_migrations", {
   componentId: integer().notNull().references(() => components.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
   name: text().notNull(),
   success: integer({mode: 'boolean'}),
-  error: text({ mode: 'json' }).$type<ErrorLike>(),
+  error: ErrorLikeJson('error'),
   attemptedAt: DayjsTimestamp('attemptedAt').notNull().$defaultFn(() => dayjs()),
 });
 
@@ -169,7 +182,7 @@ export const jobs = sqliteTable("jobs", {
   name: text({length: 50}).notNull(),
   status: text({enum: ['idle','completed','failed','processing']}).notNull().default('idle'),
   retries: integer().notNull().default(0),
-  error: text({ mode: 'json' }).$type<ErrorLike>(),
+  error: ErrorLikeJson('error'),
   transformOptions: text({ mode: 'json' }).$type<PlayTransformPartsConfig<SearchAndReplaceTerm[] | ExternalMetadataTerm>>(),
   initialParameters: text({ mode: 'json' }).$type<JobRangeCount | JobRangeTime>(),
   cursor: text({ mode: 'json' }),
