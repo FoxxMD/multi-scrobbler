@@ -58,7 +58,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         super(config);
         this.transformManager = config.transformManager ?? getRoot().items.transformerManager;
         this.cache = getRoot().items.cache();
-        const cProps = config.options?.retention?.compact ?? parseArrayFromMaybeString(process.env.COMPACT_PROPERTIES, {lower: true});
+        const cProps = config.options?.retention?.compact ?? parseArrayFromMaybeString(process.env.COMPACT_PROPERTIES ?? 'input,transform', {lower: true});
         if(!cProps.every(isCompactableProperty)) {
             throw new SimpleError(`Compactable properties must be one of 'transform' or 'input'. Given: ${cProps.join(',')}`);
         }

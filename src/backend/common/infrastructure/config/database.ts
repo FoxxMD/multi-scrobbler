@@ -34,3 +34,4 @@ export interface RetentionOptions {
 }
 
 export const DEFAULT_RETENTION_DELETE_AFTER = 604800; // 7 days
+export const DEFAULT_RETENTION_COMPACT_AFTER = 259200; // 3 days

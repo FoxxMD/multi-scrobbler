@@ -4,7 +4,7 @@ import { promises as fs } from 'fs'
 import { childLogger, Logger } from '@foxxmd/logging';
 import { loggerNoop } from '../MaybeLogger.js';
 import { fileExists, fileOrDirectoryIsWriteable } from '../../utils/FSUtils.js';
-import { COMPACTABLE, compactableProperties, CompactableProperty, DEFAULT_RETENTION_DELETE_AFTER, RententionGranular, RetentionConfig, RetentionConfigValue, RetentionOption, RetentionValue, RetentionValueUnparsed } from '../infrastructure/config/database.js';
+import { COMPACTABLE, compactableProperties, CompactableProperty, DEFAULT_RETENTION_COMPACT_AFTER, DEFAULT_RETENTION_DELETE_AFTER, RententionGranular, RetentionConfig, RetentionConfigValue, RetentionOption, RetentionValue, RetentionValueUnparsed } from '../infrastructure/config/database.js';
 import { DurationValue } from '../infrastructure/Atomic.js';
 import { Duration } from 'dayjs/plugin/duration.js';
 import dayjs from 'dayjs';
@@ -71,11 +71,11 @@ const parseRetentionValue = (val: RetentionValueUnparsed): RetentionValue => {
     throw new SimpleError('retention value be of one: false, number, or string');
 }
 
-const parseRetentionFromEnv = (): RetentionOption<RetentionValue> => {
-    const deleteAfterEnv = process.env.RETENTION_DELETE_AFTER ?? DEFAULT_RETENTION_DELETE_AFTER,
-        deleteCompletedEnv = process.env.RETENTION_DELETE_COMPLETED_AFTER ?? deleteAfterEnv,
-        deleteFailedEnv = process.env.RETENTION_DELETE_FAILED_AFTER ?? deleteAfterEnv,
-        deleteDupedEnv = process.env.RETENTION_DELETE_DUPED_AFTER ?? deleteAfterEnv;
+const parseRetentionFromEnv = (type: string, defaultVal: number = DEFAULT_RETENTION_DELETE_AFTER): RetentionOption<RetentionValue> => {
+    const deleteAfterEnv = process.env[`RETENTION_${type}_AFTER`] ?? defaultVal,
+        deleteCompletedEnv = process.env[`RETENTION_${type}_COMPLETED_AFTER`] ?? deleteAfterEnv,
+        deleteFailedEnv = process.env[`RETENTION_${type}_FAILED_AFTER`] ?? deleteAfterEnv,
+        deleteDupedEnv = process.env[`RETENTION_${type}_DUPED_AFTER`] ?? deleteAfterEnv;
 
     return {
         completed: parseRetentionValue(deleteCompletedEnv),
@@ -95,7 +95,7 @@ retentionCompactAfterFromEnv: RetentionOption<RetentionValue>;
 
 export const getRetentionDeleteAfterFromEnv = () => {
     if (retentionDeleteAfterFromEnv === undefined) {
-        const deleteEnv = parseRetentionFromEnv();
+        const deleteEnv = parseRetentionFromEnv('DELETE');
         if(isRetentionOptionDurations(deleteEnv)) {
             retentionDeleteAfterFromEnv = deleteEnv;
         } else {
@@ -106,7 +106,7 @@ export const getRetentionDeleteAfterFromEnv = () => {
 }
 export const getRetentionCompactAfterFromEnv = () => {
     if (retentionCompactAfterFromEnv === undefined) {
-        const compactEnv = parseRetentionFromEnv();
+        const compactEnv = parseRetentionFromEnv('COMPACT', DEFAULT_RETENTION_COMPACT_AFTER);
         retentionCompactAfterFromEnv = compactEnv;
     }
     return retentionCompactAfterFromEnv;
