@@ -1,7 +1,7 @@
 [
   {
     "name": "Family Account",
-    "id": "myDeezerId"
+    "id": "myDeezerId",
     "enable": true,
     "clients": [],
     "data": {

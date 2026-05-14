@@ -1,7 +1,7 @@
 [
   {
     "id": "mySubsonic",
-    "name": "Airsonic Server"
+    "name": "Airsonic Server",
     "enable": true,
     "data": {
       "url": "http://localhost:4040/airsonic",
