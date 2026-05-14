@@ -64,7 +64,9 @@ If no `sources` are configured for multi-scrobbler it will automatically try to 
 ## Configuration
 
 <Config config="IcecastSourceConfig" fileContent={IcecastConfig} name="icecast">
-        | Environmental Variable | Required? | Default | Description |
-        | :--------------------- | :-------- | :------ | ----------- |
-        | `ICECAST_URL`          | Yes       |         | Icecast URL |
+        | Environmental Variable | Required? | Default | Description                     |
+        | :--------------------- | :-------- | :------ | ------------------------------- |
+        | `ICECAST_ID`           | Yes       |         | A unique ID                     |
+        | `ICECAST_URL`          | Yes       |         | Icecast URL                     |
+        | `ICECAST_NAME`         | No        |         | A vanity name different than ID |
 </Config>

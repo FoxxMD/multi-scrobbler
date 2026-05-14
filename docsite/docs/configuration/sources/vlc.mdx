@@ -99,8 +99,10 @@ If you find that VLC is incorrectly reporting track information (in its interfac
 ## Configuration
 
 <Config config="VLCSourceConfig" fileContent={JsonConfig} name="vlc">
-        | Environmental Variable | Required?  | Default          | Description |
-        |------------------------|------------|------------------|-------------|
-        | `VLC_URL`              | No         | `localhost:8080` |             |
-        | `VLC_PASSWORD`         | Yes        |                  |             |
+        | Environmental Variable | Required? | Default          | Description                     |
+        | ---------------------- | --------- | ---------------- | ------------------------------- |
+        | `VLC_ID`               | Yes       |                  | A unique ID                     |
+        | `VLC_URL`              | No        | `localhost:8080` |                                 |
+        | `VLC_PASSWORD`         | Yes       |                  |                                 |
+        | `VLC_NAME`             | No        |                  | A vanity name different than ID |
 </Config>

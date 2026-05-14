@@ -179,11 +179,13 @@ Only one of these methods needs to be used.
 ## Configuration
 
 <Config config="YTMusicSourceConfig" fileContent={JsonConfig} name="ytmusic">
-| Environmental Variable | Required? | Default |                  Description                  |
-|------------------------|-----------|---------|-----------------------------------------------|
+| Environmental Variable | Required? | Default | Description                                   |
+| ---------------------- | --------- | ------- | --------------------------------------------- |
+| YTM_ID                 | Yes       |         | A unique ID                                   |
 | YTM_COOKIE             | No        |         | Value for Cookie Authentication               |
 | YTM_CLIENT_ID          | No        |         | Client ID for OAuth Athentication             |
 | YTM_CLIENT_SECRET      | No        |         | Client Secret for OAuth Athentication         |
 | YTM_REDIRECT_URI       | No        |         | A custom redirect URI for OAuth Athentication |
 | YTM_LOG_DIFF           | No        | false   | Log YTM history changes                       |
+| YTM_NAME               | No        |         | A vanity name different than ID               |
 </Config>

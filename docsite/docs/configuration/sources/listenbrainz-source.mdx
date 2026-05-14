@@ -28,7 +28,9 @@ On your [profile page](https://listenbrainz.org/profile/) find your **User Token
 <Config config="ListenBrainzSourceConfig" fileContent={ListenbrainzConfig} name="listenbrainz">
         | Environmental Variable | Required? | Default                       | Description                     |
         | ---------------------- | --------- | ----------------------------- | ------------------------------- |
+        | `SOURCE_LZ_ID`         | Yes       |                               | A unique ID                     |
         | `SOURCE_LZ_TOKEN`      | Yes       |                               | User token from your LZ profile |
         | `SOURCE_LZ_USER`       | Yes       |                               | Your LZ username                |
         | `SOURCE_LZ_URL`        | No        | https://api.listenbrainz.org/ | The base URL for the LZ server  |
+        | `SOURCE_LZ_NAME`       | No        |                               | A vanity name different than ID |d
 </Config>

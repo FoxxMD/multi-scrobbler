@@ -196,6 +196,7 @@ To configure MS to use Musicbrainz with your Plex metadata use one of the method
 <Config config="PlexApiSourceConfig" fileContent={PlexConfig} name="plex">
         | Environmental Variable | Required? | Default | Description                                                            |
         | ---------------------- | --------- | ------- | ---------------------------------------------------------------------- |
+        | `PLEX_ID`              | **Yes**   |         | A unique ID                                                            |
         | `PLEX_URL`             | **Yes**   |         | The URL of the Plex server IE `http://localhost:32400`                 |
         | `PLEX_TOKEN`           | **Yes**   |         | The **Plex Token** to use with the API                                 |
         | `PLEX_USERS_ALLOW`     | No        |         | Comma-separated list of usernames (from Plex) to scrobble for          |
@@ -204,4 +205,5 @@ To configure MS to use Musicbrainz with your Plex metadata use one of the method
         | `PLEX_DEVICES_BLOCK`   | No        |         | Comma-separated list of devices to disallow scrobbles from             |
         | `PLEX_LIBRARIES_ALLOW` | No        |         | Comma-separated list of libraries to allow scrobbles from              |
         | `PLEX_LIBRARIES_BLOCK` | No        |         | Comma-separated list of libraries to disallow scrobbles from           |
+        | `PLEX_NAME`            | No        |         | A vanity name different than ID                                        |
 </Config>

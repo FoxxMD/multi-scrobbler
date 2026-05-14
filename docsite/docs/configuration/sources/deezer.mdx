@@ -176,10 +176,12 @@ import DeezerDeprecatedConfig from '!!raw-loader!@site/../config/deezer-deprecat
         <Tabs groupId="configType" queryString>
             <TabItem value="env" label="ENV">
                 | Environmental Variable | Required? | Default                                 | Description                       |
-                |------------------------|-----------|-----------------------------------------|-----------------------------------|
+                | ---------------------- | --------- | --------------------------------------- | --------------------------------- |
+                | `DEEZER_ID`            | Yes       |                                         | A unique ID                       |
                 | `DEEZER_CLIENT_ID`     | Yes       |                                         | Your **Application ID**           |
                 | `DEEZER_CLIENT_SECRET` | Yes       |                                         | Your **Secret Key**               |
                 | `DEEZER_REDIRECT_URI`  | No        | `http://localhost:9078/deezer/callback` | URI must end in `deezer/callback` |
+                | `DEEZER_NAME`          | No        |                                         | A vanity name different than ID   |
             </TabItem>
             <TabItem value="file" label="File">
 

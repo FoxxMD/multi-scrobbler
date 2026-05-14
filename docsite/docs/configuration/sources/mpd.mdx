@@ -23,8 +23,10 @@ Multi-scrobbler requires only the [`read`](https://mpd.readthedocs.io/en/stable/
 ## Configuration
 
 <Config config="MPDSourceConfig" fileContent={MPDConfig} name="mpd">
-        | Environmental Variable | Required? | Default          | Description |
-        |------------------------|-----------|------------------|-------------|
-        | `MPD_URL`              | No        | `localhost:6600` |             |
-        | `MPD_PASSWORD`         | No        |                  |             |
+        | Environmental Variable | Required? | Default          | Description                     |
+        | ---------------------- | --------- | ---------------- | ------------------------------- |
+        | `MPD_ID`               | Yes       |                  | A unique ID                     |
+        | `MPD_URL`              | No        | `localhost:6600` |                                 |
+        | `MPD_PASSWORD`         | No        |                  |                                 |
+        | `MPD_NAME`             | No        |                  | A vanity name different than ID |
 </Config>

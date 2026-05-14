@@ -106,6 +106,8 @@ Allow scrobbles from plyr.fm and unknown services:
 <Config config="TealClientConfig" fileContent={JsonConfig} name="tealfm">
         | Environmental Variable     | Required? | Default | Description                                                                                |
         | :------------------------- | --------- | ------- | ------------------------------------------------------------------------------------------ |
+        | `SOURCE_TEALFM_ID`         | Yes       |         | A unique ID                                                                                |
         | `SOURCE_TEALFM_IDENTIFIER` | Yes       |         | Your **full** ATProto handle or DID. For Bluesky account this is like `myUser.bsky.social` |
         | `SOURCE_TEALFM_APP_PW`     | Yes       |         | Bluesky/ATProto network App Password                                                       |
+        | `SORUCE_TEALFM_NAME`       | No        |         | A vanity name different than ID                                                            |
 </Config>

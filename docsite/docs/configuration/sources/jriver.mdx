@@ -50,9 +50,11 @@ If any part of this URL is missing multi-scrobbler will use a default value. Thi
 ## Configuration
 
 <Config config="JRiverSourceConfig" fileContent={JriverConfig} name="jriver">
-        | Environmental Variable | Required |             Default             |                  Description                   |
-        |------------------------|----------|---------------------------------|------------------------------------------------|
+        | Environmental Variable | Required | Default                         | Description                                    |
+        | ---------------------- | -------- | ------------------------------- | ---------------------------------------------- |
+        | JRIVER_ID              | Yes      |                                 | A unique ID                                    |
         | JRIVER_URL             | Yes      | http://localhost:52199/MCWS/v1/ | The URL of the JRiver server                   |
         | JRIVER_USERNAME        | No       |                                 | If authentication is enabled, the username set |
         | JRIVER_PASSWORD        | No       |                                 | If authenticated is enabled, the password set  |
+        | JRIVER_NAME            | No       |                                 | A vanity name different than ID                |
 </Config>

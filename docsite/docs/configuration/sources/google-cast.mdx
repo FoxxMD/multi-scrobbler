@@ -149,11 +149,13 @@ To diagnose bad/incomplete track information or strange MS player behavior pleas
         [Manually configuring cast device connections](#connecting-devices) is only available through file-based config.
         :::
 
-        | Environmental Variable | Required? | Default |                                     Description                                      |
-        |------------------------|-----------|---------|--------------------------------------------------------------------------------------|
-        | CC_ENABLE              | No        |         | Set to 'true' to enable Cast monitoring without needing to define other ENVs         |
-        | CC_WHITELIST_DEVICES   | No        |         | Only scrobble from these Cast devices. Comma-delimited list. EX mini-home, family-tv |
-        | CC_BLACKLIST_DEVICES   | No        |         | Do not scrobble from these Cast devices. Comma-delimited list                        |
-        | CC_WHITELIST_APPS      | No        |         | Only scrobble from these casted Apps. Comma-delimited list. EX spotify, pandora      |
-        | CC_BLACKLIST_APPS      | No        |         | Do not scrobble from these casted Apps. Comma-delimited list                         |
+        | Environmental Variable | Required? | Default | Description                                                                          |
+        | ---------------------- | --------- | ------- | ------------------------------------------------------------------------------------ |
+        | `CC_ID`                | Yes       |         | A unique ID                                                                          |
+        | `CC_ENABLE`            | No        |         | Set to 'true' to enable Cast monitoring without needing to define other ENVs         |
+        | `CC_WHITELIST_DEVICES` | No        |         | Only scrobble from these Cast devices. Comma-delimited list. EX mini-home, family-tv |
+        | `CC_BLACKLIST_DEVICES` | No        |         | Do not scrobble from these Cast devices. Comma-delimited list                        |
+        | `CC_WHITELIST_APPS`    | No        |         | Only scrobble from these casted Apps. Comma-delimited list. EX spotify, pandora      |
+        | `CC_BLACKLIST_APPS`    | No        |         | Do not scrobble from these casted Apps. Comma-delimited list                         |
+        | `CC_NAME`              | No        |         | A vanity name different than ID                                                      |
 </Config>

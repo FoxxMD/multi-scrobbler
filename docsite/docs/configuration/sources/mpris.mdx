@@ -72,8 +72,10 @@ MPRIS communication requires multi-scrobbler to have access to the host's dbus-d
 
 <Config config="MPRISSourceConfig" fileContent={MPRISConfig} name="mpris">
         | Environmental Variable | Required? | Default | Description                                                                      |
-        |------------------------|-----------|---------|----------------------------------------------------------------------------------|
+        | ---------------------- | --------- | ------- | -------------------------------------------------------------------------------- |
+        | MPRIS_ID               | Yes       |         | A unique ID                                                                      |
         | MPRIS_ENABLE           | No        |         | Use MPRIS as a Source (useful when you don't need any other options)             |
         | MPRIS_BLACKLIST        | No        |         | Comma-delimited list of player names not to scrobble from                        |
         | MPRIS_WHITELIST        | No        |         | Comma-delimited list of players names to ONLY scrobble from. Overrides blacklist |
+        | MPRIS_NAME             | No        |         | A vanity name different than ID                                                  |
 </Config>

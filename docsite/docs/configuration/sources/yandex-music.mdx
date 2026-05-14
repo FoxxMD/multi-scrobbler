@@ -74,6 +74,8 @@ If you have issues specifically with the MS Source please mention [**Druidblack*
 <Config config="YandexMusicBridgeSourceConfig" fileContent={JsonConfig} name="ymbridge">
         | Environmental Variable | Required? | Default | Description                                                               |
         | :--------------------- | :-------- | ------- | :------------------------------------------------------------------------ |
+        | `YMBRIDGE_ID`          | Yes       |         | A unique ID                                                               |
         | `YMBRIDGE_URL`         | Yes       |         | `http://URL:PORT` for the `yandex-music-bridge` container                 |
         | `YMBRIDGE_API_KEY`     | No        |         | The same key used for `YM_API_KEY` on the `yandex-music-bridge` container |
+        | `YMBRIDGE_NAME`        | No        |         | A vanity name different than ID                                           |
 </Config>

@@ -32,8 +32,10 @@ Use the optional `usersAllow` property with **File** or **AIO** configuration to
 
 <Config config="SubSonicSourceConfig" fileContent={SubsonicConfig} name="subsonic">
         | Environmental Variable | Required? | Default | Description                          |
-        |------------------------|-----------|---------|--------------------------------------|
+        | ---------------------- | --------- | ------- | ------------------------------------ |
+        | `SUBSONIC_ID`          | Yes       |         | A unique ID                          |
         | `SUBSONIC_USER`        | Yes       |         |                                      |
         | `SUBSONIC_PASSWORD`    | Yes       |         |                                      |
         | `SUBSONIC_URL`         | Yes       |         | Base url of your subsonic-api server |
+        | `SUBSONIC_NAME`        | No        |         | A vanity name different than ID      |
 </Config>

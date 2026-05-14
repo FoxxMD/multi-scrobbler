@@ -41,6 +41,8 @@ http://localhost:9078/api/lastfm/mySlug
 <Config config="LastFMEndpointSourceConfig" fileContent={LastfmEndpointConfig} name="endpointlfm">
         | Environmental Variable | Required? | Default | Description                                                                                                        |
         | :--------------------- | :-------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
+        | `LFM_ID`               | Yes       |         | A unique ID                                                                                                        |
         | `LFM_ENABLE`           | No        |         | Use LFM Endpoint as a Source without any other configuration. Only required if slug/token are not provided as ENVs |
         | `LFM_SLUG`             | No        |         | (Optional) The URL suffix to use for accepting LFM scrobbles                                                       |
+        | `LFM_NAME`             | No        |         | A vanity name different than ID                                                                                    |
 </Config>

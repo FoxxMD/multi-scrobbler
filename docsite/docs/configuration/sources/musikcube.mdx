@@ -32,7 +32,9 @@ If no URL is provided to MS it will try to use `ws://localhost:7905`
 
 <Config config="MusikcubeSourceConfig" fileContent={MusikcubeConfig} name="musikcube">
         | Environmental Variable | Required? | Default               | Description                          |
-        |------------------------|-----------|-----------------------|--------------------------------------|
+        | ---------------------- | --------- | --------------------- | ------------------------------------ |
+        | `MC_ID`                | Yes       |                       | A unique ID                          |
         | `MC_URL`               | No        | `ws://localhost:7905` | Use port set for **metadata server** |
         | `MC_PASSWORD`          | Yes       |                       |                                      |
+        | `MC_NAME`              | No        |                       | A vanity name different than ID      |
 </Config>

@@ -111,9 +111,11 @@ Use **one** of the following methods to specify a valid Redirect URI and complet
 ## Configuration
 
 <Config config="SpotifySourceConfig" fileContent={SpotifyConfig} name="spotify">
-    | Environmental Variable  | Required? | Default                          | Description                |
-    | ----------------------- | --------- | -------------------------------- | -------------------------- |
-    | `SPOTIFY_CLIENT_ID`     | Yes       |                                  |                            |
-    | `SPOTIFY_CLIENT_SECRET` | Yes       |                                  |                            |
-    | `SPOTIFY_REDIRECT_URI`  | No        | `http://localhost:9078/callback` | URI must end in `callback` |
+    | Environmental Variable  | Required? | Default                          | Description                     |
+    | ----------------------- | --------- | -------------------------------- | ------------------------------- |
+    | `SPOTIFY_ID`            | Yes       |                                  | A unique ID                     |
+    | `SPOTIFY_CLIENT_ID`     | Yes       |                                  |                                 |
+    | `SPOTIFY_CLIENT_SECRET` | Yes       |                                  |                                 |
+    | `SPOTIFY_REDIRECT_URI`  | No        | `http://localhost:9078/callback` | URI must end in `callback`      |
+    | `SPOTIFY_NAME`          | No        |                                  | A vantiy name different than ID |
 </Config>

@@ -88,8 +88,10 @@ This affects **only** MS's behavior and does not affect the general connector be
 
 <Config config="WebScrobblerSourceConfig" fileContent={JsonConfig} name="webscrobbler">
         | Environmental Variable | Required? | Default | Description                                                              |
-        |------------------------|-----------|---------|--------------------------------------------------------------------------|
+        | ---------------------- | --------- | ------- | ------------------------------------------------------------------------ |
+        | WS_ID                  | Yes       |         | A unique ID                                                              |
         | WS_ENABLE              | No        |         | Set to 'true' to enable WS without needing to define other ENVs          |
         | WS_WHITELIST           | No        |         | Only scrobble from these WebScrobbler Connectors. Comma-delimited list   |
         | WS_BLACKLIST           | No        |         | Do not scrobble from these WebScrobbler Connectors. Comma-delimited list |
+        | WS_NAME                | No        |         | A vanity name different than ID                                          |
 </Config>
