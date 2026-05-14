@@ -1,8 +1,9 @@
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import mergeErrorCause from 'merge-error-cause';
-import { findCauseByFunc, findCauseByReference, isAbortReasonErrorLike } from "../../utils/ErrorUtils.js";
+import { findCauseByFunc, isAbortReasonErrorLike } from "../../utils/ErrorUtils.js";
 import { UpstreamError, UpstreamErrorOptions } from "./UpstreamError.js";
 import { isAbortError } from "abort-controller-x";
+import {addKnownErrorConstructor} from 'serialize-error';
 
 export abstract class NamedError extends Error {
     public abstract name: string;
@@ -13,32 +14,37 @@ export abstract class StageError extends NamedError {}
 export class BuildDataError extends StageError {
     name = 'Init Build Data';
 }
+addKnownErrorConstructor(BuildDataError);
 
 export class ParseCacheError extends StageError {
     name = 'Init Parse Cache';
 }
+addKnownErrorConstructor(ParseCacheError);
 
 export class TransformRulesError extends StageError {
     name = 'Transform Rules';
 }
-
+addKnownErrorConstructor(TransformRulesError);
 export class ConnectionCheckError extends StageError {
     name = 'Connection Check';
 }
+addKnownErrorConstructor(ConnectionCheckError);
 
 export class AuthCheckError extends StageError {
     name = 'Authentication Check';
 }
+addKnownErrorConstructor(AuthCheckError);
 
 export class PostInitError extends StageError {
     name = 'Post Initialization';
 }
+addKnownErrorConstructor(PostInitError);
 
 const STACK_AT_REGEX = new RegExp(/[\n\r]\s*at/);
 
 export class SimpleError extends Error implements HasSimpleError {
     simple: boolean;
-    name = 'Error';
+    name = 'SimpleError';
 
     stackShortened: boolean = false;
 
@@ -68,6 +74,7 @@ export class SimpleError extends Error implements HasSimpleError {
         }
     }
 }
+addKnownErrorConstructor(SimpleError, () => new SimpleError(''))
 
 export class StageTransformError extends NamedError {
     name = 'Stage Transform';
@@ -77,14 +84,17 @@ export class StageTransformError extends NamedError {
         this.stageName = name;
     }
 }
+addKnownErrorConstructor(StageTransformError, () => new StageTransformError('',''))
 
 export class SkipTransformStageError extends SimpleError {
     name = 'Skip Transform Stage';
 }
+addKnownErrorConstructor(SkipTransformStageError, () => new SkipTransformStageError(''))
 
 export class StagePrerequisiteError extends SimpleError {
     name = 'Stage Prerequisite';
 }
+addKnownErrorConstructor(StagePrerequisiteError, () => new StagePrerequisiteError(''))
 
 export interface HasSimpleError extends Error {
     simple: boolean
@@ -116,10 +126,13 @@ export class ScrobbleSubmitError<T extends (object | string) = object> extends U
         this.payload = options?.payload;
     }
 }
+addKnownErrorConstructor(ScrobbleSubmitError, () => new ScrobbleSubmitError(''))
 
 export class AbortedError extends SimpleError {
-    name = 'Aborted Operation';
+    override name = 'Aborted Operation';
 }
+addKnownErrorConstructor(AbortedError, () => new AbortedError(''));
+
 export const generateLoggableAbortReason = (msg: string, signal: AbortSignal): AbortedError => {
     const reason = signal.reason;
     let err: AbortedError;
@@ -133,6 +146,7 @@ export const generateLoggableAbortReason = (msg: string, signal: AbortSignal): A
 }
 
 export class InvalidRegexError extends SimpleError {
+    override name = 'Invalid Regex Error';
     constructor(regex: RegExp | RegExp[], val?: string, url?: string, message?: string) {
         const msgParts = [
             message ?? 'Regex(es) did not match the value given.',
@@ -150,3 +164,4 @@ export class InvalidRegexError extends SimpleError {
         super(msgParts.join('\r\n'));
     }
 }
+addKnownErrorConstructor(InvalidRegexError, () => new InvalidRegexError(new RegExp(/1/)));

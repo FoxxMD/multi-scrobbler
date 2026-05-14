@@ -341,7 +341,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         }
 
         // @ts-ignore
-        const result: DeadLetterScrobble<PlayObject>[] = (await (client as AbstractScrobbleClient).getPlaysPaginated(deadQuery)).data.map(playSelectToDeadScrobble);
+        const result: DeadLetterScrobble<PlayObject>[] = (await (client as AbstractScrobbleClient).getPlaysPaginated(deadQuery)).data.map(x => playSelectToDeadScrobble(x, true));
 
         return res.json(result);
     });
@@ -377,7 +377,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
             if(scrobbled) {
                 return res.status(200).send();
             }
-            return res.json(playSelectToDeadScrobble(dead));
+            return res.json(playSelectToDeadScrobble(dead, true));
         } catch (e) {
             if(e.message.includes(`Play ${deadId} does not exist`)) {
                 logger.warn(e);

@@ -9,7 +9,7 @@ import dayjs, { Dayjs } from "dayjs";
 import { asPlay } from "../../../../core/PlayMarshalUtils.js";
 import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../utils/PlayComparisonUtils.js";
 import { hashObject } from "../../../utils/StringUtils.js";
-import { messageWithCauses } from "../../../utils/ErrorUtils.js";
+import { serializeError } from "serialize-error";
 
 export const generateComponentEntity = (data: MarkOptional<ComponentNew, 'uid'>): ComponentNew => {
     assert(data.name !== undefined, 'Must provide name');
@@ -71,7 +71,7 @@ export const hydratePlaySelect = (select: PlaySelect, opts: PlayHydateOptions[] 
     return res;
 }
 
-export const playSelectToDeadScrobble = (select: PlaySelectWithQueueStates): DeadLetterScrobble<PlayObject> => {
+export const playSelectToDeadScrobble = (select: PlaySelectWithQueueStates, serializedError: boolean = false): DeadLetterScrobble<PlayObject> => {
     const deadQueue = select.queueStates.find(x => x.queueName === CLIENT_DEAD_QUEUE);
     return {
         play: select.play,
@@ -79,7 +79,7 @@ export const playSelectToDeadScrobble = (select: PlaySelectWithQueueStates): Dea
         source: select.play.meta.source,
         retries: deadQueue.retries,
         lastRetry: deadQueue.updatedAt,
-        error: deadQueue.error as unknown as string,
+        error: (serializedError ? serializeError(select.error) : select.error) as unknown as string,
         status: deadQueue.queueStatus as 'queued' | 'failed'
     }
 }

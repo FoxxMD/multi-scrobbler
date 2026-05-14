@@ -6,7 +6,7 @@ import { ErrorLike, PlayObject } from "../../../../../core/Atomic.js";
 import { asPlayCheap } from "../../../../../core/PlayMarshalUtils.js";
 import { ExternalMetadataTerm, PlayTransformPartsConfig, SearchAndReplaceTerm } from "../../../infrastructure/Transform.js";
 import { JobRangeCount, JobRangeTime } from "../../../infrastructure/Job.js";
-import { serializeError } from "serialize-error";
+import { serializeError, deserializeError } from "serialize-error";
 
 const DayjsTimestamp = customType<
   {
@@ -60,7 +60,7 @@ const ErrorLikeJson = customType<
     return JSON.stringify(serializeError(value));
   },
   fromDriver(value: string): ErrorLike {
-    return JSON.parse(value)
+    return deserializeError(JSON.parse(value));
   },
 });
 

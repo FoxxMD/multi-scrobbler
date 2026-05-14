@@ -50,7 +50,9 @@ import {
     sleep,
     sortByOldestPlayDate,
 } from "../utils.js";
-import { findCauseByReference, messageWithCauses, messageWithCausesTruncatedDefault } from "../utils/ErrorUtils.js";
+import { findCauseByReference } from "../utils/ErrorUtils.js";
+import { ErrorIsh, messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.js";
+import { messageWithCauses } from "../../core/ErrorUtils.js";
 import {
     comparePlayTemporally,
     getTemporalAccuracyCloseVal,
@@ -1040,7 +1042,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         let successState: PlaySelect['state'];
 
         try {
-
+            
             if (this.upstreamRefresh.refreshEnabled) {
                 try {
                     historicalPlays = await this.getSOTScrobblesForPlay(currQueuedPlay.play);
@@ -1471,12 +1473,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
 
     addDeadLetterScrobble = async (data: PlaySelect, error: (Error | string) = 'Unspecified error') => {
-        let eString = '';
-        if(typeof error === 'string') {
-            eString = error;
-        } else {
-            eString = messageWithCauses(error);
-        }
         let e: ErrorLike;
         if(isErrorLike(error)) 
         {
@@ -1492,8 +1488,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             playId: data.id,
             queueName: CLIENT_DEAD_QUEUE
         });
-        // TODO ?
-        const deadData = {id: nanoid(), retries: 0, error: eString, play: data.play};
+        const deadData = {id: nanoid(), retries: 0, error: e, play: data.play};
         //this.deadLetterScrobbles.push(deadData);
         //this.deadLetterScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
         this.emitEvent('deadLetter', {dead: deadData});

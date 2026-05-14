@@ -18,6 +18,7 @@ import { faBug } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import clsx from "clsx";
 import { useCopyToClipboard } from '../components/copyToClipboardHook';
+import { messageWithCauses } from '../../core/ErrorUtils';
 
 const displayOpts = {
     include: recentIncludes,
@@ -68,21 +69,24 @@ const dead = (props: PropsFromRedux) => {
                     {isSuccess && !isLoading && data.length === 0 ? 'No failed scrobbles!' : null}
                     <ul>{data.map(x =>
                         {
-                            let errText = x.error;
-                            if(typeof x.error === 'object' && x.error !== null) {
-                                errText = JSON.stringify(x.error);
+                            let errorSummary: string;
+                            try {
+                                // @ts-expect-error
+                                errorSummary = messageWithCauses(x.error, undefined, '\n caused by: ');
+                            } catch (e) {
+                                console.warn(new Error('Could not convert error to summary', {cause: e}));
                             }
                             const classes = [...baseClass].concat(copiedIndex !== x.id ? ['underline','cursor-pointer'] : []);
                             return (<li className="my-2.5" key={x.id}>
                         <div className="text-lg">
-                            <button className={clsx(classes)} onClick={() => copyActionCB(x.play.meta.lifecycle, x.id)}>{copiedIndex === x.id ? 'Copied!' : <FontAwesomeIcon
+                            <button className={clsx(classes)} onClick={() => copyActionCB(x, x.id)}>{copiedIndex === x.id ? 'Copied!' : <FontAwesomeIcon
                                                                             color="white" icon={faBug}/>}</button>
                             <PlayDisplay data={x.play} buildOptions={displayOpts}/></div>
                         <div><span className="font-semibold">Source</span>:{x.source === undefined ? 'Source - Unknown' : x.source.replace('Source -', '')}</div>
                         <div><span className="font-semibold">Status</span>:{x.status}</div>
                         <div><span className="font-semibold">Retries</span>: {x.retries}</div>
                         <div><span className="font-semibold">Last Retried</span>: {x.lastRetry === undefined ? 'Never' : dayjs.duration(dayjs(x.lastRetry).diff(dayjs())).humanize(true)}</div>
-                        <div><span className="font-semibold">Error</span>: <span className="font-mono text-sm">{errText}</span></div>
+                        {errorSummary === undefined ? null : <div><span className="font-semibold">Error Summary</span>: <pre className="font-mono text-sm">{errorSummary}</pre></div>}
                         <div onClick={() => retryDead(x.id)} className="capitalize underline cursor-pointer max-w-fit">Retry</div>
                         <div onClick={() => removeDead(x.id)} className="capitalize underline cursor-pointer max-w-fit">Remove</div>
                     </li>)
