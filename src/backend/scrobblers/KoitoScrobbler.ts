@@ -7,7 +7,7 @@ import { FormatPlayObjectOptions, TimeRangeListensFetcher } from "../common/infr
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.js';
 import { Notifiers } from "../notifier/Notifiers.js";
 
-import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.js";
 import { isDebugMode } from "../utils.js";
 import { KoitoClientConfig } from "../common/infrastructure/config/client/koito.js";
 import { KoitoApiClient, listenObjectResponseToPlay } from "../common/vendor/koito/KoitoApiClient.js";
@@ -28,6 +28,7 @@ export default class KoitoScrobbler extends AbstractScrobbleClient {
         // 1000 is way too high. maxing at 100
         this.MAX_INITIAL_SCROBBLES_FETCH = 100;
         this.supportsNowPlaying = true;
+        this.nowPlayingMaxThreshold = nowPlayingUpdateByPlayDuration;
         this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this.api, this.api.logger);
     }
 
