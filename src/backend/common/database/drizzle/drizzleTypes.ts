@@ -17,8 +17,8 @@ export type PlayInputNew = typeof playInputs.$inferInsert;
 export type PlayInputSelect = typeof playInputs.$inferSelect;
 
 export type PlaySelect = typeof plays.$inferSelect;
-export type PlaySelectRel = ModelWithRelations<typeof plays>;
 export type PlaySelectWithQueueStates = GenericRelationResult<'plays', 'queueStates'>;
+export type PlayWith<K extends keyof TSchema['plays']["relations"]> = GenericRelationResult<'plays', K>;
 export type PlayNew = typeof plays.$inferInsert;
 
 
@@ -42,59 +42,6 @@ export type WhereClause<T extends keyof typeof relations> = RelationsFilter<type
 
 export type CompareOp<T> = Pick<RelationFieldsFilterInternals<T>, 'gt' | 'gte' | 'eq' | 'lt' | 'lte' | 'ne'>
 export type CompareOpKey<T> = keyof CompareOp<T>;
-
-
-
-/**
- * Based on https://github.com/drizzle-team/drizzle-orm/issues/695#issuecomment-3133969178
- */
-
-// Helper type to find the tsName corresponding to a given dbName in TSchema
-type FindTsNameByDbName<TDbNameToFind extends string> = {
-    [K in keyof TSchema]: TSchema[K] extends {
-        // updated dbName -> name
-        name: TDbNameToFind;
-    }
-        ? K
-        : TDbNameToFind;
-}[keyof TSchema];
-
-// Helper type to find the dbName corresponding to a given tsName in TSchema
-type FindDbNameByTsName<TTable extends Schema[keyof Schema]> = {
-    [K in keyof Schema]: Schema[K] extends TTable ? K : never;
-}[keyof Schema];
-
-/**
- * Utility type to infer the model type for a given table name from the schema.
- * Handles nested relations recursively.
- * Uses referencedTableName (dbName) and FindTsNameByDbName helper.
- */
-export type ModelWithRelationsFromName<
-    TTableName extends keyof TSchema,
-> = InferSelectModel<Schema[TTableName]> & {
-    [K in keyof TSchema[TTableName]['relations']]?: TSchema[TTableName]['relations'][K] extends infer TRelation
-        // updated referencedTableName -> targetTableName
-        ? TRelation extends { targetTableName: infer TRefDbName extends string }
-            ? FindTsNameByDbName<TRefDbName> extends infer TRefTsName extends
-                  keyof TSchema
-                ? TRelation extends Many<any>
-                    ? ModelWithRelationsFromName<TRefTsName>[]
-                    : ModelWithRelationsFromName<TRefTsName> | null
-                : never
-            : never
-        : never;
-};
-
-/**
- * Utility type to infer the model type for a given table from the schema.
- * Handles nested relations recursively.
- * Uses referencedTableName (dbName) and FindDbNameByTsName helper.
- */
-export type ModelWithRelations<TTable extends Schema[keyof Schema]> =
-    FindDbNameByTsName<TTable> extends infer TTableName extends keyof TSchema
-        ? ModelWithRelationsFromName<TTableName>
-        : never;
-
 
 // all relations are are now fully typed and optional
 //type FullPlay = ModelWithRelations<typeof plays>;

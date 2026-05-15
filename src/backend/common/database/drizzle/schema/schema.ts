@@ -99,6 +99,21 @@ export const playInputs = sqliteTable("play_inputs", {
   uniqueIndex('play_input_id_idx').on(table.playId)
 ]);
 
+export const playsHistorical = sqliteTable("plays_historical", {
+  id: integer().primaryKey(),
+  uid: text({ length: 200 }).unique(),
+  componentId: integer().references(() => components.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
+  playedAt: DayjsTimestamp('playedAt'),
+  seenAt: DayjsTimestamp('seenAt'),
+  play: PlayJson('play').notNull(),
+  playHash: text(),
+  mbidIdentifier: text()
+}, (table) => [
+  index("play_historical_component_id_idx").on(table.componentId),
+  uniqueIndex("play_historical_uid_idx").on(table.uid),
+  index("play_historical_playedAt_idx").on(table.playedAt)
+]);
+
 // export const playParentRelations = defineRelations({plays}, (r) => ({
 //   plays: {
 //     parent: r.one.plays({
@@ -160,7 +175,9 @@ export const components = sqliteTable("components", {
   countLive: integer().notNull().default(0),
   // number of discovered/scrobbled plays from backlog/jobs
   countNonLive: integer().notNull().default(0),
-  createdAt: DayjsTimestamp('createdAt').$defaultFn(() => dayjs())
+  createdAt: DayjsTimestamp('createdAt').$defaultFn(() => dayjs()),
+  lastReadyAt: DayjsTimestamp('lastReadyAt'),
+  lastActiveAt: DayjsTimestamp('lastActiveAt')
 },
 (table) => [
   uniqueIndex('uid_mode_type_idx').on(table.uid,table.mode,table.type)
@@ -194,7 +211,7 @@ export const jobs = sqliteTable("jobs", {
   completedAt: DayjsTimestamp('completedAt')
 });
 
-const playRelations = defineRelations({ plays, queueStates, playInputs, components, jobs, componentMigrations }, (r) => ({
+const playRelations = defineRelations({ plays, queueStates, playInputs, components, jobs, componentMigrations,playsHistorical }, (r) => ({
   plays: {
     queueStates: r.many.queueStates(),
     input: r.one.playInputs({
@@ -218,6 +235,12 @@ const playRelations = defineRelations({ plays, queueStates, playInputs, componen
       optional: true
     })
   },
+  playsHistorical: {
+    component: r.one.components({
+      from: r.playsHistorical.componentId,
+      to: r.components.id,
+    }),
+  },
   queueStates: {
     play: r.one.plays({
       from: r.queueStates.playId,
@@ -230,6 +253,7 @@ const playRelations = defineRelations({ plays, queueStates, playInputs, componen
   },
   components: {
     plays: r.many.plays(),
+    playsHistorical: r.many.plays(),
     queueStates: r.many.queueStates(),
     migrations: r.many.componentMigrations(),
   },
@@ -250,6 +274,8 @@ export const getConfigByTableName = <T extends TableName>(name: T) => {
   switch(name) {
     case 'plays':
       return plays;
+    case 'playsHistorical':
+      return playsHistorical;
     case 'components':
       return components;
     case 'playInputs':

@@ -4,7 +4,7 @@ import { loggerNoop } from "../../../MaybeLogger.js";
 import { ErrorLike, PlayObject, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, TemporalAccuracy } from "../../../../../core/Atomic.js";
 import { generateInputEntity, generatePlayEntity, PlayEntityOpts, hydratePlaySelect, PlayHydateOptions } from "../entityUtils.js";
 import { playInputs, plays, queueStates, relations } from "../schema/schema.js";
-import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, CompareOpKey, QueueStateSelect, PlayInputSelect, PlaySelectRel, FindWith, PlaySelectWithQueueStates, WhereClause } from "../drizzleTypes.js";;
+import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, QueueStateSelect, FindWith, PlaySelectWithQueueStates, WhereClause, PlayWith } from "../drizzleTypes.js";;
 import { MarkOptional, MarkRequired, PathValue } from "ts-essentials";
 import { genGroupIdStrFromPlay, removeEmptyArrays, removeUndefinedKeys } from "../../../../utils.js";
 import dayjs, { Dayjs } from "dayjs";
@@ -236,7 +236,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return results.map(identifierExtractor[identifier]);
     }
 
-    findPlaysPaginated = async <T = PlaySelectRel>(args: QueryPlaysOpts, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PaginatedResponse<T>> => {
+    findPlaysPaginated = async <T = PlayWith<'queueStates' | 'input' | 'parent'>>(args: QueryPlaysOpts, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PaginatedResponse<T>> => {
         const {
             limit = 100,
             offset = 0,
@@ -664,7 +664,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         })
     }
 
-    public getTemporallyClosePlays = async (play: PlayObject, opts: {states?: PlaySelect['state'][], bufferTime?: number} & { with?: WithPlayRelation[] } & ComponentConstrainedRepoOpts = {}): Promise<PlaySelectRel[]> => {
+    public getTemporallyClosePlays = async (play: PlayObject, opts: {states?: PlaySelect['state'][], bufferTime?: number} & { with?: WithPlayRelation[] } & ComponentConstrainedRepoOpts = {}): Promise<PlayWith<'queueStates'>[]> => {
         const {
             componentId = this.componentId,
             bufferTime,
@@ -688,7 +688,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return ((await this.db.query.plays.findMany({
             where,
             with: buildPlayWith(qWith)
-        })) as PlaySelectRel[]).map(x => ({...x, play: hydratePlaySelect(x)}));
+        })) as PlayWith<'queueStates'>[]).map(x => ({...x, play: hydratePlaySelect(x)}));
     }
 }
 
