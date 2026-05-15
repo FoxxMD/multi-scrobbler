@@ -700,6 +700,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
 
     protected async postInitialize(): Promise<void> {
+        super.postInitialize();
         const {
             options: {
                 refreshInitialCount = this.MAX_INITIAL_SCROBBLES_FETCH
@@ -1006,6 +1007,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     }
                     this.emitEvent('queueEmptied', {});
                 }
+                this.componentRepo.updateById(this.dbComponent.id, {lastActiveAt: dayjs(), lastReadyAt: dayjs()});
                 await delay(signal, this.scrobbleSleep);
             }
         } catch (e) {

@@ -185,7 +185,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
             if('discoverDevices' in this && typeof this.discoverDevices === 'function') {
                 this.discoverDevices();
             }
-
+        }
+        if(this.isReady()) {
             if (this.canPoll && !this.polling) {
                 if(!this.canAuthUnattended()) {
                     this.logger.warn({labels: 'Heartbeat'}, 'Should be polling but will not attempt to start because auth state is not good and cannot be correct unattended.');
@@ -195,6 +196,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
                     this.poll({force: false, notify: true}).catch(e => this.logger.error(e));
                 }
                 return true;
+            } else if(!this.canPoll) {
+                this.componentRepo.updateById(this.dbComponent.id, {lastReadyAt: dayjs()});
             }
         }
         return true;
@@ -701,6 +704,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 this.logger[lastActivityLogLevel](activityMsgs.join(' | '));
                 this.setWakeAt(pollFrom.add(sleepTime, 'seconds'));
                 this.setIsSleeping(true);
+                // set last active before we sleep
+                this.componentRepo.updateById(this.dbComponent.id, {lastActiveAt: dayjs(), lastReadyAt: dayjs()});
                 while(dayjs().isBefore(this.getWakeAt())) {
                     // check for polling status every half second and wait till wake up time
                    await delay(signal, 500);

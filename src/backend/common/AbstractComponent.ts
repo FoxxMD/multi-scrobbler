@@ -35,6 +35,7 @@ import { DrizzlePlayRepository } from "./database/drizzle/repositories/PlayRepos
 import { ClientType } from "./infrastructure/config/client/clients.js";
 import { SourceType } from "./infrastructure/config/source/sources.js";
 import { DrizzleComponentRepository } from "./database/drizzle/repositories/ComponentRepository.js";
+import dayjs from "dayjs";
 
 export type AbstractComponentConfig = (CommonClientConfig | CommonSourceConfig) & { transformManager?: TransformerManager };
 
@@ -76,6 +77,11 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         } catch (e) {
             throw e;
         }
+    }
+
+    protected async postInitialize(): Promise<void> {
+        super.postInitialize();
+        this.componentRepo.updateById(this.dbComponent.id, {lastReadyAt: dayjs()});
     }
 
     protected async doBuildDatabase(): Promise<true | string | undefined> {

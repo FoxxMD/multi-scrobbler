@@ -193,6 +193,7 @@ export class WebScrobblerSource extends MemorySource {
                 await this.scrobble(discovered);
             }
         }
+        this.componentRepo.updateById(this.dbComponent.id, {lastActiveAt: dayjs()});
     }
 
     getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new NowPlayingPlayerState(logger,  id, opts);
