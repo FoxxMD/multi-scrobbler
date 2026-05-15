@@ -27,7 +27,7 @@ const FileConfigExample = (props: FileConfigProps) => {
     try {
         configObj = json5.parse(data) as object[];
     } catch (e) {
-        console.error(e);
+        console.error(new Error(`Unable to parse content for ${aio === true ? 'aio ' :''}${name}`, {cause: e}));
         return <Admonition type="danger" title="Unexpected Error">
             <p>Example component crashed because of error!</p>
             <CodeBlock>{e.message}</CodeBlock>
@@ -37,7 +37,11 @@ const FileConfigExample = (props: FileConfigProps) => {
     const transformed = useMemo(() => {
         let content: object;
         if(typeof data === 'string') {
+            try {
             content = json5.parse(data);
+            } catch (e) {
+                console.error(new Error(`Unable to parse transformed content for ${aio === true ? 'aio ' :''}${name}`, {cause: e}));
+            }
         } else {
             content = data;
         }
