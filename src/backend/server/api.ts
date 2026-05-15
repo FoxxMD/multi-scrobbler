@@ -37,6 +37,7 @@ import prom from 'prom-client';
 import { SimpleError } from "../common/errors/MSErrors.js";
 import { QueryPlaysOpts } from "../common/database/drizzle/repositories/PlayRepository.js";
 import { playSelectToDeadScrobble } from "../common/database/drizzle/entityUtils.js";
+import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.js";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -525,6 +526,19 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         client.logger.info('Trying to start scrobbler...');
         client.initScrobbleMonitoring({force, notify: false}).catch(e => client.logger.error(e));
         res.status(200).send('OK');
+    });
+
+    app.post('/api/client/historical', clientRequiredMiddle, async (req, res) => {
+        // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+        const client = req.scrobbleClient as AbstractScrobbleClient;
+        if(client instanceof AbstractHistoricalScrobbleClient) {
+            client.logger.info('User requested historical play hydration');
+            client.hydrateHistoricalScrobbles();
+            res.status(200).send('OK');
+        } else {
+            client.logger.warn('This client does not have historical play capabilities');
+            return res.status(400).json({error: 'This client does not have historical play capabilities'});
+        }
     });
 
     app.get('/health', async (req, res) => res.redirect(307, `/api/${req.url.slice(1)}`));

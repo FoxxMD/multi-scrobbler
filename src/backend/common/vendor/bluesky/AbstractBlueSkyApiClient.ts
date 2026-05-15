@@ -64,6 +64,11 @@ export abstract class AbstractBlueSkyApiClient extends AbstractApiClient impleme
         }
     }
 
+    async getCAR() {
+        // wish there was a way stream this...
+        return await this.agent.com.atproto.sync.getRepo({did: this.agent.sessionManager.did});
+    }
+
     async getPagelessTimeRangeListens(params: PagelessListensTimeRangeOptions): Promise<PagelessTimeRangeListensResult> {
         const {to, limit} = params;
 

@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { PlayNew, PlaySelect, PlaySelectWithQueueStates } from "./drizzleTypes.js";
+import { PlayHistoricalNew, PlayHistoricalSelect, PlayNew, PlaySelect, PlaySelectWithQueueStates } from "./drizzleTypes.js";
 import { PlayInputNew } from "./drizzleTypes.js";
 import { QueueStateNew } from "./drizzleTypes.js";
 import { ComponentNew } from "./drizzleTypes.js";
@@ -20,6 +20,7 @@ export const generateComponentEntity = (data: MarkOptional<ComponentNew, 'uid'>)
 }
 
 export type PlayEntityOpts = Partial<Pick<PlayNew, 'seenAt' | 'playedAt' | 'uid' | 'state' | 'parentId' | 'componentId'>> & { error?: ErrorLike };
+export type PlayHistoricalEntityOpts = Partial<Pick<PlayHistoricalNew, 'seenAt' | 'playedAt' | 'uid' | 'componentId'>>;
 
 export const generatePlayEntity = (play: PlayObject, opts: PlayEntityOpts = {}): PlayNew => {
     const {
@@ -51,7 +52,7 @@ export const generatePlayEntity = (play: PlayObject, opts: PlayEntityOpts = {}):
 
 export type PlayHydateOptions = 'asPlay' | 'id' | 'uid';
 
-export const hydratePlaySelect = (select: PlaySelect, opts: PlayHydateOptions[] = ['id','uid']): PlayObject => {
+export const hydratePlaySelect = <T extends PlaySelect | PlayHistoricalSelect>(select: T, opts: PlayHydateOptions[] = ['id','uid']): PlayObject => {
     if(opts.length === 0) {
         return select.play;
     }

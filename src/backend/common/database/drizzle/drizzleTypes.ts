@@ -1,5 +1,5 @@
 import { DBQueryConfig, DBQueryConfigWith, ExtractTablesFromSchema, KnownKeysOnly, RelationFieldsFilterInternals, Many, InferSelectModel, ExtractTablesWithRelations, type BuildQueryResult, RelationsFilter } from "drizzle-orm";
-import { components, componentMigrations, playInputs, plays, queueStates, relations } from "./schema/schema.js";
+import { components, componentMigrations, playInputs, plays, queueStates, relations, playsHistorical } from "./schema/schema.js";
 import {TSchema, TableName, Schema } from "./schema/schema.js";
 import { MarkOptional, MarkRequired } from "ts-essentials";
 
@@ -21,6 +21,8 @@ export type PlaySelectWithQueueStates = GenericRelationResult<'plays', 'queueSta
 export type PlayWith<K extends keyof TSchema['plays']["relations"]> = GenericRelationResult<'plays', K>;
 export type PlayNew = typeof plays.$inferInsert;
 
+export type PlayHistoricalSelect = typeof playsHistorical.$inferSelect;
+export type PlayHistoricalNew = typeof playsHistorical.$inferInsert;
 
 // useful references for building types
 // https://github.com/drizzle-team/drizzle-orm/discussions/2596

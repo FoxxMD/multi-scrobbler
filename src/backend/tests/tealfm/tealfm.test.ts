@@ -5,6 +5,13 @@ import { generateLastfmTrackObject, generateMbid, generatePlay, generateTealPlay
 import { AbstractBlueSkyApiClient, listRecordToPlay } from '../../common/vendor/bluesky/AbstractBlueSkyApiClient.js';
 import dayjs from 'dayjs';
 import { artistCreditsToNames } from '../../../core/StringUtils.js';
+import TealScrobbler from '../../scrobblers/TealfmScrobbler.js';
+import { Notifiers } from '../../notifier/Notifiers.js';
+import { EventEmitter } from "events";
+import { loggerNoop } from '../../common/MaybeLogger.js';
+import path from 'node:path';
+import { configDir } from '../../common/index.js';
+import { loggerDebug, loggerTrace } from '@foxxmd/logging';
 
 chai.use(asPromised);
 
@@ -55,4 +62,29 @@ describe('#tealfm Record to Play', function() {
         expect(play.data.meta?.brainz.artist).to.be.undefined;
     });
 
+});
+
+describe('#tealfmCar', function() {
+
+    before(function () {
+        if (process.env.TEAL_CAR_TEST !== 'true') {
+            this.skip();
+        }
+    });
+
+    it('Parses car file', async function() {
+
+        this.timeout(100000);
+
+        const tfm = new TealScrobbler('test', 
+            {name: 'test', data: {identifier: 'test', appPassword: 'test'}}, 
+            {configDir: 'test', localUrl: new URL('https://example.com'), version: 'test'},
+            new Notifiers(new EventEmitter(), new EventEmitter(), new EventEmitter(), loggerNoop),
+            new EventEmitter(),
+            loggerDebug
+        );
+        await tfm.buildDatabase();
+
+        await tfm.parseScrobblesFromCar(path.resolve(configDir, 'tealfm-myteal-1778870858.car'), 100);
+    });
 });
