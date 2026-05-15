@@ -1,0 +1,226 @@
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+<Tabs groupId="configType" queryString>
+<TabItem value="env" label="ENV">
+
+Using [ENV Config](/configuration/?configType=env#configuration-types)
+
+```yaml title="compose.yaml"
+services:
+  multi-scrobbler:
+    image: foxxmd/multi-scrobbler
+    container_name: multi-scrobbler
+    environment:
+      - TZ=Etc/GMT # Specify timezone from TZ Database name found here https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+
+      # required setup for musicbrainz
+      - MB_CONTACT=contact@mydomain.com # a real email
+       # searches with sensible release sorting with the searchOrder
+       # isrc => basic => artist (native mode)
+      - MB_PRESETS=default,sensible,native
+
+      # spotify
+      - SPOTIFY_ID=foxxSpotify
+      - SPOTIFY_CLIENT_ID=H2UvGv8okrFlv2OUoc1lAtK7Xe5EGDgs
+      - SPOTIFY_CLIENT_SECRET=HvoFE5Ce2hdblNE6vaFBEx6dRVcDdo43
+      - SPOTIFY_REDIRECT_URI=https://multiscrobbler.example.com/callback
+
+      # navidrome listenbrainz endpoint
+      - LZE_ID=myLzNavidrome
+      - LZE_TOKEN=myToken
+      # applies musicbrainz Stage to preTransform of navidrome source
+      - LZE_TRANSFORMS=musicbrainz
+
+      # lastfm
+      - LASTFM_ID=myLFM
+      - LASTFM_API_KEY=myApiKey
+      - LASTFM_SECRET=mySecret
+      - LASTFM_REDIRECT_URI=https://multiscrobbler.example.com/lastfm/callback
+
+    volumes:
+      - "./config:/config"
+    ports:
+      - "9078:9078"
+    restart: unless-stopped
+```
+
+</TabItem>
+<TabItem value="file" label="File">
+
+Using [File Config](/configuration/?configType=file#configuration-types)
+
+For non-ENV config, [Musicbrainz Transformer](/configuration/transforms/musicbrainz/#api-setup) must be setup using the [AIO Config](/configuration/?configType=aio#configuration-types) `config.json` file. This configuration uses the [sensible defaults](/configuration/transforms/musicbrainz/#sensible-default) in the `defaults` property. This is a suggestion and can be removed if not desired.
+
+```json5 title="CONFIG_DIR/config.json"
+{
+  "transformers": [
+    {
+      "type": "musicbrainz",
+      "name": "MyMB",
+      "data": {
+        "apis": [
+          {
+            "contact": "contact@mydomain.com"
+          }
+        ]
+      },
+      "defaults": {
+        "releaseStatusPriority": ["official"],
+        "releaseGroupPrimaryTypePriority": [
+          "album",
+          "single",
+          "ep"
+        ],
+        "releaseCountryPriority": ["XW"],
+        "searchArtistMethod": "native",
+        "searchOrder": [
+          "isrc",
+          "basic",
+          "artist"
+        ]
+      }
+    }
+  ]
+}
+```
+
+```json5 title="CONFIG_DIR/spotify.json"
+[
+  {
+    "id": "foxxSpotify",
+    "name": "Foxx Spotify",
+    "data": {
+      "clientId": "a89cba1569901a0671d5a9875fed4be1",
+      "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a",
+      "redirectUri": "http://localhost:9078/callback",
+      "interval": 60
+    }
+  }
+]
+```
+
+```json5 title="CONFIG_DIR/endpointlz.json"
+[
+  {
+    "id": "myLzNavidrome",
+    "name": "LZ for Navidrome",
+    "data": {
+      "token": "myToken"
+    },
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "musicbrainz",
+            "name": "MyMB"
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+
+```json5 title="CONFIG_DIR/lastfm.json"
+[
+  {
+    "id": "myLFM",
+    "name": "Old Lastfm",
+    "configureAs": "client",
+    "data": {
+      "apiKey": "myApiKey",
+      "secret": "mySecret",
+      "redirectUri": "http://localhost:9078/lastfm/callback"
+    }
+  }
+]
+```
+
+</TabItem>
+
+<TabItem value="aio" label="AIO">
+
+Using [AIO Config](/configuration/?configType=aio#configuration-types)
+
+This configuration uses the [sensible defaults](/configuration/transforms/musicbrainz/#sensible-default) in the `defaults` property. This is a suggestion and can be removed if not desired.
+
+```json5 title="CONFIG_DIR/config.json"
+{
+  "transformers": [
+    {
+      "type": "musicbrainz",
+      "name": "MyMB",
+      "data": {
+        "apis": [
+          {
+            "contact": "contact@mydomain.com"
+          }
+        ]
+      },
+      "defaults": {
+        "releaseStatusPriority": ["official"],
+        "releaseGroupPrimaryTypePriority": [
+          "album",
+          "single",
+          "ep"
+        ],
+        "releaseCountryPriority": ["XW"],
+        "searchArtistMethod": "native",
+        "searchOrder": [
+          "isrc",
+          "basic",
+          "artist"
+        ]
+      }
+    }
+  ],
+  "sources": [
+    {
+      "type": "spotify",
+      "id": "foxxSpotify",
+      "name": "Foxx Spotify",
+      "data": {
+        "clientId": "a89cba1569901a0671d5a9875fed4be1",
+        "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a",
+        "redirectUri": "http://localhost:9078/callback",
+        "interval": 60
+      }
+    },
+    {
+      "type": "endpointlz",
+      "name": "LZ for Navidrome",
+      "id": "myLzNavidrome",
+      "data": {
+        "token": "myToken"
+      },
+      "options": {
+        "playTransform": {
+          "preCompare": [
+            {
+              "type": "musicbrainz",
+              "name": "MyMB"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "clients": [
+    {
+      "type": "lastfm",
+      "id": "myLFM",
+      "name": "Old Lastfm",
+      "configureAs": "client",
+      "data": {
+        "apiKey": "myApiKey",
+        "secret": "mySecret",
+        "redirectUri": "http://localhost:9078/lastfm/callback"
+      }
+    }
+  ]
+}
+```
+</TabItem>
+</Tabs>

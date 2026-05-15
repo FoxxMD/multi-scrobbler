@@ -1,0 +1,196 @@
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+<Tabs groupId="configType" queryString>
+<TabItem value="env" label="ENV">
+
+Using [ENV Config](/configuration/?configType=env#configuration-types)
+
+```yaml title="compose.yaml"
+services:
+  multi-scrobbler:
+    image: foxxmd/multi-scrobbler
+    container_name: multi-scrobbler
+    environment:
+      - TZ=Etc/GMT # Specify timezone from TZ Database name found here https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+      # spotify
+      - SPOTIFY_ID=foxxSpotify
+      - SPOTIFY_CLIENT_ID=H2UvGv8okrFlv2OUoc1lAtK7Xe5EGDgs
+      - SPOTIFY_CLIENT_SECRET=HvoFE5Ce2hdblNE6vaFBEx6dRVcDdo43
+      - SPOTIFY_REDIRECT_URI=https://multiscrobbler.example.com/callback
+
+      # navidrome listenbrainz endpoint
+      - LZE_ID=myLzNavidrome
+      - LZE_TOKEN=myToken
+
+      # plex
+      - PLEX_ID=foxxPlex
+      - PLEX_URL=192.168.0.233:32400
+      - PLEX_TOKEN=JtRnwQWD__XMJF8sT3jc
+      - PLEX_USERS_ALLOW=foxx
+      - PLEX_LIBRARIES_ALLOW=oldies
+
+      # lastfm
+      - LASTFM_ID=myLFM
+      - LASTFM_API_KEY=myApiKey
+      - LASTFM_SECRET=mySecret
+      - LASTFM_REDIRECT_URI=https://multiscrobbler.example.com/lastfm/callback
+
+      # koito
+      - KOITO_ID=foxxKoi
+      - KOITO_TOKEN=029b081ba-9156-4pe7-88e5-3be671f5ea2b
+      - KOITO_USER=admin
+      - KOITO_URL=http://192.168.0.100:4110
+
+    volumes:
+      - "./config:/config"
+    ports:
+      - "9078:9078"
+    restart: unless-stopped
+```
+
+</TabItem>
+<TabItem value="file" label="File">
+
+Using [File Config](/configuration/?configType=file#configuration-types)
+
+```json5 title="CONFIG_DIR/spotify.json"
+[
+  {
+    "id": "foxxSpotify",
+    "name": "Foxx Spotify",
+    "data": {
+      "clientId": "a89cba1569901a0671d5a9875fed4be1",
+      "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a",
+      "redirectUri": "http://localhost:9078/callback",
+      "interval": 60
+    }
+  }
+]
+```
+
+```json5 title="CONFIG_DIR/endpointlz.json"
+[
+  {
+    "id": "myLzNavidrome",
+    "name": "LZ for Navidrome",
+    "data": {
+      "token": "myToken"
+    }
+  }
+]
+```
+
+```json5 title="CONFIG_DIR/plex.json"
+[
+  {
+    "id": "foxxPlex",
+    "name": "Foxx Plex",
+    "data": {
+      "token": "JtRnwQWD__XMJF8sT3jc",
+      "url": "192.168.0.233:32400",
+      "usersallow": ["foxx"],
+      "librariesAllow": ["oldies"],
+    }
+  }
+]
+```
+
+```json5 title="CONFIG_DIR/lastfm.json"
+[
+  {
+    "id": "myLFM",
+    "name": "Old Lastfm",
+    "configureAs": "client",
+    "data": {
+      "apiKey": "myApiKey",
+      "secret": "mySecret",
+      "redirectUri": "http://localhost:9078/lastfm/callback"
+    }
+  }
+]
+```
+
+```json5 title="CONFIG_DIR/koito.json"
+[
+  {
+    "id": "foxxKoi",
+    "name": "Foxx Koito",
+    "configureAs": "client",
+    "data": {
+      "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",
+      "username": "admin",
+      "url": "http://192.168.0.100:4110"
+    }
+  }
+]
+```
+
+</TabItem>
+
+<TabItem value="aio" label="AIO">
+
+Using [AIO Config](/configuration/?configType=aio#configuration-types)
+
+```json5 title="CONFIG_DIR/config.json"
+{
+  "sources": [
+    {
+      "type": "spotify",
+      "id": "foxxSpotify",
+      "name": "Foxx Spotify",
+      "data": {
+        "clientId": "a89cba1569901a0671d5a9875fed4be1",
+        "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a",
+        "redirectUri": "http://localhost:9078/callback",
+        "interval": 60
+      }
+    },
+    {
+      "type": "endpointlz",
+      "name": "LZ for Navidrome",
+      "id": "myLzNavidrome",
+      "data": {
+        "token": "myToken"
+      }
+    },
+    {
+      "type": "plex",
+      "id": "foxxPlex",
+      "name": "Foxx Plex",
+      "data": {
+        "token": "JtRnwQWD__XMJF8sT3jc",
+        "url": "192.168.0.233:32400",
+        "usersallow": ["foxx"],
+        "librariesAllow": ["oldies"]
+      }
+    }
+  ],
+  "clients": [
+    {
+      "type": "lastfm",
+      "id": "myLFM",
+      "name": "Old Lastfm",
+      "configureAs": "client",
+      "data": {
+        "apiKey": "myApiKey",
+        "secret": "mySecret",
+        "redirectUri": "http://localhost:9078/lastfm/callback"
+      }
+    },
+    {
+      "type": "koito",
+      "id": "foxxKoi",
+      "name": "Foxx Koito",
+      "configureAs": "client",
+      "data": {
+        "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",
+        "username": "admin",
+        "url": "http://192.168.0.100:4110"
+      }
+    }
+  ]
+}
+```
+</TabItem>
+</Tabs>

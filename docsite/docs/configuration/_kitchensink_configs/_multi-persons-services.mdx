@@ -1,0 +1,177 @@
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+<Tabs groupId="configType" queryString>
+<TabItem value="file" label="File">
+
+Using [File Config](/configuration/?configType=file#configuration-types)
+
+```json5 title="CONFIG_DIR/jellyin.json"
+[
+  {
+    "id": "fredJf",
+    "name": "Freds Jellyfin",
+    "clients": ["fredLFM"],
+    "data": {
+      "url": "https://jellyfin.fred.com",
+      "user": "Fred",
+      "apiKey": "c9fae8756fbf481ebd9c5bb56bd6540c"
+    }
+  },
+  {
+    "id": "maryJf",
+    "name": "Marys Jellyfin",
+    "clients": ["maryLFM"],
+    "data": {
+      "url": "https://jellyfin.mary.com",
+      "user": "Mary",
+      "apiKey": "26fe9c5dc6374542adc4f4d5e8352838"
+    }
+  }
+]
+```
+
+```json5 title="CONFIG_DIR/plex.json"
+[
+  {
+    "id": "foxxPlex",
+    "name": "Foxx Plex",
+    "clients": ["foxxKoi"],
+    "data": {
+      "token": "JtRnwQWD__XMJF8sT3jc",
+      "url": "192.168.0.233:32400"
+    }
+  }
+]
+```
+
+```json5 title="CONFIG_DIR/lastfm.json"
+[
+  {
+    "id": "maryLFM",
+    "name": "Marys Lastfm",
+    "configureAs": "client",
+    "data": {
+      "apiKey": "maryApiKey",
+      "secret": "marySecret",
+      "redirectUri": "http://localhost:9078/lastfm/callback"
+    }
+  },
+  {
+    "id": "fredLFM",
+    "name": "Freds Lastfm",
+    "configureAs": "client",
+    "data": {
+      "apiKey": "fredApiKey",
+      "secret": "fredSecret",
+      "redirectUri": "http://localhost:9078/lastfm/callback"
+    }
+  }
+]
+```
+
+```json5 title="CONFIG_DIR/koito.json"
+[
+  {
+    "id": "foxxKoi",
+    "name": "Foxx Koito",
+    "configureAs": "client",
+    "data": {
+      "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",
+      "username": "admin",
+      "url": "http://192.168.0.100:4110"
+    }
+  }
+]
+```
+
+</TabItem>
+
+<TabItem value="aio" label="AIO">
+
+Using [AIO Config](/configuration/?configType=aio#configuration-types)
+
+```json5 title="CONFIG_DIR/config.json"
+{
+  "sources": [
+    {
+      "type": "jellyfin",
+      "id": "fredJf",
+      "name": "Freds Jellyfin",
+      "clients": [
+        "fredLFM"
+      ],
+      "data": {
+        "url": "https://jellyfin.fred.com",
+        "user": "Fred",
+        "apiKey": "c9fae8756fbf481ebd9c5bb56bd6540c"
+      }
+    },
+    {
+      "type": "jellyfin",
+      "id": "maryJf",
+      "name": "Marys Jellyfin",
+      "clients": [
+        "maryLFM"
+      ],
+      "data": {
+        "url": "https://jellyfin.mary.com",
+        "user": "Mary",
+        "apiKey": "26fe9c5dc6374542adc4f4d5e8352838"
+      }
+    },
+    {
+      "type": "plex",
+      "id": "foxxPlex",
+      "name": "Foxx Plex",
+      "clients": [
+        "foxxKoi"
+      ],
+      "data": {
+        "token": "JtRnwQWD__XMJF8sT3jc",
+        "url": "192.168.0.233:32400",
+        "usersallow": [
+          "foxx"
+        ]
+      }
+    }
+  ],
+  "clients": [
+    {
+      "type": "lastfm",
+      "id": "maryLFM",
+      "name": "Marys Lastfm",
+      "configureAs": "client",
+      "data": {
+        "apiKey": "maryApiKey",
+        "secret": "marySecret",
+        "redirectUri": "http://localhost:9078/lastfm/callback"
+      }
+    },
+    {
+      "type": "lastfm",
+      "id": "fredLFM",
+      "name": "Freds Lastfm",
+      "configureAs": "client",
+      "data": {
+        "apiKey": "fredApiKey",
+        "secret": "fredSecret",
+        "redirectUri": "http://localhost:9078/lastfm/callback"
+      }
+    },
+    {
+      "type": "koito",
+      "id": "foxxKoi",
+      "name": "Foxx Koito",
+      "configureAs": "client",
+      "data": {
+        "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",
+        "username": "admin",
+        "url": "http://192.168.0.100:4110"
+      }
+    }
+  ]
+}
+```
+</TabItem>
+</Tabs>
