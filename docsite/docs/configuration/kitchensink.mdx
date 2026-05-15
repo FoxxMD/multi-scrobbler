@@ -37,7 +37,8 @@ Scenario:
   "sources": [
     {
       "type": "spotify",
-      "name": "foxxSpot",
+      "id": "foxxSpot",
+      "name": "Foxx Spotify",
       "clients": ["foxxMaloja"],
       "data": {
         "clientId": "foxxSpotifyAppId", 
@@ -49,7 +50,8 @@ Scenario:
     },
     {
       "type": "spotify",
-      "name": "marySpot",
+      "id": "marySpot",
+      "name": "Marys Spotify",
       "clients": ["maryMaloja"],
       "data": {
         "clientId": "foxxSpotifyAppId", // only need one application, it can be used by all users of this multi-scrobbler instance 
@@ -58,7 +60,8 @@ Scenario:
     },
     {
       "type": "spotify",
-      "name": "fredSpot",
+      "id": "fredSpot",
+      "name": "Freds Spotify",
       "clients": ["fredMaloja"],
       "data": {
         "accessToken": "fredsToken",
@@ -68,7 +71,8 @@ Scenario:
     },
     {
       "type": "plex",
-      "name": "fredPlex",
+      "id": "fredPlex",
+      "name": "Freds Plex",
       "clients": ["fredMaloja"],
       "data": {
         "token": "JtRnwQWD__XMJF8sT3jc",
@@ -78,7 +82,8 @@ Scenario:
     },
     {
       "type": "plex",
-      "name": "maryPlex",
+      "id": "maryPlex",
+      "name": "Marys Plex",
       "clients": ["maryMaloja"],
       "data": {
         "token": "JtRnwQWD__XMJF8sT3jc",
@@ -89,7 +94,8 @@ Scenario:
     },
     {
       "type": "plex",
-      "name": "partyPlex",
+      "id": "partyPlex",
+      "name": "Party Library",
       // omitting clients (or making it empty) will make this Source scrobble to all Clients
       "data": {
         "token": "JtRnwQWD__XMJF8sT3jc",
@@ -99,7 +105,8 @@ Scenario:
     },
     {
       "type": "jellyfin",
-      "name": "FredJelly",
+      "id": "fredJelly",
+      "name": "Freds Jellyfin",
       // omitting clients (or making it empty) will make this Source scrobble to all Clients
       "data": {
         "url": "http://localhost:8096",
@@ -110,17 +117,19 @@ Scenario:
     },
     {
       "type": "subsonic",
-      "name": "foxxAirsonic",
+      "id": "foxxNavi",
+      "name": "Foxx Navidrome",
       "clients": ["foxxMaloja"],
       "data": {
         "user": "foxx",
         "password": "foxxPassword",
-        "url": "https://airsonic.foxx.example"
+        "url": "https://navidrome.foxx.example"
       }
     },
     {
       "type": "ytmusic",
-      "name": "foxxYoutube",
+      "id": "foxxTube",
+      "name": "Foxx YT",
       "clients": ["foxxMaloja"],
       "data": {
         "cookie": "__Secure-3PAPISID=3AxsXpy0MKGu75Qb/AkISXGqOnSDn1jEKn; DEVICE_INFO=ChxOekU0Tmpjek5EWTBPRGd3TlRBMk16QXpNdz09EJbS8Z0GGJbS8Z0G; ...",
@@ -128,7 +137,8 @@ Scenario:
     },
     {
       "type": "endpointlz",
-      "name": "listenbrainzfoxx",
+      "id": "lzFoxx",
+      "name": "Foxx LZ",
       "clients": ["foxxMaloja"],
       "data": {
         "token": "myToken"
@@ -138,7 +148,8 @@ Scenario:
   "clients": [
     {
       "type": "maloja",
-      "name": "foxxMaloja",
+      "id": "foxxMaloja",
+      "name": "Foxx Maloja",
       "data": {
         "url": "https://maloja.foxx.example",
         "apiKey": "foxxApiKey"
@@ -146,7 +157,8 @@ Scenario:
     },
     {
       "type": "maloja",
-      "name": "fredMaloja",
+      "id": "fredMaloja",
+      "name": "Fred Maloja",
       "data": {
         "url": "https://maloja.fred.example",
         "apiKey": "fredApiKey"
@@ -154,7 +166,8 @@ Scenario:
     },
     {
       "type": "maloja",
-      "name": "maryMaloja",
+      "id": "maryMaloja",
+      "name": "Mary Maloja",
       "data": {
         "url": "https://maloja.mary.example",
         "apiKey": "maryApiKey"
@@ -162,7 +175,8 @@ Scenario:
     },
     {
       "type": "lastfm",
-      "name": "maryLFM",
+      "id": "maryLFM"
+      "name": "Mary Lastfm",
       "data": {
         "apiKey": "maryApiKey",
         "secret": "marySecret",
@@ -180,7 +194,8 @@ Scenario:
 [
   {
     // may omit 'type' property since app knows this is file is for spotify configs
-    "name": "foxxSpot",
+    "id": "foxxSpot",
+    "name": "Foxx Spotify",
     "clients": ["foxxMaloja"],
     "data": {
       "clientId": "foxxSpotifyAppId",
@@ -188,7 +203,8 @@ Scenario:
     }
   },
   {
-    "name": "marySpot",
+    "id": "marySpot",
+    "name": "Marys Spotify",
     "clients": ["maryMaloja"],
     "data": {
       "clientId": "foxxSpotifyAppId",
@@ -196,7 +212,8 @@ Scenario:
     }
   },
   {
-    "name": "fredSpot",
+    "type": "spotify",
+    "id": "fredSpot",
     "clients": ["fredMaloja"],
     "data": {
       "accessToken": "fredsToken",
@@ -210,7 +227,8 @@ Scenario:
 ```json5 title="CONFIG_DIR/plex.json"
 [
   {
-    "name": "fredPlex",
+    "type": "plex",
+    "id": "fredPlex",
     "clients": ["fredMaloja"],
     "data": {
       "token": "JtRnwQWD__XMJF8sT3jc",
@@ -219,7 +237,8 @@ Scenario:
     }
   },
   {
-    "name": "maryPlex",
+    "type": "plex",
+    "id": "maryPlex",
     "clients": ["maryMaloja"],
     "data": {
       "token": "JtRnwQWD__XMJF8sT3jc",
@@ -229,7 +248,8 @@ Scenario:
     }
   },
   {
-    "name": "partyPlex",
+    "type": "plex",
+    "id": "partyPlex",
     "data": {
       "token": "JtRnwQWD__XMJF8sT3jc",
       "url": "192.168.0.233:32400",
@@ -242,7 +262,8 @@ Scenario:
 ```json5 title="CONFIG_DIR/jellyfin.json"
 [
   {
-    "name": "FredJelly",
+    "type": "jellyfin",
+    "id": "fredJelly",
     "data": {
       "url": "http://localhost:8096",
       "user": "FoxxMD",
@@ -256,7 +277,8 @@ Scenario:
 ```json5 title="CONFIG_DIR/ytmusic.json"
 [
   {
-    "name": "foxxYoutube",
+    "type": "ytmusic",
+    "id": "foxxTube",
     "clients": ["foxxMaloja"],
     "data": {
       "cookie": "__Secure-3PAPISID=3AxsXpy0MKGu75Qb/AkISXGqOnSDn1jEKn; DEVICE_INFO=ChxOekU0Tmpjek5EWTBPRGd3TlRBMk16QXpNdz09EJbS8Z0GGJbS8Z0G; ...",
@@ -267,7 +289,8 @@ Scenario:
 ```json5 title="CONFIG_DIR/endpointlz.json"
 [
   {
-    "name": "listenbrainzfoxx",
+    "id": "lzFoxx",
+    "name": "Foxx LZ",
     "clients": ["foxxMaloja"],
     "data": {
       "token": "myToken",
@@ -279,21 +302,24 @@ Scenario:
 ```json5 title="CONFIG_DIR/maloja.json"
 [
   {
-    "name": "foxxMaloja",
+    "type": "maloja",
+    "id": "foxxMaloja",
     "data": {
       "url": "https://maloja.foxx.example",
       "apiKey": "foxxApiKey"
     }
   },
   {
-    "name": "fredMaloja",
+    "type": "maloja",
+    "id": "fredMaloja",
     "data": {
       "url": "https://maloja.fred.example",
       "apiKey": "fredApiKey"
     }
   },
   {
-    "name": "maryMaloja",
+    "type": "maloja",
+    "id": "maryMaloja",
     "data": {
       "url": "https://maloja.mary.example",
       "apiKey": "maryApiKey"
@@ -305,7 +331,8 @@ Scenario:
 ```json5 title="CONFIG_DIR/lastfm.json"
 [
   {
-    "name": "maryLFM",
+    "type": "lastfm",
+    "id": "maryLFM"
     "data": {
       "apiKey": "maryApiKey",
       "secret": "marySecret",
