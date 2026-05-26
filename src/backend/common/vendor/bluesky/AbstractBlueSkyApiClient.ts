@@ -1,10 +1,10 @@
 import { getRoot } from "../../../ioc.js";
 import { AbstractApiOptions, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PagelessTimeRangeListensResult } from "../../infrastructure/Atomic.js";
-import { ListRecord, ScrobbleRecord, TealClientData } from "../../infrastructure/config/client/tealfm.js";
+import { ListRecord, ScrobbleRecord, StatusRecord, TealClientData } from "../../infrastructure/config/client/tealfm.js";
 import AbstractApiClient from "../AbstractApiClient.js";
-import { Agent, ComAtprotoRepoCreateRecord, ComAtprotoRepoListRecords } from "@atproto/api";
+import { Agent, ComAtprotoRepoCreateRecord, ComAtprotoRepoListRecords, ComAtprotoRepoPutRecord } from "@atproto/api";
 import { MSCache } from "../../Cache.js";
-import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, UnixTimestamp } from "../../../../core/Atomic.js";
+import { BrainzMeta, PlayObject, SourcePlayerObj, PlayObjectLifecycleless, ScrobbleActionResult, UnixTimestamp } from "../../../../core/Atomic.js";
 import { musicServiceToCononical } from '../listenbrainz/lzUtils.js';
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { RecordOptions } from "../../infrastructure/config/client/tealfm.js";
@@ -45,6 +45,21 @@ export abstract class AbstractBlueSkyApiClient extends AbstractApiClient impleme
             return {payload: input, response: resp.data};
         } catch (e) {
             throw new ScrobbleSubmitError(`Failed to create record for scrobble`, { cause: e, payload: input, response: 'response' in e ? e.response : undefined });
+        }
+    }
+
+    async updateStatusRecord(record: StatusRecord): Promise<ScrobbleActionResult> {
+        const input: ComAtprotoRepoPutRecord.InputSchema = {
+            repo: this.agent.sessionManager.did,
+            collection: "fm.teal.alpha.actor.status",
+            rkey: "self",
+            record
+        };
+        try {
+            const resp = await this.agent.com.atproto.repo.putRecord(input);
+            return {payload: input, response: resp.data};
+        } catch (e) {
+            throw new ScrobbleSubmitError(`Failed to update status record for scrobble`, { cause: e, payload: input, response: 'response' in e ? e.response : undefined });
         }
     }
 
@@ -106,6 +121,19 @@ export const playToRecord = (play: PlayObject): ScrobbleRecord => {
     };
 
     return record;
+}
+
+export const playToStatusRecord = (play: PlayObject, notPlaying: boolean, position?: number): StatusRecord => {
+    const { $type, ...item } = playToRecord(play);
+    return {
+        $type: "fm.teal.alpha.actor.status",
+        time: dayjs().toISOString(),
+        // expiry is 1min ago if paused, (now + duration - position) if position is available, or fallback to (now + 10mins)
+        expiry: notPlaying ? dayjs().subtract(1, 'minute').toISOString()
+            : position !== undefined ? dayjs().add(play.data.duration - position, 'second').toISOString()
+            : dayjs().add(10, 'minute').toISOString(),
+        item
+    };
 }
 
 export const listRecordToPlay = (listRecord: ListRecord<ScrobbleRecord>): PlayObject => {
