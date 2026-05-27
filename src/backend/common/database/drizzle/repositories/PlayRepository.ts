@@ -659,7 +659,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             return undefined;
         }
         return res.map(x => ({...x, play: hydratePlaySelect(x)})).find(x => {
-            const temporalComparison = comparePlayTemporally(x.play, play);
+            const temporalComparison = comparePlayTemporally(x.play, play, {logger: this.logger});
             return hasAcceptableTemporalAccuracy(temporalComparison.match, taAccuracy)
         })
     }

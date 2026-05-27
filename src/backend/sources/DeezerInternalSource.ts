@@ -348,7 +348,8 @@ export default class DeezerInternalSource extends MemorySource {
                 if(this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {
                     temporalOptions = {
                         fuzzyDiffThreshold: Math.max(100, x.data.duration * 0.5),
-                        duringReferences: ['duration', 'listenedFor', 'range']
+                        duringReferences: ['duration', 'listenedFor', 'range'],
+                        logger: this.logger
                     }
                     temporalAccuracy.push(TA_DURING);
                 }

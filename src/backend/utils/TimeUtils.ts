@@ -35,6 +35,8 @@ import { InvalidRegexError, SimpleError } from "../common/errors/MSErrors.js";
 import { NamedGroup, parseRegex } from "@foxxmd/regex-buddy-core";
 import { Duration } from "dayjs/plugin/duration.js";
 import { SourceType } from "../common/infrastructure/config/source/sources.js";
+import { Logger } from "@foxxmd/logging";
+import { loggerNoop } from "../common/MaybeLogger.js";
 
 //dayjs.extend(isToday);
 
@@ -73,6 +75,7 @@ export interface TemporalPlayComparisonOptions {
     fuzzyDuration?: boolean,
     fuzzyDiffThreshold?: number
     duringReferences?: AcceptableTemporalDuringReference
+    logger?: Logger
 }
 
 export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: PlayObject, options: TemporalPlayComparisonOptions = {}): TemporalPlayComparison => {
@@ -113,7 +116,8 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
         diffThreshold = getTemporalAccuracyCloseVal(source as SourceType),
         fuzzyDuration = false,
         fuzzyDiffThreshold = 10,
-        duringReferences = ['range']
+        duringReferences = ['range'],
+        logger = loggerNoop
     } = options;
 
     const result: TemporalPlayComparison = {
@@ -151,20 +155,28 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
 
     if(duringReferences.length > 0) {
 
-        if (duringReferences.includes('range') && existingRanges !== undefined) {
-            // since we know when the existing track was listened to
-            // we can check if the new track play date took place while the existing one was being listened to
-            // which would indicate (assuming same source) the new track is a duplicate
-            for (const range of existingRanges) {
-                if (candidateTsSOCDate.isBetween(range.start.timestamp, range.end.timestamp)) {
-                    result.range = {
-                        type: 'range',
-                        timestamps: [range.start.timestamp, range.end.timestamp]
+        // guard against old, badly cached/marshalled range data:
+        // this should not be an issue in 0.14.0+ since listenprogress has been updated to be a plain object
+        // but for folks migrating with very old cached data it could end up being an issue
+        try {
+            if (duringReferences.includes('range') && existingRanges !== undefined) {
+                // since we know when the existing track was listened to
+                // we can check if the new track play date took place while the existing one was being listened to
+                // which would indicate (assuming same source) the new track is a duplicate
+                for (const range of existingRanges) {
+
+                    if (candidateTsSOCDate.isBetween(range.start.timestamp, range.end.timestamp)) {
+                        result.range = {
+                            type: 'range',
+                            timestamps: [range.start.timestamp, range.end.timestamp]
+                        }
+                        result.match = TA_DURING;
+                        return result;
                     }
-                    result.match = TA_DURING;
-                    return result;
                 }
             }
+        } catch (e) {
+            logger.warn(new Error('Failed to compare plays based on range but will continue', {cause: e}));
         }
 
         if(duringReferences.includes('listenedFor') && existingPlay.data.listenedFor !== undefined) {

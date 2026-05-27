@@ -503,7 +503,7 @@ export const existingScrobble = async (playObjPre: PlayObject, existingScrobbles
                 //const referenceMatch = referenceApiScrobbleResponse !== undefined && playObjDataMatch(x, referenceApiScrobbleResponse);
 
 
-                const temporalComparison = comparePlayTemporally(x, playObj);
+                const temporalComparison = comparePlayTemporally(x, playObj, {logger});
                 let timeMatch = 0;
                 if(hasAcceptableTemporalAccuracy(temporalComparison.match)) {
                     timeMatch = 1;
