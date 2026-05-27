@@ -1404,8 +1404,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         for await(const play of pMapIterable(playDatas, this.staggerMappers.preCompare(async x => transformFunc !== undefined ? await transformFunc(x) : await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 3})) {
             try {
                 // cheap check, looks for play data (non-meta) hash, playdate, and optionally mbid recording
-                const cheapExisting = await this.playRepo.checkExisting(play, {queueName: CLIENT_INGRESS_QUEUE});
-                if(cheapExisting !== undefined) {
+                const cheapExisting = await this.playRepo.checkExisting(play, { queueName: CLIENT_INGRESS_QUEUE });
+                if (cheapExisting !== undefined) {
                     const qs = cheapExisting.queueStates.find(x => x.queueName === CLIENT_INGRESS_QUEUE);
                     this.logger.trace(`Not adding to queue because it is already in the queue, discovered via hash/mbid, last queued at ${todayAwareFormat(qs.createdAt)}`);
                     continue;
@@ -1413,34 +1413,34 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 // then chunked queued plays
                 let offset = 0;
                 let inQueue = false;
-                while(true) {
-                    const {data, meta} = await this.playRepo.getQueued(CLIENT_INGRESS_QUEUE, {offset});
+                while (true) {
+                    const { data, meta } = await this.playRepo.getQueued(CLIENT_INGRESS_QUEUE, { offset });
                     const existingQueued = await this.existingScrobble(play, data.map(x => asPlay(x.play)), false);
-                     // want to be very confident of this
-                    if(existingQueued.match && existingQueued.score > 0.99) {
+                    // want to be very confident of this
+                    if (existingQueued.match && existingQueued.score > 0.99) {
                         this.logger.trace(`Not adding to queue because it is already in the queue\n${existingQueued.summary}`);
                         inQueue = true;
                         break;
                     }
-                    if(data.length < meta.limit) {
+                    if (data.length < meta.limit) {
                         break;
                     }
                     offset += meta.limit;
                 }
 
-                if(inQueue) {
+                if (inQueue) {
                     continue;
                 }
-                
-                // not in queue!
-                const {
-                    meta: {
-                        // dbId,
-                        // dbUid,
-                        lifecycle,
-                        ...metaRest
-                    },
-                } = play
+            } catch (e) {
+                this.logger.warn(new SimpleError('Failed to check queued scrobble for existing before adding, will continue with adding anyway', { cause: e }));
+            }
+            // not in queue or existing queued check failed for some reason and we don't want to lose scrobble
+            const {
+                meta: {
+                    lifecycle,
+                    ...metaRest
+                },
+            } = play
             const createPlayData = playToRepositoryCreatePlayOpts({
                 play: {
                     ...play,
@@ -1461,9 +1461,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             createdQueuedPlays.push(playRow[0]);
             this.logger.debug(`Added ${buildTrackString(play)} to the queue`);
 
-            } catch (e) {
-                this.logger.warn(new SimpleError('Failed to check queued scrobble for existing before adding', {cause: e}));
-            }
             const queuedPlay = {id: nanoid(), source, play: play}
             //await this.playRepo.updateById(play.meta.dbId, {play});
             this.emitEvent('scrobbleQueued', {queuedPlay: queuedPlay});
