@@ -10,7 +10,7 @@ export const deadApi = createApi({
     tagTypes: ['DeadLetters'],
     endpoints: (builder) => ({
         getDead: builder.query<DeadResponse, { name: string, type: string }>({
-            query: (params) => `dead?name=${params.name}&type=${params.type}`,
+            query: (params) => `dead?name=${params.name}&type=${params.type}&sort=seenAt&order=desc`,
             providesTags: ['DeadLetters']
         }),
         processDead: builder.query<DeadResponse, { name: string, type: string }>({

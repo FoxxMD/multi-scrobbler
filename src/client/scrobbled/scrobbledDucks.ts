@@ -7,7 +7,7 @@ export const scrobbledApi = createApi({
     baseQuery: fetchBaseQuery({ baseUrl: './api/' }),
     endpoints: (builder) => ({
         getRecent: builder.query<ScrobbledResponse, {name: string, type: string}>({
-            query: (params) => `scrobbled?name=${params.name}&type=${params.type}`,
+            query: (params) => `scrobbled?name=${params.name}&type=${params.type}&sort=seenAt&order=desc`,
             transformResponse: (response: ScrobbledResponse, meta, arg) => {
                 return response.map((x, index) => ({...x, index: index + 1}))
             }
