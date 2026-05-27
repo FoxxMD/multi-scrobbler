@@ -17,7 +17,6 @@ export default class TealScrobbler extends AbstractScrobbleClient {
 
     requiresAuth = true;
     requiresAuthInteraction = false;
-    clearedStatus = false; // tracks if a user's status has been cleared on their repo
 
     declare config: TealClientConfig;
 
@@ -127,21 +126,25 @@ export default class TealScrobbler extends AbstractScrobbleClient {
         const notPlaying = [CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused].includes(data.status.calculated as ReportedPlayerStatus);
         try {
             await this.client.updateStatusRecord(playToStatusRecord(data.play, notPlaying, data.position));
-            this.clearedStatus = notPlaying;
         } catch (e) {
             throw e;
         }
     }
 
+    wasLastStatusCleared = () => {
+    return this.nowPlayingLastPlay !== undefined 
+      && [CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused].includes(this.nowPlayingLastPlay.status.calculated as ReportedPlayerStatus)
+    }
+
     shouldUpdatePlayingNowPlatformSpecific = async (data: SourcePlayerObj): Promise<[boolean, string?, LogLevel?]> => {
-        if ([CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused].includes(data.status.calculated as ReportedPlayerStatus) && !this.clearedStatus
+        if ([CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused].includes(data.status.calculated as ReportedPlayerStatus) && !this.wasLastStatusCleared()
             || [CALCULATED_PLAYER_STATUSES.playing].includes(data.status.calculated as ReportedPlayerStatus)
             || (data.nowPlayingMode && !CALCULATED_PLAYER_STATUSES.stopped)) {
             return [true];
         } else {
             if(!data.nowPlayingMode && ![CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused, CALCULATED_PLAYER_STATUSES.playing].includes(data.status.calculated as ReportedPlayerStatus)) {
                 return [false,`player is not in state: stopped | paused | playing => Found '${data.status.calculated }'`];
-            } else if (this.clearedStatus) {
+            } else if (this.wasLastStatusCleared()) {
                 return [false, 'teal.fm status has already been set to expired'];
             } else if (data.nowPlayingMode && CALCULATED_PLAYER_STATUSES.stopped) {
                 this.npLogger.trace(`Will not update because now playing player is stopped => Found ${data.status.calculated}`);

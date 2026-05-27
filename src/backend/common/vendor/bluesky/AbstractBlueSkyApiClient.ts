@@ -124,13 +124,16 @@ export const playToRecord = (play: PlayObject): ScrobbleRecord => {
 }
 
 export const playToStatusRecord = (play: PlayObject, notPlaying: boolean, position?: number): StatusRecord => {
-    const { $type, ...item } = playToRecord(play);
+    const { $type, ...item } = notPlaying
+        ? { trackName: "", artists: [] }
+        : playToRecord(play);
     return {
         $type: "fm.teal.alpha.actor.status",
         time: dayjs().toISOString(),
-        // expiry is 1min ago if paused, (now + duration - position) if position is available, or fallback to (now + 10mins)
+        // 1min ago if paused -> try now + (duration - position) -> try now + duration -> fallback to now + 10mins
         expiry: notPlaying ? dayjs().subtract(1, 'minute').toISOString()
-            : position !== undefined ? dayjs().add(play.data.duration - position, 'second').toISOString()
+            : position !== undefined && play.data.duration !== undefined ? dayjs().add(play.data.duration - position, 'second').toISOString()
+            : play.data.duration !== undefined ? dayjs().add(play.data.duration, 'second').toISOString()
             : dayjs().add(10, 'minute').toISOString(),
         item
     };
