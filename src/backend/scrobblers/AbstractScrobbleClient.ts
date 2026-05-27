@@ -579,30 +579,33 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                                 lifecycle,
                                 ...metaRest
                             },
+                            data: {
+                                listenRanges,
+                                artists,
+                                albumArtists,
+                                ...dataRest
+                            } = {},
                         } = play;
                         try {
-                            const res = await this.playRepo.createPlays([
-                                playToRepositoryCreatePlayOpts({
-                                    play: {
-                                        ...play,
-                                        data: {
-                                            ...play.data,
-                                            artists: play.data?.artists === undefined ? undefined : artistNamesToCredits(play.data?.artists as unknown as string[]),
-                                            albumArtists: play.data?.albumArtists === undefined ? undefined : artistNamesToCredits(play.data?.albumArtists as unknown as string[])
-                                        },
-                                        meta: {
-                                            ...metaRest,
-                                            lifecycle: {
-                                                steps: []
-                                            }
-                                        }
-                                    },
-                                    componentId: this.dbComponent.id,
-                                    state: 'queued',
-                                    parentId: play.id
-                                })
-                            ]);
-                            logger.verbose(`Migrated Play ${res[0].uid} => ${buildTrackString(play)}`);
+                            const updatedPlay: PlayObject = {
+                                ...play,
+                                data: {
+                                    artists: artists === undefined ? undefined : artistNamesToCredits(artists as unknown as string[]),
+                                    albumArtists: albumArtists === undefined ? undefined : artistNamesToCredits(albumArtists as unknown as string[]),
+                                    ...dataRest
+                                },
+                                meta: {
+                                    ...metaRest,
+                                    lifecycle: {
+                                        steps: []
+                                    }
+                                }
+                            }
+                            // return play object without going through transform since it was (presumably) already transformed before being cached
+                            const res = await this.queueScrobble(updatedPlay, updatedPlay.meta.source, async (x) => x);
+                            if(res.length === 1) {
+                                logger.verbose(`Migrated Play ${res[0].uid} => ${buildTrackString(play)}`);
+                            }
                             cachedQueuedScrobble.play.meta.migrated = true;
                             migratedQueue.push(cachedQueuedScrobble)
                         } catch (e) {
@@ -633,6 +636,12 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                                 lifecycle,
                                 ...metaRest
                             },
+                            data: {
+                                listenRanges,
+                                artists,
+                                albumArtists,
+                                ...dataRest
+                            } = {},
                         } = play;
                         try {
                             const res = await this.playRepo.createPlays([
@@ -640,9 +649,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                                     play: {
                                         ...play,
                                         data: {
-                                            ...play.data,
-                                            artists: play.data?.artists === undefined ? undefined : artistNamesToCredits(play.data?.artists as unknown as string[]),
-                                            albumArtists: play.data?.albumArtists === undefined ? undefined : artistNamesToCredits(play.data?.albumArtists as unknown as string[])
+                                            artists: artists === undefined ? undefined : artistNamesToCredits(artists as unknown as string[]),
+                                            albumArtists: albumArtists === undefined ? undefined : artistNamesToCredits(albumArtists as unknown as string[]),
+                                            ...dataRest
                                         },
                                         meta: {
                                             ...metaRest,
@@ -657,17 +666,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                                 })
                             ]);
                             logger.verbose(`Added Play ${res[0].uid} to database => ${buildTrackString(play)}`);
-                            await this.queueRepo.create({
-                                componentId: this.dbComponent.id,
-                                playId: res[0].id,
-                                queueName: CLIENT_DEAD_QUEUE,
-                                queueStatus: 'queued',
-                                retries: cDeadScrobble.retries,
-                                error: cDeadScrobble.error !== undefined ? { message: cDeadScrobble.error } : undefined
-                            });
+                            await this.addDeadLetterScrobble(res[0], cDeadScrobble.error);
+                            logger.verbose(`Added Play ${res[0].uid} to Failed Queue`);
                             cDeadScrobble.play.meta.migrated = true;
                             migratedDead.push(cDeadScrobble);
-                            logger.verbose(`Added Play ${res[0].uid} to Failed Queue`);
                         } catch (e) {
                             migratedDead.push(cDeadScrobble);
                             allGood = false;
@@ -1394,12 +1396,12 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         await this.updateQueueStats([CLIENT_DEAD_QUEUE]);
     }
 
-    queueScrobble = async (data: PlayObject | PlayObject[], source: string) => {
+    queueScrobble = async (data: PlayObject | PlayObject[], source: string, transformFunc?: (x: PlayObject) => Promise<PlayObject>) => {
         const playDatas = (Array.isArray(data) ? data : [data]).map(x => ({...x, meta: {...x.meta, seenAt: dayjs()}}));
 
         const createdQueuedPlays: PlaySelect[] = [];
 
-        for await(const play of pMapIterable(playDatas, this.staggerMappers.preCompare(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 3})) {
+        for await(const play of pMapIterable(playDatas, this.staggerMappers.preCompare(async x => transformFunc !== undefined ? await transformFunc(x) : await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 3})) {
             try {
                 // cheap check, looks for play data (non-meta) hash, playdate, and optionally mbid recording
                 const cheapExisting = await this.playRepo.checkExisting(play, {queueName: CLIENT_INGRESS_QUEUE});
