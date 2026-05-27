@@ -64,7 +64,6 @@ import { todayAwareFormat } from "../../core/TimeUtils.js";
 import { WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
 import { AsyncTask, SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 import { getRoot } from "../ioc.js";
-import { rehydratePlay } from "../utils/CacheUtils.js";
 import { findAsyncSequential, staggerMapper, StaggerOptions } from "../utils/AsyncUtils.js";
 import pMap, { pMapIterable } from "p-map";
 import { comparePlayArtistsNormalized, comparePlayTracksNormalized, existingScrobble, ExistingScrobbleOpts } from "../utils/PlayComparisonUtils.js";
@@ -830,7 +829,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
 
         const matchPlayDate = dtInvariantMatches.find((x: PlayObject) => {
-            const temporalComparison = comparePlayTemporally(x, playObj);
+            const temporalComparison = comparePlayTemporally(x, playObj, {logger: this.logger});
             return hasAcceptableTemporalAccuracy(temporalComparison.match)
         });
 

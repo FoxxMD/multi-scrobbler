@@ -39,7 +39,7 @@ import { getRoot } from '../ioc.js';
 import { componentFileLogger } from '../common/logging.js';
 import { WebhookPayload } from '../common/infrastructure/config/health/webhooks.js';;
 import { messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.js";
-import { existingScrobble, ExistingScrobbleOpts, genericSourcePlayMatch } from '../utils/PlayComparisonUtils.js';
+import { existingScrobble, ExistingScrobbleOpts } from '../utils/PlayComparisonUtils.js';
 import { findAsync, staggerMapper, StaggerOptions } from '../utils/AsyncUtils.js';
 import pMap, {pMapIterable} from 'p-map';
 import prom, { Counter, Gauge } from 'prom-client';
