@@ -5,7 +5,7 @@ import isBetween from "dayjs/plugin/isBetween.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
 import timezone from "dayjs/plugin/timezone.js";
 import utc from "dayjs/plugin/utc.js";
-import { BrainzMeta, FEAT, JOINERS, JOINERS_FINAL, JsonPlayObject, MissingMbidType, ObjectPlayData, PlayMeta, PlayObject, SourcePlayerObj } from "./Atomic.js";
+import { ArtistCredit, BrainzMeta, FEAT, JOINERS, JOINERS_FINAL, JsonPlayObject, MBID, MissingMbidType, ObjectPlayData, PlayMeta, PlayObject, SourcePlayerObj } from "./Atomic.js";
 import { genGroupIdStr } from './PlayUtils.js';
 import { sortByNewestPlayDate } from './PlayUtils.js';
 import { CALCULATED_PLAYER_STATUSES, NO_DEVICE, NO_USER, PlayerStateDataMaybePlay, PlayPlatformId, REPORTED_PLAYER_STATUSES, SINGLE_USER_PLATFORM_ID } from '../backend/common/infrastructure/Atomic.js';
@@ -17,6 +17,7 @@ import { LastFMTrackObject } from '../backend/common/vendor/LastfmApiClient.js';
 import { MarkOptional } from 'ts-essentials';
 import { defaultLifecycle } from '../backend/utils/PlayTransformUtils.js';
 import clone from 'clone';
+import { removeUndefinedKeys } from '../backend/utils.js';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -247,7 +248,7 @@ export const generateJsonPlays = (...args: Parameters<typeof generatePlays>): Js
 }
 
 export interface WithBrainzOptions {
-    include: ('track' | 'artist' | 'album')[]
+    include: ('track' | 'artist' | 'album' | 'recording')[]
 }
 export const generateBrainz = (play: PlayObject, opts: WithBrainzOptions): BrainzMeta => {
     const {include} = opts;
@@ -255,6 +256,11 @@ export const generateBrainz = (play: PlayObject, opts: WithBrainzOptions): Brain
     for(const i of include) {
         switch(i) {
             case 'track':
+                if(play.data.meta?.brainz?.track === undefined) {
+                    brainz.track = generateMbid();
+                }
+                break;
+            case 'recording':
                 if(play.data.meta?.brainz?.recording === undefined) {
                     brainz.recording = generateMbid();
                 }
@@ -337,6 +343,21 @@ export const generateArtists = (num?: number, max: number = 3, opts: ArtistGener
         });
     }
     return artists;
+}
+
+export const generateArtistCredit = (name: string = faker.music.artist(), mbidVal: MBID | boolean = true): ArtistCredit => {
+    let mbid: MBID;
+    if(mbidVal === true) {
+        mbid = generateMbid();
+    } else if(typeof mbidVal === 'string') {
+        mbid = mbidVal as MBID;
+    }
+    return removeUndefinedKeys<ArtistCredit>({name, mbid});
+}
+
+export const generateArtistCredits = (num?: number, max?: number, opts: ArtistGenerationOptions & {mbidVal?: boolean} = {}): ArtistCredit[] => {
+    const artistNames = generateArtists(num, max, opts);
+    return artistNames.map(x => generateArtistCredit(x, opts.mbidVal));
 }
 
 export interface ArtistGenerateOptions extends ArtistGenerationOptions {
@@ -442,14 +463,14 @@ export const generateLastfmTrackObject = (): LastFMTrackObject => {
     }
 }
 
-export const generateMbid = (): string => {
+export const generateMbid = (): MBID => {
     return [
         faker.string.alphanumeric({length: 8}),
         faker.string.alphanumeric({length: 4}),
         faker.string.alphanumeric({length: 4}),
         faker.string.alphanumeric({length: 4}),
         faker.string.alphanumeric({length: 12})
-    ].join('-')
+    ].join('-') as MBID;
 }
 
 export const generateTealPlayRecord = (opts: {

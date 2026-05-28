@@ -1,8 +1,8 @@
 import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
-import { generateLastfmTrackObject, generateMbid, generatePlay, generateTealPlayRecord } from "../../../core/PlayTestUtils.js";
-import { AbstractBlueSkyApiClient, listRecordToPlay } from '../../common/vendor/bluesky/AbstractBlueSkyApiClient.js';
+import { generateArtistCredits, generatePlay, generateTealPlayRecord, withBrainz } from "../../../core/PlayTestUtils.js";
+import { listRecordToPlay, playToRecord } from '../../common/vendor/bluesky/AbstractBlueSkyApiClient.js';
 import dayjs from 'dayjs';
 import { artistCreditsToNames } from '../../../core/StringUtils.js';
 
@@ -53,6 +53,22 @@ describe('#tealfm Record to Play', function() {
 
         expect(play.data.meta?.brainz).to.not.be.undefined;
         expect(play.data.meta?.brainz.artist).to.be.undefined;
+    });
+
+});
+
+describe('#tealfm Play To Record', function () {
+
+    it('Adds mbids with uri format', function () {
+
+        const play = withBrainz(generatePlay({artists: generateArtistCredits(2)}), {include: ['recording']});
+        const record = playToRecord(play);
+
+        expect(record.recordingMbId).to.eq(`mbid:${play.data.meta.brainz.recording}`);
+        expect(record.releaseMbId).is.undefined;
+        expect(record.artists).length(2);
+        expect(record.artists[0].artistName).eq(play.data.artists[0].name);
+        expect(record.artists[0].artistMbId).eq(`mbid:${play.data.artists[0].mbid}`);
     });
 
 });

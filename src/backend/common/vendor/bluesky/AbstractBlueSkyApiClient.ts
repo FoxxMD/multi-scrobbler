@@ -4,7 +4,7 @@ import { ListRecord, ScrobbleRecord, StatusRecord, TealClientData } from "../../
 import AbstractApiClient from "../AbstractApiClient.js";
 import { Agent, ComAtprotoRepoCreateRecord, ComAtprotoRepoListRecords, ComAtprotoRepoPutRecord } from "@atproto/api";
 import { MSCache } from "../../Cache.js";
-import { BrainzMeta, PlayObject, SourcePlayerObj, PlayObjectLifecycleless, ScrobbleActionResult, UnixTimestamp } from "../../../../core/Atomic.js";
+import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, UnixTimestamp, MBID } from "../../../../core/Atomic.js";
 import { musicServiceToCononical } from '../listenbrainz/lzUtils.js';
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { RecordOptions } from "../../infrastructure/config/client/tealfm.js";
@@ -109,18 +109,31 @@ export const playToRecord = (play: PlayObject): ScrobbleRecord => {
     const record: ScrobbleRecord = {
         $type: "fm.teal.alpha.feed.play",
         trackName: play.data.track,
-        artists: play.data.artists.map(x => removeUndefinedKeys({ artistName: x.name, artistMbId: x.mbid })),
+        artists: play.data.artists.map(x => removeUndefinedKeys({ artistName: x.name, artistMbId: mbidUriOrUndefined(x.mbid as MBID) })),
         duration: Math.round(play.data.duration),
         playedTime: getScrobbleTsSOCDateWithContext(play)[0].toISOString(),
         releaseName: play.data.album,
         submissionClientAgent: `multi-scrobbler/${getRoot().items.version}`,
         musicServiceBaseDomain: musicServiceToCononical(play.meta.musicService) ?? play.meta.musicService,
         isrc: play.data.isrc,
-        recordingMbId: play.data.meta?.brainz?.recording,
-        releaseMbId: play.data.meta?.brainz?.album
+        trackMbid: mbidUriOrUndefined(play.data.meta?.brainz?.track as MBID),
+        recordingMbId: mbidUriOrUndefined(play.data.meta?.brainz?.recording as MBID),
+        releaseMbId: mbidUriOrUndefined(play.data.meta?.brainz?.album as MBID)
     };
 
     return record;
+}
+
+type MBIDURI = `mbid:${MBID}`;
+
+const mbidUriOrUndefined = (mbid?: MBID): undefined | MBIDURI => {
+    if(mbid === undefined) {
+        return undefined;
+    }
+    return mbidToUri(mbid);
+}
+export const mbidToUri = (mbid: MBID): MBIDURI => {
+    return `mbid:${mbid}`;
 }
 
 export const playToStatusRecord = (play: PlayObject, notPlaying: boolean, position?: number): StatusRecord => {

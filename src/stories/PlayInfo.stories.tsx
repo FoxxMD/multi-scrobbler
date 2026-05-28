@@ -57,7 +57,7 @@ export const PlayInfoStory = meta.story({
 
     if(args.brainz) {
       // @ts-ignore
-      args.play = asJsonPlayObject(withBrainz(args.play, {include: ['album','track','artist']}));
+      args.play = asJsonPlayObject(withBrainz(args.play, {include: ['album','recording','track','artist']}));
     }
     return (<PlayData {...args}/>) 
   }

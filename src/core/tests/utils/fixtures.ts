@@ -219,7 +219,7 @@ export const generateLifecycleStep = (play: PlayObject, opts: GenerateLifecycleO
           }
           somethingModified = true;
           if(ctx.key === 'brainz' && Object.keys(x ?? {}).length === 0) {
-              ctx.update(generateBrainz(play, {include: ['album', 'artist', 'track']}), true);
+              ctx.update(generateBrainz(play, {include: ['album', 'artist', 'track','recording']}), true);
           } else if (ctx.parent !== undefined && ctx.parent.key === 'brainz') {
             if (Array.isArray(x)) {
               ctx.update(faker.helpers.multiple(generateMbid, { count: { min: 1, max: 3 } }));

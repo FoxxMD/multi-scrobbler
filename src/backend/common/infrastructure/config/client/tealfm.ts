@@ -53,6 +53,7 @@ export interface TealClientAIOConfig extends TealClientConfig {
 }
 export interface TealArtistCredit {
     artistName?: string,
+    /** The MusicBrainz artist ID URI, formatted as mbid:<uuid> */
     artistMbId?: string
 }
 /**
@@ -70,12 +71,19 @@ export interface ScrobbleRecord {
     /** A metadata string specifying the user agent where the format is `<app-identifier>/<version> (<kernel/OS-base>; <platform/OS-version>; <device-model>)` */
     submissionClientAgent: string,
     musicServiceBaseDomain?: string
-    // musicbrainz
+    /** The MusicBrainz ID URI of the track, formatted as mbid:<uuid> */
+    trackMbid?: string
+    /** The MusicBrainz recording ID URI of the track, formatted as mbid:<uuid> */
     recordingMbId?: string
+    /** The MusicBrainz release ID URI, formatted as mbid:<uuid> */
     releaseMbId?: string
     isrc?: string,
     /** The URL associated with this track */
     originUrl?: string
+    /** Distinguishing information for track variants (e.g. 'Acoustic Version', 'Live at Wembley', 'Radio Edit', 'Demo'). Used to differentiate between different versions of the same base track while maintaining grouping capabilities. */
+    trackDiscriminant?: string;
+    /** Distinguishing information for release variants (e.g. 'Deluxe Edition', 'Remastered', '2023 Remaster', 'Special Edition'). Used to differentiate between different versions of the same base release while maintaining grouping capabilities. */
+    releaseDiscriminant?: string;
     [x: string]: unknown
 }
 
