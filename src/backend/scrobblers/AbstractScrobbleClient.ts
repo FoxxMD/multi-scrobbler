@@ -1564,10 +1564,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             return [true, 'Now Playing has not yet been set'];
         }
 
-        if(data.play.data.track === undefined) {
+        if(data.play?.data?.track === undefined) {
             return [false, 'play is missing track information'];
         }
-        if((data.play.data.artists ?? []).length === 0) {
+        if((data.play?.data?.artists ?? []).length === 0) {
             return [false, 'play is missing artist information'];
         }
 
