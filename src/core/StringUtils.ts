@@ -16,6 +16,7 @@ import {
 } from "./Atomic.js";
 import { DELIMETERS_REGEX, DELIMITERS } from "../backend/common/infrastructure/Atomic.js";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
+import { removeUndefinedKeys } from "../backend/utils.js";
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -309,7 +310,25 @@ export const containsDelimiters = (str: string) => null !== str.match(/[,&/\\]+/
 const NUMBERS_REGEX = new RegExp(/^\s*\d+\s*$/);
 export const stringIsOnlyNumbers = (str: string) => NUMBERS_REGEX.test(str);
 
-export const artistNamesToCredits = (names: string[] | undefined): ArtistCredit[] => names === undefined ? undefined : names.map((x) => ({name: x}));
-export const artistNameToCredit = (name: string | undefined): ArtistCredit => name === undefined ? undefined : ({ name });
+export const artistNamesToCredits = (names: (string | Partial<ArtistCredit>)[] | undefined): ArtistCredit[] => {
+    if(names === undefined) {
+        return undefined;
+    }
+    return names.map(artistNameToCredit).filter(x => x !== undefined);
+};
+export const artistNameToCredit = (val: string | undefined | Partial<ArtistCredit>): ArtistCredit => {
+    if(val === undefined) {
+        return undefined;
+    }
+    if(typeof val === 'string') {
+        return {name: val};
+    }
+    const {
+        name,
+        mbid,
+        ...rest
+    } = val;
+    return removeUndefinedKeys({name, mbid, ...rest});
+}
 export const artistCreditToName = (a: ArtistCredit): string => a.name;
 export const artistCreditsToNames = (a: ArtistCredit[]): string[] => a.map((x) => x.name);
