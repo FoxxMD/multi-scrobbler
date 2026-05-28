@@ -43,7 +43,7 @@ from "@jellyfin/sdk/lib/index.js";
 import dayjs from "dayjs";
 import EventEmitter from "events";
 import { ArtistCredit, BrainzMeta, PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
-import { artistNamesToCredits, buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
+import { artistNamesToCredits, artistNameToCredit, buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -59,6 +59,7 @@ import { hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 import { FixedSizeList } from "fixed-size-list";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
+import { noCasePropObj } from "../utils/DataUtils.js";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -466,17 +467,19 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
             meta.albumArtist = [ProviderIds.MusicBrainzAlbumArtist];
         }
 
+        const normalizedArtists = Artists.map(x => typeof x === 'string' ? artistNameToCredit(x) : artistNameToCredit(noCasePropObj(x)));
         let playArtists: ArtistCredit[] = [];
-        if(Artists.length === 1 && meta.artist !== undefined) {
-            playArtists.push({name: Artists[0], mbid: meta.artist[0]});
+        if(normalizedArtists.length === 1 && meta.artist !== undefined) {
+            playArtists.push({...normalizedArtists[0], mbid: meta.artist[0]});
         } else {
-            playArtists = artistNamesToCredits(Artists);
+            playArtists = normalizedArtists;
         }
+        const normalizedAlbumArtists = AlbumArtists.map(x => typeof x === 'string' ? artistNameToCredit(x) : artistNameToCredit(noCasePropObj(x)));
         let playAlbumArtists: ArtistCredit[] = [];
-        if(AlbumArtists.length === 1 && meta.albumArtist.length === 1) {
-            playAlbumArtists.push({name: AlbumArtists[0], mbid: meta.albumArtist[0]});
+        if(normalizedAlbumArtists.length === 1 && meta.albumArtist !== undefined) {
+            playAlbumArtists.push({...normalizedAlbumArtists[0], mbid: meta.albumArtist[0]});
         } else {
-            playAlbumArtists = artistNamesToCredits(AlbumArtists);
+            playAlbumArtists = normalizedAlbumArtists;
         }
 
         const play: PlayObjectLifecycleless = {

@@ -8,10 +8,12 @@ import JellyfinApiSource from "../../sources/JellyfinApiSource.js";
 import validSession from './validSession.json' with { type: "json" };
 import { JellyApiData } from "../../common/infrastructure/config/source/jellyfin.js";
 import { generatePlay } from "../../../core/PlayTestUtils.js";
-import { fakerJA } from "@faker-js/faker";
+import { faker, fakerJA } from "@faker-js/faker";
 import {
     // @ts-expect-error weird typings?
     SessionInfo,
+    // @ts-expect-error weird typings?
+    BaseItemDto,
 } from "@jellyfin/sdk/lib/generated-client/index.js";
 // @ts-expect-error weird typings?
 import { getImageApi } from "@jellyfin/sdk/lib/utils/api/index.js";
@@ -371,5 +373,89 @@ describe("Jellyfin API Source", function() {
             });
 
         });
+    });
+
+    describe('Play Data Formatting', function() {
+
+        it('Should handle artists as strings or objects', async function () {
+            const itemStr: BaseItemDto = {
+                Name: faker.word.words({count: {min: 1, max: 3}}),
+                Artists: [faker.word.words({count: {min: 1, max: 3}})]
+            };
+
+            const playStr = JellyfinApiSource.formatPlayObj(itemStr);
+
+            expect(playStr.data.artists).length(1);
+            expect(playStr.data.artists[0].name).eq(itemStr.Artists[0]);
+
+            const itemObj: BaseItemDto = {
+                Name: faker.word.words({count: {min: 1, max: 3}}),
+                Artists: [{Name: faker.word.words({count: {min: 1, max: 3}})}]
+            };
+
+            const playObj = JellyfinApiSource.formatPlayObj(itemObj);
+
+            expect(playObj.data.artists).length(1);
+            expect(playObj.data.artists[0].name).eq(itemObj.Artists[0].Name);
+        });
+
+        it('Should handle album artists as strings or objects', async function () {
+            const itemStr: BaseItemDto = {
+                Name: faker.word.words({count: {min: 1, max: 3}}),
+                Artists: [faker.word.words({count: {min: 1, max: 3}})],
+                AlbumArtists: [faker.word.words({count: {min: 1, max: 3}})]
+            };
+
+            const playStr = JellyfinApiSource.formatPlayObj(itemStr);
+
+            expect(playStr.data.albumArtists).length(1);
+            expect(playStr.data.albumArtists[0].name).eq(itemStr.AlbumArtists[0]);
+
+            const itemObj: BaseItemDto = {
+                Name: faker.word.words({count: {min: 1, max: 3}}),
+                Artists: [{Name: faker.word.words({count: {min: 1, max: 3}})}],
+                AlbumArtists: [{Name: faker.word.words({count: {min: 1, max: 3}})}]
+            };
+
+            const playObj = JellyfinApiSource.formatPlayObj(itemObj);
+
+            expect(playObj.data.albumArtists).length(1);
+            expect(playObj.data.albumArtists[0].name).eq(itemObj.AlbumArtists[0].Name);
+        });
+
+        it('Should add mbids to artist props', async function () {
+            const itemStr: BaseItemDto = {
+                Name: faker.word.words({count: {min: 1, max: 3}}),
+                Artists: [faker.word.words({count: {min: 1, max: 3}})],
+                AlbumArtists: [faker.word.words({count: {min: 1, max: 3}})],
+                ProviderIds: {
+                    MusicBrainzArtist: 'foo',
+                    MusicBrainzAlbumArtist: 'bar'
+                }
+            };
+
+            const playStr = JellyfinApiSource.formatPlayObj(itemStr);
+
+            expect(playStr.data.artists[0].mbid).eq(itemStr.ProviderIds.MusicBrainzArtist);
+            expect(playStr.data.albumArtists[0].mbid).eq(itemStr.ProviderIds.MusicBrainzAlbumArtist);
+        });
+
+        it('Does not add mbids to artist props if there are multiple artists', async function () {
+            const itemStr: BaseItemDto = {
+                Name: faker.word.words({count: {min: 1, max: 3}}),
+                Artists: [faker.word.words({count: {min: 1, max: 3}}), faker.word.words({count: {min: 1, max: 3}})],
+                AlbumArtists: [faker.word.words({count: {min: 1, max: 3}}), faker.word.words({count: {min: 1, max: 3}})],
+                ProviderIds: {
+                    MusicBrainzArtist: 'foo',
+                    MusicBrainzAlbumArtist: 'bar'
+                }
+            };
+
+            const playStr = JellyfinApiSource.formatPlayObj(itemStr);
+
+            expect(playStr.data.artists[0].mbid).is.undefined;
+            expect(playStr.data.albumArtists[0].mbid).is.undefined;
+        });
+
     });
 });
