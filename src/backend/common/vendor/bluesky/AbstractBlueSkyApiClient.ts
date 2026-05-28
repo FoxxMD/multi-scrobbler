@@ -8,7 +8,7 @@ import { BrainzMeta, PlayObject, SourcePlayerObj, PlayObjectLifecycleless, Scrob
 import { musicServiceToCononical } from '../listenbrainz/lzUtils.js';
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { RecordOptions } from "../../infrastructure/config/client/tealfm.js";
-import dayjs, { ManipulateType } from "dayjs";
+import dayjs, { Dayjs, ManipulateType } from "dayjs";
 import { getScrobbleTsSOCDateWithContext, usecToUnix } from "../../../utils/TimeUtils.js";
 import { removeUndefinedKeys } from "../../../utils.js";
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.js";
@@ -127,14 +127,22 @@ export const playToStatusRecord = (play: PlayObject, notPlaying: boolean, positi
     const { $type, ...item } = notPlaying
         ? { trackName: "", artists: [] }
         : playToRecord(play);
+
+    // default "fallback" value
+    let expiry: Dayjs = dayjs().add(10, 'minute');
+    // 1min ago if paused -> try now + (duration - position) -> try now + duration -> fallback
+    if(notPlaying) {
+        expiry = dayjs().subtract(1, 'minute');
+    } else if(position !== undefined && play.data.duration !== undefined) {
+        expiry = dayjs().add(play.data.duration - position, 'second');
+    } else if(play.data.duration !== undefined) {
+        expiry = dayjs().add(play.data.duration, 'second');
+    }
+    
     return {
         $type: "fm.teal.alpha.actor.status",
         time: dayjs().toISOString(),
-        // 1min ago if paused -> try now + (duration - position) -> try now + duration -> fallback to now + 10mins
-        expiry: notPlaying ? dayjs().subtract(1, 'minute').toISOString()
-            : position !== undefined && play.data.duration !== undefined ? dayjs().add(play.data.duration - position, 'second').toISOString()
-            : play.data.duration !== undefined ? dayjs().add(play.data.duration, 'second').toISOString()
-            : dayjs().add(10, 'minute').toISOString(),
+        expiry: expiry.toISOString(),
         item
     };
 }
