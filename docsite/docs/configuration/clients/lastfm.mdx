@@ -16,6 +16,20 @@ import JsonConfig from '!!raw-loader!@site/../config/lastfm.json.example';
 
 :::
 
+<DetailsAdmo type="warning" summary="Limits for Old Scrobbles">
+
+Last.fm will not accept scrobbles that are timestamped as **older than 2 weeks** from the current time.
+
+This is not officially documented but has been confirmed by multiple people/mods in the last.fm support forums: [[1]](https://support.last.fm/t/importing-listening-history-spotify-apple-music-and-itunes-wmp/1424/3) [[2]](https://support.last.fm/t/suggestion-allow-last-fm-pro-members-to-use-the-api-to-submit-scrobbles-older-than-2-weeks/69190/2) [[3]](https://support.last.fm/t/how-to-scrobble-complete-spotify-history/44558)
+
+Multi-scrobbler can queue scrobbles for you if the Last.fm service is unavailable, or if there is an issue with a specific scrobble. However, you are responsible for making sure these scrobbles are eventually sent to Last.fm (by retrying in the UI or retarting Last.fm client in UI) before the two week window has passed or else they will not be scrobblable *at all* unless the timestamp is changed.
+
+A future update to Multi-scrobbler will enable editing of unsent scrobble data and modifying the timestamp from the UI.
+
+If you have issues with specific scrobbles not being sent and retries/restarts do not fix it, please make sure to [create a new issue](https://github.com/FoxxMD/multi-scrobbler/issues/new?template=01-bug-report.yml) in a timely manner so that it can be resolved before the window has passed.
+
+</DetailsAdmo>
+
 You will need a [Last.fm](https://www.last.fm) account to use the Last.fm API.
 
 After creating your account, [register for an API account here.](https://www.last.fm/api/account/create)
