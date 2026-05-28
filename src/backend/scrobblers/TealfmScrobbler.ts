@@ -1,9 +1,9 @@
-import { Logger } from "@foxxmd/logging";
+import { Logger, LogLevel } from "@foxxmd/logging";
 import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic.js";
+import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
+import { FormatPlayObjectOptions, CALCULATED_PLAYER_STATUSES, ReportedPlayerStatus } from "../common/infrastructure/Atomic.js";
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.js';
 import { Notifiers } from "../notifier/Notifiers.js";
 
@@ -11,7 +11,7 @@ import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import { TealClientConfig } from "../common/infrastructure/config/client/tealfm.js";
 import { BlueSkyAppApiClient } from "../common/vendor/bluesky/BlueSkyAppApiClient.js";
 import { BlueSkyOauthApiClient } from "../common/vendor/bluesky/BlueSkyOauthApiClient.js";
-import { AbstractBlueSkyApiClient, listRecordToPlay, playToRecord, recordToPlay } from "../common/vendor/bluesky/AbstractBlueSkyApiClient.js";
+import { AbstractBlueSkyApiClient, listRecordToPlay, playToRecord, playToStatusRecord, recordToPlay } from "../common/vendor/bluesky/AbstractBlueSkyApiClient.js";
 
 export default class TealScrobbler extends AbstractScrobbleClient {
 
@@ -26,7 +26,7 @@ export default class TealScrobbler extends AbstractScrobbleClient {
         super('tealfm', name, config, notifier, emitter, logger);
         this.MAX_INITIAL_SCROBBLES_FETCH = 20;
         this.scrobbleDelay = 1500;
-        this.supportsNowPlaying = false;
+        this.supportsNowPlaying = true;
         if(config.data.appPassword !== undefined) {
             this.client = new BlueSkyAppApiClient(name, config.data, {...options, logger});
             this.requiresAuthInteraction = false;
@@ -119,6 +119,39 @@ export default class TealScrobbler extends AbstractScrobbleClient {
         } catch (e) {
             await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             throw e;
+        }
+    }
+
+    doPlayingNow = async (data: SourcePlayerObj) => {
+        const notPlaying = [CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused].includes(data.status.calculated as ReportedPlayerStatus);
+        try {
+            await this.client.updateStatusRecord(playToStatusRecord(data.play, notPlaying, data.position));
+        } catch (e) {
+            throw e;
+        }
+    }
+
+    wasLastStatusCleared = () => {
+    return this.nowPlayingLastPlay !== undefined 
+      && [CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused].includes(this.nowPlayingLastPlay.status.calculated as ReportedPlayerStatus)
+    }
+
+    shouldUpdatePlayingNowPlatformSpecific = async (data: SourcePlayerObj): Promise<[boolean, string?, LogLevel?]> => {
+        if ([CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused].includes(data.status.calculated as ReportedPlayerStatus) && !this.wasLastStatusCleared()
+            || [CALCULATED_PLAYER_STATUSES.playing].includes(data.status.calculated as ReportedPlayerStatus)
+            || (data.nowPlayingMode && !CALCULATED_PLAYER_STATUSES.stopped)) {
+            return [true];
+        } else {
+            if(!data.nowPlayingMode && ![CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused, CALCULATED_PLAYER_STATUSES.playing].includes(data.status.calculated as ReportedPlayerStatus)) {
+                return [false,`player is not in state: stopped | paused | playing => Found '${data.status.calculated }'`];
+            } else if (this.wasLastStatusCleared()) {
+                return [false, 'teal.fm status has already been set to expired'];
+            } else if (data.nowPlayingMode && CALCULATED_PLAYER_STATUSES.stopped) {
+                this.npLogger.trace(`Will not update because now playing player is stopped => Found ${data.status.calculated}`);
+                return [false,`playing player is stopped => Found ${data.status.calculated}` ]
+            } else {
+                return [false, 'player is in an unexpected state for teal.fm usage']
+            }
         }
     }
 }

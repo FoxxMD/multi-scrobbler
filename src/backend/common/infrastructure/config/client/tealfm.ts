@@ -79,6 +79,15 @@ export interface ScrobbleRecord {
     [x: string]: unknown
 }
 
+export interface StatusRecord {
+    $type: "fm.teal.alpha.actor.status",
+    /** item is just ScrobbleRecord, but without $type */
+    item: Omit<ScrobbleRecord, '$type'>,
+    time: string,
+    expiry: string,
+    [x: string]: unknown
+}
+
 export interface ListRecord<T> {
   uri: string;
   cid: string;
