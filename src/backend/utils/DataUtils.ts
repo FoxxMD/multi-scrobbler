@@ -15,6 +15,16 @@ export const asArray = <T>(data: T | T[]): T[] => {
 
 const handler: ProxyHandler<object> =
 {
+    ownKeys(target) {
+      return Reflect.ownKeys(target).map(x => typeof x === 'string' ? x.toLocaleLowerCase() : x);
+    },
+    getOwnPropertyDescriptor(target, key) {
+      return {
+        ...Reflect.getOwnPropertyDescriptor(target, key),
+        enumerable: true,
+        configurable: true,
+      };
+    },
     get: function (target, key) {
         //console.log("key: " + key.toString());
         if (typeof key == "string") {
@@ -65,29 +75,35 @@ const checkAtomic = (value) => {
     return value;
 }
 
+export type toLowerCase<T> = {
+    [K in keyof T]: T[K]
+}
+
+export type LowercaseString<S extends string> = S extends `${infer Str}` 
+    ? `${Lowercase<Str>}` 
+    : S;
+
+/** https://medium.com/@vincent.dibon_78881/type-level-uppercase-and-lowercase-in-typescript-c18f574f4572 */
+export type LowercaseKeys<T> = {
+    [K in keyof T as LowercaseString<Extract<K, string>>]: T[K]
+};
+
 /** Return a Proxy of an object where keys can be accessed case-insensitive
  * 
- * https://stackoverflow.com/a/50102779/1469797
+ * Note: objects from rest operator in spread are *always* lowercase
+ * 
+ * @see https://stackoverflow.com/a/50102779/1469797
  */
-export const noCasePropObj = <T>(obj: T): T => {
-    let newObj;
+export const noCasePropObj = <T extends object>(obj: T): LowercaseKeys<T> => {
 
-    if (typeof obj == "object") {
-        newObj = new Proxy({}, handler);
-        // traverse the Original object converting string keys to upper case
-        for (var key in obj) {
-            if (typeof key == "string") {
-                var objKey = key.toUpperCase();
-                if (!(key in newObj))
-                    newObj[objKey] = checkAtomic(obj[key]);
-            }
+    const newObj = new Proxy<LowercaseKeys<T>>({} as LowercaseKeys<T>, handler);
+    // traverse the Original object converting string keys to upper case
+    for (var key in obj) {
+        if (typeof key == "string") {
+            var objKey = key.toUpperCase();
+            if (!(key in newObj))
+                newObj[objKey] = checkAtomic(obj[key]);
         }
-    }
-    else if (Array.isArray(obj)) {
-        // in an array of objects convert to upper case string keys within each row
-        newObj = new Array();
-        for (var i = 0; i < obj.length; i++)
-            newObj[i] = checkAtomic(obj[i]);
     }
     return newObj; // object with upper cased keys
 }

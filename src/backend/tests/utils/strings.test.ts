@@ -133,6 +133,18 @@ it('Proxy object has case-insensitive keys', function() {
     expect(iObj.foo).eq('bar');
 });
 
+it('Proxy object handles spread', function() {
+    const myObj = {FOO: 'bar', WIDget: 'cool'};
+
+    const iObj = noCasePropObj(myObj);
+    const { foo, ...rest } = iObj;
+
+    expect(foo).is.not.undefined;
+    expect(foo).eq('bar');
+    expect(rest.widget).is.not.undefined;
+    expect(rest.widget).eq('cool');
+});
+
 describe('Interpolation', function() {
 
     it('interpolates values', function() {
