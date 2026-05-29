@@ -18,12 +18,12 @@ export interface LifeycleStepsTimelineProps extends MSCollapsibleExternalProps {
     original: JsonPlayObject
 }
 
-const diffElements = (original: JsonPlayObject, steps: LifecycleStep[]): [JSX.Element[], JsonPlayObject?] => {
+const diffElements = (original: JsonPlayObject, steps: LifecycleStep[]): [React.JSX.Element[], JsonPlayObject?] => {
 
     let currentPlay: JsonPlayObject = structuredClone(original); // JSON.parse(JSON.stringify(original));
     let patchFailed = false;
 
-    const diffElements: JSX.Element[] | null = [];
+    const diffElements: React.JSX.Element[] | null = [];
     let index = 0;
 
     for (const step of steps) {
@@ -100,9 +100,9 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                     name
                 } = x;
 
-                let timelineIcon: JSX.Element,
+                let timelineIcon: React.JSX.Element,
                 iconProps: Record<string, any>,
-                summary: JSX.Element,
+                summary: React.JSX.Element,
                 alertStatus: "error" | "info" | "warning" | "success" | "neutral";
                 if(error === undefined) {
                     timelineIcon = <BsStoplights/>;

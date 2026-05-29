@@ -33,9 +33,9 @@ export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
         collapsibleOpen
     } = props;
 
-    let responseSuffix: JSX.Element,
-        warningsElm: JSX.Element,
-        errorElm: JSX.Element | null;
+    let responseSuffix: React.JSX.Element,
+        warningsElm: React.JSX.Element,
+        errorElm: React.JSX.Element | null;
 
     if (warnings.length > 0) {
         warningsElm = <Span color="orange.solid">warnings</Span>

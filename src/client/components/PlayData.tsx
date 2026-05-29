@@ -49,7 +49,7 @@ export const PlayData = (props?: PlayInfoProps) => {
 
     const [codeMode, setCodeMode] = useState(false);
 
-    let code: JSX.Element | null = null;
+    let code: React.JSX.Element | null = null;
 
     const comparable = showCompare && final !== undefined;
 
@@ -95,7 +95,7 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
     } = props;
 
 
-    let albumArtistElm: JSX.Element;
+    let albumArtistElm: React.JSX.Element;
 
     if (play.data.albumArtists !== undefined && play.data.albumArtists.length > 0) {
         albumArtistElm = (
@@ -133,7 +133,7 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
         } = {}
     } = play;
 
-    let titleElm: JSX.Element;
+    let titleElm: React.JSX.Element;
     if(webUrl !== undefined || originUrl !== undefined) {
         titleElm = <Link variant="underline" target="_blank" href={webUrl ?? originUrl}>{track}</Link>
     } else {
@@ -154,7 +154,7 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
                             <HStack>{play.data.artists.map((x, index) => {
                                 return (
                                     <Tag.Root key={index}>
-                                        <Tag.Label>{x}</Tag.Label>
+                                        <Tag.Label>{x.name}</Tag.Label>
                                     </Tag.Root>
                                 );
                             })}</HStack>}
@@ -210,7 +210,7 @@ export const PlayDatesStack = (props: { play: JsonPlayObject, dates: DisplayDate
         dates
     } = props;
 
-    let datesItem: JSX.Element | null;
+    let datesItem: React.JSX.Element | null;
     if (dates === false) {
         datesItem = null;
     } else {
@@ -246,11 +246,11 @@ export const PlayDatesFooter = (props: { play: JsonPlayObject, dates: DisplayDat
         dates
     } = props;
 
-    let dateElm: JSX.Element;
+    let dateElm: React.JSX.Element;
 
     if (dates !== false) {
-        let playDate: JSX.Element,
-            seenDate: JSX.Element;
+        let playDate: React.JSX.Element,
+            seenDate: React.JSX.Element;
         if (play.data.playDate !== undefined && ['all', 'played'].includes(dates)) {
             playDate = <Text textStyle="xs" color="fg.muted">{`Played ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</Text>
         }

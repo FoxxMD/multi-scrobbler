@@ -126,7 +126,7 @@ export const ChakraPlainBlock = (props: ChakraPlainBlockProps) => {
     return safeStringify(code);
   }, [code]);
 
-  let header: JSX.Element | null;
+  let header: React.JSX.Element | null;
   if(props.title === undefined && maxLines === undefined) {
     header = null;
   } else {
