@@ -5,14 +5,16 @@ import { fn } from 'storybook/test';
 import { PlayData } from "../client/components/PlayData.js";
 import {Provider} from "../client/components/Provider";
 import { Container } from '@chakra-ui/react';
-import { generateArtists, generateJsonPlay, generatePlay, withBrainz } from "../core/PlayTestUtils.js"
+import { generateArtistCredits, generateArtists, generateJsonPlay, generatePlay, withBrainz } from "../core/PlayTestUtils.js"
 import clone from "clone";
 import { asJsonPlayObject } from '../core/PlayMarshalUtils.js';
+import { JsonPlayObject } from "../core/Atomic.js";
 
 type PropsAndCustomArgs = React.ComponentProps<typeof PlayData> & {
   includeAlbumArtists?: boolean;
   defaultFinal?: boolean
   brainz?: boolean
+  play: JsonPlayObject
 };
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.type<{args: PropsAndCustomArgs}>().meta({
@@ -48,7 +50,7 @@ export const PlayInfoStory = meta.story({
     }
     
     if(args.includeAlbumArtists && (args.play.data.albumArtists === undefined || args.play.data.albumArtists.length === 0)) {
-      const aa = generateArtists(undefined, 2);
+      const aa = generateArtistCredits(undefined, 2, {mbidVal: true});
       args.play.data.albumArtists = aa;
       if(args.final !== undefined) {
         args.final.data.albumArtists = aa;

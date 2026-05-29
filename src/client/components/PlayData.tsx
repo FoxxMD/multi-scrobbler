@@ -1,5 +1,5 @@
 import React, { Fragment, useMemo, useState } from 'react';
-import { EmptyState, DataList, HStack, Tag, Tabs, Wrap, Box, Flex, SegmentGroup, Stack, Text, Separator, IconButton, Container, SimpleGrid, Float, Spacer, Icon, Link, Span, Show } from "@chakra-ui/react"
+import { EmptyState, DataList, HStack, Tag, Tabs, Wrap, Box, Flex, SegmentGroup, Stack, Text, Tooltip, Separator, IconButton, Container, SimpleGrid, Float, Spacer, Icon, Link, Span, Show } from "@chakra-ui/react"
 import { LuCode, LuText, LuCheck, LuX } from "react-icons/lu"
 import { JsonPlayObject, PlayObjectLifecycleless } from '../../core/Atomic.js';
 import { shortTodayAwareFormat, timeToHumanTimestamp } from '../../core/TimeUtils.js';
@@ -8,6 +8,7 @@ import { ChakraCodeBlock } from './CodeBlock.js';
 import { TextMuted } from './TextMuted.js';
 import { formatNumber } from '../../core/DataUtils.js';
 import { Muted } from './Typography.js';
+import { ArtistCreditTags } from './ArtistCreditDisplay.js';
 
 const EmptyPlayData = () => {
     return (
@@ -102,13 +103,7 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
             <DataList.Item flexGrow="1">
                 <DataList.ItemLabel>Album Artists</DataList.ItemLabel>
                 <DataList.ItemValue>
-                    <HStack>{play.data.albumArtists.map((x, index) => {
-                        return (
-                            <Tag.Root key={index}>
-                                <Tag.Label>{x}</Tag.Label>
-                            </Tag.Root>
-                        );
-                    })}</HStack>
+                    <ArtistCreditTags data={play.data.albumArtists} />
                 </DataList.ItemValue>
             </DataList.Item>
         );
@@ -151,13 +146,7 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
                     <DataList.ItemLabel>Artists</DataList.ItemLabel>
                     <DataList.ItemValue>
                         {artists.length === 0 ? <Text color="fg.muted">(No Artists)</Text> :
-                            <HStack>{play.data.artists.map((x, index) => {
-                                return (
-                                    <Tag.Root key={index}>
-                                        <Tag.Label>{x.name}</Tag.Label>
-                                    </Tag.Root>
-                                );
-                            })}</HStack>}
+                            <ArtistCreditTags data={play.data.artists} />}
                     </DataList.ItemValue>
                 </DataList.Item>
                 {albumArtistElm}

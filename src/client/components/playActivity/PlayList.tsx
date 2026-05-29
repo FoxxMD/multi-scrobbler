@@ -168,7 +168,7 @@ const VirtualizedCollapse = (props: { data: PlayActivity[] }) => {
                 </Collapsible.Indicator>
                 <Stack gap="1" truncate alignItems="flex-start">
                   <Span>{play.data.track}</Span>
-                  <TextMuted truncate>{play.data.artists.join(' / ')}</TextMuted>
+                  <TextMuted truncate>{play.data.artists.map(x => x.name).join(' / ')}</TextMuted>
                   <HStack gap="1">
                     <ShortDateDisplay date={play.data.playDate} prefix="Played" /><Separator orientation="vertical" height="4" />
                     <TextMuted>{play.meta?.source}</TextMuted>
@@ -260,7 +260,7 @@ const VirtualizedAccordian = (props: { data: PlayActivity[] }) => {
                 <Accordion.ItemIndicator />
                 <Stack gap="1" truncate>
                   <Span>{play.data.track}</Span>
-                  <TextMuted truncate>{play.data.artists.join(' / ')}</TextMuted>
+                  <TextMuted truncate>{play.data.artists.map(x => x.name).join(' / ')}</TextMuted>
                   <HStack gap="1">
                     <ShortDateDisplay date={play.data.playDate} prefix="Played" /><Separator orientation="vertical" height="4" />
                     <TextMuted>{play.meta?.source}</TextMuted>
@@ -331,7 +331,7 @@ const PlainAccordian = (props: { data: PlayActivity[], sortBy: 'played' | 'seen'
                         <Accordion.ItemIndicator />
                         <Stack gap="1" truncate>
                           <Span>{play.data.track}</Span>
-                          <TextMuted truncate>{play.data.artists.join(' / ')}</TextMuted>
+                          <TextMuted truncate>{play.data.artists.map(x => x.name).join(' / ')}</TextMuted>
                           <HStack gap="1">
                             <ShortDateDisplay date={sortBy === 'played' ? play.data.playDate : play.meta?.seenAt} prefix={sortBy === 'played' ? 'Played' : 'Seen'} /><Separator orientation="vertical" height="4" />
                             <TextMuted>{play.meta?.source}</TextMuted>
