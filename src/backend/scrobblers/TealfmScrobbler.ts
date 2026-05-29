@@ -135,7 +135,7 @@ export default class TealScrobbler extends AbstractScrobbleClient {
         // we can avoid additional calls to PDS for clearing a status if the status is about to expire, or is already expired.
         // this will usually happen if a player stops playing the last track in a queue
         // -- worth doing since PDS calls have a daily rate limit
-        if(isClearing && (this.statusAlreadyExpired() || this.statusAlreadyExpired())) {
+        if(isClearing && (this.statusExpiresSoon() || this.statusAlreadyExpired())) {
             this.npLogger.debug(`Not calling status record update because status  is about to expire (or has already), expiring ${durationToHuman(dayjs.duration(dayjs().diff(this.lastExpirationDate)))}`);
             return;
         }
