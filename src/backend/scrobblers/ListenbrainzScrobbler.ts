@@ -12,7 +12,7 @@ import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.js';
 import { ListenPayload } from '../common/vendor/listenbrainz/interfaces.js';
 import { Notifiers } from "../notifier/Notifiers.js";
 
-import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, shouldUpdatePlayingNowPlatformWhenPlayingOnly } from "./AbstractScrobbleClient.js";
+import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, playerInNPPlayingOnlyState } from "./AbstractScrobbleClient.js";
 import { isDebugMode } from "../utils.js";
 import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.js";
 

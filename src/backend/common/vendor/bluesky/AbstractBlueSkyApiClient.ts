@@ -4,7 +4,7 @@ import { ListRecord, ScrobbleRecord, StatusRecord, TealClientData } from "../../
 import AbstractApiClient from "../AbstractApiClient.js";
 import { Agent, ComAtprotoRepoCreateRecord, ComAtprotoRepoListRecords, ComAtprotoRepoPutRecord } from "@atproto/api";
 import { MSCache } from "../../Cache.js";
-import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, UnixTimestamp, MBID } from "../../../../core/Atomic.js";
+import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, UnixTimestamp, MBID, NowPlayingUpdateThreshold, SourcePlayerObj, Second } from "../../../../core/Atomic.js";
 import { musicServiceToCononical } from '../listenbrainz/lzUtils.js';
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { RecordOptions } from "../../infrastructure/config/client/tealfm.js";
@@ -15,6 +15,7 @@ import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.js";
 import { ScrobbleSubmitError } from "../../errors/MSErrors.js";
 import { UpstreamError } from "../../errors/UpstreamError.js";
 import { decodeTid, generateTID } from '@ewanc26/tid';
+import { Duration } from "dayjs/plugin/duration.js";
 
 export abstract class AbstractBlueSkyApiClient extends AbstractApiClient implements PagelessTimeRangeListens {
 
@@ -141,15 +142,12 @@ export const playToStatusRecord = (play: PlayObject, notPlaying: boolean, positi
         ? { trackName: "", artists: [] }
         : playToRecord(play);
 
-    // default "fallback" value
-    let expiry: Dayjs = dayjs().add(10, 'minute');
-    // 1min ago if paused -> try now + (duration - position) -> try now + duration -> fallback
+    let expiry: Dayjs;
     if(notPlaying) {
+        // if clearing status we set expiration as one minute in the past
         expiry = dayjs().subtract(1, 'minute');
-    } else if(position !== undefined && play.data.duration !== undefined) {
-        expiry = dayjs().add(play.data.duration - position, 'second');
-    } else if(play.data.duration !== undefined) {
-        expiry = dayjs().add(play.data.duration, 'second');
+    } else {
+        expiry = dayjs().add(nowPlayingExpirationDuration({play, position}));
     }
     
     return {
@@ -158,6 +156,26 @@ export const playToStatusRecord = (play: PlayObject, notPlaying: boolean, positi
         expiry: expiry.toISOString(),
         item
     };
+}
+
+export const nowPlayingExpirationDuration = (data: Pick<SourcePlayerObj, 'play' | 'position'>): Duration => {
+    let expiry: Dayjs = dayjs().add(10, 'minute');
+
+    const {
+        position,
+        play
+    } = data;
+
+    // if we have position and duration then expiration is set as calculated end of listening session
+    if(position !== undefined && play?.data.duration !== undefined) {
+        expiry = dayjs().add(play.data.duration - position, 'second');
+    } else if(play?.data.duration !== undefined) {
+        // else if we have duration but not position then use track duration
+        expiry = dayjs().add(play.data.duration, 'second');
+    }
+
+    // otherwise use 10 minutes
+    return dayjs.duration(expiry.diff(dayjs(), 'ms'));
 }
 
 export const listRecordToPlay = (listRecord: ListRecord<ScrobbleRecord>): PlayObject => {

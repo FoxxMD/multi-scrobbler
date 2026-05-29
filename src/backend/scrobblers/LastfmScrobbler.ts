@@ -8,7 +8,7 @@ import { FormatPlayObjectOptions, InternalConfigOptional, TimeRangeListensFetche
 import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
 import LastfmApiClient, { LastFMIgnoredScrobble, playToClientPayload, formatPlayObj } from "../common/vendor/LastfmApiClient.js";
 import { Notifiers } from "../notifier/Notifiers.js";
-import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, shouldUpdatePlayingNowPlatformWhenPlayingOnly } from "./AbstractScrobbleClient.js";
+import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, playerInNPPlayingOnlyState } from "./AbstractScrobbleClient.js";
 import { findCauseByReference } from "../utils/ErrorUtils.js";
 import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.js";
 

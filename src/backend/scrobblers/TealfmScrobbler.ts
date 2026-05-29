@@ -7,16 +7,20 @@ import { FormatPlayObjectOptions, CALCULATED_PLAYER_STATUSES, ReportedPlayerStat
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.js';
 import { Notifiers } from "../notifier/Notifiers.js";
 
-import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractScrobbleClient.js";
 import { TealClientConfig } from "../common/infrastructure/config/client/tealfm.js";
 import { BlueSkyAppApiClient } from "../common/vendor/bluesky/BlueSkyAppApiClient.js";
 import { BlueSkyOauthApiClient } from "../common/vendor/bluesky/BlueSkyOauthApiClient.js";
-import { AbstractBlueSkyApiClient, listRecordToPlay, playToRecord, playToStatusRecord, recordToPlay } from "../common/vendor/bluesky/AbstractBlueSkyApiClient.js";
+import { AbstractBlueSkyApiClient, listRecordToPlay, nowPlayingExpirationDuration, playToRecord, playToStatusRecord, recordToPlay } from "../common/vendor/bluesky/AbstractBlueSkyApiClient.js";
+import dayjs, { Dayjs } from "dayjs";
+import { durationToHuman } from "../utils.js";
 
 export default class TealScrobbler extends AbstractScrobbleClient {
 
     requiresAuth = true;
     requiresAuthInteraction = false;
+    override nowPlayingIsRealtime: boolean = true;
+    protected lastExpirationDate: Dayjs;
 
     declare config: TealClientConfig;
 
@@ -35,6 +39,8 @@ export default class TealScrobbler extends AbstractScrobbleClient {
         } else {
             throw new Error(`Must define either 'baseUri' or 'appPassword' in configuration!`);
         }
+        this.nowPlayingMaxThreshold = nowPlayingUpdateByPlayDuration;
+        this.nowPlayingMinThreshold = (_) => 20;
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => recordToPlay(obj);
@@ -123,36 +129,39 @@ export default class TealScrobbler extends AbstractScrobbleClient {
     }
 
     doPlayingNow = async (data: SourcePlayerObj) => {
-        const notPlaying = [CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused].includes(data.status.calculated as ReportedPlayerStatus);
+
+        const isClearing = shouldClearNPStatus(data);
+
+        // we can avoid additional calls to PDS for clearing a status if the status is about to expire, or is already expired.
+        // this will usually happen if a player stops playing the last track in a queue
+        // -- worth doing since PDS calls have a daily rate limit
+        if(isClearing && (this.statusAlreadyExpired() || this.statusAlreadyExpired())) {
+            this.npLogger.debug(`Not calling status record update because status  is about to expire (or has already), expiring ${durationToHuman(dayjs.duration(dayjs().diff(this.lastExpirationDate)))}`);
+            return;
+        }
+
         try {
-            await this.client.updateStatusRecord(playToStatusRecord(data.play, notPlaying, data.position));
+            await this.client.updateStatusRecord(playToStatusRecord(data.play, isClearing, data.position));
+            if(!isClearing) {
+                this.lastExpirationDate = dayjs().add(nowPlayingExpirationDuration(data));
+            }
         } catch (e) {
             throw e;
         }
     }
 
-    wasLastStatusCleared = () => {
-    return this.nowPlayingLastPlay !== undefined 
-      && [CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused].includes(this.nowPlayingLastPlay.status.calculated as ReportedPlayerStatus)
-    }
-
-    shouldUpdatePlayingNowPlatformSpecific = async (data: SourcePlayerObj): Promise<[boolean, string?, LogLevel?]> => {
-        if ([CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused].includes(data.status.calculated as ReportedPlayerStatus) && !this.wasLastStatusCleared()
-            || [CALCULATED_PLAYER_STATUSES.playing].includes(data.status.calculated as ReportedPlayerStatus)
-            || (data.nowPlayingMode && !CALCULATED_PLAYER_STATUSES.stopped)) {
-            return [true];
-        } else {
-            if(!data.nowPlayingMode && ![CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused, CALCULATED_PLAYER_STATUSES.playing].includes(data.status.calculated as ReportedPlayerStatus)) {
-                return [false,`player is not in state: stopped | paused | playing => Found '${data.status.calculated }'`];
-            } else if (this.wasLastStatusCleared()) {
-                return [false, 'teal.fm status has already been set to expired'];
-            } else if (data.nowPlayingMode && CALCULATED_PLAYER_STATUSES.stopped) {
-                this.npLogger.trace(`Will not update because now playing player is stopped => Found ${data.status.calculated}`);
-                return [false,`playing player is stopped => Found ${data.status.calculated}` ]
-            } else {
-                return [false, 'player is in an unexpected state for teal.fm usage']
-            }
+    protected statusExpiresSoon = () => {
+        if(this.lastExpirationDate === undefined) {
+            return false;
         }
+        // may want to make this configurable in the future?
+        return Math.abs(dayjs().diff(this.lastExpirationDate, 's')) < 15;
+    }
+    protected statusAlreadyExpired = () => {
+        if(this.lastExpirationDate === undefined) {
+            return false;
+        }
+        return dayjs().isAfter(this.lastExpirationDate);
     }
 }
 

@@ -302,7 +302,10 @@ export abstract class AbstractPlayerState {
                     playDateCompleted: completed ? dayjs() : undefined,
                     repeat: this.isRepeatPlay
                 },
-                meta: this.currentPlay.meta
+                meta: {
+                    ...this.currentPlay.meta,
+                    trackProgressPosition: this.getPosition() ?? this.currentPlay.meta.trackProgressPosition
+                }
             }
         }
         return undefined;
