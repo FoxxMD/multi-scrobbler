@@ -9,11 +9,18 @@ import { artistCreditsToNames, artistCreditToName } from "../../../../core/Strin
 export const playToListenPayload = (play: PlayObject, version?: string): ListenPayload => {
     const {
         data: {
-            playDate, artists = [],
+            playDate,
+            artists = [],
             // MB doesn't use this during submission AFAIK
             // instead it relies on (assumes??) you will submit album/release group/etc where album artist gets credit on an individual release
-            albumArtists = [], album, track, isrc, duration, meta: {
-                brainz = {}, spotify = {},
+            albumArtists = [],
+            album, 
+            track, 
+            isrc, 
+            duration, 
+            meta: {
+                brainz = {}, 
+                spotify = {},
             } = {}
         }, meta: {
             mediaPlayerName, mediaPlayerVersion, musicService, source
@@ -75,7 +82,7 @@ export const playToListenPayload = (play: PlayObject, version?: string): ListenP
     }
 
     const minTrackData = removeUndefinedKeys<MinimumTrack>({
-        artist_name: Array.from(new Set([...artists])).join(', '),
+        artist_name: Array.from(new Set([...artists.map(artistCreditToName)])).join(', '),
         track_name: track,
         release_name: al,
     });
