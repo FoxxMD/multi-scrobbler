@@ -8,10 +8,10 @@ import { BsStoplights } from "react-icons/bs";
 import { BsExclamationTriangle, BsExclamationOctagon } from "react-icons/bs";
 import { MdMusicNote } from "react-icons/md";
 import { ChakraCodeBlockShort, ChakraPlainBlockShort } from "./CodeBlock";
-import { JsonDiffPatch } from "./JsonDiff";
-import { jdiff, patchObject } from "../../core/DataUtils";
+import { patchObject } from "../../core/DataUtils";
 import { MSCollapsible, MSCollapsibleExternalProps } from "./MSCollapsible";
 import { Muted } from "./Typography";
+import { JsonDiffPatch } from "./diffs/JsonDiff";
 
 export interface LifeycleStepsTimelineProps extends MSCollapsibleExternalProps {
     steps: LifecycleStep[]
@@ -63,9 +63,7 @@ const diffElements = (original: JsonPlayObject, steps: LifecycleStep[]): [React.
         try {
             currentPlay.data = patchObject(currentPlay.data, patch)// jdiff.patch(currentPlay, patch) as JsonPlayObject;
             diffElements.push(
-                <ChakraPlainBlockShort title="Play Diff" key={`diffblock-${index}`} code={left.data}>
-                    <JsonDiffPatch key={`diff-${index}`} left={left.data} right={currentPlay.data} />
-                </ChakraPlainBlockShort>
+                <JsonDiffPatch left={left.data} right={currentPlay.data}/>
             )
         } catch (e) {
             diffElements.push(<Fragment><ErrorAlert error={e} /><ChakraCodeBlockShort title="Diff Patch" key={`diffblockfallback-${index}`} code={patch} /></Fragment>);

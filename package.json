@@ -64,6 +64,7 @@
     "@kenyip/backoff-strategies": "^1.0.4",
     "@keyv/valkey": "^1.0.8",
     "@lukehagar/plexjs": "^0.39.0",
+    "@pierre/diffs": "^1.2.4",
     "@supercharge/promise-pool": "^3.0.0",
     "@svrooij/sonos": "^2.5.0",
     "@xhayper/discord-rpc": "^1.3.0",
@@ -190,7 +191,6 @@
     "eslint-plugin-prefer-arrow-functions": "^3.2.4",
     "eslint-plugin-storybook": "^10.3.6",
     "git-cliff": "^2.12.0",
-    "jsondiffpatch-react": "^1.0.8",
     "mocha": "^10.3.0",
     "mockdate": "^3.0.5",
     "msw": "^2.12.10",
@@ -234,10 +234,6 @@
     },
     "musicbrainz-api": {
       "rate-limit-threshold": "0.2.1"
-    },
-    "jsondiffpatch-react": {
-      "react": "$react",
-      "react-dom": "$react-dom"
     }
   }
 }

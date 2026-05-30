@@ -8,7 +8,6 @@ import { IoMusicalNoteOutline } from "react-icons/io5";
 import { HiOutlineCloudUpload, HiOutlineCloudDownload } from "react-icons/hi";
 import { LuCheck, LuCircleX, LuX } from "react-icons/lu";
 import { ChakraCodeBlockShort, ChakraPlainBlock, ChakraPlainBlockShort } from "./CodeBlock";
-import { JsonDiffPatch } from "./JsonDiff";
 import { formatNumber, jdiff } from "../../core/DataUtils";
 import { capitalize } from "../../core/StringUtils";
 import { MSCollapsible, MSCollapsibleExternalProps } from "./MSCollapsible";

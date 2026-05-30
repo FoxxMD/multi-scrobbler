@@ -7,7 +7,6 @@ import { BiWrench } from "react-icons/bi";
 import { IoMusicalNoteOutline } from "react-icons/io5";
 import { LuCheck, LuCircleX, LuX } from "react-icons/lu";
 import { ChakraCodeBlockShort, ChakraPlainBlock, ChakraPlainBlockShort } from "./CodeBlock";
-import { JsonDiffPatch } from "./JsonDiff";
 import { formatNumber, jdiff } from "../../core/DataUtils";
 
 export interface ScrobbleMatchResultProps {
