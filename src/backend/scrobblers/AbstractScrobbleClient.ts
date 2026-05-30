@@ -30,6 +30,7 @@ import {
     FormatPlayObjectOptions,
     PaginatedTimeRangeOptions,
     REFRESH_STALE_DEFAULT,
+    ReportedPlayerStatus,
     ScrobbledPlayObject,
     SourceIdentifier,
     TIME_WEIGHT,
@@ -79,6 +80,7 @@ import { ComponentMigrationNew, PlaySelect, PlaySelectWithQueueStates, QueueStat
 import { asPlay } from "../../core/PlayMarshalUtils.js";
 import { DrizzleQueueRepository } from "../common/database/drizzle/repositories/QueueRepository.js";
 import { GenericRepository } from "../common/database/drizzle/repositories/BaseRepository.js";
+import assert from "node:assert";
 
 type PlatformMappedPlays = Map<string, {player: SourcePlayerObj, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
@@ -120,6 +122,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     deadLetterQueued: number  = 0;
 
     supportsNowPlaying: boolean = false;
+    nowPlayingIsRealtime: boolean = false;
     nowPlayingInit: boolean = false;
     nowPlayingEnabled: boolean;
     nowPlayingFilter: (queue: NowPlayingQueue) => SourcePlayerObj | undefined;
@@ -1529,13 +1532,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             if(sourcePlayerData === undefined) {
                 return;
             }
-            let shouldUpdate: boolean,
-            clientReason: string | undefined;
-            const [npUpdateTop, npUpdateTopReason] = this.shouldUpdatePlayingNowResult(sourcePlayerData);
-            shouldUpdate = npUpdateTop;
-            if(!npUpdateTop) {
-                this.npLogger.trace(`Not updating because ${npUpdateTopReason}`);
-            } else {
+            let [shouldUpdate, npUpdateTopReason] = this.shouldUpdatePlayingNow(sourcePlayerData);
+            let clientReason: string | undefined;
+            if(!shouldUpdate) {
+                this.npLogger.trace(`Not updating, ${npUpdateTopReason}`);
+            }
+
+            if(shouldUpdate) {
                 const [clientUpdate, clientUpdateReason, level] = await this.shouldUpdatePlayingNowPlatformSpecific(sourcePlayerData);
                 clientReason = clientUpdateReason;
                 shouldUpdate = clientUpdate;
@@ -1543,6 +1546,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     this.npLogger[level ?? 'trace'](`Not updating, ${npUpdateTopReason} --BUT-- ${clientUpdateReason}`);
                 }
             }
+
+            // finally, do the update
             if(shouldUpdate) {
                 this.npLogger.verbose(`Updating because ${npUpdateTopReason}${clientReason !== undefined ? ` --AND-- ${clientReason}` : ''}`);
                 try {
@@ -1559,46 +1564,129 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
     }
 
-    shouldUpdatePlayingNowResult = (data: SourcePlayerObj): [boolean, string?] => {
+    nowPlayingHasDiscrepancy = (data: SourcePlayerObj): [boolean, string?] => {
         if(this.nowPlayingLastPlay === undefined || this.nowPlayingLastUpdated === undefined) {
             return [true, 'Now Playing has not yet been set'];
         }
 
-        if(data.play?.data?.track === undefined) {
-            return [false, 'play is missing track information'];
-        }
-        if((data.play?.data?.artists ?? []).length === 0) {
-            return [false, 'play is missing artist information'];
-        }
-
-        const lastUpdateDiff = Math.abs(dayjs().diff(this.nowPlayingLastUpdated, 's'));
-
         const playExistingDiscrepancy = (this.nowPlayingLastPlay.play !== undefined && data.play === undefined) || (this.nowPlayingLastPlay === undefined && data.play !== undefined);
-        const bothPlaysExist = this.nowPlayingLastPlay.play !== undefined && data.play !== undefined;
-
-        const playerStatusChanged = this.nowPlayingLastPlay.status.calculated !== data.status.calculated;
-
-        // update if play *has* changed and time since last update is greater than min interval
-        // this prevents spamming scrobbler API with updates if user is skipping tracks and source updates frequently
-        if(this.nowPlayingMinThreshold(data.play) < lastUpdateDiff && (playExistingDiscrepancy || playerStatusChanged || (bothPlaysExist && !playObjDataMatch(data.play, this.nowPlayingLastPlay.play)))) {
-            return [true, `New Play differs from previous Now Playing and time since update ${lastUpdateDiff}s, greater than threshold ${this.nowPlayingMinThreshold(data.play)}`];
-        }
-        // update if play *has not* changed but last update is greater than max interval
-        // this keeps scrobbler Now Playing fresh ("active" indicator) in the event play is long
-        if(this.nowPlayingMaxThreshold(data.play) < lastUpdateDiff && (bothPlaysExist && playObjDataMatch(data.play, this.nowPlayingLastPlay.play))) {
-            return [true, `Now Playing last updated ${lastUpdateDiff}s ago, greater than threshold ${this.nowPlayingMaxThreshold(data.play)}s`];
+        if(playExistingDiscrepancy) {
+            return [true, `previous update ${this.nowPlayingLastPlay.play !== undefined ? 'exists' : 'does not exist'} and current update ${data.play !== undefined ? 'exists' : 'does not exist'}`];
         }
 
-        return [false, `Now Playing ${bothPlaysExist && playObjDataMatch(data.play, this.nowPlayingLastPlay.play) ? 'matches' : 'does not match'} and was last updated ${lastUpdateDiff}s ago (threshold ${this.nowPlayingMaxThreshold(data.play)}s)`];
+        if(this.nowPlayingLastPlay.play === undefined && data.play === undefined) {
+            return [false, 'both previous and current update do not exist, nothing to update'];
+        }
+
+        if(this.nowPlayingLastPlay.status.calculated !== data.status.calculated) {
+            return [true, 'player state has changed'];
+        }
+        
+        if(!playObjDataMatch(data.play, this.nowPlayingLastPlay.play)) {
+            return [true, 'previous update play data does not match current'];
+        }
+
+        return [false, 'previous update data matches current'];
     }
 
-    shouldUpdatePlayingNow = (data: SourcePlayerObj): boolean => {
-        return this.shouldUpdatePlayingNowResult(data)[0];
+    protected nowPlayingThresholdsMet = (data: SourcePlayerObj) => {
+        const lastUpdateDiff = Math.abs(dayjs().diff(this.nowPlayingLastUpdated, 's'));
+        const minMet = this.nowPlayingMinThreshold(data.play) < lastUpdateDiff;
+        const minReason = `time since last update (${lastUpdateDiff}s) is ${minMet ? 'greater' : 'less'} than min threshold ${this.nowPlayingMinThreshold(data.play)}s`;
+
+        const maxMet = this.nowPlayingMaxThreshold(data.play) < lastUpdateDiff;
+        const maxReason = `time since last update (${lastUpdateDiff}s) is ${maxMet ? 'greater' : 'less'} than max threshold ${this.nowPlayingMaxThreshold(data.play)}s`;
+
+        return {
+            minMet,
+            minReason,
+            maxMet,
+            maxReason
+        }
+    }
+
+    shouldUpdatePlayingNow = (sourcePlayerData: SourcePlayerObj): [boolean, string] => {
+            let shouldUpdate: boolean;
+            const thresholds = this.nowPlayingThresholdsMet(sourcePlayerData);
+            // first we check if there is an obvious discrepancy between last updated and current update data
+            // such as one missing, status change, no stored previous, etc...
+            const [npUpdateTop, npUpdateTopReason] = this.nowPlayingHasDiscrepancy(sourcePlayerData);
+            shouldUpdate = npUpdateTop;
+            if(!npUpdateTop) {
+
+                if(npUpdateTopReason === 'previous update data matches current') {
+                    if(thresholds.maxMet) {
+                        return [true, `previous matches current update --AND-- ${thresholds.maxReason}`];
+                    } else {
+                        return [false, `previous matches current update --BUT-- ${thresholds.maxReason}`];
+                    }
+                }
+
+                return [false, npUpdateTopReason];
+            } 
+
+            let validStatusReason: string;
+            if(shouldUpdate) {
+                // next we check if new player state is even valid to use for an update
+                const [statusValid, reason] = this.nowPlayingIsRealtime ? playerInValidNPUpdateState(sourcePlayerData) : playerInNPPlayingOnlyState(sourcePlayerData);
+                validStatusReason = reason;
+                shouldUpdate = statusValid;
+                if(!statusValid) {
+                    return [false, `${npUpdateTopReason} --BUT-- ${validStatusReason}`];
+                } 
+            }
+
+            if(shouldUpdate && this.nowPlayingLastPlay !== undefined) {
+                // at this point its possible we could update but we should respect minimum update intervals
+                // and triggering this early means less, deeper checks
+                const thresholds = this.nowPlayingThresholdsMet(sourcePlayerData);
+                if (!thresholds.minMet) {
+                    shouldUpdate = false;
+                    return [false, `${npUpdateTopReason} and ${validStatusReason} --BUT-- ${thresholds.minReason}`];
+                }
+                else if (
+                    // status hasn't changed
+                    this.nowPlayingLastPlay.status?.calculated === sourcePlayerData.status?.calculated
+                    // and both plays are defined and have not changed
+                    && (this.nowPlayingLastPlay.play !== undefined && sourcePlayerData.play !== undefined)
+                    && playObjDataMatch(sourcePlayerData.play, this.nowPlayingLastPlay.play)) {
+                    
+                    // only update if we are passed max threshold
+                    shouldUpdate = thresholds.maxMet;
+                    if(!thresholds.maxMet) {
+                        return [false, `${npUpdateTopReason} and ${validStatusReason} --BUT-- ${thresholds.maxReason}`];
+                    }
+                }
+            }
+
+            if(shouldUpdate) {
+                // check for valid play data if the update should be for a playing track
+                if(playerInNPPlayingOnlyState(sourcePlayerData)) {
+                    if(sourcePlayerData.play?.data?.track === undefined) {
+                        shouldUpdate = false;
+                        return [false, `${npUpdateTopReason} and ${validStatusReason} --BUT-- play is missing track information`];
+                    }
+                    if((sourcePlayerData.play?.data?.artists ?? []).length === 0) {
+                        shouldUpdate = false;
+                        return [false, `${npUpdateTopReason} and ${validStatusReason} --BUT-- play is missing artist information`];
+                    }
+                }
+            }
+
+            if(shouldUpdate && this.nowPlayingIsRealtime) {
+                // prevent multiple clearing updates
+                if(this.nowPlayingLastPlay !== undefined && shouldClearNPStatus(sourcePlayerData) && shouldClearNPStatus(this.nowPlayingLastPlay)) {
+                    shouldUpdate = false;
+                    return [false, `${npUpdateTopReason} and ${validStatusReason} --BUT-- last update already cleared now playing`];
+                }
+            }
+
+            return [true, `${npUpdateTopReason} and ${validStatusReason}`];
     }
 
     /** Implement this for specific requirements for updating playing now based on the scrobbler platform */
-    protected shouldUpdatePlayingNowPlatformSpecific(data: SourcePlayerObj): Promise<[boolean, string?, LogLevel?]> {
-        return shouldUpdatePlayingNowPlatformWhenPlayingOnly(data);
+    protected async shouldUpdatePlayingNowPlatformSpecific(data: SourcePlayerObj): Promise<[boolean, string?, LogLevel?]> {
+        return [true];
     }
 
     protected doPlayingNow = (data: SourcePlayerObj): Promise<any> => Promise.resolve(undefined)
@@ -1636,9 +1724,46 @@ export const nowPlayingUpdateByPlayDuration: NowPlayingUpdateThreshold = (play?:
     return (play?.data?.duration ?? 30) + 1;
 }
 
-export const shouldUpdatePlayingNowPlatformWhenPlayingOnly = async (data: SourcePlayerObj): Promise<[boolean, string]> => {
-    if(data.status.calculated === CALCULATED_PLAYER_STATUSES.playing || (data.nowPlayingMode && !CALCULATED_PLAYER_STATUSES.stopped)) {
-        return [true, `calculated player status is ${data.status.calculated}`];
+export const shouldClearNPStatus = (data: SourcePlayerObj) => {
+    return [CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused].includes(data.status.calculated as ReportedPlayerStatus);
+}
+
+export const playerInNPPlayingOnlyState = (data: SourcePlayerObj): [boolean, string] => {
+    // for lower-interval update clients (like listenbrainz, lastfm) IE not real-time
+    // we don't want to create updates for paused/stopped because the NP data for these services
+    // is only supposed to be updated intermittently
+    //
+    // so only allow an update if the player is actually playing
+    if(!data.nowPlayingMode) {
+        if(data.status.calculated === CALCULATED_PLAYER_STATUSES.playing) {
+            return [true, `calculated player status is ${data.status.calculated}`];
+        }
+        return [false, `calculated player status is ${data.status.calculated} but must be playing`];
     }
-    return [false, `calculated player status is ${data.status.calculated} but must be played/stopped`];
+    return npPlayerInValidNPUpdateState(data);
+}
+
+export const playerInValidNPUpdateState = (data: SourcePlayerObj): [boolean, string] => {
+    // if the source player is not a "Now Playing" type (lz, endpoint Source, etc...)
+    // then we only want to allow an update if the player state is a known "good" type IE don't allow on unknown
+    if(!data.nowPlayingMode) {
+        if([CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused, CALCULATED_PLAYER_STATUSES.playing].includes(data.status.calculated as ReportedPlayerStatus)) {
+            return [true, `player in valid update state: '${data.status.calculated }'`];
+        }
+        return [false,`player is not in state: stopped | paused | playing => Found '${data.status.calculated }'`];
+    }
+
+    return npPlayerInValidNPUpdateState(data);
+}
+
+export const npPlayerInValidNPUpdateState = (data: SourcePlayerObj): [boolean, string] => {
+    assert(data.nowPlayingMode === true, 'data is not in nowPlayingMode');
+
+    // if the source player *is* a "Now Playing" type
+    // then we allow update on anything that isn't explicitly stopped
+    // since these sources have limited reporting capability for calculating a valid state
+    if(CALCULATED_PLAYER_STATUSES.stopped !== data.status.calculated as ReportedPlayerStatus) {
+        return [true, `NP player in valid update state: '${data.status.calculated }'`];
+    }
+    return [false, `NP player is is invalid update state: stopped`];
 }

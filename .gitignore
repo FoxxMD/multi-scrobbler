@@ -153,8 +153,4 @@ tmp-*
 storybook-static
 
 *.db
-*.db.*
-*.db-*lib
-*.db
-*.db.*
-*.db-*lib
+*.db*

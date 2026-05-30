@@ -4,7 +4,7 @@ import { PlayMatchResult, PlayObject, SourcePlayerObj } from "../../core/Atomic.
 import { CALCULATED_PLAYER_STATUSES, FormatPlayObjectOptions, REPORTED_PLAYER_STATUSES, ReportedPlayerStatus, SINGLE_USER_PLATFORM_ID_STR, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 
-import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.js";
+import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractScrobbleClient.js";
 import { DiscordClientConfig, DiscordStrongData } from "../common/infrastructure/config/client/discord.js";
 import { DiscordWSClient } from "../common/vendor/discord/DiscordWSClient.js";
 import { configToStrong } from "../common/vendor/discord/DiscordUtils.js";
@@ -18,6 +18,7 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
     api: DiscordWSClient | DiscordIPCClient;
     requiresAuth = true;
     requiresAuthInteraction = false;
+    override nowPlayingIsRealtime: boolean = true;
     apiMode!: 'ws' | 'ipc';
 
     declare config: DiscordClientConfig & {data: DiscordStrongData };
@@ -146,7 +147,7 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
 
     doPlayingNow = async (data: SourcePlayerObj) => {
         try {
-            if([CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused].includes(data.status.calculated as ReportedPlayerStatus)) {
+            if(shouldClearNPStatus(data)) {
                 await this.api.sendActivity(undefined);
             } else {
                 await this.api.sendActivity(data);
@@ -157,33 +158,19 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
     }
 
     shouldUpdatePlayingNowPlatformSpecific = async (data: SourcePlayerObj): Promise<[boolean, string?, LogLevel?]> => {
-        if ([CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused, CALCULATED_PLAYER_STATUSES.playing].includes(data.status.calculated as ReportedPlayerStatus)
-            || (data.nowPlayingMode && !CALCULATED_PLAYER_STATUSES.stopped)
-            || data.status.stale) {
+        const [sendOk, reasons, level = 'warn'] = await this.api.checkOkToSend();
+        if (!sendOk) {
+            return [false, `Cannot update playing now because api client is ${reasons}`, level as LogLevel];
+        }
 
-            const [sendOk, reasons, level = 'warn'] = await this.api.checkOkToSend();
-            if (!sendOk) {
-                return [false, `Cannot update playing now because api client is ${reasons}`, level as LogLevel];
-            }
-
-            if(this.api instanceof DiscordWSClient) {
-                const [allowed, reason] = this.api.presenceIsAllowed();
-                if(!allowed) {
-                    this.npLogger.debug(reason);
-                    return [false, reason];
-                }
-            }
-
-            return [true];
-        } else {
-            if(!data.nowPlayingMode && ![CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused, CALCULATED_PLAYER_STATUSES.playing].includes(data.status.calculated as ReportedPlayerStatus)) {
-                return [false,`player is not in state: stopped | paused | playing => Found '${data.status.calculated }'`];
-            } else if(data.nowPlayingMode && CALCULATED_PLAYER_STATUSES.stopped) {
-                this.npLogger.trace(`Will not update because now playing player is stopped => Found ${data.status.calculated}`);
-                return [false,`playing player is stopped => Found ${data.status.calculated}` ]
-            } else {
-                return [false, 'player is in an unexpected state for discord usage']
+        if(this.api instanceof DiscordWSClient) {
+            const [allowed, reason] = this.api.presenceIsAllowed();
+            if(!allowed) {
+                this.npLogger.debug(reason);
+                return [false, reason];
             }
         }
+
+        return [true];
     }
 }

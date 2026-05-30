@@ -970,7 +970,7 @@ describe('Now Playing', function() {
             await using npScrobbler = new NowPlayingScrobbler();
             await npScrobbler.initialize();
 
-            const res = npScrobbler.shouldUpdatePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}));
+            const res = npScrobbler.shouldUpdatePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}))[0];
             expect(res).to.be.true;
         });
 
@@ -983,7 +983,7 @@ describe('Now Playing', function() {
             npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingMaxThreshold(lastUpdate.play) + 1, 's');
             npScrobbler.nowPlayingLastPlay = lastUpdate;
 
-            const res = npScrobbler.shouldUpdatePlayingNow(lastUpdate);
+            const res = npScrobbler.shouldUpdatePlayingNow(lastUpdate)[0];
             expect(res).to.be.true;
         });
 
@@ -996,7 +996,7 @@ describe('Now Playing', function() {
             npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingMaxThreshold(lastUpdate.play) - 1, 's');
             npScrobbler.nowPlayingLastPlay = lastUpdate;
 
-            const res = npScrobbler.shouldUpdatePlayingNow(lastUpdate);
+            const res = npScrobbler.shouldUpdatePlayingNow(lastUpdate)[0];
             expect(res).to.be.false;
         });
 
@@ -1009,7 +1009,7 @@ describe('Now Playing', function() {
             npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingMinThreshold(lastUpdate.play) + 1, 's');
             npScrobbler.nowPlayingLastPlay = lastUpdate;
 
-            const res = npScrobbler.shouldUpdatePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}));
+            const res = npScrobbler.shouldUpdatePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}))[0];
             expect(res).to.be.true;
         });
 
@@ -1022,7 +1022,7 @@ describe('Now Playing', function() {
             npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingMinThreshold(lastUpdate.play) - 1, 's');
             npScrobbler.nowPlayingLastPlay = lastUpdate;
 
-            const res = npScrobbler.shouldUpdatePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}));
+            const res = npScrobbler.shouldUpdatePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}))[0];
             expect(res).to.be.false;
         });
 
