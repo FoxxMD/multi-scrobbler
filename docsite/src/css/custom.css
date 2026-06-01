@@ -13,7 +13,8 @@
   --ifm-color-primary-light: #33925d;
   --ifm-color-primary-lighter: #359962;
   --ifm-color-primary-lightest: #3cad6e;
-  --ifm-color-important-contrast-background: #bb91ff;
+  --ifm-color-important-contrast-background: #e7d7ff;
+  --ifm-color-important-highlight: #b94be8;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
 }
@@ -28,6 +29,7 @@
   --ifm-color-primary-lighter: #32d8b4;
   --ifm-color-primary-lightest: #4fddbf;
   --ifm-color-important-contrast-background: #5a3795;
+  --ifm-color-important-highlight: #e09cfd;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
 
@@ -96,6 +98,12 @@ details[class^='details_'].alert--info {
     --ifm-spacing-vertical: 0.5rem;
   }
 
+}
+
+.alert--info.theme-admonition-important {
+    --ifm-alert-background-color: var(--ifm-color-important-contrast-background);
+    --ifm-alert-foreground-color: var(--ifm-color-secondary-contrast-foreground);
+    --ifm-alert-border-color: var(--ifm-color-important-highlight);
 }
 
 /** https://stackoverflow.com/a/79808430/1469797 */
