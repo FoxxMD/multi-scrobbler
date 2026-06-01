@@ -438,8 +438,8 @@ export default class ScrobbleSources {
                 }    break;
                 case 'maloja': {
                     const data = removeUndefinedKeys<MalojaData>({
-                        url: process.env.MALOJA_URL,
-                        apiKey: process.env.MALOJA_API_KEY
+                        url: process.env.SOURCE_MALOJA_URL,
+                        apiKey: process.env.SOURCE_MALOJA_API_KEY
                     }, false);
                     const p = getCommonComponentEnvConfig('SOURCE_MALOJA');
                     if (nonEmptyObj(data) || nonEmptyObj(p)) {
