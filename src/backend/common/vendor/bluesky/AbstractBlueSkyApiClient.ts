@@ -117,7 +117,7 @@ export const playToRecord = (play: PlayObject): ScrobbleRecord => {
         submissionClientAgent: `multi-scrobbler/${getRoot().items.version}`,
         musicServiceBaseDomain: musicServiceToCononical(play.meta.musicService) ?? play.meta.musicService,
         isrc: play.data.isrc,
-        trackMbid: mbidUriOrUndefined(play.data.meta?.brainz?.track as MBID),
+        trackMbId: mbidUriOrUndefined(play.data.meta?.brainz?.track as MBID),
         recordingMbId: mbidUriOrUndefined(play.data.meta?.brainz?.recording as MBID),
         releaseMbId: mbidUriOrUndefined(play.data.meta?.brainz?.album as MBID)
     };
