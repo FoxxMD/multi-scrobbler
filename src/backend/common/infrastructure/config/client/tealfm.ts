@@ -72,7 +72,7 @@ export interface ScrobbleRecord {
     submissionClientAgent: string,
     musicServiceBaseDomain?: string
     /** The MusicBrainz ID URI of the track, formatted as mbid:<uuid> */
-    trackMbid?: string
+    trackMbId?: string
     /** The MusicBrainz recording ID URI of the track, formatted as mbid:<uuid> */
     recordingMbId?: string
     /** The MusicBrainz release ID URI, formatted as mbid:<uuid> */
