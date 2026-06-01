@@ -40,7 +40,7 @@ details[class^='details_'].alert--info {
 
   margin-bottom: var(--ifm-paragraph-margin-bottom);
 
-  &:not(.alert--warning,.alert--success,.alert--secondary,.alert--danger) {
+  &:not(.alert--warning,.alert--success,.alert--secondary,.alert--danger,.alert--important) {
     --ifm-alert-background-color: transparent;
 
     > summary {
