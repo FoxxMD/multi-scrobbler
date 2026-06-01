@@ -75,22 +75,24 @@ Add an `id` to the top-level for each Source/Client configuration, next to `data
 
 Add an `id` to the top-level for each Source/Client configuration, next to `data`:
 
-```json title="koito.json"
-[
-  {
-    "name": "koito-source",
-    "configureAs": "source",
-    "type": "koito",
-    // highlight-start
-    "id": "myKoitoID",
-    // highlight-end    
-    "data": {
-      "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",
-      "username": "admin",
-      "url": "http://192.168.0.100:4110" 
+```json title="config.json"
+{
+  "sources": [
+    {
+      "name": "koito-source",
+      "configureAs": "source",
+      "type": "koito",
+      // highlight-start
+      "id": "myKoitoID",
+      // highlight-end    
+      "data": {
+        "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",
+        "username": "admin",
+        "url": "http://192.168.0.100:4110" 
+      }
     }
-  }
-]
+  ]
+}
 ```
 
 </TabItem>
