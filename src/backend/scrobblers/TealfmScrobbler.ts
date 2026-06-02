@@ -18,12 +18,10 @@ import { BlueSkyAppApiClient } from "../common/vendor/bluesky/BlueSkyAppApiClien
 import { BlueSkyOauthApiClient } from "../common/vendor/bluesky/BlueSkyOauthApiClient.js";
 import { AbstractBlueSkyApiClient, nowPlayingExpirationDuration, playToRecord, playToStatusRecord, recordToPlay } from "../common/vendor/bluesky/AbstractBlueSkyApiClient.js";
 import dayjs, { Dayjs } from "dayjs";
-import { durationToHuman } from "../utils.js";
+import { durationToHuman, isDebugMode } from "../utils.js";
 import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient.js";
-import dayjs from "dayjs";
 import { fromStream } from '@atcute/repo';
 import { playToRepositoryCreatePlayHistoricalOpts, RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.js";
-import { durationToHuman, isDebugMode } from "../utils.js";
 import { isAbortError } from "abort-controller-x";
 
 export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
