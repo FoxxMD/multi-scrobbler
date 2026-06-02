@@ -204,3 +204,23 @@ export const getCommonComponentEnvConfig = (prefix: string): Partial<CommonConfi
         enable: e !== undefined ? parseBoolStrict(e) : undefined
     }, false);
 }
+
+const byteSizes = ['Bytes', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB']
+
+/**
+ * Convert bytes into human readable size
+ * 
+ * @see https://stackoverflow.com/a/18650828/1469797
+ */
+export const formatBytes = (bytes: number, decimals: number = 2): [string, number, string] => {
+    if (!+bytes) return ['0 Bytes', 0, 'Byes'];
+
+    const k = 1024
+    const dm = decimals < 0 ? 0 : decimals
+
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+
+    const friendlySize = parseFloat((bytes / Math.pow(k, i)).toFixed(dm));
+    const friendlyUnit = byteSizes[i];
+    return [`${friendlySize} ${friendlyUnit}`, friendlySize, friendlyUnit];
+}

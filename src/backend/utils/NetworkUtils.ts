@@ -8,6 +8,8 @@ import { getFirstNonEmptyVal, isDebugMode} from "../utils.js";
 import { URLData } from "../../core/Atomic.js";
 import { CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket'
 import { WEBSOCKET_CLOSE_CODE_REASONS } from "../common/infrastructure/Atomic.js";
+import { loggerNoop } from "../common/MaybeLogger.js";
+import { formatBytes } from "./DataUtils.js";
 
 export interface PortReachableOpts {
     host: string,
@@ -266,3 +268,78 @@ export const wsReadyStateToStr = (state: number): string => {
             return state.toString();
     }
 }
+
+export type StreamBodyOpts = {
+    logger?: Logger,
+    chunkDefaultSize?: number,
+    fileHint?: string
+}
+
+export const streamBodyProgress = async (response: Response, opts: StreamBodyOpts = {}) => {
+    const {
+        logger = loggerNoop,
+        chunkDefaultSize = 1024 * 1024 * 10, // default to every 10MB, when we don't know response size
+        fileHint = 'file'
+    } = opts;
+    let loading = true,
+    chunks: any[] = [];
+    const reader = response.body.getReader();
+
+    let length: number,
+    chunkReportSize: number = chunkDefaultSize,
+    lastReportedSize: number = 0;
+    if(null !== response.headers.get('content-length')) {
+        length = +response.headers.get('content-length');
+        const [summary, size, unit] = formatBytes(length);
+        if(unit === 'MiB' && size > 10) {
+            switch(true) {
+                case(size > 50):
+                    chunkReportSize = length/10;
+                    break;
+                case(size > 20):
+                    chunkReportSize = length/5;
+                    break;
+                default:
+                    chunkReportSize = length/3;
+                    break;
+            }
+        }
+        logger.trace(`Downloading ${summary} ${fileHint}...`);
+    } else {
+        logger.trace(`Downloading ${fileHint} of unknown size (no content-length header)...`);
+    }
+
+    let received = 0;
+
+    // Loop through the response stream and extract data chunks
+    while (loading) {
+      const { done, value } = await reader.read();
+      if (done) {
+        // Finish loading 
+        loading = false;
+      } else {
+        // Push values to the chunk array
+        chunks.push(value);
+
+        received += value.length;
+        lastReportedSize += value.length;
+        if(lastReportedSize >= chunkReportSize) {
+            logger.trace(`Downloaded ${formatBytes(received)[0]}...`);
+            lastReportedSize = 0;
+        }
+      }
+    }
+    logger.trace(`Finished download!`);
+
+    // Concat the chunks into a single array
+    let body = new Uint8Array(received);
+    let position = 0;
+
+    // Order the chunks by their respective position
+    for (let chunk of chunks) {
+      body.set(chunk, position);
+      position += chunk.length;
+    }
+
+    return body;
+  }

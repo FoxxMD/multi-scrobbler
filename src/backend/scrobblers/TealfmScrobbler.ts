@@ -13,7 +13,7 @@ import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.js';
 import { Notifiers } from "../notifier/Notifiers.js";
 
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractScrobbleClient.js";
-import { TealClientConfig } from "../common/infrastructure/config/client/tealfm.js";
+import { ScrobbleRecord, TealClientConfig } from "../common/infrastructure/config/client/tealfm.js";
 import { BlueSkyAppApiClient } from "../common/vendor/bluesky/BlueSkyAppApiClient.js";
 import { BlueSkyOauthApiClient } from "../common/vendor/bluesky/BlueSkyOauthApiClient.js";
 import { AbstractBlueSkyApiClient, nowPlayingExpirationDuration, playToRecord, playToStatusRecord, recordToPlay } from "../common/vendor/bluesky/AbstractBlueSkyApiClient.js";
@@ -178,20 +178,22 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
     }
 
     protected async doHydrateHistoricalScrobbles(opts: {allowFailures?: boolean, signal?: AbortSignal } = {}) {
+        const logger =  childLogger(this.logger, ['Historical Plays']);
         const {
             allowFailures = false,
             signal
         } = opts;
         let file: string;
         try {
+            logger.verbose('Fetching scrobbles from PDS...');
             file = await this.fetchCarToFile();
             signal?.throwIfAborted();
         } catch (e) {
-            throw new Error('Failed to fetch CAR repo file', {cause: e});
+            throw new Error('Failed to fetch repo CAR', {cause: e});
         }
 
         try {
-            await this.parseScrobblesFromCar(file, 100, {allowFailures, logger: childLogger(this.logger, ['Historical Plays']), signal});
+            await this.parseScrobblesFromCar(file, 100, {allowFailures, logger: logger, signal});
         } catch (e) {
             throw new Error('Failed to convert CAR without any error', {cause: e});
         } finally {
@@ -200,8 +202,9 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
     }
 
     async fetchCarToFile() {
+
         const filename = path.resolve(this.configDir, `${this.getSafeExternalId()}-${dayjs().unix()}.car`);
-        await fsPromise.writeFile(filename, Buffer.from(((await this.client.getCAR()).data)));
+        await fsPromise.writeFile(filename, Buffer.from(((await this.client.getCAR()))));
         return filename;
     }
 

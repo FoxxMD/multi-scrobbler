@@ -16,6 +16,7 @@ import { ScrobbleSubmitError } from "../../errors/MSErrors.js";
 import { UpstreamError } from "../../errors/UpstreamError.js";
 import { decodeTid, generateTID } from '@ewanc26/tid';
 import { Duration } from "dayjs/plugin/duration.js";
+import { streamBodyProgress } from "../../../utils/NetworkUtils.js";
 
 export abstract class AbstractBlueSkyApiClient extends AbstractApiClient implements PagelessTimeRangeListens {
 
@@ -81,8 +82,25 @@ export abstract class AbstractBlueSkyApiClient extends AbstractApiClient impleme
     }
 
     async getCAR() {
-        // wish there was a way stream this...
-        return await this.agent.com.atproto.sync.getRepo({did: this.agent.sessionManager.did});
+        const resp = await this.agent.sessionManager.fetchHandler(`/xrpc/com.atproto.sync.getRepo?did=${encodeURIComponent(this.agent.sessionManager.did)}`, {
+            method: 'GET',
+            // @ts-expect-error
+            duplex: 'half',
+            redirect: 'follow',
+            headers: {
+                ...(Object.fromEntries(this.agent.headers.entries())),
+                Accept: 'application/vnd.ipld.car',
+            }
+        });
+        if(resp.status !== 200) {
+            const text = await resp.text();
+            throw new UpstreamError(`Failed to fetch repo CAR file. Response was ${resp.status} with response ${text}`, {responseBody: text});
+        }
+        return await streamBodyProgress(resp, {
+            logger: this.logger,
+            chunkDefaultSize: 1024 * 1024 * 5, // report progress every 5 MB
+            fileHint: 'repo CAR'
+        });
     }
 
     async getPagelessTimeRangeListens(params: PagelessListensTimeRangeOptions): Promise<PagelessTimeRangeListensResult> {
