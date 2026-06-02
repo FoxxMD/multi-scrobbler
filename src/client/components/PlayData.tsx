@@ -1,5 +1,5 @@
 import React, { Fragment, useMemo, useState } from 'react';
-import { EmptyState, DataList, HStack, Tag, Tabs, Wrap, Box, Flex, SegmentGroup, Stack, Text, Separator, IconButton, Container, SimpleGrid, Float, Spacer, Icon, Link, Span, Show } from "@chakra-ui/react"
+import { EmptyState, DataList, HStack, Tag, Tabs, Wrap, Box, Flex, SegmentGroup, Stack, Text, Tooltip, Separator, IconButton, Container, SimpleGrid, Float, Spacer, Icon, Link, Span, Show } from "@chakra-ui/react"
 import { LuCode, LuText, LuCheck, LuX } from "react-icons/lu"
 import { JsonPlayObject, PlayObjectLifecycleless } from '../../core/Atomic.js';
 import { shortTodayAwareFormat, timeToHumanTimestamp } from '../../core/TimeUtils.js';
@@ -8,6 +8,7 @@ import { ChakraCodeBlock } from './CodeBlock.js';
 import { TextMuted } from './TextMuted.js';
 import { formatNumber } from '../../core/DataUtils.js';
 import { Muted } from './Typography.js';
+import { ArtistCreditTags } from './ArtistCreditDisplay.js';
 
 const EmptyPlayData = () => {
     return (
@@ -49,7 +50,7 @@ export const PlayData = (props?: PlayInfoProps) => {
 
     const [codeMode, setCodeMode] = useState(false);
 
-    let code: JSX.Element | null = null;
+    let code: React.JSX.Element | null = null;
 
     const comparable = showCompare && final !== undefined;
 
@@ -95,20 +96,14 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
     } = props;
 
 
-    let albumArtistElm: JSX.Element;
+    let albumArtistElm: React.JSX.Element;
 
     if (play.data.albumArtists !== undefined && play.data.albumArtists.length > 0) {
         albumArtistElm = (
             <DataList.Item flexGrow="1">
                 <DataList.ItemLabel>Album Artists</DataList.ItemLabel>
                 <DataList.ItemValue>
-                    <HStack>{play.data.albumArtists.map((x, index) => {
-                        return (
-                            <Tag.Root key={index}>
-                                <Tag.Label>{x}</Tag.Label>
-                            </Tag.Root>
-                        );
-                    })}</HStack>
+                    <ArtistCreditTags data={play.data.albumArtists} />
                 </DataList.ItemValue>
             </DataList.Item>
         );
@@ -133,7 +128,7 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
         } = {}
     } = play;
 
-    let titleElm: JSX.Element;
+    let titleElm: React.JSX.Element;
     if(webUrl !== undefined || originUrl !== undefined) {
         titleElm = <Link variant="underline" target="_blank" href={webUrl ?? originUrl}>{track}</Link>
     } else {
@@ -151,13 +146,7 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
                     <DataList.ItemLabel>Artists</DataList.ItemLabel>
                     <DataList.ItemValue>
                         {artists.length === 0 ? <Text color="fg.muted">(No Artists)</Text> :
-                            <HStack>{play.data.artists.map((x, index) => {
-                                return (
-                                    <Tag.Root key={index}>
-                                        <Tag.Label>{x}</Tag.Label>
-                                    </Tag.Root>
-                                );
-                            })}</HStack>}
+                            <ArtistCreditTags data={play.data.artists} />}
                     </DataList.ItemValue>
                 </DataList.Item>
                 {albumArtistElm}
@@ -210,7 +199,7 @@ export const PlayDatesStack = (props: { play: JsonPlayObject, dates: DisplayDate
         dates
     } = props;
 
-    let datesItem: JSX.Element | null;
+    let datesItem: React.JSX.Element | null;
     if (dates === false) {
         datesItem = null;
     } else {
@@ -246,11 +235,11 @@ export const PlayDatesFooter = (props: { play: JsonPlayObject, dates: DisplayDat
         dates
     } = props;
 
-    let dateElm: JSX.Element;
+    let dateElm: React.JSX.Element;
 
     if (dates !== false) {
-        let playDate: JSX.Element,
-            seenDate: JSX.Element;
+        let playDate: React.JSX.Element,
+            seenDate: React.JSX.Element;
         if (play.data.playDate !== undefined && ['all', 'played'].includes(dates)) {
             playDate = <Text textStyle="xs" color="fg.muted">{`Played ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</Text>
         }

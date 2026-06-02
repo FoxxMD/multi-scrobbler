@@ -2,7 +2,6 @@ import { LogDataPretty, LogLevel } from "@foxxmd/logging";
 import { Dayjs } from "dayjs";
 import { ListenProgress } from "../backend/sources/PlayerState/ListenProgress.js";
 import { AdditionalTrackInfoResponse } from "../backend/common/vendor/listenbrainz/interfaces.js";
-import { Delta } from 'jsondiffpatch';
 import { MarkOptional } from "ts-essentials";
 import { ErrorObject } from "serialize-error";
 import { PlayPlatformIdStr } from "../backend/common/infrastructure/Atomic.js";

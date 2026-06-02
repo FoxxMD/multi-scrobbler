@@ -8,7 +8,6 @@ import { IoMusicalNoteOutline } from "react-icons/io5";
 import { HiOutlineCloudUpload, HiOutlineCloudDownload } from "react-icons/hi";
 import { LuCheck, LuCircleX, LuX } from "react-icons/lu";
 import { ChakraCodeBlockShort, ChakraPlainBlock, ChakraPlainBlockShort } from "./CodeBlock";
-import { JsonDiffPatch } from "./JsonDiff";
 import { formatNumber, jdiff } from "../../core/DataUtils";
 import { capitalize } from "../../core/StringUtils";
 import { MSCollapsible, MSCollapsibleExternalProps } from "./MSCollapsible";
@@ -33,9 +32,9 @@ export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
         collapsibleOpen
     } = props;
 
-    let responseSuffix: JSX.Element,
-        warningsElm: JSX.Element,
-        errorElm: JSX.Element | null;
+    let responseSuffix: React.JSX.Element,
+        warningsElm: React.JSX.Element,
+        errorElm: React.JSX.Element | null;
 
     if (warnings.length > 0) {
         warningsElm = <Span color="orange.solid">warnings</Span>

@@ -1,12 +1,11 @@
 import { Collapsible, Stack, Box, useBreakpointValue } from "@chakra-ui/react"
-import { diff } from "jsondiffpatch";
 import { ComponentProps, PropsWithChildren, useState, useEffect, useMemo } from "react";
 import { LuChevronRight } from "react-icons/lu"
 
 //padding="0" borderWidth="0px"
 
 interface MSCollapsibleInternalProps {
-    indicator?: string | JSX.Element
+    indicator?: string | React.JSX.Element
     boxProps?: object
     triggerProps?: object
     indicatorProps?: object

@@ -5,7 +5,7 @@ import { fn } from 'storybook/test';
 import { Container } from '@chakra-ui/react';
 import { TransformSteps } from "../client/components/TransformSteps.js";
 import {Provider} from "../client/components/Provider";
-import { generateJsonPlays } from "../core/PlayTestUtils.js";
+import { generateJsonPlays, generatePlay } from "../core/PlayTestUtils.js";
 import { ErrorLike, JsonPlayObject, PlayLifecycle } from "../core/Atomic.js";
 import { examplePlay, lastfmErrorExample } from "./storyUtils.js";
 import {generatePlayWithLifecycle} from '../core/tests/utils/fixtures'
@@ -28,12 +28,13 @@ decorators: [
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });
 
-const multiPlay = asJsonPlayObject(generatePlayWithLifecycle({lifecycleSteps: { preCompare: 2}}));
+const original = generatePlay();
+const multiPlay = asJsonPlayObject(generatePlayWithLifecycle({lifecycleSteps: { preCompare: 2}, original}));
 // More on writing stories with args: https://storybook.js.org/docs/writing-stories/args
 export const Multiple = meta.story({
   args: {
-    steps: multiPlay.meta.lifecycle.steps,
-    original: multiPlay.meta.lifecycle.original,
+    steps: multiPlay.meta!.lifecycle!.steps,
+    original: asJsonPlayObject(original),
     collapsibleOpen: true
   }
   //render: function Render(args) { return (<ChakraProvider><MyList></MyList></ChakraProvider>) }

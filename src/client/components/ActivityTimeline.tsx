@@ -52,7 +52,7 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
         } = {}
     } = play;
 
-    let scrobbleSummary: JSX.Element,
+    let scrobbleSummary: React.JSX.Element,
         scrobbleIconProps: Record<string, any> = {
             color: 'green.focusRing'
         };

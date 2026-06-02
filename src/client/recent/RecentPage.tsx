@@ -8,7 +8,6 @@ import { faQuestionCircle, faBug } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCopyToClipboard } from '../components/copyToClipboardHook';
 import clsx from "clsx";
-import {patch} from 'jsondiffpatch';
 
 const displayOpts = {
     include: recentIncludes,
