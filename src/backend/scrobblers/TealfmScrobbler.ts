@@ -12,8 +12,8 @@ import { FormatPlayObjectOptions, CALCULATED_PLAYER_STATUSES, ReportedPlayerStat
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.js';
 import { Notifiers } from "../notifier/Notifiers.js";
 
-import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractScrobbleClient.js";
-import { ScrobbleRecord, TealClientConfig } from "../common/infrastructure/config/client/tealfm.js";
+import { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractScrobbleClient.js";
+import { TealClientConfig } from "../common/infrastructure/config/client/tealfm.js";
 import { BlueSkyAppApiClient } from "../common/vendor/bluesky/BlueSkyAppApiClient.js";
 import { BlueSkyOauthApiClient } from "../common/vendor/bluesky/BlueSkyOauthApiClient.js";
 import { AbstractBlueSkyApiClient, nowPlayingExpirationDuration, playToRecord, playToStatusRecord, recordToPlay } from "../common/vendor/bluesky/AbstractBlueSkyApiClient.js";
@@ -23,6 +23,7 @@ import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient
 import { fromStream } from '@atcute/repo';
 import { playToRepositoryCreatePlayHistoricalOpts, RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.js";
 import { isAbortError } from "abort-controller-x";
+import { FmTealAlphaFeedPlay } from "../common/vendor/teal/lexicons/index.js";
 
 export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
 
@@ -234,7 +235,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
             if(entry.collection === 'fm.teal.alpha.feed.play') {
                 let play: PlayObject;
                 try {
-                    play = recordToPlay(entry.record as ScrobbleRecord, {
+                    play = recordToPlay(entry.record as FmTealAlphaFeedPlay.Main, {
                         web: did !== undefined ? `at://did:plc:${did}/fm.teal.alpha.feed.play/${entry.rkey}` : undefined,
                         playId: entry.rkey,
                         user: did

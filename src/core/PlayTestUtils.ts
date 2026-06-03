@@ -11,13 +11,14 @@ import { sortByNewestPlayDate } from './PlayUtils.js';
 import { CALCULATED_PLAYER_STATUSES, NO_DEVICE, NO_USER, PlayerStateDataMaybePlay, PlayPlatformId, REPORTED_PLAYER_STATUSES, SINGLE_USER_PLATFORM_ID } from '../backend/common/infrastructure/Atomic.js';
 import { arrayListAnd, artistNamesToCredits } from './StringUtils.js';
 import { findDelimiters } from "./StringUtils.js";
-import { ListRecord, ScrobbleRecord } from '../backend/common/infrastructure/config/client/tealfm.js';
+import { ListRecord } from '../backend/common/infrastructure/config/client/tealfm.js';
 import { nanoid } from 'nanoid';
 import { LastFMTrackObject } from '../backend/common/vendor/LastfmApiClient.js';
 import { MarkOptional } from 'ts-essentials';
 import { defaultLifecycle } from '../backend/utils/PlayTransformUtils.js';
 import clone from 'clone';
 import { removeUndefinedKeys } from '../backend/utils.js';
+import { FmTealAlphaFeedPlay } from '../backend/common/vendor/teal/lexicons/index.js';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -476,7 +477,7 @@ export const generateMbid = (): MBID => {
 export const generateTealPlayRecord = (opts: {
     withMbids?: boolean,
     withIsrc?: boolean
-} = {}): [ListRecord<ScrobbleRecord>, { did: string, tid: string }] => {
+} = {}): [ListRecord<FmTealAlphaFeedPlay.Main>, { did: string, tid: string }] => {
     const {
         withMbids = true,
         withIsrc = true,
@@ -488,12 +489,12 @@ export const generateTealPlayRecord = (opts: {
     const did = nanoid(12);
     const tid = nanoid(10);
 
-    const rec: ListRecord<ScrobbleRecord> = {
+    const rec: ListRecord<FmTealAlphaFeedPlay.Main> = {
         uri: `at://did:plc:${did}/fm.teal.alpha.feed.play/${tid}`,
         cid: nanoid(12),
         value: {
             '$type': 'fm.teal.alpha.feed.play',
-            artists: artists.map(x => withMbids ? { artistName: x, artistMbId: generateMbid() } : { artistName: x }),
+            artists: artists.map(x => withMbids ? { artistName: x, artistMbId: `mbid:${generateMbid()}` } : { artistName: x }),
             releaseName: faker.music.album(),
             trackName: faker.music.songName(),
             playedTime: now.toISOString(),
@@ -503,8 +504,8 @@ export const generateTealPlayRecord = (opts: {
     }
 
     if (withMbids) {
-        rec.value.releaseMbId = generateMbid();
-        rec.value.recordingMbId = generateMbid();
+        rec.value.releaseMbId = `mbid:${generateMbid()}`;
+        rec.value.recordingMbId = `mbid:${generateMbid()}`;
     }
 
     if (withIsrc) {

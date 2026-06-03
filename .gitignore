@@ -154,3 +154,5 @@ storybook-static
 
 *.db
 *.db*
+
+**/lexicons/**/*.json

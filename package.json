@@ -24,7 +24,8 @@
     "install:parallel": "concurrently --kill-others-on-fail --names app,docs \"npm ci --no-audit\" \"npm run docs:install\"",
     "cliff": "git-cliff --unreleased",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "atproto:lex:tealfm": "npm exec -- lex-cli pull -c src/backend/common/vendor/teal/lex.config.ts && npm exec -- lex-cli generate -c src/backend/common/vendor/teal/lex.config.ts"
   },
   "exports": {
     ".": {
@@ -49,7 +50,9 @@
   "homepage": ".",
   "dependencies": {
     "@astronautlabs/mdns": "^1.0.7",
+    "@atcute/bluesky": "^4.0.5",
     "@atcute/identity-resolver-node": "^1.0.3",
+    "@atcute/lexicons": "^2.0.0",
     "@atcute/repo": "^1.0.0",
     "@atproto/api": "^0.18.0",
     "@atproto/oauth-client-node": "^0.3.10",
@@ -141,6 +144,7 @@
     "youtubei.js": "^15.0.1"
   },
   "devDependencies": {
+    "@atcute/lex-cli": "^3.1.0",
     "@chakra-ui/react": "^3.34.0",
     "@chromatic-com/storybook": "^5.1.2",
     "@dbus-types/notifications": "^0.0.5",

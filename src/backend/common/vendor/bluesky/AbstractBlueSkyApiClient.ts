@@ -1,10 +1,10 @@
 import { getRoot } from "../../../ioc.js";
 import { AbstractApiOptions, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PagelessTimeRangeListensResult } from "../../infrastructure/Atomic.js";
-import { ListRecord, ScrobbleRecord, StatusRecord, TealClientData } from "../../infrastructure/config/client/tealfm.js";
+import { ListRecord, TealClientData } from "../../infrastructure/config/client/tealfm.js";
 import AbstractApiClient from "../AbstractApiClient.js";
 import { Agent, ComAtprotoRepoCreateRecord, ComAtprotoRepoListRecords, ComAtprotoRepoPutRecord } from "@atproto/api";
 import { MSCache } from "../../Cache.js";
-import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, UnixTimestamp, MBID, NowPlayingUpdateThreshold, SourcePlayerObj, Second } from "../../../../core/Atomic.js";
+import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, UnixTimestamp, MBID, SourcePlayerObj } from "../../../../core/Atomic.js";
 import { musicServiceToCononical } from '../listenbrainz/lzUtils.js';
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { RecordOptions } from "../../infrastructure/config/client/tealfm.js";
@@ -17,6 +17,7 @@ import { UpstreamError } from "../../errors/UpstreamError.js";
 import { decodeTid, generateTID } from '@ewanc26/tid';
 import { Duration } from "dayjs/plugin/duration.js";
 import { streamBodyProgress } from "../../../utils/NetworkUtils.js";
+import { FmTealAlphaActorStatus, FmTealAlphaFeedPlay } from "../teal/lexicons/index.js";
 
 export abstract class AbstractBlueSkyApiClient extends AbstractApiClient implements PagelessTimeRangeListens {
 
@@ -36,7 +37,7 @@ export abstract class AbstractBlueSkyApiClient extends AbstractApiClient impleme
 
     abstract restoreSession(): Promise<boolean>;
 
-    async createScrobbleRecord(record: ScrobbleRecord): Promise<ScrobbleActionResult> {
+    async createScrobbleRecord(record: FmTealAlphaFeedPlay.Main): Promise<ScrobbleActionResult> {
         const input: ComAtprotoRepoCreateRecord.InputSchema = {
             repo: this.agent.sessionManager.did,
             collection: "fm.teal.alpha.feed.play",
@@ -50,7 +51,7 @@ export abstract class AbstractBlueSkyApiClient extends AbstractApiClient impleme
         }
     }
 
-    async updateStatusRecord(record: StatusRecord): Promise<ScrobbleActionResult> {
+    async updateStatusRecord(record: FmTealAlphaActorStatus.Main): Promise<ScrobbleActionResult> {
         const input: ComAtprotoRepoPutRecord.InputSchema = {
             repo: this.agent.sessionManager.did,
             collection: "fm.teal.alpha.actor.status",
@@ -118,7 +119,7 @@ export abstract class AbstractBlueSkyApiClient extends AbstractApiClient impleme
             fromTS = usecToUnix(timestampUs);
         }
 
-        const plays = (resp.data.records as unknown as ListRecord<ScrobbleRecord>[]).map(x => listRecordToPlay(x));
+        const plays = (resp.data.records as unknown as ListRecord<FmTealAlphaFeedPlay.Main>[]).map(x => listRecordToPlay(x));
 
         return {data: plays, meta: {to, from: fromTS, limit}};
     }
@@ -128,9 +129,9 @@ export abstract class AbstractBlueSkyApiClient extends AbstractApiClient impleme
     }
 }
 
-export const playToRecord = (play: PlayObject): ScrobbleRecord => {
+export const playToRecord = (play: PlayObject): FmTealAlphaFeedPlay.Main => {
 
-    const record: ScrobbleRecord = {
+    const record: FmTealAlphaFeedPlay.Main = {
         $type: "fm.teal.alpha.feed.play",
         trackName: play.data.track,
         artists: play.data.artists.map(x => removeUndefinedKeys({ artistName: x.name, artistMbId: mbidUriOrUndefined(x.mbid as MBID) })),
@@ -160,7 +161,7 @@ export const mbidToUri = (mbid: MBID): MBIDURI => {
     return `mbid:${mbid}`;
 }
 
-export const playToStatusRecord = (play: PlayObject, notPlaying: boolean, position?: number): StatusRecord => {
+export const playToStatusRecord = (play: PlayObject, notPlaying: boolean, position?: number): FmTealAlphaActorStatus.Main => {
     const { $type, ...item } = notPlaying
         ? { trackName: "", artists: [] }
         : playToRecord(play);
@@ -177,7 +178,10 @@ export const playToStatusRecord = (play: PlayObject, notPlaying: boolean, positi
         $type: "fm.teal.alpha.actor.status",
         time: dayjs().toISOString(),
         expiry: expiry.toISOString(),
-        item
+        item: {
+            artists: [],
+            ...item
+        }
     };
 }
 
@@ -201,7 +205,7 @@ export const nowPlayingExpirationDuration = (data: Pick<SourcePlayerObj, 'play' 
     return dayjs.duration(expiry.diff(dayjs(), 'ms'));
 }
 
-export const listRecordToPlay = (listRecord: ListRecord<ScrobbleRecord>): PlayObject => {
+export const listRecordToPlay = (listRecord: ListRecord<FmTealAlphaFeedPlay.Main>): PlayObject => {
     const opts: RecordOptions = {};
     const uriRes = parseRegexSingle(ATPROTO_URI_REGEX, listRecord.uri);
     if (uriRes !== undefined) {
@@ -212,7 +216,7 @@ export const listRecordToPlay = (listRecord: ListRecord<ScrobbleRecord>): PlayOb
     return recordToPlay(listRecord.value, opts);
 }
 
-export const recordToPlay = (record: ScrobbleRecord, options: RecordOptions = {}): PlayObject => {
+export const recordToPlay = (record: FmTealAlphaFeedPlay.Main, options: RecordOptions = {}): PlayObject => {
 
     const play: PlayObjectLifecycleless = {
         data: {
