@@ -203,7 +203,8 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
     }
 
     async fetchCarToFile() {
-
+        // TODO use `since` to get CAR diff instead of entire repo
+        // can use last import date from migrations table
         const filename = path.resolve(this.configDir, `${this.getSafeExternalId()}-${dayjs().unix()}.car`);
         await fsPromise.writeFile(filename, Buffer.from(((await this.client.getCAR()))));
         return filename;
@@ -295,38 +296,16 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         logger.info(`Completed CAR conversion: Result ${allGood ? 'OK' : 'Some Errors'} in ${durationToHuman(dayjs.duration(dayjs().diff(start)))} | Records ${count} | Persisted ${persisted}`)
     }
 
-    async createHistoricalPlays(batch: RepositoryCreatePlayHistoricalOpts[], opts: {allowFailures?: boolean, logger?: Logger, signal?: AbortSignal} = {}): Promise<[boolean, number]> {
-        const {
-            allowFailures = false,
-            logger = this.logger,
-            signal
-        } = opts;
-        try {
-            await this.playsHistoricalRepo.createPlays(batch);
-            return [true, batch.length];
-        } catch (e) {
-            logger.warn(`Failed to persist batch of ${batch} plays, trying individually...`);
-        }
-        signal?.throwIfAborted();
-
-        let valid = 0;
-        for(const p of batch) {
-            try {
-                await this.playsHistoricalRepo.createPlays([p]);
-                valid++;
-            } catch (e) {
-                if(allowFailures) {
-                    logger.warn(p.play,`Failed to persist play from record with rKey ${p.play.meta.playId} => ${buildTrackString(p.play)}`);
-                    logger.warn(e);
-                } else {
-                    logger.error(p.play,`Failed to persist play from record with rKey ${p.play.meta.playId} => ${buildTrackString(p.play)}`);
-                    throw e;
-                }
+    protected async syncRecentHistoricalScrobbles(): Promise<PlayObject[]> {
+        const recentPlays = await this.getScrobblesForTimeRange(undefined);
+        const unseenPlays: PlayObject[] = [];
+        for(const p of recentPlays) {
+            if(!(await this.playsHistoricalRepo.hasByUid(p.meta.playId))) {
+                unseenPlays.push(p);
             }
-            signal?.throwIfAborted();
         }
-
-        return [false, valid];
+        return unseenPlays;
     }
+
 }
 

@@ -80,12 +80,12 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     }
 
     protected async postInitialize(): Promise<void> {
-        super.postInitialize();
+        await super.postInitialize();
         this.componentRepo.updateById(this.dbComponent.id, {lastReadyAt: dayjs()});
     }
 
     protected async doBuildDatabase(): Promise<true | string | undefined> {
-        super.doBuildDatabase();
+        await super.doBuildDatabase();
 
         let name: string;
         if('name' in this) {

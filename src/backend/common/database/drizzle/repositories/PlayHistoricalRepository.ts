@@ -265,11 +265,10 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
         })
     }
 
-    public getTemporallyClosePlays = async (play: PlayObject, opts: {states?: PlaySelect['state'][], bufferTime?: number} & ComponentConstrainedRepoOpts = {}): Promise<PlayHistoricalSelect[]> => {
+    public getTemporallyClosePlays = async (play: PlayObject, opts: {bufferTime?: number} & ComponentConstrainedRepoOpts = {}): Promise<PlayHistoricalSelect[]> => {
         const {
             componentId = this.componentId,
-            bufferTime,
-            states
+            bufferTime
         } = opts;
 
         let query: FindMany<'plays'> = {};
@@ -278,11 +277,6 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
             componentId,
             playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play, {bufferTime})),
         };
-        if(states !== undefined) {
-            where.state = {
-                in: states
-            }
-        }
         query.where = where;
 
         return ((await this.db.query.plays.findMany({
