@@ -5,6 +5,13 @@ import { generateArtistCredits, generatePlay, generateTealPlayRecord, withBrainz
 import { listRecordToPlay, playToRecord } from '../../common/vendor/bluesky/AbstractBlueSkyApiClient.js';
 import dayjs from 'dayjs';
 import { artistCreditsToNames } from '../../../core/StringUtils.js';
+import TealScrobbler from '../../scrobblers/TealfmScrobbler.js';
+import { Notifiers } from '../../notifier/Notifiers.js';
+import { EventEmitter } from "events";
+import { loggerNoop } from '../../common/MaybeLogger.js';
+import path from 'node:path';
+import { configDir } from '../../common/index.js';
+import { loggerDebug, loggerTrace } from '@foxxmd/logging';
 
 chai.use(asPromised);
 
@@ -71,4 +78,45 @@ describe('#tealfm Play To Record', function () {
         expect(record.artists[0].artistMbId).eq(`mbid:${play.data.artists[0].mbid}`);
     });
 
+});
+
+describe('#tealfm Play To Record', function () {
+
+    it('Adds mbids with uri format', function () {
+
+        const play = withBrainz(generatePlay({artists: generateArtistCredits(2)}), {include: ['recording']});
+        const record = playToRecord(play);
+
+        expect(record.recordingMbId).to.eq(`mbid:${play.data.meta.brainz.recording}`);
+        expect(record.releaseMbId).is.undefined;
+        expect(record.artists).length(2);
+        expect(record.artists[0].artistName).eq(play.data.artists[0].name);
+        expect(record.artists[0].artistMbId).eq(`mbid:${play.data.artists[0].mbid}`);
+    });
+
+});
+
+describe('#tealfmCar', function() {
+
+    before(function () {
+        if (process.env.TEAL_CAR_TEST !== 'true') {
+            this.skip();
+        }
+    });
+
+    it('Parses car file', async function() {
+
+        this.timeout(100000);
+
+        const tfm = new TealScrobbler('test', 
+            {name: 'test', data: {identifier: 'test', appPassword: 'test'}}, 
+            {configDir: 'test', localUrl: new URL('https://example.com'), version: 'test'},
+            new Notifiers(new EventEmitter(), new EventEmitter(), new EventEmitter(), loggerNoop),
+            new EventEmitter(),
+            loggerDebug
+        );
+        await tfm.buildDatabase();
+
+        await tfm.parseScrobblesFromCar(path.resolve(configDir, 'tealfm-myteal-1778870858.car'), 100);
+    });
 });

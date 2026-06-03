@@ -464,7 +464,7 @@ ${sources.join('\n')}`);
                 break;
             case 'tealfm':
                 const TealScrobbler = (await import('./TealfmScrobbler.js')).default;
-                newClient = new TealScrobbler(name, {...clientConfig, data: d, options: compositeOptions} as unknown as TealClientConfig, {}, notifier, this.emitter, this.logger);
+                newClient = new TealScrobbler(name, {...clientConfig, data: d, options: compositeOptions} as unknown as TealClientConfig, this.internalConfig, notifier, this.emitter, this.logger);
                 break;
             case 'rocksky':
                 const RockskyScrobbler = (await import('./RockskyScrobbler.js')).default;
