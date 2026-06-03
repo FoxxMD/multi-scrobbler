@@ -141,7 +141,7 @@ export const setupAuthRoutes = (app: Express, logger: Logger, sourceMiddle: Expr
             // TODO right now all sources requiring source interaction are covered by logic branches (deezer above and spotify here)
             // but eventually should update all source callbacks to url specific URLS to avoid ambiguity...
             // wish we could use state param to identify name/source but not all auth strategies and auth provides may provide access to that
-            logger.info('Received auth code callback from Spotify', {label: 'Spotify'});
+            logger.info({label: 'Spotify'}, 'Received auth code callback from Spotify');
             const source = scrobbleSources.getByNameAndType(state as string, 'spotify', true) as SpotifySource;
             const tokenResult = await source.handleAuthCodeCallback(req.query);
             let responseContent = 'OK';

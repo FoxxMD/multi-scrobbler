@@ -267,7 +267,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
         try {
             spotifyCreds = await readJson(this.workingCredsPath, {throwOnNotFound: false, interpolateEnvs: false}) as any;
         } catch (e) {
-            this.logger.warn('Current spotify credentials file exists but could not be parsed', { path: this.workingCredsPath });
+            this.logger.warn({ path: this.workingCredsPath }, 'Current spotify credentials file exists but could not be parsed');
         }
 
         const {token: accessToken = undefined, refreshToken = undefined} = (spotifyCreds || {}) as any;

@@ -121,7 +121,7 @@ export class AppriseWebhookNotifier extends AbstractWebhookNotifier {
                 anyOk = true;
                 this.logger.verbose(`Pushed notification to URLs`);
             } catch (e: any) {
-                this.logger.warn(`Failed to push notification for '${payload.title}' to URLs`, {cause: e});
+                this.logger.warn(new Error(`Failed to push notification for '${payload.title}' to URLs`, {cause: e}));
                 if(isDebugMode()) {
                     this.logger.debug({ body }, 'Apprise Request')
                 }

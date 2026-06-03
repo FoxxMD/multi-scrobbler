@@ -202,7 +202,7 @@ export default class DeezerSource extends AbstractSource {
             } = e;
             const msg = response !== undefined ? `API Call failed: Server Response => ${ssMessage}` : `API Call failed: ${message}`;
             const responseMeta = ssResp ?? text;
-            this.logger.error(msg, {status, response: responseMeta});
+            this.logger.error({status, response: responseMeta}, msg);
             throw e;
         }
     }
