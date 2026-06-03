@@ -18,6 +18,7 @@ import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 import { isDebugMode } from "../utils.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
+import { artistNamesToCredits } from "../../core/StringUtils.js";
 
 const CLIENT_PLAYER_STATE: Record<PlayerState, ReportedPlayerStatus> = {
     'playing': REPORTED_PLAYER_STATUSES.playing,
@@ -142,8 +143,8 @@ export class VLCSource extends MemoryPositionalSource {
             artist
         } = obj;
 
-        let artists = [];
-        let albumArtists = [];
+        let artists: string[] = [];
+        let albumArtists: string[] = [];
         const validArtist = firstNonEmptyStr([artist, StreamArtist, ALBUMARTIST, Writer]);
         if(artist !== undefined) {
             artists.push(validArtist);
@@ -217,8 +218,8 @@ export class VLCSource extends MemoryPositionalSource {
 
         const play: PlayObjectLifecycleless = {
             data: {
-                artists: artists,
-                albumArtists,
+                artists: artistNamesToCredits(artists),
+                albumArtists: artistNamesToCredits(albumArtists),
                 album,
                 track: trackName,
                 duration: length
