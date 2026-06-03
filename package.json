@@ -50,6 +50,7 @@
   "dependencies": {
     "@astronautlabs/mdns": "^1.0.7",
     "@atcute/identity-resolver-node": "^1.0.3",
+    "@atcute/repo": "^1.0.0",
     "@atproto/api": "^0.18.0",
     "@atproto/oauth-client-node": "^0.3.10",
     "@donedeal0/superdiff": "^1.1.1",
