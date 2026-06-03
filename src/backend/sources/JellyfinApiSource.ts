@@ -193,13 +193,13 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
             }
         });
         this.wsClient.addEventListener('close', (e) => {
-            this.logger.warn(`Connection was closed: ${e.code} => ${e.reason}`, {labels: 'WS'});
+            this.logger.warn({labels: 'WS'}, `Connection was closed: ${e.code} => ${e.reason}`);
         });
         this.wsClient.addEventListener('open', (e) => {
-            this.logger.verbose(`Connection was established.`, {labels: 'WS'});
+            this.logger.verbose({labels: 'WS'}, `Connection was established.`);
         });
         this.wsClient.addEventListener('message', (e) => {
-            this.logger.debug(e.data, {labels: 'WS'});
+            this.logger.debug({labels: 'WS'}, e.data);
         });
     }
 

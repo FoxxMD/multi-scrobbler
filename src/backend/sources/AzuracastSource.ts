@@ -78,16 +78,16 @@ export class AzuracastSource extends MemorySource {
         });
         const wsLogger = childLogger(this.logger, 'WS');
         this.client.addEventListener('retry', (e) => {
-            wsLogger.verbose(`Retrying connection, attempt ${e.attempt}`, { labels: 'WS' });
+            wsLogger.verbose(`Retrying connection, attempt ${e.attempt}`);
         });
         this.client.addEventListener('close', (e) => {
-            wsLogger.warn(`Connection was closed: ${e.code} => ${e.reason}`, { labels: 'WS' });
+            wsLogger.warn(`Connection was closed: ${e.code} => ${e.reason}`);
             if (e.reason.includes('unauthenticated')) {
                 this.authed = false;
             }
         });
         this.client.addEventListener('open', (e) => {
-            wsLogger.verbose(`Connection was established.`, { labels: 'WS' });
+            wsLogger.verbose(`Connection was established.`);
             // if (this.authed) {
             //     // was a reconnect, try auto authenticating
             //     wsLogger.verbose('Resending auth message after (probably) reconnection...');
