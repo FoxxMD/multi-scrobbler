@@ -9,7 +9,7 @@ import { UpstreamError } from "../common/errors/UpstreamError.js";
 import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig, PlayPlatformId } from "../common/infrastructure/Atomic.js";
 import { SubSonicSourceConfig } from "../common/infrastructure/config/source/subsonic.js";
 import { getSubsonicResponse, SubsonicResponse, SubsonicResponseCommon } from "../common/vendor/subsonic/interfaces.js";
-import { parseRetryAfterSecsFromObj, removeDuplicates, sleep } from "../utils.js";
+import { removeDuplicates } from "../utils.js";
 import { findCauseByFunc } from "../utils/ErrorUtils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
@@ -18,6 +18,7 @@ import { PlayerStateOptions } from './PlayerState/AbstractPlayerState.js';
 import { Logger } from '@foxxmd/logging';
 import { baseFormatPlayObj } from '../utils/PlayTransformUtils.js';
 import { noRetryOnUpstreamError, tryApiCall } from '../utils/RequestUtils.js';
+import { artistNameToCredit } from '../../core/StringUtils.js';
 
 dayjs.extend(isSameOrAfter);
 
@@ -78,7 +79,7 @@ export class SubsonicSource extends MemorySource {
 
         const play: PlayObjectLifecycleless = {
             data: {
-                artists: [artist],
+                artists: [artistNameToCredit(artist)],
                 album,
                 track: title,
                 duration,

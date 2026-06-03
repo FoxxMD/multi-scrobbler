@@ -25,6 +25,7 @@ import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 import { normalizeWSAddress } from "../utils/NetworkUtils.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
+import { artistNamesToCredits } from "../../core/StringUtils.js";
 
 const CLIENT_STATE = {
     0: 'connecting',
@@ -181,8 +182,8 @@ export class MusikcubeSource extends MemoryPositionalSource {
                 }
             },
         } = obj;
-        const artists = [];
-        const albumArtists = [];
+        const artists: string[] = [];
+        const albumArtists: string[] = [];
         if(artist !== undefined) {
             artists.push(artist);
         }
@@ -191,8 +192,8 @@ export class MusikcubeSource extends MemoryPositionalSource {
         }
         const play: PlayObjectLifecycleless = {
             data: {
-                artists: artists,
-                albumArtists,
+                artists: artistNamesToCredits(artists),
+                albumArtists: artistNamesToCredits(albumArtists),
                 album: album === '' ? undefined : album,
                 track: title === '' ? undefined: title,
                 duration: playing_duration
