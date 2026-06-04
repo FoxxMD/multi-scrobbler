@@ -20,6 +20,7 @@ import { CreateScrobbleInput, RockskyClient } from "@rocksky/sdk";
 import { getRoot } from "../../ioc.js";
 import { MSCache } from "../Cache.js";
 import { HandleData } from "../infrastructure/config/client/atproto.js";
+import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 
 interface SubmitOptions {
     log?: boolean
@@ -73,7 +74,7 @@ export class RockSkyApiClient extends AbstractApiClient {
         this.rsClient = new RockskyClient({auth: token});
     }
 
-    protected isLzMode = () => this.config.key !== undefined;
+    isLzMode = () => this.config.key !== undefined;
 
     doCallLZApi = async <T = Response>(req: Request, retries = 0): Promise<T> => {
         try {
@@ -247,7 +248,12 @@ interface UserScrobbleResponse {
     scrobbles?: RockskyScrobble[]
 }
 
-export const rockskyScrobbleToPlay = (obj: RockskyScrobble): PlayObject => {
+export const rockskyScrobbleToPlay = (obj: RockskyScrobble, opts: {playId?: string, web?: string, user?: string} = {}): PlayObject => {
+    const {
+        playId,
+        web,
+        user
+    } = opts;
     const play: PlayObjectLifecycleless = {
         data: {
             track: obj.title,
@@ -259,13 +265,38 @@ export const rockskyScrobbleToPlay = (obj: RockskyScrobble): PlayObject => {
             playDate: dayjs.utc(obj.createdAt).local()
         },
         meta: {
-            // @ts-expect-error its in the response but missing from types
-            trackId: obj.trackId,
-            playId: obj.id,
+            playId,
+            user
         }
     };
+    if(web !== undefined) {
+        play.meta.url = {web};
+    }
+    if('trackId' in obj) {
+        play.meta.trackId = obj.trackId as string;
+    }
+    // if('id' in obj) {
+    //     play.meta.playId = obj.id as string;
+    // }
     if('albumArt' in obj) {
         play.meta.art = {album: obj.albumArt as string}
+    }
+
+    if(obj.uri !== undefined) {
+        const uriRes = parseRegexSingle(ATPROTO_URI_REGEX, obj.uri);
+        if(uriRes !== undefined) {
+            if(web === undefined) {
+                play.meta.url = {
+                    web: `https://atproto.at/viewer?uri=${uriRes.named.resource}`
+                }
+            }
+            if(playId === undefined) {
+                play.meta.playId = uriRes.named.tid;
+            }
+            if(user === undefined) {
+                play.meta.user = uriRes.named.did;
+            }
+        }
     }
 
     return baseFormatPlayObj(obj, play);
@@ -284,3 +315,5 @@ export const playToRockskyRecord = (play: PlayObject): CreateScrobbleInput => {
     }
     return csi;
 }
+
+const ATPROTO_URI_REGEX = new RegExp(/at:\/\/(?<resource>(?<did>did.*?)\/app\.rocksky\.scrobble\/(?<tid>.*))/);

@@ -468,7 +468,7 @@ ${sources.join('\n')}`);
                 break;
             case 'rocksky':
                 const RockskyScrobbler = (await import('./RockskyScrobbler.js')).default;
-                newClient = new RockskyScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...d}, options: compositeOptions } as unknown as RockSkyClientConfig, {}, notifier, this.emitter, this.logger);
+                newClient = new RockskyScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...d}, options: compositeOptions } as unknown as RockSkyClientConfig, this.internalConfig, notifier, this.emitter, this.logger);
                 break;
             case 'discord':
                 const DiscordScrobbler = (await import('./DiscordScrobbler.js')).default;

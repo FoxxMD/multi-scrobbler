@@ -5,7 +5,7 @@ import { MSCache } from "../../Cache.js";
 import { UpstreamError } from "../../errors/UpstreamError.js";
 import { streamBodyProgress } from "../../../utils/NetworkUtils.js";
 import { ATProtoUserIdentifierData, HandleData } from "../../infrastructure/config/client/atproto.js";
-import { checkPds, isDID, identifierToAtProtoHandle } from "./atUtils.js";
+import { checkPds, isDID, identifierToAtProtoHandle, getATProtoIdentifier } from "./atUtils.js";
 import { Client, isXRPCErrorPayload } from '@atcute/client';
 import { ComAtprotoSyncGetRepo } from '@atcute/atproto';
 import { AtprotoDid } from "@atcute/lexicons/syntax";
@@ -20,16 +20,22 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
 
     cache: MSCache;
 
-    constructor(name: any, config: ATProtoUserIdentifierData, options: AbstractApiOptions) {
+    constructor(name: any, config: ATProtoUserIdentifierData & {handleData?: HandleData}, options: AbstractApiOptions) {
         super('atproto', name, config, options);
         this.cache = getRoot().items.cache();
 
-        const cleanIdentifier = this.config.identifier;
-        if(isDID(cleanIdentifier)) {
-            this.logger.debug(`Identifier ${cleanIdentifier} looks like a DID, skipping parsing as a handle.`);
-            this.config.did = cleanIdentifier;
+        if(config.handleData !== undefined) {
+            this.userData = config.handleData;
+            this.config.did = config.handleData.did;
+            this.config.identifier = config.handleData.handle;
         } else {
-            this.config.identifier = identifierToAtProtoHandle(this.config.identifier, {logger: this.logger, defaultDomain: 'bsky.social'});
+            const cleanIdentifier = this.config.identifier;
+            if(isDID(cleanIdentifier)) {
+                this.logger.debug(`Identifier ${cleanIdentifier} looks like a DID, skipping parsing as a handle.`);
+                this.config.did = cleanIdentifier;
+            } else {
+                this.config.identifier = identifierToAtProtoHandle(this.config.identifier, {logger: this.logger, defaultDomain: 'bsky.social'});
+            }
         }
     }
 
@@ -37,6 +43,12 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
 
     async checkPds(data: ATProtoUserIdentifierData): Promise<true> {
         return await checkPds(data, {logger: this.logger, cache: this.cache.cacheAuth});
+    }
+
+    async hydrateHandleData(): Promise<void> {
+        if(this.userData === undefined) {
+            this.userData = await getATProtoIdentifier(this.config, {logger: this.logger, cache: this.cache.cacheAuth});
+        }
     }
 
     async getCAR(did: AtprotoDid) {

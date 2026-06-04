@@ -11,7 +11,7 @@ export class ATProtoUnauthenticatedApiClient extends AbstractATProtoApiClient {
     declare client: Client;
 
     async initClient(): Promise<void> {
-        this.userData = await getATProtoIdentifier(this.config, {logger: this.logger, cache: this.cache.cacheAuth});
+        await this.hydrateHandleData();
         this.client = new Client({ handler: simpleFetchHandler({ service: this.userData.pds }) });
     }
 
