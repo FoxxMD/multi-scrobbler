@@ -1,7 +1,7 @@
 import { AbstractApiOptions } from "../../infrastructure/Atomic.js";
 import { TealClientData } from "../../infrastructure/config/client/tealfm.js";
 import { Agent, CredentialSession, AtpSessionEvent, AtpSessionData } from "@atproto/api";
-import { AbstractBlueSkyApiClient } from "./AbstractATProtoApiClient.js";
+import { AbstractATProtoApiClient } from "./AbstractATProtoApiClient.js";
 import { isPortReachableConnect, normalizeWebAddress } from "../../../utils/NetworkUtils.js";
 import { URLData } from "../../../../core/Atomic.js";
 import { isNodeNetworkException } from "../../errors/NodeErrors.js";
@@ -21,7 +21,7 @@ interface HandleData {
     pds: string
 }
 
-export class BlueSkyAppApiClient extends AbstractBlueSkyApiClient {
+export class ATProtoAppApiClient extends AbstractATProtoApiClient {
 
     declare config: TealClientData & {did?: AtprotoDid};
     appSession?: CredentialSession;

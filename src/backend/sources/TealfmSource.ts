@@ -4,12 +4,12 @@ import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
-import { AbstractBlueSkyApiClient } from "../common/vendor/atproto/AbstractATProtoApiClient.js";
+import { AbstractATProtoApiClient } from "../common/vendor/atproto/AbstractATProtoApiClient.js";
 import { listRecordToPlay, TealApiClient } from "../common/vendor/teal/TealApiClient.js";
 import { recordToPlay } from "../common/vendor/teal/TealApiClient.js";
 import { TealSourceConfig } from "../common/infrastructure/config/source/tealfm.js";
-import { BlueSkyAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.js";
-import { BlueSkyOauthApiClient } from "../common/vendor/atproto/ATProtoOauthApiClient.js";
+import { ATProtoAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.js";
+import { ATProtoOauthApiClient } from "../common/vendor/atproto/ATProtoOauthApiClient.js";
 import { parseArrayFromMaybeString } from "../utils/StringUtils.js";
 
 export default class TealfmSource extends MemorySource {
@@ -70,7 +70,7 @@ export default class TealfmSource extends MemorySource {
     }
 
     protected async doCheckConnection(): Promise<true | string | undefined> {
-        if (this.client instanceof BlueSkyAppApiClient) {
+        if (this.client instanceof ATProtoAppApiClient) {
             try {
                 return await this.client.checkPds();
             } catch (e) {
@@ -87,7 +87,7 @@ export default class TealfmSource extends MemorySource {
             if(sessionRes) {
                 return true;
             }
-            if(this.client.client instanceof BlueSkyAppApiClient) {
+            if(this.client.client instanceof ATProtoAppApiClient) {
                 return await this.client.client.appLogin();
             }
         } catch (e) {

@@ -7,7 +7,7 @@ import { MSCache } from "../../Cache.js";
 import { UpstreamError } from "../../errors/UpstreamError.js";
 import { streamBodyProgress } from "../../../utils/NetworkUtils.js";
 
-export abstract class AbstractBlueSkyApiClient extends AbstractApiClient {
+export abstract class AbstractATProtoApiClient extends AbstractApiClient {
 
     agent!: Agent;
 

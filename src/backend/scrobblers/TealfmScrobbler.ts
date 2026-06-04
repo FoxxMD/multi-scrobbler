@@ -14,9 +14,9 @@ import { Notifiers } from "../notifier/Notifiers.js";
 
 import { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractScrobbleClient.js";
 import { TealClientConfig } from "../common/infrastructure/config/client/tealfm.js";
-import { BlueSkyAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.js";
-import { BlueSkyOauthApiClient } from "../common/vendor/atproto/ATProtoOauthApiClient.js";
-import { AbstractBlueSkyApiClient } from "../common/vendor/atproto/AbstractATProtoApiClient.js";
+import { ATProtoAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.js";
+import { ATProtoOauthApiClient } from "../common/vendor/atproto/ATProtoOauthApiClient.js";
+import { AbstractATProtoApiClient } from "../common/vendor/atproto/AbstractATProtoApiClient.js";
 import { playToRecord, TealApiClient } from "../common/vendor/teal/TealApiClient.js";
 import { playToStatusRecord } from "../common/vendor/teal/TealApiClient.js";
 import { nowPlayingExpirationDuration } from "../common/vendor/teal/TealApiClient.js";
@@ -82,7 +82,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
     }
 
     protected async doCheckConnection(): Promise<true | string | undefined> {
-        if (this.client.client instanceof BlueSkyAppApiClient) {
+        if (this.client.client instanceof ATProtoAppApiClient) {
             try {
                 return await this.client.client.checkPds();
             } catch (e) {
@@ -94,7 +94,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
     }
 
     async getAuthorizeUrl(): Promise<string> {
-        return await (this.client.client as BlueSkyOauthApiClient).createAuthorizeUrl(this.config.data.identifier);
+        return await (this.client.client as ATProtoOauthApiClient).createAuthorizeUrl(this.config.data.identifier);
     }
 
     doAuthentication = async () => {
@@ -104,7 +104,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
             if(sessionRes) {
                 return true;
             }
-            if(this.client.client instanceof BlueSkyAppApiClient) {
+            if(this.client.client instanceof ATProtoAppApiClient) {
                 const res = await this.client.client.appLogin();
                 return res;
             }

@@ -8,10 +8,10 @@ import {
     OAuthSession,
 } from "@atproto/oauth-client-node";
 import { Agent } from "@atproto/api";
-import { AbstractBlueSkyApiClient } from "./AbstractATProtoApiClient.js";
+import { AbstractATProtoApiClient } from "./AbstractATProtoApiClient.js";
 
 
-export class BlueSkyOauthApiClient extends AbstractBlueSkyApiClient {
+export class ATProtoOauthApiClient extends AbstractATProtoApiClient {
 
     declare config: TealClientData;
 
