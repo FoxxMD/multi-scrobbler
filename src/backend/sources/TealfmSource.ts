@@ -4,7 +4,9 @@ import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
-import { AbstractBlueSkyApiClient, listRecordToPlay, recordToPlay } from "../common/vendor/atproto/AbstractATProtoApiClient.js";
+import { AbstractBlueSkyApiClient } from "../common/vendor/atproto/AbstractATProtoApiClient.js";
+import { listRecordToPlay, TealApiClient } from "../common/vendor/teal/TealApiClient.js";
+import { recordToPlay } from "../common/vendor/teal/TealApiClient.js";
 import { TealSourceConfig } from "../common/infrastructure/config/source/tealfm.js";
 import { BlueSkyAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.js";
 import { BlueSkyOauthApiClient } from "../common/vendor/atproto/ATProtoOauthApiClient.js";
@@ -12,7 +14,7 @@ import { parseArrayFromMaybeString } from "../utils/StringUtils.js";
 
 export default class TealfmSource extends MemorySource {
 
-    client: AbstractBlueSkyApiClient;
+    client: TealApiClient;
     requiresAuth = true;
     requiresAuthInteraction = false;
 
@@ -32,14 +34,7 @@ export default class TealfmSource extends MemorySource {
         super('tealfm', name, {...config, data: {interval, maxInterval, ...restData}}, internal, emitter);
         this.canPoll = true;
         this.canBacklog = true;
-        if(config.data.appPassword !== undefined) {
-            this.client = new BlueSkyAppApiClient(name, config.data, {...internal, logger: internal.logger});
-            this.requiresAuthInteraction = false;
-        } else if(config.data.baseUri !== undefined) {
-            this.client = new BlueSkyOauthApiClient(name, config.data, {...internal, logger: internal.logger});
-        } else {
-            throw new Error(`Must define either 'baseUri' or 'appPassword' in configuration!`);
-        }
+        this.client = new TealApiClient(name, config.data, {...internal, logger: internal.logger});
         this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
         this.supportsUpstreamRecentlyPlayed = true
         this.SCROBBLE_BACKLOG_COUNT = 20;
@@ -59,7 +54,7 @@ export default class TealfmSource extends MemorySource {
             throw new Error('Must provide an identifier');
         }
 
-        await this.client.initClient();
+        await this.client.client.initClient();
 
         this.serviceAllow = parseArrayFromMaybeString(serviceAllow, {lower: true});
         if(this.serviceAllow.length > 0) {
@@ -88,12 +83,12 @@ export default class TealfmSource extends MemorySource {
 
     doAuthentication = async () => {
         try {
-            const sessionRes = await this.client.restoreSession();
+            const sessionRes = await this.client.client.restoreSession();
             if(sessionRes) {
                 return true;
             }
-            if(this.client instanceof BlueSkyAppApiClient) {
-                return await this.client.appLogin();
+            if(this.client.client instanceof BlueSkyAppApiClient) {
+                return await this.client.client.appLogin();
             }
         } catch (e) {
             if(isNodeNetworkException(e)) {

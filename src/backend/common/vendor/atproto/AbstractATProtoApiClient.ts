@@ -1,27 +1,13 @@
 import { getRoot } from "../../../ioc.js";
-import { AbstractApiOptions, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PagelessTimeRangeListensResult } from "../../infrastructure/Atomic.js";
-import { ListRecord, TealClientData } from "../../infrastructure/config/client/tealfm.js";
+import { AbstractApiOptions } from "../../infrastructure/Atomic.js";
+import { TealClientData } from "../../infrastructure/config/client/tealfm.js";
 import AbstractApiClient from "../AbstractApiClient.js";
-import { Agent, ComAtprotoRepoCreateRecord, ComAtprotoRepoListRecords, ComAtprotoRepoPutRecord } from "@atproto/api";
+import { Agent, ComAtprotoRepoListRecords } from "@atproto/api";
 import { MSCache } from "../../Cache.js";
-import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, UnixTimestamp, MBID, SourcePlayerObj } from "../../../../core/Atomic.js";
-import { musicServiceToCononical } from '../listenbrainz/lzUtils.js';
-import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
-import { RecordOptions } from "../../infrastructure/config/client/tealfm.js";
-import dayjs, { Dayjs, ManipulateType } from "dayjs";
-import { getScrobbleTsSOCDateWithContext, usecToUnix } from "../../../utils/TimeUtils.js";
-import { removeUndefinedKeys } from "../../../utils.js";
-import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.js";
-import { ScrobbleSubmitError } from "../../errors/MSErrors.js";
 import { UpstreamError } from "../../errors/UpstreamError.js";
-import { decodeTid, generateTID } from '@ewanc26/tid';
-import { Duration } from "dayjs/plugin/duration.js";
 import { streamBodyProgress } from "../../../utils/NetworkUtils.js";
-import { FmTealAlphaActorStatus, FmTealAlphaFeedPlay } from "../teal/lexicons/index.js";
 
-export abstract class AbstractBlueSkyApiClient extends AbstractApiClient implements PagelessTimeRangeListens {
-
-    declare config: TealClientData;
+export abstract class AbstractBlueSkyApiClient extends AbstractApiClient {
 
     agent!: Agent;
 
@@ -37,42 +23,13 @@ export abstract class AbstractBlueSkyApiClient extends AbstractApiClient impleme
 
     abstract restoreSession(): Promise<boolean>;
 
-    async createScrobbleRecord(record: FmTealAlphaFeedPlay.Main): Promise<ScrobbleActionResult> {
-        const input: ComAtprotoRepoCreateRecord.InputSchema = {
-            repo: this.agent.sessionManager.did,
-            collection: "fm.teal.alpha.feed.play",
-            record
-        };
-        try {
-            const resp = await this.agent.com.atproto.repo.createRecord(input);
-            return {payload: input, response: resp.data};
-        } catch (e) {
-            throw new ScrobbleSubmitError(`Failed to create record for scrobble`, { cause: e, payload: input, response: 'response' in e ? e.response : undefined });
-        }
-    }
-
-    async updateStatusRecord(record: FmTealAlphaActorStatus.Main): Promise<ScrobbleActionResult> {
-        const input: ComAtprotoRepoPutRecord.InputSchema = {
-            repo: this.agent.sessionManager.did,
-            collection: "fm.teal.alpha.actor.status",
-            rkey: "self",
-            record
-        };
-        try {
-            const resp = await this.agent.com.atproto.repo.putRecord(input);
-            return {payload: input, response: resp.data};
-        } catch (e) {
-            throw new ScrobbleSubmitError(`Failed to update status record for scrobble`, { cause: e, payload: input, response: 'response' in e ? e.response : undefined });
-        }
-    }
-
-    async listScrobbleRecord(options: {limit?: number, cursor?: string} = {}): Promise<ComAtprotoRepoListRecords.Response> {
+    async listRecord(collection: string, options: {limit?: number, cursor?: string} = {}): Promise<ComAtprotoRepoListRecords.Response> {
         const {limit = 20, cursor} = options;
         try {
             // records are returned newest to oldest
             const response = await this.agent.com.atproto.repo.listRecords({
                 repo: this.agent.sessionManager.did,
-                collection: "fm.teal.alpha.feed.play",
+                collection,
                 limit,
                 cursor // cursor TID is EXCLUSIVE IE first record returned will be the first older than cursor
             });
@@ -103,153 +60,4 @@ export abstract class AbstractBlueSkyApiClient extends AbstractApiClient impleme
             fileHint: 'repo CAR'
         });
     }
-
-    async getPagelessTimeRangeListens(params: PagelessListensTimeRangeOptions): Promise<PagelessTimeRangeListensResult> {
-        const {to, limit} = params;
-
-        let cursor: string;
-        if(to !== undefined) {
-            cursor = generateTID(dayjs.unix(to).toISOString());
-        }
-
-        const resp = await this.listScrobbleRecord({cursor, limit});
-        let fromTS: UnixTimestamp;
-        if(resp.data.cursor !== undefined) {
-            const { timestampUs } = decodeTid(resp.data.cursor);
-            fromTS = usecToUnix(timestampUs);
-        }
-
-        const plays = (resp.data.records as unknown as ListRecord<FmTealAlphaFeedPlay.Main>[]).map(x => listRecordToPlay(x));
-
-        return {data: plays, meta: {to, from: fromTS, limit}};
-    }
-
-    getPaginatedUnitOfTime(): ManipulateType {
-        return 'second';
-    }
 }
-
-export const playToRecord = (play: PlayObject): FmTealAlphaFeedPlay.Main => {
-
-    const record: FmTealAlphaFeedPlay.Main = {
-        $type: "fm.teal.alpha.feed.play",
-        trackName: play.data.track,
-        artists: play.data.artists.map(x => removeUndefinedKeys({ artistName: x.name, artistMbId: mbidUriOrUndefined(x.mbid as MBID) })),
-        duration: Math.round(play.data.duration),
-        playedTime: getScrobbleTsSOCDateWithContext(play)[0].toISOString(),
-        releaseName: play.data.album,
-        submissionClientAgent: `multi-scrobbler/${getRoot().items.version}`,
-        musicServiceBaseDomain: musicServiceToCononical(play.meta.musicService) ?? play.meta.musicService,
-        isrc: play.data.isrc,
-        trackMbId: mbidUriOrUndefined(play.data.meta?.brainz?.track as MBID),
-        recordingMbId: mbidUriOrUndefined(play.data.meta?.brainz?.recording as MBID),
-        releaseMbId: mbidUriOrUndefined(play.data.meta?.brainz?.album as MBID)
-    };
-
-    return record;
-}
-
-type MBIDURI = `mbid:${MBID}`;
-
-const mbidUriOrUndefined = (mbid?: MBID): undefined | MBIDURI => {
-    if(mbid === undefined) {
-        return undefined;
-    }
-    return mbidToUri(mbid);
-}
-export const mbidToUri = (mbid: MBID): MBIDURI => {
-    return `mbid:${mbid}`;
-}
-
-export const playToStatusRecord = (play: PlayObject, notPlaying: boolean, position?: number): FmTealAlphaActorStatus.Main => {
-    const { $type, ...item } = notPlaying
-        ? { trackName: "", artists: [] }
-        : playToRecord(play);
-
-    let expiry: Dayjs;
-    if(notPlaying) {
-        // if clearing status we set expiration as one minute in the past
-        expiry = dayjs().subtract(1, 'minute');
-    } else {
-        expiry = dayjs().add(nowPlayingExpirationDuration({play, position}));
-    }
-    
-    return {
-        $type: "fm.teal.alpha.actor.status",
-        time: dayjs().toISOString(),
-        expiry: expiry.toISOString(),
-        item: {
-            artists: [],
-            ...item
-        }
-    };
-}
-
-export const nowPlayingExpirationDuration = (data: Pick<SourcePlayerObj, 'play' | 'position'>): Duration => {
-    let expiry: Dayjs = dayjs().add(10, 'minute');
-
-    const {
-        position,
-        play
-    } = data;
-
-    // if we have position and duration then expiration is set as calculated end of listening session
-    if(position !== undefined && play?.data.duration !== undefined) {
-        expiry = dayjs().add(play.data.duration - position, 'second');
-    } else if(play?.data.duration !== undefined) {
-        // else if we have duration but not position then use track duration
-        expiry = dayjs().add(play.data.duration, 'second');
-    }
-
-    // otherwise use 10 minutes
-    return dayjs.duration(expiry.diff(dayjs(), 'ms'));
-}
-
-export const listRecordToPlay = (listRecord: ListRecord<FmTealAlphaFeedPlay.Main>): PlayObject => {
-    const opts: RecordOptions = {};
-    const uriRes = parseRegexSingle(ATPROTO_URI_REGEX, listRecord.uri);
-    if (uriRes !== undefined) {
-        opts.web = `https://atproto.at/viewer?uri=${uriRes.named.resource}`;
-        opts.playId = uriRes.named.tid;
-        opts.user = uriRes.named.did;
-    }
-    return recordToPlay(listRecord.value, opts);
-}
-
-export const recordToPlay = (record: FmTealAlphaFeedPlay.Main, options: RecordOptions = {}): PlayObject => {
-
-    const play: PlayObjectLifecycleless = {
-        data: {
-            track: record.trackName,
-            artists: record.artists.filter(x => x.artistName !== undefined).map(x => ({name: x.artistName, mbid: x.artistMbId})),
-            duration: record.duration,
-            playDate: dayjs(record.playedTime),
-            album: record.releaseName,
-            isrc: record.isrc
-        },
-        meta: {
-            source: 'tealfm',
-            parsedFrom: 'history',
-            musicService: record.musicServiceBaseDomain,
-            playId: options.playId,
-            url: {
-                web: options.web
-            },
-            user: options.user
-        }
-    };
-
-    const brainz = removeUndefinedKeys<BrainzMeta>({
-        recording: record.recordingMbId,
-        album: record.releaseMbId,
-        artist: record.artists.filter(x => x.artistMbId !== undefined).length > 0 ? record.artists.filter(x => x.artistMbId !== undefined).map(x => x.artistMbId) : undefined
-    });
-
-    if(brainz !== undefined) {
-        play.data.meta = {brainz};
-    }
-
-    return baseFormatPlayObj(record, play);
-};
-export const ATPROTO_URI_REGEX = new RegExp(/at:\/\/(?<resource>(?<did>did.*?)\/fm.teal.alpha.feed.play\/(?<tid>.*))/);
-

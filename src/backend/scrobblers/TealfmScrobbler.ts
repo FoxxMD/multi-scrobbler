@@ -16,7 +16,11 @@ import { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractS
 import { TealClientConfig } from "../common/infrastructure/config/client/tealfm.js";
 import { BlueSkyAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.js";
 import { BlueSkyOauthApiClient } from "../common/vendor/atproto/ATProtoOauthApiClient.js";
-import { AbstractBlueSkyApiClient, nowPlayingExpirationDuration, playToRecord, playToStatusRecord, recordToPlay } from "../common/vendor/atproto/AbstractATProtoApiClient.js";
+import { AbstractBlueSkyApiClient } from "../common/vendor/atproto/AbstractATProtoApiClient.js";
+import { playToRecord, TealApiClient } from "../common/vendor/teal/TealApiClient.js";
+import { playToStatusRecord } from "../common/vendor/teal/TealApiClient.js";
+import { nowPlayingExpirationDuration } from "../common/vendor/teal/TealApiClient.js";
+import { recordToPlay } from "../common/vendor/teal/TealApiClient.js";
 import dayjs, { Dayjs } from "dayjs";
 import { durationToHuman, isDebugMode } from "../utils.js";
 import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient.js";
@@ -36,21 +40,22 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
 
     protected configDir: string;
 
-    client: AbstractBlueSkyApiClient;
+    client: TealApiClient;
 
     constructor(name: any, config: TealClientConfig, options: InternalConfigOptional & {[key: string]: any}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
         super('tealfm', name, config, notifier, emitter, logger);
         this.MAX_INITIAL_SCROBBLES_FETCH = 20;
         this.scrobbleDelay = 1500;
         this.supportsNowPlaying = true;
-        if(config.data.appPassword !== undefined) {
-            this.client = new BlueSkyAppApiClient(name, config.data, {...options, logger});
-            this.requiresAuthInteraction = false;
-        } else if(config.data.baseUri !== undefined) {
-            this.client = new BlueSkyOauthApiClient(name, config.data, {...options, logger});
-        } else {
-            throw new Error(`Must define either 'baseUri' or 'appPassword' in configuration!`);
-        }
+        this.client = new TealApiClient(name, config.data, {...options, logger});
+        // if(config.data.appPassword !== undefined) {
+        //     this.client = new BlueSkyAppApiClient(name, config.data, {...options, logger});
+        //     this.requiresAuthInteraction = false;
+        // } else if(config.data.baseUri !== undefined) {
+        //     this.client = new BlueSkyOauthApiClient(name, config.data, {...options, logger});
+        // } else {
+        //     throw new Error(`Must define either 'baseUri' or 'appPassword' in configuration!`);
+        // }
         this.nowPlayingMaxThreshold = nowPlayingUpdateByPlayDuration;
         this.nowPlayingMinThreshold = (_) => 20;
         this.configDir = options.configDir;
@@ -72,14 +77,14 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         if (identifier === undefined) {
             throw new Error('Must provide an identifier');
         }
-        await this.client.initClient();
+        await this.client.client.initClient();
         return true;
     }
 
     protected async doCheckConnection(): Promise<true | string | undefined> {
-        if (this.client instanceof BlueSkyAppApiClient) {
+        if (this.client.client instanceof BlueSkyAppApiClient) {
             try {
-                return await this.client.checkPds();
+                return await this.client.client.checkPds();
             } catch (e) {
                 throw e;
             }
@@ -89,18 +94,18 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
     }
 
     async getAuthorizeUrl(): Promise<string> {
-        return await (this.client as BlueSkyOauthApiClient).createAuthorizeUrl(this.config.data.identifier);
+        return await (this.client.client as BlueSkyOauthApiClient).createAuthorizeUrl(this.config.data.identifier);
     }
 
     doAuthentication = async () => {
 
         try {
-            const sessionRes = await this.client.restoreSession();
+            const sessionRes = await this.client.client.restoreSession();
             if(sessionRes) {
                 return true;
             }
-            if(this.client instanceof BlueSkyAppApiClient) {
-                const res = await this.client.appLogin();
+            if(this.client.client instanceof BlueSkyAppApiClient) {
+                const res = await this.client.client.appLogin();
                 return res;
             }
         } catch (e) {
@@ -206,7 +211,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         // TODO use `since` to get CAR diff instead of entire repo
         // can use last import date from migrations table
         const filename = path.resolve(this.configDir, `${this.getSafeExternalId()}-${dayjs().unix()}.car`);
-        await fsPromise.writeFile(filename, Buffer.from(((await this.client.getCAR()))));
+        await fsPromise.writeFile(filename, Buffer.from(((await this.client.client.getCAR()))));
         return filename;
     }
 
@@ -222,7 +227,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
 
         await using repo = fromStream(stream);
 
-        const did = this.client?.agent?.sessionManager?.did;
+        const did = this.client?.client?.agent?.sessionManager?.did;
 
         let batch: RepositoryCreatePlayHistoricalOpts[] = [];
         let allGood = true;
