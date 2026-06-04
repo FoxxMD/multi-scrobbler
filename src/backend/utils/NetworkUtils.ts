@@ -272,24 +272,26 @@ export const wsReadyStateToStr = (state: number): string => {
 export type StreamBodyOpts = {
     logger?: Logger,
     chunkDefaultSize?: number,
-    fileHint?: string
+    fileHint?: string,
+    headers?: Headers
 }
 
-export const streamBodyProgress = async (response: Response, opts: StreamBodyOpts = {}) => {
+export const streamBodyProgress = async (stream: ReadableStream<Uint8Array<ArrayBufferLike>>, opts: StreamBodyOpts = {}) => {
     const {
         logger = loggerNoop,
         chunkDefaultSize = 1024 * 1024 * 10, // default to every 10MB, when we don't know response size
-        fileHint = 'file'
+        fileHint = 'file',
+        headers
     } = opts;
     let loading = true,
     chunks: any[] = [];
-    const reader = response.body.getReader();
+    const reader = stream.getReader();
 
     let length: number,
     chunkReportSize: number = chunkDefaultSize,
     lastReportedSize: number = 0;
-    if(null !== response.headers.get('content-length')) {
-        length = +response.headers.get('content-length');
+    if(headers !== undefined && null !== headers.get('content-length')) {
+        length = +headers.get('content-length');
         const [summary, size, unit] = formatBytes(length);
         if(unit === 'MiB' && size > 10) {
             switch(true) {

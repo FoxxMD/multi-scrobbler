@@ -8,10 +8,9 @@ import {
     OAuthSession,
 } from "@atproto/oauth-client-node";
 import { Agent } from "@atproto/api";
-import { AbstractATProtoApiClient } from "./AbstractATProtoApiClient.js";
+import { ATProtoAuthenticatedApiClient } from "./ATProtoAuthenticatedApiClient.js";
 
-
-export class ATProtoOauthApiClient extends AbstractATProtoApiClient {
+export class ATProtoOauthApiClient extends ATProtoAuthenticatedApiClient {
 
     declare config: TealClientData;
 

@@ -105,15 +105,17 @@ export const getATProtoIdentifier = async (data: ATProtoUserIdentifierData, opts
         identifier
     } = data;
 
-    assert(isAtprotoDid(givenDid), `Given DID is not an ATProto DID: ${givenDid}`);
-    let did: AtprotoDid = givenDid;
-    if (did === undefined) {
+    let did: AtprotoDid;
+    if (givenDid === undefined) {
         try {
             did = await handleResolver.resolve(identifier as `${string}.${string}`);
             logger.debug(`Resolved ${did}`);
         } catch (e) {
             throw new Error('Unable to resolve handle', { cause: e });
         }
+    } else {
+        assert(isAtprotoDid(givenDid), `Given DID is not an ATProto DID: ${givenDid}`);
+        did = givenDid;
     }
 
     const docResolver = new CompositeDidDocumentResolver({

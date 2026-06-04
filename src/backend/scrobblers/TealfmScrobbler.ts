@@ -16,7 +16,6 @@ import { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractS
 import { TealClientConfig } from "../common/infrastructure/config/client/tealfm.js";
 import { ATProtoAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.js";
 import { ATProtoOauthApiClient } from "../common/vendor/atproto/ATProtoOauthApiClient.js";
-import { AbstractATProtoApiClient } from "../common/vendor/atproto/AbstractATProtoApiClient.js";
 import { playToRecord, TealApiClient } from "../common/vendor/teal/TealApiClient.js";
 import { playToStatusRecord } from "../common/vendor/teal/TealApiClient.js";
 import { nowPlayingExpirationDuration } from "../common/vendor/teal/TealApiClient.js";
@@ -48,14 +47,6 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         this.scrobbleDelay = 1500;
         this.supportsNowPlaying = true;
         this.client = new TealApiClient(name, config.data, {...options, logger});
-        // if(config.data.appPassword !== undefined) {
-        //     this.client = new BlueSkyAppApiClient(name, config.data, {...options, logger});
-        //     this.requiresAuthInteraction = false;
-        // } else if(config.data.baseUri !== undefined) {
-        //     this.client = new BlueSkyOauthApiClient(name, config.data, {...options, logger});
-        // } else {
-        //     throw new Error(`Must define either 'baseUri' or 'appPassword' in configuration!`);
-        // }
         this.nowPlayingMaxThreshold = nowPlayingUpdateByPlayDuration;
         this.nowPlayingMinThreshold = (_) => 20;
         this.configDir = options.configDir;
@@ -211,7 +202,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         // TODO use `since` to get CAR diff instead of entire repo
         // can use last import date from migrations table
         const filename = path.resolve(this.configDir, `${this.getSafeExternalId()}-${dayjs().unix()}.car`);
-        await fsPromise.writeFile(filename, Buffer.from(((await this.client.client.getCAR()))));
+        await fsPromise.writeFile(filename, Buffer.from(((await this.client.client.getCAR(this.client.client.userData.did)))));
         return filename;
     }
 
@@ -227,7 +218,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
 
         await using repo = fromStream(stream);
 
-        const did = this.client?.client?.agent?.sessionManager?.did;
+        const did = this.client.client.userData.did;
 
         let batch: RepositoryCreatePlayHistoricalOpts[] = [];
         let allGood = true;

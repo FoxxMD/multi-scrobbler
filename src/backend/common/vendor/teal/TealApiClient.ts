@@ -7,23 +7,24 @@ import { MSCache } from "../../Cache.js";
 import { AbstractApiOptions, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PagelessTimeRangeListensResult } from "../../infrastructure/Atomic.js";
 import { ListRecord, RecordOptions, TealClientData } from "../../infrastructure/config/client/tealfm.js";
 import AbstractApiClient from "../AbstractApiClient.js";
-import { AbstractATProtoApiClient } from "../atproto/AbstractATProtoApiClient.js";
 import { ATProtoAppApiClient } from "../atproto/ATProtoAppApiClient.js";
 import { ATProtoOauthApiClient } from "../atproto/ATProtoOauthApiClient.js";
 import { Duration } from "dayjs/plugin/duration.js";
 import { FmTealAlphaActorStatus, FmTealAlphaFeedPlay } from "./lexicons/index.js";
 import { ScrobbleSubmitError } from "../../errors/MSErrors.js";
-import { ComAtprotoRepoCreateRecord, ComAtprotoRepoPutRecord } from "@atproto/api";
 import { getScrobbleTsSOCDateWithContext, usecToUnix } from "../../../utils/TimeUtils.js";
 import { musicServiceToCononical } from "../listenbrainz/lzUtils.js";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { decodeTid, generateTID } from "@ewanc26/tid";
+import { ATProtoAuthenticatedApiClient } from "../atproto/ATProtoAuthenticatedApiClient.js";
+import { UpstreamError } from "../../errors/UpstreamError.js";
+import { ComAtprotoRepoCreateRecord, ComAtprotoRepoPutRecord } from '@atcute/atproto';
 
 export class TealApiClient extends AbstractApiClient implements PagelessTimeRangeListens {
 
     declare config: TealClientData;
 
-    declare client: AbstractATProtoApiClient;
+    declare client: ATProtoAuthenticatedApiClient;
 
     cache: MSCache;
 
@@ -43,29 +44,35 @@ export class TealApiClient extends AbstractApiClient implements PagelessTimeRang
 
 
     async createScrobbleRecord(record: FmTealAlphaFeedPlay.Main): Promise<ScrobbleActionResult> {
-        const input: ComAtprotoRepoCreateRecord.InputSchema = {
-            repo: this.client.agent.sessionManager.did,
-            collection: "fm.teal.alpha.feed.play",
+        const input: ComAtprotoRepoCreateRecord.$input = {
+            repo: this.client.userData.did,
+            collection: 'fm.teal.alpha.feed.play',
             record
         };
         try {
-            const resp = await this.client.agent.com.atproto.repo.createRecord(input);
-            return {payload: input, response: resp.data};
+            const res = await this.client.client.post('com.atproto.repo.createRecord', {
+                input,
+                params: {}
+            });
+            return {payload: input, response: res.data};
         } catch (e) {
             throw new ScrobbleSubmitError(`Failed to create record for scrobble`, { cause: e, payload: input, response: 'response' in e ? e.response : undefined });
         }
     }
 
     async updateStatusRecord(record: FmTealAlphaActorStatus.Main): Promise<ScrobbleActionResult> {
-        const input: ComAtprotoRepoPutRecord.InputSchema = {
-            repo: this.client.agent.sessionManager.did,
+        const input: ComAtprotoRepoPutRecord.$input = {
+            repo: this.client.userData.did,
             collection: "fm.teal.alpha.actor.status",
             rkey: "self",
             record
         };
         try {
-            const resp = await this.client.agent.com.atproto.repo.putRecord(input);
-            return {payload: input, response: resp.data};
+            const res = await this.client.client.post('com.atproto.repo.putRecord', {
+                input,
+                params: {}
+            });
+            return {payload: input, response: res.data};
         } catch (e) {
             throw new ScrobbleSubmitError(`Failed to update status record for scrobble`, { cause: e, payload: input, response: 'response' in e ? e.response : undefined });
         }
@@ -83,7 +90,19 @@ export class TealApiClient extends AbstractApiClient implements PagelessTimeRang
             cursor = generateTID(dayjs.unix(to).toISOString());
         }
 
-        const resp = await this.client.listRecord("fm.teal.alpha.feed.play", {cursor, limit});
+        const resp = await this.client.client.get('com.atproto.repo.listRecords', {
+            params: {
+                repo: this.client.userData.did,
+                collection: "fm.teal.alpha.feed.play",
+                limit,
+                cursor
+            }
+        });
+
+        if(!resp.ok) {
+            throw new UpstreamError('Fetching records from PDS failed', {cause: resp.data});
+        }
+
         let fromTS: UnixTimestamp;
         if(resp.data.cursor !== undefined) {
             const { timestampUs } = decodeTid(resp.data.cursor);
