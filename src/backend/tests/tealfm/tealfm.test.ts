@@ -2,7 +2,7 @@ import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
 import { generateArtistCredits, generatePlay, generateTealPlayRecord, withBrainz } from "../../../core/PlayTestUtils.js";
-import { listRecordToPlay, playToRecord } from '../../common/vendor/bluesky/AbstractBlueSkyApiClient.js';
+import { listRecordToPlay, playToRecord } from '../../common/vendor/atproto/AbstractATProtoApiClient.js';
 import dayjs from 'dayjs';
 import { artistCreditsToNames } from '../../../core/StringUtils.js';
 import TealScrobbler from '../../scrobblers/TealfmScrobbler.js';

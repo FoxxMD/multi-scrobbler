@@ -12,7 +12,7 @@ import { sortAndDeduplicateDiagnostics } from "typescript";
 import { source } from "common-tags";
 import TealScrobbler from "../scrobblers/TealfmScrobbler.js";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
-import { BlueSkyOauthApiClient } from "../common/vendor/bluesky/BlueSkyOauthApiClient.js";
+import { BlueSkyOauthApiClient } from "../common/vendor/atproto/ATProtoOauthApiClient.js";
 import LibrefmScrobbler from "../scrobblers/LibrefmScrobbler.js";
 import LibrefmSource from "../sources/LibrefmSource.js";
 import e from "express";

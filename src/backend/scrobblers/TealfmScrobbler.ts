@@ -14,9 +14,9 @@ import { Notifiers } from "../notifier/Notifiers.js";
 
 import { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractScrobbleClient.js";
 import { TealClientConfig } from "../common/infrastructure/config/client/tealfm.js";
-import { BlueSkyAppApiClient } from "../common/vendor/bluesky/BlueSkyAppApiClient.js";
-import { BlueSkyOauthApiClient } from "../common/vendor/bluesky/BlueSkyOauthApiClient.js";
-import { AbstractBlueSkyApiClient, nowPlayingExpirationDuration, playToRecord, playToStatusRecord, recordToPlay } from "../common/vendor/bluesky/AbstractBlueSkyApiClient.js";
+import { BlueSkyAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.js";
+import { BlueSkyOauthApiClient } from "../common/vendor/atproto/ATProtoOauthApiClient.js";
+import { AbstractBlueSkyApiClient, nowPlayingExpirationDuration, playToRecord, playToStatusRecord, recordToPlay } from "../common/vendor/atproto/AbstractATProtoApiClient.js";
 import dayjs, { Dayjs } from "dayjs";
 import { durationToHuman, isDebugMode } from "../utils.js";
 import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient.js";

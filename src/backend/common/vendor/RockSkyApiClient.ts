@@ -12,7 +12,7 @@ import { ListenPayload, ListenResponse, ListenType, SubmitPayload } from './list
 import { playToListenPayload } from './listenbrainz/lzUtils.js';
 import { RockskyScrobble } from './rocksky/interfaces.js';
 import { Handle } from "@atcute/lexicons";
-import { identifierToAtProtoHandle } from './bluesky/bsUtils.js';
+import { identifierToAtProtoHandle } from './atproto/atUtils.js';
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.js";
 import { ScrobbleSubmitError } from "../errors/MSErrors.js";
 import { tryApiCall } from "../../utils/RequestUtils.js";

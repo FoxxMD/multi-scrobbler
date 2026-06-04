@@ -4,10 +4,10 @@ import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
-import { AbstractBlueSkyApiClient, listRecordToPlay, recordToPlay } from "../common/vendor/bluesky/AbstractBlueSkyApiClient.js";
+import { AbstractBlueSkyApiClient, listRecordToPlay, recordToPlay } from "../common/vendor/atproto/AbstractATProtoApiClient.js";
 import { TealSourceConfig } from "../common/infrastructure/config/source/tealfm.js";
-import { BlueSkyAppApiClient } from "../common/vendor/bluesky/BlueSkyAppApiClient.js";
-import { BlueSkyOauthApiClient } from "../common/vendor/bluesky/BlueSkyOauthApiClient.js";
+import { BlueSkyAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.js";
+import { BlueSkyOauthApiClient } from "../common/vendor/atproto/ATProtoOauthApiClient.js";
 import { parseArrayFromMaybeString } from "../utils/StringUtils.js";
 
 export default class TealfmSource extends MemorySource {

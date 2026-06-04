@@ -1,7 +1,7 @@
 import { AbstractApiOptions } from "../../infrastructure/Atomic.js";
 import { TealClientData } from "../../infrastructure/config/client/tealfm.js";
 import { Agent, CredentialSession, AtpSessionEvent, AtpSessionData } from "@atproto/api";
-import { AbstractBlueSkyApiClient } from "./AbstractBlueSkyApiClient.js";
+import { AbstractBlueSkyApiClient } from "./AbstractATProtoApiClient.js";
 import { isPortReachableConnect, normalizeWebAddress } from "../../../utils/NetworkUtils.js";
 import { URLData } from "../../../../core/Atomic.js";
 import { isNodeNetworkException } from "../../errors/NodeErrors.js";
@@ -14,7 +14,7 @@ import {
   WellKnownHandleResolver,
 } from "@atcute/identity-resolver";
 import { AtprotoDid, DidDocument } from "@atproto/oauth-client-node";
-import { identifierToAtProtoHandle, isDID } from "./bsUtils.js";
+import { identifierToAtProtoHandle, isDID } from "./atUtils.js";
 
 interface HandleData {
     did: string

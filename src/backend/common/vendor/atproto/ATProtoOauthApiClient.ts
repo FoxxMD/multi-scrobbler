@@ -8,7 +8,7 @@ import {
     OAuthSession,
 } from "@atproto/oauth-client-node";
 import { Agent } from "@atproto/api";
-import { AbstractBlueSkyApiClient } from "./AbstractBlueSkyApiClient.js";
+import { AbstractBlueSkyApiClient } from "./AbstractATProtoApiClient.js";
 
 
 export class BlueSkyOauthApiClient extends AbstractBlueSkyApiClient {
