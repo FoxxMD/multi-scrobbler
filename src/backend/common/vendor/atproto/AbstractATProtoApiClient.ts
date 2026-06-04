@@ -1,7 +1,6 @@
 import { getRoot } from "../../../ioc.js";
 import { AbstractApiOptions } from "../../infrastructure/Atomic.js";
 import AbstractApiClient from "../AbstractApiClient.js";
-import { Agent } from "@atproto/api";
 import { MSCache } from "../../Cache.js";
 import { UpstreamError } from "../../errors/UpstreamError.js";
 import { streamBodyProgress } from "../../../utils/NetworkUtils.js";
@@ -12,8 +11,6 @@ import { ComAtprotoSyncGetRepo } from '@atcute/atproto';
 import { AtprotoDid } from "@atcute/lexicons/syntax";
 
 export abstract class AbstractATProtoApiClient extends AbstractApiClient {
-
-    agent!: Agent;
 
     declare config: ATProtoUserIdentifierData;
 

@@ -57,8 +57,6 @@
     "@atcute/lexicons": "^2.0.0",
     "@atcute/password-session": "^1.0.0",
     "@atcute/repo": "^1.0.0",
-    "@atproto/api": "^0.18.0",
-    "@atproto/oauth-client-node": "^0.3.10",
     "@donedeal0/superdiff": "^1.1.1",
     "@ewanc26/tid": "^1.0.2",
     "@foxxmd/chromecast-client": "^1.0.4",
