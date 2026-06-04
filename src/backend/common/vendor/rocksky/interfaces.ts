@@ -1,4 +1,3 @@
-import { RockskyClient } from "@rocksky/sdk";
-import { ElementOf } from "ts-essentials";
+import { ScrobbleViewBasic } from "@rocksky/sdk";
 
-export type RockskyScrobble = ElementOf<Awaited<ReturnType<RockskyClient['scrobble']['getScrobbles']>>['scrobbles']>;
+export type RockskyScrobble = ScrobbleViewBasic;
