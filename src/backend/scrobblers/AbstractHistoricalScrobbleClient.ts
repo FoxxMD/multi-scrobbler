@@ -24,7 +24,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
 
     protected abstract doHydrateHistoricalScrobbles(opts: {allowFailures?: boolean, signal?: AbortSignal }): Promise<void>;
 
-    hydrateHistoricalScrobbles(allowFailures: boolean = false): void {
+    hydrateHistoricalScrobbles(allowFailures: boolean = false, cleanup: boolean = true): void {
         if(this.importAbortController !== undefined) {
             throw new Error('Cannot start a new import while one is already running');
         }
@@ -32,8 +32,10 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
         this.importPromise = spawn(this.importAbortController.signal, async (signal, {defer, fork}) => {
 
             defer(async () => {
-                this.importAbortController = undefined;
-                this.importPromise = undefined;
+                if(cleanup) {
+                    this.importAbortController = undefined;
+                    this.importPromise = undefined;
+                }
             });
         
             const newImport: ComponentMigrationSelect = await this.migrationRepo.create({name: 'historicalImport', componentId: this.dbComponent.id}) as ComponentMigrationSelect;
@@ -44,7 +46,9 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
                 this.lastImportSuccess = dayjs();
             } catch (e) {
                 await this.migrationRepo.updateById(newImport.id, {success: false, error: e});
+                this.logger.warn(new Error('Failed to hydrate historical scrobbles', {cause: e}));
                 this.syncError = e;
+                this.syncedReason = 'last attempted import failed';
                 this.synced = false;
             } finally {
                 this.lastImport = dayjs();
@@ -64,16 +68,16 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
     async getHistoricalScrobblesAreSynced(): Promise<[boolean, string?]> {
         const imports = this.dbComponent.migrations.filter(x => x.name === 'historicalImport');
         if(imports.length === 0) {
-            return [false, 'No historical imports exist'];
+            return [false, 'no historical imports exist'];
         }
         imports.sort((a, b) => sortByNewestDate(a.attemptedAt, b.attemptedAt));
         if(!imports[0].success) {
-            return [false, 'Last attempted import failed'];
+            return [false, 'last attempted import failed'];
         }
 
         // vibing this duration for now...
         if(this.dbComponent.lastActiveAt.diff(dayjs(), 'minutes') > 60 && imports[0].attemptedAt.isBefore(this.dbComponent.lastActiveAt)) {
-            return [false, 'Component was inactive for more than an hour and last import was before last activity. There may be missed plays during the period of inactivity.'];
+            return [true, 'component was inactive for more than an hour and last import was before last activity. There may be missed plays during the period of inactivity.'];
         }
 
         return [true];
@@ -123,21 +127,36 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
     protected async postInitialize(): Promise<void> {
         await super.postInitialize();
 
-        if(this.lastImport === undefined && this.syncError === undefined) {
-            // have not run an initial import so automatically do it now
-            this.logger.info('No historical imports have run! Automatically running an initial import now.');
-            this.hydrateHistoricalScrobbles();
-        } else {
-            // pull latest plays into database
-            this.logger.info('Pulling latest scrobbles to sync up historical database...');
-            const recent = await this.syncRecentHistoricalScrobbles();
-            if(recent.length > 0) {
-                await this.createHistoricalPlays(recent.map((x) => playToRepositoryCreatePlayHistoricalOpts({play: x})));
-                this.logger.verbose(`Added ${recent.length} upstream plays to historical plays`);
-            } else {
-                this.logger.verbose('Most recent plays are already in sync with historical database!');
+        const syncPromise = spawn(new AbortController().signal, async (signal, {defer, fork}) => {
+
+            let shouldSync = true;
+
+            if(!this.synced) {
+                this.logger[this.syncError !== undefined ? 'warn' : 'info'](`Running historical import automatically because ${this.syncedReason}`);
+                this.hydrateHistoricalScrobbles();
+                await this.importPromise;
+                if(this.synced) {
+                    shouldSync = false;
+                } else {
+                    this.logger.verbose('Since historical hydration did not complete successfully, will run recent scrobble sync instead.');
+                }
+            } else if(this.syncedReason !== undefined) {
+                this.logger.warn(`Last historical sync run successfully but ${this.syncedReason}`);
+            } 
+
+            if(shouldSync){
+                // pull latest plays into database
+                this.logger.info('Pulling latest scrobbles into historical database...');
+                const recent = await this.syncRecentHistoricalScrobbles();
+                if(recent.length > 0) {
+                    await this.createHistoricalPlays(recent.map((x) => playToRepositoryCreatePlayHistoricalOpts({play: x})));
+                    this.logger.verbose(`Added ${recent.length} upstream plays to historical plays`);
+                } else {
+                    this.logger.verbose('Most recent plays are already in historical database!');
+                }
             }
-        }
+
+        }).catch((e) => this.logger.warn(new Error('Failed to complete post-init historical database sync but continuing anyway', {cause: e})));
     }
 
     protected async postDatabase(): Promise<void> {
@@ -158,5 +177,11 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
                 this.lastImportSuccess = success.attemptedAt;
             }
         }
+    }
+
+    public async scrobble(playObj: PlayObject, opts?: { delay?: number | false, signal?: AbortSignal }): Promise<PlayObject> {
+        const res = await super.scrobble(playObj, opts);
+        await this.createHistoricalPlays([playToRepositoryCreatePlayHistoricalOpts({play: res})]);
+        return res;
     }
 }

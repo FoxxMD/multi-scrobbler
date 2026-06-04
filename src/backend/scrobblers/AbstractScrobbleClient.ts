@@ -845,7 +845,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return [s, [s]];
     }
 
-    public scrobble = async (playObj: PlayObject, opts?: { delay?: number | false, signal?: AbortSignal }): Promise<PlayObject> => {
+    public async scrobble(playObj: PlayObject, opts?: { delay?: number | false, signal?: AbortSignal }): Promise<PlayObject> {
         const {delay: delayDuration, signal} = opts || {};
         const scrobbleDelay = delayDuration === undefined ? this.scrobbleDelay : (delayDuration === false ? 0 : delayDuration);
         if (scrobbleDelay !== 0) {
