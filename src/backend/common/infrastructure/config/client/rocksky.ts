@@ -11,6 +11,13 @@ export interface RockSkyData extends RequestRetryOptions{
     key: string
 
     /**
+     * Access Token generated from https://rocksky.app/access-tokens in Rocksky for your account
+     *
+     * @examples ["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaWQ....."]
+     * */
+    token?: string
+
+    /**
      * The **fully-qualified** handle for your ATPRoto/Bluesky account, like:
      * 
      * * alice.bsky.social

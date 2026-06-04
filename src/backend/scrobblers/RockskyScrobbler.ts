@@ -40,10 +40,11 @@ export default class RockskyScrobbler extends AbstractScrobbleClient {
         const {
             data: {
                 key,
+                token,
             } = {}
         } = this.config;
-        if (key === undefined) {
-            throw new Error('Must provide an API Key');
+        if (key === undefined && token === undefined) {
+            throw new Error('Must provide an API Key or Access Token');
         }
         return true;
     }

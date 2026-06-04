@@ -1,22 +1,4 @@
-export interface RockskyScrobble extends RockskyScrobbleUris, RockSkyScrobbleUserData {
-    id: string
-    trackId: string
-    title: string
-    artist: string
-    albumArtist: string
-    albumArt: String
-    album: string
-    createdAt: string
-}
+import { RockskyClient } from "@rocksky/sdk";
+import { ElementOf } from "ts-essentials";
 
-export interface RockskyScrobbleUris {
-    trackUri: string
-    artistUri: string
-    albumUri: string
-    uri: string
-}
-
-export interface RockSkyScrobbleUserData {
-    did: string
-    handle: string
-}
+export type RockskyScrobble = ElementOf<Awaited<ReturnType<RockskyClient['scrobble']['getScrobbles']>>['scrobbles']>;
