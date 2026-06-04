@@ -8,7 +8,6 @@ import { AbstractApiOptions, PagelessListensTimeRangeOptions, PagelessTimeRangeL
 import { ListRecord, RecordOptions, TealClientData } from "../../infrastructure/config/client/tealfm.js";
 import AbstractApiClient from "../AbstractApiClient.js";
 import { ATProtoAppApiClient } from "../atproto/ATProtoAppApiClient.js";
-import { ATProtoOauthApiClient } from "../atproto/ATProtoOauthApiClient.js";
 import { Duration } from "dayjs/plugin/duration.js";
 import { FmTealAlphaActorStatus, FmTealAlphaFeedPlay } from "./lexicons/index.js";
 import { ScrobbleSubmitError } from "../../errors/MSErrors.js";
@@ -34,7 +33,7 @@ export class TealApiClient extends AbstractApiClient implements PagelessTimeRang
         if(config.appPassword !== undefined) {
             this.client = new ATProtoAppApiClient(name, config, {...options, logger: this.logger});
         } else if(config.baseUri !== undefined) {
-            this.client = new ATProtoOauthApiClient(name, config, {...options, logger: this.logger});
+            throw new Error('Oauth is not yet implemented');
         } else {
             throw new Error(`Must define either 'baseUri' or 'appPassword' in configuration!`);
         }

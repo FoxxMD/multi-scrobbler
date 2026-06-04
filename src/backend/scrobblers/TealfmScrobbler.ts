@@ -15,7 +15,6 @@ import { Notifiers } from "../notifier/Notifiers.js";
 import { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractScrobbleClient.js";
 import { TealClientConfig } from "../common/infrastructure/config/client/tealfm.js";
 import { ATProtoAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.js";
-import { ATProtoOauthApiClient } from "../common/vendor/atproto/ATProtoOauthApiClient.js";
 import { playToRecord, TealApiClient } from "../common/vendor/teal/TealApiClient.js";
 import { playToStatusRecord } from "../common/vendor/teal/TealApiClient.js";
 import { nowPlayingExpirationDuration } from "../common/vendor/teal/TealApiClient.js";
@@ -85,7 +84,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
     }
 
     async getAuthorizeUrl(): Promise<string> {
-        return await (this.client.client as ATProtoOauthApiClient).createAuthorizeUrl(this.config.data.identifier);
+        throw new Error('Oauth is not yet implemented');
     }
 
     doAuthentication = async () => {

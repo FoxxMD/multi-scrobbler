@@ -8,11 +8,6 @@ import LastfmSource from "../sources/LastfmSource.js";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import SpotifySource from "../sources/SpotifySource.js";
 import YTMusicSource from "../sources/YTMusicSource.js";
-import { sortAndDeduplicateDiagnostics } from "typescript";
-import { source } from "common-tags";
-import TealScrobbler from "../scrobblers/TealfmScrobbler.js";
-import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
-import { ATProtoOauthApiClient } from "../common/vendor/atproto/ATProtoOauthApiClient.js";
 import LibrefmScrobbler from "../scrobblers/LibrefmScrobbler.js";
 import LibrefmSource from "../sources/LibrefmSource.js";
 import e from "express";
@@ -154,70 +149,4 @@ export const setupAuthRoutes = (app: Express, logger: Logger, sourceMiddle: Expr
             return res.send(responseContent);
         }
     });
-
-    app.get(/(\/api\/tealfm\/.*)/, async function (req, res) {
-
-        const clients = scrobbleClients.getByType('tealfm') as TealScrobbler[];
-        if (clients.length === 0) {
-            logger.warn('Received callback to Teal OAuth but no TealFM scrobble clients are configured');
-        }
-
-        // const {
-        //     query: {
-        //         state
-        //     } = {}
-        // } = req;
-
-        // const name = (state as string).replace('tfm','');
-
-        // const validClient = clients.find(x => x.name === name);
-
-        // if (validClient === undefined) {
-        //     logger.warn(`No Tealfm scrobble matched => URL: ${req.originalUrl} | State: ${state}`);
-        // }
-
-        const intents = getTealUrlIntent(req.originalUrl);
-
-        if(intents === undefined) {
-            logger.warn(`Tealfm url was not formed correctly. Should be '/api/tealfm/SCROBBLER_NAME/SOME_ACTION' but found ${req.originalUrl}`);
-            return res.status(404);
-        }
-
-        const validClient = clients.find(x => x.name === intents[0]);
-        if(validClient === undefined) {
-            logger.warn(`No Tealfm client found with the name ${intents[0]}. Url: ${req.originalUrl}`);
-            return res.status(404);
-        }
-
-        if(intents[1].includes('login')) {
-                    const {
-            query: {
-                handle
-            } = {}
-        } = req;
-            const url = await (validClient.client.client as ATProtoOauthApiClient).createAuthorizeUrl(handle as string);
-            res.redirect(url)
-        }
-
-        if(intents[1].includes('client-metadata.json')) {
-            return res.json((validClient.client.client as ATProtoOauthApiClient).getMetadata());
-        }
-
-        if(intents[1].includes('oauth/callback')) {
-            const result = await (validClient.client.client as ATProtoOauthApiClient).handleCallback(new URLSearchParams(req.query as Record<string, string>));
-            if(result) {
-                return res.status(200);
-            }
-            return res.status(500);
-        }
-    });
-}
-
-const TEAL_NAME_REGEX = new RegExp(/\/api\/tealfm\/([^\/])\/(.*)/);
-const getTealUrlIntent = (url: string): [string, string] | undefined => {
-    const res = parseRegexSingle(TEAL_NAME_REGEX, url);
-    if(res === undefined) {
-        return undefined;
-    }
-    return res.groups as [string, string];
 }

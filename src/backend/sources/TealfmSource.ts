@@ -4,12 +4,10 @@ import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
-import { AbstractATProtoApiClient } from "../common/vendor/atproto/AbstractATProtoApiClient.js";
-import { listRecordToPlay, TealApiClient } from "../common/vendor/teal/TealApiClient.js";
+import { TealApiClient } from "../common/vendor/teal/TealApiClient.js";
 import { recordToPlay } from "../common/vendor/teal/TealApiClient.js";
 import { TealSourceConfig } from "../common/infrastructure/config/source/tealfm.js";
 import { ATProtoAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.js";
-import { ATProtoOauthApiClient } from "../common/vendor/atproto/ATProtoOauthApiClient.js";
 import { parseArrayFromMaybeString } from "../utils/StringUtils.js";
 
 export default class TealfmSource extends MemorySource {
