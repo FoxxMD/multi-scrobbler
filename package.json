@@ -51,8 +51,11 @@
   "dependencies": {
     "@astronautlabs/mdns": "^1.0.7",
     "@atcute/bluesky": "^4.0.5",
-    "@atcute/identity-resolver-node": "^1.0.3",
+    "@atcute/client": "^5.0.0",
+    "@atcute/identity": "^2.0.0",
+    "@atcute/identity-resolver": "^2.0.0",
     "@atcute/lexicons": "^2.0.0",
+    "@atcute/password-session": "^1.0.0",
     "@atcute/repo": "^1.0.0",
     "@atproto/api": "^0.18.0",
     "@atproto/oauth-client-node": "^0.3.10",

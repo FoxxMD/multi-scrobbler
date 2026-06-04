@@ -5,23 +5,9 @@ import AbstractApiClient from "../AbstractApiClient.js";
 import { Agent, ComAtprotoRepoListRecords } from "@atproto/api";
 import { MSCache } from "../../Cache.js";
 import { UpstreamError } from "../../errors/UpstreamError.js";
-import { isPortReachableConnect, normalizeWebAddress, streamBodyProgress } from "../../../utils/NetworkUtils.js";
-import {
-  CompositeDidDocumentResolver,
-  CompositeHandleResolver,
-  DohJsonHandleResolver,
-  PlcDidDocumentResolver,
-  WebDidDocumentResolver,
-  WellKnownHandleResolver,
-} from "@atcute/identity-resolver";
-import { AtprotoDid, DidDocument } from "@atproto/oauth-client-node";
-import { isNodeNetworkException } from "../../errors/NodeErrors.js";
+import { streamBodyProgress } from "../../../utils/NetworkUtils.js";
 import { ATProtoUserIdentifierData } from "../../infrastructure/config/client/atproto.js";
-
-interface HandleData {
-    did: string
-    pds: string
-}
+import { getATProtoIdentifier, checkPds } from "./atUtils.js";
 
 export abstract class AbstractATProtoApiClient extends AbstractApiClient {
 
@@ -55,88 +41,8 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
         }
     }
 
-    protected async getATProtoIdentifier(data: ATProtoUserIdentifierData): Promise<HandleData> {
-
-        let hd: HandleData;
-        hd = await this.cache.cacheAuth.get<HandleData>(`${this.name}-handleData`);
-        if (hd !== undefined) {
-            this.logger.debug('Found cached handle data');
-            return hd;
-        } else {
-            this.logger.debug('Handle data not cached, attempting to resolve...');
-        }
-
-        const handleResolver = new CompositeHandleResolver({
-            strategy: "race",
-            methods: {
-                dns: new DohJsonHandleResolver({
-                    dohUrl: "https://mozilla.cloudflare-dns.com/dns-query",
-                }),
-                http: new WellKnownHandleResolver(),
-            },
-        });
-
-        const {
-            did: givenDid,
-            identifier
-        } = data;
-
-        let did: AtprotoDid = givenDid;
-        if(did === undefined) {
-            try {
-                did = await handleResolver.resolve(identifier as `${string}.${string}`);
-                this.logger.debug(`Resolved ${did}`);
-            } catch (e) {
-                throw new Error('Unable to resolve handle', { cause: e });
-            }
-        }
-
-        const docResolver = new CompositeDidDocumentResolver({
-            methods: {
-                plc: new PlcDidDocumentResolver(),
-                web: new WebDidDocumentResolver(),
-            },
-        });
-
-        let doc: Awaited<ReturnType<typeof docResolver.resolve>>;
-        try {
-            doc = await docResolver.resolve(did);
-        } catch (e) {
-            throw new Error('Unable to resolve did document', { cause: e });
-        }
-        if (doc.service === undefined || doc.service.length === 0) {
-            throw new Error('did document did not return a service');
-        }
-
-        if (typeof doc.service[0].serviceEndpoint !== 'string') {
-            throw new Error(`Do not know how to handle this serviceEndpoint data structure!\n${JSON.stringify(doc.service[0].serviceEndpoint)}`);
-        }
-        hd = { did, pds: doc.service[0].serviceEndpoint };
-
-        this.cache.cacheAuth.set(`${this.name}-handleData`, hd, '1d');
-        return hd;
-    }
-
-
     async checkPds(data: ATProtoUserIdentifierData): Promise<true> {
-        let hd: HandleData;
-        try {
-            hd = await this.getATProtoIdentifier(data);
-        } catch(e) {
-            throw new Error('Unable to get handle data', {cause: e});
-        }
-
-        const normal = normalizeWebAddress(hd.pds);
-
-        try {
-            await isPortReachableConnect(normal.port, {host: normal.url.hostname});
-            return true;
-        } catch (e) {
-            if(isNodeNetworkException(e)) {
-                throw new Error('Could not communicate with PDS server', {cause: e});
-            }
-            throw new Error('Unexpected error when trying to communicate with PDS server', {cause: e});
-        }
+        return await checkPds(data, {logger: this.logger, cache: this.cache.cacheAuth});
     }
 
     async getCAR() {

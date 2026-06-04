@@ -1,9 +1,26 @@
 import { Handle } from "@atcute/lexicons";
-import { isHandle } from "@atcute/lexicons/syntax";
+import { isHandle, AtprotoDid } from "@atcute/lexicons/syntax";
 import { Logger } from "@foxxmd/logging";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
-import { MaybeLogger } from '../../MaybeLogger.js';
-import { AtprotoDid } from "@atproto/oauth-client-node";
+import { loggerNoop, MaybeLogger } from '../../MaybeLogger.js';
+import { ATProtoUserIdentifierData, HandleData } from "../../infrastructure/config/client/atproto.js";
+import { Cacheable } from "cacheable";
+import {
+    CompositeDidDocumentResolver,
+    CompositeHandleResolver,
+    DohJsonHandleResolver,
+    PlcDidDocumentResolver,
+    WebDidDocumentResolver,
+    WellKnownHandleResolver,
+} from "@atcute/identity-resolver";
+import {
+    getPdsEndpoint,
+    getAtprotoHandle,
+    isAtprotoDid,
+} from '@atcute/identity';
+import assert from "node:assert";
+import { isPortReachableConnect, normalizeWebAddress } from "../../../utils/NetworkUtils.js";
+import { isNodeNetworkException } from "../../errors/NodeErrors.js";
 
 export const HANDLE_REGEX = new RegExp(/.+\..+/);
 export const ATSIGN_REGEX = new RegExp(/^@(.+)/);
@@ -17,7 +34,7 @@ export interface HandleOptions {
 export const isDID = (str: string): str is AtprotoDid => DID_REGEX.test(str);
 
 export const identifierToAtProtoHandle = (str: string, options: HandleOptions = {}): Handle => {
-    if(isHandle(str)) {
+    if (isHandle(str)) {
         return str;
     }
 
@@ -26,13 +43,13 @@ export const identifierToAtProtoHandle = (str: string, options: HandleOptions = 
     let cleanHandle: string = str;
 
     const atRes = parseRegexSingle(ATSIGN_REGEX, str);
-    if(atRes !== undefined) {
+    if (atRes !== undefined) {
         logger.warn(`Handle '${cleanHandle}' has '@' at beginning, removing this.`);
         cleanHandle = atRes.groups[0];
     }
 
-    if(undefined == parseRegexSingle(HANDLE_REGEX, cleanHandle)) {
-        if(options.defaultDomain === undefined) {
+    if (undefined == parseRegexSingle(HANDLE_REGEX, cleanHandle)) {
+        if (options.defaultDomain === undefined) {
             throw new Error(`No domain found for ATProto handle '${cleanHandle}'`);
         }
 
@@ -41,8 +58,110 @@ export const identifierToAtProtoHandle = (str: string, options: HandleOptions = 
         cleanHandle = fqId;
     }
 
-    if(isHandle(cleanHandle)) {
+    if (isHandle(cleanHandle)) {
         return cleanHandle;
     }
     throw new Error(`Identifier ${cleanHandle} is not a valid ATProto handle`);
+}
+
+export interface IdentifyOptions {
+    logger?: Logger
+    cache?: Cacheable
+}
+
+export const getATProtoIdentifier = async (data: ATProtoUserIdentifierData, opts: IdentifyOptions = {}): Promise<HandleData> => {
+
+    const {
+        logger = loggerNoop,
+        cache
+    } = opts;
+
+    const key = [data.did, data.identifier].filter(x => x !== undefined).join('-');
+
+    let hd: HandleData;
+    if (cache !== undefined) {
+        hd = await cache.get<HandleData>(`${key}-handleData`);
+        if (hd !== undefined) {
+            logger.debug('Found cached handle data');
+            return hd;
+        } else {
+            logger.debug('Handle data not cached, attempting to resolve...');
+        }
+    }
+
+
+    const handleResolver = new CompositeHandleResolver({
+        strategy: "race",
+        methods: {
+            dns: new DohJsonHandleResolver({
+                dohUrl: "https://mozilla.cloudflare-dns.com/dns-query",
+            }),
+            http: new WellKnownHandleResolver(),
+        },
+    });
+
+    const {
+        did: givenDid,
+        identifier
+    } = data;
+
+    assert(isAtprotoDid(givenDid), `Given DID is not an ATProto DID: ${givenDid}`);
+    let did: AtprotoDid = givenDid;
+    if (did === undefined) {
+        try {
+            did = await handleResolver.resolve(identifier as `${string}.${string}`);
+            logger.debug(`Resolved ${did}`);
+        } catch (e) {
+            throw new Error('Unable to resolve handle', { cause: e });
+        }
+    }
+
+    const docResolver = new CompositeDidDocumentResolver({
+        methods: {
+            plc: new PlcDidDocumentResolver(),
+            web: new WebDidDocumentResolver(),
+        },
+    });
+
+    let doc: Awaited<ReturnType<typeof docResolver.resolve>>;
+    try {
+        doc = await docResolver.resolve(did);
+    } catch (e) {
+        throw new Error('Unable to resolve did document', { cause: e });
+    }
+    if (doc.service === undefined || doc.service.length === 0) {
+        throw new Error('did document did not return a service');
+    }
+
+    if (typeof doc.service[0].serviceEndpoint !== 'string') {
+        throw new Error(`Do not know how to handle this serviceEndpoint data structure!\n${JSON.stringify(doc.service[0].serviceEndpoint)}`);
+    }
+    hd = { did, pds: getPdsEndpoint(doc), handle: getAtprotoHandle(doc) };
+
+    if (cache !== undefined) {
+        cache.set(`${key}-handleData`, hd, '1d');
+    }
+
+    return hd;
+}
+
+export const checkPds = async (data: ATProtoUserIdentifierData, opts: IdentifyOptions): Promise<true> => {
+    let hd: HandleData;
+    try {
+        hd = await getATProtoIdentifier(data, opts);
+    } catch (e) {
+        throw new Error('Unable to get handle data', { cause: e });
+    }
+
+    const normal = normalizeWebAddress(hd.pds);
+
+    try {
+        await isPortReachableConnect(normal.port, { host: normal.url.hostname });
+        return true;
+    } catch (e) {
+        if (isNodeNetworkException(e)) {
+            throw new Error('Could not communicate with PDS server', { cause: e });
+        }
+        throw new Error('Unexpected error when trying to communicate with PDS server', { cause: e });
+    }
 }

@@ -2,7 +2,7 @@ import { AbstractApiOptions } from "../../infrastructure/Atomic.js";
 import { TealClientData } from "../../infrastructure/config/client/tealfm.js";
 import { Agent, CredentialSession, AtpSessionEvent, AtpSessionData } from "@atproto/api";
 import { AbstractATProtoApiClient } from "./AbstractATProtoApiClient.js";
-import { identifierToAtProtoHandle, isDID } from "./atUtils.js";
+import { getATProtoIdentifier, identifierToAtProtoHandle, isDID } from "./atUtils.js";
 import { ATProtoAppData, ATProtoUserIdentifierData } from "../../infrastructure/config/client/atproto.js";
 
 export class ATProtoAppApiClient extends AbstractATProtoApiClient {
@@ -28,7 +28,7 @@ export class ATProtoAppApiClient extends AbstractATProtoApiClient {
     }
 
     async initClient(): Promise<void> {
-        const hd = await this.getATProtoIdentifier(this.config);
+        const hd = await getATProtoIdentifier(this.config, {logger: this.logger, cache: this.cache.cacheAuth});
         this.logger.verbose(`Using ${hd.did} on PDS ${hd.pds}`);
         this.appSession = new CredentialSession(new URL(hd.pds), undefined, (evt: AtpSessionEvent, sess?: AtpSessionData) => {
             this.cache.cacheAuth.set(`appPwSession-${this.name}-${hd.did}`, sess, '1000h');
@@ -37,7 +37,7 @@ export class ATProtoAppApiClient extends AbstractATProtoApiClient {
     }
 
     restoreSession = async (): Promise<boolean> => {
-        const hd = await this.getATProtoIdentifier(this.config);
+        const hd = await getATProtoIdentifier(this.config, {logger: this.logger, cache: this.cache.cacheAuth});
         const savedSession = await this.cache.cacheAuth.get<AtpSessionData>(`appPwSession-${this.name}-${hd.did}`);
         if (savedSession !== undefined) {
             try {

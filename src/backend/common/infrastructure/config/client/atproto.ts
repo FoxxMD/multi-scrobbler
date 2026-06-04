@@ -1,4 +1,4 @@
-import { AtprotoDid, DidDocument } from "@atproto/oauth-client-node";
+import { AtprotoDid } from "@atcute/lexicons/syntax";
 
 export interface ATProtoUserIdentifierData {
     /**
@@ -8,7 +8,7 @@ export interface ATProtoUserIdentifierData {
      * * For **Oauth** - your handle minus the @
      */
     identifier: string
-    did?: AtprotoDid
+    did?: string
 }
 
 export interface ATProtoAppData {
@@ -20,4 +20,10 @@ export interface ATProtoAppData {
      * **Use this if you are self-hosting Multi-Scrobbler on localhost or accessed like http://IP:PORT**
      */
     appPassword: string
+}
+
+export interface HandleData {
+    did: AtprotoDid
+    pds: string
+    handle: string
 }
