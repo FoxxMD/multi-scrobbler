@@ -296,6 +296,7 @@ export default class ScrobbleClients {
                 case 'rocksky': {
                     const data: RockSkyData = removeUndefinedKeys<RockSkyData>({
                         key: process.env.ROCKSKY_KEY,
+                        token: process.env.ROCKSKY_TOKEN,
                         handle: process.env.ROCKSKY_HANDLE
                     }, false);
                     const p = getCommonComponentEnvConfig('ROCKSKY');

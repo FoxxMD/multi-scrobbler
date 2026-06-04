@@ -37,6 +37,19 @@ export default class RockskySource extends MemorySource {
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}){ return RockSkyApiClient.formatPlayObj(obj, options); }
 
+    protected async doBuildInitData(): Promise<true | string | undefined> {
+        const {
+            data: {
+                key,
+                token,
+            } = {}
+        } = this.config;
+        if (key === undefined && token === undefined) {
+            throw new Error('Must provide an API Key or Access Token');
+        }
+        return true;
+    }
+
     protected async doCheckConnection(): Promise<true | string | undefined> {
         await this.api.testConnection();
         return true;
