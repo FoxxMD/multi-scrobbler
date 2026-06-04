@@ -84,7 +84,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
     protected async doCheckConnection(): Promise<true | string | undefined> {
         if (this.client.client instanceof ATProtoAppApiClient) {
             try {
-                return await this.client.client.checkPds();
+                return await this.client.client.checkPds(this.config.data);
             } catch (e) {
                 throw e;
             }

@@ -1,28 +1,14 @@
 import { RequestRetryOptions } from "../common.js"
+import { ATProtoAppData, ATProtoUserIdentifierData } from "./atproto.js"
 import { CommonClientConfig, CommonClientData, CommonClientOptions } from "./index.js"
 
-export interface TealData extends RequestRetryOptions {
+export type TealData = RequestRetryOptions & ATProtoUserIdentifierData & Partial<ATProtoAppData> & {
         /**
      * The base URI of the Multi-Scrobbler to use for ATProto OAuth
      * 
      * Only include this if you want to use OAuth. The URI must be a non-IP/non-local domain using https: protocol.
     */
     baseUri?: string
-    /**
-     * Identify the account to login as
-     * 
-     * * For **App Password** Auth - your email
-     * * For **Oauth** - your handle minus the @
-     */
-    identifier: string
-    /**
-     * The [App Password](https://atproto.com/specs/xrpc#app-passwords) you created for your account
-     * 
-     * This is created under https://bsky.app/settings/app-passwords
-     * 
-     * **Use this if you are self-hosting Multi-Scrobbler on localhost or accessed like http://IP:PORT**
-     */
-    appPassword?: string
 }
 
 export interface TealClientData extends TealData, CommonClientData {

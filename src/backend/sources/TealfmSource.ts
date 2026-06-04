@@ -72,7 +72,7 @@ export default class TealfmSource extends MemorySource {
     protected async doCheckConnection(): Promise<true | string | undefined> {
         if (this.client instanceof ATProtoAppApiClient) {
             try {
-                return await this.client.checkPds();
+                return await this.client.checkPds(this.config.data);
             } catch (e) {
                 throw e;
             }
