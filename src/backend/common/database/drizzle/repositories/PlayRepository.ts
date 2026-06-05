@@ -705,6 +705,14 @@ group by state;`);
 group by state,componentId;`);
         return res;
     }
+
+    public getCompactedPlayCountByComponent = async () => {
+
+        const res = await this.db.all(sql`select componentId,compacted,count(*) from plays p
+where compacted IS NOT NULL
+group by componentId,compacted;`);
+        return res;
+    }
 }
 
 export const getTemporallyCloseDateCompareOp = (play: PlayObject, opts: {bufferTime?: number, useCompleted?: boolean} = {}): CompareDateOp => {
