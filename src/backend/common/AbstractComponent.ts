@@ -50,6 +50,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     protected db: DbConcrete;
     protected componentRepo!: DrizzleComponentRepository;
     protected dbComponent!: ComponentSelect;
+    componentId!: number;
     protected retentionOpts: RetentionOptions;
 
     protected componentType: 'source' | 'client';
@@ -100,6 +101,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             uid: this.config.id ?? this.config.name ?? name,
             name: this.config.name ?? name
         });
+        this.componentId = this.dbComponent.id;
         return true;
     }
 

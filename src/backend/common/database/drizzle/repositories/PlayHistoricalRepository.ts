@@ -283,6 +283,13 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
             where,
         })) as PlayHistoricalSelect[]).map(x => ({...x, play: hydratePlaySelect(x)}));
     }
+
+    public getPlayCountByComponent = async () => {
+
+        const res = await this.db.all(sql`select componentId, count(*) from plays_historical p
+group by componentId;`);
+        return res;
+    }
 }
 
 export const buildPlayHistoricalWhere = (args: PlayWhereOpts): WhereClause<'playsHistorical'> => {

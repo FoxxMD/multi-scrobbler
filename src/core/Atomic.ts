@@ -623,3 +623,13 @@ export type TypesAreEqual<T, U, Y=unknown, N=never> =
   (<G>() => G extends U ? 1 : 2) ? Y : N;
 
 export type MBID = `${string}-${string}-${string}-${string}-${string}`
+
+// ['queued','discovered','discarded','scrobbled','failed','duped']
+export type PlayStateCommon = 'queued' |'discarded' | 'failed';
+export const PLAY_STATE_COMMON: PlayStateCommon[] = ['queued', 'discarded', 'failed'];
+export type PlaySourceState = PlayStateCommon | 'discovered';
+export const PLAY_SOURCE_STATE: PlaySourceState[] = [...PLAY_STATE_COMMON, 'discovered'];
+export type PlayClientState = PlayStateCommon | 'duped' | 'scrobbled';
+export const PLAY_CLIENT_STATE = [...PLAY_STATE_COMMON, 'duped', 'scrobbled'];
+export type PlayState = PlaySourceState | PlayClientState;
+export const PLAY_STATES = Array.from(new Set(...PLAY_CLIENT_STATE, ...PLAY_SOURCE_STATE));
