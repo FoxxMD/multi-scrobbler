@@ -291,15 +291,18 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         logger.info(`Completed CAR conversion: Result ${allGood ? 'OK' : 'Some Errors'} in ${durationToHuman(dayjs.duration(dayjs().diff(start)))} | Records ${count} | Persisted ${persisted}`)
     }
 
-    protected async syncRecentHistoricalScrobbles(): Promise<PlayObject[]> {
+    protected async syncRecentHistoricalScrobbles(): Promise<[PlayObject[], boolean]> {
         const recentPlays = await this.getScrobblesForTimeRange(undefined);
         const unseenPlays: PlayObject[] = [];
+        let syncGapFilled = false;
         for(const p of recentPlays) {
             if(!(await this.playsHistoricalRepo.hasByUid(p.meta.playId))) {
                 unseenPlays.push(p);
+            } else {
+                syncGapFilled = true;
             }
         }
-        return unseenPlays;
+        return [unseenPlays, syncGapFilled];
     }
 
 }

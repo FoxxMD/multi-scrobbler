@@ -123,7 +123,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
         return closeTemporalPlays.map(x => x.play);
     }
 
-    protected abstract syncRecentHistoricalScrobbles(): Promise<PlayObject[]>;
+    protected abstract syncRecentHistoricalScrobbles(): Promise<[PlayObject[], boolean]>;
 
     protected async postInitialize(): Promise<void> {
         await super.postInitialize();
@@ -148,12 +148,20 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
             if(shouldSync){
                 // pull latest plays into database
                 this.logger.info('Pulling latest scrobbles into historical database...');
-                const recent = await this.syncRecentHistoricalScrobbles();
+                const [recent, gapSynced] = await this.syncRecentHistoricalScrobbles();
                 if(recent.length > 0) {
                     await this.createHistoricalPlays(recent.map((x) => playToRepositoryCreatePlayHistoricalOpts({play: x})));
                     this.logger.verbose(`Added ${recent.length} upstream plays to historical plays`);
                 } else {
                     this.logger.verbose('Most recent plays are already in historical database!');
+                }
+                if(this.syncedReason.includes('component was inactive')) {
+                    if(gapSynced) {
+                        this.syncedReason = undefined;
+                        this.logger.verbose('Sync gap was verified filled by pulling latest scrobbles!');
+                    } else {
+                        this.logger.verbose('Pulling latest scrobbles did not fill inactivity period. You may want to run historical hydration again.');
+                    }
                 }
             }
 
@@ -167,6 +175,9 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
         const [synced, reason] = await this.getHistoricalScrobblesAreSynced();
         this.synced = synced;
         this.syncedReason = reason;
+        if(this.syncedReason !== undefined) {
+            this.logger.info(`Sync status is abnormal: ${this.syncedReason}`);
+        }
         if(imports.length > 0) {
             imports.sort((a, b) => sortByNewestDate(a.attemptedAt, b.attemptedAt));
             this.lastImport = imports[0].attemptedAt;
