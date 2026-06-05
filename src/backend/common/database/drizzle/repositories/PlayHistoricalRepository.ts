@@ -55,7 +55,7 @@ const identifierExtractor: { [K in keyof PlayIdentifierPrimitiveMap]: (play: {id
 export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'playsHistorical'> {
 
     constructor(db: DbConcrete, opts: DrizzleRepositoryOpts = {}) {
-        super(db, 'plays', 'Plays', opts);
+        super(db, 'playsHistorical', 'Plays Historical', opts);
     }
 
     findByUid = async (uid: string, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PlayHistoricalSelect | undefined> => {
@@ -161,7 +161,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
         }
 
         query = removeUndefinedKeys(query);
-        const results = await this.db.query.plays.findMany({
+        const results = await this.db.query.playsHistorical.findMany({
             limit: args.limit,
             offset: args.offset,
             columns: {id: true},
@@ -271,15 +271,15 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
             bufferTime
         } = opts;
 
-        let query: FindMany<'plays'> = {};
+        let query: FindMany<'playsHistorical'> = {};
 
-        let where: FindWhere<'plays'> = {
+        let where: FindWhere<'playsHistorical'> = {
             componentId,
             playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play, {bufferTime})),
         };
         query.where = where;
 
-        return ((await this.db.query.plays.findMany({
+        return ((await this.db.query.playsHistorical.findMany({
             where,
         })) as PlayHistoricalSelect[]).map(x => ({...x, play: hydratePlaySelect(x)}));
     }
