@@ -598,7 +598,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
     const sourcePlays = new prom.Gauge({
                 name: 'multiscrobbler_source_plays',
                 help: 'Count of stored plays by state for Sources',
-                labelNames: ['name', 'type'],
+                labelNames: ['name', 'type', 'state'],
                 async collect() {
                     const res = await playRepo.getPlayCountByState();
                     for(const source of scrobbleSources.sources) {
@@ -606,7 +606,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
                         for(const s of PLAY_SOURCE_STATE) {
                             const rel = relevant.find(x => x['state'] === s);
                             const count = rel === undefined ? 0 : rel['count(*)'];
-                            this.labels({name: source.getSafeExternalName(), type: s}).set(count);
+                            this.labels({name: source.getSafeExternalName(), type: source.type, state: s}).set(count);
                         }
                     }
                 }
@@ -614,7 +614,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
     const sourceRetention = new prom.Gauge({
                 name: 'multiscrobbler_source_plays_compacted',
                 help: 'Count of compacted, stored plays by compaction type for Sources',
-                labelNames: ['name', 'type'],
+                labelNames: ['name', 'type', 'compactionType'],
                 async collect() {
                     const res = await playRepo.getCompactedPlayCountByComponent();
                     for(const source of scrobbleSources.sources) {
@@ -622,7 +622,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
                         for(const s of ['input','transform','input-transform']) {
                             const rel = relevant.find(x => x['compacted'] === s);
                             const count = rel === undefined ? 0 : rel['count(*)'];
-                            this.labels({name: source.getSafeExternalName(), type: s}).set(count);
+                            this.labels({name: source.getSafeExternalName(), type: source.type, compactionType: s}).set(count);
                         }
                     }
                 }
@@ -630,7 +630,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
     const clientPlays = new prom.Gauge({
                 name: 'multiscrobbler_client_plays',
                 help: 'Count of stored plays by state for Clients',
-                labelNames: ['name', 'type'],
+                labelNames: ['name', 'type', 'state'],
                 async collect() {
                     const res = await playRepo.getPlayCountByState();
                     for(const client of scrobbleClients.clients) {
@@ -638,7 +638,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
                         for(const s of PLAY_CLIENT_STATE) {
                             const rel = relevant.find(x => x['state'] === s);
                             const count = rel === undefined ? 0 : rel['count(*)'];
-                            this.labels({name: client.getSafeExternalName(), type: s}).set(count);
+                            this.labels({name: client.getSafeExternalName(), type: client.type, state: s}).set(count);
                         }
                     }
                 }
@@ -646,7 +646,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
     const clientRetention = new prom.Gauge({
                 name: 'multiscrobbler_client_plays_compacted',
                 help: 'Count of compacted, stored plays by compaction type for Clients',
-                labelNames: ['name', 'type'],
+                labelNames: ['name', 'type', 'compactionType'],
                 async collect() {
                     const res = await playRepo.getCompactedPlayCountByComponent();
                     for(const client of scrobbleClients.clients) {
@@ -654,7 +654,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
                         for(const s of ['input','transform','input-transform']) {
                             const rel = relevant.find(x => x['compacted'] === s);
                             const count = rel === undefined ? 0 : rel['count(*)'];
-                            this.labels({name: client.getSafeExternalName(), type: s}).set(count);
+                            this.labels({name: client.getSafeExternalName(), type: client.type, compactionType: s}).set(count);
                         }
                     }
                 }
@@ -669,7 +669,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
                         if(client instanceof AbstractHistoricalScrobbleClient) {
                             const relevant = res.filter(x => x['componentId'] === client.componentId);
                             for(const rel of relevant) {
-                                this.labels({name: client.getSafeExternalName()}).set(rel['count(*)']);
+                                this.labels({name: client.getSafeExternalName(), type: client.type}).set(rel['count(*)']);
                             }
                         }
                     }
