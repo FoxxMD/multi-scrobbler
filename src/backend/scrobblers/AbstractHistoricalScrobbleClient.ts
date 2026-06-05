@@ -21,6 +21,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
     syncedReason?: string;
     syncError?: ErrorIsh;
     override preloadScrobbles: boolean = false;
+    protected addScrobbleToHistorical: boolean = true;
 
     protected abstract doHydrateHistoricalScrobbles(opts: {allowFailures?: boolean, signal?: AbortSignal }): Promise<void>;
 
@@ -181,7 +182,9 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
 
     public async scrobble(playObj: PlayObject, opts?: { delay?: number | false, signal?: AbortSignal }): Promise<PlayObject> {
         const res = await super.scrobble(playObj, opts);
-        await this.createHistoricalPlays([playToRepositoryCreatePlayHistoricalOpts({play: res})]);
+        if(this.addScrobbleToHistorical) {
+            await this.createHistoricalPlays([playToRepositoryCreatePlayHistoricalOpts({play: res})]);
+        }
         return res;
     }
 }

@@ -33,6 +33,13 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
     declare config: RockSkyClientConfig;
 
     protected configDir: string;
+    // because rocksky scrobble peristence is async, does not return a TID, and may be modified server-side
+    // we don't want to add our scrobble payload as a source-of-truth historical play because it may end up
+    // looking different when we sync historical from car/api call
+    //
+    // we already keep a copy of what was scrobbled in the play table and that should be enough to prevent dupes
+    // without having to result to historical querying
+    protected override addScrobbleToHistorical: boolean = false;
 
     constructor(name: any, config: RockSkyClientConfig, options: InternalConfigOptional & { [key: string]: any }, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
         super('rocksky', name, config, notifier, emitter, logger);
