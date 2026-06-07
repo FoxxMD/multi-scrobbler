@@ -296,6 +296,7 @@ export default class ScrobbleClients {
                 case 'rocksky': {
                     const data: RockSkyData = removeUndefinedKeys<RockSkyData>({
                         key: process.env.ROCKSKY_KEY,
+                        token: process.env.ROCKSKY_TOKEN,
                         handle: process.env.ROCKSKY_HANDLE
                     }, false);
                     const p = getCommonComponentEnvConfig('ROCKSKY');
@@ -464,11 +465,11 @@ ${sources.join('\n')}`);
                 break;
             case 'tealfm':
                 const TealScrobbler = (await import('./TealfmScrobbler.js')).default;
-                newClient = new TealScrobbler(name, {...clientConfig, data: d, options: compositeOptions} as unknown as TealClientConfig, {}, notifier, this.emitter, this.logger);
+                newClient = new TealScrobbler(name, {...clientConfig, data: d, options: compositeOptions} as unknown as TealClientConfig, this.internalConfig, notifier, this.emitter, this.logger);
                 break;
             case 'rocksky':
                 const RockskyScrobbler = (await import('./RockskyScrobbler.js')).default;
-                newClient = new RockskyScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...d}, options: compositeOptions } as unknown as RockSkyClientConfig, {}, notifier, this.emitter, this.logger);
+                newClient = new RockskyScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...d}, options: compositeOptions } as unknown as RockSkyClientConfig, this.internalConfig, notifier, this.emitter, this.logger);
                 break;
             case 'discord':
                 const DiscordScrobbler = (await import('./DiscordScrobbler.js')).default;

@@ -50,6 +50,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     protected db: DbConcrete;
     protected componentRepo!: DrizzleComponentRepository;
     protected dbComponent!: ComponentSelect;
+    componentId!: number;
     protected retentionOpts: RetentionOptions;
 
     protected componentType: 'source' | 'client';
@@ -80,12 +81,12 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     }
 
     protected async postInitialize(): Promise<void> {
-        super.postInitialize();
+        await super.postInitialize();
         this.componentRepo.updateById(this.dbComponent.id, {lastReadyAt: dayjs()});
     }
 
     protected async doBuildDatabase(): Promise<true | string | undefined> {
-        super.doBuildDatabase();
+        await super.doBuildDatabase();
 
         let name: string;
         if('name' in this) {
@@ -100,6 +101,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             uid: this.config.id ?? this.config.name ?? name,
             name: this.config.name ?? name
         });
+        this.componentId = this.dbComponent.id;
         return true;
     }
 

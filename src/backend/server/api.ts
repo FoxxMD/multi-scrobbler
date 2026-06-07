@@ -11,6 +11,8 @@ import {
     DeadLetterScrobble,
     LeveledLogData,
     LogOutputConfig,
+    PLAY_CLIENT_STATE,
+    PLAY_SOURCE_STATE,
     PlayObject,
     SOURCE_SOT,
     SOURCE_SOT_TYPES,
@@ -35,8 +37,10 @@ import ScrobbleSources from "../sources/ScrobbleSources.js";
 import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
 import prom from 'prom-client';
 import { SimpleError } from "../common/errors/MSErrors.js";
-import { QueryPlaysOpts } from "../common/database/drizzle/repositories/PlayRepository.js";
+import { DrizzlePlayRepository, QueryPlaysOpts } from "../common/database/drizzle/repositories/PlayRepository.js";
 import { playSelectToDeadScrobble } from "../common/database/drizzle/entityUtils.js";
+import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.js";
+import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.js";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -527,6 +531,19 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         res.status(200).send('OK');
     });
 
+    app.post('/api/client/historical', clientRequiredMiddle, async (req, res) => {
+        // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+        const client = req.scrobbleClient as AbstractScrobbleClient;
+        if(client instanceof AbstractHistoricalScrobbleClient) {
+            client.logger.info('User requested historical play hydration');
+            client.hydrateHistoricalScrobbles();
+            res.status(200).send('OK');
+        } else {
+            client.logger.warn('This client does not have historical play capabilities');
+            return res.status(400).json({error: 'This client does not have historical play capabilities'});
+        }
+    });
+
     app.get('/health', async (req, res) => res.redirect(307, `/api/${req.url.slice(1)}`));
     app.get('/api/health', async (req, res) => {
         const {
@@ -574,11 +591,102 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
                 }
     });
 
+
+    let playRepo: DrizzlePlayRepository,
+    playHistoricalRepo: DrizzlePlayHistoricalRepository;
+
+    const sourcePlays = new prom.Gauge({
+                name: 'multiscrobbler_source_plays',
+                help: 'Count of stored plays by state for Sources',
+                labelNames: ['name', 'type', 'state'],
+                async collect() {
+                    const res = await playRepo.getPlayCountByState();
+                    for(const source of scrobbleSources.sources) {
+                        const relevant = res.filter(x => x['componentId'] === source.componentId);
+                        for(const s of PLAY_SOURCE_STATE) {
+                            const rel = relevant.find(x => x['state'] === s);
+                            const count = rel === undefined ? 0 : rel['count(*)'];
+                            this.labels({name: source.getSafeExternalName(), type: source.type, state: s}).set(count);
+                        }
+                    }
+                }
+    });
+    const sourceRetention = new prom.Gauge({
+                name: 'multiscrobbler_source_plays_compacted',
+                help: 'Count of compacted, stored plays by compaction type for Sources',
+                labelNames: ['name', 'type', 'compactionType'],
+                async collect() {
+                    const res = await playRepo.getCompactedPlayCountByComponent();
+                    for(const source of scrobbleSources.sources) {
+                        const relevant = res.filter(x => x['componentId'] === source.componentId);
+                        for(const s of ['input','transform','input-transform']) {
+                            const rel = relevant.find(x => x['compacted'] === s);
+                            const count = rel === undefined ? 0 : rel['count(*)'];
+                            this.labels({name: source.getSafeExternalName(), type: source.type, compactionType: s}).set(count);
+                        }
+                    }
+                }
+    });
+    const clientPlays = new prom.Gauge({
+                name: 'multiscrobbler_client_plays',
+                help: 'Count of stored plays by state for Clients',
+                labelNames: ['name', 'type', 'state'],
+                async collect() {
+                    const res = await playRepo.getPlayCountByState();
+                    for(const client of scrobbleClients.clients) {
+                        const relevant = res.filter(x => x['componentId'] === client.componentId);
+                        for(const s of PLAY_CLIENT_STATE) {
+                            const rel = relevant.find(x => x['state'] === s);
+                            const count = rel === undefined ? 0 : rel['count(*)'];
+                            this.labels({name: client.getSafeExternalName(), type: client.type, state: s}).set(count);
+                        }
+                    }
+                }
+    });
+    const clientRetention = new prom.Gauge({
+                name: 'multiscrobbler_client_plays_compacted',
+                help: 'Count of compacted, stored plays by compaction type for Clients',
+                labelNames: ['name', 'type', 'compactionType'],
+                async collect() {
+                    const res = await playRepo.getCompactedPlayCountByComponent();
+                    for(const client of scrobbleClients.clients) {
+                        const relevant = res.filter(x => x['componentId'] === client.componentId);
+                        for(const s of ['input','transform','input-transform']) {
+                            const rel = relevant.find(x => x['compacted'] === s);
+                            const count = rel === undefined ? 0 : rel['count(*)'];
+                            this.labels({name: client.getSafeExternalName(), type: client.type, compactionType: s}).set(count);
+                        }
+                    }
+                }
+    });
+    const clientHistoricalPlays = new prom.Gauge({
+                name: 'multiscrobbler_client_historical_plays',
+                help: 'Count of stored historical plays for Clients',
+                labelNames: ['name', 'type'],
+                async collect() {
+                    const res = await playHistoricalRepo.getPlayCountByComponent();
+                    for(const client of scrobbleClients.clients) {
+                        if(client instanceof AbstractHistoricalScrobbleClient) {
+                            const relevant = res.filter(x => x['componentId'] === client.componentId);
+                            for(const rel of relevant) {
+                                this.labels({name: client.getSafeExternalName(), type: client.type}).set(rel['count(*)']);
+                            }
+                        }
+                    }
+                }
+    });
+
     if(process.env.PROMETHEUS_FULL === 'true') {
         prom.collectDefaultMetrics();
     }
 
     app.get('/api/metrics', async (req, res) => {
+
+        if(playRepo === undefined) {
+            const db = await getRoot().items.db();
+            playRepo = new DrizzlePlayRepository(db);
+            playHistoricalRepo = new DrizzlePlayHistoricalRepository(db);
+        }
 
         const metricsString = await prom.register.metrics();
         return res

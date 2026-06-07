@@ -690,6 +690,29 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             with: buildPlayWith(qWith)
         })) as PlayWith<'queueStates'>[]).map(x => ({...x, play: hydratePlaySelect(x)}));
     }
+
+    public getComponentPlayCountByState = async (componentId?: string) => {
+
+        const res = await this.db.all(sql`select state, count(*) from plays p
+where componentId = ${componentId ?? this.componentId}
+group by state;`);
+        return res;
+    }
+
+    public getPlayCountByState = async () => {
+
+        const res = await this.db.all(sql`select state,componentId, count(*) from plays p
+group by state,componentId;`);
+        return res;
+    }
+
+    public getCompactedPlayCountByComponent = async () => {
+
+        const res = await this.db.all(sql`select componentId,compacted,count(*) from plays p
+where compacted IS NOT NULL
+group by componentId,compacted;`);
+        return res;
+    }
 }
 
 export const getTemporallyCloseDateCompareOp = (play: PlayObject, opts: {bufferTime?: number, useCompleted?: boolean} = {}): CompareDateOp => {

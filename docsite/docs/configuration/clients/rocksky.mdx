@@ -23,13 +23,13 @@ To monitor and re-scrobble activity **from** Rocksky create a [Rocksky (Source)]
 
 </details>
 
-<DetailsAdmo type="warning" summary="Your Data Is Public">
+<DetailsAdmo type="important" summary="Your Data Is Public">
 
 The default Bluesky PDS is **public**, meaning your scrobbles are also public (read-only). This isn't any different than using Last.fm or Listenbrainz, in terms of privacy.
 
 </DetailsAdmo>
 
-<DetailsAdmo type="warning" summary="No Scrobbling Guarantee">
+<DetailsAdmo type="important" summary="No Scrobbling Guarantee">
 
 Rocksky **does not guarantee** that every scrobble you send will be persisted. Rocksky's design goal is to store scrobbles with **metdata-complete, 3rd party verifiable track information** so that it can be a metadata-rich discovery platform, rather than an exhaustive scrobble data source-of-truth.
 
@@ -41,16 +41,10 @@ If you need your scrobbles to be 100% captured then you should scrobble to an *a
 
 ## Setup
 
-You will need a [Bluesky](https://bsky.app/) account to use Rocksky.
+You will need a [Bluesky](https://bsky.app/), or other [ATmosphere](https://atproto.brussels/about-the-atmosphere), account to use Rocksky.
 
-:::note 
-
-Usage is adapted from [Rocksky docs](https://docs.rocksky.app/migrating-to-rocksky-scrobble-api-957839m0) on [docs.rocksky.app](https://docs.rocksky.app)
-
-:::
-
-* Navigate to [rocksky.app](https://rocksky.app/) and sign up/logn using your Bluesky account
-* Then, navigate to the [RockSky developer dashboard](https://rocksky.app/apikeys) and obtain an API Key
+* Navigate to [rocksky.app](https://rocksky.app/) and sign up/logn using your ATmosphere account
+* Then, navigate to the [Access Tokens](https://rocksky.app/access-tokens) in the Rocksky settings dropdown, and create a new token
 
 ## Configuration
 
@@ -64,11 +58,28 @@ The handle used with multi-scrobbler should be your **full** ATProto handle, inc
 
 If you do not include a TLD then multi-scrobbler will automatically append `.bsky.social` to your handle value.
 
+<DetailsAdmo type="warning" summary="API Applications Deprecated">
+
+In < 0.14.1, Multi-Scrobber used Rocksky's API Appication "API Key" for communication with a Listenbrainz-compatible API from Rocksky.
+
+Going forward, this should be replaced with the official guidance in the [Setup](#setup) section above: use an **Access Token**. This uses the native Rocksky API which has more functionality.
+
+If your configuration is using either
+
+* (File/AIO) `'key': ...`
+* (ENV) `ROCKSKY_KEY`
+
+you should redo the [Setup](#setup) modify your configuration to use an Access Token instead.
+
+Keys are now **deprecated** and functionality for them will be removed in a future version of Multi-Scrobbler. 
+
+</DetailsAdmo>
+
 <Config config="RockSkyClientConfig" fileContent={JsonConfig} client name="rocksky">
         | Environmental Variable | Required? | Default | Description                                                                         |
         | :--------------------- | --------- | ------- | ----------------------------------------------------------------------------------- |
-        | `ROCKSKY_ID`           | Yes       |         | A unique ID                                                                         |
+        | `ROCKSKY_ID`           | Yes       |         | A unique ID used in MS                                                              |
         | `ROCKSKY_HANDLE`       | Yes       |         | Your **full** ATProto handle. For Bluesky account this is like `myUser.bsky.social` |
-        | `ROCKSKY_KEY`          | Yes       |         | API Key obtained from Rocksky developer dashboard                                   |
+        | `ROCKSKY_TOKEN`        | Yes       |         | Access Token obtained from Rocksky                                                  |
         | `ROCKSKY_NAME`         | No        |         | A vanity name different than ID                                                     |
 </Config>

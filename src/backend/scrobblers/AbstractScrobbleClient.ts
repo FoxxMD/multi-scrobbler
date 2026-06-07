@@ -99,6 +99,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     protected MAX_STORED_SCROBBLES = 40;
     protected MAX_INITIAL_SCROBBLES_FETCH = this.MAX_STORED_SCROBBLES;
 
+    preloadScrobbles: boolean = true;
     scrobbleSOTRanges: PaginatedTimeRangeOptions[] = [];
     tracksScrobbled: number = 0;
 
@@ -714,36 +715,38 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
         this.initializeNowPlaying();
 
-        let initialLimit = refreshInitialCount;
-        if (refreshInitialCount > this.MAX_INITIAL_SCROBBLES_FETCH) {
-            this.logger.warn(`Defined initial scrobbles count (${refreshInitialCount}) higher than maximum allowed (${this.MAX_INITIAL_SCROBBLES_FETCH}). Will use max instead.`);
-            initialLimit = this.MAX_INITIAL_SCROBBLES_FETCH;
-        }
-
-        this.logger.verbose(`Preloading up to ${initialLimit} initial scrobbles...`);
-
-        try  {
-            const preload = await this.getScrobblesForTimeRange({
-                limit: initialLimit,
-                fetchMax: initialLimit
-            });
-            if(preload === undefined) {
-                this.logger.warn('Preload result was undefined!');
-            } else {
-                if(preload.length === 0) {
-                    this.logger.verbose(`Preloaded 0 scrobbles.`);
-                } else {
-                    preload.sort(sortByOldestPlayDate);
-                    const from = preload[0].data.playDate;
-                    // we are assuming that all fetchers return latest scrobbles first (pretty sure this is the case)
-                    const to = dayjs();// preload[preload.length - 1].data.playDate;
-                    await this.cache.cacheClientScrobbles.set<PlayObject[]>(this.getScrobbleCacheKey(from, to), preload, '60s');
-                    this.scrobbleSOTRanges.push({from: from.unix(), to: to.unix()});
-                    this.logger.verbose(`Preloaded ${preload.length} scrobbles from ${todayAwareFormat(from)} to ${todayAwareFormat(to)}`);
-                }
+        if(this.preloadScrobbles) {
+            let initialLimit = refreshInitialCount;
+            if (refreshInitialCount > this.MAX_INITIAL_SCROBBLES_FETCH) {
+                this.logger.warn(`Defined initial scrobbles count (${refreshInitialCount}) higher than maximum allowed (${this.MAX_INITIAL_SCROBBLES_FETCH}). Will use max instead.`);
+                initialLimit = this.MAX_INITIAL_SCROBBLES_FETCH;
             }
-        } catch (e) {
-            this.logger.warn(new SimpleError('Could not preload scrobbles', {cause: e, shortStack: true}));
+
+            this.logger.verbose(`Preloading up to ${initialLimit} initial scrobbles...`);
+
+            try  {
+                const preload = await this.getScrobblesForTimeRange({
+                    limit: initialLimit,
+                    fetchMax: initialLimit
+                });
+                if(preload === undefined) {
+                    this.logger.warn('Preload result was undefined!');
+                } else {
+                    if(preload.length === 0) {
+                        this.logger.verbose(`Preloaded 0 scrobbles.`);
+                    } else {
+                        preload.sort(sortByOldestPlayDate);
+                        const from = preload[0].data.playDate;
+                        // we are assuming that all fetchers return latest scrobbles first (pretty sure this is the case)
+                        const to = dayjs();// preload[preload.length - 1].data.playDate;
+                        await this.cache.cacheClientScrobbles.set<PlayObject[]>(this.getScrobbleCacheKey(from, to), preload, '60s');
+                        this.scrobbleSOTRanges.push({from: from.unix(), to: to.unix()});
+                        this.logger.verbose(`Preloaded ${preload.length} scrobbles from ${todayAwareFormat(from)} to ${todayAwareFormat(to)}`);
+                    }
+                }
+            } catch (e) {
+                this.logger.warn(new SimpleError('Could not preload scrobbles', {cause: e, shortStack: true}));
+            }
         }
     }
 
@@ -759,7 +762,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             this.scrobbleSOTRanges = groupPlaysToTimeRanges(queued.concat(dead), this.scrobbleSOTRanges, {staleNowBuffer: this.config.options?.refreshStaleAfter});
     }
 
-    getSOTScrobblesForPlay = async (play: PlayObject): Promise<PlayObject[]> => {
+    async getSOTScrobblesForPlay(play: PlayObject): Promise<PlayObject[]> {
         let range: PaginatedTimeRangeOptions = this.scrobbleSOTRanges.find(x => x.from <= play.data.playDate.unix() && x.to > Math.min(dayjs().subtract(this.config.options?.refreshStaleAfter ?? REFRESH_STALE_DEFAULT, 's').unix(), play.data.playDate.unix()));
         if(range === undefined) {
             this.logger.warn(`No Scrobble SOT range found! Should have been handled before this. Creating a new one for ${buildTrackString(play)}`);
@@ -786,6 +789,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             throw new SimpleError('Cannot get historical plays', {cause: e, shortStack: true});
         }
     }
+    
     public async alreadyScrobbled(playObj: PlayObject, log?: boolean): Promise<[boolean, PlayMatchResult]> {
         const result = await this.existingScrobble(playObj, await this.getSOTScrobblesForPlay(playObj));
         return [result.match, result];
@@ -841,7 +845,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return [s, [s]];
     }
 
-    public scrobble = async (playObj: PlayObject, opts?: { delay?: number | false, signal?: AbortSignal }): Promise<PlayObject> => {
+    public async scrobble(playObj: PlayObject, opts?: { delay?: number | false, signal?: AbortSignal }): Promise<PlayObject> {
         const {delay: delayDuration, signal} = opts || {};
         const scrobbleDelay = delayDuration === undefined ? this.scrobbleDelay : (delayDuration === false ? 0 : delayDuration);
         if (scrobbleDelay !== 0) {

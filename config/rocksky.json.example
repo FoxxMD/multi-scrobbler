@@ -4,7 +4,7 @@
     "name": "FoxxMD Rocksky Client",
     "configureAs": "client",
     "data": {
-      "key": "7cdr86vis3mpq5b1pi01md0hkm7ykzzxjy81r",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaWQiOiJkaWQ6cGxjOng0NjVwZmtyeW5zaDZ...",
       "handle": "alice.bsky.social"
     }
   },
@@ -13,7 +13,7 @@
     "name": "FoxxMD Rocksky Source",
     "configureAs": "source",
     "data": {
-      "key": "e4xwktm7jxm607x8el1fcda30eu14dzb64h3j",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaWQiOiJkaWQ6cGxjOng0NjVwZmtyeW5zaDZ...",
       "handle": "alice.bsky.social"
     }
   }
