@@ -161,7 +161,7 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
                     <DataList.ItemLabel>Duration</DataList.ItemLabel>
                     <DataList.ItemValue>
                         <Stack gap="1">
-                            <Text textStyle="xs">Track Length: {timeToHumanTimestamp(dayjs.duration(duration, 's'))}</Text>
+                            <Text textStyle="xs">Track Length: {duration === undefined ? 'N/A' : timeToHumanTimestamp(dayjs.duration(duration, 's'))}</Text>
                             {listenedFor !== undefined ? <Muted textStyle="xs">Listened For: {timeToHumanTimestamp(dayjs.duration(listenedFor, 's'))} ({formatNumber((listenedFor / duration) * 100)}%)</Muted> : null}
                         </Stack>
                     </DataList.ItemValue>
