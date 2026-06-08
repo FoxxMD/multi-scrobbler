@@ -44,7 +44,7 @@ export const ChakraCodeBlock = (props: ChakraCodeBlockProps) => {
     maxLines,
     collapsedMaxHeight = DEFAULT_COLLAPSED_MAX_HEIGHT,
     language = DEFAULT_LANGUAGE,
-    code,
+    code = '',
     ...rest
   } = props;
 
