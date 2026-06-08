@@ -78,12 +78,12 @@ export const normalizePlays = (plays: PlayObject[],
                 ...defaultMeta
             }
 
-            if(cleanPlay.meta.lifecycle?.original?.data?.playDate !== undefined) {
-                cleanPlay.meta.lifecycle.original.data.playDate = lastDate;
-            }
-            if(cleanPlay.meta.lifecycle?.original?.data?.playDateCompleted !== undefined) {
-                cleanPlay.meta.lifecycle.original.data.playDate = lastDate.add(cleanPlay.data.listenedFor ?? cleanPlay.data.duration, 's');
-            }
+            // if(cleanPlay.meta.lifecycle?.original?.data?.playDate !== undefined) {
+            //     cleanPlay.meta.lifecycle.original.data.playDate = lastDate;
+            // }
+            // if(cleanPlay.meta.lifecycle?.original?.data?.playDateCompleted !== undefined) {
+            //     cleanPlay.meta.lifecycle.original.data.playDate = lastDate.add(cleanPlay.data.listenedFor ?? cleanPlay.data.duration, 's');
+            // }
 
             if(index + 1 <= plays.length - 1) {
                 const listenTime = (plays[index+1].data.duration ?? defaultDuration) + faker.number.int({min: 0, max: 2});
@@ -121,12 +121,12 @@ export const normalizePlays = (plays: PlayObject[],
                 ...defaultMeta
             }
 
-            if(cleanPlay.meta.lifecycle?.original?.data?.playDate !== undefined) {
-                cleanPlay.meta.lifecycle.original.data.playDate = lastDate;
-            }
-            if(cleanPlay.meta.lifecycle?.original?.data?.playDateCompleted !== undefined) {
-                cleanPlay.meta.lifecycle.original.data.playDate = lastDate.add(cleanPlay.data.listenedFor ?? cleanPlay.data.duration, 's');
-            }
+            // if(cleanPlay.meta.lifecycle?.original?.data?.playDate !== undefined) {
+            //     cleanPlay.meta.lifecycle.original.data.playDate = lastDate;
+            // }
+            // if(cleanPlay.meta.lifecycle?.original?.data?.playDateCompleted !== undefined) {
+            //     cleanPlay.meta.lifecycle.original.data.playDate = lastDate.add(cleanPlay.data.listenedFor ?? cleanPlay.data.duration, 's');
+            // }
 
             if(progressDirection === 'newer') {
                 const listenTime = (cleanPlay.data.duration ?? defaultDuration) + faker.number.int({min: 0, max: 2});
@@ -189,10 +189,10 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: MarkOptional<PlayM
             seenAt: dayjs(),
             ...meta,
             lifecycle: {
-                original: {
-                    data: {},
-                    meta: {}
-                },
+                // original: {
+                //     data: {},
+                //     meta: {}
+                // },
                 steps: []
             },
             url: {

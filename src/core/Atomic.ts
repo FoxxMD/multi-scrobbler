@@ -311,8 +311,8 @@ export interface ScrobbleResult<D extends DateLike = Dayjs> {
 }
 
 export interface PlayLifecycle<D extends DateLike = Dayjs> {
-    input?: object
-    original?: PlayObjectLifecycleless<D>
+    //input?: object
+    //original?: PlayObjectLifecycleless<D>
     steps: LifecycleStep[]
     scrobble?: ScrobbleResult<D>
 }
@@ -357,11 +357,17 @@ export const SCROBBLE_TS_SOC_END: ScrobbleTsSOC = 2;
 
 export type DateLike = Dayjs | string
 
+export interface PlayOriginal<D extends DateLike = Dayjs> {
+    data?: object
+    play?: PlayObjectLifecycleless<D>
+}
+
 export interface AmbPlayObject<D extends DateLike = Dayjs> {
     id?: number
     uid?: string
     data: PlayData<D>,
     meta: PlayMetaLifecycleless
+    original?: PlayOriginal<D>
 }
 
 export const isPlayObject = (obj: object): obj is PlayObject => {

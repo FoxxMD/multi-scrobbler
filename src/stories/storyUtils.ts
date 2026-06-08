@@ -1,183 +1,6 @@
 import { JsonPlayObject, PlayLifecycle } from "../core/Atomic.js";
 
 const exampleLifecycle = (): PlayLifecycle<string> => ({
-  "input": {
-    "device": {
-      "id": "3cc6dc47a8551498a70e519ee09cd8423ff9d48c",
-      "is_active": true,
-      "is_private_session": false,
-      "is_restricted": false,
-      "name": "Pixel 9a",
-      "supports_volume": false,
-      "type": "Smartphone",
-      "volume_percent": 100
-    },
-    "shuffle_state": true,
-    "smart_shuffle": false,
-    "repeat_state": "context",
-    "is_playing": true,
-    "timestamp": 1773588429309,
-    "context": {
-      "external_urls": {
-        "spotify": "https://open.spotify.com/collection/tracks"
-      },
-      "href": "https://api.spotify.com/v1/me/tracks",
-      "type": "collection",
-      "uri": "spotify:user:socrates13:collection"
-    },
-    "progress_ms": 5455,
-    "item": {
-      "album": {
-        "album_type": "album",
-        "artists": [
-          {
-            "external_urls": {
-              "spotify": "https://open.spotify.com/artist/4V8LLVI7PbaPR0K2TGSxFF"
-            },
-            "href": "https://api.spotify.com/v1/artists/4V8LLVI7PbaPR0K2TGSxFF",
-            "id": "4V8LLVI7PbaPR0K2TGSxFF",
-            "name": "Tyler, The Creator",
-            "type": "artist",
-            "uri": "spotify:artist:4V8LLVI7PbaPR0K2TGSxFF"
-          }
-        ],
-        "external_urls": {
-          "spotify": "https://open.spotify.com/album/2nkto6YNI4rUYTLqEwWJ3o"
-        },
-        "href": "https://api.spotify.com/v1/albums/2nkto6YNI4rUYTLqEwWJ3o",
-        "id": "2nkto6YNI4rUYTLqEwWJ3o",
-        "images": [
-          {
-            "height": 640,
-            "url": "https://i.scdn.co/image/ab67616d0000b2738940ac99f49e44f59e6f7fb3",
-            "width": 640
-          },
-          {
-            "height": 300,
-            "url": "https://i.scdn.co/image/ab67616d00001e028940ac99f49e44f59e6f7fb3",
-            "width": 300
-          },
-          {
-            "height": 64,
-            "url": "https://i.scdn.co/image/ab67616d000048518940ac99f49e44f59e6f7fb3",
-            "width": 64
-          }
-        ],
-        "name": "Flower Boy",
-        "release_date": "2017-07-21",
-        "release_date_precision": "day",
-        "total_tracks": 14,
-        "type": "album",
-        "uri": "spotify:album:2nkto6YNI4rUYTLqEwWJ3o"
-      },
-      "artists": [
-        {
-          "external_urls": {
-            "spotify": "https://open.spotify.com/artist/4V8LLVI7PbaPR0K2TGSxFF"
-          },
-          "href": "https://api.spotify.com/v1/artists/4V8LLVI7PbaPR0K2TGSxFF",
-          "id": "4V8LLVI7PbaPR0K2TGSxFF",
-          "name": "Tyler, The Creator",
-          "type": "artist",
-          "uri": "spotify:artist:4V8LLVI7PbaPR0K2TGSxFF"
-        },
-        {
-          "external_urls": {
-            "spotify": "https://open.spotify.com/artist/7pbDxGE6nQSZVfiFdq9lOL"
-          },
-          "href": "https://api.spotify.com/v1/artists/7pbDxGE6nQSZVfiFdq9lOL",
-          "id": "7pbDxGE6nQSZVfiFdq9lOL",
-          "name": "Rex Orange County",
-          "type": "artist",
-          "uri": "spotify:artist:7pbDxGE6nQSZVfiFdq9lOL"
-        },
-        {
-          "external_urls": {
-            "spotify": "https://open.spotify.com/artist/1mSJCvDX0W7Dn7S9C6vmvI"
-          },
-          "href": "https://api.spotify.com/v1/artists/1mSJCvDX0W7Dn7S9C6vmvI",
-          "id": "1mSJCvDX0W7Dn7S9C6vmvI",
-          "name": "Anna of the North",
-          "type": "artist",
-          "uri": "spotify:artist:1mSJCvDX0W7Dn7S9C6vmvI"
-        }
-      ],
-      "disc_number": 1,
-      "duration_ms": 320720,
-      "explicit": true,
-      "external_ids": {
-        "isrc": "USQX91701279"
-      },
-      "external_urls": {
-        "spotify": "https://open.spotify.com/track/5WNYg3usc6H8N3MBEp4zVk"
-      },
-      "href": "https://api.spotify.com/v1/tracks/5WNYg3usc6H8N3MBEp4zVk",
-      "id": "5WNYg3usc6H8N3MBEp4zVk",
-      "is_local": false,
-      "name": "Boredom (feat. Rex Orange County & Anna of the North)",
-      "popularity": 66,
-      "preview_url": "https://p.scdn.co/mp3-preview/64c36bb59fe8c48d0ed5b38dc5a7b0189c1a642b?cid=f85f5aa4211f4ea78aa364547798b340",
-      "track_number": 8,
-      "type": "track",
-      "uri": "spotify:track:5WNYg3usc6H8N3MBEp4zVk"
-    },
-    "currently_playing_type": "track",
-    "actions": {
-      "disallows": {
-        "resuming": true
-      }
-    }
-  },
-  "original": {
-    "data": {
-      "artists": [
-        "Tyler, The Creator",
-        "Rex Orange County",
-        "Anna of the North"
-      ],
-      "albumArtists": [
-        "Tyler, The Creator"
-      ],
-      "album": "Flower Boy",
-      "track": "Boredom (feat. Rex Orange County & Anna of the North)",
-      "duration": 320.72,
-      // @ts-ignore
-      "playDate": "2026-03-15T15:27:09.309Z",
-      "isrc": "USQX91701279",
-      "meta": {
-        "spotify": {
-          "track": "5WNYg3usc6H8N3MBEp4zVk",
-          "artist": [
-            "4V8LLVI7PbaPR0K2TGSxFF",
-            "7pbDxGE6nQSZVfiFdq9lOL",
-            "1mSJCvDX0W7Dn7S9C6vmvI"
-          ],
-          "albumArtist": [
-            "4V8LLVI7PbaPR0K2TGSxFF"
-          ],
-          "album": "2nkto6YNI4rUYTLqEwWJ3o"
-        },
-        "brainz": {
-          "trackNumber": 8
-        }
-      }
-    },
-    "meta": {
-      "deviceId": "3cc6dc47a8-Pixel 9a",
-      "source": "Spotify",
-      "musicService": "Spotify",
-      "trackId": "5WNYg3usc6H8N3MBEp4zVk",
-      "trackProgressPosition": 5.455,
-      "scrobbleTsSOC": 1,
-      "newFromSource": true,
-      "url": {
-        "web": "https://open.spotify.com/track/5WNYg3usc6H8N3MBEp4zVk"
-      },
-      "art": {
-        "album": "https://i.scdn.co/image/ab67616d00001e028940ac99f49e44f59e6f7fb3"
-      }
-    }
-  },
   "steps": [
     {
       "name": "preCompare",
@@ -807,7 +630,7 @@ const exampleLifecycle = (): PlayLifecycle<string> => ({
       "closestMatchedPlay": {
         "data": {
           "artists": [
-            "Gorillaz"
+            {"name": "Gorillaz"}
           ],
           "track": "Tormenta",
           "album": "Cracker Island",
@@ -827,89 +650,9 @@ const exampleLifecycle = (): PlayLifecycle<string> => ({
             "web": "https://www.last.fm/music/Gorillaz/_/Tormenta"
           },
           "lifecycle": {
-            "input": {
-              "artist": {
-                "url": "https://www.last.fm/music/Gorillaz",
-                "name": "Gorillaz",
-                "image": [
-                  {
-                    "size": "small",
-                    "#text": "https://lastfm.freetls.fastly.net/i/u/34s/2a96cbd8b46e442fc41c2b86b821562f.png"
-                  },
-                  {
-                    "size": "medium",
-                    "#text": "https://lastfm.freetls.fastly.net/i/u/64s/2a96cbd8b46e442fc41c2b86b821562f.png"
-                  },
-                  {
-                    "size": "large",
-                    "#text": "https://lastfm.freetls.fastly.net/i/u/174s/2a96cbd8b46e442fc41c2b86b821562f.png"
-                  },
-                  {
-                    "size": "extralarge",
-                    "#text": "https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png"
-                  }
-                ],
-                "mbid": ""
-              },
-              "date": {
-                "uts": "1773520517",
-                "#text": "14 Mar 2026, 20:35"
-              },
-              "mbid": "",
-              "name": "Tormenta",
-              "image": [
-                {
-                  "size": "small",
-                  "#text": "https://lastfm.freetls.fastly.net/i/u/34s/507c3f4c1863a05626a445057871b56e.png"
-                },
-                {
-                  "size": "medium",
-                  "#text": "https://lastfm.freetls.fastly.net/i/u/64s/507c3f4c1863a05626a445057871b56e.png"
-                },
-                {
-                  "size": "large",
-                  "#text": "https://lastfm.freetls.fastly.net/i/u/174s/507c3f4c1863a05626a445057871b56e.png"
-                },
-                {
-                  "size": "extralarge",
-                  "#text": "https://lastfm.freetls.fastly.net/i/u/300x300/507c3f4c1863a05626a445057871b56e.png"
-                }
-              ],
-              "url": "https://www.last.fm/music/Gorillaz/_/Tormenta",
-              "streamable": "0",
-              "album": {
-                "mbid": "52518f4a-9543-4f9c-9a86-89052f4bf458",
-                "#text": "Cracker Island"
-              },
-              "loved": "0"
-            },
-            "original": {
-              "data": {
-                "artists": [
-                  "Gorillaz"
-                ],
-                "track": "Tormenta",
-                "album": "Cracker Island",
-                // @ts-ignore
-                "playDate": "2026-03-14T20:35:17.000Z",
-                "meta": {
-                  "brainz": {
-                    "album": "52518f4a-9543-4f9c-9a86-89052f4bf458"
-                  }
-                }
-              },
-              "meta": {
-                "nowPlaying": false,
-                "mbid": "",
-                "source": "Lastfm",
-                "url": {
-                  "web": "https://www.last.fm/music/Gorillaz/_/Tormenta"
-                }
-              }
-            },
             "steps": []
           }
-        }
+        },
       }
     },
     "payload": {
@@ -958,9 +701,9 @@ const exampleLifecycle = (): PlayLifecycle<string> => ({
     "mergedScrobble": {
       "data": {
         "artists": [
-          "Tyler, The Creator",
-          "Rex Orange County",
-          "Anna of the North"
+          {"name": "Tyler, The Creator"},
+          {"name": "Rex Orange County"},
+          {"name": "Anna of the North"}
         ],
         "album": "Scum Fuck Flower Boy",
         "track": "Boredom",
@@ -1032,9 +775,9 @@ const exampleLifecycle = (): PlayLifecycle<string> => ({
 export const examplePlay = (): JsonPlayObject => ({
       "data": {
         "artists": [
-          "Tyler, The Creator",
-          "Rex Orange County",
-          "Anna of the North"
+          {"name": "Tyler, The Creator"},
+          {"name": "Rex Orange County"},
+          {"name": "Anna of the North"}
         ],
         "album": "Scum Fuck Flower Boy",
         "track": "Boredom",
@@ -1102,135 +845,6 @@ export const examplePlay = (): JsonPlayObject => ({
 });
 
 const lastfmErrorLifcycle: PlayLifecycle<string> = {
-  "input": {
-    "track": {
-      "album": {
-        "album_type": "single",
-        "artists": [
-          {
-            "external_urls": {
-              "spotify": "https://open.spotify.com/artist/4l8MDydHy2RGwcGscG0uCB"
-            },
-            "href": "https://api.spotify.com/v1/artists/4l8MDydHy2RGwcGscG0uCB",
-            "id": "4l8MDydHy2RGwcGscG0uCB",
-            "name": "Mpho.Wav",
-            "type": "artist",
-            "uri": "spotify:artist:4l8MDydHy2RGwcGscG0uCB"
-          }
-        ],
-        "external_urls": {
-          "spotify": "https://open.spotify.com/album/1TCD8jrQdFclnpYVQxjon2"
-        },
-        "href": "https://api.spotify.com/v1/albums/1TCD8jrQdFclnpYVQxjon2",
-        "id": "1TCD8jrQdFclnpYVQxjon2",
-        "images": [
-          {
-            "height": 640,
-            "url": "https://i.scdn.co/image/ab67616d0000b273b0e9752208d1c426fcda8820",
-            "width": 640
-          },
-          {
-            "height": 300,
-            "url": "https://i.scdn.co/image/ab67616d00001e02b0e9752208d1c426fcda8820",
-            "width": 300
-          },
-          {
-            "height": 64,
-            "url": "https://i.scdn.co/image/ab67616d00004851b0e9752208d1c426fcda8820",
-            "width": 64
-          }
-        ],
-        "name": "Into The Deep",
-        "release_date": "2026-02-27",
-        "release_date_precision": "day",
-        "total_tracks": 3,
-        "type": "album",
-        "uri": "spotify:album:1TCD8jrQdFclnpYVQxjon2"
-      },
-      "artists": [
-        {
-          "external_urls": {
-            "spotify": "https://open.spotify.com/artist/4l8MDydHy2RGwcGscG0uCB"
-          },
-          "href": "https://api.spotify.com/v1/artists/4l8MDydHy2RGwcGscG0uCB",
-          "id": "4l8MDydHy2RGwcGscG0uCB",
-          "name": "Mpho.Wav",
-          "type": "artist",
-          "uri": "spotify:artist:4l8MDydHy2RGwcGscG0uCB"
-        }
-      ],
-      "disc_number": 1,
-      "duration_ms": 318875,
-      "explicit": false,
-      "external_ids": {
-        "isrc": "US23A9495906"
-      },
-      "external_urls": {
-        "spotify": "https://open.spotify.com/track/3Uar9flTUlakmFt9nkJdNZ"
-      },
-      "href": "https://api.spotify.com/v1/tracks/3Uar9flTUlakmFt9nkJdNZ",
-      "id": "3Uar9flTUlakmFt9nkJdNZ",
-      "is_local": false,
-      "name": "Bab'omdala",
-      "popularity": 26,
-      "preview_url": "https://p.scdn.co/mp3-preview/ec6e58ff47870192adfa02cd02b963e269ff330e?cid=f85f5aa4211f4ea78aa364547798b340",
-      "track_number": 1,
-      "type": "track",
-      "uri": "spotify:track:3Uar9flTUlakmFt9nkJdNZ"
-    },
-    "played_at": "2026-03-10T18:20:34.606Z",
-    "context": {
-      "type": "album",
-      "external_urls": {
-        "spotify": "https://open.spotify.com/album/4JgbPlF06nOTO03mSBSgtq"
-      },
-      "href": "https://api.spotify.com/v1/albums/4JgbPlF06nOTO03mSBSgtq",
-      "uri": "spotify:album:4JgbPlF06nOTO03mSBSgtq"
-    }
-  },
-  "original": {
-    "data": {
-      "album": "Into The Deep",
-      "track": "Bab'omdala",
-      "duration": 318.875,
-      "isrc": "US23A9495906",
-      "artists": [
-        "Mpho.Wav"
-      ],
-      "albumArtists": [],
-      // @ts-ignore
-      "playDate": "2026-03-10T18:20:34.606Z",
-      // @ts-ignore
-      "playDateCompleted": "2026-03-10T18:20:34.606Z",
-      "meta": {
-        "spotify": {
-          "track": "3Uar9flTUlakmFt9nkJdNZ",
-          "artist": [
-            "4l8MDydHy2RGwcGscG0uCB"
-          ],
-          "albumArtist": [],
-          "album": "1TCD8jrQdFclnpYVQxjon2"
-        },
-        "brainz": {
-          "trackNumber": 1
-        }
-      }
-    },
-    "meta": {
-      "deviceId": "NoDevice-SingleUser",
-      "source": "Spotify",
-      "musicService": "Spotify",
-      "trackId": "3Uar9flTUlakmFt9nkJdNZ",
-      "scrobbleTsSOC": 2,
-      "newFromSource": false,
-      "url": {
-        "web": "https://open.spotify.com/track/3Uar9flTUlakmFt9nkJdNZ"
-      },
-      "art": {
-        "album": "https://i.scdn.co/image/ab67616d00001e02b0e9752208d1c426fcda8820"
-      }
-    }
-  },
   "steps": [
     {
       "name": "preCompare",
@@ -1278,7 +892,7 @@ const lastfmErrorLifcycle: PlayLifecycle<string> = {
       "closestMatchedPlay": {
         "data": {
           "artists": [
-            "Monique Bingham"
+            {"name": "Monique Bingham"}
           ],
           "track": "Deep In The Bottom (of Africa) (feat. Black Coffee) - JazzWRLD Remix Edit (Radio Edit)",
           "album": "Deep In The Bottom (Of Africa) The Remixes [Pt. 1]",
@@ -1293,81 +907,6 @@ const lastfmErrorLifcycle: PlayLifecycle<string> = {
             "web": "https://www.last.fm/music/Monique+Bingham/_/Deep+In+The+Bottom+(of+Africa)+(feat.+Black+Coffee)+-+JazzWRLD+Remix+Edit+(Radio+Edit)"
           },
           "lifecycle": {
-            "input": {
-              "artist": {
-                "url": "https://www.last.fm/music/Monique+Bingham",
-                "name": "Monique Bingham",
-                "image": [
-                  {
-                    "size": "small",
-                    "#text": "https://lastfm.freetls.fastly.net/i/u/34s/2a96cbd8b46e442fc41c2b86b821562f.png"
-                  },
-                  {
-                    "size": "medium",
-                    "#text": "https://lastfm.freetls.fastly.net/i/u/64s/2a96cbd8b46e442fc41c2b86b821562f.png"
-                  },
-                  {
-                    "size": "large",
-                    "#text": "https://lastfm.freetls.fastly.net/i/u/174s/2a96cbd8b46e442fc41c2b86b821562f.png"
-                  },
-                  {
-                    "size": "extralarge",
-                    "#text": "https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png"
-                  }
-                ],
-                "mbid": ""
-              },
-              "date": {
-                "uts": "1773166515",
-                "#text": "10 Mar 2026, 18:15"
-              },
-              "mbid": "",
-              "name": "Deep In The Bottom (of Africa) (feat. Black Coffee) - JazzWRLD Remix Edit (Radio Edit)",
-              "image": [
-                {
-                  "size": "small",
-                  "#text": "https://lastfm.freetls.fastly.net/i/u/34s/2a96cbd8b46e442fc41c2b86b821562f.png"
-                },
-                {
-                  "size": "medium",
-                  "#text": "https://lastfm.freetls.fastly.net/i/u/64s/2a96cbd8b46e442fc41c2b86b821562f.png"
-                },
-                {
-                  "size": "large",
-                  "#text": "https://lastfm.freetls.fastly.net/i/u/174s/2a96cbd8b46e442fc41c2b86b821562f.png"
-                },
-                {
-                  "size": "extralarge",
-                  "#text": "https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png"
-                }
-              ],
-              "url": "https://www.last.fm/music/Monique+Bingham/_/Deep+In+The+Bottom+(of+Africa)+(feat.+Black+Coffee)+-+JazzWRLD+Remix+Edit+(Radio+Edit)",
-              "streamable": "0",
-              "album": {
-                "mbid": "",
-                "#text": "Deep In The Bottom (Of Africa) The Remixes [Pt. 1]"
-              },
-              "loved": "0"
-            },
-            "original": {
-              "data": {
-                "track": "Deep In The Bottom (of Africa) (feat. Black Coffee) - JazzWRLD Remix Edit (Radio Edit)",
-                "album": "Deep In The Bottom (Of Africa) The Remixes [Pt. 1]",
-                "artists": [
-                  "Monique Bingham"
-                ],
-                // @ts-ignore
-                "playDate": "2026-03-10T18:15:15.000Z"
-              },
-              "meta": {
-                "nowPlaying": false,
-                "mbid": "",
-                "source": "Lastfm",
-                "url": {
-                  "web": "https://www.last.fm/music/Monique+Bingham/_/Deep+In+The+Bottom+(of+Africa)+(feat.+Black+Coffee)+-+JazzWRLD+Remix+Edit+(Radio+Edit)"
-                }
-              }
-            },
             "steps": []
           }
         }
@@ -1383,7 +922,7 @@ export const lastfmErrorExample = (): JsonPlayObject => ({
       "duration": 318.875,
       "isrc": "US23A9495906",
       "artists": [
-        "Mpho.Wav"
+        {"name": "Mpho.Wav"}
       ],
       "albumArtists": [],
       // @ts-ignore

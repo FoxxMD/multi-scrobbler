@@ -833,12 +833,16 @@ export const playToRepositoryCreatePlayOpts = (data: MarkOptional<RepositoryCrea
         play: {
             meta: {
                 lifecycle: {
-                    input,
-                    original,
+                    //input,
+                    //original,
                     ...lifecycleRest
                 } = {},
                 ...metaRest
             },
+            original: {
+                play: playOriginal,
+                data: playData
+            } = {},
             ...playRest
         },
         ...rest
@@ -857,8 +861,8 @@ export const playToRepositoryCreatePlayOpts = (data: MarkOptional<RepositoryCrea
         },
         ...rest,
         input: {
-            play: original,
-            data: input
+            play: playOriginal,
+            data: playData
         }
     }
 }

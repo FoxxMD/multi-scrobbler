@@ -19,9 +19,10 @@ export const metaInvariantTransform = (play: PlayObject): PlayObjectLifecycleles
         meta: {
             trackId
         } = {},
+        data = {}
     } = play;
     return {
-        ...play,
+        data,
         meta: {
             trackId
         }

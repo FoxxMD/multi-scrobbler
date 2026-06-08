@@ -182,24 +182,24 @@ export const baseFormatPlayObj = (data: any, play: PlayObjectLifecycleless): Pla
             seenAt: dayjs(),
             ...play.meta,
             lifecycle: {
-                input: data,
-                original: play,
                 steps: []
             }
+        },
+        original: {
+            input: data,
+            play,
         }
     }
-    basePlay.meta.lifecycle.original.meta.seenAt = basePlay.meta.seenAt;
+    basePlay.original.play.meta.seenAt = basePlay.meta.seenAt;
     return basePlay;
 }
 
 export const defaultLifecycle = (extra?: PlayLifecycle): PlayLifecycle => {
     const {
-        original = {data: {}, meta: {}},
         steps = [],
         ...rest
     } = extra ?? {};
     return {
-        original,
         steps,
         ...rest,
     }
