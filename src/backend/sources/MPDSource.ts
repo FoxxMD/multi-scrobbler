@@ -150,8 +150,8 @@ export class MPDSource extends MemoryPositionalSource {
 
         let trackName: string,
         album: string,
-        artists: string[] = [],
-        albumArtists: string[] = [],
+        artists: string[] | undefined = [],
+        albumArtists: string[] | undefined = [],
         duration: number,
         position: number,
         brainz: BrainzMeta = {};
@@ -257,8 +257,8 @@ export class MPDSource extends MemoryPositionalSource {
 
         const play: PlayObjectLifecycleless = {
             data: {
-                artists: artistNamesToCredits(artists),
-                albumArtists: artistNamesToCredits(albumArtists),
+                artists: artists !== undefined ? artistNamesToCredits(artists) : [],
+                albumArtists: albumArtists !== undefined ? artistNamesToCredits(albumArtists) : [],
                 album,
                 track: trackName,
                 duration
