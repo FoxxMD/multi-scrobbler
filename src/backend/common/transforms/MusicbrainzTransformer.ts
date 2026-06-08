@@ -913,6 +913,12 @@ export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: Mus
         artistWeight
     } = stageConfig;
 
+    // reverse order so that "highest" priority (first in user list) ends up with the highest index, that we use as score
+    const groupPrimaryPriority = [...releaseGroupPrimaryTypePriority].reverse(),
+    groupSecPriority = [...releaseGroupSecondaryTypePriority].reverse(),
+    countryPriority = [...releaseCountryPriority].reverse(),
+    statusPriority = [...releaseStatusPriority].reverse();
+
     const cList = clone(list) as RecordingRankedMatched[];
     const rankedList = cList.map((x) => {
         let artistScore = 0;
@@ -921,10 +927,10 @@ export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: Mus
             artistScore = artistRes[0] * (artistWeight + (artistRes[1] > 0 ? 0.05 : 0));
         }
         const releases = (x.releases ?? []).map((a) => {
-            const statAScore = releaseStatusPriority.findIndex(x => a.status !== undefined && x === a.status.toLocaleLowerCase()) + 1;
-            const grpPAScore = releaseGroupPrimaryTypePriority.findIndex(x => x === a["release-group"]?.["primary-type"]?.toLocaleLowerCase()) + 1;
-            const grpSAScore = (a["release-group"]?.["secondary-types"] ?? []).reduce((acc: number, curr: MBReleaseGroupSecondaryType) => acc + releaseGroupSecondaryTypePriority.findIndex(x => x === (curr as MBReleaseGroupSecondaryType).toLocaleLowerCase()) + 1,0);
-            const countryAScore = releaseCountryPriority.findIndex(x => a.country === undefined ? false : x === a.country.toLocaleLowerCase()) + 1;
+            const statAScore = statusPriority.findIndex(x => a.status !== undefined && x === a.status.toLocaleLowerCase()) + 1;
+            const grpPAScore = groupPrimaryPriority.findIndex(x => x === a["release-group"]?.["primary-type"]?.toLocaleLowerCase()) + 1;
+            const grpSAScore = (a["release-group"]?.["secondary-types"] ?? []).reduce((acc: number, curr: MBReleaseGroupSecondaryType) => acc + groupSecPriority.findIndex(x => x === (curr as MBReleaseGroupSecondaryType).toLocaleLowerCase()) + 1,0);
+            const countryAScore = countryPriority.findIndex(x => a.country === undefined ? false : x === a.country.toLocaleLowerCase()) + 1;
             const compareScore = scoreNormalizedStringsWeighted(play.data.album, a.title, albumWeight, albumWeight !== 0 ? 0.05 : 0);
             return {
                 ...a,
