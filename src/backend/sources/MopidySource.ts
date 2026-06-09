@@ -5,7 +5,7 @@ import Mopidy, { models } from "mopidy";
 import normalizeUrl from 'normalize-url';
 import pEvent from 'p-event';
 import { URL } from "url";
-import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
 import { artistNamesToCredits, buildTrackString } from "../../core/StringUtils.js";
 import {
     FormatPlayObjectOptions,
@@ -160,7 +160,7 @@ export class MopidySource extends MemoryPositionalSource {
             artists = performers;
         }
 
-        const play: PlayObjectLifecycleless = {
+        const play: PlayObjectMinimal = {
             data: {
                 track: name,
                 album: albumName,

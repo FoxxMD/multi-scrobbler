@@ -42,7 +42,7 @@ import {
 from "@jellyfin/sdk/lib/index.js";
 import dayjs from "dayjs";
 import EventEmitter from "events";
-import { ArtistCredit, BrainzMeta, PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
+import { ArtistCredit, BrainzMeta, PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
 import { artistNamesToCredits, artistNameToCredit, buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import {
     FormatPlayObjectOptions,
@@ -482,7 +482,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
             playAlbumArtists = normalizedAlbumArtists;
         }
 
-        const play: PlayObjectLifecycleless = {
+        const play: PlayObjectMinimal = {
             data: {
                 artists: playArtists,
                 album: Album,

@@ -1,5 +1,5 @@
 import { getListDiff, ListDiff } from "@donedeal0/superdiff";
-import { PlayMatchResult, PlayObject, PlayObjectLifecycleless, SOURCE_SOT, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_DURING, TA_EXACT, TA_FUZZY, TemporalAccuracy, TrackStringOptions } from "../../core/Atomic.js";
+import { PlayMatchResult, PlayObject, PlayObjectMinimal, SOURCE_SOT, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_DURING, TA_EXACT, TA_FUZZY, TemporalAccuracy, TrackStringOptions } from "../../core/Atomic.js";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
 import { comparingMultipleArtists, playObjDataMatch, setIntersection } from "../utils.js";
 import { comparePlayTemporally, hasAcceptableTemporalAccuracy, temporalAccuracyToString, TemporalPlayComparisonOptions, temporalPlayComparisonSummary } from "./TimeUtils.js";
@@ -15,7 +15,7 @@ import { findAsyncSequential } from "./AsyncUtils.js";
 import dayjs from "dayjs";
 
 
-export const metaInvariantTransform = (play: PlayObject): PlayObjectLifecycleless => {
+export const metaInvariantTransform = (play: PlayObject): PlayObjectMinimal => {
     const {
         meta: {
             trackId
@@ -45,7 +45,7 @@ export const playDateInvariantTransform = (play: PlayObject): PlayObject => {
     }
 }
 
-export const playContentInvariantTransform = (play: PlayObject): PlayObjectLifecycleless => {
+export const playContentInvariantTransform = (play: PlayObject): PlayObjectMinimal => {
     const {
         data: {
             playDate,
@@ -63,7 +63,7 @@ export const playContentInvariantTransform = (play: PlayObject): PlayObjectLifec
     }
 }
 
-export const playContentBasicInvariantTransform = (play: PlayObject): PlayObjectLifecycleless => {
+export const playContentBasicInvariantTransform = (play: PlayObject): PlayObjectMinimal => {
     const {
         data: {
             playDate,
@@ -110,7 +110,7 @@ export const playMbidIdentifier = (play: PlayObject): string | undefined => {
     return undefined;
 }
 
-export type PlayTransformer = (play: PlayObject) => PlayObjectLifecycleless;
+export type PlayTransformer = (play: PlayObject) => PlayObjectMinimal;
 export type ListTransformers = PlayTransformer[];
 
 export const defaultListTransformers: ListTransformers = [metaInvariantTransform, playDateInvariantTransform];

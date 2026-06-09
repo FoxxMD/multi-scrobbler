@@ -1,5 +1,5 @@
 import { Response } from 'superagent';
-import { ArtistCredit, PlayObject, PlayObjectLifecycleless, URLData } from "../../../../core/Atomic.js";
+import { ArtistCredit, PlayObject, PlayObjectMinimal, URLData } from "../../../../core/Atomic.js";
 import { UpstreamError } from "../../errors/UpstreamError.js";
 import { AbstractApiOptions, FormatPlayObjectOptions, MUSICBRAINZ_URL, MusicbrainzApiConfigData } from "../../infrastructure/Atomic.js";
 import AbstractApiClient from "../AbstractApiClient.js";
@@ -407,7 +407,7 @@ export const recordingToPlay = (data: IRecording, options?: {ignoreVA?: boolean}
         }
     }
 
-    const play: PlayObjectLifecycleless = {
+    const play: PlayObjectMinimal = {
         data: {
             track: data.title,
             artists,

@@ -1,6 +1,6 @@
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { EventEmitter } from "events";
-import { PlayObject, PlayObjectLifecycleless, URLData } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectMinimal, URLData } from "../../core/Atomic.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -209,7 +209,7 @@ const formatPlayObj = (obj: IcecastMetadata, options: FormatPlayObjectOptions = 
         }
     }
 
-    const play: PlayObjectLifecycleless = {
+    const play: PlayObjectMinimal = {
         data: {
             track,
             artists: artistNamesToCredits(artists)

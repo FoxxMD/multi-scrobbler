@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, URLData } from "../../../../core/Atomic.js";
+import { PlayObject, PlayObjectMinimal, ScrobbleActionResult, URLData } from "../../../../core/Atomic.js";
 import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens, PaginatedTimeRangeListensResult } from "../../infrastructure/Atomic.js";
 import { GetListensOptions, KoitoData, ListenObjectResponse, ListensResponse } from "../../infrastructure/config/client/koito.js";
 import AbstractApiClient from "../AbstractApiClient.js";
@@ -216,7 +216,7 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
 }
 
 export const listenObjectResponseToPlay = (obj: ListenObjectResponse, options: { newFromSource?: boolean, url?: URL } = {}): PlayObject => {
-    const play: PlayObjectLifecycleless = {
+    const play: PlayObjectMinimal = {
         data: {
             track: obj.track.title,
             artists: artistNamesToCredits((obj.track.artists ?? []).map(x => x.name)),

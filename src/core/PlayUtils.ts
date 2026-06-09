@@ -1,5 +1,5 @@
 import { PlayPlatformId } from "../backend/common/infrastructure/Atomic.js";
-import { AmbPlayObject, DateLike, PlayObject, PlayObjectLifecycleless } from "./Atomic.js";
+import { AmbPlayObject, DateLike, PlayObject, PlayObjectMinimal } from "./Atomic.js";
 import dayjs from "dayjs";
 
 export const sortByNewestDate = (aPlayDate: DateLike, bPlayDate: DateLike) => {
@@ -36,7 +36,7 @@ export const genGroupIdStr = (id: PlayPlatformId) => {
     return `${id[0]}-${id[1]}`;
 };
 
-export const statefulInvariantTransform = (play: PlayObject): PlayObjectLifecycleless => {
+export const statefulInvariantTransform = (play: PlayObject): PlayObjectMinimal => {
     const {
         meta,
         data

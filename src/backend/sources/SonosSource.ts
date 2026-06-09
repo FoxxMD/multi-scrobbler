@@ -1,5 +1,5 @@
 import { EventEmitter } from "events";
-import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -374,7 +374,7 @@ export const formatPlayObj = (obj: SonosState, options: FormatPlayObjectOptions 
         titleStr = Title;
     }
 
-    const play: PlayObjectLifecycleless = {
+    const play: PlayObjectMinimal = {
         data: {
             track: titleStr,
             album: Album,

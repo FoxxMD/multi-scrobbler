@@ -1,7 +1,7 @@
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { EventEmitter } from "events";
-import { PlayObject, PlayObjectLifecycleless, URLData } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectMinimal, URLData } from "../../core/Atomic.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -148,7 +148,7 @@ const formatPlayObj = (obj: PlayInfoCDResponse | PlayInfoNetResponse, options: F
         playback
     } = obj;
 
-    const play: PlayObjectLifecycleless = {
+    const play: PlayObjectMinimal = {
         data: {
             artists: artistNamesToCredits(artist !== undefined && artist !== '' ? [artist] : []),
             album: album !== '' ? album : undefined,

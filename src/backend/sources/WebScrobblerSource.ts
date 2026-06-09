@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import EventEmitter from "events";
-import { PlayObject, PlayObjectLifecycleless, SOURCE_SOT } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectMinimal, SOURCE_SOT } from "../../core/Atomic.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -125,7 +125,7 @@ export class WebScrobblerSource extends MemorySource {
         const albumArtist = processed.albumArtist ?? parsed.albumArtist;
         const duration = parsed.duration ?? processed.duration;
 
-        const play: PlayObjectLifecycleless = {
+        const play: PlayObjectMinimal = {
             data: {
                 track,
                 artists: [artistNameToCredit(artist)],

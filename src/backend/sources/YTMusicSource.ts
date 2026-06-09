@@ -1,6 +1,6 @@
 import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
-import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
 import { Innertube, UniversalCache, Parser, YTNodes, ApiResponse, IBrowseResponse, Log, SessionOptions } from 'youtubei.js';
@@ -419,7 +419,7 @@ Redirect URI  : ${this.redirectUri}`);
             const durObj = dayjs.duration(dur.seconds, 's')
             duration = durObj.asSeconds();
         }
-        const play: PlayObjectLifecycleless = {
+        const play: PlayObjectMinimal = {
             data: {
                 artists: artistNamesToCredits(artists),
                 albumArtists: artistNamesToCredits(albumArtists),

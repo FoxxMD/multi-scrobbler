@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import { EventEmitter } from "events";
 import path from 'path';
 import {MPC, type Status, type Song, type PlaylistItem} from 'mpc-js';
-import { BrainzMeta, PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
+import { BrainzMeta, PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -255,7 +255,7 @@ export class MPDSource extends MemoryPositionalSource {
             position = Math.ceil(position);
         }
 
-        const play: PlayObjectLifecycleless = {
+        const play: PlayObjectMinimal = {
             data: {
                 artists: artists !== undefined ? artistNamesToCredits(artists) : [],
                 albumArtists: albumArtists !== undefined ? artistNamesToCredits(albumArtists) : [],

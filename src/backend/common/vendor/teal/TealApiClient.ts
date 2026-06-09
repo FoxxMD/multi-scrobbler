@@ -1,5 +1,5 @@
 import dayjs, { Dayjs, ManipulateType } from "dayjs";
-import { PlayObject, PlayObjectLifecycleless, BrainzMeta, SourcePlayerObj, MBID, ScrobbleActionResult, UnixTimestamp } from "../../../../core/Atomic.js";
+import { PlayObject, PlayObjectMinimal, BrainzMeta, SourcePlayerObj, MBID, ScrobbleActionResult, UnixTimestamp } from "../../../../core/Atomic.js";
 import { getRoot } from "../../../ioc.js";
 import { removeUndefinedKeys } from "../../../utils.js";
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.js";
@@ -116,7 +116,7 @@ export class TealApiClient extends AbstractApiClient implements PagelessTimeRang
 
 export const recordToPlay = (record: FmTealAlphaFeedPlay.Main, options: RecordOptions = {}): PlayObject => {
 
-    const play: PlayObjectLifecycleless = {
+    const play: PlayObjectMinimal = {
         data: {
             track: record.trackName,
             artists: record.artists.filter(x => x.artistName !== undefined).map(x => ({ name: x.artistName, mbid: x.artistMbId })),

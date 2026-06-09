@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import EventEmitter from "events";
 import request, { Request, Response, SuperAgent } from 'superagent';
-import { PlayObject, PlayObjectLifecycleless, SOURCE_SOT, TA_CLOSE, TA_DURING, TA_EXACT, TA_FUZZY, TemporalAccuracy } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectMinimal, SOURCE_SOT, TA_CLOSE, TA_DURING, TA_EXACT, TA_FUZZY, TemporalAccuracy } from "../../core/Atomic.js";
 import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { DeezerInternalSourceConfig, DeezerInternalTrackData, DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
 import { TRANSFORM_HOOK } from "../common/infrastructure/Transform.js";
@@ -112,7 +112,7 @@ export default class DeezerInternalSource extends MemorySource {
 
     static formatPlayObj(obj: DeezerInternalTrackData, options: FormatPlayObjectOptions = {}): PlayObject {
         const {newFromSource = false} = options;
-        const play: PlayObjectLifecycleless = {
+        const play: PlayObjectMinimal = {
             data: {
                 artists: artistNamesToCredits([obj.ART_NAME]),
                 album: obj.ALB_TITLE,

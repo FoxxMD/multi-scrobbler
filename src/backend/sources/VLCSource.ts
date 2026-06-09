@@ -2,7 +2,7 @@ import { parseRegexSingle, parseToRegex } from "@foxxmd/regex-buddy-core";
 import { EventEmitter } from "events";
 import * as VLC from "vlc-client"
 import { VlcMeta, VlcStatus } from "vlc-client/dist/Types.js";
-import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -216,7 +216,7 @@ export class VLCSource extends MemoryPositionalSource {
             state
         } = vlcState || {};
 
-        const play: PlayObjectLifecycleless = {
+        const play: PlayObjectMinimal = {
             data: {
                 artists: artistNamesToCredits(artists),
                 albumArtists: artistNamesToCredits(albumArtists),

@@ -3,7 +3,7 @@ import dayjs from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
 import EventEmitter from "events";
 import request, { Request } from 'superagent';
-import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
 import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig, PlayPlatformId } from "../common/infrastructure/Atomic.js";
@@ -77,7 +77,7 @@ export class SubsonicSource extends MemorySource {
             username,
         } = obj;
 
-        const play: PlayObjectLifecycleless = {
+        const play: PlayObjectMinimal = {
             data: {
                 artists: [artistNameToCredit(artist)],
                 album,

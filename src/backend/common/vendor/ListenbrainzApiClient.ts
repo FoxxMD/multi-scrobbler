@@ -1,7 +1,7 @@
 import { stringSameness } from '@foxxmd/string-sameness';
 import dayjs from "dayjs";
 import request, { Request, Response } from 'superagent';
-import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, UnixTimestamp, URLData } from "../../../core/Atomic.js";
+import { BrainzMeta, PlayObject, PlayObjectMinimal, ScrobbleActionResult, UnixTimestamp, URLData } from "../../../core/Atomic.js";
 import { artistNamesToCredits, combinePartsToString, slice } from "../../../core/StringUtils.js";
 import {
     normalizeListenbrainzUrl,
@@ -683,7 +683,7 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
         }
 
 
-        const play: PlayObjectLifecycleless = {
+        const play: PlayObjectMinimal = {
             data: {
                 playDate: dayjs.unix(listened_at),
                 track: normalTrackName,

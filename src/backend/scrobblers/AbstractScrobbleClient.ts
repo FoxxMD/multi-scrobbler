@@ -8,7 +8,7 @@ import {
     DeadLetterScrobble,
     NowPlayingUpdateThreshold,
     PlayObject,
-    PlayObjectLifecycleless,
+    PlayObjectMinimal,
     QueuedScrobble, ScrobbleActionResult, PlayMatchResult, SourcePlayerObj, TA_DURING,
     TA_FUZZY,
     TrackStringOptions,

@@ -2,7 +2,7 @@ import { LogDataPretty, LogLevel } from "@foxxmd/logging";
 import { Dayjs } from "dayjs";
 import { ListenProgress } from "../backend/sources/PlayerState/ListenProgress.js";
 import { AdditionalTrackInfoResponse } from "../backend/common/vendor/listenbrainz/interfaces.js";
-import { MarkOptional } from "ts-essentials";
+import { MarkOptional, RequiredKeys } from "ts-essentials";
 import { ErrorObject } from "serialize-error";
 import { PlayPlatformIdStr } from "../backend/common/infrastructure/Atomic.js";
 import { FlowControlTerm, TransformHook } from "../backend/common/infrastructure/Transform.js";
@@ -292,13 +292,6 @@ export interface LifecycleInput {
     type: string, input: (object | string)
 }
 
-export type PlayMetaLifecycleless<D extends DateLike = Dayjs> = MarkOptional<PlayMeta<D>, 'lifecycle'>;
-
-export interface PlayObjectLifecycleless<D extends DateLike = Dayjs> {
-    data: PlayData<D>,
-    meta: PlayMetaLifecycleless<D>
-}
-
 export type ErrorLike = Error | ErrorObject;
 
 /** scrobble action plus the match result before scrobbling */
@@ -308,7 +301,7 @@ export interface ScrobbleResult<D extends DateLike = Dayjs> {
     warnings?: string[]
     error?: Error | ErrorObject
     response?: ScrobbleResponse
-    mergedScrobble?: PlayObjectLifecycleless<D>
+    mergedScrobble?: AmbPlayObjectMinimal<D>
 }
 
 // export interface PlayLifecycle<D extends DateLike = Dayjs> {
@@ -350,8 +343,8 @@ export interface PlayMatchResult<D extends DateLike = Dayjs> {
     score: number
     breakdowns: string[]
     reason?: string
-    closestMatchedPlay?: PlayObjectLifecycleless<D>
-    transformedPlay?: PlayObjectLifecycleless<D>
+    closestMatchedPlay?: AmbPlayObjectMinimal<D>
+    transformedPlay?: PlayObjectMinimal
     summary?: string
     createdAt: string
 }
@@ -365,24 +358,27 @@ export type DateLike = Dayjs | string
 
 export interface PlayOriginal<D extends DateLike = Dayjs> {
     data?: object
-    play?: PlayObjectLifecycleless<D>
+    play?: PlayObjectMinimal<D>
 }
 
 export interface AmbPlayObject<D extends DateLike = Dayjs> {
     id?: number
     uid?: string
     data: PlayData<D>,
-    meta: PlayMetaLifecycleless<D>
+    meta: PlayMeta<D>
     original?: PlayOriginal<D>
     scrobble?: ScrobbleResult<D>
     lifecycle?: LifecycleStep[]
 }
+
+export type AmbPlayObjectMinimal<D extends DateLike = Dayjs> = Pick<AmbPlayObject<D>, RequiredKeys<AmbPlayObject<D>>>;
 
 export const isPlayObject = (obj: object): obj is PlayObject => {
    return obj !== undefined && obj !== null &&  'data' in obj && typeof obj.data === 'object' && 'meta' in obj && typeof obj.meta === 'object';
 }
 
 export type PlayObject = AmbPlayObject<Dayjs>;
+export type PlayObjectMinimal<D extends DateLike = Dayjs> = AmbPlayObjectMinimal<D>;
 export interface PlayActivity {
   play: JsonPlayObject
   status: string

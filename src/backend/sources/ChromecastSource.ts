@@ -5,7 +5,7 @@ import { Client as CastClient } from 'castv2';
 import dayjs from "dayjs";
 import { EventEmitter } from "events";
 import e from "express";
-import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
 import { artistNamesToCredits, buildTrackString } from "../../core/StringUtils.js";
 import { NETWORK_ERROR_FAILURE_CODES } from "../common/errors/NodeErrors.js";
 import {
@@ -718,7 +718,7 @@ export class ChromecastSource extends MemoryPositionalSource {
             trackProgressPosition = currentTime;
         }
 
-        const play: PlayObjectLifecycleless = {
+        const play: PlayObjectMinimal = {
             data: {
                 track,
                 album,

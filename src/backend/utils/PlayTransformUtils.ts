@@ -1,6 +1,6 @@
 import { Logger } from "@foxxmd/logging";
 import { searchAndReplace as searchAndReplaceFunc, testMaybeRegex as testMaybeRegexFunc } from "@foxxmd/regex-buddy-core";
-import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
 
 import {
     ConditionalSearchAndReplaceRegExp,
@@ -173,7 +173,7 @@ export interface TransformPlayPartsOptions {
     regex?: SuppliedRegex
 }
 
-export const baseFormatPlayObj = (data: any, play: PlayObjectLifecycleless): PlayObject => {
+export const baseFormatPlayObj = (data: any, play: PlayObjectMinimal): PlayObject => {
     const basePlay =  {
         data: {
             ...play.data

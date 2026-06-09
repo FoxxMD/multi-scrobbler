@@ -2,7 +2,7 @@ import { EventEmitter } from "events";
 import request from 'superagent';
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { PlayObject, PlayObjectLifecycleless, URLData } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectMinimal, URLData } from "../../core/Atomic.js";
 import {
     InternalConfig,
     NO_DEVICE,
@@ -436,7 +436,7 @@ const formatPlayObj = (obj: BridgeTrackData, playerId: string): PlayObject => {
         ? obj.artists_list
         : (obj.artists ? obj.artists.split(/\s*,\s*/).filter(x => x.trim() !== '') : []);
 
-    const play: PlayObjectLifecycleless = {
+    const play: PlayObjectMinimal = {
         data: {
             artists: artistNamesToCredits(artists),
             album: obj.album ?? undefined,

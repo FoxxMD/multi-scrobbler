@@ -4,7 +4,7 @@ import { childLogger, Logger } from "@foxxmd/logging";
 import { EventEmitter } from "events";
 import { WS, CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket'
 import pEvent from 'p-event';
-import { PlayObject, PlayObjectLifecycleless, URLData } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectMinimal, URLData } from "../../core/Atomic.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
 import {
     FormatPlayObjectOptions,
@@ -249,7 +249,7 @@ const formatPlayObj = (obj: AzuraNowPlayingResponse, options: FormatPlayObjectOp
 
     const track: string = title ?? text;
 
-    const play: PlayObjectLifecycleless = {
+    const play: PlayObjectMinimal = {
         data: {
             artists: artistNamesToCredits(artist !== undefined && artist !== '' ? [artist] : []),
             album: album !== '' ? album : undefined,

@@ -3,7 +3,7 @@ import EventEmitter from "events";
 import passport from "passport";
 import { Strategy as DeezerStrategy } from 'passport-deezer';
 import request from 'superagent';
-import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
 import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
 import { parseRetryAfterSecsFromObj, sleep, sortByOldestPlayDate, } from "../utils.js";
@@ -72,7 +72,7 @@ export default class DeezerSource extends AbstractSource {
                 title: albumName,
             } = {},
         } = obj;
-        const play: PlayObjectLifecycleless = {
+        const play: PlayObjectMinimal = {
             data: {
                 artists: [artistName],
                 album: albumName,

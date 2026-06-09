@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import normalizeUrl from 'normalize-url';
 import pEvent from 'p-event';
 import { URL } from "url";
-import { PlayObject, PlayObjectLifecycleless, URLData } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectMinimal, URLData } from "../../core/Atomic.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
 import {
     FormatPlayObjectOptions,
@@ -190,7 +190,7 @@ export class MusikcubeSource extends MemoryPositionalSource {
         if(album_artist !== undefined && album_artist !== artist) {
             albumArtists.push(album_artist);
         }
-        const play: PlayObjectLifecycleless = {
+        const play: PlayObjectMinimal = {
             data: {
                 artists: artistNamesToCredits(artists),
                 albumArtists: artistNamesToCredits(albumArtists),

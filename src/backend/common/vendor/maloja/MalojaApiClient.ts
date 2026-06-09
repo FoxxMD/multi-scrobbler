@@ -4,7 +4,7 @@ import compareVersions from "compare-versions";
 import AbstractApiClient from "../AbstractApiClient.js";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../../utils/NetworkUtils.js";
 import { MalojaData } from "../../infrastructure/config/client/maloja.js";
-import { PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, URLData } from "../../../../core/Atomic.js";
+import { PlayObject, PlayObjectMinimal, ScrobbleActionResult, URLData } from "../../../../core/Atomic.js";
 import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens, PaginatedTimeRangeListensResult } from "../../infrastructure/Atomic.js";
 import { isNodeNetworkException } from "../../errors/NodeErrors.js";
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
@@ -410,7 +410,7 @@ export const formatPlayObj = (obj: MalojaScrobbleData, options: FormatPlayObject
         return [...acc, ...aStrings];
     }, []);
     const urlParams = new URLSearchParams([['artist', artists[0]], ['title', title]]);
-    const play: PlayObjectLifecycleless = {
+    const play: PlayObjectMinimal = {
         data: removeUndefinedKeys({
             artists: artistNamesToCredits([...new Set(artistStrings)] as string[]),
             track: title,

@@ -1,5 +1,5 @@
 import EventEmitter from "events";
-import { BrainzMeta, PlayObject, PlayObjectLifecycleless, URLData } from "../../core/Atomic.js";
+import { BrainzMeta, PlayObject, PlayObjectMinimal, URLData } from "../../core/Atomic.js";
 import { artistNamesToCredits, buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import {
     asPlayerStateDataMaybePlay,
@@ -374,7 +374,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
             realArtists.push(artist);
         }
 
-        const play: PlayObjectLifecycleless = {
+        const play: PlayObjectMinimal = {
             data: {
                 artists: artistNamesToCredits(realArtists),
                 albumArtists: artistNamesToCredits(albumArtists),

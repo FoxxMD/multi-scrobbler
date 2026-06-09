@@ -2,7 +2,7 @@ import { Interfaces as Notifications } from '@dbus-types/notifications'
 import dayjs from "dayjs";
 import { DBusInterface, MessageBus, sessionBus, Connection, ConnectOpts } from 'dbus-ts';
 import EventEmitter from "events";
-import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import {
     MPRIS_IFACE,
@@ -73,7 +73,7 @@ export class MPRISSource extends MemorySource {
             actualAlbumArtists = albumArtist;
         }
 
-        const play: PlayObjectLifecycleless = {
+        const play: PlayObjectMinimal = {
             data: {
                 track: title,
                 album,

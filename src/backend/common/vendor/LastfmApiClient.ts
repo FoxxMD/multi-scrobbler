@@ -1,5 +1,5 @@
 import dayjs, { Dayjs, ManipulateType } from "dayjs";
-import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, UnixTimestamp, URLData, Writeable } from "../../../core/Atomic.js";
+import { BrainzMeta, PlayObject, PlayObjectMinimal, ScrobbleActionResult, UnixTimestamp, URLData, Writeable } from "../../../core/Atomic.js";
 import { artistNamesToCredits, artistNameToCredit, nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.js";
 import { removeUndefinedKeys, sleep } from "../../utils.js";
 import { writeFile } from '../../utils/FSUtils.js';
@@ -570,7 +570,7 @@ export const scrobblePayloadToPlay = (obj: LastFMScrobbleRequestPayload): PlayOb
         artists = [artist];
     }
 
-    const play: PlayObjectLifecycleless = {
+    const play: PlayObjectMinimal = {
         data: {
             track,
             album: nonEmptyStringOrDefault(album),
@@ -696,7 +696,7 @@ export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectO
         recording: nonEmptyStringOrDefault<undefined>(mbid)
     });
 
-    const play: PlayObjectLifecycleless = {
+    const play: PlayObjectMinimal = {
         data: {
             artists: artistNamesToCredits([...new Set(artistStrings)] as string[]),
             track: title,

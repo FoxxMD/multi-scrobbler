@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import { EventEmitter } from "events";
 import normalizeUrl from 'normalize-url';
 import { URL } from "url";
-import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { JRiverSourceConfig } from "../common/infrastructure/config/source/jriver.js";
 import { Info, JRiverApiClient, PLAYER_STATE } from "../common/vendor/JRiverApiClient.js";
@@ -101,7 +101,7 @@ export class JRiverSource extends MemoryPositionalSource {
         const album = Album === null || Album === '' ? undefined : Album;
         const length = Number.parseInt(DurationMS.toString()) / 1000;
 
-        const play: PlayObjectLifecycleless = {
+        const play: PlayObjectMinimal = {
             data: {
                 track: Name,
                 album: album,
