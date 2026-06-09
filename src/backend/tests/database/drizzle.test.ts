@@ -121,7 +121,7 @@ describe('Migrations', function () {
 
         await withLocalTmpDir(async () => {
 
-            const dbPath = getDbPath('msDb', process.cwd());
+            const dbPath = getDbPath('ms', process.cwd());
             // copy first migration
             await fs.mkdir('migrations');
             try {
@@ -148,7 +148,8 @@ describe('Migrations', function () {
 
                 await getMigratedDb(dbPath, {migrationsFolder: mf});
                 const contents = await fs.readdir(path.resolve('./'));
-                expect(contents.some(x => x.includes('ms.db.bak')));
+                const bakPattern = new RegExp(/ms\.db\.\d+\.bak/);
+                expect(contents.some(x => bakPattern.test(x))).is.true;
             } catch (e) {
                 throw e;
             }

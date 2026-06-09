@@ -34,7 +34,7 @@ export const backupDb = async (db: sqlite.DatabaseSync, dbPath: string, opts: { 
 
     const {
         logger: parentLogger = loggerNoop,
-        suffix,
+        suffix = dayjs().unix().toString(),
     } = opts;
 
     const logger = childLogger(parentLogger, 'Migrations');
