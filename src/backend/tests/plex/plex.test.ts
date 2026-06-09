@@ -2,7 +2,7 @@ import { loggerTest } from "@foxxmd/logging";
 import { assert, expect } from 'chai';
 import EventEmitter from "events";
 import { describe, it } from 'mocha';
-import { JsonPlayObject, PlayMeta, PlayObject } from "../../../core/Atomic.js";
+import { PlayMeta } from "../../../core/Atomic.js";
 
 import validSessionResponse from './validSession.json' with { type: "json" };
 import { generatePlay } from "../../../core/PlayTestUtils.js";
@@ -10,7 +10,6 @@ import { PlayerStateDataMaybePlay } from "../../common/infrastructure/Atomic.js"
 import { PlexApiData } from "../../common/infrastructure/config/source/plex.js";
 import PlexApiSource from "../../sources/PlexApiSource.js";
 import { GetSessionsMetadata } from "@lukehagar/plexjs/sdk/models/operations/getsessions.js";
-import { MarkOptional } from "ts-essentials";
 
 const validSession = validSessionResponse.object.mediaContainer.metadata[0];
 
@@ -34,7 +33,7 @@ const validPlayerState: PlayerStateDataMaybePlay = {
     platformId: ['1234', 'MyUser'],
     play: generatePlay({}, {mediaType: 'track', user: 'MyUser', deviceId: '1234', library: 'Music'})
 }
-const playWithMeta = (meta: MarkOptional<PlayMeta, 'lifecycle'>): PlayerStateDataMaybePlay => {
+const playWithMeta = (meta: PlayMeta): PlayerStateDataMaybePlay => {
     const {user, deviceId} = meta;
     const platformId = validPlayerState.platformId;
     return {

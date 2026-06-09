@@ -1,4 +1,4 @@
-import { faker, fakerEL, FakerError } from '@faker-js/faker';
+import { faker } from '@faker-js/faker';
 import dayjs, { Dayjs } from "dayjs";
 import duration from "dayjs/plugin/duration.js";
 import isBetween from "dayjs/plugin/isBetween.js";
@@ -14,7 +14,6 @@ import { findDelimiters } from "./StringUtils.js";
 import { ListRecord } from '../backend/common/infrastructure/config/client/tealfm.js';
 import { nanoid } from 'nanoid';
 import { LastFMTrackObject } from '../backend/common/vendor/LastfmApiClient.js';
-import { MarkOptional } from 'ts-essentials';
 import clone from 'clone';
 import { removeUndefinedKeys } from '../backend/utils.js';
 import { FmTealAlphaFeedPlay } from '../backend/common/vendor/teal/lexicons/index.js';
@@ -32,7 +31,7 @@ export const normalizePlays = (plays: PlayObject[],
                                    endDate?: Dayjs
                                    defaultDuration?: number,
                                    defaultData?: ObjectPlayData,
-                                   defaultMeta?: MarkOptional<PlayMeta, 'lifecycle'>
+                                   defaultMeta?: PlayMeta
                                }
 ): PlayObject[] => {
     const {
@@ -165,7 +164,7 @@ export interface GeneratePlayOpts {
     playDateCompleted?: boolean,
     listenRanges?: boolean
 }
-export const generatePlay = (data: ObjectPlayData = {}, meta: MarkOptional<PlayMeta, 'lifecycle'> = {}, opts: GeneratePlayOpts = {}): PlayObject => {
+export const generatePlay = (data: ObjectPlayData = {}, meta: PlayMeta = {}, opts: GeneratePlayOpts = {}): PlayObject => {
     const {
         playDateCompleted = false,
         listenRanges = false,
@@ -292,7 +291,7 @@ export const generatePlayPlatformId = (deviceId?: string, userId?: string): Play
     return [did, uid];
 }
 
-export const generatePlays = (numberOfPlays: number, data: ObjectPlayData = {}, meta: MarkOptional<PlayMeta, 'lifecycle'> = {}, opts: GeneratePlayOpts = {}): PlayObject[] => {
+export const generatePlays = (numberOfPlays: number, data: ObjectPlayData = {}, meta: PlayMeta = {}, opts: GeneratePlayOpts = {}): PlayObject[] => {
     return Array.from(Array(numberOfPlays), () => generatePlay(data, meta, opts));
 }
 

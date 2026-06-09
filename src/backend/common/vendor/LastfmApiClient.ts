@@ -311,7 +311,6 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
                         playDate,
                     },
                     meta: {
-                        mbid,
                         nowPlaying,
                     }
                 } = formatted;
@@ -319,13 +318,13 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
                     // if the track is "now playing" it doesn't get a timestamp so we can't determine when it started playing
                     // and don't want to accidentally count the same track at different timestamps by artificially assigning it 'now' as a timestamp
                     // so we'll just ignore it in the context of recent tracks since really we only want "tracks that have already finished being played" anyway
-                    this.logger.trace({ track, mbid }, `Ignoring 'now playing' track returned from ${this.upstreamName} client`);
+                    this.logger.trace({ track }, `Ignoring 'now playing' track returned from ${this.upstreamName} client`);
                     return acc;
                 } else if (playDate === undefined) {
                     if(nowPlaying === true) {
                         formatted.data.playDate = dayjs();
                     } else {
-                        this.logger.warn({ track, mbid }, `${this.upstreamName} recently scrobbled track did not contain a timestamp, omitting from time frame check`);
+                        this.logger.warn({ track }, `${this.upstreamName} recently scrobbled track did not contain a timestamp, omitting from time frame check`);
                         return acc;
                     }
                 }
@@ -706,7 +705,6 @@ export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectO
         },
         meta: {
             nowPlaying: nowplaying === 'true',
-            mbid,
             source,
             url: {
                 web: url,

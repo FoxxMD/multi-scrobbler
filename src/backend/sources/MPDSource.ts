@@ -261,10 +261,12 @@ export class MPDSource extends MemoryPositionalSource {
                 albumArtists: albumArtists !== undefined ? artistNamesToCredits(albumArtists) : [],
                 album,
                 track: trackName,
-                duration
+                duration,
+                meta: {
+                    brainz
+                }
             },
             meta: {
-                brainz,
                 trackProgressPosition: position,
                 mediaPlayerName: 'mpd'
             }

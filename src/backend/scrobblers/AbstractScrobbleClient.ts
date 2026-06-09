@@ -17,7 +17,8 @@ import {
     ErrorLike,
     CLIENT_INGRESS_QUEUE,
     CLIENT_DEAD_QUEUE,
-    PlayOriginal
+    PlayOriginal,
+    PlayLifecycle
 } from "../../core/Atomic.js";
 import { artistNamesToCredits, buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
 import AbstractComponent from "../common/AbstractComponent.js";
@@ -87,7 +88,6 @@ type PlatformMappedPlays = Map<string, {player: SourcePlayerObj, source: SourceI
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
 
 const platformTruncate = truncateStringToLength(10);
-
 
 export default abstract class AbstractScrobbleClient extends AbstractComponent implements Authenticatable {
 
@@ -567,7 +567,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         if (shouldMigrate) {
             const migrationEntry: ComponentMigrationNew = migration !== undefined ? migration : {componentId: this.dbComponent.id, name: 'cachedScrobbles'};
             try {
-                const cachedQueue = (await this.cache.cacheScrobble.get(`${this.getMachineId()}-queue`) as QueuedScrobble<PlayObject>[] ?? []);
+                const cachedQueue = (await this.cache.cacheScrobble.get(`${this.getMachineId()}-queue`) as QueuedScrobble<PlayObject<{migrated?: boolean, lifecycle?: PlayLifecycle}>>[] ?? []);
                 const migratedQueue: QueuedScrobble<PlayObject>[] = [];
                 let allGood = true;
                 if (cachedQueue.length > 0) {
@@ -577,10 +577,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                             logger.debug(`Skipping already migrated play => ${buildTrackString(cachedQueuedScrobble.play)}`);
                             continue;
                         }
-                        const play = asPlay(cachedQueuedScrobble.play);
+                        const play = asPlay(cachedQueuedScrobble.play)  as PlayObject<{migrated?: boolean, lifecycle?: PlayLifecycle}>;
                         const {
                             meta: {
-                                lifecycle = {},
+                                lifecycle,
                                 ...metaRest
                             },
                             data: {
@@ -599,19 +599,20 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                                     ...dataRest
                                 },
                                 meta: metaRest,
-                                // @ts-expect-error
-                                lifecycle: lifecycle.steps
+                                
+                                lifecycle: lifecycle?.steps
                             }
-                            if('scrobble' in lifecycle) {
-                                updatedPlay.scrobble = lifecycle.scrobble;
-                            }
-                            if('input' in lifecycle || 'original' in lifecycle) {
-                                updatedPlay.original = removeUndefinedKeys<PlayOriginal>({
-                                    // @ts-expect-error
-                                    data: lifecycle.input,
-                                    // @ts-expect-error
-                                    play: lifecycle.original
-                                })
+                            if(lifecycle !== undefined) {
+                                if('scrobble' in lifecycle) {
+                                    updatedPlay.scrobble = lifecycle.scrobble;
+                                }
+                                if('input' in lifecycle || 'original' in lifecycle) {
+                                    updatedPlay.original = removeUndefinedKeys<PlayOriginal>({
+                                        
+                                        data: lifecycle.input,
+                                        play: lifecycle.original
+                                    })
+                                }
                             }
                             // return play object without going through transform since it was (presumably) already transformed before being cached
                             const res = await this.queueScrobble(updatedPlay, updatedPlay.meta.source, async (x) => x);
@@ -632,7 +633,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     logger.info('No scrobbles to migrate');
                 }
 
-                const cachedDead = (await this.cache.cacheScrobble.get(`${this.getMachineId()}-dead`) as DeadLetterScrobble<PlayObject>[] ?? []);
+                const cachedDead = (await this.cache.cacheScrobble.get(`${this.getMachineId()}-dead`) as DeadLetterScrobble<PlayObject<{migrated?: boolean, lifecycle?: PlayLifecycle}>>[] ?? []);
                 const migratedDead: DeadLetterScrobble<PlayObject>[] = [];
                 if (cachedDead.length > 0) {
                     logger.info('Migrating failed scrobbles to database...');
@@ -642,10 +643,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                             logger.debug(`Skipping already migrated play => ${buildTrackString(cDeadScrobble.play)}`)
                             continue;
                         }
-                        const play = asPlay(cDeadScrobble.play);
+                        const play = asPlay(cDeadScrobble.play) as PlayObject<{migrated?: boolean, lifecycle?: PlayLifecycle}>;
                         const {
                             meta: {
-                                lifecycle = {},
+                                lifecycle,
                                 ...metaRest
                             },
                             data: {
@@ -663,19 +664,18 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                                 ...dataRest
                             },
                             meta: metaRest,
-                            // @ts-expect-error
-                            lifecycle: lifecycle.steps
+                            lifecycle: lifecycle?.steps
                         }
-                        if('scrobble' in lifecycle) {
-                            updatedDeadPlay.scrobble = lifecycle.scrobble;
-                        }
-                        if('input' in lifecycle || 'original' in lifecycle) {
-                            updatedDeadPlay.original = removeUndefinedKeys<PlayOriginal>({
-                                // @ts-expect-error
-                                data: lifecycle.input,
-                                // @ts-expect-error
-                                play: lifecycle.original
-                            })
+                        if(lifecycle !== undefined) {
+                            if('scrobble' in lifecycle) {
+                                updatedDeadPlay.scrobble = lifecycle.scrobble;
+                            }
+                            if('input' in lifecycle || 'original' in lifecycle) {
+                                updatedDeadPlay.original = removeUndefinedKeys<PlayOriginal>({
+                                    data: lifecycle.input,
+                                    play: lifecycle.original
+                                })
+                            }
                         }
                         try {
                             const res = await this.playRepo.createPlays([

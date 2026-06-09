@@ -12,9 +12,9 @@ export class JellyfinPlayerState extends PositionalPlayerState {
 
     update(state: PlayerStateDataMaybePlay) {
         let stat: ReportedPlayerStatus = state.status;
-        if(stat === undefined && state.play?.meta?.event === 'PlaybackProgress') {
-            stat = 'playing';
-        }
+        // if(stat === undefined && state.play?.meta?.event === 'PlaybackProgress') {
+        //     stat = 'playing';
+        // }
         return super.update({...state, status: stat});
     }
 }

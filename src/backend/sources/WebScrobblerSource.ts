@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
 import { PlayObject, PlayObjectMinimal, SOURCE_SOT } from "../../core/Atomic.js";
 import {
@@ -24,6 +24,12 @@ import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 import { artistCreditToName, artistNameToCredit } from "../../core/StringUtils.js";
+
+interface WebScrobbleMeta {
+    scrobbleAllowed?: boolean
+}
+
+type WebScrobblerPlayObject = PlayObjectMinimal<Dayjs, WebScrobbleMeta>;
 
 export class WebScrobblerSource extends MemorySource {
 
@@ -97,7 +103,7 @@ export class WebScrobblerSource extends MemorySource {
 
     static formatPlayObj(obj: WebScrobblerSong, options: FormatPlayObjectOptions & {
         nowPlaying?: boolean
-    } = {}): PlayObject {
+    } = {}): WebScrobblerPlayObject {
         const {
             connectorLabel,
             connector: {
@@ -125,7 +131,7 @@ export class WebScrobblerSource extends MemorySource {
         const albumArtist = processed.albumArtist ?? parsed.albumArtist;
         const duration = parsed.duration ?? processed.duration;
 
-        const play: PlayObjectMinimal = {
+        const play: PlayObjectMinimal<Dayjs, WebScrobbleMeta> = {
             data: {
                 track,
                 artists: [artistNameToCredit(artist)],
@@ -158,7 +164,7 @@ export class WebScrobblerSource extends MemorySource {
 
     getRecentlyPlayed = async (options = {}) => await this.getFlatRecentlyDiscoveredPlays()
 
-    isValidScrobble = (playObj: PlayObject) => {
+    isValidScrobble = (playObj: WebScrobblerPlayObject) => {
         if (playObj.meta?.scrobbleAllowed === false) {
             this.logger.debug(`Will not scrobble play because it was marked as 'Do Not Scrobble' by extension`);
             return false;

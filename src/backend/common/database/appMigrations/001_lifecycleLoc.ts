@@ -3,6 +3,7 @@ import { MigrateBaseContext } from '../appMigrator.js';
 import { plays as drizzlePlays } from '../drizzle/schema/schema.js';
 import clone from 'clone';
 import { eq } from 'drizzle-orm';
+import { PlayLifecycle, PlayObject } from '../../../../core/Atomic.js';
 
 
 export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase, ctx: MigrateBaseContext): Promise<void> => {
@@ -16,6 +17,7 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
     while (more) {
         const playRows = await ctx.db.select().from(drizzlePlays).limit(100).offset(offset);
         for (const row of playRows) {
+            const play = row.play as PlayObject<{lifecycle?: PlayLifecycle}>;
             try {
                 const {
                     meta: {
@@ -25,7 +27,7 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
                             scrobble
                         } = {}
                     } = {}
-                } = row.play;
+                } = play;
                 if (lifecycle === undefined) {
                     // already migrated or unneeded
                     processed++;
@@ -37,6 +39,7 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
                 if (scrobble !== undefined) {
                     row.play.scrobble = clone(scrobble);
                 }
+                // @ts-expect-error
                 delete row.play.meta.lifecycle;
                 await ctx.db.update(drizzlePlays).set({ play: row.play }).where(eq(drizzlePlays.id, row.id));
                 updated++;

@@ -21,7 +21,7 @@ export interface ScrobbleMatchOptions {
 export interface GeneratePlayWithLifecycleOptions {
   original?: {
     data?: ObjectPlayData,
-    meta?: MarkOptional<PlayMeta, 'lifecycle'>
+    meta?: PlayMeta
     opts?: GeneratePlayOpts
   },
   lifecycleSteps?: {

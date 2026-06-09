@@ -701,11 +701,7 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
                 deviceId: combinePartsToString([music_service_name ?? music_service, submission_client, submission_client_version])
             }
         }
-
-        if(trackId !== undefined) {
-            play.meta.trackid = trackId;
-        }
-
+        
         const brainzMeta = removeUndefinedKeys<BrainzMeta>({
             album: release_mbid,
             releaseGroup: release_group_mbid,

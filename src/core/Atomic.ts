@@ -1,8 +1,7 @@
 import { LogDataPretty, LogLevel } from "@foxxmd/logging";
 import { Dayjs } from "dayjs";
-import { ListenProgress } from "../backend/sources/PlayerState/ListenProgress.js";
 import { AdditionalTrackInfoResponse } from "../backend/common/vendor/listenbrainz/interfaces.js";
-import { MarkOptional, RequiredKeys } from "ts-essentials";
+import { Merge, RequiredKeys } from "ts-essentials";
 import { ErrorObject } from "serialize-error";
 import { PlayPlatformIdStr } from "../backend/common/infrastructure/Atomic.js";
 import { FlowControlTerm, TransformHook } from "../backend/common/infrastructure/Transform.js";
@@ -201,7 +200,9 @@ export interface ArtMeta {
     artist?: string
 }
 
-export interface PlayMeta<D extends DateLike = Dayjs> {
+export type PlayMeta<D extends DateLike = Dayjs, T = {}> = Merge<PlayMetaBase<D>, T>;
+
+export interface PlayMetaBase<D extends DateLike = Dayjs> {
     source?: string
     sourceSOT?: SOURCE_SOT_TYPES
 
@@ -285,7 +286,7 @@ export interface PlayMeta<D extends DateLike = Dayjs> {
     //lifecycle: PlayLifecycle<D>
     lifecycleInputs?: LifecycleInput[]
 
-    [key: string]: any
+    //[key: string]: any
 }
 
 export interface LifecycleInput {
@@ -304,12 +305,12 @@ export interface ScrobbleResult<D extends DateLike = Dayjs> {
     mergedScrobble?: AmbPlayObjectMinimal<D>
 }
 
-// export interface PlayLifecycle<D extends DateLike = Dayjs> {
-//     //input?: object
-//     //original?: PlayObjectLifecycleless<D>
-//     //steps: LifecycleStep[]
-//     //scrobble?: ScrobbleResult<D>
-// }
+export interface PlayLifecycle<D extends DateLike = Dayjs> {
+    input?: object
+    original?: PlayObjectMinimal<D>
+    steps: LifecycleStep[]
+    scrobble?: ScrobbleResult<D>
+}
 
 export interface LifecycleStep {
     stageName: string
@@ -361,24 +362,24 @@ export interface PlayOriginal<D extends DateLike = Dayjs> {
     play?: PlayObjectMinimal<D>
 }
 
-export interface AmbPlayObject<D extends DateLike = Dayjs> {
+export interface AmbPlayObject<D extends DateLike = Dayjs, T = {}> {
     id?: number
     uid?: string
     data: PlayData<D>,
-    meta: PlayMeta<D>
+    meta: PlayMeta<D,T>
     original?: PlayOriginal<D>
     scrobble?: ScrobbleResult<D>
     lifecycle?: LifecycleStep[]
 }
 
-export type AmbPlayObjectMinimal<D extends DateLike = Dayjs> = Pick<AmbPlayObject<D>, RequiredKeys<AmbPlayObject<D>>>;
+export type AmbPlayObjectMinimal<D extends DateLike = Dayjs, T = {}> = Pick<AmbPlayObject<D,T>, RequiredKeys<AmbPlayObject<D>>>;
 
 export const isPlayObject = (obj: object): obj is PlayObject => {
    return obj !== undefined && obj !== null &&  'data' in obj && typeof obj.data === 'object' && 'meta' in obj && typeof obj.meta === 'object';
 }
 
-export type PlayObject = AmbPlayObject<Dayjs>;
-export type PlayObjectMinimal<D extends DateLike = Dayjs> = AmbPlayObjectMinimal<D>;
+export type PlayObject<T = {}> = AmbPlayObject<Dayjs,T>;
+export type PlayObjectMinimal<D extends DateLike = Dayjs, T = {}> = AmbPlayObjectMinimal<D,T>;
 export interface PlayActivity {
   play: JsonPlayObject
   status: string
