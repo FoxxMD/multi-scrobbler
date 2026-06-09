@@ -11,6 +11,7 @@ import { PlayingNowPayload } from '../common/vendor/listenbrainz/interfaces.js';
 import ScrobbleClients from '../scrobblers/ScrobbleClients.js';
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.js';
 import { stringToDeterministicNumber } from '../utils/StringUtils.js';
+import { messageWithCauses } from '../../core/ErrorUtils.js';
 
 const TEXT_WILDCARD_REGEX = new RegExp(/text\/.+/);
 
@@ -48,28 +49,35 @@ export const setupLZEndpointRoutes = (app: Express, parentLogger: Logger, scrobb
         lzJsonParser, nonEmptyCheck, async function (req, res) {
             webhookIngress.trackIngress(req, false);
 
-            res.status(200).json({status: "ok"});
+            logger.trace({body: req.body}, "Recieved request Body");
 
+            const playerStates = playStateFromRequest(req.body);
 
             const sources = scrobbleSources.getByType('endpointlz') as EndpointListenbrainzSource[];
             if (sources.length === 0) {
                 logger.warn('Received Listenbrainz endpoint payload but no Listenbrainz endpoint sources are configured');
+                return res.status(409).json({error: `Received Listenbrainz endpoint payload but no Listenbrainz endpoint sources are configured`, code: 409});
             }
 
             const validSources = sources.filter(x => x.matchRequest(req));
             if (validSources.length === 0) {
                 const [slug, token] = parseDisplayIdentifiersFromRequest(req);
                 logger.warn(`No Listenbrainz endpoint config matched => Slug: ${slug} | Token: ${token}`);
+                return res.status(409).json({error: `No Listenbrainz endpoint config matched => Slug: ${slug} | Token: ${token}`, code: 409});
             }
 
-            if(isDebugMode()) {
-                logger.debug({body: req.body}, "Recieved request Body");
+            try {
+                for (const source of validSources) {
+                    await source.handle(playerStates);
+                }
+            } catch (e) {
+                const submitListenError = new Error('Unexpected error occurred while processing submit-listens request', {cause: e});
+                const errMsg = messageWithCauses(submitListenError);
+                logger.error(submitListenError);
+                return res.status(500).json({error: errMsg, code: 500});
             }
-            const playerStates = playStateFromRequest(req.body);
 
-            for (const source of validSources) {
-                await source.handle(playerStates);
-            }
+            return res.status(200).json({status: "ok"});
         });
 
     app.get('/1/user/:username/playing-now', async function (req, res) {
