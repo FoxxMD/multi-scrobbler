@@ -19,16 +19,20 @@ import { ExpandCollapse } from "./ExpandCollapse";
 import { MSCollapsible } from "./MSCollapsible";
 import { TimelineErrorIcon } from "./timeline/TimelineIcon";
 import { Muted } from "./Typography";
+import { PlayApiCommonDetailed } from "../../core/Api";
 
 
 export interface ActivityDetailProps {
-    play: JsonPlayObject
+    activity: PlayApiCommonDetailed
     collapsibleOpen?: boolean
 }
 
 export const ActivityTimeline = (props: ActivityDetailProps) => {
     const {
-        play,
+        activity:{
+            play,
+            input
+        } = {},
         collapsibleOpen
     } = props;
     const {
@@ -38,8 +42,8 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
         meta: {
             source,
             lifecycle: {
-                input,
-                original,
+                // input,
+                // original,
                 steps = [],
                 scrobble: {
                     match,
@@ -51,6 +55,10 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
             },
         } = {}
     } = play;
+    const {
+        play: original,
+        data: ogInput
+    } = input || {};
 
     let scrobbleSummary: React.JSX.Element,
         scrobbleIconProps: Record<string, any> = {
@@ -98,7 +106,7 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                                             <PlayData play={original} />
                                         </Tabs.Content>
                                         <Tabs.Content value="source">
-                                            <ChakraCodeBlockShort code={input} />
+                                            <ChakraCodeBlockShort code={ogInput} />
                                         </Tabs.Content>
                                     </Tabs.Root>
                                 </Card.Body>

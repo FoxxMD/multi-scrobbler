@@ -7,6 +7,7 @@ import { asPlayCheap } from "../../../../../core/PlayMarshalUtils.js";
 import { ExternalMetadataTerm, PlayTransformPartsConfig, SearchAndReplaceTerm } from "../../../infrastructure/Transform.js";
 import { JobRangeCount, JobRangeTime } from "../../../infrastructure/Job.js";
 import { serializeError, deserializeError } from "serialize-error";
+import { generatePlayUid } from "../../../../../core/StringUtils.js";
 
 const DayjsTimestamp = customType<
   {
@@ -67,7 +68,7 @@ const ErrorLikeJson = customType<
 
 export const plays = sqliteTable("plays", {
   id: integer().primaryKey(),
-  uid: text({ length: 30 }).notNull().unique().$defaultFn(() => nanoid(20)),
+  uid: text({ length: 30 }).notNull().unique().$defaultFn(() => generatePlayUid()),
   componentId: integer().references(() => components.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
   error: ErrorLikeJson('error'),
   playedAt: DayjsTimestamp('playedAt'),

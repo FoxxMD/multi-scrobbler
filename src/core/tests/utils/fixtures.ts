@@ -1,6 +1,6 @@
 import { Traverse, TraverseContext } from 'neotraverse/modern';
 import { faker } from '@faker-js/faker';
-import { LifecycleInput, LifecycleStep, ObjectPlayData, PlayMeta, PlayObject, ScrobbleResult } from '../../Atomic.js';
+import { AmbPlayObject, DateLike, LifecycleInput, LifecycleStep, ObjectPlayData, PLAY_STATES, PlayMeta, PlayObject, PlayOriginal, PlayState, ScrobbleResult } from '../../Atomic.js';
 import { MarkOptional } from 'ts-essentials';
 import { generateBrainz, generateMbid, generatePlay, GeneratePlayOpts, generatePlays } from '../../PlayTestUtils.js';
 import { lifecyclelessInvariantTransform } from '../../PlayUtils.js';
@@ -10,6 +10,7 @@ import { existingScrobble } from '../../../backend/utils/PlayComparisonUtils.js'
 import { UpstreamError } from '../../../backend/common/errors/UpstreamError.js';
 import { playToListenPayload } from '../../../backend/common/vendor/listenbrainz/lzUtils.js';
 import { mergeSimpleError, SimpleError, SkipTransformStageError, StagePrerequisiteError } from '../../../backend/common/errors/MSErrors.js';
+import { Dayjs } from 'dayjs';
 
 export interface ScrobbleMatchOptions {
   match?: boolean
@@ -96,6 +97,13 @@ export const generatePlayWithLifecycle = (opts: GeneratePlayWithLifecycleOptions
   lplay.data = transformedPlay.data;
 
   return lplay;
+}
+
+export const generatePlayInput = <D extends DateLike = Dayjs>(play?: AmbPlayObject<D>, data?: object | false): PlayOriginal<D> => {
+  return {
+    play,
+    data: data ?? generateRandomObj(2)
+  }
 }
 
 export const playWithLifecycleScrobble = async (play: PlayObject, opts: ScrobbleMatchOptions = {}): Promise<PlayObject> => {
@@ -283,3 +291,5 @@ export const generateRandomObj = (depth: number = 0, opt: RandomObjOptions = {})
   }
   return tgrt
 }
+
+export const randomPlayState = () => faker.helpers.arrayElement(PLAY_STATES) as PlayState;

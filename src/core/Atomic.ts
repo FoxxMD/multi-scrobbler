@@ -366,7 +366,7 @@ export interface AmbPlayObject<D extends DateLike = Dayjs> {
     id?: number
     uid?: string
     data: PlayData<D>,
-    meta: PlayMetaLifecycleless
+    meta: PlayMetaLifecycleless<D>
     original?: PlayOriginal<D>
 }
 
@@ -614,8 +614,10 @@ export const REGEX_ISO8601_LOOSE = new RegExp(/\d{4}-[01]\d-[0-3]\dT/);
  */
 export const REGEX_ISO8601_WELLKNOWN = new RegExp(/dayjs-(\d{4}-[01]\d-[0-3]\dT.*)/);
 
-export const CLIENT_INGRESS_QUEUE = 'ingress';
-export const CLIENT_DEAD_QUEUE = 'dead';
+export const CLIENT_INGRESS_QUEUE: QueueName = 'ingress';
+export const CLIENT_DEAD_QUEUE: QueueName = 'dead';
+export type QueueName = 'ingress' | 'dead';
+export const QUEUE_NAMES = [CLIENT_INGRESS_QUEUE, CLIENT_DEAD_QUEUE];
 
 /**
  * Useful TS type-only utility for testing type equality
@@ -639,3 +641,10 @@ export type PlayClientState = PlayStateCommon | 'duped' | 'scrobbled';
 export const PLAY_CLIENT_STATE = [...PLAY_STATE_COMMON, 'duped', 'scrobbled'];
 export type PlayState = PlaySourceState | PlayClientState;
 export const PLAY_STATES = Array.from(new Set(...PLAY_CLIENT_STATE, ...PLAY_SOURCE_STATE));
+
+
+export type QueueStatus = 'queued' | 'completed' | 'failed';
+export const QUEUE_STATUS_QUEUED: QueueStatus = 'queued';
+export const QUEUE_STATUS_COMPLETED: QueueStatus = 'completed';
+export const QUEUE_STATUS_FAILED: QueueStatus = 'failed';
+export const QUEUE_STATUSES: QueueStatus[] = [QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, QUEUE_STATUS_QUEUED];

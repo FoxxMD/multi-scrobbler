@@ -2,7 +2,7 @@ import clone from 'clone';
 import dayjs from 'dayjs';
 import { Traverse, TraverseContext } from 'neotraverse/modern';
 import { ListenRange } from '../backend/sources/PlayerState/ListenRange.js';
-import { AmbPlayObject, JsonPlayObject, PlayObject, PlayProgressAmb, REGEX_ISO8601_LOOSE } from './Atomic.js';
+import { AmbPlayObject, DateLike, JsonPlayObject, PlayObject, PlayProgressAmb, REGEX_ISO8601_LOOSE } from './Atomic.js';
 import { ListenProgressPositional, ListenProgressTS } from '../backend/sources/PlayerState/ListenProgress.js';
 
 interface BlockPath { key: string, parent: string };
@@ -39,7 +39,7 @@ export const shouldBlock = (ctx: TraverseContext): boolean => {
   });
 };
 
-export const asJsonPlayObject = (play: AmbPlayObject): JsonPlayObject => {
+export const asJsonPlayObject = (play: AmbPlayObject<DateLike>): JsonPlayObject => {
   const cloned = clone(play);
   new Traverse(cloned).forEach((ctx, x) => {
     if (shouldBlock(ctx)) {

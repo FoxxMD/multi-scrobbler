@@ -7,6 +7,7 @@ import { ActivityTimeline } from "../client/components/ActivityTimeline";
 import {Provider} from "../client/components/Provider";
 import { generateJsonPlays } from "../core/PlayTestUtils.js";
 import { ErrorLike, JsonPlayObject, PlayLifecycle } from "../core/Atomic.js";
+import { generatePlayApiCommonDetailed } from "../core/tests/utils/apiFixtures.js";
 import { examplePlay, lastfmErrorExample } from "./storyUtils.js";
 import { generatePlayWithLifecycle, playWithLifecycleScrobble } from "../core/tests/utils/fixtures.js";
 import { asJsonPlayObject } from '../core/PlayMarshalUtils.js';
@@ -23,9 +24,9 @@ const meta = preview.meta({
   tags: ['autodocs'],
   // More on argTypes: https://storybook.js.org/docs/api/argtypes
   args: {
-     play: examplePlay()
+     activity: generatePlayApiCommonDetailed()
   },
-  render: function Render(args, { loaded: { play } }) { return (<ActivityTimeline {...args} play={play}/>) },
+  render: function Render(args, { loaded: { activity } }) { return (<ActivityTimeline {...args} activity={activity}/>) },
 decorators: [
     (Story) => (<Provider><Container maxWidth="4xl"><Story/></Container></Provider>),
   ]
@@ -43,8 +44,12 @@ export const ActivityTimelineStory = meta.story({
           postCompare: 1,
         }
       }
-      )))
-      return {play: scrobbleError};
+      )));
+
+      return {activity: generatePlayApiCommonDetailed({
+        playOpts: [{play: scrobbleError}],
+        inputOpts: [{play: scrobbleError}]
+      })};
     }
   ],
 });

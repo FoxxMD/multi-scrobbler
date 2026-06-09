@@ -6,9 +6,10 @@ import { ErrorAlert } from "./ErrorAlert";
 import { AiOutlineExclamationCircle } from "react-icons/ai";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { ExpandCollapse } from "./ExpandCollapse";
+import { PlayApiCommon, PlayApiCommonDetailed } from "../../core/Api";
 
 export interface ActivityDetailProps {
-    activity: PlayActivity
+    activity: PlayApiCommonDetailed
 }
 
 export const ActivityDetails = (props: ActivityDetailProps) => {
@@ -16,15 +17,9 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
         activity,
         activity: {
             error,
-            play: {
-                meta: {
-                    lifecycle: {
-                        original,
-                        scrobble
-                    } = {},
-                    lifecycle
-                } = {},
-            } = {}
+            input: {
+                play: original,
+            }
         }
     } = props;
 
@@ -69,7 +64,7 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
                 </Flex>
                 <Accordion.ItemContent>
                     <Accordion.ItemBody>
-                        <ActivityTimeline play={activity.play} collapsibleOpen={collapsibleOpen} />
+                        <ActivityTimeline activity={activity} collapsibleOpen={collapsibleOpen} />
                     </Accordion.ItemBody>
                 </Accordion.ItemContent>
             </Accordion.Item>

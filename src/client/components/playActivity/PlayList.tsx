@@ -12,11 +12,12 @@ import { GroupedVirtuoso } from 'react-virtuoso'
 import { ActivityDetails } from '../ActivityDetail.js';
 import { sortByNewestPlayDate, sortByNewestSeenDate } from '../../../core/PlayUtils.js';
 import "./PlayList.scss";
+import { PlayApiCommon } from '../../../core/Api.js';
 
 dayjs.extend(doy);
 
 export interface ActivityLogProps {
-  data: PlayActivity[]
+  data: PlayApiCommon[]
   sortBy?: 'played' | 'seen'
   render?: 'virtCollapse' | 'virtAccordian' | 'accordian'
 }
@@ -27,11 +28,11 @@ interface GroupInfo {
 }
 
 interface GroupData {
-  plays: PlayActivity[]
+  plays: PlayApiCommon[]
   date: Dayjs
 }
 
-const generateGroupInfo = (data: PlayActivity[]): GroupInfo[] => {
+const generateGroupInfo = (data: PlayApiCommon[]): GroupInfo[] => {
 
   const groupsReduced = data.reduce((acc: { groups: GroupInfo[], active?: GroupInfo }, curr, index) => {
     const date = dayjs(curr.play.data.playDate);
@@ -48,7 +49,7 @@ const generateGroupInfo = (data: PlayActivity[]): GroupInfo[] => {
   return groupsReduced.groups.concat(groupsReduced.active);
 }
 
-const generateGroupPlays = (data: PlayActivity[]): GroupData[] => {
+const generateGroupPlays = (data: PlayApiCommon[]): GroupData[] => {
 
   const groupsReduced = data.reduce((acc: { groups: GroupData[], active?: GroupData }, curr, index) => {
     const date = dayjs(curr.play.data.playDate);
@@ -91,7 +92,7 @@ export const PlayList = (props: ActivityLogProps) => {
   }
 }
 
-const VirtualizedCollapse = (props: { data: PlayActivity[] }) => {
+const VirtualizedCollapse = (props: { data: PlayApiCommon[] }) => {
   const {
     data,
   } = props;
@@ -180,7 +181,7 @@ const VirtualizedCollapse = (props: { data: PlayActivity[] }) => {
                 paddingInline: "var(--chakra-spacing-4)"
               }} justify="flex-start" alignItems="flex-end">
                 <StatusBadge maxWidth="fit-content" data={activity} />
-                {activity.status === 'error' ? <IconButton variant="ghost" size="xs" maxWidth="fit-content">
+                {activity.state === 'failed' ? <IconButton variant="ghost" size="xs" maxWidth="fit-content">
                   <VscDebugRestart />
                 </IconButton> : null}
               </Stack>
@@ -200,7 +201,7 @@ const VirtualizedCollapse = (props: { data: PlayActivity[] }) => {
   );
 }
 
-const VirtualizedAccordian = (props: { data: PlayActivity[] }) => {
+const VirtualizedAccordian = (props: { data: PlayApiCommon[] }) => {
   const {
     data,
   } = props;
@@ -290,7 +291,7 @@ const VirtualizedAccordian = (props: { data: PlayActivity[] }) => {
   );
 }
 
-const PlainAccordian = (props: { data: PlayActivity[], sortBy: 'played' | 'seen' }) => {
+const PlainAccordian = (props: { data: PlayApiCommon[], sortBy: 'played' | 'seen' }) => {
   const { 
     data = [],
     sortBy
@@ -343,7 +344,7 @@ const PlainAccordian = (props: { data: PlayActivity[], sortBy: 'played' | 'seen'
                         paddingInline: "var(--accordion-padding-x)"
                       }} justify="flex-start" alignItems="flex-end">
                         <StatusBadge maxWidth="fit-content" data={activity} />
-                        {activity.status === 'error' ? <IconButton variant="ghost" size="xs" maxWidth="fit-content">
+                        {activity.state === 'failed' ? <IconButton variant="ghost" size="xs" maxWidth="fit-content">
                           <VscDebugRestart />
                         </IconButton> : null}
                       </Stack>
@@ -365,22 +366,29 @@ const PlainAccordian = (props: { data: PlayActivity[], sortBy: 'played' | 'seen'
   );
 }
 
-const StatusBadge = (props: ComponentProps<typeof Badge> & { data: PlayActivity }) => {
+const StatusBadge = (props: ComponentProps<typeof Badge> & { data: PlayApiCommon }) => {
 
   const { data, ...rest } = props;
 
   let badgeColor = undefined,
-    badgeText = capitalize(data.status);
+    badgeText = capitalize(data.state);
 
-  switch (data.status) {
+  switch (data.state) {
     case 'queued':
       badgeColor = 'gray';
       break;
     case 'scrobbled':
+    case 'discovered':
       badgeColor = 'green';
       break;
-    case 'error':
+    case 'failed':
       badgeColor = 'red';
+      break;
+    case 'discarded':
+      badgeColor = 'grey';
+      break;
+    case 'duped':
+      badgeColor = 'orange';
       break;
   }
 

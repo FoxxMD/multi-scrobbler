@@ -17,6 +17,7 @@ import {
 import { DELIMETERS_REGEX, DELIMITERS } from "../backend/common/infrastructure/Atomic.js";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { removeUndefinedKeys } from "../backend/utils.js";
+import { nanoid } from "nanoid";
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -332,3 +333,5 @@ export const artistNameToCredit = (val: string | undefined | Partial<ArtistCredi
 }
 export const artistCreditToName = (a: ArtistCredit): string => a.name;
 export const artistCreditsToNames = (a: ArtistCredit[]): string[] => a.map((x) => x.name);
+
+export const generatePlayUid = () => nanoid(20);
