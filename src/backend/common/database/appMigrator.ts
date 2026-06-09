@@ -40,7 +40,7 @@ export const migrateApp = async (db: DbConcrete, opts: {logger?: Logger, migrati
     logger: parentLogger = loggerNoop,
     migrationsAppFolder = path.resolve(projectDir, 'src/backend/common/database/appMigrations')
     } = opts;
-    const logger = childLogger(parentLogger, 'App');
+    const logger = childLogger(parentLogger, ['App', 'Migrations']);
 
     const migrator = new Migrator<MigrateBaseContext>({
         db: db.$client,
