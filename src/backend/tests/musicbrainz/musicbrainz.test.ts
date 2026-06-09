@@ -14,7 +14,6 @@ import { MockNetworkError, withRequestInterception } from '../utils/networking.j
 import { http, HttpResponse, delay } from "msw";
 import { generatePlay, withBrainz } from '../../../core/PlayTestUtils.js';
 import { intersect, missingMbidTypes } from '../../utils.js';
-import { defaultLifecycle } from '../../utils/PlayTransformUtils.js';
 import { CoverArtApiClient, CoverArtApiConfig } from '../../common/vendor/musicbrainz/CoverArtApiClient.js';
 import { artistCreditToName, artistNamesToCredits, artistNameToCredit } from '../../../core/StringUtils.js';
 
@@ -67,7 +66,7 @@ describe('Musicbrainz API', function () {
                     album: "The Universe Smiles Upon You ii"
                 },
                 meta: {
-                    lifecycle: defaultLifecycle()
+                    
                 }
             }
             await mbTransformer.initialize();
@@ -98,7 +97,7 @@ describe('Musicbrainz API', function () {
                     url: {
                         web: "https://www.last.fm/music/Kanon+Oguni/_/Cyber+Space+(CrossWorlds+Remix):+Final+Lap+-+No+Chants",
                     },
-                    lifecycle: defaultLifecycle()
+                    
                 }
             };
             await mbTransformer.initialize();
@@ -128,7 +127,7 @@ describe('Musicbrainz API', function () {
                     }
                 },
                 meta: {
-                    lifecycle: defaultLifecycle()
+                    
                 }
             }
             await mbTransformer.initialize();
@@ -157,7 +156,7 @@ describe('Musicbrainz API', function () {
                     isrc: 'GBAHT1600302'
                 },
                 meta: {
-                    lifecycle: defaultLifecycle()
+                    
                 }
             }
             await mbTransformer.initialize();
@@ -188,7 +187,7 @@ describe('Musicbrainz API', function () {
                     }
                 },
                 meta: {
-                    lifecycle: defaultLifecycle()
+                    
                 }
             }
             await mbTransformer.initialize();
@@ -222,7 +221,7 @@ describe('Musicbrainz API', function () {
                     }
                 },
                 meta: {
-                    lifecycle: defaultLifecycle()
+                    
                 }
             }
             await mbTransformer.initialize();
@@ -251,7 +250,7 @@ describe('Musicbrainz API', function () {
                     album: "Sonic Racing: CrossWorlds Original Soundtrack - Echoes of Dimensions"
                 },
                 meta: {
-                    lifecycle: defaultLifecycle()
+                    
                 }
             }
             await mbTransformer.initialize();
@@ -275,7 +274,7 @@ describe('Musicbrainz API', function () {
                     artists: artistNamesToCredits(["SEGA Sound Team / Tomoya Ohtani"]),
                 },
                 meta: {
-                    lifecycle: defaultLifecycle()
+                    
                 }
             }
             await mbTransformer.initialize();
@@ -301,7 +300,7 @@ describe('Musicbrainz API', function () {
                     album: "25時、ナイトコードで。 SEKAI ALBUM Vol.3"
                 },
                 meta: {
-                    lifecycle: defaultLifecycle()
+                    
                 }
             }
             await mbTransformer.initialize();
@@ -326,7 +325,7 @@ describe('Musicbrainz API', function () {
                     album: "Leo / need SEKAI ALBUM Vol.1"
                 },
                 meta: {
-                    lifecycle: defaultLifecycle()
+                    
                 }
             }
             await mbTransformer.initialize();
@@ -356,7 +355,7 @@ describe('Musicbrainz API', function () {
                     isrc: 'JPK651601515'
                 },
                 meta: {
-                    lifecycle: defaultLifecycle()
+                    
                 }
             }
             await mbTransformer.initialize();
@@ -400,7 +399,7 @@ describe('Musicbrainz API', function () {
                         album: "The Universe Smiles Upon You ii"
                     },
                     meta: {
-                        lifecycle: defaultLifecycle()
+                        
                     }
                 }
                 await multiMb.initialize();
@@ -434,7 +433,7 @@ describe('Musicbrainz API', function () {
                         album: "The Universe Smiles Upon You ii"
                     },
                     meta: {
-                        lifecycle: defaultLifecycle()
+                        
                     }
                 }
                 await multiMb.initialize();

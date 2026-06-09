@@ -16,7 +16,8 @@ import {
     SOURCE_SOT,
     ErrorLike,
     CLIENT_INGRESS_QUEUE,
-    CLIENT_DEAD_QUEUE
+    CLIENT_DEAD_QUEUE,
+    PlayOriginal
 } from "../../core/Atomic.js";
 import { artistNamesToCredits, buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
 import AbstractComponent from "../common/AbstractComponent.js";
@@ -68,7 +69,7 @@ import { getRoot } from "../ioc.js";
 import { findAsyncSequential, staggerMapper, StaggerOptions } from "../utils/AsyncUtils.js";
 import pMap, { pMapIterable } from "p-map";
 import { comparePlayArtistsNormalized, comparePlayTracksNormalized, existingScrobble, ExistingScrobbleOpts } from "../utils/PlayComparisonUtils.js";
-import { lifecyclelessInvariantTransform } from "../../core/PlayUtils.js";
+import { statefulInvariantTransform } from "../../core/PlayUtils.js";
 import { normalizeStr } from "../utils/StringUtils.js";
 import prom, { Counter, Gauge } from 'prom-client';
 import { generateLoggableAbortReason, ScrobbleSubmitError, SimpleError } from "../common/errors/MSErrors.js";
@@ -579,7 +580,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                         const play = asPlay(cachedQueuedScrobble.play);
                         const {
                             meta: {
-                                lifecycle,
+                                lifecycle = {},
                                 ...metaRest
                             },
                             data: {
@@ -597,12 +598,20 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                                     albumArtists: albumArtists === undefined ? undefined : artistNamesToCredits(albumArtists as unknown as string[]),
                                     ...dataRest
                                 },
-                                meta: {
-                                    ...metaRest,
-                                    lifecycle: {
-                                        steps: []
-                                    }
-                                }
+                                meta: metaRest,
+                                // @ts-expect-error
+                                lifecycle: lifecycle.steps
+                            }
+                            if('scrobble' in lifecycle) {
+                                updatedPlay.scrobble = lifecycle.scrobble;
+                            }
+                            if('input' in lifecycle || 'original' in lifecycle) {
+                                updatedPlay.original = removeUndefinedKeys<PlayOriginal>({
+                                    // @ts-expect-error
+                                    data: lifecycle.input,
+                                    // @ts-expect-error
+                                    play: lifecycle.original
+                                })
                             }
                             // return play object without going through transform since it was (presumably) already transformed before being cached
                             const res = await this.queueScrobble(updatedPlay, updatedPlay.meta.source, async (x) => x);
@@ -636,7 +645,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                         const play = asPlay(cDeadScrobble.play);
                         const {
                             meta: {
-                                lifecycle,
+                                lifecycle = {},
                                 ...metaRest
                             },
                             data: {
@@ -646,23 +655,32 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                                 ...dataRest
                             } = {},
                         } = play;
+                        const updatedDeadPlay: PlayObject = {
+                            ...play,
+                            data: {
+                                artists: artists === undefined ? undefined : artistNamesToCredits(artists as unknown as string[]),
+                                albumArtists: albumArtists === undefined ? undefined : artistNamesToCredits(albumArtists as unknown as string[]),
+                                ...dataRest
+                            },
+                            meta: metaRest,
+                            // @ts-expect-error
+                            lifecycle: lifecycle.steps
+                        }
+                        if('scrobble' in lifecycle) {
+                            updatedDeadPlay.scrobble = lifecycle.scrobble;
+                        }
+                        if('input' in lifecycle || 'original' in lifecycle) {
+                            updatedDeadPlay.original = removeUndefinedKeys<PlayOriginal>({
+                                // @ts-expect-error
+                                data: lifecycle.input,
+                                // @ts-expect-error
+                                play: lifecycle.original
+                            })
+                        }
                         try {
                             const res = await this.playRepo.createPlays([
                                 playToRepositoryCreatePlayOpts({
-                                    play: {
-                                        ...play,
-                                        data: {
-                                            artists: artists === undefined ? undefined : artistNamesToCredits(artists as unknown as string[]),
-                                            albumArtists: albumArtists === undefined ? undefined : artistNamesToCredits(albumArtists as unknown as string[]),
-                                            ...dataRest
-                                        },
-                                        meta: {
-                                            ...metaRest,
-                                            lifecycle: {
-                                                steps: []
-                                            }
-                                        }
-                                    },
+                                    play: updatedDeadPlay,
                                     componentId: this.dbComponent.id,
                                     state: 'failed',
                                     parentId: play.id
@@ -871,7 +889,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 payload: result.payload,
                 warnings: result.warnings,
                 response: result.response,
-                mergedScrobble: result.mergedScrobble !== undefined ? lifecyclelessInvariantTransform(result.mergedScrobble) : undefined
+                mergedScrobble: result.mergedScrobble !== undefined ? statefulInvariantTransform(result.mergedScrobble) : undefined
             }
             return playObj;
         } finally {
@@ -1081,12 +1099,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 if (!matchResult.match) {
                     const transformedScrobble = await this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.postCompare);
                     signal.throwIfAborted();
-                    if (transformedScrobble.meta.lifecycle === undefined) {
-                        transformedScrobble.meta.lifecycle = {
-                            //original: transformedScrobble,
-                            steps: []
-                        };
-                    }
                     try {
                         const scrobbledPlay = await this.scrobble(transformedScrobble, {signal});
                         await this.addScrobbledTrack(scrobbledPlay);
@@ -1430,20 +1442,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }
             // not in queue or existing queued check failed for some reason and we don't want to lose scrobble
             const {
-                meta: {
-                    lifecycle,
-                    ...metaRest
-                },
+                data,
+                meta
             } = play
             const createPlayData = playToRepositoryCreatePlayOpts({
                 play: {
-                    ...play,
-                    meta: {
-                        ...metaRest,
-                        lifecycle: {
-                            steps: []
-                        }
-                    }
+                    data,
+                    meta
                 },
                 componentId: this.dbComponent.id, 
                 state: 'queued',

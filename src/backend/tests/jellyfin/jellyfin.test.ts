@@ -19,7 +19,6 @@ import {
 import { getImageApi } from "@jellyfin/sdk/lib/utils/api/index.js";
 import { PlayerStateDataMaybePlay } from "../../common/infrastructure/Atomic.js";
 import { MarkOptional } from "ts-essentials";
-import { defaultLifecycle } from "../../utils/PlayTransformUtils.js";
 
 const dataAsFixture = (data: any): TestFixture => {
     return data as TestFixture;
@@ -54,7 +53,6 @@ const playWithMeta = (meta: MarkOptional<PlayMeta, 'lifecycle'>): PlayerStateDat
     play: {
         ...validPlayerState.play,
         meta: {
-            lifecycle: defaultLifecycle(),
             ...validPlayerState.play?.meta,
             ...meta
         }

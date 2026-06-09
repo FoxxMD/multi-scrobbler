@@ -1,6 +1,5 @@
 import { ComponentProps, Fragment } from "react"
 import { Timeline, Icon, Span, Stack, Heading, Tabs, DataList, Alert, List } from '@chakra-ui/react';
-import { JsonPlayObject, LifecycleStep, PlayLifecycle, PlayMatchResult, ScrobbleResult } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
 import { ErrorAlert } from "./ErrorAlert";
 import { BiWrench } from "react-icons/bi";

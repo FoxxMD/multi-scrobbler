@@ -309,7 +309,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                         if(step.error !== undefined && step.flowKnownState !== 'skip' && !step.returnPartial) {
                             // revert to original play but keep steps for paper trail
                             transformedPlay = play;
-                            transformedPlay.meta.lifecycle.steps = steps;
+                            transformedPlay.lifecycle = steps;
                         } else {
                             transformedPlay = stepPlay;
                         }
@@ -323,26 +323,22 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             const historyToDiff: {name: string, data?: PlayData}[] = [
                 {name: 'Pre Transform', data: play.data}
             ];
-            if(steps.length > 0 && transformedPlay.meta?.lifecycle?.steps === undefined) {
-                const {
-                    meta: {
-                        lifecycle: {
-                            steps = [],
-                            ...lifecycleRest
-                        },
-                    } = {}
-                } = transformedPlay;
-                transformedPlay.meta.lifecycle = {
-                    ...lifecycleRest,
-                    steps
-                }
+            let isNew = false;
+            if(steps.length > 0 && transformedPlay.lifecycle === undefined) {
+                transformedPlay.lifecycle = steps;
+                isNew = true;
             }
+            const {
+                lifecycle = []
+            } = transformedPlay;
             steps.forEach((s, index) => {
-                const existingStepIndex = transformedPlay.meta.lifecycle.steps.findIndex(x => x.stageName === s.stageName && x.stageType && s.stageType && x.hook === s.hook && x.source === this.getIdentifier());
-                if(existingStepIndex !== -1) {
-                    transformedPlay.meta.lifecycle.steps[existingStepIndex] = s;
-                } else {
-                    transformedPlay.meta.lifecycle.steps.push(s);
+                if(!isNew) {
+                    const existingStepIndex = lifecycle.findIndex(x => x.stageName === s.stageName && x.stageType === s.stageType && x.hook === s.hook && x.source === this.getIdentifier());
+                    if(existingStepIndex !== -1) {
+                        transformedPlay.lifecycle[existingStepIndex] = s;
+                    } else {
+                        transformedPlay.lifecycle.push(s);
+                    }
                 }
 
                 if(shouldLog === 'all') {
@@ -412,9 +408,13 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             asyncId = nanoid(6)
         } = opts;
 
-        const stepName = `${hookType} - ${hookItem.type} - ${hookItem.name}`
-        const existingStepIndex = playTruth.meta.lifecycle.steps.findIndex(x => x.hook === hookType && hookItem.name === x.stageName && x.stageType === hookItem.type && x.source === this.getIdentifier());
-        const step: LifecycleStep = existingStepIndex !== -1 && playTruth.meta.lifecycle.steps[existingStepIndex] !== undefined ? playTruth.meta.lifecycle.steps[existingStepIndex] : {
+        const {
+            lifecycle = []
+        } = playTruth;
+
+        //const stepName = `${hookType} - ${hookItem.type} - ${hookItem.name}`
+        const existingStepIndex = lifecycle.findIndex(x => x.hook === hookType && hookItem.name === x.stageName && x.stageType === hookItem.type && x.source === this.getIdentifier());
+        const step: LifecycleStep = existingStepIndex !== -1 && lifecycle[existingStepIndex] !== undefined ? lifecycle[existingStepIndex] : {
             stageName: hookItem.name,
             hook: hookType,
             stageType: hookItem.type,

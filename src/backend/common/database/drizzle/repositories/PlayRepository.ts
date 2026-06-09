@@ -404,7 +404,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                             }
 
                             compactedPlay = playRow.play;
-                            compactedPlay.meta.lifecycle.steps = compactedPlay.meta.lifecycle.steps.map(x => {
+                            compactedPlay.lifecycle = compactedPlay.lifecycle.map(x => {
                                 if(x.inputs == undefined) {
                                     return x;
                                 }
@@ -831,14 +831,6 @@ export const buildPlayWhere = (args: PlayWhereOpts): WhereClause<'plays'> => {
 export const playToRepositoryCreatePlayOpts = (data: MarkOptional<RepositoryCreatePlayOpts, 'input' | 'componentId'>): RepositoryCreatePlayOpts => {
     const {
         play: {
-            meta: {
-                lifecycle: {
-                    //input,
-                    //original,
-                    ...lifecycleRest
-                } = {},
-                ...metaRest
-            },
             original: {
                 play: playOriginal,
                 data: playData
@@ -851,13 +843,6 @@ export const playToRepositoryCreatePlayOpts = (data: MarkOptional<RepositoryCrea
     return {
         play: {
             ...playRest,
-            meta: {
-                ...metaRest,
-                // @ts-expect-error
-                lifecycle: {
-                    ...lifecycleRest
-                }
-            }
         },
         ...rest,
         input: {

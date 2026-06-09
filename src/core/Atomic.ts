@@ -282,7 +282,7 @@ export interface PlayMeta<D extends DateLike = Dayjs> {
 
     comment?: string
 
-    lifecycle: PlayLifecycle<D>
+    //lifecycle: PlayLifecycle<D>
     lifecycleInputs?: LifecycleInput[]
 
     [key: string]: any
@@ -311,12 +311,12 @@ export interface ScrobbleResult<D extends DateLike = Dayjs> {
     mergedScrobble?: PlayObjectLifecycleless<D>
 }
 
-export interface PlayLifecycle<D extends DateLike = Dayjs> {
-    //input?: object
-    //original?: PlayObjectLifecycleless<D>
-    steps: LifecycleStep[]
-    //scrobble?: ScrobbleResult<D>
-}
+// export interface PlayLifecycle<D extends DateLike = Dayjs> {
+//     //input?: object
+//     //original?: PlayObjectLifecycleless<D>
+//     //steps: LifecycleStep[]
+//     //scrobble?: ScrobbleResult<D>
+// }
 
 export interface LifecycleStep {
     stageName: string
@@ -375,6 +375,7 @@ export interface AmbPlayObject<D extends DateLike = Dayjs> {
     meta: PlayMetaLifecycleless<D>
     original?: PlayOriginal<D>
     scrobble?: ScrobbleResult<D>
+    lifecycle?: LifecycleStep[]
 }
 
 export const isPlayObject = (obj: object): obj is PlayObject => {
@@ -387,7 +388,7 @@ export interface PlayActivity {
   status: string
   error?: ErrorLike
 }
-export type JsonPlayObject = PlayObjectLifecycleless<string>;
+export type JsonPlayObject = AmbPlayObject<string>;
 
 export interface ObjectPlayData extends PlayData {
     playDate?: Dayjs

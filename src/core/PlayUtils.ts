@@ -36,17 +36,14 @@ export const genGroupIdStr = (id: PlayPlatformId) => {
     return `${id[0]}-${id[1]}`;
 };
 
-export const lifecyclelessInvariantTransform = (play: PlayObject): PlayObjectLifecycleless => {
+export const statefulInvariantTransform = (play: PlayObject): PlayObjectLifecycleless => {
     const {
-        meta: {
-            lifecycle, ...rest
-        } = {},
+        meta,
+        data
     } = play;
     return {
-        ...play,
-        meta: {
-            ...rest
-        }
+        data,
+        meta
     };
 };
 

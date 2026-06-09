@@ -3,7 +3,7 @@ import { faker } from '@faker-js/faker';
 import { AmbPlayObject, DateLike, LifecycleInput, LifecycleStep, ObjectPlayData, PLAY_STATES, PlayMeta, PlayObject, PlayOriginal, PlayState, ScrobbleResult } from '../../Atomic.js';
 import { MarkOptional } from 'ts-essentials';
 import { generateBrainz, generateMbid, generatePlay, GeneratePlayOpts, generatePlays } from '../../PlayTestUtils.js';
-import { lifecyclelessInvariantTransform } from '../../PlayUtils.js';
+import { statefulInvariantTransform } from '../../PlayUtils.js';
 import clone from 'clone';
 import { diffObjects } from '../../DataUtils.js';
 import { existingScrobble } from '../../../backend/utils/PlayComparisonUtils.js';
@@ -94,7 +94,7 @@ export const generatePlayWithLifecycle = (opts: GeneratePlayWithLifecycleOptions
     }
   }
 
-  lplay.meta.lifecycle.steps = steps;
+  lplay.lifecycle = steps;
   lplay.data = transformedPlay.data;
 
   return lplay;
@@ -141,7 +141,7 @@ export const playWithLifecycleScrobble = async (play: PlayObject, opts: Scrobble
   }
 
   scrobbleRes.response = generateRandomObj(2);
-  scrobbleRes.mergedScrobble = lifecyclelessInvariantTransform(play);
+  scrobbleRes.mergedScrobble = statefulInvariantTransform(play);
   play.scrobble = scrobbleRes;
 
   return play;

@@ -10,7 +10,7 @@ import { Duration } from "dayjs/plugin/duration.js";
 import { PlayTransformRules, TRANSFORM_HOOK, TransformHook } from "../common/infrastructure/Transform.js";
 import { Logger } from "@foxxmd/logging";
 import { loggerNoop } from '../common/MaybeLogger.js';
-import { lifecyclelessInvariantTransform } from "../../core/PlayUtils.js";
+import { statefulInvariantTransform } from "../../core/PlayUtils.js";
 import { findAsyncSequential } from "./AsyncUtils.js";
 import dayjs from "dayjs";
 
@@ -470,7 +470,7 @@ export const existingScrobble = async (playObjPre: PlayObject, existingScrobbles
 
         // if we have an submitted play with matching data and play date then we can just return the response from the original scrobble
         if (existingExactSubmitted !== undefined) {
-            result.closestMatchedPlay = lifecyclelessInvariantTransform(existingExactSubmitted.play);
+            result.closestMatchedPlay = statefulInvariantTransform(existingExactSubmitted.play);
             result.score = 1;
             result.match = true;
             result.reason = 'Exact Match found in previously successfully scrobbled plays';
@@ -562,7 +562,7 @@ export const existingScrobble = async (playObjPre: PlayObject, existingScrobbles
 
                 if (result.score <= score && score > 0) {
                     result.reason = confidence;
-                    result.closestMatchedPlay = lifecyclelessInvariantTransform(x);
+                    result.closestMatchedPlay = statefulInvariantTransform(x);
                     result.match = score >= DUP_SCORE_THRESHOLD;
                     result.breakdowns = scoreBreakdowns;
                     result.score = score;

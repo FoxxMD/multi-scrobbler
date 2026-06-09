@@ -15,7 +15,6 @@ import { ListRecord } from '../backend/common/infrastructure/config/client/tealf
 import { nanoid } from 'nanoid';
 import { LastFMTrackObject } from '../backend/common/vendor/LastfmApiClient.js';
 import { MarkOptional } from 'ts-essentials';
-import { defaultLifecycle } from '../backend/utils/PlayTransformUtils.js';
 import clone from 'clone';
 import { removeUndefinedKeys } from '../backend/utils.js';
 import { FmTealAlphaFeedPlay } from '../backend/common/vendor/teal/lexicons/index.js';
@@ -73,7 +72,6 @@ export const normalizePlays = (plays: PlayObject[],
                 ...defaultData
             }
             cleanPlay.meta = {
-                lifecycle: defaultLifecycle(),
                 ...cleanPlay.meta,
                 ...defaultMeta
             }
@@ -188,13 +186,6 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: MarkOptional<PlayM
             source: ['Spotify', 'Listenbrainz', 'Lastfm', 'Jellyfin', 'Plex'][faker.number.int({min: 0, max: 4})],
             seenAt: dayjs(),
             ...meta,
-            lifecycle: {
-                // original: {
-                //     data: {},
-                //     meta: {}
-                // },
-                steps: []
-            },
             url: {
                 web: 'https://example.com',
                 origin: 'https://example.com'

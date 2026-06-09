@@ -11,7 +11,6 @@ import { PlexApiData } from "../../common/infrastructure/config/source/plex.js";
 import PlexApiSource from "../../sources/PlexApiSource.js";
 import { GetSessionsMetadata } from "@lukehagar/plexjs/sdk/models/operations/getsessions.js";
 import { MarkOptional } from "ts-essentials";
-import { defaultLifecycle } from "../../utils/PlayTransformUtils.js";
 
 const validSession = validSessionResponse.object.mediaContainer.metadata[0];
 
@@ -44,7 +43,6 @@ const playWithMeta = (meta: MarkOptional<PlayMeta, 'lifecycle'>): PlayerStateDat
     play: {
         ...validPlayerState.play,
         meta: {
-            lifecycle: defaultLifecycle(),
             ...validPlayerState.play?.meta,
             ...meta
         }

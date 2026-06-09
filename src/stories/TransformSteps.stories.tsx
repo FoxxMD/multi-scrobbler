@@ -6,8 +6,6 @@ import { Container } from '@chakra-ui/react';
 import { TransformSteps } from "../client/components/TransformSteps.js";
 import {Provider} from "../client/components/Provider";
 import { generateJsonPlays, generatePlay } from "../core/PlayTestUtils.js";
-import { ErrorLike, JsonPlayObject, PlayLifecycle } from "../core/Atomic.js";
-import { examplePlay, lastfmErrorExample } from "./storyUtils.js";
 import {generatePlayWithLifecycle} from '../core/tests/utils/fixtures'
 import { asJsonPlayObject } from "../core/PlayMarshalUtils.js";
 
@@ -33,7 +31,7 @@ const multiPlay = asJsonPlayObject(generatePlayWithLifecycle({lifecycleSteps: { 
 // More on writing stories with args: https://storybook.js.org/docs/writing-stories/args
 export const Multiple = meta.story({
   args: {
-    steps: multiPlay.meta!.lifecycle!.steps,
+    steps: multiPlay.lifecycle!,
     original: asJsonPlayObject(original),
     collapsibleOpen: true
   }

@@ -314,28 +314,9 @@ export const buildPlayHistoricalWhere = (args: PlayWhereOpts): WhereClause<'play
 }
 
 export const playToRepositoryCreatePlayHistoricalOpts = (data: MarkOptional<RepositoryCreatePlayHistoricalOpts, 'componentId'>): RepositoryCreatePlayHistoricalOpts => {
-    const {
-        play: {
-            meta: {
-                lifecycle,
-                ...metaRest
-            },
-            ...playRest
-        },
-        ...rest
-    } = data;
-
     return {
-        play: {
-            ...playRest,
-            meta: {
-                ...metaRest,
-                // @ts-expect-error
-                lifecycle: {
-                }
-            }
-        },
+        play: data.play,
         uid: data.play.meta?.playId,
-        ...rest
+        ...data
     }
 }

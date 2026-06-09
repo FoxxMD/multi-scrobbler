@@ -41,19 +41,15 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
         },
         meta: {
             source,
-            lifecycle: {
-                // input,
-                // original,
-                steps = [],
-                scrobble: {
-                    match,
-                    payload,
-                    error,
-                    warnings = []
-                } = {},
-                scrobble
-            },
-        } = {}
+        } = {},
+        lifecycle: steps = [],
+        scrobble: {
+            match,
+            payload,
+            error,
+            warnings = []
+        } = {},
+        scrobble
     } = play;
     const {
         play: original,

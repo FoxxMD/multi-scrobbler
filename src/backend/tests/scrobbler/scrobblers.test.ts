@@ -17,7 +17,6 @@ import MockDate from 'mockdate';
 
 import { NowPlayingScrobbler, TestAuthScrobbler, TestScrobbler } from "./TestScrobbler.js";
 import { PaginatedTimeRangeOptions, PlayPlatformId, REFRESH_STALE_DEFAULT } from '../../common/infrastructure/Atomic.js';
-import { defaultLifecycle } from '../../utils/PlayTransformUtils.js';
 import { shuffleArray } from '../../utils/DataUtils.js';
 import { DEFAULT_CONSOLIDATE_DURATION, DEFAULT_GROUP_DURATION, groupPlaysToTimeRanges } from '../../utils/ListenFetchUtils.js';
 import { asPlay } from '../../../core/PlayMarshalUtils.js';
@@ -425,8 +424,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
                     "playDate": dayjs().subtract(1, 'hour').set('minute', 29).set('second', 27)
                 },
                 meta: {
-                    source: 'Spotify',
-                    lifecycle: defaultLifecycle()
+                    source: 'Spotify'
                 }
             }
             await using testScrobbler = await generateTestScrobbler();

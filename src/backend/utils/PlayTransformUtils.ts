@@ -1,6 +1,6 @@
 import { Logger } from "@foxxmd/logging";
 import { searchAndReplace as searchAndReplaceFunc, testMaybeRegex as testMaybeRegexFunc } from "@foxxmd/regex-buddy-core";
-import { PlayLifecycle, PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
 
 import {
     ConditionalSearchAndReplaceRegExp,
@@ -181,9 +181,6 @@ export const baseFormatPlayObj = (data: any, play: PlayObjectLifecycleless): Pla
         meta: {
             seenAt: dayjs(),
             ...play.meta,
-            lifecycle: {
-                steps: []
-            }
         },
         original: {
             input: data,
@@ -192,15 +189,4 @@ export const baseFormatPlayObj = (data: any, play: PlayObjectLifecycleless): Pla
     }
     basePlay.original.play.meta.seenAt = basePlay.meta.seenAt;
     return basePlay;
-}
-
-export const defaultLifecycle = (extra?: PlayLifecycle): PlayLifecycle => {
-    const {
-        steps = [],
-        ...rest
-    } = extra ?? {};
-    return {
-        steps,
-        ...rest,
-    }
 }
