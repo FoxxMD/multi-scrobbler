@@ -338,7 +338,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 }
             }
             steps.forEach((s, index) => {
-                const existingStepIndex = transformedPlay.meta.lifecycle.steps.findIndex(x => x.name === 'hookType' && x.source === this.getIdentifier());
+                const existingStepIndex = transformedPlay.meta.lifecycle.steps.findIndex(x => x.stageName === s.stageName && x.stageType && s.stageType && x.hook === s.hook && x.source === this.getIdentifier());
                 if(existingStepIndex !== -1) {
                     transformedPlay.meta.lifecycle.steps[existingStepIndex] = s;
                 } else {
@@ -347,10 +347,10 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
                 if(shouldLog === 'all') {
                     if(s.patch === undefined) {
-                        historyToDiff.push({name: `${s.source}-${s.name}`});
+                        historyToDiff.push({name: `${s.source}-${s.hook}-${s.stageType}-${s.stageName}`});
                     } else {
                         const patched = patchObject(historyToDiff[historyToDiff.length - 1].data, s.patch);
-                        historyToDiff.push({name: `${s.source}-${s.name}${s.cached ? ' (Cached)' : ''}`, data: patched});
+                        historyToDiff.push({name: `${s.source}-${s.hook}-${s.stageType}-${s.stageName} ${s.cached ? ' (Cached)' : ''}`, data: patched});
                     }
                 }
             });
@@ -413,9 +413,11 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         } = opts;
 
         const stepName = `${hookType} - ${hookItem.type} - ${hookItem.name}`
-        const existingStepIndex = playTruth.meta.lifecycle.steps.findIndex(x => x.name === stepName && x.source === this.getIdentifier());
+        const existingStepIndex = playTruth.meta.lifecycle.steps.findIndex(x => x.hook === hookType && hookItem.name === x.stageName && x.stageType === hookItem.type && x.source === this.getIdentifier());
         const step: LifecycleStep = existingStepIndex !== -1 && playTruth.meta.lifecycle.steps[existingStepIndex] !== undefined ? playTruth.meta.lifecycle.steps[existingStepIndex] : {
-            name: stepName,
+            stageName: hookItem.name,
+            hook: hookType,
+            stageType: hookItem.type,
             source: this.getIdentifier(),
             createdAt: dayjs().toString()
         }
@@ -432,6 +434,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 stageName = e.stageName;
             }
         }
+
+        step.stageName = stageName;
 
         if (err !== undefined) {
             const merged = mergeSimpleError(err);

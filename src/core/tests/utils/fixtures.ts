@@ -11,6 +11,7 @@ import { UpstreamError } from '../../../backend/common/errors/UpstreamError.js';
 import { playToListenPayload } from '../../../backend/common/vendor/listenbrainz/lzUtils.js';
 import { mergeSimpleError, SimpleError, SkipTransformStageError, StagePrerequisiteError } from '../../../backend/common/errors/MSErrors.js';
 import dayjs, { Dayjs } from 'dayjs';
+import { TransformHook } from '../../../backend/common/infrastructure/Transform.js';
 
 export interface ScrobbleMatchOptions {
   match?: boolean
@@ -172,7 +173,9 @@ export const generateLifecycleStep = (play: PlayObject, opts: GenerateLifecycleO
   const inputs = faker.helpers.multiple(() => generateLifecycleInput(), { count: inputCount ?? { min: 0, max: 2 } });
 
   const step: LifecycleStep = {
-    name,
+    hook: name as TransformHook,
+    stageType: faker.helpers.arrayElement(['musicbrainz','native','user']),
+    stageName: faker.word.noun({length: {min: 1, max: 3}}),
     source,
     flowResult: 'continue',
     inputs,

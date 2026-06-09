@@ -5,7 +5,7 @@ import { AdditionalTrackInfoResponse } from "../backend/common/vendor/listenbrai
 import { MarkOptional } from "ts-essentials";
 import { ErrorObject } from "serialize-error";
 import { PlayPlatformIdStr } from "../backend/common/infrastructure/Atomic.js";
-import { FlowControlTerm } from "../backend/common/infrastructure/Transform.js";
+import { FlowControlTerm, TransformHook } from "../backend/common/infrastructure/Transform.js";
 import { Changeset } from "json-diff-ts";
 
 export interface SourceStatusData {
@@ -319,7 +319,9 @@ export interface PlayLifecycle<D extends DateLike = Dayjs> {
 }
 
 export interface LifecycleStep {
-    name: string
+    stageName: string
+    stageType: string
+    hook: TransformHook
     source: string
     cached?: boolean
     returnPartial?: boolean
