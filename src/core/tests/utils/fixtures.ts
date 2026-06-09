@@ -124,14 +124,14 @@ export const playWithLifecycleScrobble = async (play: PlayObject, opts: Scrobble
   const res = await existingScrobble(play, existingPlays);
   scrobbleRes.match = res;
   if(res.match) {
-    play.meta.lifecycle.scrobble = scrobbleRes;
+    play.scrobble = scrobbleRes;
     return play;
   }
 
   scrobbleRes.payload = playToListenPayload(play);
   if(error) {
     scrobbleRes.error = new Error('Failed to scrobble to client', {cause: new UpstreamError('Client returned a 400 or something')});
-    play.meta.lifecycle.scrobble = scrobbleRes;
+    play.scrobble = scrobbleRes;
     return play;
   }
 
@@ -141,7 +141,7 @@ export const playWithLifecycleScrobble = async (play: PlayObject, opts: Scrobble
 
   scrobbleRes.response = generateRandomObj(2);
   scrobbleRes.mergedScrobble = lifecyclelessInvariantTransform(play);
-  play.meta.lifecycle.scrobble = scrobbleRes;
+  play.scrobble = scrobbleRes;
 
   return play;
 }

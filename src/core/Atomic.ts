@@ -301,6 +301,7 @@ export interface PlayObjectLifecycleless<D extends DateLike = Dayjs> {
 
 export type ErrorLike = Error | ErrorObject;
 
+/** scrobble action plus the match result before scrobbling */
 export interface ScrobbleResult<D extends DateLike = Dayjs> {
     match?: PlayMatchResult<D>
     payload?: ScrobblePayload
@@ -314,7 +315,7 @@ export interface PlayLifecycle<D extends DateLike = Dayjs> {
     //input?: object
     //original?: PlayObjectLifecycleless<D>
     steps: LifecycleStep[]
-    scrobble?: ScrobbleResult<D>
+    //scrobble?: ScrobbleResult<D>
 }
 
 export interface LifecycleStep {
@@ -349,7 +350,7 @@ export interface PlayMatchResult<D extends DateLike = Dayjs> {
     reason?: string
     closestMatchedPlay?: PlayObjectLifecycleless<D>
     transformedPlay?: PlayObjectLifecycleless<D>
-    summary?: String
+    summary?: string
     createdAt: string
 }
 
@@ -371,6 +372,7 @@ export interface AmbPlayObject<D extends DateLike = Dayjs> {
     data: PlayData<D>,
     meta: PlayMetaLifecycleless<D>
     original?: PlayOriginal<D>
+    scrobble?: ScrobbleResult<D>
 }
 
 export const isPlayObject = (obj: object): obj is PlayObject => {

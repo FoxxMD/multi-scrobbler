@@ -821,7 +821,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             // if no existing transform then we can run cheap db match
             const cheapExisting = await this.playRepo.checkExisting(playObj, {states: ['scrobbled']});
             if(cheapExisting !== undefined) {
-                const s: ScrobbledPlayObject = {play: cheapExisting.play, scrobble: cheapExisting.play.meta.lifecycle?.scrobble?.mergedScrobble};
+                const s: ScrobbledPlayObject = {play: cheapExisting.play, scrobble: cheapExisting.play.scrobble?.mergedScrobble};
                 return [s, [s]];
             }
         }
@@ -840,7 +840,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             return hasAcceptableTemporalAccuracy(temporalComparison.match)
         });
 
-        const s: ScrobbledPlayObject = {play: matchPlayDate, scrobble: matchPlayDate.meta.lifecycle?.scrobble?.mergedScrobble};
+        const s: ScrobbledPlayObject = {play: matchPlayDate, scrobble: matchPlayDate.scrobble?.mergedScrobble};
 
         return [s, [s]];
     }
@@ -864,9 +864,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         try {
             const result = await this.doScrobble(playObj);
             const {
-                scrobble = {},
-            } = playObj.meta.lifecycle;
-            playObj.meta.lifecycle.scrobble = {
+                scrobble = {}
+            } = playObj;
+            playObj.scrobble = {
                 ...scrobble,
                 payload: result.payload,
                 warnings: result.warnings,
@@ -1073,18 +1073,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }
             if (historicalError === undefined) {
                 const { summary, ...matchResult } = await this.existingScrobble(currQueuedPlay.play, historicalPlays);
-                signal.throwIfAborted();
-                const {
-                    scrobble = {},
-                    ...lifeRest
-                } = currQueuedPlay.play.meta.lifecycle ?? { steps: [], original: currQueuedPlay.play };
-                currQueuedPlay.play.meta.lifecycle = {
-                    ...lifeRest,
-                    scrobble: {
-                        ...scrobble,
-                        match: matchResult
-                    }
+                currQueuedPlay.play.scrobble = {
+                    ...(currQueuedPlay.play.scrobble ?? {}),
+                    match: matchResult
                 }
+                signal.throwIfAborted();
                 if (!matchResult.match) {
                     const transformedScrobble = await this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.postCompare);
                     signal.throwIfAborted();
@@ -1099,17 +1092,17 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                         await this.addScrobbledTrack(scrobbledPlay);
                         //handledShiftedPlay = true;
                     } catch (e) {
-                        currQueuedPlay.play.meta.lifecycle.scrobble = {
+                        currQueuedPlay.play.scrobble = {
                         };
 
                         const submitError = findCauseByReference(e, ScrobbleSubmitError);
                         if (submitError !== undefined) {
-                            currQueuedPlay.play.meta.lifecycle.scrobble.payload = submitError.payload;
-                            currQueuedPlay.play.meta.lifecycle.scrobble.response = submitError.responseBody;
-                            currQueuedPlay.play.meta.lifecycle.scrobble.error = serializeError(submitError);
+                            currQueuedPlay.play.scrobble.payload = submitError.payload;
+                            currQueuedPlay.play.scrobble.response = submitError.responseBody;
+                            currQueuedPlay.play.scrobble.error = serializeError(submitError);
                         } else {
-                            currQueuedPlay.play.meta.lifecycle.scrobble.payload = this.playToClientPayload(transformedScrobble);
-                            currQueuedPlay.play.meta.lifecycle.scrobble.error = serializeError(e);
+                            currQueuedPlay.play.scrobble.payload = this.playToClientPayload(transformedScrobble);
+                            currQueuedPlay.play.scrobble.error = serializeError(e);
                         }
 
                         queueError = e;
@@ -1295,16 +1288,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
         signal?.throwIfAborted();
         const {summary, ...matchResult} = await this.existingScrobble(deadScrobble.play, historicalPlays);
-        const {
-            scrobble = {},
-            ...lifeRest
-        } = deadScrobble.play.meta.lifecycle ?? {steps: [], original: deadScrobble.play};
-        deadScrobble.play.meta.lifecycle = {
-            ...lifeRest,
-            scrobble: {
-                ...scrobble,
-                match: matchResult
-            }
+        deadScrobble.play.scrobble = {
+            ...(deadScrobble.play.scrobble ?? {}),
+            match: matchResult
         }
         if(!matchResult.match) {
             const transformedScrobble = await this.transformPlay(deadScrobble.play, TRANSFORM_HOOK.postCompare);
@@ -1314,15 +1300,17 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 await this.addScrobbledTrack(scrobbledPlay);
                 this.removeDeadLetterScrobble(deadScrobble, 'scrobbled', true);
             } catch (e) {
-
+                deadScrobble.play.scrobble = {
+                    ...(deadScrobble.play.scrobble ?? {})
+                }
                 const submitError = findCauseByReference(e, ScrobbleSubmitError);
                 if(submitError !== undefined) {
-                    deadScrobble.play.meta.lifecycle.scrobble.payload = submitError.payload;
-                    deadScrobble.play.meta.lifecycle.scrobble.response = submitError.responseBody;
-                    deadScrobble.play.meta.lifecycle.scrobble.error = serializeError(submitError);
+                    deadScrobble.play.scrobble.payload = submitError.payload;
+                    deadScrobble.play.scrobble.response = submitError.responseBody;
+                    deadScrobble.play.scrobble.error = serializeError(submitError);
                 } else {
-                    deadScrobble.play.meta.lifecycle.scrobble.payload = this.playToClientPayload(transformedScrobble);
-                    deadScrobble.play.meta.lifecycle.scrobble.error = serializeError(e);
+                    deadScrobble.play.scrobble.payload = this.playToClientPayload(transformedScrobble);
+                    deadScrobble.play.scrobble.error = serializeError(e);
                 }
 
                 this.queueRepo.updateById(deadQueueState.id, {retries: deadQueueState.retries + 1, error: e, updatedAt: dayjs(), queueStatus: 'failed'});
