@@ -225,7 +225,7 @@ export class RockSkyApiClient extends AbstractApiClient {
                 if(log) {
                     this.logger.debug(`Submit Response: ${resp.text}`)
                 }
-                return {payload: submitPayload, response: resp.body as SubmitResponse};
+                return {payload: submitPayload, response: resp.body as SubmitResponse, createdAt: dayjs().toISOString()};
             } catch (e) {
                 throw new ScrobbleSubmitError(`Error occurred while making Rocksky API scrobble (${listenType}) request`, {cause: e, payload: submitPayload});
             }
@@ -235,7 +235,7 @@ export class RockSkyApiClient extends AbstractApiClient {
                 this.logger.debug(`Submit Payload: ${JSON.stringify(payload)}`);
             }
             const resp = await this.rsClient.scrobble.createScrobble(playToRockskyRecord(play));
-            return {payload, response: resp}
+            return {payload, response: resp, createdAt: dayjs().toISOString()}
         }
     }
 

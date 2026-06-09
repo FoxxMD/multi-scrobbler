@@ -11,6 +11,7 @@ import { DrizzlePlayRepository, RepositoryCreatePlayOpts } from "../../common/da
 import { DrizzleQueueRepository } from "../../common/database/drizzle/repositories/QueueRepository.js";
 import { PlaySelect } from "../../common/database/drizzle/drizzleTypes.js";
 import { loggerDebug } from "@foxxmd/logging";
+import dayjs from "dayjs";
 
 export class TestScrobbler extends AbstractScrobbleClient {
 
@@ -34,7 +35,7 @@ export class TestScrobbler extends AbstractScrobbleClient {
     }
 
     doScrobble(playObj: PlayObject) {
-        return Promise.resolve({payload: {}, mergedScrobble: clone(playObj, true)});
+        return Promise.resolve({payload: {}, mergedScrobble: clone(playObj, true), createdAt: dayjs().toISOString()});
     }
 
     protected async doParseCache() {

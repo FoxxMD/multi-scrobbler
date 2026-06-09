@@ -328,6 +328,7 @@ export interface LifecycleStep {
     error?: ErrorLike
     patch?: Changeset
     inputs?: LifecycleInput[]
+    createdAt: string
 }
 
 export type ScrobblePayload = object | string;
@@ -338,6 +339,7 @@ export interface ScrobbleActionResult<D extends DateLike = Dayjs> {
     response?: ScrobbleResponse, 
     mergedScrobble?: AmbPlayObject<D>
     warnings?: string[]
+    createdAt: string
 }
 
 export interface PlayMatchResult<D extends DateLike = Dayjs> {
@@ -348,6 +350,7 @@ export interface PlayMatchResult<D extends DateLike = Dayjs> {
     closestMatchedPlay?: PlayObjectLifecycleless<D>
     transformedPlay?: PlayObjectLifecycleless<D>
     summary?: String
+    createdAt: string
 }
 
 export type ScrobbleTsSOC = 1 | 2;

@@ -124,7 +124,7 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
         return [];
     }
 
-    alreadyScrobbled = async (playObj: PlayObject, log = false): Promise<[boolean, PlayMatchResult]> => ([false, {match: false, breakdowns: [], score: 0}])
+    alreadyScrobbled = async (playObj: PlayObject, log = false): Promise<[boolean, PlayMatchResult]> => ([false, {match: false, breakdowns: [], score: 0, createdAt: dayjs().toISOString()}])
 
     public playToClientPayload(playObj: PlayObject): any {
         return playStateToActivityData({
@@ -142,7 +142,7 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
     }
 
     doScrobble = async (playObj: PlayObject) => {
-        return { play: playObj, payload: {} };
+        return { play: playObj, payload: {}, createdAt: dayjs().toISOString() };
     }
 
     doPlayingNow = async (data: SourcePlayerObj) => {

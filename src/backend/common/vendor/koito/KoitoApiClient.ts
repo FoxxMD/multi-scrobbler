@@ -207,7 +207,7 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
             if (log) {
                 this.logger.debug(`Submit Response: ${resp.text}`)
             }
-            return {payload: listenPayload, response: resp.text};
+            return {payload: listenPayload, response: resp.text, createdAt: dayjs().toISOString()};
         } catch (e) {
             throw new ScrobbleSubmitError(`Error occurred while making Koito API submit request (listen_type ${listenPayload.listen_type})`, {cause: e, payload: listenPayload, response: e.response, responseBody: e.response?.text});
         }

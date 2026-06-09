@@ -290,7 +290,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                     }
 
                     for(const s of cachedSteps) {
-                        steps.push({...s, cached: true});
+                        steps.push({...s, cached: true, createdAt: dayjs().toISOString()});
                         if(shouldTransform && s.patch !== undefined) {
                             transformedPlay.data = patchObject(transformedPlay.data, s.patch); // jdiff.patch(clone(transformedPlay.data),s.patch);
                         }
@@ -417,6 +417,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         const step: LifecycleStep = existingStepIndex !== -1 && playTruth.meta.lifecycle.steps[existingStepIndex] !== undefined ? playTruth.meta.lifecycle.steps[existingStepIndex] : {
             name: stepName,
             source: this.getIdentifier(),
+            createdAt: dayjs().toString()
         }
 
         let newTransformedPlay: PlayObject,

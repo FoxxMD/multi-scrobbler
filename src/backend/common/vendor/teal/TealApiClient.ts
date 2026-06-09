@@ -53,7 +53,7 @@ export class TealApiClient extends AbstractApiClient implements PagelessTimeRang
                 input,
                 params: {}
             });
-            return {payload: input, response: res.data};
+            return {payload: input, response: res.data, createdAt: dayjs().toISOString()};
         } catch (e) {
             throw new ScrobbleSubmitError(`Failed to create record for scrobble`, { cause: e, payload: input, response: 'response' in e ? e.response : undefined });
         }
@@ -71,7 +71,7 @@ export class TealApiClient extends AbstractApiClient implements PagelessTimeRang
                 input,
                 params: {}
             });
-            return {payload: input, response: res.data};
+            return {payload: input, response: res.data, createdAt: dayjs().toISOString()};
         } catch (e) {
             throw new ScrobbleSubmitError(`Failed to update status record for scrobble`, { cause: e, payload: input, response: 'response' in e ? e.response : undefined });
         }

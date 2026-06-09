@@ -12,6 +12,7 @@ import { Logger } from "@foxxmd/logging";
 import { loggerNoop } from '../common/MaybeLogger.js';
 import { lifecyclelessInvariantTransform } from "../../core/PlayUtils.js";
 import { findAsyncSequential } from "./AsyncUtils.js";
+import dayjs from "dayjs";
 
 
 export const metaInvariantTransform = (play: PlayObject): PlayObjectLifecycleless => {
@@ -443,7 +444,8 @@ export const existingScrobble = async (playObjPre: PlayObject, existingScrobbles
             match: false,
             score: 0,
             breakdowns: [],
-            reason: 'No existing scrobble matched with a score higher than 0'
+            reason: 'No existing scrobble matched with a score higher than 0',
+            createdAt: dayjs().toISOString()
         };
 
         const playObj = await transformPlay(playObjPre, TRANSFORM_HOOK.candidate);

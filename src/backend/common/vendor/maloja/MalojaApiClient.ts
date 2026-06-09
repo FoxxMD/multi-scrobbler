@@ -294,7 +294,7 @@ export class MalojaApiClient extends AbstractApiClient implements PaginatedTimeR
                 throw new ScrobbleSubmitError(buildMalojaErrorString(response.body), { showStopper: false, payload: scrobbleData, response, responseBody });
             }
 
-            return {payload: scrobbleData, warnings: msWarnings.length > 0 ? msWarnings : undefined, response: responseBody, mergedScrobble: scrobbleResponse !== undefined ? formatPlayObj(scrobbleResponse, {url: this.url.normal}) : undefined};
+            return {createdAt: dayjs().toISOString(), payload: scrobbleData, warnings: msWarnings.length > 0 ? msWarnings : undefined, response: responseBody, mergedScrobble: scrobbleResponse !== undefined ? formatPlayObj(scrobbleResponse, {url: this.url.normal}) : undefined};
         } catch (e) {
             let scrobbleError: ScrobbleSubmitError;
             if(e instanceof ScrobbleSubmitError) {

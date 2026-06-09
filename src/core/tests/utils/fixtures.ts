@@ -10,7 +10,7 @@ import { existingScrobble } from '../../../backend/utils/PlayComparisonUtils.js'
 import { UpstreamError } from '../../../backend/common/errors/UpstreamError.js';
 import { playToListenPayload } from '../../../backend/common/vendor/listenbrainz/lzUtils.js';
 import { mergeSimpleError, SimpleError, SkipTransformStageError, StagePrerequisiteError } from '../../../backend/common/errors/MSErrors.js';
-import { Dayjs } from 'dayjs';
+import dayjs, { Dayjs } from 'dayjs';
 
 export interface ScrobbleMatchOptions {
   match?: boolean
@@ -175,7 +175,8 @@ export const generateLifecycleStep = (play: PlayObject, opts: GenerateLifecycleO
     name,
     source,
     flowResult: 'continue',
-    inputs
+    inputs,
+    createdAt: dayjs().toISOString()
   }
 
   if (equal) {

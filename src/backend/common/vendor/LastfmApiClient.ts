@@ -484,7 +484,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
                 modifiedPlay.data.album = albumName;
             }
 
-            return {payload: scrobblePayload, response, mergedScrobble: modifiedPlay};
+            return {payload: scrobblePayload, response, mergedScrobble: modifiedPlay, createdAt: dayjs().toISOString()};
             // last fm has rate limits but i can't find a specific example of what that limit is. going to default to 1 scrobble/sec to be safe
             //await sleep(1000);
         } catch (e) {

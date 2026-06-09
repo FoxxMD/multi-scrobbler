@@ -228,7 +228,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
             if(log) {
                 this.logger.debug(`Submit Response: ${resp.text}`)
             }
-            return {payload: listenPayload, response: resp.text};
+            return {payload: listenPayload, response: resp.text, createdAt: dayjs().toISOString()};
         } catch (e) {
             throw new ScrobbleSubmitError(`Failed to submit to Listenbrainz (listen_type ${listenPayload.listen_type})`, {cause: e, payload: listenPayload, response: e.response, responseBody: e.response?.text});
         }
