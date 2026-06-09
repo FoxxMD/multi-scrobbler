@@ -65,10 +65,10 @@ export const setupLZEndpointRoutes = (app: Express, parentLogger: Logger, scrobb
             if(isDebugMode()) {
                 logger.debug({body: req.body}, "Recieved request Body");
             }
-            const playerState = playStateFromRequest(req.body);
+            const playerStates = playStateFromRequest(req.body);
 
             for (const source of validSources) {
-                await source.handle(playerState);
+                await source.handle(playerStates);
             }
         });
 

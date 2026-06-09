@@ -89,15 +89,18 @@ export class EndpointListenbrainzSource extends MemorySource {
         return true;
     }
 
-    handle = async (stateData: PlayerStateData) => {
+    handle = async (stateData: PlayerStateData[]) => {
 
-        await this.processRecentPlays([stateData]);
+        // if request was an import (multiple plays) then we don't want to process for "now playing" player
+        // so only process if we only have one payload in the request
+        if(stateData.length === 1) {
+            await this.processRecentPlays(stateData);
+        }
 
-        if (stateData.play.meta.nowPlaying === false && this.isValidScrobble(stateData.play)) {
-            const discovered = await this.discover([stateData.play]);
-            if (discovered.length > 0) {
-                await this.scrobble(discovered);
-            }
+        const discoverable = stateData.filter(x => x.play.meta.nowPlaying === false && this.isValidScrobble(x.play));
+        const discovered = await this.discover(discoverable.map(x => x.play));
+        if (discovered.length > 0) {
+            await this.scrobble(discovered);
         }
         this.componentRepo.updateById(this.dbComponent.id, {lastActiveAt: dayjs()});
     }
@@ -105,20 +108,23 @@ export class EndpointListenbrainzSource extends MemorySource {
     getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new NowPlayingPlayerState(logger,  id, opts);
 }
 
-export const playStateFromRequest = (obj: SubmitPayload): PlayerStateData => {
+export const playStateFromRequest = (obj: SubmitPayload): PlayerStateData[] => {
     const {
         listen_type,
         payload,
     } = obj;
 
-    const play = listenPayloadToPlay(payload[0], listen_type === 'playing_now');
-    play.meta.sourceSOT = SOURCE_SOT.HISTORY;
-    return {
-        platformId: [play.meta.deviceId, NO_USER],
-        play,
-        status: listenTypeAsPlayerStatus(listen_type),
-        stateUpdatedAt: dayjs()
-    }
+    const playStates: PlayerStateData[] = payload.map((x) => {
+        const play = listenPayloadToPlay(x, listen_type === 'playing_now');
+        play.meta.sourceSOT = SOURCE_SOT.HISTORY;
+        return {
+            platformId: [play.meta.deviceId, NO_USER],
+            play,
+            status: listenTypeAsPlayerStatus(listen_type),
+            stateUpdatedAt: dayjs()
+        }
+    });
+    return playStates;
 }
 
 export const listenTypeAsPlayerStatus = (event: string): ReportedPlayerStatus => {
