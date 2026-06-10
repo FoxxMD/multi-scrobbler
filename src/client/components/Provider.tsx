@@ -5,11 +5,22 @@ import {
   ColorModeProvider,
   type ColorModeProviderProps,
 } from "./Color-Mode"
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  QueryClient,
+  QueryClientProvider,
+} from '@tanstack/react-query'
+
+const queryClient = new QueryClient()
 
 export function Provider(props: ColorModeProviderProps) {
   return (
-    <ChakraProvider value={defaultSystem}>
-      <ColorModeProvider {...props} />
-    </ChakraProvider>
+    <QueryClientProvider client={queryClient}>
+      <ChakraProvider value={defaultSystem}>
+        <ColorModeProvider {...props} />
+      </ChakraProvider>
+    </QueryClientProvider>
   )
 }

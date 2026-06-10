@@ -3,8 +3,12 @@ import addonA11y from "@storybook/addon-a11y";
 import { definePreview } from "@storybook/react-vite";
 
 import { themes } from 'storybook/theming';
+import { initialize, mswLoader } from 'msw-storybook-addon';
+
+initialize();
 
 export default definePreview({
+  loaders: [mswLoader],
   parameters: {
     controls: {
       matchers: {

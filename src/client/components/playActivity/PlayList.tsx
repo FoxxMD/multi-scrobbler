@@ -9,7 +9,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import doy from 'dayjs/plugin/dayOfYear.js';
 import { VscDebugRestart } from "react-icons/vsc";
 import { GroupedVirtuoso } from 'react-virtuoso'
-import { ActivityDetails } from '../ActivityDetail.js';
+import { ActivityDetailFetchable, ActivityDetails } from '../ActivityDetail.js';
 import { sortByNewestPlayDate, sortByNewestSeenDate } from '../../../core/PlayUtils.js';
 import "./PlayList.scss";
 import { PlayApiCommon } from '../../../core/Api.js';
@@ -352,7 +352,7 @@ const PlainAccordian = (props: { data: PlayApiCommon[], sortBy: 'played' | 'seen
                     </Flex>
                     <Accordion.ItemContent>
                       <Accordion.ItemBody borderTopColor="gray.border" >
-                        <ActivityDetails activity={activity} />
+                        <ActivityDetailFetchable componentType='source' uid={activity.uid} />
                       </Accordion.ItemBody>
                     </Accordion.ItemContent>
                   </Accordion.Item>

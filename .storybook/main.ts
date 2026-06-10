@@ -18,6 +18,7 @@ export default defineMain({
     // https://github.com/storybookjs/storybook/discussions/33279
     sidebarOnboardingChecklist: false,
   },
+   staticDirs: ['../public'],
   "framework": "@storybook/react-vite",
     viteFinal: async (config) => {
     return mergeConfig(config, {

@@ -1,5 +1,6 @@
 import preview from "../../.storybook/preview.js";
 import React from 'react';
+import { http, HttpResponse, delay } from 'msw';
 
 import { fn } from 'storybook/test';
 import { Container } from '@chakra-ui/react';
@@ -11,7 +12,8 @@ import {playWithLifecycleScrobble, generatePlayWithLifecycle} from '../core/test
 import { generateArray } from "../core/DataUtils.js";
 import dayjs from "dayjs";
 import { asJsonPlayObject } from "../core/PlayMarshalUtils.js";
-import { generatePlayApiCommon } from "../core/tests/utils/apiFixtures.js";
+import { generatePlayApiCommon, generatePlayApiCommonDetailed } from "../core/tests/utils/apiFixtures.js";
+import { PlayApiCommonDetailed } from "../core/Api.js";
 
 const stack = "Scrobble Submit Error: Failed to submit to Listenbrainz (listen_type single)\n    at ListenbrainzApiClient.submitListen (/app/src/backend/common/vendor/ListenbrainzApiClient.ts:246:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async ListenbrainzScrobbler.doScrobble (/app/src/backend/scrobblers/ListenbrainzScrobbler.ts:87:28)\n    at async ListenbrainzScrobbler.scrobble (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:679:28)\n    at async ListenbrainzScrobbler.processDeadLetterScrobble (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:920:39)\n    at async ListenbrainzScrobbler.processDeadLetterQueue (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:894:43)\n    at async PromisePoolExecutor.handler (/app/src/backend/tasks/heartbeatClients.ts:35:21)\n    at async PromisePoolExecutor.waitForActiveTaskToFinish (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:375:9)\n    at async PromisePoolExecutor.waitForProcessingSlot (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:368:13)\n    at async PromisePoolExecutor.process (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:354:13)";
 
@@ -52,32 +54,59 @@ decorators: [
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });
 
+let playData: PlayApiCommonDetailed[] = [];
+
 // More on writing stories with args: https://storybook.js.org/docs/writing-stories/args
 export const List = meta.story({
+    parameters: {
+    msw: {
+      handlers: [
+        http.get<{uid: string}>('/api/plays/:uid', async ({ params }) => {
+          const existing = playData.find(x => x.uid === params.uid);
+          if(existing !== undefined) {
+            return HttpResponse.json(existing);
+          }
+          return HttpResponse.json(generatePlayApiCommonDetailed());
+        }),
+      ],
+    },
+  },
     loaders: [
     async () => {
-      const queued = normalizePlays(generateArray(7,() => generatePlayWithLifecycle()), {endDate: dayjs()}).map(x => generatePlayApiCommon({play: asJsonPlayObject(x), state: 'queued'}));
+      const queued = normalizePlays(generateArray(7,() => generatePlayWithLifecycle()), {endDate: dayjs()}).map(x => {
+        const jsonPlay = asJsonPlayObject(x);
+        return generatePlayApiCommonDetailed({playOpts: [{state: 'queued', play: jsonPlay}], inputOpts: [{play: jsonPlay}]})
+    });
 
-      const scrobbled = generatePlayApiCommon({
-        play: asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle({lifecycleSteps: {preCompare: [true, 'skipped', true]}}))),
-        state: 'scrobbled'
+      const scrobbledPlay = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle({lifecycleSteps: {preCompare: [true, 'skipped', true]}})));
+      const scrobbledApi = generatePlayApiCommonDetailed({ 
+        playOpts: [{ play: scrobbledPlay, state: 'scrobbled'}],
+        inputOpts: [{play: scrobbledPlay}]
       });
-      const scrobbleError = generatePlayApiCommon({
-        play: asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle(), {error: true})),
-        state: 'failed'
+
+      const scrobbleErrorPlay = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle(), {error: true}));
+
+      const scrobbleError = generatePlayApiCommonDetailed({ 
+        playOpts: [{ play: scrobbleErrorPlay, state: 'failed'}],
+        inputOpts: [{play: scrobbleErrorPlay}]
       });
 
       const promisedScrobbled = generateArray(10,() => playWithLifecycleScrobble(generatePlayWithLifecycle({lifecycleSteps: {preCompare: [true, 'skipped', true]}})));
       const promised = await Promise.all(promisedScrobbled);
-      const yesterdayScrobbled = normalizePlays(promised, {endDate: dayjs().subtract(1, 'd').subtract(100, 'm')}).map((x) => generatePlayApiCommon({play: asJsonPlayObject(x), state: 'scrobbled'}));
-      return {data: [
+      const yesterdayScrobbled = normalizePlays(promised, {endDate: dayjs().subtract(1, 'd').subtract(100, 'm')}).map((x) => { 
+        const jPlay = asJsonPlayObject(x);
+        return generatePlayApiCommonDetailed({ 
+        playOpts: [{ play: jPlay, state: 'scrobbled'}],
+        inputOpts: [{play: jPlay}]
+      });
+    });
+      playData = [        
         ...queued,
-        scrobbled,
+        scrobbledApi,
         scrobbleError,
-        // {play: scrobbled, status: 'scrobbled'},
-        // {play: scrobbleError, status: 'error'},
         ...yesterdayScrobbled
-      ]};
+      ];
+      return {data: playData};
     }
   ],
   //render: function Render(args) { return (<ChakraProvider><MyList></MyList></ChakraProvider>) }
