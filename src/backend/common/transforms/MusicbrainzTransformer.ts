@@ -246,10 +246,6 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
         releaseCountryAllow: releaseCountryAllow !== undefined ? parseArrayFromMaybeString(releaseCountryAllow, {lower: true}) : undefined,
         releaseCountryDeny:  releaseCountryDeny !== undefined ? parseArrayFromMaybeString(releaseCountryDeny, {lower: true}) : undefined,
         releaseCountryPriority:  releaseCountryPriority !== undefined ? parseArrayFromMaybeString(releaseCountryPriority, {lower: true}) : undefined,
-        artistWeight: 0,
-        titleWeight: 0,
-        albumWeight: 0,
-
         ...rest,
     };
 
@@ -908,9 +904,9 @@ export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: Mus
         releaseGroupPrimaryTypePriority = [],
         releaseGroupSecondaryTypePriority = [],
         releaseCountryPriority = [],
-        albumWeight,
-        titleWeight,
-        artistWeight
+        albumWeight = 0,
+        titleWeight = 0,
+        artistWeight = 0
     } = stageConfig;
 
     // reverse order so that "highest" priority (first in user list) ends up with the highest index, that we use as score
