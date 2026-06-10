@@ -10,11 +10,13 @@ import { PlayApiCommon, PlayApiCommonDetailed } from "../../core/Api";
 
 export interface ActivityDetailProps {
     activity: PlayApiCommonDetailed
+    componentType: 'source' | 'client'
 }
 
 export const ActivityDetails = (props: ActivityDetailProps) => {
     const {
         activity,
+        componentType,
         activity: {
             error,
             input: {
@@ -64,7 +66,7 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
                 </Flex>
                 <Accordion.ItemContent>
                     <Accordion.ItemBody>
-                        <ActivityTimeline activity={activity} collapsibleOpen={collapsibleOpen} />
+                        <ActivityTimeline activity={activity} collapsibleOpen={collapsibleOpen} componentType={componentType} />
                     </Accordion.ItemBody>
                 </Accordion.ItemContent>
             </Accordion.Item>

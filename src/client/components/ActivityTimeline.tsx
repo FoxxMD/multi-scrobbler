@@ -127,14 +127,14 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                                     <Tabs.Root size="sm" variant="outline" defaultValue="play">
                                         <Tabs.List>
                                             <Tabs.Trigger value="play">Play</Tabs.Trigger>
-                                            <Tabs.Trigger value="source">Source Data</Tabs.Trigger>
+                                            {ogInput !== undefined ? <Tabs.Trigger value="source">Source Data</Tabs.Trigger> : null}
                                         </Tabs.List>
                                         <Tabs.Content value="play">
                                             <PlayData play={original} />
                                         </Tabs.Content>
-                                        <Tabs.Content value="source">
+                                        {ogInput !== undefined ?  (<Tabs.Content value="source">
                                             <ChakraCodeBlockShort code={ogInput} />
-                                        </Tabs.Content>
+                                        </Tabs.Content>) : null }
                                     </Tabs.Root>
                                 </Card.Body>
                             </Card.Root>
