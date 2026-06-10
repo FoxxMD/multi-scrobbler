@@ -273,7 +273,7 @@ const VirtualizedAccordian = (props: { data: PlayApiCommon[] }) => {
                 paddingInline: "var(--accordion-padding-x)"
               }} justify="flex-start" alignItems="flex-end">
                 <StatusBadge maxWidth="fit-content" data={activity} />
-                {activity.status === 'error' ? <IconButton variant="ghost" size="xs" maxWidth="fit-content">
+                {activity.state === 'failed' ? <IconButton variant="ghost" size="xs" maxWidth="fit-content">
                   <VscDebugRestart />
                 </IconButton> : null}
               </Stack>

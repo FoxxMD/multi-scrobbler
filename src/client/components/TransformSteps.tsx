@@ -95,7 +95,9 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                     flowKnownState,
                     flowReason,
                     flowResult,
-                    name
+                    stageName,
+                    stageType,
+                    hook
                 } = x;
 
                 let timelineIcon: React.JSX.Element,
@@ -107,7 +109,7 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                     iconProps = flowResult === 'continue' ? {color: "green.focusRing"} : {color: "red.focusRing"};
                     summary = <Fragment><Muted>was</Muted> completed{flowResult === 'stop' ? <Fragment><Muted> and </Muted> stopped <Muted> due to onSuccess condition</Muted></Fragment> : null}</Fragment>;
                     if(patch === undefined) {
-                        summary = <Fragment>{summary}<Muted>with</Muted> no change <Muted>to Play</Muted></Fragment>;
+                        summary = <Fragment>{summary}<Muted> with</Muted> no change <Muted>to Play</Muted></Fragment>;
                     }
                 } else {
                     if(flowKnownState === 'skip') {
@@ -144,7 +146,7 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                     <Timeline.Content>
                         <Timeline.Title>
                             <MSCollapsible
-                                indicator={<Span><Span color="fg.muted">{name} with</Span> {source} {summary}</Span>}
+                                indicator={<Span><Span color="fg.muted">Stage </Span>{stageType}-{stageName}<Span color="fg.muted"> in Hook </Span>{hook} <Span color="fg.muted">from</Span> {source} {summary}</Span>}
                                 defaultOpen={collapsibleOpen}
                                 disableUntil="md"
                                 timeline>

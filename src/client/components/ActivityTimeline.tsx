@@ -24,14 +24,16 @@ import { PlayApiCommonDetailed } from "../../core/Api";
 
 export interface ActivityDetailProps {
     activity: PlayApiCommonDetailed
-    collapsibleOpen?: boolean
+    collapsibleOpen?: boolean,
+    componentType?: 'source' | 'client'
 }
 
 export const ActivityTimeline = (props: ActivityDetailProps) => {
     const {
         activity:{
             play,
-            input
+            input,
+            seenAt
         } = {},
         collapsibleOpen
     } = props;
@@ -86,7 +88,7 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                     <Timeline.Title>
                         <MSCollapsible
                             indicator={<Span>
-                                Discovered <Span color="fg.muted">new (Play) activity from</Span> <Span fontWeight="medium">{capitalize(source)}</Span> <Span color="fg.muted">at {shortTodayAwareFormat(dayjs(playDate))}</Span>
+                                Discovered <Span color="fg.muted">new (Play) activity from</Span> <Span fontWeight="medium">{capitalize(source)}</Span> <Span color="fg.muted">at {shortTodayAwareFormat(dayjs(seenAt))}</Span>
                             </Span>}
                             defaultOpen={collapsibleOpen}
                             timeline

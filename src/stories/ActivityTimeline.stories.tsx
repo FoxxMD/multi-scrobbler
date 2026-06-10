@@ -10,6 +10,9 @@ import { generatePlayApiCommonDetailed } from "../core/tests/utils/apiFixtures.j
 import { generatePlayWithLifecycle, playWithLifecycleScrobble } from "../core/tests/utils/fixtures.js";
 import { asJsonPlayObject } from '../core/PlayMarshalUtils.js';
 
+type PropsAndCustomArgs = React.ComponentProps<typeof ActivityTimeline> & {
+  componentType: 'source' | 'client'
+};
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
   title: 'Examples/ActivityTimline',
@@ -22,9 +25,18 @@ const meta = preview.meta({
   tags: ['autodocs'],
   // More on argTypes: https://storybook.js.org/docs/api/argtypes
   args: {
-     activity: generatePlayApiCommonDetailed()
+     activity: generatePlayApiCommonDetailed(),
+     //componentType: 'source'
   },
-  render: function Render(args, { loaded: { activity } }) { return (<ActivityTimeline {...args} activity={activity}/>) },
+  argTypes: {
+    componentType: {
+      control: { type: 'select' },
+      options: ['source', 'client'],
+    }
+  },
+  render: function Render(args, { loaded: { activity } }) {
+     return (<ActivityTimeline {...args}  activity={activity}/>) 
+    },
 decorators: [
     (Story) => (<Provider><Container maxWidth="4xl"><Story/></Container></Provider>),
   ]
@@ -34,7 +46,7 @@ decorators: [
 // More on writing stories with args: https://storybook.js.org/docs/writing-stories/args
 export const ActivityTimelineStory = meta.story({
     loaders: [
-    async () => {
+    async (ctx) => {
       const scrobbleError = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle(
         {
         lifecycleSteps: {
@@ -44,10 +56,12 @@ export const ActivityTimelineStory = meta.story({
       }
       )));
 
-      return {activity: generatePlayApiCommonDetailed({
+      return {
+        activity: generatePlayApiCommonDetailed({
         playOpts: [{play: scrobbleError}],
         inputOpts: [{play: scrobbleError}]
-      })};
+      }),
+    };
     }
   ],
 });
@@ -56,8 +70,13 @@ export const ScrobbleError = meta.story({
     loaders: [
     async () => {
       const scrobbleError = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle(), {error: true}));
-      return {play: scrobbleError};
+      return {
+        activity: generatePlayApiCommonDetailed({
+        playOpts: [{play: scrobbleError}],
+        inputOpts: [{play: scrobbleError}]
+      })
     }
+  }
   ],
 });
 
@@ -70,7 +89,12 @@ export const TransformError = meta.story({
           postCompare: [false],
         }
       }));
-      return {play: scrobbleError};
+      return {
+        activity: generatePlayApiCommonDetailed({
+        playOpts: [{play: scrobbleError}],
+        inputOpts: [{play: scrobbleError}]
+      })
+    }
     }
   ],
 });
@@ -83,7 +107,12 @@ export const TransformSkip = meta.story({
           preCompare: [true, 'skipped', true],
         }
       }));
-      return {play};
+      return {
+        activity: generatePlayApiCommonDetailed({
+        playOpts: [{play}],
+        inputOpts: [{play}]
+      })
+    }
     }
   ],
 });
@@ -96,7 +125,12 @@ export const TransformPrereq = meta.story({
           preCompare: [true, 'prereq'],
         }
       }));
-      return {play};
+      return {
+        activity: generatePlayApiCommonDetailed({
+        playOpts: [{play}],
+        inputOpts: [{play}]
+      })
+    }
     }
   ],
 });
@@ -109,7 +143,12 @@ export const TransformStop = meta.story({
           preCompare: [true, 'stop'],
         }
       }));
-      return {play};
+      return {
+        activity: generatePlayApiCommonDetailed({
+        playOpts: [{play}],
+        inputOpts: [{play}]
+      })
+    }
     }
   ],
 });
