@@ -10,9 +10,6 @@ import { generatePlayApiCommonDetailed } from "../core/tests/utils/apiFixtures.j
 import { generatePlayWithLifecycle, playWithLifecycleScrobble } from "../core/tests/utils/fixtures.js";
 import { asJsonPlayObject } from '../core/PlayMarshalUtils.js';
 
-type PropsAndCustomArgs = React.ComponentProps<typeof ActivityTimeline> & {
-  componentType: 'source' | 'client'
-};
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
   title: 'Examples/ActivityTimline',
@@ -25,8 +22,8 @@ const meta = preview.meta({
   tags: ['autodocs'],
   // More on argTypes: https://storybook.js.org/docs/api/argtypes
   args: {
-     activity: generatePlayApiCommonDetailed(),
-     //componentType: 'source'
+     //activity: generatePlayApiCommonDetailed(),
+     componentType: 'source' as const
   },
   argTypes: {
     componentType: {
@@ -43,6 +40,9 @@ decorators: [
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });
 
+export const NotLoaded = meta.story({
+});
+
 // More on writing stories with args: https://storybook.js.org/docs/writing-stories/args
 export const ActivityTimelineStory = meta.story({
     loaders: [
@@ -55,7 +55,6 @@ export const ActivityTimelineStory = meta.story({
         }
       }
       )));
-
       return {
         activity: generatePlayApiCommonDetailed({
         playOpts: [{play: scrobbleError}],

@@ -1,5 +1,5 @@
 import { ComponentProps, useState, Fragment } from "react"
-import { Accordion, Timeline, Icon, Span, Stack, Heading, Card, Box, Tabs } from '@chakra-ui/react';
+import { Accordion, Timeline, Icon, Span, Stack, Heading, Card, Box, Tabs, Skeleton, SkeletonCircle, SkeletonText } from '@chakra-ui/react';
 import { ErrorLike, JsonPlayObject, PlayActivity } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
 import { ErrorAlert } from "./ErrorAlert";
@@ -23,19 +23,48 @@ import { PlayApiCommonDetailed } from "../../core/Api";
 
 
 export interface ActivityDetailProps {
-    activity: PlayApiCommonDetailed
+    activity?: PlayApiCommonDetailed
     collapsibleOpen?: boolean,
     componentType?: 'source' | 'client'
 }
 
+const TimelineLoading = () => {
+    return (
+        <Timeline.Root variant="subtle" size="lg">
+            <Timeline.Item>
+                <Timeline.Connector>
+                    <Timeline.Separator />
+                    <Timeline.Indicator>
+                        <Icon fontSize="lg">
+                            <SkeletonCircle />
+                        </Icon>
+                    </Timeline.Indicator>
+                </Timeline.Connector>
+                <Timeline.Content>
+                    <Timeline.Title>
+                        <SkeletonText noOfLines={1} />
+                    </Timeline.Title>
+                    <SkeletonText noOfLines={2} />
+                </Timeline.Content>
+            </Timeline.Item>
+        </Timeline.Root>
+    );
+}
+
 export const ActivityTimeline = (props: ActivityDetailProps) => {
+
+    if(props.activity === undefined) {
+        return <TimelineLoading/>;
+    }
+
     const {
         activity:{
             play,
             input,
             seenAt
         } = {},
-        collapsibleOpen
+        collapsibleOpen,
+        componentType
     } = props;
     const {
         data: {
@@ -88,7 +117,7 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                     <Timeline.Title>
                         <MSCollapsible
                             indicator={<Span>
-                                Discovered <Span color="fg.muted">new (Play) activity from</Span> <Span fontWeight="medium">{capitalize(source)}</Span> <Span color="fg.muted">at {shortTodayAwareFormat(dayjs(seenAt))}</Span>
+                               {componentType === 'source' ? 'Discovered' : 'Recieved'} <Span color="fg.muted">new Play from</Span> <Span fontWeight="medium">{capitalize(source)}</Span> <Span color="fg.muted">at {shortTodayAwareFormat(dayjs(seenAt))}</Span>
                             </Span>}
                             defaultOpen={collapsibleOpen}
                             timeline
