@@ -58,56 +58,61 @@ let playData: PlayApiCommonDetailed[] = [];
 
 // More on writing stories with args: https://storybook.js.org/docs/writing-stories/args
 export const List = meta.story({
-    parameters: {
-    msw: {
-      handlers: [
-        http.get<{uid: string}>('/api/plays/:uid', async ({ params }) => {
-          const existing = playData.find(x => x.uid === params.uid);
-          if(existing !== undefined) {
-            return HttpResponse.json(existing);
-          }
-          return HttpResponse.json(generatePlayApiCommonDetailed());
-        }),
-      ],
-    },
+  args: {
+    render: "accordian"
   },
-    loaders: [
-    async () => {
-      const queued = normalizePlays(generateArray(7,() => generatePlayWithLifecycle()), {endDate: dayjs()}).map(x => {
-        const jsonPlay = asJsonPlayObject(x);
-        return generatePlayApiCommonDetailed({playOpts: [{state: 'queued', play: jsonPlay}], inputOpts: [{play: jsonPlay}]})
-    });
 
-      const scrobbledPlay = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle({lifecycleSteps: {preCompare: [true, 'skipped', true]}})));
-      const scrobbledApi = generatePlayApiCommonDetailed({ 
-        playOpts: [{ play: scrobbledPlay, state: 'scrobbled'}],
-        inputOpts: [{play: scrobbledPlay}]
-      });
+  parameters: {
+  msw: {
+    handlers: [
+      http.get<{uid: string}>('/api/plays/:uid', async ({ params }) => {
+        const existing = playData.find(x => x.uid === params.uid);
+        if(existing !== undefined) {
+          return HttpResponse.json(existing);
+        }
+        return HttpResponse.json(generatePlayApiCommonDetailed());
+      }),
+    ],
+  },
+},
 
-      const scrobbleErrorPlay = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle(), {error: true}));
-
-      const scrobbleError = generatePlayApiCommonDetailed({ 
-        playOpts: [{ play: scrobbleErrorPlay, state: 'failed'}],
-        inputOpts: [{play: scrobbleErrorPlay}]
-      });
-
-      const promisedScrobbled = generateArray(10,() => playWithLifecycleScrobble(generatePlayWithLifecycle({lifecycleSteps: {preCompare: [true, 'skipped', true]}})));
-      const promised = await Promise.all(promisedScrobbled);
-      const yesterdayScrobbled = normalizePlays(promised, {endDate: dayjs().subtract(1, 'd').subtract(100, 'm')}).map((x) => { 
-        const jPlay = asJsonPlayObject(x);
-        return generatePlayApiCommonDetailed({ 
-        playOpts: [{ play: jPlay, state: 'scrobbled'}],
-        inputOpts: [{play: jPlay}]
-      });
-    });
-      playData = [        
-        ...queued,
-        scrobbledApi,
-        scrobbleError,
-        ...yesterdayScrobbled
-      ];
-      return {data: playData};
-    }
-  ],
   //render: function Render(args) { return (<ChakraProvider><MyList></MyList></ChakraProvider>) }
+  loaders: [
+  async () => {
+    const queued = normalizePlays(generateArray(7,() => generatePlayWithLifecycle()), {endDate: dayjs()}).map(x => {
+      const jsonPlay = asJsonPlayObject(x);
+      return generatePlayApiCommonDetailed({playOpts: [{state: 'queued', play: jsonPlay}], inputOpts: [{play: jsonPlay}]})
+  });
+
+    const scrobbledPlay = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle({lifecycleSteps: {preCompare: [true, 'skipped', true]}})));
+    const scrobbledApi = generatePlayApiCommonDetailed({ 
+      playOpts: [{ play: scrobbledPlay, state: 'scrobbled'}],
+      inputOpts: [{play: scrobbledPlay}]
+    });
+
+    const scrobbleErrorPlay = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle(), {error: true}));
+
+    const scrobbleError = generatePlayApiCommonDetailed({ 
+      playOpts: [{ play: scrobbleErrorPlay, state: 'failed'}],
+      inputOpts: [{play: scrobbleErrorPlay}]
+    });
+
+    const promisedScrobbled = generateArray(10,() => playWithLifecycleScrobble(generatePlayWithLifecycle({lifecycleSteps: {preCompare: [true, 'skipped', true]}})));
+    const promised = await Promise.all(promisedScrobbled);
+    const yesterdayScrobbled = normalizePlays(promised, {endDate: dayjs().subtract(1, 'd').subtract(100, 'm')}).map((x) => { 
+      const jPlay = asJsonPlayObject(x);
+      return generatePlayApiCommonDetailed({ 
+      playOpts: [{ play: jPlay, state: 'scrobbled'}],
+      inputOpts: [{play: jPlay}]
+    });
+  });
+    playData = [        
+      ...queued,
+      scrobbledApi,
+      scrobbleError,
+      ...yesterdayScrobbled
+    ];
+    return {data: playData};
+  }
+]
 });

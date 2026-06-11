@@ -4,11 +4,11 @@ import { ShortDateDisplay } from '../DateDisplay.js';
 import { TextMuted } from '../TextMuted.js';
 import { LuChevronRight } from "react-icons/lu"
 import { capitalize } from '../../../core/StringUtils.js';
-import { ComponentProps, useMemo, forwardRef, Fragment } from "react"
+import React, { ComponentProps, useMemo, forwardRef, Fragment } from "react"
 import dayjs, { Dayjs } from 'dayjs';
 import doy from 'dayjs/plugin/dayOfYear.js';
 import { VscDebugRestart } from "react-icons/vsc";
-import { GroupedVirtuoso } from 'react-virtuoso'
+import { GroupedVirtuoso, Components, LogLevel } from 'react-virtuoso'
 import { ActivityDetailFetchable, ActivityDetails } from '../ActivityDetail.js';
 import { sortByNewestPlayDate, sortByNewestSeenDate } from '../../../core/PlayUtils.js';
 import "./PlayList.scss";
@@ -192,7 +192,7 @@ const VirtualizedCollapse = (props: { data: PlayApiCommon[] }) => {
                 paddingBlock: "var(--chakra-spacing-4)",
                 paddingInline: "var(--chakra-spacing-4)"
               }}>
-              <ActivityDetails activity={activity} />
+              <ActivityDetailFetchable componentType='source' uid={activity.uid} />
             </Collapsible.Content>
           </Collapsible.Root>
         )
@@ -201,18 +201,7 @@ const VirtualizedCollapse = (props: { data: PlayApiCommon[] }) => {
   );
 }
 
-const VirtualizedAccordian = (props: { data: PlayApiCommon[] }) => {
-  const {
-    data,
-  } = props;
-  const groups = useMemo(() => generateGroupInfo(data), [data]);
-  return (
-    <GroupedVirtuoso
-      style={{ height: '700px' }}
-      fixedItemHeight={80}
-      fixedGroupHeight={50}
-      components={{
-        List: forwardRef((args, ref) => {
+const CustomList: Components['List'] = React.forwardRef((args, ref) => {
           // @ts-ignore
           if (args.children.length === 1 && args.children[0].type.name === 'Group') {
             // @ts-ignore
@@ -220,14 +209,59 @@ const VirtualizedAccordian = (props: { data: PlayApiCommon[] }) => {
           }
           // @ts-ignore
           return <Accordion.Root ref={ref} data-testid={args["data-testid"]} style={args.style} lazyMount variant="enclosed" collapsible multiple>{args.children}</Accordion.Root>
-        }),
-        Group: (args) => {
-          return <div data-testid={args["data-testid"]} style={args.style}>{args.children}</div>
-        }
-      }}
-      groupCounts={groups.map(x => x.count)}
-      groupContent={(index) => {
-        const gData = groups[index];
+});
+
+const CustomGroup: Components['Group'] = React.forwardRef((args) => {
+  return <div data-testid={args["data-testid"]} style={args.style}>{args.children}</div>;
+});
+
+const ItemComponent = React.memo((props: {index: number, activity}) => {
+  const {index, activity} = props;
+  const { play } = activity;
+  console.log(`render ${play.data.track}`);
+  return (
+        <Accordion.Item value={index.toString()}>
+          <Flex justify="space-between">
+            <Accordion.ItemTrigger truncate cursor="pointer">
+              <Accordion.ItemIndicator />
+              <Stack gap="1" truncate>
+                <Span>{play.data.track}</Span>
+                <TextMuted truncate>{play.data.artists.map(x => x.name).join(' / ')}</TextMuted>
+                <HStack gap="1">
+                  <ShortDateDisplay date={play.data.playDate} prefix="Played" /><Separator orientation="vertical" height="4" />
+                  <TextMuted>{play.meta?.source}</TextMuted>
+                </HStack>
+              </Stack>
+            </Accordion.ItemTrigger>
+            <Stack style={{
+              paddingBlock: "var(--accordion-padding-y)",
+              paddingInline: "var(--accordion-padding-x)"
+            }} justify="flex-start" alignItems="flex-end">
+              <StatusBadge maxWidth="fit-content" data={activity} />
+              {activity.state === 'failed' ? <IconButton variant="ghost" size="xs" maxWidth="fit-content">
+                <VscDebugRestart />
+              </IconButton> : null}
+            </Stack>
+
+          </Flex>
+          <Accordion.ItemContent>
+            <Accordion.ItemBody borderTopColor="gray.border" >
+              <ActivityDetailFetchable componentType='source' uid={activity.uid} />
+            </Accordion.ItemBody>
+          </Accordion.ItemContent>
+        </Accordion.Item>
+      )
+});
+
+const VirtualizedAccordian = (props: { data: PlayApiCommon[] }) => {
+  const {
+    data,
+  } = props;
+
+  const groups = useMemo(() => generateGroupInfo(data), [data]);
+
+  const GroupComponent = (props: {index: number}) => {
+    const gData = groups[props.index];
         let headerText: string;
         if (gData.date.isToday()) {
           headerText = 'Today';
@@ -238,7 +272,7 @@ const VirtualizedAccordian = (props: { data: PlayApiCommon[] }) => {
           }
         }
         return (
-          <Box paddingY="2">
+          <Box paddingY="2" bgColor="var(--chakra-colors-bg)">
             <Flex direction="row" justify="space-between">
 
               <Text fontWeight="semibold">{headerText}</Text>
@@ -247,46 +281,24 @@ const VirtualizedAccordian = (props: { data: PlayApiCommon[] }) => {
                 <VscDebugRestart />
               </IconButton>
             </Flex>
-            <Separator orientation="horizontal" height="4" />
+            <Separator orientation="horizontal"/>
           </Box>
-        )
-      }}
-      itemContent={(index, groupIndex) => {
-        const activity = data[index];
-        const { play } = activity;
-        return (
-          <Accordion.Item key={index} value={index.toString()}>
-            <Flex justify="space-between">
-              <Accordion.ItemTrigger truncate cursor="pointer">
-                <Accordion.ItemIndicator />
-                <Stack gap="1" truncate>
-                  <Span>{play.data.track}</Span>
-                  <TextMuted truncate>{play.data.artists.map(x => x.name).join(' / ')}</TextMuted>
-                  <HStack gap="1">
-                    <ShortDateDisplay date={play.data.playDate} prefix="Played" /><Separator orientation="vertical" height="4" />
-                    <TextMuted>{play.meta?.source}</TextMuted>
-                  </HStack>
-                </Stack>
-              </Accordion.ItemTrigger>
-              <Stack style={{
-                paddingBlock: "var(--accordion-padding-y)",
-                paddingInline: "var(--accordion-padding-x)"
-              }} justify="flex-start" alignItems="flex-end">
-                <StatusBadge maxWidth="fit-content" data={activity} />
-                {activity.state === 'failed' ? <IconButton variant="ghost" size="xs" maxWidth="fit-content">
-                  <VscDebugRestart />
-                </IconButton> : null}
-              </Stack>
+        );
+  }
 
-            </Flex>
-            <Accordion.ItemContent>
-              <Accordion.ItemBody borderTopColor="gray.border" >
-                <ActivityDetails activity={activity} />
-              </Accordion.ItemBody>
-            </Accordion.ItemContent>
-          </Accordion.Item>
-        )
+  return (
+    <GroupedVirtuoso
+      style={{ height: '700px' }}
+      logLevel={LogLevel.DEBUG}
+      fixedItemHeight={80}
+      fixedGroupHeight={50}
+      components={{
+        List: CustomList,
+        Group: CustomGroup
       }}
+      groupCounts={groups.map(x => x.count)}
+      groupContent={(index) => <GroupComponent index={index}/>}
+      itemContent={(index) => <ItemComponent index={index} activity={data[index]}/>}
     />
   );
 }
