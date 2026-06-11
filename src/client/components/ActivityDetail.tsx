@@ -1,4 +1,4 @@
-import { ComponentProps, useState, Fragment } from "react"
+import React, { ComponentProps, useState, Fragment } from "react"
 import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Icon, useAccordionItemContext, Skeleton } from '@chakra-ui/react';
 import { ErrorLike, PlayActivity } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
@@ -28,18 +28,20 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
         }
     } = props;
 
-    const ExpandableButtons = () => {
-        const item = useAccordionItemContext();
-        console.log(item.expanded);
-        return (
-            <Stack style={{
-                        paddingBlock: "var(--accordion-padding-y)",
-                        paddingInline: "var(--accordion-padding-x)"
-                    }} justify="flex-start" alignItems="flex-end">
-                        <ExpandCollapse hideBelow="sm" display={item.expanded ? 'flex' : 'none'} onClick={(val) => setCollapsibleOpen(val)} />
-                    </Stack>
-        )
-    }
+    console.log(`Rendering ActivityDetails for ${activity.play.data.track}`);
+
+    // const ExpandableButtons = () => {
+    //     const item = useAccordionItemContext();
+    //     console.log(item.expanded);
+    //     return (
+    //         <Stack style={{
+    //                     paddingBlock: "var(--accordion-padding-y)",
+    //                     paddingInline: "var(--accordion-padding-x)"
+    //                 }} justify="flex-start" alignItems="flex-end">
+    //                     <ExpandCollapse hideBelow="sm" display={item.expanded ? 'flex' : 'none'} onClick={(val) => setCollapsibleOpen(val)} />
+    //                 </Stack>
+    //     )
+    // }
 
     const [collapsibleOpen, setCollapsibleOpen] = useState(undefined);
 
@@ -65,7 +67,12 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
                             <AiOutlineExclamationCircle />
                         </Icon>) : null}
                     </Accordion.ItemTrigger>
-                    <ExpandableButtons/>
+                    <Stack style={{
+                        paddingBlock: "var(--accordion-padding-y)",
+                        paddingInline: "var(--accordion-padding-x)"
+                    }} justify="flex-start" alignItems="flex-end">
+                        <ExpandCollapse hideBelow="sm" display={useAccordionItemContext().expanded ? 'flex' : 'none'} onClick={(val) => setCollapsibleOpen(val)} />
+                    </Stack>
                 </Flex>
                 <Accordion.ItemContent>
                     <Accordion.ItemBody>
@@ -98,7 +105,7 @@ export const ActivityDetailFetchable = (props: ActivityDetailFetchableProps) => 
         return <ErrorAlert error={error}/>
     }
 
-    return <ActivityDetails componentType={props.componentType} activity={data}/>
+    return <ActivityDetails componentType={props.componentType} key={data?.uid} activity={data}/>
 }
 
 type PlayQueryKey = ['plays', string];
