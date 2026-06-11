@@ -1,4 +1,9 @@
-import { ErrorLike, JsonPlayObject, PlayState } from "./Atomic.js"
+import { PickKeys, StrictOmit } from "ts-essentials"
+import { ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.js"
+import { ClientType } from "../backend/common/infrastructure/config/client/clients.js"
+import { SourceType } from "../backend/common/infrastructure/config/source/sources.js"
+import { ErrorLike, JsonPlayObject, PlayState, Replace, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.js"
+import { Dayjs } from "dayjs"
 
 export interface PlayApiCommon {
     uid: string
@@ -34,4 +39,52 @@ export interface PlayApiCommonDetailed extends PlayApiCommon {
     error?: ErrorLike
     input?: PlayInputApi
     queueStates: QueueStateApi[]
+}
+
+export type ComponentCommonApi = {
+    type: SourceType | ClientType
+    name: string
+    /** General state of the component like Idle, Stopped, Running, Error */
+    state: string
+    /** More specific, live activity state like "sleeping", "hydrating historical scrobbles", "processing dead scrobbles", etc... */
+    status?: string
+} & Omit<ComponentMinimalSelect, 'type'>
+
+export type ComponentCommonApiJson = Replace<ComponentCommonApi, PickKeys<ComponentCommonApi, Dayjs>, string>;
+
+export type ComponentDetailedApi = ComponentCommonApi & {
+    hasAuth: boolean;
+    hasAuthInteraction: boolean;
+    authed: boolean
+    initialized: boolean
+}
+
+export type ComponentCientApiBase = {
+    queued: number
+    deadLetterScrobbles: number
+    deadLetterScrobblesTotal: number
+}
+
+export type ComponentClientApi = ComponentCommonApi & ComponentCientApiBase;
+export type ComponentClientApiJson = Replace<ComponentClientApi, PickKeys<ComponentClientApi, Dayjs>, string>;
+
+export type ComponentSourceApiBase = {
+    sot: SOURCE_SOT_TYPES
+    supportsUpstreamRecentlyPlayed: boolean;
+    supportsManualListening: boolean;
+    manualListening?: boolean
+    systemListeningBehavior?: boolean
+    tracksDiscovered: number;
+    players: Record<string, SourcePlayerJson>
+}
+
+export type ComponentSourceApi = ComponentCommonApi & ComponentSourceApiBase;
+export type ComponentSourceApiJson = Replace<ComponentSourceApi, PickKeys<ComponentSourceApi, Dayjs>, string>;
+
+export const isComponentSourceApiJson = (data: ComponentCommonApiJson): data is ComponentSourceApiJson => {
+    return data.mode === 'source';
+}
+
+export const isComponentClientApiJson = (data: ComponentCommonApiJson): data is ComponentClientApiJson => {
+    return data.mode === 'client';
 }

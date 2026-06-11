@@ -1,7 +1,7 @@
 import { LogDataPretty, LogLevel } from "@foxxmd/logging";
 import { Dayjs } from "dayjs";
 import { AdditionalTrackInfoResponse } from "../backend/common/vendor/listenbrainz/interfaces.js";
-import { Merge, RequiredKeys } from "ts-essentials";
+import { Merge, RequiredKeys, StrictOmit } from "ts-essentials";
 import { ErrorObject } from "serialize-error";
 import { PlayPlatformIdStr } from "../backend/common/infrastructure/Atomic.js";
 import { FlowControlTerm, TransformHook } from "../backend/common/infrastructure/Transform.js";
@@ -485,6 +485,7 @@ export const SOURCE_SOT = {
     PLAYER : 'player' as SOURCE_SOT_TYPES,
     HISTORY: 'history' as SOURCE_SOT_TYPES
 }
+export const sourceSotTypes: SOURCE_SOT_TYPES[] = ['player','history'];
 
 export interface LeveledLogData extends LogDataPretty {
     levelLabel: string
@@ -653,3 +654,5 @@ export const QUEUE_STATUS_QUEUED: QueueStatus = 'queued';
 export const QUEUE_STATUS_COMPLETED: QueueStatus = 'completed';
 export const QUEUE_STATUS_FAILED: QueueStatus = 'failed';
 export const QUEUE_STATUSES: QueueStatus[] = [QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, QUEUE_STATUS_QUEUED];
+
+export type Replace<Type, Keys extends keyof Type, TReplace> = StrictOmit<Type, Keys> & Record<Keys, TReplace>

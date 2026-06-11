@@ -6,6 +6,7 @@ import { MarkOptional, MarkRequired } from "ts-essentials";
 
 export type ComponentNew = typeof components.$inferInsert;
 export type ComponentSelect = GenericRelationResult<'components', 'migrations'>;
+export type ComponentMinimalSelect = typeof components.$inferSelect;
 
 export type ComponentMigrationNew = typeof componentMigrations.$inferInsert;
 export type ComponentMigrationSelect = typeof componentMigrations.$inferSelect;
