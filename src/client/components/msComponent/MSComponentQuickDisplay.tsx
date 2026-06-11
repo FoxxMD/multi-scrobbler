@@ -6,14 +6,35 @@ import { isClientType } from "../../../backend/common/infrastructure/Atomic";
 import { capitalize } from "../../../core/StringUtils";
 import { ShortDateDisplay } from "../DateDisplay";
 import { ChevronRightButton } from "../icons/ChakraIcons";
+import { ChakraPlayer } from "../chakraPlayer/Player";
 
 export const MSComponentSummary = (props: { data: ComponentCommonApiJson }) => {
         const {
         data
     } = props;
     const isClient = isClientType(data.type);
+
+    let body = <Card.Footer/>;
+    let cardHeaderProps: Card.HeaderProps = {};
+    if(isComponentSourceApiJson(data)) {
+        const {
+            players
+        } = data;
+        if(Object.keys(players).length > 0) {
+            cardHeaderProps.borderBottomWidth="1px";
+            cardHeaderProps.paddingBottom="2";
+            body = (<Card.Body px="3" py="2" paddingTop="3">
+                <Stack gap="2">
+                {
+                    Object.values(players).map((x) => <Container maxW="lg" bg="bg.emphasized" borderWidth="1px" p="2" py="3" rounded="md"><ChakraPlayer data={x}/></Container>)
+                }
+                </Stack>
+            </Card.Body>);
+        }
+    }
+
     return (<Card.Root variant="subtle">
-        <Card.Header>
+        <Card.Header {...cardHeaderProps}>
             <LinkBox>
             <Flex justify="space-between">
                 <Heading>{data.name}</Heading>
@@ -32,7 +53,7 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson }) => {
             <TextMuted textStyle="md">{isClient ? `(${data.mode}) ` : ''}{capitalize(data.type)}</TextMuted>
             <QuickStatsSource data={data} />
         </Card.Header>
-        <Card.Footer />
+        {body}
     </Card.Root>)
 }
 

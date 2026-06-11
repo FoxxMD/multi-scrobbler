@@ -2,14 +2,14 @@ import preview from "../../.storybook/preview.js";
 import React from 'react';
 
 import { Container } from '@chakra-ui/react';
-import { MSComponentSummary } from "../client/components/msComponent/MSComponentQuickDisplay";
+import { ChakraPlayer } from "../client/components/chakraPlayer/Player";
 import {Provider} from "../client/components/Provider";
 import { generateClientApiJson, generateSourceApiJson, generateSourcePlayerJson } from "../core/tests/utils/apiFixtures.js";
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
-  title: 'Examples/ComponentSummary',
-  component: MSComponentSummary,
+  title: 'Examples/Player',
+  component: ChakraPlayer,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
@@ -27,29 +27,35 @@ const meta = preview.meta({
   //   }
   // },
   render: function Render(args) {
-     return (<MSComponentSummary {...args} />) 
+     return (<ChakraPlayer {...args} />) 
     },
 decorators: [
-    (Story) => (<Provider><Container maxWidth="4xl"><Story/></Container></Provider>),
+    (Story) => (<Provider><Container maxWidth="lg"><Story/></Container></Provider>),
   ]
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });
 
 // More on writing stories with args: https://storybook.js.org/docs/writing-stories/args
-export const SourceSummary = meta.story({
+export const PlayerNoArt = meta.story({
     args: {
-      data: generateSourceApiJson()
+      data: generateSourcePlayerJson()
     }
 });
 
-export const ClientSummary = meta.story({
+export const PlayerWithArt = meta.story({
     args: {
-      data: generateClientApiJson()
+      data: generateSourcePlayerJson(undefined, {art: true})
     }
 });
 
-export const SourceWithPlayerSummary = meta.story({
+export const PlayerNowPlaying = meta.story({
     args: {
-      data: generateSourceApiJson({players: {test: generateSourcePlayerJson(undefined, {art: true})}})
+      data: {...generateSourcePlayerJson(undefined, {art: true}), nowPlayingMode: true }
+    }
+});
+
+export const PlayerNoPosition = meta.story({
+    args: {
+      data: {...generateSourcePlayerJson(undefined, {art: true}), position: undefined }
     }
 });

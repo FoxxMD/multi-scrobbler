@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentSourceApi, ComponentSourceApiJson, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi } from "../../Api.js";
-import { CLIENT_INGRESS_QUEUE, JsonPlayObject, PlayObject, PlayState, QUEUE_STATUSES, SOURCE_SOT, sourceSotTypes } from "../../Atomic.js";
+import { CLIENT_INGRESS_QUEUE, JsonPlayObject, PlayObject, PlayState, QUEUE_STATUSES, SOURCE_SOT, SourcePlayerJson, sourceSotTypes } from "../../Atomic.js";
 import { generatePlay } from "../../PlayTestUtils.js";
 import { generatePlayInput, randomPlayState } from "./fixtures.js";
 import { asJsonPlayObject } from "../../PlayMarshalUtils.js";
@@ -11,7 +11,8 @@ import { nanoid } from "nanoid";
 import { isSourceType, SourceType, sourceTypes } from "../../../backend/common/infrastructure/config/source/sources.js";
 import { ClientType, clientTypes } from "../../../backend/common/infrastructure/config/client/clients.js";
 import { ComponentSelect } from "../../../backend/common/database/drizzle/drizzleTypes.js";
-import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
+import { CALCULATED_PLAYER_STATUSES, isClientType, REPORTED_PLAYER_STATUSES } from "../../../backend/common/infrastructure/Atomic.js";
+import { faMarker } from "@fortawesome/free-solid-svg-icons";
 
 export const generatePlayApiCommon = (commonData: Partial<PlayApiCommon> & {play?: JsonPlayObject | PlayObject } = {}, ...playOpts: Parameters<typeof generatePlay>): PlayApiCommon => {
     let play: JsonPlayObject | PlayObject;
@@ -160,7 +161,7 @@ export const generateSourceApiJson = (data: Partial<ComponentSourceApi> = {}): C
         manualListening = faker.datatype.boolean({probability: 0.1}),
         systemListeningBehavior = true,
         tracksDiscovered = faker.number.int({min: 1, max: 2000}),
-        players = {}
+        players = (data.players ?? {})
     } = data;
     return {
         ...common,
@@ -222,4 +223,50 @@ export const generateComponentApiJson = (data: Partial<ComponentCommonApi> = {})
         return generateSourceApiJson({mode, type, ...data});
     }
     return generateClientApiJson({mode, type, ...data});
+}
+
+export const generateSourcePlayerJson = (data: Partial<SourcePlayerJson> = {}, opts: {art?: boolean} = {}): SourcePlayerJson => {
+    const {
+        platformId = `${faker.word.noun()}-${faker.word.adjective()}`,
+        play = asJsonPlayObject(generatePlay()),
+        position = play.meta.trackProgressPosition ?? faker.number.int({min: 0, max: play.data.duration}),
+        listenedDuration = play.data.listenedFor ?? faker.number.int({min: 0, max: play.data.duration}),
+        playFirstSeenAt = dayjs().subtract(30, 's').toISOString(),
+        playLastUpdatedAt = dayjs().subtract(10, 's').toISOString(),
+        playerLastUpdatedAt = dayjs().subtract(10, 's').toISOString(),
+        createdAt = dayjs().unix(),
+        status: {
+            reported = REPORTED_PLAYER_STATUSES.playing,
+            calculated = CALCULATED_PLAYER_STATUSES.playing,
+            stale = false,
+            orphaned = false
+        } = {}
+    } = data;
+
+    if(opts.art) {
+        play.meta = {
+            ...(play.meta),
+            art: {
+                album: 'https://placehold.co/400',
+                ...(play.meta?.art ?? {})
+            }
+        }
+    }
+
+    return {
+        platformId,
+        play,
+        position,
+        listenedDuration,
+        playerLastUpdatedAt,
+        playFirstSeenAt,
+        playLastUpdatedAt,
+        createdAt,
+        status: {
+            reported,
+            calculated,
+            stale,
+            orphaned
+        }
+    }
 }
