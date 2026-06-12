@@ -81,6 +81,8 @@ export type ComponentSourceApiBase = {
 export type ComponentSourceApi = ComponentCommonApi & ComponentSourceApiBase;
 export type ComponentSourceApiJson = Replace<ComponentSourceApi, PickKeys<ComponentSourceApi, Dayjs>, string>;
 
+export type ComponentsApiJson = ComponentSourceApiJson | ComponentClientApiJson;
+
 export const isComponentSourceApiJson = (data: ComponentCommonApiJson): data is ComponentSourceApiJson => {
     return data.mode === 'source';
 }

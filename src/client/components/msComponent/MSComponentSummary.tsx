@@ -1,12 +1,13 @@
 import React, { ComponentProps, useMemo, forwardRef, Fragment } from "react"
 import { Accordion, For, Span, Stack, Text, Box, Heading, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Collapsible, Card,  LinkOverlay, LinkBox } from '@chakra-ui/react';
-import { ComponentCommonApi, ComponentCommonApiJson, isComponentClientApiJson, isComponentSourceApiJson } from "../../../core/Api";
-import { TextMuted } from "../TextMuted";
-import { isClientType } from "../../../backend/common/infrastructure/Atomic";
-import { capitalize } from "../../../core/StringUtils";
-import { ShortDateDisplay } from "../DateDisplay";
-import { ChevronRightButton } from "../icons/ChakraIcons";
-import { ChakraPlayer } from "../chakraPlayer/Player";
+import { ComponentCommonApi, ComponentCommonApiJson, isComponentClientApiJson, isComponentSourceApiJson } from "../../../core/Api.js";
+import { TextMuted } from "../TextMuted.js";
+import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
+import { capitalize } from "../../../core/StringUtils.js";
+import { ShortDateDisplay } from "../DateDisplay.js";
+import { ChevronRightButton } from "../icons/ChakraIcons.js";
+import { ChakraPlayer } from "../chakraPlayer/Player.js";
+import { InfoTip } from "../ToggleTip.js";
 
 export const MSComponentSummary = (props: { data: ComponentCommonApiJson }) => {
         const {
@@ -26,7 +27,7 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson }) => {
             body = (<Card.Body px="3" py="2" paddingTop="3">
                 <Stack gap="2">
                 {
-                    Object.values(players).map((x) => <Container maxW="lg" bg="bg.emphasized" borderWidth="1px" p="2" py="3" rounded="md"><ChakraPlayer data={x}/></Container>)
+                    Object.values(players).map((x) => <Container  bg="bg.emphasized" borderWidth="1px" p="2" py="3" rounded="md"><ChakraPlayer data={x}/></Container>)
                 }
                 </Stack>
             </Card.Body>);
@@ -50,7 +51,7 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson }) => {
                 </Stack>
             </Flex>
             </LinkBox>
-            <TextMuted textStyle="md">{isClient ? `(${data.mode}) ` : ''}{capitalize(data.type)}</TextMuted>
+            <TextMuted textStyle="md"><Badge colorPalette={data.mode === 'client' ? 'purple' : 'pink'} size="sm" variant="subtle">{capitalize(data.mode)}</Badge> {capitalize(data.type)}</TextMuted>
             <QuickStatsSource data={data} />
         </Card.Header>
         {body}
@@ -83,9 +84,11 @@ const QuickStatsSource = (props: { data: ComponentCommonApiJson }) => {
                 <HStack gap="2">
                 <TextMuted textStyle="sm">{queued} Queued</TextMuted>
                 <Separator orientation="vertical" height="4" />
-                <TextMuted textStyle="sm">{deadLetterScrobbles} ({deadLetterScrobblesTotal}) Dead (Total) </TextMuted>
+                <TextMuted textStyle="sm">{deadLetterScrobbles} ({deadLetterScrobblesTotal}) Dead<InfoTip content="Dead scrobbles that can be automatically retried and (all) dead scrobbles, including those that have hit the retry limit."/></TextMuted>
+                <HStack gap="2" hideBelow="sm">
                 <Separator orientation="vertical" height="4" />
                 <TextMuted textStyle="sm">{countLive} Scrobbled</TextMuted>
+                </HStack>
                 </HStack>
             </Fragment>
         )
