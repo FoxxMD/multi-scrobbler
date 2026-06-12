@@ -82,7 +82,9 @@ export const initServer = async (parentLogger: Logger, appLoggerStream: PassThro
             process.env.USE_HASH_ROUTER = root.get('isSubPath').toString();
         }
 
-        
+        app.get(/^\/next$/, (_, res) => {
+            res.redirect("/next/")
+        });
 
         const viteExpressOptions: Parameters<typeof ViteExpress.config>[0] = {
             mode: isProd ? 'production' : 'development',
