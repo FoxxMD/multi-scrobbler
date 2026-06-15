@@ -124,7 +124,6 @@ export const ChakraPlayerFetchable = (props: ChakraPlayerFetchableProps) => {
     const { isPending, isError, data, error } = useQuery({
         queryKey: ['components', componentId, 'players', platformId],
         queryFn: queryFn,
-        structuralSharing: false,
         staleTime: Infinity,
     });
 

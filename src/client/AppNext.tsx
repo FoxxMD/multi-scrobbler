@@ -19,6 +19,7 @@ import { Provider } from './components/Provider';
 import { Container, Box, Center } from '@chakra-ui/react';
 import { MsSseEvent } from '../core/Api';
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
+import { AppHeader } from './components/AppHeader';
 
 function NoMatch() {
     const location = useLocation();
@@ -59,7 +60,7 @@ function MissingDocs() {
 const routes: RouteObject[] = [
     {
         path: "/next",
-        element: <Center><MSComponentListFetchable/></Center>,
+        element: <Container maxWidth="4xl"><MSComponentListFetchable/></Container>,
     },
     {
         path: "/docs",
@@ -86,11 +87,10 @@ const sseProviderOptions = {
 function App() {
   return (
       <Provider>
-        <Container maxWidth="8xl">
+        <Box px="4" py="2" pb="4"><AppHeader fetchable/></Box>
             <SSEProvider<MsSseEvent> options={sseProviderOptions}>
             <RouterProvider router={router}/>
             </SSEProvider>
-        </Container>
       </Provider>
   );
 }
