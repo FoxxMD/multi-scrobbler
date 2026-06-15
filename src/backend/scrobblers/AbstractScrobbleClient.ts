@@ -83,6 +83,7 @@ import { asPlay } from "../../core/PlayMarshalUtils.js";
 import { DrizzleQueueRepository } from "../common/database/drizzle/repositories/QueueRepository.js";
 import { GenericRepository } from "../common/database/drizzle/repositories/BaseRepository.js";
 import assert from "node:assert";
+import { ComponentClientApi } from "../../core/Api.js";
 
 type PlatformMappedPlays = Map<string, {player: SourcePlayerObj, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
@@ -405,6 +406,27 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     protected getPrometheusLabels() {
         return {name: this.getSafeExternalName(), type: this.type};
+    }
+
+    protected getComponentApiData() {
+        return {
+            hasAuth: this.requiresAuth,
+            hasAuthInteraction: this.requiresAuthInteraction,
+            authed: this.authed,
+        }
+    }
+
+    public getApiData(): ComponentClientApi {
+        return {
+            ...super.getApiData(),
+            ...this.getComponentApiData(),
+            type: this.type,
+            state: 'idle',
+            status: 'idle',
+            queued: this.queuedLength,
+            deadLetterScrobbles: this.deadLetterQueued,
+            deadLetterScrobblesTotal: this.deadLetterLength,
+        }
     }
 
     public notify = async (payload: WebhookPayload) => {

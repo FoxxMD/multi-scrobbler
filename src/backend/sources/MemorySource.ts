@@ -2,7 +2,7 @@ import { Logger } from "@foxxmd/logging";
 import dayjs, { Dayjs } from "dayjs";
 import { EventEmitter } from "events";
 import { AsyncTask, SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
-import { PlayObject, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj } from "../../core/Atomic.js";
+import { PlayObject, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerJson, SourcePlayerObj } from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 import {
     asPlayerStateDataMaybePlay,
@@ -29,6 +29,7 @@ import { AbstractPlayerState, createPlayerOptions, PlayerStateOptions } from "./
 import { GenericPlayerState } from "./PlayerState/GenericPlayerState.js";
 import { hashObject } from "../utils/StringUtils.js";
 import { useDebugValue } from "react";
+import { ComponentSourceApi } from "../../core/Api.js";
 
 const EXPECTED_NON_DISCOVERED_REASON = 'not added because an identical play with the same timestamp was already discovered.';
 
@@ -176,6 +177,14 @@ export default class MemorySource extends AbstractSource {
             record[k] = v.getApiState();
         }
         return record;
+    }
+
+    public getApiData(): ComponentSourceApi {
+        return {
+            ...super.getApiData(),
+            sot: this.playerSourceOfTruth,
+            players: this.playersToObject() as unknown as Record<string, SourcePlayerJson>
+        }
     }
 
     getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions): AbstractPlayerState => new GenericPlayerState(logger, id, opts)

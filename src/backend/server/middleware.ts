@@ -1,7 +1,12 @@
 import { Logger } from "@foxxmd/logging";
 import { ExpressHandler } from "../common/infrastructure/Atomic.js";
+import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
+import ScrobbleSources from "../sources/ScrobbleSources.js";
+import { Request, Response, NextFunction } from "express";
+import AbstractSource from "../sources/AbstractSource.js";
+import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.js";
 
-export const makeSourceCheckMiddle = (sources: any) => (required: boolean ): ExpressHandler => (req: any, res: any, next: any) => {
+export const makeSourceCheckMiddle = (sources: any) => (required: boolean): ExpressHandler => (req: any, res: any, next: any) => {
     const {
         query: {
             name,
@@ -11,7 +16,7 @@ export const makeSourceCheckMiddle = (sources: any) => (required: boolean ): Exp
 
     if (required && name === undefined) {
         return res.status(404).send('Source name must be defined');
-    } else if(name !== undefined) {
+    } else if (name !== undefined) {
         const source = sources.getByNameAndType(name, type);
 
         if (source === undefined) {
@@ -63,5 +68,36 @@ export const nonEmptyBody = (logger: Logger, origin: string = 'Origin'): Express
         res.status(400).send('Invalid Content-Type. Must be either application/json or a text wildcard (like text/plain)');
         return;
     }
+    next();
+}
+
+export interface ComponentAwareRequest extends Request {
+    component: AbstractSource | AbstractScrobbleClient
+}
+
+export const makeComponentMiddle = (sources: ScrobbleSources, clients: ScrobbleClients): ExpressHandler => async (req: Request, res: Response, next: NextFunction) => {
+    const {
+        params: {
+            componentVal
+        }
+    } = req;
+
+    const componentId = Number.parseInt(componentVal as string);
+    if (isNaN(componentId)) {
+        return res.status(400).json({ error: 'Component id must be a number' });
+    }
+
+    let component: AbstractSource | AbstractScrobbleClient;
+    component = sources.sources.find(x => x.componentId === componentId);
+    if (component === undefined) {
+        component = clients.clients.find(x => x.componentId === componentId);
+    }
+
+    if(component === undefined) {
+        return res.status(404).json({error: `No Component with the Id ${componentId} exists`});
+    }
+
+    (req as ComponentAwareRequest).component = component;
+
     next();
 }

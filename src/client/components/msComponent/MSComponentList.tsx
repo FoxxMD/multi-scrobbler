@@ -1,8 +1,11 @@
 import React, { ComponentProps, useMemo, useState, forwardRef, Fragment } from "react"
-import { CheckboxCard, Span, Stack, SegmentGroup, Text, Box, Center, Heading, Button, Separator, HStack, Flex, Badge } from '@chakra-ui/react';
+import { Stack, SegmentGroup, Text, Box, Center, Card, SkeletonText } from '@chakra-ui/react';
 import { ComponentsApiJson } from "../../../core/Api";
-import { components } from "storybook/internal/components";
 import { MSComponentSummary } from "./MSComponentSummary";
+import { QueryFunctionContext, queryOptions, useQuery } from '@tanstack/react-query';
+import ky from 'ky';
+import { baseUrl } from "../../utils";
+import { ErrorAlert } from "../ErrorAlert";
 
 export interface ComponentListProps {
     components: ComponentsApiJson[]
@@ -31,4 +34,31 @@ export const MSComponentList = (props: ComponentListProps) => {
             </Stack>
         </Stack>
     )
+}
+
+export const MSComponentListFetchable = () => {
+    const { isPending, isError, data, error } = useQuery({
+        queryKey: ['components'],
+        queryFn: queryFn
+    });
+
+    if(isPending) {
+        return (<Card.Root variant="subtle">
+            <Card.Header>
+                <SkeletonText noOfLines={2}/>
+            </Card.Header>
+            <Card.Footer/>
+        </Card.Root>)
+    }
+
+    if(isError) {
+        return <ErrorAlert error={error}/>
+    }
+
+    return <MSComponentList components={data}/>
+}
+
+type ComponentListQueryKey = ['components'];
+const queryFn = async (context: QueryFunctionContext<ComponentListQueryKey>) => {
+    return await ky.get(`components`, { baseUrl: baseUrl }).json() as ComponentsApiJson[];
 }

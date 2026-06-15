@@ -30,7 +30,7 @@ import { objectsEqual } from "../utils/DataUtils.js";
 import { RetentionOptions } from "./infrastructure/config/database.js";
 import { getRetentionCompactAfterFromEnv, getRetentionDeleteAfterFromEnv, isCompactableProperty, parseRetentionOptions, parseRetentionOptionsDurations } from "./database/Database.js";
 import { DbConcrete } from "./database/drizzle/drizzleUtils.js";
-import { ComponentSelect } from "./database/drizzle/drizzleTypes.js";
+import { ComponentMinimalSelect, ComponentSelect } from "./database/drizzle/drizzleTypes.js";
 import { DrizzlePlayRepository } from "./database/drizzle/repositories/PlayRepository.js";
 import { ClientType } from "./infrastructure/config/client/clients.js";
 import { SourceType } from "./infrastructure/config/source/sources.js";
@@ -501,5 +501,20 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
 
         return [step, newTransformedPlay];
+    }
+
+    public getApiData(): Omit<ComponentMinimalSelect, 'type'>  {
+        return {
+            id: this.dbComponent.id,
+            uid: this.dbComponent.uid,
+            name: this.dbComponent.name,
+            mode: this.dbComponent.mode,
+            countLive: this.dbComponent.countLive,
+            countNonLive: this.dbComponent.countNonLive,
+            createdAt: this.dbComponent.createdAt,
+            lastReadyAt: this.dbComponent.lastReadyAt,
+            lastActiveAt: this.dbComponent.lastActiveAt,
+            ...this.additionalApiData()
+        }
     }
 }

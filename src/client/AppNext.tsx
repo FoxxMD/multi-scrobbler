@@ -16,8 +16,9 @@ import DeadPage from "./deadLetter/DeadPage";
 import {clientUpdate, sourceUpdate} from "./status/ducks";
 import {useEventSource, useEventSourceListener} from "@react-nano/use-event-source";
 import Version from "./Version";
-import { MSComponentList } from './components/msComponent/MSComponentList';
+import { MSComponentList, MSComponentListFetchable } from './components/msComponent/MSComponentList';
 import { Provider } from './components/Provider';
+import { Container } from '@chakra-ui/react';
 
 function NoMatch() {
     const location = useLocation();
@@ -58,7 +59,7 @@ function MissingDocs() {
 const routes: RouteObject[] = [
     {
         path: "/next",
-        element: <MSComponentList components={[]}/>,
+        element: <MSComponentListFetchable/>,
     },
     {
         path: "/docs",
@@ -112,7 +113,9 @@ const router = genRouter();
 function App() {
   return (
       <Provider>
-        <RouterProvider router={router}/>
+        <Container maxWidth="8xl">
+            <RouterProvider router={router}/>
+        </Container>
       </Provider>
   );
 }

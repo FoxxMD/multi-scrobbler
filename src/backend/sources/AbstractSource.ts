@@ -2,7 +2,7 @@ import { childLogger, LogDataPretty, LogLevel } from '@foxxmd/logging';
 import dayjs, { Dayjs } from "dayjs";
 import { EventEmitter } from "events";
 import { FixedSizeList } from "fixed-size-list";
-import { JsonPlayObject, PlayMatchResult, PlayObject } from "../../core/Atomic.js";
+import { JsonPlayObject, PlayMatchResult, PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
 import AbstractComponent from "../common/AbstractComponent.js";
 import {
@@ -49,6 +49,8 @@ import { AbortedError, generateLoggableAbortReason } from '../common/errors/MSEr
 import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, queryArgsFromRequest, QueryPlaysOpts, RequestPlayQuery } from '../common/database/drizzle/repositories/PlayRepository.js';
 import { asPlay } from '../../core/PlayMarshalUtils.js';
 import { AsyncTask, SimpleIntervalJob, ToadScheduler } from 'toad-scheduler';
+import { ComponentMinimalSelect } from '../common/database/drizzle/drizzleTypes.js';
+import { ComponentSourceApi, ComponentSourceApiJson } from '../../core/Api.js';
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -258,6 +260,31 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     protected getPrometheusLabels() {
         return {name: this.getSafeExternalName(), type: this.type};
+    }
+
+    protected getComponentApiData() {
+        return {
+            hasAuth: this.requiresAuth,
+            hasAuthInteraction: this.requiresAuthInteraction,
+            authed: this.authed,
+        }
+    }
+
+    public getApiData(): ComponentSourceApi {
+        return {
+            ...super.getApiData(),
+            ...this.getComponentApiData(),
+            type: this.type,
+            state: 'idle',
+            status: 'idle',
+            players: {},
+            tracksDiscovered: this.tracksDiscovered,
+            sot: SOURCE_SOT.HISTORY,
+            supportsUpstreamRecentlyPlayed: this.supportsUpstreamRecentlyPlayed,
+            supportsManualListening: this.supportsManualListening,
+            manualListening: this.manualListening,
+            systemListeningBehavior: this.getSystemListeningBehavior(),
+        }
     }
 
     getSystemListeningBehavior = (): boolean | undefined => {

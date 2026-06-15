@@ -31,7 +31,7 @@ import { setupAuthRoutes } from "./auth.js";
 import { setupDeezerRoutes } from "./deezerRoutes.js";
 import {setupLZEndpointRoutes} from "./endpointListenbrainzRoutes.js";
 import {setupLastfmEndpointRoutes} from "./endpointLastfmRoutes.js";
-import { makeClientCheckMiddle, makeSourceCheckMiddle } from "./middleware.js";
+import { makeClientCheckMiddle, makeComponentMiddle, makeSourceCheckMiddle } from "./middleware.js";
 import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.js";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
@@ -41,6 +41,7 @@ import { DrizzlePlayRepository, QueryPlaysOpts } from "../common/database/drizzl
 import { playSelectToDeadScrobble } from "../common/database/drizzle/entityUtils.js";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.js";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.js";
+import { ComponentClientApi, ComponentSourceApi, ComponentSourceApiJson } from "../../core/Api.js";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -107,6 +108,8 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
     const clientRequiredMiddle = clientMiddleFunc(true);
     const sourceRequiredMiddle = sourceMiddleFunc(true);
 
+    const componentMiddle = makeComponentMiddle(scrobbleSources, scrobbleClients);
+
     const setLogWebSettings: ExpressHandler = async (req, res, next) => {
         // @ts-expect-error logLevel not part of session
         const sessionLevel: LogLevel | undefined = req.session.logLevel as LogLevel | undefined;
@@ -170,6 +173,66 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
     app.get('/api/webscrobbler', bodyParser.json({type: ['text/*', 'application/json']}), async (req, res) => {
         logger.info(req.body);
         res.sendStatus(200);
+    });
+
+    app.get('/api/components', async (req, res, next) => {
+
+        const sourceData = scrobbleSources.sources.map((x) => {
+            const {
+                canPoll = false,
+                polling = false,
+                requiresAuth = false,
+                requiresAuthInteraction = false,
+                authed = false,
+            } = x;
+            const base: ComponentSourceApi = x.getApiData();
+            if(!x.isReady()) {
+                if(x.buildOK === false) {
+                    base.status = 'Initializing Data Failed';
+                } else if(x.connectionOK === false) {
+                    base.status = 'Communication Failed';
+                } else if (requiresAuth && !authed) {
+                    base.status = requiresAuthInteraction ? 'Auth Interaction Required' : 'Authentication Failed Or Not Attempted'
+                } else {
+                    base.status = 'Not Ready';
+                }
+            } else {
+                if (canPoll) {
+                    base.status = polling ? 'Polling' : 'Idle';
+                } else {
+                    base.status = !x.instantiatedAt.isSame(x.lastActivityAt) ? 'Received Data' : 'Awaiting Data';
+                }
+            }
+            return base;
+        });
+
+        
+        const clientData = scrobbleClients.clients.map((x) => {
+            const {
+                requiresAuth = false,
+                requiresAuthInteraction = false,
+                authed = false,
+                scrobbling = false,
+            } = x;
+            const base: ComponentClientApi = x.getApiData();
+
+            if (!x.isReady()) {
+                if(x.buildOK === false) {
+                    base.status = 'Initializing Data Failed';
+                } else if(x.connectionOK === false) {
+                    base.status = 'Communication Failed';
+                } else if (requiresAuth && !authed) {
+                    base.status = requiresAuthInteraction ? 'Auth Interaction Required' : 'Authentication Failed Or Not Attempted'
+                } else {
+                    base.status = 'Not Ready';
+                }
+            } else {
+                base.status = scrobbling ? 'Running' : 'Idle';
+            }
+            return base;
+        });
+
+        return res.json([...sourceData, ...clientData]);
     });
 
     app.get('/api/status', async (req, res, next) => {
