@@ -101,3 +101,30 @@ export const makeComponentMiddle = (sources: ScrobbleSources, clients: ScrobbleC
 
     next();
 }
+
+export interface SourceAwareRequest extends Request {
+    component: AbstractSource
+}
+
+export const makeSourceNextMiddle = (sources: ScrobbleSources): ExpressHandler => async (req: Request, res: Response, next: NextFunction) => {
+    const {
+        params: {
+            componentVal
+        }
+    } = req;
+
+    const componentId = Number.parseInt(componentVal as string);
+    if (isNaN(componentId)) {
+        return res.status(400).json({ error: 'Source Id must be a number' });
+    }
+
+    let component: AbstractSource;
+    component = sources.sources.find(x => x.componentId === componentId);
+    if(component === undefined) {
+        return res.status(404).json({error: `No Source with the Id ${componentId} exists`});
+    }
+
+    (req as SourceAwareRequest).component = component;
+
+    next();
+}

@@ -19,6 +19,8 @@ import Version from "./Version";
 import { MSComponentList, MSComponentListFetchable } from './components/msComponent/MSComponentList';
 import { Provider } from './components/Provider';
 import { Container } from '@chakra-ui/react';
+import { useQueryClient } from '@tanstack/react-query'
+import { ComponentsApiJson, ComponentSourceApiJson } from '../core/Api';
 
 function NoMatch() {
     const location = useLocation();
@@ -110,10 +112,51 @@ const router = genRouter();
 
 // const ConnectedGlobal = connector(Global);
 
+const Global = (props) => {
+
+    const queryClient = useQueryClient();
+    const [sourceEventSource, eventSourceStatus] = useEventSource("/api/events", false);
+    useEventSourceListener(sourceEventSource, ['source', 'client'], evt => {
+        const data = JSON.parse(evt.data);
+        if(data.event === 'playerUpdate') {
+
+            console.log(`Updated => Component ${data.componentId} Player ${data.data.platformId}`);
+            queryClient.setQueryData(['components', data.componentId, 'players', data.data.platformId], data.data);
+
+            // queryClient.setQueryData(['components'], (old: ComponentsApiJson[]) => {
+            //     const componentIndex = old.findIndex(x => x.id === data.componentId);
+            //     if(componentIndex !== -1) {
+            //         console.log(`Updated => Component ${data.componentId} Player ${data.data.platformId}`);
+            //         //(old[componentIndex] as ComponentSourceApiJson).players[data.data.platformId] = data.data;
+            //         const newData = [...old];
+            //         newData[componentIndex] = {
+            //             ...old[componentIndex], 
+            //             players: {
+            //                 // @ts-ignore
+            //             ...old[componentIndex].players,
+            //             [data.data.platformId]: data.data
+            //             }
+            //         }
+            //         return newData;
+            //     }
+            //     //console.log(old);
+            // });
+        }
+        if(data.from === 'source') {
+            console.log(data);
+        } else if(data.from === 'client') {
+            console.log(data);
+        }
+    }, []);
+
+    return <span/>;
+}
+
 function App() {
   return (
       <Provider>
         <Container maxWidth="8xl">
+            <Global/>
             <RouterProvider router={router}/>
         </Container>
       </Provider>

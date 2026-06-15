@@ -805,6 +805,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.emitter.emit(eventName, {
             type: this.type,
             name: this.name,
+            componentId: this.dbComponent.id,
             from: 'source',
             data: payload,
         });

@@ -1731,6 +1731,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             data: payload,
             type: this.type,
             name: this.name,
+            componentId: this.dbComponent.id,
             from: 'client'
         });
     }

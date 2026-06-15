@@ -1,9 +1,13 @@
-import React, { ComponentProps, useMemo, forwardRef, Fragment } from "react"
+import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect } from "react"
 import { Accordion, Progress, For, Span, Stack, Spacer, Text, Image, Box, Heading, AbsoluteCenter, Button, Separator, HStack, Flex, Center, Badge, IconButton, Container, Collapsible, Card, LinkOverlay, LinkBox } from '@chakra-ui/react';
 import { TextMuted } from "../TextMuted";
 import { SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerJson } from "../../../core/Atomic";
 import { timeToHumanTimestamp } from "../../../core/TimeUtils";
 import { capitalize } from "../../../core/StringUtils";
+import { QueryFunctionContext, queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ErrorAlert } from "../ErrorAlert";
+import ky from 'ky';
+import { baseUrl } from "../../utils";
 
 export interface PlayerProps {
     data: SourcePlayerJson
@@ -81,4 +85,48 @@ export const ChakraPlayer = (props: PlayerProps) => {
             </Flex>
         </Stack>
     
+}
+
+export interface ChakraPlayerFetchableProps {
+    componentId: number
+    platformId: string
+    data: SourcePlayerJson
+    sot?: SOURCE_SOT_TYPES
+}
+
+export const ChakraPlayerFetchable = (props: ChakraPlayerFetchableProps) => {
+    const {
+        componentId,
+        platformId,
+        data: initData,
+        sot
+    } = props;
+    const queryClient = useQueryClient();
+    useEffect(() => {
+        if(initData !== undefined) {
+            queryClient.setQueryData(['components', componentId, 'players', platformId], initData);
+        }
+    },[initData]);
+
+    const { isPending, isError, data, error } = useQuery({
+        queryKey: ['components', componentId, 'players', platformId],
+        queryFn: queryFn,
+        structuralSharing: false,
+        staleTime: Infinity,
+    });
+
+    if(isError) {
+        return <ErrorAlert error={error}/>
+    }
+
+    console.log('rendering player');
+
+    if(!isPending) {
+        return <ChakraPlayer data={data}/>
+    }
+}
+
+type PlayerQueryKey = ['components', number, 'players', string];
+const queryFn = async (context: QueryFunctionContext<PlayerQueryKey>) => {
+    return await ky.get(`sources/${context.queryKey[1]}/players/${context.queryKey[3]}`, { baseUrl: baseUrl }).json() as SourcePlayerJson;
 }

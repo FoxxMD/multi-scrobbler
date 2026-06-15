@@ -31,7 +31,7 @@ import { setupAuthRoutes } from "./auth.js";
 import { setupDeezerRoutes } from "./deezerRoutes.js";
 import {setupLZEndpointRoutes} from "./endpointListenbrainzRoutes.js";
 import {setupLastfmEndpointRoutes} from "./endpointLastfmRoutes.js";
-import { makeClientCheckMiddle, makeComponentMiddle, makeSourceCheckMiddle } from "./middleware.js";
+import { makeClientCheckMiddle, makeComponentMiddle, makeSourceCheckMiddle, makeSourceNextMiddle, SourceAwareRequest } from "./middleware.js";
 import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.js";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
@@ -109,6 +109,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
     const sourceRequiredMiddle = sourceMiddleFunc(true);
 
     const componentMiddle = makeComponentMiddle(scrobbleSources, scrobbleClients);
+    const sourceAwareMiddle = makeSourceNextMiddle(scrobbleSources);
 
     const setLogWebSettings: ExpressHandler = async (req, res, next) => {
         // @ts-expect-error logLevel not part of session
@@ -233,6 +234,29 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         });
 
         return res.json([...sourceData, ...clientData]);
+    });
+
+    app.get('/api/sources/:componentVal/players', sourceAwareMiddle, async (req: SourceAwareRequest, res, next) => {
+        if(req.component instanceof MemorySource) {
+            return res.json(req.component.playersToObject());
+        }
+        return res.json({});
+    });
+
+    app.get('/api/sources/:componentVal/players/:platformId', sourceAwareMiddle, async (req: SourceAwareRequest, res, next) => {
+        if(req.component instanceof MemorySource) {
+            const {
+                params: {
+                    platformId
+                }
+            } = req;
+            const player = req.component.players.get(platformId as string);
+            if(player === undefined) {
+                return res.status(400).json({error: `No player with platform id ${platformId} exists`});
+            }
+            return res.json(player);
+        }
+        return res.json({});
     });
 
     app.get('/api/status', async (req, res, next) => {

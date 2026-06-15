@@ -6,7 +6,7 @@ import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
 import { capitalize } from "../../../core/StringUtils.js";
 import { ShortDateDisplay } from "../DateDisplay.js";
 import { ChevronRightButton } from "../icons/ChakraIcons.js";
-import { ChakraPlayer } from "../chakraPlayer/Player.js";
+import { ChakraPlayer, ChakraPlayerFetchable } from "../chakraPlayer/Player.js";
 import { InfoTip } from "../ToggleTip.js";
 
 export const MSComponentSummary = (props: { data: ComponentCommonApiJson }) => {
@@ -27,7 +27,7 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson }) => {
             body = (<Card.Body px="3" py="2" paddingTop="3">
                 <Stack gap="2">
                 {
-                    Object.values(players).map((x) => <Container  bg="bg.emphasized" borderWidth="1px" p="2" py="3" rounded="md"><ChakraPlayer data={x}/></Container>)
+                    Object.entries(players).map(([key, x]) => <Container  bg="bg.emphasized" borderWidth="1px" p="2" py="3" rounded="md"><ChakraPlayerFetchable componentId={data.id} platformId={key} data={x}/></Container>)
                 }
                 </Stack>
             </Card.Body>);

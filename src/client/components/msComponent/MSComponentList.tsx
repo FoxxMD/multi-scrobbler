@@ -12,6 +12,7 @@ export interface ComponentListProps {
 }
 
 export const MSComponentList = (props: ComponentListProps) => {
+    console.log('rendering component list');
     const [shownType, setShownType] = useState("All");
     return (
         <Stack gap="3">
