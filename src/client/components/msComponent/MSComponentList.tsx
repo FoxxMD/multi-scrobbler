@@ -1,7 +1,7 @@
 import React, { ComponentProps, useMemo, useState, forwardRef, Fragment } from "react"
 import { Stack, SegmentGroup, Text, Box, Center, Card, SkeletonText } from '@chakra-ui/react';
 import { ComponentsApiJson } from "../../../core/Api";
-import { MSComponentSummary } from "./MSComponentSummary";
+import { MSComponentSummary, MSComponentSummaryFetchable } from "./MSComponentSummary";
 import { QueryFunctionContext, queryOptions, useQuery } from '@tanstack/react-query';
 import ky from 'ky';
 import { baseUrl } from "../../utils";
@@ -9,6 +9,7 @@ import { ErrorAlert } from "../ErrorAlert";
 
 export interface ComponentListProps {
     components: ComponentsApiJson[]
+    fetchable?: boolean
 }
 
 export const MSComponentList = (props: ComponentListProps) => {
@@ -31,7 +32,7 @@ export const MSComponentList = (props: ComponentListProps) => {
                         return x.mode === 'source';
                     }
                     return x.mode === 'client';
-                }).map(x => <MSComponentSummary data={x} key={x.uid} />)}
+                }).map(x => props.fetchable ? <MSComponentSummaryFetchable componentId={x.id} data={x}/> : <MSComponentSummary data={x} key={x.uid} />)}
             </Stack>
         </Stack>
     )
@@ -56,7 +57,7 @@ export const MSComponentListFetchable = () => {
         return <ErrorAlert error={error}/>
     }
 
-    return <MSComponentList components={data}/>
+    return <MSComponentList fetchable components={data}/>
 }
 
 type ComponentListQueryKey = ['components'];

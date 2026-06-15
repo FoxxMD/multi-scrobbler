@@ -1,6 +1,6 @@
-import React, { ComponentProps, useMemo, forwardRef, Fragment } from "react"
+import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect } from "react"
 import { Accordion, For, Span, Stack, Text, Box, Heading, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Collapsible, Card,  LinkOverlay, LinkBox } from '@chakra-ui/react';
-import { ComponentCommonApi, ComponentCommonApiJson, isComponentClientApiJson, isComponentSourceApiJson } from "../../../core/Api.js";
+import { ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentSourceApiJson, isComponentClientApiJson, isComponentSourceApiJson, MsSseEvent } from "../../../core/Api.js";
 import { TextMuted } from "../TextMuted.js";
 import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
 import { capitalize } from "../../../core/StringUtils.js";
@@ -8,10 +8,20 @@ import { ShortDateDisplay } from "../DateDisplay.js";
 import { ChevronRightButton } from "../icons/ChakraIcons.js";
 import { ChakraPlayer, ChakraPlayerFetchable } from "../chakraPlayer/Player.js";
 import { InfoTip } from "../ToggleTip.js";
+import { QueryFunctionContext, queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ErrorAlert } from "../ErrorAlert";
+import ky from 'ky';
+import { baseUrl } from "../../utils";
+import {
+  useSSEContext,
+  useSSEEvent,
+  useSSEAnyEvent
+} from "@flamefrontend/sse-runtime-react";
 
-export const MSComponentSummary = (props: { data: ComponentCommonApiJson }) => {
+export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetchable?: boolean }) => {
         const {
-        data
+        data,
+        fetchable
     } = props;
     const isClient = isClientType(data.type);
 
@@ -27,7 +37,11 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson }) => {
             body = (<Card.Body px="3" py="2" paddingTop="3">
                 <Stack gap="2">
                 {
-                    Object.entries(players).map(([key, x]) => <Container  bg="bg.emphasized" borderWidth="1px" p="2" py="3" rounded="md"><ChakraPlayerFetchable componentId={data.id} platformId={key} data={x}/></Container>)
+                    Object.entries(players).map(([key, x]) => (
+                    <Container bg="bg.emphasized" borderWidth="1px" p="2" py="3" rounded="md">
+                        {fetchable ? <ChakraPlayerFetchable componentId={data.id} platformId={key} data={x}/> : <ChakraPlayer data={x}/>}
+                        </Container>
+                        ))
                 }
                 </Stack>
             </Card.Body>);
@@ -120,4 +134,77 @@ const StateBadge = (props: ComponentProps<typeof Badge> & { data: ComponentCommo
     }
 
     return <Badge variant="surface" colorPalette={badgeColor} {...rest}>{badgeText}</Badge>
+}
+
+
+
+export const MSComponentSummaryFetchable = (props: {componentId: number, data: ComponentCommonApiJson}) => {
+    const {
+        componentId,
+        data: initData
+    } = props;
+    const queryClient = useQueryClient();
+    const qKey = ['components', componentId, 'summary'];
+    useEffect(() => {
+        if (initData !== undefined && queryClient.getQueryData(qKey) === undefined) {
+            queryClient.setQueryData(['components', componentId, 'summary'], initData);
+        }
+    }, [initData]);
+
+    const client = useSSEContext<MsSseEvent>();
+    useSSEAnyEvent(client, (payload) => {
+        if('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === componentId) {
+            switch(payload.type) {
+                case 'discovered':
+                    queryClient.setQueryData(['components', componentId, 'summary'], (old: ComponentSourceApiJson) => {
+                        return {
+                            ...old,
+                            tracksDiscovered: old.tracksDiscovered + 1
+                        }
+                    });
+                    break;
+                case 'scrobbleQueued':
+                    queryClient.setQueryData(['components', componentId, 'summary'], (old: ComponentClientApiJson) => {
+                        let newData: ComponentClientApiJson = {...old};
+                        newData.queued = old.queued + 1;
+                        return newData;
+                    });
+                    break;
+                case 'scrobbleDequeued':
+                    queryClient.setQueryData(['components', componentId, 'summary'], (old: ComponentClientApiJson) => {
+                        let newData: ComponentClientApiJson = {...old};
+                        newData.queued = old.queued - 1;
+                        return newData;
+                    });
+                    break;  
+                case 'scrobble':
+                    queryClient.setQueryData(['components', componentId, 'summary'], (old: ComponentClientApiJson) => {
+                        let newData: ComponentClientApiJson = {...old};
+                        newData.countLive = old.countLive + 1;
+                        return newData;
+                    });
+                    break;
+            }
+        }
+    });
+
+    const { isPending, isError, data, error } = useQuery({
+        queryKey: ['components', componentId, 'summary'],
+        queryFn: queryFn,
+        structuralSharing: false,
+        staleTime: Infinity,
+    });
+
+    if (isError) {
+        return <ErrorAlert error={error} />
+    }
+
+    if(!isPending) {
+        return <MSComponentSummary data={data} fetchable/>
+    }
+}
+
+type ComponentSummaryQueryKey = ['components', number, 'summary'];
+const queryFn = async (context: QueryFunctionContext<ComponentSummaryQueryKey>) => {
+    return {} as ComponentCommonApiJson;
 }

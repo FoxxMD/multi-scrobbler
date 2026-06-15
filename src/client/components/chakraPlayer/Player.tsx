@@ -8,6 +8,11 @@ import { QueryFunctionContext, queryOptions, useQuery, useQueryClient } from '@t
 import { ErrorAlert } from "../ErrorAlert";
 import ky from 'ky';
 import { baseUrl } from "../../utils";
+import {
+  useSSEContext,
+  useSSEEvent,
+} from "@flamefrontend/sse-runtime-react";
+import { MsSseEvent, MsSseEventPayload } from "../../../core/Api";
 
 export interface PlayerProps {
     data: SourcePlayerJson
@@ -102,11 +107,19 @@ export const ChakraPlayerFetchable = (props: ChakraPlayerFetchableProps) => {
         sot
     } = props;
     const queryClient = useQueryClient();
+    const qKey = ['components', componentId, 'players', platformId];
     useEffect(() => {
-        if(initData !== undefined) {
+        if (initData !== undefined && queryClient.getQueryData(qKey) === undefined) {
             queryClient.setQueryData(['components', componentId, 'players', platformId], initData);
         }
-    },[initData]);
+    }, [initData]);
+
+    const client = useSSEContext<MsSseEvent<MsSseEventPayload<SourcePlayerJson>>>();
+    useSSEEvent(client, "playerUpdate", (payload) => {
+        if (payload.componentId === componentId && payload.data.platformId === platformId) {
+            queryClient.setQueryData(['components', componentId, 'players', platformId], payload.data);
+        }
+    });
 
     const { isPending, isError, data, error } = useQuery({
         queryKey: ['components', componentId, 'players', platformId],
@@ -115,14 +128,12 @@ export const ChakraPlayerFetchable = (props: ChakraPlayerFetchableProps) => {
         staleTime: Infinity,
     });
 
-    if(isError) {
-        return <ErrorAlert error={error}/>
+    if (isError) {
+        return <ErrorAlert error={error} />
     }
 
-    console.log('rendering player');
-
-    if(!isPending) {
-        return <ChakraPlayer data={data}/>
+    if (!isPending) {
+        return <ChakraPlayer data={data} sot={sot} />
     }
 }
 

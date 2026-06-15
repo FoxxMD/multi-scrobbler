@@ -90,3 +90,20 @@ export const isComponentSourceApiJson = (data: ComponentCommonApiJson): data is 
 export const isComponentClientApiJson = (data: ComponentCommonApiJson): data is ComponentClientApiJson => {
     return data.mode === 'client';
 }
+
+export type MsSseEventPayload<T extends object = Record<string, any>> = {
+    type: SourceType | ClientType
+    name: string
+    componentId: number
+    from: 'source' | 'client'
+    data: T
+    event: string
+}
+
+export type MsSseEvent<T extends object = Record<string, any>> = {
+    playerUpdate: MsSseEventPayload<SourcePlayerJson>
+    discovered: MsSseEventPayload
+    scrobbleQueued: MsSseEventPayload
+    scrobbleDequeued: MsSseEventPayload
+    client: T
+}
