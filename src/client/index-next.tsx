@@ -1,6 +1,5 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './index.css';
 import App from './AppNext.js';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';

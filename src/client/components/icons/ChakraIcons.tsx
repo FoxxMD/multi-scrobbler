@@ -1,7 +1,14 @@
-import { LuChevronRight, LuActivity, LuGithub, LuTerminal } from "react-icons/lu"
+import { LuChevronRight, LuActivity, LuGithub, LuTerminal, LuAlignJustify, LuX, LuExternalLink } from "react-icons/lu"
 import { SiGoogledocs } from "react-icons/si";
 import { IconButton } from "@chakra-ui/react"
 import { ComponentProps } from 'react';
+import { IconType } from "react-icons/lib";
+
+export const makeIconButton = (Icon: IconType) => (props: ComponentProps<typeof IconButton>) => (
+    <IconButton variant="surface" size="xs" {...props}>
+        <Icon />
+    </IconButton>
+);
 
 export const ChevronRight = LuChevronRight;
 export const ChevronRightButton = (props: ComponentProps<typeof IconButton>) => (
@@ -37,3 +44,12 @@ export const TerminalButton = (props: ComponentProps<typeof IconButton>) => (
         <TerminalIcon />
     </IconButton>
 );
+
+export const MenuIcon = LuAlignJustify;
+export const MenuButton = makeIconButton(MenuIcon);
+
+export const XIcon = LuX;
+export const XButton = makeIconButton(XIcon);
+
+export const ExternalLinkIcon = LuExternalLink;
+export const ExternalLinkButton = makeIconButton(ExternalLinkIcon);

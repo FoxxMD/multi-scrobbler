@@ -3,6 +3,7 @@ import { Image, Heading, HStack, Link, LinkOverlay, LinkBox, Span, Flex, Box, Se
 import { VersionNext } from "../Version";
 import { TextMuted } from "./TextMuted";
 import { DocsButton, GithubButton, HeartbeatButton, HeartbeatIcon, TerminalButton } from "./icons/ChakraIcons";
+import { MobileSidebarNav } from "./MobileMenu";
 
 export const AppTitle = (props: { fetchable?: boolean } = {}) => {
     const {
@@ -11,6 +12,7 @@ export const AppTitle = (props: { fetchable?: boolean } = {}) => {
 
     return (
         <HStack gap="2">
+            <MobileSidebarNav/>
             <LinkBox>
                 <HStack gap="2">
                     <Image flex="0" maxWidth="30px" height="100%" width="100%" src="/icon.svg"></Image>
@@ -26,7 +28,7 @@ export const AppTitle = (props: { fetchable?: boolean } = {}) => {
 
 export const RightHeaderActions = (props: any) => {
     return <HStack gap="2">
-        <LinkBox>
+        {/* <LinkBox>
             <LinkOverlay target="__blank" href="https://status.multi-scrobbler.app">
                 <HeartbeatButton />
             </LinkOverlay>
@@ -40,7 +42,7 @@ export const RightHeaderActions = (props: any) => {
             <LinkOverlay target="__blank" href="https://github.com/FoxxMD/multi-scrobbler">
                 <GithubButton />
             </LinkOverlay>
-        </LinkBox>
+        </LinkBox> */}
     </HStack>
 }
 

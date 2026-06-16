@@ -220,6 +220,7 @@
     "shiki": "^4.0.2",
     "sinon": "^21.0.2",
     "storybook": "^10.4.3",
+    "storybook-addon-remix-react-router": "^6.1.0",
     "tailwindcss": "^4.2.2",
     "tinyexec": "^1.1.1",
     "ts-essentials": "^10.2.0",

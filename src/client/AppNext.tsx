@@ -2,24 +2,19 @@ import React from 'react';
 import {
     createBrowserRouter,
     createHashRouter, RouteObject,
-    RouterProvider, useLocation,
+    RouterProvider, useLocation, Outlet
 } from "react-router-dom";
 import {connect, ConnectedProps, Provider as ReduxProvider} from 'react-redux'
 import './App.css';
 import CopyToClipboard from "./components/CopyToClipboard";
-import ExternalLink from "./components/ExternalLink";
 import {store} from './store';
-import Dashboard from "./dashboard/dashboard";
-import RecentPage from "./recent/RecentPage";
-import ScrobbledPage from "./scrobbled/ScrobbledPage";
-import DeadPage from "./deadLetter/DeadPage";
-import Version from "./Version";
-import { MSComponentList, MSComponentListFetchable } from './components/msComponent/MSComponentList';
+import { MSComponentListFetchable } from './components/msComponent/MSComponentList';
 import { Provider } from './components/Provider';
 import { Container, Box, Center } from '@chakra-ui/react';
 import { MsSseEvent } from '../core/Api';
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
 import { AppHeader } from './components/AppHeader';
+import { NAV_LINKS, SideNavItems } from './components/SideNav';
 
 function NoMatch() {
     const location = useLocation();
@@ -57,10 +52,29 @@ function MissingDocs() {
     );
 }
 
-const routes: RouteObject[] = [
+const Layout = () => {
+    const location = useLocation();
+    return (<>
+    <Box px="4" py="2" mb="4" pb="4" position="sticky" top="0" zIndex="1" bg="bg" borderBottomWidth="1px"><AppHeader fetchable/></Box>
+    <Container display="flex">
+        <Box hideBelow="md" display="flex" flexDir="column" pr="2" gap="6" flexShrink="1"><SideNavItems items={NAV_LINKS} currentUrl={location.pathname}/></Box><Outlet/>
+    </Container>
+    </>);
+}
+
+const routesNested: RouteObject[] = [
     {
         path: "/next",
-        element: <Container maxWidth="4xl"><MSComponentListFetchable/></Container>,
+        Component: Layout,
+        children: [ {
+            index: true,
+            element: <Container p="0" maxWidth="4xl"><MSComponentListFetchable/></Container>,
+        },
+        {
+                    path: "*",
+        element: <NoMatch/>
+        }
+        ],
     },
     {
         path: "/docs",
@@ -74,7 +88,7 @@ const routes: RouteObject[] = [
 
 const genRouter = () => {
     const useHashRouter = __USE_HASH_ROUTER__ === 'true';
-    return useHashRouter ? createHashRouter(routes) : createBrowserRouter(routes);
+    return useHashRouter ? createHashRouter(routesNested) : createBrowserRouter(routesNested);
 }
 
 const router = genRouter();
@@ -87,7 +101,7 @@ const sseProviderOptions = {
 function App() {
   return (
       <Provider>
-        <Box px="4" py="2" pb="4"><AppHeader fetchable/></Box>
+        {/* <Box px="4" py="2" pb="4"><AppHeader fetchable/></Box> */}
             <SSEProvider<MsSseEvent> options={sseProviderOptions}>
             <RouterProvider router={router}/>
             </SSEProvider>
