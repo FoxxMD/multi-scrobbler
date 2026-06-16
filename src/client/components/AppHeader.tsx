@@ -1,9 +1,15 @@
-import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect, PropsWithChildren } from "react"
-import { Image, Heading, HStack, Link, LinkOverlay, LinkBox, Span, Flex, Box, Separator, Switch } from '@chakra-ui/react';
+import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect, PropsWithChildren, useCallback, useRef } from "react"
+import { Image, Heading, HStack, Link, LinkOverlay, LinkBox, Span, Flex, Box, Separator, Switch, FloatingPanel, Portal, Text, IconButton } from '@chakra-ui/react';
 import { VersionNext } from "../Version";
 import { TextMuted } from "./TextMuted";
-import { DocsButton, GithubButton, HeartbeatButton, HeartbeatIcon, TerminalButton, TerminalIcon } from "./icons/ChakraIcons";
+import { TerminalButton, TerminalIcon, XButton } from "./icons/ChakraIcons";
 import { MobileSidebarNav } from "./MobileMenu";
+import { LuGripHorizontal, LuMinus } from "react-icons/lu"
+import {
+    useWindowSize,
+} from '@react-hook/window-size'
+
+import { LogsFetchable } from "./LogsNext";
 
 export const AppTitle = (props: { fetchable?: boolean } = {}) => {
     const {
@@ -28,14 +34,14 @@ export const AppTitle = (props: { fetchable?: boolean } = {}) => {
 
 interface RightHeaderSwitchLogsProps {
     logsEnabled?: boolean
-    setLogsEnabled?: (val: boolean ) => void
+    setLogsEnabled?: (val: boolean) => void
 }
 
 export const RightHeaderSwitchLogs = (props: {
     logsEnabled?: boolean
-    setLogsEnabled?: (val: boolean ) => void
+    setLogsEnabled?: (val: boolean) => void
 }) => {
-    const {logsEnabled, setLogsEnabled} = props;
+    const { logsEnabled, setLogsEnabled } = props;
 
     const TerminalSwitch = setLogsEnabled !== undefined ? (
         <Switch.Root
@@ -47,12 +53,56 @@ export const RightHeaderSwitchLogs = (props: {
             <Switch.Control>
                 <Switch.Thumb />
             </Switch.Control>
-            <Switch.Label><TerminalIcon/></Switch.Label>
+            <Switch.Label><TerminalIcon /></Switch.Label>
         </Switch.Root>
     ) : null;
 
     return <HStack gap="2">
         {TerminalSwitch}
+    </HStack>
+}
+
+export const RightHeaderFloatingLogs = () => {
+    const [width, height] = useWindowSize();
+
+    return <HStack gap="2">
+        <FloatingPanel.Root
+            defaultPosition={{x: width * 0.03, y: height * 0.65}}
+            defaultSize={{ width: width * 0.95, height: height * 0.3 }}
+            persistRect
+            closeOnEscape
+            lazyMount
+        >
+            <FloatingPanel.Trigger asChild>
+                <TerminalButton hideBelow="md" />
+            </FloatingPanel.Trigger>
+            <Portal>
+                <FloatingPanel.Positioner>
+                    <FloatingPanel.Content>
+                        <FloatingPanel.Header>
+                            <FloatingPanel.DragTrigger>
+                                <LuGripHorizontal />
+                                <FloatingPanel.Title>Logs</FloatingPanel.Title>
+                            </FloatingPanel.DragTrigger>
+                            <FloatingPanel.Control>
+                                <FloatingPanel.StageTrigger stage="minimized" asChild>
+                                    <IconButton variant="ghost" size="2xs">
+                                        <LuMinus />
+                                    </IconButton>
+                                </FloatingPanel.StageTrigger>
+                                <FloatingPanel.CloseTrigger asChild>
+                                    <XButton variant="ghost" size="2xs" />
+                                </FloatingPanel.CloseTrigger>
+                            </FloatingPanel.Control>
+                        </FloatingPanel.Header>
+                        <FloatingPanel.Body>
+                            <LogsFetchable />
+                        </FloatingPanel.Body>
+                        <FloatingPanel.ResizeTriggers />
+                    </FloatingPanel.Content>
+                </FloatingPanel.Positioner>
+            </Portal>
+        </FloatingPanel.Root>
     </HStack>
 }
 

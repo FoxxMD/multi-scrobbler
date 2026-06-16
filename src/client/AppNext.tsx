@@ -13,7 +13,7 @@ import { Provider } from './components/Provider';
 import { Container, Box, Center, Splitter, useSplitter } from '@chakra-ui/react';
 import { MsSseEvent } from '../core/Api';
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
-import { AppHeader, RightHeaderSwitchLogs } from './components/AppHeader';
+import { AppHeader, RightHeaderFloatingLogs, RightHeaderSwitchLogs } from './components/AppHeader';
 import { NAV_LINKS, SideNavItems } from './components/SideNav';
 import { LogsFetchable } from './components/LogsNext';
 import { SplitLayout } from './components/layouts/SplitLayout';
@@ -55,14 +55,13 @@ function MissingDocs() {
 }
 
 const Layout = () => {
-    const [logsEnabled, setLogsEnabled] = useState(true);
+    //const [logsEnabled, setLogsEnabled] = useState(true);
     const location = useLocation();
     return (<>
-    <Box px="4" py="2" mb="4" pb="4" position="sticky" top="0" zIndex="1" bg="bg" borderBottomWidth="1px"><AppHeader fetchable><RightHeaderSwitchLogs logsEnabled={logsEnabled} setLogsEnabled={setLogsEnabled}/></AppHeader></Box>
+    <Box px="4" py="2" mb="4" pb="4" position="sticky" top="0" zIndex="1" bg="bg" borderBottomWidth="1px"><AppHeader fetchable><RightHeaderFloatingLogs/></AppHeader></Box>
     <Container display="flex">
         <Box hideBelow="md" display="flex" flexDir="column" pr="2" gap="6" flexShrink="1"><SideNavItems items={NAV_LINKS} currentUrl={location.pathname}/></Box>
-        {!logsEnabled ? <Outlet/> : <SplitLayout/>}
-        {/* <Outlet/> */}
+        <Outlet/>
     </Container>
     </>);
 }
