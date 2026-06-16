@@ -74,10 +74,10 @@ export const RightHeaderFloatingLogs = () => {
             lazyMount
         >
             <FloatingPanel.Trigger asChild>
-                <TerminalButton hideBelow="md" />
+                <TerminalButton  />
             </FloatingPanel.Trigger>
             <Portal>
-                <FloatingPanel.Positioner>
+                <FloatingPanel.Positioner zIndex="1400">
                     <FloatingPanel.Content>
                         <FloatingPanel.Header>
                             <FloatingPanel.DragTrigger>
