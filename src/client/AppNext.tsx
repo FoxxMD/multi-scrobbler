@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState, useRef, Fragment} from 'react';
 import {
     createBrowserRouter,
     createHashRouter, RouteObject,
@@ -10,11 +10,13 @@ import CopyToClipboard from "./components/CopyToClipboard";
 import {store} from './store';
 import { MSComponentListFetchable } from './components/msComponent/MSComponentList';
 import { Provider } from './components/Provider';
-import { Container, Box, Center } from '@chakra-ui/react';
+import { Container, Box, Center, Splitter, useSplitter } from '@chakra-ui/react';
 import { MsSseEvent } from '../core/Api';
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
-import { AppHeader } from './components/AppHeader';
+import { AppHeader, RightHeaderSwitchLogs } from './components/AppHeader';
 import { NAV_LINKS, SideNavItems } from './components/SideNav';
+import { LogsFetchable } from './components/LogsNext';
+import { SplitLayout } from './components/layouts/SplitLayout';
 
 function NoMatch() {
     const location = useLocation();
@@ -53,11 +55,14 @@ function MissingDocs() {
 }
 
 const Layout = () => {
+    const [logsEnabled, setLogsEnabled] = useState(true);
     const location = useLocation();
     return (<>
-    <Box px="4" py="2" mb="4" pb="4" position="sticky" top="0" zIndex="1" bg="bg" borderBottomWidth="1px"><AppHeader fetchable/></Box>
+    <Box px="4" py="2" mb="4" pb="4" position="sticky" top="0" zIndex="1" bg="bg" borderBottomWidth="1px"><AppHeader fetchable><RightHeaderSwitchLogs logsEnabled={logsEnabled} setLogsEnabled={setLogsEnabled}/></AppHeader></Box>
     <Container display="flex">
-        <Box hideBelow="md" display="flex" flexDir="column" pr="2" gap="6" flexShrink="1"><SideNavItems items={NAV_LINKS} currentUrl={location.pathname}/></Box><Outlet/>
+        <Box hideBelow="md" display="flex" flexDir="column" pr="2" gap="6" flexShrink="1"><SideNavItems items={NAV_LINKS} currentUrl={location.pathname}/></Box>
+        {!logsEnabled ? <Outlet/> : <SplitLayout/>}
+        {/* <Outlet/> */}
     </Container>
     </>);
 }
@@ -68,7 +73,7 @@ const routesNested: RouteObject[] = [
         Component: Layout,
         children: [ {
             index: true,
-            element: <Container p="0" maxWidth="4xl"><MSComponentListFetchable/></Container>,
+            element: <Container boxSize="full" p="0" maxWidth="4xl"><MSComponentListFetchable/></Container>,
         },
         {
                     path: "*",
