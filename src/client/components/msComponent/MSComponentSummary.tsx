@@ -1,6 +1,6 @@
 import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect } from "react"
 import { Accordion, For, Span, Stack, Text, Box, Heading, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Collapsible, Card,  LinkOverlay, LinkBox } from '@chakra-ui/react';
-import { ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentSourceApiJson, isComponentClientApiJson, isComponentSourceApiJson, MsSseEvent } from "../../../core/Api.js";
+import { ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentSourceApiJson, isComponentClientApiJson, isComponentSourceApiJson, MsSseEvent, MsSseEventPayload } from "../../../core/Api.js";
 import { TextMuted } from "../TextMuted.js";
 import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
 import { capitalize } from "../../../core/StringUtils.js";
@@ -17,6 +17,7 @@ import {
   useSSEEvent,
   useSSEAnyEvent
 } from "@flamefrontend/sse-runtime-react";
+import { SourcePlayerJson } from "../../../core/Atomic.js";
 
 export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetchable?: boolean }) => {
         const {
@@ -164,24 +165,49 @@ export const MSComponentSummaryFetchable = (props: {componentId: number, data: C
                     });
                     break;
                 case 'scrobbleQueued':
+                case 'scrobbleDequeued':
+                case 'scrobble':
+                case 'deadLetter':
+                // TODO dead letter finish processing
+                // need to signal if it was completed (removed) or goes to non-queued dead
                     queryClient.setQueryData(['components', componentId, 'summary'], (old: ComponentClientApiJson) => {
                         let newData: ComponentClientApiJson = {...old};
-                        newData.queued = old.queued + 1;
+                        switch(payload.type) {
+                            case 'scrobbleQueued':
+                                newData.queued = old.queued + 1;
+                                break;
+                            case 'scrobbleDequeued':
+                                newData.queued = old.queued - 1;
+                                break;
+                            case 'scrobble':
+                                newData.countLive = old.countLive + 1;
+                                break;
+                            case 'deadLetter':
+                                newData.deadLetterScrobbles = old.deadLetterScrobbles + 1;
+                                break;
+                        }
                         return newData;
                     });
                     break;
-                case 'scrobbleDequeued':
-                    queryClient.setQueryData(['components', componentId, 'summary'], (old: ComponentClientApiJson) => {
-                        let newData: ComponentClientApiJson = {...old};
-                        newData.queued = old.queued - 1;
-                        return newData;
+                case 'playerUpdate':
+                    // add new player
+                    queryClient.setQueryData(['components', componentId, 'summary'], (old: ComponentSourceApiJson) => {
+                        const playerPayload = payload.data as MsSseEventPayload<SourcePlayerJson>;
+                        if(old.players[playerPayload.data.platformId] === undefined) {
+                            let newData: ComponentSourceApiJson = {...old};
+                            newData.players[playerPayload.data.platformId] = playerPayload.data;
+                            return newData;
+                        }
                     });
-                    break;  
-                case 'scrobble':
-                    queryClient.setQueryData(['components', componentId, 'summary'], (old: ComponentClientApiJson) => {
-                        let newData: ComponentClientApiJson = {...old};
-                        newData.countLive = old.countLive + 1;
-                        return newData;
+                    break;
+                case 'playerDelete':
+                    queryClient.setQueryData(['components', componentId, 'summary'], (old: ComponentSourceApiJson) => {
+                        const playerPayload = payload.data as MsSseEventPayload<{platformId: string}>;
+                        if(old.players[playerPayload.data.platformId] !== undefined) {
+                            let newData: ComponentSourceApiJson = {...old};
+                            delete newData.players[playerPayload.data.platformId];
+                            return newData;
+                        }
                     });
                     break;
             }

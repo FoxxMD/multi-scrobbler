@@ -45,7 +45,7 @@ export const ChakraPlayer = (props: PlayerProps) => {
             reported,
             stale,
             orphaned
-        }
+        } = {}
     } = data;
 
     const playArt = art.track ?? art.album ?? art.artist ?? undefined;
