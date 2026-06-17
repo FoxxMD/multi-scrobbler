@@ -20,6 +20,7 @@ import {
 } from "@flamefrontend/sse-runtime-react";
 import { SourcePlayerJson } from "../../../core/Atomic.js";
 import { CountLiveIndicator, DeadLetterIndicator, QueuedIndicator } from "./Stats.js";
+import { StateBadge } from "./StateBadge.js";
 
 export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetchable?: boolean }) => {
         const {
@@ -112,39 +113,6 @@ const QuickStatsSource = (props: { data: ComponentCommonApiJson, streamable?: bo
         )
     }
 }
-
-const StateBadge = (props: ComponentProps<typeof Badge> & { data: ComponentCommonApiJson }) => {
-
-    const { data, ...rest } = props;
-
-    let badgeColor = undefined;
-
-    switch (data.state) {
-        case COMPONENT_STATE.STOPPED:
-            badgeColor = 'gray';
-            break;
-        case COMPONENT_STATE.RUNNING:
-            badgeColor = 'green';
-            break;
-        case COMPONENT_STATE.INITIALIZING:
-            badgeColor = 'cyan';
-            break;
-        case COMPONENT_STATE.ERROR:
-        case COMPONENT_STATE.NOT_READY:
-            badgeColor = 'red';
-            break;
-        case COMPONENT_STATE.IDLE:
-            badgeColor = 'orange';
-            break;
-        case COMPONENT_STATE.MUTED:
-            badgeColor = 'yellow';  
-            break;
-    }
-
-    return <Badge variant="surface" colorPalette={badgeColor} {...rest}>{componentStateToFriendly(data.state)}</Badge>
-}
-
-
 
 export const MSComponentSummaryFetchable = (props: {componentId: number, data: ComponentCommonApiJson}) => {
     const {

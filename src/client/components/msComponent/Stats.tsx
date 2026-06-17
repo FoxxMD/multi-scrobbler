@@ -25,22 +25,27 @@ export const CountLiveIndicator = (props: {
     recentTimeout?: number
     streamable?: boolean
     as?: 'text' | 'stat'
-}) => {
+} & ComponentProps<typeof Stat.Root>) => {
 
     const {
-        as = 'stat'
+        data,
+        recent: recentProp = 0,
+        recentTimeout: timeoutProp = 10000,
+        streamable,
+        as = 'stat',
+        ...rest
     } = props;
 
     const sessionCount = props.data.mode === 'source' ? props.data.tracksDiscovered : props.data.countLive;
 
     const [total, setTotal] = useState(props.data.countLive);
     const [current, setCurrent] = useState(sessionCount);
-    const [recent, setRecent] = useState(0);
+    const [recent, setRecent] = useState(recentProp);
     const resetRecent = useCallback(() => {
         setRecent(props.recent ?? 0);
 
     }, [setRecent]);
-    const recentTimeout = useTimeout(resetRecent, props.recentTimeout ?? 10000);
+    const recentTimeout = useTimeout(resetRecent, timeoutProp ?? 10000);
 
     if (props.streamable) {
         const client = useSSEContext<MsSseEvent>();
@@ -62,17 +67,17 @@ export const CountLiveIndicator = (props: {
 
     if (as === 'stat') {
         return (
-            <Stat.Root>
+            <Stat.Root size={{smDown: "sm", base: "md"}} {...rest}>
                 <Stat.Label>{props.data.mode === 'source' ? 'Discovered' : 'Scrobbled'}</Stat.Label>
                 <HStack>
                     {/* <InfoTip>{props.data.mode === 'source' ? 'Discovered' : 'Scrobbled'} since start and (Total)</InfoTip> */}
-                    <Stat.ValueText>{current} ({total})</Stat.ValueText>
+                    <Stat.ValueText textWrapMode="nowrap">{current} ({total})</Stat.ValueText>
                     {recent !== 0 ? <Badge colorPalette="green" gap="0">
                         <Stat.UpIndicator />
                         {recent}
                     </Badge> : null}
                 </HStack>
-                <Stat.HelpText>Since restart and (Total)</Stat.HelpText>
+                <Stat.HelpText>Since Start and (Total)</Stat.HelpText>
             </Stat.Root>
         );
     }
@@ -91,20 +96,25 @@ export const QueuedIndicator = (props: {
     recentTimeout?: number
     streamable?: boolean
     as?: 'text' | 'stat'
-}) => {
+} & ComponentProps<typeof Stat.Root>) => {
 
     const {
-        as = 'stat'
+        data,
+        recent: recentProp = 0,
+        recentTimeout: timeoutProp = 10000,
+        streamable,
+        as = 'stat',
+        ...rest
     } = props;
 
     const [current, setCurrent] = useState(props.data.queued);
-    const [recent, setRecent] = useState(0);
+    const [recent, setRecent] = useState(recentProp);
     const [recentDirection, setRecentDirection] = useState<'up' | 'down'>('up');
     const resetRecent = useCallback(() => {
-        setRecent(props.recent ?? 0);
+        setRecent(0);
 
     }, [setRecent]);
-    const recentTimeout = useTimeout(resetRecent, props.recentTimeout ?? 10000);
+    const recentTimeout = useTimeout(resetRecent, timeoutProp);
 
     if (props.streamable) {
         const client = useSSEContext<MsSseEvent>();
@@ -140,7 +150,7 @@ export const QueuedIndicator = (props: {
 
     if(as === 'stat') {
         return (
-            <Stat.Root>
+            <Stat.Root size={{smDown: "sm", base: "md"}} {...rest}>
                 <Stat.Label>Queued</Stat.Label>
                 <HStack>
                     <Stat.ValueText>{current}</Stat.ValueText>
@@ -167,23 +177,28 @@ export const DeadLetterIndicator = (props: {
     recentTimeout?: number
     streamable?: boolean
     as?: 'text' | 'stat'
-}) => {
+} & ComponentProps<typeof Stat.Root> ) => {
 
     const {
-        as = 'stat'
+        data,
+        recent: recentProp = 0,
+        recentTimeout: timeoutProp = 10000,
+        streamable,
+        as = 'stat',
+        ...rest
     } = props;
 
     const [current, setCurrent] = useState(props.data.deadLetterScrobbles);
     const [total, setTotal] = useState(props.data.deadLetterScrobblesTotal);
-    const [recent, setRecent] = useState(0);
+    const [recent, setRecent] = useState(recentProp);
     const [recentDirection, setRecentDirection] = useState<'up' | 'down'>('up');
     const resetRecent = useCallback(() => {
-        setRecent(props.recent ?? 0);
+        setRecent(0);
 
     }, [setRecent]);
-    const recentTimeout = useTimeout(resetRecent, props.recentTimeout ?? 10000);
+    const recentTimeout = useTimeout(resetRecent, timeoutProp ?? 10000);
 
-    if (props.streamable) {
+    if (streamable) {
         const client = useSSEContext<MsSseEvent>();
         useSSEAnyEvent(client, (payload) => {
             if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === props.data.id) {
@@ -207,10 +222,10 @@ export const DeadLetterIndicator = (props: {
 
     if(as === 'stat') {
         return (
-            <Stat.Root>
+            <Stat.Root size={{smDown: "sm", base: "md"}} {...rest}>
                 <Stat.Label>Dead</Stat.Label>
                 <HStack>
-                    <Stat.ValueText>{current} ({total})</Stat.ValueText>
+                    <Stat.ValueText textWrapMode="nowrap">{current} ({total})</Stat.ValueText>
                     {recent !== 0 ? <Badge colorPalette={recentDirection === 'up' ? 'red' : 'green'} gap="0">
                         {recentDirection === 'up' ? <Stat.UpIndicator color="red" /> : <Stat.DownIndicator color="green" />}
                         {recent}

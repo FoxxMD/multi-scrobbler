@@ -1,5 +1,5 @@
 import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect, useState, useCallback } from "react"
-import { DataList, Badge, Box, Heading, Skeleton, Stat, Separator, HStack, Flex, Collapsible, Card, LinkOverlay, LinkBox, SkeletonText } from '@chakra-ui/react';
+import { DataList, Badge, Grid, Spacer, GridItem, Text, Box, Heading, Skeleton, Wrap, Stat, Separator, HStack, Stack, Flex, Collapsible, Card, LinkOverlay, LinkBox, SkeletonText } from '@chakra-ui/react';
 import { COMPONENT_STATE, ComponentClientApiJson, ComponentCommonApiJson, ComponentSourceApiJson, componentStateToFriendly, isComponentClientApiJson, isComponentSourceApiJson, MsSseEvent, MsSseEventPayload } from "../../../core/Api.js";
 import { TextMuted } from "../TextMuted.js";
 import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
@@ -19,6 +19,8 @@ import {
     useSSEAnyEvent
 } from "@flamefrontend/sse-runtime-react";
 import { SourcePlayerJson } from "../../../core/Atomic.js";
+import { CountLiveIndicator, DeadLetterIndicator, QueuedIndicator } from "./Stats.js";
+import { StateBadge } from "./StateBadge.js";
 
 export const MSComponentHeading = (props: { data?: Pick<ComponentCommonApiJson, 'name' | 'mode' | 'type'>, fetchable?: boolean }) => {
     if (props.data === undefined) {
@@ -37,7 +39,7 @@ export const MSComponentHeading = (props: { data?: Pick<ComponentCommonApiJson, 
     )
 }
 
-export const MSComponentStats = (props: { data?: ComponentCommonApiJson }) => {
+export const MSComponentStats = (props: { data?: ComponentCommonApiJson, live?: boolean }) => {
     if (props.data === undefined) {
         return (
             <Box>
@@ -45,10 +47,28 @@ export const MSComponentStats = (props: { data?: ComponentCommonApiJson }) => {
             </Box>
         )
     }
+    const isClient = isComponentClientApiJson(props.data);
     return (
-        <Box>
-            <Heading size="2xl">{props.data.name}</Heading>
-            <Heading color="fg.subtle" size="lg">({props.data.mode}) {capitalize(props.data.type)}</Heading>
-        </Box>
+        <Wrap gap="6" rowGap="5" justify="flex-start">
+            <CountLiveIndicator data={props.data} streamable={props.live} flexGrow="0"/>
+            {isClient ? <QueuedIndicator data={props.data as ComponentClientApiJson} streamable={props.live} flexGrow="0"/> : null}
+            {isClient ? <DeadLetterIndicator data={props.data as ComponentClientApiJson} streamable={props.live} flexGrow="0"/> : null}
+        </Wrap>
+    )
+}
+
+export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, live?: boolean}) => {
+    return (
+        <Flex direction="column" gap="6">
+            <Flex rowGap="6" wrap="wrap">
+               <MSComponentHeading data={props.data} />
+               <Spacer/>
+               <Stack alignItems="flex-end">
+                <StateBadge size="lg" maxWidth="fit-content" data={props.data} />
+                <Text>{props.data.status}</Text>
+                </Stack>
+            </Flex>
+             <MSComponentStats {...props}/>
+        </Flex>
     )
 }
