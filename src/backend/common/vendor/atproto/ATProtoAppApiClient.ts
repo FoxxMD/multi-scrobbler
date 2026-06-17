@@ -5,6 +5,7 @@ import { ATProtoAppData, ATProtoUserIdentifierData } from "../../infrastructure/
 import { ATProtoAuthenticatedApiClient } from "./ATProtoAuthenticatedApiClient.js";
 import { PasswordSession, PasswordSessionData } from '@atcute/password-session';
 import { Client } from "@atcute/client";
+import { UpstreamError } from "../../errors/UpstreamError.js";
 
 export class ATProtoAppApiClient extends ATProtoAuthenticatedApiClient {
 
@@ -79,8 +80,7 @@ export class ATProtoAppApiClient extends ATProtoAuthenticatedApiClient {
             this.client = new Client({ handler: session });
             return true;
         } catch (e) {
-            this.logger.error(new Error('Could not login using app password', { cause: e }));
-            return false;
+            new UpstreamError('Could not login using app password', { cause: e });
         }
     }
 
