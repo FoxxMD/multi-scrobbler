@@ -194,7 +194,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
 
     app.get('/api/components', async (req, res, next) => {
 
-        const sourceData = scrobbleSources.sources.map((x) => {
+        const sourceData = scrobbleSources.sources.filter(x => x.databaseOK).map((x) => {
             const {
                 canPoll = false,
                 polling = false,
@@ -224,7 +224,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         });
 
         
-        const clientData = scrobbleClients.clients.map((x) => {
+        const clientData = scrobbleClients.clients.filter(x => x.databaseOK).map((x) => {
             const {
                 requiresAuth = false,
                 requiresAuthInteraction = false,
