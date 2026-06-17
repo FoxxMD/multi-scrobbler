@@ -1,11 +1,12 @@
-import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect } from "react"
-import { Accordion, For, Span, Stack, Text, Box, Heading, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Collapsible, Card,  LinkOverlay, LinkBox } from '@chakra-ui/react';
+import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect, useState, useCallback } from "react"
+import { Accordion, For, Span, Stack, Stat, Text, Box, Heading, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Collapsible, Card,  LinkOverlay, LinkBox } from '@chakra-ui/react';
 import { COMPONENT_STATE, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentSourceApiJson, componentStateToFriendly, isComponentClientApiJson, isComponentSourceApiJson, MsSseEvent, MsSseEventPayload } from "../../../core/Api.js";
 import { TextMuted } from "../TextMuted.js";
 import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
 import { capitalize } from "../../../core/StringUtils.js";
 import { ShortDateDisplay } from "../DateDisplay.js";
-import { ChevronRightButton } from "../icons/ChakraIcons.js";
+import { ChevronRightButton, UpArrowIcon } from "../icons/ChakraIcons.js";
+import { useTimeout } from 'react-use-timeout';
 import { ChakraPlayer, ChakraPlayerFetchable } from "../chakraPlayer/Player.js";
 import { InfoTip } from "../ToggleTip.js";
 import { QueryFunctionContext, queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -18,6 +19,7 @@ import {
   useSSEAnyEvent
 } from "@flamefrontend/sse-runtime-react";
 import { SourcePlayerJson } from "../../../core/Atomic.js";
+import { CountLiveIndicator, DeadLetterIndicator, QueuedIndicator } from "./Stats.js";
 
 export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetchable?: boolean }) => {
         const {
@@ -67,13 +69,13 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
             </Flex>
             </LinkBox>
             <TextMuted textStyle="md"><Badge colorPalette={data.mode === 'client' ? 'purple' : 'pink'} size="sm" variant="subtle">{capitalize(data.mode)}</Badge> {capitalize(data.type)}</TextMuted>
-            <QuickStatsSource data={data} />
+            <QuickStatsSource data={data} streamable={props.fetchable} />
         </Card.Header>
         {body}
     </Card.Root>)
 }
 
-const QuickStatsSource = (props: { data: ComponentCommonApiJson }) => {
+const QuickStatsSource = (props: { data: ComponentCommonApiJson, streamable?: boolean }) => {
     if (isComponentSourceApiJson(props.data)) {
         const {
             tracksDiscovered,
@@ -82,7 +84,8 @@ const QuickStatsSource = (props: { data: ComponentCommonApiJson }) => {
         return (
             <Fragment>
                 <HStack gap="2">
-                <TextMuted textStyle="sm">{tracksDiscovered} Discovered</TextMuted>
+                {/* <TextMuted textStyle="sm">{tracksDiscovered} Discovered</TextMuted> */}
+                <CountLiveIndicator data={props.data} streamable={props.streamable} as="text"/>
                 </HStack>
             </Fragment>
         )
@@ -97,12 +100,12 @@ const QuickStatsSource = (props: { data: ComponentCommonApiJson }) => {
         return (
             <Fragment>
                 <HStack gap="2">
-                <TextMuted textStyle="sm">{queued} Queued</TextMuted>
+                <QueuedIndicator data={props.data} streamable={props.streamable} as="text"/>
                 <Separator orientation="vertical" height="4" />
-                <TextMuted textStyle="sm">{deadLetterScrobbles} ({deadLetterScrobblesTotal}) Dead<InfoTip content="Dead scrobbles that can be automatically retried and (all) dead scrobbles, including those that have hit the retry limit."/></TextMuted>
+                <DeadLetterIndicator data={props.data} streamable={props.streamable} as="text"/>
                 <HStack gap="2" hideBelow="sm">
                 <Separator orientation="vertical" height="4" />
-                <TextMuted textStyle="sm">{countLive} Scrobbled</TextMuted>
+                <CountLiveIndicator data={props.data} streamable={props.streamable} as="text"/>
                 </HStack>
                 </HStack>
             </Fragment>
@@ -160,39 +163,6 @@ export const MSComponentSummaryFetchable = (props: {componentId: number, data: C
     useSSEAnyEvent(client, (payload) => {
         if('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === componentId) {
             switch(payload.type) {
-                case 'discovered':
-                    queryClient.setQueryData(['components', componentId, 'summary'], (old: ComponentSourceApiJson) => {
-                        return {
-                            ...old,
-                            tracksDiscovered: old.tracksDiscovered + 1
-                        }
-                    });
-                    break;
-                case 'scrobbleQueued':
-                case 'scrobbleDequeued':
-                case 'scrobble':
-                case 'deadLetter':
-                // TODO dead letter finish processing
-                // need to signal if it was completed (removed) or goes to non-queued dead
-                    queryClient.setQueryData(['components', componentId, 'summary'], (old: ComponentClientApiJson) => {
-                        let newData: ComponentClientApiJson = {...old};
-                        switch(payload.type) {
-                            case 'scrobbleQueued':
-                                newData.queued = old.queued + 1;
-                                break;
-                            case 'scrobbleDequeued':
-                                newData.queued = old.queued - 1;
-                                break;
-                            case 'scrobble':
-                                newData.countLive = old.countLive + 1;
-                                break;
-                            case 'deadLetter':
-                                newData.deadLetterScrobbles = old.deadLetterScrobbles + 1;
-                                break;
-                        }
-                        return newData;
-                    });
-                    break;
                 case 'playerUpdate':
                     // add new player
                     queryClient.setQueryData(['components', componentId, 'summary'], (old: ComponentSourceApiJson) => {

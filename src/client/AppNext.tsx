@@ -97,7 +97,7 @@ const genRouter = () => {
 
 const router = genRouter();
 
-const sseProviderOptions = {
+export const sseProviderOptions = {
     key: ['events'],
     url: '/api/events?next=true'
 }

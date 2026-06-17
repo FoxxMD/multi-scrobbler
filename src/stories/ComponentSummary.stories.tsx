@@ -1,10 +1,15 @@
 import preview from "../../.storybook/preview.js";
 import React from 'react';
+import { http, HttpResponse, delay, sse } from 'msw';
 
 import { Container } from '@chakra-ui/react';
 import { MSComponentSummary } from "../client/components/msComponent/MSComponentSummary.js";
 import {Provider} from "../client/components/Provider";
 import { generateClientApiJson, generateSourceApiJson, generateSourcePlayerJson } from "../core/tests/utils/apiFixtures.js";
+import { MsSseEvent } from "../core/Api.js";
+import { SSEProvider } from "@flamefrontend/sse-runtime-react";
+import { sseProviderOptions } from "../client/AppNext.js";
+import { faker } from "@faker-js/faker";
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
@@ -13,6 +18,12 @@ const meta = preview.meta({
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
+    msw: {
+      handlers: [
+        sse('/api/events?next=true', async ({ params, client }) => {
+        }),
+      ],
+    },
   },
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],
@@ -42,9 +53,67 @@ export const SourceSummary = meta.story({
     }
 });
 
+export const SourceSummaryFetchable = meta.story({
+    args: {
+      data: generateSourceApiJson({id: 1}),
+      fetchable: true,
+      componentId: 1,
+    },
+    decorators: [
+      (Story) => 
+        (<Provider><Container maxWidth="4xl"><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Container></Provider>),
+    ],
+    parameters: {
+        msw: {
+          handlers: [
+            sse('/api/events?next=true', async ({ params, client }) => {
+            setInterval(() => client.send({
+              // @ts-expect-error
+              event: 'discovered', 
+              data: {componentId: 1}}), 2000);
+            }),
+          ],
+        },
+    }
+});
+
 export const ClientSummary = meta.story({
     args: {
       data: generateClientApiJson()
+    }
+});
+
+const randomQueue = () => faker.helpers.arrayElement(['scrobbleQueued', 'scrobbleDequeued']);
+
+export const ClientSummaryFetchable = meta.story({
+    args: {
+      data: generateClientApiJson({id: 1}),
+      fetchable: true,
+      componentId: 1,
+    },
+    decorators: [
+      (Story) => 
+        (<Provider><Container maxWidth="4xl"><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Container></Provider>),
+    ],
+    parameters: {
+        msw: {
+          handlers: [
+            sse('/api/events?next=true', async ({ params, client }) => {
+            setInterval(() => client.send({
+              //@ts-expect-error
+              event: randomQueue(), 
+              data: {componentId: 1}}), 2000);
+            setInterval(() => client.send({
+              //@ts-expect-error
+              event: 'deadLetter', 
+              data: {componentId: 1}}), 3000);
+            setInterval(() => client.send({
+              //@ts-expect-error
+              event: 'scrobble', 
+              data: {componentId: 1}}), 2500);
+            })
+          ],
+        },
     }
 });
 
