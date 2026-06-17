@@ -11,6 +11,8 @@ export interface MigrateBaseContext {
     logger: Logger
 }
 
+const migrationsTable = '__app_migrations';
+
 export const getAppMigrationStatus = async (db: DbConcrete, opts: {logger?: Logger, migrationsAppFolder?: string} = {}): Promise<MigrationStatus> => {
     const {
     logger: parentLogger = loggerNoop,
@@ -21,7 +23,7 @@ export const getAppMigrationStatus = async (db: DbConcrete, opts: {logger?: Logg
     const migrator = new Migrator({
         db: db.$client,
         migrationsDir: migrationsAppFolder,
-        migrationsTable: '__app_migrations'
+        migrationsTable: migrationsTable
     });
 
     const status = await migrator.status();
@@ -45,7 +47,7 @@ export const migrateApp = async (db: DbConcrete, opts: {logger?: Logger, migrati
     const migrator = new Migrator<MigrateBaseContext>({
         db: db.$client,
         migrationsDir: migrationsAppFolder,
-        migrationsTable: 'appMigrations'
+        migrationsTable: migrationsTable
     });
 
     migrator.on('migration:applied', function (name: string, batch: number): void {
