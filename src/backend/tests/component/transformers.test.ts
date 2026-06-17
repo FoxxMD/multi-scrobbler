@@ -19,10 +19,14 @@ import { transientCache } from "../utils/TransientTestUtils.js";
 import dayjs from "dayjs";
 import clone from "clone";
 import { artistCreditsToNames, artistNamesToCredits } from "../../../core/StringUtils.js";
+import { COMPONENT_STATE, ComponentState } from "../../../core/Api.js";
 
 chai.use(asPromised);
 
 class TestComponent extends AbstractComponent {
+    public getRunningState(): ComponentState {
+       return COMPONENT_STATE.RUNNING;
+    }
     public notify(payload: WebhookPayload): Promise<void> {
         throw new Error("Method not implemented.");
     }
