@@ -80,7 +80,7 @@ export class ATProtoAppApiClient extends ATProtoAuthenticatedApiClient {
             this.client = new Client({ handler: session });
             return true;
         } catch (e) {
-            new UpstreamError('Could not login using app password', { cause: e });
+            throw new UpstreamError('Could not login using app password', { cause: e });
         }
     }
 
