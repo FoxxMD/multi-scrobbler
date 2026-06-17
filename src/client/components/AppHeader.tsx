@@ -10,6 +10,7 @@ import {
 } from '@react-hook/window-size'
 
 import { LogsFetchable } from "./LogsNext";
+import { Ripple } from "./icons/AnimatedIcons";
 
 export const AppTitle = (props: { fetchable?: boolean } = {}) => {
     const {
@@ -62,7 +63,7 @@ export const RightHeaderSwitchLogs = (props: {
     </HStack>
 }
 
-export const RightHeaderFloatingLogs = () => {
+export const RightHeaderFloatingLogs = (props: {streamable?: boolean}) => {
     const [width, height] = useWindowSize();
 
     return <HStack gap="2">
@@ -82,7 +83,7 @@ export const RightHeaderFloatingLogs = () => {
                         <FloatingPanel.Header>
                             <FloatingPanel.DragTrigger>
                                 <LuGripHorizontal />
-                                <FloatingPanel.Title>Logs</FloatingPanel.Title>
+                                <FloatingPanel.Title>Logs <Ripple/></FloatingPanel.Title>
                             </FloatingPanel.DragTrigger>
                             <FloatingPanel.Control>
                                 <FloatingPanel.StageTrigger stage="minimized" asChild>
@@ -96,7 +97,7 @@ export const RightHeaderFloatingLogs = () => {
                             </FloatingPanel.Control>
                         </FloatingPanel.Header>
                         <FloatingPanel.Body>
-                            <LogsFetchable />
+                            <LogsFetchable streamable={props.streamable} />
                         </FloatingPanel.Body>
                         <FloatingPanel.ResizeTriggers />
                     </FloatingPanel.Content>
