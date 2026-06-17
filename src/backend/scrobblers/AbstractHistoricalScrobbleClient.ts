@@ -155,7 +155,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
                 } else {
                     this.logger.verbose('Most recent plays are already in historical database!');
                 }
-                if(this.syncedReason.includes('component was inactive')) {
+                if(this.syncedReason !== undefined && this.syncedReason.includes('component was inactive')) {
                     if(gapSynced) {
                         this.syncedReason = undefined;
                         this.logger.verbose('Sync gap was verified filled by pulling latest scrobbles!');
