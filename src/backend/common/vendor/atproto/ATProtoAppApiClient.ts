@@ -1,11 +1,13 @@
+import dayjs from 'dayjs';
 import { AbstractApiOptions } from "../../infrastructure/Atomic.js";
 import { TealClientData } from "../../infrastructure/config/client/tealfm.js";
 import { getATProtoIdentifier } from "./atUtils.js";
 import { ATProtoAppData, ATProtoUserIdentifierData } from "../../infrastructure/config/client/atproto.js";
 import { ATProtoAuthenticatedApiClient } from "./ATProtoAuthenticatedApiClient.js";
 import { PasswordSession, PasswordSessionData } from '@atcute/password-session';
-import { Client } from "@atcute/client";
+import { Client, ClientResponseError, parseRateLimitHeaders } from "@atcute/client";
 import { UpstreamError } from "../../errors/UpstreamError.js";
+import { todayAwareFormat } from '../../../../core/TimeUtils.js';
 
 export class ATProtoAppApiClient extends ATProtoAuthenticatedApiClient {
 
@@ -25,6 +27,7 @@ export class ATProtoAppApiClient extends ATProtoAuthenticatedApiClient {
     }
 
     restoreSession = async (): Promise<boolean> => {
+        await this.checkRateLimit();
         const savedSessionCute = await this.getSession();
         if (savedSessionCute !== undefined) {
             const that = this;
@@ -60,6 +63,7 @@ export class ATProtoAppApiClient extends ATProtoAuthenticatedApiClient {
     }
 
     appLogin = async (): Promise<boolean> => {
+        await this.checkRateLimit();
         const that = this;
         try {
             const session = await PasswordSession.login(
@@ -80,8 +84,7 @@ export class ATProtoAppApiClient extends ATProtoAuthenticatedApiClient {
             this.client = new Client({ handler: session });
             return true;
         } catch (e) {
-            throw new UpstreamError('Could not login using app password', { cause: e });
+            throw await this.handleError(e);
         }
     }
-
 }

@@ -49,9 +49,11 @@ export class TealApiClient extends AbstractApiClient implements PagelessTimeRang
             record
         };
         try {
-            const res = await this.client.client.post('com.atproto.repo.createRecord', {
+            const res =  await this.client.post((client) => {
+                return client.post('com.atproto.repo.createRecord', {
                 input,
                 params: {}
+                });
             });
             return {payload: input, response: res.data, createdAt: dayjs().toISOString()};
         } catch (e) {
@@ -67,10 +69,10 @@ export class TealApiClient extends AbstractApiClient implements PagelessTimeRang
             record
         };
         try {
-            const res = await this.client.client.post('com.atproto.repo.putRecord', {
+            const res = await this.client.post((client) => client.post('com.atproto.repo.putRecord', {
                 input,
                 params: {}
-            });
+            }));
             return {payload: input, response: res.data, createdAt: dayjs().toISOString()};
         } catch (e) {
             throw new ScrobbleSubmitError(`Failed to update status record for scrobble`, { cause: e, payload: input, response: 'response' in e ? e.response : undefined });
@@ -89,14 +91,14 @@ export class TealApiClient extends AbstractApiClient implements PagelessTimeRang
             cursor = generateTID(dayjs.unix(to).toISOString());
         }
 
-        const resp = await this.client.client.get('com.atproto.repo.listRecords', {
+        const resp = await this.client.get((client) => client.get('com.atproto.repo.listRecords', {
             params: {
                 repo: this.client.userData.did,
                 collection: "fm.teal.alpha.feed.play",
                 limit,
                 cursor
             }
-        });
+        }));
 
         if(!resp.ok) {
             throw new UpstreamError('Fetching records from PDS failed', {cause: resp.data});
