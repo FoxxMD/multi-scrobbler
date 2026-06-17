@@ -357,7 +357,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 order: 'desc',
                 sort: 'playedAt',
                 limit: 200
-            })).map(x => asPlay(x.play))
+            })).map(x => ({...asPlay(x.play), id: x.id, uid: x.uid}))
             list.sort(sortByOldestPlayDate);
             await this.cache.cacheDb.set<PlayObject[]>(cacheKey, list, '2m');
         }
@@ -365,7 +365,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     }
 
     existingDiscovered = async (play: PlayObject): Promise<PlayObject | undefined> => {
-        const list: PlayObject[] = await this.getRecentlyDiscoveredPlays();
+        const list: PlayObject[] = await this.getRecentlyDiscoveredPlays(true);
         const matchResults = await this.existingDiscoveredPlay(play, list);
         if(matchResults.match) {
             return matchResults.closestMatchedPlay;

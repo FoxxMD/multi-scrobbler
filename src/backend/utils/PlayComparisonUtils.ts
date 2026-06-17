@@ -470,7 +470,7 @@ export const existingScrobble = async (playObjPre: PlayObject, existingScrobbles
 
         // if we have an submitted play with matching data and play date then we can just return the response from the original scrobble
         if (existingExactSubmitted !== undefined) {
-            result.closestMatchedPlay = statefulInvariantTransform(existingExactSubmitted.play);
+            result.closestMatchedPlay = statefulInvariantTransform(existingExactSubmitted.play, true);
             result.score = 1;
             result.match = true;
             result.reason = 'Exact Match found in previously successfully scrobbled plays';
@@ -562,7 +562,7 @@ export const existingScrobble = async (playObjPre: PlayObject, existingScrobbles
 
                 if (result.score <= score && score > 0) {
                     result.reason = confidence;
-                    result.closestMatchedPlay = statefulInvariantTransform(x);
+                    result.closestMatchedPlay = statefulInvariantTransform(x, true);
                     result.match = score >= DUP_SCORE_THRESHOLD;
                     result.breakdowns = scoreBreakdowns;
                     result.score = score;

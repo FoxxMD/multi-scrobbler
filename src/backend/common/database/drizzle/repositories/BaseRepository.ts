@@ -6,6 +6,7 @@ import { RelationsFieldFilter, eq, inArray } from "drizzle-orm";
 import { loggerNoop } from "../../../MaybeLogger.js";
 import { capitalize } from "../../../../../core/StringUtils.js";
 import { getConfigByTableName, relations, TableName } from "../schema/schema.js";
+import assert from 'node:assert';
 
 export interface DrizzleRepositoryOpts {
     logger?: Logger
@@ -58,6 +59,7 @@ export abstract class DrizzleBaseRepository<T extends TableName> {
     }
 
     async updateById(id: number, data: Partial<typeof this.table.$inferInsert>): Promise<void> {
+        assert(id !== null && id !== undefined, `${typeof id === null ? 'null' : 'undefined'} given for entity id`);
         await this.db.update(this.table).set(data).where(eq(this.table.id, id));
     }
 

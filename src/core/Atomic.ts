@@ -372,7 +372,7 @@ export interface AmbPlayObject<D extends DateLike = Dayjs, T = {}> {
     lifecycle?: LifecycleStep[]
 }
 
-export type AmbPlayObjectMinimal<D extends DateLike = Dayjs, T = {}> = Pick<AmbPlayObject<D,T>, RequiredKeys<AmbPlayObject<D>>>;
+export type AmbPlayObjectMinimal<D extends DateLike = Dayjs, T = {}> = Pick<AmbPlayObject<D,T>, RequiredKeys<AmbPlayObject<D>>> & Pick<AmbPlayObject<D,T>, 'id' | 'uid'>;
 
 export const isPlayObject = (obj: object): obj is PlayObject => {
    return obj !== undefined && obj !== null &&  'data' in obj && typeof obj.data === 'object' && 'meta' in obj && typeof obj.meta === 'object';

@@ -36,11 +36,21 @@ export const genGroupIdStr = (id: PlayPlatformId) => {
     return `${id[0]}-${id[1]}`;
 };
 
-export const statefulInvariantTransform = (play: PlayObject): PlayObjectMinimal => {
+export const statefulInvariantTransform = (play: PlayObject, withIds?: boolean): PlayObjectMinimal => {
     const {
         meta,
-        data
+        data,
+        id,
+        uid
     } = play;
+    if(withIds) {
+        return {
+            data,
+            meta,
+            uid,
+            id
+        }
+    }
     return {
         data,
         meta
