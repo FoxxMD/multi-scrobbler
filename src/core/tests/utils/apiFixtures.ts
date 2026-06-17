@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import { ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentSourceApi, ComponentSourceApiJson, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi } from "../../Api.js";
+import { ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi } from "../../Api.js";
 import { CLIENT_INGRESS_QUEUE, JsonPlayObject, PlayObject, PlayState, QUEUE_STATUSES, SOURCE_SOT, SourcePlayerJson, sourceSotTypes } from "../../Atomic.js";
 import { generatePlay } from "../../PlayTestUtils.js";
 import { generatePlayInput, randomPlayState } from "./fixtures.js";
@@ -112,7 +112,7 @@ export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApi>
         createdAt = dayjs(),
         lastActiveAt = dayjs(),
         lastReadyAt = dayjs(),
-        state = faker.helpers.arrayElement(['Idle','polling','running','error','awaiting data','stopped']),
+        state = faker.number.int({min: 1, max: 7}) as ComponentState,
         ...rest
     } = data;
 

@@ -1,6 +1,6 @@
 import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect } from "react"
 import { Accordion, For, Span, Stack, Text, Box, Heading, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Collapsible, Card,  LinkOverlay, LinkBox } from '@chakra-ui/react';
-import { ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentSourceApiJson, isComponentClientApiJson, isComponentSourceApiJson, MsSseEvent, MsSseEventPayload } from "../../../core/Api.js";
+import { COMPONENT_STATE, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentSourceApiJson, componentStateToFriendly, isComponentClientApiJson, isComponentSourceApiJson, MsSseEvent, MsSseEventPayload } from "../../../core/Api.js";
 import { TextMuted } from "../TextMuted.js";
 import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
 import { capitalize } from "../../../core/StringUtils.js";
@@ -114,27 +114,31 @@ const StateBadge = (props: ComponentProps<typeof Badge> & { data: ComponentCommo
 
     const { data, ...rest } = props;
 
-    let badgeColor = undefined,
-        badgeText = capitalize(data.state);
+    let badgeColor = undefined;
 
     switch (data.state) {
-        case 'stopped':
+        case COMPONENT_STATE.STOPPED:
             badgeColor = 'gray';
             break;
-        case 'running':
-        case 'polling':
-        case 'awaiting data':
+        case COMPONENT_STATE.RUNNING:
             badgeColor = 'green';
             break;
-        case 'error':
+        case COMPONENT_STATE.INITIALIZING:
+            badgeColor = 'cyan';
+            break;
+        case COMPONENT_STATE.ERROR:
+        case COMPONENT_STATE.NOT_READY:
             badgeColor = 'red';
             break;
-        case 'idle':
+        case COMPONENT_STATE.IDLE:
             badgeColor = 'orange';
+            break;
+        case COMPONENT_STATE.MUTED:
+            badgeColor = 'yellow';  
             break;
     }
 
-    return <Badge variant="surface" colorPalette={badgeColor} {...rest}>{badgeText}</Badge>
+    return <Badge variant="surface" colorPalette={badgeColor} {...rest}>{componentStateToFriendly(data.state)}</Badge>
 }
 
 

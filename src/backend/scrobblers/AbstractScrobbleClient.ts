@@ -83,7 +83,8 @@ import { asPlay } from "../../core/PlayMarshalUtils.js";
 import { DrizzleQueueRepository } from "../common/database/drizzle/repositories/QueueRepository.js";
 import { GenericRepository } from "../common/database/drizzle/repositories/BaseRepository.js";
 import assert from "node:assert";
-import { ComponentClientApi } from "../../core/Api.js";
+import { COMPONENT_STATE, ComponentClientApi } from "../../core/Api.js";
+import { ComponentState } from "react";
 
 type PlatformMappedPlays = Map<string, {player: SourcePlayerObj, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
@@ -408,6 +409,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return {name: this.getSafeExternalName(), type: this.type};
     }
 
+    public getRunningState(): ComponentState {
+        return this.scrobbling ? COMPONENT_STATE.RUNNING : COMPONENT_STATE.IDLE;
+    }
+
     protected getComponentApiData() {
         return {
             hasAuth: this.requiresAuth,
@@ -421,7 +426,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             ...super.getApiData(),
             ...this.getComponentApiData(),
             type: this.type,
-            state: 'idle',
             status: 'idle',
             queued: this.queuedLength,
             deadLetterScrobbles: this.deadLetterQueued,

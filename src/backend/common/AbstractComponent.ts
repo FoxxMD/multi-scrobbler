@@ -36,6 +36,7 @@ import { ClientType } from "./infrastructure/config/client/clients.js";
 import { SourceType } from "./infrastructure/config/source/sources.js";
 import { DrizzleComponentRepository } from "./database/drizzle/repositories/ComponentRepository.js";
 import dayjs from "dayjs";
+import { COMPONENT_STATE, ComponentCommonApi, ComponentState } from "../../core/Api.js";
 
 export type AbstractComponentConfig = (CommonClientConfig | CommonSourceConfig) & { transformManager?: TransformerManager };
 
@@ -503,11 +504,22 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         return [step, newTransformedPlay];
     }
 
-    public getApiData(): Omit<ComponentMinimalSelect, 'type'>  {
+    public abstract getRunningState(): ComponentState
+
+    public getApiData(): Omit<ComponentMinimalSelect, 'type'> & Pick<ComponentCommonApi, 'state'>  {
+        let state: ComponentState;
+        if(!this.initializedOnce || this.initializing) {
+            state = COMPONENT_STATE.INITIALIZING;
+        } else if(!this.isReady()) {
+            state = COMPONENT_STATE.NOT_READY;
+        } else {
+            state = this.getRunningState()
+        }
         return {
             id: this.dbComponent.id,
             uid: this.dbComponent.uid,
             name: this.dbComponent.name,
+            state,
             mode: this.dbComponent.mode,
             countLive: this.dbComponent.countLive,
             countNonLive: this.dbComponent.countNonLive,

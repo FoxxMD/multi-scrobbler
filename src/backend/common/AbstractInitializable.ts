@@ -20,6 +20,7 @@ export default abstract class AbstractInitializable {
     connectionOK?: boolean | null;
     cacheOK?: boolean | null;
 
+    protected initializedOnce: boolean = false;
     initializing: boolean = false;
 
     config: Record<string, any>;
@@ -36,7 +37,7 @@ export default abstract class AbstractInitializable {
     protected abstract getIdentifier(): string;
 
     initialize = async (options: {force?: boolean, notify?: boolean, notifyTitle?: string, internalOnly?: boolean} = {}) => {
-
+        this.initializedOnce = true;
         if(this.initController !== undefined) {
             throw new Error(`Already trying to initialize, cannot attempt while an existing initialization attempt is running.`);
         }

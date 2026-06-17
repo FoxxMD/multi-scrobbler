@@ -50,7 +50,7 @@ import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, queryArgsFromReq
 import { asPlay } from '../../core/PlayMarshalUtils.js';
 import { AsyncTask, SimpleIntervalJob, ToadScheduler } from 'toad-scheduler';
 import { ComponentMinimalSelect } from '../common/database/drizzle/drizzleTypes.js';
-import { ComponentSourceApi, ComponentSourceApiJson } from '../../core/Api.js';
+import { COMPONENT_STATE, ComponentSourceApi, ComponentSourceApiJson, ComponentState } from '../../core/Api.js';
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -262,6 +262,15 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return {name: this.getSafeExternalName(), type: this.type};
     }
 
+    public getRunningState(): ComponentState {
+        const monitoring = (this.canPoll && this.polling) || !this.canPoll;
+
+        if(monitoring && this.supportsManualListening && this.manualListening === false) {
+            return COMPONENT_STATE.MUTED;
+        }
+        return monitoring ? COMPONENT_STATE.RUNNING : COMPONENT_STATE.IDLE;
+    }
+
     protected getComponentApiData() {
         return {
             hasAuth: this.requiresAuth,
@@ -275,7 +284,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
             ...super.getApiData(),
             ...this.getComponentApiData(),
             type: this.type,
-            state: 'idle',
             status: 'idle',
             players: {},
             tracksDiscovered: this.tracksDiscovered,

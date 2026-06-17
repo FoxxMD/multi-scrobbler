@@ -4,6 +4,7 @@ import { ClientType } from "../backend/common/infrastructure/config/client/clien
 import { SourceType } from "../backend/common/infrastructure/config/source/sources.js"
 import { ErrorLike, JsonPlayObject, PlayState, Replace, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.js"
 import { Dayjs } from "dayjs"
+import { INITIALIZING } from "../backend/common/infrastructure/Atomic.js"
 
 export interface PlayApiCommon {
     uid: string
@@ -41,11 +42,41 @@ export interface PlayApiCommonDetailed extends PlayApiCommon {
     queueStates: QueueStateApi[]
 }
 
+export type ComponentState = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export const COMPONENT_STATE = {
+    RUNNING: 1,
+    MUTED: 2,
+    IDLE: 3,
+    STOPPED: 4,
+    INITIALIZING: 5,
+    NOT_READY: 6,
+    ERROR: 7,
+} as const satisfies Record<string, ComponentState>;
+
+export const componentStateToFriendly = (state: ComponentState) => {
+    switch(state) {
+        case 1:
+            return 'Running';
+        case 2:
+            return 'Muted';
+        case 3:
+            return 'Idle';
+        case 4:
+            return 'Stopped';
+        case 5:
+            return 'Initializing';
+        case 6:
+            return 'Not Ready';
+        case 7:
+            return 'Error';
+    }
+}
+
 export type ComponentCommonApi = {
     type: SourceType | ClientType
     name: string
     /** General state of the component like Idle, Stopped, Running, Error */
-    state: string
+    state: ComponentState
     /** More specific, live activity state like "sleeping", "hydrating historical scrobbles", "processing dead scrobbles", etc... */
     status?: string
 } & Omit<ComponentMinimalSelect, 'type'>
