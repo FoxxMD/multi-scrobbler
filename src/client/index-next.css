@@ -19,6 +19,9 @@
       background-position: unset !important;
       background-color: var(--chakra-colors-color-palette-muted) 
 }
+.playerContainer .chakra-stack .MuiLinearProgress-dashed {
+      background-color: var(--chakra-colors-color-palette-emphasized) 
+}
 .chakra-stack .MuiLinearProgress-bar1 {
       background-color: var(--chakra-colors-color-palette-solid) !important;
 }

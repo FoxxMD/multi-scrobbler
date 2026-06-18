@@ -228,7 +228,7 @@ export const PlayersContainer = (props: { data: ComponentCommonApiJson, live?: b
             return <Stack gap="2">
                 {
                     Object.entries(players).map(([key, x]) => (
-                        <Container bg="bg.emphasized" borderWidth="1px" p="2" py="3" rounded="md" {...container}>
+                        <Container className="playerContainer" bg="bg.emphasized" borderWidth="1px" p="2" py="3" rounded="md" {...container}>
                             {live ? <ChakraPlayerFetchable componentId={data.id} platformId={key} data={x} /> : <ChakraPlayer data={x} />}
                         </Container>
                     ))
