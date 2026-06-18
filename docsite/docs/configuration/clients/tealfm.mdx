@@ -16,7 +16,7 @@ To monitor and re-scrobble activity from a ATProto Profile create a [teal.fm (So
 
 :::
 
-[**teal.fm**](https://teal.fm/) is a social discovery and web viewing service for scrobbles stored/available on the ATProto network/your repository in a [PDS (Personal Data Server)](https://github.com/Bluesky-social/pds).
+[**teal.fm**](https://teal.fm/) is a social discovery and browsing app for scrobbles stored in your [**Atmosphere Account**](https://atmosphereaccount.com/).
 
 <details>
 
@@ -46,6 +46,13 @@ To view your teal.fm scrobble data you can:
 
 ## Setup
 
+
+:::note
+
+Multi-scrobbler will work with *any* Atmosphere Account, not just Bluesky. See [Configuration](#configuration) below for provider-agnostic config.
+
+:::
+
 #### Bluesky
 
 * Create a [Bluesky](https://bsky.app) account, if you don't already have one
@@ -57,10 +64,10 @@ To view your teal.fm scrobble data you can:
 
 ### Identifier
 
-The ATPRoto identifier used with multi-scrobbler should be either:
+The ATProto identifier used with multi-scrobbler should be either:
 
 * A valid [DID](https://atproto.com/specs/did#at-protocol-did-identifier-syntax), starting with `did:plc:...` or `did:web:...`
-* Your **full** ATProto handle, including TLD
+* Your **full** [Atmosphere Account](https://atmosphereaccount.com/) ATProto handle, including TLD
 
 If using a handle:
 
