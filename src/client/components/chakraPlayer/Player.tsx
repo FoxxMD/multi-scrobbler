@@ -22,12 +22,11 @@ export interface PlayerProps {
 }
 
 const bufferExplanation = (<>
-    <Text mb="2"><Highlight styles={{fontWeight: 'bold'}} query={["white", "reported"]}>
-        The white bar is the real, reported position by the upstream service.
-        </Highlight></Text>
-    <Text><Highlight styles={{bg: 'var(--chakra-colors-color-palette-600)'}} query={["gray", 'calculated']}>
-        The gray bar is the calculated real-time position.
-        </Highlight></Text>
+    <Text mb="2">
+        The <Span bg="var(--chakra-colors-color-palette-solid)" color="var(--chakra-colors-color-palette-contrast)">reported bar</Span> is the <Em>real, reported</Em> position by the upstream service.</Text>
+    <Text>
+        The <Span bg="var(--chakra-colors-color-palette-500)" color="var(--chakra-colors-color-palette-contrast)">buffer bar</Span> is the <Em>calculated</Em> real-time position.
+        </Text>
         <Text>This is reflected in the position timestamp and corrected when the reported position is updated.</Text>
 </>);
 
