@@ -1,5 +1,5 @@
 import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect, useState, useCallback } from "react"
-import { DataList, Badge, Grid, Spacer, GridItem, Text, Box, Heading, Skeleton, Wrap, Stat, Separator, HStack, Stack, Flex, Collapsible, Card, LinkOverlay, LinkBox, SkeletonText } from '@chakra-ui/react';
+import { DataList, Badge, Grid, Spacer, ButtonGroup, Button, GridItem, Text, Box, Heading, Skeleton, Wrap, Stat, Separator, HStack, Stack, Flex, Collapsible, Card, LinkOverlay, LinkBox, SkeletonText } from '@chakra-ui/react';
 import { COMPONENT_STATE, ComponentClientApiJson, ComponentCommonApiJson, ComponentSourceApiJson, componentStateToFriendly, isComponentClientApiJson, isComponentSourceApiJson, MsSseEvent, MsSseEventPayload } from "../../../core/Api.js";
 import { TextMuted } from "../TextMuted.js";
 import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
@@ -68,7 +68,28 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
                 <Text>{props.data.status}</Text>
                 </Stack>
             </Flex>
-             <MSComponentStats {...props}/>
+            <Flex justifyContent="flex-end" rowGap="6" flexDirection="row-reverse" wrap="wrap">
+                <Card.Root bgColor="bg.subtle" size="sm">
+                <Card.Header>Actions</Card.Header>
+                <Card.Body>
+                    <ComponentSettings/>
+                    </Card.Body>
+                    </Card.Root>
+                <Box marginEnd="auto"><MSComponentStats {...props}/></Box>
+            </Flex>
+             
         </Flex>
+    )
+}
+
+const ComponentSettings = () => {
+    return (
+        <Stack>
+            <ButtonGroup size="sm" variant="surface" attached>
+                <Button disabled colorPalette="green">Start</Button>
+                <Button disabled colorPalette="yellow">Mute</Button>
+                <Button disabled colorPalette="red">Stop</Button>
+            </ButtonGroup>
+        </Stack>
     )
 }
