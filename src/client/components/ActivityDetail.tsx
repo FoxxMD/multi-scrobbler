@@ -73,19 +73,20 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
                 </Accordion.ItemContent>
             </Accordion.Item>
         </Accordion.Root>
-        {error !== undefined ? <ErrorAlert error={error} /> : null}
+        {error !== undefined && error !== null ? <ErrorAlert error={error} /> : null}
         </Box>
     )
 }
 
 export interface ActivityDetailFetchableProps {
     uid: string
+    componentId: number
     componentType: 'source' | 'client'
 }
 
 export const ActivityDetailFetchable = (props: ActivityDetailFetchableProps) => {
     const { isPending, isError, data, error } = useQuery({
-        queryKey: ['plays', props.uid],
+        queryKey: ['component', props.componentId, 'play', props.uid],
         queryFn: queryFn
     });
 
@@ -100,7 +101,7 @@ export const ActivityDetailFetchable = (props: ActivityDetailFetchableProps) => 
     return <ActivityDetails componentType={props.componentType} key={data?.uid} activity={data}/>
 }
 
-type PlayQueryKey = ['plays', string];
+type PlayQueryKey = ['component', number, 'play', string];
 const queryFn = async (context: QueryFunctionContext<PlayQueryKey>) => {
-    return await ky.get(`plays/${context.queryKey[1]}`, { baseUrl }).json() as PlayApiCommonDetailed;
+    return await ky.get(`components/${context.queryKey[1]}/plays/${context.queryKey[3]}`, { baseUrl }).json() as PlayApiCommonDetailed;
 }

@@ -1,6 +1,6 @@
 import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect, useState, useCallback } from "react"
 import { DataList, Badge, Grid, Spacer, ButtonGroup, Button, GridItem, Text, Box, Heading, Skeleton, Wrap, Stat, Separator, HStack, Stack, Flex, Collapsible, Card, LinkOverlay, LinkBox, SkeletonText } from '@chakra-ui/react';
-import { COMPONENT_STATE, ComponentClientApiJson, ComponentCommonApiJson, ComponentSourceApiJson, componentStateToFriendly, isComponentClientApiJson, isComponentSourceApiJson, MsSseEvent, MsSseEventPayload } from "../../../core/Api.js";
+import { COMPONENT_STATE, ComponentClientApiJson, ComponentCommonApiJson, ComponentsApiJson, ComponentSourceApiJson, componentStateToFriendly, isComponentClientApiJson, isComponentSourceApiJson, MsSseEvent, MsSseEventPayload } from "../../../core/Api.js";
 import { TextMuted } from "../TextMuted.js";
 import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
 import { capitalize } from "../../../core/StringUtils.js";
@@ -21,6 +21,8 @@ import {
 import { SourcePlayerJson } from "../../../core/Atomic.js";
 import { CountLiveIndicator, DateIndicator, DeadLetterIndicator, QueuedIndicator } from "./Stats.js";
 import { StateBadge } from "./StateBadge.js";
+import { ListContainerFetchable, PlayListSkeleton } from "../playActivity/PlayList.js";
+import { useParams } from "react-router-dom";
 
 export const MSComponentHeading = (props: { data?: Pick<ComponentCommonApiJson, 'name' | 'mode' | 'type'>, fetchable?: boolean }) => {
     if (props.data === undefined) {
@@ -90,6 +92,64 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
                 <Box marginEnd="auto"><MSComponentStats {...props}/></Box>
             </Flex>
             <PlayersContainer data={props.data} live={props.live}/>
+            <ListContainerFetchable render="accordian" componentType={props.data.mode} componentId={props.data.id}/>
         </Flex>
     )
+}
+
+const ComponentDetailedSkeleton = () => {
+    return (
+        <Flex direction="column" gap="6">
+            <Flex justifyContent="flex-end" rowGap="6" wrap="wrap">
+                <Box marginEnd="auto"><SkeletonText noOfLines={2}/></Box>
+                <Stack alignItems="flex-end">
+                <Skeleton height="2"/>
+                </Stack>
+            </Flex>
+            <Flex justifyContent="flex-end" rowGap="6" flexDirection="row-reverse" wrap="wrap">
+                <Card.Root bgColor="bg.subtle" size="sm">
+                <Card.Header>Actions</Card.Header>
+                <Card.Body>
+                    <Skeleton height="2"/>
+                    </Card.Body>
+                    </Card.Root>
+                <Box marginEnd="auto"><SkeletonText noOfLines={2}/></Box>
+            </Flex>
+            <PlayListSkeleton/>
+        </Flex>
+    )
+}
+
+export const ComponentDetailedFetchable = (props: {componentId: number}) => {
+  const { isPending, isError, data, error } = useQuery({
+    queryKey: ['components', props.componentId],
+    queryFn: queryFn
+  });
+
+  let rendered;
+  if (isPending && data === undefined) {
+    rendered = <ComponentDetailedSkeleton/>
+  } else if (isError) {
+    rendered = <ErrorAlert error={error} />
+  } else {
+    rendered = <ComponentDetailedDesktop data={data} live/>;
+  }
+
+  return rendered;
+}
+
+type ComponentDetailedQueryKey = ['components', number];
+const queryFn = async (context: QueryFunctionContext<ComponentDetailedQueryKey>) => {
+    return await ky.get(`components/${context.queryKey[1]}`, {
+       baseUrl: baseUrl,
+      }).json<ComponentsApiJson>();
+}
+
+export const ComponentDetailedRoutable = () => {
+  const params = useParams();
+  if(params.componentId === undefined) {
+    return <ErrorAlert error={{message: 'Component is on a route with :componentId, cannot rendering anything!'}} />
+  }
+
+  return <ComponentDetailedFetchable componentId={Number.parseInt(params.componentId)}/>
 }

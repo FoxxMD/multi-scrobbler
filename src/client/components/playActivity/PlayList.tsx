@@ -1,4 +1,4 @@
-import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Collapsible } from '@chakra-ui/react';
+import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Collapsible, SkeletonText } from '@chakra-ui/react';
 import { JsonPlayObject, PlayActivity } from '../../../core/Atomic.js';
 import { ShortDateDisplay } from '../DateDisplay.js';
 import { TextMuted } from '../TextMuted.js';
@@ -12,12 +12,21 @@ import { GroupedVirtuoso, Components, LogLevel } from 'react-virtuoso'
 import { ActivityDetailFetchable, ActivityDetails } from '../ActivityDetail.js';
 import { sortByNewestPlayDate, sortByNewestSeenDate } from '../../../core/PlayUtils.js';
 import "./PlayList.scss";
-import { PlayApiCommon } from '../../../core/Api.js';
+import { PlayApiCommon, PlayApiCommonDetailed } from '../../../core/Api.js';
+import { QueryPlaysOpts } from '../../../backend/common/database/drizzle/repositories/PlayRepository.js';
+import ky from 'ky';
+import { baseUrl } from '../../utils/index.js';
+import { PaginatedResponse } from '../../../backend/common/database/drizzle/repositories/BaseRepository.js';
+import { QueryFunctionContext, useQuery } from '@tanstack/react-query';
+import { ErrorAlert } from '../ErrorAlert.js';
+import { useParams } from 'react-router-dom';
 
 dayjs.extend(doy);
 
 export interface ActivityLogProps {
   data: PlayApiCommon[]
+  componentId: number
+  componentType: 'source' | 'client'
   sortBy?: 'played' | 'seen'
   render?: 'virtCollapse' | 'virtAccordian' | 'accordian'
 }
@@ -82,17 +91,17 @@ export const PlayList = (props: ActivityLogProps) => {
   }), [data, sortBy]);
 
   if (render === 'accordian') {
-    return <PlainAccordian data={sorted} sortBy={sortBy} />
+    return <PlainAccordian data={sorted} sortBy={sortBy} {...props} />
   }
   if (render === 'virtCollapse') {
-    return <VirtualizedCollapse data={sorted} />
+    return <VirtualizedCollapse data={sorted} {...props}/>
   }
   if (render === 'virtAccordian') {
-    return <VirtualizedAccordian data={sorted} />;
+    return <VirtualizedAccordian data={sorted} {...props}/>;
   }
 }
 
-const VirtualizedCollapse = (props: { data: PlayApiCommon[] }) => {
+const VirtualizedCollapse = (props: { data: PlayApiCommon[], componentId: number, componentType: 'source' | 'client' }) => {
   const {
     data,
   } = props;
@@ -192,7 +201,7 @@ const VirtualizedCollapse = (props: { data: PlayApiCommon[] }) => {
                 paddingBlock: "var(--chakra-spacing-4)",
                 paddingInline: "var(--chakra-spacing-4)"
               }}>
-              <ActivityDetailFetchable componentType='source' uid={activity.uid} />
+              <ActivityDetailFetchable componentType={props.componentType} componentId={props.componentId} uid={activity.uid} />
             </Collapsible.Content>
           </Collapsible.Root>
         )
@@ -215,7 +224,7 @@ const CustomGroup: Components['Group'] = React.forwardRef((args) => {
   return <div data-testid={args["data-testid"]} style={args.style}>{args.children}</div>;
 });
 
-const ItemComponent = React.memo((props: {index: number, activity}) => {
+const ItemComponent = React.memo((props: {index: number, activity, componentId: number}) => {
   const {index, activity} = props;
   const { play } = activity;
   console.log(`render ${play.data.track}`);
@@ -246,14 +255,14 @@ const ItemComponent = React.memo((props: {index: number, activity}) => {
           </Flex>
           <Accordion.ItemContent>
             <Accordion.ItemBody borderTopColor="gray.border" >
-              <ActivityDetailFetchable componentType='source' uid={activity.uid} />
+              <ActivityDetailFetchable componentType='source' componentId={props.componentId} uid={activity.uid} />
             </Accordion.ItemBody>
           </Accordion.ItemContent>
         </Accordion.Item>
       )
 });
 
-const VirtualizedAccordian = (props: { data: PlayApiCommon[] }) => {
+const VirtualizedAccordian = (props: { data: PlayApiCommon[], componentId: number, componentType: 'source' | 'client' }) => {
   const {
     data,
   } = props;
@@ -298,12 +307,12 @@ const VirtualizedAccordian = (props: { data: PlayApiCommon[] }) => {
       }}
       groupCounts={groups.map(x => x.count)}
       groupContent={(index) => <GroupComponent index={index}/>}
-      itemContent={(index) => <ItemComponent index={index} activity={data[index]}/>}
+      itemContent={(index) => <ItemComponent index={index} activity={data[index]} componentId={props.componentId}/>}
     />
   );
 }
 
-const PlainAccordian = (props: { data: PlayApiCommon[], sortBy: 'played' | 'seen' }) => {
+const PlainAccordian = (props: { data: PlayApiCommon[], componentId: number, componentType: 'source' | 'client', sortBy: 'played' | 'seen' }) => {
   const { 
     data = [],
     sortBy
@@ -364,7 +373,7 @@ const PlainAccordian = (props: { data: PlayApiCommon[], sortBy: 'played' | 'seen
                     </Flex>
                     <Accordion.ItemContent>
                       <Accordion.ItemBody borderTopColor="gray.border" >
-                        <ActivityDetailFetchable componentType='source' uid={activity.uid} />
+                        <ActivityDetailFetchable componentId={props.componentId} componentType={props.componentType} uid={activity.uid} />
                       </Accordion.ItemBody>
                     </Accordion.ItemContent>
                   </Accordion.Item>
@@ -409,4 +418,45 @@ const StatusBadge = (props: ComponentProps<typeof Badge> & { data: PlayApiCommon
 
 export const ListContainer = (props?: ComponentProps<typeof PlayList>) => {
   return <Container maxWidth="3xl"><PlayList {...props} /></Container>
+}
+
+export const PlayListSkeleton = () => {
+  return (
+    <Accordion.Root variant="enclosed" collapsible>
+        <Accordion.Item value="pending">
+          <Accordion.ItemContent>
+            <Accordion.ItemBody borderTopColor="gray.border" >
+              <SkeletonText noOfLines={2} />
+            </Accordion.ItemBody>
+          </Accordion.ItemContent>
+        </Accordion.Item>
+      </Accordion.Root>
+  );
+}
+
+export const ListContainerFetchable = (props: { componentId: number, componentType: 'source' | 'client' } & Pick<ComponentProps<typeof PlayList>, 'render'>) => {
+  const { isPending, isError, data, error } = useQuery({
+    queryKey: ['components', props.componentId, 'plays', {}],
+    queryFn: queryFn
+  });
+
+  let rendered;
+  if (isPending && data === undefined) {
+    rendered = <PlayListSkeleton/>;
+  } else if (isError) {
+    rendered = <ErrorAlert error={error} />
+  } else {
+    rendered = <PlayList data={data.data} {...props} />;
+  }
+
+  return rendered; // <Container maxWidth="3xl">{rendered}</Container>
+}
+
+type PlayListQueryKey = ['components', number, 'plays', QueryPlaysOpts];
+const queryFn = async (context: QueryFunctionContext<PlayListQueryKey>) => {
+    return await ky.get(`components/${context.queryKey[1]}/plays`, {
+       baseUrl: baseUrl,
+       // @ts-expect-error
+       searchParams: context.queryKey[3] 
+      }).json<PaginatedResponse<PlayApiCommonDetailed>>();
 }

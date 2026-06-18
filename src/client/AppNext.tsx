@@ -17,6 +17,7 @@ import { AppHeader, RightHeaderFloatingLogs, RightHeaderSwitchLogs } from './com
 import { NAV_LINKS, SideNavItems } from './components/SideNav';
 import { LogsFetchable } from './components/LogsNext';
 import { SplitLayout } from './components/layouts/SplitLayout';
+import { ComponentDetailedRoutable } from './components/msComponent/MSComponentDetailed';
 
 function NoMatch() {
     const location = useLocation();
@@ -75,7 +76,11 @@ const routesNested: RouteObject[] = [
             element: <Container boxSize="full" p="0" maxWidth="4xl"><MSComponentListFetchable/></Container>,
         },
         {
-                    path: "*",
+            path: "components/:componentId",
+            element: <Container boxSize="full" p="0" maxWidth="8xl"><ComponentDetailedRoutable/></Container>
+        },
+        {
+        path: "*",
         element: <NoMatch/>
         }
         ],

@@ -1,6 +1,7 @@
 import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect, useState, useCallback } from "react"
 import { Accordion, For, Span, Stack, Stat, Text, Box, Heading, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Collapsible, Card,  LinkOverlay, LinkBox } from '@chakra-ui/react';
 import { COMPONENT_STATE, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentSourceApiJson, componentStateToFriendly, isComponentClientApiJson, isComponentSourceApiJson, MsSseEvent, MsSseEventPayload } from "../../../core/Api.js";
+import { Link } from "react-router";
 import { TextMuted } from "../TextMuted.js";
 import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
 import { capitalize } from "../../../core/StringUtils.js";
@@ -53,8 +54,10 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
                     <HStack gap="2">
                     <StateBadge maxWidth="fit-content" data={props.data} />
                     <Separator orientation="vertical" height="4" />
-                    <LinkOverlay href="#">
+                    <LinkOverlay asChild>
+                    <Link to={`components/${props.data.id}`}>
                     <ChevronRightButton variant="ghost" size="xs"/>
+                    </Link>
                     </LinkOverlay>
                     </HStack>
                     {/* <Text textStyle="sm" textAlign="end">{props.data.status}</Text> */}

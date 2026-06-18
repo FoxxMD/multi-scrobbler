@@ -11,8 +11,12 @@ export interface ErrorAlertProps {
 
 export const ErrorAlert = (props: ErrorAlertProps) => {
 
+    if(props.error === undefined || props.error === null) {
+        console.warn('trying to render a null or undefined error');
+        return null;
+    }
     let causes: ErrorData[] = [];
-    if(props.error.cause !== undefined && typeof props.error.cause === 'object') {
+    if(props.error.cause !== undefined && typeof props.error.cause === 'object' && props.error.cause !== null) {
         causes = walkError(props.error.cause as ErrorLike);
     }
 
@@ -56,7 +60,7 @@ const walkError = (err: ErrorLike, errors: ErrorData[] = []): ErrorData[] => {
         stack: err.stack
     };
     errors.push(thisErr);
-    if(err.cause !== undefined && typeof err.cause === 'object') {
+    if(err.cause !== undefined && typeof err.cause === 'object' && err.cause !== null) {
         return walkError(err, errors);
     }
     return errors;
