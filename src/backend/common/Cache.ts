@@ -329,12 +329,12 @@ export class MSCache {
         if (!this.hasInit) {
             let authConfig: CacheConfig | undefined;
             try {
-                if(asCacheConfig(this.config.scrobble)) {
+                if(asCacheConfig(this.config.auth)) {
                     authConfig = this.config.auth;
                 }
             } catch (e) {
                 this.logger.warn(new Error('Could not validate auth config! will fallback to memory cache only', {cause: e}));
-                this.cacheScrobble = await this.initCacheable('Scrobble', {provider: false});
+                this.cacheAuth = await this.initCacheable('Auth', {provider: false});
             }
 
             this.cacheAuth = await this.initCacheable('Auth', {provider: 'memory', ttl: '3m'}, authConfig);
