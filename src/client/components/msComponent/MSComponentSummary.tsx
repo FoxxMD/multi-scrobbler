@@ -7,7 +7,7 @@ import { capitalize } from "../../../core/StringUtils.js";
 import { ShortDateDisplay } from "../DateDisplay.js";
 import { ChevronRightButton, UpArrowIcon } from "../icons/ChakraIcons.js";
 import { useTimeout } from 'react-use-timeout';
-import { ChakraPlayer, ChakraPlayerFetchable } from "../chakraPlayer/Player.js";
+import { ChakraPlayer, ChakraPlayerFetchable, PlayersContainer } from "../chakraPlayer/Player.js";
 import { InfoTip } from "../ToggleTip.js";
 import { QueryFunctionContext, queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ErrorAlert } from "../ErrorAlert";
@@ -39,15 +39,7 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
             cardHeaderProps.borderBottomWidth="1px";
             cardHeaderProps.paddingBottom="2";
             body = (<Card.Body px="3" py="2" paddingTop="3">
-                <Stack gap="2">
-                {
-                    Object.entries(players).map(([key, x]) => (
-                    <Container bg="bg.emphasized" borderWidth="1px" p="2" py="3" rounded="md">
-                        {fetchable ? <ChakraPlayerFetchable componentId={data.id} platformId={key} data={x}/> : <ChakraPlayer data={x}/>}
-                        </Container>
-                        ))
-                }
-                </Stack>
+                <PlayersContainer data={data} live={fetchable}/>
             </Card.Body>);
         }
     }

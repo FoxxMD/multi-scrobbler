@@ -1,6 +1,6 @@
 import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect, useState, useCallback } from "react"
 import { DataList, Badge, Box, Heading, Skeleton, Stat, Separator, HStack, Flex, Collapsible, Card, LinkOverlay, LinkBox, SkeletonText } from '@chakra-ui/react';
-import { COMPONENT_STATE, ComponentClientApiJson, ComponentCommonApiJson, ComponentSourceApiJson, componentStateToFriendly, isComponentClientApiJson, isComponentSourceApiJson, MsSseEvent, MsSseEventPayload } from "../../../core/Api.js";
+import { COMPONENT_STATE, ComponentClientApiJson, ComponentCommonApiJson, ComponentSourceApiJson, ComponentState, componentStateToFriendly, isComponentClientApiJson, isComponentSourceApiJson, MsSseEvent, MsSseEventPayload } from "../../../core/Api.js";
 import { TextMuted } from "../TextMuted.js";
 import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
 import { capitalize } from "../../../core/StringUtils.js";
@@ -18,6 +18,8 @@ import {
     useSSEEvent,
     useSSEAnyEvent
 } from "@flamefrontend/sse-runtime-react";
+import dayjs from "dayjs";
+import { shortTodayAwareFormat } from "../../../core/TimeUtils.js";
 
 export const CountLiveIndicator = (props: {
     data: Pick<ComponentCommonApiJson, 'countLive' | 'mode' | 'id'> & { tracksDiscovered?: number, scrobbled?: number },
@@ -241,5 +243,53 @@ export const DeadLetterIndicator = (props: {
                         {recentDirection === 'up' ? <UpArrowIcon color="red" /> : <DownArrowIcon color="green" />}
                         {recent}
                     </Badge> : null} Dead</TextMuted>
+        );
+}
+
+export const DateIndicator = (props: {
+    data: Pick<ComponentCommonApiJson, 'id' | 'lastActiveAt' | 'state' | 'lastReadyAt'>,
+    streamable?: boolean
+    as?: 'text' | 'stat'
+} & ComponentProps<typeof Stat.Root>) => {
+
+    const {
+        data: {
+            id,
+            lastActiveAt,
+            lastReadyAt,
+            state
+        } = {},
+        streamable,
+        as = 'stat',
+        ...rest
+    } = props;
+
+    const useActive = state < 5;
+
+    const [current, setCurrent] = useState(useActive ? lastActiveAt : lastReadyAt);
+
+    if (props.streamable) {
+        const client = useSSEContext<MsSseEvent>();
+        useSSEAnyEvent(client, (payload) => {
+            if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === props.data.id) {
+                // TODO update state from event
+                setCurrent(dayjs().toISOString());
+            }
+        });
+    }
+
+    if(as === 'stat') {
+        return (
+            <Stat.Root size={{smDown: "sm", base: "md"}} {...rest}>
+                <Stat.Label>{useActive? 'Last Active At' : 'Last Ready At'}</Stat.Label>
+                <HStack>
+                    <Stat.ValueText>{shortTodayAwareFormat(dayjs(current))}</Stat.ValueText>
+                </HStack>
+            </Stat.Root>
+        );
+    }
+
+        return (
+            <TextMuted textStyle="sm">{shortTodayAwareFormat(dayjs(current))} {useActive? 'Last Active At' : 'Last Ready At'}</TextMuted>
         );
 }

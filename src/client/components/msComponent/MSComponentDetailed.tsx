@@ -6,7 +6,7 @@ import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
 import { capitalize } from "../../../core/StringUtils.js";
 import { ShortDateDisplay } from "../DateDisplay.js";
 import { ChevronRightButton } from "../icons/ChakraIcons.js";
-import { ChakraPlayer, ChakraPlayerFetchable } from "../chakraPlayer/Player.js";
+import { ChakraPlayer, ChakraPlayerFetchable, PlayersContainer } from "../chakraPlayer/Player.js";
 import { InfoTip } from "../ToggleTip.js";
 import { QueryFunctionContext, queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ErrorAlert } from "../ErrorAlert";
@@ -19,7 +19,7 @@ import {
     useSSEAnyEvent
 } from "@flamefrontend/sse-runtime-react";
 import { SourcePlayerJson } from "../../../core/Atomic.js";
-import { CountLiveIndicator, DeadLetterIndicator, QueuedIndicator } from "./Stats.js";
+import { CountLiveIndicator, DateIndicator, DeadLetterIndicator, QueuedIndicator } from "./Stats.js";
 import { StateBadge } from "./StateBadge.js";
 
 export const MSComponentHeading = (props: { data?: Pick<ComponentCommonApiJson, 'name' | 'mode' | 'type'>, fetchable?: boolean }) => {
@@ -49,21 +49,33 @@ export const MSComponentStats = (props: { data?: ComponentCommonApiJson, live?: 
     }
     const isClient = isComponentClientApiJson(props.data);
     return (
-        <Wrap gap="6" rowGap="5" justify="flex-start">
+        <Wrap gap="6" rowGap="5" justify="flex-start" flexGrow="0">
             <CountLiveIndicator data={props.data} streamable={props.live} flexGrow="0"/>
             {isClient ? <QueuedIndicator data={props.data as ComponentClientApiJson} streamable={props.live} flexGrow="0"/> : null}
             {isClient ? <DeadLetterIndicator data={props.data as ComponentClientApiJson} streamable={props.live} flexGrow="0"/> : null}
+            <DateIndicator data={props.data} streamable={props.live} flexGrow="0"/>
         </Wrap>
+    )
+}
+
+const ComponentSettings = () => {
+    return (
+        <Stack>
+            <ButtonGroup size="sm" variant="surface" attached>
+                <Button disabled colorPalette="green">Start</Button>
+                <Button disabled colorPalette="yellow">Mute</Button>
+                <Button disabled colorPalette="red">Stop</Button>
+            </ButtonGroup>
+        </Stack>
     )
 }
 
 export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, live?: boolean}) => {
     return (
         <Flex direction="column" gap="6">
-            <Flex rowGap="6" wrap="wrap">
-               <MSComponentHeading data={props.data} />
-               <Spacer/>
-               <Stack alignItems="flex-end">
+            <Flex justifyContent="flex-end" rowGap="6" wrap="wrap">
+                <Box marginEnd="auto"><MSComponentHeading data={props.data} /></Box>
+                <Stack alignItems="flex-end">
                 <StateBadge size="lg" maxWidth="fit-content" data={props.data} />
                 <Text>{props.data.status}</Text>
                 </Stack>
@@ -77,19 +89,7 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
                     </Card.Root>
                 <Box marginEnd="auto"><MSComponentStats {...props}/></Box>
             </Flex>
-             
+            <PlayersContainer data={props.data} live={props.live}/>
         </Flex>
-    )
-}
-
-const ComponentSettings = () => {
-    return (
-        <Stack>
-            <ButtonGroup size="sm" variant="surface" attached>
-                <Button disabled colorPalette="green">Start</Button>
-                <Button disabled colorPalette="yellow">Mute</Button>
-                <Button disabled colorPalette="red">Stop</Button>
-            </ButtonGroup>
-        </Stack>
     )
 }

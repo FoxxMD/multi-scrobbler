@@ -79,3 +79,9 @@ export const ClientDetailedFetchable = meta.story({
         },
     }
 });
+
+export const SourceDetailed = meta.story({
+    args: {
+      data: generateSourceApiJson({players: {test: generateSourcePlayerJson(undefined, {art: true}), foo: generateSourcePlayerJson(undefined, {art: true})}})
+    }
+});

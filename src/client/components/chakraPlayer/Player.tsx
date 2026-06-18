@@ -12,7 +12,7 @@ import {
   useSSEContext,
   useSSEEvent,
 } from "@flamefrontend/sse-runtime-react";
-import { MsSseEvent, MsSseEventPayload } from "../../../core/Api";
+import { ComponentCommonApiJson, isComponentSourceApiJson, MsSseEvent, MsSseEventPayload } from "../../../core/Api";
 import LinearProgress from '@mui/material/LinearProgress';
 import { InfoTip, ToggleTip } from "../ToggleTip";
 
@@ -212,4 +212,30 @@ export const ChakraPlayerFetchable = (props: ChakraPlayerFetchableProps) => {
 type PlayerQueryKey = ['components', number, 'players', string];
 const queryFn = async (context: QueryFunctionContext<PlayerQueryKey>) => {
     return await ky.get(`sources/${context.queryKey[1]}/players/${context.queryKey[3]}`, { baseUrl: baseUrl }).json() as SourcePlayerJson;
+}
+
+export const PlayersContainer = (props: { data: ComponentCommonApiJson, live?: boolean, container?: ComponentProps<typeof Container> }) => {
+    const {
+        data,
+        live,
+        container = {}
+    } = props;
+    if (isComponentSourceApiJson(data)) {
+        const {
+            players = {}
+        } = data;
+        if (Object.keys(players).length > 0) {
+            return <Stack gap="2">
+                {
+                    Object.entries(players).map(([key, x]) => (
+                        <Container bg="bg.emphasized" borderWidth="1px" p="2" py="3" rounded="md" {...container}>
+                            {live ? <ChakraPlayerFetchable componentId={data.id} platformId={key} data={x} /> : <ChakraPlayer data={x} />}
+                        </Container>
+                    ))
+                }
+            </Stack>;
+        }
+        return null;
+    }
+    return null;
 }
