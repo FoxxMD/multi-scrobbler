@@ -1,5 +1,5 @@
 import React, { ComponentProps, useMemo, forwardRef, Fragment, useState, useEffect, useCallback } from "react"
-import { Accordion, Progress, For, Span, Stack, Spacer, Text, Image, Box, Heading, AbsoluteCenter, Button, Separator, HStack, Flex, Center, Badge, IconButton, Container, Collapsible, Card, LinkOverlay, LinkBox } from '@chakra-ui/react';
+import { Accordion, Highlight, Em, Progress, For, Span, Stack, Spacer, Bleed, Text, Image, Box, Heading, AbsoluteCenter, Button, Separator, HStack, Flex, Center, Badge, IconButton, Container, Collapsible, Card, LinkOverlay, LinkBox } from '@chakra-ui/react';
 import { TextMuted } from "../TextMuted";
 import { SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerJson } from "../../../core/Atomic";
 import { timeToHumanTimestamp } from "../../../core/TimeUtils";
@@ -14,11 +14,22 @@ import {
 } from "@flamefrontend/sse-runtime-react";
 import { MsSseEvent, MsSseEventPayload } from "../../../core/Api";
 import LinearProgress from '@mui/material/LinearProgress';
+import { InfoTip, ToggleTip } from "../ToggleTip";
 
 export interface PlayerProps {
     data: SourcePlayerJson
     sot?: SOURCE_SOT_TYPES
 }
+
+const bufferExplanation = (<>
+    <Text mb="2"><Highlight styles={{fontWeight: 'bold'}} query={["white", "reported"]}>
+        The white bar is the real, reported position by the upstream service.
+        </Highlight></Text>
+    <Text><Highlight styles={{bg: 'var(--chakra-colors-color-palette-600)'}} query={["gray", 'calculated']}>
+        The gray bar is the calculated real-time position.
+        </Highlight></Text>
+        <Text>This is reflected in the position timestamp and corrected when the reported position is updated.</Text>
+</>);
 
 export const ChakraPlayer = (props: PlayerProps) => {
 
@@ -65,21 +76,34 @@ export const ChakraPlayer = (props: PlayerProps) => {
     const [positionBuffer, setProgressBuffer] = useState<undefined | number>(undefined);
     const [intervalId, setIntervalId] = useState<undefined | number>(undefined);
 
+
+    // this effect block is used to set the buffer progress using a realtime counter (setinterval)
+    // we only set this as "active" if the player has reported it is calculated playing and we have position
+    // -- then we update the buffer position to increment one second every second
+    // this is reset to undefined if the valid player state changes to invalid (not playing)
+    // or reset to the player position if props change but state stays valid (last reported position from upstream service)
     useEffect(() => {
+        // abusing useState a little bit here...
+        // need to clear interval on the old id if props have changed
+        // but cannot use interval id in useEffect or it causes circular dependencies since we set intervalId here too
+        // so clear inside the set state function (bad) using the previous data argument, before returning new value
         let interval;
-        if(calculated === 'playing' && data.position !== undefined) {
-            if(intervalId !== undefined) {
-                setIntervalId((old) => {clearInterval(old); return undefined;})
-                //clearInterval(intervalId); 
-            }
+        if(data.status?.calculated === 'playing' && data.position !== undefined && !data.status?.stale && !data.status?.orphaned) {
             setProgressBuffer(data.position);
             interval = setInterval(() => {
                 setProgressBuffer((oldPosition) => {
+                    if(data.play.data.duration !== undefined) {
+                        return Math.min(data.play.data.duration, oldPosition + 1);
+                    }
                     return oldPosition + 1;
-
                 });
-            }, 1200);
-            setIntervalId(interval);
+            }, 1000);
+            setIntervalId((old) => {
+                if(old !== undefined) {
+                    clearInterval(old);
+                }
+                return interval;
+            });
         } else {
             setProgressBuffer(undefined);
             if(intervalId !== undefined) {
@@ -97,11 +121,10 @@ export const ChakraPlayer = (props: PlayerProps) => {
     const indeterminate = nowPlayingMode || (calculated === 'playing' && data.position === undefined);
     const positionProgress = indeterminate || data.position === undefined || duration === undefined ? undefined : (data.position/duration) * 100;
     const bufferProgress = indeterminate || data.position === undefined || duration === undefined || positionBuffer === undefined ? undefined : (positionBuffer/duration) * 100;
-    //const progressBuffer = progressPosition !== undefined ? Math.min(100, progressPosition + 10) : undefined
     const positionTimestamp = indeterminate || data.position === undefined ? '-' : timeToHumanTimestamp((positionBuffer ?? data.position) * 1000);
     const durationTimestamp = duration === undefined ? '-' : timeToHumanTimestamp(duration * 1000);
 
-    console.log(`Position ${data.position} (${positionProgress}) | Buffer ${positionBuffer} (${bufferProgress})`);
+    const bufferTip = positionBuffer !== undefined ? <InfoTip buttonProps={{height: 'var(--chakra-sizes-4)'}} content={bufferExplanation}/> : null;
      
     return <Stack gap="2">
             <Flex gap="4" align="center">
@@ -134,10 +157,10 @@ export const ChakraPlayer = (props: PlayerProps) => {
                     <Progress.ValueText>{durationTimestamp}</Progress.ValueText>
                 </HStack>
             </Progress.Root> */}
-            <Flex>
-                <TextMuted>{['unknown', 'playing'].includes(calculated) && nowPlayingMode ? 'Now Playing' : capitalize(calculated)}</TextMuted>
+            <Flex alignItems="center">
+                <TextMuted>{['unknown', 'playing'].includes(calculated) && nowPlayingMode ? 'Now Playing' : capitalize(calculated)}{bufferTip}</TextMuted>
                 <Spacer />
-                <TextMuted textAlign="right">Listened: {nowPlayingMode !== true && calculated !== 'stopped' && listenedDuration !== null ? `${listenedDuration.toFixed(0)}s` : '-'}{durPer}</TextMuted>
+                <TextMuted>Listened: {nowPlayingMode !== true && calculated !== 'stopped' && listenedDuration !== null ? `${listenedDuration.toFixed(0)}s` : '-'}{durPer}</TextMuted>
             </Flex>
         </Stack>
     
