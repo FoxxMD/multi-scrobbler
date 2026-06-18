@@ -123,7 +123,7 @@ export const ChakraPlayer = (props: PlayerProps) => {
     const positionTimestamp = indeterminate || data.position === undefined ? '-' : timeToHumanTimestamp((positionBuffer ?? data.position) * 1000);
     const durationTimestamp = duration === undefined ? '-' : timeToHumanTimestamp(duration * 1000);
 
-    const bufferTip = positionBuffer !== undefined ? <InfoTip buttonProps={{height: 'var(--chakra-sizes-4)'}} content={bufferExplanation}/> : null;
+    const bufferTip = positionBuffer !== undefined ? <InfoTip positioning={{placement: "bottom-start"}} buttonProps={{height: 'var(--chakra-sizes-4)'}} content={bufferExplanation}/> : null;
      
     return <Stack gap="2">
             <Flex gap="4" align="center">
