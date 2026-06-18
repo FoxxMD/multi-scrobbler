@@ -14,6 +14,7 @@ import {
 } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { createSystem, defaultConfig, defineConfig } from "@chakra-ui/react"
+import '../index-next.css';
 
 const queryClient = new QueryClient()
 

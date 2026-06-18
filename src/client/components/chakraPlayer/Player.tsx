@@ -13,6 +13,7 @@ import {
   useSSEEvent,
 } from "@flamefrontend/sse-runtime-react";
 import { MsSseEvent, MsSseEventPayload } from "../../../core/Api";
+import LinearProgress from '@mui/material/LinearProgress';
 
 export interface PlayerProps {
     data: SourcePlayerJson
@@ -62,9 +63,12 @@ export const ChakraPlayer = (props: PlayerProps) => {
     }
 
     const indeterminate = nowPlayingMode || (calculated === 'playing' && data.position === undefined);
-
+    const progressPosition = indeterminate || data.position === undefined || duration === undefined ? undefined : (data.position/duration) * 100;
+    const progressBuffer = progressPosition !== undefined ? Math.min(100, progressPosition + 10) : undefined
+    const positionTimestamp = indeterminate || data.position === undefined ? '-' : timeToHumanTimestamp(data.position * 1000);
+    const durationTimestamp = duration === undefined ? '-' : timeToHumanTimestamp(duration * 1000);
      
-    return    <Stack gap="2">
+    return <Stack gap="2">
             <Flex gap="4" align="center">
                 {playArt !== undefined ? <Image minWidth="48px" flex="0" height="100%" width="100%" src={playArt}></Image> : null}
                 <Center flex="1">
@@ -74,15 +78,27 @@ export const ChakraPlayer = (props: PlayerProps) => {
                     </Stack>
                 </Center>
             </Flex>
-            <Progress.Root value={indeterminate || data.position === undefined || duration === undefined ? null : (data.position/duration) * 100} size="sm">
+            <HStack gap="5">
+                <Text textStyle="sm">{positionTimestamp}</Text>
+                <Box flex="1">
+                <LinearProgress
+                variant={indeterminate ? undefined : "buffer"}
+                
+                value={progressPosition}
+                valueBuffer={progressPosition}
+                />
+                </Box>
+                <Text textStyle="xs">{durationTimestamp}</Text>
+            </HStack>
+            {/* <Progress.Root value={indeterminate || data.position === undefined || duration === undefined ? null : (data.position/duration) * 100} size="sm">
                 <HStack gap="5">
-                    <Progress.Label>{indeterminate || data.position === undefined ? '-' : timeToHumanTimestamp(data.position * 1000)}</Progress.Label>
+                    <Progress.Label>{positionTimestamp}</Progress.Label>
                     <Progress.Track flex="1">
                         <Progress.Range />
                     </Progress.Track>
-                    <Progress.ValueText>{duration === undefined ? '-' : timeToHumanTimestamp(duration * 1000)}</Progress.ValueText>
+                    <Progress.ValueText>{durationTimestamp}</Progress.ValueText>
                 </HStack>
-            </Progress.Root>
+            </Progress.Root> */}
             <Flex>
                 <TextMuted>{['unknown', 'playing'].includes(calculated) && nowPlayingMode ? 'Now Playing' : capitalize(calculated)}</TextMuted>
                 <Spacer />
