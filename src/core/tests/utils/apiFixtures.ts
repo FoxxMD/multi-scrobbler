@@ -73,8 +73,7 @@ export const generateQueueStateApi = (data: Partial<QueueStateApi>): QueueStateA
     return {
         id: faker.number.int({min: 1, max: 100}),
         queueName: CLIENT_INGRESS_QUEUE,
-        queueState: faker.helpers.arrayElement(QUEUE_STATUSES),
-        createdAt: cAt,
+        queueStatus: faker.helpers.arrayElement(QUEUE_STATUSES),
         updatedAt: cAt,
         retries: 0,
         ...data
