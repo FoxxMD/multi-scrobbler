@@ -57,7 +57,7 @@ export const ActivityDetailStory = meta.story({
         activity: generatePlayApiCommonDetailed({
         playOpts: [{play: play}],
         inputOpts: [{play: play}]
-      }),
+      })
     };
     }
   ],

@@ -30,18 +30,10 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
 
     console.log(`Rendering ActivityDetails for ${activity.play.data.track}`);
 
-    // const ExpandableButtons = () => {
-    //     const item = useAccordionItemContext();
-    //     console.log(item.expanded);
-    //     return (
-    //         <Stack style={{
-    //                     paddingBlock: "var(--accordion-padding-y)",
-    //                     paddingInline: "var(--accordion-padding-x)"
-    //                 }} justify="flex-start" alignItems="flex-end">
-    //                     <ExpandCollapse hideBelow="sm" display={item.expanded ? 'flex' : 'none'} onClick={(val) => setCollapsibleOpen(val)} />
-    //                 </Stack>
-    //     )
-    // }
+    const ExpandCollapseContext = () => {
+        const item = useAccordionItemContext();
+        return <ExpandCollapse hideBelow="sm" display={useAccordionItemContext()?.expanded ? 'flex' : 'none'} onClick={(val) => setCollapsibleOpen(val)} />
+    }
 
     const [collapsibleOpen, setCollapsibleOpen] = useState(undefined);
 
@@ -71,8 +63,8 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
                         paddingBlock: "var(--accordion-padding-y)",
                         paddingInline: "var(--accordion-padding-x)"
                     }} justify="flex-start" alignItems="flex-end">
-                        <ExpandCollapse hideBelow="sm" display={useAccordionItemContext().expanded ? 'flex' : 'none'} onClick={(val) => setCollapsibleOpen(val)} />
                     </Stack>
+                    <ExpandCollapseContext/>
                 </Flex>
                 <Accordion.ItemContent>
                     <Accordion.ItemBody>
