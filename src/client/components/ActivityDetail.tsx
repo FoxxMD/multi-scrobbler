@@ -55,7 +55,7 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
                 <Flex justify="flex-start">
                     <Accordion.ItemTrigger>
                         <Accordion.ItemIndicator />
-                        Timeline  {error !== undefined ? (<Icon size="sm" color="red.focusRing">
+                        Timeline  {error !== undefined && error !== null ? (<Icon size="sm" color="red.focusRing">
                             <AiOutlineExclamationCircle />
                         </Icon>) : null}
                     </Accordion.ItemTrigger>
