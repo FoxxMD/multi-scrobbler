@@ -174,7 +174,7 @@ export interface TransformPlayPartsOptions {
 }
 
 export const baseFormatPlayObj = (data: any, play: PlayObjectMinimal): PlayObject => {
-    const basePlay =  {
+    const basePlay: PlayObject =  {
         data: {
             ...play.data
         },
@@ -183,7 +183,7 @@ export const baseFormatPlayObj = (data: any, play: PlayObjectMinimal): PlayObjec
             ...play.meta,
         },
         original: {
-            input: data,
+            data,
             play,
         }
     }

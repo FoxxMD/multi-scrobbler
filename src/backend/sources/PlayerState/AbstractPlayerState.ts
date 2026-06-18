@@ -293,9 +293,14 @@ export abstract class AbstractPlayerState {
             if(completed) {
                 this.logger.debug('Generating play object with playDateCompleted');
             }
+            const {
+                data,
+                meta,
+                ...rest
+            } = this.currentPlay;
             return {
                 data: {
-                    ...this.currentPlay.data,
+                    ...data,
                     playDate: this.playFirstSeenAt,
                     listenedFor: this.getListenDuration(),
                     listenRanges: ranges.map(x => ({start: x.start, end: x.end})),
@@ -303,9 +308,10 @@ export abstract class AbstractPlayerState {
                     repeat: this.isRepeatPlay
                 },
                 meta: {
-                    ...this.currentPlay.meta,
-                    trackProgressPosition: this.getPosition() ?? this.currentPlay.meta.trackProgressPosition
-                }
+                    ...meta,
+                    trackProgressPosition: this.getPosition() ?? meta.trackProgressPosition
+                },
+                ...rest
             }
         }
         return undefined;
