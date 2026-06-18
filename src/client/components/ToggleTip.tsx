@@ -36,7 +36,7 @@ export const ToggleTip = React.forwardRef<HTMLDivElement, ToggleTipProps>(
         <Portal disabled={!portalled} container={portalRef}>
           <ChakraPopover.Positioner>
             <ChakraPopover.Content
-              width="auto"
+              // width="auto"
               px="2"
               py="1"
               textStyle="xs"
