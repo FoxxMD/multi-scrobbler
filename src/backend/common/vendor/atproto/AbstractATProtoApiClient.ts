@@ -11,10 +11,11 @@ import { ComAtprotoSyncGetRepo } from '@atcute/atproto';
 import { AtprotoDid } from "@atcute/lexicons/syntax";
 import { todayAwareFormat } from "../../../../core/TimeUtils.js";
 import dayjs from "dayjs";
+import { Millisecond } from "../../../../core/Atomic.js";
 
 export interface RateLimitInfo {
     limit: number
-    reset: number
+    reset: Millisecond
     remaining: number
 }
 
@@ -126,8 +127,9 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
         }
         try {
             const info = parseRateLimitHeaders(headers);
+            const secUntilReset = dayjs(info.reset).diff(dayjs(), 's');
             if (info !== null) {
-                await this.cache.cacheAuth.set<RateLimitInfo>(`${this.getAuthCacheKey()}-rateLimitInfo`, { limit: info.limit, remaining: info.remaining, reset: info.reset.valueOf() });
+                await this.cache.cacheAuth.set<RateLimitInfo>(`${this.getAuthCacheKey()}-rateLimitInfo`, { limit: info.limit, remaining: info.remaining, reset: info.reset.valueOf() }, Math.min(secUntilReset, 3600));
             }
         } catch (e) {
             this.logger.warn(new Error('Failed to parse or set rate limit data', { cause: e }));
@@ -140,7 +142,7 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
             return;
         }
         if(limitInfo.remaining === 0) {
-            throw new UpstreamError(`(Cached) Rate limit is exceeded and will be reset at ${todayAwareFormat(dayjs.unix(limitInfo.reset))}`);
+            throw new UpstreamError(`(Cached) Rate limit is exceeded and will be reset at ${todayAwareFormat(dayjs(limitInfo.reset))}`);
         }
     }
 
