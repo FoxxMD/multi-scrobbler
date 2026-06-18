@@ -65,31 +65,34 @@ export const ChakraPlayer = (props: PlayerProps) => {
     const [positionBuffer, setProgressBuffer] = useState<undefined | number>(undefined);
     const [intervalId, setIntervalId] = useState<undefined | number>(undefined);
 
-    // useEffect(() => {
-    //     let interval;
-    //     if(calculated === 'playing' && data.position !== undefined) {
-    //         if(intervalId !== undefined) {
-    //             setIntervalId((old) => {clearInterval(old); return undefined;})
-    //             //clearInterval(intervalId); 
-    //         }
-    //         setProgressBuffer(data.position);
-    //         interval = setInterval(() => {
-    //             setProgressBuffer((oldPosition) => {
-    //                 return oldPosition + 1;
+    useEffect(() => {
+        let interval;
+        if(calculated === 'playing' && data.position !== undefined) {
+            if(intervalId !== undefined) {
+                setIntervalId((old) => {clearInterval(old); return undefined;})
+                //clearInterval(intervalId); 
+            }
+            setProgressBuffer(data.position);
+            interval = setInterval(() => {
+                setProgressBuffer((oldPosition) => {
+                    return oldPosition + 1;
 
-    //             });
-    //         }, 1200);
-    //         setIntervalId(interval);
-    //     } else if(intervalId !== undefined) {
-    //         setIntervalId((old) => {
-    //             if(old !== undefined) {
-    //                 clearInterval(old);
-    //             }
-    //             return undefined;
-    //         });
-    //     }
-    //     return () => clearInterval(interval);
-    // },[setProgressBuffer, data, setIntervalId]);
+                });
+            }, 1200);
+            setIntervalId(interval);
+        } else {
+            setProgressBuffer(undefined);
+            if(intervalId !== undefined) {
+                setIntervalId((old) => {
+                    if(old !== undefined) {
+                        clearInterval(old);
+                    }
+                    return undefined;
+                });
+            }
+        }
+        return () => clearInterval(interval);
+    },[setProgressBuffer, data, setIntervalId]);
 
     const indeterminate = nowPlayingMode || (calculated === 'playing' && data.position === undefined);
     const positionProgress = indeterminate || data.position === undefined || duration === undefined ? undefined : (data.position/duration) * 100;
@@ -97,6 +100,8 @@ export const ChakraPlayer = (props: PlayerProps) => {
     //const progressBuffer = progressPosition !== undefined ? Math.min(100, progressPosition + 10) : undefined
     const positionTimestamp = indeterminate || data.position === undefined ? '-' : timeToHumanTimestamp((positionBuffer ?? data.position) * 1000);
     const durationTimestamp = duration === undefined ? '-' : timeToHumanTimestamp(duration * 1000);
+
+    console.log(`Position ${data.position} (${positionProgress}) | Buffer ${positionBuffer} (${bufferProgress})`);
      
     return <Stack gap="2">
             <Flex gap="4" align="center">
@@ -115,7 +120,7 @@ export const ChakraPlayer = (props: PlayerProps) => {
                 variant={indeterminate ? undefined : "buffer"}
                 
                 value={positionProgress}
-                valueBuffer={positionBuffer ?? positionProgress}
+                valueBuffer={bufferProgress ?? positionProgress}
                 />
                 </Box>
                 <Text textStyle="xs">{durationTimestamp}</Text>

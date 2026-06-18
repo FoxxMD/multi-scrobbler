@@ -11,9 +11,13 @@
 }
 
 .chakra-stack [class$="MuiLinearProgress-dashed"] {
-      animation: dashed-player 3s infinite linear !important;
+      /* animation: dashed-player 3s infinite linear !important;
       background-image: radial-gradient(var(--chakra-colors-color-palette-solid) 0%, var(--chakra-colors-color-palette-solid) 16%, transparent 42%);
-      background-position: 0 -1px !important;
+      background-position: 0 -1px !important; */
+      animation: unset !important;
+      background-image: unset !important;
+      background-position: unset !important;
+      background-color: var(--chakra-colors-color-palette-muted) 
 }
 .chakra-stack [class$="MuiLinearProgress-bar1"] {
       background-color: var(--chakra-colors-color-palette-solid) !important;

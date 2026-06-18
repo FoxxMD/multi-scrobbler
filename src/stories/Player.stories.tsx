@@ -10,6 +10,8 @@ import { MsSseEvent } from "../core/Api.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
 import { sseProviderOptions } from "../client/AppNext.js";
 import dayjs from "dayjs";
+import { asJsonPlayObject } from "../core/PlayMarshalUtils.js";
+import { generatePlay } from "../core/PlayTestUtils.js";
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
@@ -62,6 +64,18 @@ export const PlayerNowPlaying = meta.story({
 export const PlayerNoPosition = meta.story({
     args: {
       data: {...generateSourcePlayerJson(undefined, {art: true}), position: undefined }
+    }
+});
+
+export const PlayerStartPosition = meta.story({
+    args: {
+      data: generateSourcePlayerJson({status: {calculated: 'unknown', reported: 'playing', stale: false, orphaned: false}, position: 0})
+    }
+});
+
+export const PlayerEndPosition = meta.story({
+    args: {
+      data: generateSourcePlayerJson({play: asJsonPlayObject(generatePlay({duration: 60})), status: {calculated: 'unknown', reported: 'playing', stale: false, orphaned: false}, position: 60})
     }
 });
 
