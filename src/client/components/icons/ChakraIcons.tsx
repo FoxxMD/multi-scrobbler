@@ -1,4 +1,4 @@
-import { LuChevronRight, LuActivity, LuGithub, LuTerminal, LuAlignJustify, LuX, LuExternalLink, LuArrowUp, LuArrowDown } from "react-icons/lu"
+import { LuChevronRight, LuChevronLeft, LuActivity, LuGithub, LuTerminal, LuAlignJustify, LuX, LuExternalLink, LuArrowUp, LuArrowDown } from "react-icons/lu"
 import { SiGoogledocs } from "react-icons/si";
 import { IconButton } from "@chakra-ui/react"
 import { ComponentProps } from 'react';
@@ -14,6 +14,13 @@ export const ChevronRight = LuChevronRight;
 export const ChevronRightButton = (props: ComponentProps<typeof IconButton>) => (
     <IconButton variant="surface" size="xs" {...props}>
         <ChevronRight />
+    </IconButton>
+);
+
+export const ChevronLeft = LuChevronLeft;
+export const ChevronLeftButton = (props: ComponentProps<typeof IconButton>) => (
+    <IconButton variant="surface" size="xs" {...props}>
+        <ChevronLeft />
     </IconButton>
 );
 
