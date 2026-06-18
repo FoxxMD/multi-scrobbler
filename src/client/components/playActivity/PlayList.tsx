@@ -436,7 +436,7 @@ export const PlayListSkeleton = () => {
 
 export const ListContainerFetchable = (props: { componentId: number, componentType: 'source' | 'client' } & Pick<ComponentProps<typeof PlayList>, 'render'>) => {
   const { isPending, isError, data, error } = useQuery({
-    queryKey: ['components', props.componentId, 'plays', {}],
+    queryKey: ['components', props.componentId, 'plays', {order: 'desc', sort: 'seenAt'}],
     queryFn: queryFn
   });
 
