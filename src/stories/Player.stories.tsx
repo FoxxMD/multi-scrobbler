@@ -1,10 +1,15 @@
 import preview from "../../.storybook/preview.js";
 import React from 'react';
+import { http, HttpResponse, delay, sse } from 'msw';
 
 import { Container } from '@chakra-ui/react';
-import { ChakraPlayer } from "../client/components/chakraPlayer/Player";
+import { ChakraPlayer, ChakraPlayerFetchable } from "../client/components/chakraPlayer/Player";
 import {Provider} from "../client/components/Provider";
 import { generateClientApiJson, generateSourceApiJson, generateSourcePlayerJson } from "../core/tests/utils/apiFixtures.js";
+import { MsSseEvent } from "../core/Api.js";
+import { SSEProvider } from "@flamefrontend/sse-runtime-react";
+import { sseProviderOptions } from "../client/AppNext.js";
+import dayjs from "dayjs";
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
@@ -58,4 +63,49 @@ export const PlayerNoPosition = meta.story({
     args: {
       data: {...generateSourcePlayerJson(undefined, {art: true}), position: undefined }
     }
+});
+
+export const PlayerLive = meta.story({
+  component: ChakraPlayerFetchable,
+  args: {
+    platformId: 'test',
+    componentId: 1,
+    data: generateSourcePlayerJson({platformId: 'test'}, {art: true})
+  },
+  parameters: {
+      msw: {
+        handlers: [
+          http.get<{componentId: string, platformId: string}>(`/api/sources/:componentId/players/:platformId`, async ({ params }) => {
+            return HttpResponse.json(generateSourcePlayerJson({platformId: params.platformId, position: 10}, {art: true}));
+          }),
+          sse('/api/events?next=true', async ({ params, client }) => {
+          const data = generateSourcePlayerJson({platformId: 'test'}, {art: true});
+          let position = 10;
+          let listenedDur = 10;
+          setInterval(() => {
+            position += 10;
+            listenedDur += 10;
+            client.send({
+            //@ts-expect-error
+            event: 'playerUpdate', 
+            data: {componentId: 1, data: {
+              ...data,
+              playLastUpdatedAt: dayjs().toISOString(),
+              playerLastUpdatedAt: dayjs().toISOString(),
+              position,
+              listenedDuration: listenedDur
+            }}});
+          }, 10000);
+          })
+        ],
+      },
+  },
+  render: function Render(args) {
+    // @ts-expect-error
+    return (<ChakraPlayerFetchable {...args} />) 
+  },
+  decorators: [
+    (Story) => 
+      (<Provider><Container maxWidth="4xl"><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Container></Provider>),
+  ],
 });

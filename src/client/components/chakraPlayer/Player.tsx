@@ -1,4 +1,4 @@
-import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect } from "react"
+import React, { ComponentProps, useMemo, forwardRef, Fragment, useState, useEffect, useCallback } from "react"
 import { Accordion, Progress, For, Span, Stack, Spacer, Text, Image, Box, Heading, AbsoluteCenter, Button, Separator, HStack, Flex, Center, Badge, IconButton, Container, Collapsible, Card, LinkOverlay, LinkBox } from '@chakra-ui/react';
 import { TextMuted } from "../TextMuted";
 import { SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerJson } from "../../../core/Atomic";
@@ -62,10 +62,40 @@ export const ChakraPlayer = (props: PlayerProps) => {
         }
     }
 
+    const [positionBuffer, setProgressBuffer] = useState<undefined | number>(undefined);
+    const [intervalId, setIntervalId] = useState<undefined | number>(undefined);
+
+    // useEffect(() => {
+    //     let interval;
+    //     if(calculated === 'playing' && data.position !== undefined) {
+    //         if(intervalId !== undefined) {
+    //             setIntervalId((old) => {clearInterval(old); return undefined;})
+    //             //clearInterval(intervalId); 
+    //         }
+    //         setProgressBuffer(data.position);
+    //         interval = setInterval(() => {
+    //             setProgressBuffer((oldPosition) => {
+    //                 return oldPosition + 1;
+
+    //             });
+    //         }, 1200);
+    //         setIntervalId(interval);
+    //     } else if(intervalId !== undefined) {
+    //         setIntervalId((old) => {
+    //             if(old !== undefined) {
+    //                 clearInterval(old);
+    //             }
+    //             return undefined;
+    //         });
+    //     }
+    //     return () => clearInterval(interval);
+    // },[setProgressBuffer, data, setIntervalId]);
+
     const indeterminate = nowPlayingMode || (calculated === 'playing' && data.position === undefined);
-    const progressPosition = indeterminate || data.position === undefined || duration === undefined ? undefined : (data.position/duration) * 100;
-    const progressBuffer = progressPosition !== undefined ? Math.min(100, progressPosition + 10) : undefined
-    const positionTimestamp = indeterminate || data.position === undefined ? '-' : timeToHumanTimestamp(data.position * 1000);
+    const positionProgress = indeterminate || data.position === undefined || duration === undefined ? undefined : (data.position/duration) * 100;
+    const bufferProgress = indeterminate || data.position === undefined || duration === undefined || positionBuffer === undefined ? undefined : (positionBuffer/duration) * 100;
+    //const progressBuffer = progressPosition !== undefined ? Math.min(100, progressPosition + 10) : undefined
+    const positionTimestamp = indeterminate || data.position === undefined ? '-' : timeToHumanTimestamp((positionBuffer ?? data.position) * 1000);
     const durationTimestamp = duration === undefined ? '-' : timeToHumanTimestamp(duration * 1000);
      
     return <Stack gap="2">
@@ -84,8 +114,8 @@ export const ChakraPlayer = (props: PlayerProps) => {
                 <LinearProgress
                 variant={indeterminate ? undefined : "buffer"}
                 
-                value={progressPosition}
-                valueBuffer={progressPosition}
+                value={positionProgress}
+                valueBuffer={positionBuffer ?? positionProgress}
                 />
                 </Box>
                 <Text textStyle="xs">{durationTimestamp}</Text>
