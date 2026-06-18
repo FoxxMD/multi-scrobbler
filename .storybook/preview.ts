@@ -24,7 +24,7 @@ export default definePreview({
       test: 'todo'
     },
     docs: {
-      theme: themes.dark,
+      //theme: themes.normal,
     },
   },
 
