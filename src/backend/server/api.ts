@@ -31,7 +31,7 @@ import { setupAuthRoutes } from "./auth.js";
 import { setupDeezerRoutes } from "./deezerRoutes.js";
 import {setupLZEndpointRoutes} from "./endpointListenbrainzRoutes.js";
 import {setupLastfmEndpointRoutes} from "./endpointLastfmRoutes.js";
-import { makeClientCheckMiddle, makeComponentMiddle, makeSourceCheckMiddle, makeSourceNextMiddle, SourceAwareRequest } from "./middleware.js";
+import { ClientAwareRequest, ComponentAwareRequest, makeClientCheckMiddle, makeClientNextMiddle, makeComponentMiddle, makeSourceCheckMiddle, makeSourceNextMiddle, SourceAwareRequest } from "./middleware.js";
 import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.js";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
@@ -108,8 +108,9 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
     const clientRequiredMiddle = clientMiddleFunc(true);
     const sourceRequiredMiddle = sourceMiddleFunc(true);
 
-    const componentMiddle = makeComponentMiddle(scrobbleSources, scrobbleClients);
+    const componentAwareMiddle = makeComponentMiddle(scrobbleSources, scrobbleClients);
     const sourceAwareMiddle = makeSourceNextMiddle(scrobbleSources);
+    const clientAwareMiddle = makeClientNextMiddle(scrobbleClients);
 
     const setLogWebSettings: ExpressHandler = async (req, res, next) => {
         // @ts-expect-error logLevel not part of session
@@ -274,6 +275,48 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         }
         return res.json({});
     });
+
+    app.get('/api/components/:componentVal', componentAwareMiddle, async (req: ComponentAwareRequest, res, next) => {
+        const {
+            component,
+        } = req;
+        return res.json(component.getApiData());
+    });
+
+    app.get('/api/components/:componentVal/plays', componentAwareMiddle, async (req: ComponentAwareRequest, res, next) => {
+        const {
+            component,
+            query
+        } = req;
+
+        const playRes = await component.getPlaysPaginated(query);
+        //PlayApiCommonDetailed
+        // plus paginatioon
+        return res.json(playRes);
+    });
+
+    app.get('/api/components/:componentVal/plays/:playUid', componentAwareMiddle, async (req: ComponentAwareRequest, res, next) => {
+        const {
+            component,
+            query,
+            params: {
+                playUid
+            }
+        } = req;
+
+        const playRes = await component.getPlayApiResponse(playUid as string);
+        //PlayApiCommonDetailed
+        // plus paginatioon
+        return res.json(playRes);
+    });
+
+    /**
+     * 
+     * 
+     *  new apis above
+     * 
+     * 
+     *  */
 
     app.get('/api/status', async (req, res, next) => {
 

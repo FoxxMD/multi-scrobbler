@@ -8,7 +8,7 @@ import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, QueueStateSelec
 import { MarkOptional, MarkRequired, PathValue } from "ts-essentials";
 import { genGroupIdStrFromPlay, removeEmptyArrays, removeUndefinedKeys } from "../../../../utils.js";
 import dayjs, { Dayjs } from "dayjs";
-import { RelationsFieldFilter, eq, inArray, ne, notInArray, desc, asc, and, sql, Placeholder } from "drizzle-orm";
+import { RelationsFieldFilter, eq, inArray, ne, notInArray, desc, asc, and, sql, Placeholder, relationsFilterToSQL } from "drizzle-orm";
 import { CompactableProperty, RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.js";
 import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.js";
 import { buildDateCompare, CompareDateOp, ComponentConstrainedRepoOpts, DrizzleBaseRepository, DrizzleRepositoryOpts, PaginatedQueryResponse, PaginatedResponse } from "./BaseRepository.js";
@@ -73,18 +73,19 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         super(db, 'plays', 'Plays', opts);
     }
 
-    findByUid = async (uid: string, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PlaySelectWithQueueStates | undefined> => {
+    findByUid = async (uid: string, opts: HydrateOpts & Pick<QueryPlaysOpts, 'with'> & ComponentConstrainedRepoOpts = {}): Promise<PlaySelectWithQueueStates | undefined> => {
         const res = await this.db.query.plays.findFirst({
             where: {
                 uid,
                 componentId: opts.componentId ?? this.componentId
             },
-            with: {
-                queueStates: true
-            }
+            with: buildPlayWith([...(opts.with ?? []), 'queues'])
         });
+        if(res === undefined) {
+            return undefined;
+        }
         res.play = hydratePlaySelect(res, opts.hydrate);
-        return res;
+        return res as PlaySelectWithQueueStates;
     }
 
     createPlays = async (entitiesOpts: RepositoryCreatePlayOpts[], opts: HydrateOpts = {}) => {
@@ -244,7 +245,15 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         } = args;
         const clampedLimit = Math.min(limit, 100);
         const res = await this.findPlays({limit: clampedLimit, offset, ...rest}, opts) as T[];
-        return {data: res, meta: {limit: clampedLimit, offset}};
+
+        
+        const where = buildPlayWhere({componentId: args.componentId ?? this.componentId,  ...rest});
+        // @ts-expect-error
+        const filter = relationsFilterToSQL(plays, where);
+        // https://github.com/drizzle-team/drizzle-orm/discussions/3119#discussioncomment-16379557
+        const count = await this.db.$count(plays, filter);
+
+        return {data: res, meta: {limit: clampedLimit, offset, total: count}};
     }
 
     // async updateById(id: number, data: Partial<PlayNew>): Promise<void> {

@@ -7,9 +7,11 @@ import { loggerNoop } from "../../../MaybeLogger.js";
 import { capitalize } from "../../../../../core/StringUtils.js";
 import { getConfigByTableName, relations, TableName } from "../schema/schema.js";
 import assert from 'node:assert';
+import { Cacheable } from "cacheable";
 
 export interface DrizzleRepositoryOpts {
     logger?: Logger
+    cache?: Cacheable
     componentId?: number
 }
 
@@ -25,6 +27,7 @@ export type CompareDateOp = {
 export interface PaginatedQueryResponse {
     limit: number,
     offset: number
+    total?: number
 }
 
 export interface PaginatedResponse<T> {
@@ -44,6 +47,7 @@ export abstract class DrizzleBaseRepository<T extends TableName> {
     table: ReturnType<typeof getConfigByTableName<T>>
     db: DbConcrete;
     componentId?: number
+    cache?: Cacheable
 
     constructor(db: DbConcrete, tableName: TableName, displayName: string, opts: DrizzleRepositoryOpts = {}) {
         this.db = db;
@@ -52,6 +56,7 @@ export abstract class DrizzleBaseRepository<T extends TableName> {
         this.table = getConfigByTableName(this.tableName);
         this.logger = childLogger(opts.logger ?? loggerNoop, ['Database', capitalize(displayName)]);
         this.componentId = opts.componentId;
+        this.cache = opts.cache;
     }
 
     async deleteByIds(ids: number[]): Promise<void> {

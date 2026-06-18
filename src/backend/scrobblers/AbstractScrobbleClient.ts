@@ -77,13 +77,13 @@ import { generateLoggableAbortReason, ScrobbleSubmitError, SimpleError } from ".
 import {isErrorLike, serializeError} from 'serialize-error';
 import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetchUtils.js";
 import { spawn, catchAbortError, isAbortError, rethrowAbortError, delay, forever, AbortError, throwIfAborted } from 'abort-controller-x';
-import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, QueryPlaysOpts } from "../common/database/drizzle/repositories/PlayRepository.js";
+import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, QueryPlaysOpts, WithPlayRelation } from "../common/database/drizzle/repositories/PlayRepository.js";
 import { ComponentMigrationNew, PlaySelect, PlaySelectWithQueueStates, QueueStateNew, QueueStateSelect } from "../common/database/drizzle/drizzleTypes.js";
 import { asPlay } from "../../core/PlayMarshalUtils.js";
 import { DrizzleQueueRepository } from "../common/database/drizzle/repositories/QueueRepository.js";
 import { GenericRepository } from "../common/database/drizzle/repositories/BaseRepository.js";
 import assert from "node:assert";
-import { COMPONENT_STATE, ComponentClientApi } from "../../core/Api.js";
+import { COMPONENT_STATE, ComponentClientApi, PlayApiCommonDetailed } from "../../core/Api.js";
 import { ComponentState } from "react";
 
 type PlatformMappedPlays = Map<string, {player: SourcePlayerObj, source: SourceIdentifier}>;
@@ -1728,6 +1728,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         let parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
         let parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
         return this.playRepo.findPlaysPaginated({limit: parsedLimit, offset: parsedOffset, with: withQuery, ...rest});
+    }
+
+    public async getPlayApiResponse(uid: string, opts: {with?: WithPlayRelation[]} = {}): Promise<PlayApiCommonDetailed> {
+        const {
+            with: withQuery = ['input','parent-input','queues'],
+        } = opts;
+        return await this.playRepo.findByUid(uid, { with: withQuery as WithPlayRelation[] }) as unknown as PlayApiCommonDetailed;
     }
 
     public emitEvent = (eventName: string, payload: object) => {

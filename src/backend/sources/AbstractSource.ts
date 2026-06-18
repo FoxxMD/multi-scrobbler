@@ -46,11 +46,12 @@ import prom, { Counter, Gauge } from 'prom-client';
 import { normalizeStr } from '../utils/StringUtils.js';
 import { spawn, catchAbortError, isAbortError, rethrowAbortError, delay, forever, AbortError, throwIfAborted } from 'abort-controller-x';
 import { AbortedError, generateLoggableAbortReason } from '../common/errors/MSErrors.js';
-import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, queryArgsFromRequest, QueryPlaysOpts, RequestPlayQuery } from '../common/database/drizzle/repositories/PlayRepository.js';
+import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, queryArgsFromRequest, QueryPlaysOpts, RequestPlayQuery, WithPlayRelation } from '../common/database/drizzle/repositories/PlayRepository.js';
 import { asPlay } from '../../core/PlayMarshalUtils.js';
 import { AsyncTask, SimpleIntervalJob, ToadScheduler } from 'toad-scheduler';
 import { ComponentMinimalSelect } from '../common/database/drizzle/drizzleTypes.js';
-import { COMPONENT_STATE, ComponentSourceApi, ComponentSourceApiJson, ComponentState } from '../../core/Api.js';
+import { COMPONENT_STATE, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommonDetailed } from '../../core/Api.js';
+import { PaginatedResponse } from '../common/database/drizzle/repositories/BaseRepository.js';
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -797,7 +798,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return maxInterval - this.getInterval();
     }
 
-    public getPlays = (args: QueryPlaysOpts) => {
+    public async getPlaysPaginated(args: QueryPlaysOpts): Promise<PaginatedResponse<PlayApiCommonDetailed>> {
         const {
             limit,
             offset,
@@ -807,6 +808,13 @@ export default abstract class AbstractSource extends AbstractComponent implement
         let parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
         let parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
         return this.playRepo.findPlaysPaginated({limit: parsedLimit, offset: parsedOffset, with: withQuery, ...rest});
+    }
+
+    public async getPlayApiResponse(uid: string, opts: {with?: WithPlayRelation[]} = {}): Promise<PlayApiCommonDetailed> {
+        const {
+            with: withQuery = ['input','parent-input','queues'],
+        } = opts;
+        return await this.playRepo.findByUid(uid, { with: withQuery as WithPlayRelation[] }) as unknown as PlayApiCommonDetailed;
     }
 
     public emitEvent = (eventName: string, payload: object = {}) => {

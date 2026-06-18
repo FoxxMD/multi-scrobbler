@@ -105,6 +105,9 @@ export const makeComponentMiddle = (sources: ScrobbleSources, clients: ScrobbleC
 export interface SourceAwareRequest extends Request {
     component: AbstractSource
 }
+export interface ClientAwareRequest extends Request {
+    component: AbstractScrobbleClient
+}
 
 export const makeSourceNextMiddle = (sources: ScrobbleSources): ExpressHandler => async (req: Request, res: Response, next: NextFunction) => {
     const {
@@ -125,6 +128,29 @@ export const makeSourceNextMiddle = (sources: ScrobbleSources): ExpressHandler =
     }
 
     (req as SourceAwareRequest).component = component;
+
+    next();
+}
+
+export const makeClientNextMiddle = (clients: ScrobbleClients): ExpressHandler => async (req: Request, res: Response, next: NextFunction) => {
+    const {
+        params: {
+            componentVal
+        }
+    } = req;
+
+    const componentId = Number.parseInt(componentVal as string);
+    if (isNaN(componentId)) {
+        return res.status(400).json({ error: 'Source Id must be a number' });
+    }
+
+    let component: AbstractScrobbleClient;
+    component = clients.clients.find(x => x.componentId === componentId);
+    if(component === undefined) {
+        return res.status(404).json({error: `No Client with the Id ${componentId} exists`});
+    }
+
+    (req as ClientAwareRequest).component = component;
 
     next();
 }

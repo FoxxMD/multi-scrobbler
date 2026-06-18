@@ -29,10 +29,9 @@ export interface PlayInputApi {
 export interface QueueStateApi {
     id: number
     queueName: string
-    queueState: string
+    queueStatus: string
     retries: number
     error?: ErrorLike
-    createdAt: string
     updatedAt: string
 }
 
