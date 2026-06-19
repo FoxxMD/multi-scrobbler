@@ -1,4 +1,5 @@
-import react from '@vitejs/plugin-react';
+import react,{ reactCompilerPreset } from '@vitejs/plugin-react';
+import babel from '@rolldown/plugin-babel';
 import normalizeUrl from "normalize-url";
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite'
@@ -45,6 +46,9 @@ export default defineConfig(() => {
         base: baseUrlStr,
         plugins: [
             react(),
+                babel({
+      presets: [reactCompilerPreset()]
+    }),
             tailwindcss(),
         ],
         build: {
