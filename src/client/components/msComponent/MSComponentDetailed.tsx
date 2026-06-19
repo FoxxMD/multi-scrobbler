@@ -18,7 +18,7 @@ import {
     useSSEEvent,
     useSSEAnyEvent
 } from "@flamefrontend/sse-runtime-react";
-import { SourcePlayerJson } from "../../../core/Atomic.js";
+import { isComponentTypeSource, SourcePlayerJson } from "../../../core/Atomic.js";
 import { CountLiveIndicator, DateIndicator, DeadLetterIndicator, QueuedIndicator } from "./Stats.js";
 import { ListContainerFetchable, PlayListSkeleton } from "../playActivity/PlayList.js";
 import { useParams } from "react-router-dom";
@@ -92,6 +92,7 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
                 <Box marginEnd="auto"><MSComponentStats {...props}/></Box>
             </Flex>
             <PlayersContainer data={props.data} live={props.live}/>
+            <Heading size="3xl">{isComponentTypeSource(props.data.mode) ? 'Plays' : 'Scrobbles'}</Heading>
             <ListContainerFetchable render="virtDynamic" componentType={props.data.mode} componentId={props.data.id}/>
         </Flex>
     )
