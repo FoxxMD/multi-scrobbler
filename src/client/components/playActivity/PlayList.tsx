@@ -1,26 +1,15 @@
-import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Collapsible, SkeletonText } from '@chakra-ui/react';
-import { ComponentType, JsonPlayObject, PlayActivity } from '../../../core/Atomic.js';
-import { ShortDateDisplay } from '../DateDisplay.js';
-import { TextMuted } from '../TextMuted.js';
-import { LuChevronRight } from "react-icons/lu"
-import { capitalize } from '../../../core/StringUtils.js';
-import React, { ComponentProps, useMemo, forwardRef, Fragment } from "react"
+import { Accordion, Span, Stack, Text, Box, Separator, HStack, Flex, IconButton, Container, SkeletonText } from '@chakra-ui/react';
+import { ComponentType } from '../../../core/Atomic.js';
+import React, { ComponentProps, Fragment } from "react"
 import dayjs, { Dayjs } from 'dayjs';
 import doy from 'dayjs/plugin/dayOfYear.js';
 import { VscDebugRestart } from "react-icons/vsc";
-import { GroupedVirtuoso, Components, LogLevel } from 'react-virtuoso'
 import { ActivityDetailFetchable, ActivityDetails, ActivitySummary, ActivitySummaryFetchable } from '../ActivityDetail.js';
-import { sortByNewestPlayDate, sortByNewestSeenDate } from '../../../core/PlayUtils.js';
 import "./PlayList.scss";
 import { PlayApiCommon, PlayApiCommonDetailed, SortPlaysByProps } from '../../../core/Api.js';
 import { QueryPlaysOpts } from '../../../backend/common/database/drizzle/repositories/PlayRepository.js';
-import ky from 'ky';
-import { baseUrl } from '../../utils/index.js';
-import { PaginatedResponse } from '../../../backend/common/database/drizzle/repositories/BaseRepository.js';
-import { QueryFunctionContext, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { ErrorAlert } from '../ErrorAlert.js';
-import { useParams } from 'react-router-dom';
-import { queries } from 'storybook/test';
 import { tanQueries } from '../../queries/index.js';
 
 dayjs.extend(doy);
@@ -102,7 +91,7 @@ const PlainAccordian = (props: ActivityLogProps) => {
           }
         }
         return (
-          <Fragment>
+          <Fragment key={headerText}>
             <Box>
               <Flex direction="row" justify="space-between">
 

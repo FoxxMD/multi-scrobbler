@@ -53,9 +53,6 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
                 paddingInline: "var(--accordion-padding-x)"
             }} justify="flex-start" alignItems="flex-end">
                 <PlayStateBadge maxWidth="fit-content" data={activity} />
-                {activity.state === 'failed' ? <IconButton variant="ghost" size="xs" maxWidth="fit-content">
-                    <VscDebugRestart />
-                </IconButton> : null}
             </Stack>
 
         </Flex>

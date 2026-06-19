@@ -30,8 +30,8 @@ export const ErrorAlert = (props: ErrorAlertProps) => {
                     <Stack>
                         <Text>{props.error.message}</Text>
                         {props.error.stack !== undefined ? <ChakraCodeBlock language="plaintext" code={props.error.stack} title="Stack" maxLines={6} collapsedMaxHeight="10em" hideBelow="sm"/> : null}
-                        {causes.map(x => (
-                            <Fragment>
+                        {causes.map((x, index) => (
+                            <Fragment key={index}>
                                 <Text color="fg.muted">Caused By: {x.name ?? ''}{x.code !== undefined ? ` (${x.code}) ` : ''}{x.message}</Text>
                                 {x.stack !== undefined ? <ChakraCodeBlock language="plaintext" code={x.stack} title="Stack" maxLines={6} collapsedMaxHeight="10em" hideBelow="sm"/> : null}
                             </Fragment>
