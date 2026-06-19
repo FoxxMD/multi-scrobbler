@@ -1,5 +1,6 @@
 import { ActivityType, StatusDisplayType } from "discord.js"
 import { CommonClientConfig, CommonClientData } from "./index.js"
+import { ComponentType } from "../../../../../core/Atomic.js"
 
 export interface DiscordData {
     token?: string
@@ -20,7 +21,7 @@ export interface DiscordClientConfig extends CommonClientConfig {
      * @default client
      * @examples ["client"]
      * */
-    configureAs?: 'client' | 'source'
+    configureAs?: ComponentType
     data: DiscordClientData
 }
 

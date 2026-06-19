@@ -2,7 +2,7 @@ import { PickKeys, StrictOmit } from "ts-essentials"
 import { ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.js"
 import { ClientType } from "../backend/common/infrastructure/config/client/clients.js"
 import { SourceType } from "../backend/common/infrastructure/config/source/sources.js"
-import { ErrorLike, JsonPlayObject, PlayState, Replace, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.js"
+import { ComponentType, ErrorLike, JsonPlayObject, PlayState, Replace, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.js"
 import { Dayjs } from "dayjs"
 import { INITIALIZING } from "../backend/common/infrastructure/Atomic.js"
 
@@ -125,7 +125,7 @@ export type MsSseEventPayload<T extends object = Record<string, any>> = {
     type: SourceType | ClientType
     name: string
     componentId: number
-    from: 'source' | 'client'
+    from: ComponentType
     data: T
     event: string
 }

@@ -1,6 +1,6 @@
 import React, { ComponentProps, useState, Fragment } from "react"
 import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Icon, useAccordionItemContext, Skeleton } from '@chakra-ui/react';
-import { ErrorLike, PlayActivity } from "../../core/Atomic";
+import { ComponentType, ErrorLike, PlayActivity } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
 import { ErrorAlert } from "./ErrorAlert";
 import { AiOutlineExclamationCircle } from "react-icons/ai";
@@ -13,7 +13,12 @@ import { baseUrl } from "../utils";
 
 export interface ActivityDetailProps {
     activity: PlayApiCommonDetailed
-    componentType: 'source' | 'client'
+    componentType: ComponentType
+}
+
+export interface ActivitySummaryProps {
+    activity: PlayApiCommon
+
 }
 
 export const ActivityDetails = (props: ActivityDetailProps) => {
@@ -81,7 +86,7 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
 export interface ActivityDetailFetchableProps {
     uid: string
     componentId: number
-    componentType: 'source' | 'client'
+    componentType: ComponentType
 }
 
 export const ActivityDetailFetchable = (props: ActivityDetailFetchableProps) => {

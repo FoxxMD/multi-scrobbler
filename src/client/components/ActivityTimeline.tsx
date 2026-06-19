@@ -1,6 +1,6 @@
 import { ComponentProps, useState, Fragment } from "react"
 import { Accordion, Timeline, Icon, Span, Stack, Heading, Card, Box, Tabs, Skeleton, SkeletonCircle, SkeletonText } from '@chakra-ui/react';
-import { ErrorLike, JsonPlayObject, PlayActivity } from "../../core/Atomic";
+import { ComponentType, ErrorLike, JsonPlayObject, PlayActivity } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
 import { ErrorAlert } from "./ErrorAlert";
 import { IoMdCodeDownload } from "react-icons/io";
@@ -25,7 +25,7 @@ import { PlayApiCommonDetailed } from "../../core/Api";
 export interface ActivityDetailProps {
     activity?: PlayApiCommonDetailed
     collapsibleOpen?: boolean,
-    componentType?: 'source' | 'client'
+    componentType?: ComponentType
 }
 
 const TimelineLoading = () => {

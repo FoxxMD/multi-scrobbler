@@ -2,7 +2,7 @@ import { childLogger, Logger } from "@foxxmd/logging";
 import {
     cacheFunctions,
 } from "@foxxmd/regex-buddy-core";
-import { LifecycleStep, PlayData, PlayObject, TransformResult } from "../../core/Atomic.js";
+import { ComponentType, LifecycleStep, PlayData, PlayObject, TransformResult } from "../../core/Atomic.js";
 import { buildPlayHumanDiffable, buildTrackString } from "../../core/StringUtils.js";
 import { CommonClientConfig } from "./infrastructure/config/client/index.js";
 import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
@@ -54,7 +54,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     componentId!: number;
     protected retentionOpts: RetentionOptions;
 
-    protected componentType: 'source' | 'client';
+    protected componentType: ComponentType;
     type: ClientType | SourceType;
 
     protected constructor(config: AbstractComponentConfig) {

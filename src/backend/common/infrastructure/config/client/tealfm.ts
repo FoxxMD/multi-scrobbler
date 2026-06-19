@@ -1,3 +1,4 @@
+import { ComponentType } from "../../../../../core/Atomic.js"
 import { RequestRetryOptions } from "../common.js"
 import { ATProtoAppData, ATProtoUserIdentifierData } from "./atproto.js"
 import { CommonClientConfig, CommonClientData, CommonClientOptions } from "./index.js"
@@ -21,7 +22,7 @@ export interface TealClientConfig extends CommonClientConfig {
      * @default client
      * @examples ["client"]
      * */
-    configureAs?: 'client' | 'source'
+    configureAs?: ComponentType
     data: TealClientData
     options?: TealClientOptions
 }

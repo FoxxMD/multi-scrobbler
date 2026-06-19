@@ -7,6 +7,15 @@ import { PlayPlatformIdStr } from "../backend/common/infrastructure/Atomic.js";
 import { FlowControlTerm, TransformHook } from "../backend/common/infrastructure/Transform.js";
 import { Changeset } from "json-diff-ts";
 
+export type ComponentTypeClient = 'client';
+export const COMPONENT_TYPE_CLIENT: ComponentTypeClient = 'client';
+export type ComponentTypeSource = 'source';
+export const COMPONENT_TYPE_SOURCE: ComponentTypeSource = 'source';
+export type ComponentType = ComponentTypeClient | ComponentTypeSource;
+export const COMPONENT_TYPES: ComponentType[] = [COMPONENT_TYPE_SOURCE, COMPONENT_TYPE_CLIENT];
+export const isComponentTypeSource = (type: string): type is ComponentTypeSource => type === COMPONENT_TYPE_SOURCE;
+export const isComponentTypeClient = (type: string): type is ComponentTypeClient => type === COMPONENT_TYPE_CLIENT;
+export const isComponentType = (type: string): type is ComponentType => isComponentTypeClient(type) || isComponentTypeSource(type);
 export interface SourceStatusData {
     status: string;
     type: 'spotify'

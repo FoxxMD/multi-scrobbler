@@ -1,3 +1,4 @@
+import { ComponentType } from "../../../../../core/Atomic.js";
 import { RequestRetryOptions } from "../common.js";
 import { CommonClientConfig, CommonClientData } from "./index.js";
 
@@ -27,7 +28,7 @@ export interface MalojaClientConfig extends CommonClientConfig {
      * @default client
      * @examples ["client"]
      * */
-    configureAs?: 'client' | 'source'
+    configureAs?: ComponentType
     data: MalojaClientData
 }
 

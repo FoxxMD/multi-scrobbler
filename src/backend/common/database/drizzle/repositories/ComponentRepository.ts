@@ -4,6 +4,7 @@ import { DbConcrete } from "../drizzleUtils.js";
 import { ComponentNew, ComponentSelect, FindWhere } from "../drizzleTypes.js";
 import { components } from "../schema/schema.js";
 import { generateComponentEntity } from "../entityUtils.js";
+import { ComponentType } from "../../../../../core/Atomic.js";
 
 export class DrizzleComponentRepository extends DrizzleBaseRepository<'components'> {
 
@@ -11,7 +12,7 @@ export class DrizzleComponentRepository extends DrizzleBaseRepository<'component
         super(db, 'components', 'Component', opts);
     }
 
-    findOrInsert = async (data: { mode: 'source' | 'client', type: string, uid?: string, name?: string }): Promise<ComponentSelect> => {
+    findOrInsert = async (data: { mode: ComponentType, type: string, uid?: string, name?: string }): Promise<ComponentSelect> => {
         const where: FindWhere<'components'> = {
             mode: data.mode,
             type: data.type,

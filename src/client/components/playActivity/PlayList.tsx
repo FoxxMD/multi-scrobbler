@@ -1,5 +1,5 @@
 import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Collapsible, SkeletonText } from '@chakra-ui/react';
-import { JsonPlayObject, PlayActivity } from '../../../core/Atomic.js';
+import { ComponentType, JsonPlayObject, PlayActivity } from '../../../core/Atomic.js';
 import { ShortDateDisplay } from '../DateDisplay.js';
 import { TextMuted } from '../TextMuted.js';
 import { LuChevronRight } from "react-icons/lu"
@@ -26,7 +26,7 @@ dayjs.extend(doy);
 export interface ActivityLogProps {
   data: PlayApiCommon[]
   componentId: number
-  componentType: 'source' | 'client'
+  componentType: ComponentType
   sortBy?: 'played' | 'seen'
   render?: 'virtCollapse' | 'virtAccordian' | 'accordian'
 }
@@ -101,7 +101,7 @@ export const PlayList = (props: ActivityLogProps) => {
   }
 }
 
-const VirtualizedCollapse = (props: { data: PlayApiCommon[], componentId: number, componentType: 'source' | 'client' }) => {
+const VirtualizedCollapse = (props: { data: PlayApiCommon[], componentId: number, componentType: ComponentType }) => {
   const {
     data,
   } = props;
@@ -262,7 +262,7 @@ const ItemComponent = React.memo((props: {index: number, activity, componentId: 
       )
 });
 
-const VirtualizedAccordian = (props: { data: PlayApiCommon[], componentId: number, componentType: 'source' | 'client' }) => {
+const VirtualizedAccordian = (props: { data: PlayApiCommon[], componentId: number, componentType: ComponentType }) => {
   const {
     data,
   } = props;
@@ -312,7 +312,7 @@ const VirtualizedAccordian = (props: { data: PlayApiCommon[], componentId: numbe
   );
 }
 
-const PlainAccordian = (props: { data: PlayApiCommon[], componentId: number, componentType: 'source' | 'client', sortBy: 'played' | 'seen' }) => {
+const PlainAccordian = (props: { data: PlayApiCommon[], componentId: number, componentType: ComponentType, sortBy: 'played' | 'seen' }) => {
   const { 
     data = [],
     sortBy
@@ -434,7 +434,7 @@ export const PlayListSkeleton = () => {
   );
 }
 
-export const ListContainerFetchable = (props: { componentId: number, componentType: 'source' | 'client' } & Pick<ComponentProps<typeof PlayList>, 'render'>) => {
+export const ListContainerFetchable = (props: { componentId: number, componentType: ComponentType } & Pick<ComponentProps<typeof PlayList>, 'render'>) => {
   const { isPending, isError, data, error } = useQuery({
     queryKey: ['components', props.componentId, 'plays', {order: 'desc', sort: 'seenAt'}],
     queryFn: queryFn

@@ -1,4 +1,4 @@
-import { UnixTimestamp } from "../../../../../core/Atomic.js"
+import { ComponentType, UnixTimestamp } from "../../../../../core/Atomic.js"
 import { RequestRetryOptions } from "../common.js"
 import { CommonClientConfig, CommonClientData } from "./index.js"
 
@@ -74,7 +74,7 @@ export interface KoitoClientConfig extends CommonClientConfig {
      * @default client
      * @examples ["client"]
      * */
-    configureAs?: 'client' | 'source'
+    configureAs?: ComponentType
     data: KoitoClientData
 }
 
