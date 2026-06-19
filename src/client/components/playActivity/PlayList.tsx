@@ -1,61 +1,21 @@
-import { Accordion, Span, Stack, Text, Box, Separator, HStack, Flex, IconButton, Container, SkeletonText } from '@chakra-ui/react';
+import { Accordion, Span, Stack, Text, Box, HStack, Flex, Container, SkeletonText, Collapsible, ScrollArea } from '@chakra-ui/react';
 import { ComponentType } from '../../../core/Atomic.js';
-import React, { ComponentProps, Fragment } from "react"
+import React, { ComponentProps, Fragment, useMemo, useCallback } from "react"
 import dayjs, { Dayjs } from 'dayjs';
 import doy from 'dayjs/plugin/dayOfYear.js';
 import { VscDebugRestart } from "react-icons/vsc";
 import { ActivityDetailFetchable, ActivityDetails, ActivitySummary, ActivitySummaryFetchable } from '../ActivityDetail.js';
 import "./PlayList.scss";
-import { PlayApiCommon, PlayApiCommonDetailed, SortPlaysByProps } from '../../../core/Api.js';
-import { QueryPlaysOpts } from '../../../backend/common/database/drizzle/repositories/PlayRepository.js';
+import { PlayApiCommonDetailed } from '../../../core/Api.js';
 import { useQuery } from '@tanstack/react-query';
 import { ErrorAlert } from '../ErrorAlert.js';
 import { tanQueries } from '../../queries/index.js';
+import { VirtualizedListNormal } from './VirtualListNormal.js';
+import { VirtualizedListDynamic } from './VirtualListDynamic.js';
+import { VirtualizedListExp } from './VirtualListExperimental.js';
+import { ActivityLogProps, generateGroupPlays, GroupHeader } from './ListParts.js';
 
 dayjs.extend(doy);
-
-export interface ActivityLogProps extends SortPlaysByProps {
-  data: PlayApiCommon[]
-  componentId: number
-  componentType: ComponentType
-  render?: 'virtCollapse' | 'virtAccordian' | 'accordian'
-  query: QueryPlaysOpts
-  live?: boolean
-}
-
-interface GroupInfo {
-  count: number
-  date: Dayjs
-}
-
-interface GroupData {
-  plays: PlayApiCommon[]
-  date: Dayjs
-}
-
-const generateGroupPlays = (data: PlayApiCommon[]): GroupData[] => {
-
-  if(data.length === 0) {
-    return [];
-  }
-  const groupsReduced = data.reduce((acc: { groups: GroupData[], active?: GroupData }, curr, index) => {
-    const date = dayjs(curr.play.data.playDate);
-    if (acc.active === undefined) {
-      return { ...acc, active: { plays: [curr], date } };
-    }
-    if (acc.active.date.dayOfYear() !== date.dayOfYear()) {
-      return { groups: [...acc.groups, acc.active], active: { plays: [curr], date } }
-    }
-
-    return { groups: acc.groups, active: { ...acc.active, plays: acc.active.plays.concat(curr) } };
-  }, { groups: [] });
-
-  if(groupsReduced.active !== null && groupsReduced !== undefined) {
-    return groupsReduced.groups.concat(groupsReduced.active);
-  }
-
-  return groupsReduced.groups;
-}
 
 export const PlayList = (props: ActivityLogProps) => {
 
@@ -67,6 +27,15 @@ export const PlayList = (props: ActivityLogProps) => {
 
   if (render === 'accordian') {
     return <PlainAccordian data={data} sortBy={sortBy} {...props} />
+  }
+  if(render === 'virtNormal') {
+    return <VirtualizedListNormal data={data} sortBy={sortBy} {...props} />
+  }
+  if(render === 'virtDynamic') {
+    return <VirtualizedListDynamic data={data} sortBy={sortBy} {...props} />
+  }
+  if(render === 'virtExp') {
+    return <VirtualizedListExp data={data} sortBy={sortBy} {...props} />
   }
 }
 
@@ -81,28 +50,9 @@ const PlainAccordian = (props: ActivityLogProps) => {
   return (
     <Stack gap="2">
       {groups.map((g) => {
-        let headerText: string;
-        if (g.date.isToday()) {
-          headerText = 'Today';
-        } else {
-          headerText = g.date.format('MMM DD');
-          if (g.date.year() !== dayjs().year()) {
-            headerText += `, ${g.date.year()}`;
-          }
-        }
         return (
-          <Fragment key={headerText}>
-            <Box>
-              <Flex direction="row" justify="space-between">
-
-                <Text fontWeight="semibold">{headerText}</Text>
-
-                <IconButton variant="ghost" size="xs" maxWidth="fit-content">
-                  <VscDebugRestart />
-                </IconButton>
-              </Flex>
-              <Separator orientation="horizontal" height="4" />
-            </Box>
+          <Fragment key={g.date.valueOf()}>
+            <GroupHeader data={{date: g.date, count: g.plays.length}}/>
             <Accordion.Root variant="enclosed" collapsible multiple lazyMount>
               {g.plays.map((activity, index) => {
                 const { play } = activity;
@@ -127,6 +77,7 @@ const PlainAccordian = (props: ActivityLogProps) => {
     </Stack>
   );
 }
+
 
 export const ListContainer = (props?: ComponentProps<typeof PlayList>) => {
   return <Container maxWidth="3xl"><PlayList {...props} /></Container>

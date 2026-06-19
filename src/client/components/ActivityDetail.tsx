@@ -1,5 +1,5 @@
 import React, { ComponentProps, useState, Fragment } from "react"
-import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Icon, useAccordionItemContext, Skeleton } from '@chakra-ui/react';
+import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Icon, useAccordionItemContext, Skeleton, Collapsible } from '@chakra-ui/react';
 import { ComponentType } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
 import { ErrorAlert } from "./ErrorAlert";
@@ -18,6 +18,7 @@ import { MarkOptional } from "ts-essentials";
 import { QueryPlaysOpts } from "../../backend/common/database/drizzle/repositories/PlayRepository";
 import { tanQueries } from "../queries";
 import { PaginatedResponse } from "../../backend/common/database/drizzle/repositories/BaseRepository";
+import { LuChevronRight } from "react-icons/lu";
 
 export interface ActivityDetailProps {
     activity: PlayApiCommonDetailed
@@ -40,7 +41,7 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
     return (
         <Container fluid p="0">
         <Flex justify="space-between">
-            <Stack gap="1" truncate>
+            <Stack alignContent="flex-start" textAlign="start" gap="1">
                 <Span>{play.data.track}</Span>
                 <TextMuted truncate>{play.data.artists.map(x => x.name).join(' / ')}</TextMuted>
                 <HStack gap="1">
@@ -54,7 +55,6 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
             }} justify="flex-start" alignItems="flex-end">
                 <PlayStateBadge maxWidth="fit-content" data={activity} />
             </Stack>
-
         </Flex>
         </Container>
     )
@@ -162,4 +162,57 @@ export const ActivityDetailFetchable = (props: ActivityDetailFetchableProps) => 
     }
 
     return <ActivityDetails componentType={props.componentType} key={data?.uid} activity={data}/>
+}
+
+export const ActivityCollapsible = (props: ActivitySummaryProps & { key?: string, live?: boolean, componentId: number, query: QueryPlaysOpts }) => {
+    const {
+        activity: {
+            play
+        } = {},
+        activity,
+        sortBy,
+        live = false
+    } = props;
+    return (
+        <Collapsible.Root key={props.key}
+
+            lazyMount
+            _open={{
+                background: "var(--chakra-colors-bg-subtle)"
+            }}
+            style={{
+                borderColor: "var(--chakra-colors-border)",
+                borderWidth: '1px',
+            }}
+        >
+                <Collapsible.Trigger
+                    userSelect="text"
+                    w="full"
+                    paddingY="3"
+                    display="flex"
+                    gap="2"
+                    alignItems="center"
+                    truncate cursor="pointer"
+                    style={{
+                        paddingBlock: "var(--chakra-spacing-2)",
+                        paddingInline: "var(--chakra-spacing-4)"
+                    }}
+                >
+                    <Collapsible.Indicator
+                        transition="transform 0.2s"
+                        _open={{ transform: "rotate(90deg)" }}
+                    >
+                        <LuChevronRight />
+                    </Collapsible.Indicator>
+                    {live ? <ActivitySummaryFetchable activityUid={activity.uid} {...props} /> : <ActivitySummary componentType={props.componentType} activity={activity} sortBy={sortBy} />}
+                </Collapsible.Trigger>
+            <Collapsible.Content borderTopColor="gray.border"
+                style={{
+                    paddingBlock: "var(--chakra-spacing-4)",
+                    paddingInline: "var(--chakra-spacing-4)"
+                }}>
+                {live ? <ActivityDetailFetchable componentId={props.componentId} componentType={props.componentType} query={props.query} uid={activity.uid} /> : <ActivityDetails  {...props} activity={activity as PlayApiCommonDetailed} />}
+            </Collapsible.Content>
+        </Collapsible.Root>
+    )
 }
