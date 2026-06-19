@@ -4,7 +4,7 @@ import { http, HttpResponse, delay } from 'msw';
 
 import { fn } from 'storybook/test';
 import { Container } from '@chakra-ui/react';
-import { PlayList } from "../client/components/playActivity/PlayList.js";
+import { ListContainerFetchable, PlayList } from "../client/components/playActivity/PlayList.js";
 import {Provider} from "../client/components/Provider";
 import { generateJsonPlays, normalizePlays } from "../core/PlayTestUtils.js";
 import { ErrorLike, JsonPlayObject } from "../core/Atomic.js";
@@ -14,6 +14,7 @@ import dayjs from "dayjs";
 import { asJsonPlayObject } from "../core/PlayMarshalUtils.js";
 import { generatePlayApiCommon, generatePlayApiCommonDetailed } from "../core/tests/utils/apiFixtures.js";
 import { PlayApiCommonDetailed } from "../core/Api.js";
+import { PaginatedResponse } from "../backend/common/database/drizzle/repositories/BaseRepository.js";
 
 const stack = "Scrobble Submit Error: Failed to submit to Listenbrainz (listen_type single)\n    at ListenbrainzApiClient.submitListen (/app/src/backend/common/vendor/ListenbrainzApiClient.ts:246:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async ListenbrainzScrobbler.doScrobble (/app/src/backend/scrobblers/ListenbrainzScrobbler.ts:87:28)\n    at async ListenbrainzScrobbler.scrobble (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:679:28)\n    at async ListenbrainzScrobbler.processDeadLetterScrobble (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:920:39)\n    at async ListenbrainzScrobbler.processDeadLetterQueue (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:894:43)\n    at async PromisePoolExecutor.handler (/app/src/backend/tasks/heartbeatClients.ts:35:21)\n    at async PromisePoolExecutor.waitForActiveTaskToFinish (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:375:9)\n    at async PromisePoolExecutor.waitForProcessingSlot (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:368:13)\n    at async PromisePoolExecutor.process (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:354:13)";
 
@@ -32,6 +33,42 @@ const errorExample: ErrorLike = {
     }
 }
 
+const generatePlays = async () => {
+  const queued = normalizePlays(generateArray(7, () => generatePlayWithLifecycle()), { endDate: dayjs() }).map(x => {
+    const jsonPlay = asJsonPlayObject(x);
+    return generatePlayApiCommonDetailed({ playOpts: [{ state: 'queued', play: jsonPlay }], inputOpts: [{ play: jsonPlay }] })
+  });
+
+  const scrobbledPlay = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle({ lifecycleSteps: { preCompare: [true, 'skipped', true] } })));
+  const scrobbledApi = generatePlayApiCommonDetailed({
+    playOpts: [{ play: scrobbledPlay, state: 'scrobbled' }],
+    inputOpts: [{ play: scrobbledPlay }]
+  });
+
+  const scrobbleErrorPlay = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle(), { error: true }));
+
+  const scrobbleError = generatePlayApiCommonDetailed({
+    playOpts: [{ play: scrobbleErrorPlay, state: 'failed' }],
+    inputOpts: [{ play: scrobbleErrorPlay }]
+  });
+
+  const promisedScrobbled = generateArray(10, () => playWithLifecycleScrobble(generatePlayWithLifecycle({ lifecycleSteps: { preCompare: [true, 'skipped', true] } })));
+  const promised = await Promise.all(promisedScrobbled);
+  const yesterdayScrobbled = normalizePlays(promised, { endDate: dayjs().subtract(1, 'd').subtract(100, 'm') }).map((x) => {
+    const jPlay = asJsonPlayObject(x);
+    return generatePlayApiCommonDetailed({
+      playOpts: [{ play: jPlay, state: 'scrobbled' }],
+      inputOpts: [{ play: jPlay }]
+    });
+  });
+  return [
+    ...queued,
+    scrobbledApi,
+    scrobbleError,
+    ...yesterdayScrobbled
+  ];
+}
+
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
   title: 'Examples/ActivityLog',
@@ -43,10 +80,10 @@ const meta = preview.meta({
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],
   // More on argTypes: https://storybook.js.org/docs/api/argtypes
-  args: {
-     data:[
-      ] ,
-  },
+  // args: {
+  //    data:[
+  //     ] ,
+  // },
   render: function Render(args, { loaded: { data } }) { return (<PlayList {...args} data={data ?? []}/>) },
 decorators: [
     (Story) => (<Provider><Container maxWidth="4xl"><Story/></Container></Provider>),
@@ -55,6 +92,7 @@ decorators: [
 });
 
 let playData: PlayApiCommonDetailed[] = [];
+let livePlayData: PlayApiCommonDetailed[] = [];
 
 // More on writing stories with args: https://storybook.js.org/docs/writing-stories/args
 export const List = meta.story({
@@ -65,7 +103,7 @@ export const List = meta.story({
   parameters: {
   msw: {
     handlers: [
-      http.get<{uid: string}>('/api/plays/:uid', async ({ params }) => {
+      http.get<{uid: string}>('/api/components/:componentId/play/:uid', async ({ params }) => {
         const existing = playData.find(x => x.uid === params.uid);
         if(existing !== undefined) {
           return HttpResponse.json(existing);
@@ -79,40 +117,55 @@ export const List = meta.story({
   //render: function Render(args) { return (<ChakraProvider><MyList></MyList></ChakraProvider>) }
   loaders: [
   async () => {
-    const queued = normalizePlays(generateArray(7,() => generatePlayWithLifecycle()), {endDate: dayjs()}).map(x => {
-      const jsonPlay = asJsonPlayObject(x);
-      return generatePlayApiCommonDetailed({playOpts: [{state: 'queued', play: jsonPlay}], inputOpts: [{play: jsonPlay}]})
-  });
-
-    const scrobbledPlay = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle({lifecycleSteps: {preCompare: [true, 'skipped', true]}})));
-    const scrobbledApi = generatePlayApiCommonDetailed({ 
-      playOpts: [{ play: scrobbledPlay, state: 'scrobbled'}],
-      inputOpts: [{play: scrobbledPlay}]
-    });
-
-    const scrobbleErrorPlay = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle(), {error: true}));
-
-    const scrobbleError = generatePlayApiCommonDetailed({ 
-      playOpts: [{ play: scrobbleErrorPlay, state: 'failed'}],
-      inputOpts: [{play: scrobbleErrorPlay}]
-    });
-
-    const promisedScrobbled = generateArray(10,() => playWithLifecycleScrobble(generatePlayWithLifecycle({lifecycleSteps: {preCompare: [true, 'skipped', true]}})));
-    const promised = await Promise.all(promisedScrobbled);
-    const yesterdayScrobbled = normalizePlays(promised, {endDate: dayjs().subtract(1, 'd').subtract(100, 'm')}).map((x) => { 
-      const jPlay = asJsonPlayObject(x);
-      return generatePlayApiCommonDetailed({ 
-      playOpts: [{ play: jPlay, state: 'scrobbled'}],
-      inputOpts: [{play: jPlay}]
-    });
-  });
-    playData = [        
-      ...queued,
-      scrobbledApi,
-      scrobbleError,
-      ...yesterdayScrobbled
-    ];
+    playData = await generatePlays()
     return {data: playData};
   }
 ]
+});
+
+export const ListLive = meta.story({
+  component: ListContainerFetchable,
+  render: function Render(args, { loaded: { data } }) { return (<ListContainerFetchable {...args}/>) },
+  args: {
+    render: "accordian",
+    componentId: 1,
+    componentType: 'source'
+  },
+  parameters: {
+    msw: {
+      handlers: [
+        http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params }) => {
+          if(livePlayData.length === 0) {
+            livePlayData = await generatePlays();
+          }
+          const res: PaginatedResponse<PlayApiCommonDetailed> = {
+            data: livePlayData,
+            meta: {
+              offset: 0,
+              limit: 100
+            }
+          }
+          return HttpResponse.json(res);
+        }),
+        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
+          if(livePlayData.length === 0) {
+            livePlayData = await generatePlays();
+          }
+          const existing = livePlayData.find(x => x.uid === params.uid);
+          if (existing !== undefined) {
+            return HttpResponse.json(existing);
+          }
+          return HttpResponse.json(generatePlayApiCommonDetailed());
+        }),
+      ],
+    },
+  },
+
+  //render: function Render(args) { return (<ChakraProvider><MyList></MyList></ChakraProvider>) }
+  loaders: [
+    async () => {
+      playData = await generatePlays()
+      return { data: playData };
+    }
+  ]
 });
