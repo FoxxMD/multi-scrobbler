@@ -20,9 +20,9 @@ import {
 } from "@flamefrontend/sse-runtime-react";
 import { SourcePlayerJson } from "../../../core/Atomic.js";
 import { CountLiveIndicator, DateIndicator, DeadLetterIndicator, QueuedIndicator } from "./Stats.js";
-import { StateBadge } from "./StateBadge.js";
 import { ListContainerFetchable, PlayListSkeleton } from "../playActivity/PlayList.js";
 import { useParams } from "react-router-dom";
+import { ComponentStateBadge } from "../Badges.js";
 
 export const MSComponentHeading = (props: { data?: Pick<ComponentCommonApiJson, 'name' | 'mode' | 'type'>, fetchable?: boolean }) => {
     if (props.data === undefined) {
@@ -78,7 +78,7 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
             <Flex justifyContent="flex-end" rowGap="6" wrap="wrap">
                 <Box marginEnd="auto"><MSComponentHeading data={props.data} /></Box>
                 <Stack alignItems="flex-end">
-                <StateBadge size="lg" maxWidth="fit-content" data={props.data} />
+                <ComponentStateBadge size="lg" maxWidth="fit-content" data={props.data} />
                 <Text>{props.data.status}</Text>
                 </Stack>
             </Flex>

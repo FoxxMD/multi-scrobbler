@@ -9,10 +9,10 @@ import dayjs, { Dayjs } from 'dayjs';
 import doy from 'dayjs/plugin/dayOfYear.js';
 import { VscDebugRestart } from "react-icons/vsc";
 import { GroupedVirtuoso, Components, LogLevel } from 'react-virtuoso'
-import { ActivityDetailFetchable, ActivityDetails } from '../ActivityDetail.js';
+import { ActivityDetailFetchable, ActivityDetails, ActivitySummary } from '../ActivityDetail.js';
 import { sortByNewestPlayDate, sortByNewestSeenDate } from '../../../core/PlayUtils.js';
 import "./PlayList.scss";
-import { PlayApiCommon, PlayApiCommonDetailed } from '../../../core/Api.js';
+import { PlayApiCommon, PlayApiCommonDetailed, SortPlaysByProps } from '../../../core/Api.js';
 import { QueryPlaysOpts } from '../../../backend/common/database/drizzle/repositories/PlayRepository.js';
 import ky from 'ky';
 import { baseUrl } from '../../utils/index.js';
@@ -312,7 +312,7 @@ const VirtualizedAccordian = (props: { data: PlayApiCommon[], componentId: numbe
   );
 }
 
-const PlainAccordian = (props: { data: PlayApiCommon[], componentId: number, componentType: ComponentType, sortBy: 'played' | 'seen' }) => {
+const PlainAccordian = (props: { data: PlayApiCommon[], componentId: number, componentType: ComponentType } & SortPlaysByProps) => {
   const { 
     data = [],
     sortBy
@@ -348,29 +348,10 @@ const PlainAccordian = (props: { data: PlayApiCommon[], componentId: number, com
                 const { play } = activity;
                 return (
                   <Accordion.Item key={index} value={index.toString()}>
-                    <Flex justify="space-between">
-                      <Accordion.ItemTrigger truncate cursor="pointer">
-                        <Accordion.ItemIndicator />
-                        <Stack gap="1" truncate>
-                          <Span>{play.data.track}</Span>
-                          <TextMuted truncate>{play.data.artists.map(x => x.name).join(' / ')}</TextMuted>
-                          <HStack gap="1">
-                            <ShortDateDisplay date={sortBy === 'played' ? play.data.playDate : play.meta?.seenAt} prefix={sortBy === 'played' ? 'Played' : 'Seen'} /><Separator orientation="vertical" height="4" />
-                            <TextMuted>{play.meta?.source}</TextMuted>
-                          </HStack>
-                        </Stack>
-                      </Accordion.ItemTrigger>
-                      <Stack style={{
-                        paddingBlock: "var(--accordion-padding-y)",
-                        paddingInline: "var(--accordion-padding-x)"
-                      }} justify="flex-start" alignItems="flex-end">
-                        <StatusBadge maxWidth="fit-content" data={activity} />
-                        {activity.state === 'failed' ? <IconButton variant="ghost" size="xs" maxWidth="fit-content">
-                          <VscDebugRestart />
-                        </IconButton> : null}
-                      </Stack>
-
-                    </Flex>
+                    <Accordion.ItemTrigger truncate cursor="pointer">
+                      <Accordion.ItemIndicator />
+                    <ActivitySummary componentType={props.componentType} activity={activity} sortBy={sortBy}/>
+                    </Accordion.ItemTrigger>
                     <Accordion.ItemContent>
                       <Accordion.ItemBody borderTopColor="gray.border" >
                         <ActivityDetailFetchable componentId={props.componentId} componentType={props.componentType} uid={activity.uid} />

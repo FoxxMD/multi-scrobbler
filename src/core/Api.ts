@@ -137,3 +137,8 @@ export type MsSseEvent<T extends object = Record<string, any>> = {
     scrobbleDequeued: MsSseEventPayload
     client: T
 }
+
+export type SortPlaysBy = 'played' | 'seen';
+export interface SortPlaysByProps {
+    sortBy: SortPlaysBy
+}

@@ -21,7 +21,7 @@ import {
 } from "@flamefrontend/sse-runtime-react";
 import { SourcePlayerJson } from "../../../core/Atomic.js";
 import { CountLiveIndicator, DeadLetterIndicator, QueuedIndicator } from "./Stats.js";
-import { StateBadge } from "./StateBadge.js";
+import { ComponentStateBadge } from "../Badges.js";
 
 export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetchable?: boolean }) => {
         const {
@@ -52,7 +52,7 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
                 <Heading>{data.name}</Heading>
                 <Stack justify="flex-start" alignItems="flex-end">
                     <HStack gap="2">
-                    <StateBadge maxWidth="fit-content" data={props.data} />
+                    <ComponentStateBadge maxWidth="fit-content" data={props.data} />
                     <Separator orientation="vertical" height="4" />
                     <LinkOverlay asChild>
                     <Link to={`components/${props.data.id}`}>

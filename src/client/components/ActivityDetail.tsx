@@ -1,24 +1,62 @@
 import React, { ComponentProps, useState, Fragment } from "react"
 import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Icon, useAccordionItemContext, Skeleton } from '@chakra-ui/react';
-import { ComponentType, ErrorLike, PlayActivity } from "../../core/Atomic";
+import { ComponentType } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
 import { ErrorAlert } from "./ErrorAlert";
 import { AiOutlineExclamationCircle } from "react-icons/ai";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { ExpandCollapse } from "./ExpandCollapse";
-import { PlayApiCommon, PlayApiCommonDetailed } from "../../core/Api";
+import { PlayApiCommon, PlayApiCommonDetailed, SortPlaysBy, SortPlaysByProps } from "../../core/Api";
 import { QueryFunctionContext, queryOptions, useQuery } from '@tanstack/react-query';
 import ky from 'ky';
 import { baseUrl } from "../utils";
+import { ShortDateDisplay } from "./DateDisplay";
+import { TextMuted } from "./TextMuted";
+import { VscDebugRestart } from "react-icons/vsc";
+import { PlayStateBadge } from "./Badges";
 
 export interface ActivityDetailProps {
     activity: PlayApiCommonDetailed
     componentType: ComponentType
 }
 
-export interface ActivitySummaryProps {
+export interface ActivitySummaryProps extends SortPlaysByProps {
     activity: PlayApiCommon
+    componentType: ComponentType
+}
 
+export const ActivitySummary = (props: ActivitySummaryProps) => {
+    const {
+        activity: {
+            play
+        } = {},
+        activity,
+        sortBy
+    } = props;
+    return (
+        <Container fluid p="0">
+        <Flex justify="space-between">
+            <Stack gap="1" truncate>
+                <Span>{play.data.track}</Span>
+                <TextMuted truncate>{play.data.artists.map(x => x.name).join(' / ')}</TextMuted>
+                <HStack gap="1">
+                    <ShortDateDisplay date={sortBy === 'played' ? play.data.playDate : play.meta?.seenAt} prefix={sortBy === 'played' ? 'Played' : 'Seen'} /><Separator orientation="vertical" height="4" />
+                    <TextMuted>{play.meta?.source}</TextMuted>
+                </HStack>
+            </Stack>
+            <Stack style={{
+                paddingBlock: "var(--accordion-padding-y)",
+                paddingInline: "var(--accordion-padding-x)"
+            }} justify="flex-start" alignItems="flex-end">
+                <PlayStateBadge maxWidth="fit-content" data={activity} />
+                {activity.state === 'failed' ? <IconButton variant="ghost" size="xs" maxWidth="fit-content">
+                    <VscDebugRestart />
+                </IconButton> : null}
+            </Stack>
+
+        </Flex>
+        </Container>
+    )
 }
 
 export const ActivityDetails = (props: ActivityDetailProps) => {

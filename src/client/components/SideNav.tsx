@@ -92,7 +92,7 @@ export const SideNavItems = (props: {items: SideNavProps[], currentUrl?: string}
     </>)
 }
 
-export const StatusBadge = (props: BadgeProps) => (
+const StatusBadge = (props: BadgeProps) => (
   <Badge
     size="xs"
     textStyle="xs"
