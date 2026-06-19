@@ -92,7 +92,7 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
                 <Box marginEnd="auto"><MSComponentStats {...props}/></Box>
             </Flex>
             <PlayersContainer data={props.data} live={props.live}/>
-            <ListContainerFetchable render="accordian" componentType={props.data.mode} componentId={props.data.id}/>
+            <ListContainerFetchable render="virtDynamic" componentType={props.data.mode} componentId={props.data.id}/>
         </Flex>
     )
 }

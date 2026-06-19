@@ -5,11 +5,14 @@ import { http, HttpResponse, delay, sse } from 'msw';
 import { Container } from '@chakra-ui/react';
 import { ComponentDetailedDesktop } from "../client/components/msComponent/MSComponentDetailed.js";
 import {Provider} from "../client/components/Provider";
-import { generateClientApiJson, generateSourceApiJson, generateSourcePlayerJson } from "../core/tests/utils/apiFixtures.js";
-import { MsSseEvent } from "../core/Api.js";
+import { generateClientApiJson, generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList, generateSourceApiJson, generateSourcePlayerJson } from "../core/tests/utils/apiFixtures.js";
+import { MsSseEvent, PlayApiCommonDetailed } from "../core/Api.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
 import { sseProviderOptions } from "../client/AppNext.js";
 import { faker } from "@faker-js/faker";
+import { PaginatedResponse } from "../backend/common/database/drizzle/repositories/BaseRepository.js";
+
+let livePlayData: PlayApiCommonDetailed[] = [];
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
@@ -18,6 +21,33 @@ const meta = preview.meta({
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
+    msw: {
+      handlers: [
+        http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params }) => {
+          if(livePlayData.length === 0) {
+            livePlayData = await generatePlayApiCommonDetailedList();
+          }
+          const res: PaginatedResponse<PlayApiCommonDetailed> = {
+            data: livePlayData,
+            meta: {
+              offset: 0,
+              limit: 100
+            }
+          }
+          return HttpResponse.json(res);
+        }),
+        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
+          if(livePlayData.length === 0) {
+            livePlayData = await generatePlayApiCommonDetailedList();
+          }
+          const existing = livePlayData.find(x => x.uid === params.uid);
+          if (existing !== undefined) {
+            return HttpResponse.json(existing);
+          }
+          return HttpResponse.json(generatePlayApiCommonDetailed());
+        }),
+      ],
+    },
   },
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],

@@ -109,7 +109,7 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
   } else if (isError) {
     rendered = <ErrorAlert error={error} />
   } else {
-    rendered = <PlayList data={data.data} live {...props} sortBy="played" query={{order: 'desc', sort: 'playedAt'}} />;
+    rendered = <PlayList render="virtDynamic" data={data.data} live {...props} sortBy="played" query={{order: 'desc', sort: 'playedAt'}} />;
   }
 
   return rendered; // <Container maxWidth="3xl">{rendered}</Container>

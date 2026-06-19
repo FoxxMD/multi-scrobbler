@@ -1,3 +1,4 @@
+import '../client/wdyr.js';
 import preview from "../../.storybook/preview.js";
 import React from 'react';
 import { http, HttpResponse, delay } from 'msw';
@@ -12,7 +13,7 @@ import {playWithLifecycleScrobble, generatePlayWithLifecycle} from '../core/test
 import { generateArray } from "../core/DataUtils.js";
 import dayjs from "dayjs";
 import { asJsonPlayObject } from "../core/PlayMarshalUtils.js";
-import { generatePlayApiCommon, generatePlayApiCommonDetailed } from "../core/tests/utils/apiFixtures.js";
+import { generatePlayApiCommon, generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList } from "../core/tests/utils/apiFixtures.js";
 import { PlayApiCommonDetailed } from "../core/Api.js";
 import { PaginatedResponse } from "../backend/common/database/drizzle/repositories/BaseRepository.js";
 
@@ -31,42 +32,6 @@ const errorExample: ErrorLike = {
       message: "read ECONNRESET",
       stack: "Error: read ECONNRESET\n    at TLSWrap.onStreamRead (node:internal/stream_base_commons:218:20)\n    at TLSWrap.callbackTrampoline (node:internal/async_hooks:130:17)"
     }
-}
-
-const generatePlays = async () => {
-  const queued = normalizePlays(generateArray(7, () => generatePlayWithLifecycle()), { endDate: dayjs() }).map(x => {
-    const jsonPlay = asJsonPlayObject(x);
-    return generatePlayApiCommonDetailed({ playOpts: [{ state: 'queued', play: jsonPlay }], inputOpts: [{ play: jsonPlay }] })
-  });
-
-  const scrobbledPlay = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle({ lifecycleSteps: { preCompare: [true, 'skipped', true] } })));
-  const scrobbledApi = generatePlayApiCommonDetailed({
-    playOpts: [{ play: scrobbledPlay, state: 'scrobbled' }],
-    inputOpts: [{ play: scrobbledPlay }]
-  });
-
-  const scrobbleErrorPlay = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle(), { error: true }));
-
-  const scrobbleError = generatePlayApiCommonDetailed({
-    playOpts: [{ play: scrobbleErrorPlay, state: 'failed' }],
-    inputOpts: [{ play: scrobbleErrorPlay }]
-  });
-
-  const promisedScrobbled = generateArray(10, () => playWithLifecycleScrobble(generatePlayWithLifecycle({ lifecycleSteps: { preCompare: [true, 'skipped', true] } })));
-  const promised = await Promise.all(promisedScrobbled);
-  const yesterdayScrobbled = normalizePlays(promised, { endDate: dayjs().subtract(1, 'd').subtract(100, 'm') }).map((x) => {
-    const jPlay = asJsonPlayObject(x);
-    return generatePlayApiCommonDetailed({
-      playOpts: [{ play: jPlay, state: 'scrobbled' }],
-      inputOpts: [{ play: jPlay }]
-    });
-  });
-  return [
-    ...queued,
-    scrobbledApi,
-    scrobbleError,
-    ...yesterdayScrobbled
-  ];
 }
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
@@ -117,7 +82,7 @@ export const List = meta.story({
   //render: function Render(args) { return (<ChakraProvider><MyList></MyList></ChakraProvider>) }
   loaders: [
   async () => {
-    playData = await generatePlays()
+    playData = await generatePlayApiCommonDetailedList()
     return {data: playData};
   }
 ]
@@ -136,7 +101,7 @@ export const ListLive = meta.story({
       handlers: [
         http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params }) => {
           if(livePlayData.length === 0) {
-            livePlayData = await generatePlays();
+            livePlayData = await generatePlayApiCommonDetailedList();
           }
           const res: PaginatedResponse<PlayApiCommonDetailed> = {
             data: livePlayData,
@@ -149,7 +114,7 @@ export const ListLive = meta.story({
         }),
         http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
           if(livePlayData.length === 0) {
-            livePlayData = await generatePlays();
+            livePlayData = await generatePlayApiCommonDetailedList();
           }
           const existing = livePlayData.find(x => x.uid === params.uid);
           if (existing !== undefined) {
@@ -164,7 +129,7 @@ export const ListLive = meta.story({
   //render: function Render(args) { return (<ChakraProvider><MyList></MyList></ChakraProvider>) }
   loaders: [
     async () => {
-      playData = await generatePlays()
+      playData = await generatePlayApiCommonDetailedList()
       return { data: playData };
     }
   ]

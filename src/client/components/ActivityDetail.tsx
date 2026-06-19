@@ -64,6 +64,7 @@ export const ActivitySummaryFetchable = (props: MarkOptional<ActivitySummaryProp
         const queryClient = useQueryClient();
         const { isPending, isError, data, error } = useSuspenseQuery({
         ...tanQueries.activities.single(props.componentId, props.activityUid),
+        staleTime: Infinity,
         initialData: () => {
             const data = queryClient.getQueryData(tanQueries.activities.list(props.componentId, props.query).queryKey) as PaginatedResponse<PlayApiCommonDetailed> | undefined;
             if(data !== undefined) {
@@ -174,7 +175,7 @@ export const ActivityCollapsible = (props: ActivitySummaryProps & { key?: string
         live = false
     } = props;
     return (
-        <Collapsible.Root key={props.key}
+        <Collapsible.Root key={props.key} unmountOnExit
 
             lazyMount
             _open={{

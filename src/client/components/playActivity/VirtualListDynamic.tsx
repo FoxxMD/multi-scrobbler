@@ -36,15 +36,15 @@ export const VirtualizedListDynamic = (props: ActivityLogProps) => {
     getScrollElement: () => parentRef.current,
     estimateSize: () => 85,
     directDomUpdates: true,
-    debug: true
+    //debug: true
   });
 
-  return (<div
+  return (<Box
     ref={parentRef}
-    className="List"
+    w="full"
     style={{
-      height: 800,
-      width: 800,
+      height: '50vh',
+      // width: 800,
       overflowY: 'auto',
       contain: 'strict',
       overflowAnchor: 'none',
@@ -59,9 +59,18 @@ export const VirtualizedListDynamic = (props: ActivityLogProps) => {
             key={virtualItem.key}
             ref={virtualizer.measureElement}
             style={itemContainerStyle}>
-              {isGroupInfo(item) ? <GroupHeader paddingY="2" data={item} /> : <ActivityCollapsible query={props.query} live={live} sortBy={sortBy} componentId={props.componentId} componentType={props.componentType} activity={item} />}
+              
+              <ItemContainer query={props.query} live={live} sortBy={sortBy} componentId={props.componentId} componentType={props.componentType} activity={item} paddingY="2" data={item}/>
+              {/*isGroupInfo(item) ? <GroupHeader paddingY="2" data={item} /> : <ActivityCollapsible query={props.query} live={live} sortBy={sortBy} componentId={props.componentId} componentType={props.componentType} activity={item} />*/}
             </Box>)
       })}
     </Box>
-  </div>);
+  </Box>);
+}
+
+const ItemContainer = (props: ComponentProps<typeof GroupHeader> & ComponentProps<typeof ActivityCollapsible>) => {
+  if(isGroupInfo(props.data)) {
+    return <GroupHeader paddingY="2" data={props.data} />
+  }
+  return <ActivityCollapsible query={props.query} live={props.live} sortBy={props.sortBy} componentId={props.componentId} componentType={props.componentType} activity={props.activity} />
 }

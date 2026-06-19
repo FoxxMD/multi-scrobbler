@@ -1,8 +1,8 @@
 import { faker } from "@faker-js/faker";
 import { ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi } from "../../Api.js";
 import { CLIENT_INGRESS_QUEUE, JsonPlayObject, PlayObject, PlayState, QUEUE_STATUSES, SOURCE_SOT, SourcePlayerJson, sourceSotTypes } from "../../Atomic.js";
-import { generatePlay } from "../../PlayTestUtils.js";
-import { generatePlayInput, randomPlayState } from "./fixtures.js";
+import { generatePlay, normalizePlays } from "../../PlayTestUtils.js";
+import { generatePlayInput, generatePlayWithLifecycle, playWithLifecycleScrobble, randomPlayState } from "./fixtures.js";
 import { asJsonPlayObject } from "../../PlayMarshalUtils.js";
 import { generatePlayUid } from "../../StringUtils.js";
 import dayjs from "dayjs";
@@ -13,6 +13,7 @@ import { ClientType, clientTypes } from "../../../backend/common/infrastructure/
 import { ComponentSelect } from "../../../backend/common/database/drizzle/drizzleTypes.js";
 import { CALCULATED_PLAYER_STATUSES, isClientType, REPORTED_PLAYER_STATUSES } from "../../../backend/common/infrastructure/Atomic.js";
 import { faMarker } from "@fortawesome/free-solid-svg-icons";
+import { generateArray } from "../../DataUtils.js";
 
 export const generatePlayApiCommon = (commonData: Partial<PlayApiCommon> & {play?: JsonPlayObject | PlayObject } = {}, ...playOpts: Parameters<typeof generatePlay>): PlayApiCommon => {
     let play: JsonPlayObject | PlayObject;
@@ -290,4 +291,40 @@ export const LOG_MESSAGE_FIXTURE = {
 export const logsApiResponse = () => {
     const time = dayjs().subtract(10, 'm').unix();
     return {data: messages.map((x, index) => ({line: x, time: time + index, levelLabel: 'debug', level: 'debug'})) }
+}
+
+export const generatePlayApiCommonDetailedList = async () => {
+      const queued = normalizePlays(generateArray(7, () => generatePlayWithLifecycle()), { endDate: dayjs() }).map(x => {
+        const jsonPlay = asJsonPlayObject(x);
+        return generatePlayApiCommonDetailed({ playOpts: [{ state: 'queued', play: jsonPlay }], inputOpts: [{ play: jsonPlay }] })
+      });
+    
+      const scrobbledPlay = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle({ lifecycleSteps: { preCompare: [true, 'skipped', true] } })));
+      const scrobbledApi = generatePlayApiCommonDetailed({
+        playOpts: [{ play: scrobbledPlay, state: 'scrobbled' }],
+        inputOpts: [{ play: scrobbledPlay }]
+      });
+    
+      const scrobbleErrorPlay = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle(), { error: true }));
+    
+      const scrobbleError = generatePlayApiCommonDetailed({
+        playOpts: [{ play: scrobbleErrorPlay, state: 'failed' }],
+        inputOpts: [{ play: scrobbleErrorPlay }]
+      });
+    
+      const promisedScrobbled = generateArray(10, () => playWithLifecycleScrobble(generatePlayWithLifecycle({ lifecycleSteps: { preCompare: [true, 'skipped', true] } })));
+      const promised = await Promise.all(promisedScrobbled);
+      const yesterdayScrobbled = normalizePlays(promised, { endDate: dayjs().subtract(1, 'd').subtract(100, 'm') }).map((x) => {
+        const jPlay = asJsonPlayObject(x);
+        return generatePlayApiCommonDetailed({
+          playOpts: [{ play: jPlay, state: 'scrobbled' }],
+          inputOpts: [{ play: jPlay }]
+        });
+      });
+      return [
+        ...queued,
+        scrobbledApi,
+        scrobbleError,
+        ...yesterdayScrobbled
+      ];
 }
