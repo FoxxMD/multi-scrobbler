@@ -38,7 +38,7 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
         } = data;
         if(Object.keys(players).length > 0) {
             cardHeaderProps.borderBottomWidth="1px";
-            cardHeaderProps.paddingBottom="2";
+            cardHeaderProps.paddingBottom="2px";
             body = (<Card.Body px="3" py="2" paddingTop="3">
                 <PlayersContainer data={data} live={fetchable}/>
             </Card.Body>);

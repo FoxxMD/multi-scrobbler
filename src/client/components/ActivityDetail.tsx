@@ -53,7 +53,7 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
                 paddingBlock: "var(--accordion-padding-y)",
                 paddingInline: "var(--accordion-padding-x)"
             }} justify="flex-start" alignItems="flex-end">
-                <PlayStateBadge maxWidth="fit-content" data={activity} />
+                <PlayStateBadge maxWidth="fit-content" state={activity.state} />
             </Stack>
         </Flex>
         </Container>

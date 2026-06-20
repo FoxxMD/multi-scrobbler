@@ -5,7 +5,7 @@ import { http, HttpResponse, delay } from 'msw';
 
 import { fn } from 'storybook/test';
 import { Container } from '@chakra-ui/react';
-import { ListContainerFetchable, PlayList } from "../client/components/playActivity/PlayList.js";
+import { ListContainerFetchable, ListContainerFilterable, PlayList } from "../client/components/playActivity/PlayList.js";
 import {Provider} from "../client/components/Provider";
 import { generateJsonPlays, normalizePlays } from "../core/PlayTestUtils.js";
 import { ErrorLike, JsonPlayObject } from "../core/Atomic.js";
@@ -91,6 +91,53 @@ export const List = meta.story({
 export const ListLive = meta.story({
   component: ListContainerFetchable,
   render: function Render(args, { loaded: { data } }) { return (<ListContainerFetchable {...args}/>) },
+  args: {
+    render: "accordian",
+    componentId: 1,
+    componentType: 'source'
+  },
+  parameters: {
+    msw: {
+      handlers: [
+        http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params }) => {
+          if(livePlayData.length === 0) {
+            livePlayData = await generatePlayApiCommonDetailedList();
+          }
+          const res: PaginatedResponse<PlayApiCommonDetailed> = {
+            data: livePlayData,
+            meta: {
+              offset: 0,
+              limit: 100
+            }
+          }
+          return HttpResponse.json(res);
+        }),
+        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
+          if(livePlayData.length === 0) {
+            livePlayData = await generatePlayApiCommonDetailedList();
+          }
+          const existing = livePlayData.find(x => x.uid === params.uid);
+          if (existing !== undefined) {
+            return HttpResponse.json(existing);
+          }
+          return HttpResponse.json(generatePlayApiCommonDetailed());
+        }),
+      ],
+    },
+  },
+
+  //render: function Render(args) { return (<ChakraProvider><MyList></MyList></ChakraProvider>) }
+  loaders: [
+    async () => {
+      playData = await generatePlayApiCommonDetailedList()
+      return { data: playData };
+    }
+  ]
+});
+
+export const ListLiveFilterable = meta.story({
+  component: ListContainerFilterable,
+  render: function Render(args, { loaded: { data } }) { return (<ListContainerFilterable {...args}/>) },
   args: {
     render: "accordian",
     componentId: 1,

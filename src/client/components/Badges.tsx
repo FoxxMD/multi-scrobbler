@@ -3,14 +3,14 @@ import { ComponentProps } from "react";
 import { COMPONENT_STATE, ComponentCommonApiJson, componentStateToFriendly, PlayApiCommon } from "../../core/Api";
 import { capitalize } from "../../core/StringUtils";
 
-export const PlayStateBadge = (props: ComponentProps<typeof Badge> & { data: PlayApiCommon }) => {
+export const PlayStateBadge = (props: ComponentProps<typeof Badge> & { state: PlayApiCommon['state'] }) => {
 
-  const { data, ...rest } = props;
+  const { state, ...rest } = props;
 
   let badgeColor = undefined,
-    badgeText = capitalize(data.state);
+    badgeText = capitalize(state);
 
-  switch (data.state) {
+  switch (state) {
     case 'queued':
       badgeColor = 'gray';
       break;
