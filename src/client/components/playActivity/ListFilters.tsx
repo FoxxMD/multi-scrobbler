@@ -53,7 +53,7 @@ export const PlayStateFilter = (props: PlayStateFilterProps) => {
                 <Select.HiddenSelect />
                 <Select.Label>States</Select.Label>
                 <Select.Control>
-                    <Select.Trigger marginRight="12vh">
+                    <Select.Trigger marginRight="5vh">
                         <SelectValue />
                         {/* <Select.ValueText placeholder="Select Play State" /> */}
                     </Select.Trigger>
@@ -215,7 +215,7 @@ export const PhraseFilter = (props: PhraseFilterProps) => {
         onChange = noop
     } = props;
     return (
-    <TagsInput.Root size="sm" minW="150px" flexShrink="1"  onValueChange={(e) => onChange(e.value)} addOnPaste delimiter=",">
+    <TagsInput.Root size="sm" minW="150px" width="fit-content"  onValueChange={(e) => onChange(e.value)} addOnPaste delimiter=",">
       <TagsInput.Label>Filter Titles, Artists, and Albums</TagsInput.Label>
       <TagsInput.Control>
         <TagsInput.Items />

@@ -116,37 +116,35 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
   return rendered; // <Container maxWidth="3xl">{rendered}</Container>
 }
 
-// export const ListContainerFilterable = (props: { componentId: number, componentType: ComponentType } & Pick<ComponentProps<typeof PlayList>, 'render'>) => {
-//   return (
-//     <Stack gap="4">
-//       <Card.Root size="sm" variant="outline">
-//         <Card.Header {...cardHeaderSeparator}>
-//           Filters
-//         </Card.Header>
-//         <Card.Body px="3" py="4">
-//           <Flex wrap="1" gap="10">
-//             <PlayStateFilter mode={props.componentType} />
-//             <PhraseFilter />
-//             <PlayDateRangeFilter />
-//           </Flex>
-//         </Card.Body>
-//       </Card.Root>
-//       <ListContainerFetchable {...props} />
-//     </Stack>
-//   )
-// }
-
 export const ListContainerFilterable = (props: { componentId: number, componentType: ComponentType } & Pick<ComponentProps<typeof PlayList>, 'render'>) => {
   return (
     <Stack gap="4">
+      <Card.Root size="sm" variant="outline">
+        <Card.Header {...cardHeaderSeparator}>
+          Filters
+        </Card.Header>
+        <Card.Body px="3" py="4">
           <Flex wrap="1" gap="5">
-            
             <PhraseFilter />
             <PlayStateFilter mode={props.componentType} />
           </Flex>
           <PlayDateRangeFilter />
-          
+        </Card.Body>
+      </Card.Root>
       <ListContainerFetchable {...props} />
     </Stack>
   )
 }
+
+// export const ListContainerFilterable = (props: { componentId: number, componentType: ComponentType } & Pick<ComponentProps<typeof PlayList>, 'render'>) => {
+//   return (
+//     <Stack gap="4">
+//           <Flex wrap="1" gap="5">
+//             <PhraseFilter />
+//             <PlayStateFilter mode={props.componentType} />
+//           </Flex>
+//           <PlayDateRangeFilter />
+//       <ListContainerFetchable {...props} />
+//     </Stack>
+//   )
+// }
