@@ -140,10 +140,12 @@ export const ListContainerFilterable = (props: { componentId: number, componentT
   return (
     <Stack gap="4">
           <Flex wrap="1" gap="5">
-            <PlayStateFilter mode={props.componentType} />
+            
             <PhraseFilter />
-            <PlayDateRangeFilter />
+            <PlayStateFilter mode={props.componentType} />
           </Flex>
+          <PlayDateRangeFilter />
+          
       <ListContainerFetchable {...props} />
     </Stack>
   )

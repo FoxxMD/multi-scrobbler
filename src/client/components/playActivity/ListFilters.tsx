@@ -49,11 +49,11 @@ export const PlayStateFilter = (props: PlayStateFilterProps) => {
     const [enabledStates, setEnabledStates] = useState<PlayState[]>([]);
     // maxW="420px"
     return (
-            <Select.Root closeOnSelect={false}  minW="120px" onValueChange={(e) => onChange(e.items.map(x => x.value as PlayState))} multiple collection={selectOptions} size="sm">
+            <Select.Root closeOnSelect={false} width="max-content" flexShrink="1"  minW="120px" onValueChange={(e) => onChange(e.items.map(x => x.value as PlayState))} multiple collection={selectOptions} size="sm">
                 <Select.HiddenSelect />
                 <Select.Label>States</Select.Label>
                 <Select.Control>
-                    <Select.Trigger marginRight="3em">
+                    <Select.Trigger marginRight="12vh">
                         <SelectValue />
                         {/* <Select.ValueText placeholder="Select Play State" /> */}
                     </Select.Trigger>
@@ -122,11 +122,11 @@ export const PlayDateRangeFilter = (props: PlayDateRangeFilterProps) => {
     }, [onChange]);
 
     return (
-        <DatePicker.Root onValueChange={onChangeCB} value={parsedValues} defaultValue={parsedInitialValues} openOnClick selectionMode="range" size="sm" width="min-content">
-            <DatePicker.Label width="fit-content">Play Date Range</DatePicker.Label>
-            <DatePicker.Control width="min-content">
-                <DatePicker.Input index={0} minWidth="100px" flexGrow="0" />
-                <DatePicker.Input index={1} minWidth="100px" flexGrow="0"/>
+        <DatePicker.Root onValueChange={onChangeCB} value={parsedValues} defaultValue={parsedInitialValues} openOnClick selectionMode="range" size="sm" maxW="32rem">
+            <DatePicker.Label>Play Date Range</DatePicker.Label>
+            <DatePicker.Control >
+                <DatePicker.Input index={0} />
+                <DatePicker.Input index={1} />
                 {/* <DatePicker.IndicatorGroup>
                     <DatePicker.Trigger>
                         <LuCalendar />
@@ -215,7 +215,7 @@ export const PhraseFilter = (props: PhraseFilterProps) => {
         onChange = noop
     } = props;
     return (
-    <TagsInput.Root size="sm" minW="150px"  onValueChange={(e) => onChange(e.value)} addOnPaste delimiter=",">
+    <TagsInput.Root size="sm" minW="150px" flexShrink="1"  onValueChange={(e) => onChange(e.value)} addOnPaste delimiter=",">
       <TagsInput.Label>Filter Titles, Artists, and Albums</TagsInput.Label>
       <TagsInput.Control>
         <TagsInput.Items />
