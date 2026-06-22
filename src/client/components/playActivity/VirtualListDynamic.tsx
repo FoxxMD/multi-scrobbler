@@ -1,9 +1,10 @@
-import { Accordion, Span, Stack, Text, Box, Separator, HStack, Flex, IconButton, Container, SkeletonText, Collapsible, ScrollArea, SystemStyleObject } from '@chakra-ui/react';
+import { Accordion, Span, Spinner, Stack, VStack, Text, Box, Separator, HStack, Flex, IconButton, Container, SkeletonText, Collapsible, ScrollArea, SystemStyleObject, EmptyState } from '@chakra-ui/react';
 import React, { ComponentProps, Fragment, useMemo, useCallback } from "react"
 import { ActivityCollapsible } from '../ActivityDetail.js';
 import { type VirtualItem, useVirtualizer } from "@tanstack/react-virtual"
 import { ActivityLogProps, generateFlatItems, GroupHeader, isGroupInfo } from './ListParts.js';
 import { UseInfiniteQueryResult } from '@tanstack/react-query';
+import { LuCaptionsOff } from "react-icons/lu";
 
 const itemContainerStyle: React.ComponentProps<"div">['style'] = {
   position: "absolute",
@@ -68,7 +69,7 @@ export const VirtualizedListDynamic = (props: ActivityLogProps & Pick<UseInfinit
     }
 
     if (
-      lastItem.index >= data.length - 1 &&
+      lastItem.index === data.length - 1 &&
       hasNextPage &&
       !isFetchingNextPage
     ) {
@@ -107,6 +108,9 @@ export const VirtualizedListDynamic = (props: ActivityLogProps & Pick<UseInfinit
       {virtualizer.getVirtualItems().map((virtualItem) => {
         const item = items[virtualItem.index]
         const isLoaderRow = virtualItem.index > data.length - 1
+        if(isLoaderRow && virtualItem.index - data.length > 0) {
+          return null;
+        }
         return (
             <Box w="full"
             data-index={virtualItem.index}
@@ -115,8 +119,13 @@ export const VirtualizedListDynamic = (props: ActivityLogProps & Pick<UseInfinit
             style={itemContainerStyle}>
               {isLoaderRow
                     ? hasNextPage
-                      ? 'Loading more...'
-                      : 'Nothing more to load'
+                      ? (
+                        <VStack>
+                          <Spinner/>
+                        <Text>Loading...</Text>
+                      </VStack>
+                      )
+                      : <NoPlayResults type="additional"/>
                     : <ItemContainer query={props.query} live={live} sortBy={sortBy} componentId={props.componentId} componentType={props.componentType} activity={item} paddingY="2" data={item}/>}
             </Box>)
       })}
@@ -132,4 +141,23 @@ const ItemContainer = (props: ComponentProps<typeof GroupHeader> & ComponentProp
     return <GroupHeader paddingY="2" data={props.data} />
   }
   return <ActivityCollapsible query={props.query} live={props.live} sortBy={props.sortBy} componentId={props.componentId} componentType={props.componentType} activity={props.activity} />
+}
+
+export const NoPlayResults = (props: {type: 'empty' | 'additional'}) => {
+  return (
+  <EmptyState.Root>
+      <EmptyState.Content>
+        <EmptyState.Indicator>
+          <LuCaptionsOff />
+        </EmptyState.Indicator>
+        <EmptyState.Title>No{props.type === 'additional' ? ' more ' :' '}Plays found</EmptyState.Title>
+        <EmptyState.Description>
+            {props.type === 'additional' ? (
+              'There are no more Plays for this search.'
+            ) : 'No Plays were found for this search. Try broadening the filters.'
+            }
+          </EmptyState.Description>
+      </EmptyState.Content>
+    </EmptyState.Root>
+    );
 }

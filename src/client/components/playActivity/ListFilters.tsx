@@ -88,7 +88,7 @@ interface PlayDateRangeFilterProps {
     initialValues?: [string, string]
 }
 
-const todayRange: [string, string] = [toCalendarDateTime(today(tz), new Time(0, 0, 0, 0)).toString(), toCalendarDateTime(today(tz), new Time(23, 59, 59)).toString()];
+export const todayRange: [string, string] = [toCalendarDateTime(today(tz), new Time(0, 0, 0, 0)).toString(), toCalendarDateTime(today(tz), new Time(23, 59, 59)).toString()];
 
 export const PlayDateRangeFilter = (props: PlayDateRangeFilterProps & {containerProps?: ComponentProps<typeof DatePicker.Root>}) => {
     const {

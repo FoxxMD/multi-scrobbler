@@ -1,5 +1,5 @@
 import React, { ComponentProps, useState, Fragment } from "react"
-import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Icon, useAccordionItemContext, Skeleton, Collapsible } from '@chakra-ui/react';
+import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Icon, useAccordionItemContext, Skeleton, SkeletonText, Collapsible } from '@chakra-ui/react';
 import { ComponentType } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
 import { ErrorAlert } from "./ErrorAlert";
@@ -215,4 +215,42 @@ export const ActivityCollapsible = (props: ActivitySummaryProps & { key?: string
             </Collapsible.Content>
         </Collapsible.Root>
     )
+}
+
+export const ActivitySummarySkeleton = () => {
+    return (
+        <Collapsible.Root key="skeleton" disabled>
+            <Collapsible.Trigger
+                userSelect="text"
+                w="full"
+                paddingY="3"
+                display="flex"
+                gap="2"
+                alignItems="center"
+                truncate cursor="pointer"
+                style={{
+                    paddingBlock: "var(--chakra-spacing-2)",
+                    paddingInline: "var(--chakra-spacing-4)"
+                }}
+            >
+                <Collapsible.Indicator
+                    transition="transform 0.2s"
+                    _open={{ transform: "rotate(90deg)" }}
+                >
+                    <LuChevronRight />
+                </Collapsible.Indicator>
+                <Stack>
+                    <Skeleton height="2rem" width="20rem" />
+                    <SkeletonText noOfLines={3} />
+                </Stack>
+            </Collapsible.Trigger>
+            <Collapsible.Content borderTopColor="gray.border"
+                style={{
+                    paddingBlock: "var(--chakra-spacing-4)",
+                    paddingInline: "var(--chakra-spacing-4)"
+                }}>
+                <SkeletonText noOfLines={2} />
+            </Collapsible.Content>
+        </Collapsible.Root>
+    );
 }

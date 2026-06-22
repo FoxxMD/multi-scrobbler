@@ -1,19 +1,19 @@
-import { Accordion, Span, Stack, Text, Box, HStack, Flex, Container, SkeletonText, Wrap, Card } from '@chakra-ui/react';
+import { Accordion, Span, Stack, Text, Box, HStack, Flex, Container, SkeletonText, Wrap, Card, Collapsible } from '@chakra-ui/react';
 import { ComponentType, PlayState, } from '../../../core/Atomic.js';
 import React, { ComponentProps, Fragment, useMemo, useCallback, useState } from "react"
 import dayjs, { Dayjs } from 'dayjs';
 import doy from 'dayjs/plugin/dayOfYear.js';
-import { ActivityDetailFetchable, ActivityDetails, ActivitySummary, ActivitySummaryFetchable } from '../ActivityDetail.js';
+import { ActivityDetailFetchable, ActivityDetails, ActivitySummary, ActivitySummaryFetchable, ActivitySummarySkeleton } from '../ActivityDetail.js';
 import "./PlayList.scss";
 import { PlayApiCommonDetailed } from '../../../core/Api.js';
 import { useQuery, useInfiniteQuery, UseInfiniteQueryResult } from '@tanstack/react-query';
 import { ErrorAlert } from '../ErrorAlert.js';
 import { tanQueries } from '../../queries/index.js';
 import { VirtualizedListNormal } from './VirtualListNormal.js';
-import { VirtualizedListDynamic } from './VirtualListDynamic.js';
+import { NoPlayResults, VirtualizedListDynamic } from './VirtualListDynamic.js';
 import { VirtualizedListExp } from './VirtualListExperimental.js';
 import { ActivityLogProps, generateGroupPlays, GroupHeader } from './ListParts.js';
-import { PhraseFilter, PlayDateRangeFilter, PlayStateFilter } from './ListFilters.js';
+import { PhraseFilter, PlayDateRangeFilter, PlayStateFilter, todayRange } from './ListFilters.js';
 import { cardHeaderSeparator } from '../../utils/ComponentUtils.js';
 import { QueryPlaysOpts, QueryPlaysOptsJson } from '../../../backend/common/database/drizzle/repositories/PlayRepository.js';
 
@@ -85,25 +85,12 @@ export const ListContainer = (props?: ComponentProps<typeof PlayList>) => {
   return <Container maxWidth="3xl"><PlayList {...props} /></Container>
 }
 
-export const PlayListSkeleton = () => {
-  return (
-    <Accordion.Root variant="enclosed" collapsible>
-      <Accordion.Item value="pending">
-        <Accordion.ItemContent>
-          <Accordion.ItemBody borderTopColor="gray.border" >
-            <SkeletonText noOfLines={2} />
-          </Accordion.ItemBody>
-        </Accordion.ItemContent>
-      </Accordion.Item>
-    </Accordion.Root>
-  );
-}
-
 export const ListContainerFetchable = (props: { componentId: number, componentType: ComponentType, filters?: QueryPlaysOptsJson } & Pick<ComponentProps<typeof PlayList>, 'render'>) => {
   const {
     componentId,
     filters = {}
   } = props;
+  const query: QueryPlaysOptsJson = { ...filters, order: 'desc', sort: 'playedAt' };
   const { 
     isPending, 
     isError, 
@@ -115,7 +102,7 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
     isFetchingNextPage,
     status
   } = useInfiniteQuery({
-    ...tanQueries.activities.list(componentId, { ...filters, order: 'desc', sort: 'playedAt' }),
+    ...tanQueries.activities.list(componentId, query),
     initialPageParam: 0,
   getNextPageParam: (lastPage, allPages, lastPageParam) => {
     if (lastPage.data.length < lastPage.meta.limit) {
@@ -125,20 +112,30 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
   },
   });
 
+  const allPlays = useMemo(() => data === undefined ? [] : data.pages.map(x => x.data).flat(),[data]);
+
   let rendered;
-  if (isPending && data === undefined) {
-    rendered = <PlayListSkeleton />;
+  if (isFetching && data === undefined) {
+    rendered = <Stack><ActivitySummarySkeleton /><ActivitySummarySkeleton /><ActivitySummarySkeleton /></Stack>;
   } else if (isError) {
     rendered = <ErrorAlert error={error} />
+  } else if(!isFetching && allPlays.length === 0) {
+    rendered = <NoPlayResults type="empty"/>
   } else {
-    rendered = <PlayList hasNextPage={hasNextPage} fetchNextPage={fetchNextPage} isFetchingNextPage={isFetchingNextPage} render="virtDynamic" data={data.pages.map(x => x.data).flat()} live {...props} sortBy="played" query={{ order: 'desc', sort: 'playedAt' }} />;
+    rendered = <PlayList hasNextPage={hasNextPage} fetchNextPage={fetchNextPage} isFetchingNextPage={isFetchingNextPage} render="virtDynamic" data={data.pages.map(x => x.data).flat()} live {...props} sortBy="played" query={query} />;
   }
 
   return rendered; // <Container maxWidth="3xl">{rendered}</Container>
 }
 
 export const ListContainerFilterable = (props: { componentId: number, componentType: ComponentType } & Pick<ComponentProps<typeof PlayList>, 'render'>) => {
-  const [filters, setFilter] = useState<QueryPlaysOptsJson>({});
+  const [filters, setFilter] = useState<QueryPlaysOptsJson>({
+    playedAt: {
+      type: 'between',
+      range: todayRange,
+      inclusive: true
+    }
+  });
   const setState = useCallback((val: PlayState[]) => {
     setFilter((old) => {
       const {

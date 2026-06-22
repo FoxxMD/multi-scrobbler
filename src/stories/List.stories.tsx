@@ -17,23 +17,7 @@ import { asJsonPlayObject } from "../core/PlayMarshalUtils.js";
 import { generatePlayApiCommon, generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList } from "../core/tests/utils/apiFixtures.js";
 import { PlayApiCommonDetailed } from "../core/Api.js";
 import { PaginatedResponse } from "../backend/common/database/drizzle/repositories/BaseRepository.js";
-
-const stack = "Scrobble Submit Error: Failed to submit to Listenbrainz (listen_type single)\n    at ListenbrainzApiClient.submitListen (/app/src/backend/common/vendor/ListenbrainzApiClient.ts:246:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async ListenbrainzScrobbler.doScrobble (/app/src/backend/scrobblers/ListenbrainzScrobbler.ts:87:28)\n    at async ListenbrainzScrobbler.scrobble (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:679:28)\n    at async ListenbrainzScrobbler.processDeadLetterScrobble (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:920:39)\n    at async ListenbrainzScrobbler.processDeadLetterQueue (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:894:43)\n    at async PromisePoolExecutor.handler (/app/src/backend/tasks/heartbeatClients.ts:35:21)\n    at async PromisePoolExecutor.waitForActiveTaskToFinish (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:375:9)\n    at async PromisePoolExecutor.waitForProcessingSlot (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:368:13)\n    at async PromisePoolExecutor.process (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:354:13)";
-
-const errorExample: ErrorLike = {
-    showStopper: false,
-    name: "Scrobble Submit Error",
-    message: "Failed to submit to Listenbrainz (listen_type single)",
-    stack: `${stack}`,
-    cause: {
-      errno: -104,
-      code: "ECONNRESET",
-      syscall: "read",
-      name: "Error",
-      message: "read ECONNRESET",
-      stack: "Error: read ECONNRESET\n    at TLSWrap.onStreamRead (node:internal/stream_base_commons:218:20)\n    at TLSWrap.callbackTrampoline (node:internal/async_hooks:130:17)"
-    }
-}
+import { QueryPlaysOptsJson } from '../backend/common/database/drizzle/repositories/PlayRepository.js';
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
@@ -63,7 +47,7 @@ let livePlayData: PlayApiCommonDetailed[] = [];
 // More on writing stories with args: https://storybook.js.org/docs/writing-stories/args
 export const List = meta.story({
   args: {
-    render: "accordian"
+    render: "virtDynamic"
   },
 
   parameters: {
@@ -93,7 +77,7 @@ export const ListLive = meta.story({
   component: ListContainerFetchable,
   render: function Render(args, { loaded: { data } }) { return (<ListContainerFetchable {...args}/>) },
   args: {
-    render: "accordian",
+    render: "virtDynamic",
     componentId: 1,
     componentType: 'source'
   },
@@ -140,7 +124,7 @@ export const ListLiveFilterable = meta.story({
   component: ListContainerFilterable,
   render: function Render(args, { loaded: { data } }) { return (<ListContainerFilterable {...args}/>) },
   args: {
-    render: "accordian",
+    render: "virtDynamic",
     componentId: 1,
     componentType: 'source'
   },
@@ -162,6 +146,7 @@ export const ListLiveFilterable = meta.story({
               limit: livePlayData.length
             }
           }
+          await delay(1000);
           return HttpResponse.json(res);
         }),
         http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
@@ -185,4 +170,89 @@ export const ListLiveFilterable = meta.story({
       return { data: playData };
     }
   ]
+});
+
+export const ListLiveEmpty = meta.story({
+  component: ListContainerFilterable,
+  render: function Render(args, { loaded: { data } }) { return (<ListContainerFilterable {...args}/>) },
+  args: {
+    render: "virtDynamic",
+    componentId: 1,
+    componentType: 'source'
+  },
+  parameters: {
+    msw: {
+      handlers: [
+        http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
+          await delay(2000);
+          return HttpResponse.json({data: [], meta: {offset: 0, limit: 100}});
+        }),
+        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
+          if(livePlayData.length === 0) {
+            livePlayData = await generatePlayApiCommonDetailedList();
+          }
+          const existing = livePlayData.find(x => x.uid === params.uid);
+          if (existing !== undefined) {
+            return HttpResponse.json(existing);
+          }
+          return HttpResponse.json(generatePlayApiCommonDetailed());
+        }),
+      ],
+    },
+  }
+});
+
+export const ListLiveNoMorePlay = meta.story({
+  component: ListContainerFilterable,
+  render: function Render(args) { return (<ListContainerFilterable {...args}/>) },
+  args: {
+    render: "virtDynamic",
+    componentId: 1,
+    componentType: 'source'
+  },
+  parameters: {
+    msw: {
+      handlers: [
+        http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
+
+          const url = new URL(request.url)
+          console.log(url.search);
+          const query = qs.parse(url.search, qsOptions) as QueryPlaysOptsJson;
+          console.log(query);
+          const offset = Number.parseInt(query.offset as unknown as string);
+          if(offset > 0) {
+            return HttpResponse.json({
+              data: [],
+              meta: {
+                limit: livePlayData.length,
+                offset: query.offset
+              }
+            });
+          }
+          if(livePlayData.length === 0) {
+            livePlayData = await generatePlayApiCommonDetailedList();
+          }
+          const res: PaginatedResponse<PlayApiCommonDetailed> = {
+            data: livePlayData,
+            meta: {
+              offset: 0,
+              limit: livePlayData.length
+            }
+          }
+          await delay(1000);
+          return HttpResponse.json(res);
+        }),
+        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
+          if(livePlayData.length === 0) {
+            livePlayData = await generatePlayApiCommonDetailedList();
+          }
+          const existing = livePlayData.find(x => x.uid === params.uid);
+          if (existing !== undefined) {
+            return HttpResponse.json(existing);
+          }
+          return HttpResponse.json(generatePlayApiCommonDetailed());
+        }),
+      ],
+    },
+  },
 });

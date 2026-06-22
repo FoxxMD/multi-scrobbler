@@ -23,6 +23,7 @@ import { CountLiveIndicator, DateIndicator, DeadLetterIndicator, QueuedIndicator
 import { ListContainerFetchable, ListContainerFilterable, PlayListSkeleton } from "../playActivity/PlayList.js";
 import { useParams } from "react-router-dom";
 import { ComponentStateBadge } from "../Badges.js";
+import { ActivitySummarySkeleton } from "../ActivityDetail.js";
 
 export const MSComponentHeading = (props: { data?: Pick<ComponentCommonApiJson, 'name' | 'mode' | 'type'>, fetchable?: boolean }) => {
     if (props.data === undefined) {
@@ -116,7 +117,7 @@ const ComponentDetailedSkeleton = () => {
                     </Card.Root>
                 <Box marginEnd="auto"><SkeletonText noOfLines={2}/></Box>
             </Flex>
-            <PlayListSkeleton/>
+            <ActivitySummarySkeleton/>
         </Flex>
     )
 }
