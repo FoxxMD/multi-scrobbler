@@ -46,7 +46,7 @@ export const PlayStateFilter = (props: PlayStateFilterProps) => {
     } = props;
     const availableStates = isComponentTypeSource(mode) ? PLAY_SOURCE_STATE : PLAY_CLIENT_STATE;
     const selectOptions = createListCollection({ items: availableStates.map(x => ({ label: capitalize(x), value: x })) });
-    const [enabledStates, setEnabledStates] = useState<PlayState[]>([]);
+    //const [enabledStates, setEnabledStates] = useState<PlayState[]>([]);
     // maxW="420px"
     return (
             <Select.Root closeOnSelect={false} width="max-content" flexShrink="1"  minW="120px" onValueChange={(e) => onChange(e.items.map(x => x.value as PlayState))} multiple collection={selectOptions} size="sm">

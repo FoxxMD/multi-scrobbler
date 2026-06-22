@@ -1,17 +1,17 @@
 import { createQueryKeys, mergeQueryKeys } from "@lukemorales/query-key-factory";
 import ky from 'ky';
-import { QueryPlaysOpts } from "../../backend/common/database/drizzle/repositories/PlayRepository";
+import { QueryPlaysOpts, QueryPlaysOptsJson } from "../../backend/common/database/drizzle/repositories/PlayRepository";
+import qs from 'qs';
 import { baseUrl } from "../utils";
 import { PaginatedResponse } from "../../backend/common/database/drizzle/repositories/BaseRepository";
 import { PlayApiCommonDetailed } from "../../core/Api";
 
 const activities = createQueryKeys('activities', {
-    list: (componentId: number, filters: QueryPlaysOpts) => ({
+    list: (componentId: number, filters: QueryPlaysOptsJson) => ({
         queryKey: ['components', componentId, 'plays', filters],
         queryFn: (ctx) => ky.get(`components/${componentId}/plays`, {
        baseUrl: baseUrl,
-       // @ts-expect-error
-       searchParams: filters
+       searchParams: qs.stringify(filters)
       }).json<PaginatedResponse<PlayApiCommonDetailed>>()
     }),
     single: (componentId: number, activityUid: string) => ({

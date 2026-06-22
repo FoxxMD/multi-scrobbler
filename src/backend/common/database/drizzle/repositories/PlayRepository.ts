@@ -1,7 +1,9 @@
 import { childLogger, Logger, LoggerAppExtras } from "@foxxmd/logging";
 import { DbConcrete, runTransaction } from "../drizzleUtils.js";
+import clone from 'clone';
+import { Traverse, TraverseContext } from 'neotraverse/modern';
 import { loggerNoop } from "../../../MaybeLogger.js";
-import { ErrorLike, PlayObject, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, TemporalAccuracy } from "../../../../../core/Atomic.js";
+import { DateLike, ErrorLike, PlayObject, REGEX_ISO8601_LOOSE, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, TemporalAccuracy } from "../../../../../core/Atomic.js";
 import { generateInputEntity, generatePlayEntity, PlayEntityOpts, hydratePlaySelect, PlayHydateOptions } from "../entityUtils.js";
 import { playInputs, plays, queueStates, relations } from "../schema/schema.js";
 import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, QueueStateSelect, FindWith, PlaySelectWithQueueStates, WhereClause, PlayWith } from "../drizzleTypes.js";;
@@ -26,24 +28,37 @@ export interface QueueCriteria {
     queueStatus: QueueStateSelect['queueStatus'][] | QueueStateSelect['queueStatus']
 }
 
-export interface PlayWhereOpts {
+export interface PlayWhereOpts<D extends DateLike = Dayjs> {
     state?: PlaySelect['state'][]
     stateNot?: PlaySelect['state'][]
     componentId?: number
-    seenAt?: CompareDateOp
-    playedAt?: CompareDateOp
+    seenAt?: CompareDateOp<D>
+    playedAt?: CompareDateOp<D>
     queues?: QueueCriteria[]
     uid?: string[]
 }
 
 export type WithPlayRelation = 'input' | 'parent' | 'parent-input' | 'queues';
-export interface QueryPlaysOpts extends PlayWhereOpts {
+export interface QueryPlaysOpts<D extends DateLike = Dayjs> extends PlayWhereOpts<D> {
     sort?: 'seenAt' | 'playedAt'
     order?: 'asc' | 'desc'
     with?: WithPlayRelation[]
     limit?: number
     offset?: number
 }
+
+export type QueryPlaysOptsJson = QueryPlaysOpts<string>;
+
+export const asQueryPlaysOpts = (obj: QueryPlaysOptsJson): QueryPlaysOpts<Dayjs> => {
+  const cloned = clone(obj);
+  new Traverse(cloned).forEach((ctx, x) => {
+
+     if (typeof x === 'string' && REGEX_ISO8601_LOOSE.test(x)) {
+        ctx.update(dayjs(x), true);
+    }
+  });
+  return cloned as unknown as QueryPlaysOpts<Dayjs>;
+};
 
 export interface HydrateOpts {
    hydrate?: PlayHydateOptions[] 

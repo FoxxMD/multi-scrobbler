@@ -8,10 +8,11 @@ import { Container } from '@chakra-ui/react';
 import { ListContainerFetchable, ListContainerFilterable, PlayList } from "../client/components/playActivity/PlayList.js";
 import {Provider} from "../client/components/Provider";
 import { generateJsonPlays, normalizePlays } from "../core/PlayTestUtils.js";
-import { ErrorLike, JsonPlayObject } from "../core/Atomic.js";
+import { ErrorLike, JsonPlayObject, qsOptions } from "../core/Atomic.js";
 import {playWithLifecycleScrobble, generatePlayWithLifecycle} from '../core/tests/utils/fixtures'
 import { generateArray } from "../core/DataUtils.js";
 import dayjs from "dayjs";
+import qs from 'qs';
 import { asJsonPlayObject } from "../core/PlayMarshalUtils.js";
 import { generatePlayApiCommon, generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList } from "../core/tests/utils/apiFixtures.js";
 import { PlayApiCommonDetailed } from "../core/Api.js";
@@ -146,10 +147,14 @@ export const ListLiveFilterable = meta.story({
   parameters: {
     msw: {
       handlers: [
-        http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params }) => {
+        http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
           if(livePlayData.length === 0) {
             livePlayData = await generatePlayApiCommonDetailedList();
           }
+          const url = new URL(request.url)
+          console.log(url.search);
+          const query = qs.parse(url.search, qsOptions);
+          console.log(query);
           const res: PaginatedResponse<PlayApiCommonDetailed> = {
             data: livePlayData,
             meta: {

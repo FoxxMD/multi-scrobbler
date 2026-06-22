@@ -37,7 +37,7 @@ import ScrobbleSources from "../sources/ScrobbleSources.js";
 import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
 import prom from 'prom-client';
 import { SimpleError } from "../common/errors/MSErrors.js";
-import { DrizzlePlayRepository, QueryPlaysOpts } from "../common/database/drizzle/repositories/PlayRepository.js";
+import { asQueryPlaysOpts, DrizzlePlayRepository, QueryPlaysOpts } from "../common/database/drizzle/repositories/PlayRepository.js";
 import { playSelectToDeadScrobble } from "../common/database/drizzle/entityUtils.js";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.js";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.js";
@@ -289,7 +289,8 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
             query
         } = req;
 
-        const playRes = await component.getPlaysPaginated(query);
+        const hydratedQuery = asQueryPlaysOpts(query);
+        const playRes = await component.getPlaysPaginated(hydratedQuery);
         //PlayApiCommonDetailed
         // plus paginatioon
         return res.json(playRes);

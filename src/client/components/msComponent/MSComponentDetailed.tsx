@@ -20,7 +20,7 @@ import {
 } from "@flamefrontend/sse-runtime-react";
 import { isComponentTypeSource, SourcePlayerJson } from "../../../core/Atomic.js";
 import { CountLiveIndicator, DateIndicator, DeadLetterIndicator, QueuedIndicator } from "./Stats.js";
-import { ListContainerFetchable, PlayListSkeleton } from "../playActivity/PlayList.js";
+import { ListContainerFetchable, ListContainerFilterable, PlayListSkeleton } from "../playActivity/PlayList.js";
 import { useParams } from "react-router-dom";
 import { ComponentStateBadge } from "../Badges.js";
 
@@ -93,7 +93,7 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
             </Flex>
             <PlayersContainer data={props.data} live={props.live}/>
             <Heading size="3xl">{isComponentTypeSource(props.data.mode) ? 'Plays' : 'Scrobbles'}</Heading>
-            <ListContainerFetchable render="virtDynamic" componentType={props.data.mode} componentId={props.data.id}/>
+            <ListContainerFilterable render="virtDynamic" componentType={props.data.mode} componentId={props.data.id}/>
         </Flex>
     )
 }

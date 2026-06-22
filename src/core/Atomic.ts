@@ -1,11 +1,12 @@
 import { LogDataPretty, LogLevel } from "@foxxmd/logging";
 import { Dayjs } from "dayjs";
 import { AdditionalTrackInfoResponse } from "../backend/common/vendor/listenbrainz/interfaces.js";
-import { Merge, RequiredKeys, StrictOmit } from "ts-essentials";
+import { DeepOmit, Merge, RequiredKeys, StrictOmit } from "ts-essentials";
 import { ErrorObject } from "serialize-error";
 import { PlayPlatformIdStr } from "../backend/common/infrastructure/Atomic.js";
 import { FlowControlTerm, TransformHook } from "../backend/common/infrastructure/Transform.js";
 import { Changeset } from "json-diff-ts";
+import {type IParseBaseOptions } from 'qs'; 
 
 export type ComponentTypeClient = 'client';
 export const COMPONENT_TYPE_CLIENT: ComponentTypeClient = 'client';
@@ -664,4 +665,16 @@ export const QUEUE_STATUS_COMPLETED: QueueStatus = 'completed';
 export const QUEUE_STATUS_FAILED: QueueStatus = 'failed';
 export const QUEUE_STATUSES: QueueStatus[] = [QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, QUEUE_STATUS_QUEUED];
 
+/* https://github.com/ts-essentials/ts-essentials/issues/339#issuecomment-4681920369 */
 export type Replace<Type, Keys extends keyof Type, TReplace> = StrictOmit<Type, Keys> & Record<Keys, TReplace>
+
+export type DeepReplace<Type, Keys extends keyof Type, TReplace> = DeepOmit<Type, Keys> & Record<Keys, TReplace>
+
+export const qsOptions: IParseBaseOptions = { 
+    ignoreQueryPrefix: true, 
+    depth: 5,
+    parameterLimit: 20,
+    arrayLimit: 20,
+    plainObjects: true,
+    allowPrototypes: false
+}

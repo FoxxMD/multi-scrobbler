@@ -6,6 +6,7 @@ import session from 'express-session';
 import { PassThrough } from "node:stream";
 import passport from 'passport';
 import path from "path";
+import qs from 'qs';
 import ViteExpress from "vite-express";
 import { projectDir } from "../common/index.js";
 import { getRoot } from "../ioc.js";
@@ -14,9 +15,11 @@ import { getAddress } from "../utils/NetworkUtils.js";
 import { setupApi } from "./api.js";
 import ScrobbleSources from '../sources/ScrobbleSources.js';
 import ScrobbleClients from '../scrobblers/ScrobbleClients.js';
+import { qsOptions } from '../../core/Atomic.js';
 
 const app = express();
 const router = Router();
+app.set('query parser', (str: string) => qs.parse(str, qsOptions));
 
 export const initServer = async (parentLogger: Logger, appLoggerStream: PassThrough, initialOutput: LogDataPretty[] = [], sources: ScrobbleSources, clients: ScrobbleClients) => {
 

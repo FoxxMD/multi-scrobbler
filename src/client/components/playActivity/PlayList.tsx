@@ -1,5 +1,5 @@
 import { Accordion, Span, Stack, Text, Box, HStack, Flex, Container, SkeletonText, Wrap, Card } from '@chakra-ui/react';
-import { ComponentType, } from '../../../core/Atomic.js';
+import { ComponentType, PlayState, } from '../../../core/Atomic.js';
 import React, { ComponentProps, Fragment, useMemo, useCallback, useState } from "react"
 import dayjs, { Dayjs } from 'dayjs';
 import doy from 'dayjs/plugin/dayOfYear.js';
@@ -15,6 +15,7 @@ import { VirtualizedListExp } from './VirtualListExperimental.js';
 import { ActivityLogProps, generateGroupPlays, GroupHeader } from './ListParts.js';
 import { PhraseFilter, PlayDateRangeFilter, PlayStateFilter } from './ListFilters.js';
 import { cardHeaderSeparator } from '../../utils/ComponentUtils.js';
+import { QueryPlaysOpts, QueryPlaysOptsJson } from '../../../backend/common/database/drizzle/repositories/PlayRepository.js';
 
 dayjs.extend(doy);
 
@@ -98,10 +99,13 @@ export const PlayListSkeleton = () => {
   );
 }
 
-export const ListContainerFetchable = (props: { componentId: number, componentType: ComponentType } & Pick<ComponentProps<typeof PlayList>, 'render'>) => {
-
+export const ListContainerFetchable = (props: { componentId: number, componentType: ComponentType, filters?: QueryPlaysOptsJson } & Pick<ComponentProps<typeof PlayList>, 'render'>) => {
+  const {
+    componentId,
+    filters = {}
+  } = props;
   const { isPending, isError, data, error } = useQuery({
-    ...tanQueries.activities.list(props.componentId, { order: 'desc', sort: 'playedAt' })
+    ...tanQueries.activities.list(componentId, { ...filters, order: 'desc', sort: 'playedAt' })
   });
 
   let rendered;
@@ -117,6 +121,40 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
 }
 
 export const ListContainerFilterable = (props: { componentId: number, componentType: ComponentType } & Pick<ComponentProps<typeof PlayList>, 'render'>) => {
+  const [filters, setFilter] = useState<QueryPlaysOptsJson>({});
+  const setState = useCallback((val: PlayState[]) => {
+    setFilter((old) => {
+      const {
+        state,
+        ...rest
+      } = old;
+      return {
+        ...rest,
+        state: val
+      }
+    });
+  }, [setFilter]);
+  const setDateRange = useCallback((val: [string, string]) => {
+    setFilter((old) => {
+      const {
+        playedAt,
+        ...rest
+      } = old;
+      return {
+        ...rest,
+        playedAt: {
+          type: 'between',
+          range: [val[0], val[1]],
+          inclusive: true
+        }
+      }
+    })
+  }, [setFilter]);
+  // const setPhrases = useCallback((val: string[]) => {
+  //   setFilter((old) => {
+  //     const {} = old;
+  //   })
+  // }, [setFilter]);
   return (
     <Stack gap="4">
       <Card.Root size="sm" variant="outline">
@@ -126,12 +164,12 @@ export const ListContainerFilterable = (props: { componentId: number, componentT
         <Card.Body px="3" py="4">
           <Flex wrap="1" gap="5">
             <PhraseFilter />
-            <PlayStateFilter mode={props.componentType} />
+            <PlayStateFilter onChange={setState} mode={props.componentType} />
           </Flex>
-          <PlayDateRangeFilter />
+          <PlayDateRangeFilter onChange={setDateRange} />
         </Card.Body>
       </Card.Root>
-      <ListContainerFetchable {...props} />
+      <ListContainerFetchable {...props} filters={filters} />
     </Stack>
   )
 }

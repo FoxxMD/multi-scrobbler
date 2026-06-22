@@ -8,6 +8,7 @@ import { capitalize } from "../../../../../core/StringUtils.js";
 import { getConfigByTableName, relations, TableName } from "../schema/schema.js";
 import assert from 'node:assert';
 import { Cacheable } from "cacheable";
+import { DateLike } from "../../../../../core/Atomic.js";
 
 export interface DrizzleRepositoryOpts {
     logger?: Logger
@@ -15,12 +16,12 @@ export interface DrizzleRepositoryOpts {
     componentId?: number
 }
 
-export type CompareDateOp = {
-    type: CompareOpKey<Dayjs>
-    date: Dayjs
+export type CompareDateOp<D extends DateLike = Dayjs> = {
+    type: CompareOpKey<D>
+    date: D
 } | {
     type: 'between',
-    range: [Dayjs, Dayjs],
+    range: [D, D],
     inclusive?: boolean
 }
 
