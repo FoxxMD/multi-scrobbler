@@ -162,11 +162,11 @@ export const ListContainerFilterable = (props: { componentId: number, componentT
           Filters
         </Card.Header>
         <Card.Body px="3" py="4">
-          <Flex wrap="1" gap="5">
+          <Wrap gap="5">
             <PhraseFilter />
             <PlayStateFilter onChange={setState} mode={props.componentType} />
-          </Flex>
-          <PlayDateRangeFilter onChange={setDateRange} />
+          </Wrap>
+          <PlayDateRangeFilter onChange={setDateRange} containerProps={{mt: "2"}} />
         </Card.Body>
       </Card.Root>
       <ListContainerFetchable {...props} filters={filters} />

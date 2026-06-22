@@ -1,4 +1,4 @@
-import { Span, Stack, Text, Box, HStack, Flex, Container, Select, Portal, createListCollection, useSelectContext, DatePicker, VStack, Button, Spacer, TagsInput } from '@chakra-ui/react';
+import { Span, Stack, Text, Box, HStack, Wrap, Flex, Container, Select, Portal, createListCollection, useSelectContext, DatePicker, VStack, Button, Spacer, TagsInput } from '@chakra-ui/react';
 import { ComponentType, isComponentTypeSource, PLAY_CLIENT_STATE, PLAY_SOURCE_STATE, PlayState } from '../../../core/Atomic.js';
 import React, { ComponentProps, Fragment, useMemo, useCallback, useState } from "react"
 import dayjs, { Dayjs } from 'dayjs';
@@ -27,10 +27,10 @@ const SelectValue = () => {
     const select = useSelectContext()
     const items = select.selectedItems as Array<{ label: string; value: PlayState }>
     return (
-        <Select.ValueText maxW="100%" placeholder="Select Play States">
-            <HStack>
+        <Select.ValueText  width="100%" maxWidth="100%" placeholder="Select Play States">
+            <Wrap rowGap="1" columnGap="1" my="1">
                 {items.map((x) => <PlayStateBadge key={x.value} state={x.value}>{x.label}</PlayStateBadge>)}
-            </HStack>
+            </Wrap>
         </Select.ValueText>
     )
 }
@@ -53,14 +53,14 @@ export const PlayStateFilter = (props: PlayStateFilterProps) => {
                 <Select.HiddenSelect />
                 <Select.Label>States</Select.Label>
                 <Select.Control>
-                    <Select.Trigger marginRight="5vh">
+                    <Select.Trigger >
                         <SelectValue />
                         {/* <Select.ValueText placeholder="Select Play State" /> */}
-                    </Select.Trigger>
-                    <Select.IndicatorGroup>
+                        <Select.IndicatorGroup position="relative">
+                            <Select.ClearTrigger />
                         <Select.Indicator />
-                        <Select.ClearTrigger />
                     </Select.IndicatorGroup>
+                    </Select.Trigger>
                 </Select.Control>
                 <Portal>
                     <Select.Positioner>
@@ -90,11 +90,12 @@ interface PlayDateRangeFilterProps {
 
 const todayRange: [string, string] = [toCalendarDateTime(today(tz), new Time(0, 0, 0, 0)).toString(), toCalendarDateTime(today(tz), new Time(23, 59, 59)).toString()];
 
-export const PlayDateRangeFilter = (props: PlayDateRangeFilterProps) => {
+export const PlayDateRangeFilter = (props: PlayDateRangeFilterProps & {containerProps?: ComponentProps<typeof DatePicker.Root>}) => {
     const {
         onChange = noop,
         values,
-        initialValues = todayRange
+        initialValues = todayRange,
+        containerProps = {}
     } = props;
 
     const parsedValues = useMemo(() => {
@@ -122,7 +123,7 @@ export const PlayDateRangeFilter = (props: PlayDateRangeFilterProps) => {
     }, [onChange]);
 
     return (
-        <DatePicker.Root onValueChange={onChangeCB} value={parsedValues} defaultValue={parsedInitialValues} openOnClick selectionMode="range" size="sm" maxW="32rem">
+        <DatePicker.Root {...containerProps} onValueChange={onChangeCB} value={parsedValues} defaultValue={parsedInitialValues} openOnClick selectionMode="range" size="sm" maxW="32rem">
             <DatePicker.Label>Play Date Range</DatePicker.Label>
             <DatePicker.Control >
                 <DatePicker.Input index={0} />
