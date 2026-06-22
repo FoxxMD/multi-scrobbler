@@ -36,6 +36,7 @@ export interface PlayWhereOpts<D extends DateLike = Dayjs> {
     playedAt?: CompareDateOp<D>
     queues?: QueueCriteria[]
     uid?: string[]
+    text?: string[]
 }
 
 export type WithPlayRelation = 'input' | 'parent' | 'parent-input' | 'queues';
@@ -849,6 +850,27 @@ export const buildPlayWhere = (args: PlayWhereOpts): WhereClause<'plays'> => {
             }
         }
     }
+
+    if(args.text !== undefined && args.text.length > 0) {
+        
+        where.AND = [
+            {
+                OR: []
+            }
+        ];
+        let textWhere: typeof where.RAW[] = [];
+        for(const t of args.text) {
+            textWhere.push((p) => sql`lower(json_extract(${p.play}, '$.data.track')) LIKE '%' || ${t.toLocaleLowerCase()} || '%'`)
+            textWhere.push((p) => sql`lower(json_extract(${p.play}, '$.data.artists')) LIKE '%' || ${t.toLocaleLowerCase()} || '%'`)
+            textWhere.push((p) => sql`lower(json_extract(${p.play}, '$.data.album')) LIKE '%' || ${t.toLocaleLowerCase()} || '%'`)
+        }
+        where.AND = [
+            {
+                OR: textWhere.map(x => ({RAW: x}))
+            }
+        ]
+    }
+
     return where;
 }
 
@@ -877,41 +899,3 @@ export const playToRepositoryCreatePlayOpts = (data: MarkOptional<RepositoryCrea
 }
 
 export type RequestPlayQuery = Partial< Record<keyof Exclude<QueryPlaysOpts, 'componentId'>, string>>;
-
-export const queryArgsFromRequest = (rec: RequestPlayQuery): QueryPlaysOpts => {
-
-    const {
-        state,
-        stateNot,
-        uid,
-        with: withQuery,
-        seenAt,
-        playedAt,
-        limit,
-        sort,
-        order,
-        offset,
-        componentId,
-        queues,
-        ...rest
-    } = rec;
-
-    let queryArgs: QueryPlaysOpts = removeEmptyArrays<QueryPlaysOpts>({
-        state: parseArrayFromMaybeString(state) as PlaySelect['state'][],
-        stateNot: parseArrayFromMaybeString(stateNot) as PlaySelect['state'][],
-        uid: parseArrayFromMaybeString(uid),
-        with: parseArrayFromMaybeString(withQuery) as WithPlayRelation[],
-        sort: sort as 'playedAt' | 'seenAt',
-        order: order as 'asc' | 'desc',
-        ...rest
-    });
-
-    if(limit !== undefined) {
-        queryArgs.limit = Number.parseInt(limit);
-    }
-    if(offset !== undefined) {
-        queryArgs.offset = Number.parseInt(offset);
-    }
-
-    return queryArgs;
-}

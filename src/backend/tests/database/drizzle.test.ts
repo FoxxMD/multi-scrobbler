@@ -534,9 +534,23 @@ describe('Repository Operations', function () {
 
             let result: PlaySelect[];
             // https://github.com/drizzle-team/drizzle-orm/discussions/938#discussioncomment-6542336
-            result = await db.select().from(plays).where(
-                sql`json_extract(${plays.play}, '$.meta.source') = 'test1'`
-            );
+            result = await db.query.plays.findMany({
+                where: {
+                    AND: [
+                        {
+                            OR: [
+                                {
+                                    RAW: (p) => sql`lower(json_extract(${p.play}, '$.data.track')) LIKE '%'|| ${playRows[0].play.data.track.substring(0, 5).toLocaleLowerCase()} || '%'`
+                                }
+                            ]
+                        }
+                    ]
+                }
+            });
+            
+            // await db.select().from(plays).where(
+            //     sql`json_extract(${plays.play}, '$.meta.source') = 'test1'`
+            // );
 
             expect(result).length(1);
             expect(result[0].play.meta.source).eq('test1');

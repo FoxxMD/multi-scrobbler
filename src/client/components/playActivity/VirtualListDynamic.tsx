@@ -110,9 +110,7 @@ export const VirtualizedListDynamic = (props: ActivityLogProps & Pick<UseInfinit
       {virtualizer.getVirtualItems().map((virtualItem) => {
         const item = items[virtualItem.index]
         const isLoaderRow = virtualItem.index > data.length - 1
-        if(isLoaderRow && virtualItem.index - data.length > 0) {
-          return null;
-        }
+
         return (
             <Box w="full"
             data-index={virtualItem.index}

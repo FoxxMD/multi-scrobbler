@@ -248,7 +248,6 @@ export const ListFilters = (props: {
     const {
         filters,
         onChange,
-        count
     } = props;
 
     const setState = useCallback((val: PlayState[]) => {
@@ -277,8 +276,12 @@ export const ListFilters = (props: {
         })
     }, [onChange, filters]);
     const setPhrases = useCallback((val: string[]) => {
-        const {} = filters;
-        onChange(filters);
+        const {
+            text,
+            ...rest
+        } = filters;
+        console.log(val);
+        onChange({...rest, text: val});
     }, [onChange, filters]);
 
     return (
@@ -288,7 +291,7 @@ export const ListFilters = (props: {
             </Card.Header>
             <Card.Body px="3" py="4">
                 <Wrap gap="5">
-                    <PhraseFilter />
+                    <PhraseFilter value={filters.text} onChange={setPhrases} />
                     <PlayStateFilter value={filters.state} onChange={setState} mode={props.componentType} />
                 </Wrap>
                 <PlayDateRangeFilter values={(filters.playedAt as CompareDateBetween<string>)?.range} onChange={setDateRange} containerProps={{ mt: "2" }} />

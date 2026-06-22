@@ -345,7 +345,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
     getRecentPlaysApi = async (query: RequestPlayQuery) => {
         const res = await this.playRepo.findPlays({
             limit: 100,
-            ...queryArgsFromRequest(query)
         });
         return res.map((x) => {
             const {id, ...rest} = x;
