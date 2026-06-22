@@ -44,7 +44,7 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
                 <Span truncate marginEnd="auto">{play.data.track}</Span>
                 <PlayStateBadge state={activity.state} />
             </Flex>
-            <TextMuted truncate>{play.data.artists.map(x => x.name).join(' / ')}</TextMuted>
+            <TextMuted textAlign="left" truncate>{play.data.artists.map(x => x.name).join(' / ')}</TextMuted>
             <HStack gap="1">
                 <ShortDateDisplay date={sortBy === 'played' ? play.data.playDate : play.meta?.seenAt} prefix={sortBy === 'played' ? 'Played' : 'Seen'} /><Separator orientation="vertical" height="4" />
                 <TextMuted>{play.meta?.source}</TextMuted>
