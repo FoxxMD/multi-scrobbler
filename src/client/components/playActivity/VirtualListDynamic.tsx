@@ -3,6 +3,7 @@ import React, { ComponentProps, Fragment, useMemo, useCallback } from "react"
 import { ActivityCollapsible } from '../ActivityDetail.js';
 import { type VirtualItem, useVirtualizer } from "@tanstack/react-virtual"
 import { ActivityLogProps, generateFlatItems, GroupHeader, isGroupInfo } from './ListParts.js';
+import { UseInfiniteQueryResult } from '@tanstack/react-query';
 
 const itemContainerStyle: React.ComponentProps<"div">['style'] = {
   position: "absolute",
@@ -34,11 +35,14 @@ const scrollShadowCss: SystemStyleObject = {
   },
 };
 
-export const VirtualizedListDynamic = (props: ActivityLogProps) => {
+export const VirtualizedListDynamic = (props: ActivityLogProps & Pick<UseInfiniteQueryResult, 'hasNextPage' | 'isFetchingNextPage' | 'fetchNextPage'>) => {
   const {
     data = [],
     sortBy,
     live = false,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage
   } = props;
 
   const items = useMemo(() => {
@@ -55,6 +59,29 @@ export const VirtualizedListDynamic = (props: ActivityLogProps) => {
     directDomUpdates: true,
     //debug: true
   });
+
+    React.useEffect(() => {
+    const [lastItem] = [...virtualizer.getVirtualItems()].reverse()
+
+    if (!lastItem) {
+      return
+    }
+
+    if (
+      lastItem.index >= data.length - 1 &&
+      hasNextPage &&
+      !isFetchingNextPage
+    ) {
+      fetchNextPage()
+    }
+  }, [
+    hasNextPage,
+    fetchNextPage,
+    data.length,
+    isFetchingNextPage,
+    virtualizer.getVirtualItems(),
+  ])
+
 
   // doesn't seem like i need this for height to work correctly?
   //
@@ -79,14 +106,18 @@ export const VirtualizedListDynamic = (props: ActivityLogProps) => {
     <Box ref={virtualizer.containerRef} style={containerStyle} >
       {virtualizer.getVirtualItems().map((virtualItem) => {
         const item = items[virtualItem.index]
+        const isLoaderRow = virtualItem.index > data.length - 1
         return (
             <Box w="full"
             data-index={virtualItem.index}
             key={virtualItem.key}
             ref={virtualizer.measureElement}
             style={itemContainerStyle}>
-              
-              <ItemContainer query={props.query} live={live} sortBy={sortBy} componentId={props.componentId} componentType={props.componentType} activity={item} paddingY="2" data={item}/>
+              {isLoaderRow
+                    ? hasNextPage
+                      ? 'Loading more...'
+                      : 'Nothing more to load'
+                    : <ItemContainer query={props.query} live={live} sortBy={sortBy} componentId={props.componentId} componentType={props.componentType} activity={item} paddingY="2" data={item}/>}
             </Box>)
       })}
     </Box>

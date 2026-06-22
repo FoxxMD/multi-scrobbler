@@ -4,7 +4,7 @@ import React, { ComponentProps, Fragment, useMemo, useCallback } from "react"
 import dayjs, { Dayjs } from 'dayjs';
 import doy from 'dayjs/plugin/dayOfYear.js';
 import { PlayApiCommon, PlayApiCommonDetailed, SortPlaysByProps } from '../../../core/Api.js';
-import { QueryPlaysOpts } from '../../../backend/common/database/drizzle/repositories/PlayRepository.js';
+import { QueryPlaysOpts, QueryPlaysOptsJson } from '../../../backend/common/database/drizzle/repositories/PlayRepository.js';
 import { VscDebugRestart } from 'react-icons/vsc';
 import { sortByNewestDate } from '../../../core/PlayUtils.js';
 
@@ -25,7 +25,7 @@ export interface ActivityLogProps extends SortPlaysByProps {
   componentId: number
   componentType: ComponentType
   render?: 'virtNormal' | 'virtDynamic' | 'virtExp' | 'accordian'
-  query: QueryPlaysOpts
+  query: QueryPlaysOptsJson
   live?: boolean
 }
 

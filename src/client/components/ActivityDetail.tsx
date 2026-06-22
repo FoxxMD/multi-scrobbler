@@ -7,7 +7,7 @@ import { AiOutlineExclamationCircle } from "react-icons/ai";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { ExpandCollapse } from "./ExpandCollapse";
 import { PlayApiCommon, PlayApiCommonDetailed, SortPlaysBy, SortPlaysByProps } from "../../core/Api";
-import { QueryFunctionContext, queryOptions, useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import { InfiniteData, QueryFunctionContext, queryOptions, useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import ky from 'ky';
 import { baseUrl } from "../utils";
 import { ShortDateDisplay } from "./DateDisplay";
@@ -15,7 +15,7 @@ import { TextMuted } from "./TextMuted";
 import { VscDebugRestart } from "react-icons/vsc";
 import { PlayStateBadge } from "./Badges";
 import { MarkOptional } from "ts-essentials";
-import { QueryPlaysOpts } from "../../backend/common/database/drizzle/repositories/PlayRepository";
+import { QueryPlaysOpts, QueryPlaysOptsJson } from "../../backend/common/database/drizzle/repositories/PlayRepository";
 import { tanQueries } from "../queries";
 import { PaginatedResponse } from "../../backend/common/database/drizzle/repositories/BaseRepository";
 import { LuChevronRight } from "react-icons/lu";
@@ -53,15 +53,21 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
     );
 }
 
-export const ActivitySummaryFetchable = (props: MarkOptional<ActivitySummaryProps, 'activity'> & { componentId: number, activityUid: string, query: QueryPlaysOpts}) => {
+export const ActivitySummaryFetchable = (props: MarkOptional<ActivitySummaryProps, 'activity'> & { componentId: number, activityUid: string, query: QueryPlaysOptsJson}) => {
         const queryClient = useQueryClient();
         const { isPending, isError, data, error } = useSuspenseQuery({
         ...tanQueries.activities.single(props.componentId, props.activityUid),
         staleTime: Infinity,
         initialData: () => {
-            const data = queryClient.getQueryData(tanQueries.activities.list(props.componentId, props.query).queryKey) as PaginatedResponse<PlayApiCommonDetailed> | undefined;
+            const data = queryClient.getQueryData(tanQueries.activities.list(props.componentId, props.query).queryKey) as InfiniteData<PaginatedResponse<PlayApiCommonDetailed>> | undefined;
             if(data !== undefined) {
-                return data.data.find(x => x.uid === props.activityUid);
+                for(const p of data.pages) {
+                    const res = p.data.find(x => x.uid === props.activityUid);
+                    if(res !== undefined) {
+                        return res;
+                    }
+                }
+                return undefined;
             }
         }
     });
@@ -139,7 +145,7 @@ export interface ActivityDetailFetchableProps {
     uid: string
     componentId: number
     componentType: ComponentType
-    query: QueryPlaysOpts
+    query: QueryPlaysOptsJson
 }
 
 export const ActivityDetailFetchable = (props: ActivityDetailFetchableProps) => {
@@ -158,7 +164,7 @@ export const ActivityDetailFetchable = (props: ActivityDetailFetchableProps) => 
     return <ActivityDetails componentType={props.componentType} key={data?.uid} activity={data}/>
 }
 
-export const ActivityCollapsible = (props: ActivitySummaryProps & { key?: string, live?: boolean, componentId: number, query: QueryPlaysOpts }) => {
+export const ActivityCollapsible = (props: ActivitySummaryProps & { key?: string, live?: boolean, componentId: number, query: QueryPlaysOptsJson }) => {
     const {
         activity: {
             play

@@ -9,10 +9,12 @@ import { PlayApiCommonDetailed } from "../../core/Api";
 const activities = createQueryKeys('activities', {
     list: (componentId: number, filters: QueryPlaysOptsJson) => ({
         queryKey: ['components', componentId, 'plays', filters],
-        queryFn: (ctx) => ky.get(`components/${componentId}/plays`, {
+        queryFn: (ctx) => {
+            return ky.get(`components/${componentId}/plays`, {
        baseUrl: baseUrl,
-       searchParams: qs.stringify(filters)
+       searchParams: qs.stringify({...filters, offset: ctx.pageParam})
       }).json<PaginatedResponse<PlayApiCommonDetailed>>()
+    }
     }),
     single: (componentId: number, activityUid: string) => ({
         queryKey: ['components', componentId, 'play', activityUid],

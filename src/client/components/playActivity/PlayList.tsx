@@ -6,7 +6,7 @@ import doy from 'dayjs/plugin/dayOfYear.js';
 import { ActivityDetailFetchable, ActivityDetails, ActivitySummary, ActivitySummaryFetchable } from '../ActivityDetail.js';
 import "./PlayList.scss";
 import { PlayApiCommonDetailed } from '../../../core/Api.js';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, UseInfiniteQueryResult } from '@tanstack/react-query';
 import { ErrorAlert } from '../ErrorAlert.js';
 import { tanQueries } from '../../queries/index.js';
 import { VirtualizedListNormal } from './VirtualListNormal.js';
@@ -19,7 +19,7 @@ import { QueryPlaysOpts, QueryPlaysOptsJson } from '../../../backend/common/data
 
 dayjs.extend(doy);
 
-export const PlayList = (props: ActivityLogProps) => {
+export const PlayList = (props: ActivityLogProps & Pick<UseInfiniteQueryResult, 'hasNextPage' | 'isFetchingNextPage' | 'fetchNextPage'>) => {
 
   const {
     data = [],
@@ -104,8 +104,25 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
     componentId,
     filters = {}
   } = props;
-  const { isPending, isError, data, error } = useQuery({
-    ...tanQueries.activities.list(componentId, { ...filters, order: 'desc', sort: 'playedAt' })
+  const { 
+    isPending, 
+    isError, 
+    data, 
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetching,
+    isFetchingNextPage,
+    status
+  } = useInfiniteQuery({
+    ...tanQueries.activities.list(componentId, { ...filters, order: 'desc', sort: 'playedAt' }),
+    initialPageParam: 0,
+  getNextPageParam: (lastPage, allPages, lastPageParam) => {
+    if (lastPage.data.length < lastPage.meta.limit) {
+      return undefined
+    }
+    return lastPage.meta.offset + lastPage.meta.limit
+  },
   });
 
   let rendered;
@@ -114,7 +131,7 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
   } else if (isError) {
     rendered = <ErrorAlert error={error} />
   } else {
-    rendered = <PlayList render="virtDynamic" data={data.data} live {...props} sortBy="played" query={{ order: 'desc', sort: 'playedAt' }} />;
+    rendered = <PlayList hasNextPage={hasNextPage} fetchNextPage={fetchNextPage} isFetchingNextPage={isFetchingNextPage} render="virtDynamic" data={data.pages.map(x => x.data).flat()} live {...props} sortBy="played" query={{ order: 'desc', sort: 'playedAt' }} />;
   }
 
   return rendered; // <Container maxWidth="3xl">{rendered}</Container>

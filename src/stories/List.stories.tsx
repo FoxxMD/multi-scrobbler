@@ -108,7 +108,7 @@ export const ListLive = meta.story({
             data: livePlayData,
             meta: {
               offset: 0,
-              limit: 100
+              limit: livePlayData.length
             }
           }
           return HttpResponse.json(res);
@@ -159,7 +159,7 @@ export const ListLiveFilterable = meta.story({
             data: livePlayData,
             meta: {
               offset: 0,
-              limit: 100
+              limit: livePlayData.length
             }
           }
           return HttpResponse.json(res);
