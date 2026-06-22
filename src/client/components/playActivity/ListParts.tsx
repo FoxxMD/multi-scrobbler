@@ -27,6 +27,7 @@ export interface ActivityLogProps extends SortPlaysByProps {
   render?: 'virtNormal' | 'virtDynamic' | 'virtExp' | 'accordian'
   query: QueryPlaysOptsJson
   live?: boolean
+  total?: number
 }
 
 
@@ -49,7 +50,7 @@ export const GroupHeader = (props: { data: GroupInfo } & ComponentProps<typeof B
     <Box {...rest}>
       <Flex direction="row" justify="space-between">
 
-        <Text fontWeight="semibold">{headerText}</Text>
+        <Text fontWeight="semibold">{headerText} ({data.count} Plays)</Text>
 
         <IconButton variant="ghost" size="xs" maxWidth="fit-content">
           <VscDebugRestart />

@@ -1,4 +1,4 @@
-import { Span, Stack, Text, Box, HStack, Wrap, Flex, Container, Select, Portal, createListCollection, useSelectContext, DatePicker, VStack, Button, Spacer, TagsInput } from '@chakra-ui/react';
+import { Span, Stack, Text, Box, HStack, Wrap, Flex, Container, Select, Portal, createListCollection, useSelectContext, DatePicker, VStack, Button, Spacer, TagsInput, Card } from '@chakra-ui/react';
 import { ComponentType, isComponentTypeSource, PLAY_CLIENT_STATE, PLAY_SOURCE_STATE, PlayState } from '../../../core/Atomic.js';
 import React, { ComponentProps, Fragment, useMemo, useCallback, useState } from "react"
 import dayjs, { Dayjs } from 'dayjs';
@@ -18,8 +18,13 @@ import {
     type DateValue,
     toZoned,
     parseDateTime,
-    toCalendarDateTime
+    toCalendarDateTime,
+    parseAbsolute,
+    ZonedDateTime
 } from "@internationalized/date"
+import { QueryPlaysOptsJson } from '../../../backend/common/database/drizzle/repositories/PlayRepository.js';
+import { cardHeaderSeparator } from '../../utils/ComponentUtils.js';
+import { CompareDateBetween } from '../../../backend/common/database/drizzle/repositories/BaseRepository.js';
 
 const noop = (_) => null;
 
@@ -39,17 +44,18 @@ interface PlayStateFilterProps {
     mode: ComponentType
     onChange?: (states: PlayState[]) => void
 }
-export const PlayStateFilter = (props: PlayStateFilterProps) => {
+export const PlayStateFilter = (props: PlayStateFilterProps & {value?: PlayState[] | undefined}) => {
     const {
         mode,
-        onChange = noop
+        onChange = noop,
+        value
     } = props;
     const availableStates = isComponentTypeSource(mode) ? PLAY_SOURCE_STATE : PLAY_CLIENT_STATE;
     const selectOptions = createListCollection({ items: availableStates.map(x => ({ label: capitalize(x), value: x })) });
     //const [enabledStates, setEnabledStates] = useState<PlayState[]>([]);
     // maxW="420px"
     return (
-            <Select.Root closeOnSelect={false} width="max-content" flexShrink="1"  minW="120px" onValueChange={(e) => onChange(e.items.map(x => x.value as PlayState))} multiple collection={selectOptions} size="sm">
+            <Select.Root value={value} closeOnSelect={false} width="max-content" flexShrink="1"  minW="120px" onValueChange={(e) => onChange(e.items.map(x => x.value as PlayState))} multiple collection={selectOptions} size="sm">
                 <Select.HiddenSelect />
                 <Select.Label>States</Select.Label>
                 <Select.Control>
@@ -88,7 +94,7 @@ interface PlayDateRangeFilterProps {
     initialValues?: [string, string]
 }
 
-export const todayRange: [string, string] = [toCalendarDateTime(today(tz), new Time(0, 0, 0, 0)).toString(), toCalendarDateTime(today(tz), new Time(23, 59, 59)).toString()];
+export const todayRange: [string, string] = [toZoned(toCalendarDateTime(today(tz), new Time(0, 0, 0, 0)), tz).toAbsoluteString(), toZoned(toCalendarDateTime(today(tz), new Time(23, 59, 59)), tz).toAbsoluteString()];
 
 export const PlayDateRangeFilter = (props: PlayDateRangeFilterProps & {containerProps?: ComponentProps<typeof DatePicker.Root>}) => {
     const {
@@ -98,32 +104,35 @@ export const PlayDateRangeFilter = (props: PlayDateRangeFilterProps & {container
         containerProps = {}
     } = props;
 
-    const parsedValues = useMemo(() => {
+    const parsedValues = useMemo<[ZonedDateTime, ZonedDateTime]>(() => {
         if (values === undefined) {
             return undefined;
         }
-        return [parseDateTime(values[0]), parseDateTime(values[1])]
+        return [parseAbsolute(values[0], tz), parseAbsolute(values[1], tz)]
     }, [values]);
 
     const parsedInitialValues = useMemo(() => {
         if (initialValues === undefined) {
             return undefined;
         }
-        return [parseDateTime(initialValues[0]), parseDateTime(initialValues[1])]
+        return [parseAbsolute(initialValues[0], tz), parseAbsolute(initialValues[1], tz)]
     }, [initialValues]);
 
+    const [stateVals, setStateVals] = useState<[DatePicker.DateValue, DatePicker.DateValue]>(parsedValues);
+
+
     const onChangeCB = useCallback((e: DatePicker.ValueChangeDetails) => {
-        if (e.value.length !== 2) {
-            return;
-        }
         const start = toZoned(toCalendarDateTime(e.value[0], new Time(0, 0, 0, 0)), tz).toAbsoluteString();
-        const end = toZoned(toCalendarDateTime(e.value[1], new Time(23, 59, 59)), tz).toAbsoluteString();
+        const end = e.value[1] !== undefined ? toZoned(toCalendarDateTime(e.value[1], new Time(23, 59, 59)), tz).toAbsoluteString() : undefined;
         console.log([start, end]);
-        onChange([start, end]);
-    }, [onChange]);
+        setStateVals([e.value[0],e.value[1]]);
+        if(end !== undefined) {
+            onChange([start, end]);
+        }
+    }, [onChange, setStateVals]);
 
     return (
-        <DatePicker.Root {...containerProps} onValueChange={onChangeCB} value={parsedValues} defaultValue={parsedInitialValues} openOnClick selectionMode="range" size="sm" maxW="32rem">
+        <DatePicker.Root {...containerProps} onValueChange={onChangeCB} value={stateVals} defaultValue={parsedInitialValues} openOnClick selectionMode="range" size="sm" maxW="32rem">
             <DatePicker.Label>Play Date Range</DatePicker.Label>
             <DatePicker.Control >
                 <DatePicker.Input index={0} />
@@ -210,13 +219,15 @@ export const PlayDateRangeFilter = (props: PlayDateRangeFilterProps & {container
 
 interface PhraseFilterProps {
     onChange?: (phrases: string[]) => void
+    value?: string[] | undefined
 }
 export const PhraseFilter = (props: PhraseFilterProps) => {
     const {
-        onChange = noop
+        onChange = noop,
+        value
     } = props;
     return (
-    <TagsInput.Root size="sm" minW="150px" width="fit-content"  onValueChange={(e) => onChange(e.value)} addOnPaste delimiter=",">
+    <TagsInput.Root value={value} size="sm" minW="150px" width="fit-content"  onValueChange={(e) => onChange(e.value)} addOnPaste delimiter=",">
       <TagsInput.Label>Filter Titles, Artists, and Albums</TagsInput.Label>
       <TagsInput.Control>
         <TagsInput.Items />
@@ -227,4 +238,62 @@ export const PhraseFilter = (props: PhraseFilterProps) => {
       </Span>
     </TagsInput.Root>
   )
+}
+
+export const ListFilters = (props: {
+    onChange: (e: QueryPlaysOptsJson) => void
+    filters: QueryPlaysOptsJson
+    componentType: ComponentType,
+}) => {
+    const {
+        filters,
+        onChange,
+        count
+    } = props;
+
+    const setState = useCallback((val: PlayState[]) => {
+        const {
+            state,
+            ...rest
+        } = filters;
+
+        onChange({
+            ...rest,
+            state: val
+        });
+    }, [onchange, filters]);
+    const setDateRange = useCallback((val: [string, string]) => {
+        const {
+            playedAt,
+            ...rest
+        } = filters;
+        onChange({
+            ...rest,
+            playedAt: {
+                type: 'between',
+                range: [val[0], val[1]],
+                inclusive: true
+            }
+        })
+    }, [onChange, filters]);
+    const setPhrases = useCallback((val: string[]) => {
+        const {} = filters;
+        onChange(filters);
+    }, [onChange, filters]);
+
+    return (
+        <Card.Root size="sm" variant="outline">
+            <Card.Header {...cardHeaderSeparator}>
+                Filters
+            </Card.Header>
+            <Card.Body px="3" py="4">
+                <Wrap gap="5">
+                    <PhraseFilter />
+                    <PlayStateFilter value={filters.state} onChange={setState} mode={props.componentType} />
+                </Wrap>
+                <PlayDateRangeFilter values={(filters.playedAt as CompareDateBetween<string>)?.range} onChange={setDateRange} containerProps={{ mt: "2" }} />
+            </Card.Body>
+        </Card.Root>
+    )
+
 }

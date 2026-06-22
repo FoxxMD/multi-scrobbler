@@ -43,7 +43,8 @@ export const VirtualizedListDynamic = (props: ActivityLogProps & Pick<UseInfinit
     live = false,
     hasNextPage,
     isFetchingNextPage,
-    fetchNextPage
+    fetchNextPage,
+    total,
   } = props;
 
   const items = useMemo(() => {
@@ -104,6 +105,7 @@ export const VirtualizedListDynamic = (props: ActivityLogProps & Pick<UseInfinit
     css={scrollShadowCss}
   >
     <ScrollArea.Content>
+      {total !== undefined ? <HStack><Separator flex="1"/><Text flexShrink="0">{total} Plays Total</Text><Separator flex="1"/></HStack> : null}
     <Box ref={virtualizer.containerRef} style={containerStyle} >
       {virtualizer.getVirtualItems().map((virtualItem) => {
         const item = items[virtualItem.index]

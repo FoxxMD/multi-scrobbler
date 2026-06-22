@@ -143,7 +143,8 @@ export const ListLiveFilterable = meta.story({
             data: livePlayData,
             meta: {
               offset: 0,
-              limit: livePlayData.length
+              limit: livePlayData.length,
+              total: livePlayData.length,
             }
           }
           await delay(1000);

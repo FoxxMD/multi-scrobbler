@@ -16,15 +16,16 @@ export interface DrizzleRepositoryOpts {
     componentId?: number
 }
 
-export type CompareDateOp<D extends DateLike = Dayjs> = {
+export type CompareDateSingle<D extends DateLike = Dayjs> = {
     type: CompareOpKey<D>
     date: D
-} | {
+}
+export type CompareDateBetween<D extends DateLike = Dayjs> = {
     type: 'between',
     range: [D, D],
     inclusive?: boolean
 }
-
+export type CompareDateOp<D extends DateLike = Dayjs> = CompareDateSingle<D> | CompareDateBetween<D>;
 export interface PaginatedQueryResponse {
     limit: number,
     offset: number

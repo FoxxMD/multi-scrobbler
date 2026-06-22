@@ -1,4 +1,4 @@
-import { Accordion, Span, Stack, Text, Box, HStack, Flex, Container, SkeletonText, Wrap, Card, Collapsible } from '@chakra-ui/react';
+import { Accordion, Span, Stack, Text, Box, HStack, Flex, Container, SkeletonText, Wrap, Card, Collapsible, Separator } from '@chakra-ui/react';
 import { ComponentType, PlayState, } from '../../../core/Atomic.js';
 import React, { ComponentProps, Fragment, useMemo, useCallback, useState } from "react"
 import dayjs, { Dayjs } from 'dayjs';
@@ -13,8 +13,7 @@ import { VirtualizedListNormal } from './VirtualListNormal.js';
 import { NoPlayResults, VirtualizedListDynamic } from './VirtualListDynamic.js';
 import { VirtualizedListExp } from './VirtualListExperimental.js';
 import { ActivityLogProps, generateGroupPlays, GroupHeader } from './ListParts.js';
-import { PhraseFilter, PlayDateRangeFilter, PlayStateFilter, todayRange } from './ListFilters.js';
-import { cardHeaderSeparator } from '../../utils/ComponentUtils.js';
+import { ListFilters, todayRange } from './ListFilters.js';
 import { QueryPlaysOpts, QueryPlaysOptsJson } from '../../../backend/common/database/drizzle/repositories/PlayRepository.js';
 
 dayjs.extend(doy);
@@ -122,10 +121,10 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
   } else if(!isFetching && allPlays.length === 0) {
     rendered = <NoPlayResults type="empty"/>
   } else {
-    rendered = <PlayList hasNextPage={hasNextPage} fetchNextPage={fetchNextPage} isFetchingNextPage={isFetchingNextPage} render="virtDynamic" data={data.pages.map(x => x.data).flat()} live {...props} sortBy="played" query={query} />;
+    rendered = <PlayList total={data?.pages.length > 0 ? data.pages[0].meta.total : undefined} hasNextPage={hasNextPage} fetchNextPage={fetchNextPage} isFetchingNextPage={isFetchingNextPage} render="virtDynamic" data={data.pages.map(x => x.data).flat()} live {...props} sortBy="played" query={query} />;
   }
 
-  return rendered; // <Container maxWidth="3xl">{rendered}</Container>
+  return rendered;
 }
 
 export const ListContainerFilterable = (props: { componentId: number, componentType: ComponentType } & Pick<ComponentProps<typeof PlayList>, 'render'>) => {
@@ -136,67 +135,10 @@ export const ListContainerFilterable = (props: { componentId: number, componentT
       inclusive: true
     }
   });
-  const setState = useCallback((val: PlayState[]) => {
-    setFilter((old) => {
-      const {
-        state,
-        ...rest
-      } = old;
-      return {
-        ...rest,
-        state: val
-      }
-    });
-  }, [setFilter]);
-  const setDateRange = useCallback((val: [string, string]) => {
-    setFilter((old) => {
-      const {
-        playedAt,
-        ...rest
-      } = old;
-      return {
-        ...rest,
-        playedAt: {
-          type: 'between',
-          range: [val[0], val[1]],
-          inclusive: true
-        }
-      }
-    })
-  }, [setFilter]);
-  // const setPhrases = useCallback((val: string[]) => {
-  //   setFilter((old) => {
-  //     const {} = old;
-  //   })
-  // }, [setFilter]);
   return (
     <Stack gap="4">
-      <Card.Root size="sm" variant="outline">
-        <Card.Header {...cardHeaderSeparator}>
-          Filters
-        </Card.Header>
-        <Card.Body px="3" py="4">
-          <Wrap gap="5">
-            <PhraseFilter />
-            <PlayStateFilter onChange={setState} mode={props.componentType} />
-          </Wrap>
-          <PlayDateRangeFilter onChange={setDateRange} containerProps={{mt: "2"}} />
-        </Card.Body>
-      </Card.Root>
+      <ListFilters componentType={props.componentType} filters={filters} onChange={setFilter}/>
       <ListContainerFetchable {...props} filters={filters} />
     </Stack>
   )
 }
-
-// export const ListContainerFilterable = (props: { componentId: number, componentType: ComponentType } & Pick<ComponentProps<typeof PlayList>, 'render'>) => {
-//   return (
-//     <Stack gap="4">
-//           <Flex wrap="1" gap="5">
-//             <PhraseFilter />
-//             <PlayStateFilter mode={props.componentType} />
-//           </Flex>
-//           <PlayDateRangeFilter />
-//       <ListContainerFetchable {...props} />
-//     </Stack>
-//   )
-// }
