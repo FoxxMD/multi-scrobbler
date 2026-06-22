@@ -39,25 +39,18 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
         sortBy
     } = props;
     return (
-        <Container fluid p="0">
-        <Flex justify="space-between">
-            <Stack alignContent="flex-start" textAlign="start" gap="1">
-                <Span>{play.data.track}</Span>
-                <TextMuted truncate>{play.data.artists.map(x => x.name).join(' / ')}</TextMuted>
-                <HStack gap="1">
-                    <ShortDateDisplay date={sortBy === 'played' ? play.data.playDate : play.meta?.seenAt} prefix={sortBy === 'played' ? 'Played' : 'Seen'} /><Separator orientation="vertical" height="4" />
-                    <TextMuted>{play.meta?.source}</TextMuted>
-                </HStack>
-            </Stack>
-            <Stack style={{
-                paddingBlock: "var(--accordion-padding-y)",
-                paddingInline: "var(--accordion-padding-x)"
-            }} justify="flex-start" alignItems="flex-end">
-                <PlayStateBadge maxWidth="fit-content" state={activity.state} />
-            </Stack>
+        <Flex direction="column" width="100%" truncate rowGap="0.5">
+            <Flex width="100%" truncate>
+                <Span truncate marginEnd="auto">{play.data.track}</Span>
+                <PlayStateBadge state={activity.state} />
+            </Flex>
+            <TextMuted truncate>{play.data.artists.map(x => x.name).join(' / ')}</TextMuted>
+            <HStack gap="1">
+                <ShortDateDisplay date={sortBy === 'played' ? play.data.playDate : play.meta?.seenAt} prefix={sortBy === 'played' ? 'Played' : 'Seen'} /><Separator orientation="vertical" height="4" />
+                <TextMuted>{play.meta?.source}</TextMuted>
+            </HStack>
         </Flex>
-        </Container>
-    )
+    );
 }
 
 export const ActivitySummaryFetchable = (props: MarkOptional<ActivitySummaryProps, 'activity'> & { componentId: number, activityUid: string, query: QueryPlaysOpts}) => {
