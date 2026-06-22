@@ -22,7 +22,7 @@ export const AppTitle = (props: { fetchable?: boolean } = {}) => {
             <MobileSidebarNav />
             <LinkBox>
                 <HStack gap="2">
-                    <Image flex="0" maxWidth="30px" height="100%" width="100%" src="/icon.svg"></Image>
+                    <Image maxWidth="30px" height="100%" width="100%" src="/icon.svg"></Image>
                     <LinkOverlay href="/next/">
                         <Heading hideBelow="sm" size="sm">Multi Scrobbler</Heading>
                     </LinkOverlay>
