@@ -76,7 +76,7 @@ export class NtfyWebhookNotifier extends AbstractWebhookNotifier {
             const req: Config = {
                 message: payload.message,
                 topic: this.config.topic,
-                title: payload.title,
+                title: payload.title !== undefined ? `${payload.identifier} - ${payload.title}` : undefined,
                 server: this.endpoint.normal,
                 priority: this.priorities[payload.priority],
             };

@@ -86,7 +86,7 @@ export class AppriseWebhookNotifier extends AbstractWebhookNotifier {
 
     doNotify = async (payload: WebhookPayload) => {
         const body: Record<string, any> = {
-            title: payload.title,
+            title: payload.title !== undefined ? `${payload.identifier} - ${payload.title}` : undefined,
             body: payload.message,
             tags: this.tags.join(','), // a comma 'OR's the tags https://github.com/caronc/apprise-api?tab=readme-ov-file#persistent-stateful-storage-solution
             type: convertPriorityToType(payload.priority)

@@ -66,7 +66,7 @@ export class GotifyWebhookNotifier extends AbstractWebhookNotifier {
                 server: this.endpoint.normal,
                 app: this.config.token,
                 message: payload.message,
-                title: payload.title,
+                title: payload.title !== undefined ? `${payload.identifier} - ${payload.title}` : undefined,
                 priority: this.priorities[payload.priority]
             });
             this.logger.verbose(`Pushed notification.`);

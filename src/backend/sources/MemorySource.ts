@@ -349,6 +349,14 @@ export default class MemorySource extends AbstractSource {
             }
         }
 
+        if(this.playerSourceOfTruth === SOURCE_SOT.PLAYER) {
+            if(this.players.size > 0) {
+                this.setStatus(`Monitoring ${this.players.size} active Players`);
+            } else {
+                this.setStatus(`Monitoring for new Players`);
+            }
+        }
+
         return newStatefulPlays;
     }
 

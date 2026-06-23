@@ -193,13 +193,26 @@ export class WebScrobblerSource extends MemorySource {
 
         await this.processRecentPlays([stateData]);
 
-        if (stateData.play.meta.nowPlaying === false && this.isValidScrobble(stateData.play)) {
-            const discovered = await this.discover([stateData.play]);
-            if (discovered.length > 0) {
-                await this.scrobble(discovered);
+        if(this.isValidScrobble(stateData.play)) {
+            if(stateData[0].play.meta.nowPlaying === true) {
+                this.setStatus('Received Now Playing');
+            } else {
+                this.setStatus('Received Play');
+            }
+            if (stateData.play.meta.nowPlaying === false) {
+                const discovered = await this.discover([stateData.play]);
+                if (discovered.length > 0) {
+                    await this.scrobble(discovered);
+                }
             }
         }
+
         this.componentRepo.updateById(this.dbComponent.id, {lastActiveAt: dayjs()});
+        this.setStatus('Waiting for Plays');
+    }
+
+    protected async postInitialize(): Promise<void> {
+        this.setStatus('Waiting for Plays');
     }
 
     getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new NowPlayingPlayerState(logger,  id, opts);

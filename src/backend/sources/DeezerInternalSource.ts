@@ -208,6 +208,7 @@ export default class DeezerInternalSource extends MemorySource {
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
 
+        this.setStatus('Checking for new Plays');
         try {
             const req = this.agent.post('https://www.deezer.com/ajax/gw-light.php')
                 .query({

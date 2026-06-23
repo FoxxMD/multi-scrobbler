@@ -94,7 +94,14 @@ export class EndpointListenbrainzSource extends MemorySource {
         // if request was an import (multiple plays) then we don't want to process for "now playing" player
         // so only process if we only have one payload in the request
         if(stateData.length === 1) {
+            if(stateData[0].play.meta.nowPlaying === true) {
+                this.setStatus('Received Now Playing');
+            } else {
+                this.setStatus('Received single Play');
+            }
             await this.processRecentPlays(stateData);
+        } else {
+            this.setStatus('Received batch Plays');
         }
 
         const discoverable = stateData.filter(x => x.play.meta.nowPlaying === false && this.isValidScrobble(x.play));
@@ -103,6 +110,11 @@ export class EndpointListenbrainzSource extends MemorySource {
             await this.scrobble(discovered);
         }
         this.componentRepo.updateById(this.dbComponent.id, {lastActiveAt: dayjs()});
+        this.setStatus('Waiting for Plays');
+    }
+
+    protected async postInitialize(): Promise<void> {
+        this.setStatus('Waiting for Plays');
     }
 
     getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new NowPlayingPlayerState(logger,  id, opts);

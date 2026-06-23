@@ -33,6 +33,9 @@ export default abstract class AbstractInitializable {
     }
 
     public abstract notify(payload: WebhookPayload): Promise<void>;
+    protected setStatus(status: string): void {
+        return;
+    }
 
     protected abstract getIdentifier(): string;
 
@@ -44,6 +47,7 @@ export default abstract class AbstractInitializable {
 
         this.initController = new AbortController();
         return spawn(this.initController.signal, async (signal, {defer, fork}) => {
+            this.setStatus('Initializing...');
 
             defer(async () => {
                 this.initializing = false;
@@ -76,6 +80,7 @@ export default abstract class AbstractInitializable {
                 await this.checkConnection(force);
                 await this.testAuth(force);
                 this.logger.info('Fully Initialized!');
+                this.setStatus('Initialized!');
                 try {
                     await this.postInitialize();
                 } catch (e) {
@@ -84,7 +89,7 @@ export default abstract class AbstractInitializable {
                 return true;
             } catch(e) {
                 if(notify) {
-                    await this.notify({title: `${this.getIdentifier()} - ${notifyTitle}`, message: truncateStringToLength(500)(messageWithCausesTruncatedDefault(e)), priority: 'error'});
+                    await this.notify({identifier: this.getIdentifier(), title: notifyTitle, message: truncateStringToLength(500)(messageWithCausesTruncatedDefault(e)), priority: 'error'});
                 }
                 throw new Error('Initialization failed', {cause: e});
             } finally {

@@ -62,7 +62,6 @@ export interface RecentlyPlayedOptions {
 
 export default abstract class AbstractSource extends AbstractComponent implements Authenticatable {
 
-    name: string;
     declare type: SourceType;
 
     declare config: SourceConfig;
@@ -95,7 +94,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
     manualListening?: boolean
 
     scheduler: ToadScheduler = new ToadScheduler();
-    emitter: EventEmitter;
 
     protected SCROBBLE_BACKLOG_COUNT: number = 30;
 
@@ -179,9 +177,11 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 return false;
             }
             try {
+                this.setStatus('Attempting to initialize...');
                 await this.initialize({force: false, notify: true, notifyTitle: 'Could not initialize automatically'});
             } catch (e) {
                 this.logger.error(new Error('Could not initialize automatically', {cause: e}));
+                this.setStatus('Could not initialzie automatically');
                 return false;
             }
 
@@ -196,6 +196,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                     return false;
                 } else {
                     this.logger.info({labels: 'Heartbeat'}, 'Should be polling, attempting to start polling...');
+                    this.setStatus('Attempting to start polling...');
                     this.poll({force: false, notify: true}).catch(e => this.logger.error(e));
                 }
                 return true;
@@ -285,7 +286,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             ...super.getApiData(),
             ...this.getComponentApiData(),
             type: this.type,
-            status: 'idle',
+            status: this.status,
             players: {},
             tracksDiscovered: this.tracksDiscovered,
             sot: SOURCE_SOT.HISTORY,
@@ -383,9 +384,10 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return undefined;
     }
 
-    discover = async (plays: PlayObject[], options: { checkAll?: boolean, signal?: AbortSignal, [key: string]: any } = {}): Promise<PlayObject[]> => {
+    discover = async (plays: PlayObject[], options: { checkAll?: boolean, signal?: AbortSignal, discoverLocation?: string, [key: string]: any } = {}): Promise<PlayObject[]> => {
         const newDiscoveredPlays: PlayObject[] = [];
 
+        this.setStatus(`Discovering new Plays${options.discoverLocation !== undefined ? ` from ${options.discoverLocation} ` : ''}`);
         for await(const play of pMapIterable(plays, this.staggerMappers.preCompare(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 3})) {
             options.signal?.throwIfAborted();
             const existing = await this.existingDiscovered(play);
@@ -398,11 +400,14 @@ export default abstract class AbstractSource extends AbstractComponent implement
             }
         }
         if(newDiscoveredPlays.length > 0) {
+            this.setStatus(`Discovered ${newDiscoveredPlays.length} new Plays${options.discoverLocation !== undefined ? ` from ${options.discoverLocation} ` : ''}`);
             try {
                 await this.componentRepo.updateById(this.dbComponent.id, {countLive: this.dbComponent.countLive + newDiscoveredPlays.length});
             } catch (e) {
                 this.logger.warn(new Error('Unable to update discovered count', {cause: e}));
             }
+        } else {
+            this.setStatus(`No new Plays discovered${options.discoverLocation !== undefined ? ` from ${options.discoverLocation} ` : ''}`);
         }
         newDiscoveredPlays.sort(sortByOldestPlayDate);
 
@@ -426,6 +431,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         if(newDiscoveredPlays.length > 0) {
             if(!this.shouldScrobble(options.discoverLocation)) {
                 await this.playRepo.setStateById('discarded', newDiscoveredPlays.map(x => x.id));
+                this.setStatus(`Discarded ${newDiscoveredPlays} new Plays${options.discoverLocation !== undefined ? ` from ${options.discoverLocation} ` : ''}`);
                 return;
             }
             newDiscoveredPlays.sort(sortByOldestPlayDate);
@@ -438,6 +444,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                     scrobbleTo: this.clients
                 }
             });
+            this.setStatus(`Forwarded ${newDiscoveredPlays.length} new Plays to Clients${options.discoverLocation !== undefined ? ` from ${options.discoverLocation} ` : ''}`);
         }
     }
 
@@ -452,10 +459,12 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
             if(scrobbleBacklog === false) {
                 this.logger.info('Source is able to scrobble backlog but was it disabled by user.');
+                this.setStatus('Not scrobbling backlog because it was disabled by user');
                 return;
             }
 
             this.logger.info('Discovering backlogged tracks from recently played API...');
+            this.setStatus('Discovering backlogged tracks from recently played API...');
             let backlogPlays: PlayObject[] = [];
             const {
                 scrobbleBacklogCount = this.SCROBBLE_BACKLOG_COUNT
@@ -495,10 +504,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return [];
     }
 
-    public notify = async (payload: WebhookPayload) => {
-        this.emitter.emit('notify', payload);
-    }
-
     onPollPreAuthCheck = async (): Promise<boolean> => true
 
     onPollPostAuthCheck = async (): Promise<boolean> => true
@@ -516,8 +521,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 await this.initialize(options);
             } catch (e) {
                 this.logger.error(new Error('Cannot start polling because Source is not ready', {cause: e}));
+                this.setStatus('Polling Error');
                 if(notify) {
-                    await this.notify( {title: `${this.getIdentifier()} - Polling Error`, message: `Cannot start polling because Source is not ready: ${truncateStringToLength(500)(messageWithCausesTruncatedDefault(e))}`, priority: 'error'});
+                    await this.notify( {title: `Polling Error`, message: `Cannot start polling because Source is not ready: ${truncateStringToLength(500)(messageWithCausesTruncatedDefault(e))}`, priority: 'error'});
                 }
                 return;
             }
@@ -529,12 +535,15 @@ export default abstract class AbstractSource extends AbstractComponent implement
             return;
         }
 
+        this.setStatus('Starting polling...');
+
         this.abortController = new AbortController();
         this.pollingPromise = spawn(this.abortController.signal, async (signal, { defer, fork }) => {
             defer(async () => {
                 this.polling = false;
                 this.isSleeping = false;
                 this.emitEvent('statusChange', {status: 'Idle'});
+                this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({state: COMPONENT_STATE.IDLE});
             });
 
             fork(async (fSignal) => {
@@ -543,7 +552,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 } catch (e) {
                     throwIfAborted(fSignal);
                     await this.notify({
-                        title: `${this.getIdentifier()} - Polling Error`,
+                        title: `Polling Error`,
                         message: 'Polling interrupted because error occurred while processing backlog.',
                         priority: 'error'
                     });
@@ -552,13 +561,17 @@ export default abstract class AbstractSource extends AbstractComponent implement
             });
             await this.startPolling(signal);
         }).catch((e) => {
+            let status: string;
             if (isAbortError(e)) {
                 const err = generateLoggableAbortReason('Polling stopped', this.abortController.signal);
                 this.logger.info(err);
                 this.logger.trace(e)
+                status = 'Polling cancelled';
             } else {
                 this.logger.warn(new Error('Polling stopped with error', { cause: e }));
+                status = 'Polling stopped with error';
             }
+            this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({state: COMPONENT_STATE.IDLE, status});
         }).finally(() => {
             this.abortController = undefined;
             this.pollingPromise = undefined;
@@ -603,12 +616,12 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 if (this.pollRetries < maxRetries) {
                     const delayFor = pollingBackoff(this.pollRetries + 1, retryMultiplier);
                     this.logger.info(`Poll retries (${this.pollRetries}) less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay...`);
-                    await this.notify({title: `${this.getIdentifier()} - Polling Retry`, message: `Encountered error while polling but retries (${this.pollRetries}) are less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay. | Error: ${e.message}`, priority: 'warn'});
+                    await this.notify({title: `Polling Retry`, message: `Encountered error while polling but retries (${this.pollRetries}) are less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay. | Error: ${e.message}`, priority: 'warn'});
                     await sleep((delayFor) * 1000);
                     this.pollRetries++;
                 } else {
                     this.logger.warn(`Poll retries (${this.pollRetries}) equal to max poll retries (${maxRetries}), stopping polling!`);
-                    await this.notify({title: `${this.getIdentifier()} - Polling Error`, message: `Encountered error while polling and retries (${this.pollRetries}) are equal to max poll retries (${maxRetries}), stopping polling!. | Error: ${e.message}`, priority: 'error'});
+                    await this.notify({title: `Polling Error`, message: `Encountered error while polling and retries (${this.pollRetries}) are equal to max poll retries (${maxRetries}), stopping polling!. | Error: ${e.message}`, priority: 'error'});
                     throw e;
                 }
             }
@@ -646,7 +659,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
         this.logger.info('Polling started');
         this.emitEvent('statusChange', {status: 'Running'});
-        await this.notify({title: `${this.getIdentifier()} - Polling Started`, message: 'Polling Started', priority: 'info'});
+        this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({state: COMPONENT_STATE.RUNNING});
+        await this.notify({title: `Polling Started`, message: 'Polling Started', priority: 'info'});
+        this.setStatus('Polling Started');
         this.lastActivityAt = dayjs();
         let checkCount = 0;
         let checksOverThreshold = 0;
@@ -741,6 +756,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 this.logger[lastActivityLogLevel](activityMsgs.join(' | '));
                 this.setWakeAt(pollFrom.add(sleepTime, 'seconds'));
                 this.setIsSleeping(true);
+                this.emitComponentUpdate({sleeping: true, wakeAt: this.getWakeAt().toISOString()})
                 // set last active before we sleep
                 this.componentRepo.updateById(this.dbComponent.id, {lastActiveAt: dayjs(), lastReadyAt: dayjs()});
                 while(dayjs().isBefore(this.getWakeAt())) {
@@ -748,6 +764,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                    await delay(signal, 500);
                 }
                 this.setIsSleeping(false);
+                this.emitComponentUpdate({sleeping: false});
                 // if we have made it this far in the loop we can reset poll retries
                 this.pollRetries = 0;
             }
@@ -762,6 +779,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             throw e;
         } finally {
             this.setIsSleeping(false);
+            this.emitComponentUpdate({sleeping: false});
         }
     }
 

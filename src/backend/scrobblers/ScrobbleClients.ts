@@ -495,7 +495,7 @@ ${sources.join('\n')}`);
         } = options;
 
         if (this.clients.length === 0) {
-            this.logger.warn('Cannot update Now Playing! No clients are configured.');
+            this.logger.trace('Cannot update Now Playing! No clients are configured.');
         }
 
         for (const client of this.clients) {

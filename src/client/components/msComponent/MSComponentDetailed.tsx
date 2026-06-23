@@ -12,7 +12,6 @@ import { QueryFunctionContext, queryOptions, useQuery, useQueryClient } from '@t
 import { ErrorAlert } from "../ErrorAlert";
 import ky from 'ky';
 import { baseUrl } from "../../utils";
-import { useTimeout } from 'react-use-timeout';
 import {
     useSSEContext,
     useSSEEvent,
@@ -163,22 +162,36 @@ const ComponentDetailedSkeleton = () => {
     )
 }
 
-export const ComponentDetailedFetchable = (props: {componentId: number}) => {
-  const { isPending, isError, data, error } = useQuery({
-    queryKey: ['components', props.componentId],
-    queryFn: queryFn
-  });
+export const ComponentDetailedFetchable = (props: { componentId: number }) => {
+    const { isPending, isError, data, error } = useQuery({
+        queryKey: ['components', props.componentId],
+        queryFn: queryFn
+    });
 
-  let rendered;
-  if (isPending && data === undefined) {
-    rendered = <ComponentDetailedSkeleton/>
-  } else if (isError) {
-    rendered = <ErrorAlert error={error} />
-  } else {
-    rendered = <ComponentDetailedDesktop data={data} live/>;
-  }
+    let rendered;
+    if (isPending && data === undefined) {
+        rendered = <ComponentDetailedSkeleton />
+    } else if (isError) {
+        rendered = <ErrorAlert error={error} />
+    } else {
+        rendered = <ComponentDetailedDesktop data={data} live />;
+    }
 
-  return rendered;
+    const queryClient = useQueryClient();
+    const client = useSSEContext<MsSseEvent>();
+    useSSEAnyEvent(client, (payload) => {
+        if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === props.componentId) {
+            switch (payload.type) {
+                case 'componentUpdate':
+                    queryClient.setQueryData(['components', props.componentId], (old: ComponentCommonApiJson) => {
+                        const componentData = payload.data as MsSseEventPayload<Partial<ComponentCommonApiJson>>;
+                        return { ...old, ...componentData.data };
+                    });
+            }
+        }
+    });
+
+    return rendered;
 }
 
 type ComponentDetailedQueryKey = ['components', number];

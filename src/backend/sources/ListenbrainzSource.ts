@@ -80,6 +80,7 @@ export default class ListenbrainzSource extends MemorySource {
 
 
     getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}) => {
+        this.setStatus('Checking for new Plays');
         const {limit = 20} = options;
         const now = await this.api.getPlayingNow();
         await this.processRecentPlays(now.listens.map(x => ListenbrainzSource.formatPlayObj(x)));

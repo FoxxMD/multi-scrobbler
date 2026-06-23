@@ -69,6 +69,7 @@ export default class RockskySource extends MemorySource {
 
     getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}) => {
         const {limit = 20} = options;
+        this.setStatus('Checking for new Plays');
         return await this.api.getRecentlyPlayed(limit);
     }
 

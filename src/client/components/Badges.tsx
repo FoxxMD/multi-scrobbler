@@ -1,7 +1,9 @@
 import { Badge } from "@chakra-ui/react";
-import { ComponentProps } from "react";
-import { COMPONENT_STATE, ComponentCommonApiJson, componentStateToFriendly, PlayApiCommon } from "../../core/Api";
+import { ComponentProps, useState } from "react";
+import { COMPONENT_STATE, ComponentCommonApiJson, componentStateToFriendly, MsSseEvent, MsSseEventPayload, PlayApiCommon } from "../../core/Api";
 import { capitalize } from "../../core/StringUtils";
+import { PlayerState } from "../../backend/common/infrastructure/config/source/mpd";
+import {useSSE, useSSEContext, useSSEEvent} from "@flamefrontend/sse-runtime-react";
 
 export const PlayStateBadge = (props: ComponentProps<typeof Badge> & { state: PlayApiCommon['state'] }) => {
 
@@ -32,13 +34,24 @@ export const PlayStateBadge = (props: ComponentProps<typeof Badge> & { state: Pl
   return <Badge variant="surface" colorPalette={badgeColor} {...rest}>{badgeText}</Badge>
 }
 
-export const ComponentStateBadge = (props: ComponentProps<typeof Badge> & { data: Pick<ComponentCommonApiJson, 'state'> }) => {
+export const ComponentStateBadge = (props: ComponentProps<typeof Badge> & { data: Pick<ComponentCommonApiJson, 'state'>, componentId?: number, live?: boolean }) => {
 
     const { data, ...rest } = props;
 
+    const [componentState, setComponentState] = useState(data.state);
+
+    if(props.componentId !== undefined && props.live) {
+        const client = useSSEContext<MsSseEvent>();
+        const connection = useSSEEvent(client, 'componentUpdate', (payload) => {
+            if(payload.componentId === props.componentId && payload.data.state !== undefined) {
+                setComponentState(payload.data.state);
+            }
+        });
+    }
+
     let badgeColor = undefined;
 
-    switch (data.state) {
+    switch (componentState) {
         case COMPONENT_STATE.STOPPED:
             badgeColor = 'gray';
             break;
@@ -60,5 +73,5 @@ export const ComponentStateBadge = (props: ComponentProps<typeof Badge> & { data
             break;
     }
 
-    return <Badge variant="surface" colorPalette={badgeColor} {...rest}>{componentStateToFriendly(data.state)}</Badge>
+    return <Badge variant="surface" colorPalette={badgeColor} {...rest}>{componentStateToFriendly(componentState)}</Badge>
 }

@@ -53,7 +53,7 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
                 <Stack justify="flex-start" alignItems="flex-end">
                     <HStack gap="2">
                     {sleepingRender}
-                    <ComponentStateBadge maxWidth="fit-content" data={props.data} />
+                    <ComponentStateBadge maxWidth="fit-content" componentId={props.data.id} live data={props.data} />
                     <Separator orientation="vertical" height="4" />
                     <LinkOverlay asChild>
                     <Link to={`components/${props.data.id}`}>
@@ -148,6 +148,11 @@ export const MSComponentSummaryFetchable = (props: {componentId: number, data: C
                         }
                     });
                     break;
+                case 'componentUpdate':
+                    queryClient.setQueryData(['components', componentId, 'summary'], (old: ComponentCommonApiJson) => {
+                        const componentData = payload.data as MsSseEventPayload<Partial<ComponentCommonApiJson>>;
+                            return {...old, ...componentData.data};
+                    });
             }
         }
     });

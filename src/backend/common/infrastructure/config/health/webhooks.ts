@@ -1,5 +1,6 @@
 export interface WebhookPayload {
     title?: string
+    identifier: string
     message: string
     priority: Priority
 }

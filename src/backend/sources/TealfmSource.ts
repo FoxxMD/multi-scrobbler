@@ -100,6 +100,7 @@ export default class TealfmSource extends MemorySource {
     getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}) => {
         const {limit = 20} = options;
         let plays: PlayObject[];
+        this.setStatus('Checking for new Plays');
         try {
             const {data} = await this.client.getPagelessTimeRangeListens({limit})
             plays = data;

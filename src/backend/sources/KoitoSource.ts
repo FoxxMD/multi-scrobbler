@@ -60,6 +60,7 @@ export default class KoitoSource extends MemorySource {
 
     getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}) => {
         const {limit = 20} = options;
+        this.setStatus('Checking for new Plays');
         await this.processRecentPlays([]);
         const resp = await this.getScrobblesForTimeRange({limit, cursor: 0 });
         return resp;

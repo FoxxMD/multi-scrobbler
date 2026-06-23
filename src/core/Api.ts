@@ -138,6 +138,7 @@ export type MsSseEvent<T extends object = Record<string, any>> = {
     scrobbleQueued: MsSseEventPayload
     scrobbleDequeued: MsSseEventPayload
     client: T
+    componentUpdate: MsSseEventPayload<ComponentCommonApiJson>
 }
 
 export type SortPlaysBy = 'played' | 'seen';

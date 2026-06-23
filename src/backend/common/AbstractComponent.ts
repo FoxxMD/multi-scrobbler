@@ -2,6 +2,7 @@ import { childLogger, Logger } from "@foxxmd/logging";
 import {
     cacheFunctions,
 } from "@foxxmd/regex-buddy-core";
+import EventEmitter from "events";
 import { ComponentType, LifecycleStep, PlayData, PlayObject, TransformResult } from "../../core/Atomic.js";
 import { buildPlayHumanDiffable, buildTrackString } from "../../core/StringUtils.js";
 import { CommonClientConfig } from "./infrastructure/config/client/index.js";
@@ -37,6 +38,7 @@ import { SourceType } from "./infrastructure/config/source/sources.js";
 import { DrizzleComponentRepository } from "./database/drizzle/repositories/ComponentRepository.js";
 import dayjs from "dayjs";
 import { COMPONENT_STATE, ComponentCommonApi, ComponentState } from "../../core/Api.js";
+import { WebhookPayload } from "./infrastructure/config/health/webhooks.js";
 
 export type AbstractComponentConfig = (CommonClientConfig | CommonSourceConfig) & { transformManager?: TransformerManager };
 
@@ -53,9 +55,12 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     protected dbComponent!: ComponentSelect;
     componentId!: number;
     protected retentionOpts: RetentionOptions;
+    status: string = 'Waiting to initialize...';
+    emitter: EventEmitter;
 
     protected componentType: ComponentType;
     type: ClientType | SourceType;
+    name: string;
 
     protected constructor(config: AbstractComponentConfig) {
         super(config);
@@ -211,11 +216,14 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             this.logger.warn(`Cannot run retention cleanup because ${this.componentType} database state is not OK`);
             return;
         }
+        this.setStatus('Running retention cleanup');
         try {
             const repo = new DrizzlePlayRepository(this.db, {logger: this.logger});
             await repo.retentionCleanup(this.componentType, this.retentionOpts);
+            this.setStatus('Retention cleanup finished');
         } catch (e) {
             this.logger.warn(new Error('Failed to do retention cleanup', {cause: e}));
+            this.setStatus('Retention cleanup failed');
         }
     }
 
@@ -528,5 +536,35 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             lastActiveAt: this.dbComponent.lastActiveAt,
             ...this.additionalApiData()
         }
+    }
+
+    public emitEvent = (eventName: string, payload: object = {}) => {
+        this.emitter.emit(eventName, {
+            type: this.type,
+            name: this.name,
+            componentId: this.dbComponent?.id,
+            from: this.componentType,
+            data: payload,
+        });
+    }
+
+    protected emitComponentUpdate = <T = Partial<typeof this.getApiData>>(payload: T) => {
+        this.emitter.emit('componentUpdate', {
+            type: this.type,
+            name: this.name,
+            componentId: this.dbComponent?.id,
+            from: this.componentType,
+            data: payload,
+        });
+    }
+
+    async notify(payload: Omit<WebhookPayload, 'identifier'>) {
+        this.emitEvent('notify', {...payload, identifier: this.getIdentifier()});
+        this.setStatus(payload.title);
+    }
+
+    protected setStatus = (status: string) => {
+        this.status = status;
+        this.emitComponentUpdate({status});
     }
 }
