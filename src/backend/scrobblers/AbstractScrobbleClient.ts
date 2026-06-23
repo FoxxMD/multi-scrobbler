@@ -83,7 +83,7 @@ import { asPlay } from "../../core/PlayMarshalUtils.js";
 import { DrizzleQueueRepository } from "../common/database/drizzle/repositories/QueueRepository.js";
 import { GenericRepository } from "../common/database/drizzle/repositories/BaseRepository.js";
 import assert from "node:assert";
-import { COMPONENT_STATE, ComponentClientApi, PlayApiCommonDetailed } from "../../core/Api.js";
+import { COMPONENT_STATE, ComponentClientApi, ComponentClientApiJson, PlayApiCommonDetailed } from "../../core/Api.js";
 import { ComponentState } from "react";
 
 type PlatformMappedPlays = Map<string, {player: SourcePlayerObj, source: SourceIdentifier}>;
@@ -424,7 +424,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             ...super.getApiData(),
             ...this.getComponentApiData(),
             type: this.type,
-            status: 'idle',
+            status: this.status,
             queued: this.queuedLength,
             deadLetterScrobbles: this.deadLetterQueued,
             deadLetterScrobblesTotal: this.deadLetterLength,
@@ -761,6 +761,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }
 
             this.logger.verbose(`Preloading up to ${initialLimit} initial scrobbles...`);
+            this.setStatus(`Preloading up to ${initialLimit} initial scrobbles...`);
 
             try  {
                 const preload = await this.getScrobblesForTimeRange({
@@ -772,6 +773,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 } else {
                     if(preload.length === 0) {
                         this.logger.verbose(`Preloaded 0 scrobbles.`);
+                        this.setStatus(`Preloaded 0 scrobbles.`);
                     } else {
                         preload.sort(sortByOldestPlayDate);
                         const from = preload[0].data.playDate;
@@ -780,6 +782,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                         await this.cache.cacheClientScrobbles.set<PlayObject[]>(this.getScrobbleCacheKey(from, to), preload, '60s');
                         this.scrobbleSOTRanges.push({from: from.unix(), to: to.unix()});
                         this.logger.verbose(`Preloaded ${preload.length} scrobbles from ${todayAwareFormat(from)} to ${todayAwareFormat(to)}`);
+                        this.setStatus(`Preloaded ${preload.length} scrobbles`);
                     }
                 }
             } catch (e) {
@@ -900,6 +903,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }
         }
         try {
+            this.setStatus(`Scrobbling Play ${playObj.uid}`);
             const result = await this.doScrobble(playObj);
             const {
                 scrobble = {}
@@ -935,24 +939,29 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 return;
             }
         }
-
+        this.setStatus('Starting scrobbling processing');
         this.scrobbleQueueAbortController = new AbortController();
         this.scrobbleQueuePromise = spawn(this.scrobbleQueueAbortController.signal, async (signal, { defer, fork }) => {
 
             defer(async () => {
                 this.scrobbling = false;
                 this.emitEvent('statusChange', {status: 'Idle'});
+                this.emitComponentUpdate<Partial<ComponentClientApiJson>>({state: COMPONENT_STATE.IDLE});
             });
 
             await this.startScrobbling(signal);
         }).catch((e) => {
+            let status: string;
             if (isAbortError(e)) {
                 const err = generateLoggableAbortReason('Scrobble processing stopped', this.scrobbleQueueAbortController.signal);
                 this.logger.info(err);
-                this.logger.trace(e)
+                this.logger.trace(e);
+                status = 'Processing cancelled';
             } else {
                 this.logger.warn(new Error('Scrobble processing stopped with error', { cause: e }));
+                status = 'Processing stopped with error';
             }
+            this.emitComponentUpdate<Partial<ComponentClientApiJson>>({state: COMPONENT_STATE.IDLE, status});
         }).finally(() => {
             this.scrobbleQueueAbortController = undefined;
             this.scrobbleQueuePromise = undefined;
@@ -1038,6 +1047,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.emitEvent('statusChange', {status: 'Running'});
 
         try {
+            this.setStatus('Waiting for Plays from Sources');
             this.scrobbling = true;
             if(!this.upstreamRefresh.refreshEnabled) {
                 this.logger.verbose('Scrobble refresh is DISABLED. All queued scrobbles will likely always be scrobbled (nothing to check duplicates against).');
@@ -1052,6 +1062,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                         nextQueued = await this.playRepo.getQueueNext(CLIENT_INGRESS_QUEUE)
                     }
                     this.emitEvent('queueEmptied', {});
+                    this.setStatus('Waiting for Plays from Sources');
                 }
                 this.componentRepo.updateById(this.dbComponent.id, {lastActiveAt: dayjs(), lastReadyAt: dayjs()});
                 await delay(signal, this.scrobbleSleep);
@@ -1074,6 +1085,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         //     this.logger.trace('Nothing queued');
         //     return;
         // }
+        this.setStatus(`Processing Play ${currQueuedPlay.id}`);
         await this.handleQueuedScrobbleRanges();
         if (!this.upstreamRefresh.refreshEnabled) {
             // TODO add signal for this to scrobble match
@@ -1155,6 +1167,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     }
                 } else {
                     successState = 'duped';
+                    this.setStatus(`Play ${currQueuedPlay.id} detected as dupe`);
                 }
             }
             signal.throwIfAborted();
@@ -1227,6 +1240,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             if (processable === 0) {
                 this.deadLogger.verbose(queueStatus);
                 return;
+            } else {
+                this.setStatus(`Processing ${processable} Dead Plays`);
             }
             this.logger.info(queueStatus);
             if(!this.upstreamRefresh.refreshEnabled) {
@@ -1271,7 +1286,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         //     return [false];
         // }
 
-        
         let deadQueueState: QueueStateSelect;
         let deadScrobble: PlaySelectWithQueueStates = await this.playRepo.findByUid(uid, {hydrate: ['asPlay']});
         if(deadScrobble === undefined) {
@@ -1284,6 +1298,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         if(deadQueueState === undefined) {
             throw new Error(`Play ${uid} is not currently queued in dead letter.`);
         }
+        this.setStatus(`Processing Dead Play ${uid}`);
         //const deadScrobble = await this.playRepo.getQueueNext(this.dbComponent.id, CLIENT_INGRESS_QUEUE);
         const deadLabel = {labels: deadScrobble.uid};
         //const deadScrobble = this.deadLetterScrobbles[deadScrobbleIndex];
@@ -1375,6 +1390,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         } else {
             deadScrobble = dead;
         }
+        this.setStatus(`Removing Dead Play ${dead} from queue`);
         // const index = this.deadLetterScrobbles.findIndex(x => x.id === id);
         // if (index === -1) {
         //     this.deadLogger.warn(`No scrobble found with ID ${id}`);
@@ -1479,6 +1495,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             await this.queueRepo.create({componentId: this.dbComponent.id, playId: playRow[0].id, queueName: CLIENT_INGRESS_QUEUE});
             createdQueuedPlays.push(playRow[0]);
             this.logger.debug(`Added ${buildTrackString(play)} to the queue`);
+            this.setStatus(`Added Play from parent ${play.uid} to queue`);
 
             const queuedPlay = {id: nanoid(), source, play: play}
             //await this.playRepo.updateById(play.meta.dbId, {play});
@@ -1512,6 +1529,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         //this.deadLetterScrobbles.push(deadData);
         //this.deadLetterScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
         this.emitEvent('deadLetter', {dead: deadData});
+        this.setStatus(`Moved ${data.uid} to Dead Play queue`);
         this.deadLetterGauge.labels(this.getPrometheusLabels()).inc();
     }
 
@@ -1570,6 +1588,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 try {
                     await this.doPlayingNow(sourcePlayerData);
                     this.npLogger.trace(`Now Playing updated.`);
+                    this.setStatus('Now Playing updated');
                     this.emitEvent('nowPlayingUpdated', sourcePlayerData);
                 } catch (e) {
                     this.npLogger.warn(new Error('Error occurred while trying to update upstream Client, will ignore', {cause: e}));
