@@ -104,7 +104,7 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
                 const now = dayjs();
                 sleepingRender = (
                     <Tooltip content={<Span>Will next poll Source for activity at {shortTodayAwareFormat(wakeDay)} (in {durationToHuman(dayjs.duration(wakeDay.diff(now, 'ms')))})</Span>}>
-                        <IdleIcon cursor="pointer"/>
+                        <IdleIcon animated cursor="pointer"/>
                     </Tooltip>
                 )
             } else {

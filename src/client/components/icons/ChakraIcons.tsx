@@ -65,4 +65,13 @@ export const ExternalLinkButton = makeIconButton(ExternalLinkIcon);
 export const UpArrowIcon = LuArrowUp;
 export const DownArrowIcon = LuArrowDown;
 
-export const IdleIcon = RiZzzFill;
+export const IdleIcon = (props: {animated?: boolean} & ComponentProps<typeof RiZzzFill>) => {
+    const {
+        animated,
+        ...rest
+    } = props;
+    if(animated) {
+        return <RiZzzFill {...rest} style={{animation: 'dashed-player 3s infinite linear'}} />
+    }
+    return <RiZzzFill {...rest}/>;
+};

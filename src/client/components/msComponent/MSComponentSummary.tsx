@@ -42,7 +42,7 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
             sleeping
         } = data;
         if(sleeping) {
-           sleepingRender = <IdleIcon/>;
+           sleepingRender = <IdleIcon animated/>;
         }
         if(Object.keys(players).length > 0) {
             cardHeaderProps.borderBottomWidth="1px";
