@@ -45,6 +45,20 @@ export const MSComponentHeading = (props: { data?: Pick<ComponentCommonApiJson, 
     )
 }
 
+export const MSComponentName = (props: {data?: Pick<ComponentCommonApiJson, 'name'>}) => {
+    if(props.data === undefined) {
+        return <Skeleton width="5rem" height="5rem" />;
+    }
+    return <Heading truncate size="2xl">{props.data.name}</Heading>;
+}
+
+export const MSComponentType = (props: {data?: Pick<ComponentCommonApiJson, 'mode' | 'type'>}) => {
+    if(props.data === undefined) {
+        return <Skeleton width="3rem" height="1rem" />;
+    }
+    return <Heading color="fg.subtle" size="lg">({props.data.mode}) {capitalize(props.data.type)}</Heading>;
+}
+
 export const MSComponentStats = (props: { data?: ComponentCommonApiJson, live?: boolean }) => {
     if (props.data === undefined) {
         return (
@@ -99,14 +113,17 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
         }
     }
     return (
-        <Flex direction="column" gap="6">
-            <Flex justifyContent="flex-end" rowGap="6" wrap="wrap">
-                <Box marginEnd="auto"><MSComponentHeading data={props.data} /></Box>
-                <Stack alignItems="flex-end">
+        <Flex direction="column" width="100%" truncate rowGap="1">
+            <Flex width="100%" truncate>
+                <Box marginEnd="auto" truncate><MSComponentName data={props.data}/></Box>
                 <ComponentStateBadge size="lg" maxWidth="fit-content" data={props.data} />
-                <HStack>{props.data.status}{sleepingRender}</HStack>
-                </Stack>
             </Flex>
+            <Wrap>
+                <Box marginEnd="auto">
+                    <MSComponentType data={props.data}/>
+                </Box>
+                <HStack truncate>{props.data.status}{sleepingRender}</HStack>
+            </Wrap>
             <Flex justifyContent="flex-end" rowGap="6" flexDirection="row-reverse" wrap="wrap">
                 <Card.Root bgColor="bg.subtle" size="sm">
                 <Card.Header>Actions</Card.Header>
