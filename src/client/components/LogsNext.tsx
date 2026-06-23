@@ -18,7 +18,7 @@ interface LogLineProps {
 
 export const LogLine = (props: LogLineProps) => {
     return (
-        <Text whiteSpace="pre-wrap" display="block"><Ansi useClasses>{props.message}</Ansi></Text>
+        <Text className="logline" whiteSpace="pre-wrap" display="block"><Ansi useClasses>{props.message}</Ansi></Text>
     )
 };
 

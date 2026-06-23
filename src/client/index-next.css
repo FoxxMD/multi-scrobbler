@@ -46,3 +46,11 @@
 .chakra-stack .MuiLinearProgress-root {
       height: 8px;
 }
+
+.ansi-cyan-fg {
+      color: var(--chakra-colors-color-palette-solid)
+}
+
+.logline code span:first-child {
+      color: var(--chakra-colors-gray-500);
+}
