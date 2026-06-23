@@ -6,10 +6,10 @@ import { TextMuted } from "../TextMuted.js";
 import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
 import { capitalize } from "../../../core/StringUtils.js";
 import { ShortDateDisplay } from "../DateDisplay.js";
-import { ChevronRightButton, UpArrowIcon } from "../icons/ChakraIcons.js";
+import { ChevronRightButton, IdleIcon, UpArrowIcon } from "../icons/ChakraIcons.js";
 import { useTimeout } from 'react-use-timeout';
 import { ChakraPlayer, ChakraPlayerFetchable, PlayersContainer } from "../chakraPlayer/Player.js";
-import { InfoTip } from "../ToggleTip.js";
+import { InfoTip, Tooltip } from "../ToggleTip.js";
 import { QueryFunctionContext, queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ErrorAlert } from "../ErrorAlert";
 import ky from 'ky';
@@ -22,6 +22,9 @@ import {
 import { SourcePlayerJson } from "../../../core/Atomic.js";
 import { CountLiveIndicator, DeadLetterIndicator, QueuedIndicator } from "./Stats.js";
 import { ComponentStateBadge } from "../Badges.js";
+import { shortTodayAwareFormat } from "../../../core/TimeUtils.js";
+import dayjs from "dayjs";
+import { durationToHuman } from "../../../backend/utils.js";
 
 export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetchable?: boolean }) => {
         const {
@@ -29,13 +32,18 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
         fetchable
     } = props;
     const isClient = isClientType(data.type);
+    let sleepingRender: React.JSX.Element = null;
 
     let body = <Card.Footer/>;
     let cardHeaderProps: Card.HeaderProps = {};
     if(isComponentSourceApiJson(data)) {
         const {
-            players
+            players,
+            sleeping
         } = data;
+        if(sleeping) {
+           sleepingRender = <IdleIcon/>;
+        }
         if(Object.keys(players).length > 0) {
             cardHeaderProps.borderBottomWidth="1px";
             cardHeaderProps.paddingBottom="2px";
@@ -52,6 +60,7 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
                 <Heading>{data.name}</Heading>
                 <Stack justify="flex-start" alignItems="flex-end">
                     <HStack gap="2">
+                    {sleepingRender}
                     <ComponentStateBadge maxWidth="fit-content" data={props.data} />
                     <Separator orientation="vertical" height="4" />
                     <LinkOverlay asChild>

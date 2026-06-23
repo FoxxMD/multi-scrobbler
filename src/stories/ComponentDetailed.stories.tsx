@@ -11,6 +11,7 @@ import { SSEProvider } from "@flamefrontend/sse-runtime-react";
 import { sseProviderOptions } from "../client/AppNext.js";
 import { faker } from "@faker-js/faker";
 import { PaginatedResponse } from "../backend/common/database/drizzle/repositories/BaseRepository.js";
+import dayjs from "dayjs";
 
 let livePlayData: PlayApiCommonDetailed[] = [];
 
@@ -113,5 +114,11 @@ export const ClientDetailedFetchable = meta.story({
 export const SourceDetailed = meta.story({
     args: {
       data: generateSourceApiJson({players: {test: generateSourcePlayerJson(undefined, {art: true}), foo: generateSourcePlayerJson(undefined, {art: true})}})
+    }
+});
+
+export const SourceDetailedSleeping = meta.story({
+    args: {
+      data: generateSourceApiJson({sleeping: true, wakeAt: dayjs().add(45, 's').toISOString()})
     }
 });

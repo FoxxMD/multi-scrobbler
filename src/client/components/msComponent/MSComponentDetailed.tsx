@@ -1,13 +1,13 @@
 import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect, useState, useCallback } from "react"
-import { DataList, Badge, Grid, Spacer, ButtonGroup, Button, GridItem, Text, Box, Heading, Skeleton, Wrap, Stat, Separator, HStack, Stack, Flex, Collapsible, Card, LinkOverlay, LinkBox, SkeletonText } from '@chakra-ui/react';
+import { DataList, Badge, Grid, Spacer, Span, ButtonGroup, Button, GridItem, Text, Box, Heading, Skeleton, Wrap, Stat, Separator, HStack, Stack, Flex, Collapsible, Card, LinkOverlay, LinkBox, SkeletonText } from '@chakra-ui/react';
 import { COMPONENT_STATE, ComponentClientApiJson, ComponentCommonApiJson, ComponentsApiJson, ComponentSourceApiJson, componentStateToFriendly, isComponentClientApiJson, isComponentSourceApiJson, MsSseEvent, MsSseEventPayload } from "../../../core/Api.js";
 import { TextMuted } from "../TextMuted.js";
 import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
 import { capitalize } from "../../../core/StringUtils.js";
 import { ShortDateDisplay } from "../DateDisplay.js";
-import { ChevronRightButton } from "../icons/ChakraIcons.js";
+import { ChevronRightButton, IdleIcon } from "../icons/ChakraIcons.js";
 import { ChakraPlayer, ChakraPlayerFetchable, PlayersContainer } from "../chakraPlayer/Player.js";
-import { InfoTip } from "../ToggleTip.js";
+import { InfoTip, ToggleTip, Tooltip } from "../ToggleTip.js";
 import { QueryFunctionContext, queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ErrorAlert } from "../ErrorAlert";
 import ky from 'ky';
@@ -20,10 +20,13 @@ import {
 } from "@flamefrontend/sse-runtime-react";
 import { isComponentTypeSource, SourcePlayerJson } from "../../../core/Atomic.js";
 import { CountLiveIndicator, DateIndicator, DeadLetterIndicator, QueuedIndicator } from "./Stats.js";
-import { ListContainerFetchable, ListContainerFilterable, PlayListSkeleton } from "../playActivity/ActivityList.js";
+import { ListContainerFetchable, ListContainerFilterable } from "../playActivity/ActivityList.js";
 import { useParams } from "react-router-dom";
 import { ComponentStateBadge } from "../Badges.js";
 import { ActivitySummarySkeleton } from "../ActivityDetail.js";
+import dayjs from "dayjs";
+import { shortTodayAwareFormat } from "../../../core/TimeUtils.js";
+import { durationToHuman } from "../../../backend/utils.js";
 
 export const MSComponentHeading = (props: { data?: Pick<ComponentCommonApiJson, 'name' | 'mode' | 'type'>, fetchable?: boolean }) => {
     if (props.data === undefined) {
@@ -74,13 +77,34 @@ const ComponentSettings = () => {
 }
 
 export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, live?: boolean}) => {
+    let sleepingRender: React.JSX.Element = null;
+    const {data} = props;
+    if(isComponentSourceApiJson(data)) {
+        const {
+            sleeping,
+            wakeAt
+        } = data;
+        if(sleeping) {
+            if(sleeping && wakeAt !== undefined) {
+                const wakeDay = dayjs(wakeAt);
+                const now = dayjs();
+                sleepingRender = (
+                    <Tooltip content={<Span>Will next poll Source for activity at {shortTodayAwareFormat(wakeDay)} (in {durationToHuman(dayjs.duration(wakeDay.diff(now, 'ms')))})</Span>}>
+                        <IdleIcon cursor="pointer"/>
+                    </Tooltip>
+                )
+            } else {
+                sleepingRender = <IdleIcon/>;
+            }
+        }
+    }
     return (
         <Flex direction="column" gap="6">
             <Flex justifyContent="flex-end" rowGap="6" wrap="wrap">
                 <Box marginEnd="auto"><MSComponentHeading data={props.data} /></Box>
                 <Stack alignItems="flex-end">
                 <ComponentStateBadge size="lg" maxWidth="fit-content" data={props.data} />
-                <Text>{props.data.status}</Text>
+                <HStack>{props.data.status}{sleepingRender}</HStack>
                 </Stack>
             </Flex>
             <Flex justifyContent="flex-end" rowGap="6" flexDirection="row-reverse" wrap="wrap">

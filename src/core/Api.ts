@@ -106,6 +106,8 @@ export type ComponentSourceApiBase = {
     systemListeningBehavior?: boolean
     tracksDiscovered: number;
     players: Record<string, SourcePlayerJson>
+    wakeAt?: string
+    sleeping: boolean
 }
 
 export type ComponentSourceApi = ComponentCommonApi & ComponentSourceApiBase;

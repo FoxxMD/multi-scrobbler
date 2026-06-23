@@ -161,7 +161,8 @@ export const generateSourceApiJson = (data: Partial<ComponentSourceApi> = {}): C
         manualListening = faker.datatype.boolean({probability: 0.1}),
         systemListeningBehavior = true,
         tracksDiscovered = faker.number.int({min: 1, max: 2000}),
-        players = (data.players ?? {})
+        players = (data.players ?? {}),
+        sleeping = false,
     } = data;
     return {
         ...common,
@@ -171,7 +172,8 @@ export const generateSourceApiJson = (data: Partial<ComponentSourceApi> = {}): C
         manualListening,
         systemListeningBehavior,
         tracksDiscovered,
-        players
+        players,
+        sleeping
     }
 }
 

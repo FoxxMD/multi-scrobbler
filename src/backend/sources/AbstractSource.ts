@@ -293,6 +293,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
             supportsManualListening: this.supportsManualListening,
             manualListening: this.manualListening,
             systemListeningBehavior: this.getSystemListeningBehavior(),
+            sleeping: this.getIsSleeping(),
+            wakeAt: this.wakeAt !== undefined ? this.wakeAt.toISOString() : undefined
         }
     }
 

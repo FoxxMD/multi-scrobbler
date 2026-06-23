@@ -10,6 +10,8 @@ import { MsSseEvent } from "../core/Api.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
 import { sseProviderOptions } from "../client/AppNext.js";
 import { faker } from "@faker-js/faker";
+import { withRouter, reactRouterParameters } from 'storybook-addon-remix-react-router';
+import dayjs from "dayjs";
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
@@ -42,6 +44,7 @@ const meta = preview.meta({
     },
 decorators: [
     (Story) => (<Provider><Container maxWidth="4xl"><Story/></Container></Provider>),
+    withRouter
   ]
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });
@@ -74,6 +77,18 @@ export const SourceSummaryFetchable = meta.story({
             }),
           ],
         },
+    }
+});
+
+export const SourceSleeping = meta.story({
+    args: {
+      data: generateSourceApiJson({sleeping: true, wakeAt: dayjs().add(45, 's').toISOString()})
+    }
+});
+
+export const SourceWithPlayerSummary = meta.story({
+    args: {
+      data: generateSourceApiJson({players: {test: generateSourcePlayerJson(undefined, {art: true})}})
     }
 });
 
@@ -114,11 +129,5 @@ export const ClientSummaryFetchable = meta.story({
             })
           ],
         },
-    }
-});
-
-export const SourceWithPlayerSummary = meta.story({
-    args: {
-      data: generateSourceApiJson({players: {test: generateSourcePlayerJson(undefined, {art: true})}})
     }
 });

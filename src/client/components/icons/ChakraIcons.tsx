@@ -1,4 +1,5 @@
 import { LuChevronRight, LuChevronLeft, LuActivity, LuGithub, LuTerminal, LuAlignJustify, LuX, LuExternalLink, LuArrowUp, LuArrowDown } from "react-icons/lu"
+import { RiZzzFill } from "react-icons/ri";
 import { SiGoogledocs } from "react-icons/si";
 import { IconButton } from "@chakra-ui/react"
 import { ComponentProps } from 'react';
@@ -63,3 +64,5 @@ export const ExternalLinkButton = makeIconButton(ExternalLinkIcon);
 
 export const UpArrowIcon = LuArrowUp;
 export const DownArrowIcon = LuArrowDown;
+
+export const IdleIcon = RiZzzFill;

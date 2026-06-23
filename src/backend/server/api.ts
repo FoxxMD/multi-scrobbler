@@ -203,7 +203,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
                 polling = false,
                 requiresAuth = false,
                 requiresAuthInteraction = false,
-                authed = false,
+                authed = false
             } = x;
             const base: ComponentSourceApi = x.getApiData();
             if(!x.isReady()) {
