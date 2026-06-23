@@ -55,10 +55,12 @@ export const VirtualizedListDynamic = (props: ActivityLogProps & Pick<UseInfinit
 
   // The virtualizer
   const virtualizer = useVirtualizer({
-    count: items.length,
+    count: items.length + 1,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 85,
-    directDomUpdates: true,
+    //directDomUpdates: true,
+    //directDomUpdatesMode: 'position',
+    overscan: 4,
     //debug: true
   });
 
@@ -69,17 +71,19 @@ export const VirtualizedListDynamic = (props: ActivityLogProps & Pick<UseInfinit
       return
     }
 
+    //console.log(`Last Item Index ${lastItem.index} | Items ${items.length} | Has Next Page? ${hasNextPage} | Is Fetching Next? ${isFetchingNextPage}`);
     if (
-      lastItem.index === data.length - 1 &&
+      lastItem.index >= items.length - 1 &&
       hasNextPage &&
       !isFetchingNextPage
     ) {
+      console.log('Invoke next fetch');
       fetchNextPage()
     }
   }, [
     hasNextPage,
     fetchNextPage,
-    data.length,
+    items.length,
     isFetchingNextPage,
     virtualizer.getVirtualItems(),
   ])
@@ -87,16 +91,31 @@ export const VirtualizedListDynamic = (props: ActivityLogProps & Pick<UseInfinit
 
   // doesn't seem like i need this for height to work correctly?
   //
-  // const contentProps = useMemo(
-  //   (): React.ComponentProps<"div"> => ({
-  //     style: {
-  //       height: `${virtualizer.getTotalSize()}px`,
-  //       width: "100%",
-  //       position: "relative",
-  //     },
-  //   }),
-  //   [virtualizer],
-  // )
+  const containerStyleProps = useMemo(
+    (): React.ComponentProps<"div"> => ({
+      style: {
+        height: `${virtualizer.getTotalSize()}px`,
+        width: "100%",
+        position: "relative",
+      },
+    }),
+    [virtualizer],
+  )
+
+    const itemContainerStyleProps = useCallback(
+    (item: VirtualItem): React.ComponentProps<"div"> => ({
+      style: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "100%",
+        paddingBottom: 4,
+        height: `${item.size}px`,
+        transform: `translateY(${item.start}px)`,
+      },
+    }),
+    [],
+  )
 
   return (
     <ScrollArea.Root height="70vh" variant="always" w="full">
@@ -106,17 +125,17 @@ export const VirtualizedListDynamic = (props: ActivityLogProps & Pick<UseInfinit
   >
     <ScrollArea.Content>
       {total !== undefined ? <HStack><Separator flex="1"/><Text flexShrink="0">{total} Plays Total</Text><Separator flex="1"/></HStack> : null}
-    <Box ref={virtualizer.containerRef} style={containerStyle} >
+    <Box ref={virtualizer.containerRef} {...containerStyleProps}>
       {virtualizer.getVirtualItems().map((virtualItem) => {
         const item = items[virtualItem.index]
-        const isLoaderRow = virtualItem.index > data.length - 1
+        const isLoaderRow = virtualItem.index > items.length - 1
 
         return (
             <Box w="full"
             data-index={virtualItem.index}
             key={virtualItem.key}
             ref={virtualizer.measureElement}
-            style={itemContainerStyle}>
+            {...itemContainerStyleProps(virtualItem)}>
               {isLoaderRow
                     ? hasNextPage
                       ? (
@@ -145,7 +164,7 @@ const ItemContainer = (props: ComponentProps<typeof GroupHeader> & ComponentProp
 
 export const NoPlayResults = (props: {type: 'empty' | 'additional'}) => {
   return (
-  <EmptyState.Root>
+  <EmptyState.Root size="sm">
       <EmptyState.Content>
         <EmptyState.Indicator>
           <LuCaptionsOff />

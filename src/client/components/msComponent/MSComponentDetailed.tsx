@@ -20,7 +20,7 @@ import {
 } from "@flamefrontend/sse-runtime-react";
 import { isComponentTypeSource, SourcePlayerJson } from "../../../core/Atomic.js";
 import { CountLiveIndicator, DateIndicator, DeadLetterIndicator, QueuedIndicator } from "./Stats.js";
-import { ListContainerFetchable, ListContainerFilterable, PlayListSkeleton } from "../playActivity/PlayList.js";
+import { ListContainerFetchable, ListContainerFilterable, PlayListSkeleton } from "../playActivity/ActivityList.js";
 import { useParams } from "react-router-dom";
 import { ComponentStateBadge } from "../Badges.js";
 import { ActivitySummarySkeleton } from "../ActivityDetail.js";

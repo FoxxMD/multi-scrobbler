@@ -18,7 +18,7 @@ import { QueryPlaysOpts, QueryPlaysOptsJson } from '../../../backend/common/data
 
 dayjs.extend(doy);
 
-export const PlayList = (props: ActivityLogProps & Pick<UseInfiniteQueryResult, 'hasNextPage' | 'isFetchingNextPage' | 'fetchNextPage'>) => {
+export const ActivityList = (props: ActivityLogProps & Pick<UseInfiniteQueryResult, 'hasNextPage' | 'isFetchingNextPage' | 'fetchNextPage'>) => {
 
   const {
     data = [],
@@ -80,11 +80,11 @@ const PlainAccordian = (props: ActivityLogProps) => {
 }
 
 
-export const ListContainer = (props?: ComponentProps<typeof PlayList>) => {
-  return <Container maxWidth="3xl"><PlayList {...props} /></Container>
+export const ListContainer = (props?: ComponentProps<typeof ActivityList>) => {
+  return <Container maxWidth="3xl"><ActivityList {...props} /></Container>
 }
 
-export const ListContainerFetchable = (props: { componentId: number, componentType: ComponentType, filters?: QueryPlaysOptsJson } & Pick<ComponentProps<typeof PlayList>, 'render'>) => {
+export const ListContainerFetchable = (props: { componentId: number, componentType: ComponentType, filters?: QueryPlaysOptsJson } & Pick<ComponentProps<typeof ActivityList>, 'render'>) => {
   const {
     componentId,
     filters = {}
@@ -111,23 +111,23 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
   },
   });
 
-  const allPlays = useMemo(() => data === undefined ? [] : data.pages.map(x => x.data).flat(),[data]);
+  const allPlays = useMemo(() => data === undefined ? [] : data.pages.flatMap(x => x.data).filter(x => x !== null && x !== undefined),[data]);
 
   let rendered;
-  if (isFetching && data === undefined) {
+  if (status === 'pending' && data === undefined) {
     rendered = <Stack><ActivitySummarySkeleton /><ActivitySummarySkeleton /><ActivitySummarySkeleton /></Stack>;
-  } else if (isError) {
+  } else if (isError || status === 'error') {
     rendered = <ErrorAlert error={error} />
   } else if(!isFetching && allPlays.length === 0) {
     rendered = <NoPlayResults type="empty"/>
   } else {
-    rendered = <PlayList total={data?.pages.length > 0 ? data.pages[0].meta.total : undefined} hasNextPage={hasNextPage} fetchNextPage={fetchNextPage} isFetchingNextPage={isFetchingNextPage} render="virtDynamic" data={allPlays} live {...props} sortBy="played" query={query} />;
+    rendered = <ActivityList total={data?.pages.length > 0 ? data.pages[0].meta.total : undefined} hasNextPage={hasNextPage} fetchNextPage={fetchNextPage} isFetchingNextPage={isFetchingNextPage} render="virtDynamic" data={allPlays} live {...props} sortBy="played" query={query} />;
   }
 
   return rendered;
 }
 
-export const ListContainerFilterable = (props: { componentId: number, componentType: ComponentType } & Pick<ComponentProps<typeof PlayList>, 'render'>) => {
+export const ListContainerFilterable = (props: { componentId: number, componentType: ComponentType } & Pick<ComponentProps<typeof ActivityList>, 'render'>) => {
   const [filters, setFilter] = useState<QueryPlaysOptsJson>({
     playedAt: {
       type: 'between',

@@ -5,11 +5,11 @@ import { http, HttpResponse, delay } from 'msw';
 
 import { fn } from 'storybook/test';
 import { Container } from '@chakra-ui/react';
-import { ListContainerFetchable, ListContainerFilterable, PlayList } from "../client/components/playActivity/PlayList.js";
-import {Provider} from "../client/components/Provider";
+import { ListContainerFetchable, ListContainerFilterable, ActivityList } from "../client/components/playActivity/ActivityList.js";
+import {Provider} from "../client/components/Provider.js";
 import { generateJsonPlays, normalizePlays } from "../core/PlayTestUtils.js";
 import { ErrorLike, JsonPlayObject, qsOptions } from "../core/Atomic.js";
-import {playWithLifecycleScrobble, generatePlayWithLifecycle} from '../core/tests/utils/fixtures'
+import {playWithLifecycleScrobble, generatePlayWithLifecycle} from '../core/tests/utils/fixtures.js'
 import { generateArray } from "../core/DataUtils.js";
 import dayjs from "dayjs";
 import qs from 'qs';
@@ -21,8 +21,8 @@ import { QueryPlaysOptsJson } from '../backend/common/database/drizzle/repositor
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
-  title: 'Examples/ActivityLog',
-  component: PlayList,
+  title: 'Examples/Activity List',
+  component: ActivityList,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
@@ -34,7 +34,7 @@ const meta = preview.meta({
   //    data:[
   //     ] ,
   // },
-  render: function Render(args, { loaded: { data } }) { return (<PlayList {...args} data={data ?? []}/>) },
+  render: function Render(args, { loaded: { data } }) { return (<ActivityList {...args} data={data ?? []}/>) },
 decorators: [
     (Story) => (<Provider><Container maxWidth="4xl"><Story/></Container></Provider>),
   ]
@@ -216,6 +216,7 @@ export const ListLiveNoMorePlay = meta.story({
       handlers: [
         http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
 
+          await delay();
           const url = new URL(request.url)
           console.log(url.search);
           const query = qs.parse(url.search, qsOptions) as QueryPlaysOptsJson;
@@ -240,7 +241,6 @@ export const ListLiveNoMorePlay = meta.story({
               limit: livePlayData.length
             }
           }
-          await delay(1000);
           return HttpResponse.json(res);
         }),
         http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
