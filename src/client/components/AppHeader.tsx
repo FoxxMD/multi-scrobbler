@@ -5,6 +5,7 @@ import { TextMuted } from "./TextMuted";
 import { TerminalButton, TerminalIcon, XButton } from "./icons/ChakraIcons";
 import { MobileSidebarNav } from "./MobileMenu";
 import { LuGripHorizontal, LuMinus } from "react-icons/lu"
+import {Link as RouterLink} from 'react-router';
 import {
     useWindowSize,
 } from '@react-hook/window-size'
@@ -23,8 +24,10 @@ export const AppTitle = (props: { fetchable?: boolean } = {}) => {
             <LinkBox>
                 <HStack gap="2">
                     <Image maxWidth="30px" height="100%" width="100%" src="/icon.svg"></Image>
-                    <LinkOverlay href="/next/">
-                        <Heading hideBelow="sm" size="sm">Multi Scrobbler</Heading>
+                    <LinkOverlay asChild href="/next/">
+                        <RouterLink to='/next/'>
+                            <Heading hideBelow="sm" size="sm">Multi Scrobbler</Heading>
+                        </RouterLink>
                     </LinkOverlay>
                 </HStack>
             </LinkBox>

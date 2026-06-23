@@ -5,6 +5,7 @@ import { Container, Box } from '@chakra-ui/react';
 import { SideNavItems, NAV_LINKS } from "../client/components/SideNav";
 import {Provider} from "../client/components/Provider";
 import { generateClientApiJson, generateSourceApiJson, generateSourcePlayerJson } from "../core/tests/utils/apiFixtures.js";
+import { withRouter, reactRouterParameters } from 'storybook-addon-remix-react-router';
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
@@ -25,6 +26,7 @@ const meta = preview.meta({
     },
 decorators: [
     (Story) => (<Provider><Container maxWidth="lg"><Box display="flex" flexDir="column" gap="6" flex="1"><Story/></Box></Container></Provider>),
+    withRouter
   ]
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });
