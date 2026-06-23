@@ -12,7 +12,7 @@ export default class LibrefmScrobbler extends LastfmScrobbler {
         // @ts-expect-error
         declare config: LibrefmClientConfig;
 
-        constructor(name: any, config: LibrefmClientConfig, options: InternalConfigOptional & {[key: string]: any}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
+        constructor(name: any, config: LibrefmClientConfig, options: InternalConfigOptional & {[key: string]: any},  emitter: EventEmitter, logger: Logger) {
             const {
                 data: {
                     urlBase = `https://${LIBREFM_HOST}${LIBREFM_PATH}`,
@@ -22,7 +22,7 @@ export default class LibrefmScrobbler extends LastfmScrobbler {
                 } = {},
             } = config;
             config.data = {...(rest as LastfmData), urlBase, apiKey, secret};
-            super(name, config as LastfmClientConfig, {...options, type: 'librefm'}, notifier, emitter, logger, 'librefm');
+            super(name, config as LastfmClientConfig, {...options, type: 'librefm'}, emitter, logger, 'librefm');
             this.upstreamType = 'Libre.fm';
         }
 

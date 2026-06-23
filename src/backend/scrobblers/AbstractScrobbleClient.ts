@@ -162,7 +162,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     protected queueRepo!: DrizzleQueueRepository;
     protected migrationRepo!: GenericRepository<'componentMigrations'>;
 
-    constructor(type: any, name: any, config: CommonClientConfig, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
+    constructor(type: any, name: any, config: CommonClientConfig, emitter: EventEmitter, logger: Logger) {
         super(config);
         this.componentType = 'client';
         this.type = type;
@@ -171,7 +171,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.npLogger = childLogger(this.logger, 'Now Playing');
         this.dupeLogger = childLogger(this.logger, 'Dupe');
         this.deadLogger = childLogger(this.logger, CLIENT_DEAD_QUEUE);
-        this.notifier = notifier;
         this.emitter = emitter;
 
         const {

@@ -23,8 +23,7 @@ export class TestScrobbler extends AbstractScrobbleClient {
 
     constructor(config: CommonClientConfig = {name: 'test'}) {
         const logger = loggerNoop;
-        const notifier = new Notifiers(new EventEmitter(), new EventEmitter(), new EventEmitter(), logger);
-        super('test', 'Test', {name: 'test', ...config}, notifier, new EventEmitter(), logger);
+        super('test', 'Test', {name: 'test', ...config}, new EventEmitter(), logger);
         this.supportsNowPlaying = false;
         this.getScrobblesForTimeRange = async (_) =>  {
             return this.testRecentScrobbles;

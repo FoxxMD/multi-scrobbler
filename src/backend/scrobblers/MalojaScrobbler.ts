@@ -29,8 +29,8 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     declare config: MalojaClientConfig
 
-    constructor(name: any, config: MalojaClientConfig, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
-        super('maloja', name, config, notifier, emitter, logger);
+    constructor(name: any, config: MalojaClientConfig, emitter: EventEmitter, logger: Logger) {
+        super('maloja', name, config, emitter, logger);
         this.api = new MalojaApiClient(name, this.config.data, { logger: childLogger(this.logger, 'API') });
         this.MAX_INITIAL_SCROBBLES_FETCH = 100;
         this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this.api, this.api.logger);
@@ -107,7 +107,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             }
             return result;
         } catch (e) {
-            await this.notifier.notify({ title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error' });
+            await this.notify({ title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error' });
             throw e;
         }
     }

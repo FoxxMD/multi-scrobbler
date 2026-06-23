@@ -40,8 +40,8 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
 
     client: TealApiClient;
 
-    constructor(name: any, config: TealClientConfig, options: InternalConfigOptional & {[key: string]: any}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
-        super('tealfm', name, config, notifier, emitter, logger);
+    constructor(name: any, config: TealClientConfig, options: InternalConfigOptional & {[key: string]: any}, emitter: EventEmitter, logger: Logger) {
+        super('tealfm', name, config, emitter, logger);
         this.MAX_INITIAL_SCROBBLES_FETCH = 20;
         this.scrobbleDelay = 1500;
         this.supportsNowPlaying = true;
@@ -132,7 +132,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
             }
             return res;
         } catch (e) {
-            await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
+            await this.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             throw e;
         }
     }

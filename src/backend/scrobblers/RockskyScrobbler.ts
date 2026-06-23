@@ -41,8 +41,8 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
     // without having to result to historical querying
     protected override addScrobbleToHistorical: boolean = false;
 
-    constructor(name: any, config: RockSkyClientConfig, options: InternalConfigOptional & { [key: string]: any }, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
-        super('rocksky', name, config, notifier, emitter, logger);
+    constructor(name: any, config: RockSkyClientConfig, options: InternalConfigOptional & { [key: string]: any }, emitter: EventEmitter, logger: Logger) {
+        super('rocksky', name, config, emitter, logger);
         this.api = new RockSkyApiClient(name, { ...config.data, ...config.options }, { logger: this.logger });
         // https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(user_name)-listens
         // 1000 is way too high. maxing at 100
@@ -115,7 +115,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
             }
             return result;
         } catch (e) {
-            await this.notifier.notify({ title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error' });
+            await this.notify({ title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error' });
             throw e;
         }
     }

@@ -21,8 +21,8 @@ export default class KoitoScrobbler extends AbstractScrobbleClient {
     getScrobblesForTimeRange: TimeRangeListensFetcher
     declare config: KoitoClientConfig;
 
-    constructor(name: any, config: KoitoClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
-        super('koito', name, config, notifier, emitter, logger);
+    constructor(name: any, config: KoitoClientConfig, options = {}, emitter: EventEmitter, logger: Logger) {
+        super('koito', name, config, emitter, logger);
         this.api = new KoitoApiClient(name, config.data, {logger: this.logger});
         // https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(user_name)-listens
         // 1000 is way too high. maxing at 100
@@ -86,7 +86,7 @@ export default class KoitoScrobbler extends AbstractScrobbleClient {
             }
             return result;
         } catch (e) {
-            await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
+            await this.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             throw e;
         }
     }

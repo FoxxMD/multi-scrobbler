@@ -112,7 +112,6 @@ describe('#tealfmCar', function() {
         const tfm = new TealScrobbler('test', 
             {name: 'test', data: {identifier: 'test', appPassword: 'test'}}, 
             {configDir: 'test', localUrl: new URL('https://example.com'), version: 'test'},
-            new Notifiers(new EventEmitter(), new EventEmitter(), new EventEmitter(), loggerNoop),
             new EventEmitter(),
             loggerDebug
         );

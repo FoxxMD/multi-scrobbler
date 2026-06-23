@@ -33,6 +33,9 @@ export class Notifiers {
         this.sourceEmitter.on('notify', async (payload: WebhookPayload) => {
             await this.notify(payload);
         })
+        this.clientEmitter.on('notify', async (payload: WebhookPayload) => {
+            await this.notify(payload);
+        })
     }
 
     buildWebhooks = async (webhookConfigs: WebhookConfig[]) => {

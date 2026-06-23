@@ -22,8 +22,8 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
     declare config: LastfmClientConfig;
 
-    constructor(name: any, config: LastfmClientConfig, options: InternalConfigOptional & {[key: string]: any}, notifier: Notifiers, emitter: EventEmitter, logger: Logger, type = 'lastfm') {
-        super(type, name, config, notifier, emitter, logger);
+    constructor(name: any, config: LastfmClientConfig, options: InternalConfigOptional & {[key: string]: any}, emitter: EventEmitter, logger: Logger, type = 'lastfm') {
+        super(type, name, config, emitter, logger);
         this.api = new LastfmApiClient(name, config.data, {...options, logger});
         // https://www.last.fm/api/show/user.getRecentTracks
         this.MAX_INITIAL_SCROBBLES_FETCH = 100;
@@ -95,9 +95,9 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         } catch (e) {
             const ignored = findCauseByReference(e, LastFMIgnoredScrobble);
             if(ignored !== undefined) {
-                await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Ignored`, message: `Failed to scrobble => ${buildTrackString(playObj)} | ${e.message}`, priority: 'warn'});
+                await this.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Ignored`, message: `Failed to scrobble => ${buildTrackString(playObj)} | ${e.message}`, priority: 'warn'});
             } else {
-                await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
+                await this.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             }
             this.logger.error({playInfo: buildTrackString(playObj), payload: playToClientPayload(playObj)}, `Scrobble Error (${sType})`);
             throw e;

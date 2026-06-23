@@ -23,9 +23,9 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
 
     declare config: DiscordClientConfig & {data: DiscordStrongData };
 
-    constructor(name: any, config: DiscordClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
+    constructor(name: any, config: DiscordClientConfig, options = {}, emitter: EventEmitter, logger: Logger) {
         const strong = configToStrong(config.data);
-        super('discord', name, {...config, data: strong}, notifier, emitter, logger);
+        super('discord', name, {...config, data: strong}, emitter, logger);
         this.supportsNowPlaying = true;
         this.nowPlayingMaxThreshold = nowPlayingUpdateByPlayDuration;
         this.nowPlayingMinThreshold = (_) => 5;
