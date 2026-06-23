@@ -1,5 +1,5 @@
 import { create as diffCreate } from "jsondiffpatch";
-import { numberFormatOptions } from './Atomic.js';
+import { DeepReplaceValue, numberFormatOptions, REGEX_ISO8601_LOOSE } from './Atomic.js';
 import { diff, applyChangeset, Changeset, Options } from 'json-diff-ts';
 // may want to return to this one day
 // but currently the jsondiffpatch formatter is the best console/ansi diff output for humans :(
@@ -8,6 +8,8 @@ import chalk from 'chalk';
 import clone from "clone";
 import ConsoleFormatter from "jsondiffpatch/formatters/console";
 import assert from "node:assert";
+import dayjs, {Dayjs} from "dayjs";
+import { Traverse } from "neotraverse/modern";
 
 const console = new ConsoleFormatter();
 
@@ -98,3 +100,14 @@ export const chunkArray = <T>(chunkSize: number, arr: T[]): T[][] => {
     }
     return chunks;
 }
+
+export const asDayjsHydratedObject = <T, U>(obj: T): U => {
+  const cloned = clone(obj);
+  new Traverse(cloned).forEach((ctx, x) => {
+
+     if (typeof x === 'string' && REGEX_ISO8601_LOOSE.test(x)) {
+        ctx.update(dayjs(x), true);
+    }
+  });
+  return cloned as unknown as U;
+};

@@ -3,7 +3,7 @@ import { DbConcrete, runTransaction } from "../drizzleUtils.js";
 import clone from 'clone';
 import { Traverse, TraverseContext } from 'neotraverse/modern';
 import { loggerNoop } from "../../../MaybeLogger.js";
-import { DateLike, ErrorLike, PlayObject, REGEX_ISO8601_LOOSE, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, TemporalAccuracy } from "../../../../../core/Atomic.js";
+import { DateLike, DeepReplaceValue, ErrorLike, PlayObject, REGEX_ISO8601_LOOSE, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, TemporalAccuracy } from "../../../../../core/Atomic.js";
 import { generateInputEntity, generatePlayEntity, PlayEntityOpts, hydratePlaySelect, PlayHydateOptions } from "../entityUtils.js";
 import { playInputs, plays, queueStates, relations } from "../schema/schema.js";
 import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, QueueStateSelect, FindWith, PlaySelectWithQueueStates, WhereClause, PlayWith } from "../drizzleTypes.js";;
@@ -14,7 +14,6 @@ import { RelationsFieldFilter, eq, inArray, ne, notInArray, desc, asc, and, sql,
 import { CompactableProperty, RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.js";
 import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.js";
 import { buildDateCompare, CompareDateOp, ComponentConstrainedRepoOpts, DrizzleBaseRepository, DrizzleRepositoryOpts, PaginatedQueryResponse, PaginatedResponse } from "./BaseRepository.js";
-import { asPlay } from "../../../../../core/PlayMarshalUtils.js";
 import assert, { Assert } from "node:assert";
 import { hashObject, parseArrayFromMaybeString } from "../../../../utils/StringUtils.js";
 import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../../utils/PlayComparisonUtils.js";
@@ -48,18 +47,7 @@ export interface QueryPlaysOpts<D extends DateLike = Dayjs> extends PlayWhereOpt
     offset?: number
 }
 
-export type QueryPlaysOptsJson = QueryPlaysOpts<string>;
-
-export const asQueryPlaysOpts = (obj: QueryPlaysOptsJson): QueryPlaysOpts<Dayjs> => {
-  const cloned = clone(obj);
-  new Traverse(cloned).forEach((ctx, x) => {
-
-     if (typeof x === 'string' && REGEX_ISO8601_LOOSE.test(x)) {
-        ctx.update(dayjs(x), true);
-    }
-  });
-  return cloned as unknown as QueryPlaysOpts<Dayjs>;
-};
+export type QueryPlaysOptsJson = DeepReplaceValue<QueryPlaysOpts<Dayjs>, [[Dayjs, string]]>;
 
 export interface HydrateOpts {
    hydrate?: PlayHydateOptions[] 

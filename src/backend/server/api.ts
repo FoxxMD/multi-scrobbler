@@ -37,11 +37,13 @@ import ScrobbleSources from "../sources/ScrobbleSources.js";
 import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
 import prom from 'prom-client';
 import { SimpleError } from "../common/errors/MSErrors.js";
-import { asQueryPlaysOpts, DrizzlePlayRepository, QueryPlaysOpts } from "../common/database/drizzle/repositories/PlayRepository.js";
+import { DrizzlePlayRepository, QueryPlaysOpts, QueryPlaysOptsJson } from "../common/database/drizzle/repositories/PlayRepository.js";
 import { playSelectToDeadScrobble } from "../common/database/drizzle/entityUtils.js";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.js";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.js";
 import { ComponentClientApi, ComponentSourceApi, ComponentSourceApiJson } from "../../core/Api.js";
+import { asDayjsHydratedObject } from "../../core/DataUtils.js";
+import { Dayjs } from "dayjs";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -289,7 +291,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
             query
         } = req;
 
-        const hydratedQuery = asQueryPlaysOpts(query);
+        const hydratedQuery = asDayjsHydratedObject<QueryPlaysOptsJson, QueryPlaysOpts<Dayjs>>(query);
         const playRes = await component.getPlaysPaginated(hydratedQuery);
         //PlayApiCommonDetailed
         // plus paginatioon

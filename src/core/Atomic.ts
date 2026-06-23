@@ -665,10 +665,43 @@ export const QUEUE_STATUS_COMPLETED: QueueStatus = 'completed';
 export const QUEUE_STATUS_FAILED: QueueStatus = 'failed';
 export const QUEUE_STATUSES: QueueStatus[] = [QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, QUEUE_STATUS_QUEUED];
 
-/* https://github.com/ts-essentials/ts-essentials/issues/339#issuecomment-4681920369 */
+/**
+ * @see https://github.com/ts-essentials/ts-essentials/issues/339#issuecomment-4681920369 */
 export type Replace<Type, Keys extends keyof Type, TReplace> = StrictOmit<Type, Keys> & Record<Keys, TReplace>
 
-export type DeepReplace<Type, Keys extends keyof Type, TReplace> = DeepOmit<Type, Keys> & Record<Keys, TReplace>
+type Match<Value, ReplaceTuple extends readonly [any, any][], Acc = never> = ReplaceTuple extends readonly [[infer From, infer To], ...infer Rest extends readonly [any, any][]]
+    ? [From] extends [Value]
+        ? Match<Value, Rest, Acc | To>
+        : Match<Value, Rest, Acc>
+    : Acc;
+
+/** 
+ * @see https://github.com/ts-essentials/ts-essentials/issues/339#issuecomment-4770849507
+ * @see https://tsplay.dev/w1rgkN
+ */
+export type DeepReplaceValue<Type, ReplaceTuple extends readonly [any, any][]> = Type extends {}
+  ? {
+        [Key in keyof Type]: Match<Type[Key], ReplaceTuple> extends infer Value
+            ? [Value] extends [never]
+                ? DeepReplaceValue<Type[Key], ReplaceTuple>
+                : Value
+            : never
+        }
+  : Type;
+
+// example of usage
+//
+// type T1 = DeepReplaceValue<{
+//     a: Date;
+//     b: {
+//         c: Date;
+//         d: {
+//             e: Date;
+//         }
+//     }
+// }, [
+//     [Date, string]
+// ]>;
 
 export const qsOptions: IParseBaseOptions = { 
     ignoreQueryPrefix: true, 
