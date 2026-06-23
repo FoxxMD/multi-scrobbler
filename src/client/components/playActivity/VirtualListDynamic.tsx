@@ -6,17 +6,21 @@ import { ActivityLogProps, generateFlatItems, GroupHeader, isGroupInfo } from '.
 import { UseInfiniteQueryResult } from '@tanstack/react-query';
 import { LuCaptionsOff } from "react-icons/lu";
 
-const itemContainerStyle: React.ComponentProps<"div">['style'] = {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  width: "100%",
-  paddingBottom: 4,
+const itemContainerStyle: React.ComponentProps<"div"> = {
+  style: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    paddingBottom: 4,
+  }
 };
 
-const containerStyle: React.ComponentProps<"div">['style'] = {
-  width: "100%",
-  position: "relative",
+const containerStyle: React.ComponentProps<"div"> = {
+  style: {
+    //width: "100%",
+    position: "relative",
+  }
 }
 
 const scrollShadowCss: SystemStyleObject = {
@@ -58,7 +62,7 @@ export const VirtualizedListDynamic = (props: ActivityLogProps & Pick<UseInfinit
     count: items.length + 1,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 85,
-    //directDomUpdates: true,
+    directDomUpdates: true,
     //directDomUpdatesMode: 'position',
     overscan: 4,
     //debug: true
@@ -91,31 +95,31 @@ export const VirtualizedListDynamic = (props: ActivityLogProps & Pick<UseInfinit
 
   // doesn't seem like i need this for height to work correctly?
   //
-  const containerStyleProps = useMemo(
-    (): React.ComponentProps<"div"> => ({
-      style: {
-        height: `${virtualizer.getTotalSize()}px`,
-        width: "100%",
-        position: "relative",
-      },
-    }),
-    [virtualizer],
-  )
+  // const containerStyleProps = useMemo(
+  //   (): React.ComponentProps<"div"> => ({
+  //     style: {
+  //       height: `${virtualizer.getTotalSize()}px`,
+  //       width: "100%",
+  //       position: "relative",
+  //     },
+  //   }),
+  //   [virtualizer],
+  // )
 
-    const itemContainerStyleProps = useCallback(
-    (item: VirtualItem): React.ComponentProps<"div"> => ({
-      style: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        width: "100%",
-        paddingBottom: 4,
-        height: `${item.size}px`,
-        transform: `translateY(${item.start}px)`,
-      },
-    }),
-    [],
-  )
+  //   const itemContainerStyleProps = useCallback(
+  //   (item: VirtualItem): React.ComponentProps<"div"> => ({
+  //     style: {
+  //       position: "absolute",
+  //       top: 0,
+  //       left: 0,
+  //       width: "100%",
+  //       paddingBottom: 4,
+  //       height: `${item.size}px`,
+  //       transform: `translateY(${item.start}px)`,
+  //     },
+  //   }),
+  //   [],
+  // )
 
   return (
     <ScrollArea.Root height="70vh" variant="always" w="full">
@@ -125,7 +129,7 @@ export const VirtualizedListDynamic = (props: ActivityLogProps & Pick<UseInfinit
   >
     <ScrollArea.Content>
       {total !== undefined ? <HStack><Separator flex="1"/><Text flexShrink="0">{total} Plays Total</Text><Separator flex="1"/></HStack> : null}
-    <Box ref={virtualizer.containerRef} {...containerStyleProps}>
+    <Box ref={virtualizer.containerRef} {...containerStyle}>
       {virtualizer.getVirtualItems().map((virtualItem) => {
         const item = items[virtualItem.index]
         const isLoaderRow = virtualItem.index > items.length - 1
@@ -135,7 +139,7 @@ export const VirtualizedListDynamic = (props: ActivityLogProps & Pick<UseInfinit
             data-index={virtualItem.index}
             key={virtualItem.key}
             ref={virtualizer.measureElement}
-            {...itemContainerStyleProps(virtualItem)}>
+            {...itemContainerStyle}>
               {isLoaderRow
                     ? hasNextPage
                       ? (
