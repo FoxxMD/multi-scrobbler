@@ -121,7 +121,7 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
                 <Box marginEnd="auto">
                     <MSComponentType data={props.data}/>
                 </Box>
-                <HStack truncate>{props.data.status}{sleepingRender}</HStack>
+                <HStack truncate>{sleepingRender}{props.data.status}</HStack>
             </Wrap>
             <Flex justifyContent="flex-end" rowGap="6" flexDirection="row-reverse" wrap="wrap">
                 <Card.Root bgColor="bg.subtle" size="sm">

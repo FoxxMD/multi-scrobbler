@@ -1,5 +1,5 @@
-import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect, PropsWithChildren, useCallback, useRef } from "react"
-import { Image, Heading, HStack, Link, LinkOverlay, LinkBox, Span, Flex, Box, Separator, Switch, FloatingPanel, Portal, Text, IconButton } from '@chakra-ui/react';
+import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect, PropsWithChildren, useCallback, useRef, useState } from "react"
+import { Image, Heading, HStack, Link, LinkOverlay, LinkBox, Span, Flex, Box, Separator, Switch, FloatingPanel, Portal, Text, IconButton, Status, Stack } from '@chakra-ui/react';
 import { VersionNext } from "../Version";
 import { TextMuted } from "./TextMuted";
 import { TerminalButton, TerminalIcon, XButton } from "./icons/ChakraIcons";
@@ -12,6 +12,10 @@ import {
 
 import { LogsFetchable } from "./LogsNext";
 import { Ripple } from "./icons/AnimatedIcons";
+import { useSSEContext, useSSEStatus } from "@flamefrontend/sse-runtime-react";
+import { ToggleTip } from "./ToggleTip";
+import { ErrorLike } from "../../core/Atomic";
+import { ErrorAlert } from "./ErrorAlert";
 
 export const AppTitle = (props: { fetchable?: boolean } = {}) => {
     const {
@@ -66,10 +70,58 @@ export const RightHeaderSwitchLogs = (props: {
     </HStack>
 }
 
+export const SSEStatus = (props: {live?: boolean, status?: ReturnType<typeof useSSEStatus>['status'], error?: ErrorLike}) => {
+
+    let status = props.status ?? 'closed'
+    let error: ErrorLike = props.error;
+
+    if(props.live) {
+        const client = useSSEContext();
+        const { status: sseStatus, error: sseError } = useSSEStatus(client);
+        status = sseStatus;
+        error = sseError as ErrorLike;
+    }
+    let content: string | React.JSX.Element;
+    let color: ComponentProps<typeof Status.Indicator>['colorPalette'];
+    switch(status) {
+        case 'error':
+        case 'closed':
+            color = 'red';
+            content = (
+                <Stack>
+                    <Text>Live events connection is <strong>{status}</strong></Text>
+                    {error !== undefined ? <ErrorAlert error={error}/> : null}
+                </Stack>                
+            );
+            break;
+        case 'idle':
+        case 'open':
+            color = 'green';
+            content = 'Currently receiving live events';
+            break;
+        case 'connecting':
+        case 'reconnecting':
+            color = 'orange';
+            content = 'Reconnecting to live events...';
+            break;
+    }
+
+  return (
+    <ToggleTip content={content}>
+        <IconButton variant="ghost" size="xs">
+            <Status.Root>
+                <Status.Indicator colorPalette={color} style={color === 'green' ? {animation: 'icon-fade-half 3s infinite linear'} : undefined}/>
+            </Status.Root>
+        </IconButton>
+    </ToggleTip>
+  )
+}
+
 export const RightHeaderFloatingLogs = (props: {streamable?: boolean}) => {
     const [width, height] = useWindowSize();
 
     return <HStack gap="2">
+        <Box marginRight="2"><SSEStatus live={props.streamable}/></Box>
         <FloatingPanel.Root
             defaultPosition={{x: width * 0.03, y: height * 0.65}}
             defaultSize={{ width: width * 0.95, height: height * 0.3 }}

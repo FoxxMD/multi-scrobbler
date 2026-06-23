@@ -22,6 +22,18 @@
  }
 }
 
+@keyframes icon-fade-half {
+ 0% {
+  opacity: 1;
+ }
+ 60% {
+  opacity: 0.5;
+ }
+ 100% {
+  opacity: 1;
+ }
+}
+
 .chakra-stack .MuiLinearProgress-dashed {
       /* animation: dashed-player 3s infinite linear !important;
       background-image: radial-gradient(var(--chakra-colors-color-palette-solid) 0%, var(--chakra-colors-color-palette-solid) 16%, transparent 42%);
