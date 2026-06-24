@@ -6,6 +6,7 @@ import { QueryFunctionContext, queryOptions, useQuery } from '@tanstack/react-qu
 import ky from 'ky';
 import { baseUrl } from "../../utils";
 import { ErrorAlert } from "../ErrorAlert";
+import { tanQueries } from "../../queries";
 
 export interface ComponentListProps {
     components: ComponentsApiJson[]
@@ -32,7 +33,7 @@ export const MSComponentList = (props: ComponentListProps) => {
                         return x.mode === 'source';
                     }
                     return x.mode === 'client';
-                }).map(x => props.fetchable ? <MSComponentSummaryFetchable componentId={x.id} data={x}/> : <MSComponentSummary data={x} key={x.uid} />)}
+                }).map(x => props.fetchable ? <MSComponentSummaryFetchable key={x.id} componentId={x.id} data={x}/> : <MSComponentSummary data={x} key={x.uid} />)}
             </Stack>
         </Stack>
     )
@@ -40,8 +41,7 @@ export const MSComponentList = (props: ComponentListProps) => {
 
 export const MSComponentListFetchable = () => {
     const { isPending, isError, data, error } = useQuery({
-        queryKey: ['components'],
-        queryFn: queryFn
+        ...tanQueries.components.list()
     });
 
     if(isPending) {
@@ -58,9 +58,4 @@ export const MSComponentListFetchable = () => {
     }
 
     return <MSComponentList fetchable components={data}/>
-}
-
-type ComponentListQueryKey = ['components'];
-const queryFn = async (context: QueryFunctionContext<ComponentListQueryKey>) => {
-    return await ky.get(`components`, { baseUrl: baseUrl }).json() as ComponentsApiJson[];
 }

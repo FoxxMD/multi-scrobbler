@@ -4,8 +4,23 @@ import { QueryPlaysOpts, QueryPlaysOptsJson } from "../../backend/common/databas
 import qs from 'qs';
 import { baseUrl } from "../utils";
 import { PaginatedResponse } from "../../backend/common/database/drizzle/repositories/BaseRepository";
-import { PlayApiCommonDetailed } from "../../core/Api";
+import { ComponentsApiJson, PlayApiCommonDetailed } from "../../core/Api";
 import { SourcePlayerJson } from "../../core/Atomic";
+
+const components = createQueryKeys('components', {
+    list: () => ({
+        queryKey: ['components'],
+        queryFn: (ctx) => {
+            return ky.get(`components`, {
+       baseUrl: baseUrl,
+      }).json<ComponentsApiJson[]>()
+    }
+    }),
+    single: (componentId: number) => ({
+        queryKey: ['components', componentId],
+        queryFn: (ctx) => ky.get(`components/${componentId}`, { baseUrl }).json<ComponentsApiJson>()
+    })
+})
 
 const activities = createQueryKeys('activities', {
     list: (componentId: number, filters: QueryPlaysOptsJson) => ({
@@ -38,4 +53,4 @@ const players = createQueryKeys('players', {
     })
 })
 
-export const tanQueries = mergeQueryKeys(activities, players);
+export const tanQueries = mergeQueryKeys(components, activities, players);

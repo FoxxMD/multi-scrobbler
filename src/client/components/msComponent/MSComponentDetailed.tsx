@@ -10,8 +10,6 @@ import { ChakraPlayer, ChakraPlayerFetchable, PlayersContainer, PlayersContainer
 import { InfoTip, ToggleTip, Tooltip } from "../ToggleTip.js";
 import { QueryFunctionContext, queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ErrorAlert } from "../ErrorAlert";
-import ky from 'ky';
-import { baseUrl } from "../../utils";
 import {
     useSSEContext,
     useSSEEvent,
@@ -26,6 +24,7 @@ import { ActivitySummarySkeleton } from "../ActivityDetail.js";
 import dayjs from "dayjs";
 import { shortTodayAwareFormat } from "../../../core/TimeUtils.js";
 import { durationToHuman } from "../../../backend/utils.js";
+import { tanQueries } from "../../queries/index.js";
 
 export const MSComponentHeading = (props: { data?: Pick<ComponentCommonApiJson, 'name' | 'mode' | 'type'>, fetchable?: boolean }) => {
     if (props.data === undefined) {
@@ -164,8 +163,7 @@ const ComponentDetailedSkeleton = () => {
 
 export const ComponentDetailedFetchable = (props: { componentId: number }) => {
     const { isPending, isError, data, error } = useQuery({
-        queryKey: ['components', props.componentId],
-        queryFn: queryFn
+        ...tanQueries.components.single(props.componentId),
     });
 
     let rendered;
@@ -183,7 +181,7 @@ export const ComponentDetailedFetchable = (props: { componentId: number }) => {
         if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === props.componentId) {
             switch (payload.type) {
                 case 'componentUpdate':
-                    queryClient.setQueryData(['components', props.componentId], (old: ComponentCommonApiJson) => {
+                    queryClient.setQueryData(tanQueries.components.single(props.componentId).queryKey, (old: ComponentCommonApiJson) => {
                         const componentData = payload.data as MsSseEventPayload<Partial<ComponentCommonApiJson>>;
                         return { ...old, ...componentData.data };
                     });
@@ -192,13 +190,6 @@ export const ComponentDetailedFetchable = (props: { componentId: number }) => {
     });
 
     return rendered;
-}
-
-type ComponentDetailedQueryKey = ['components', number];
-const queryFn = async (context: QueryFunctionContext<ComponentDetailedQueryKey>) => {
-    return await ky.get(`components/${context.queryKey[1]}`, {
-       baseUrl: baseUrl,
-      }).json<ComponentsApiJson>();
 }
 
 export const ComponentDetailedRoutable = () => {
