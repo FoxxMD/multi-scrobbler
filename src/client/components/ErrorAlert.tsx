@@ -1,13 +1,56 @@
-import { Alert, Accordion, Stack, Text, Box } from '@chakra-ui/react';
-import { Fragment } from 'react';
-import { ErrorLike } from '../../core/Atomic';
+import { Alert, Accordion, Stack, Text, Box, Collapsible, HStack, Highlight, Span, Code, useCollapsible, UseCollapsibleReturn } from '@chakra-ui/react';
+import { Fragment, ComponentProps, useEffect, useState } from 'react';
 import { ChakraCodeBlock } from './CodeBlock';
 import { ChakraClip } from './ChakraClipboard';
 import { ErrorIsh, isErrorIsh } from '../../core/ErrorUtils';
+import { EllipsisButton, FatArrowRight } from './icons/ChakraIcons';
+import { ErrorObject } from 'serialize-error';
 
 export interface ErrorAlertProps {
     error: ErrorIsh
     status?: "error" | "info" | "warning" | "success" | "neutral"
+}
+
+const ErrorBlock = (props: {data: ErrorData, cause?: boolean, messageProps?: ComponentProps<typeof Text>, collapsible: UseCollapsibleReturn}) => {
+    const {
+        data,
+        cause,
+        collapsible,
+        messageProps = {}
+    } = props;
+
+        const [open, setOpen] = useState(collapsible.open);
+        useEffect(() => {
+            setOpen(collapsible.open);
+        }, [setOpen, collapsible]);
+
+    const textProps: ComponentProps<typeof Text> = {...(cause ? {color: "fg.muted"} : {}), ...messageProps};
+    const containerProps: ComponentProps<typeof HStack> = {};
+    if(cause) {
+        containerProps.paddingLeft = "2";
+    }
+    const errorIdentifier = `${data.name ?? ''}${data.code !== undefined ? ` (${data.code}) ` : ''}`;
+    const errorElm = errorIdentifier === '' ? null : <Code variant="surface" mx="1">{errorIdentifier}</Code>
+    let messageElm: React.JSX.Element = (
+        <HStack {...containerProps}>
+        {cause ? <FatArrowRight/> : null}
+        <Text {...textProps}>{cause ? <Span fontWeight="semibold">Caused By: </Span> : ''}{errorElm}{data.message}</Text>
+    </HStack>
+
+    );
+
+    if(data.stack === undefined) {
+        return messageElm;
+    }
+
+    return (
+    <Collapsible.Root open={open} onOpenChange={(val) => setOpen(val.open)}>
+        <HStack>{messageElm}<Collapsible.Trigger><EllipsisButton size="2xs"/></Collapsible.Trigger></HStack>
+        <Collapsible.Content paddingY="2">
+            <ChakraCodeBlock language="plaintext" code={data.stack} title="Stack" maxLines={6} collapsedMaxHeight="10em" hideBelow="sm"/>
+        </Collapsible.Content>
+    </Collapsible.Root>
+    )
 }
 
 export const ErrorAlert = (props: ErrorAlertProps) => {
@@ -20,20 +63,20 @@ export const ErrorAlert = (props: ErrorAlertProps) => {
         causes = walkError(props.error.cause);
     }
 
+    const collapsible = useCollapsible()
+
     return (
         <Box>
         <Alert.Root status={props.status ?? 'error'}>
             <Alert.Indicator />
             <Alert.Content>
-                <Alert.Title>{props.error.name ?? 'Error'}</Alert.Title>
+                <Alert.Title>{props.error.name ?? 'Error'}<EllipsisButton marginLeft="2" size="2xs" onClick={() => collapsible.setOpen(!collapsible.open)}/></Alert.Title>
                 <Alert.Description>
-                    <Stack>
-                        <Text>{props.error.message}</Text>
-                        {props.error.stack !== undefined ? <ChakraCodeBlock language="plaintext" code={props.error.stack} title="Stack" maxLines={6} collapsedMaxHeight="10em" hideBelow="sm"/> : null}
+                    <Stack gap="0.5">
+                        <ErrorBlock data={props.error} messageProps={{fontWeight: 'semibold'}} collapsible={collapsible}/>
                         {causes.map((x, index) => (
                             <Fragment key={index}>
-                                <Text color="fg.muted">Caused By: {x.name ?? ''}{x.code !== undefined ? ` (${x.code}) ` : ''}{x.message}</Text>
-                                {x.stack !== undefined ? <ChakraCodeBlock language="plaintext" code={x.stack} title="Stack" maxLines={6} collapsedMaxHeight="10em" hideBelow="sm"/> : null}
+                                <ErrorBlock key={index} data={x} cause collapsible={collapsible}/>
                             </Fragment>
                         ))}
                     </Stack>

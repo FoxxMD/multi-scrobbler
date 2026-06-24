@@ -1,4 +1,4 @@
-import { LuChevronRight, LuChevronLeft, LuActivity, LuGithub, LuTerminal, LuAlignJustify, LuX, LuExternalLink, LuArrowUp, LuArrowDown } from "react-icons/lu"
+import { LuChevronRight, LuChevronLeft, LuActivity, LuGithub, LuTerminal, LuAlignJustify, LuX, LuExternalLink, LuArrowUp, LuArrowDown, LuEllipsis, LuArrowBigRight } from "react-icons/lu"
 import { RiZzzFill } from "react-icons/ri";
 import { SiGoogledocs } from "react-icons/si";
 import { IconButton } from "@chakra-ui/react"
@@ -75,3 +75,8 @@ export const IdleIcon = (props: {animated?: boolean} & ComponentProps<typeof RiZ
     }
     return <RiZzzFill {...rest}/>;
 };
+
+export const EllipsisIcon = LuEllipsis;
+export const EllipsisButton = makeIconButton(EllipsisIcon);
+
+export const FatArrowRight = LuArrowBigRight;
