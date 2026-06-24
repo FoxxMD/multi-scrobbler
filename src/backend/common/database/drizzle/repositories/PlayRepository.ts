@@ -92,12 +92,12 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return res as PlaySelectWithQueueStates;
     }
 
-    createPlays = async (entitiesOpts: RepositoryCreatePlayOpts[], opts: HydrateOpts = {}) => {
+    createPlays = async (entitiesOpts: RepositoryCreatePlayOpts[], opts: HydrateOpts = {}): Promise<PlayWith<'input'>[]> => {
 
         const {
             hydrate
         } = opts;
-        let playRows: PlaySelect[];
+        let playRows: PlayWith<'input'>[];
 
         await runTransaction(this.db, async () => {
 
@@ -110,9 +110,9 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                 return generatePlayEntity(play, { componentId: this.componentId, ...rest });
             });
 
-            playRows = await this.db.insert(plays).values(entitiesData).returning();
+            const nakedPlays = await this.db.insert(plays).values(entitiesData).returning();
 
-            const inputDatas = playRows.map((x, index) => {
+            const inputDatas = nakedPlays.map((x, index) => {
                 const {
                     play,
                     input,
@@ -126,10 +126,10 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             });
 
             const inputRow = await this.db.insert(playInputs).values(inputDatas);
-
+            playRows = nakedPlays.map((x, index) => ({...x, play: hydratePlaySelect(x, hydrate), input: inputRow[index]}));
         });
 
-        return playRows.map(x => ({...x, play: hydratePlaySelect(x, hydrate)}));
+        return playRows;
     }
 
     findPlays = async (args: QueryPlaysOpts, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PlaySelect[]> => {
