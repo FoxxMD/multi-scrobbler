@@ -3,9 +3,14 @@ import addonA11y from "@storybook/addon-a11y";
 import { definePreview } from "@storybook/react-vite";
 
 import { themes } from 'storybook/theming';
-import { initialize, mswLoader } from 'msw-storybook-addon';
+import { initialize, mswLoader, getWorker } from 'msw-storybook-addon';
 
-initialize();
+// https://github.com/mswjs/msw-storybook-addon/issues/82#issuecomment-3894302575
+try {
+  getWorker();
+} catch (_) {
+  initialize();
+}
 
 export default definePreview({
   loaders: [mswLoader],
