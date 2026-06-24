@@ -118,8 +118,8 @@ export const ChakraPlayer = (props: PlayerProps) => {
     },[setProgressBuffer, data, setIntervalId]);
 
     const indeterminate = nowPlayingMode || (calculated === 'playing' && data.position === undefined);
-    const positionProgress = indeterminate || data.position === undefined || duration === undefined ? undefined : (data.position/duration) * 100;
-    const bufferProgress = indeterminate || data.position === undefined || duration === undefined || positionBuffer === undefined ? undefined : (positionBuffer/duration) * 100;
+    const positionProgress = indeterminate || data.position === undefined || duration === undefined ? undefined : Math.trunc((data.position/duration) * 100);
+    const bufferProgress = indeterminate || data.position === undefined || duration === undefined || positionBuffer === undefined ? undefined : Math.trunc((positionBuffer/duration) * 100);
     const positionTimestamp = indeterminate || data.position === undefined ? '-' : timeToHumanTimestamp((positionBuffer ?? data.position) * 1000);
     const durationTimestamp = duration === undefined ? '-' : timeToHumanTimestamp(duration * 1000);
 
@@ -142,7 +142,7 @@ export const ChakraPlayer = (props: PlayerProps) => {
                 variant={indeterminate ? undefined : "buffer"}
                 
                 value={positionProgress}
-                valueBuffer={bufferProgress ?? positionProgress}
+                valueBuffer={Math.max(bufferProgress ?? positionProgress)}
                 />
                 </Box>
                 <Text textStyle="xs">{durationTimestamp}</Text>
@@ -228,7 +228,7 @@ export const PlayersContainer = (props: { data: ComponentCommonApiJson, live?: b
             return <Stack gap="2">
                 {
                     Object.entries(players).map(([key, x]) => (
-                        <Container className="playerContainer" bg="bg.emphasized" borderWidth="1px" p="2" py="3" rounded="md" {...container}>
+                        <Container key={key} className="playerContainer" bg="bg.emphasized" borderWidth="1px" p="2" py="3" rounded="md" {...container}>
                             {live ? <ChakraPlayerFetchable componentId={data.id} platformId={key} data={x} /> : <ChakraPlayer data={x} />}
                         </Container>
                     ))
