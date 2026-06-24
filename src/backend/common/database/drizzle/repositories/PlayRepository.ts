@@ -417,12 +417,14 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                             }
 
                             compactedPlay = playRow.play;
-                            compactedPlay.lifecycle = compactedPlay.lifecycle.map(x => {
-                                if(x.inputs == undefined) {
-                                    return x;
-                                }
-                                return {...x, inputs: x.inputs.map(y => ({type: y.type, input: 'Removed by compaction'}))};
-                            });
+                            if(compactedPlay.lifecycle !== undefined) {
+                                compactedPlay.lifecycle = compactedPlay.lifecycle.map(x => {
+                                    if(x.inputs == undefined) {
+                                        return x;
+                                    }
+                                    return {...x, inputs: x.inputs.map(y => ({type: y.type, input: 'Removed by compaction'}))};
+                                });
+                            }
                         }
 
                         const updater = this.db.update(plays);
