@@ -656,7 +656,7 @@ export const PLAY_SOURCE_STATE: PlaySourceState[] = [...PLAY_STATE_COMMON, 'disc
 export type PlayClientState = PlayStateCommon | 'duped' | 'scrobbled';
 export const PLAY_CLIENT_STATE = [...PLAY_STATE_COMMON, 'duped', 'scrobbled'];
 export type PlayState = PlaySourceState | PlayClientState;
-export const PLAY_STATES = Array.from(new Set(...PLAY_CLIENT_STATE, ...PLAY_SOURCE_STATE));
+export const PLAY_STATES = Array.from(new Set([...PLAY_CLIENT_STATE, ...PLAY_SOURCE_STATE]));
 
 
 export type QueueStatus = 'queued' | 'completed' | 'failed';

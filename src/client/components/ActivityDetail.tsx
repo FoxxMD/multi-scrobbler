@@ -6,7 +6,7 @@ import { ErrorAlert } from "./ErrorAlert";
 import { AiOutlineExclamationCircle } from "react-icons/ai";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { ExpandCollapse } from "./ExpandCollapse";
-import { PlayApiCommon, PlayApiCommonDetailed, SortPlaysBy, SortPlaysByProps } from "../../core/Api";
+import { MsSseEvent, PlayApiCommon, PlayApiCommonDetailed, SortPlaysBy, SortPlaysByProps } from "../../core/Api";
 import { InfiniteData, QueryFunctionContext, queryOptions, useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import ky from 'ky';
 import { baseUrl } from "../utils";
@@ -19,6 +19,7 @@ import { QueryPlaysOpts, QueryPlaysOptsJson } from "../../backend/common/databas
 import { tanQueries } from "../queries";
 import { PaginatedResponse } from "../../backend/common/database/drizzle/repositories/BaseRepository";
 import { LuChevronRight } from "react-icons/lu";
+import { useSSEContext, useSSEEvent } from "@flamefrontend/sse-runtime-react";
 
 export interface ActivityDetailProps {
     activity: PlayApiCommonDetailed
@@ -69,6 +70,16 @@ export const ActivitySummaryFetchable = (props: MarkOptional<ActivitySummaryProp
                 }
                 return undefined;
             }
+        }
+    });
+
+    const client = useSSEContext<MsSseEvent>();
+    useSSEEvent(client, 'playUpdate', (payload) => {
+        if(payload.componentId === props.componentId && payload.data.uid === props.activityUid) {
+            queryClient.invalidateQueries({
+                queryKey: tanQueries.activities.single(props.componentId, props.activityUid).queryKey,
+                refetchType: "all"
+            });
         }
     });
 
@@ -151,6 +162,16 @@ export interface ActivityDetailFetchableProps {
 export const ActivityDetailFetchable = (props: ActivityDetailFetchableProps) => {
     const { isPending, isError, data, error } = useQuery({
         ...tanQueries.activities.single(props.componentId, props.uid)
+    });
+
+    const queryClient = useQueryClient();
+    const client = useSSEContext<MsSseEvent>();
+    useSSEEvent(client, 'playUpdate', (payload) => {
+        if(payload.componentId === props.componentId && payload.data.uid === props.uid) {
+            queryClient.invalidateQueries({
+                queryKey: tanQueries.activities.single(props.componentId, props.uid).queryKey
+            });
+        }
     });
 
     if(isPending) {

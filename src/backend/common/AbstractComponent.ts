@@ -37,8 +37,9 @@ import { ClientType } from "./infrastructure/config/client/clients.js";
 import { SourceType } from "./infrastructure/config/source/sources.js";
 import { DrizzleComponentRepository } from "./database/drizzle/repositories/ComponentRepository.js";
 import dayjs from "dayjs";
-import { COMPONENT_STATE, ComponentCommonApi, ComponentState } from "../../core/Api.js";
+import { COMPONENT_STATE, ComponentCommonApi, ComponentState, PlayApiCommonDetailed } from "../../core/Api.js";
 import { WebhookPayload } from "./infrastructure/config/health/webhooks.js";
+import { MarkRequired } from "ts-essentials";
 
 export type AbstractComponentConfig = (CommonClientConfig | CommonSourceConfig) & { transformManager?: TransformerManager };
 
@@ -538,7 +539,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
     }
 
-    public emitEvent = (eventName: string, payload: object = {}) => {
+    public emitEvent = (eventName: string, payload: Record<string, any> = {}) => {
         this.emitter.emit(eventName, {
             type: this.type,
             name: this.name,
@@ -548,14 +549,14 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         });
     }
 
-    protected emitComponentUpdate = <T = Partial<typeof this.getApiData>>(payload: T) => {
-        this.emitter.emit('componentUpdate', {
-            type: this.type,
-            name: this.name,
-            componentId: this.dbComponent?.id,
-            from: this.componentType,
-            data: payload,
-        });
+    protected emitComponentUpdate = (payload: Partial<typeof this.getApiData>) => {
+        this.emitEvent('componentUpdate', payload);
+    }
+    protected emitPlayUpdate = (payload: MarkRequired<Partial<PlayApiCommonDetailed>, 'uid'>) => {
+        this.emitEvent('playUpdate', payload);
+    }
+    protected emitPlayInsert = (payload: PlayApiCommonDetailed) => {
+        this.emitEvent('playInsert', payload);
     }
 
     async notify(payload: Omit<WebhookPayload, 'identifier'>) {

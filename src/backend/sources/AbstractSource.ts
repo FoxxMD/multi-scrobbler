@@ -334,6 +334,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.tracksDiscovered++;
         this.logger.info(`Discovered => ${buildTrackString(play)}`);
         this.emitEvent('discovered', {play});
+        this.emitPlayInsert(playRow);
         this.discoveredCounter.labels(this.getPrometheusLabels()).inc();
         play.id = playRow[0].id;
         play.uid = playRow[0].uid;

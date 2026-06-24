@@ -5,8 +5,8 @@ import dayjs, { Dayjs } from 'dayjs';
 import doy from 'dayjs/plugin/dayOfYear.js';
 import { ActivityDetailFetchable, ActivityDetails, ActivitySummary, ActivitySummaryFetchable, ActivitySummarySkeleton } from '../ActivityDetail.js';
 import "./PlayList.scss";
-import { PlayApiCommonDetailed } from '../../../core/Api.js';
-import { useQuery, useInfiniteQuery, UseInfiniteQueryResult } from '@tanstack/react-query';
+import { MsSseEvent, MsSseEventPayload, PlayApiCommon, PlayApiCommonDetailed } from '../../../core/Api.js';
+import { useQuery, useInfiniteQuery, UseInfiniteQueryResult, InfiniteData, useQueryClient } from '@tanstack/react-query';
 import { ErrorAlert } from '../ErrorAlert.js';
 import { tanQueries } from '../../queries/index.js';
 import { VirtualizedListNormal } from './VirtualListNormal.js';
@@ -15,6 +15,8 @@ import { VirtualizedListExp } from './VirtualListExperimental.js';
 import { ActivityLogProps, generateGroupPlays, GroupHeader } from './ListParts.js';
 import { ListFilters, todayRange } from './ListFilters.js';
 import { QueryPlaysOpts, QueryPlaysOptsJson } from '../../../backend/common/database/drizzle/repositories/PlayRepository.js';
+import { PaginatedResponse } from '../../../backend/common/database/drizzle/repositories/BaseRepository.js';
+import { useSSEAnyEvent, useSSEContext } from '@flamefrontend/sse-runtime-react';
 
 dayjs.extend(doy);
 
@@ -113,6 +115,20 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
 
   const allPlays = useMemo(() => data === undefined ? [] : data.pages.flatMap(x => x.data).filter(x => x !== null && x !== undefined),[data]);
 
+    const queryClient = useQueryClient();
+    const client = useSSEContext<MsSseEvent>();
+    useSSEAnyEvent(client, (payload) => {
+        if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === props.componentId) {
+            switch (payload.type) {
+              case 'playInsert':
+                queryClient.setQueryData(['components', props.componentId], (old: InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown>) => {
+                    const componentData = payload.data as MsSseEventPayload<PlayApiCommonDetailed>;
+                    return insertInfinitePlay(componentData.data, old);
+                });
+            }
+        }
+    });
+
   let rendered;
   if (status === 'pending' && data === undefined) {
     rendered = <Stack><ActivitySummarySkeleton /><ActivitySummarySkeleton /><ActivitySummarySkeleton /></Stack>;
@@ -125,6 +141,92 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
   }
 
   return rendered;
+}
+
+/** this is based on the assumption data is always playedAt descending */
+const insertInfinitePlay = (data: PlayApiCommonDetailed, queryData: InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown>): InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown> => {
+  const newQueryData: InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown> = {
+    pages: [],
+    pageParams: {...queryData.pageParams}
+  };
+
+  const playedAt = dayjs(data.play.data.playDate);
+
+  for(const p of queryData.pages) {
+    const afterIndex = p.data.findIndex(x => dayjs(x.play.data.playDate).isSameOrAfter(playedAt));
+    if(afterIndex === -1) {
+      newQueryData.pages.push(p);
+    } else {
+      const {
+        data: playData,
+        meta
+      } = p;
+      newQueryData.pages.push({
+        meta,
+        data: [...playData.slice(0, afterIndex), data, ...playData.slice(afterIndex)]
+      });
+    }
+  }
+
+  return newQueryData;
+}
+
+// const updateInfinitePlay = (data: PlayApiCommonDetailed, queryData: InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown>): InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown> => {
+//   const newQueryData: InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown> = {
+//     pages: [],
+//     pageParams: {...queryData.pageParams}
+//   };
+
+//   for(const p of queryData.pages) {
+//     const afterIndex = p.data.findIndex(x => x.uid === data.uid);
+//     if(afterIndex === -1) {
+//       newQueryData.pages.push(p);
+//     } else {
+//       const {
+//         data: playData,
+//         meta
+//       } = p;
+//       newQueryData.pages.push({
+//         meta,
+//         data: [...playData.slice(0, afterIndex), {...p.data[afterIndex], ...data}, ...playData.slice(afterIndex)]
+//       });
+//     }
+//   }
+
+//   return newQueryData;
+// }
+
+const playInWindow = (data: PlayApiCommonDetailed, query: QueryPlaysOptsJson): boolean => {
+  if (query.state !== undefined && !query.state.includes(data.state)) {
+    return false;
+  }
+  if (query.text !== undefined) {
+    let someFound = false;
+    for (const t of query.text) {
+      if (data.play.data.track?.toLocaleLowerCase().includes(t)) {
+        someFound = true;
+        break;
+      }
+      if (data.play.data.track.toLocaleLowerCase().includes(t)) {
+        someFound = true;
+        break;
+      }
+      if ((data.play.data.artists ?? []).some(x => x.name.toLocaleLowerCase().includes(t))) {
+        someFound = true;
+      }
+    }
+    if (!someFound) {
+      return false;
+    }
+  }
+  const played = dayjs(data.play.data.playDate);
+  if (query.playedAt.type === 'between' && (
+    !played.isAfter(dayjs(query.playedAt.range[0]))
+    || !played.isBefore(dayjs(query.playedAt.range[1])))) {
+    return false;
+  }
+  // TODO playedAt with comparisons that aren't between
+  return true;
 }
 
 export const ListContainerFilterable = (props: { componentId: number, componentType: ComponentType } & Pick<ComponentProps<typeof ActivityList>, 'render'>) => {

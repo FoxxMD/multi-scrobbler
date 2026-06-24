@@ -110,6 +110,6 @@ export const generateFlatItems = (data: PlayApiCommon[]) => {
     groups.sort((a, b) => sortByNewestDate(a.date, b.date));
     return groups.map((x) => {
       x.plays.sort((a, b) => sortByNewestDate(a.playedAt, b.playedAt));
-      return [{count: x.plays.length, date: x.date}, ...x.plays];
+      return [{count: x.plays.length, date: x.date, uid: x.date.toISOString()}, ...x.plays];
     }).flat(1);
 }

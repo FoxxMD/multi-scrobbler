@@ -1132,6 +1132,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     signal.throwIfAborted();
                     try {
                         const scrobbledPlay = await this.scrobble(transformedScrobble, {signal});
+                        currQueuedPlay.play = scrobbledPlay;
                         await this.addScrobbledTrack(scrobbledPlay);
                         //handledShiftedPlay = true;
                     } catch (e) {
@@ -1184,11 +1185,15 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             const queueState = currQueuedPlay.queueStates.find(x => x.queueName === CLIENT_INGRESS_QUEUE);
             if(queueError !== undefined) {
                 await this.queueRepo.updateById(queueState.id, {queueStatus: 'failed', error: queueError});
-                await this.playRepo.updateById(currQueuedPlay.id, {state: 'failed', error: queueError});
+                await this.playRepo.updateById(currQueuedPlay.id, {state: 'failed', error: queueError, play: currQueuedPlay.play});
+                currQueuedPlay.state = 'failed';
+                currQueuedPlay.error = queueError;
             } else {
                 await this.queueRepo.updateById(queueState.id, {queueStatus: 'completed'});
-                await this.playRepo.updateById(currQueuedPlay.id, {state: successState ?? 'scrobbled'});
+                await this.playRepo.updateById(currQueuedPlay.id, {state: successState ?? 'scrobbled', play: currQueuedPlay.play});
+                currQueuedPlay.state = successState ?? 'scrobbled';
             }
+            this.emitPlayUpdate(currQueuedPlay);
             this.emitEvent('scrobbleDequeued', { queuedScrobble: currQueuedPlay })
             this.queuedGauge.labels(this.getPrometheusLabels()).dec();
             this.queuedLength -= 1;
@@ -1499,6 +1504,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             const queuedPlay = {id: nanoid(), source, play: play}
             //await this.playRepo.updateById(play.meta.dbId, {play});
             this.emitEvent('scrobbleQueued', {queuedPlay: queuedPlay});
+            this.emitPlayInsert(playRow[0]);
             this.queuedLength += 1;
             //this.queuedScrobbles.push(queuedPlay);
             this.queuedGauge.labels(this.getPrometheusLabels()).inc();

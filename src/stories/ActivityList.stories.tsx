@@ -1,23 +1,26 @@
 import '../client/wdyr.js';
 import preview from "../../.storybook/preview.js";
 import React from 'react';
-import { http, HttpResponse, delay } from 'msw';
+import { http, HttpResponse, delay, sse } from 'msw';
 
 import { fn } from 'storybook/test';
 import { Container } from '@chakra-ui/react';
 import { ListContainerFetchable, ListContainerFilterable, ActivityList } from "../client/components/playActivity/ActivityList.js";
 import {Provider} from "../client/components/Provider.js";
 import { generateJsonPlays, normalizePlays } from "../core/PlayTestUtils.js";
-import { ErrorLike, JsonPlayObject, qsOptions } from "../core/Atomic.js";
-import {playWithLifecycleScrobble, generatePlayWithLifecycle} from '../core/tests/utils/fixtures.js'
+import { ErrorLike, JsonPlayObject, PlayState, qsOptions } from "../core/Atomic.js";
+import {playWithLifecycleScrobble, generatePlayWithLifecycle, randomPlayState} from '../core/tests/utils/fixtures.js'
 import { generateArray } from "../core/DataUtils.js";
 import dayjs from "dayjs";
 import qs from 'qs';
 import { asJsonPlayObject } from "../core/PlayMarshalUtils.js";
 import { generatePlayApiCommon, generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList } from "../core/tests/utils/apiFixtures.js";
-import { PlayApiCommonDetailed } from "../core/Api.js";
+import { MsSseEvent, PlayApiCommonDetailed } from "../core/Api.js";
 import { PaginatedResponse } from "../backend/common/database/drizzle/repositories/BaseRepository.js";
 import { QueryPlaysOptsJson } from '../backend/common/database/drizzle/repositories/PlayRepository.js';
+import { SSEProvider } from "@flamefrontend/sse-runtime-react";
+import { sseProviderOptions } from '../client/AppNext.js';
+import { faker } from '@faker-js/faker';
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
@@ -36,7 +39,7 @@ const meta = preview.meta({
   // },
   render: function Render(args, { loaded: { data } }) { return (<ActivityList {...args} data={data ?? []}/>) },
 decorators: [
-    (Story) => (<Provider><Container maxWidth="4xl"><Story/></Container></Provider>),
+    (Story) => (<Provider><Container maxWidth="4xl"><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Container></Provider>),
   ]
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });
@@ -256,4 +259,71 @@ export const ListLiveNoMorePlay = meta.story({
       ],
     },
   },
+});
+
+export const ListLiveUpdates = meta.story({
+  component: ListContainerFilterable,
+  render: function Render(args, { loaded: { data } }) { return (<ListContainerFilterable {...args}/>) },
+  args: {
+    render: "virtDynamic",
+    componentId: 1,
+    componentType: 'source'
+  },
+  parameters: {
+    msw: {
+      handlers: [
+        http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
+          if(livePlayData.length === 0) {
+            livePlayData = await generatePlayApiCommonDetailedList();
+          }
+          const url = new URL(request.url)
+          console.log(url.search);
+          const query = qs.parse(url.search, qsOptions);
+          console.log(query);
+          const res: PaginatedResponse<PlayApiCommonDetailed> = {
+            data: livePlayData,
+            meta: {
+              offset: 0,
+              limit: livePlayData.length,
+              total: livePlayData.length,
+            }
+          }
+          await delay(1000);
+          return HttpResponse.json(res);
+        }),
+        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
+          if(livePlayData.length === 0) {
+            livePlayData = await generatePlayApiCommonDetailedList();
+          }
+          const existingIndex = livePlayData.findIndex(x => x.uid === params.uid);
+          if (existingIndex !== -1) {
+            const existing = livePlayData[existingIndex];
+            let newState: PlayState = existing.state;
+            while(newState === existing.state) {
+              newState = randomPlayState();
+            }
+            existing.play.data.track = faker.music.songName();
+            livePlayData[existingIndex].state = newState;
+            const updated = {...existing, state: newState};
+            return HttpResponse.json(updated);
+          }
+          return HttpResponse.json(generatePlayApiCommonDetailed());
+        }),
+        sse('/api/events?next=true', async ({ params, client }) => {
+            setInterval(() => client.send({
+              //@ts-expect-error
+              event: 'playUpdate', 
+              data: {componentId: 1, data: {uid: livePlayData[1].uid}}}), 2000);
+        })
+      ],
+    },
+  },
+
+  //render: function Render(args) { return (<ChakraProvider><MyList></MyList></ChakraProvider>) }
+  loaders: [
+    async () => {
+      playData = await generatePlayApiCommonDetailedList()
+      return { data: playData };
+    }
+  ]
 });
