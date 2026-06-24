@@ -6,7 +6,7 @@ import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
 import { capitalize } from "../../../core/StringUtils.js";
 import { ShortDateDisplay } from "../DateDisplay.js";
 import { ChevronRightButton, IdleIcon } from "../icons/ChakraIcons.js";
-import { ChakraPlayer, ChakraPlayerFetchable, PlayersContainer } from "../chakraPlayer/Player.js";
+import { ChakraPlayer, ChakraPlayerFetchable, PlayersContainer, PlayersContainerFetchable } from "../chakraPlayer/Player.js";
 import { InfoTip, ToggleTip, Tooltip } from "../ToggleTip.js";
 import { QueryFunctionContext, queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ErrorAlert } from "../ErrorAlert";
@@ -132,7 +132,7 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
                     </Card.Root>
                 <Box marginEnd="auto"><MSComponentStats {...props}/></Box>
             </Flex>
-            <PlayersContainer data={props.data} live={props.live}/>
+            {props.live ? <PlayersContainerFetchable data={props.data}/> : <PlayersContainer data={props.data} live={props.live}/>}
             <Heading size="3xl">{isComponentTypeSource(props.data.mode) ? 'Plays' : 'Scrobbles'}</Heading>
             <ListContainerFilterable render="virtDynamic" componentType={props.data.mode} componentId={props.data.id}/>
         </Flex>

@@ -6,7 +6,7 @@ import { TextMuted } from "../TextMuted.js";
 import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
 import { capitalize } from "../../../core/StringUtils.js";
 import { ChevronRightButton, IdleIcon } from "../icons/ChakraIcons.js";
-import { PlayersContainer } from "../chakraPlayer/Player.js";
+import { PlayersContainer, PlayersContainerFetchable } from "../chakraPlayer/Player.js";
 import { QueryFunctionContext, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ErrorAlert } from "../ErrorAlert";
 import {
@@ -14,7 +14,6 @@ import {
   useSSEEvent,
   useSSEAnyEvent
 } from "@flamefrontend/sse-runtime-react";
-import { SourcePlayerJson } from "../../../core/Atomic.js";
 import { CountLiveIndicator, DeadLetterIndicator, QueuedIndicator } from "./Stats.js";
 import { ComponentStateBadge } from "../Badges.js";
 
@@ -40,7 +39,7 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
             cardHeaderProps.borderBottomWidth="1px";
             cardHeaderProps.paddingBottom="2px";
             body = (<Card.Body px="3" py="2" paddingTop="3">
-                <PlayersContainer data={data} live={fetchable}/>
+                {fetchable ? <PlayersContainerFetchable data={data}/> : <PlayersContainer data={data} live={fetchable}/>}
             </Card.Body>);
         }
     }
@@ -127,27 +126,6 @@ export const MSComponentSummaryFetchable = (props: {componentId: number, data: C
     useSSEAnyEvent(client, (payload) => {
         if('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === componentId) {
             switch(payload.type) {
-                case 'playerUpdate':
-                    // add new player
-                    queryClient.setQueryData(['components', componentId, 'summary'], (old: ComponentSourceApiJson) => {
-                        const playerPayload = payload.data as MsSseEventPayload<SourcePlayerJson>;
-                        if(old.players[playerPayload.data.platformId] === undefined) {
-                            let newData: ComponentSourceApiJson = {...old};
-                            newData.players[playerPayload.data.platformId] = playerPayload.data;
-                            return newData;
-                        }
-                    });
-                    break;
-                case 'playerDelete':
-                    queryClient.setQueryData(['components', componentId, 'summary'], (old: ComponentSourceApiJson) => {
-                        const playerPayload = payload.data as MsSseEventPayload<{platformId: string}>;
-                        if(old.players[playerPayload.data.platformId] !== undefined) {
-                            let newData: ComponentSourceApiJson = {...old};
-                            delete newData.players[playerPayload.data.platformId];
-                            return newData;
-                        }
-                    });
-                    break;
                 case 'componentUpdate':
                     queryClient.setQueryData(['components', componentId, 'summary'], (old: ComponentCommonApiJson) => {
                         const componentData = payload.data as MsSseEventPayload<Partial<ComponentCommonApiJson>>;

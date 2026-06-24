@@ -47,6 +47,7 @@ const meta = preview.meta({
           }
           return HttpResponse.json(generatePlayApiCommonDetailed());
         }),
+        sse('/api/events?next=true', async ({ params, client }) => {})
       ],
     },
   },
@@ -66,7 +67,7 @@ const meta = preview.meta({
      return (<ComponentDetailedDesktop {...args} />) 
     },
 decorators: [
-    (Story) => (<Provider><Container maxWidth="4xl"><Story/></Container></Provider>),
+    (Story) => (<Provider><Container maxWidth="4xl"><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Container></Provider>),
   ]
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });
@@ -85,10 +86,6 @@ export const ClientDetailedFetchable = meta.story({
       live: true,
       componentId: 1,
     },
-    decorators: [
-      (Story) => 
-        (<Provider><Container maxWidth="4xl"><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Container></Provider>),
-    ],
     parameters: {
         msw: {
           handlers: [
@@ -114,6 +111,14 @@ export const ClientDetailedFetchable = meta.story({
 export const SourceDetailed = meta.story({
     args: {
       data: generateSourceApiJson({players: {test: generateSourcePlayerJson(undefined, {art: true}), foo: generateSourcePlayerJson(undefined, {art: true})}})
+    }
+});
+
+export const SourceDetailedFetchable = meta.story({
+    args: {
+      data: generateSourceApiJson({players: {test: generateSourcePlayerJson(undefined, {art: true}), foo: generateSourcePlayerJson(undefined, {art: true})}}),
+      live: true,
+      componentId: 1,
     }
 });
 

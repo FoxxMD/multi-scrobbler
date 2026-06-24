@@ -9,12 +9,14 @@ import { ErrorAlert } from "../ErrorAlert";
 import ky from 'ky';
 import { baseUrl } from "../../utils";
 import {
+    useSSEAnyEvent,
   useSSEContext,
   useSSEEvent,
 } from "@flamefrontend/sse-runtime-react";
 import { ComponentCommonApiJson, isComponentSourceApiJson, MsSseEvent, MsSseEventPayload } from "../../../core/Api";
 import LinearProgress from '@mui/material/LinearProgress';
 import { InfoTip, ToggleTip } from "../ToggleTip";
+import { tanQueries } from "../../queries";
 
 export interface PlayerProps {
     data: SourcePlayerJson
@@ -168,7 +170,7 @@ export const ChakraPlayer = (props: PlayerProps) => {
 export interface ChakraPlayerFetchableProps {
     componentId: number
     platformId: string
-    data: SourcePlayerJson
+    data?: SourcePlayerJson
     sot?: SOURCE_SOT_TYPES
 }
 
@@ -180,23 +182,21 @@ export const ChakraPlayerFetchable = (props: ChakraPlayerFetchableProps) => {
         sot
     } = props;
     const queryClient = useQueryClient();
-    const qKey = ['components', componentId, 'players', platformId];
     useEffect(() => {
-        if (initData !== undefined && queryClient.getQueryData(qKey) === undefined) {
-            queryClient.setQueryData(['components', componentId, 'players', platformId], initData);
+        if (initData !== undefined && queryClient.getQueryData(tanQueries.players.single(componentId, platformId).queryKey) === undefined) {
+            queryClient.setQueryData(tanQueries.players.single(componentId, platformId).queryKey, initData);
         }
     }, [initData]);
 
     const client = useSSEContext<MsSseEvent<MsSseEventPayload<SourcePlayerJson>>>();
     useSSEEvent(client, "playerUpdate", (payload) => {
         if (payload.componentId === componentId && payload.data.platformId === platformId) {
-            queryClient.setQueryData(['components', componentId, 'players', platformId], payload.data);
+            queryClient.setQueryData(tanQueries.players.single(componentId, platformId).queryKey, payload.data);
         }
     });
 
     const { isPending, isError, data, error } = useQuery({
-        queryKey: ['components', componentId, 'players', platformId],
-        queryFn: queryFn,
+        ...tanQueries.players.single(componentId, platformId),
         staleTime: Infinity,
     });
 
@@ -209,11 +209,6 @@ export const ChakraPlayerFetchable = (props: ChakraPlayerFetchableProps) => {
     }
 }
 
-type PlayerQueryKey = ['components', number, 'players', string];
-const queryFn = async (context: QueryFunctionContext<PlayerQueryKey>) => {
-    return await ky.get(`sources/${context.queryKey[1]}/players/${context.queryKey[3]}`, { baseUrl: baseUrl }).json() as SourcePlayerJson;
-}
-
 export const PlayersContainer = (props: { data: ComponentCommonApiJson, live?: boolean, container?: ComponentProps<typeof Container> }) => {
     const {
         data,
@@ -221,9 +216,11 @@ export const PlayersContainer = (props: { data: ComponentCommonApiJson, live?: b
         container = {}
     } = props;
     if (isComponentSourceApiJson(data)) {
+
         const {
             players = {}
         } = data;
+
         if (Object.keys(players).length > 0) {
             return <Stack gap="2">
                 {
@@ -236,6 +233,64 @@ export const PlayersContainer = (props: { data: ComponentCommonApiJson, live?: b
             </Stack>;
         }
         return null;
+    }
+    return null;
+}
+
+export const PlayersContainerFetchable = (props: { data: ComponentCommonApiJson, live?: boolean, container?: ComponentProps<typeof Container> }) => {
+    const {
+        data: initData,
+        live = true,
+        container = {}
+    } = props;
+    if (isComponentSourceApiJson(initData)) {
+
+        const queryClient = useQueryClient();
+
+        useEffect(() => {
+            if (initData !== undefined && queryClient.getQueryData(tanQueries.players.list(initData.id).queryKey) === undefined) {
+                queryClient.setQueryData(tanQueries.players.list(initData.id).queryKey, initData.players);
+            }
+        }, [initData]);
+
+        const client = useSSEContext<MsSseEvent>();
+        useSSEAnyEvent(client, (payload) => {
+            if('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === initData.id) {
+                switch(payload.type) {
+                    case 'playerUpdate': {
+                        const playerPayload = payload.data as MsSseEventPayload<SourcePlayerJson>;
+                        queryClient.setQueryData(tanQueries.players.list(initData.id).queryKey, (old: Record<string, SourcePlayerJson>) => {
+                            if(old[playerPayload.data.platformId] === undefined) {
+                                let newData: Record<string, SourcePlayerJson> = {...old};
+                                newData[playerPayload.data.platformId] = playerPayload.data;
+                                return newData;
+                            }
+                        });
+                    }
+                        break;
+                    case 'playerDelete':{
+                        const playerPayload = payload.data as MsSseEventPayload<{platformId: string}>;
+                        queryClient.setQueryData(tanQueries.players.list(initData.id).queryKey, (old: Record<string, SourcePlayerJson>) => {
+                            if(old[playerPayload.data.platformId] !== undefined) {
+                                let newData: Record<string, SourcePlayerJson> = {...old};
+                                delete newData[playerPayload.data.platformId];
+                                return newData;
+                            }
+                        });
+                    }
+                        break;
+                }
+            }
+        });
+
+        const { isPending, isError, data = {}, error } = useQuery({
+            ...tanQueries.players.list(initData.id),
+            staleTime: Infinity,
+        });
+
+        const mergedData = useMemo(() => ({...initData, players: data}),[initData,data]);
+
+        return <PlayersContainer data={mergedData} live container={container}/>
     }
     return null;
 }
