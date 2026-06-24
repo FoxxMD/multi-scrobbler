@@ -5,7 +5,7 @@ import { generatePlay, normalizePlays } from "../../PlayTestUtils.js";
 import { generatePlayInput, generatePlayWithLifecycle, playWithLifecycleScrobble, randomPlayState } from "./fixtures.js";
 import { asJsonPlayObject } from "../../PlayMarshalUtils.js";
 import { generatePlayUid } from "../../StringUtils.js";
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import { ErrorLike } from "serialize-error";
 import { nanoid } from "nanoid";
 import { isSourceType, SourceType, sourceTypes } from "../../../backend/common/infrastructure/config/source/sources.js";
@@ -295,8 +295,8 @@ export const logsApiResponse = () => {
     return {data: messages.map((x, index) => ({line: x, time: time + index, levelLabel: 'debug', level: 'debug'})) }
 }
 
-export const generatePlayApiCommonDetailedList = async () => {
-      const queued = normalizePlays(generateArray(7, () => generatePlayWithLifecycle()), { endDate: dayjs() }).map(x => {
+export const generatePlayApiCommonDetailedList = async (opts: {endDate?: Dayjs} = {}) => {
+      const queued = normalizePlays(generateArray(7, () => generatePlayWithLifecycle()), { endDate: opts.endDate ?? dayjs() }).map(x => {
         const jsonPlay = asJsonPlayObject(x);
         return generatePlayApiCommonDetailed({ playOpts: [{ state: 'queued', play: jsonPlay }], inputOpts: [{ play: jsonPlay }] })
       });

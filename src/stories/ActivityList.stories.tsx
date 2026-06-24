@@ -7,7 +7,7 @@ import { fn } from 'storybook/test';
 import { Container } from '@chakra-ui/react';
 import { ListContainerFetchable, ListContainerFilterable, ActivityList } from "../client/components/playActivity/ActivityList.js";
 import {Provider} from "../client/components/Provider.js";
-import { generateJsonPlays, normalizePlays } from "../core/PlayTestUtils.js";
+import { generateJsonPlays, generatePlay, normalizePlays } from "../core/PlayTestUtils.js";
 import { ErrorLike, JsonPlayObject, PlayState, qsOptions } from "../core/Atomic.js";
 import {playWithLifecycleScrobble, generatePlayWithLifecycle, randomPlayState} from '../core/tests/utils/fixtures.js'
 import { generateArray } from "../core/DataUtils.js";
@@ -16,7 +16,7 @@ import qs from 'qs';
 import { asJsonPlayObject } from "../core/PlayMarshalUtils.js";
 import { generatePlayApiCommon, generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList } from "../core/tests/utils/apiFixtures.js";
 import { MsSseEvent, PlayApiCommonDetailed } from "../core/Api.js";
-import { PaginatedResponse } from "../backend/common/database/drizzle/repositories/BaseRepository.js";
+import { CompareDateBetween, PaginatedResponse } from "../backend/common/database/drizzle/repositories/BaseRepository.js";
 import { QueryPlaysOptsJson } from '../backend/common/database/drizzle/repositories/PlayRepository.js';
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
 import { sseProviderOptions } from '../client/AppNext.js';
@@ -273,6 +273,7 @@ export const ListLiveUpdates = meta.story({
     msw: {
       handlers: [
         http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
+          debugger;
           if(livePlayData.length === 0) {
             livePlayData = await generatePlayApiCommonDetailedList();
           }
@@ -292,11 +293,13 @@ export const ListLiveUpdates = meta.story({
           return HttpResponse.json(res);
         }),
         http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
+          debugger;
           if(livePlayData.length === 0) {
             livePlayData = await generatePlayApiCommonDetailedList();
           }
           const existingIndex = livePlayData.findIndex(x => x.uid === params.uid);
           if (existingIndex !== -1) {
+            debugger;
             const existing = livePlayData[existingIndex];
             let newState: PlayState = existing.state;
             while(newState === existing.state) {
@@ -310,10 +313,83 @@ export const ListLiveUpdates = meta.story({
           return HttpResponse.json(generatePlayApiCommonDetailed());
         }),
         sse('/api/events?next=true', async ({ params, client }) => {
+          debugger;
             setInterval(() => client.send({
               //@ts-expect-error
               event: 'playUpdate', 
               data: {componentId: 1, data: {uid: livePlayData[1].uid}}}), 2000);
+        })
+      ],
+    },
+  },
+
+  //render: function Render(args) { return (<ChakraProvider><MyList></MyList></ChakraProvider>) }
+  loaders: [
+    async () => {
+      playData = await generatePlayApiCommonDetailedList()
+      return { data: playData };
+    }
+  ]
+});
+
+let livePlayInsertData: PlayApiCommonDetailed[] = [];
+export const ListLiveInsert = meta.story({
+  component: ListContainerFilterable,
+  render: function Render(args, { loaded: { data } }) { return (<ListContainerFilterable {...args}/>) },
+  args: {
+    render: "virtDynamic",
+    componentId: 1,
+    componentType: 'source'
+  },
+  parameters: {
+    msw: {
+      handlers: [
+        http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
+          const url = new URL(request.url)
+          console.log(url.search);
+          const query = qs.parse(url.search, qsOptions) as QueryPlaysOptsJson;
+          if(livePlayInsertData.length === 0) {
+            livePlayInsertData = await generatePlayApiCommonDetailedList({endDate: dayjs((query.playedAt as CompareDateBetween<string>)?.range[0])});
+          }
+          console.log(query);
+          const res: PaginatedResponse<PlayApiCommonDetailed> = {
+            data: livePlayInsertData,
+            meta: {
+              offset: 0,
+              limit: livePlayInsertData.length,
+              total: livePlayInsertData.length,
+            }
+          }
+          await delay(1000);
+          return HttpResponse.json(res);
+        }),
+        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
+          const existing = livePlayInsertData.findIndex(x => x.uid === params.uid);
+          if (existing !== undefined) {
+            return HttpResponse.json(existing);
+          }
+          return HttpResponse.json(generatePlayApiCommonDetailed());
+        }),
+        sse('/api/events?next=true', async ({ params, client }) => {
+            setInterval(() => {
+              //const first = livePlayInsertData[0].play.data.playDate;
+              //const last = livePlayInsertData[livePlayData.length - 1].play.data.playDate;
+              const randomIndex = faker.number.int({min: 1, max: livePlayInsertData.length - 2});
+              const random = livePlayInsertData[randomIndex];
+
+              const generatedPlayData = generatePlayApiCommonDetailed({
+                playOpts: [{
+                  
+                  play: asJsonPlayObject(generatePlay({playDate: dayjs(random.play.data.playDate).subtract(30, 's')}))
+                }]
+              });
+              livePlayInsertData.splice(randomIndex, 0, generatedPlayData);
+              client.send({
+              //@ts-expect-error
+              event: 'playInsert', 
+              data: {componentId: 1, data: generatedPlayData}});
+
+            }, 2000);
         })
       ],
     },

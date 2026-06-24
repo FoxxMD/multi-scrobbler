@@ -1,6 +1,6 @@
 import React, { ComponentProps, useState, Fragment } from "react"
 import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Icon, useAccordionItemContext, Skeleton, SkeletonText, Collapsible } from '@chakra-ui/react';
-import { ComponentType } from "../../core/Atomic";
+import { ComponentType, Second } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
 import { ErrorAlert } from "./ErrorAlert";
 import { AiOutlineExclamationCircle } from "react-icons/ai";
@@ -13,7 +13,7 @@ import { baseUrl } from "../utils";
 import { ShortDateDisplay } from "./DateDisplay";
 import { TextMuted } from "./TextMuted";
 import { VscDebugRestart } from "react-icons/vsc";
-import { PlayStateBadge } from "./Badges";
+import { NewBadge, PlayStateBadge } from "./Badges";
 import { MarkOptional } from "ts-essentials";
 import { QueryPlaysOpts, QueryPlaysOptsJson } from "../../backend/common/database/drizzle/repositories/PlayRepository";
 import { tanQueries } from "../queries";
@@ -27,14 +27,15 @@ export interface ActivityDetailProps {
 }
 
 export interface ActivitySummaryProps extends SortPlaysByProps {
-    activity: PlayApiCommon
+    activity: PlayApiCommon & {isNew?: boolean | Second}
     componentType: ComponentType
 }
 
 export const ActivitySummary = (props: ActivitySummaryProps) => {
     const {
         activity: {
-            play
+            play,
+            isNew
         } = {},
         activity,
         sortBy
@@ -42,7 +43,7 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
     return (
         <Flex direction="column" width="100%" truncate rowGap="0.5">
             <Flex width="100%" truncate>
-                <Span truncate marginEnd="auto">{play.data.track}</Span>
+                <Span truncate marginEnd="auto">{play.data.track}{isNew !== undefined ? <NewBadge marginLeft="2" expires={typeof isNew === 'boolean' ? undefined : isNew}/> : null}</Span>
                 <PlayStateBadge state={activity.state} />
             </Flex>
             <TextMuted textAlign="left" truncate>{play.data.artists.map(x => x.name).join(' / ')}</TextMuted>
@@ -98,7 +99,7 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
             error,
             input: {
                 play: original,
-            }
+            } = {}
         }
     } = props;
 

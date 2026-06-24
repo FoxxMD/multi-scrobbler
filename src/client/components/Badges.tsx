@@ -1,9 +1,11 @@
 import { Badge } from "@chakra-ui/react";
-import { ComponentProps, useState } from "react";
+import { ComponentProps, useState, useCallback, useEffect } from "react";
 import { COMPONENT_STATE, ComponentCommonApiJson, componentStateToFriendly, MsSseEvent, MsSseEventPayload, PlayApiCommon } from "../../core/Api";
 import { capitalize } from "../../core/StringUtils";
 import { PlayerState } from "../../backend/common/infrastructure/config/source/mpd";
 import {useSSE, useSSEContext, useSSEEvent} from "@flamefrontend/sse-runtime-react";
+import { Second } from "../../core/Atomic";
+import { useTimeout } from 'react-use-timeout';
 
 export const PlayStateBadge = (props: ComponentProps<typeof Badge> & { state: PlayApiCommon['state'] }) => {
 
@@ -32,6 +34,30 @@ export const PlayStateBadge = (props: ComponentProps<typeof Badge> & { state: Pl
   }
 
   return <Badge variant="surface" colorPalette={badgeColor} {...rest}>{badgeText}</Badge>
+}
+
+export const NewBadge = (props: ComponentProps<typeof Badge> & { expires?: Second }) => {
+
+    const {
+        expires,
+        ...rest
+    } = props;
+    const [shouldShow, setShouldShow] = useState<boolean>(true);
+    const hide = useCallback(() => {
+        setShouldShow(false);
+
+    }, [setShouldShow]);
+    const hideTimeout = useTimeout(hide, expires ?? 10000);
+    useEffect(() => {
+        if (expires !== undefined) {
+            hideTimeout.start();
+        }
+    }, []);
+
+    if (shouldShow) {
+        return <Badge variant="surface" colorPalette="blue" {...rest}>New</Badge>
+    }
+    return null;
 }
 
 export const ComponentStateBadge = (props: ComponentProps<typeof Badge> & { data: Pick<ComponentCommonApiJson, 'state'>, componentId?: number, live?: boolean }) => {

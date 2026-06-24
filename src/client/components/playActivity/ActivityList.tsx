@@ -121,10 +121,12 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
         if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === props.componentId) {
             switch (payload.type) {
               case 'playInsert':
-                queryClient.setQueryData(['components', props.componentId], (old: InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown>) => {
-                    const componentData = payload.data as MsSseEventPayload<PlayApiCommonDetailed>;
-                    return insertInfinitePlay(componentData.data, old);
-                });
+                const componentData = payload.data as MsSseEventPayload<PlayApiCommonDetailed>;
+                if(playInWindow(componentData.data, query)) {
+                  queryClient.setQueryData(tanQueries.activities.list(componentId, query).queryKey, (old: InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown>) => {
+                      return insertInfinitePlay(componentData.data, old);
+                  });
+                }
             }
         }
     });
@@ -153,8 +155,13 @@ const insertInfinitePlay = (data: PlayApiCommonDetailed, queryData: InfiniteData
   const playedAt = dayjs(data.play.data.playDate);
 
   for(const p of queryData.pages) {
-    const afterIndex = p.data.findIndex(x => dayjs(x.play.data.playDate).isSameOrAfter(playedAt));
-    if(afterIndex === -1) {
+    let beforeIndex: number;
+    try {
+      beforeIndex = p.data.findIndex(x => dayjs(x.play.data.playDate).isBefore(playedAt));
+    } catch (e) {
+      console.warn(new Error('Failed to find index for existing data insert', {cause: e}));
+    }
+    if(beforeIndex === -1 || beforeIndex === undefined) {
       newQueryData.pages.push(p);
     } else {
       const {
@@ -163,7 +170,12 @@ const insertInfinitePlay = (data: PlayApiCommonDetailed, queryData: InfiniteData
       } = p;
       newQueryData.pages.push({
         meta,
-        data: [...playData.slice(0, afterIndex), data, ...playData.slice(afterIndex)]
+        data: [...playData.slice(0, beforeIndex), 
+          {...data,
+            // @ts-expect-error
+          isNew: true
+        }
+          , ...playData.slice(beforeIndex)]
       });
     }
   }
@@ -198,6 +210,7 @@ const insertInfinitePlay = (data: PlayApiCommonDetailed, queryData: InfiniteData
 
 const playInWindow = (data: PlayApiCommonDetailed, query: QueryPlaysOptsJson): boolean => {
   if (query.state !== undefined && !query.state.includes(data.state)) {
+    console.debug(`Newely inserted Play ${data.uid} is in state ${data.state} not included in current filters of ${query.state.join(',')}`);
     return false;
   }
   if (query.text !== undefined) {
@@ -216,6 +229,7 @@ const playInWindow = (data: PlayApiCommonDetailed, query: QueryPlaysOptsJson): b
       }
     }
     if (!someFound) {
+      console.debug(`Newely inserted Play ${data.uid} does not match current phrase filters`);
       return false;
     }
   }
@@ -223,6 +237,7 @@ const playInWindow = (data: PlayApiCommonDetailed, query: QueryPlaysOptsJson): b
   if (query.playedAt.type === 'between' && (
     !played.isAfter(dayjs(query.playedAt.range[0]))
     || !played.isBefore(dayjs(query.playedAt.range[1])))) {
+      console.debug(`Newely inserted Play ${data.uid} date ${data.play.data.playDate} is not between filter date range of ${query.playedAt.range[0]} and ${query.playedAt.range[1]}`);
     return false;
   }
   // TODO playedAt with comparisons that aren't between
