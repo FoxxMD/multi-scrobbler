@@ -18,6 +18,7 @@ import { NAV_LINKS, SideNavItems } from './components/SideNav';
 import { LogsFetchable } from './components/LogsNext';
 import { SplitLayout } from './components/layouts/SplitLayout';
 import { ComponentDetailedRoutable } from './components/msComponent/MSComponentDetailed';
+import { MSErrorBoundary } from './components/ErrorBoundary';
 
 function NoMatch() {
     const location = useLocation();
@@ -73,11 +74,11 @@ const routesNested: RouteObject[] = [
         Component: Layout,
         children: [ {
             index: true,
-            element: <Container boxSize="full" p="0" maxWidth="4xl"><MSComponentListFetchable/></Container>,
+            element: <Container boxSize="full" p="0" maxWidth="4xl"><MSErrorBoundary><MSComponentListFetchable/></MSErrorBoundary></Container>,
         },
         {
             path: "components/:componentId",
-            element: <Container boxSize="full" p="0" maxWidth="8xl"><ComponentDetailedRoutable/></Container>
+            element: <Container boxSize="full" p="0" maxWidth="8xl"><MSErrorBoundary><ComponentDetailedRoutable/></MSErrorBoundary></Container>
         },
         {
         path: "*",

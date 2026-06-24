@@ -16,6 +16,7 @@ import {
 } from "@flamefrontend/sse-runtime-react";
 import { CountLiveIndicator, DeadLetterIndicator, QueuedIndicator } from "./Stats.js";
 import { ComponentStateBadge } from "../Badges.js";
+import { MSErrorBoundary } from "../ErrorBoundary.js";
 
 const presentPlayersContainerProps: ComponentProps<typeof Stack> = {
 paddingTop: '2',
@@ -43,7 +44,9 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
             </Card.Body>);
     }
 
-    return (<Card.Root variant="subtle">
+    return (
+    <MSErrorBoundary>
+    <Card.Root variant="subtle">
         <Card.Header {...cardHeaderProps}>
             <LinkBox>
             <Flex justify="space-between">
@@ -67,7 +70,8 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
             <QuickStatsSource data={data} streamable={props.fetchable} />
         </Card.Header>
         {body}
-    </Card.Root>)
+    </Card.Root>
+    </MSErrorBoundary>)
 }
 
 const QuickStatsSource = (props: { data: ComponentCommonApiJson, streamable?: boolean }) => {

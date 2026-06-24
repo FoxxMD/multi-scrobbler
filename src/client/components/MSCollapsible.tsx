@@ -1,6 +1,7 @@
 import { Collapsible, Stack, Box, useBreakpointValue } from "@chakra-ui/react"
 import { ComponentProps, PropsWithChildren, useState, useEffect, useMemo } from "react";
 import { LuChevronRight } from "react-icons/lu"
+import { MSErrorBoundary } from "./ErrorBoundary";
 
 //padding="0" borderWidth="0px"
 
@@ -127,7 +128,9 @@ export const MSCollapsible = (props: MSCollapsibleProps) => {
             </Collapsible.Trigger>
             <Collapsible.Content>
                 <Box {...boxProps}>
+                    <MSErrorBoundary>
                     {props.children}
+                    </MSErrorBoundary>
                 </Box>
             </Collapsible.Content>
         </Collapsible.Root>

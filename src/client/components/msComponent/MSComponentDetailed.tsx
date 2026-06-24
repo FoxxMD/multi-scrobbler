@@ -25,6 +25,7 @@ import dayjs from "dayjs";
 import { shortTodayAwareFormat } from "../../../core/TimeUtils.js";
 import { durationToHuman } from "../../../backend/utils.js";
 import { tanQueries } from "../../queries/index.js";
+import { MSErrorBoundary } from "../ErrorBoundary.js";
 
 export const MSComponentHeading = (props: { data?: Pick<ComponentCommonApiJson, 'name' | 'mode' | 'type'>, fetchable?: boolean }) => {
     if (props.data === undefined) {
@@ -111,6 +112,7 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
         }
     }
     return (
+        <MSErrorBoundary>
         <Flex direction="column" width="100%" truncate rowGap="1">
             <Flex width="100%" truncate>
                 <Box marginEnd="auto" truncate><MSComponentName data={props.data}/></Box>
@@ -135,6 +137,7 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
             <Heading size="3xl">{isComponentTypeSource(props.data.mode) ? 'Plays' : 'Scrobbles'}</Heading>
             <ListContainerFilterable render="virtDynamic" componentType={props.data.mode} componentId={props.data.id}/>
         </Flex>
+        </MSErrorBoundary>
     )
 }
 

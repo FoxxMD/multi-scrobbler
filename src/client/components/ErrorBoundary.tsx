@@ -13,7 +13,7 @@ export const MSErrorBoundary = (props: React.PropsWithChildren) => {
                     <Alert.Content>
                         <Alert.Title>Error while render</Alert.Title>
                         <Alert.Description>
-                            <ChakraCodeBlock code={getErrorMessage(error)} language="plaintext" />
+                            <ChakraCodeBlock code={getErrorMessage(error)} maxLines={6} collapsedMaxHeight="10em" language="plaintext" />
                         </Alert.Description>
                     </Alert.Content>
                 </Alert.Root>

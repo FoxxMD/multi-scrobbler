@@ -3,20 +3,21 @@ import { Fragment } from 'react';
 import { ErrorLike } from '../../core/Atomic';
 import { ChakraCodeBlock } from './CodeBlock';
 import { ChakraClip } from './ChakraClipboard';
+import { ErrorIsh, isErrorIsh } from '../../core/ErrorUtils';
 
 export interface ErrorAlertProps {
-    error: ErrorLike
+    error: ErrorIsh
     status?: "error" | "info" | "warning" | "success" | "neutral"
 }
 
 export const ErrorAlert = (props: ErrorAlertProps) => {
 
-    if(props.error === undefined || props.error === null) {
+    if(!isErrorIsh(props.error)) {
         return null;
     }
     let causes: ErrorData[] = [];
-    if(props.error.cause !== undefined && typeof props.error.cause === 'object' && props.error.cause !== null) {
-        causes = walkError(props.error.cause as ErrorLike);
+    if(isErrorIsh(props.error.cause)) {
+        causes = walkError(props.error.cause);
     }
 
     return (
@@ -51,7 +52,7 @@ interface ErrorData {
     stack?: string
 }
 
-const walkError = (err: ErrorLike, errors: ErrorData[] = []): ErrorData[] => {
+const walkError = (err: ErrorIsh, errors: ErrorData[] = []): ErrorData[] => {
     const thisErr: ErrorData = {
         name: err.name,
         code: 'code' in err ? err.code : undefined,

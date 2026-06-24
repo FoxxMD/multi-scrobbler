@@ -16,6 +16,7 @@ import { useSSEContext, useSSEStatus } from "@flamefrontend/sse-runtime-react";
 import { ToggleTip } from "./ToggleTip";
 import { ErrorLike } from "../../core/Atomic";
 import { ErrorAlert } from "./ErrorAlert";
+import { MSErrorBoundary } from "./ErrorBoundary";
 
 export const AppTitle = (props: { fetchable?: boolean } = {}) => {
     const {
@@ -152,7 +153,7 @@ export const RightHeaderFloatingLogs = (props: {streamable?: boolean}) => {
                             </FloatingPanel.Control>
                         </FloatingPanel.Header>
                         <FloatingPanel.Body>
-                            <LogsFetchable streamable={props.streamable} />
+                            <MSErrorBoundary><LogsFetchable streamable={props.streamable} /></MSErrorBoundary>
                         </FloatingPanel.Body>
                         <FloatingPanel.ResizeTriggers />
                     </FloatingPanel.Content>

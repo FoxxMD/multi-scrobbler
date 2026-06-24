@@ -4,6 +4,21 @@ import { ErrorLike, isErrorLike } from 'serialize-error';
 
 export type ErrorIsh = Error | MarkOptional<ErrorLike, 'stack'>;
 
+export const isErrorIsh = (val: unknown): val is ErrorIsh => {
+    if(val === undefined || val === null || typeof val !== 'object') {
+        return false;
+    }
+    if(!('message' in val)) {
+        return false;
+    }
+    if('cause' in val) {
+        if(!isErrorIsh(val.cause)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 /**
  * Adapted from https://github.com/voxpelli/pony-cause
  * */

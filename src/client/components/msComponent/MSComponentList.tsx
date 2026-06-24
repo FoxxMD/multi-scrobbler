@@ -7,6 +7,7 @@ import ky from 'ky';
 import { baseUrl } from "../../utils";
 import { ErrorAlert } from "../ErrorAlert";
 import { tanQueries } from "../../queries";
+import { MSErrorBoundary } from "../ErrorBoundary";
 
 export interface ComponentListProps {
     components: ComponentsApiJson[]
@@ -33,7 +34,7 @@ export const MSComponentList = (props: ComponentListProps) => {
                         return x.mode === 'source';
                     }
                     return x.mode === 'client';
-                }).map(x => props.fetchable ? <MSComponentSummaryFetchable key={x.id} componentId={x.id} data={x}/> : <MSComponentSummary data={x} key={x.uid} />)}
+                }).map(x => props.fetchable ? <MSErrorBoundary><MSComponentSummaryFetchable key={x.id} componentId={x.id} data={x}/></MSErrorBoundary> : <MSComponentSummary data={x} key={x.uid} />)}
             </Stack>
         </Stack>
     )

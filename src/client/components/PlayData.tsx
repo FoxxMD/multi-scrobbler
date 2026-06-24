@@ -9,6 +9,7 @@ import { TextMuted } from './TextMuted.js';
 import { formatNumber } from '../../core/DataUtils.js';
 import { Muted } from './Typography.js';
 import { ArtistCreditTags } from './ArtistCreditDisplay.js';
+import { MSErrorBoundary } from './ErrorBoundary.js';
 
 const EmptyPlayData = () => {
     return (
@@ -71,19 +72,21 @@ export const PlayData = (props?: PlayInfoProps) => {
 
     return (
         <Box position="relative">
-            <Float placement="top-end" offsetX="4" offsetY="2" hideBelow="sm" zIndex={100}>{code}</Float>
-            <Tabs.Root size="sm" variant="outline" defaultValue={compareDefault}>
-                <Tabs.List>
-                    <Tabs.Trigger value="Initial">Initial</Tabs.Trigger>
-                    <Tabs.Trigger value="Final">Final</Tabs.Trigger>
-                </Tabs.List>
-                <Tabs.Content value="Initial">
-                    {codeMode ? <ChakraCodeBlock code={play} /> : <PlayDataDataList play={play} dates={dates} />}
-                </Tabs.Content>
-                <Tabs.Content value="Final">
-                    {codeMode ? <ChakraCodeBlock code={final} /> : <PlayDataDataList play={final} dates={dates} />}
-                </Tabs.Content>
-            </Tabs.Root>
+            <MSErrorBoundary>
+                <Float placement="top-end" offsetX="4" offsetY="2" hideBelow="sm" zIndex={100}>{code}</Float>
+                <Tabs.Root size="sm" variant="outline" defaultValue={compareDefault}>
+                    <Tabs.List>
+                        <Tabs.Trigger value="Initial">Initial</Tabs.Trigger>
+                        <Tabs.Trigger value="Final">Final</Tabs.Trigger>
+                    </Tabs.List>
+                    <Tabs.Content value="Initial">
+                        {codeMode ? <ChakraCodeBlock code={play} /> : <PlayDataDataList play={play} dates={dates} />}
+                    </Tabs.Content>
+                    <Tabs.Content value="Final">
+                        {codeMode ? <ChakraCodeBlock code={final} /> : <PlayDataDataList play={final} dates={dates} />}
+                    </Tabs.Content>
+                </Tabs.Root>
+            </MSErrorBoundary>
         </Box>
     );
 }

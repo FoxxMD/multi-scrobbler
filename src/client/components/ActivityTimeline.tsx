@@ -20,6 +20,7 @@ import { MSCollapsible } from "./MSCollapsible";
 import { TimelineErrorIcon } from "./timeline/TimelineIcon";
 import { Muted } from "./Typography";
 import { PlayApiCommonDetailed } from "../../core/Api";
+import { MSErrorBoundary } from "./ErrorBoundary";
 
 
 export interface ActivityDetailProps {
@@ -103,6 +104,7 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
     }
 
     return (
+        <MSErrorBoundary>
         <Timeline.Root variant="subtle" size="lg">
             <Timeline.Item>
                 <Timeline.Connector>
@@ -241,5 +243,6 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                 </Timeline.Item>
             ) : null}
         </Timeline.Root>
+        </MSErrorBoundary>
     )
 }
