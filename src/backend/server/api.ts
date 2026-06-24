@@ -44,6 +44,7 @@ import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repo
 import { ComponentClientApi, ComponentSourceApi, ComponentSourceApiJson } from "../../core/Api.js";
 import { asDayjsHydratedObject } from "../../core/DataUtils.js";
 import { Dayjs } from "dayjs";
+import { asSerializablePlaySelect } from "../../core/PlayMarshalUtils.js";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -293,6 +294,9 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
 
         const hydratedQuery = asDayjsHydratedObject<QueryPlaysOptsJson, QueryPlaysOpts<Dayjs>>(query);
         const playRes = await component.getPlaysPaginated(hydratedQuery);
+
+        // @ts-expect-error
+        playRes.data = playRes.data.map(x => asSerializablePlaySelect(x))
         //PlayApiCommonDetailed
         // plus paginatioon
         return res.json(playRes);
@@ -310,7 +314,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         const playRes = await component.getPlayApiResponse(playUid as string);
         //PlayApiCommonDetailed
         // plus paginatioon
-        return res.json(playRes);
+        return res.json(asSerializablePlaySelect(playRes));
     });
 
     /**

@@ -2,9 +2,12 @@ import clone from 'clone';
 import dayjs, { Dayjs } from 'dayjs';
 import { Traverse, TraverseContext } from 'neotraverse/modern';
 import { ListenRange } from '../backend/sources/PlayerState/ListenRange.js';
-import { AmbPlayObject, DateLike, JsonPlayObject, PlayObject, PlayProgressAmb, REGEX_ISO8601_LOOSE } from './Atomic.js';
+import { AmbPlayObject, DateLike, ErrorLike, JsonPlayObject, PlayObject, PlayProgressAmb, REGEX_ISO8601_LOOSE, Replace } from './Atomic.js';
 import { ListenProgressPositional, ListenProgressTS } from '../backend/sources/PlayerState/ListenProgress.js';
-import { DeepPick, PickKeys } from 'ts-essentials';
+import { DeepPick, ElementOf, MarkOptional, PickKeys } from 'ts-essentials';
+import { PlaySelectWithQueueStates } from '../backend/common/database/drizzle/drizzleTypes.js';
+import { ErrorObject, serializeError } from 'serialize-error';
+import { PlayApiCommonDetailed } from './Api.js';
 
 interface BlockPath { key: string, parent: string };
 type BlockPaths = BlockPath[];
@@ -56,6 +59,32 @@ export const asJsonPlayObject = (play: AmbPlayObject<DateLike>): JsonPlayObject 
   });
   return cloned as unknown as JsonPlayObject;
 };
+
+export type SerializablePlaySelect = Replace<MarkOptional<PlayApiCommonDetailed, 'queueStates'>, 'error', ErrorObject> & {queueStates?: Replace<ElementOf<PlayApiCommonDetailed['queueStates']>, 'error', ErrorObject>[]};
+export const asSerializablePlaySelect = (data: MarkOptional<PlayApiCommonDetailed, 'queueStates'>): SerializablePlaySelect => {
+  const {
+    error,
+    queueStates = [],
+    ...rest
+  } = data;
+
+  const qMapped = queueStates.map((x) => {
+    const {
+      error: e,
+      ...restQ
+    } = x;
+    return {
+      ...restQ,
+      error: e instanceof Error ? serializeError(e) : e
+    }
+  });
+
+  return {
+    ...rest,
+    error: error instanceof Error ? serializeError(error) : error,
+    queueStates: qMapped
+  }
+}
 
 export const asPlay = (data: JsonPlayObject | PlayObject): PlayObject => {
   const cloned = clone(data);

@@ -60,8 +60,8 @@ const walkError = (err: ErrorIsh, errors: ErrorData[] = []): ErrorData[] => {
         stack: err.stack
     };
     errors.push(thisErr);
-    if(err.cause !== undefined && typeof err.cause === 'object' && err.cause !== null) {
-        return walkError(err, errors);
+    if(isErrorIsh(err.cause)) {
+        return walkError(err.cause, errors);
     }
     return errors;
 }

@@ -10,6 +10,7 @@ import ConsoleFormatter from "jsondiffpatch/formatters/console";
 import assert from "node:assert";
 import dayjs, {Dayjs} from "dayjs";
 import { Traverse } from "neotraverse/modern";
+import { serializeError } from "serialize-error";
 
 const console = new ConsoleFormatter();
 
@@ -107,6 +108,17 @@ export const asDayjsHydratedObject = <T, U>(obj: T): U => {
 
      if (typeof x === 'string' && REGEX_ISO8601_LOOSE.test(x)) {
         ctx.update(dayjs(x), true);
+    }
+  });
+  return cloned as unknown as U;
+};
+
+export const asErrorSerializedObject = <T, U>(obj: T): U => {
+  const cloned = clone(obj);
+  new Traverse(cloned).forEach((ctx, x) => {
+
+     if (x !== null && typeof x === 'object' && x instanceof Error) {
+        ctx.update(serializeError(x), true);
     }
   });
   return cloned as unknown as U;
