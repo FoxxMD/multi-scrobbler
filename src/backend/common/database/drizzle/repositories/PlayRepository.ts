@@ -3,7 +3,7 @@ import { DbConcrete, runTransaction } from "../drizzleUtils.js";
 import clone from 'clone';
 import { Traverse, TraverseContext } from 'neotraverse/modern';
 import { loggerNoop } from "../../../MaybeLogger.js";
-import { DateLike, DeepReplaceValue, ErrorLike, PlayObject, REGEX_ISO8601_LOOSE, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, TemporalAccuracy } from "../../../../../core/Atomic.js";
+import { DateLike, DeepReplaceValue, ErrorLike, PlayObject, PlayState, REGEX_ISO8601_LOOSE, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, TemporalAccuracy } from "../../../../../core/Atomic.js";
 import { generateInputEntity, generatePlayEntity, PlayEntityOpts, hydratePlaySelect, PlayHydateOptions } from "../entityUtils.js";
 import { playInputs, plays, queueStates, relations } from "../schema/schema.js";
 import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, QueueStateSelect, FindWith, PlaySelectWithQueueStates, WhereClause, PlayWith } from "../drizzleTypes.js";;
@@ -704,12 +704,12 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         })) as PlayWith<'queueStates'>[]).map(x => ({...x, play: hydratePlaySelect(x)}));
     }
 
-    public getComponentPlayCountByState = async (componentId?: string) => {
+    public getComponentPlayCountByState = async (componentId?: number): Promise<{state: PlayState, 'count(*)': number}[]> => {
 
         const res = await this.db.all(sql`select state, count(*) from plays p
 where componentId = ${componentId ?? this.componentId}
 group by state;`);
-        return res;
+        return res as {state: PlayState, 'count(*)': number}[];
     }
 
     public getPlayCountByState = async () => {

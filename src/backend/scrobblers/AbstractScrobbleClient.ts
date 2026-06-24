@@ -104,6 +104,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     preloadScrobbles: boolean = true;
     scrobbleSOTRanges: PaginatedTimeRangeOptions[] = [];
     tracksScrobbled: number = 0;
+    tracksScrobbledTotal: number =  0;
 
     lastScrobbleAttempt: Dayjs = dayjs(0)
     upstreamRefresh: MarkOptional<Required<UpstreamRefreshOptions>, 'refreshInitialCount'>;
@@ -341,7 +342,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.migrationRepo = new GenericRepository<'componentMigrations'>(this.db, 'componentMigrations', 'Component Migrations', {logger: this.logger});
         this.playRepo.componentId = this.dbComponent.id;
         this.queueRepo.componentId = this.dbComponent.id;
-        this.tracksScrobbled = this.dbComponent.countLive + this.dbComponent.countNonLive;
+        const counts = await this.playRepo.getComponentPlayCountByState();
+        const scrobbledCount = counts.find(x => x.state === 'scrobbled');
+        if(scrobbledCount !== undefined) {
+            this.tracksScrobbledTotal = scrobbledCount['count(*)'];
+        }
         await this.updateQueueStats([CLIENT_INGRESS_QUEUE, CLIENT_DEAD_QUEUE]);
     }
 
@@ -425,6 +430,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             type: this.type,
             status: this.status,
             queued: this.queuedLength,
+            tracksScrobbled: this.tracksScrobbled,
+            countLive: this.tracksScrobbledTotal,
             deadLetterScrobbles: this.deadLetterQueued,
             deadLetterScrobblesTotal: this.deadLetterLength,
         }
@@ -851,6 +858,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.scrobbledCounter.labels(this.getPrometheusLabels()).inc();
         //this.lastScrobbledPlayDate = playObj.data.playDate;
         this.tracksScrobbled++;
+        this.tracksScrobbledTotal++;
     }
 
     findExistingSubmittedPlayObj = async (playObjPre: PlayObject): Promise<([undefined, undefined] | [ScrobbledPlayObject, ScrobbledPlayObject[]])> => {

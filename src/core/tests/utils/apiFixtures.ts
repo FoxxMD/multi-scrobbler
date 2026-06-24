@@ -196,6 +196,7 @@ export const generateClientApiJson = (data: Partial<ComponentClientApi> = {}): C
     return {
         ...common,
         queued,
+        tracksScrobbled: common.countLive,
         deadLetterScrobbles,
         deadLetterScrobblesTotal,
     }

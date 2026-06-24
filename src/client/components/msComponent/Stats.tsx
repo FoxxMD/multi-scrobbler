@@ -22,7 +22,7 @@ import dayjs from "dayjs";
 import { shortTodayAwareFormat } from "../../../core/TimeUtils.js";
 
 export const CountLiveIndicator = (props: {
-    data: Pick<ComponentCommonApiJson, 'countLive' | 'mode' | 'id'> & { tracksDiscovered?: number, scrobbled?: number },
+    data: Pick<ComponentCommonApiJson, 'countLive' | 'mode' | 'id'> & { tracksDiscovered?: number, tracksScrobbled?: number },
     recent?: number
     recentTimeout?: number
     streamable?: boolean
@@ -38,7 +38,7 @@ export const CountLiveIndicator = (props: {
         ...rest
     } = props;
 
-    const sessionCount = props.data.mode === 'source' ? props.data.tracksDiscovered : props.data.countLive;
+    const sessionCount = props.data.mode === 'source' ? props.data.tracksDiscovered : props.data.tracksScrobbled;
 
     const [total, setTotal] = useState(props.data.countLive);
     const [current, setCurrent] = useState(sessionCount);

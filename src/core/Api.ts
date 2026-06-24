@@ -91,6 +91,7 @@ export type ComponentDetailedApi = ComponentCommonApi & {
 
 export type ComponentCientApiBase = {
     queued: number
+    tracksScrobbled: number
     deadLetterScrobbles: number
     deadLetterScrobblesTotal: number
 }

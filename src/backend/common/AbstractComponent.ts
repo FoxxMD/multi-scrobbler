@@ -515,7 +515,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     public abstract getRunningState(): ComponentState
 
-    public getApiData(): Omit<ComponentMinimalSelect, 'type'> & Pick<ComponentCommonApi, 'state'>  {
+    public getApiData(): Omit<ComponentMinimalSelect, 'type' | 'countLive'> & Pick<ComponentCommonApi, 'state'>  {
         let state: ComponentState;
         if(!this.initializedOnce || this.initializing) {
             state = COMPONENT_STATE.INITIALIZING;
@@ -530,7 +530,6 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             name: this.dbComponent.name,
             state,
             mode: this.dbComponent.mode,
-            countLive: this.dbComponent.countLive,
             countNonLive: this.dbComponent.countNonLive,
             createdAt: this.dbComponent.createdAt,
             lastReadyAt: this.dbComponent.lastReadyAt,

@@ -83,6 +83,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     stopPollingWaitInterval: number = 200;
     pollRetries: number = 0;
     tracksDiscovered: number = 0;
+    tracksDiscoveredTotal: number = 0;
 
     protected isSleeping: boolean = false;
     protected wakeAt: Dayjs = dayjs();
@@ -214,8 +215,12 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     protected async postDatabase(): Promise<void> {
         this.playRepo = new DrizzlePlayRepository(this.db, {logger: this.logger});
-        this.tracksDiscovered = this.dbComponent.countLive;
         this.playRepo.componentId = this.dbComponent.id;
+        const counts = await this.playRepo.getComponentPlayCountByState();
+        const discoveredCount = counts.find(x => x.state === 'discovered');
+        if(discoveredCount !== undefined) {
+            this.tracksDiscoveredTotal = discoveredCount['count(*)'];
+        }
     }
 
     protected generateStaggerMappers() {
@@ -295,7 +300,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
             manualListening: this.manualListening,
             systemListeningBehavior: this.getSystemListeningBehavior(),
             sleeping: this.getIsSleeping(),
-            wakeAt: this.wakeAt !== undefined ? this.wakeAt.toISOString() : undefined
+            wakeAt: this.wakeAt !== undefined ? this.wakeAt.toISOString() : undefined,
+            countLive: this.tracksDiscoveredTotal
         }
     }
 
@@ -332,6 +338,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             this.cache.cacheDb.set(this.recentDiscoveredCacheKey(), recentPlays, '2m');
         }
         this.tracksDiscovered++;
+        this.tracksDiscoveredTotal++
         this.logger.info(`Discovered => ${buildTrackString(play)}`);
         this.emitEvent('discovered', {play});
         this.emitPlayInsert({...playRow[0], queueStates: []} as unknown as PlayApiCommonDetailed);
