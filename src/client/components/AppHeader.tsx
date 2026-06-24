@@ -90,7 +90,7 @@ export const SSEStatus = (props: {live?: boolean, status?: ReturnType<typeof use
             content = (
                 <Stack>
                     <Text>Live events connection is <strong>{status}</strong></Text>
-                    {error !== undefined ? <ErrorAlert error={error}/> : null}
+                    <ErrorAlert error={error}/>
                 </Stack>                
             );
             break;

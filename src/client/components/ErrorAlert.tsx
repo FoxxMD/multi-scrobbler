@@ -12,7 +12,6 @@ export interface ErrorAlertProps {
 export const ErrorAlert = (props: ErrorAlertProps) => {
 
     if(props.error === undefined || props.error === null) {
-        console.warn('trying to render a null or undefined error');
         return null;
     }
     let causes: ErrorData[] = [];
