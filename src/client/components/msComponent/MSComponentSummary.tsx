@@ -17,31 +17,30 @@ import {
 import { CountLiveIndicator, DeadLetterIndicator, QueuedIndicator } from "./Stats.js";
 import { ComponentStateBadge } from "../Badges.js";
 
+const presentPlayersContainerProps: ComponentProps<typeof Stack> = {
+paddingTop: '2',
+borderTopWidth: '1px'
+};
+
 export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetchable?: boolean }) => {
         const {
         data,
         fetchable
     } = props;
-    const isClient = isClientType(data.type);
     let sleepingRender: React.JSX.Element = null;
 
     let body = <Card.Footer/>;
     let cardHeaderProps: Card.HeaderProps = {};
     if(isComponentSourceApiJson(data)) {
         const {
-            players,
             sleeping
         } = data;
         if(sleeping) {
            sleepingRender = <IdleIcon animated/>;
         }
-        if(Object.keys(players).length > 0) {
-            cardHeaderProps.borderBottomWidth="1px";
-            cardHeaderProps.paddingBottom="2px";
-            body = (<Card.Body px="3" py="2" paddingTop="3">
-                {fetchable ? <PlayersContainerFetchable data={data}/> : <PlayersContainer data={data} live={fetchable}/>}
+        body = (<Card.Body px="3" py="2" paddingTop="3">
+                {fetchable ? <PlayersContainerFetchable data={data} stack={presentPlayersContainerProps}/> : <PlayersContainer data={data} live={fetchable} stack={presentPlayersContainerProps}/>}
             </Card.Body>);
-        }
     }
 
     return (<Card.Root variant="subtle">

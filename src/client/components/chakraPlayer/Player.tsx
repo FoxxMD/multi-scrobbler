@@ -144,7 +144,7 @@ export const ChakraPlayer = (props: PlayerProps) => {
                 variant={indeterminate ? undefined : "buffer"}
                 
                 value={positionProgress}
-                valueBuffer={Math.max(bufferProgress ?? positionProgress)}
+                valueBuffer={Math.max(bufferProgress ?? positionProgress, positionProgress)}
                 />
                 </Box>
                 <Text textStyle="xs">{durationTimestamp}</Text>
@@ -209,11 +209,12 @@ export const ChakraPlayerFetchable = (props: ChakraPlayerFetchableProps) => {
     }
 }
 
-export const PlayersContainer = (props: { data: ComponentCommonApiJson, live?: boolean, container?: ComponentProps<typeof Container> }) => {
+export const PlayersContainer = (props: { data: ComponentCommonApiJson, live?: boolean, stack?: ComponentProps<typeof Stack>, container?: ComponentProps<typeof Container> }) => {
     const {
         data,
         live,
-        container = {}
+        container = {},
+        stack = {}
     } = props;
     if (isComponentSourceApiJson(data)) {
 
@@ -222,7 +223,7 @@ export const PlayersContainer = (props: { data: ComponentCommonApiJson, live?: b
         } = data;
 
         if (Object.keys(players).length > 0) {
-            return <Stack gap="2">
+            return <Stack gap="2" {...stack}>
                 {
                     Object.entries(players).map(([key, x]) => (
                         <Container key={key} className="playerContainer" bg="bg.emphasized" borderWidth="1px" p="2" py="3" rounded="md" {...container}>
@@ -237,11 +238,12 @@ export const PlayersContainer = (props: { data: ComponentCommonApiJson, live?: b
     return null;
 }
 
-export const PlayersContainerFetchable = (props: { data: ComponentCommonApiJson, live?: boolean, container?: ComponentProps<typeof Container> }) => {
+export const PlayersContainerFetchable = (props: { data: ComponentCommonApiJson, live?: boolean, stack?: ComponentProps<typeof Stack>, container?: ComponentProps<typeof Container> }) => {
     const {
         data: initData,
         live = true,
-        container = {}
+        container = {},
+        stack =  {}
     } = props;
     if (isComponentSourceApiJson(initData)) {
 
@@ -290,7 +292,7 @@ export const PlayersContainerFetchable = (props: { data: ComponentCommonApiJson,
 
         const mergedData = useMemo(() => ({...initData, players: data}),[initData,data]);
 
-        return <PlayersContainer data={mergedData} live container={container}/>
+        return <PlayersContainer data={mergedData} live container={container} stack={stack}/>
     }
     return null;
 }
