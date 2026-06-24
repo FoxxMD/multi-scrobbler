@@ -549,7 +549,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         });
     }
 
-    protected emitComponentUpdate = (payload: Partial<typeof this.getApiData>) => {
+    protected emitComponentUpdate = <T = Partial<typeof this.getApiData>>(payload: T) => {
         this.emitEvent('componentUpdate', payload);
     }
     protected emitPlayUpdate = (payload: MarkRequired<Partial<PlayApiCommonDetailed>, 'uid'>) => {

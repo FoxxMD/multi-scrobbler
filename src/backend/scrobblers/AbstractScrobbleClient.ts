@@ -1185,6 +1185,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             const queueState = currQueuedPlay.queueStates.find(x => x.queueName === CLIENT_INGRESS_QUEUE);
             if(queueError !== undefined) {
                 await this.queueRepo.updateById(queueState.id, {queueStatus: 'failed', error: queueError});
+                queueState.queueStatus = 'failed';
+                queueState.error = queueError;
                 await this.playRepo.updateById(currQueuedPlay.id, {state: 'failed', error: queueError, play: currQueuedPlay.play});
                 currQueuedPlay.state = 'failed';
                 currQueuedPlay.error = queueError;
@@ -1192,8 +1194,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 await this.queueRepo.updateById(queueState.id, {queueStatus: 'completed'});
                 await this.playRepo.updateById(currQueuedPlay.id, {state: successState ?? 'scrobbled', play: currQueuedPlay.play});
                 currQueuedPlay.state = successState ?? 'scrobbled';
+                queueState.queueStatus = 'completed';
             }
-            this.emitPlayUpdate(currQueuedPlay);
+            this.emitPlayUpdate({...currQueuedPlay, queueStates: [queueState]} as unknown as PlayApiCommonDetailed);
             this.emitEvent('scrobbleDequeued', { queuedScrobble: currQueuedPlay })
             this.queuedGauge.labels(this.getPrometheusLabels()).dec();
             this.queuedLength -= 1;
@@ -1496,7 +1499,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             });
 
             const playRow = await this.playRepo.createPlays([createPlayData]);
-            await this.queueRepo.create({componentId: this.dbComponent.id, playId: playRow[0].id, queueName: CLIENT_INGRESS_QUEUE});
+            const queueState = await this.queueRepo.create({componentId: this.dbComponent.id, playId: playRow[0].id, queueName: CLIENT_INGRESS_QUEUE});
             createdQueuedPlays.push(playRow[0]);
             this.logger.debug(`Added ${buildTrackString(play)} to the queue`);
             this.setStatus(`Added Play from parent ${play.uid} to queue`);
@@ -1504,7 +1507,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             const queuedPlay = {id: nanoid(), source, play: play}
             //await this.playRepo.updateById(play.meta.dbId, {play});
             this.emitEvent('scrobbleQueued', {queuedPlay: queuedPlay});
-            this.emitPlayInsert(playRow[0]);
+            this.emitPlayInsert({...playRow[0], queueStates: [queueState]} as unknown as PlayApiCommonDetailed);
             this.queuedLength += 1;
             //this.queuedScrobbles.push(queuedPlay);
             this.queuedGauge.labels(this.getPrometheusLabels()).inc();
