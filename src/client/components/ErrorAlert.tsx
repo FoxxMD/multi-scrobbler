@@ -44,12 +44,15 @@ const ErrorBlock = (props: {data: ErrorData, cause?: boolean, messageProps?: Com
     }
 
     return (
-    <Collapsible.Root open={open} onOpenChange={(val) => setOpen(val.open)}>
-        <HStack>{messageElm}<Collapsible.Trigger><EllipsisButton size="2xs"/></Collapsible.Trigger></HStack>
-        <Collapsible.Content paddingY="2">
-            <ChakraCodeBlock language="plaintext" code={data.stack} title="Stack" maxLines={6} collapsedMaxHeight="10em" hideBelow="sm"/>
-        </Collapsible.Content>
-    </Collapsible.Root>
+    <>
+        <Box hideFrom="md">{messageElm}</Box>
+        <Collapsible.Root hideBelow="md" open={open} onOpenChange={(val) => setOpen(val.open)}>
+            <HStack>{messageElm}<Collapsible.Trigger><EllipsisButton size="2xs"/></Collapsible.Trigger></HStack>
+            <Collapsible.Content paddingY="2">
+                <ChakraCodeBlock language="plaintext" code={data.stack} title="Stack" maxLines={6} collapsedMaxHeight="10em" hideBelow="sm"/>
+            </Collapsible.Content>
+        </Collapsible.Root>
+    </>
     )
 }
 
@@ -66,11 +69,10 @@ export const ErrorAlert = (props: ErrorAlertProps) => {
     const collapsible = useCollapsible()
 
     return (
-        <Box>
         <Alert.Root status={props.status ?? 'error'}>
             <Alert.Indicator />
             <Alert.Content>
-                <Alert.Title>{props.error.name ?? 'Error'}<EllipsisButton marginLeft="2" size="2xs" onClick={() => collapsible.setOpen(!collapsible.open)}/></Alert.Title>
+                <Alert.Title>{props.error.name ?? 'Error'}<EllipsisButton hideBelow="md" marginLeft="2" size="2xs" onClick={() => collapsible.setOpen(!collapsible.open)}/></Alert.Title>
                 <Alert.Description>
                     <Stack gap="0.5">
                         <ErrorBlock data={props.error} messageProps={{fontWeight: 'semibold'}} collapsible={collapsible}/>
@@ -84,7 +86,6 @@ export const ErrorAlert = (props: ErrorAlertProps) => {
             </Alert.Content>
             <ChakraClip value={props.error}/>
         </Alert.Root>
-        </Box>
     )
 }
 
