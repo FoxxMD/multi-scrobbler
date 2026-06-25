@@ -14,6 +14,7 @@ import { ComponentSelect } from "../../../backend/common/database/drizzle/drizzl
 import { CALCULATED_PLAYER_STATUSES, isClientType, REPORTED_PLAYER_STATUSES } from "../../../backend/common/infrastructure/Atomic.js";
 import { faMarker } from "@fortawesome/free-solid-svg-icons";
 import { generateArray } from "../../DataUtils.js";
+import { ErrorIsh } from "../../ErrorUtils.js";
 
 export const generatePlayApiCommon = (commonData: Partial<PlayApiCommon> & {play?: JsonPlayObject | PlayObject } = {}, ...playOpts: Parameters<typeof generatePlay>): PlayApiCommon => {
     let play: JsonPlayObject | PlayObject;
@@ -85,7 +86,7 @@ export const generatePlayApiCommonDetailed = (opts: {
     playOpts?: Parameters<typeof generatePlayApiCommon>,
     inputOpts?: Parameters<typeof generatePlayInputApi>,
     queueOpts?: Parameters<typeof generateQueueStateApi>
-} = {}, error?: ErrorLike): PlayApiCommonDetailed => {
+} = {}, error?: ErrorIsh): PlayApiCommonDetailed => {
     const {
         playOpts = [],
         inputOpts = [],
@@ -330,4 +331,117 @@ export const generatePlayApiCommonDetailedList = async (opts: {endDate?: Dayjs} 
         scrobbleError,
         ...yesterdayScrobbled
       ];
+}
+
+/**
+ * Generates a fake Error with nested cause errors for testing.
+ * Each error has a realistic-looking stack trace with plausible call sites.
+ *
+ * @param depth - Number of nested cause errors to create (0 = just one error, no cause chain)
+ * @returns An Error object with nested cause errors
+ */
+export function generateFakeError(depth: number = 0): Error {
+  const commonFunctions = [
+    'handleRequest',
+    'processData',
+    'validateInput',
+    'fetchUser',
+    'parseJSON',
+    'connectToDatabase',
+    'executeQuery',
+    'mapResponse',
+    'transformData',
+    'authenticateUser',
+    'authorizeAccess',
+    'fetchFromCache',
+    'updateRecord',
+    'deleteResource',
+    'createTransaction',
+    'rollbackChanges',
+    'serializeObject',
+    'deserializePayload',
+    'encryptData',
+    'decryptData',
+  ];
+ 
+  const filePaths = [
+    'src/handlers/userController.ts',
+    'src/services/authService.ts',
+    'src/repositories/userRepository.ts',
+    'src/middleware/errorHandler.ts',
+    'src/utils/dataTransformer.ts',
+    'src/database/connection.ts',
+    'src/api/routes/users.ts',
+    'src/validators/schema.ts',
+    'src/lib/helpers.ts',
+    'node_modules/express/index.js',
+    'src/cache/redis.ts',
+    'src/external/api-client.ts',
+  ];
+ 
+  const generateStackTrace = (functionName: string): string => {
+    const lines: string[] = [];
+    const callDepth = Math.floor(Math.random() * 8) + 3; // 3-10 call sites
+ 
+    for (let i = 0; i < callDepth; i++) {
+      const func = i === 0 ? functionName : commonFunctions[Math.floor(Math.random() * commonFunctions.length)];
+      const file = filePaths[Math.floor(Math.random() * filePaths.length)];
+      const line = Math.floor(Math.random() * 500) + 1;
+      const column = Math.floor(Math.random() * 80) + 1;
+ 
+      lines.push(`    at ${func} (${file}:${line}:${column})`);
+    }
+ 
+    return lines.join('\n');
+  };
+ 
+  const messages = [
+    'Connection timeout after 30000ms',
+    'Failed to parse JSON response',
+    'Invalid user credentials',
+    'Database query failed',
+    'Resource not found',
+    'Permission denied',
+    'Network request failed',
+    'Serialization error',
+    'Type validation failed',
+    'Authentication required',
+    'Cache miss',
+    'Service unavailable',
+  ];
+ 
+  const createErrorAtDepth = (currentDepth: number): Error => {
+    const message = messages[Math.floor(Math.random() * messages.length)];
+    const func = commonFunctions[Math.floor(Math.random() * commonFunctions.length)];
+    const error = new Error(message);
+ 
+    // Set the function name (shows in stack trace)
+    Object.defineProperty(error, 'name', {
+      value: 'CustomError',
+      writable: true,
+      enumerable: false,
+    });
+ 
+    // Create a fake stack trace
+    const stackTrace = `CustomError: ${message}\n${generateStackTrace(func)}`;
+    Object.defineProperty(error, 'stack', {
+      value: stackTrace,
+      writable: true,
+      enumerable: false,
+    });
+ 
+    // Add nested cause if depth allows
+    if (currentDepth < depth) {
+      const causeError = createErrorAtDepth(currentDepth + 1);
+      Object.defineProperty(error, 'cause', {
+        value: causeError,
+        writable: true,
+        enumerable: true,
+      });
+    }
+ 
+    return error;
+  };
+ 
+  return createErrorAtDepth(0);
 }

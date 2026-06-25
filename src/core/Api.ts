@@ -5,6 +5,7 @@ import { SourceType } from "../backend/common/infrastructure/config/source/sourc
 import { ComponentType, ErrorLike, JsonPlayObject, PlayState, Replace, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.js"
 import { Dayjs } from "dayjs"
 import { INITIALIZING } from "../backend/common/infrastructure/Atomic.js"
+import { ErrorIsh } from "./ErrorUtils.js"
 
 export interface PlayApiCommon {
     uid: string
@@ -36,7 +37,7 @@ export interface QueueStateApi {
 }
 
 export interface PlayApiCommonDetailed extends PlayApiCommon {
-    error?: ErrorLike
+    error?: ErrorIsh
     input?: PlayInputApi
     queueStates: QueueStateApi[]
 }
