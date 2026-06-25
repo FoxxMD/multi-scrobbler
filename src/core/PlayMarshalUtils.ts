@@ -81,6 +81,7 @@ export const asSerializablePlaySelect = (data: MarkOptional<PlayApiCommonDetaile
 
   return {
     ...rest,
+    // @ts-expect-error
     error: error instanceof Error ? serializeError(error) : error,
     queueStates: qMapped
   }
