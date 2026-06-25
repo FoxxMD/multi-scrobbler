@@ -1,5 +1,5 @@
 import { ComponentProps, Fragment } from "react"
-import { Timeline, Icon, Span, Stack, Heading, Tabs, DataList, Alert, List } from '@chakra-ui/react';
+import { Timeline, Icon, Span, Stack, Heading, Tabs, DataList, Alert, List, HStack } from '@chakra-ui/react';
 import { PlayData } from "./PlayData";
 import { ErrorAlert } from "./ErrorAlert";
 import { BiWrench } from "react-icons/bi";
@@ -43,9 +43,9 @@ export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
     }
 
     if (warningsElm !== undefined && errorElm !== undefined) {
-        responseSuffix = <Fragment> with {warningsElm} and {errorElm}</Fragment>;
+        responseSuffix = <Fragment>with {warningsElm} and {errorElm}</Fragment>;
     } else if (warningsElm !== undefined || errorElm !== undefined) {
-        responseSuffix = <Fragment> with {warningsElm ?? errorElm}</Fragment>;
+        responseSuffix = <Fragment>with {warningsElm ?? errorElm}</Fragment>;
     }
 
     return (
@@ -85,7 +85,7 @@ export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
                     <Timeline.Content>
                         <Timeline.Title>
                             <MSCollapsible
-                                indicator={<Fragment><Span color="fg.muted">Received</Span> Response{scrobbler !== undefined ? <Fragment><Span color="fg.muted">from</Span> {capitalize(scrobbler)}</Fragment> : null}{responseSuffix !== undefined ? <Span> {responseSuffix}</Span> : null}</Fragment>}
+                                indicator={<HStack gap="1"><Span color="fg.muted">Received</Span> Response{scrobbler !== undefined ? <Fragment><Span color="fg.muted">from</Span> {capitalize(scrobbler)}</Fragment> : null}{responseSuffix !== undefined ? <Span> {responseSuffix}</Span> : null}</HStack>}
                                 timeline
                                 defaultOpen={collapsibleOpen}
                                 disableUntil="md">

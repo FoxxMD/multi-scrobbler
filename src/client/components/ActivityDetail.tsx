@@ -113,8 +113,9 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
     const [collapsibleOpen, setCollapsibleOpen] = useState(undefined);
 
     return (
-        <Box>
-        <Accordion.Root variant="enclosed" collapsible multiple>
+        <Stack>
+        {error !== undefined && error !== null ? <ErrorAlert error={error} /> : null}
+        <Accordion.Root width="full" variant="enclosed" collapsible multiple>
             <Accordion.Item value="info">
                 <Accordion.ItemTrigger>
                     <Accordion.ItemIndicator />
@@ -148,8 +149,7 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
                 </Accordion.ItemContent>
             </Accordion.Item>
         </Accordion.Root>
-        {error !== undefined && error !== null ? <ErrorAlert error={error} /> : null}
-        </Box>
+        </Stack>
     )
 }
 

@@ -127,7 +127,7 @@ export const VirtualizedListDynamic = (props: ActivityLogProps & Pick<UseInfinit
   // )
 
   return (
-    <ScrollArea.Root height="70vh" variant="always" w="full">
+    <ScrollArea.Root height="70vh" variant="always" >
   <ScrollArea.Viewport
     ref={parentRef}
     css={scrollShadowCss}

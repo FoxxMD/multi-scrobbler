@@ -113,7 +113,7 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
     }
     return (
         <MSErrorBoundary>
-        <Flex direction="column" width="100%" truncate rowGap="1">
+        <Flex direction="column" style={{whiteSpace: 'break-spaces'}} truncate rowGap="1">
             <Flex width="100%" truncate>
                 <Box marginEnd="auto" truncate><MSComponentName data={props.data}/></Box>
                 <ComponentStateBadge size="lg" maxWidth="fit-content" data={props.data} />

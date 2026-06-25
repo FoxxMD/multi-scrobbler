@@ -5,13 +5,14 @@ import { http, HttpResponse, delay, sse } from 'msw';
 import { Container } from '@chakra-ui/react';
 import { ComponentDetailedDesktop } from "../client/components/msComponent/MSComponentDetailed.js";
 import {Provider} from "../client/components/Provider";
-import { generateClientApiJson, generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList, generateSourceApiJson, generateSourcePlayerJson } from "../core/tests/utils/apiFixtures.js";
+import { generateClientApiJson, generateFakeError, generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList, generateSourceApiJson, generateSourcePlayerJson } from "../core/tests/utils/apiFixtures.js";
 import { MsSseEvent, PlayApiCommonDetailed } from "../core/Api.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
 import { sseProviderOptions } from "../client/AppNext.js";
 import { faker } from "@faker-js/faker";
 import { PaginatedResponse } from "../backend/common/database/drizzle/repositories/BaseRepository.js";
 import dayjs from "dayjs";
+import { serializeError } from "serialize-error";
 
 let livePlayData: PlayApiCommonDetailed[] = [];
 
@@ -27,6 +28,7 @@ const meta = preview.meta({
         http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params }) => {
           if(livePlayData.length === 0) {
             livePlayData = await generatePlayApiCommonDetailedList();
+            livePlayData[0].error = serializeError(generateFakeError(3));
           }
           const res: PaginatedResponse<PlayApiCommonDetailed> = {
             data: livePlayData,
@@ -45,7 +47,7 @@ const meta = preview.meta({
           if (existing !== undefined) {
             return HttpResponse.json(existing);
           }
-          return HttpResponse.json(generatePlayApiCommonDetailed());
+          return HttpResponse.json(generatePlayApiCommonDetailed({}, serializeError(new Error('This is an error', {cause: new Error('this is a nested error', {cause: new Error('another error')})}))));
         }),
         sse('/api/events?next=true', async ({ params, client }) => {})
       ],
