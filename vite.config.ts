@@ -59,6 +59,8 @@ export default defineConfig(() => {
                     main: resolve(import.meta.dirname, 'index.html'),
                     next: resolve(import.meta.dirname, 'next/index.html'),
                 },
+                keepNames: true,
+                sourcemap: true
             },
         },
         define: {
