@@ -3,14 +3,16 @@ import React from 'react';
 import { Container } from '@chakra-ui/react';
 
 import { fn } from 'storybook/test';
-import { PhraseFilter } from "../../client/components/playActivity/ListFilters.js";
-import { Provider } from "../../client/components/Provider.js";
-
+import { ErrorAlert } from "../../client/components/ErrorAlert.js";
+import {Provider} from "../../client/components/Provider.js";
+import { ErrorLike } from "../../core/Atomic.js";
+import { ActivitySummarySkeleton } from "../../client/components/ActivityDetail.js";
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
-  title: 'Examples/List Filters/Phrase',
-  component: PhraseFilter,
+  title: 'Activities/List Skeleton',
+  component: ActivitySummarySkeleton
+,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
@@ -22,12 +24,14 @@ decorators: [
   ],
 args: {
   },
+  render: function Render(args) {
+    return (<ActivitySummarySkeleton
+ {...args}/>) 
+  }
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });
 
 // More on writing stories with args: https://storybook.js.org/docs/writing-stories/args
-export const ListFiltersStory = meta.story({
-  render: function Render(args) {
-    return (<PhraseFilter {...args}/>) 
-  }
+export const Story = meta.story({
+
 });

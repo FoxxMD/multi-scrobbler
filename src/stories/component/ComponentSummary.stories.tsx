@@ -1,21 +1,21 @@
-import preview from "../../.storybook/preview.js";
+import preview from "../../../.storybook/preview.js";
 import React from 'react';
 import { http, HttpResponse, delay, sse } from 'msw';
 
 import { Container } from '@chakra-ui/react';
-import { MSComponentSummary } from "../client/components/msComponent/MSComponentSummary.js";
-import {Provider} from "../client/components/Provider";
-import { generateClientApiJson, generateSourceApiJson, generateSourcePlayerJson } from "../core/tests/utils/apiFixtures.js";
-import { MsSseEvent } from "../core/Api.js";
+import { MSComponentSummary } from "../../client/components/msComponent/MSComponentSummary.js";
+import {Provider} from "../../client/components/Provider.js";
+import { generateClientApiJson, generateSourceApiJson, generateSourcePlayerJson } from "../../core/tests/utils/apiFixtures.js";
+import { MsSseEvent } from "../../core/Api.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
-import { sseProviderOptions } from "../client/AppNext.js";
+import { sseProviderOptions } from "../../client/AppNext.js";
 import { faker } from "@faker-js/faker";
 import { withRouter, reactRouterParameters } from 'storybook-addon-remix-react-router';
 import dayjs from "dayjs";
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
-  title: 'Examples/ComponentSummary',
+  title: 'Component/Summary',
   component: MSComponentSummary,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
@@ -43,7 +43,7 @@ const meta = preview.meta({
      return (<MSComponentSummary {...args} />) 
     },
 decorators: [
-    (Story) => (<Provider><Container maxWidth="4xl"><Story/></Container></Provider>),
+    (Story) => (<Provider><Container maxWidth="4xl"><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Container></Provider>),
     withRouter
   ]
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
@@ -62,10 +62,6 @@ export const SourceSummaryFetchable = meta.story({
       fetchable: true,
       componentId: 1,
     },
-    decorators: [
-      (Story) => 
-        (<Provider><Container maxWidth="4xl"><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Container></Provider>),
-    ],
     parameters: {
         msw: {
           handlers: [
@@ -106,10 +102,6 @@ export const ClientSummaryFetchable = meta.story({
       fetchable: true,
       componentId: 1,
     },
-    decorators: [
-      (Story) => 
-        (<Provider><Container maxWidth="4xl"><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Container></Provider>),
-    ],
     parameters: {
         msw: {
           handlers: [

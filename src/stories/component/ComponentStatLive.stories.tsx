@@ -1,18 +1,18 @@
-import preview from "../../.storybook/preview.js";
+import preview from "../../../.storybook/preview.js";
 import React from 'react';
 import { http, HttpResponse, delay, sse } from 'msw';
 
 import { Container, Box } from '@chakra-ui/react';
-import { CountLiveIndicator } from "../client/components/msComponent/Stats.js";
-import { sseProviderOptions } from "../client/AppNext.js";
-import {Provider} from "../client/components/Provider";
+import { CountLiveIndicator } from "../../client/components/msComponent/Stats.js";
+import { sseProviderOptions } from "../../client/AppNext.js";
+import {Provider} from "../../client/components/Provider.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
-import { generateClientApiJson, generateSourceApiJson, generateSourcePlayerJson, LOG_MESSAGE_FIXTURE, logsApiResponse } from "../core/tests/utils/apiFixtures.js";
-import { MsSseEvent } from "../core/Api.js";
+import { generateClientApiJson, generateSourceApiJson, generateSourcePlayerJson, LOG_MESSAGE_FIXTURE, logsApiResponse } from "../../core/tests/utils/apiFixtures.js";
+import { MsSseEvent } from "../../core/Api.js";
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
-  title: 'Examples/Component Details/Stats Count',
+  title: 'Component/Details/Stats Count',
   component: CountLiveIndicator,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout

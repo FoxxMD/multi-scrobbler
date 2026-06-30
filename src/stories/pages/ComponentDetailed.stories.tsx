@@ -1,16 +1,16 @@
-import preview from "../../.storybook/preview.js";
+import preview from "../../../.storybook/preview.js";
 import React from 'react';
 import { http, HttpResponse, delay, sse } from 'msw';
 
 import { Container } from '@chakra-ui/react';
-import { ComponentDetailedDesktop } from "../client/components/msComponent/MSComponentDetailed.js";
-import {Provider} from "../client/components/Provider";
-import { generateClientApiJson, generateFakeError, generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList, generateSourceApiJson, generateSourcePlayerJson } from "../core/tests/utils/apiFixtures.js";
-import { MsSseEvent, PlayApiCommonDetailed } from "../core/Api.js";
+import { ComponentDetailedDesktop } from "../../client/components/msComponent/MSComponentDetailed.js";
+import {Provider} from "../../client/components/Provider.js";
+import { generateClientApiJson, generateFakeError, generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList, generateSourceApiJson, generateSourcePlayerJson } from "../../core/tests/utils/apiFixtures.js";
+import { MsSseEvent, PlayApiCommonDetailed } from "../../core/Api.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
-import { sseProviderOptions } from "../client/AppNext.js";
+import { sseProviderOptions } from "../../client/AppNext.js";
 import { faker } from "@faker-js/faker";
-import { PaginatedResponse } from "../backend/common/database/drizzle/repositories/BaseRepository.js";
+import { PaginatedResponse } from "../../backend/common/database/drizzle/repositories/BaseRepository.js";
 import dayjs from "dayjs";
 import { serializeError } from "serialize-error";
 
@@ -18,7 +18,7 @@ let livePlayData: PlayApiCommonDetailed[] = [];
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
-  title: 'Examples/Component Detailed',
+  title: 'Pages/Component Detailed',
   component: ComponentDetailedDesktop,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout

@@ -1,14 +1,14 @@
-import preview from "../../.storybook/preview.js";
+import preview from "../../../.storybook/preview.js";
 import React from 'react';
 
 import { fn } from 'storybook/test';
-import { PlayData } from "../client/components/PlayData.js";
-import {Provider} from "../client/components/Provider";
+import { PlayData } from "../../client/components/PlayData.js";
+import {Provider} from "../../client/components/Provider.js";
 import { Container } from '@chakra-ui/react';
-import { generateArtistCredits, generateArtists, generateJsonPlay, generatePlay, withBrainz } from "../core/PlayTestUtils.js"
+import { generateArtistCredits, generateArtists, generateJsonPlay, generatePlay, withBrainz } from "../../core/PlayTestUtils.js"
 import clone from "clone";
-import { asJsonPlayObject } from '../core/PlayMarshalUtils.js';
-import { JsonPlayObject } from "../core/Atomic.js";
+import { asJsonPlayObject } from '../../core/PlayMarshalUtils.js';
+import { JsonPlayObject } from "../../core/Atomic.js";
 
 type PropsAndCustomArgs = React.ComponentProps<typeof PlayData> & {
   includeAlbumArtists?: boolean;
@@ -18,7 +18,7 @@ type PropsAndCustomArgs = React.ComponentProps<typeof PlayData> & {
 };
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.type<{args: PropsAndCustomArgs}>().meta({
-  title: 'Examples/PlayInfo',
+  title: 'Static Components/Play Info',
   component: PlayData,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout

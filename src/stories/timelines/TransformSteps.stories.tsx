@@ -1,17 +1,17 @@
-import preview from "../../.storybook/preview.js";
+import preview from "../../../.storybook/preview.js";
 import React from 'react';
 
 import { fn } from 'storybook/test';
 import { Container } from '@chakra-ui/react';
-import { TransformSteps } from "../client/components/TransformSteps.js";
-import {Provider} from "../client/components/Provider";
-import { generateJsonPlays, generatePlay } from "../core/PlayTestUtils.js";
-import {generatePlayWithLifecycle} from '../core/tests/utils/fixtures'
-import { asJsonPlayObject } from "../core/PlayMarshalUtils.js";
+import { TransformSteps } from "../../client/components/TransformSteps.js";
+import {Provider} from "../../client/components/Provider.js";
+import { generateJsonPlays, generatePlay } from "../../core/PlayTestUtils.js";
+import {generatePlayWithLifecycle} from '../../core/tests/utils/fixtures.js'
+import { asJsonPlayObject } from "../../core/PlayMarshalUtils.js";
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
-  title: 'Examples/TransformSteps',
+  title: 'Timelines/Play Transform Steps',
   component: TransformSteps,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout

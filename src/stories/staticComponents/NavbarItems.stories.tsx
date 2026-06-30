@@ -1,15 +1,15 @@
-import preview from "../../.storybook/preview.js";
+import preview from "../../../.storybook/preview.js";
 import React from 'react';
 
 import { Container, Box } from '@chakra-ui/react';
-import { SideNavItems, NAV_LINKS } from "../client/components/SideNav";
-import {Provider} from "../client/components/Provider";
-import { generateClientApiJson, generateSourceApiJson, generateSourcePlayerJson } from "../core/tests/utils/apiFixtures.js";
+import { SideNavItems, NAV_LINKS } from "../../client/components/SideNav.js";
+import {Provider} from "../../client/components/Provider.js";
+import { generateClientApiJson, generateSourceApiJson, generateSourcePlayerJson } from "../../core/tests/utils/apiFixtures.js";
 import { withRouter, reactRouterParameters } from 'storybook-addon-remix-react-router';
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
-  title: 'Examples/NavbarItems',
+  title: 'Static Components/Navbar Items',
   component: SideNavItems,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout

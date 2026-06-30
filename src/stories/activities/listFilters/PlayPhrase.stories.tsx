@@ -1,16 +1,16 @@
-import preview from "../../../.storybook/preview.js";
+import preview from "../../../../.storybook/preview.js";
 import React from 'react';
 import { Container } from '@chakra-ui/react';
 
 import { fn } from 'storybook/test';
-import { PlayDateRangeFilter } from "../../client/components/playActivity/ListFilters.js";
-import { Provider } from "../../client/components/Provider.js";
+import { PhraseFilter } from "../../../client/components/playActivity/ListFilters.js";
+import { Provider } from "../../../client/components/Provider.js";
 
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
-  title: 'Examples/List Filters/Play Date Range',
-  component: PlayDateRangeFilter,
+  title: 'Activities/List Filters/Phrase',
+  component: PhraseFilter,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
@@ -28,6 +28,6 @@ args: {
 // More on writing stories with args: https://storybook.js.org/docs/writing-stories/args
 export const ListFiltersStory = meta.story({
   render: function Render(args) {
-    return (<PlayDateRangeFilter {...args}/>) 
+    return (<PhraseFilter {...args}/>) 
   }
 });
