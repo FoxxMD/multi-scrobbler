@@ -7,6 +7,10 @@ import {Provider} from "../client/components/Provider";
 import { generateClientApiJson, generateSourceApiJson, generateSourcePlayerJson } from "../core/tests/utils/apiFixtures.js";
 import { generateArray } from "../core/DataUtils.js";
 import { faker } from "@faker-js/faker";
+import { MsSseEvent } from "../core/Api.js";
+import { SSEProvider } from "@flamefrontend/sse-runtime-react";
+import { sseProviderOptions } from "../client/AppNext.js";
+import { withRouter, reactRouterParameters } from 'storybook-addon-remix-react-router';
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
@@ -15,6 +19,15 @@ const meta = preview.meta({
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
+    reactRouter: reactRouterParameters({
+      location: {
+        path: '/'
+      },
+      routing: {
+        path: '/',
+        useStoryElement: true
+      }
+    }),
   },
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],
@@ -32,7 +45,8 @@ const meta = preview.meta({
      return (<MSComponentList {...args} />) 
     },
 decorators: [
-    (Story) => (<Provider><Container maxWidth="4xl"><Story/></Container></Provider>),
+    withRouter,
+    (Story) => (<Provider><Container maxWidth="4xl"><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Container></Provider>),
   ]
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });
