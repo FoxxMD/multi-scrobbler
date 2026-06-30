@@ -1,13 +1,14 @@
-import { LuChevronRight, LuChevronLeft, LuActivity, LuGithub, LuTerminal, LuAlignJustify, LuX, LuExternalLink, LuArrowUp, LuArrowDown, LuEllipsis, LuArrowBigRight } from "react-icons/lu"
+import { LuChevronRight, LuChevronLeft, LuActivity, LuGithub, LuTerminal, LuAlignJustify, LuX, LuCheck, LuExternalLink, LuArrowUp, LuArrowDown, LuEllipsis, LuArrowBigRight, LuBug } from "react-icons/lu"
+import { VscDebugRestart } from 'react-icons/vsc';
 import { RiZzzFill } from "react-icons/ri";
 import { SiGoogledocs } from "react-icons/si";
-import { IconButton } from "@chakra-ui/react"
-import { ComponentProps } from 'react';
+import { IconButton, Clipboard, useClipboard } from "@chakra-ui/react"
+import { ComponentProps, PropsWithChildren } from 'react';
 import { IconType } from "react-icons/lib";
 
-export const makeIconButton = (Icon: IconType) => (props: ComponentProps<typeof IconButton>) => (
+export const makeIconButton = (Icon: IconType) => (props: PropsWithChildren<ComponentProps<typeof IconButton>>) => (
     <IconButton variant="surface" size="xs" {...props}>
-        <Icon />
+        <Icon />{props.children}
     </IconButton>
 );
 
@@ -80,3 +81,25 @@ export const EllipsisIcon = LuEllipsis;
 export const EllipsisButton = makeIconButton(EllipsisIcon);
 
 export const FatArrowRight = LuArrowBigRight;
+
+export const DebugIcon = LuBug;
+export const DebugButton = makeIconButton(DebugIcon);
+
+export const DebugCopy = (props: {value: Clipboard.RootProps['value']} & ComponentProps<typeof IconButton>) => {
+    const {
+        value,
+        onClick,
+        children,
+        ...rest
+    } = props;
+    const clipboard = useClipboard({value: value});
+
+    return (
+    <IconButton variant="surface" size="xs" onClick={clipboard.copy} {...rest}>
+        {clipboard.copied ? <LuCheck/> : <DebugIcon/>}{children}
+    </IconButton>
+    )
+}
+
+export const RetryIcon = VscDebugRestart;
+export const RetryButton = makeIconButton(RetryIcon);

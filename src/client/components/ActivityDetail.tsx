@@ -1,5 +1,5 @@
 import React, { ComponentProps, useState, Fragment } from "react"
-import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Icon, useAccordionItemContext, Skeleton, SkeletonText, Collapsible } from '@chakra-ui/react';
+import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Clipboard, Separator, HStack, Flex, Badge, IconButton, Container, Icon, useAccordionItemContext, Skeleton, SkeletonText, Collapsible } from '@chakra-ui/react';
 import { ComponentType, Second } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
 import { ErrorAlert } from "./ErrorAlert";
@@ -20,6 +20,7 @@ import { tanQueries } from "../queries";
 import { PaginatedResponse } from "../../backend/common/database/drizzle/repositories/BaseRepository";
 import { LuChevronRight } from "react-icons/lu";
 import { useSSEContext, useSSEEvent } from "@flamefrontend/sse-runtime-react";
+import { DebugCopy, RetryButton } from "./icons/ChakraIcons";
 
 export interface ActivityDetailProps {
     activity: PlayApiCommonDetailed
@@ -113,7 +114,13 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
     const [collapsibleOpen, setCollapsibleOpen] = useState(undefined);
 
     return (
-        <Stack>
+        <Stack gap="2">
+        <Flex justifyContent="flex-end">
+            <HStack>
+                <RetryButton/>
+                <DebugCopy value={JSON.stringify(activity)}/>
+            </HStack>
+        </Flex>
         {error !== undefined && error !== null ? <ErrorAlert error={error} /> : null}
         <Accordion.Root width="full" variant="enclosed" collapsible multiple>
             <Accordion.Item value="info">
