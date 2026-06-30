@@ -12,6 +12,7 @@ import { patchObject } from "../../core/DataUtils";
 import { MSCollapsible, MSCollapsibleExternalProps } from "./MSCollapsible";
 import { Muted } from "./Typography";
 import { JsonDiffPatch } from "./diffs/JsonDiff";
+import { timelineTextFormatting } from "../utils/ComponentUtils";
 
 export interface LifeycleStepsTimelineProps extends MSCollapsibleExternalProps {
     steps: LifecycleStep[]
@@ -146,7 +147,7 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                     <Timeline.Content>
                         <Timeline.Title>
                             <MSCollapsible
-                                indicator={<Span><Span color="fg.muted">Stage </Span>{stageType}-{stageName}<Span color="fg.muted"> in Hook </Span>{hook} <Span color="fg.muted">from</Span> {source} {summary}</Span>}
+                                indicator={<Span {...timelineTextFormatting}><Span color="fg.muted">Stage </Span>{stageType}-{stageName}<Span color="fg.muted"> in Hook </Span>{hook} <Span color="fg.muted">from</Span> {source} {summary}</Span>}
                                 defaultOpen={collapsibleOpen}
                                 disableUntil="md"
                                 timeline>
@@ -182,7 +183,7 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                         </Timeline.Indicator>
                     </Timeline.Connector>
                     <Timeline.Content>
-                        <Timeline.Title>
+                        <Timeline.Title {...timelineTextFormatting}>
                             Final Play<Span color="fg.muted">after all Transforms</Span>
                         </Timeline.Title>
                         <PlayData play={original} final={finalPlay} dates={false} compareDefault="Final" />

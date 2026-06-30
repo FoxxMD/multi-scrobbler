@@ -1,5 +1,5 @@
 import { ComponentProps, useState, Fragment } from "react"
-import { Accordion, Timeline, Icon, Span, Stack, Heading, Card, Box, Tabs, Skeleton, SkeletonCircle, SkeletonText } from '@chakra-ui/react';
+import { Accordion, Timeline, Icon, Span, Stack, Heading, Card, Box, Tabs, Skeleton, SkeletonCircle, SkeletonText, HTMLChakraProps } from '@chakra-ui/react';
 import { ComponentType, ErrorLike, JsonPlayObject, PlayActivity } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
 import { ErrorAlert } from "./ErrorAlert";
@@ -21,6 +21,7 @@ import { TimelineErrorIcon } from "./timeline/TimelineIcon";
 import { Muted } from "./Typography";
 import { PlayApiCommonDetailed } from "../../core/Api";
 import { MSErrorBoundary } from "./ErrorBoundary";
+import { timelineTextFormatting } from "../utils/ComponentUtils";
 
 
 export interface ActivityDetailProps {
@@ -157,7 +158,7 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                     <Timeline.Content gap="4">
                         <Timeline.Title>
                             <MSCollapsible
-                                indicator={<Span>Transformed Play <Span color="fg.muted">using configured Rules</Span></Span>}
+                                indicator={<Span {...timelineTextFormatting}>Transformed Play <Span color="fg.muted">using configured Rules</Span></Span>}
                                 defaultOpen={collapsibleOpen}
                                 timeline>
                                 <Card.Root bgColor="bg.muted" size="sm">
@@ -180,7 +181,7 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                         </Timeline.Indicator>
                     </Timeline.Connector>
                     <Timeline.Content gap="4">
-                        <Timeline.Title>
+                        <Timeline.Title {...timelineTextFormatting}>
                             Play <Muted>was</Muted> not transformed <Muted>because no</Muted> Transform Rules <Muted> were used/configured.</Muted>
                         </Timeline.Title>
                     </Timeline.Content>
@@ -199,7 +200,7 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                     <Timeline.Content gap="4">
                         <Timeline.Title>
                             <MSCollapsible
-                                indicator={<Span><Span color="fg.muted">Found </Span>{match.match ? <Span color="orange.solid"> a duplicate Scrobble</Span> : 'no duplicate Scrobbles'}</Span>}
+                                indicator={<Span {...timelineTextFormatting}><Span color="fg.muted">Found </Span>{match.match ? <Span color="orange.solid"> a duplicate Scrobble</Span> : 'no duplicate Scrobbles'}</Span>}
                                 defaultOpen={collapsibleOpen}
                                 disableUntil="md"
                                 timeline>
