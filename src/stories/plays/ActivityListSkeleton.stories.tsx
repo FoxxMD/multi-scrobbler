@@ -10,7 +10,7 @@ import { ActivitySummarySkeleton } from "../../client/components/ActivityDetail.
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
-  title: 'Activities/List Skeleton',
+  title: 'Plays/List Skeleton',
   component: ActivitySummarySkeleton
 ,
   parameters: {

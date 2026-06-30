@@ -1,19 +1,19 @@
-import preview from "../../.storybook/preview.js";
+import preview from "../../../.storybook/preview.js";
 import React from 'react';
 
 import { fn } from 'storybook/test';
 import { Container } from '@chakra-ui/react';
-import { ActivityTimeline } from "../client/components/ActivityTimeline";
-import {Provider} from "../client/components/Provider";
-import { generateJsonPlays } from "../core/PlayTestUtils.js";
-import { generatePlayApiCommonDetailed } from "../core/tests/utils/apiFixtures.js";
-import { generatePlayWithLifecycle, playWithLifecycleScrobble } from "../core/tests/utils/fixtures.js";
-import { asJsonPlayObject } from '../core/PlayMarshalUtils.js';
-import { ActivityDetails } from "../client/components/ActivityDetail.js";
+import { ActivityTimeline } from "../../client/components/ActivityTimeline.js";
+import {Provider} from "../../client/components/Provider.js";
+import { generateJsonPlays } from "../../core/PlayTestUtils.js";
+import { generatePlayApiCommonDetailed } from "../../core/tests/utils/apiFixtures.js";
+import { generatePlayWithLifecycle, playWithLifecycleScrobble } from "../../core/tests/utils/fixtures.js";
+import { asJsonPlayObject } from '../../core/PlayMarshalUtils.js';
+import { ActivityDetails } from "../../client/components/ActivityDetail.js";
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
-  title: 'Examples/ActivityDetails',
+  title: 'Plays/Details',
   component: ActivityDetails,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout

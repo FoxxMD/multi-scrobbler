@@ -1,16 +1,16 @@
-import preview from "../../.storybook/preview.js";
+import preview from "../../../.storybook/preview.js";
 import React from 'react';
 import { http, HttpResponse, delay } from 'msw';
 
 import { Container, Box } from '@chakra-ui/react';
-import { Logs, LogsFetchable } from "../client/components/LogsNext";
-import {Provider} from "../client/components/Provider";
-import { generateClientApiJson, generateSourceApiJson, generateSourcePlayerJson, LOG_MESSAGE_FIXTURE, logsApiResponse } from "../core/tests/utils/apiFixtures.js";
-import { RightHeaderFloatingLogs } from "../client/components/AppHeader.js";
+import { Logs, LogsFetchable } from "../../client/components/LogsNext.js";
+import {Provider} from "../../client/components/Provider.js";
+import { generateClientApiJson, generateSourceApiJson, generateSourcePlayerJson, LOG_MESSAGE_FIXTURE, logsApiResponse } from "../../core/tests/utils/apiFixtures.js";
+import { RightHeaderFloatingLogs } from "../../client/components/AppHeader.js";
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
-  title: 'Examples/Logs Window',
+  title: 'Logs/Floating Panel',
   component: RightHeaderFloatingLogs,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout

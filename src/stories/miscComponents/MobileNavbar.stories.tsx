@@ -8,7 +8,7 @@ import { withRouter, reactRouterParameters } from 'storybook-addon-remix-react-r
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
-  title: 'Static Components/Mobile Sidebar',
+  title: 'Misc Components/Mobile Sidebar',
   component: MobileSidebarNav,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
