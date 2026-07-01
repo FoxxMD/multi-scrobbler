@@ -47,8 +47,8 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
     return (
     <MSErrorBoundary>
     <Card.Root variant="subtle">
+        <LinkBox>
         <Card.Header {...cardHeaderProps}>
-            <LinkBox>
             <Flex justify="space-between">
                 <Heading>{data.name}</Heading>
                 <Stack justify="flex-start" alignItems="flex-end">
@@ -65,10 +65,10 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
                     {/* <Text textStyle="sm" textAlign="end">{props.data.status}</Text> */}
                 </Stack>
             </Flex>
-            </LinkBox>
             <TextMuted textStyle="md">{capitalize(data.type)} <Badge color={data.mode === 'client' ? 'var(--chakra-colors-purple-fg)' : 'var(--chakra-colors-pink-fg)'} size="sm" variant="outline">{capitalize(data.mode)}</Badge></TextMuted>
             <QuickStatsSource data={data} streamable={props.fetchable} />
         </Card.Header>
+        </LinkBox>
         {body}
     </Card.Root>
     </MSErrorBoundary>)
