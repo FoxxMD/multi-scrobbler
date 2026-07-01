@@ -112,11 +112,11 @@ export const ComponentStateBadge = (props: ComponentProps<typeof Badge> & {
     let sep: React.JSX.Element | undefined;
     if(suffix !== undefined) {
         if(separator === true) {
-            sep = <Separator orientation="vertical" borderColor="var(--chakra-colors-color-palette-muted)" height="5"/>;
+            sep = <Separator orientation="vertical" borderColor="var(--chakra-colors-color-palette-muted)" ml="2" height="5"/>;
         } else if(separator !== false) {
             sep = separator;
         }
     }
 
-    return <Badge variant="surface" colorPalette={badgeColor} {...rest}><HStack>{componentStateToFriendly(componentState)}{sep}{suffix}</HStack></Badge>
+    return <Badge variant="surface" colorPalette={badgeColor} {...rest}><HStack gap="0">{componentStateToFriendly(componentState)}{sep}{suffix}</HStack></Badge>
 }

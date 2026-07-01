@@ -11,6 +11,7 @@ import {
     LuArrowUp,
     LuArrowDown,
     LuEllipsis,
+    LuEllipsisVertical,
     LuArrowBigRight,
     LuBug,
     LuPower,
@@ -100,6 +101,8 @@ export const IdleIcon = (props: {animated?: boolean} & ComponentProps<typeof RiZ
 
 export const EllipsisIcon = LuEllipsis;
 export const EllipsisButton = makeIconButton(EllipsisIcon);
+export const EllipsisVerticalIcon = LuEllipsisVertical;
+export const EllipsisVerticalButton = makeIconButton(EllipsisVerticalIcon);
 
 export const FatArrowRight = LuArrowBigRight;
 

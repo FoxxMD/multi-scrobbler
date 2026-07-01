@@ -1,11 +1,11 @@
 import React, { ComponentProps, useState } from "react"
-import { SegmentGroup, Switch, Span, ButtonGroup, Button, Box, Heading, Skeleton, Wrap, HStack, Stack, Flex, Card, LinkOverlay, SkeletonText, BadgeProps, Badge } from '@chakra-ui/react';
+import { SegmentGroup, Switch, Portal, Group, Span, Menu, ButtonGroup, Button, Box, Heading, Skeleton, Wrap, HStack, Stack, Flex, Card, LinkOverlay, SkeletonText, BadgeProps, Badge, MenuItemProps } from '@chakra-ui/react';
 import { COMPONENT_STATE, ComponentClientApiJson, ComponentCommonApiJson, ComponentsApiJson, ComponentSourceApiJson, ComponentState, componentStateToFriendly, isComponentClientApiJson, isComponentSourceApiJson, MsSseEvent, MsSseEventPayload } from "../../../core/Api.js";
 import { TextMuted } from "../TextMuted.js";
 import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
 import { capitalize } from "../../../core/StringUtils.js";
 import { ShortDateDisplay } from "../DateDisplay.js";
-import { CheckIcon, ChevronLeftButton, ChevronRightButton, EyeButton, IdleIcon, PowerButton, PowerOffButton, PowerOffIcon, XIcon } from "../icons/ChakraIcons.js";
+import { CheckIcon, ChevronLeftButton, ChevronRightButton, EllipsisButton, EyeButton, EyeClosedIcon, EyeIcon, IdleIcon, PowerButton, PowerIcon, PowerOffButton, PowerOffIcon, RetryIcon, XIcon } from "../icons/ChakraIcons.js";
 import { ChakraPlayer, ChakraPlayerFetchable, PlayersContainer, PlayersContainerFetchable } from "../chakraPlayer/Player.js";
 import { InfoTip, ToggleTip, Tooltip } from "../ToggleTip.js";
 import { QueryFunctionContext, queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -27,14 +27,13 @@ import { shortTodayAwareFormat } from "../../../core/TimeUtils.js";
 import { durationToHuman } from "../../../backend/utils.js";
 import { tanQueries } from "../../queries/index.js";
 import { MSErrorBoundary } from "../ErrorBoundary.js";
+import { IconType } from "react-icons/lib";
 
 export const ComponentBackButton = (props: ComponentProps<typeof ChevronLeftButton> = {}) => {
     return (
-        <LinkOverlay asChild>
-            <Link to={`/next`}>
-                <ChevronLeftButton variant="ghost" iconProps={{style: {width: 'unset', height:  'unset', fontSize: "2em"}}} {...props} />
-            </Link>
-        </LinkOverlay>
+        <Link to={`/next`}>
+            <ChevronLeftButton variant="ghost" iconProps={{style: {width: 'unset', height:  'unset', fontSize: "2em"}}} {...props} />
+        </Link>
     );
 }
 
@@ -95,6 +94,15 @@ const ComponentSettings = (props: { data: ComponentCommonApiJson }) => {
     )
 }
 
+const componentStateMenuItem = (Icon: IconType, value: string, name?: string) => (props: Pick<MenuItemProps, 'disabled'> = {}) => {
+    return (<Menu.Item key={value} value={value} {...props}><Icon/><Box flex="1">{name ?? capitalize(value)}</Box></Menu.Item>);
+}
+const MenuItemRestart = componentStateMenuItem(RetryIcon, 'restart');
+const MenuItemStop = componentStateMenuItem(PowerOffIcon, 'stop');
+const MenuItemStart = componentStateMenuItem(PowerIcon, 'start');
+const MenuItemMute = componentStateMenuItem(EyeClosedIcon, 'mute', 'Ignore')
+const MenuItemUnmute = componentStateMenuItem(EyeIcon, 'unmute', 'Monitor');
+
 const primaryActionProps: ComponentProps<typeof PowerOffButton> = {
     margin: "1px",
     variant: "subtle",
@@ -107,28 +115,52 @@ export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof 
         live,
         ...rest
     } = props; 
-    let suffix: React.JSX.Element | null;
-    let primaryAction: React.JSX.Element | null;
+    let suffix: React.JSX.Element | undefined;
+    let primaryAction: React.JSX.Element | undefined;
+    let menuElm: React.JSX.Element | undefined;
+    let menuItems: React.JSX.Element[] = [];
     let badgeProps: BadgeProps = {};
     switch(props.data.state) {
         case COMPONENT_STATE.RUNNING:
             primaryAction = <PowerOffButton {...primaryActionProps}/>
+            menuItems = [<MenuItemStop/>,<MenuItemRestart/>,<MenuItemMute/>];
             break;
         case COMPONENT_STATE.MUTED:
-            primaryAction = <EyeButton {...primaryActionProps}/>
+            primaryAction = <EyeButton {...primaryActionProps}/>;
+            menuItems = [<MenuItemStop/>,<MenuItemRestart/>,<MenuItemUnmute/>];
             break;
         case COMPONENT_STATE.INITIALIZING:
             // no actions while init is occurring
             break;
         default:
             // otherwise generic start action for all non-running states
-            primaryAction = <PowerButton {...primaryActionProps}/>
+            primaryAction = <PowerButton {...primaryActionProps}/>;
+            menuItems = [<MenuItemStart/>];
     }
-    if(primaryAction !== undefined) {
+    if(menuItems.length > 0) {
+        menuElm = (
+    <Menu.Root positioning={{ placement: "bottom-end" }}>
+      <Group attached>
+        {primaryAction}
+        <Menu.Trigger asChild>
+          <EllipsisButton {...primaryActionProps}/>
+        </Menu.Trigger>
+      </Group>
+      <Portal>
+        <Menu.Positioner>
+          <Menu.Content>
+            {menuItems}
+          </Menu.Content>
+        </Menu.Positioner>
+      </Portal>
+    </Menu.Root>
+        );
+        suffix = menuElm;
+    } else if(primaryAction !== undefined) {
         suffix = primaryAction;
     }
     if(suffix !== undefined || primaryAction !== undefined) {
-        //badgeProps.paddingRight = 0;
+        badgeProps.paddingRight = 0;
     }
 
     return <ComponentStateBadge size="lg" maxWidth="fit-content" {...badgeProps} separator suffix={suffix} {...rest}/>;
@@ -170,7 +202,6 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
                 <HStack truncate>{sleepingRender}{props.data.status}</HStack>
             </Wrap>
             <Flex justifyContent="flex-end" rowGap="6" flexDirection="row-reverse" wrap="wrap">
-                <ComponentSettings data={props.data}/>
                 <Box marginEnd="auto"><MSComponentStats {...props}/></Box>
             </Flex>
             {props.live ? <PlayersContainerFetchable data={props.data}/> : <PlayersContainer data={props.data} live={props.live}/>}

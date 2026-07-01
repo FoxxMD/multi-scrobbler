@@ -58,7 +58,7 @@ export const componentStateToFriendly = (state: ComponentState) => {
         case 1:
             return 'Running';
         case 2:
-            return 'Muted';
+            return 'Ignored';
         case 3:
             return 'Idle';
         case 4:
