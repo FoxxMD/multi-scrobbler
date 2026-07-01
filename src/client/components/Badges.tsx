@@ -7,9 +7,9 @@ import {useSSE, useSSEContext, useSSEEvent} from "@flamefrontend/sse-runtime-rea
 import { Second } from "../../core/Atomic";
 import { useTimeout } from 'react-use-timeout';
 
-export const PlayStateBadge = (props: ComponentProps<typeof Badge> & { state: PlayApiCommon['state'] }) => {
+export const PlayStateBadge = (props: ComponentProps<typeof Badge> & { state: PlayApiCommon['state'], suffix?: React.JSX.Element }) => {
 
-  const { state, ...rest } = props;
+  const { state, suffix, ...rest } = props;
 
   let badgeColor = undefined,
     badgeText = capitalize(state);
@@ -33,7 +33,7 @@ export const PlayStateBadge = (props: ComponentProps<typeof Badge> & { state: Pl
       break;
   }
 
-  return <Badge variant="surface" colorPalette={badgeColor} {...rest}>{badgeText}</Badge>
+  return <Badge variant="surface" colorPalette={badgeColor} {...rest}>{badgeText}{suffix}</Badge>
 }
 
 export const NewBadge = (props: ComponentProps<typeof Badge> & { expires?: Second }) => {

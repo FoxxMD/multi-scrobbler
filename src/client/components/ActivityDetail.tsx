@@ -1,5 +1,5 @@
 import React, { ComponentProps, useState, Fragment } from "react"
-import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Clipboard, Separator, HStack, Flex, Badge, IconButton, Container, Icon, useAccordionItemContext, Skeleton, SkeletonText, Collapsible } from '@chakra-ui/react';
+import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Clipboard, Separator, HStack, Flex, Badge, IconButton, Container, Icon, useAccordionItemContext, Skeleton, SkeletonText, Collapsible, BadgeProps } from '@chakra-ui/react';
 import { ComponentType, Second } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
 import { ErrorAlert } from "./ErrorAlert";
@@ -101,7 +101,7 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
         <Flex direction="column" width="100%" truncate rowGap="0.5">
             <Flex width="100%" truncate>
                 <Span truncate marginEnd="auto">{play.data.track}{isNew !== undefined ? <NewBadge marginLeft="2" expires={typeof isNew === 'boolean' ? undefined : isNew}/> : null}</Span>
-                <PlayStateBadge state={activity.state} />
+                {/* <PlayStateBadge state={activity.state} /> */}
             </Flex>
             <TextMuted textAlign="left" truncate>{play.data.artists.map(x => x.name).join(' / ')}</TextMuted>
             <HStack gap="1">
@@ -149,12 +149,12 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
 
     return (
         <Stack gap="2">
-        <Flex justifyContent="flex-end">
+        {/* <Flex justifyContent="flex-end">
             <HStack>
                 <RetryButton/>
                 <DebugCopy value={JSON.stringify(activity)}/>
             </HStack>
-        </Flex>
+        </Flex> */}
         {error !== undefined && error !== null ? <ErrorAlert error={error} /> : null}
         <Accordion.Root width="full" variant="enclosed" collapsible multiple>
             <Accordion.Item value="info">
@@ -215,6 +215,25 @@ export const ActivityDetailFetchable = (props: ActivityDetailFetchableProps) => 
     return <ActivityDetails componentType={props.componentType} key={props.uid} activity={activity as PlayApiCommonDetailed}/>
 }
 
+export const ActivityStateActions = (props: {activity: PlayApiCommon}) => {
+    let suffix: React.JSX.Element | null;
+    let badgeProps: BadgeProps = {};
+    if(props.activity.state === 'failed') {
+        suffix = <RetryButton size="xs" margin="1px" variant="subtle"/>;
+        badgeProps.paddingRight = 0;
+    }
+    return (
+        <Stack>
+            <HStack>
+                <PlayStateBadge {...badgeProps} minH="32px" alignItems="anchor-center" size="lg" state={props.activity.state} suffix={suffix} />
+            </HStack>
+            <HStack justifyContent="flex-end">
+                <DebugCopy variant="ghost" value={JSON.stringify(props.activity)}/>
+            </HStack>
+        </Stack>
+    )
+}
+
 export const ActivityCollapsible = (props: ActivitySummaryProps & { key?: string, live?: boolean, componentId: number, query: QueryPlaysOptsJson }) => {
     const {
         activity: {
@@ -236,18 +255,19 @@ export const ActivityCollapsible = (props: ActivitySummaryProps & { key?: string
                 borderWidth: '1px',
             }}
         >
+            <HStack                     style={{
+                        paddingBlock: "var(--chakra-spacing-2)",
+                        paddingInline: "var(--chakra-spacing-4)"
+                    }}>
                 <Collapsible.Trigger
                     userSelect="text"
                     w="full"
-                    paddingY="3"
+
                     display="flex"
                     gap="2"
                     alignItems="center"
                     truncate cursor="pointer"
-                    style={{
-                        paddingBlock: "var(--chakra-spacing-2)",
-                        paddingInline: "var(--chakra-spacing-4)"
-                    }}
+
                 >
                     <Collapsible.Indicator
                         transition="transform 0.2s"
@@ -257,6 +277,8 @@ export const ActivityCollapsible = (props: ActivitySummaryProps & { key?: string
                     </Collapsible.Indicator>
                     <ActivitySummaryFetchable activityUid={activity.uid} {...props}/>
                 </Collapsible.Trigger>
+                <ActivityStateActions activity={activity}/>
+                </HStack>
             <Collapsible.Content borderTopColor="gray.border"
                 style={{
                     paddingBlock: "var(--chakra-spacing-4)",
