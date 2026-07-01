@@ -47,35 +47,6 @@ decorators: [
 let playData: PlayApiCommonDetailed[] = [];
 let livePlayData: PlayApiCommonDetailed[] = [];
 
-// More on writing stories with args: https://storybook.js.org/docs/writing-stories/args
-export const List = meta.story({
-  args: {
-    render: "virtDynamic"
-  },
-
-  parameters: {
-  msw: {
-    handlers: [
-      http.get<{uid: string}>('/api/components/:componentId/play/:uid', async ({ params }) => {
-        const existing = playData.find(x => x.uid === params.uid);
-        if(existing !== undefined) {
-          return HttpResponse.json(existing);
-        }
-        return HttpResponse.json(generatePlayApiCommonDetailed());
-      }),
-    ],
-  },
-},
-
-  //render: function Render(args) { return (<ChakraProvider><MyList></MyList></ChakraProvider>) }
-  loaders: [
-  async () => {
-    playData = await generatePlayApiCommonDetailedList()
-    return {data: playData};
-  }
-]
-});
-
 export const ListLive = meta.story({
   component: ListContainerFetchable,
   render: function Render(args, { loaded: { data } }) { return (<ListContainerFetchable {...args}/>) },

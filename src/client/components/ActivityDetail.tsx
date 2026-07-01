@@ -7,7 +7,7 @@ import { AiOutlineExclamationCircle } from "react-icons/ai";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { ExpandCollapse } from "./ExpandCollapse";
 import { MsSseEvent, PlayApiCommon, PlayApiCommonDetailed, SortPlaysBy, SortPlaysByProps } from "../../core/Api";
-import { InfiniteData, QueryFunctionContext, queryOptions, useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import { InfiniteData, QueryFunctionContext, QueryOptions, queryOptions, SuspenseQueriesOptions, useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import ky from 'ky';
 import { baseUrl } from "../utils";
 import { ShortDateDisplay } from "./DateDisplay";
@@ -22,6 +22,62 @@ import { LuChevronRight } from "react-icons/lu";
 import { useSSEContext, useSSEEvent } from "@flamefrontend/sse-runtime-react";
 import { DebugCopy, RetryButton } from "./icons/ChakraIcons";
 
+type UseActivityQueryOptions = {
+    msQuery?: QueryPlaysOptsJson
+    activity?: ActivitySummaryProps['activity']
+    refetchOnMount?: boolean | 'always'
+}
+export function useActivityQuery(
+    componentId: number,
+    activityUid: string,
+    options: UseActivityQueryOptions = {}
+) {
+    const {
+        msQuery,
+        activity: preloadedActivity,
+        ...rest
+    } = options;
+    const queryClient = useQueryClient();
+
+    const { isPending, isError, data: activity, error } = useQuery({
+        ...tanQueries.activities.single(componentId, activityUid),
+        ...rest,
+        staleTime: Infinity,
+        initialData: () => {
+            if (msQuery === undefined && preloadedActivity === undefined) {
+                return undefined;
+            }
+            if(preloadedActivity !== undefined) {
+                return preloadedActivity;
+            }
+            const data = queryClient.getQueryData(
+                tanQueries.activities.list(componentId, msQuery).queryKey
+            ) as InfiniteData<PaginatedResponse<PlayApiCommonDetailed>> | undefined;
+
+            if (data !== undefined) {
+                for (const p of data.pages) {
+                    const res = p.data.find(x => x.uid === activityUid);
+                    if (res !== undefined) {
+                        return res;
+                    }
+                }
+                return undefined;
+            }
+        },
+    });
+
+    const client = useSSEContext<MsSseEvent>();
+    useSSEEvent(client, 'playUpdate', (payload) => {
+        if (payload.componentId === componentId && payload.data.uid === activityUid) {
+            queryClient.invalidateQueries({
+                queryKey: tanQueries.activities.single(componentId, activityUid).queryKey,
+                refetchType: 'all'
+            });
+        }
+    });
+
+    return { activity, isPending, isError, error };
+}
 export interface ActivityDetailProps {
     activity: PlayApiCommonDetailed
     componentType: ComponentType
@@ -57,39 +113,17 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
 }
 
 export const ActivitySummaryFetchable = (props: MarkOptional<ActivitySummaryProps, 'activity'> & { componentId: number, activityUid: string, query: QueryPlaysOptsJson}) => {
-        const queryClient = useQueryClient();
-        const { isPending, isError, data, error } = useSuspenseQuery({
-        ...tanQueries.activities.single(props.componentId, props.activityUid),
-        staleTime: Infinity,
-        initialData: () => {
-            const data = queryClient.getQueryData(tanQueries.activities.list(props.componentId, props.query).queryKey) as InfiniteData<PaginatedResponse<PlayApiCommonDetailed>> | undefined;
-            if(data !== undefined) {
-                for(const p of data.pages) {
-                    const res = p.data.find(x => x.uid === props.activityUid);
-                    if(res !== undefined) {
-                        return res;
-                    }
-                }
-                return undefined;
-            }
-        }
-    });
-
-    const client = useSSEContext<MsSseEvent>();
-    useSSEEvent(client, 'playUpdate', (payload) => {
-        if(payload.componentId === props.componentId && payload.data.uid === props.activityUid) {
-            queryClient.invalidateQueries({
-                queryKey: tanQueries.activities.single(props.componentId, props.activityUid).queryKey,
-                refetchType: "all"
-            });
-        }
-    });
+    const {isError, error, isPending, activity} = useActivityQuery(props.componentId, props.activityUid, {activity: props.activity});
 
     if(isError) {
         return <ErrorAlert error={error}/>
     }
 
-    return <ActivitySummary {...props} activity={data}/>
+    if(activity === undefined && isPending) {
+        return <ActivitySummarySkeleton/>;
+    }
+
+    return <ActivitySummary {...props} activity={activity}/>
 }
 
 export const ActivityDetails = (props: ActivityDetailProps) => {
@@ -164,23 +198,11 @@ export interface ActivityDetailFetchableProps {
     uid: string
     componentId: number
     componentType: ComponentType
-    query: QueryPlaysOptsJson
+    activity?: ActivitySummaryProps['activity']
 }
 
 export const ActivityDetailFetchable = (props: ActivityDetailFetchableProps) => {
-    const { isPending, isError, data, error } = useQuery({
-        ...tanQueries.activities.single(props.componentId, props.uid)
-    });
-
-    const queryClient = useQueryClient();
-    const client = useSSEContext<MsSseEvent>();
-    useSSEEvent(client, 'playUpdate', (payload) => {
-        if(payload.componentId === props.componentId && payload.data.uid === props.uid) {
-            queryClient.invalidateQueries({
-                queryKey: tanQueries.activities.single(props.componentId, props.uid).queryKey
-            });
-        }
-    });
+    const {isError, error, isPending, activity} = useActivityQuery(props.componentId, props.uid, {activity: props.activity, refetchOnMount: 'always'});
 
     if(isPending) {
         return <Fragment><Skeleton height="100px"/><Skeleton height="100px"/></Fragment>
@@ -190,7 +212,7 @@ export const ActivityDetailFetchable = (props: ActivityDetailFetchableProps) => 
         return <ErrorAlert error={error}/>
     }
 
-    return <ActivityDetails componentType={props.componentType} key={data?.uid} activity={data}/>
+    return <ActivityDetails componentType={props.componentType} key={props.uid} activity={activity as PlayApiCommonDetailed}/>
 }
 
 export const ActivityCollapsible = (props: ActivitySummaryProps & { key?: string, live?: boolean, componentId: number, query: QueryPlaysOptsJson }) => {
@@ -233,14 +255,14 @@ export const ActivityCollapsible = (props: ActivitySummaryProps & { key?: string
                     >
                         <LuChevronRight />
                     </Collapsible.Indicator>
-                    {live ? <ActivitySummaryFetchable activityUid={activity.uid} {...props} /> : <ActivitySummary componentType={props.componentType} activity={activity} sortBy={sortBy} />}
+                    <ActivitySummaryFetchable activityUid={activity.uid} {...props}/>
                 </Collapsible.Trigger>
             <Collapsible.Content borderTopColor="gray.border"
                 style={{
                     paddingBlock: "var(--chakra-spacing-4)",
                     paddingInline: "var(--chakra-spacing-4)"
                 }}>
-                {live ? <ActivityDetailFetchable componentId={props.componentId} componentType={props.componentType} query={props.query} uid={activity.uid} /> : <ActivityDetails  {...props} activity={activity as PlayApiCommonDetailed} />}
+                <ActivityDetailFetchable componentId={props.componentId} componentType={props.componentType} uid={activity.uid} activity={activity} />
             </Collapsible.Content>
         </Collapsible.Root>
     )
