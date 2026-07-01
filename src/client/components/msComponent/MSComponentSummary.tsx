@@ -66,13 +66,16 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
                 </Stack>
             </Flex>
             </LinkBox>
-            <TextMuted textStyle="md"><Badge colorPalette={data.mode === 'client' ? 'purple' : 'pink'} size="sm" variant="subtle">{capitalize(data.mode)}</Badge> {capitalize(data.type)}</TextMuted>
+            <TextMuted textStyle="md">{capitalize(data.type)} <Badge color={data.mode === 'client' ? 'var(--chakra-colors-purple-fg)' : 'var(--chakra-colors-pink-fg)'} size="sm" variant="outline">{capitalize(data.mode)}</Badge></TextMuted>
             <QuickStatsSource data={data} streamable={props.fetchable} />
         </Card.Header>
         {body}
     </Card.Root>
     </MSErrorBoundary>)
 }
+
+//colorPalette={data.mode === 'client' ? 'purple' : 'pink'}
+// color={data.mode === 'client' ? 'purple' : 'pink'}
 
 const QuickStatsSource = (props: { data: ComponentCommonApiJson, streamable?: boolean }) => {
     if (isComponentSourceApiJson(props.data)) {
