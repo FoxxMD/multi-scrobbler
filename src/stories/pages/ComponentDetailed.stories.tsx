@@ -13,6 +13,7 @@ import { faker } from "@faker-js/faker";
 import { PaginatedResponse } from "../../backend/common/database/drizzle/repositories/BaseRepository.js";
 import dayjs from "dayjs";
 import { serializeError } from "serialize-error";
+import { withRouter, reactRouterParameters } from 'storybook-addon-remix-react-router';
 
 let livePlayData: PlayApiCommonDetailed[] = [];
 
@@ -23,6 +24,15 @@ const meta = preview.meta({
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
+    reactRouter: reactRouterParameters({
+      location: {
+        path: '/'
+      },
+      routing: {
+        path: '/',
+        useStoryElement: true
+      }
+    }),
     msw: {
       handlers: [
         http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params }) => {
@@ -69,6 +79,7 @@ const meta = preview.meta({
      return (<ComponentDetailedDesktop {...args} />) 
     },
 decorators: [
+  withRouter,
     (Story) => (<Provider><Container maxWidth="4xl"><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Container></Provider>),
   ]
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args

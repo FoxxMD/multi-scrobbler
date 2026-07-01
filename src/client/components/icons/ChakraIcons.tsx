@@ -4,13 +4,16 @@ import { RiZzzFill } from "react-icons/ri";
 import { SiGoogledocs } from "react-icons/si";
 import { IconButton, Clipboard, useClipboard } from "@chakra-ui/react"
 import { ComponentProps, PropsWithChildren } from 'react';
-import { IconType } from "react-icons/lib";
+import { IconBaseProps, IconType } from "react-icons/lib";
 
-export const makeIconButton = (Icon: IconType) => (props: PropsWithChildren<ComponentProps<typeof IconButton>>) => (
-    <IconButton variant="surface" size="xs" {...props}>
-        <Icon />{props.children}
-    </IconButton>
-);
+export const makeIconButton = (Icon: IconType) => (props: PropsWithChildren<ComponentProps<typeof IconButton>> & { iconProps?: IconBaseProps }) => {
+    const { iconProps = {}, children, ...rest } = props;
+    return (
+        <IconButton variant="surface" size="xs" {...rest}>
+            <Icon {...iconProps} />{children}
+        </IconButton>
+    );
+}
 
 export const ChevronRight = LuChevronRight;
 export const ChevronRightButton = (props: ComponentProps<typeof IconButton>) => (
@@ -20,11 +23,7 @@ export const ChevronRightButton = (props: ComponentProps<typeof IconButton>) => 
 );
 
 export const ChevronLeft = LuChevronLeft;
-export const ChevronLeftButton = (props: ComponentProps<typeof IconButton>) => (
-    <IconButton variant="surface" size="xs" {...props}>
-        <ChevronLeft />
-    </IconButton>
-);
+export const ChevronLeftButton = makeIconButton(ChevronLeft);  
 
 export const HeartbeatIcon = LuActivity;
 export const HeartbeatButton = (props: ComponentProps<typeof IconButton>) => (

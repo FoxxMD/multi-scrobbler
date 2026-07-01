@@ -1,11 +1,11 @@
 import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect, useState, useCallback } from "react"
-import { DataList, Badge, Grid, Spacer, Span, ButtonGroup, Button, GridItem, Text, Box, Heading, Skeleton, Wrap, Stat, Separator, HStack, Stack, Flex, Collapsible, Card, LinkOverlay, LinkBox, SkeletonText } from '@chakra-ui/react';
+import { DataList, Badge, Grid, Spacer, Span, ButtonGroup, Button, GridItem, Text, Box, Heading, Skeleton, Wrap, Stat, Separator, HStack, Stack, Flex, Collapsible, Card, LinkOverlay, LinkBox, SkeletonText, IconButtonProps } from '@chakra-ui/react';
 import { COMPONENT_STATE, ComponentClientApiJson, ComponentCommonApiJson, ComponentsApiJson, ComponentSourceApiJson, componentStateToFriendly, isComponentClientApiJson, isComponentSourceApiJson, MsSseEvent, MsSseEventPayload } from "../../../core/Api.js";
 import { TextMuted } from "../TextMuted.js";
 import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
 import { capitalize } from "../../../core/StringUtils.js";
 import { ShortDateDisplay } from "../DateDisplay.js";
-import { ChevronRightButton, IdleIcon } from "../icons/ChakraIcons.js";
+import { ChevronLeftButton, ChevronRightButton, IdleIcon } from "../icons/ChakraIcons.js";
 import { ChakraPlayer, ChakraPlayerFetchable, PlayersContainer, PlayersContainerFetchable } from "../chakraPlayer/Player.js";
 import { InfoTip, ToggleTip, Tooltip } from "../ToggleTip.js";
 import { QueryFunctionContext, queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -16,6 +16,7 @@ import {
     useSSEAnyEvent
 } from "@flamefrontend/sse-runtime-react";
 import { isComponentTypeSource, SourcePlayerJson } from "../../../core/Atomic.js";
+import { Link } from "react-router";
 import { CountLiveIndicator, DateIndicator, DeadLetterIndicator, QueuedIndicator } from "./Stats.js";
 import { ListContainerFetchable, ListContainerFilterable } from "../playActivity/ActivityList.js";
 import { useParams } from "react-router-dom";
@@ -27,28 +28,21 @@ import { durationToHuman } from "../../../backend/utils.js";
 import { tanQueries } from "../../queries/index.js";
 import { MSErrorBoundary } from "../ErrorBoundary.js";
 
-export const MSComponentHeading = (props: { data?: Pick<ComponentCommonApiJson, 'name' | 'mode' | 'type'>, fetchable?: boolean }) => {
-    if (props.data === undefined) {
-        return (
-            <Box>
-                <Skeleton width="5rem" height="5rem" />
-                <Skeleton width="3rem" height="1rem" />
-            </Box>
-        )
-    }
+export const ComponentBackButton = (props: ComponentProps<typeof ChevronLeftButton> = {}) => {
     return (
-        <Box>
-            <Heading size="2xl">{props.data.name}</Heading>
-            <Heading color="fg.subtle" size="lg">({props.data.mode}) {capitalize(props.data.type)}</Heading>
-        </Box>
-    )
+        <LinkOverlay asChild>
+            <Link to={`/next`}>
+                <ChevronLeftButton variant="ghost" iconProps={{style: {width: 'unset', height:  'unset', fontSize: "2em"}}} {...props} />
+            </Link>
+        </LinkOverlay>
+    );
 }
 
 export const MSComponentName = (props: {data?: Pick<ComponentCommonApiJson, 'name'>}) => {
     if(props.data === undefined) {
-        return <Skeleton width="5rem" height="5rem" />;
+        return <HStack><ComponentBackButton/><Skeleton width="5rem" height="5rem" /></HStack>;
     }
-    return <Heading truncate size="2xl">{props.data.name}</Heading>;
+    return <Heading truncate size="2xl"><ComponentBackButton/>{props.data.name}</Heading>;
 }
 
 export const MSComponentType = (props: {data?: Pick<ComponentCommonApiJson, 'mode' | 'type'>}) => {
