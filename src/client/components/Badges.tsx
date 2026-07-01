@@ -1,5 +1,5 @@
-import { Badge } from "@chakra-ui/react";
-import { ComponentProps, useState, useCallback, useEffect } from "react";
+import { Badge, Separator, HStack } from "@chakra-ui/react";
+import React, { ComponentProps, useState, useCallback, useEffect } from "react";
 import { COMPONENT_STATE, ComponentCommonApiJson, componentStateToFriendly, MsSseEvent, MsSseEventPayload, PlayApiCommon } from "../../core/Api";
 import { capitalize } from "../../core/StringUtils";
 import { PlayerState } from "../../backend/common/infrastructure/config/source/mpd";
@@ -60,11 +60,21 @@ export const NewBadge = (props: ComponentProps<typeof Badge> & { expires?: Secon
     return null;
 }
 
-export const ComponentStateBadge = (props: ComponentProps<typeof Badge> & { data: Pick<ComponentCommonApiJson, 'state'>, componentId?: number, live?: boolean }) => {
+export const ComponentStateBadge = (props: ComponentProps<typeof Badge> & {
+    data: Pick<ComponentCommonApiJson, 'state'>,
+    componentId?: number,
+    live?: boolean,
+    separator?: boolean | React.JSX.Element,
+    suffix?: React.JSX.Element
+}) => {
 
-    const { data, ...rest } = props;
+    const { data, suffix, separator, ...rest } = props;
 
     const [componentState, setComponentState] = useState(data.state);
+
+    useEffect(() =>{
+        setComponentState(data.state);
+    },[data.state, setComponentState]);
 
     if(props.componentId !== undefined && props.live) {
         const client = useSSEContext<MsSseEvent>();
@@ -99,5 +109,14 @@ export const ComponentStateBadge = (props: ComponentProps<typeof Badge> & { data
             break;
     }
 
-    return <Badge variant="surface" colorPalette={badgeColor} {...rest}>{componentStateToFriendly(componentState)}</Badge>
+    let sep: React.JSX.Element | undefined;
+    if(suffix !== undefined) {
+        if(separator === true) {
+            sep = <Separator orientation="vertical" borderColor="var(--chakra-colors-color-palette-muted)" height="5"/>;
+        } else if(separator !== false) {
+            sep = separator;
+        }
+    }
+
+    return <Badge variant="surface" colorPalette={badgeColor} {...rest}><HStack>{componentStateToFriendly(componentState)}{sep}{suffix}</HStack></Badge>
 }

@@ -1,4 +1,23 @@
-import { LuChevronRight, LuChevronLeft, LuActivity, LuGithub, LuTerminal, LuAlignJustify, LuX, LuCheck, LuExternalLink, LuArrowUp, LuArrowDown, LuEllipsis, LuArrowBigRight, LuBug } from "react-icons/lu"
+import {
+    LuChevronRight,
+    LuChevronLeft,
+    LuActivity,
+    LuGithub,
+    LuTerminal,
+    LuAlignJustify,
+    LuX,
+    LuCheck,
+    LuExternalLink,
+    LuArrowUp,
+    LuArrowDown,
+    LuEllipsis,
+    LuArrowBigRight,
+    LuBug,
+    LuPower,
+    LuPowerOff,
+    LuEye,
+    LuEyeClosed
+} from "react-icons/lu"
 import { VscDebugRestart } from 'react-icons/vsc';
 import { RiZzzFill } from "react-icons/ri";
 import { SiGoogledocs } from "react-icons/si";
@@ -59,6 +78,9 @@ export const MenuButton = makeIconButton(MenuIcon);
 export const XIcon = LuX;
 export const XButton = makeIconButton(XIcon);
 
+export const CheckIcon = LuCheck;
+export const CheckButton = makeIconButton(CheckIcon);
+
 export const ExternalLinkIcon = LuExternalLink;
 export const ExternalLinkButton = makeIconButton(ExternalLinkIcon);
 
@@ -102,3 +124,15 @@ export const DebugCopy = (props: {value: Clipboard.RootProps['value']} & Compone
 
 export const RetryIcon = VscDebugRestart;
 export const RetryButton = makeIconButton(RetryIcon);
+
+export const PowerIcon = LuPower;
+export const PowerButton = makeIconButton(PowerIcon);
+
+export const PowerOffIcon = LuPowerOff;
+export const PowerOffButton = makeIconButton(PowerOffIcon);
+
+export const EyeIcon = LuEye;
+export const EyeButton = makeIconButton(EyeIcon);
+
+export const EyeClosedIcon = LuEyeClosed;
+export const EyeClosedButton = makeIconButton(LuEyeClosed);
