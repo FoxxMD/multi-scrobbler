@@ -28,12 +28,13 @@ import { durationToHuman } from "../../../backend/utils.js";
 import { tanQueries } from "../../queries/index.js";
 import { MSErrorBoundary } from "../ErrorBoundary.js";
 import { IconType } from "react-icons/lib";
+import { useIsWrapped } from "../../utils/hooks/useIsWrapped.js";
 
 export const ComponentBackButton = (props: ComponentProps<typeof ChevronLeftButton> = {}) => {
     return (
-        <Link to={`/next`}>
-            <ChevronLeftButton variant="ghost" iconProps={{style: {width: 'unset', height:  'unset', fontSize: "2em"}}} {...props} />
-        </Link>
+            <Link to={`/next`}>
+                <ChevronLeftButton variant="ghost" iconProps={{style: {width: 'unset', height:  'unset', fontSize: "2em"}}} {...props} />
+            </Link>
     );
 }
 
@@ -188,24 +189,26 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
             }
         }
     }
+    const target = React.useRef(null);
+    const isWrapped = useIsWrapped(target);
     return (
         <MSErrorBoundary>
-        <Flex direction="column" style={{whiteSpace: 'break-spaces'}} truncate rowGap="1">
-            <Flex width="100%" truncate>
-                <Box marginEnd="auto" truncate><MSComponentName data={props.data}/></Box>
-                <ComponentStateBadgeActionable size="lg" maxWidth="fit-content" data={props.data} />
-            </Flex>
-            <Wrap>
-                <Box marginEnd="auto">
+        <Flex direction="row" wrap="wrap" style={{whiteSpace: 'break-spaces'}} truncate rowGap="4">
+            <Wrap width="100%" ref={target}>
+                <Box marginEnd="auto" truncate>
+                    <MSComponentName data={props.data}/>
                     <MSComponentType data={props.data}/>
                 </Box>
-                <HStack truncate>{sleepingRender}{props.data.status}</HStack>
+                <Stack alignItems={isWrapped ? 'flex-start' : 'flex-end'}>
+                    <ComponentStateBadgeActionable size="lg" maxWidth="fit-content" data={props.data} />
+                    <HStack style={{whiteSpace: 'break-spaces'}}>{sleepingRender}{props.data.status}</HStack>
+                </Stack>
             </Wrap>
             <Flex justifyContent="flex-end" rowGap="6" flexDirection="row-reverse" wrap="wrap">
                 <Box marginEnd="auto"><MSComponentStats {...props}/></Box>
             </Flex>
             {props.live ? <PlayersContainerFetchable data={props.data}/> : <PlayersContainer data={props.data} live={props.live}/>}
-            <Heading size="3xl">{isComponentTypeSource(props.data.mode) ? 'Plays' : 'Scrobbles'}</Heading>
+            <Heading size="3xl" width="100%">{isComponentTypeSource(props.data.mode) ? 'Plays' : 'Scrobbles'}</Heading>
             <ListContainerFilterable render="virtDynamic" componentType={props.data.mode} componentId={props.data.id}/>
         </Flex>
         </MSErrorBoundary>

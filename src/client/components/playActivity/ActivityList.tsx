@@ -253,7 +253,7 @@ export const ListContainerFilterable = (props: { componentId: number, componentT
     }
   });
   return (
-    <Stack gap="4">
+    <Stack width="100%" gap="4">
       <ListFilters componentType={props.componentType} filters={filters} onChange={setFilter}/>
       <ListContainerFetchable {...props} filters={filters} />
     </Stack>
