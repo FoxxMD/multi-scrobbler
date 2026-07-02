@@ -36,26 +36,34 @@ export const PlayStateBadge = (props: ComponentProps<typeof Badge> & { state: Pl
   return <Badge variant="surface" colorPalette={badgeColor} {...rest}>{badgeText}{suffix}</Badge>
 }
 
-export const NewBadge = (props: ComponentProps<typeof Badge> & { expires?: Second }) => {
+const DEFAULT_EXPIRES = 10000;
+
+export const EphemeralBadge = (props: ComponentProps<typeof Badge> & { expires?: Second | boolean, children: React.ReactNode }) => {
 
     const {
-        expires,
+        expires = DEFAULT_EXPIRES,
         ...rest
     } = props;
+    let expiresTime: Second | undefined;
+    if(expires === true) {
+        expiresTime = DEFAULT_EXPIRES;
+    } else if(expires !== false) {
+        expiresTime = expires;
+    }
     const [shouldShow, setShouldShow] = useState<boolean>(true);
     const hide = useCallback(() => {
         setShouldShow(false);
 
     }, [setShouldShow]);
-    const hideTimeout = useTimeout(hide, expires ?? 10000);
+    const hideTimeout = useTimeout(hide, expiresTime ?? DEFAULT_EXPIRES);
     useEffect(() => {
-        if (expires !== undefined) {
+        if (expiresTime !== undefined) {
             hideTimeout.start();
         }
     }, []);
 
     if (shouldShow) {
-        return <Badge variant="surface" colorPalette="blue" {...rest}>New</Badge>
+        return <Badge variant="surface" colorPalette="blue" {...rest}>{props.children}</Badge>
     }
     return null;
 }

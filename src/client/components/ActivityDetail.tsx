@@ -13,7 +13,7 @@ import { baseUrl } from "../utils";
 import { ShortDateDisplay } from "./DateDisplay";
 import { TextMuted } from "./TextMuted";
 import { VscDebugRestart } from "react-icons/vsc";
-import { NewBadge, PlayStateBadge } from "./Badges";
+import { EphemeralBadge, PlayStateBadge } from "./Badges";
 import { MarkOptional } from "ts-essentials";
 import { QueryPlaysOpts, QueryPlaysOptsJson } from "../../backend/common/database/drizzle/repositories/PlayRepository";
 import { tanQueries } from "../queries";
@@ -21,6 +21,7 @@ import { PaginatedResponse } from "../../backend/common/database/drizzle/reposit
 import { LuChevronRight } from "react-icons/lu";
 import { useSSEContext, useSSEEvent } from "@flamefrontend/sse-runtime-react";
 import { DebugCopy, RetryButton } from "./icons/ChakraIcons";
+import dayjs from "dayjs";
 
 type UseActivityQueryOptions = {
     msQuery?: QueryPlaysOptsJson
@@ -64,11 +65,19 @@ export function useActivityQuery(
                 return undefined;
             }
         },
+        structuralSharing(oldData: PlayApiCommonDetailed, newData: PlayApiCommonDetailed) {
+            if(oldData !== undefined) {
+                console.debug(`Merging new data for Activity ${activityUid} in Component ${componentId}`);
+                return {...newData, isUpdated: true, updatedAt: dayjs().toISOString()};
+            }
+            return newData;
+        },
     });
 
     const client = useSSEContext<MsSseEvent>();
     useSSEEvent(client, 'playUpdate', (payload) => {
         if (payload.componentId === componentId && payload.data.uid === activityUid) {
+            console.debug(`Recieved playUpdate for Activity ${activityUid} in Component ${componentId}, invalidating single query`);
             queryClient.invalidateQueries({
                 queryKey: tanQueries.activities.single(componentId, activityUid).queryKey,
                 refetchType: 'all'
@@ -84,7 +93,7 @@ export interface ActivityDetailProps {
 }
 
 export interface ActivitySummaryProps extends SortPlaysByProps {
-    activity: PlayApiCommon & {isNew?: boolean | Second}
+    activity: PlayApiCommon & {isNew?: boolean | Second, isUpdated?: boolean | Second, updatedAt?: string}
     componentType: ComponentType
 }
 
@@ -92,15 +101,22 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
     const {
         activity: {
             play,
-            isNew
+            isNew,
+            isUpdated,
+            updatedAt
         } = {},
         activity,
         sortBy
     } = props;
+    let ephemeralStatus: React.JSX.Element | undefined;
+    if(isUpdated || isNew) {
+        const eph = isUpdated ?? isNew;
+        ephemeralStatus = <EphemeralBadge key={updatedAt ?? 'now'} marginLeft="2" expires={typeof eph === 'boolean' ? undefined : eph}>{isNew !== undefined ? 'New' : 'Updated'}</EphemeralBadge>;
+    }
     return (
         <Flex direction="column" width="100%" truncate rowGap="0.5">
             <Flex width="100%" truncate>
-                <Span truncate marginEnd="auto">{play.data.track}{isNew !== undefined ? <NewBadge marginLeft="2" expires={typeof isNew === 'boolean' ? undefined : isNew}/> : null}</Span>
+                <Span truncate marginEnd="auto">{play.data.track}{ephemeralStatus}</Span>
                 {/* <PlayStateBadge state={activity.state} /> */}
             </Flex>
             <TextMuted textAlign="left" truncate>{play.data.artists.map(x => x.name).join(' / ')}</TextMuted>
@@ -234,6 +250,14 @@ export const ActivityStateActions = (props: {activity: PlayApiCommon}) => {
     )
 }
 
+export const ActivityStateActionsFetchable = (props: ActivityDetailFetchableProps) => {
+    const {isError, error, isPending, activity} = useActivityQuery(props.componentId, props.uid, {activity: props.activity});
+
+    if(!isPending && !isError) {
+        return <ActivityStateActions activity={activity}/>;
+    }
+}
+
 export const ActivityCollapsible = (props: ActivitySummaryProps & { key?: string, live?: boolean, componentId: number, query: QueryPlaysOptsJson }) => {
     const {
         activity: {
@@ -277,7 +301,7 @@ export const ActivityCollapsible = (props: ActivitySummaryProps & { key?: string
                     </Collapsible.Indicator>
                     <ActivitySummaryFetchable activityUid={activity.uid} {...props}/>
                 </Collapsible.Trigger>
-                <ActivityStateActions activity={activity}/>
+                <ActivityStateActionsFetchable activity={activity} componentId={props.componentId} componentType={props.componentType} uid={props.activity.uid}/>
                 </HStack>
             <Collapsible.Content borderTopColor="gray.border"
                 style={{

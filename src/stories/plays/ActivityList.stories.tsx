@@ -244,7 +244,6 @@ export const ListLiveUpdates = meta.story({
     msw: {
       handlers: [
         http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
-          debugger;
           if(livePlayData.length === 0) {
             livePlayData = await generatePlayApiCommonDetailedList();
           }
@@ -264,13 +263,11 @@ export const ListLiveUpdates = meta.story({
           return HttpResponse.json(res);
         }),
         http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
-          debugger;
           if(livePlayData.length === 0) {
             livePlayData = await generatePlayApiCommonDetailedList();
           }
           const existingIndex = livePlayData.findIndex(x => x.uid === params.uid);
           if (existingIndex !== -1) {
-            debugger;
             const existing = livePlayData[existingIndex];
             let newState: PlayState = existing.state;
             while(newState === existing.state) {
@@ -284,11 +281,10 @@ export const ListLiveUpdates = meta.story({
           return HttpResponse.json(generatePlayApiCommonDetailed());
         }),
         sse('/api/events?next=true', async ({ params, client }) => {
-          debugger;
             setInterval(() => client.send({
               //@ts-expect-error
               event: 'playUpdate', 
-              data: {componentId: 1, data: {uid: livePlayData[1].uid}}}), 2000);
+              data: {componentId: 1, data: {uid: livePlayData[faker.number.int({min: 0, max: 7})].uid}}}), 2000);
         })
       ],
     },
