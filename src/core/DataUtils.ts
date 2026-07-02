@@ -123,3 +123,16 @@ export const asErrorSerializedObject = <T, U>(obj: T): U => {
   });
   return cloned as unknown as U;
 };
+
+/**
+ * Get indexes of all elements in array that make the function return true
+ * 
+ * @see https://stackoverflow.com/a/20798567/1469797
+ */
+export const getAllIndexes = <T>(arr: T[], truthyFunc: (val: T) => boolean) => {
+    var indexes = [], i: number;
+    for(i = 0; i < arr.length; i++)
+        if (truthyFunc(arr[i]))
+            indexes.push(i);
+    return indexes;
+}

@@ -56,7 +56,7 @@ export const VirtualizedListDynamic = (props: ActivityLogProps & Pick<UseInfinit
   }, [data]);
 
   const getItemKey = useCallback((index) => {
-    return items[index].uid;
+    return items[index] !== undefined ? items[index].uid : index;
   },[items]);
 
   const parentRef = React.useRef(null)
@@ -65,7 +65,7 @@ export const VirtualizedListDynamic = (props: ActivityLogProps & Pick<UseInfinit
   const virtualizer = useVirtualizer({
     count: items.length + 1,
     getScrollElement: () => parentRef.current,
-    //getItemKey: getItemKey,
+    getItemKey: getItemKey,
     estimateSize: () => 85,
     directDomUpdates: true,
     //directDomUpdatesMode: 'position',
