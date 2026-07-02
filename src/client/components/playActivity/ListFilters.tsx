@@ -306,8 +306,8 @@ export const ListFilters = (props: {
                 <Wrap gap="5">
                     <PhraseFilter value={filters.text} onChange={setPhrases} />
                     <PlayStateFilter value={filters.state} onChange={setState} mode={props.componentType} />
+                    <PlayDateRangeFilter values={(filters.playedAt as CompareDateBetween<string>)?.range} onChange={setDateRange} containerProps={{ mt: "2" }} />
                 </Wrap>
-                <PlayDateRangeFilter values={(filters.playedAt as CompareDateBetween<string>)?.range} onChange={setDateRange} containerProps={{ mt: "2" }} />
             </Card.Body>
         </Card.Root>
     )

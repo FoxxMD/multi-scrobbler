@@ -1,12 +1,12 @@
-import preview from "../../../.storybook/preview.js";
+import preview from "../../../../.storybook/preview.js";
 import React from 'react';
 import { Container } from '@chakra-ui/react';
 
 import { fn } from 'storybook/test';
-import { ErrorAlert } from "../../client/components/ErrorAlert.js";
-import {Provider} from "../../client/components/Provider.js";
-import { ErrorLike } from "../../core/Atomic.js";
-import { PlayStateFilter } from "../../client/components/playActivity/ListFilters.js";
+import { ErrorAlert } from "../../../client/components/ErrorAlert.js";
+import {Provider} from "../../../client/components/Provider.js";
+import { ErrorLike } from "../../../core/Atomic.js";
+import { PlayStateFilter } from "../../../client/components/playActivity/ListFilters.js";
 
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
@@ -28,7 +28,7 @@ args: {
 });
 
 // More on writing stories with args: https://storybook.js.org/docs/writing-stories/args
-export const ListFiltersStory = meta.story({
+export const PlayState = meta.story({
   component: PlayStateFilter,
   render: function Render(args) {
     return (<PlayStateFilter {...args}/>) 
