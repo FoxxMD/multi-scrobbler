@@ -73,7 +73,7 @@ export const plays = sqliteTable("plays", {
   error: ErrorLikeJson('error'),
   playedAt: DayjsTimestamp('playedAt'),
   seenAt: DayjsTimestamp('seenAt'),
-  updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs()),
+  updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs()).$onUpdate(() => dayjs()),
   play: PlayJson('play').notNull(), //  text({ mode: 'json' }).notNull().$type<PlayObject>(),
   state: text({enum: ['queued','discovered','discarded','scrobbled','failed','duped']}).notNull(),
   // https://orm.drizzle.team/docs/indexes-constraints#foreign-key
@@ -145,7 +145,7 @@ export const queueStates = sqliteTable("play_queue_states", {
   retries: integer().notNull().default(0),
   error: ErrorLikeJson('error'),
   createdAt: DayjsTimestamp('createdAt').notNull().$defaultFn(() => dayjs()),
-  updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs())
+  updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs()).$onUpdate(() => dayjs())
 }, (table) => [
   index('play_queue_state_id_idx').on(table.playId)
 ]);
@@ -208,7 +208,7 @@ export const jobs = sqliteTable("jobs", {
   imported: integer().notNull().default(0),
   scrobbled: integer().notNull().default(0),
   createdAt: DayjsTimestamp('createdAt').notNull().$defaultFn(() => dayjs()),
-  updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs()),
+  updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs()).$onUpdate(() => dayjs()),
   completedAt: DayjsTimestamp('completedAt')
 });
 
