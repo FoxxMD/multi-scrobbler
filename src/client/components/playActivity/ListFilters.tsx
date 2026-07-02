@@ -142,7 +142,6 @@ export const PlayDateRangeFilter = (props: PlayDateRangeFilterProps & {container
     return (
         <DatePicker.Root
         {...containerProps}
-        format={format}
         onValueChange={onChangeCB}
         value={stateVals}
         defaultValue={parsedInitialValues}
