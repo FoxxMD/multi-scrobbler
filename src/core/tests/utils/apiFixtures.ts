@@ -297,8 +297,8 @@ export const logsApiResponse = () => {
     return {data: messages.map((x, index) => ({line: x, time: time + index, levelLabel: 'debug', level: 'debug'})) }
 }
 
-export const generatePlayApiCommonDetailedList = async (opts: {endDate?: Dayjs} = {}) => {
-      const queued = normalizePlays(generateArray(7, () => generatePlayWithLifecycle()), { endDate: opts.endDate ?? dayjs() }).map(x => {
+export const generatePlayApiCommonDetailedList = async (opts: {endDate?: Dayjs, initialDate?: Dayjs} = {}) => {
+      const queued = normalizePlays(generateArray(7, () => generatePlayWithLifecycle()), { endDate: opts.initialDate === undefined ? opts.endDate ?? dayjs() : undefined, initialDate: opts.initialDate }).map(x => {
         const jsonPlay = asJsonPlayObject(x);
         return generatePlayApiCommonDetailed({ playOpts: [{ state: 'queued', play: jsonPlay }], inputOpts: [{ play: jsonPlay }] })
       });

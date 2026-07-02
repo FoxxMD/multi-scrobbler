@@ -1,7 +1,7 @@
 import '../../client/wdyr.js';
 import preview from "../../../.storybook/preview.js";
 import React from 'react';
-import { http, HttpResponse, delay, sse } from 'msw';
+import { http, HttpResponse, delay, sse, StrictRequest, DefaultBodyType, JsonBodyType } from 'msw';
 
 import { fn } from 'storybook/test';
 import { Container } from '@chakra-ui/react';
@@ -45,8 +45,48 @@ decorators: [
 });
 
 let playData: PlayApiCommonDetailed[] = [];
-let livePlayData: PlayApiCommonDetailed[] = [];
 
+
+const handlePlayListRequest = async ({ request, list }: {request: StrictRequest<DefaultBodyType>, list: PlayApiCommonDetailed[]}): Promise<[HttpResponse<JsonBodyType>, PlayApiCommonDetailed[]]> => {
+          const url = new URL(request.url)
+          console.log(url.search);
+          const query = qs.parse(url.search, qsOptions);
+          console.log(query);
+          let responseData: PlayApiCommonDetailed[] = [];
+          if(list.length === 0) {
+            list = await generatePlayApiCommonDetailedList();
+            responseData = list;
+          } else {
+            const startDate = dayjs(list[Math.min(Number.parseInt(query.offset as string) - 1, list.length - 1)].playedAt);
+            const moreData = await generatePlayApiCommonDetailedList({endDate: startDate});
+            list = list.concat(moreData);
+            responseData = moreData;
+          }
+          const res: PaginatedResponse<PlayApiCommonDetailed> = {
+            data: responseData,
+            meta: {
+              offset: Number.parseInt(query.offset as string),
+              limit: responseData.length,
+              total: list.length,
+            }
+          }
+          return [HttpResponse.json(res), list];
+}
+
+type PlayRequestMock = Parameters<Parameters<typeof http.get<{ uid: string }>>[1]>[0];
+
+const handlePlayRequest = async ({params, request}: PlayRequestMock, list: PlayApiCommonDetailed[]): Promise<[HttpResponse<JsonBodyType>, PlayApiCommonDetailed[]]> => {
+  if(list.length === 0) {
+    list = await generatePlayApiCommonDetailedList();
+  }
+  const existing = list.find(x => x.uid === params.uid);
+  if (existing !== undefined) {
+    return [HttpResponse.json(existing), list];
+  }
+  return [HttpResponse.json(generatePlayApiCommonDetailed()), list];
+}
+
+let listLiveData: PlayApiCommonDetailed[] = [];
 export const ListLive = meta.story({
   component: ListContainerFetchable,
   render: function Render(args, { loaded: { data } }) { return (<ListContainerFetchable {...args}/>) },
@@ -58,28 +98,17 @@ export const ListLive = meta.story({
   parameters: {
     msw: {
       handlers: [
-        http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params }) => {
-          if(livePlayData.length === 0) {
-            livePlayData = await generatePlayApiCommonDetailedList();
-          }
-          const res: PaginatedResponse<PlayApiCommonDetailed> = {
-            data: livePlayData,
-            meta: {
-              offset: 0,
-              limit: livePlayData.length
-            }
-          }
-          return HttpResponse.json(res);
+        http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
+          const [res, newList] = await handlePlayListRequest({request, list: listLiveData});
+          await delay(1000);
+          listLiveData = newList;
+          return res;
         }),
-        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
-          if(livePlayData.length === 0) {
-            livePlayData = await generatePlayApiCommonDetailedList();
-          }
-          const existing = livePlayData.find(x => x.uid === params.uid);
-          if (existing !== undefined) {
-            return HttpResponse.json(existing);
-          }
-          return HttpResponse.json(generatePlayApiCommonDetailed());
+        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async (info) => {
+          const [res, newList] = await handlePlayRequest(info, listLiveData);
+          listLiveData = newList;
+          await delay(1000);
+          return res;
         }),
       ],
     },
@@ -94,6 +123,8 @@ export const ListLive = meta.story({
   ]
 });
 
+
+let livePlayData: PlayApiCommonDetailed[] = [];
 export const ListLiveFilterable = meta.story({
   component: ListContainerFilterable,
   render: function Render(args, { loaded: { data } }) { return (<ListContainerFilterable {...args}/>) },
@@ -106,33 +137,16 @@ export const ListLiveFilterable = meta.story({
     msw: {
       handlers: [
         http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
-          if(livePlayData.length === 0) {
-            livePlayData = await generatePlayApiCommonDetailedList();
-          }
-          const url = new URL(request.url)
-          console.log(url.search);
-          const query = qs.parse(url.search, qsOptions);
-          console.log(query);
-          const res: PaginatedResponse<PlayApiCommonDetailed> = {
-            data: livePlayData,
-            meta: {
-              offset: 0,
-              limit: livePlayData.length,
-              total: livePlayData.length,
-            }
-          }
+          const [res, newList] = await handlePlayListRequest({request, list: livePlayData});
           await delay(1000);
-          return HttpResponse.json(res);
+          livePlayData = newList;
+          return res;
         }),
-        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
-          if(livePlayData.length === 0) {
-            livePlayData = await generatePlayApiCommonDetailedList();
-          }
-          const existing = livePlayData.find(x => x.uid === params.uid);
-          if (existing !== undefined) {
-            return HttpResponse.json(existing);
-          }
-          return HttpResponse.json(generatePlayApiCommonDetailed());
+        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async (info) => {
+          const [res, newList] = await handlePlayRequest(info, livePlayData);
+          livePlayData = newList;
+          await delay(1000);
+          return res;
         }),
       ],
     },
@@ -163,20 +177,14 @@ export const ListLiveEmpty = meta.story({
           return HttpResponse.json({data: [], meta: {offset: 0, limit: 100}});
         }),
         http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
-          if(livePlayData.length === 0) {
-            livePlayData = await generatePlayApiCommonDetailedList();
-          }
-          const existing = livePlayData.find(x => x.uid === params.uid);
-          if (existing !== undefined) {
-            return HttpResponse.json(existing);
-          }
-          return HttpResponse.json(generatePlayApiCommonDetailed());
+          return new HttpResponse('', {status: 404});
         }),
       ],
     },
   }
 });
 
+let liveNoMorePlayData: PlayApiCommonDetailed[] = [];
 export const ListLiveNoMorePlay = meta.story({
   component: ListContainerFilterable,
   render: function Render(args) { return (<ListContainerFilterable {...args}/>) },
@@ -200,16 +208,16 @@ export const ListLiveNoMorePlay = meta.story({
             return HttpResponse.json({
               data: [],
               meta: {
-                limit: livePlayData.length,
+                limit: liveNoMorePlayData.length,
                 offset: query.offset
               }
             });
           }
-          if(livePlayData.length === 0) {
-            livePlayData = await generatePlayApiCommonDetailedList();
+          if(liveNoMorePlayData.length === 0) {
+            liveNoMorePlayData = await generatePlayApiCommonDetailedList();
           }
           const res: PaginatedResponse<PlayApiCommonDetailed> = {
-            data: livePlayData,
+            data: liveNoMorePlayData,
             meta: {
               offset: 0,
               limit: livePlayData.length
@@ -217,21 +225,18 @@ export const ListLiveNoMorePlay = meta.story({
           }
           return HttpResponse.json(res);
         }),
-        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
-          if(livePlayData.length === 0) {
-            livePlayData = await generatePlayApiCommonDetailedList();
-          }
-          const existing = livePlayData.find(x => x.uid === params.uid);
-          if (existing !== undefined) {
-            return HttpResponse.json(existing);
-          }
-          return HttpResponse.json(generatePlayApiCommonDetailed());
+        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async (info) => {
+          const [res, newList] = await handlePlayRequest(info, liveNoMorePlayData);
+          liveNoMorePlayData = newList;
+          await delay(1000);
+          return res;
         }),
       ],
     },
   },
 });
 
+let liveUpdateData: PlayApiCommonDetailed[] = [];
 export const ListLiveUpdates = meta.story({
   component: ListContainerFilterable,
   render: function Render(args, { loaded: { data } }) { return (<ListContainerFilterable {...args}/>) },
@@ -244,49 +249,33 @@ export const ListLiveUpdates = meta.story({
     msw: {
       handlers: [
         http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
-          livePlayData = await generatePlayApiCommonDetailedList();
-          const url = new URL(request.url)
-          console.log(url.search);
-          const query = qs.parse(url.search, qsOptions);
-          console.log(query);
-          const res: PaginatedResponse<PlayApiCommonDetailed> = {
-            data: livePlayData,
-            meta: {
-              offset: 0,
-              limit: livePlayData.length,
-              total: livePlayData.length,
-            }
-          }
+          const [res, newList] = await handlePlayListRequest({request, list: liveUpdateData});
           await delay(1000);
-          return HttpResponse.json(res);
+          liveUpdateData = newList;
+          return res;
         }),
-        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
-          if(livePlayData.length === 0) {
-            livePlayData = await generatePlayApiCommonDetailedList();
-          }
-          const existingIndex = livePlayData.findIndex(x => x.uid === params.uid);
-          if (existingIndex !== -1) {
-            const existing = livePlayData[existingIndex];
-            return HttpResponse.json(existing);
-          }
-          return HttpResponse.json(generatePlayApiCommonDetailed());
+        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async (info) => {
+          const [res, newList] = await handlePlayRequest(info, liveUpdateData);
+          liveUpdateData = newList;
+          await delay(1000);
+          return res;
         }),
         sse('/api/events?next=true', async ({ params, client }) => {
             setInterval(() => {
 
               const index = faker.number.int({min: 0, max: 7});
-              let newState: PlayState = livePlayData[index].state;
-              while(newState === livePlayData[index].state) {
+              let newState: PlayState = liveUpdateData[index].state;
+              while(newState === liveUpdateData[index].state) {
                 newState = randomPlayState();
               }
-              livePlayData[index].state = newState;
-              livePlayData[index].play.data.track = faker.music.songName();
-              livePlayData[index].updatedAt = dayjs().toISOString();
+              liveUpdateData[index].state = newState;
+              liveUpdateData[index].play.data.track = faker.music.songName();
+              liveUpdateData[index].updatedAt = dayjs().toISOString();
 
               client.send({
               //@ts-expect-error
               event: 'playUpdate', 
-              data: {componentId: 1, data: {uid: livePlayData[index].uid}}})
+              data: {componentId: 1, data: {uid: liveUpdateData[index].uid}}})
             }, 2000);
         })
       ],
@@ -315,30 +304,16 @@ export const ListLiveInsert = meta.story({
     msw: {
       handlers: [
         http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
-          const url = new URL(request.url)
-          console.log(url.search);
-          const query = qs.parse(url.search, qsOptions) as QueryPlaysOptsJson;
-          if(livePlayInsertData.length === 0) {
-            livePlayInsertData = await generatePlayApiCommonDetailedList({endDate: dayjs((query.playedAt as CompareDateBetween<string>)?.range[1])});
-          }
-          console.log(query);
-          const res: PaginatedResponse<PlayApiCommonDetailed> = {
-            data: livePlayInsertData,
-            meta: {
-              offset: 0,
-              limit: livePlayInsertData.length,
-              total: livePlayInsertData.length,
-            }
-          }
+          const [res, newList] = await handlePlayListRequest({request, list: livePlayInsertData});
           await delay(1000);
-          return HttpResponse.json(res);
+          livePlayInsertData = newList;
+          return res;
         }),
-        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
-          const existing = livePlayInsertData.findIndex(x => x.uid === params.uid);
-          if (existing !== undefined) {
-            return HttpResponse.json(livePlayInsertData[existing]);
-          }
-          return HttpResponse.json(generatePlayApiCommonDetailed());
+        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async (info) => {
+          const [res, newList] = await handlePlayRequest(info, livePlayInsertData);
+          livePlayInsertData = newList;
+          await delay(1000);
+          return res;
         }),
         sse('/api/events?next=true', async ({ params, client }) => {
             setInterval(() => {
