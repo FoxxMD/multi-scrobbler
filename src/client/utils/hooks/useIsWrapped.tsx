@@ -4,6 +4,9 @@ import useResizeObserver from '@react-hook/resize-observer';
 const getTop = item => Math.round(item.getBoundingClientRect().top);
 
 const getIsWrapped = (target: Element) => {
+    if(target === undefined || target === null || target.children === undefined || target.children === null) {
+        return false;
+    }
     const flexItems = target.children; // flexBox.children;
 
     // target must have 'flex-direction: row'
