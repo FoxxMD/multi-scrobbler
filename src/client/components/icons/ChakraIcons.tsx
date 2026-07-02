@@ -17,7 +17,8 @@ import {
     LuPower,
     LuPowerOff,
     LuEye,
-    LuEyeClosed
+    LuEyeClosed,
+    LuCalendar
 } from "react-icons/lu"
 import { VscDebugRestart } from 'react-icons/vsc';
 import { RiZzzFill } from "react-icons/ri";
@@ -139,3 +140,6 @@ export const EyeButton = makeIconButton(EyeIcon);
 
 export const EyeClosedIcon = LuEyeClosed;
 export const EyeClosedButton = makeIconButton(LuEyeClosed);
+
+export const CalendarIcon = LuCalendar;
+export const CalendarButton = makeIconButton(CalendarIcon);

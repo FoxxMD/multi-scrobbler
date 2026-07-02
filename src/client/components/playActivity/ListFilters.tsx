@@ -7,7 +7,6 @@ import "./PlayList.scss";
 import { ToggleButtonVariant } from '../ToggleButton.js';
 import { capitalize } from '../../../core/StringUtils.js';
 import { PlayStateBadge } from '../Badges.js';
-import { LuCalendar } from 'react-icons/lu';
 import {
     DateFormatter,
     getLocalTimeZone,
@@ -25,6 +24,7 @@ import {
 import { QueryPlaysOptsJson } from '../../../backend/common/database/drizzle/repositories/PlayRepository.js';
 import { cardHeaderSeparator } from '../../utils/ComponentUtils.js';
 import { CompareDateBetween } from '../../../backend/common/database/drizzle/repositories/BaseRepository.js';
+import { CalendarButton } from '../icons/ChakraIcons.js';
 
 const noop = (_) => null;
 
@@ -96,6 +96,14 @@ interface PlayDateRangeFilterProps {
 
 export const todayRange: [string, string] = [toZoned(toCalendarDateTime(today(tz), new Time(0, 0, 0, 0)), tz).toAbsoluteString(), toZoned(toCalendarDateTime(today(tz), new Time(23, 59, 59)), tz).toAbsoluteString()];
 
+
+const format = (date: DateValue) => {
+  const day = date.day.toString().padStart(2, "0")
+  const month = date.month.toString().padStart(2, "0")
+  const year = (date.year).toString()
+  return `${year}-${month}-${day}`
+}
+
 export const PlayDateRangeFilter = (props: PlayDateRangeFilterProps & {containerProps?: ComponentProps<typeof DatePicker.Root>}) => {
     const {
         onChange = noop,
@@ -132,16 +140,22 @@ export const PlayDateRangeFilter = (props: PlayDateRangeFilterProps & {container
     }, [onChange, setStateVals]);
 
     return (
-        <DatePicker.Root {...containerProps} onValueChange={onChangeCB} value={stateVals} defaultValue={parsedInitialValues} openOnClick selectionMode="range" size="sm" maxW="32rem">
-            <DatePicker.Label>Play Date Range</DatePicker.Label>
+        <DatePicker.Root
+        {...containerProps}
+        format={format}
+        onValueChange={onChangeCB}
+        value={stateVals}
+        defaultValue={parsedInitialValues}
+        selectionMode="range"
+        size="sm"
+        maxW="32rem">
+            <DatePicker.Label>Played Between</DatePicker.Label>
             <DatePicker.Control >
                 <DatePicker.Input index={0} />
                 <DatePicker.Input index={1} />
-                {/* <DatePicker.IndicatorGroup>
-                    <DatePicker.Trigger>
-                        <LuCalendar />
-                    </DatePicker.Trigger>
-                </DatePicker.IndicatorGroup> */}
+                <DatePicker.Trigger asChild unstyled>
+                <CalendarButton variant="outline"/>
+                </DatePicker.Trigger>
             </DatePicker.Control>
             <Portal>
                 <DatePicker.Positioner>
@@ -183,7 +197,7 @@ export const PlayDateRangeFilter = (props: PlayDateRangeFilterProps & {container
                                         Last 30 days
                                     </Button>
                                 </DatePicker.PresetTrigger>
-                                <DatePicker.PresetTrigger value="thisMonth" asChild>
+                                {/* <DatePicker.PresetTrigger value="thisMonth" asChild>
                                     <Button variant="surface" size="sm" width="100%">
                                         This month
                                     </Button>
@@ -192,7 +206,7 @@ export const PlayDateRangeFilter = (props: PlayDateRangeFilterProps & {container
                                     <Button variant="surface" size="sm" width="100%">
                                         Last month
                                     </Button>
-                                </DatePicker.PresetTrigger>
+                                </DatePicker.PresetTrigger> */}
                             </VStack>
                             <Flex direction="column" flex="1" minW={0}>
                                 <DatePicker.View view="day">
@@ -227,11 +241,11 @@ export const PhraseFilter = (props: PhraseFilterProps) => {
         value
     } = props;
     return (
-    <TagsInput.Root value={value} size="sm" minW="150px" width="fit-content"  onValueChange={(e) => onChange(e.value)} addOnPaste delimiter=",">
-      <TagsInput.Label>Filter Titles, Artists, and Albums</TagsInput.Label>
+    <TagsInput.Root blurBehavior="add" value={value} size="sm" minW="150px" width="fit-content"  onValueChange={(e) => onChange(e.value)} addOnPaste delimiter=",">
+      <TagsInput.Label>Search</TagsInput.Label>
       <TagsInput.Control>
         <TagsInput.Items />
-        <TagsInput.Input placeholder="Add phrase..." />
+        <TagsInput.Input placeholder="Titles, Artists, or Albums" />
       </TagsInput.Control>
       <Span textStyle="xs" color="fg.muted" ms="auto">
         Press Enter or Return to add phrases
