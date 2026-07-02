@@ -120,7 +120,7 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
     if(isNew) {
         ephemeralStatus = <EphemeralElement key={updatedAt ?? 'now'} expires={isNew}><InsertedIcon size="xl" /></EphemeralElement>;
     } else if(updated.updated) {
-        ephemeralStatus = <EphemeralElement key={updatedAt ?? 'now'} expires={false}><UpdatedIcon colorPalette="green" color="colorPalette.focusRing" size="sm" /></EphemeralElement>;
+        ephemeralStatus = <EphemeralElement key={updatedAt ?? 'now'} expires={true}><UpdatedIcon colorPalette="green" color="colorPalette.focusRing" size="sm" /></EphemeralElement>;
     }
     return (
         <Flex direction="column" width="100%" truncate rowGap="0.5">
