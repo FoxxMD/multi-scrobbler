@@ -38,11 +38,13 @@ export const PlayStateBadge = (props: ComponentProps<typeof Badge> & { state: Pl
 
 const DEFAULT_EXPIRES = 10000;
 
-export const EphemeralBadge = (props: ComponentProps<typeof Badge> & { expires?: Second | boolean, children: React.ReactNode }) => {
+export const NewBadge = (props: ComponentProps<typeof Badge>) => <Badge variant="surface" colorPalette="blue" {...props}/>;
+
+export const EphemeralElement = (props: { expires?: Second | boolean, children: React.ReactNode }) => {
 
     const {
         expires = DEFAULT_EXPIRES,
-        ...rest
+        children
     } = props;
     let expiresTime: Second | undefined;
     if(expires === true) {
@@ -63,7 +65,7 @@ export const EphemeralBadge = (props: ComponentProps<typeof Badge> & { expires?:
     }, []);
 
     if (shouldShow) {
-        return <Badge variant="surface" colorPalette="blue" {...rest}>{props.children}</Badge>
+        return children;
     }
     return null;
 }

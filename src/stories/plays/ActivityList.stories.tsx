@@ -244,9 +244,7 @@ export const ListLiveUpdates = meta.story({
     msw: {
       handlers: [
         http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
-          if(livePlayData.length === 0) {
-            livePlayData = await generatePlayApiCommonDetailedList();
-          }
+          livePlayData = await generatePlayApiCommonDetailedList();
           const url = new URL(request.url)
           console.log(url.search);
           const query = qs.parse(url.search, qsOptions);
@@ -269,22 +267,27 @@ export const ListLiveUpdates = meta.story({
           const existingIndex = livePlayData.findIndex(x => x.uid === params.uid);
           if (existingIndex !== -1) {
             const existing = livePlayData[existingIndex];
-            let newState: PlayState = existing.state;
-            while(newState === existing.state) {
-              newState = randomPlayState();
-            }
-            existing.play.data.track = faker.music.songName();
-            livePlayData[existingIndex].state = newState;
-            const updated = {...existing, state: newState};
-            return HttpResponse.json(updated);
+            return HttpResponse.json(existing);
           }
           return HttpResponse.json(generatePlayApiCommonDetailed());
         }),
         sse('/api/events?next=true', async ({ params, client }) => {
-            setInterval(() => client.send({
+            setInterval(() => {
+
+              const index = faker.number.int({min: 0, max: 7});
+              let newState: PlayState = livePlayData[index].state;
+              while(newState === livePlayData[index].state) {
+                newState = randomPlayState();
+              }
+              livePlayData[index].state = newState;
+              livePlayData[index].play.data.track = faker.music.songName();
+              livePlayData[index].updatedAt = dayjs().toISOString();
+
+              client.send({
               //@ts-expect-error
               event: 'playUpdate', 
-              data: {componentId: 1, data: {uid: livePlayData[faker.number.int({min: 0, max: 7})].uid}}}), 2000);
+              data: {componentId: 1, data: {uid: livePlayData[index].uid}}})
+            }, 2000);
         })
       ],
     },
@@ -333,7 +336,7 @@ export const ListLiveInsert = meta.story({
         http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
           const existing = livePlayInsertData.findIndex(x => x.uid === params.uid);
           if (existing !== undefined) {
-            return HttpResponse.json(existing);
+            return HttpResponse.json(livePlayInsertData[existing]);
           }
           return HttpResponse.json(generatePlayApiCommonDetailed());
         }),

@@ -9,6 +9,7 @@ import {
     LuCheck,
     LuExternalLink,
     LuArrowUp,
+    LuCircleArrowUp,
     LuArrowDown,
     LuEllipsis,
     LuEllipsisVertical,
@@ -22,9 +23,10 @@ import {
     LuRefreshCw
 } from "react-icons/lu"
 import { VscDebugRestart } from 'react-icons/vsc';
+import { MdOutlineFiberNew } from "react-icons/md";
 import { RiZzzFill } from "react-icons/ri";
 import { SiGoogledocs } from "react-icons/si";
-import { IconButton, Clipboard, useClipboard, Spinner } from "@chakra-ui/react"
+import { IconButton, Clipboard, useClipboard, Spinner, Icon } from "@chakra-ui/react"
 import { ComponentProps, PropsWithChildren } from 'react';
 import { IconBaseProps, IconType } from "react-icons/lib";
 
@@ -42,6 +44,7 @@ export const makeIconButton = (Icon: IconType) => (props: PropsWithChildren<Comp
         </IconButton>
     );
 }
+export const makeChakraIcon = (IconComponent: IconType) => (props: ComponentProps<typeof Icon> & { iconProps?: IconBaseProps }) => <Icon {...props}><IconComponent {...props.iconProps}/></Icon>
 
 export const ChevronRight = LuChevronRight;
 export const ChevronRightButton = (props: ComponentProps<typeof IconButton>) => (
@@ -153,3 +156,7 @@ export const CalendarButton = makeIconButton(CalendarIcon);
 
 export const RefreshIcon = LuRefreshCw;
 export const RefreshButton = makeIconButton(RefreshIcon);
+
+export const InsertedIcon = makeChakraIcon(MdOutlineFiberNew);
+
+export const UpdatedIcon = makeChakraIcon(LuCircleArrowUp);

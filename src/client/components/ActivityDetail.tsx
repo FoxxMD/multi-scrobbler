@@ -1,4 +1,4 @@
-import React, { ComponentProps, useState, Fragment } from "react"
+import React, { ComponentProps, useState, Fragment, useEffect } from "react"
 import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Clipboard, Separator, HStack, Flex, Badge, IconButton, Container, Icon, useAccordionItemContext, Skeleton, SkeletonText, Collapsible, BadgeProps } from '@chakra-ui/react';
 import { ComponentType, Second } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
@@ -13,14 +13,14 @@ import { baseUrl } from "../utils";
 import { ShortDateDisplay } from "./DateDisplay";
 import { TextMuted } from "./TextMuted";
 import { VscDebugRestart } from "react-icons/vsc";
-import { EphemeralBadge, PlayStateBadge } from "./Badges";
+import { EphemeralElement, PlayStateBadge } from "./Badges";
 import { MarkOptional } from "ts-essentials";
 import { QueryPlaysOpts, QueryPlaysOptsJson } from "../../backend/common/database/drizzle/repositories/PlayRepository";
 import { tanQueries } from "../queries";
 import { PaginatedResponse } from "../../backend/common/database/drizzle/repositories/BaseRepository";
 import { LuChevronRight } from "react-icons/lu";
 import { useSSEContext, useSSEEvent } from "@flamefrontend/sse-runtime-react";
-import { DebugCopy, RetryButton } from "./icons/ChakraIcons";
+import { DebugCopy, InsertedIcon, RetryButton, UpdatedIcon } from "./icons/ChakraIcons";
 import dayjs from "dayjs";
 
 type UseActivityQueryOptions = {
@@ -65,13 +65,13 @@ export function useActivityQuery(
                 return undefined;
             }
         },
-        structuralSharing(oldData: PlayApiCommonDetailed, newData: PlayApiCommonDetailed) {
-            if(oldData !== undefined) {
-                console.debug(`Merging new data for Activity ${activityUid} in Component ${componentId}`);
-                return {...newData, isUpdated: true, updatedAt: dayjs().toISOString()};
-            }
-            return newData;
-        },
+        // structuralSharing(oldData: PlayApiCommonDetailed, newData: PlayApiCommonDetailed) {
+        //     if(oldData !== undefined) {
+        //         console.debug(`Merging new data for Activity ${activityUid} in Component ${componentId}`);
+        //         return {...newData, isUpdated: true, updatedAt: dayjs().toISOString()};
+        //     }
+        //     return newData;
+        // },
     });
 
     const client = useSSEContext<MsSseEvent>();
@@ -93,7 +93,7 @@ export interface ActivityDetailProps {
 }
 
 export interface ActivitySummaryProps extends SortPlaysByProps {
-    activity: PlayApiCommon & {isNew?: boolean | Second, isUpdated?: boolean | Second, updatedAt?: string}
+    activity: PlayApiCommon & {isNew?: boolean | Second}
     componentType: ComponentType
 }
 
@@ -102,21 +102,30 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
         activity: {
             play,
             isNew,
-            isUpdated,
             updatedAt
         } = {},
         activity,
         sortBy
     } = props;
+    const [updated, setUpdated] = useState<{lastUpdated: string, updated: boolean}>({lastUpdated: updatedAt, updated: false});
+    useEffect(() => {
+        setUpdated((old) => {
+            if(old.lastUpdated === activity.updatedAt) {
+                return {lastUpdated: activity.updatedAt, updated: false};
+            }
+            return {lastUpdated: activity.updatedAt, updated: true};
+        });
+    },[setUpdated, activity]);
     let ephemeralStatus: React.JSX.Element | undefined;
-    if(isUpdated || isNew) {
-        const eph = isUpdated ?? isNew;
-        ephemeralStatus = <EphemeralBadge key={updatedAt ?? 'now'} marginLeft="2" expires={typeof eph === 'boolean' ? undefined : eph}>{isNew !== undefined ? 'New' : 'Updated'}</EphemeralBadge>;
+    if(isNew) {
+        ephemeralStatus = <EphemeralElement key={updatedAt ?? 'now'} expires={isNew}><InsertedIcon size="xl" /></EphemeralElement>;
+    } else if(updated.updated) {
+        ephemeralStatus = <EphemeralElement key={updatedAt ?? 'now'} expires={false}><UpdatedIcon colorPalette="green" color="colorPalette.focusRing" size="sm" /></EphemeralElement>;
     }
     return (
         <Flex direction="column" width="100%" truncate rowGap="0.5">
             <Flex width="100%" truncate>
-                <Span truncate marginEnd="auto">{play.data.track}{ephemeralStatus}</Span>
+                <Span truncate marginEnd="auto"><HStack>{play.data.track}{ephemeralStatus}</HStack></Span>
                 {/* <PlayStateBadge state={activity.state} /> */}
             </Flex>
             <TextMuted textAlign="left" truncate>{play.data.artists.map(x => x.name).join(' / ')}</TextMuted>

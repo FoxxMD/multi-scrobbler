@@ -31,7 +31,7 @@ export const generatePlayApiCommon = (commonData: Partial<PlayApiCommon> & {play
     const {
         playedAt = typeof play.data.playDate === 'string' ? play.data.playDate : play.data.playDate.toISOString(),
         seenAt = playedAt,
-        updatedAt = seenAt,
+        updatedAt = dayjs().toISOString(),
         compacted = false,
         state = randomPlayState(),
         componentId = faker.number.int({min: 1, max: 10}),
