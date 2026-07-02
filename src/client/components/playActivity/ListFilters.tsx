@@ -147,11 +147,13 @@ export const PlayDateRangeFilter = (props: PlayDateRangeFilterProps & {container
         defaultValue={parsedInitialValues}
         selectionMode="range"
         size="sm"
-        maxW="32rem">
+        width="unset"
+        maxW="32rem"
+        minW="0">
             <DatePicker.Label>Played Between</DatePicker.Label>
             <DatePicker.Control >
-                <DatePicker.Input index={0} />
-                <DatePicker.Input index={1} />
+                <DatePicker.Input maxW="8em" index={0} />
+                <DatePicker.Input maxW="8em" index={1} />
                 <DatePicker.Trigger asChild unstyled>
                 <CalendarButton variant="outline"/>
                 </DatePicker.Trigger>
