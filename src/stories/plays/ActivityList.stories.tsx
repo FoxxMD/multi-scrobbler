@@ -316,7 +316,7 @@ export const ListLiveInsert = meta.story({
           console.log(url.search);
           const query = qs.parse(url.search, qsOptions) as QueryPlaysOptsJson;
           if(livePlayInsertData.length === 0) {
-            livePlayInsertData = await generatePlayApiCommonDetailedList({endDate: dayjs((query.playedAt as CompareDateBetween<string>)?.range[0])});
+            livePlayInsertData = await generatePlayApiCommonDetailedList({endDate: dayjs((query.playedAt as CompareDateBetween<string>)?.range[1])});
           }
           console.log(query);
           const res: PaginatedResponse<PlayApiCommonDetailed> = {
