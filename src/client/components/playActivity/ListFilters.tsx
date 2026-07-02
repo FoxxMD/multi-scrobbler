@@ -1,4 +1,4 @@
-import { Span, Stack, Text, Box, HStack, Wrap, Flex, Container, Select, Portal, createListCollection, useSelectContext, DatePicker, VStack, Button, Spacer, TagsInput, Card } from '@chakra-ui/react';
+import { Span, Stack, Text, Box, Spinner, HStack, Wrap, Flex, Container, Select, Portal, createListCollection, useSelectContext, DatePicker, VStack, Button, Spacer, TagsInput, Card } from '@chakra-ui/react';
 import { ComponentType, isComponentTypeSource, PLAY_CLIENT_STATE, PLAY_SOURCE_STATE, PlayState } from '../../../core/Atomic.js';
 import React, { ComponentProps, Fragment, useMemo, useCallback, useState } from "react"
 import dayjs, { Dayjs } from 'dayjs';
@@ -24,7 +24,10 @@ import {
 import { QueryPlaysOptsJson } from '../../../backend/common/database/drizzle/repositories/PlayRepository.js';
 import { cardHeaderSeparator } from '../../utils/ComponentUtils.js';
 import { CompareDateBetween } from '../../../backend/common/database/drizzle/repositories/BaseRepository.js';
-import { CalendarButton } from '../icons/ChakraIcons.js';
+import { CalendarButton, RefreshButton } from '../icons/ChakraIcons.js';
+import { nanoid } from 'nanoid';
+import { QueryPlaysOptsJsonRefreshable, tanQueries, useQueryWatcher } from '../../queries/index.js';
+import { useQueryClient } from '@tanstack/react-query';
 
 const noop = (_) => null;
 
@@ -256,14 +259,19 @@ export const PhraseFilter = (props: PhraseFilterProps) => {
 }
 
 export const ListFilters = (props: {
-    onChange: (e: QueryPlaysOptsJson) => void
-    filters: QueryPlaysOptsJson
+    onChange: (e: QueryPlaysOptsJsonRefreshable) => void,
+    loading?: boolean
+    filters: QueryPlaysOptsJsonRefreshable
     componentType: ComponentType,
+    componentId: number
 }) => {
     const {
         filters,
         onChange,
+        componentId,
     } = props;
+
+    const queryClient = useQueryClient();
 
     const setState = useCallback((val: PlayState[]) => {
         const {
@@ -299,10 +307,24 @@ export const ListFilters = (props: {
         onChange({...rest, text: val});
     }, [onChange, filters]);
 
+    const onRefresh = useCallback(() => {
+    queryClient.invalidateQueries({
+        queryKey: tanQueries.activities.list(componentId, filters).queryKey
+    });
+    // const nonce = nanoid();
+    // const {
+    //     ...rest
+    // } = filters;
+    // console.log(`Adding nonce for refresh ${nonce}`);
+    // onChange({...rest, nonce});
+    }, [componentId, filters]);
+
+    const { isFetching } = useQueryWatcher(tanQueries.activities.list(componentId, filters).queryKey)
+
     return (
         <Card.Root size="sm" variant="outline">
             <Card.Header {...cardHeaderSeparator}>
-                Filters
+                <HStack>Filters <RefreshButton variant="ghost" size="sm" loading={isFetching} onClick={(e) => onRefresh()}/></HStack>
             </Card.Header>
             <Card.Body px="3" py="4">
                 <Wrap gap="5">

@@ -8,7 +8,7 @@ import "./PlayList.scss";
 import { MsSseEvent, MsSseEventPayload, PlayApiCommon, PlayApiCommonDetailed } from '../../../core/Api.js';
 import { useQuery, useInfiniteQuery, UseInfiniteQueryResult, InfiniteData, useQueryClient } from '@tanstack/react-query';
 import { ErrorAlert } from '../ErrorAlert.js';
-import { tanQueries } from '../../queries/index.js';
+import { QueryPlaysOptsJsonRefreshable, tanQueries } from '../../queries/index.js';
 import { VirtualizedListNormal } from './VirtualListNormal.js';
 import { NoPlayResults, VirtualizedListDynamic } from './VirtualListDynamic.js';
 import { VirtualizedListExp } from './VirtualListExperimental.js';
@@ -67,7 +67,7 @@ const PlainAccordian = (props: ActivityLogProps) => {
                     </Accordion.ItemTrigger>
                     <Accordion.ItemContent>
                       <Accordion.ItemBody borderTopColor="gray.border" >
-                        {live ? <ActivityDetailFetchable componentId={props.componentId} componentType={props.componentType} query={props.query} uid={activity.uid} /> : <ActivityDetails activity={activity as PlayApiCommonDetailed} {...props} />}
+                        {live ? <ActivityDetailFetchable componentId={props.componentId} componentType={props.componentType} uid={activity.uid} /> : <ActivityDetails activity={activity as PlayApiCommonDetailed} {...props} />}
                       </Accordion.ItemBody>
                     </Accordion.ItemContent>
                   </Accordion.Item>
@@ -86,12 +86,12 @@ export const ListContainer = (props?: ComponentProps<typeof ActivityList>) => {
   return <Container maxWidth="3xl"><ActivityList {...props} /></Container>
 }
 
-export const ListContainerFetchable = (props: { componentId: number, componentType: ComponentType, filters?: QueryPlaysOptsJson } & Pick<ComponentProps<typeof ActivityList>, 'render'>) => {
+export const ListContainerFetchable = (props: { componentId: number, componentType: ComponentType, filters?: QueryPlaysOptsJsonRefreshable } & Pick<ComponentProps<typeof ActivityList>, 'render'>) => {
   const {
     componentId,
     filters = {}
   } = props;
-  const query: QueryPlaysOptsJson = { ...filters, order: 'desc', sort: 'playedAt' };
+  const query: QueryPlaysOptsJsonRefreshable = filters; // { ...filters, order: 'desc', sort: 'playedAt' };
   const { 
     isPending, 
     isError, 
@@ -133,8 +133,8 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
     });
 
   let rendered;
-  if (status === 'pending' && data === undefined) {
-    rendered = <Stack><ActivitySummarySkeleton /><ActivitySummarySkeleton /><ActivitySummarySkeleton /></Stack>;
+  if (isPending) {
+    rendered = <Stack width="100%"><ActivitySummarySkeleton /><ActivitySummarySkeleton /><ActivitySummarySkeleton /></Stack>;
   } else if (isError || status === 'error') {
     rendered = <ErrorAlert error={error} />
   } else if(!isFetching && allPlays.length === 0) {
@@ -263,16 +263,18 @@ const playInWindow = (data: PlayApiCommonDetailed, query: QueryPlaysOptsJson): b
 }
 
 export const ListContainerFilterable = (props: { componentId: number, componentType: ComponentType } & Pick<ComponentProps<typeof ActivityList>, 'render'>) => {
-  const [filters, setFilter] = useState<QueryPlaysOptsJson>({
+  const [filters, setFilter] = useState<QueryPlaysOptsJsonRefreshable>({
     playedAt: {
       type: 'between',
       range: todayRange,
       inclusive: true
-    }
+    },
+    order: 'desc',
+    sort: 'playedAt'
   });
   return (
     <Stack width="100%" gap="4">
-      <ListFilters componentType={props.componentType} filters={filters} onChange={setFilter}/>
+      <ListFilters componentType={props.componentType} componentId={props.componentId} filters={filters} onChange={setFilter}/>
       <ListContainerFetchable {...props} filters={filters} />
     </Stack>
   )

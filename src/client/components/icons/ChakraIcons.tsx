@@ -18,20 +18,27 @@ import {
     LuPowerOff,
     LuEye,
     LuEyeClosed,
-    LuCalendar
+    LuCalendar,
+    LuRefreshCw
 } from "react-icons/lu"
 import { VscDebugRestart } from 'react-icons/vsc';
 import { RiZzzFill } from "react-icons/ri";
 import { SiGoogledocs } from "react-icons/si";
-import { IconButton, Clipboard, useClipboard } from "@chakra-ui/react"
+import { IconButton, Clipboard, useClipboard, Spinner } from "@chakra-ui/react"
 import { ComponentProps, PropsWithChildren } from 'react';
 import { IconBaseProps, IconType } from "react-icons/lib";
 
-export const makeIconButton = (Icon: IconType) => (props: PropsWithChildren<ComponentProps<typeof IconButton>> & { iconProps?: IconBaseProps }) => {
-    const { iconProps = {}, children, ...rest } = props;
+export const makeIconButton = (Icon: IconType) => (props: PropsWithChildren<ComponentProps<typeof IconButton>> & { iconProps?: IconBaseProps, loading?: boolean }) => {
+    const { 
+        iconProps = {},
+        children,
+        loading = false,
+        size = 'xs',
+        ...rest 
+    } = props;
     return (
-        <IconButton variant="surface" size="xs" {...rest}>
-            <Icon {...iconProps} />{children}
+        <IconButton variant="surface" disabled={loading} size={size} {...rest}>
+            {loading ? <Spinner/>  : <Icon {...iconProps} />}{children}
         </IconButton>
     );
 }
@@ -143,3 +150,6 @@ export const EyeClosedButton = makeIconButton(LuEyeClosed);
 
 export const CalendarIcon = LuCalendar;
 export const CalendarButton = makeIconButton(CalendarIcon);
+
+export const RefreshIcon = LuRefreshCw;
+export const RefreshButton = makeIconButton(RefreshIcon);
