@@ -170,7 +170,8 @@ export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof 
 export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, live?: boolean}) => {
     let sleepingRender: React.JSX.Element = null;
     const {data} = props;
-    if(isComponentSourceApiJson(data)) {
+    const isSource = isComponentSourceApiJson(data)
+    if(isSource) {
         const {
             sleeping,
             wakeAt
@@ -207,7 +208,7 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
             <Flex justifyContent="flex-end" rowGap="6" flexDirection="row-reverse" wrap="wrap">
                 <Box marginEnd="auto"><MSComponentStats {...props}/></Box>
             </Flex>
-            {props.live ? <PlayersContainerFetchable data={props.data}/> : <PlayersContainer data={props.data} live={props.live}/>}
+            {props.live ? <PlayersContainerFetchable nowPlaying={isSource ? undefined : true} data={props.data}/> : <PlayersContainer nowPlaying={isSource ? undefined : true} data={props.data} live={props.live}/>}
             <Heading size="3xl" width="100%">{isComponentTypeSource(props.data.mode) ? 'Plays' : 'Scrobbles'}</Heading>
             <ListContainerFilterable render="virtDynamic" componentType={props.data.mode} componentId={props.data.id}/>
         </Flex>
