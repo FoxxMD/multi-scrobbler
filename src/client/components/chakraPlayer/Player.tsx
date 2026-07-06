@@ -69,11 +69,6 @@ export const ChakraPlayer = (props: PlayerProps) => {
     const [positionBuffer, setProgressBuffer] = useState<undefined | number>(undefined);
     const [intervalId, setIntervalId] = useState<undefined | number>(undefined);
     const [lastUpdated, setLastUpdated] = useState<undefined | number>(undefined);
-
-    if(expiration !== undefined && dayjs().isAfter(dayjs(expiration))) {
-        return null;
-    }
-
     const playArt = art.track ?? art.album ?? art.artist ?? undefined;
 
     const isNowPlaying = nowPlaying || nowPlayingMode;
@@ -141,6 +136,10 @@ export const ChakraPlayer = (props: PlayerProps) => {
         }
         return () => clearInterval(interval);
     },[setProgressBuffer, data, setIntervalId, setLastUpdated, isNowPlaying]);
+
+    if(expiration !== undefined && dayjs().isAfter(dayjs(expiration))) {
+        return null;
+    }
 
     const indeterminate = isNowPlaying || (calculated === 'playing' && data.position === undefined);
     const positionProgress = indeterminate || data.position === undefined || duration === undefined ? undefined : Math.trunc((data.position/duration) * 100);
@@ -227,14 +226,14 @@ type UsePlayerQueryOpts = {
     initData?: SourcePlayerJson
 }
 
-export function usePlayerQuery(componentId: number, platformId: string, opts: UsePlayerQueryOpts = {}) {
+export const usePlayerQuery = (componentId: number, platformId: string, opts: UsePlayerQueryOpts = {}) => {
     const { initData } = opts;
     const queryClient = useQueryClient();
     useEffect(() => {
         if (initData !== undefined && queryClient.getQueryData(tanQueries.players.single(componentId, platformId).queryKey) === undefined) {
             queryClient.setQueryData(tanQueries.players.single(componentId, platformId).queryKey, initData);
         }
-    }, [initData]);
+    }, [initData, componentId, platformId]);
 
     const client = useSSEContext<MsSseEvent<MsSseEventPayload<SourcePlayerJson>>>();
     useSSEEvent(client, "playerUpdate", (payload) => {
@@ -264,7 +263,7 @@ export const PlayersContainer = (props: { data: ComponentCommonApiJson, live?: b
             players = {}
         } = data;
 
-        let playerContainers: React.JSX.Element[] = [];
+        const playerContainers: React.JSX.Element[] = [];
         // const isSource = isComponentSourceApiJson(data);
         // const now = dayjs();
         if (Object.keys(players).length > 0) {
@@ -292,14 +291,14 @@ export const PlayersContainer = (props: { data: ComponentCommonApiJson, live?: b
             </Stack>;
 }
 
-function usePlayersQuery(componentId: number, players?: ComponentCommonApiJson['players']) {
+const usePlayersQuery = (componentId: number, players?: ComponentCommonApiJson['players']) => {
     const queryClient = useQueryClient();
 
     useEffect(() => {
         if(queryClient.getQueryData(tanQueries.players.list(componentId).queryKey) === undefined) {
             queryClient.setQueryData(tanQueries.players.list(componentId).queryKey, players ?? {});
         }
-    }, [players]);
+    }, [players, componentId]);
 
     const client = useSSEContext<MsSseEvent>();
     useSSEAnyEvent(client, (payload) => {
@@ -309,7 +308,7 @@ function usePlayersQuery(componentId: number, players?: ComponentCommonApiJson['
                     const playerPayload = payload.data as MsSseEventPayload<SourcePlayerJson>;
                     queryClient.setQueryData(tanQueries.players.list(componentId).queryKey, (old: Record<string, SourcePlayerJson>) => {
                         if(old[playerPayload.data.platformId] === undefined || 'expiration' in playerPayload.data) {
-                            let newData: Record<string, SourcePlayerJson> = {...old};
+                            const newData: Record<string, SourcePlayerJson> = {...old};
                             newData[playerPayload.data.platformId] = playerPayload.data;
                             return newData;
                         }
@@ -320,7 +319,7 @@ function usePlayersQuery(componentId: number, players?: ComponentCommonApiJson['
                     const playerPayload = payload.data as MsSseEventPayload<{platformId: string}>;
                     queryClient.setQueryData(tanQueries.players.list(componentId).queryKey, (old: Record<string, SourcePlayerJson>) => {
                         if(old[playerPayload.data.platformId] !== undefined) {
-                            let newData: Record<string, SourcePlayerJson> = {...old};
+                            const newData: Record<string, SourcePlayerJson> = {...old};
                             delete newData[playerPayload.data.platformId];
                             return newData;
                         }

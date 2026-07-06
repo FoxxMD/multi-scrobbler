@@ -45,15 +45,16 @@ export const PlayData = (props?: PlayInfoProps) => {
         dates = 'all'
     } = props ?? {};
 
-    if (play === undefined) {
-        return <EmptyPlayData />
-    }
 
     const [codeMode, setCodeMode] = useState(false);
 
     let code: React.JSX.Element | null = null;
 
     const comparable = showCompare && final !== undefined;
+
+    if (play === undefined) {
+        return <EmptyPlayData />
+    }
 
     if (showCodeToggle) {
         code = (
