@@ -114,6 +114,7 @@ export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApi>
         lastActiveAt = dayjs(),
         lastReadyAt = dayjs(),
         state = faker.number.int({min: 1, max: 7}) as ComponentState,
+        players = {},
         ...rest
     } = data;
 
@@ -139,6 +140,7 @@ export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApi>
         countLive: faker.number.int({min: 0, max: 2000}),
         countNonLive: 0,
         state,
+        players,
         status: faker.helpers.arrayElement(statusSamples),
         ...rest
     }
