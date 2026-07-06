@@ -70,7 +70,7 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
             <QuickStatsSource data={data} streamable={props.fetchable} />
         </Card.Header>
         </LinkBox>
-        {body}
+        <MSErrorBoundary>{body}</MSErrorBoundary>
     </Card.Root>
     </MSErrorBoundary>)
 }
