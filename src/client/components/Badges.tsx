@@ -86,14 +86,12 @@ export const ComponentStateBadge = (props: ComponentProps<typeof Badge> & {
         setComponentState(data.state);
     },[data.state, setComponentState]);
 
-    if(props.componentId !== undefined && props.live) {
-        const client = useSSEContext<MsSseEvent>();
-        const connection = useSSEEvent(client, 'componentUpdate', (payload) => {
-            if(payload.componentId === props.componentId && payload.data.state !== undefined) {
-                setComponentState(payload.data.state);
-            }
-        });
-    }
+    const client = useSSEContext<MsSseEvent>();
+    const connection = useSSEEvent(client, 'componentUpdate', (payload) => {
+        if(props.componentId !== undefined && props.live && payload.componentId === props.componentId && payload.data.state !== undefined) {
+            setComponentState(payload.data.state);
+        }
+    });
 
     let badgeColor = undefined;
 

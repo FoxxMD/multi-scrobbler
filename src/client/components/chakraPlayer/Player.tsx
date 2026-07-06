@@ -18,6 +18,7 @@ import LinearProgress from '@mui/material/LinearProgress';
 import { InfoTip, ToggleTip } from "../ToggleTip";
 import { tanQueries } from "../../queries";
 import dayjs from "dayjs";
+import { MSErrorBoundary } from "../ErrorBoundary";
 
 export interface PlayerProps {
     data: SourcePlayerJson & {expiration?: string}
@@ -149,45 +150,49 @@ export const ChakraPlayer = (props: PlayerProps) => {
 
     const bufferTip = positionBuffer !== undefined ? <InfoTip positioning={{placement: "bottom-start"}} buttonProps={{height: 'var(--chakra-sizes-4)'}} content={bufferExplanation}/> : null;
      
-    return <Container className="playerContainer" bg="bg.emphasized" borderWidth="1px" p="2" py="3" rounded="md">
-    <Stack gap="2">
-            <Flex gap="4" align="center">
-                {playArt !== undefined ? <Image minWidth="48px" flex="0" height="100%" width="100%" src={playArt}></Image> : null}
-                <Center flex="1">
-                    <Stack textAlign="center">
-                        <Heading textWrap="balance" size="md">{calculated !== 'stopped' ? track : '-'}</Heading>
-                        <TextMuted>{calculated !== 'stopped' ? artists.map(x => x.name).join(' / ') : '-'}</TextMuted>
-                    </Stack>
-                </Center>
-            </Flex>
-            <HStack gap="5">
-                <Text textStyle="sm">{positionTimestamp}</Text>
-                <Box flex="1">
-                <LinearProgress
-                variant={indeterminate ? undefined : "buffer"}
-                
-                value={positionProgress}
-                valueBuffer={Math.max(bufferProgress ?? positionProgress, positionProgress)}
-                />
-                </Box>
-                <Text textStyle="xs">{durationTimestamp}</Text>
-            </HStack>
-            {/* <Progress.Root value={indeterminate || data.position === undefined || duration === undefined ? null : (data.position/duration) * 100} size="sm">
-                <HStack gap="5">
-                    <Progress.Label>{positionTimestamp}</Progress.Label>
-                    <Progress.Track flex="1">
-                        <Progress.Range />
-                    </Progress.Track>
-                    <Progress.ValueText>{durationTimestamp}</Progress.ValueText>
-                </HStack>
-            </Progress.Root> */}
-            <Flex alignItems="center">
-                <TextMuted>{['unknown', 'playing'].includes(calculated) && isNowPlaying ? 'Now Playing' : capitalize(calculated)}{!isNowPlaying ? bufferTip : null}</TextMuted>
-                <Spacer />
-                <TextMuted>Listened: {isNowPlaying !== true && calculated !== 'stopped' && listenedDuration !== null ? `${listenedDuration.toFixed(0)}s` : '-'}{durPer}</TextMuted>
-            </Flex>
-        </Stack>
-        </Container>
+    return (
+    <MSErrorBoundary>
+        <Container className="playerContainer" bg="bg.emphasized" borderWidth="1px" p="2" py="3" rounded="md">
+            <Stack gap="2">
+                    <Flex gap="4" align="center">
+                        {playArt !== undefined ? <Image minWidth="48px" flex="0" height="100%" width="100%" src={playArt}></Image> : null}
+                        <Center flex="1">
+                            <Stack textAlign="center">
+                                <Heading textWrap="balance" size="md">{calculated !== 'stopped' ? track : '-'}</Heading>
+                                <TextMuted>{calculated !== 'stopped' ? artists.map(x => x.name).join(' / ') : '-'}</TextMuted>
+                            </Stack>
+                        </Center>
+                    </Flex>
+                    <HStack gap="5">
+                        <Text textStyle="sm">{positionTimestamp}</Text>
+                        <Box flex="1">
+                        <LinearProgress
+                        variant={indeterminate ? undefined : "buffer"}
+                        
+                        value={positionProgress}
+                        valueBuffer={Math.max(bufferProgress ?? positionProgress, positionProgress)}
+                        />
+                        </Box>
+                        <Text textStyle="xs">{durationTimestamp}</Text>
+                    </HStack>
+                    {/* <Progress.Root value={indeterminate || data.position === undefined || duration === undefined ? null : (data.position/duration) * 100} size="sm">
+                        <HStack gap="5">
+                            <Progress.Label>{positionTimestamp}</Progress.Label>
+                            <Progress.Track flex="1">
+                                <Progress.Range />
+                            </Progress.Track>
+                            <Progress.ValueText>{durationTimestamp}</Progress.ValueText>
+                        </HStack>
+                    </Progress.Root> */}
+                    <Flex alignItems="center">
+                        <TextMuted>{['unknown', 'playing'].includes(calculated) && isNowPlaying ? 'Now Playing' : capitalize(calculated)}{!isNowPlaying ? bufferTip : null}</TextMuted>
+                        <Spacer />
+                        <TextMuted>Listened: {isNowPlaying !== true && calculated !== 'stopped' && listenedDuration !== null ? `${listenedDuration.toFixed(0)}s` : '-'}{durPer}</TextMuted>
+                    </Flex>
+                </Stack>
+            </Container>
+        </MSErrorBoundary>
+        )
     
 }
 

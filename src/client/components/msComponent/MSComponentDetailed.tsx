@@ -73,28 +73,6 @@ export const MSComponentStats = (props: { data?: ComponentCommonApiJson, live?: 
 
 const stateIsStarted = (state: ComponentState): boolean => state <= COMPONENT_STATE.MUTED;
 
-const ComponentSettings = (props: { data: ComponentCommonApiJson }) => {
-    const [startChecked, setStartChecked] = useState<boolean>(stateIsStarted(props.data.state));
-    return (
-        <Stack>
-            <Switch.Root
-                checked={startChecked}
-                onCheckedChange={(e) => setStartChecked(e.checked)}
-            >
-                <Switch.HiddenInput />
-                <Switch.Control>
-                    <Switch.Thumb>
-                        <Switch.ThumbIndicator fallback={<XIcon color="black" />}>
-                            <CheckIcon />
-                        </Switch.ThumbIndicator>
-                    </Switch.Thumb>
-                </Switch.Control>
-                <Switch.Label>Start</Switch.Label>
-            </Switch.Root>
-        </Stack>
-    )
-}
-
 const componentStateMenuItem = (Icon: IconType, value: string, name?: string) => (props: Pick<MenuItemProps, 'disabled'> = {}) => {
     return (<Menu.Item key={value} value={value} {...props}><Icon/><Box flex="1">{name ?? capitalize(value)}</Box></Menu.Item>);
 }
@@ -208,9 +186,9 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
             <Flex justifyContent="flex-end" rowGap="6" flexDirection="row-reverse" wrap="wrap">
                 <Box marginEnd="auto"><MSComponentStats {...props}/></Box>
             </Flex>
-            {props.live ? <PlayersContainerFetchable nowPlaying={isSource ? undefined : true} data={props.data}/> : <PlayersContainer nowPlaying={isSource ? undefined : true} data={props.data} live={props.live}/>}
+            <MSErrorBoundary>{props.live ? <PlayersContainerFetchable nowPlaying={isSource ? undefined : true} data={props.data}/> : <PlayersContainer nowPlaying={isSource ? undefined : true} data={props.data} live={props.live}/>}</MSErrorBoundary>
             <Heading size="3xl" width="100%">{isComponentTypeSource(props.data.mode) ? 'Plays' : 'Scrobbles'}</Heading>
-            <ListContainerFilterable render="virtDynamic" componentType={props.data.mode} componentId={props.data.id}/>
+            <MSErrorBoundary><ListContainerFilterable render="virtDynamic" componentType={props.data.mode} componentId={props.data.id}/></MSErrorBoundary>
         </Flex>
         </MSErrorBoundary>
     )
