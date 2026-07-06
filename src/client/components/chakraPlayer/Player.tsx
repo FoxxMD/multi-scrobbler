@@ -65,6 +65,10 @@ export const ChakraPlayer = (props: PlayerProps) => {
         expiration
     } = data;
 
+    const [positionBuffer, setProgressBuffer] = useState<undefined | number>(undefined);
+    const [intervalId, setIntervalId] = useState<undefined | number>(undefined);
+    const [lastUpdated, setLastUpdated] = useState<undefined | number>(undefined);
+
     if(expiration !== undefined && dayjs().isAfter(dayjs(expiration))) {
         return null;
     }
@@ -83,10 +87,6 @@ export const ChakraPlayer = (props: PlayerProps) => {
             }
         }
     }
-
-    const [positionBuffer, setProgressBuffer] = useState<undefined | number>(undefined);
-    const [intervalId, setIntervalId] = useState<undefined | number>(undefined);
-
 
     // this effect block is used to set the buffer progress using a realtime counter (setinterval)
     // we only set this as "active" if the player has reported it is calculated playing and we have position
@@ -117,6 +117,9 @@ export const ChakraPlayer = (props: PlayerProps) => {
             });
         } else if(isNowPlaying) {
             interval = setInterval(() => {
+                // force now playing-only player to re-render
+                // so we can stop rendering it if it passes expiration date
+                setLastUpdated(dayjs().unix());
             }, 1000);
             setIntervalId((old) => {
                 if(old !== undefined) {
@@ -136,7 +139,7 @@ export const ChakraPlayer = (props: PlayerProps) => {
             }
         }
         return () => clearInterval(interval);
-    },[setProgressBuffer, data, setIntervalId, isNowPlaying]);
+    },[setProgressBuffer, data, setIntervalId, setLastUpdated, isNowPlaying]);
 
     const indeterminate = isNowPlaying || (calculated === 'playing' && data.position === undefined);
     const positionProgress = indeterminate || data.position === undefined || duration === undefined ? undefined : Math.trunc((data.position/duration) * 100);
@@ -204,6 +207,23 @@ export const ChakraPlayerFetchable = (props: ChakraPlayerFetchableProps) => {
         data: initData,
         sot
     } = props;
+    const { isPending, isError, data, error } = usePlayerQuery(componentId, platformId, {initData});
+
+    if (isError) {
+        return <ErrorAlert error={error} />
+    }
+
+    if (!isPending) {
+        return <ChakraPlayer nowPlaying={nowPlaying} data={data} sot={sot} />
+    }
+}
+
+type UsePlayerQueryOpts = {
+    initData?: SourcePlayerJson
+}
+
+export function usePlayerQuery(componentId: number, platformId: string, opts: UsePlayerQueryOpts = {}) {
+    const { initData } = opts;
     const queryClient = useQueryClient();
     useEffect(() => {
         if (initData !== undefined && queryClient.getQueryData(tanQueries.players.single(componentId, platformId).queryKey) === undefined) {
@@ -223,13 +243,7 @@ export const ChakraPlayerFetchable = (props: ChakraPlayerFetchableProps) => {
         staleTime: Infinity,
     });
 
-    if (isError) {
-        return <ErrorAlert error={error} />
-    }
-
-    if (!isPending) {
-        return <ChakraPlayer nowPlaying={nowPlaying} data={data} sot={sot} />
-    }
+    return { data, isPending, isError, error };
 }
 
 export const PlayersContainer = (props: { data: ComponentCommonApiJson, live?: boolean, nowPlaying?: boolean, stack?: ComponentProps<typeof Stack>, container?: ComponentProps<typeof Container> }) => {
@@ -273,6 +287,53 @@ export const PlayersContainer = (props: { data: ComponentCommonApiJson, live?: b
             </Stack>;
 }
 
+function usePlayersQuery(componentId: number, players?: ComponentCommonApiJson['players']) {
+    const queryClient = useQueryClient();
+
+    useEffect(() => {
+        if(queryClient.getQueryData(tanQueries.players.list(componentId).queryKey) === undefined) {
+            queryClient.setQueryData(tanQueries.players.list(componentId).queryKey, players ?? {});
+        }
+    }, [players]);
+
+    const client = useSSEContext<MsSseEvent>();
+    useSSEAnyEvent(client, (payload) => {
+        if('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === componentId) {
+            switch(payload.type) {
+                case 'playerUpdate': {
+                    const playerPayload = payload.data as MsSseEventPayload<SourcePlayerJson>;
+                    queryClient.setQueryData(tanQueries.players.list(componentId).queryKey, (old: Record<string, SourcePlayerJson>) => {
+                        if(old[playerPayload.data.platformId] === undefined || 'expiration' in playerPayload.data) {
+                            let newData: Record<string, SourcePlayerJson> = {...old};
+                            newData[playerPayload.data.platformId] = playerPayload.data;
+                            return newData;
+                        }
+                    });
+                }
+                    break;
+                case 'playerDelete':{
+                    const playerPayload = payload.data as MsSseEventPayload<{platformId: string}>;
+                    queryClient.setQueryData(tanQueries.players.list(componentId).queryKey, (old: Record<string, SourcePlayerJson>) => {
+                        if(old[playerPayload.data.platformId] !== undefined) {
+                            let newData: Record<string, SourcePlayerJson> = {...old};
+                            delete newData[playerPayload.data.platformId];
+                            return newData;
+                        }
+                    });
+                }
+                    break;
+            }
+        }
+    });
+
+    const { isPending, isError, data = {}, error } = useQuery({
+        ...tanQueries.players.list(componentId),
+        staleTime: Infinity,
+    });
+
+    return {isPending, isError, data, error};
+}
+
 export const PlayersContainerFetchable = (props: { data: ComponentCommonApiJson, live?: boolean, nowPlaying?: boolean, stack?: ComponentProps<typeof Stack>, container?: ComponentProps<typeof Container> }) => {
     const {
         data: initData,
@@ -282,48 +343,7 @@ export const PlayersContainerFetchable = (props: { data: ComponentCommonApiJson,
         stack =  {}
     } = props;
 
-        const queryClient = useQueryClient();
-
-        useEffect(() => {
-            if (initData !== undefined && queryClient.getQueryData(tanQueries.players.list(initData.id).queryKey) === undefined) {
-                queryClient.setQueryData(tanQueries.players.list(initData.id).queryKey, initData.players);
-            }
-        }, [initData]);
-
-        const client = useSSEContext<MsSseEvent>();
-        useSSEAnyEvent(client, (payload) => {
-            if('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === initData.id) {
-                switch(payload.type) {
-                    case 'playerUpdate': {
-                        const playerPayload = payload.data as MsSseEventPayload<SourcePlayerJson>;
-                        queryClient.setQueryData(tanQueries.players.list(initData.id).queryKey, (old: Record<string, SourcePlayerJson>) => {
-                            if(old[playerPayload.data.platformId] === undefined || 'expiration' in playerPayload.data) {
-                                let newData: Record<string, SourcePlayerJson> = {...old};
-                                newData[playerPayload.data.platformId] = playerPayload.data;
-                                return newData;
-                            }
-                        });
-                    }
-                        break;
-                    case 'playerDelete':{
-                        const playerPayload = payload.data as MsSseEventPayload<{platformId: string}>;
-                        queryClient.setQueryData(tanQueries.players.list(initData.id).queryKey, (old: Record<string, SourcePlayerJson>) => {
-                            if(old[playerPayload.data.platformId] !== undefined) {
-                                let newData: Record<string, SourcePlayerJson> = {...old};
-                                delete newData[playerPayload.data.platformId];
-                                return newData;
-                            }
-                        });
-                    }
-                        break;
-                }
-            }
-        });
-
-        const { isPending, isError, data = {}, error } = useQuery({
-            ...tanQueries.players.list(initData.id),
-            staleTime: Infinity,
-        });
+        const { isPending, isError, data = {}, error } = usePlayersQuery(initData.id, initData.players);
 
         const mergedData = useMemo(() => ({...initData, players: data}),[initData,data]);
 
