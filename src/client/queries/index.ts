@@ -59,9 +59,20 @@ const players = createQueryKeys('players', {
         queryKey: ['components', componentId, 'play', platformId],
         queryFn: (ctx) => ky.get(`components/${componentId}/players/${platformId}`, { baseUrl }).json<SourcePlayerJson>()
     })
+});
+
+const logs = createQueryKeys('logs', {
+  list: (level: string, limit: number) => ({
+    queryKey: ['logs', {level, limit}],
+    queryFn: (ctx) => {
+      return ky.get(`logs`, { 
+        baseUrl: baseUrl 
+      }).json<{data: {line: string, time: number, levelLabel: string, level: number}[]}>();
+    }
+  })
 })
 
-export const tanQueries = mergeQueryKeys(components, activities, players);
+export const tanQueries = mergeQueryKeys(components, activities, players, logs);
 
 export const useQueryState = (queryKey: Readonly<unknown[]>) => {
   const queryClient = useQueryClient()

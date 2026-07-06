@@ -20,7 +20,8 @@ import {
     LuEye,
     LuEyeClosed,
     LuCalendar,
-    LuRefreshCw
+    LuRefreshCw,
+    LuCopy
 } from "react-icons/lu"
 import { VscDebugRestart } from 'react-icons/vsc';
 import { MdOutlineFiberNew } from "react-icons/md";
@@ -160,3 +161,6 @@ export const RefreshButton = makeIconButton(RefreshIcon);
 export const InsertedIcon = makeChakraIcon(MdOutlineFiberNew);
 
 export const UpdatedIcon = makeChakraIcon(LuCircleArrowUp);
+
+export const CopyIcon = makeChakraIcon(LuCopy);
+export const CopyIconButton = makeIconButton(LuCopy);

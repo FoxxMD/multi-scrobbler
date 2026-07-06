@@ -1,4 +1,4 @@
-import React, {PropsWithChildren, useState, useEffect} from 'react';
+import React, {PropsWithChildren, useState, useEffect, useRef, useCallback} from 'react';
 import * as AnsiImport from "ansi-to-react";
 import { Text, Box, SegmentGroup, Separator, HStack, Stack, Span } from '@chakra-ui/react';
 import {FixedSizeList} from "fixed-size-list";
@@ -6,8 +6,9 @@ import {useSSE} from "@flamefrontend/sse-runtime-react";
 import { useQueryClient, QueryFunctionContext, useQuery, useMutation } from '@tanstack/react-query'
 import { LogOutputConfig } from '../../core/Atomic';
 import ky from 'ky';
-import { baseUrl } from '../utils';
 import { LogLevel } from '@foxxmd/logging';
+import { tanQueries } from '../queries';
+import { ChakraClip, ChakraClipDynamic } from './ChakraClipboard';
 
 // @ts-expect-error Ansi export is built incorrectly
 const Ansi = AnsiImport.default.default as typeof AnsiImport.default;
@@ -35,8 +36,8 @@ const createFixedList = (size, initialList: MinLogInfo[] = []): FixedSizeList<Mi
 
 let list = createFixedList(50);
 
-export const Logs = (props: {logs: Readonly<LogLineProps[]>}) => {
-    return <Box fontFamily="source-code-pro, Menlo, Monaco, Consolas,'Courier New',monospace;">
+export const Logs = (props: {logs: Readonly<LogLineProps[]>, ref?: React.Ref<HTMLDivElement>}) => {
+    return <Box ref={props.ref} fontFamily="source-code-pro, Menlo, Monaco, Consolas,'Courier New',monospace;">
         {props.logs.map(x => <LogLine message={x.message}/>)}
     </Box>
 }
@@ -55,9 +56,9 @@ export const LogsFetchable = (props: {settings?: LogOutputConfig, streamable?: b
     const [logLimit, setLogLimit] = useState(limit);
     const [logList, setLogList] = useState<MinLogInfo[]>([]);
 
+
     const { isPending, isError, data, error } = useQuery({
-        queryKey: ['logs', { level: logLevel, limit: logLimit }],
-        queryFn: queryFn,
+        ...tanQueries.logs.list(logLevel, logLimit),
         staleTime: Infinity
     });
 
@@ -123,14 +124,20 @@ export const LogsFetchable = (props: {settings?: LogOutputConfig, streamable?: b
         }
     }, [data, limit,setLogList]);
 
+    const logRef = useRef<HTMLDivElement>(null);
+
+    const getLogCopyText = useCallback(() =>{
+        const content = logRef.current.innerText;
+        return content.replaceAll(/\n\[/g, '[');
+    },[logRef]);
+
     return (<Stack>
-        <HStack gap="5"><Span>Level: {levelGroup}</Span><Separator orientation="vertical" height="4"/><Span>Limit: {limitGroup}</Span></HStack>
-        <Logs logs={logList}/>
+        <HStack gap="5">
+            <Span>Level: {levelGroup}</Span>
+            <Separator orientation="vertical" height="4"/><Span marginEnd="auto">Limit: {limitGroup}</Span>
+            <ChakraClipDynamic onCopy={getLogCopyText}/>
+            </HStack>
+        <Logs ref={logRef} logs={logList}/>
         </Stack>);
     
-}
-
-type LogsQueryKey = ['logs', {level: string, limit: number}];
-const queryFn = async (context: QueryFunctionContext<LogsQueryKey>) => {
-    return await ky.get(`logs`, { baseUrl: baseUrl }).json() as {data: {line: string, time: number, levelLabel: string, level: number}[]};
 }
