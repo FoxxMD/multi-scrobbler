@@ -192,7 +192,8 @@ export const generateClientApiJson = (data: Partial<ComponentClientApi> = {}): C
     const {
         queued = faker.number.int({min: 1, max: 2000}),
         deadLetterScrobbles = faker.number.int({min: 1, max: 2000}),
-        deadLetterScrobblesTotal = faker.number.int({min: deadLetterScrobbles, max: 2000})
+        deadLetterScrobblesTotal = faker.number.int({min: deadLetterScrobbles, max: 2000}),
+        players = (data.players ?? {}),
     } = data;
     return {
         ...common,
@@ -200,6 +201,8 @@ export const generateClientApiJson = (data: Partial<ComponentClientApi> = {}): C
         tracksScrobbled: common.countLive,
         deadLetterScrobbles,
         deadLetterScrobblesTotal,
+        players,
+        supportsNowPlaying: Object.keys(players).length > 0
     }
 }
 

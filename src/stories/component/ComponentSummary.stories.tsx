@@ -94,6 +94,12 @@ export const ClientSummary = meta.story({
     }
 });
 
+export const ClientSummaryWithNowPlaying = meta.story({
+    args: {
+      data: generateClientApiJson({players: {test: generateSourcePlayerJson(undefined, {art: true})}})
+    }
+});
+
 const randomQueue = () => faker.helpers.arrayElement(['scrobbleQueued', 'scrobbleDequeued']);
 
 export const ClientSummaryFetchable = meta.story({

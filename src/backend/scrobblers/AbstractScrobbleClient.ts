@@ -1,7 +1,7 @@
 import { childLogger, Logger, LogLevel } from "@foxxmd/logging";
 import dayjs, { Dayjs } from "dayjs";
+import { Duration } from "dayjs/plugin/duration.js";
 import EventEmitter from "events";
-import { FixedSizeList } from 'fixed-size-list';
 import { nanoid } from "nanoid";
 import { MarkOptional, MarkRequired } from "ts-essentials";
 import {
@@ -18,7 +18,8 @@ import {
     CLIENT_INGRESS_QUEUE,
     CLIENT_DEAD_QUEUE,
     PlayOriginal,
-    PlayLifecycle
+    PlayLifecycle,
+    SourcePlayerJson
 } from "../../core/Atomic.js";
 import { artistNamesToCredits, buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
 import AbstractComponent from "../common/AbstractComponent.js";
@@ -133,6 +134,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     nowPlayingMinThreshold: NowPlayingUpdateThreshold = (_) => 10;
     nowPlayingMaxThreshold: NowPlayingUpdateThreshold = (_) => 30;
     nowPlayingLastUpdated?: Dayjs;
+    nowPlayingExpirationDate?: Dayjs;
     nowPlayingLastPlay?: SourcePlayerObj;
     nowPlayingQueue: NowPlayingQueue = new Map();
     nowPlayingTaskInterval: number = 5000;
@@ -434,6 +436,17 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             countLive: this.tracksScrobbledTotal,
             deadLetterScrobbles: this.deadLetterQueued,
             deadLetterScrobblesTotal: this.deadLetterLength,
+            supportsNowPlaying: this.supportsNowPlaying,
+            players: {...this.getNowPlayingPlayers()}
+        }
+    }
+
+    public getNowPlayingPlayers(): Record<string, SourcePlayerJson & {expiration?: string}> {
+        if(this.nowPlayingLastPlay === undefined) {
+            return {};
+        }
+        return {
+            [this.nowPlayingLastPlay.platformId]: {...(this.nowPlayingLastPlay as unknown as SourcePlayerJson), expiration: !this.nowPlayingIsRealtime ? this.nowPlayingExpirationDate?.toISOString() : undefined }
         }
     }
 
@@ -1601,15 +1614,27 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             // finally, do the update
             if(shouldUpdate) {
                 this.npLogger.verbose(`Updating because ${npUpdateTopReason}${clientReason !== undefined ? ` --AND-- ${clientReason}` : ''}`);
+                const isClearing = this.nowPlayingIsRealtime && shouldClearNPStatus(sourcePlayerData);
                 try {
                     await this.doPlayingNow(sourcePlayerData);
                     this.npLogger.trace(`Now Playing updated.`);
                     this.setStatus('Now Playing updated');
+                    if(!isClearing) {
+                        this.nowPlayingExpirationDate = dayjs().add(nowPlayingExpirationDuration(sourcePlayerData));
+                        this.emitEvent('playerUpdate', {...sourcePlayerData, expiration: this.nowPlayingExpirationDate});
+                    } else {
+                        this.nowPlayingExpirationDate = undefined;
+                        this.emitEvent('playerDelete', {platformId: sourcePlayerData.platformId});
+                    }
                     this.emitEvent('nowPlayingUpdated', sourcePlayerData);
                 } catch (e) {
                     this.npLogger.warn(new Error('Error occurred while trying to update upstream Client, will ignore', {cause: e}));
                 }
-                this.nowPlayingLastPlay = sourcePlayerData;
+                if(isClearing) {
+                    this.nowPlayingLastPlay = undefined;
+                } else {
+                    this.nowPlayingLastPlay = sourcePlayerData;
+                }
                 this.nowPlayingLastUpdated = dayjs();
             }
             this.nowPlayingQueue = new Map();
@@ -1743,6 +1768,20 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     protected doPlayingNow = (data: SourcePlayerObj): Promise<any> => Promise.resolve(undefined)
 
+    protected statusExpiresSoon = () => {
+        if(this.nowPlayingExpirationDate === undefined) {
+            return false;
+        }
+        // may want to make this configurable in the future?
+        return Math.abs(dayjs().diff(this.nowPlayingExpirationDate, 's')) < 15;
+    }
+    protected statusAlreadyExpired = () => {
+        if(this.nowPlayingExpirationDate === undefined) {
+            return false;
+        }
+        return dayjs().isAfter(this.nowPlayingExpirationDate);
+    }
+
     public getQueued = (queueName: string, statuses: string[], offset?: number) => {
         return this.playRepo.getQueued(queueName, {offset});
     }
@@ -1827,3 +1866,22 @@ export const npPlayerInValidNPUpdateState = (data: SourcePlayerObj): [boolean, s
     }
     return [false, `NP player is is invalid update state: stopped`];
 }
+
+export const nowPlayingExpirationDuration = (data: Pick<SourcePlayerObj, 'play' | 'position'>): Duration => {
+    let expiry: Dayjs = dayjs().add(10, 'minute');
+
+    const {
+        position, play
+    } = data;
+
+    // if we have position and duration then expiration is set as calculated end of listening session
+    if (position !== undefined && play?.data.duration !== undefined) {
+        expiry = dayjs().add(play.data.duration - position, 'second');
+    } else if (play?.data.duration !== undefined) {
+        // else if we have duration but not position then use track duration
+        expiry = dayjs().add(play.data.duration, 'second');
+    }
+
+    // otherwise use 10 minutes
+    return dayjs.duration(expiry.diff(dayjs(), 'ms'));
+};

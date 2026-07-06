@@ -13,13 +13,15 @@ import {
   useSSEContext,
   useSSEEvent,
 } from "@flamefrontend/sse-runtime-react";
-import { ComponentCommonApiJson, isComponentSourceApiJson, MsSseEvent, MsSseEventPayload } from "../../../core/Api";
+import { ComponentCommonApiJson, ComponentSourceApiJson, isComponentClientApiJson, isComponentSourceApiJson, MsSseEvent, MsSseEventPayload } from "../../../core/Api";
 import LinearProgress from '@mui/material/LinearProgress';
 import { InfoTip, ToggleTip } from "../ToggleTip";
 import { tanQueries } from "../../queries";
+import dayjs from "dayjs";
 
 export interface PlayerProps {
-    data: SourcePlayerJson
+    data: SourcePlayerJson & {expiration?: string}
+    nowPlaying?: boolean
     sot?: SOURCE_SOT_TYPES
 }
 
@@ -36,6 +38,7 @@ export const ChakraPlayer = (props: PlayerProps) => {
 
     const {
         data,
+        nowPlaying = false,
         sot = SOURCE_SOT.PLAYER
     } = props;
 
@@ -58,13 +61,20 @@ export const ChakraPlayer = (props: PlayerProps) => {
             reported,
             stale,
             orphaned
-        } = {}
+        } = {},
+        expiration
     } = data;
+
+    if(expiration !== undefined && dayjs().isAfter(dayjs(expiration))) {
+        return null;
+    }
 
     const playArt = art.track ?? art.album ?? art.artist ?? undefined;
 
+    const isNowPlaying = nowPlaying || nowPlayingMode;
+
     let durPer = null;
-    if (!nowPlayingMode) {
+    if (!isNowPlaying) {
         if (duration !== undefined && duration !== null && duration !== 0) {
             if (listenedDuration === 0 || listenedDuration === null) {
                 durPer = ' (0%)';
@@ -89,7 +99,7 @@ export const ChakraPlayer = (props: PlayerProps) => {
         // but cannot use interval id in useEffect or it causes circular dependencies since we set intervalId here too
         // so clear inside the set state function (bad) using the previous data argument, before returning new value
         let interval;
-        if(data.status?.calculated === 'playing' && data.position !== undefined && !data.status?.stale && !data.status?.orphaned) {
+        if(!isNowPlaying && data.status?.calculated === 'playing' && data.position !== undefined && !data.status?.stale && !data.status?.orphaned) {
             setProgressBuffer(data.position);
             interval = setInterval(() => {
                 setProgressBuffer((oldPosition) => {
@@ -98,6 +108,15 @@ export const ChakraPlayer = (props: PlayerProps) => {
                     }
                     return oldPosition + 1;
                 });
+            }, 1000);
+            setIntervalId((old) => {
+                if(old !== undefined) {
+                    clearInterval(old);
+                }
+                return interval;
+            });
+        } else if(isNowPlaying) {
+            interval = setInterval(() => {
             }, 1000);
             setIntervalId((old) => {
                 if(old !== undefined) {
@@ -117,9 +136,9 @@ export const ChakraPlayer = (props: PlayerProps) => {
             }
         }
         return () => clearInterval(interval);
-    },[setProgressBuffer, data, setIntervalId]);
+    },[setProgressBuffer, data, setIntervalId, isNowPlaying]);
 
-    const indeterminate = nowPlayingMode || (calculated === 'playing' && data.position === undefined);
+    const indeterminate = isNowPlaying || (calculated === 'playing' && data.position === undefined);
     const positionProgress = indeterminate || data.position === undefined || duration === undefined ? undefined : Math.trunc((data.position/duration) * 100);
     const bufferProgress = indeterminate || data.position === undefined || duration === undefined || positionBuffer === undefined ? undefined : Math.trunc((positionBuffer/duration) * 100);
     const positionTimestamp = indeterminate || data.position === undefined ? '-' : timeToHumanTimestamp((positionBuffer ?? data.position) * 1000);
@@ -127,7 +146,8 @@ export const ChakraPlayer = (props: PlayerProps) => {
 
     const bufferTip = positionBuffer !== undefined ? <InfoTip positioning={{placement: "bottom-start"}} buttonProps={{height: 'var(--chakra-sizes-4)'}} content={bufferExplanation}/> : null;
      
-    return <Stack gap="2">
+    return <Container className="playerContainer" bg="bg.emphasized" borderWidth="1px" p="2" py="3" rounded="md">
+    <Stack gap="2">
             <Flex gap="4" align="center">
                 {playArt !== undefined ? <Image minWidth="48px" flex="0" height="100%" width="100%" src={playArt}></Image> : null}
                 <Center flex="1">
@@ -159,16 +179,18 @@ export const ChakraPlayer = (props: PlayerProps) => {
                 </HStack>
             </Progress.Root> */}
             <Flex alignItems="center">
-                <TextMuted>{['unknown', 'playing'].includes(calculated) && nowPlayingMode ? 'Now Playing' : capitalize(calculated)}{bufferTip}</TextMuted>
+                <TextMuted>{['unknown', 'playing'].includes(calculated) && isNowPlaying ? 'Now Playing' : capitalize(calculated)}{!isNowPlaying ? bufferTip : null}</TextMuted>
                 <Spacer />
-                <TextMuted>Listened: {nowPlayingMode !== true && calculated !== 'stopped' && listenedDuration !== null ? `${listenedDuration.toFixed(0)}s` : '-'}{durPer}</TextMuted>
+                <TextMuted>Listened: {isNowPlaying !== true && calculated !== 'stopped' && listenedDuration !== null ? `${listenedDuration.toFixed(0)}s` : '-'}{durPer}</TextMuted>
             </Flex>
         </Stack>
+        </Container>
     
 }
 
 export interface ChakraPlayerFetchableProps {
     componentId: number
+    nowPlaying?: boolean
     platformId: string
     data?: SourcePlayerJson
     sot?: SOURCE_SOT_TYPES
@@ -177,6 +199,7 @@ export interface ChakraPlayerFetchableProps {
 export const ChakraPlayerFetchable = (props: ChakraPlayerFetchableProps) => {
     const {
         componentId,
+        nowPlaying,
         platformId,
         data: initData,
         sot
@@ -205,47 +228,59 @@ export const ChakraPlayerFetchable = (props: ChakraPlayerFetchableProps) => {
     }
 
     if (!isPending) {
-        return <ChakraPlayer data={data} sot={sot} />
+        return <ChakraPlayer nowPlaying={nowPlaying} data={data} sot={sot} />
     }
 }
 
-export const PlayersContainer = (props: { data: ComponentCommonApiJson, live?: boolean, stack?: ComponentProps<typeof Stack>, container?: ComponentProps<typeof Container> }) => {
+export const PlayersContainer = (props: { data: ComponentCommonApiJson, live?: boolean, nowPlaying?: boolean, stack?: ComponentProps<typeof Stack>, container?: ComponentProps<typeof Container> }) => {
     const {
         data,
+        nowPlaying,
         live,
         container = {},
         stack = {}
     } = props;
-    if (isComponentSourceApiJson(data)) {
 
         const {
             players = {}
         } = data;
 
+        let playerContainers: React.JSX.Element[] = [];
+        // const isSource = isComponentSourceApiJson(data);
+        // const now = dayjs();
         if (Object.keys(players).length > 0) {
-            return <Stack gap="2" {...stack}>
-                {
-                    Object.entries(players).map(([key, x]) => (
-                        <Container key={key} className="playerContainer" bg="bg.emphasized" borderWidth="1px" p="2" py="3" rounded="md" {...container}>
-                            {live ? <ChakraPlayerFetchable componentId={data.id} platformId={key} data={x} /> : <ChakraPlayer data={x} />}
-                        </Container>
-                    ))
-                }
-            </Stack>;
+            for(const [key, x] of Object.entries(players)) {
+                // if(!isSource && 'expiration' in x) {
+                //     const expiresAt = dayjs(x.expiration as string);
+                //     if(now.isAfter(expiresAt)) {
+                //         continue;
+                //     }
+                // }
+                playerContainers.push(
+                live ? <ChakraPlayerFetchable key={key} nowPlaying={nowPlaying} componentId={data.id} platformId={key} data={x} /> : <ChakraPlayer key={key} nowPlaying={nowPlaying} data={x} />
+                );
+            };
         }
-        return null;
-    }
-    return null;
+        // if(playerContainers.length > 0) {
+        //     return <Stack gap="2" {...stack}>
+        //         {playerContainers}
+        //     </Stack>;
+        // }
+        // return null;
+
+        return <Stack gap="2" width="100%" {...stack}>
+                {playerContainers}
+            </Stack>;
 }
 
-export const PlayersContainerFetchable = (props: { data: ComponentCommonApiJson, live?: boolean, stack?: ComponentProps<typeof Stack>, container?: ComponentProps<typeof Container> }) => {
+export const PlayersContainerFetchable = (props: { data: ComponentCommonApiJson, live?: boolean, nowPlaying?: boolean, stack?: ComponentProps<typeof Stack>, container?: ComponentProps<typeof Container> }) => {
     const {
         data: initData,
+        nowPlaying,
         live = true,
         container = {},
         stack =  {}
     } = props;
-    if (isComponentSourceApiJson(initData)) {
 
         const queryClient = useQueryClient();
 
@@ -262,7 +297,7 @@ export const PlayersContainerFetchable = (props: { data: ComponentCommonApiJson,
                     case 'playerUpdate': {
                         const playerPayload = payload.data as MsSseEventPayload<SourcePlayerJson>;
                         queryClient.setQueryData(tanQueries.players.list(initData.id).queryKey, (old: Record<string, SourcePlayerJson>) => {
-                            if(old[playerPayload.data.platformId] === undefined) {
+                            if(old[playerPayload.data.platformId] === undefined || 'expiration' in playerPayload.data) {
                                 let newData: Record<string, SourcePlayerJson> = {...old};
                                 newData[playerPayload.data.platformId] = playerPayload.data;
                                 return newData;
@@ -292,7 +327,5 @@ export const PlayersContainerFetchable = (props: { data: ComponentCommonApiJson,
 
         const mergedData = useMemo(() => ({...initData, players: data}),[initData,data]);
 
-        return <PlayersContainer data={mergedData} live container={container} stack={stack}/>
-    }
-    return null;
+        return <PlayersContainer nowPlaying={nowPlaying} data={mergedData} live container={container} stack={stack}/>
 }

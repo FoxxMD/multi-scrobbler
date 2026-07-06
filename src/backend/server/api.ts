@@ -262,6 +262,14 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         }
         return res.json({});
     });
+    app.get('/api/components/:componentVal/players', componentAwareMiddle, async (req: ComponentAwareRequest, res, next) => {
+        if(req.component instanceof MemorySource) {
+            return res.json(req.component.playersToObject());
+        } else if(req.component instanceof AbstractScrobbleClient && req.component.nowPlayingEnabled) {
+            return res.json(req.component.getNowPlayingPlayers());
+        }
+        return res.json({});
+    });
 
     app.get('/api/sources/:componentVal/players/:platformId', sourceAwareMiddle, async (req: SourceAwareRequest, res, next) => {
         if(req.component instanceof MemorySource) {
@@ -277,6 +285,28 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
             return res.json(player);
         }
         return res.json({});
+    });
+    app.get('/api/components/:componentVal/players/:platformId', componentAwareMiddle, async (req: ComponentAwareRequest, res, next) => {
+        const {
+            params: {
+                platformId
+            }
+        } = req;
+        if(req.component instanceof MemorySource) {
+
+            const player = req.component.players.get(platformId as string);
+            if(player === undefined) {
+                return res.status(400).json({error: `No player with platform id ${platformId} exists`});
+            }
+            return res.json(player);
+        } else if(req.component instanceof AbstractScrobbleClient && req.component.nowPlayingEnabled) {
+            const players = req.component.getNowPlayingPlayers();
+            if(players[platformId as string] === undefined) {
+                return res.status(400).json({error: `No player with platform id ${platformId} exists`});
+            }
+            return res.json(players[platformId as string]);
+        }
+        return res.status(400).json({error: `Component does not support players`});
     });
 
     app.get('/api/components/:componentVal', componentAwareMiddle, async (req: ComponentAwareRequest, res, next) => {

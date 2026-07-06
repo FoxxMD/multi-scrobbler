@@ -1,5 +1,5 @@
 import dayjs, { Dayjs, ManipulateType } from "dayjs";
-import { PlayObject, PlayObjectMinimal, BrainzMeta, SourcePlayerObj, MBID, ScrobbleActionResult, UnixTimestamp } from "../../../../core/Atomic.js";
+import { PlayObject, PlayObjectMinimal, BrainzMeta, MBID, ScrobbleActionResult, UnixTimestamp } from "../../../../core/Atomic.js";
 import { getRoot } from "../../../ioc.js";
 import { removeUndefinedKeys } from "../../../utils.js";
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.js";
@@ -8,7 +8,6 @@ import { AbstractApiOptions, PagelessListensTimeRangeOptions, PagelessTimeRangeL
 import { ListRecord, RecordOptions, TealClientData } from "../../infrastructure/config/client/tealfm.js";
 import AbstractApiClient from "../AbstractApiClient.js";
 import { ATProtoAppApiClient } from "../atproto/ATProtoAppApiClient.js";
-import { Duration } from "dayjs/plugin/duration.js";
 import { FmTealAlphaActorStatus, FmTealAlphaFeedPlay } from "./lexicons/index.js";
 import { ScrobbleSubmitError } from "../../errors/MSErrors.js";
 import { getScrobbleTsSOCDateWithContext, usecToUnix } from "../../../utils/TimeUtils.js";
@@ -18,6 +17,7 @@ import { decodeTid, generateTID } from "@ewanc26/tid";
 import { ATProtoAuthenticatedApiClient } from "../atproto/ATProtoAuthenticatedApiClient.js";
 import { UpstreamError } from "../../errors/UpstreamError.js";
 import { ComAtprotoRepoCreateRecord, ComAtprotoRepoPutRecord } from '@atcute/atproto';
+import { nowPlayingExpirationDuration } from "../../../scrobblers/AbstractScrobbleClient.js";
 
 export class TealApiClient extends AbstractApiClient implements PagelessTimeRangeListens {
 
@@ -150,24 +150,8 @@ export const recordToPlay = (record: FmTealAlphaFeedPlay.Main, options: RecordOp
     }
 
     return baseFormatPlayObj(record, play);
-};export const nowPlayingExpirationDuration = (data: Pick<SourcePlayerObj, 'play' | 'position'>): Duration => {
-    let expiry: Dayjs = dayjs().add(10, 'minute');
+}
 
-    const {
-        position, play
-    } = data;
-
-    // if we have position and duration then expiration is set as calculated end of listening session
-    if (position !== undefined && play?.data.duration !== undefined) {
-        expiry = dayjs().add(play.data.duration - position, 'second');
-    } else if (play?.data.duration !== undefined) {
-        // else if we have duration but not position then use track duration
-        expiry = dayjs().add(play.data.duration, 'second');
-    }
-
-    // otherwise use 10 minutes
-    return dayjs.duration(expiry.diff(dayjs(), 'ms'));
-};
 export const playToStatusRecord = (play: PlayObject, notPlaying: boolean, position?: number): FmTealAlphaActorStatus.Main => {
     const { $type, ...item } = notPlaying
         ? { trackName: "", artists: [] }

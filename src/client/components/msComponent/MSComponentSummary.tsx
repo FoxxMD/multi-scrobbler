@@ -19,8 +19,8 @@ import { ComponentStateBadge } from "../Badges.js";
 import { MSErrorBoundary } from "../ErrorBoundary.js";
 
 const presentPlayersContainerProps: ComponentProps<typeof Stack> = {
-paddingTop: '2',
-borderTopWidth: '1px'
+//paddingTop: '2',
+//borderTopWidth: '1px'
 };
 
 export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetchable?: boolean }) => {
@@ -32,6 +32,7 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
 
     let body = <Card.Footer/>;
     let cardHeaderProps: Card.HeaderProps = {};
+    const isClient = isComponentClientApiJson(data);
     if(isComponentSourceApiJson(data)) {
         const {
             sleeping
@@ -39,10 +40,10 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
         if(sleeping) {
            sleepingRender = <IdleIcon animated/>;
         }
-        body = (<Card.Body px="3" py="2" paddingTop="3">
-                {fetchable ? <PlayersContainerFetchable data={data} stack={presentPlayersContainerProps}/> : <PlayersContainer data={data} live={fetchable} stack={presentPlayersContainerProps}/>}
-            </Card.Body>);
     }
+    body = (<Card.Body px="3" py="2" paddingTop="3">
+        {fetchable ? <PlayersContainerFetchable data={data} nowPlaying={isClient} stack={presentPlayersContainerProps}/> : <PlayersContainer data={data} nowPlaying={isClient} live={fetchable} stack={presentPlayersContainerProps}/>}
+    </Card.Body>);
 
     return (
     <MSErrorBoundary>

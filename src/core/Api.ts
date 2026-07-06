@@ -79,6 +79,7 @@ export type ComponentCommonApi = {
     state: ComponentState
     /** More specific, live activity state like "sleeping", "hydrating historical scrobbles", "processing dead scrobbles", etc... */
     status?: string
+    players: Record<string, SourcePlayerJson>
 } & Omit<ComponentMinimalSelect, 'type'>
 
 export type ComponentCommonApiJson = Replace<ComponentCommonApi, PickKeys<ComponentCommonApi, Dayjs>, string>;
@@ -95,6 +96,8 @@ export type ComponentCientApiBase = {
     tracksScrobbled: number
     deadLetterScrobbles: number
     deadLetterScrobblesTotal: number
+    supportsNowPlaying: boolean
+    players: Record<string, SourcePlayerJson & {expiration?: string}>
 }
 
 export type ComponentClientApi = ComponentCommonApi & ComponentCientApiBase;
@@ -107,7 +110,6 @@ export type ComponentSourceApiBase = {
     manualListening?: boolean
     systemListeningBehavior?: boolean
     tracksDiscovered: number;
-    players: Record<string, SourcePlayerJson>
     wakeAt?: string
     sleeping: boolean
 }

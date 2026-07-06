@@ -17,7 +17,7 @@ import { TealClientConfig } from "../common/infrastructure/config/client/tealfm.
 import { ATProtoAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.js";
 import { playToRecord, TealApiClient } from "../common/vendor/teal/TealApiClient.js";
 import { playToStatusRecord } from "../common/vendor/teal/TealApiClient.js";
-import { nowPlayingExpirationDuration } from "../common/vendor/teal/TealApiClient.js";
+import { nowPlayingExpirationDuration } from "./AbstractScrobbleClient.js";
 import { recordToPlay } from "../common/vendor/teal/TealApiClient.js";
 import dayjs, { Dayjs } from "dayjs";
 import { durationToHuman, isDebugMode } from "../utils.js";
@@ -32,7 +32,6 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
     requiresAuth = true;
     requiresAuthInteraction = false;
     override nowPlayingIsRealtime: boolean = true;
-    protected lastExpirationDate: Dayjs;
 
     declare config: TealClientConfig;
 
@@ -145,32 +144,15 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         // this will usually happen if a player stops playing the last track in a queue
         // -- worth doing since PDS calls have a daily rate limit
         if(isClearing && (this.statusExpiresSoon() || this.statusAlreadyExpired())) {
-            this.npLogger.debug(`Not calling status record update because status  is about to expire (or has already), expiring ${durationToHuman(dayjs.duration(dayjs().diff(this.lastExpirationDate)))}`);
+            this.npLogger.debug(`Not calling status record update because status  is about to expire (or has already), expiring ${durationToHuman(dayjs.duration(dayjs().diff(this.nowPlayingExpirationDate)))}`);
             return;
         }
 
         try {
             await this.client.updateStatusRecord(playToStatusRecord(data.play, isClearing, data.position));
-            if(!isClearing) {
-                this.lastExpirationDate = dayjs().add(nowPlayingExpirationDuration(data));
-            }
         } catch (e) {
             throw e;
         }
-    }
-
-    protected statusExpiresSoon = () => {
-        if(this.lastExpirationDate === undefined) {
-            return false;
-        }
-        // may want to make this configurable in the future?
-        return Math.abs(dayjs().diff(this.lastExpirationDate, 's')) < 15;
-    }
-    protected statusAlreadyExpired = () => {
-        if(this.lastExpirationDate === undefined) {
-            return false;
-        }
-        return dayjs().isAfter(this.lastExpirationDate);
     }
 
     protected async doHydrateHistoricalScrobbles(opts: {allowFailures?: boolean, signal?: AbortSignal } = {}) {
