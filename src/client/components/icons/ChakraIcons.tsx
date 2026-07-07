@@ -23,7 +23,8 @@ import {
     LuEyeClosed,
     LuCalendar,
     LuRefreshCw,
-    LuCopy
+    LuCopy,
+    LuClock
 } from "react-icons/lu"
 import { VscDebugRestart } from 'react-icons/vsc';
 import { MdOutlineFiberNew } from "react-icons/md";
@@ -99,8 +100,8 @@ export const MenuButton = makeIconButton(MenuIcon);
 export const XIcon = LuX;
 export const XButton = makeIconButton(XIcon);
 
-export const CheckIcon = LuCheck;
-export const CheckButton = makeIconButton(CheckIcon);
+export const CheckIcon = makeChakraIcon(LuCheck);
+export const CheckButton = makeIconButton(LuCheck);
 
 export const ExternalLinkIcon = LuExternalLink;
 export const ExternalLinkButton = makeIconButton(ExternalLinkIcon);
@@ -176,3 +177,5 @@ export const CopyIconButton = makeIconButton(LuCopy);
 export const ExclamationCircleIcon = makeChakraIcon(LuCircleAlert);
 
 export const ExclamationTriangleIcon = makeChakraIcon(LuTriangleAlert);
+
+export const TimelineIndicatorIconQueued = makeChakraIcon(LuClock);

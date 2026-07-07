@@ -5,7 +5,7 @@ import { TextMuted } from "../TextMuted.js";
 import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
 import { capitalize } from "../../../core/StringUtils.js";
 import { ShortDateDisplay } from "../DateDisplay.js";
-import { CheckIcon, ChevronLeftButton, ChevronRightButton, EllipsisButton, EyeButton, EyeClosedIcon, EyeIcon, IdleIcon, PowerButton, PowerIcon, PowerOffButton, PowerOffIcon, RetryIcon, XIcon } from "../icons/ChakraIcons.js";
+import { ChevronLeftButton, EllipsisButton, EyeButton, EyeClosedIcon, EyeIcon, IdleIcon, PowerButton, PowerIcon, PowerOffButton, PowerOffIcon, RetryIcon } from "../icons/ChakraIcons.js";
 import { ChakraPlayer, ChakraPlayerFetchable, PlayersContainer, PlayersContainerFetchable } from "../chakraPlayer/Player.js";
 import { InfoTip, ToggleTip, Tooltip } from "../ToggleTip.js";
 import { QueryFunctionContext, queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';

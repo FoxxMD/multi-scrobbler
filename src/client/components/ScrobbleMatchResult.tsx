@@ -1,13 +1,8 @@
-import { ComponentProps, Fragment } from "react"
-import { Timeline, Icon, Span, Stack, Heading, Tabs, DataList, List } from '@chakra-ui/react';
-import { JsonPlayObject, LifecycleStep, PlayMatchResult } from "../../core/Atomic";
+import { Icon, Tabs, DataList, List } from '@chakra-ui/react';
+import { PlayMatchResult } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
-import { ErrorAlert } from "./ErrorAlert";
-import { BiWrench } from "react-icons/bi";
-import { IoMusicalNoteOutline } from "react-icons/io5";
-import { LuCheck, LuCircleX, LuX } from "react-icons/lu";
-import { ChakraCodeBlockShort, ChakraPlainBlock, ChakraPlainBlockShort } from "./CodeBlock";
-import { formatNumber, jdiff } from "../../core/DataUtils";
+import { LuCheck, LuX } from "react-icons/lu";
+import { formatNumber } from "../../core/DataUtils";
 
 export interface ScrobbleMatchResultProps {
     match: PlayMatchResult<string>
@@ -49,7 +44,7 @@ export const ScrobbleMatchResult = (props: ScrobbleMatchResultProps) => {
                         <DataList.ItemValue>
                             <List.Root>
                                 {match.breakdowns.map((x, index) => {
-                                    if (x.includes('Time Detail')) {
+                                    if (x !== null && x !== undefined && x.includes('Time Detail')) {
                                         const sub = x.substring(15).split('|');
                                         return (
                                             <List.Root ps="5">

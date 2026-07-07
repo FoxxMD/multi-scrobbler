@@ -1,16 +1,12 @@
-import { ComponentProps, Fragment } from "react"
-import { Timeline, Icon, Span, Stack, Heading, Tabs, DataList, Alert, List, HStack } from '@chakra-ui/react';
-import { PlayData } from "./PlayData";
+import React, { Fragment } from "react"
+import { Timeline, Icon, Span, Stack, Alert, List, HStack } from '@chakra-ui/react';
 import { ErrorAlert } from "./ErrorAlert";
-import { BiWrench } from "react-icons/bi";
-import { IoMusicalNoteOutline } from "react-icons/io5";
 import { HiOutlineCloudUpload, HiOutlineCloudDownload } from "react-icons/hi";
-import { LuCheck, LuCircleX, LuX } from "react-icons/lu";
-import { ChakraCodeBlockShort, ChakraPlainBlock, ChakraPlainBlockShort } from "./CodeBlock";
-import { formatNumber, jdiff } from "../../core/DataUtils";
+import { ChakraCodeBlockShort } from "./CodeBlock";
 import { capitalize } from "../../core/StringUtils";
 import { MSCollapsible, MSCollapsibleExternalProps } from "./MSCollapsible";
 import { TimelineErrorIcon } from "./timeline/TimelineIcon";
+import { ScrobbleResult } from "../../core/Atomic";
 
 export interface ScrobbleActionResultProps extends MSCollapsibleExternalProps {
     result: ScrobbleResult<string>,
@@ -25,7 +21,6 @@ export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
             warnings = [],
             payload,
             response,
-            mergedScrobble
         } = {},
         scrobbler,
         collapsibleOpen

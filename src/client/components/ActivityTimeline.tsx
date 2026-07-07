@@ -1,27 +1,26 @@
-import React, { ComponentProps, useState, Fragment } from "react"
-import { Accordion, Timeline, Icon, Span, Stack, Heading, Card, Box, Tabs, Skeleton, SkeletonCircle, SkeletonText, HTMLChakraProps } from '@chakra-ui/react';
-import { ComponentType, ErrorLike, JsonPlayObject, PlayActivity } from "../../core/Atomic";
+import React, { Fragment } from "react"
+import { Timeline, Icon, Span, Card, Tabs, SkeletonCircle, SkeletonText, HTMLChakraProps } from '@chakra-ui/react';
+import { CLIENT_DEAD_QUEUE, CLIENT_INGRESS_QUEUE, ComponentType, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, QUEUE_STATUS_QUEUED } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
 import { ErrorAlert } from "./ErrorAlert";
 import { IoMdCodeDownload } from "react-icons/io";
 import { BiWrench } from "react-icons/bi";
-import { IoMusicalNoteOutline } from "react-icons/io5";
 import { HiMiniMagnifyingGlass } from "react-icons/hi2";
 import { TbDatabaseEdit } from "react-icons/tb";
 import { capitalize } from "../../core/StringUtils";
-import { shortTodayAwareFormat, todayAwareFormat } from "../../core/TimeUtils";
-import dayjs from "dayjs";
-import { ChakraCodeBlockShort, ChakraPlainBlockShort } from "./CodeBlock";
+import { shortTodayAwareFormat } from "../../core/TimeUtils";
+import dayjs, { Dayjs } from "dayjs";
+import { ChakraCodeBlockShort } from "./CodeBlock";
 import { TransformSteps } from "./TransformSteps";
 import { ScrobbleMatchResult } from "./ScrobbleMatchResult";
 import { ScrobbleActionResult } from "./ScrobbleActionResult";
-import { ExpandCollapse } from "./ExpandCollapse";
 import { MSCollapsible } from "./MSCollapsible";
 import { TimelineErrorIcon } from "./timeline/TimelineIcon";
 import { Muted } from "./Typography";
-import { PlayApiCommonDetailed } from "../../core/Api";
+import { PlayApiCommonDetailed, QueueStateApi } from "../../core/Api";
 import { MSErrorBoundary } from "./ErrorBoundary";
 import { activityTransformHasIssue, timelineTextFormatting } from "../utils/ComponentUtils";
+import { CheckIcon, TimelineIndicatorIconQueued } from "./icons/ChakraIcons";
 
 
 export interface ActivityDetailProps {
@@ -53,6 +52,97 @@ const TimelineLoading = () => {
     );
 }
 
+const QueueTimelineItem = (props: {queueState: QueueStateApi, collapsibleOpen: boolean, /*isBefore?: Dayjs, isAfter?: Dayjs*/}) => {
+    const {
+        queueState,
+        collapsibleOpen,
+    } = props;
+    if(queueState.queueStatus === QUEUE_STATUS_QUEUED) {
+        return (
+            <Timeline.Item>
+                    <Timeline.Connector>
+                        <Timeline.Separator />
+                        <Timeline.Indicator>
+                            <TimelineIndicatorIconQueued fontSize="lg"/>
+                        </Timeline.Indicator>
+                    </Timeline.Connector>
+                    <Timeline.Content gap="4">
+                        <Timeline.Title {...timelineTextFormatting}>
+                            {queueState.queueName === CLIENT_DEAD_QUEUE ? 'Dead ' : ''}Queued <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}
+                        </Timeline.Title>
+                    </Timeline.Content>
+                </Timeline.Item>
+        );
+    }
+
+    if(queueState.queueStatus === QUEUE_STATUS_COMPLETED) {
+        return (
+            <Timeline.Item>
+                    <Timeline.Connector>
+                        <Timeline.Separator />
+                        <Timeline.Indicator>
+                            <CheckIcon fontSize="lg"/>
+                        </Timeline.Indicator>
+                    </Timeline.Connector>
+                    <Timeline.Content gap="4">
+                        <Timeline.Title {...timelineTextFormatting}>
+                            {queueState.queueName === CLIENT_DEAD_QUEUE ? 'Dead ' : ''}Queue finished processing <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}
+                        </Timeline.Title>
+                    </Timeline.Content>
+                </Timeline.Item>
+        );
+    }
+
+    if(queueState.queueStatus === QUEUE_STATUS_FAILED) {
+        let titleContent: React.JSX.Element;
+        const titleProps: HTMLChakraProps<"span"> = queueState.error === undefined ? timelineTextFormatting : {};
+        if(queueState.error === undefined) {
+            titleContent = <>{queueState.queueName === CLIENT_DEAD_QUEUE ? 'Dead ' : ''}Queue failed <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}</>;
+        } else {
+            titleContent = (
+                <MSCollapsible indicator={<Fragment>{queueState.queueName === CLIENT_DEAD_QUEUE ? 'Dead ' : ''}Queue failed <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}</Fragment>}
+                                            defaultOpen={collapsibleOpen}
+                                            disableUntil="md"
+                                            timeline>
+                                            <ErrorAlert error={queueState.error} />
+                                        </MSCollapsible>
+            )
+        }
+        return (
+            <Timeline.Item>
+                    <Timeline.Connector>
+                        <Timeline.Separator />
+                        <Timeline.Indicator>
+                            <CheckIcon fontSize="lg"/>
+                        </Timeline.Indicator>
+                    </Timeline.Connector>
+                    <Timeline.Content gap="4">
+                        <Timeline.Title {...titleProps}>
+                            {titleContent}
+                        </Timeline.Title>
+                    </Timeline.Content>
+                </Timeline.Item>
+        );
+    }
+}
+
+const TimeFiltered = (props: {datetime: Dayjs, isBefore?: Dayjs, isAfter?: Dayjs, children: React.ReactNode}) => {
+    const {
+        isBefore,
+        isAfter,
+        datetime,
+        children
+    } = props;
+    if(isBefore !== undefined && !datetime.isBefore(isBefore)) {
+        return null;
+    }
+    if(isAfter !== undefined && !datetime.isAfter(isAfter)) {
+        return null;
+    }
+
+    return children;
+}
+
 export const ActivityTimeline = (props: ActivityDetailProps) => {
 
     if(props.activity === undefined) {
@@ -63,7 +153,8 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
         activity:{
             play,
             input,
-            seenAt
+            seenAt,
+            queueStates,
         } = {},
         collapsibleOpen,
         componentType
@@ -82,15 +173,15 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
             error,
             warnings = []
         } = {},
-        scrobble
+        scrobble,
     } = play;
     const {
         play: original,
         data: ogInput
     } = input || {};
 
-    let scrobbleSummary: React.JSX.Element,
-        scrobbleIconProps: Record<string, any> = {
+    let scrobbleSummary: React.JSX.Element;
+    const scrobbleIconProps: Record<string, any> = {
             color: 'green.focusRing'
         };
     if (payload !== undefined) {
@@ -115,6 +206,25 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
         transformVerb = 'Transforming Play';
         transformResult = <Span> resulted in <Span color="orange.solid">warnings</Span></Span>;
     }
+
+    let queueItem: React.JSX.Element | undefined,
+    queueDateTime: Dayjs | undefined,
+    deadItem: React.JSX.Element | undefined,
+    deadDateTime: Dayjs | undefined;
+    const ingressQueue = queueStates.find(x => x.queueName === CLIENT_INGRESS_QUEUE);
+    if(ingressQueue !== undefined) {
+        queueDateTime = dayjs(ingressQueue.updatedAt);
+        queueItem = <QueueTimelineItem queueState={ingressQueue} collapsibleOpen={collapsibleOpen}/>
+    }
+    const deadqueue = queueStates.find(x => x.queueName === CLIENT_DEAD_QUEUE);
+    if(deadqueue !== undefined) {
+        deadDateTime = dayjs(deadqueue.updatedAt);
+        deadItem = <QueueTimelineItem queueState={deadqueue} collapsibleOpen={collapsibleOpen}/>
+    }
+
+    const stepsDateTime = steps.length > 0 ? dayjs(steps[0].createdAt) : undefined;
+    // TODO add actual timestamp to scrobble action so we can make this more accurate
+    const scrobbleDateTime = match !== undefined ? dayjs(match.createdAt) : undefined;
 
     return (
         <MSErrorBoundary>
@@ -157,6 +267,8 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                     </Timeline.Title>
                 </Timeline.Content>
             </Timeline.Item>
+            {queueItem && stepsDateTime && <TimeFiltered datetime={queueDateTime} isBefore={stepsDateTime}>{queueItem}</TimeFiltered>}
+            {deadItem && stepsDateTime && <TimeFiltered datetime={deadDateTime} isBefore={stepsDateTime}>{deadItem}</TimeFiltered>}
             {steps.length > 0 ? (
                 <Timeline.Item>
                     <Timeline.Connector>
@@ -199,6 +311,8 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                     </Timeline.Content>
                 </Timeline.Item>
             )}
+            {queueItem && <TimeFiltered datetime={queueDateTime} isAfter={stepsDateTime} isBefore={scrobbleDateTime}>{queueItem}</TimeFiltered>}
+            {deadItem && <TimeFiltered datetime={deadDateTime} isAfter={stepsDateTime} isBefore={scrobbleDateTime}>{deadItem}</TimeFiltered>}
             {match !== undefined ? (
                 <Timeline.Item>
                     <Timeline.Connector>
@@ -255,6 +369,8 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                     </Timeline.Content>
                 </Timeline.Item>
             ) : null}
+            {queueItem && <TimeFiltered datetime={queueDateTime} isAfter={scrobbleDateTime}>{queueItem}</TimeFiltered>}
+            {deadItem && <TimeFiltered datetime={deadDateTime} isAfter={scrobbleDateTime}>{deadItem}</TimeFiltered>}
         </Timeline.Root>
         </MSErrorBoundary>
     )
