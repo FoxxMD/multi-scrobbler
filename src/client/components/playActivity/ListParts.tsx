@@ -17,12 +17,12 @@ export interface GroupInfo {
 }
 
 export interface GroupData {
-  plays: PlayApiCommon[]
+  plays: PlayApiCommonDetailed[]
   date: Dayjs
 }
 
 export interface ActivityLogProps extends SortPlaysByProps {
-  data: PlayApiCommon[]
+  data: PlayApiCommonDetailed[]
   componentId: number
   componentType: ComponentType
   render?: 'virtNormal' | 'virtDynamic' | 'virtExp' | 'accordian'
@@ -106,7 +106,7 @@ export const generateGroupPlays = (data: PlayApiCommon[]): GroupData[] => {
   return groupsReduced.groups;
 }
 
-export const generateFlatItems = (data: PlayApiCommon[]) => {
+export const generateFlatItems = (data: PlayApiCommonDetailed[]) => {
     // ensure there are no duplicates
     // this may happen if a play is "bumped" from one "page" to another, based on offset,
     // when new plays are inserted out of order (playedAt)

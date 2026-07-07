@@ -1,6 +1,6 @@
 import React, { ComponentProps, useState, Fragment, useEffect } from "react"
 import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Clipboard, Separator, HStack, Flex, Badge, IconButton, Container, Icon, useAccordionItemContext, Skeleton, SkeletonText, Collapsible, BadgeProps } from '@chakra-ui/react';
-import { ComponentType, Second } from "../../core/Atomic";
+import { CLIENT_DEAD_QUEUE, ComponentType, QUEUE_NAMES, Second } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
 import { ErrorAlert } from "./ErrorAlert";
 import { AiOutlineExclamationCircle } from "react-icons/ai";
@@ -93,7 +93,7 @@ export interface ActivityDetailProps {
 }
 
 export interface ActivitySummaryProps extends SortPlaysByProps {
-    activity: PlayApiCommon & {isNew?: boolean | Second}
+    activity: PlayApiCommonDetailed & {isNew?: boolean | Second}
     componentType: ComponentType
 }
 
@@ -109,6 +109,7 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
     } = props;
     const [updated, setUpdated] = useState<{lastUpdated: string, updated: boolean}>({lastUpdated: updatedAt, updated: false});
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setUpdated((old) => {
             if(old.lastUpdated === activity.updatedAt) {
                 return {lastUpdated: activity.updatedAt, updated: false};
@@ -237,20 +238,26 @@ export const ActivityDetailFetchable = (props: ActivityDetailFetchableProps) => 
         return <ErrorAlert error={error}/>
     }
 
-    return <ActivityDetails componentType={props.componentType} key={props.uid} activity={activity as PlayApiCommonDetailed}/>
+    return <ActivityDetails componentType={props.componentType} key={props.uid} activity={activity}/>
 }
 
-export const ActivityStateActions = (props: {activity: PlayApiCommon}) => {
+export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed}) => {
     let suffix: React.JSX.Element | null;
-    let badgeProps: BadgeProps = {};
+    const badgeProps: BadgeProps = {};
+    const {
+        activity: {
+            queueStates = []
+        } = {}
+    } = props;
     if(props.activity.state === 'failed') {
         suffix = <RetryButton size="xs" margin="1px" variant="subtle"/>;
         badgeProps.paddingRight = 0;
     }
+    const hasDeadQueue = queueStates.some(x => x.queueName === CLIENT_DEAD_QUEUE && x.queueStatus === 'queued');
     return (
         <Stack>
             <HStack>
-                <PlayStateBadge {...badgeProps} minH="32px" alignItems="anchor-center" size="lg" state={props.activity.state} suffix={suffix} />
+                <PlayStateBadge {...badgeProps} minH="32px" alignItems="anchor-center" size="lg" hasDeadQueue={hasDeadQueue} state={props.activity.state} suffix={suffix} />
             </HStack>
             <HStack justifyContent="flex-end">
                 <DebugCopy variant="ghost" value={JSON.stringify(props.activity)}/>
