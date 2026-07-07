@@ -3,6 +3,7 @@ import mergeErrorCause from 'merge-error-cause';
 import { findCauseByFunc, isAbortReasonErrorLike } from "../../utils/ErrorUtils.js";
 import { UpstreamError, UpstreamErrorOptions } from "./UpstreamError.js";
 import {addKnownErrorConstructor, serializeError} from 'serialize-error';
+import { LifecycleInput } from "../../../core/Atomic.js";
 
 export abstract class NamedError extends Error {
     public abstract name: string;
@@ -46,7 +47,7 @@ const STACK_AT_REGEX = new RegExp(/[\n\r]\s*at/);
 
 export class SimpleError extends Error implements HasSimpleError {
     simple: boolean;
-    name = 'SimpleError';
+    override name = 'SimpleError';
     public toJSON() {
         return serializeError(this);
     }
@@ -82,22 +83,47 @@ export class SimpleError extends Error implements HasSimpleError {
 addKnownErrorConstructor(SimpleError, () => new SimpleError(''))
 
 export class StageTransformError extends NamedError {
-    name = 'Stage Transform';
+    override name = 'Stage Transform';
+    lifecycleInputs?: LifecycleInput[]
     stageName: string;
-    constructor(name: string, message: string, options?: ErrorOptions) {
-        super(message, options);
+    constructor(name: string, message: string, options: ErrorOptions & {inputs?: LifecycleInput[]} = {}) {
+        const {
+            inputs,
+            ...restOpts
+        } = options;
+        super(message, restOpts);
+        this.lifecycleInputs = inputs;
         this.stageName = name;
     }
 }
 addKnownErrorConstructor(StageTransformError, () => new StageTransformError('',''))
 
 export class SkipTransformStageError extends SimpleError {
-    name = 'Skip Transform Stage';
+    lifecycleInputs?: LifecycleInput[]
+    override name = 'Skip Transform Stage';
+
+    public constructor(msg: string, options: ErrorOptions & { simple?: boolean, shortStack?: boolean, inputs?: LifecycleInput[]} = {}) {
+        const {
+            inputs,
+            ...restOpts
+        } = options;
+        super(msg, restOpts);
+        this.lifecycleInputs = inputs;
+    }
 }
 addKnownErrorConstructor(SkipTransformStageError, () => new SkipTransformStageError(''))
 
 export class StagePrerequisiteError extends SimpleError {
-    name = 'Stage Prerequisite';
+    lifecycleInputs?: LifecycleInput[]
+    override name = 'Stage Prerequisite';
+    public constructor(msg: string, options: ErrorOptions & { simple?: boolean, shortStack?: boolean, inputs?: LifecycleInput[]} = {}) {
+        const {
+            inputs,
+            ...restOpts
+        } = options;
+        super(msg, restOpts);
+        this.lifecycleInputs = inputs;
+    }
 }
 addKnownErrorConstructor(StagePrerequisiteError, () => new StagePrerequisiteError(''))
 
@@ -128,7 +154,7 @@ export const mergeSimpleError = (err: Error): Error => {
 }
 
 export class ScrobbleSubmitError<T extends (object | string) = object> extends UpstreamError {
-    name = 'Scrobble Submit Error';
+    override name = 'Scrobble Submit Error';
     payload?: T;
     constructor(message: string, options?: UpstreamErrorOptions & {payload?: T}) {
         super(message, options);

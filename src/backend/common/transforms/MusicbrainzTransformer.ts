@@ -1,4 +1,4 @@
-import { ArtistCredit, asMBReleasePrimaryGroupType, asMBReleaseSecondaryGroupType, asMBReleaseStatus, DEFAULT_MISSING_TYPES, isMBReleasePrimaryGroupType, MBReleaseGroupPrimaryType, MBReleaseGroupSecondaryType, MBReleaseStatus, MissingMbidType, PlayObject, TrackMeta, TransformerCommon, TransformOptions } from "../../../core/Atomic.js";
+import { ArtistCredit, asMBReleasePrimaryGroupType, asMBReleaseSecondaryGroupType, asMBReleaseStatus, DEFAULT_MISSING_TYPES, isMBReleasePrimaryGroupType, LifecycleInput, MBReleaseGroupPrimaryType, MBReleaseGroupSecondaryType, MBReleaseStatus, MissingMbidType, PlayObject, TrackMeta, TransformerCommon, TransformOptions } from "../../../core/Atomic.js";
 import { isWhenCondition, testWhenConditions } from "../../utils/PlayTransformUtils.js";
 import { WebhookPayload } from "../infrastructure/config/health/webhooks.js";
 import { ExternalMetadataTerm, PlayTransformMetadataStage } from "../infrastructure/Transform.js";
@@ -10,7 +10,7 @@ import { childLogger, Logger } from "@foxxmd/logging";
 import { MusicbrainzApiClient, MusicbrainzApiConfig, recordingToPlay, UsingTypes } from "../vendor/musicbrainz/MusicbrainzApiClient.js";
 import { IRecordingList, IRecordingMatch, IRelease, MusicBrainzApi } from "musicbrainz-api";
 import { intersect, isDebugMode, missingMbidTypes, removeUndefinedKeys } from "../../utils.js";
-import { SimpleError, SkipTransformStageError, StagePrerequisiteError } from "../errors/MSErrors.js";
+import { SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../errors/MSErrors.js";
 import { parseArrayFromMaybeString, scoreNormalizedStringsWeighted } from "../../utils/StringUtils.js";
 import clone from "clone";
 import { Cacheable } from "cacheable";
@@ -193,6 +193,7 @@ export interface IRecordingMSList extends IRecordingList {
     recordings: RecordingRankedMatched[]
     freeText?: boolean
     requestQuery: string
+    requestQueries?: LifecycleInput[]
 }
 
 export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = {}, logger: MaybeLogger = new MaybeLogger()): MusicbrainzTransformerDataStrong => {
@@ -434,6 +435,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         } = stageConfig;
 
         let results: IRecordingMSList;
+        const queries: LifecycleInput[] = [];
 
         for(const searchType of searchOrder) {
             try {
@@ -460,6 +462,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
                         results = await this.searchByRecordingMbid(play, stageConfig);
                         break;
                 }
+                queries.push({type: `mbQuery-${searchType}${results.recordings.length === 0 ? '-empty' : ''}`, input: results.requestQuery});
                 if(results.recordings.length === 0) {
                     this.logger.debug(`'${searchType}' search type returned no matches`);
                 } else {
@@ -472,12 +475,12 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
                     // we should be catching any unrecoverable errors in api calls
                     // so we should only get here if something truly bad has happened
                     // and we probably don't want to try additional api calls
-                    throw e;
+                    throw new StageTransformError('Search Error', 'Unexpected error occurred while getting musicbrainz recordings', {cause: e, inputs: queries});
                 }
             }
         }
 
-        return results;
+        return {...results, requestQueries: queries};
     }
 
     public async searchByBasicFields(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
@@ -597,7 +600,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
     public async handlePostFetch(play: PlayObject, transformData: IRecordingMSList, stageConfig: MusicbrainzTransformerDataStage): Promise<PlayObject> {
         if(transformData.recordings.length === 0) {
-            throw new StagePrerequisiteError('No matches returned from Musicbrainz API', {shortStack: true});
+            throw new StagePrerequisiteError('No matches returned from Musicbrainz API', {shortStack: true, inputs: transformData.requestQueries});
         }
 
         const {
@@ -638,7 +641,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         this.logger.debug(`${filteredList.length} of ${transformData.count} were valid, filtered matches. Using match with best score of ${filteredList[0].score}`);
 
         const recordingPlay = recordingToPlay(filteredList[0], {ignoreVA: stageConfig.ignoreVA});
-        recordingPlay.meta.lifecycleInputs = [...(recordingPlay.meta.lifecycleInputs ?? []), {type: 'mbQuery', input: transformData.requestQuery}, {type: 'mbRecording', input: filteredList[0]}];
+        recordingPlay.meta.lifecycleInputs = [...(recordingPlay.meta.lifecycleInputs ?? []), ...(transformData.requestQueries ?? []), {type: 'mbRecording', input: filteredList[0]}];
         return recordingPlay;
     }
 

@@ -3,8 +3,8 @@ import {
     cacheFunctions,
 } from "@foxxmd/regex-buddy-core";
 import EventEmitter from "events";
-import { ComponentType, LifecycleStep, PlayData, PlayObject, TransformResult } from "../../core/Atomic.js";
-import { buildPlayHumanDiffable, buildTrackString } from "../../core/StringUtils.js";
+import { ComponentType, LifecycleInput, LifecycleStep, PlayData, PlayObject } from "../../core/Atomic.js";
+import { buildTrackString } from "../../core/StringUtils.js";
 import { CommonClientConfig } from "./infrastructure/config/client/index.js";
 import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
 import { mergeSimpleError, SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError, TransformRulesError } from "./errors/MSErrors.js";
@@ -22,7 +22,7 @@ import { nanoid } from "nanoid";
 import { isDebugMode } from "../utils.js";
 import { findCauseByReference } from "../utils/ErrorUtils.js";
 import { hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.js";
-import { metaInvariantTransform, playContentInvariantTransform } from "../utils/PlayComparisonUtils.js";
+import { playContentInvariantTransform } from "../utils/PlayComparisonUtils.js";
 import { MSCache } from "./Cache.js";
 import { diffObjects, diffObjectsConsoleOutput, patchObject } from "../../core/DataUtils.js";
 import clone from "clone";
@@ -448,6 +448,10 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         step.stageName = stageName;
 
         if (err !== undefined) {
+            if ('lifecycleInputs' in err) {
+                step.inputs = clone(err.lifecycleInputs) as LifecycleInput[];
+                delete err.lifecycleInputs;
+            }
             const merged = mergeSimpleError(err);
             step.error = merged;
 

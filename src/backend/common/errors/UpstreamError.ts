@@ -7,7 +7,7 @@ export type UpstreamErrorOptions = ErrorOptions & { showStopper?: boolean, respo
 
 export class UpstreamError extends Error {
 
-    name = 'UpstreamError';
+    override name = 'UpstreamError';
     showStopper: boolean = false;
     response?: Response
     responseBody?: object | string
