@@ -96,6 +96,7 @@ export const ChakraPlayer = (props: PlayerProps) => {
         // so clear inside the set state function (bad) using the previous data argument, before returning new value
         let interval;
         if(!isNowPlaying && data.status?.calculated === 'playing' && data.position !== undefined && !data.status?.stale && !data.status?.orphaned) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setProgressBuffer(data.position);
             interval = setInterval(() => {
                 setProgressBuffer((oldPosition) => {

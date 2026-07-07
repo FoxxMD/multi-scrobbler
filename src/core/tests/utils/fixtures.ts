@@ -12,6 +12,7 @@ import { playToListenPayload } from '../../../backend/common/vendor/listenbrainz
 import { mergeSimpleError, SimpleError, SkipTransformStageError, StagePrerequisiteError } from '../../../backend/common/errors/MSErrors.js';
 import dayjs, { Dayjs } from 'dayjs';
 import { TransformHook } from '../../../backend/common/infrastructure/Transform.js';
+import { serializeError } from 'serialize-error';
 
 export interface ScrobbleMatchOptions {
   match?: boolean
@@ -131,7 +132,7 @@ export const playWithLifecycleScrobble = async (play: PlayObject, opts: Scrobble
 
   scrobbleRes.payload = playToListenPayload(play);
   if(error) {
-    scrobbleRes.error = new Error('Failed to scrobble to client', {cause: new UpstreamError('Client returned a 400 or something')});
+    scrobbleRes.error = serializeError(new Error('Failed to scrobble to client', {cause: new UpstreamError('Client returned a 400 or something')}));
     play.scrobble = scrobbleRes;
     return play;
   }

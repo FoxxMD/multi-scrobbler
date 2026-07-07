@@ -1,5 +1,5 @@
 import React, { ComponentProps, useState, Fragment, useEffect } from "react"
-import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Clipboard, Separator, HStack, Flex, Badge, IconButton, Container, Icon, useAccordionItemContext, Skeleton, SkeletonText, Collapsible, BadgeProps } from '@chakra-ui/react';
+import { Accordion, For, Span, Code, Alert, Stack, Text, Box, AbsoluteCenter, Button, Clipboard, Separator, HStack, Flex, Badge, IconButton, Container, Icon, useAccordionItemContext, Skeleton, SkeletonText, Collapsible, BadgeProps } from '@chakra-ui/react';
 import { CLIENT_DEAD_QUEUE, ComponentType, QUEUE_NAMES, Second } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
 import { ErrorAlert } from "./ErrorAlert";
@@ -152,6 +152,71 @@ export const ActivitySummaryFetchable = (props: MarkOptional<ActivitySummaryProp
     return <ActivitySummary {...props} activity={activity}/>
 }
 
+export const ActivityErrorSummary = (props: {activity: ActivityDetailProps['activity']}) => {
+        const {
+        activity: {
+            queueStates = [],
+            play: {
+                lifecycle = [],
+                scrobble,
+            } = {},
+            error,
+        }
+    } = props;
+    if(error !== undefined && error !== null) {
+        return <ErrorAlert error={error} />;
+    }
+    const lifecycleError = lifecycle.find(x => x.error !== undefined && x.error !== null && Object.keys(x.error).length > 0);
+    if(lifecycleError !== undefined) {
+        return (
+        <Alert.Root status="error">
+            <Alert.Indicator />
+            <Alert.Content>
+                <Alert.Title>Error occurred during Play Transform in <Span color="fg.muted">Stage </Span>{lifecycleError.stageType}-{lifecycleError.stageName}<Span color="fg.muted"> in Hook </Span>{lifecycleError.hook} <Span color="fg.muted">from</Span> {lifecycleError.source}</Alert.Title>
+                <Alert.Description>
+                    <Stack gap="0.5">
+                        <Code width="fit-content" my="2" variant="surface">{lifecycleError.error.message}</Code>                        
+                        <Box>Open the <strong>Timeline</strong> to find the error specifics.</Box>
+                    </Stack>                    
+                </Alert.Description>
+            </Alert.Content>
+        </Alert.Root>
+        );
+    }
+    if(scrobble?.error !== undefined) {
+        return (
+        <Alert.Root status="error">
+            <Alert.Indicator />
+            <Alert.Content>
+                <Alert.Title>Error occurred during while trying to scrobble</Alert.Title>
+                <Alert.Description>
+                    <Stack gap="0.5">
+                        <Code width="fit-content" my="2" variant="surface">{scrobble.error.message}</Code>                        
+                        <Box>Open the <strong>Timeline</strong> to find the error specifics.</Box>
+                    </Stack>  
+                </Alert.Description>
+            </Alert.Content>
+        </Alert.Root>
+        );
+    }
+    if(scrobble?.warnings !== undefined) {
+        return (
+        <Alert.Root status="warning">
+            <Alert.Indicator />
+            <Alert.Content>
+                <Alert.Title>There were warnings while scrobbling</Alert.Title>
+                <Alert.Description>
+                    <Stack gap="0.5">
+                        <Box>Open the <strong>Timeline</strong> to find warning specifics.</Box>
+                    </Stack>  
+                </Alert.Description>
+            </Alert.Content>
+        </Alert.Root>
+        )
+    }
+    return null;
+}
+
 export const ActivityDetails = (props: ActivityDetailProps) => {
     const {
         activity,
@@ -175,13 +240,7 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
 
     return (
         <Stack gap="2">
-        {/* <Flex justifyContent="flex-end">
-            <HStack>
-                <RetryButton/>
-                <DebugCopy value={JSON.stringify(activity)}/>
-            </HStack>
-        </Flex> */}
-        {error !== undefined && error !== null ? <ErrorAlert error={error} /> : null}
+        <ActivityErrorSummary activity={props.activity}/>
         <Accordion.Root width="full" variant="enclosed" collapsible multiple>
             <Accordion.Item value="info">
                 <Accordion.ItemTrigger>
