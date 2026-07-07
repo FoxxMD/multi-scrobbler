@@ -1,7 +1,6 @@
-import { Traverse, TraverseContext } from 'neotraverse/modern';
+import { Traverse } from 'neotraverse/modern';
 import { faker } from '@faker-js/faker';
 import { AmbPlayObject, DateLike, LifecycleInput, LifecycleStep, ObjectPlayData, PLAY_STATES, PlayMeta, PlayObject, PlayOriginal, PlayState, ScrobbleResult } from '../../Atomic.js';
-import { MarkOptional } from 'ts-essentials';
 import { generateBrainz, generateMbid, generatePlay, GeneratePlayOpts, generatePlays } from '../../PlayTestUtils.js';
 import { statefulInvariantTransform } from '../../PlayUtils.js';
 import clone from 'clone';
@@ -52,7 +51,7 @@ export const generatePlayWithLifecycle = (opts: GeneratePlayWithLifecycleOptions
   //lplay.meta.lifecycle.original = lifecyclelessInvariantTransform(original);
   //lplay.meta.lifecycle.input = generateRandomObj();
 
-  let steps: LifecycleStep[] = [];
+  const steps: LifecycleStep[] = [];
   let transformedPlay = clone(original);
 
   if(preCompare !== undefined) {
@@ -115,7 +114,9 @@ export const playWithLifecycleScrobble = async (play: PlayObject, opts: Scrobble
     error = false,
   } = opts;
 
-  const scrobbleRes: ScrobbleResult = {};
+  const scrobbleRes: ScrobbleResult = {
+    createdAt: dayjs()
+  };
 
   const existingPlays = generatePlays(2);
 
@@ -278,8 +279,10 @@ const generateRandomVal = (depth: number = 0, opt: RandomObjOptions = {}, typeId
     case 7:
       return generateRandomObj(depth + 1, opt);
     case 8:
-      const typeId = faker.number.int({ min: 4, max: depth > (opt.maxDepth ?? 3) ? 6 : 7 });
-      return faker.helpers.multiple(() => generateRandomVal(depth + 1, opt, typeId), { count: { min: 1, max: opt.maxObjSize ?? 7 } })
+      { 
+        const typeId = faker.number.int({ min: 4, max: depth > (opt.maxDepth ?? 3) ? 6 : 7 });
+        return faker.helpers.multiple(() => generateRandomVal(depth + 1, opt, typeId), { count: { min: 1, max: opt.maxObjSize ?? 7 } }) 
+    }
   }
 }
 

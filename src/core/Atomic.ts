@@ -313,6 +313,7 @@ export interface ScrobbleResult<D extends DateLike = Dayjs> {
     error?: Error | ErrorObject
     response?: ScrobbleResponse
     mergedScrobble?: AmbPlayObjectMinimal<D>
+    createdAt?: D
 }
 
 export interface PlayLifecycle<D extends DateLike = Dayjs> {

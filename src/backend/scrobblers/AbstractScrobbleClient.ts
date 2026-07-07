@@ -19,7 +19,8 @@ import {
     CLIENT_DEAD_QUEUE,
     PlayOriginal,
     PlayLifecycle,
-    SourcePlayerJson
+    SourcePlayerJson,
+    QUEUE_STATUS_COMPLETED
 } from "../../core/Atomic.js";
 import { artistNamesToCredits, buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
 import AbstractComponent from "../common/AbstractComponent.js";
@@ -932,6 +933,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 ...scrobble,
                 payload: result.payload,
                 warnings: result.warnings,
+                createdAt: dayjs(),
                 response: result.response,
                 mergedScrobble: result.mergedScrobble !== undefined ? statefulInvariantTransform(result.mergedScrobble) : undefined
             }
@@ -1145,7 +1147,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 const { summary, ...matchResult } = await this.existingScrobble(currQueuedPlay.play, historicalPlays);
                 currQueuedPlay.play.scrobble = {
                     ...(currQueuedPlay.play.scrobble ?? {}),
-                    match: matchResult
+                    match: matchResult,
+                    createdAt: dayjs()
                 }
                 signal.throwIfAborted();
                 if (!matchResult.match) {
@@ -1158,6 +1161,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                         //handledShiftedPlay = true;
                     } catch (e) {
                         currQueuedPlay.play.scrobble = {
+                            createdAt: dayjs()
                         };
 
                         const submitError = findCauseByReference(e, ScrobbleSubmitError);
@@ -1210,7 +1214,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 queueState.error = queueError;
                 await this.playRepo.updateById(currQueuedPlay.id, {state: 'failed', error: queueError, play: currQueuedPlay.play});
                 currQueuedPlay.state = 'failed';
-                currQueuedPlay.error = queueError;
+                //currQueuedPlay.error = queueError;
             } else {
                 await this.queueRepo.updateById(queueState.id, {queueStatus: 'completed'});
                 await this.playRepo.updateById(currQueuedPlay.id, {state: successState ?? 'scrobbled', play: currQueuedPlay.play});
@@ -1314,15 +1318,14 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         //     return [false];
         // }
 
-        let deadQueueState: QueueStateSelect;
-        let deadScrobble: PlaySelectWithQueueStates = await this.playRepo.findByUid(uid, {hydrate: ['asPlay']});
+        const deadScrobble: PlaySelectWithQueueStates = await this.playRepo.findByUid(uid, {hydrate: ['asPlay']});
         if(deadScrobble === undefined) {
             throw new Error(`Play ${uid} does not exist for ${this.name}`);
         }
         if(deadScrobble.state === 'scrobbled') {
             throw new Error(`Play ${uid} is already scrobbled.`);
         }
-        deadQueueState = deadScrobble.queueStates.find(x => x.queueName === CLIENT_DEAD_QUEUE);
+        const deadQueueState: QueueStateSelect = deadScrobble.queueStates.find(x => x.queueName === CLIENT_DEAD_QUEUE);
         if(deadQueueState === undefined) {
             throw new Error(`Play ${uid} is not currently queued in dead letter.`);
         }
@@ -1352,7 +1355,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 }
 
                 this.queueRepo.updateById(deadQueueState.id, {retries: deadQueueState.retries + 1, error: e, updatedAt: dayjs(), queueStatus: 'failed'});
-                this.playRepo.updateById(deadScrobble.id, {error: e});
+                //this.playRepo.updateById(deadScrobble.id, {error: e});
                 // deadScrobble.retries++;
                 // deadScrobble.error = messageWithCauses(e);
                 // deadScrobble.lastRetry = dayjs();
@@ -1365,18 +1368,23 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         const {summary, ...matchResult} = await this.existingScrobble(deadScrobble.play, historicalPlays);
         deadScrobble.play.scrobble = {
             ...(deadScrobble.play.scrobble ?? {}),
-            match: matchResult
+            match: matchResult,
+            createdAt: dayjs()
         }
         if(!matchResult.match) {
             const transformedScrobble = await this.transformPlay(deadScrobble.play, TRANSFORM_HOOK.postCompare);
             signal?.throwIfAborted();
             try {
                 const scrobbledPlay = await this.scrobble(transformedScrobble);
+                deadScrobble.play = scrobbledPlay;
                 await this.addScrobbledTrack(scrobbledPlay);
+                this.playRepo.updateById(deadScrobble.id, {play: deadScrobble.play});
+                this.queueRepo.updateById(deadQueueState.id, {error: null, updatedAt: dayjs(), queueStatus: QUEUE_STATUS_COMPLETED});
                 this.removeDeadLetterScrobble(deadScrobble, 'scrobbled', true);
             } catch (e) {
                 deadScrobble.play.scrobble = {
-                    ...(deadScrobble.play.scrobble ?? {})
+                    ...(deadScrobble.play.scrobble ?? {}),
+                    createdAt: dayjs()
                 }
                 const submitError = findCauseByReference(e, ScrobbleSubmitError);
                 if(submitError !== undefined) {
@@ -1389,7 +1397,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 }
 
                 this.queueRepo.updateById(deadQueueState.id, {retries: deadQueueState.retries + 1, error: e, updatedAt: dayjs(), queueStatus: 'failed'});
-                this.playRepo.updateById(deadScrobble.id, {error: e});
+                this.playRepo.updateById(deadScrobble.id, {play: deadScrobble.play});
                 // deadScrobble.retries++;
                 // deadScrobble.error = messageWithCauses(e);
                 // deadScrobble.lastRetry = dayjs();
@@ -1399,6 +1407,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 return [false, deadScrobble];
             }
         } else {
+            this.playRepo.updateById(deadScrobble.id, {play: deadScrobble.play});
             this.deadLogger.verbose(`Looks like ${buildTrackString(deadScrobble.play)} was already scrobbled!\n${summary}`);
             this.removeDeadLetterScrobble(deadScrobble, 'duped', true);
         }
