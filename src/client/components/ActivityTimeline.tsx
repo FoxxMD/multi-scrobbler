@@ -1,4 +1,4 @@
-import { ComponentProps, useState, Fragment } from "react"
+import React, { ComponentProps, useState, Fragment } from "react"
 import { Accordion, Timeline, Icon, Span, Stack, Heading, Card, Box, Tabs, Skeleton, SkeletonCircle, SkeletonText, HTMLChakraProps } from '@chakra-ui/react';
 import { ComponentType, ErrorLike, JsonPlayObject, PlayActivity } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
@@ -21,7 +21,7 @@ import { TimelineErrorIcon } from "./timeline/TimelineIcon";
 import { Muted } from "./Typography";
 import { PlayApiCommonDetailed } from "../../core/Api";
 import { MSErrorBoundary } from "./ErrorBoundary";
-import { timelineTextFormatting } from "../utils/ComponentUtils";
+import { activityTransformHasIssue, timelineTextFormatting } from "../utils/ComponentUtils";
 
 
 export interface ActivityDetailProps {
@@ -104,6 +104,18 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
         }
     }
 
+    let transformVerb: string = 'Transformed Play';
+
+    const transformIssue = activityTransformHasIssue(props.activity);
+    let transformResult: React.JSX.Element | undefined;
+    if(transformIssue === 'error') {
+        transformVerb = 'Transforming Play';
+        transformResult = <Span> resulted in <Span color="red.solid">an error</Span></Span>;
+    } else if(transformIssue === 'warn') {
+        transformVerb = 'Transforming Play';
+        transformResult = <Span> resulted in <Span color="orange.solid">warnings</Span></Span>;
+    }
+
     return (
         <MSErrorBoundary>
         <Timeline.Root variant="subtle" size="lg">
@@ -158,7 +170,7 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                     <Timeline.Content gap="4">
                         <Timeline.Title>
                             <MSCollapsible
-                                indicator={<Span {...timelineTextFormatting}>Transformed Play <Span color="fg.muted">using configured Rules</Span></Span>}
+                                indicator={<Span {...timelineTextFormatting}>{transformVerb} <Span color="fg.muted">using configured Rules</Span>{transformResult}</Span>}
                                 defaultOpen={collapsibleOpen}
                                 timeline>
                                 <Card.Root bgColor="bg.muted" size="sm">

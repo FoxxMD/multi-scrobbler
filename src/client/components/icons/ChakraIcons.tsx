@@ -1,6 +1,8 @@
 import {
     LuChevronRight,
     LuChevronLeft,
+    LuCircleAlert,
+    LuTriangleAlert,
     LuActivity,
     LuGithub,
     LuTerminal,
@@ -45,7 +47,13 @@ export const makeIconButton = (Icon: IconType) => (props: PropsWithChildren<Comp
         </IconButton>
     );
 }
-export const makeChakraIcon = (IconComponent: IconType) => (props: ComponentProps<typeof Icon> & { iconProps?: IconBaseProps }) => <Icon {...props}><IconComponent {...props.iconProps}/></Icon>
+export const makeChakraIcon = (IconComponent: IconType) => (props: ComponentProps<typeof Icon> & { iconProps?: IconBaseProps }) => {
+    const {
+        iconProps,
+        ...rest
+    } = props;
+    return <Icon {...rest}><IconComponent {...iconProps}/></Icon>
+}
 
 export const ChevronRight = LuChevronRight;
 export const ChevronRightButton = (props: ComponentProps<typeof IconButton>) => (
@@ -164,3 +172,7 @@ export const UpdatedIcon = makeChakraIcon(LuCircleArrowUp);
 
 export const CopyIcon = makeChakraIcon(LuCopy);
 export const CopyIconButton = makeIconButton(LuCopy);
+
+export const ExclamationCircleIcon = makeChakraIcon(LuCircleAlert);
+
+export const ExclamationTriangleIcon = makeChakraIcon(LuTriangleAlert);

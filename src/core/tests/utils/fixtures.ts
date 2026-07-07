@@ -191,23 +191,23 @@ export const generateLifecycleStep = (play: PlayObject, opts: GenerateLifecycleO
     if(error === true) {
       step.flowResult = 'stop';
       step.flowReason = 'Error encountered while transforming';
-      step.error = new Error('Failed to do something', {cause: new Error('Oops it borked.')});
+      step.error = serializeError(new Error('Failed to do something', {cause: new Error('Oops it borked.')}));
     } else if(error === 'prereq') {
       step.flowResult = 'stop';
       step.flowKnownState = 'prereq';
       step.flowReason = 'Transform could not be completed due to prerequisite failure';
-      step.error = mergeSimpleError(new StagePrerequisiteError('No matches returned from Musicbrainz API', {shortStack: true, cause: new SimpleError('Results were empty')}));
+      step.error = serializeError(mergeSimpleError(new StagePrerequisiteError('No matches returned from Musicbrainz API', {shortStack: true, cause: new SimpleError('Results were empty')})));
     } else if(error === 'stop') {
       step.flowResult = 'stop';
     } else if(error === 'continuewitherror') {
       step.flowResult = 'continue';
       step.flowReason = 'Transform encountered an error but continuing due to onFailure: continue';
-      step.error = mergeSimpleError(new SkipTransformStageError('An error that was an okay to continue with'));
+      step.error = serializeError(mergeSimpleError(new SkipTransformStageError('An error that was an okay to continue with')));
     } else {
       step.flowResult = 'continue';
       step.flowKnownState = 'skip';
       step.flowReason = `Stage ${name} was skipped`;
-      step.error = mergeSimpleError(new SkipTransformStageError('No desired MBIDs were missing', {shortStack: true}));
+      step.error = serializeError(mergeSimpleError(new SkipTransformStageError('No desired MBIDs were missing', {shortStack: true})));
     }
 
     return [step, play];

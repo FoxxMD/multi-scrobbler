@@ -1,27 +1,23 @@
-import React, { ComponentProps, useState, Fragment, useEffect } from "react"
-import { Accordion, For, Span, Code, Alert, Stack, Text, Box, AbsoluteCenter, Button, Clipboard, Separator, HStack, Flex, Badge, IconButton, Container, Icon, useAccordionItemContext, Skeleton, SkeletonText, Collapsible, BadgeProps } from '@chakra-ui/react';
-import { CLIENT_DEAD_QUEUE, ComponentType, QUEUE_NAMES, Second } from "../../core/Atomic";
+import React, { useState, Fragment, useEffect } from "react"
+import { Accordion, Span, Code, Alert, Stack, Box, Separator, HStack, Flex, useAccordionItemContext, Skeleton, SkeletonText, Collapsible, BadgeProps } from '@chakra-ui/react';
+import { CLIENT_DEAD_QUEUE, ComponentType, Second } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
 import { ErrorAlert } from "./ErrorAlert";
-import { AiOutlineExclamationCircle } from "react-icons/ai";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { ExpandCollapse } from "./ExpandCollapse";
-import { MsSseEvent, PlayApiCommon, PlayApiCommonDetailed, SortPlaysBy, SortPlaysByProps } from "../../core/Api";
-import { InfiniteData, QueryFunctionContext, QueryOptions, queryOptions, SuspenseQueriesOptions, useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
-import ky from 'ky';
-import { baseUrl } from "../utils";
+import { MsSseEvent, PlayApiCommonDetailed, SortPlaysByProps } from "../../core/Api";
+import { InfiniteData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ShortDateDisplay } from "./DateDisplay";
 import { TextMuted } from "./TextMuted";
-import { VscDebugRestart } from "react-icons/vsc";
 import { EphemeralElement, PlayStateBadge } from "./Badges";
 import { MarkOptional } from "ts-essentials";
-import { QueryPlaysOpts, QueryPlaysOptsJson } from "../../backend/common/database/drizzle/repositories/PlayRepository";
+import { QueryPlaysOptsJson } from "../../backend/common/database/drizzle/repositories/PlayRepository";
 import { tanQueries } from "../queries";
 import { PaginatedResponse } from "../../backend/common/database/drizzle/repositories/BaseRepository";
 import { LuChevronRight } from "react-icons/lu";
 import { useSSEContext, useSSEEvent } from "@flamefrontend/sse-runtime-react";
-import { DebugCopy, InsertedIcon, RetryButton, UpdatedIcon } from "./icons/ChakraIcons";
-import dayjs from "dayjs";
+import { DebugCopy, ExclamationCircleIcon, ExclamationTriangleIcon, InsertedIcon, RetryButton, UpdatedIcon } from "./icons/ChakraIcons";
+import { activityTimelineHasIssue } from "../utils/ComponentUtils";
 
 type UseActivityQueryOptions = {
     msQuery?: QueryPlaysOptsJson
@@ -238,9 +234,18 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
 
     const [collapsibleOpen, setCollapsibleOpen] = useState(undefined);
 
+    let timelineStatusIcon: React.JSX.Element | undefined;
+    const timelineIssue = activityTimelineHasIssue(activity);
+    if(timelineIssue === 'error') {
+        timelineStatusIcon = <ExclamationCircleIcon size="sm" color="red.focusRing"/>;
+    } else if(timelineIssue === 'warn') {
+        timelineStatusIcon = <ExclamationTriangleIcon size="sm" color="yellow.focusRing"/>;
+    }
+
     return (
         <Stack gap="2">
-        <ActivityErrorSummary activity={props.activity}/>
+        {/* <ActivityErrorSummary activity={props.activity}/> */}
+        {error !== undefined && error !== null ? <ErrorAlert error={error}/> : null}
         <Accordion.Root width="full" variant="enclosed" collapsible multiple>
             <Accordion.Item value="info">
                 <Accordion.ItemTrigger>
@@ -257,9 +262,7 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
                 <Flex justify="flex-start">
                     <Accordion.ItemTrigger>
                         <Accordion.ItemIndicator />
-                        Timeline  {error !== undefined && error !== null ? (<Icon size="sm" color="red.focusRing">
-                            <AiOutlineExclamationCircle />
-                        </Icon>) : null}
+                        Timeline  {timelineStatusIcon}
                     </Accordion.ItemTrigger>
                     <Stack style={{
                         paddingBlock: "var(--accordion-padding-y)",
