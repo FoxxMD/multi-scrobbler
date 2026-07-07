@@ -20,7 +20,7 @@ import TransformerManager from "./transforms/TransformerManager.js";
 import { getRoot } from "../ioc.js";
 import { nanoid } from "nanoid";
 import { isDebugMode } from "../utils.js";
-import { findCauseByReference } from "../utils/ErrorUtils.js";
+import { findCauseByFunc, findCauseByReference } from "../utils/ErrorUtils.js";
 import { hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.js";
 import { playContentInvariantTransform } from "../utils/PlayComparisonUtils.js";
 import { MSCache } from "./Cache.js";
@@ -448,9 +448,12 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         step.stageName = stageName;
 
         if (err !== undefined) {
-            if ('lifecycleInputs' in err) {
-                step.inputs = clone(err.lifecycleInputs) as LifecycleInput[];
-                delete err.lifecycleInputs;
+            const lifecycleErrorContext = findCauseByFunc(err, (e) => 'lifecycleInputs' in e && e.lifecycleInputs !== undefined);
+            if (lifecycleErrorContext !== undefined) {
+                // @ts-expect-error it does exist
+                step.inputs = clone(lifecycleErrorContext.lifecycleInputs) as LifecycleInput[];
+                // @ts-expect-error it does exist
+                delete lifecycleErrorContext.lifecycleInputs;
             }
             const merged = mergeSimpleError(err);
             step.error = merged;
