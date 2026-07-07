@@ -19,7 +19,7 @@ export interface LifeycleStepsTimelineProps extends MSCollapsibleExternalProps {
     original: JsonPlayObject
 }
 
-const diffElements = (original: JsonPlayObject, steps: LifecycleStep[]): [React.JSX.Element[], JsonPlayObject?] => {
+export const diffElements = (original: JsonPlayObject, steps: LifecycleStep[]): [React.JSX.Element[], JsonPlayObject?] => {
 
     let currentPlay: JsonPlayObject = structuredClone(original); // JSON.parse(JSON.stringify(original));
     let patchFailed = false;
@@ -105,7 +105,7 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                 iconProps: Record<string, any>,
                 summary: React.JSX.Element,
                 alertStatus: "error" | "info" | "warning" | "success" | "neutral";
-                if(error === undefined) {
+                if(error === undefined && error !== null) {
                     timelineIcon = <BsStoplights/>;
                     iconProps = flowResult === 'continue' ? {color: "green.focusRing"} : {color: "red.focusRing"};
                     summary = <Fragment><Muted>was</Muted> completed{flowResult === 'stop' ? <Fragment><Muted> and </Muted> stopped <Muted> due to onSuccess condition</Muted></Fragment> : null}</Fragment>;
@@ -151,7 +151,7 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                                 defaultOpen={collapsibleOpen}
                                 disableUntil="md"
                                 timeline>
-                                {error !== undefined ? <ErrorAlert status={alertStatus} error={error}/> : null}
+                                {error !== undefined && error !== null ? <ErrorAlert status={alertStatus} error={error}/> : null}
                             <Stack gap="2">
                                 {diffs[index] !== null ? (
                                     <Fragment>

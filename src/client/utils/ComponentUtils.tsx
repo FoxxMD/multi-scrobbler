@@ -1,6 +1,6 @@
 import { Card, HTMLChakraProps } from '@chakra-ui/react';
 import { PlayApiCommon, PlayApiCommonDetailed } from '../../core/Api';
-import { QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED } from '../../core/Atomic';
+import { LifecycleStep, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED } from '../../core/Atomic';
 
 export const cardHeaderSeparator: Card.HeaderProps = {
     borderBottomWidth: "1px",
@@ -12,13 +12,8 @@ export const timelineTextFormatting: HTMLChakraProps<"span"> = {
     textWrap: "balance" 
 }
 
-export const activityTransformHasIssue = (activity: PlayApiCommon): 'warn' | 'error' | undefined => {
-    const {
-        play: {
-            lifecycle = [],
-        } = {},
-    } = activity;
-    for(const step of lifecycle) {
+export const activityTransformHasIssue = (steps: LifecycleStep[]): 'warn' | 'error' | undefined => {
+    for(const step of steps) {
         if(step.flowKnownState === 'prereq') {
             return 'warn';
         }
@@ -36,13 +31,14 @@ export const activityTimelineHasIssue = (activity: PlayApiCommonDetailed): 'warn
     const {
         queueStates = [],
         play: {
+            lifecycle = [],
             scrobble: {
                 error: scrobbleError,
                 warnings: scrobbleWarnings = []
             } = {},
         } = {},
     } = activity;
-    const transformIssue = activityTransformHasIssue(activity);
+    const transformIssue = activityTransformHasIssue(lifecycle);
     if(transformIssue !== undefined) {
         return transformIssue;
     }

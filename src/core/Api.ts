@@ -34,6 +34,7 @@ export interface QueueStateApi {
     retries: number
     error?: ErrorLike
     updatedAt: string
+    createdAt: string
 }
 
 export interface PlayApiCommonDetailed extends PlayApiCommon {
