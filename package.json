@@ -210,6 +210,7 @@
     "clsx": "^2.1.1",
     "drizzle-kit": "^1.0.0-rc.2-c5a84d1",
     "eslint": "^10.6.0",
+    "eslint-plugin-mocha": "^11.3.0",
     "eslint-plugin-prefer-arrow-functions": "^3.2.4",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-storybook": "^10.3.6",

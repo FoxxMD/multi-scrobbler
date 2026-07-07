@@ -10,6 +10,7 @@ import globals from 'globals';
 import tsEslint from 'typescript-eslint';
 import arrow from 'eslint-plugin-prefer-arrow-functions';
 import hooks from 'eslint-plugin-react-hooks';
+import mochaPlugin from 'eslint-plugin-mocha';
 
 const defaultRules = {
     'no-useless-catch': 'off',
@@ -68,5 +69,22 @@ export default defineConfig([
             }
         },
         files: ['src/client/**/*.tsx'],
+    },
+    {
+        extends: [
+            mochaPlugin.configs.recommended,
+        ],
+        languageOptions: {
+            globals: {
+                ...globals.node,
+            }
+        },
+        files: ['src/backend/tests/**/*.ts'],
+        rules: {
+            ...defaultRules,
+                "prefer-arrow-functions/prefer-arrow-functions": ["off"],
+                "@typescript-eslint/no-unused-expressions": 'off',
+                'mocha/max-top-level-suites': 'off'
+        },
     }
 ]);
