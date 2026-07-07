@@ -78,6 +78,7 @@ export const generateQueueStateApi = (data: Partial<QueueStateApi>): QueueStateA
         queueStatus: faker.helpers.arrayElement(QUEUE_STATUSES),
         updatedAt: cAt,
         retries: 0,
+        createdAt: cAt,
         ...data
     }
 }

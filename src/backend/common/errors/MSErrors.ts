@@ -2,11 +2,13 @@ import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import mergeErrorCause from 'merge-error-cause';
 import { findCauseByFunc, isAbortReasonErrorLike } from "../../utils/ErrorUtils.js";
 import { UpstreamError, UpstreamErrorOptions } from "./UpstreamError.js";
-import { isAbortError } from "abort-controller-x";
-import {addKnownErrorConstructor} from 'serialize-error';
+import {addKnownErrorConstructor, serializeError} from 'serialize-error';
 
 export abstract class NamedError extends Error {
     public abstract name: string;
+    public toJSON() {
+        return serializeError(this);
+    }
 }
 
 export abstract class StageError extends NamedError {}
@@ -45,6 +47,9 @@ const STACK_AT_REGEX = new RegExp(/[\n\r]\s*at/);
 export class SimpleError extends Error implements HasSimpleError {
     simple: boolean;
     name = 'SimpleError';
+    public toJSON() {
+        return serializeError(this);
+    }
 
     stackShortened: boolean = false;
 
@@ -113,7 +118,11 @@ export const mergeSimpleError = (err: Error): Error => {
         // mergeErrorCause mutates the argument
         // and we want to be able to do more cause/error parsing after merging for logging
         // so give it a copy instead of the original
-        return mergeErrorCause(structuredClone(err));
+        const mergedErr = mergeErrorCause(structuredClone(err));
+        if(!('toJson' in mergedErr)) {
+            // @ts-expect-error this is used by serialize error with out custom errors
+            mergedErr.toJSON = () => serializeError(mergedErr);
+        }
     }
     return err;
 }

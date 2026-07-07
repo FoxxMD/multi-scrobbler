@@ -8,7 +8,7 @@ import { diffObjects } from '../../DataUtils.js';
 import { existingScrobble } from '../../../backend/utils/PlayComparisonUtils.js';
 import { UpstreamError } from '../../../backend/common/errors/UpstreamError.js';
 import { playToListenPayload } from '../../../backend/common/vendor/listenbrainz/lzUtils.js';
-import { mergeSimpleError, SimpleError, SkipTransformStageError, StagePrerequisiteError } from '../../../backend/common/errors/MSErrors.js';
+import { mergeSimpleError, SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from '../../../backend/common/errors/MSErrors.js';
 import dayjs, { Dayjs } from 'dayjs';
 import { TransformHook } from '../../../backend/common/infrastructure/Transform.js';
 import { serializeError } from 'serialize-error';
@@ -192,7 +192,7 @@ export const generateLifecycleStep = (play: PlayObject, opts: GenerateLifecycleO
     if(error === true) {
       step.flowResult = 'stop';
       step.flowReason = 'Error encountered while transforming';
-      step.error = serializeError(new Error('Failed to do something', {cause: new Error('Oops it borked.')}));
+      step.error = new StageTransformError('foo', 'Failed to do something', {cause: new Error('Oops it borked.')});
     } else if(error === 'prereq') {
       step.flowResult = 'stop';
       step.flowKnownState = 'prereq';
