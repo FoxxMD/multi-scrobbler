@@ -394,25 +394,7 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
         {id: 'new', dt: dayjs(seenAt)},
     ];
 
-    const ingressQueue = queueStates.find(x => x.queueName === CLIENT_INGRESS_QUEUE);
-    if(ingressQueue !== undefined) {
-        timelineItems.push({id: 'queue-ingress-created', dt: dayjs(ingressQueue.createdAt)});
-        timelineItems.push({id: 'queue-ingress-updated', dt: dayjs(ingressQueue.updatedAt)});
-    }
-    const deadqueue = queueStates.find(x => x.queueName === CLIENT_DEAD_QUEUE);
-    if(deadqueue !== undefined) {
-        timelineItems.push({id: 'queue-dead-created', dt: dayjs(deadqueue.createdAt)});
-        timelineItems.push({id: 'queue-dead-updated', dt: dayjs(deadqueue.updatedAt)});
-    }
-
-    if(match !== undefined) {
-        timelineItems.push({id: 'scrobble-match', dt: dayjs(match.createdAt)});
-    }
-    if(payload !== undefined) {
-        timelineItems.push({id: 'scrobble-response', dt: dayjs(scrobbleResultCreatedAt ?? match.createdAt)})
-    }
-
-    // group transforms by hook
+        // group transforms by hook
     const transformGroups: Record<string, LifecycleStep[]> = steps.length === 0  ? {} : steps.reduce((acc, curr) => {
         if(acc[curr.hook] === undefined) {
             acc[curr.hook] = [];
@@ -428,7 +410,30 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
         timelineItems.push(d);
     }
 
+    const ingressQueue = queueStates.find(x => x.queueName === CLIENT_INGRESS_QUEUE);
+    if(ingressQueue !== undefined) {
+        timelineItems.push({id: 'queue-ingress-created', dt: dayjs(ingressQueue.createdAt)});
+        timelineItems.push({id: 'queue-ingress-updated', dt: dayjs(ingressQueue.updatedAt)});
+    }
+    const deadqueue = queueStates.find(x => x.queueName === CLIENT_DEAD_QUEUE);
+    if(deadqueue !== undefined) {
+        timelineItems.push({id: 'queue-dead-created', dt: dayjs(deadqueue.createdAt)});
+        timelineItems.push({id: 'queue-dead-updated', dt: dayjs(deadqueue.updatedAt)});
+    }
+
+    if(match !== undefined) {
+        timelineItems.push({id: 'scrobble-match', dt: dayjs(match.createdAt)});
+    }
+
+    // since scrobbleResultCreatedAt has just been implemented older play data will not have it
+    // and if match was never run, due to error earlier in lifecycle, we need to fallback to oldest event + 1s
     timelineItems.sort((a, b) => sortByNewestDate(b.dt, a.dt));
+
+    if(payload !== undefined) {
+        timelineItems.push({id: 'scrobble-response', dt: dayjs(scrobbleResultCreatedAt ?? match?.createdAt ?? timelineItems[timelineItems.length - 1].dt.add(5, 's'))});
+        // then, make sure added payload is in the right order
+        timelineItems.sort((a, b) => sortByNewestDate(b.dt, a.dt));
+    }
 
     const timelineElements: React.JSX.Element[] = timelineItems.map((x) => {
         const timelineKey = `${x.id}-${x.dt.unix()}`;
