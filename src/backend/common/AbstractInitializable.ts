@@ -1,9 +1,9 @@
-import { childLogger, Logger } from "@foxxmd/logging";
+import { Logger } from "@foxxmd/logging";
 import {truncateStringToLength } from "../../core/StringUtils.js";
 import { hasNodeNetworkException } from "./errors/NodeErrors.js";
 import { hasUpstreamError } from "./errors/UpstreamError.js";
 import { WebhookPayload } from "./infrastructure/config/health/webhooks.js";
-import { AuthCheckError, BuildDataError, ConnectionCheckError, ParseCacheError, PostInitError, StageError, TransformRulesError } from "./errors/MSErrors.js";
+import { AuthCheckError, BuildDataError, ConnectionCheckError, ParseCacheError, PostInitError, StageError } from "./errors/MSErrors.js";
 import { messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.js";
 import { spawn } from 'abort-controller-x';
 
@@ -19,6 +19,8 @@ export default abstract class AbstractInitializable {
     databaseOK?: boolean | null;
     connectionOK?: boolean | null;
     cacheOK?: boolean | null;
+    error?: Error;
+    warning?: Error;
 
     protected initializedOnce: boolean = false;
     initializing: boolean = false;
@@ -86,12 +88,16 @@ export default abstract class AbstractInitializable {
                 } catch (e) {
                     throw new PostInitError('Error occurred during post-initialization hook', {cause: e});
                 }
+                this.error = undefined;
+                this.warning = undefined;
                 return true;
             } catch(e) {
                 if(notify) {
                     await this.notify({identifier: this.getIdentifier(), title: notifyTitle, message: truncateStringToLength(500)(messageWithCausesTruncatedDefault(e)), priority: 'error'});
                 }
-                throw new Error('Initialization failed', {cause: e});
+                const initError = new Error('Initialization failed', {cause: e});
+                this.error = initError;
+                throw initError;
             } finally {
                 this.initializing = false;
             }

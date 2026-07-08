@@ -37,9 +37,10 @@ import { ClientType } from "./infrastructure/config/client/clients.js";
 import { SourceType } from "./infrastructure/config/source/sources.js";
 import { DrizzleComponentRepository } from "./database/drizzle/repositories/ComponentRepository.js";
 import dayjs from "dayjs";
-import { COMPONENT_STATE, ComponentCommonApi, ComponentState, PlayApiCommonDetailed } from "../../core/Api.js";
+import { COMPONENT_STATE, ComponentCommonApi, ComponentCommonApiJson, ComponentState, PlayApiCommonDetailed } from "../../core/Api.js";
 import { WebhookPayload } from "./infrastructure/config/health/webhooks.js";
 import { MarkRequired } from "ts-essentials";
+import { serializeError } from "serialize-error";
 
 export type AbstractComponentConfig = (CommonClientConfig | CommonSourceConfig) & { transformManager?: TransformerManager };
 
@@ -223,7 +224,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             await repo.retentionCleanup(this.componentType, this.retentionOpts);
             this.setStatus('Retention cleanup finished');
         } catch (e) {
-            this.logger.warn(new Error('Failed to do retention cleanup', {cause: e}));
+            const retentionErr = new Error('Failed to do retention cleanup', {cause: e});
+            this.warning = retentionErr;
+            this.logger.warn(retentionErr);
             this.setStatus('Retention cleanup failed');
         }
     }
@@ -522,7 +525,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     public abstract getRunningState(): ComponentState
 
-    public getApiData(): Omit<ComponentMinimalSelect, 'type' | 'countLive'> & Pick<ComponentCommonApi, 'state'>  {
+    public getApiData(): Omit<ComponentCommonApiJson, 'type' | 'countLive' | 'players'> & Pick<ComponentCommonApi, 'state' | 'error' | 'warning'>  {
         let state: ComponentState;
         if(!this.initializedOnce || this.initializing) {
             state = COMPONENT_STATE.INITIALIZING;
@@ -538,9 +541,11 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             state,
             mode: this.dbComponent.mode,
             countNonLive: this.dbComponent.countNonLive,
-            createdAt: this.dbComponent.createdAt,
-            lastReadyAt: this.dbComponent.lastReadyAt,
-            lastActiveAt: this.dbComponent.lastActiveAt,
+            createdAt: this.dbComponent.createdAt?.toISOString(),
+            lastReadyAt: this.dbComponent.lastReadyAt?.toISOString(),
+            lastActiveAt: this.dbComponent.lastActiveAt?.toISOString(),
+            error: this.error !== undefined && this.error instanceof Error ? serializeError(this.error) : this.error,
+            warning: this.warning !== undefined && this.warning instanceof Error ? serializeError(this.warning) : this.warning,
             ...this.additionalApiData()
         }
     }
@@ -555,7 +560,13 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         });
     }
 
-    protected emitComponentUpdate = <T = Partial<typeof this.getApiData>>(payload: T) => {
+    protected emitComponentUpdate = <T extends Partial<ReturnType<typeof this.getApiData>>>(payload: T) => {
+        if('error' in payload && payload.error instanceof Error) {
+            payload.error = serializeError(payload.error);
+        }
+        if('warning' in payload && payload.warning instanceof Error) {
+            payload.warning = serializeError(payload.warning);
+        }
         this.emitEvent('componentUpdate', payload);
     }
     protected emitPlayUpdate = (payload: MarkRequired<Partial<PlayApiCommonDetailed>, 'uid'>) => {

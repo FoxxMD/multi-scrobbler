@@ -15,7 +15,6 @@ import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 
 export default class DeezerSource extends AbstractSource {
     workingCredsPath;
-    error: any;
 
     requiresAuth = true;
     requiresAuthInteraction = true;

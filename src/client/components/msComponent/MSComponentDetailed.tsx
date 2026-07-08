@@ -147,7 +147,13 @@ export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof 
 
 export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, live?: boolean}) => {
     let sleepingRender: React.JSX.Element = null;
-    const {data} = props;
+    const {
+        data,
+        data: {
+            warning,
+            error
+        } = {}
+    } = props;
     const isSource = isComponentSourceApiJson(data)
     if(isSource) {
         const {
@@ -186,6 +192,8 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
             <Flex justifyContent="flex-end" rowGap="6" flexDirection="row-reverse" wrap="wrap">
                 <Box marginEnd="auto"><MSComponentStats {...props}/></Box>
             </Flex>
+            {error !== undefined && error !== null ? <ErrorAlert error={error}/> : undefined}
+            {warning !== undefined && warning !== null ? <ErrorAlert error={warning} status="warning"/> : undefined}
             <MSErrorBoundary>{props.live ? <PlayersContainerFetchable nowPlaying={isSource ? undefined : true} data={props.data}/> : <PlayersContainer nowPlaying={isSource ? undefined : true} data={props.data} live={props.live}/>}</MSErrorBoundary>
             <Heading size="3xl" width="100%">{isComponentTypeSource(props.data.mode) ? 'Plays' : 'Scrobbles'}</Heading>
             <MSErrorBoundary><ListContainerFilterable render="virtDynamic" componentType={props.data.mode} componentId={props.data.id}/></MSErrorBoundary>

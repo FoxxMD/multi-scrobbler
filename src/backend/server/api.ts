@@ -41,7 +41,7 @@ import { DrizzlePlayRepository, QueryPlaysOpts, QueryPlaysOptsJson } from "../co
 import { playSelectToDeadScrobble } from "../common/database/drizzle/entityUtils.js";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.js";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.js";
-import { ComponentClientApi, ComponentSourceApi, ComponentSourceApiJson } from "../../core/Api.js";
+import { ComponentClientApi, ComponentClientApiJson, ComponentSourceApi, ComponentSourceApiJson } from "../../core/Api.js";
 import { asDayjsHydratedObject } from "../../core/DataUtils.js";
 import { Dayjs } from "dayjs";
 import { asSerializablePlaySelect } from "../../core/PlayMarshalUtils.js";
@@ -206,7 +206,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
                 requiresAuthInteraction = false,
                 authed = false
             } = x;
-            const base: ComponentSourceApi = x.getApiData();
+            const base: ComponentSourceApiJson = x.getApiData();
             if(!x.isReady()) {
                 if(x.buildOK === false) {
                     base.status = 'Initializing Data Failed';
@@ -235,7 +235,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
                 authed = false,
                 scrobbling = false,
             } = x;
-            const base: ComponentClientApi = x.getApiData();
+            const base: ComponentClientApiJson = x.getApiData();
 
             if (!x.isReady()) {
                 if(x.buildOK === false) {

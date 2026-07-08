@@ -254,10 +254,12 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 'Heartbeat',
                 (): Promise<any> => {
                     return this.heartbeatTask().then(() => null).catch((err) => {
+                        this.error = err;
                         this.logger.error(err);
                     });
                 },
                 (err: Error) => {
+                    this.error = err;
                     this.logger.error(err);
                 }
             ), {id: 'heartbeat'}));
@@ -281,12 +283,14 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     (): Promise<any> => {
                         if(this.isReady()) {
                             return this.processDeadLetterQueue().then(() => null).catch((e) => {
+                                this.warning = e;
                                 this.logger.error(e);
                             })
                         }
                         return new Promise((resolve, reject) => resolve);
                     },
                     (err: Error) => {
+                        this.warning = err;
                         this.logger.error(err);
                     }
                 ), {id: 'dead'}));
@@ -426,7 +430,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
     }
 
-    public getApiData(): ComponentClientApi {
+    public getApiData(): ComponentClientApiJson {
         return {
             ...super.getApiData(),
             ...this.getComponentApiData(),
@@ -501,7 +505,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             const t = new AsyncTask('Playing Now', (): Promise<any> => {
                 return this.processingPlayingNow();
             }, (err: Error) => {
-                this.npLogger.error(new Error('Unexpected error while processing Now Playing queue', {cause: err}));
+                const npErr = new Error('Unexpected error while processing Now Playing queue', {cause: err});
+                this.npLogger.error(npErr);
+                this.warning = npErr;
+                this.emitComponentUpdate<Partial<ComponentClientApiJson>>({warning: npErr});
             });
 
             // even though we are processing every 5 seconds the interval that Now Playing is updated at, and that the queue is cleared on,
@@ -806,7 +813,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     }
                 }
             } catch (e) {
-                this.logger.warn(new SimpleError('Could not preload scrobbles', {cause: e, shortStack: true}));
+                const preloadErr = new SimpleError('Could not preload scrobbles', {cause: e, shortStack: true});
+                this.warning = preloadErr;
+                this.emitComponentUpdate<Partial<ComponentClientApiJson>>({warning: preloadErr});
+                this.logger.warn(preloadErr);
             }
         }
     }
@@ -973,17 +983,21 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
             await this.startScrobbling(signal);
         }).catch((e) => {
-            let status: string;
+            const componentUpdate: Partial<ComponentClientApiJson> = {
+                state: COMPONENT_STATE.IDLE
+            };
             if (isAbortError(e)) {
                 const err = generateLoggableAbortReason('Scrobble processing stopped', this.scrobbleQueueAbortController.signal);
                 this.logger.info(err);
                 this.logger.trace(e);
-                status = 'Processing cancelled';
+                componentUpdate.status = 'Processing cancelled';
             } else {
-                this.logger.warn(new Error('Scrobble processing stopped with error', { cause: e }));
-                status = 'Processing stopped with error';
+                const err = new Error('Scrobble processing stopped with error', { cause: e });
+                this.logger.warn(err);
+                componentUpdate.status = 'Processing stopped with error';
+                componentUpdate.warning = err;
             }
-            this.emitComponentUpdate<Partial<ComponentClientApiJson>>({state: COMPONENT_STATE.IDLE, status});
+            this.emitComponentUpdate<Partial<ComponentClientApiJson>>(componentUpdate);
         }).finally(() => {
             this.scrobbleQueueAbortController = undefined;
             this.scrobbleQueuePromise = undefined;
@@ -1021,11 +1035,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 if(!this.isUsable()) {
                     this.logger.warn('Stopping scrobble processing due to client no longer usable.');
                     await this.notify({title: `Processing Error`, message: `Encountered error while scrobble processing and client is no longer usable, stopping processing!. | Error: ${e.message}`, priority: 'error'});
-                    break;
+                    throw e;
                 } else if (this.authGated()) {
                     this.logger.warn('Stopping scrobble processing due to client no longer being authenticated.');
                     await this.notify({title: ` Processing Error`, message: `Encountered error while scrobble processing and client is no longer authenticated, stopping processing!. | Error: ${e.message}`, priority: 'error'});
-                    break;
+                    throw e;
                 } else if (this.scrobbleRetries < maxRetries) {
                     const delayFor = pollingBackoff(this.scrobbleRetries + 1, retryMultiplier);
                     this.logger.info(`Scrobble processing retries (${this.scrobbleRetries}) less than max processing retries (${maxRetries}), restarting processing after ${delayFor} second delay...`);
@@ -1034,6 +1048,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 } else {
                     this.logger.warn(`Scrobble processing retries (${this.scrobbleRetries}) equal to max processing retries (${maxRetries}), stopping processing!`);
                     await this.notify({title: `Processing Error`, message: `Encountered error while scrobble processing and retries (${this.scrobbleRetries}) are equal to max processing retries (${maxRetries}), stopping processing!. | Error: ${e.message}`, priority: 'error'});
+                    throw e;
                 }
                 this.scrobbleRetries++;
             }
@@ -1067,6 +1082,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         signal.throwIfAborted();
         this.logger.info('Scrobble processing started');
         this.emitEvent('statusChange', {status: 'Running'});
+        this.emitComponentUpdate<Partial<ComponentClientApiJson>>({state: COMPONENT_STATE.RUNNING});
 
         try {
             this.setStatus('Waiting for Plays from Sources');
@@ -1081,6 +1097,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 if(nextQueued !== undefined) {
                     while (nextQueued !== undefined) {
                         await this.processQueueCurrentScrobble(nextQueued, signal);
+                        if(this.error !== undefined) {
+                            // we made it through a scrobble without any issues so clear any issue we may have previously had
+                            this.error = undefined;
+                            this.emitComponentUpdate<Partial<ComponentClientApiJson>>({error: null});
+                        }
                         nextQueued = await this.playRepo.getQueueNext(CLIENT_INGRESS_QUEUE)
                     }
                     this.emitEvent('queueEmptied', {});
@@ -1095,6 +1116,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 this.logger.error(e);
             }
             this.emitEvent('statusChange', {status: 'Idle'});
+            this.emitComponentUpdate<Partial<ComponentClientApiJson>>({state: COMPONENT_STATE.IDLE});
             this.scrobbling = false;
             throw e;
         }
@@ -1825,16 +1847,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
 }
 
-export const nowPlayingUpdateByPlayDuration: NowPlayingUpdateThreshold = (play?: PlayObject) => {
-    if(play === undefined) {
-        31;
-    }
-    return (play?.data?.duration ?? 30) + 1;
-}
+export const nowPlayingUpdateByPlayDuration: NowPlayingUpdateThreshold = (play?: PlayObject) => (play?.data?.duration ?? 30) + 1
 
-export const shouldClearNPStatus = (data: SourcePlayerObj) => {
-    return [CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused].includes(data.status.calculated as ReportedPlayerStatus);
-}
+export const shouldClearNPStatus = (data: SourcePlayerObj) => [CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused].includes(data.status.calculated as ReportedPlayerStatus)
 
 export const playerInNPPlayingOnlyState = (data: SourcePlayerObj): [boolean, string] => {
     // for lower-interval update clients (like listenbrainz, lastfm) IE not real-time

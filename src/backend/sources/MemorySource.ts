@@ -29,7 +29,7 @@ import { AbstractPlayerState, createPlayerOptions, PlayerStateOptions } from "./
 import { GenericPlayerState } from "./PlayerState/GenericPlayerState.js";
 import { hashObject } from "../utils/StringUtils.js";
 import { useDebugValue } from "react";
-import { ComponentSourceApi } from "../../core/Api.js";
+import { ComponentSourceApi, ComponentSourceApiJson } from "../../core/Api.js";
 
 const EXPECTED_NON_DISCOVERED_REASON = 'not added because an identical play with the same timestamp was already discovered.';
 
@@ -179,7 +179,7 @@ export default class MemorySource extends AbstractSource {
         return record;
     }
 
-    public getApiData(): ComponentSourceApi {
+    public getApiData(): ComponentSourceApiJson {
         return {
             ...super.getApiData(),
             sot: this.playerSourceOfTruth,

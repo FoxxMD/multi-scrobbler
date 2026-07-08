@@ -159,11 +159,13 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 'Heartbeat',
                 (): Promise<any> => {
                     return this.heartbeatTask().then(() => null).catch((err) => {
+                        this.error = err;
                         this.logger.error(err);
                     });
                 },
                 (err: Error) => {
                     this.logger.error(err);
+                    this.error = err;
                 }
             ), {id: 'heartbeat'}));
         } else {
@@ -182,7 +184,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 await this.initialize({force: false, notify: true, notifyTitle: 'Could not initialize automatically'});
             } catch (e) {
                 this.logger.error(new Error('Could not initialize automatically', {cause: e}));
-                this.setStatus('Could not initialzie automatically');
+                this.setStatus('Could not initialize automatically');
                 return false;
             }
 
@@ -286,7 +288,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         }
     }
 
-    public getApiData(): ComponentSourceApi {
+    public getApiData(): ComponentSourceApiJson {
         return {
             ...super.getApiData(),
             ...this.getComponentApiData(),
@@ -528,8 +530,11 @@ export default abstract class AbstractSource extends AbstractComponent implement
             try {
                 await this.initialize(options);
             } catch (e) {
-                this.logger.error(new Error('Cannot start polling because Source is not ready', {cause: e}));
+                const err = new Error('Cannot start polling because Source is not ready', {cause: e});
+                this.logger.error(err);
                 this.setStatus('Polling Error');
+                this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({error: err});
+                this.error = err;
                 if(notify) {
                     await this.notify( {title: `Polling Error`, message: `Cannot start polling because Source is not ready: ${truncateStringToLength(500)(messageWithCausesTruncatedDefault(e))}`, priority: 'error'});
                 }
@@ -569,17 +574,22 @@ export default abstract class AbstractSource extends AbstractComponent implement
             });
             await this.startPolling(signal);
         }).catch((e) => {
-            let status: string;
+            const componentUpdate: Partial<ComponentSourceApiJson> = {
+                state: COMPONENT_STATE.IDLE
+            };
             if (isAbortError(e)) {
                 const err = generateLoggableAbortReason('Polling stopped', this.abortController.signal);
                 this.logger.info(err);
                 this.logger.trace(e)
-                status = 'Polling cancelled';
+                componentUpdate.status = 'Polling cancelled';
             } else {
-                this.logger.warn(new Error('Polling stopped with error', { cause: e }));
-                status = 'Polling stopped with error';
+                const err = new Error('Polling stopped with error', { cause: e });
+                this.logger.warn(err);
+                componentUpdate.status = 'Polling stopped with error';
+                componentUpdate.warning = err;
+                this.warning = err;
             }
-            this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({state: COMPONENT_STATE.IDLE, status});
+            this.emitComponentUpdate<Partial<ComponentSourceApiJson>>(componentUpdate);
         }).finally(() => {
             this.abortController = undefined;
             this.pollingPromise = undefined;
@@ -764,7 +774,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 this.logger[lastActivityLogLevel](activityMsgs.join(' | '));
                 this.setWakeAt(pollFrom.add(sleepTime, 'seconds'));
                 this.setIsSleeping(true);
-                this.emitComponentUpdate({sleeping: true, wakeAt: this.getWakeAt().toISOString()})
+                this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({sleeping: true, wakeAt: this.getWakeAt().toISOString()})
                 // set last active before we sleep
                 this.componentRepo.updateById(this.dbComponent.id, {lastActiveAt: dayjs(), lastReadyAt: dayjs()});
                 while(dayjs().isBefore(this.getWakeAt())) {
@@ -772,7 +782,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                    await delay(signal, 500);
                 }
                 this.setIsSleeping(false);
-                this.emitComponentUpdate({sleeping: false});
+                this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({sleeping: false});
                 // if we have made it this far in the loop we can reset poll retries
                 this.pollRetries = 0;
             }
@@ -787,7 +797,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             throw e;
         } finally {
             this.setIsSleeping(false);
-            this.emitComponentUpdate({sleeping: false});
+            this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({sleeping: false});
         }
     }
 

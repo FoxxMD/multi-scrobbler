@@ -254,7 +254,11 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         const where = buildPlayWhere({componentId: args.componentId ?? this.componentId,  ...rest});
   
         // https://github.com/drizzle-team/drizzle-orm/issues/5218#issuecomment-3854900241
-        const filter = relationsFilterToSQL(plays, where, relations.plays.relations, relations);
+        const filter = relationsFilterToSQL(plays,
+            // @ts-expect-error don't have a good way to type this yet
+            where,
+            relations.plays.relations,
+            relations);
         // https://github.com/drizzle-team/drizzle-orm/discussions/3119#discussioncomment-16379557
         const count = await this.db.$count(plays, filter);
 
