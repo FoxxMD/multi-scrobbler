@@ -8,7 +8,7 @@ import { sseProviderOptions } from "../../client/AppNext.js";
 import {Provider} from "../../client/components/Provider.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
 import { generateClientApiJson, generateSourceApiJson, generateSourcePlayerJson, LOG_MESSAGE_FIXTURE, logsApiResponse } from "../../core/tests/utils/apiFixtures.js";
-import { MsSseEvent } from "../../core/Api.js";
+import { type MsSseEvent } from "../../core/Api.js";
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({

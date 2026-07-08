@@ -1,10 +1,10 @@
-import { DbConcrete } from "./drizzle/drizzleUtils.js";
+import { type DbConcrete } from "./drizzle/drizzleUtils.js";
 import { loggerNoop } from "../MaybeLogger.js";
 import * as path from 'path';
-import { childLogger, Logger } from "@foxxmd/logging";
+import { childLogger, type Logger } from "@foxxmd/logging";
 import { projectDir } from "../index.js";
 import { Migrator } from 'sqlite-up';
-import { MigrationStatus } from "../infrastructure/Atomic.js";
+import { type MigrationStatus } from "../infrastructure/Atomic.js";
 
 export interface MigrateBaseContext {
     db: DbConcrete

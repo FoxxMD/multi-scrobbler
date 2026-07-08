@@ -1,10 +1,10 @@
-import { Logger } from "drizzle-orm";
-import { DrizzleBaseRepository, DrizzleRepositoryOpts } from "./BaseRepository.js";
-import { DbConcrete } from "../drizzleUtils.js";
-import { ComponentNew, ComponentSelect, FindWhere } from "../drizzleTypes.js";
+import { type Logger } from "drizzle-orm";
+import { DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.js";
+import { type DbConcrete } from "../drizzleUtils.js";
+import { type ComponentNew, type ComponentSelect, type FindWhere } from "../drizzleTypes.js";
 import { components } from "../schema/schema.js";
 import { generateComponentEntity } from "../entityUtils.js";
-import { ComponentType } from "../../../../../core/Atomic.js";
+import { type ComponentType } from "../../../../../core/Atomic.js";
 
 export class DrizzleComponentRepository extends DrizzleBaseRepository<'components'> {
 

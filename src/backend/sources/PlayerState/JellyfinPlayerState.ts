@@ -1,7 +1,7 @@
-import { Logger } from "@foxxmd/logging";
-import { PlayObject } from "../../../core/Atomic.js";
-import { PlayerStateDataMaybePlay, PlayPlatformId, ReportedPlayerStatus } from "../../common/infrastructure/Atomic.js";
-import { PlayerStateOptions } from "./AbstractPlayerState.js";
+import { type Logger } from "@foxxmd/logging";
+import { type PlayObject } from "../../../core/Atomic.js";
+import { type PlayerStateDataMaybePlay, type PlayPlatformId, type ReportedPlayerStatus } from "../../common/infrastructure/Atomic.js";
+import { type PlayerStateOptions } from "./AbstractPlayerState.js";
 import { GenericPlayerState } from "./GenericPlayerState.js";
 import { PositionalPlayerState } from "./PositionalPlayerState.js";
 

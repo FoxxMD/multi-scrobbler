@@ -1,8 +1,8 @@
-import { Logger } from "@foxxmd/logging";
-import { ExpressHandler } from "../common/infrastructure/Atomic.js";
+import { type Logger } from "@foxxmd/logging";
+import { type ExpressHandler } from "../common/infrastructure/Atomic.js";
 import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
-import { Request, Response, NextFunction } from "express";
+import { type Request, type Response, type NextFunction } from "express";
 import AbstractSource from "../sources/AbstractSource.js";
 import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.js";
 

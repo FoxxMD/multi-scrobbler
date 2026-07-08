@@ -1,10 +1,10 @@
 import React, {useState, useRef, Fragment} from 'react';
 import {
     createBrowserRouter,
-    createHashRouter, RouteObject,
+    createHashRouter, type RouteObject,
     RouterProvider, useLocation, Outlet
 } from "react-router-dom";
-import {connect, ConnectedProps, Provider as ReduxProvider} from 'react-redux'
+import {connect, type ConnectedProps, Provider as ReduxProvider} from 'react-redux'
 import './App.css';
 import CopyToClipboard from "./components/CopyToClipboard";
 import {store} from './store';

@@ -1,19 +1,19 @@
 import { drizzle } from 'drizzle-orm/node-sqlite';
 import { migrate } from 'drizzle-orm/node-sqlite/migrator';
 import { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
-import { sql as dsl, LogWriter, Logger as DrizzleLogger } from 'drizzle-orm';
+import { sql as dsl, type LogWriter, type Logger as DrizzleLogger } from 'drizzle-orm';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { backupDb, getDbPath, getDbBackupPath, MEMORY_DB_NAME } from '../Database.js';
 import { fileExists, fileOrDirectoryIsWriteable } from '../../../utils/FSUtils.js';
-import { childLogger, Logger, LogLevel } from '@foxxmd/logging';
+import { childLogger, type Logger, type LogLevel } from '@foxxmd/logging';
 import { loggerNoop } from '../../MaybeLogger.js';
 import { projectDir } from '../../index.js';
 import { relations } from './schema/schema.js';
 import { addToContext, executeQuery } from './logContext.js';
 import { DatabaseSync } from 'node:sqlite';
 import { migrateApp, getAppMigrationStatus } from '../appMigrator.js';
-import { MigrationStatus } from '../../infrastructure/Atomic.js';
+import { type MigrationStatus } from '../../infrastructure/Atomic.js';
 
 export async function getDbMigrationStatus(dbVal: string | DbConcrete, opts: {logger?: Logger, migrationsFolder?: string} = {}): Promise<MigrationStatus> {
   const {

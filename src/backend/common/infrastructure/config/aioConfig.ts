@@ -1,13 +1,13 @@
-import { LogOptions } from "@foxxmd/logging";
-import { ClientAIOConfig } from "./client/clients.js";
-import { CommonClientOptions } from "./client/index.js";
-import { RequestRetryOptions } from "./common.js";
-import { WebhookConfig } from "./health/webhooks.js";
-import { CommonSourceOptions, SourceRetryOptions } from "./source/index.js";
-import { SourceAIOConfig } from "./source/sources.js";
-import { CacheConfigOptions, CacheConfigUser, DurationValue } from "../Atomic.js";
-import { TransformerCommonConfig } from "../../../../core/Atomic.js";
-import { RetentionConfig } from "./database.js";
+import { type LogOptions } from "@foxxmd/logging";
+import { type ClientAIOConfig } from "./client/clients.js";
+import { type CommonClientOptions } from "./client/index.js";
+import { type RequestRetryOptions } from "./common.js";
+import { type WebhookConfig } from "./health/webhooks.js";
+import { type CommonSourceOptions, type SourceRetryOptions } from "./source/index.js";
+import { type SourceAIOConfig } from "./source/sources.js";
+import { type CacheConfigOptions, type CacheConfigUser, type DurationValue } from "../Atomic.js";
+import { type TransformerCommonConfig } from "../../../../core/Atomic.js";
+import { type RetentionConfig } from "./database.js";
 
 
 export interface SourceDefaults extends CommonSourceOptions {

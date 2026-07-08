@@ -4,7 +4,7 @@ import {
     Drawer,
     BreakpointName,
 } from "@chakra-ui/react"
-import { useState, useEffect, ComponentProps } from 'react';
+import { useState, useEffect, type ComponentProps } from 'react';
 import { useLocation } from 'react-router';
 import { MenuButton, MenuIcon, XIcon } from "./icons/ChakraIcons";
 import { NAV_LINKS, SideNavItems } from "./SideNav";

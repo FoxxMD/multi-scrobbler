@@ -1,8 +1,8 @@
-import React, { ComponentProps, useMemo, useState, forwardRef, Fragment } from "react"
+import React, { type ComponentProps, useMemo, useState, forwardRef, Fragment } from "react"
 import { Stack, SegmentGroup, Text, Box, Center, Card, SkeletonText } from '@chakra-ui/react';
 import { ComponentsApiJson } from "../../../core/Api";
 import { MSComponentSummary, MSComponentSummaryFetchable } from "./MSComponentSummary";
-import { QueryFunctionContext, queryOptions, useQuery } from '@tanstack/react-query';
+import { type QueryFunctionContext, queryOptions, useQuery } from '@tanstack/react-query';
 import ky from 'ky';
 import { baseUrl } from "../../utils";
 import { ErrorAlert } from "../ErrorAlert";

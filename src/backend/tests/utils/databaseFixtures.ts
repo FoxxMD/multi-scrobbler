@@ -1,10 +1,10 @@
 import { generatePlay } from "../../../core/PlayTestUtils.js";
 import { generateRandomObj } from "../../../core/tests/utils/fixtures.js";
 import { generateComponentEntity, generateInputEntity, generatePlayEntity } from "../../common/database/drizzle/entityUtils.js";
-import { PlayNew } from "../../common/database/drizzle/drizzleTypes.js";
-import { PlayInputNew } from "../../common/database/drizzle/drizzleTypes.js";
-import { ComponentNew } from "../../common/database/drizzle/drizzleTypes.js";
-import { ObjectPlayData } from "../../../core/Atomic.js";
+import { type PlayNew } from "../../common/database/drizzle/drizzleTypes.js";
+import { type PlayInputNew } from "../../common/database/drizzle/drizzleTypes.js";
+import { type ComponentNew } from "../../common/database/drizzle/drizzleTypes.js";
+import { type ObjectPlayData } from "../../../core/Atomic.js";
 
 export const fixtureCreateComponent = (data: Partial<ComponentNew> = {}): ComponentNew => {
     return generateComponentEntity(

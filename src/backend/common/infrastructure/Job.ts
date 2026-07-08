@@ -1,4 +1,4 @@
-import { UnixTimestamp } from "../../../core/Atomic.js"
+import { type UnixTimestamp } from "../../../core/Atomic.js"
 
 export interface JobParameters {
     /** maximum number of results to get for the entire job */

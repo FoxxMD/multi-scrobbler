@@ -1,7 +1,7 @@
 import { Traverse } from 'neotraverse/modern';
 import { faker } from '@faker-js/faker';
-import { AmbPlayObject, DateLike, LifecycleInput, LifecycleStep, ObjectPlayData, PLAY_STATES, PlayMeta, PlayObject, PlayOriginal, PlayState, ScrobbleResult } from '../../Atomic.js';
-import { generateBrainz, generateMbid, generatePlay, GeneratePlayOpts, generatePlays } from '../../PlayTestUtils.js';
+import { type AmbPlayObject, type DateLike, type LifecycleInput, type LifecycleStep, type ObjectPlayData, PLAY_STATES, type PlayMeta, type PlayObject, type PlayOriginal, type PlayState, type ScrobbleResult } from '../../Atomic.js';
+import { generateBrainz, generateMbid, generatePlay, type GeneratePlayOpts, generatePlays } from '../../PlayTestUtils.js';
 import { statefulInvariantTransform } from '../../PlayUtils.js';
 import clone from 'clone';
 import { diffObjects } from '../../DataUtils.js';
@@ -10,7 +10,7 @@ import { UpstreamError } from '../../../backend/common/errors/UpstreamError.js';
 import { playToListenPayload } from '../../../backend/common/vendor/listenbrainz/lzUtils.js';
 import { mergeSimpleError, SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from '../../../backend/common/errors/MSErrors.js';
 import dayjs, { Dayjs } from 'dayjs';
-import { TransformHook } from '../../../backend/common/infrastructure/Transform.js';
+import { type TransformHook } from '../../../backend/common/infrastructure/Transform.js';
 import { serializeError } from 'serialize-error';
 
 export interface ScrobbleMatchOptions {

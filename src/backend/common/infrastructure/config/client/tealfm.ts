@@ -1,7 +1,7 @@
-import { ComponentType } from "../../../../../core/Atomic.js"
-import { RequestRetryOptions } from "../common.js"
-import { ATProtoAppData, ATProtoUserIdentifierData } from "./atproto.js"
-import { CommonClientConfig, CommonClientData, CommonClientOptions } from "./index.js"
+import { type ComponentType } from "../../../../../core/Atomic.js"
+import { type RequestRetryOptions } from "../common.js"
+import { type ATProtoAppData, type ATProtoUserIdentifierData } from "./atproto.js"
+import { type CommonClientConfig, type CommonClientData, type CommonClientOptions } from "./index.js"
 
 export type TealData = RequestRetryOptions & ATProtoUserIdentifierData & Partial<ATProtoAppData> & {
         /**

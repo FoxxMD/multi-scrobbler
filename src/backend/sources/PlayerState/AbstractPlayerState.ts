@@ -1,22 +1,22 @@
-import { childLogger, Logger } from "@foxxmd/logging";
+import { childLogger, type Logger } from "@foxxmd/logging";
 import dayjs, { Dayjs } from "dayjs";
-import { PlayObject, PlayProgress, Second, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj } from "../../../core/Atomic.js";
+import { type PlayObject, type PlayProgress, type Second, SOURCE_SOT, type SOURCE_SOT_TYPES, type SourcePlayerObj } from "../../../core/Atomic.js";
 import { buildTrackString } from "../../../core/StringUtils.js";
 import {
     asPlayerStateData,
     CALCULATED_PLAYER_STATUSES,
-    CalculatedPlayerStatus,
-    PlayerStateData,
-    PlayerStateDataMaybePlay,
-    PlayPlatformId,
+    type CalculatedPlayerStatus,
+    type PlayerStateData,
+    type PlayerStateDataMaybePlay,
+    type PlayPlatformId,
     REPORTED_PLAYER_STATUSES,
-    ReportedPlayerStatus,
+    type ReportedPlayerStatus,
 } from "../../common/infrastructure/Atomic.js";
-import { PollingOptions } from "../../common/infrastructure/config/common.js";
+import { type PollingOptions } from "../../common/infrastructure/config/common.js";
 import { playObjDataMatch, progressBar } from "../../utils.js";
 import { genGroupIdStr } from '../../../core/PlayUtils.js';
 import { formatNumber } from '../../../core/DataUtils.js';
-import { ListenProgress } from "./ListenProgress.js";
+import { type ListenProgress } from "./ListenProgress.js";
 import { ListenRange, ListenRangePositional } from "./ListenRange.js";
 import { closeToPlayEnd, closeToPlayStart, repeatDurationPlayed } from "../../utils/TimeUtils.js";
 import { timeToHumanTimestamp } from "../../../core/TimeUtils.js";

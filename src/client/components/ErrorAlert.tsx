@@ -1,10 +1,10 @@
 import { Alert, Accordion, Stack, Text, Box, Collapsible, HStack, Highlight, Span, Code, useCollapsible, UseCollapsibleReturn } from '@chakra-ui/react';
-import { Fragment, ComponentProps, useEffect, useState } from 'react';
+import { Fragment, type ComponentProps, useEffect, useState } from 'react';
 import { ChakraCodeBlock } from './CodeBlock';
 import { ChakraClip } from './ChakraClipboard';
 import { ErrorIsh, isErrorIsh } from '../../core/ErrorUtils';
 import { EllipsisButton, FatArrowRight } from './icons/ChakraIcons';
-import { ErrorObject } from 'serialize-error';
+import { type ErrorObject } from 'serialize-error';
 
 export interface ErrorAlertProps {
     error: ErrorIsh

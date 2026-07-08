@@ -1,12 +1,12 @@
-import React, {PropsWithChildren, useState, useEffect, useRef, useCallback} from 'react';
+import React, {type PropsWithChildren, useState, useEffect, useRef, useCallback} from 'react';
 import * as AnsiImport from "ansi-to-react";
 import { Text, Box, SegmentGroup, Separator, HStack, Stack, Span } from '@chakra-ui/react';
 import {FixedSizeList} from "fixed-size-list";
 import {useSSE} from "@flamefrontend/sse-runtime-react";
-import { useQueryClient, QueryFunctionContext, useQuery, useMutation } from '@tanstack/react-query'
+import { useQueryClient, type QueryFunctionContext, useQuery, useMutation } from '@tanstack/react-query'
 import { LogOutputConfig } from '../../core/Atomic';
 import ky from 'ky';
-import { LogLevel } from '@foxxmd/logging';
+import { type LogLevel } from '@foxxmd/logging';
 import { tanQueries } from '../queries';
 import { ChakraClip, ChakraClipDynamic } from './ChakraClipboard';
 

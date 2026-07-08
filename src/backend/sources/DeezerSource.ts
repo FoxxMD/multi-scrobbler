@@ -3,14 +3,14 @@ import EventEmitter from "events";
 import passport from "passport";
 import { Strategy as DeezerStrategy } from 'passport-deezer';
 import request from 'superagent';
-import { PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
-import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import { DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
+import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.js";
+import { DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.js";
+import { type DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
 import { parseRetryAfterSecsFromObj, sleep, sortByOldestPlayDate, } from "../utils.js";
 import { writeFile } from '../utils/FSUtils.js';
 import { readJson } from '../utils/DataUtils.js';
 import { joinedUrl } from "../utils/NetworkUtils.js";
-import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
+import AbstractSource, { type RecentlyPlayedOptions } from "./AbstractSource.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 
 export default class DeezerSource extends AbstractSource {

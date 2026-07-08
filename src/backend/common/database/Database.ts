@@ -1,12 +1,12 @@
 import { configDir } from '../index.js';
 import * as path from 'path';
 import { promises as fs } from 'fs'
-import { childLogger, Logger } from '@foxxmd/logging';
+import { childLogger, type Logger } from '@foxxmd/logging';
 import { loggerNoop } from '../MaybeLogger.js';
 import { fileExists, fileOrDirectoryIsWriteable } from '../../utils/FSUtils.js';
-import { COMPACTABLE, compactableProperties, CompactableProperty, DEFAULT_RETENTION_COMPACT_AFTER, DEFAULT_RETENTION_DELETE_AFTER, RententionGranular, RetentionConfig, RetentionConfigValue, RetentionOption, RetentionValue, RetentionValueUnparsed } from '../infrastructure/config/database.js';
-import { DurationValue } from '../infrastructure/Atomic.js';
-import { Duration } from 'dayjs/plugin/duration.js';
+import { COMPACTABLE, compactableProperties, type CompactableProperty, DEFAULT_RETENTION_COMPACT_AFTER, DEFAULT_RETENTION_DELETE_AFTER, type RententionGranular, type RetentionConfig, type RetentionConfigValue, type RetentionOption, type RetentionValue, type RetentionValueUnparsed } from '../infrastructure/config/database.js';
+import { type DurationValue } from '../infrastructure/Atomic.js';
+import { type Duration } from 'dayjs/plugin/duration.js';
 import dayjs from 'dayjs';
 import { parseDurationFromDurationValue } from '../../utils/TimeUtils.js';
 import assert, { AssertionError } from 'node:assert';

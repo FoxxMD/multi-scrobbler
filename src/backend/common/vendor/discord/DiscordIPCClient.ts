@@ -1,17 +1,17 @@
 import { childLogger } from "@foxxmd/logging";
-import { AbstractApiOptions, SourceData } from "../../infrastructure/Atomic.js";
-import { ActivityData, DiscordIPCData, DiscordStrongData } from "../../infrastructure/config/client/discord.js";
+import { type AbstractApiOptions } from "../../infrastructure/Atomic.js";
+import { type ActivityData, type DiscordIPCData, type DiscordStrongData } from "../../infrastructure/config/client/discord.js";
 import EventEmitter from "events";
 import { getRoot } from "../../../ioc.js";
-import { Client, SetActivity } from "@xhayper/discord-rpc";
+import { Client, type SetActivity } from "@xhayper/discord-rpc";
 import {realpathSync} from 'fs';
 import {sep, join} from 'path';
-import { PathData } from "@xhayper/discord-rpc/dist/transport/IPC.js";
-import { removeUndefinedKeys, sleep } from "../../../utils.js";
+import { type PathData } from "@xhayper/discord-rpc/dist/transport/IPC.js";
+import { removeUndefinedKeys } from "../../../utils.js";
 import { playStateToActivityData } from "./DiscordUtils.js";
 import { DiscordAbstractClient } from "./DiscordAbstractClient.js";
 import dayjs from "dayjs";
-import { isPlayObject, SourcePlayerObj } from "../../../../core/Atomic.js";
+import { isPlayObject, type SourcePlayerObj } from "../../../../core/Atomic.js";
 import { mergeSimpleError, SimpleError } from "../../errors/MSErrors.js";
 import { UpstreamError } from "../../errors/UpstreamError.js";
 

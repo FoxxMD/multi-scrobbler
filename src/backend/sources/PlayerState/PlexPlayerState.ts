@@ -1,6 +1,6 @@
-import { Logger } from "@foxxmd/logging";
-import { PlayPlatformId, REPORTED_PLAYER_STATUSES } from "../../common/infrastructure/Atomic.js";
-import { AbstractPlayerState, PlayerStateOptions } from "./AbstractPlayerState.js";
+import { type Logger } from "@foxxmd/logging";
+import { type PlayPlatformId, REPORTED_PLAYER_STATUSES } from "../../common/infrastructure/Atomic.js";
+import { AbstractPlayerState, type PlayerStateOptions } from "./AbstractPlayerState.js";
 import { GenericPlayerState } from "./GenericPlayerState.js";
 import { PositionalPlayerState } from "./PositionalPlayerState.js";
 

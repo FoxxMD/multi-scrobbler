@@ -1,9 +1,9 @@
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import mergeErrorCause from 'merge-error-cause';
 import { findCauseByFunc, isAbortReasonErrorLike } from "../../utils/ErrorUtils.js";
-import { UpstreamError, UpstreamErrorOptions } from "./UpstreamError.js";
+import { UpstreamError, type UpstreamErrorOptions } from "./UpstreamError.js";
 import {addKnownErrorConstructor, serializeError} from 'serialize-error';
-import { LifecycleInput } from "../../../core/Atomic.js";
+import { type LifecycleInput } from "../../../core/Atomic.js";
 
 export abstract class NamedError extends Error {
     public abstract name: string;

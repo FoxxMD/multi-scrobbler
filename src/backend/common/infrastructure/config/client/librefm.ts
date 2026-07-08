@@ -1,6 +1,6 @@
-import { RequestRetryOptions } from "../common.js";
-import { CommonClientConfig, CommonClientData } from "./index.js";
-import { LastfmClientOptions } from "./lastfm.js";
+import { type RequestRetryOptions } from "../common.js";
+import { type CommonClientConfig, type CommonClientData } from "./index.js";
+import { type LastfmClientOptions } from "./lastfm.js";
 
 export interface LibrefmData extends CommonClientData, RequestRetryOptions {
         /**

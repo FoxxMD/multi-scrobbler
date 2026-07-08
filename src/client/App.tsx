@@ -1,10 +1,10 @@
 import React from 'react';
 import {
     createBrowserRouter,
-    createHashRouter, RouteObject,
+    createHashRouter, type RouteObject,
     RouterProvider, useLocation,
 } from "react-router-dom";
-import {connect, ConnectedProps, Provider} from 'react-redux'
+import {connect, type ConnectedProps, Provider} from 'react-redux'
 import './App.css';
 import CopyToClipboard from "./components/CopyToClipboard";
 import ExternalLink from "./components/ExternalLink";

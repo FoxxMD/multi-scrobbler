@@ -1,17 +1,17 @@
 import { EventEmitter } from "events";
 import request from 'superagent';
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { PlayObject, PlayObjectMinimal, URLData } from "../../core/Atomic.js";
+import { type RecentlyPlayedOptions } from "./AbstractSource.js";
+import { type PlayObject, type PlayObjectMinimal, type URLData } from "../../core/Atomic.js";
 import {
-    InternalConfig,
+    type InternalConfig,
     NO_DEVICE,
     NO_USER,
-    PlayerStateData,
-    PlayerStateDataMaybePlay,
+    type PlayerStateData,
+    type PlayerStateDataMaybePlay,
     REPORTED_PLAYER_STATUSES,
 } from "../common/infrastructure/Atomic.js";
-import { YandexMusicBridgeSourceConfig } from "../common/infrastructure/config/source/ymbridge.js";
+import { type YandexMusicBridgeSourceConfig } from "../common/infrastructure/config/source/ymbridge.js";
 import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";

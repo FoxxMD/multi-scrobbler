@@ -1,4 +1,4 @@
-import { Logger, loggerDebug, LogOptions } from "@foxxmd/logging";
+import { type Logger, loggerDebug, type LogOptions } from "@foxxmd/logging";
 import { EventEmitter } from "events";
 import { createContainer } from "iti";
 import path from "path";
@@ -7,15 +7,15 @@ import { WildcardEmitter } from "./common/WildcardEmitter.js";
 
 import { generateBaseURL } from "./utils/NetworkUtils.js";
 import { PassThrough } from "stream";
-import { CacheConfigOptions, MusicBrainzSingletonMap } from "./common/infrastructure/Atomic.js";
+import { type CacheConfigOptions, type MusicBrainzSingletonMap } from "./common/infrastructure/Atomic.js";
 import { MSCache } from "./common/Cache.js";
 import TransformerManager from "./common/transforms/TransformerManager.js";
-import { TransformerCommonConfig } from "../core/Atomic.js";
+import { type TransformerCommonConfig } from "../core/Atomic.js";
 import prom, { Counter, Gauge } from 'prom-client';
 import { CoverArtApiClient } from "./common/vendor/musicbrainz/CoverArtApiClient.js";
 import { version } from "./version.js";
-import { StaggerOptions } from "./utils/AsyncUtils.js";
-import { DbConcrete } from "./common/database/drizzle/drizzleUtils.js";
+import { type StaggerOptions } from "./utils/AsyncUtils.js";
+import { type DbConcrete } from "./common/database/drizzle/drizzleUtils.js";
 
 let root: ReturnType<typeof createRoot>;
 export interface RootOptions {

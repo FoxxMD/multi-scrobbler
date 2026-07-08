@@ -1,23 +1,23 @@
-import { childLogger, Logger, LoggerAppExtras } from "@foxxmd/logging";
-import { DbConcrete, runTransaction } from "../drizzleUtils.js";
+import { childLogger, type Logger, type LoggerAppExtras } from "@foxxmd/logging";
+import { type DbConcrete, runTransaction } from "../drizzleUtils.js";
 import { loggerNoop } from "../../../MaybeLogger.js";
-import { ErrorLike, PlayObject, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, TemporalAccuracy } from "../../../../../core/Atomic.js";
-import { generateInputEntity, generatePlayEntity, PlayEntityOpts, hydratePlaySelect, PlayHydateOptions, PlayHistoricalEntityOpts } from "../entityUtils.js";
+import { type ErrorLike, type PlayObject, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, type TemporalAccuracy } from "../../../../../core/Atomic.js";
+import { generateInputEntity, generatePlayEntity, type PlayEntityOpts, hydratePlaySelect, type PlayHydateOptions, type PlayHistoricalEntityOpts } from "../entityUtils.js";
 import { playInputs, plays, playsHistorical, queueStates, relations } from "../schema/schema.js";
-import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, QueueStateSelect, FindWith, PlaySelectWithQueueStates, WhereClause, PlayWith, PlayHistoricalSelect, PlayHistoricalNew } from "../drizzleTypes.js";;
-import { MarkOptional, MarkRequired, PathValue } from "ts-essentials";
+import { type PlayNew, type PlaySelect, type PlayInputNew, type FindWhere, type FindMany, type QueueStateSelect, type FindWith, type PlaySelectWithQueueStates, type WhereClause, type PlayWith, type PlayHistoricalSelect, type PlayHistoricalNew } from "../drizzleTypes.js";;
+import type { MarkOptional } from "ts-essentials";
 import { genGroupIdStrFromPlay, removeEmptyArrays, removeUndefinedKeys } from "../../../../utils.js";
 import dayjs, { Dayjs } from "dayjs";
-import { RelationsFieldFilter, eq, inArray, ne, notInArray, desc, asc, and, sql, Placeholder } from "drizzle-orm";
-import { CompactableProperty, RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.js";
+import { type RelationsFieldFilter, eq, inArray, ne, notInArray, desc, asc, and, sql, Placeholder } from "drizzle-orm";
+import { type CompactableProperty, type RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.js";
 import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.js";
-import { buildDateCompare, CompareDateOp, ComponentConstrainedRepoOpts, DrizzleBaseRepository, DrizzleRepositoryOpts, PaginatedQueryResponse, PaginatedResponse } from "./BaseRepository.js";
+import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts, type PaginatedQueryResponse, type PaginatedResponse } from "./BaseRepository.js";
 import { asPlay } from "../../../../../core/PlayMarshalUtils.js";
 import assert, { Assert } from "node:assert";
 import { hashObject, parseArrayFromMaybeString } from "../../../../utils/StringUtils.js";
 import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../../utils/PlayComparisonUtils.js";
 import { comparePlayTemporally, getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext, getTemporalAccuracyCloseVal, hasAcceptableTemporalAccuracy } from "../../../../utils/TimeUtils.js";
-import { SourceType } from "../../../infrastructure/config/source/sources.js";
+import { type SourceType } from "../../../infrastructure/config/source/sources.js";
 import { getTemporallyCloseDateCompareOp } from "./PlayRepository.js";
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?

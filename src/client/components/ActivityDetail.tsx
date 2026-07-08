@@ -6,7 +6,7 @@ import { ErrorAlert } from "./ErrorAlert";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { ExpandCollapse } from "./ExpandCollapse";
 import { MsSseEvent, PlayApiCommonDetailed, SortPlaysByProps } from "../../core/Api";
-import { InfiniteData, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type InfiniteData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ShortDateDisplay } from "./DateDisplay";
 import { TextMuted } from "./TextMuted";
 import { EphemeralElement, PlayStateBadge } from "./Badges";

@@ -1,7 +1,7 @@
-import { Express } from 'express';
-import { Logger } from "@foxxmd/logging";
+import { type Express } from 'express';
+import { type Logger } from "@foxxmd/logging";
 import passport from "passport";
-import { ExpressHandler } from "../common/infrastructure/Atomic.js";
+import { type ExpressHandler } from "../common/infrastructure/Atomic.js";
 import LastfmScrobbler from "../scrobblers/LastfmScrobbler.js";
 import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
 import LastfmSource from "../sources/LastfmSource.js";

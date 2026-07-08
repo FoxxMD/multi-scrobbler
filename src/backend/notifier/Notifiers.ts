@@ -1,11 +1,11 @@
-import { childLogger, Logger } from '@foxxmd/logging';
+import { childLogger, type Logger } from '@foxxmd/logging';
 import { EventEmitter } from "events";
 import {
-    AppriseConfig,
-    GotifyConfig,
-    NtfyConfig,
-    WebhookConfig,
-    WebhookPayload
+    type AppriseConfig,
+    type GotifyConfig,
+    type NtfyConfig,
+    type WebhookConfig,
+    type WebhookPayload
 } from "../common/infrastructure/config/health/webhooks.js";
 import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.js";
 import { AppriseWebhookNotifier } from "./AppriseWebhookNotifier.js";

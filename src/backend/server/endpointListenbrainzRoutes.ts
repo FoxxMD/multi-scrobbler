@@ -1,13 +1,13 @@
 /* eslint-disable prefer-arrow-functions/prefer-arrow-functions */
-import { Express } from 'express';
-import { childLogger, Logger } from "@foxxmd/logging";
+import { type Express } from 'express';
+import { childLogger, type Logger } from "@foxxmd/logging";
 import bodyParser from "body-parser";
 import { EndpointListenbrainzSource, playStateFromRequest, parseDisplayIdentifiersFromRequest } from "../sources/EndpointListenbrainzSource.js";
 import { LZEndpointNotifier } from "../sources/ingressNotifiers/LZEndpointNotifier.js";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import { nonEmptyBody } from "./middleware.js";
 import { isDebugMode } from "../utils.js";
-import { PlayingNowPayload } from '../common/vendor/listenbrainz/interfaces.js';
+import { type PlayingNowPayload } from '../common/vendor/listenbrainz/interfaces.js';
 import ScrobbleClients from '../scrobblers/ScrobbleClients.js';
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.js';
 import { stringToDeterministicNumber } from '../utils/StringUtils.js';

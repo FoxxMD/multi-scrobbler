@@ -1,13 +1,13 @@
-import { Logger } from '@foxxmd/logging';
-import { Dayjs, ManipulateType } from "dayjs";
-import { Request, Response } from "express";
+import { type Logger } from '@foxxmd/logging';
+import { Dayjs, type ManipulateType } from "dayjs";
+import { type Request, type Response } from "express";
 import { type NextFunction, type ParamsDictionary, type Query } from "express-serve-static-core";
 import { FixedSizeList } from 'fixed-size-list';
-import { ErrorLike, isPlayObject, PlayMeta, PlayObject, PlayObjectMinimal, UnixTimestamp } from "../../../core/Atomic.js";
+import { type ErrorLike, isPlayObject, type PlayMeta, type PlayObject, type PlayObjectMinimal, type UnixTimestamp } from "../../../core/Atomic.js";
 import TupleMap from "../TupleMap.js";
 import { MusicBrainzApi } from 'musicbrainz-api';
-import { SourceType } from './config/source/sources.js';
-import { ClientType, clientTypes } from './config/client/clients.js';
+import { type SourceType } from './config/source/sources.js';
+import { type ClientType, clientTypes } from './config/client/clients.js';
 import assert, { AssertionError } from 'assert';
 
 export const lowGranularitySources: SourceType[] = ['subsonic', 'ytmusic'];

@@ -3,7 +3,7 @@ import clone from "clone";
 import { describe, it } from 'mocha';
 import { genericSourcePlayMatch, playsAreAddedOnly, playsAreBumpedOnly, playsAreSortConsistent } from "../../utils/PlayComparisonUtils.js";
 import { generatePlay, generatePlays } from "../../../core/PlayTestUtils.js";
-import { PlayObject } from "../../../core/Atomic.js";
+import { type PlayObject } from "../../../core/Atomic.js";
 
 const newPlay = generatePlay();
 

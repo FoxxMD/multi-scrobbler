@@ -1,20 +1,20 @@
 import { parseRegexSingle, parseToRegex } from "@foxxmd/regex-buddy-core";
 import { EventEmitter } from "events";
 import * as VLC from "vlc-client"
-import { VlcMeta, VlcStatus } from "vlc-client/dist/Types.js";
-import { PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
+import { type VlcMeta, type VlcStatus } from "vlc-client/dist/Types.js";
+import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.js";
 import {
-    FormatPlayObjectOptions,
-    InternalConfig,
-    PlayerStateData,
+    type FormatPlayObjectOptions,
+    type InternalConfig,
+    type PlayerStateData,
     REPORTED_PLAYER_STATUSES,
-    ReportedPlayerStatus,
+    type ReportedPlayerStatus,
     SINGLE_USER_PLATFORM_ID,
 } from "../common/infrastructure/Atomic.js";
-import { VlcAudioMeta, VLCSourceConfig, PlayerState } from "../common/infrastructure/config/source/vlc.js";
+import { type VlcAudioMeta, type VLCSourceConfig, type PlayerState } from "../common/infrastructure/config/source/vlc.js";
 import { isPortReachable } from "../utils/NetworkUtils.js";
 import { firstNonEmptyStr } from "../utils/StringUtils.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { type RecentlyPlayedOptions } from "./AbstractSource.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 import { isDebugMode } from "../utils.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";

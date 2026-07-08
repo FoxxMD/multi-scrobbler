@@ -1,19 +1,19 @@
-import { Logger } from "@foxxmd/logging";
+import { type Logger } from "@foxxmd/logging";
 import { searchAndReplace as searchAndReplaceFunc, testMaybeRegex as testMaybeRegexFunc } from "@foxxmd/regex-buddy-core";
-import { PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
+import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.js";
 
 import {
-    ConditionalSearchAndReplaceRegExp,
-    ConditionalSearchAndReplaceTerm,
-    ExternalMetadataTerm,
-    PlayTransformParts,
-    PlayTransformStage,
-    SearchAndReplaceTerm,
+    type ConditionalSearchAndReplaceRegExp,
+    type ConditionalSearchAndReplaceTerm,
+    type ExternalMetadataTerm,
+    type PlayTransformParts,
+    type PlayTransformStage,
+    type SearchAndReplaceTerm,
     STAGE_TYPES,
-    StageType,
-    StageTypedConfig,
-    WhenConditionsConfig,
-    WhenParts
+    type StageType,
+    type StageTypedConfig,
+    type WhenConditionsConfig,
+    type WhenParts
 } from "../common/infrastructure/Transform.js";
 import dayjs from "dayjs";
 

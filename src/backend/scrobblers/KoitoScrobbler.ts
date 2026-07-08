@@ -1,15 +1,15 @@
-import { Logger } from "@foxxmd/logging";
+import { type Logger } from "@foxxmd/logging";
 import EventEmitter from "events";
-import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
+import { type PlayObject, type SourcePlayerObj } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { FormatPlayObjectOptions, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
+import { type FormatPlayObjectOptions, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.js';
 import { Notifiers } from "../notifier/Notifiers.js";
 
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.js";
 import { isDebugMode } from "../utils.js";
-import { KoitoClientConfig } from "../common/infrastructure/config/client/koito.js";
+import { type KoitoClientConfig } from "../common/infrastructure/config/client/koito.js";
 import { KoitoApiClient, listenObjectResponseToPlay } from "../common/vendor/koito/KoitoApiClient.js";
 import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.js";
 

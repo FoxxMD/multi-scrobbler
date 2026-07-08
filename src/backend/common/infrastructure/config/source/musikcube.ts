@@ -1,4 +1,4 @@
-import { CommonSourceConfig, CommonSourceData } from "./index.js";
+import { type CommonSourceConfig, type CommonSourceData } from "./index.js";
 
 export const PLAYBACK_STATUS_PLAYING_MC = 'playing';
 export const PLAYBACK_STATUS_PAUSED_MC = 'paused';

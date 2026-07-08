@@ -1,21 +1,21 @@
-import { Interfaces as Notifications } from '@dbus-types/notifications'
+import { type Interfaces as Notifications } from '@dbus-types/notifications'
 import dayjs from "dayjs";
-import { DBusInterface, MessageBus, sessionBus, Connection, ConnectOpts } from 'dbus-ts';
+import { DBusInterface, sessionBus, Connection, type ConnectOpts } from 'dbus-ts';
 import EventEmitter from "events";
-import { PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
+import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.js";
+import { type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.js";
 import {
     MPRIS_IFACE,
     MPRIS_PATH,
-    MPRISMetadata,
-    MPRISSourceConfig,
+    type MPRISMetadata,
+    type MPRISSourceConfig,
     PLAYBACK_STATUS_STOPPED,
-    PlaybackStatus,
-    PlayerInfo,
+    type PlaybackStatus,
+    type PlayerInfo,
 } from "../common/infrastructure/config/source/mpris.js";
 import { removeDuplicates } from "../utils.js";
 import { findCauseByMessage } from "../utils/ErrorUtils.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { type RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
 import { Readable, Writable } from 'stream';
 import net from 'net';

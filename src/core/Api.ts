@@ -1,11 +1,11 @@
-import { PickKeys, StrictOmit } from "ts-essentials"
-import { ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.js"
-import { ClientType } from "../backend/common/infrastructure/config/client/clients.js"
-import { SourceType } from "../backend/common/infrastructure/config/source/sources.js"
-import { ComponentType, ErrorLike, JsonPlayObject, PlayState, Replace, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.js"
+import type { PickKeys } from "ts-essentials"
+import { type ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.js"
+import { type ClientType } from "../backend/common/infrastructure/config/client/clients.js"
+import { type SourceType } from "../backend/common/infrastructure/config/source/sources.js"
+import { type ComponentType, type ErrorLike, type JsonPlayObject, type PlayState, type Replace, type SOURCE_SOT_TYPES, type SourcePlayerJson } from "./Atomic.js"
 import { Dayjs } from "dayjs"
 import { INITIALIZING } from "../backend/common/infrastructure/Atomic.js"
-import { ErrorIsh } from "./ErrorUtils.js"
+import { type ErrorIsh } from "./ErrorUtils.js"
 
 export interface PlayApiCommon {
     uid: string

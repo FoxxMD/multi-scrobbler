@@ -1,22 +1,22 @@
 import { createPlatform, Media, MediaController, PersistentClient } from "@foxxmd/chromecast-client";
 import { ContextualValidationError } from "@foxxmd/chromecast-client/dist/cjs/src/utils.js";
-import { childLogger, Logger } from "@foxxmd/logging";
+import { childLogger, type Logger } from "@foxxmd/logging";
 import { Client as CastClient } from 'castv2';
 import dayjs from "dayjs";
 import { EventEmitter } from "events";
 import e from "express";
-import { PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
+import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.js";
 import { artistNamesToCredits, buildTrackString } from "../../core/StringUtils.js";
 import { NETWORK_ERROR_FAILURE_CODES } from "../common/errors/NodeErrors.js";
 import {
-    FormatPlayObjectOptions,
-    InternalConfig,
-    MdnsDeviceInfo,
+    type FormatPlayObjectOptions,
+    type InternalConfig,
+    type MdnsDeviceInfo,
     NO_USER,
-    PlayerStateData,
-    SourceData,
+    type PlayerStateData,
+    type SourceData,
 } from "../common/infrastructure/Atomic.js";
-import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
+import { type ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
 import { MaybeLogger } from '../common/MaybeLogger.js';
 import {
     chromePlayerStateToReported,
@@ -26,15 +26,15 @@ import {
     getMediaStatus,
 } from "../common/vendor/chromecast/ChromecastClientUtils.js";
 import {
-    PlatformApplication,
-    PlatformApplicationWithContext,
-    PlatformType
+    type PlatformApplication,
+    type PlatformApplicationWithContext,
+    type PlatformType
 } from "../common/vendor/chromecast/interfaces.js";
 import { difference, isDebugMode, parseBool } from "../utils.js";
 import { genGroupIdStr } from '../../core/PlayUtils.js';
 import { findCauseByReference } from "../utils/ErrorUtils.js";
 import { discoveryAvahi, discoveryNative } from "../utils/MDNSUtils.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { type RecentlyPlayedOptions } from "./AbstractSource.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 

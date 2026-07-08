@@ -1,11 +1,11 @@
 import EventEmitter from "events";
-import { Logger } from "@foxxmd/logging";
+import { type Logger } from "@foxxmd/logging";
 import LastfmScrobbler from "./LastfmScrobbler.js";
 import { Notifiers } from "../notifier/Notifiers.js";
-import { LibrefmClientConfig } from "../common/infrastructure/config/client/librefm.js";
+import { type LibrefmClientConfig } from "../common/infrastructure/config/client/librefm.js";
 import { formatPlayObj, LIBREFM_HOST, LIBREFM_PATH } from "../common/vendor/LastfmApiClient.js";
-import { LastfmClientConfig, LastfmData } from "../common/infrastructure/config/client/lastfm.js";
-import { FormatPlayObjectOptions, InternalConfigOptional } from "../common/infrastructure/Atomic.js";
+import { type LastfmClientConfig, type LastfmData } from "../common/infrastructure/config/client/lastfm.js";
+import { type FormatPlayObjectOptions, type InternalConfigOptional } from "../common/infrastructure/Atomic.js";
 
 export default class LibrefmScrobbler extends LastfmScrobbler {
 

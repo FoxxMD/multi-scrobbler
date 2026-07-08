@@ -2,24 +2,24 @@ import { loggerTest, loggerDebug, childLogger } from "@foxxmd/logging";
 import chai, { assert, expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
-import AbstractComponent, { AbstractComponentConfig } from "../../common/AbstractComponent.js";
+import AbstractComponent, { type AbstractComponentConfig } from "../../common/AbstractComponent.js";
 
-import { ConditionalSearchAndReplaceRegExp, STAGE_TYPES, STAGE_TYPES_METADATA, STAGE_TYPES_USER, TRANSFORM_HOOK } from "../../common/infrastructure/Transform.js";
+import { type ConditionalSearchAndReplaceRegExp, STAGE_TYPES, STAGE_TYPES_METADATA, STAGE_TYPES_USER, TRANSFORM_HOOK } from "../../common/infrastructure/Transform.js";
 
 import { isConditionalSearchAndReplace } from "../../utils/PlayTransformUtils.js";
 import { generateArtistsStr, generatePlay } from "../../../core/PlayTestUtils.js";
-import { WebhookPayload } from "../../common/infrastructure/config/health/webhooks.js";
+import { type WebhookPayload } from "../../common/infrastructure/config/health/webhooks.js";
 import { findCauseByMessage } from "../../utils/ErrorUtils.js";
 import NativeTransformer from "../../common/transforms/NativeTransformer.js";
 import { initMemoryCache } from "../../common/Cache.js";
 import { Cacheable } from "cacheable";
-import { TransformerCommonConfig } from "../../../core/Atomic.js";
+import { type TransformerCommonConfig } from "../../../core/Atomic.js";
 import TransformerManager from "../../common/transforms/TransformerManager.js";
 import { transientCache } from "../utils/TransientTestUtils.js";
 import dayjs from "dayjs";
 import clone from "clone";
 import { artistCreditsToNames, artistNamesToCredits } from "../../../core/StringUtils.js";
-import { COMPONENT_STATE, ComponentState } from "../../../core/Api.js";
+import { COMPONENT_STATE, type ComponentState } from "../../../core/Api.js";
 
 chai.use(asPromised);
 

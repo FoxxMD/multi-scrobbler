@@ -6,7 +6,7 @@ import dayjs from "dayjs";
 import { after, before, describe, it } from 'mocha';
 import { http, HttpResponse } from 'msw';
 import pEvent from 'p-event';
-import { CLIENT_INGRESS_QUEUE, PlayObject, SOURCE_SOT } from "../../../core/Atomic.js";
+import { CLIENT_INGRESS_QUEUE, type PlayObject, SOURCE_SOT } from "../../../core/Atomic.js";
 import { sleep, sortByOldestPlayDate } from "../../utils.js";
 import { genGroupIdStr } from '../../../core/PlayUtils.js';
 import mixedDuration from '../plays/mixedDuration.json' with { type: 'json' };
@@ -16,7 +16,7 @@ import { generatePlay, generatePlayPlatformId, generatePlays, generateSourcePlay
 import MockDate from 'mockdate';
 
 import { NowPlayingScrobbler, TestAuthScrobbler, TestScrobbler } from "./TestScrobbler.js";
-import { PaginatedTimeRangeOptions, PlayPlatformId, REFRESH_STALE_DEFAULT } from '../../common/infrastructure/Atomic.js';
+import { type PaginatedTimeRangeOptions, type PlayPlatformId, REFRESH_STALE_DEFAULT } from '../../common/infrastructure/Atomic.js';
 import { shuffleArray } from '../../utils/DataUtils.js';
 import { DEFAULT_CONSOLIDATE_DURATION, DEFAULT_GROUP_DURATION, groupPlaysToTimeRanges } from '../../utils/ListenFetchUtils.js';
 import { asPlay } from '../../../core/PlayMarshalUtils.js';
@@ -24,7 +24,7 @@ import { nanoid } from 'nanoid';
 import { getRoot } from '../../ioc.js';
 import { transientCache } from '../utils/TransientTestUtils.js';
 import { generateArray } from '../../../core/DataUtils.js';
-import { RepositoryCreatePlayOpts } from '../../common/database/drizzle/repositories/PlayRepository.js';
+import { type RepositoryCreatePlayOpts } from '../../common/database/drizzle/repositories/PlayRepository.js';
 import { fixtureCreatePlay } from '../utils/databaseFixtures.js';
 import { isAbortError } from 'abort-controller-x';
 import { artistNamesToCredits } from '../../../core/StringUtils.js';

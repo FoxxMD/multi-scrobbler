@@ -1,9 +1,9 @@
 import { EventEmitter } from "events";
-import { PlayObject } from "../../core/Atomic.js";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import { KodiSourceConfig } from "../common/infrastructure/config/source/kodi.js";
+import { type PlayObject } from "../../core/Atomic.js";
+import { type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.js";
+import { type KodiSourceConfig } from "../common/infrastructure/config/source/kodi.js";
 import { KodiApiClient } from "../common/vendor/KodiApiClient.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { type RecentlyPlayedOptions } from "./AbstractSource.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 
 export class KodiSource extends MemoryPositionalSource {

@@ -5,23 +5,23 @@ import { randomUUID } from "node:crypto";
 import normalizeUrl from 'normalize-url';
 import pEvent from 'p-event';
 import { URL } from "url";
-import { PlayObject, PlayObjectMinimal, URLData } from "../../core/Atomic.js";
+import { type PlayObject, type PlayObjectMinimal, type URLData } from "../../core/Atomic.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
 import {
-    FormatPlayObjectOptions,
-    InternalConfig,
-    PlayerStateData,
+    type FormatPlayObjectOptions,
+    type InternalConfig,
+    type PlayerStateData,
     SINGLE_USER_PLATFORM_ID,
 } from "../common/infrastructure/Atomic.js";
 import {
-    MCAuthenticateRequest,
-    MCAuthenticateResponse,
-    MCPlaybackOverviewRequest,
-    MCPlaybackOverviewResponse,
-    MusikcubeSourceConfig
+    type MCAuthenticateRequest,
+    type MCAuthenticateResponse,
+    type MCPlaybackOverviewRequest,
+    type MCPlaybackOverviewResponse,
+    type MusikcubeSourceConfig
 } from "../common/infrastructure/config/source/musikcube.js";
 import { sleep } from "../utils.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { type RecentlyPlayedOptions } from "./AbstractSource.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 import { normalizeWSAddress } from "../utils/NetworkUtils.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";

@@ -1,4 +1,4 @@
-import React, {Fragment, PropsWithChildren, ReactElement} from 'react';
+import React, {Fragment, type PropsWithChildren, type ReactElement} from 'react';
 
 import {JsonPlayObject, TrackStringOptions} from "../../core/Atomic";
 import {buildTrackString} from "../../core/StringUtils";

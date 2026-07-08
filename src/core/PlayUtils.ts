@@ -1,5 +1,5 @@
-import { PlayPlatformId } from "../backend/common/infrastructure/Atomic.js";
-import { AmbPlayObject, DateLike, PlayObject, PlayObjectMinimal } from "./Atomic.js";
+import { type PlayPlatformId } from "../backend/common/infrastructure/Atomic.js";
+import { type AmbPlayObject, type DateLike, type PlayObject, type PlayObjectMinimal } from "./Atomic.js";
 import dayjs from "dayjs";
 
 export const sortByNewestDate = (aPlayDate: DateLike, bPlayDate: DateLike) => {

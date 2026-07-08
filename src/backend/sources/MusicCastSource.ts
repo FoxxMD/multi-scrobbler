@@ -1,15 +1,15 @@
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { type RecentlyPlayedOptions } from "./AbstractSource.js";
 import { EventEmitter } from "events";
-import { PlayObject, PlayObjectMinimal, URLData } from "../../core/Atomic.js";
+import { type PlayObject, type PlayObjectMinimal, type URLData } from "../../core/Atomic.js";
 import {
-    FormatPlayObjectOptions,
-    InternalConfig,
-    PlayerStateData,
+    type FormatPlayObjectOptions,
+    type InternalConfig,
+    type PlayerStateData,
     SINGLE_USER_PLATFORM_ID,
 } from "../common/infrastructure/Atomic.js";
 import { isPortReachable, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.js";
-import { DeviceInfoResponse, DeviceStatusResponse, MusicCastResponseCodes, MusicCastSourceConfig, playbackToReportedStatus, PlayInfoCDResponse, PlayInfoNetResponse } from "../common/infrastructure/config/source/musiccast.js";
+import { type DeviceInfoResponse, type DeviceStatusResponse, MusicCastResponseCodes, type MusicCastSourceConfig, playbackToReportedStatus, type PlayInfoCDResponse, type PlayInfoNetResponse } from "../common/infrastructure/config/source/musiccast.js";
 import request, { Request, Response } from 'superagent';
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 import { artistNamesToCredits } from "../../core/StringUtils.js";

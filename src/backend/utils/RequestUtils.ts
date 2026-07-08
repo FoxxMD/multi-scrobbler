@@ -1,16 +1,16 @@
-import { Files, File } from "formidable";
+import { type Files, File } from "formidable";
 import VolatileFile from "formidable/VolatileFile.js";
 import { KNOWN_MEDIA_PROVIDER_URLS } from "../../core/Atomic.js";
-import { RequestRetryOptions } from "../common/infrastructure/config/common.js";
-import { Logger } from "@foxxmd/logging";
+import { type RequestRetryOptions } from "../common/infrastructure/config/common.js";
+import { type Logger } from "@foxxmd/logging";
 import request, { Request, Response } from 'superagent';
-import pRetry, { RetryContext, Options } from 'p-retry';
+import pRetry, { type RetryContext, type Options } from 'p-retry';
 import { DEFAULT_RETRY_MULTIPLIER } from "../common/infrastructure/Atomic.js";
 import { SimpleError } from "../common/errors/MSErrors.js";
 import { loggerNoop } from '../common/MaybeLogger.js';
 import { findCauseByFunc } from "./ErrorUtils.js";
 import { isSuperAgentResponseError } from "../common/errors/ErrorUtils.js";
-import { isNodeNetworkException, NodeNetworkException } from "../common/errors/NodeErrors.js";
+import { isNodeNetworkException, type NodeNetworkException } from "../common/errors/NodeErrors.js";
 import { formatNumber } from '../../core/DataUtils.js';
 import { UpstreamError } from "../common/errors/UpstreamError.js";
 

@@ -1,11 +1,11 @@
-import { ArtistCredit, PlayObject, TransformerCommon } from "../../../core/Atomic.js";
+import { type ArtistCredit, type PlayObject, type TransformerCommon } from "../../../core/Atomic.js";
 import { isWhenCondition, testWhenConditions } from "../../utils/PlayTransformUtils.js";
-import { WebhookPayload } from "../infrastructure/config/health/webhooks.js";
-import { ExternalMetadataTerm, PlayTransformNativeStage, StageConfig } from "../infrastructure/Transform.js";
+import { type WebhookPayload } from "../infrastructure/config/health/webhooks.js";
+import { type ExternalMetadataTerm, type PlayTransformNativeStage, type StageConfig } from "../infrastructure/Transform.js";
 import AtomicPartsTransformer from "./AtomicPartsTransformer.js";
 import { parseArtistCredits, parseTrackCredits, uniqueNormalizedStrArr } from "../../utils/StringUtils.js";
 import { parseRegexSingle, parseToRegexOrLiteralSearch } from "@foxxmd/regex-buddy-core";
-import { TransformerOptions } from "./AbstractTransformer.js";
+import { type TransformerOptions } from "./AbstractTransformer.js";
 import { DELIMITERS_NO_AMP } from "../infrastructure/Atomic.js";
 import { asArray } from "../../utils/DataUtils.js";
 import { MaybeLogger } from '../MaybeLogger.js';

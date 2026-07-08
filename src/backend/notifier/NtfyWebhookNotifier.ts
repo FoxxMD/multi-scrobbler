@@ -1,10 +1,10 @@
-import { Logger } from "@foxxmd/logging";
-import { Config, publish } from 'ntfy';
+import { type Logger } from "@foxxmd/logging";
+import { type Config, publish } from 'ntfy';
 import request from "superagent";
 import {redactString} from '@foxxmd/redact-string';
-import { NtfyConfig, PrioritiesConfig, WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
+import { type NtfyConfig, type PrioritiesConfig, type WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
 import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.js";
-import { URLData } from "../../core/Atomic.js";
+import { type URLData } from "../../core/Atomic.js";
 import { isPortReachable, normalizeWebAddress } from "../utils/NetworkUtils.js";
 
 export class NtfyWebhookNotifier extends AbstractWebhookNotifier {

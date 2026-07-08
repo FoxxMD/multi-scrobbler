@@ -1,21 +1,21 @@
 import { Accordion, Span, Stack, Text, Box, HStack, Flex, Container, SkeletonText, Wrap, Card, Collapsible, Separator } from '@chakra-ui/react';
-import { ComponentType, PlayState, } from '../../../core/Atomic.js';
-import React, { ComponentProps, Fragment, useMemo, useCallback, useState } from "react"
+import { type ComponentType, type PlayState, } from '../../../core/Atomic.js';
+import React, { type ComponentProps, Fragment, useMemo, useCallback, useState } from "react"
 import dayjs, { Dayjs } from 'dayjs';
 import doy from 'dayjs/plugin/dayOfYear.js';
 import { ActivityDetailFetchable, ActivityDetails, ActivitySummary, ActivitySummaryFetchable, ActivitySummarySkeleton } from '../ActivityDetail.js';
 import "./PlayList.scss";
-import { MsSseEvent, MsSseEventPayload, PlayApiCommon, PlayApiCommonDetailed } from '../../../core/Api.js';
-import { useQuery, useInfiniteQuery, UseInfiniteQueryResult, InfiniteData, useQueryClient } from '@tanstack/react-query';
+import { type MsSseEvent, type MsSseEventPayload, type PlayApiCommon, type PlayApiCommonDetailed } from '../../../core/Api.js';
+import { useQuery, useInfiniteQuery, type UseInfiniteQueryResult, type InfiniteData, useQueryClient } from '@tanstack/react-query';
 import { ErrorAlert } from '../ErrorAlert.js';
-import { QueryPlaysOptsJsonRefreshable, tanQueries } from '../../queries/index.js';
+import { type QueryPlaysOptsJsonRefreshable, tanQueries } from '../../queries/index.js';
 import { VirtualizedListNormal } from './VirtualListNormal.js';
 import { NoPlayResults, VirtualizedListDynamic } from './VirtualListDynamic.js';
 import { VirtualizedListExp } from './VirtualListExperimental.js';
-import { ActivityLogProps, generateGroupPlays, GroupHeader } from './ListParts.js';
+import { type ActivityLogProps, generateGroupPlays, GroupHeader } from './ListParts.js';
 import { ListFilters, todayRange } from './ListFilters.js';
-import { QueryPlaysOpts, QueryPlaysOptsJson } from '../../../backend/common/database/drizzle/repositories/PlayRepository.js';
-import { PaginatedResponse } from '../../../backend/common/database/drizzle/repositories/BaseRepository.js';
+import { type QueryPlaysOpts, type QueryPlaysOptsJson } from '../../../backend/common/database/drizzle/repositories/PlayRepository.js';
+import { type PaginatedResponse } from '../../../backend/common/database/drizzle/repositories/BaseRepository.js';
 import { useSSEAnyEvent, useSSEContext } from '@flamefrontend/sse-runtime-react';
 
 dayjs.extend(doy);

@@ -1,17 +1,17 @@
-import { childLogger, Logger } from "@foxxmd/logging";
+import { childLogger, type Logger } from "@foxxmd/logging";
 import EventEmitter from "events";
-import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
+import { type PlayObject, type SourcePlayerObj } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { FormatPlayObjectOptions, InternalConfigOptional } from "../common/infrastructure/Atomic.js";
+import { type FormatPlayObjectOptions, type InternalConfigOptional } from "../common/infrastructure/Atomic.js";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.js";
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.js';
-import { ListenPayload } from '../common/vendor/listenbrainz/interfaces.js';
+import { type ListenPayload } from '../common/vendor/listenbrainz/interfaces.js';
 import { Notifiers } from "../notifier/Notifiers.js";
 
 import { durationToHuman, isDebugMode } from "../utils.js";
-import { RockSkyApiClient, rockskyScrobbleToPlay, SubmitResponse } from "../common/vendor/RockSkyApiClient.js";
-import { RockSkyClientConfig } from "../common/infrastructure/config/client/rocksky.js";
+import { RockSkyApiClient, rockskyScrobbleToPlay, type SubmitResponse } from "../common/vendor/RockSkyApiClient.js";
+import { type RockSkyClientConfig } from "../common/infrastructure/config/client/rocksky.js";
 import { ScrobbleSubmitError } from "../common/errors/MSErrors.js";
 import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient.js";
 import { fromStream } from '@atcute/repo';
@@ -21,7 +21,7 @@ import path from 'path';
 import dayjs from "dayjs";
 import { Readable } from 'stream';
 import { ATProtoUnauthenticatedApiClient } from "../common/vendor/atproto/ATProtoUnauthenticatedApiClient.js";
-import { playToRepositoryCreatePlayHistoricalOpts, RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.js";
+import { playToRepositoryCreatePlayHistoricalOpts, type RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.js";
 import { isAbortError } from "abort-controller-x";
 
 export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {

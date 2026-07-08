@@ -1,5 +1,5 @@
 import { Collapsible, Stack, Box, useBreakpointValue } from "@chakra-ui/react"
-import { ComponentProps, PropsWithChildren, useState, useEffect, useMemo } from "react";
+import { type ComponentProps, type PropsWithChildren, useState, useEffect, useMemo } from "react";
 import { LuChevronRight } from "react-icons/lu"
 import { MSErrorBoundary } from "./ErrorBoundary";
 

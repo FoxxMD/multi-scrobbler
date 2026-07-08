@@ -1,5 +1,5 @@
-import { Logger } from "@foxxmd/logging";
-import { Request } from "express";
+import { type Logger } from "@foxxmd/logging";
+import { type Request } from "express";
 import path from "path";
 import { IngressNotifier } from "./IngressNotifier.js";
 

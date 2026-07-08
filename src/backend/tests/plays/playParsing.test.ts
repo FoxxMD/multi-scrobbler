@@ -6,7 +6,7 @@ import { generateArtistsStr, } from "../../../core/PlayTestUtils.js";
 import { parseArtistCredits, parseCredits, parseTrackCredits, uniqueNormalizedStrArr } from "../../utils/StringUtils.js";
 import testData from '../utils/playTestData.json' with { type: "json" };
 import { intersect } from "../../utils.js";
-import { ExpectedResults } from "../utils/interfaces.js";
+import { type ExpectedResults } from "../utils/interfaces.js";
 
 interface PlayTestFixture {
     caseHints: string[]

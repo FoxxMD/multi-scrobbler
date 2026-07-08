@@ -1,4 +1,4 @@
-import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect, PropsWithChildren, useCallback, useRef, useState } from "react"
+import React, { type ComponentProps, useMemo, forwardRef, Fragment, useEffect, type PropsWithChildren, useCallback, useRef, useState } from "react"
 import { Image, Heading, HStack, Link, LinkOverlay, LinkBox, Span, Flex, Box, Separator, Switch, FloatingPanel, Portal, Text, IconButton, Status, Stack } from '@chakra-ui/react';
 import { VersionNext } from "../Version";
 import { TextMuted } from "./TextMuted";

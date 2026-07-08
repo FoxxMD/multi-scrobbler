@@ -1,11 +1,11 @@
 import {
     createAction,
     createReducer,
-    AnyAction,
-    PayloadAction, createEntityAdapter,
+    type AnyAction,
+    type PayloadAction, createEntityAdapter,
     createSlice
 } from '@reduxjs/toolkit'
-import { Api } from '@reduxjs/toolkit/query/react';
+import { type Api } from '@reduxjs/toolkit/query/react';
 import {statusApi} from "./statusApi";
 import {ClientStatusData, SourcePlayerJson, SourceStatusData} from "../../core/Atomic";
 

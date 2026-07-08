@@ -1,5 +1,5 @@
-import { setupServer, SetupServer } from 'msw/node';
-import { NodeNetworkErrorCode, NodeNetworkException } from "../../common/errors/NodeErrors.js";
+import { setupServer, type SetupServer } from 'msw/node';
+import { type NodeNetworkErrorCode, type NodeNetworkException } from "../../common/errors/NodeErrors.js";
 
 export class MockNetworkError extends Error implements NodeNetworkException {
 

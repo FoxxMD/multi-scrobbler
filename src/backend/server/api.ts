@@ -1,5 +1,5 @@
-import { LogDataPretty, Logger, LogLevel } from "@foxxmd/logging";
-import { Express } from 'express';
+import { type LogDataPretty, type Logger, type LogLevel } from "@foxxmd/logging";
+import { type Express } from 'express';
 import bsseDef from 'better-sse';
 import bodyParser from "body-parser";
 import { FixedSizeList } from 'fixed-size-list';
@@ -7,20 +7,20 @@ import { PassThrough } from "node:stream";
 import { Transform } from "stream";
 import {
     CLIENT_DEAD_QUEUE,
-    ClientStatusData,
-    DeadLetterScrobble,
-    LeveledLogData,
-    LogOutputConfig,
+    type ClientStatusData,
+    type DeadLetterScrobble,
+    type LeveledLogData,
+    type LogOutputConfig,
     PLAY_CLIENT_STATE,
     PLAY_SOURCE_STATE,
-    PlayObject,
+    type PlayObject,
     SOURCE_SOT,
-    SOURCE_SOT_TYPES,
-    SourcePlayerJson,
-    SourceStatusData,
+    type SOURCE_SOT_TYPES,
+    type SourcePlayerJson,
+    type SourceStatusData,
 } from "../../core/Atomic.js";
 import { capitalize } from "../../core/StringUtils.js";
-import { ExpressHandler } from "../common/infrastructure/Atomic.js";
+import { type ExpressHandler } from "../common/infrastructure/Atomic.js";
 import { getRoot } from "../ioc.js";
 import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.js";
 import AbstractSource from "../sources/AbstractSource.js";
@@ -31,17 +31,17 @@ import { setupAuthRoutes } from "./auth.js";
 import { setupDeezerRoutes } from "./deezerRoutes.js";
 import {setupLZEndpointRoutes} from "./endpointListenbrainzRoutes.js";
 import {setupLastfmEndpointRoutes} from "./endpointLastfmRoutes.js";
-import { ClientAwareRequest, ComponentAwareRequest, makeClientCheckMiddle, makeClientNextMiddle, makeComponentMiddle, makeSourceCheckMiddle, makeSourceNextMiddle, SourceAwareRequest } from "./middleware.js";
+import { type ClientAwareRequest, type ComponentAwareRequest, makeClientCheckMiddle, makeClientNextMiddle, makeComponentMiddle, makeSourceCheckMiddle, makeSourceNextMiddle, type SourceAwareRequest } from "./middleware.js";
 import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.js";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
 import prom from 'prom-client';
 import { SimpleError } from "../common/errors/MSErrors.js";
-import { DrizzlePlayRepository, QueryPlaysOpts, QueryPlaysOptsJson } from "../common/database/drizzle/repositories/PlayRepository.js";
+import { DrizzlePlayRepository, type QueryPlaysOpts, type QueryPlaysOptsJson } from "../common/database/drizzle/repositories/PlayRepository.js";
 import { playSelectToDeadScrobble } from "../common/database/drizzle/entityUtils.js";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.js";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.js";
-import { ComponentClientApi, ComponentClientApiJson, ComponentSourceApi, ComponentSourceApiJson } from "../../core/Api.js";
+import { type ComponentClientApi, type ComponentClientApiJson, type ComponentSourceApi, type ComponentSourceApiJson } from "../../core/Api.js";
 import { asDayjsHydratedObject } from "../../core/DataUtils.js";
 import { Dayjs } from "dayjs";
 import { asSerializablePlaySelect } from "../../core/PlayMarshalUtils.js";

@@ -1,12 +1,12 @@
 import EventEmitter from "events";
-import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
+import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.js";
+import { type RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
 import { TealApiClient } from "../common/vendor/teal/TealApiClient.js";
 import { recordToPlay } from "../common/vendor/teal/TealApiClient.js";
-import { TealSourceConfig } from "../common/infrastructure/config/source/tealfm.js";
+import { type TealSourceConfig } from "../common/infrastructure/config/source/tealfm.js";
 import { ATProtoAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.js";
 import { parseArrayFromMaybeString } from "../utils/StringUtils.js";
 

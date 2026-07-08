@@ -1,4 +1,4 @@
-import { ResponseError } from "superagent";
+import { type ResponseError } from "superagent";
 
 import { findCauseByFunc } from "../../../utils/ErrorUtils.js";
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";

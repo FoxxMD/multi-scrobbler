@@ -1,5 +1,5 @@
-import { Express } from 'express';
-import { childLogger, Logger } from "@foxxmd/logging";
+import { type Express } from 'express';
+import { childLogger, type Logger } from "@foxxmd/logging";
 import bodyParser from "body-parser";
 import cors from 'cors';
 import path from "path";

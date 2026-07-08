@@ -2,21 +2,21 @@ import dayjs from "dayjs";
 import { EventEmitter } from "events";
 import path from 'path';
 import {MPC, type Status, type Song, type PlaylistItem} from 'mpc-js';
-import { BrainzMeta, PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
+import { type BrainzMeta, type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.js";
 import {
-    FormatPlayObjectOptions,
-    InternalConfig,
-    PlayerStateData,
+    type FormatPlayObjectOptions,
+    type InternalConfig,
+    type PlayerStateData,
     REPORTED_PLAYER_STATUSES,
-    ReportedPlayerStatus,
+    type ReportedPlayerStatus,
     SINGLE_USER_PLATFORM_ID,
 } from "../common/infrastructure/Atomic.js";
 import {
-    MPDSourceConfig,
-    PlayerState,
+    type MPDSourceConfig,
+    type PlayerState,
 } from "../common/infrastructure/config/source/mpd.js";
 import { isPortReachable } from "../utils/NetworkUtils.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { type RecentlyPlayedOptions } from "./AbstractSource.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 import { isDebugMode, sleep } from "../utils.js";

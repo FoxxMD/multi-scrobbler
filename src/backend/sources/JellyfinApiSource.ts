@@ -1,4 +1,4 @@
-import { Logger } from "@foxxmd/logging";
+import { type Logger } from "@foxxmd/logging";
 import { WS } from "iso-websocket";
 // @ts-expect-error weird typings?
 import { Api, Jellyfin } from "@jellyfin/sdk";
@@ -42,16 +42,16 @@ import {
 from "@jellyfin/sdk/lib/index.js";
 import dayjs from "dayjs";
 import EventEmitter from "events";
-import { ArtistCredit, BrainzMeta, PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
+import { type ArtistCredit, type BrainzMeta, type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.js";
 import { artistNamesToCredits, artistNameToCredit, buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import {
-    FormatPlayObjectOptions,
-    InternalConfig,
-    PlayerStateData,
-    PlayerStateDataMaybePlay,
-    PlayPlatformId, REPORTED_PLAYER_STATUSES
+    type FormatPlayObjectOptions,
+    type InternalConfig,
+    type PlayerStateData,
+    type PlayerStateDataMaybePlay,
+    type PlayPlatformId, REPORTED_PLAYER_STATUSES
 } from "../common/infrastructure/Atomic.js";
-import { JellyApiSourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
+import { type JellyApiSourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
 import { getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.js";
 import { genGroupIdStr } from '../../core/PlayUtils.js';
 import { joinedUrl } from "../utils/NetworkUtils.js";

@@ -2,7 +2,7 @@ import { loggerTest, loggerDebug } from "@foxxmd/logging";
 import { assert, expect } from 'chai';
 import EventEmitter from "events";
 import { describe, it } from 'mocha';
-import { SonosData } from "../../common/infrastructure/config/source/sonos.js";
+import { type SonosData } from "../../common/infrastructure/config/source/sonos.js";
 import { SonosSource } from "../../sources/SonosSource.js";
 import * as dotenv from 'dotenv';
 import path from 'path';

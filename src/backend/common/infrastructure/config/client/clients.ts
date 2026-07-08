@@ -1,11 +1,11 @@
-import { KoitoClientAIOConfig, KoitoClientConfig } from "./koito.js";
-import { LastfmClientAIOConfig, LastfmClientConfig } from "./lastfm.js";
-import { ListenBrainzClientAIOConfig, ListenBrainzClientConfig } from "./listenbrainz.js";
-import { MalojaClientAIOConfig, MalojaClientConfig } from "./maloja.js";
-import { TealClientAIOConfig, TealClientConfig } from "./tealfm.js";
-import { RockSkyClientAIOConfig, RockSkyClientConfig } from "./rocksky.js";
-import { LibrefmClientConfig, LibrefmClientAIOConfig } from "./librefm.js";
-import { DiscordClientAIOConfig, DiscordClientConfig } from "./discord.js";
+import { type KoitoClientAIOConfig, type KoitoClientConfig } from "./koito.js";
+import { type LastfmClientAIOConfig, type LastfmClientConfig } from "./lastfm.js";
+import { type ListenBrainzClientAIOConfig, type ListenBrainzClientConfig } from "./listenbrainz.js";
+import { type MalojaClientAIOConfig, type MalojaClientConfig } from "./maloja.js";
+import { type TealClientAIOConfig, type TealClientConfig } from "./tealfm.js";
+import { type RockSkyClientAIOConfig, type RockSkyClientConfig } from "./rocksky.js";
+import { type LibrefmClientConfig, type LibrefmClientAIOConfig } from "./librefm.js";
+import { type DiscordClientAIOConfig, type DiscordClientConfig } from "./discord.js";
 
 export type ClientConfig = 
 MalojaClientConfig 

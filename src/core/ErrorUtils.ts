@@ -1,6 +1,6 @@
 import { type MarkOptional } from "ts-essentials";
 import { truncateStringToLength } from "./StringUtils.js";
-import { ErrorLike, isErrorLike } from 'serialize-error';
+import { type ErrorLike, isErrorLike } from 'serialize-error';
 
 export type ErrorIsh = Error | MarkOptional<ErrorLike, 'stack'>;
 

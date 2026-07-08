@@ -1,10 +1,10 @@
 import { Accordion, Span, Stack, Text, Box, Separator, HStack, Flex, IconButton, Container, SkeletonText, Collapsible, ScrollArea } from '@chakra-ui/react';
-import { ComponentType } from '../../../core/Atomic.js';
-import React, { ComponentProps, Fragment, useMemo, useCallback } from "react"
+import { type ComponentType } from '../../../core/Atomic.js';
+import React, { type ComponentProps, Fragment, useMemo, useCallback } from "react"
 import dayjs, { Dayjs } from 'dayjs';
 import doy from 'dayjs/plugin/dayOfYear.js';
-import { PlayApiCommon, PlayApiCommonDetailed, SortPlaysByProps } from '../../../core/Api.js';
-import { QueryPlaysOpts, QueryPlaysOptsJson } from '../../../backend/common/database/drizzle/repositories/PlayRepository.js';
+import { type PlayApiCommon, type PlayApiCommonDetailed, type SortPlaysByProps } from '../../../core/Api.js';
+import { type QueryPlaysOpts, type QueryPlaysOptsJson } from '../../../backend/common/database/drizzle/repositories/PlayRepository.js';
 import { VscDebugRestart } from 'react-icons/vsc';
 import { sortByNewestDate } from '../../../core/PlayUtils.js';
 import { getAllIndexes } from '../../../core/DataUtils.js';

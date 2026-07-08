@@ -1,14 +1,15 @@
-import { childLogger, Logger } from "@foxxmd/logging";
+import { childLogger, type Logger } from "@foxxmd/logging";
 import { WS } from 'iso-websocket'
-import { DiscordStrongData, StatusType, DiscordWSData, ActivityData, ACTIVITY_TYPE } from "../../infrastructure/config/client/discord.js";
-import { _DataPayload, _NonDispatchPayload, APIUser, GatewayActivity, GatewayActivityAssets, GatewayCloseCodes, GatewayDispatchEvents, GatewayHeartbeatRequest, GatewayHelloData, GatewayIdentify, GatewayInvalidSessionData, GatewayOpcodes, GatewayPresenceUpdateData, GatewayReadyDispatchData, GatewayResumeData, GatewayUpdatePresence, PresenceUpdateStatus } from "discord.js";
+import { type DiscordStrongData, type StatusType, type DiscordWSData, type ActivityData, ACTIVITY_TYPE } from "../../infrastructure/config/client/discord.js";
+import type { _DataPayload, _NonDispatchPayload, APIUser, GatewayActivity, GatewayActivityAssets, GatewayHeartbeatRequest, GatewayHelloData, GatewayIdentify, GatewayInvalidSessionData, GatewayPresenceUpdateData, GatewayReadyDispatchData, GatewayResumeData, GatewayUpdatePresence } from "discord.js";
+import { GatewayCloseCodes, GatewayDispatchEvents, GatewayOpcodes, PresenceUpdateStatus } from "discord.js"
 import { isDebugMode, removeUndefinedKeys, sleep } from "../../../utils.js";
 import pEvent from 'p-event';
 import EventEmitter from "events";
 import { randomInt } from "crypto";
 import request from 'superagent';
-import { AbstractApiOptions,SourceData } from "../../infrastructure/Atomic.js";
-import { isPlayObject, SourcePlayerObj } from "../../../../core/Atomic.js";
+import { type AbstractApiOptions } from "../../infrastructure/Atomic.js";
+import { isPlayObject, type SourcePlayerObj } from "../../../../core/Atomic.js";
 import dayjs, { Dayjs } from "dayjs";
 import { getRoot } from "../../../ioc.js";
 import { formatWebsocketClose, isCloseEvent, isErrorEvent, wsReadyStateToStr } from "../../../utils/NetworkUtils.js";

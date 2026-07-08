@@ -1,11 +1,11 @@
-import { LogDataPretty, LogLevel } from "@foxxmd/logging";
+import { type LogDataPretty, type LogLevel } from "@foxxmd/logging";
 import { Dayjs } from "dayjs";
-import { AdditionalTrackInfoResponse } from "../backend/common/vendor/listenbrainz/interfaces.js";
-import { DeepOmit, Merge, RequiredKeys, StrictOmit } from "ts-essentials";
-import { ErrorObject } from "serialize-error";
-import { PlayPlatformIdStr } from "../backend/common/infrastructure/Atomic.js";
-import { FlowControlTerm, TransformHook } from "../backend/common/infrastructure/Transform.js";
-import { Changeset } from "json-diff-ts";
+import { type AdditionalTrackInfoResponse } from "../backend/common/vendor/listenbrainz/interfaces.js";
+import type { DeepOmit, Merge, RequiredKeys, StrictOmit } from "ts-essentials";
+import { type ErrorObject } from "serialize-error";
+import { type PlayPlatformIdStr } from "../backend/common/infrastructure/Atomic.js";
+import { type FlowControlTerm, type TransformHook } from "../backend/common/infrastructure/Transform.js";
+import { type Changeset } from "json-diff-ts";
 import {type IParseBaseOptions } from 'qs'; 
 
 export type ComponentTypeClient = 'client';

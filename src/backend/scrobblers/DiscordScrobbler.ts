@@ -1,11 +1,11 @@
-import { Logger, LogLevel } from "@foxxmd/logging";
+import { type Logger, type LogLevel } from "@foxxmd/logging";
 import EventEmitter from "events";
-import { PlayMatchResult, PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
-import { CALCULATED_PLAYER_STATUSES, FormatPlayObjectOptions, REPORTED_PLAYER_STATUSES, ReportedPlayerStatus, SINGLE_USER_PLATFORM_ID_STR, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
+import { type PlayMatchResult, type PlayObject, type SourcePlayerObj } from "../../core/Atomic.js";
+import { CALCULATED_PLAYER_STATUSES, type FormatPlayObjectOptions, REPORTED_PLAYER_STATUSES, type ReportedPlayerStatus, SINGLE_USER_PLATFORM_ID_STR, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractScrobbleClient.js";
-import { DiscordClientConfig, DiscordStrongData } from "../common/infrastructure/config/client/discord.js";
+import { type DiscordClientConfig, type DiscordStrongData } from "../common/infrastructure/config/client/discord.js";
 import { DiscordWSClient } from "../common/vendor/discord/DiscordWSClient.js";
 import { configToStrong } from "../common/vendor/discord/DiscordUtils.js";
 import { DiscordIPCClient } from "../common/vendor/discord/DiscordIPCClient.js";

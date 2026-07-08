@@ -1,4 +1,4 @@
-import { Logger } from "@foxxmd/logging";
+import { type Logger } from "@foxxmd/logging";
 
 
 export class MaybeLogger {

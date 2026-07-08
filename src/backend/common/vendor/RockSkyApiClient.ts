@@ -1,25 +1,25 @@
 import dayjs from "dayjs";
 import request, { Request, Response } from 'superagent';
-import { PlayObject, PlayObjectMinimal, ScrobbleActionResult, URLData } from "../../../core/Atomic.js";
+import { type PlayObject, type PlayObjectMinimal, type ScrobbleActionResult, type URLData } from "../../../core/Atomic.js";
 import { artistCreditsToNames, artistNamesToCredits, nonEmptyStringOrDefault } from "../../../core/StringUtils.js";
 import { UpstreamError } from "../errors/UpstreamError.js";
-import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
-import { RockSkyClientData, RockSkyData, RockSkyOptions } from "../infrastructure/config/client/rocksky.js";
+import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
+import { type RockSkyClientData, type RockSkyData, type RockSkyOptions } from "../infrastructure/config/client/rocksky.js";
 import AbstractApiClient from "./AbstractApiClient.js";
 import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.js';
 import { unique } from '../../utils.js';
-import { ListenPayload, ListenResponse, ListenType, SubmitPayload } from './listenbrainz/interfaces.js';
+import { type ListenPayload, type ListenResponse, type ListenType, type SubmitPayload } from './listenbrainz/interfaces.js';
 import { playToListenPayload } from './listenbrainz/lzUtils.js';
-import { RockskyScrobble } from './rocksky/interfaces.js';
-import { Handle } from "@atcute/lexicons";
+import { type RockskyScrobble } from './rocksky/interfaces.js';
+import { type Handle } from "@atcute/lexicons";
 import { getATProtoIdentifier, identifierToAtProtoHandle } from './atproto/atUtils.js';
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.js";
 import { ScrobbleSubmitError } from "../errors/MSErrors.js";
 import { tryApiCall } from "../../utils/RequestUtils.js";
-import { CreateScrobbleInput, RockskyClient } from "@rocksky/sdk";
+import { type CreateScrobbleInput, RockskyClient } from "@rocksky/sdk";
 import { getRoot } from "../../ioc.js";
 import { MSCache } from "../Cache.js";
-import { HandleData } from "../infrastructure/config/client/atproto.js";
+import { type HandleData } from "../infrastructure/config/client/atproto.js";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 
 interface SubmitOptions {

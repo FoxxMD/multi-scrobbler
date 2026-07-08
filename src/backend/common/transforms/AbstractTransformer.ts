@@ -1,15 +1,15 @@
-import { childLogger, Logger } from "@foxxmd/logging";
-import { PlayObject, TransformerCommon, TransformerCommonConfig } from "../../../core/Atomic.js";
+import { childLogger, type Logger } from "@foxxmd/logging";
+import { type PlayObject, type TransformerCommon, type TransformerCommonConfig } from "../../../core/Atomic.js";
 import { isStageTyped, testWhenConditions } from "../../utils/PlayTransformUtils.js";
 import AbstractInitializable from "../AbstractInitializable.js";
-import { StageConfig } from "../infrastructure/Transform.js";
+import { type StageConfig } from "../infrastructure/Transform.js";
 import { cacheFunctions,  parseToRegexOrLiteralSearch, testMaybeRegex, searchAndReplace} from "@foxxmd/regex-buddy-core";
 import { Cacheable } from "cacheable";
 import { hashObject } from "../../utils/StringUtils.js";
 import { playContentInvariantTransform } from "../../utils/PlayComparisonUtils.js";
 import { isSimpleError, SkipTransformStageError, StagePrerequisiteError } from "../errors/MSErrors.js";
 import { capitalize } from "../../../core/StringUtils.js";
-import { StaggerOptions } from "../../utils/AsyncUtils.js";
+import { type StaggerOptions } from "../../utils/AsyncUtils.js";
 
 export interface TransformerOptions {
         logger: Logger

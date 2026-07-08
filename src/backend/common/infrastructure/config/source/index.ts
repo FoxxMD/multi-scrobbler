@@ -1,9 +1,9 @@
-import { FileLogOptions, LogLevel } from "@foxxmd/logging";
+import { type FileLogOptions, type LogLevel } from "@foxxmd/logging";
 
-import { PlayTransformConfig, PlayTransformOptions } from "../../Transform.js";
-import { CommonConfig, CommonData, RequestRetryOptions } from "../common.js";
-import { RetentionConfig } from "../database.js";
-import { DurationValue } from "../../Atomic.js";
+import { type PlayTransformConfig, type PlayTransformOptions } from "../../Transform.js";
+import { type CommonConfig, type CommonData, type RequestRetryOptions } from "../common.js";
+import { type RetentionConfig } from "../database.js";
+import { type DurationValue } from "../../Atomic.js";
 
 export interface SourceRetryOptions extends RequestRetryOptions {
     /**

@@ -1,4 +1,4 @@
-import { SourcePlayerObj } from "../../../core/Atomic.js";
+import { type SourcePlayerObj } from "../../../core/Atomic.js";
 import { GenericPlayerState } from "./GenericPlayerState.js";
 
 /**

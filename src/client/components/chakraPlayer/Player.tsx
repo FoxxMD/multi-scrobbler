@@ -1,10 +1,10 @@
-import React, { ComponentProps, useMemo, forwardRef, Fragment, useState, useEffect, useCallback } from "react"
+import React, { type ComponentProps, useMemo, forwardRef, Fragment, useState, useEffect, useCallback } from "react"
 import { Accordion, Highlight, Em, Progress, For, Span, Stack, Spacer, Bleed, Text, Image, Box, Heading, AbsoluteCenter, Button, Separator, HStack, Flex, Center, Badge, IconButton, Container, Collapsible, Card, LinkOverlay, LinkBox } from '@chakra-ui/react';
 import { TextMuted } from "../TextMuted";
 import { SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerJson } from "../../../core/Atomic";
 import { timeToHumanTimestamp } from "../../../core/TimeUtils";
 import { capitalize } from "../../../core/StringUtils";
-import { QueryFunctionContext, queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type QueryFunctionContext, queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ErrorAlert } from "../ErrorAlert";
 import ky from 'ky';
 import { baseUrl } from "../../utils";

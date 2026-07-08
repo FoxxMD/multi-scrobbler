@@ -1,5 +1,5 @@
-import { Logger } from "@foxxmd/logging";
-import { Request } from "express";
+import { type Logger } from "@foxxmd/logging";
+import { type Request } from "express";
 import { EndpointListenbrainzSource, parseIdentifiersFromRequest } from "../EndpointListenbrainzSource.js";
 import { IngressNotifier } from "./IngressNotifier.js";
 

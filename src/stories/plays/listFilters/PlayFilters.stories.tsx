@@ -5,9 +5,9 @@ import { Container, Stack } from '@chakra-ui/react';
 import { fn } from 'storybook/test';
 import { ErrorAlert } from "../../../client/components/ErrorAlert.js";
 import {Provider} from "../../../client/components/Provider.js";
-import { ErrorLike } from "../../../core/Atomic.js";
+import { type ErrorLike } from "../../../core/Atomic.js";
 import { ListFilters, todayRange } from "../../../client/components/playActivity/ListFilters.js";
-import { QueryPlaysOptsJson } from "../../../backend/common/database/drizzle/repositories/PlayRepository.js";
+import { type QueryPlaysOptsJson } from "../../../backend/common/database/drizzle/repositories/PlayRepository.js";
 
 const ContainedFilter = (props: any) => {
     const [filters, setFilter] = useState<QueryPlaysOptsJson>({

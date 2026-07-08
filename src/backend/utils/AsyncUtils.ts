@@ -1,4 +1,4 @@
-import pMap, { Mapper, Options, pMapIterable } from "p-map";
+import pMap, { type Mapper, type Options, pMapIterable } from "p-map";
 import { sleep } from "../utils.js";
 
 /** https://stackoverflow.com/a/63795192/1469797 */

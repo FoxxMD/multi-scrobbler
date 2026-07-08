@@ -2,7 +2,7 @@ import JSON5 from "json5";
 import { constants, promises } from "fs";
 import { MaybeLogger } from '../common/MaybeLogger.js';
 import { deepEqual } from 'fast-equals';
-import { CommonConfigPrimitives } from "../common/infrastructure/config/common.js";
+import { type CommonConfigPrimitives } from "../common/infrastructure/config/common.js";
 import { parseBoolStrict, removeUndefinedKeys } from "../utils.js";
 import { nonEmptyStringOrDefault } from "../../core/StringUtils.js";
 

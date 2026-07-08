@@ -1,26 +1,26 @@
 import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
-import { PlayObject, PlayObjectMinimal, SOURCE_SOT } from "../../core/Atomic.js";
+import { type PlayObject, type PlayObjectMinimal, SOURCE_SOT } from "../../core/Atomic.js";
 import {
-    FormatPlayObjectOptions,
-    InternalConfig,
+    type FormatPlayObjectOptions,
+    type InternalConfig,
     NO_USER,
-    PlayerStateData,
-    PlayPlatformId,
+    type PlayerStateData,
+    type PlayPlatformId,
     REPORTED_PLAYER_STATUSES,
-    ReportedPlayerStatus,
+    type ReportedPlayerStatus,
 } from "../common/infrastructure/Atomic.js";
-import { WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.js";
+import { type WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.js";
 import {
-    WebScrobblerHookEvent,
-    WebScrobblerPayload,
-    WebScrobblerSong
+    type WebScrobblerHookEvent,
+    type WebScrobblerPayload,
+    type WebScrobblerSong
 } from "../common/vendor/webscrobbler/interfaces.js";
 
 import { joinedUrl } from "../utils/NetworkUtils.js";
 import MemorySource from "./MemorySource.js";
-import { Logger } from "@foxxmd/logging";
-import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
+import { type Logger } from "@foxxmd/logging";
+import { type PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 import { artistCreditToName, artistNameToCredit } from "../../core/StringUtils.js";

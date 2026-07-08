@@ -1,5 +1,5 @@
 import React, {Fragment} from 'react';
-import {connect, ConnectedProps} from "react-redux";
+import {connect, type ConnectedProps} from "react-redux";
 import StatusCardSkeleton from "../components/statusCard/StatusCardSkeleton";
 import SourceStatusCard from "../components/statusCard/SourceStatusCard";
 import ClientStatusCard from "../components/statusCard/ClientStatusCard";

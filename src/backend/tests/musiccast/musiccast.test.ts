@@ -5,7 +5,7 @@ import dayjs from "dayjs";
 import { describe, it, before, after } from 'mocha';
 import { http, HttpResponse } from "msw";
 import { withRequestInterception } from "../utils/networking.js";
-import { MusicCastData } from "../../common/infrastructure/config/source/musiccast.js";
+import { type MusicCastData } from "../../common/infrastructure/config/source/musiccast.js";
 import { MusicCastSource } from "../../sources/MusicCastSource.js";
 import netInterceptor from "@gr2m/net-interceptor";
 import { REPORTED_PLAYER_STATUSES } from "../../common/infrastructure/Atomic.js";

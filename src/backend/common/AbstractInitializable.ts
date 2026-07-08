@@ -1,8 +1,8 @@
-import { Logger } from "@foxxmd/logging";
+import { type Logger } from "@foxxmd/logging";
 import {truncateStringToLength } from "../../core/StringUtils.js";
 import { hasNodeNetworkException } from "./errors/NodeErrors.js";
 import { hasUpstreamError } from "./errors/UpstreamError.js";
-import { WebhookPayload } from "./infrastructure/config/health/webhooks.js";
+import { type WebhookPayload } from "./infrastructure/config/health/webhooks.js";
 import { AuthCheckError, BuildDataError, ConnectionCheckError, ParseCacheError, PostInitError, StageError } from "./errors/MSErrors.js";
 import { messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.js";
 import { spawn } from 'abort-controller-x';

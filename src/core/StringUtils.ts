@@ -5,14 +5,14 @@ import relativeTime from "dayjs/plugin/relativeTime.js";
 import timezone from "dayjs/plugin/timezone.js";
 import utc from "dayjs/plugin/utc.js";
 import {
-    AmbPlayObject,
-    ArtistCredit,
-    PlayData,
-    PlayObject,
+    type AmbPlayObject,
+    type ArtistCredit,
+    type PlayData,
+    type PlayObject,
     SCROBBLE_TS_SOC_END,
     SCROBBLE_TS_SOC_START,
-    ScrobbleTsSOC,
-    TrackStringOptions
+    type ScrobbleTsSOC,
+    type TrackStringOptions
 } from "./Atomic.js";
 import { DELIMETERS_REGEX, DELIMITERS } from "../backend/common/infrastructure/Atomic.js";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";

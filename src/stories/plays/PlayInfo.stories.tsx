@@ -8,7 +8,7 @@ import { Container } from '@chakra-ui/react';
 import { generateArtistCredits, generateArtists, generateJsonPlay, generatePlay, withBrainz } from "../../core/PlayTestUtils.js"
 import clone from "clone";
 import { asJsonPlayObject } from '../../core/PlayMarshalUtils.js';
-import { JsonPlayObject } from "../../core/Atomic.js";
+import { type JsonPlayObject } from "../../core/Atomic.js";
 
 type PropsAndCustomArgs = React.ComponentProps<typeof PlayData> & {
   includeAlbumArtists?: boolean;

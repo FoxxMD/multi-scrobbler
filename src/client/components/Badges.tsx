@@ -1,5 +1,5 @@
 import { Badge, Separator, HStack } from "@chakra-ui/react";
-import React, { ComponentProps, useState, useCallback, useEffect, PropsWithChildren } from "react";
+import React, { type ComponentProps, useState, useCallback, useEffect, type PropsWithChildren } from "react";
 import { COMPONENT_STATE, ComponentCommonApiJson, componentStateToFriendly, MsSseEvent, PlayApiCommon } from "../../core/Api";
 import { capitalizeWords } from "../../core/StringUtils";
 import {useSSEContext, useSSEEvent} from "@flamefrontend/sse-runtime-react";

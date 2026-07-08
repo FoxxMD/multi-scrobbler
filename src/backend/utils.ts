@@ -1,22 +1,22 @@
 import backoffStrategies from '@kenyip/backoff-strategies';
 import { replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer } from 'common-tags';
 import dayjs, { Dayjs } from 'dayjs';
-import { Duration } from "dayjs/plugin/duration.js";
+import { type Duration } from "dayjs/plugin/duration.js";
 import utc from 'dayjs/plugin/utc.js';
-import { Request } from "express";
+import { type Request } from "express";
 // https://github.com/jfromaniello/url-join#in-nodejs
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
-import { DEFAULT_MISSING_MBIDS_TYPES, DEFAULT_MISSING_TYPES, MissingMbidType, PlayObject } from "../core/Atomic.js";
+import { DEFAULT_MISSING_MBIDS_TYPES, DEFAULT_MISSING_TYPES, type MissingMbidType, type PlayObject } from "../core/Atomic.js";
 import {
     asPlayerStateDataMaybePlay,
     NO_DEVICE,
     NO_USER,
-    PlayerStateDataMaybePlay,
-    PlayPlatformId,
-    ProgressAwarePlayObject,
-    RegExResult,
-    RemoteIdentityParts,
-    ScrobbleThresholdResult,
+    type PlayerStateDataMaybePlay,
+    type PlayPlatformId,
+    type ProgressAwarePlayObject,
+    type RegExResult,
+    type RemoteIdentityParts,
+    type ScrobbleThresholdResult,
 } from "./common/infrastructure/Atomic.js";
 import { genGroupIdStr } from '../core/PlayUtils.js';
 

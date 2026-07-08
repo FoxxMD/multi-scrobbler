@@ -3,7 +3,7 @@ import StatusCardSkeleton, {StatusCardSkeletonData} from "./StatusCardSkeleton";
 import SkeletonParagraph from "../skeleton/SkeletonParagraph";
 import {clientAdapter} from "../../status/ducks";
 import {RootState} from "../../store";
-import {connect, ConnectedProps} from "react-redux";
+import {connect, type ConnectedProps} from "react-redux";
 import {Link} from "react-router-dom";
 import {useStartClientMutation} from "./clientDucks";
 

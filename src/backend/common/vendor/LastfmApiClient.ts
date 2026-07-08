@@ -1,5 +1,5 @@
-import dayjs, { Dayjs, ManipulateType } from "dayjs";
-import { BrainzMeta, PlayObject, PlayObjectMinimal, ScrobbleActionResult, UnixTimestamp, URLData, Writeable } from "../../../core/Atomic.js";
+import dayjs, { Dayjs, type ManipulateType } from "dayjs";
+import { type BrainzMeta, type PlayObject, type PlayObjectMinimal, type ScrobbleActionResult, type UnixTimestamp, type URLData, type Writeable } from "../../../core/Atomic.js";
 import { artistNamesToCredits, artistNameToCredit, nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.js";
 import { removeUndefinedKeys, sleep } from "../../utils.js";
 import { writeFile } from '../../utils/FSUtils.js';
@@ -8,11 +8,11 @@ import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../ut
 import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.js";
 import { getNodeNetworkException, isNodeNetworkException } from "../errors/NodeErrors.js";
 import { UpstreamError } from "../errors/UpstreamError.js";
-import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfigOptional, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens, PaginatedTimeRangeListensResult } from "../infrastructure/Atomic.js";
-import { LastfmData } from "../infrastructure/config/client/lastfm.js";
+import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type InternalConfigOptional, type PaginatedListensTimeRangeOptions, type PaginatedTimeRangeListens, type PaginatedTimeRangeListensResult } from "../infrastructure/Atomic.js";
+import { type LastfmData } from "../infrastructure/config/client/lastfm.js";
 import AbstractApiClient from "./AbstractApiClient.js";
 import { normalizeStr, parseArtistCredits } from "../../utils/StringUtils.js";
-import { LastFMUser, LastFMAuth, LastFMTrack, LastFMUserGetRecentTracksResponse, LastFMBooleanNumber, LastFMUpdateNowPlayingResponse, LastFMUserGetInfoResponse, LastFMUserGetRecentTracksParams } from 'lastfm-ts-api';
+import { LastFMUser, LastFMAuth, LastFMTrack, type LastFMUserGetRecentTracksResponse, type LastFMBooleanNumber, type LastFMUpdateNowPlayingResponse, type LastFMUserGetInfoResponse, type LastFMUserGetRecentTracksParams } from 'lastfm-ts-api';
 import clone from 'clone';
 import { IncomingMessage } from "http";
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.js";

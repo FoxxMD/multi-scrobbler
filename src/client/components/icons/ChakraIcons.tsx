@@ -31,7 +31,7 @@ import { MdOutlineFiberNew } from "react-icons/md";
 import { RiZzzFill } from "react-icons/ri";
 import { SiGoogledocs } from "react-icons/si";
 import { IconButton, Clipboard, useClipboard, Spinner, Icon } from "@chakra-ui/react"
-import { ComponentProps, PropsWithChildren } from 'react';
+import { type ComponentProps, type PropsWithChildren } from 'react';
 import { IconBaseProps, IconType } from "react-icons/lib";
 
 export const makeIconButton = (Icon: IconType) => (props: PropsWithChildren<ComponentProps<typeof IconButton>> & { iconProps?: IconBaseProps, loading?: boolean }) => {

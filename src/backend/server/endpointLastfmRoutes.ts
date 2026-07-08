@@ -1,12 +1,12 @@
 /* eslint-disable prefer-arrow-functions/prefer-arrow-functions */
-import { Express } from 'express';
-import { childLogger, Logger } from "@foxxmd/logging";
+import { type Express } from 'express';
+import { childLogger, type Logger } from "@foxxmd/logging";
 import bodyParser from "body-parser";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import { nonEmptyBody } from "./middleware.js";
 import { LFMEndpointNotifier } from "../sources/ingressNotifiers/LFMEndpointNotifier.js";
 import { EndpointLastfmSource, playStateFromRequest, parseDisplayIdentifiersFromRequest } from "../sources/EndpointLastfmSource.js";
-import { LastFMScrobbleRequestPayload } from "../common/vendor/LastfmApiClient.js";
+import { type LastFMScrobbleRequestPayload } from "../common/vendor/LastfmApiClient.js";
 
 export const setupLastfmEndpointRoutes = (app: Express, parentLogger: Logger, scrobbleSources: ScrobbleSources) => {
 

@@ -17,6 +17,9 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "sourceMap": false,
+    "rewriteRelativeImportExtensions": true,
+     "erasableSyntaxOnly": true,
+     "verbatimModuleSyntax": true
   },
   "include": [
     "src",

@@ -1,24 +1,24 @@
 import dayjs from "dayjs";
 import EventEmitter from "events";
-import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
+import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
 import {
-    ExpressRequest,
-    FormatPlayObjectOptions,
-    InternalConfig,
+    type ExpressRequest,
+    type FormatPlayObjectOptions,
+    type InternalConfig,
     NO_USER,
-    PlayerStateData,
-    PlayPlatformId,
+    type PlayerStateData,
+    type PlayPlatformId,
     REPORTED_PLAYER_STATUSES,
-    ReportedPlayerStatus
+    type ReportedPlayerStatus
 } from "../common/infrastructure/Atomic.js";
-import { ListenbrainzEndpointSourceConfig } from "../common/infrastructure/config/source/endpointlz.js";
+import { type ListenbrainzEndpointSourceConfig } from "../common/infrastructure/config/source/endpointlz.js";
 import { ListenbrainzApiClient, listenPayloadToPlay } from "../common/vendor/ListenbrainzApiClient.js";
-import { SubmitPayload } from '../common/vendor/listenbrainz/interfaces.js';
-import { ListenPayload } from '../common/vendor/listenbrainz/interfaces.js';
+import { type SubmitPayload } from '../common/vendor/listenbrainz/interfaces.js';
+import { type ListenPayload } from '../common/vendor/listenbrainz/interfaces.js';
 import MemorySource from "./MemorySource.js";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.js";
-import { Logger } from "@foxxmd/logging";
-import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
+import { type Logger } from "@foxxmd/logging";
+import { type PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 
 const noSlugMatch = new RegExp(/(?:\/api\/listenbrainz\/?)$|(?:\/1\/?|\/1\/submit-listens\/?\/1\/validate-token\/|)$/i);

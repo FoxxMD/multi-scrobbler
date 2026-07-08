@@ -1,4 +1,4 @@
-import { PlayObject } from "../../../core/Atomic.js";
+import { type PlayObject } from "../../../core/Atomic.js";
 import AbstractSource from "../../sources/AbstractSource.js";
 import { MemoryPositionalSource } from "../../sources/MemoryPositionalSource.js";
 import MemorySource from "../../sources/MemorySource.js";

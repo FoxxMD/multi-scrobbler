@@ -1,6 +1,6 @@
-import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect, useState, useCallback } from "react"
+import React, { type ComponentProps, useMemo, forwardRef, Fragment, useEffect, useState, useCallback } from "react"
 import { DataList, Badge, Box, Heading, Skeleton, Stat, Separator, HStack, Flex, Collapsible, Card, LinkOverlay, LinkBox, SkeletonText } from '@chakra-ui/react';
-import { COMPONENT_STATE, ComponentClientApiJson, ComponentCommonApiJson, ComponentSourceApiJson, ComponentState, componentStateToFriendly, isComponentClientApiJson, isComponentSourceApiJson, MsSseEvent, MsSseEventPayload } from "../../../core/Api.js";
+import { COMPONENT_STATE, type ComponentClientApiJson, type ComponentCommonApiJson, type ComponentSourceApiJson, type ComponentState, componentStateToFriendly, isComponentClientApiJson, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
 import { TextMuted } from "../TextMuted.js";
 import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
 import { capitalize } from "../../../core/StringUtils.js";
@@ -8,7 +8,7 @@ import { ShortDateDisplay } from "../DateDisplay.js";
 import { ChevronRightButton, DownArrowIcon, UpArrowIcon } from "../icons/ChakraIcons.js";
 import { ChakraPlayer, ChakraPlayerFetchable } from "../chakraPlayer/Player.js";
 import { InfoTip } from "../ToggleTip.js";
-import { QueryFunctionContext, queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type QueryFunctionContext, queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ErrorAlert } from "../ErrorAlert";
 import ky from 'ky';
 import { baseUrl } from "../../utils";

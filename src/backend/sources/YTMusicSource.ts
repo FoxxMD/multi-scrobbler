@@ -1,23 +1,23 @@
 import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
-import { PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
-import { Innertube, UniversalCache, Parser, YTNodes, ApiResponse, IBrowseResponse, Log, SessionOptions } from 'youtubei.js';
-import { GenerateAuthUrlOpts, OAuth2Client } from 'google-auth-library';
+import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.js";
+import { type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.js";
+import { type YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
+import { Innertube, UniversalCache, Parser, YTNodes, type ApiResponse, type IBrowseResponse, Log, type SessionOptions } from 'youtubei.js';
+import { type GenerateAuthUrlOpts, OAuth2Client } from 'google-auth-library';
 import {resolve} from 'path';
 import { isDebugMode, parseBool, sleep } from "../utils.js";
 import { formatNumber } from '../../core/DataUtils.js';
 import {
     getPlaysDiff,
     humanReadableDiff,
-    PlayOrderChangeType,
-    PlayOrderConsistencyResults,
+    type PlayOrderChangeType,
+    type PlayOrderConsistencyResults,
     playsAreAddedOnly,
     playsAreBumpedOnly,
     playsAreSortConsistent
 } from "../utils/PlayComparisonUtils.js";
-import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
+import AbstractSource, { type RecentlyPlayedOptions } from "./AbstractSource.js";
 import { artistNamesToCredits, buildTrackString, truncateStringToLength } from "../../core/StringUtils.js";
 import { joinedUrl } from "../utils/NetworkUtils.js";
 import { todayAwareFormat } from "../../core/TimeUtils.js";

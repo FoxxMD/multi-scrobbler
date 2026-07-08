@@ -1,7 +1,7 @@
 import request, { Request, Response } from 'superagent';
 import xml2js from 'xml2js';
-import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER } from "../infrastructure/Atomic.js";
-import { JRiverData } from "../infrastructure/config/source/jriver.js";
+import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER } from "../infrastructure/Atomic.js";
+import { type JRiverData } from "../infrastructure/config/source/jriver.js";
 import AbstractApiClient from "./AbstractApiClient.js";
 
 const parser = new xml2js.Parser({'async': true});
@@ -120,7 +120,7 @@ export class JRiverApiClient extends AbstractApiClient {
             const resp = await req as Response;
             if (resp.text !== '') {
                 const rawBody = await parser.parseStringPromise(resp.text);
-                resp.body = <T>jriverResponseTransform(rawBody);
+                resp.body = jriverResponseTransform(rawBody);
             }
             return resp;
         } catch (e) {

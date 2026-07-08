@@ -1,5 +1,5 @@
 import {TrackStringOptions} from "../../core/Atomic";
-import React, {ReactElement, Fragment} from "react";
+import React, {type ReactElement, Fragment} from "react";
 import {defaultBuildTrackStringTransformers} from "../../core/StringUtils";
 import dayjs, {Dayjs} from 'dayjs';
 

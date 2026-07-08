@@ -1,15 +1,15 @@
-import { Logger } from "@foxxmd/logging";
+import { type Logger } from "@foxxmd/logging";
 import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
-import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
+import { type PlayObject, type SourcePlayerObj } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
-import { FormatPlayObjectOptions, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
-import { DEFAULT_MS_ITEMS_PER_GET_LZ, ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz.js";
+import { type FormatPlayObjectOptions, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
+import { DEFAULT_MS_ITEMS_PER_GET_LZ, type ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz.js";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.js";
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.js';
-import { ListenPayload } from '../common/vendor/listenbrainz/interfaces.js';
+import { type ListenPayload } from '../common/vendor/listenbrainz/interfaces.js';
 import { Notifiers } from "../notifier/Notifiers.js";
 
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, playerInNPPlayingOnlyState } from "./AbstractScrobbleClient.js";

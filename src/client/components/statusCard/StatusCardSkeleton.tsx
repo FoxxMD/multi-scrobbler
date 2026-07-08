@@ -1,4 +1,4 @@
-import React, {PropsWithChildren, ReactElement} from 'react';
+import React, {type PropsWithChildren, type ReactElement} from 'react';
 import SkeletonTitle from "../skeleton/SkeletonTitle";
 import SkeletonParagraph from "../skeleton/SkeletonParagraph";
 import StatusIndicator, {StatusType} from "../StatusIndicator";

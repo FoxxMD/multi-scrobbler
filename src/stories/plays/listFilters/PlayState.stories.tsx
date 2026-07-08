@@ -5,7 +5,7 @@ import { Container } from '@chakra-ui/react';
 import { fn } from 'storybook/test';
 import { ErrorAlert } from "../../../client/components/ErrorAlert.js";
 import {Provider} from "../../../client/components/Provider.js";
-import { ErrorLike } from "../../../core/Atomic.js";
+import { type ErrorLike } from "../../../core/Atomic.js";
 import { PlayStateFilter } from "../../../client/components/playActivity/ListFilters.js";
 
 

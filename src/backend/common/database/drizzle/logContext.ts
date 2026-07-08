@@ -1,4 +1,4 @@
-import { Logger } from '@foxxmd/logging'
+import { type Logger } from '@foxxmd/logging'
 import { AsyncLocalStorage } from 'async_hooks'
 
 // based on https://numeric.substack.com/p/upgrading-drizzleorm-logging-with

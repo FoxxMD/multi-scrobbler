@@ -13,7 +13,7 @@ import {
 } from "./deadLetterDucks";
 import dayjs from "dayjs";
 import {RootState} from "../store";
-import {connect, ConnectedProps} from "react-redux";
+import {connect, type ConnectedProps} from "react-redux";
 import { faBug } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import clsx from "clsx";

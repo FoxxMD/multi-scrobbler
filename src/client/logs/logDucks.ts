@@ -4,7 +4,7 @@ import {
 } from '@reduxjs/toolkit'
 import {logsApi} from "./logsApi";
 import {LogOutputConfig} from "../../core/Atomic";
-import {LogDataPretty} from "@foxxmd/logging";
+import {type LogDataPretty} from "@foxxmd/logging";
 export interface LogsState {
     data: (LogDataPretty & {levelLabel: string})[],
     settings: LogOutputConfig

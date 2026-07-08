@@ -1,25 +1,25 @@
-import { childLogger, Logger, LogLevel } from "@foxxmd/logging";
+import { childLogger, type Logger, type LogLevel } from "@foxxmd/logging";
 import dayjs, { Dayjs } from "dayjs";
-import { Duration } from "dayjs/plugin/duration.js";
+import { type Duration } from "dayjs/plugin/duration.js";
 import EventEmitter from "events";
 import { nanoid } from "nanoid";
-import { MarkOptional, MarkRequired } from "ts-essentials";
+import type { MarkOptional } from "ts-essentials";
 import {
-    DeadLetterScrobble,
-    NowPlayingUpdateThreshold,
-    PlayObject,
-    PlayObjectMinimal,
-    QueuedScrobble, ScrobbleActionResult, PlayMatchResult, SourcePlayerObj, TA_DURING,
+    type DeadLetterScrobble,
+    type NowPlayingUpdateThreshold,
+    type PlayObject,
+    type PlayObjectMinimal,
+    type QueuedScrobble, type ScrobbleActionResult, type PlayMatchResult, type SourcePlayerObj, TA_DURING,
     TA_FUZZY,
-    TrackStringOptions,
+    type TrackStringOptions,
     TA_EXACT,
     SOURCE_SOT,
-    ErrorLike,
+    type ErrorLike,
     CLIENT_INGRESS_QUEUE,
     CLIENT_DEAD_QUEUE,
-    PlayOriginal,
-    PlayLifecycle,
-    SourcePlayerJson,
+    type PlayOriginal,
+    type PlayLifecycle,
+    type SourcePlayerJson,
     QUEUE_STATUS_COMPLETED
 } from "../../core/Atomic.js";
 import { artistNamesToCredits, buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
@@ -27,22 +27,22 @@ import AbstractComponent from "../common/AbstractComponent.js";
 import { hasUpstreamError } from "../common/errors/UpstreamError.js";
 import {
     ARTIST_WEIGHT,
-    Authenticatable,
+    type Authenticatable,
     CALCULATED_PLAYER_STATUSES,
     DEFAULT_RETRY_MULTIPLIER,
     DUP_SCORE_THRESHOLD,
-    FormatPlayObjectOptions,
-    PaginatedTimeRangeOptions,
+    type FormatPlayObjectOptions,
+    type PaginatedTimeRangeOptions,
     REFRESH_STALE_DEFAULT,
-    ReportedPlayerStatus,
-    ScrobbledPlayObject,
-    SourceIdentifier,
+    type ReportedPlayerStatus,
+    type ScrobbledPlayObject,
+    type SourceIdentifier,
     TIME_WEIGHT,
-    TimeRangeListensFetcher,
+    type TimeRangeListensFetcher,
     TITLE_WEIGHT,
 } from "../common/infrastructure/Atomic.js";
-import { ClientType } from '../common/infrastructure/config/client/clients.js';
-import { CommonClientConfig, NowPlayingOptions, UpstreamRefreshOptions } from "../common/infrastructure/config/client/index.js";
+import { type ClientType } from '../common/infrastructure/config/client/clients.js';
+import { type CommonClientConfig, type NowPlayingOptions, type UpstreamRefreshOptions } from "../common/infrastructure/config/client/index.js";
 import { TRANSFORM_HOOK } from "../common/infrastructure/Transform.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 import {
@@ -56,7 +56,7 @@ import {
     sortByOldestPlayDate,
 } from "../utils.js";
 import { findCauseByReference } from "../utils/ErrorUtils.js";
-import { ErrorIsh, messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.js";
+import { type ErrorIsh, messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.js";
 import { messageWithCauses } from "../../core/ErrorUtils.js";
 import {
     comparePlayTemporally,
@@ -66,12 +66,12 @@ import {
     temporalPlayComparisonSummary,
 } from "../utils/TimeUtils.js";
 import { todayAwareFormat } from "../../core/TimeUtils.js";
-import { WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
+import { type WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
 import { AsyncTask, SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 import { getRoot } from "../ioc.js";
-import { findAsyncSequential, staggerMapper, StaggerOptions } from "../utils/AsyncUtils.js";
+import { findAsyncSequential, staggerMapper, type StaggerOptions } from "../utils/AsyncUtils.js";
 import pMap, { pMapIterable } from "p-map";
-import { comparePlayArtistsNormalized, comparePlayTracksNormalized, existingScrobble, ExistingScrobbleOpts } from "../utils/PlayComparisonUtils.js";
+import { comparePlayArtistsNormalized, comparePlayTracksNormalized, existingScrobble, type ExistingScrobbleOpts } from "../utils/PlayComparisonUtils.js";
 import { statefulInvariantTransform } from "../../core/PlayUtils.js";
 import { normalizeStr } from "../utils/StringUtils.js";
 import prom, { Counter, Gauge } from 'prom-client';
@@ -79,14 +79,14 @@ import { generateLoggableAbortReason, ScrobbleSubmitError, SimpleError } from ".
 import {isErrorLike, serializeError} from 'serialize-error';
 import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetchUtils.js";
 import { spawn, catchAbortError, isAbortError, rethrowAbortError, delay, forever, AbortError, throwIfAborted } from 'abort-controller-x';
-import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, QueryPlaysOpts, WithPlayRelation } from "../common/database/drizzle/repositories/PlayRepository.js";
-import { ComponentMigrationNew, PlaySelect, PlaySelectWithQueueStates, QueueStateNew, QueueStateSelect } from "../common/database/drizzle/drizzleTypes.js";
+import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, type QueryPlaysOpts, type WithPlayRelation } from "../common/database/drizzle/repositories/PlayRepository.js";
+import { type ComponentMigrationNew, type PlaySelect, type PlaySelectWithQueueStates, type QueueStateNew, type QueueStateSelect } from "../common/database/drizzle/drizzleTypes.js";
 import { asPlay } from "../../core/PlayMarshalUtils.js";
 import { DrizzleQueueRepository } from "../common/database/drizzle/repositories/QueueRepository.js";
 import { GenericRepository } from "../common/database/drizzle/repositories/BaseRepository.js";
 import assert from "node:assert";
-import { COMPONENT_STATE, ComponentClientApi, ComponentClientApiJson, PlayApiCommonDetailed } from "../../core/Api.js";
-import { ComponentState } from "react";
+import { COMPONENT_STATE, type ComponentClientApi, type ComponentClientApiJson, type PlayApiCommonDetailed } from "../../core/Api.js";
+import { type ComponentState } from "react";
 
 type PlatformMappedPlays = Map<string, {player: SourcePlayerObj, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;

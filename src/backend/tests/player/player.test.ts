@@ -7,7 +7,7 @@ import {
     CALCULATED_PLAYER_STATUSES,
     NO_DEVICE,
     NO_USER,
-    PlayerStateDataMaybePlay,
+    type PlayerStateDataMaybePlay,
     REPORTED_PLAYER_STATUSES,
     SINGLE_USER_PLATFORM_ID
 } from "../../common/infrastructure/Atomic.js";

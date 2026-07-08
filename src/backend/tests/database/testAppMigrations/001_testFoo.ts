@@ -1,6 +1,6 @@
 import type { SqliteDatabase, Migration } from 'sqlite-up';
 import { DrizzlePlayRepository } from '../../../common/database/drizzle/repositories/PlayRepository.js';
-import { MigrateBaseContext } from '../../../common/database/appMigrator.js';
+import { type MigrateBaseContext } from '../../../common/database/appMigrator.js';
 
 export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase, ctx): Promise<void> => {
 

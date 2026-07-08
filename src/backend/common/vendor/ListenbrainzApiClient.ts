@@ -1,7 +1,7 @@
 import { stringSameness } from '@foxxmd/string-sameness';
 import dayjs from "dayjs";
 import request, { Request, Response } from 'superagent';
-import { BrainzMeta, PlayObject, PlayObjectMinimal, ScrobbleActionResult, UnixTimestamp, URLData } from "../../../core/Atomic.js";
+import { type BrainzMeta, type PlayObject, type PlayObjectMinimal, type ScrobbleActionResult, type UnixTimestamp, type URLData } from "../../../core/Atomic.js";
 import { artistNamesToCredits, combinePartsToString, slice } from "../../../core/StringUtils.js";
 import {
     normalizeListenbrainzUrl,
@@ -13,12 +13,12 @@ import {
 } from "../../utils/StringUtils.js";
 import { findDelimiters } from "../../../core/StringUtils.js";
 import { UpstreamError } from "../errors/UpstreamError.js";
-import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, DELIMITERS, FormatPlayObjectOptions, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PagelessTimeRangeListensResult } from "../infrastructure/Atomic.js";
-import { DEFAULT_ITEMS_PER_GET_LZ, ListenBrainzClientData, MAX_ITEMS_PER_GET_LZ } from "../infrastructure/config/client/listenbrainz.js";
+import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, DELIMITERS, type FormatPlayObjectOptions, type PagelessListensTimeRangeOptions, type PagelessTimeRangeListens, type PagelessTimeRangeListensResult } from "../infrastructure/Atomic.js";
+import { DEFAULT_ITEMS_PER_GET_LZ, type ListenBrainzClientData, MAX_ITEMS_PER_GET_LZ } from "../infrastructure/config/client/listenbrainz.js";
 import AbstractApiClient from "./AbstractApiClient.js";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.js';
 import { removeUndefinedKeys, unique } from '../../utils.js';
-import { ListenPayload, ListenResponse, ListenType, SubmitPayload } from './listenbrainz/interfaces.js';
+import { type ListenPayload, type ListenResponse, type ListenType, type SubmitPayload } from './listenbrainz/interfaces.js';
 import { baseFormatPlayObj } from '../../utils/PlayTransformUtils.js';
 import { ScrobbleSubmitError, SimpleError } from '../errors/MSErrors.js';
 import pRetry from 'p-retry';

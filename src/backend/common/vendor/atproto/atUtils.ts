@@ -1,9 +1,9 @@
-import { Handle } from "@atcute/lexicons";
-import { isHandle, AtprotoDid } from "@atcute/lexicons/syntax";
-import { Logger } from "@foxxmd/logging";
+import { type Handle } from "@atcute/lexicons";
+import { isHandle, type AtprotoDid } from "@atcute/lexicons/syntax";
+import { type Logger } from "@foxxmd/logging";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { loggerNoop, MaybeLogger } from '../../MaybeLogger.js';
-import { ATProtoUserIdentifierData, HandleData } from "../../infrastructure/config/client/atproto.js";
+import { type ATProtoUserIdentifierData, type HandleData } from "../../infrastructure/config/client/atproto.js";
 import { Cacheable } from "cacheable";
 import {
     CompositeDidDocumentResolver,

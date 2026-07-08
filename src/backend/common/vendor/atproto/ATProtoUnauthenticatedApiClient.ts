@@ -1,10 +1,10 @@
 import { UpstreamError } from "../../errors/UpstreamError.js";
-import { HandleData } from "../../infrastructure/config/client/atproto.js";
+import { type HandleData } from "../../infrastructure/config/client/atproto.js";
 import { AbstractATProtoApiClient } from "./AbstractATProtoApiClient.js";
 import { getATProtoIdentifier, checkPds } from "./atUtils.js";
 import { Client, simpleFetchHandler } from '@atcute/client';
 import type {} from '@atcute/atproto';
-import { Nsid } from "@atcute/lexicons";
+import { type Nsid } from "@atcute/lexicons";
 
 export class ATProtoUnauthenticatedApiClient extends AbstractATProtoApiClient {
 

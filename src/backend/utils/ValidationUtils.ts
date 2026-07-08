@@ -1,6 +1,6 @@
-import { Logger } from "@foxxmd/logging";
+import { type Logger } from "@foxxmd/logging";
 import * as AjvNS from "ajv";
-import Ajv, { Schema } from "ajv";
+import Ajv from "ajv";
 import f from "ajv-formats"
 import { resolve } from "path";
 import { projectDir } from "../common/index.js";

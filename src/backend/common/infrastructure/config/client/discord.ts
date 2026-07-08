@@ -1,6 +1,6 @@
 import { ActivityType, StatusDisplayType } from "discord.js"
-import { CommonClientConfig, CommonClientData } from "./index.js"
-import { ComponentType } from "../../../../../core/Atomic.js"
+import { type CommonClientConfig, type CommonClientData } from "./index.js"
+import { type ComponentType } from "../../../../../core/Atomic.js"
 
 export interface DiscordData {
     token?: string
@@ -61,10 +61,6 @@ export interface ActivityAssets {
 export interface ActivityTimestamps {
     start?: number
     end?: number
-}
-
-export enum ActivityTypeOthers {
-    Hanging = 6
 }
 
 export declare enum ActivityTypeReal {

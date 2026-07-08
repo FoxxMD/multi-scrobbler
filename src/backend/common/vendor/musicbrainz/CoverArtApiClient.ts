@@ -1,15 +1,15 @@
 import { Cacheable } from "cacheable";
-import { AbstractApiOptions } from "../../infrastructure/Atomic.js";
+import { type AbstractApiOptions } from "../../infrastructure/Atomic.js";
 import AbstractApiClient from "../AbstractApiClient.js";
-import request, { ResponseError } from 'superagent';
+import request, { type ResponseError } from 'superagent';
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
 import { UpstreamError } from "../../errors/UpstreamError.js";
 import { initMemoryCache } from "../../Cache.js";
 import { joinedUrl } from "../../../utils/NetworkUtils.js";
 import { hasNodeNetworkException } from "../../errors/NodeErrors.js";
 import { sleep } from "../../../utils.js";
-import { RequestRetryOptions } from "../../infrastructure/config/common.js";
-import { RetryContext } from "p-retry";
+import { type RequestRetryOptions } from "../../infrastructure/config/common.js";
+import { type RetryContext } from "p-retry";
 import { NO_RETRY_HTTP_STATUS, tryApiCall } from "../../../utils/RequestUtils.js";
 
 export type ThumbSize = 250 | 500 | 1200;

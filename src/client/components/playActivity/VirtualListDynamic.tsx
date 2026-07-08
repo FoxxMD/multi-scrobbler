@@ -1,9 +1,9 @@
 import { Accordion, Span, Spinner, Stack, VStack, Text, Box, Separator, HStack, Flex, IconButton, Container, SkeletonText, Collapsible, ScrollArea, SystemStyleObject, EmptyState } from '@chakra-ui/react';
-import React, { ComponentProps, Fragment, useMemo, useCallback } from "react"
+import React, { type ComponentProps, Fragment, useMemo, useCallback } from "react"
 import { ActivityCollapsible } from '../ActivityDetail.js';
 import { type VirtualItem, useVirtualizer } from "@tanstack/react-virtual"
-import { ActivityLogProps, generateFlatItems, GroupHeader, isGroupInfo } from './ListParts.js';
-import { UseInfiniteQueryResult } from '@tanstack/react-query';
+import { type ActivityLogProps, generateFlatItems, GroupHeader, isGroupInfo } from './ListParts.js';
+import { type UseInfiniteQueryResult } from '@tanstack/react-query';
 import { LuCaptionsOff } from "react-icons/lu";
 
 const itemContainerStyle: React.ComponentProps<"div"> = {

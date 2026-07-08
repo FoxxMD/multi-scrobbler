@@ -1,5 +1,5 @@
 import express, { Router } from 'express';
-import { childLogger, LogDataPretty, Logger } from "@foxxmd/logging";
+import { childLogger, type LogDataPretty, type Logger } from "@foxxmd/logging";
 import bodyParser from 'body-parser';
 import { stripIndents } from "common-tags";
 import session from 'express-session';

@@ -1,15 +1,15 @@
 import EventEmitter from "events";
 import request from "superagent";
-import { PlayObject } from "../../../core/Atomic.js";
+import { type PlayObject } from "../../../core/Atomic.js";
 import { Notifiers } from "../../notifier/Notifiers.js";
 import AbstractScrobbleClient from "../../scrobblers/AbstractScrobbleClient.js";
-import { CommonClientConfig, CommonClientOptions, NowPlayingOptions } from "../../common/infrastructure/config/client/index.js";
+import { type CommonClientConfig, type CommonClientOptions, type NowPlayingOptions } from "../../common/infrastructure/config/client/index.js";
 import clone from "clone";
-import { TimeRangeListensFetcher } from "../../common/infrastructure/Atomic.js";
+import { type TimeRangeListensFetcher } from "../../common/infrastructure/Atomic.js";
 import { loggerNoop } from "../../common/MaybeLogger.js";
-import { DrizzlePlayRepository, RepositoryCreatePlayOpts } from "../../common/database/drizzle/repositories/PlayRepository.js";
+import { DrizzlePlayRepository, type RepositoryCreatePlayOpts } from "../../common/database/drizzle/repositories/PlayRepository.js";
 import { DrizzleQueueRepository } from "../../common/database/drizzle/repositories/QueueRepository.js";
-import { PlaySelect } from "../../common/database/drizzle/drizzleTypes.js";
+import { type PlaySelect } from "../../common/database/drizzle/drizzleTypes.js";
 import { loggerDebug } from "@foxxmd/logging";
 import dayjs from "dayjs";
 

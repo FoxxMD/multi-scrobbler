@@ -1,4 +1,4 @@
-import { childLogger, Logger } from '@foxxmd/logging';
+import { childLogger, type Logger } from '@foxxmd/logging';
 import { AsyncTask } from "toad-scheduler";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import ScrobbleClients from '../scrobblers/ScrobbleClients.js';

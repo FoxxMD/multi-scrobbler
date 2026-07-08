@@ -1,30 +1,30 @@
 import EventEmitter from "events";
-import { BrainzMeta, PlayObject, PlayObjectMinimal, URLData } from "../../core/Atomic.js";
+import { type BrainzMeta, type PlayObject, type PlayObjectMinimal, type URLData } from "../../core/Atomic.js";
 import { artistNamesToCredits, buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import {
     asPlayerStateDataMaybePlay,
-    FormatPlayObjectOptions,
-    InternalConfig,
+    type FormatPlayObjectOptions,
+    type InternalConfig,
     MBID_VARIOUS_ARTISTS,
     NO_USER,
-    PlayerStateData,
-    PlayerStateDataMaybePlay,
-    PlayPlatformId, REPORTED_PLAYER_STATUSES
+    type PlayerStateData,
+    type PlayerStateDataMaybePlay,
+    type PlayPlatformId, REPORTED_PLAYER_STATUSES
 } from "../common/infrastructure/Atomic.js";
 import { getFirstNonEmptyString, getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.js";
 import { genGroupIdStr } from '../../core/PlayUtils.js';
 import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.js";
-import { GetSessionsMetadata } from "@lukehagar/plexjs/sdk/models/operations/getsessions.js";
-import { PlexAPI, HTTPClient, Fetcher } from "@lukehagar/plexjs";
+import { type GetSessionsMetadata } from "@lukehagar/plexjs/sdk/models/operations/getsessions.js";
+import { PlexAPI, HTTPClient, type Fetcher } from "@lukehagar/plexjs";
 import { Agent } from 'undici';
-import { PlexApiSourceConfig } from "../common/infrastructure/config/source/plex.js";
+import { type PlexApiSourceConfig } from "../common/infrastructure/config/source/plex.js";
 import { isPortReachable, joinedUrl, normalizeWebAddress } from '../utils/NetworkUtils.js';
-import { GetTokenDetailsResponse, GetTokenDetailsUserPlexAccount } from '@lukehagar/plexjs/sdk/models/operations/gettokendetails.js';
+import { type GetTokenDetailsResponse, type GetTokenDetailsUserPlexAccount } from '@lukehagar/plexjs/sdk/models/operations/gettokendetails.js';
 import { parseRegexSingle } from '@foxxmd/regex-buddy-core';
 import { Readable } from 'node:stream';
 import { PlexPlayerState } from './PlayerState/PlexPlayerState.js';
-import { AbstractPlayerState, PlayerStateOptions } from './PlayerState/AbstractPlayerState.js';
-import { Logger } from '@foxxmd/logging';
+import { AbstractPlayerState, type PlayerStateOptions } from './PlayerState/AbstractPlayerState.js';
+import { type Logger } from '@foxxmd/logging';
 import { MemoryPositionalSource } from './MemoryPositionalSource.js';
 import { FixedSizeList } from 'fixed-size-list';
 import { SDKValidationError } from '@lukehagar/plexjs/sdk/models/errors/sdkvalidationerror.js';

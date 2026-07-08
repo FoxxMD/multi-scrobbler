@@ -1,6 +1,6 @@
-import { LastfmData } from "../client/lastfm.js";
-import { PollingOptions } from "../common.js";
-import { CommonSourceConfig, CommonSourceData } from "./index.js";
+import { type LastfmData } from "../client/lastfm.js";
+import { type PollingOptions } from "../common.js";
+import { type CommonSourceConfig, type CommonSourceData } from "./index.js";
 
 export interface LastFmSourceData extends CommonSourceData, PollingOptions, LastfmData{}
 

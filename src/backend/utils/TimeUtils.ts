@@ -2,20 +2,20 @@
 import dayjs, { Dayjs } from "dayjs";
 //import isToday from 'dayjs/plugin/isToday.js';
 import {
-    AcceptableTemporalDuringReference,
-    PlayObject,
+    type AcceptableTemporalDuringReference,
+    type PlayObject,
     SCROBBLE_TS_SOC_END,
     SCROBBLE_TS_SOC_START,
-    ScrobbleTsSOC,
+    type ScrobbleTsSOC,
     TA_CLOSE,
     TA_DEFAULT_ACCURACY,
     TA_DURING,
     TA_EXACT,
     TA_FUZZY,
     TA_NONE,
-    TemporalAccuracy,
-    TemporalPlayComparison,
-    UnixTimestamp,
+    type TemporalAccuracy,
+    type TemporalPlayComparison,
+    type UnixTimestamp,
 } from "../../core/Atomic.js";
 import { capitalize, stringIsOnlyNumbers } from "../../core/StringUtils.js";
 import {
@@ -25,17 +25,17 @@ import {
     DEFAULT_DURATION_REPEAT_PERCENT,
     DEFAULT_SCROBBLE_DURATION_THRESHOLD,
     DEFAULT_SCROBBLE_PERCENT_THRESHOLD,
-    DurationValue,
+    type DurationValue,
     lowGranularitySources,
-    ScrobbleThresholdResult,
+    type ScrobbleThresholdResult,
 } from "../common/infrastructure/Atomic.js";
-import { ScrobbleThresholds } from "../common/infrastructure/config/source/index.js";
+import { type ScrobbleThresholds } from "../common/infrastructure/config/source/index.js";
 import { formatNumber } from '../../core/DataUtils.js';
 import { InvalidRegexError, SimpleError } from "../common/errors/MSErrors.js";
-import { NamedGroup, parseRegex } from "@foxxmd/regex-buddy-core";
-import { Duration } from "dayjs/plugin/duration.js";
-import { SourceType } from "../common/infrastructure/config/source/sources.js";
-import { Logger } from "@foxxmd/logging";
+import { type NamedGroup, parseRegex } from "@foxxmd/regex-buddy-core";
+import { type Duration } from "dayjs/plugin/duration.js";
+import { type SourceType } from "../common/infrastructure/config/source/sources.js";
+import { type Logger } from "@foxxmd/logging";
 import { loggerNoop } from "../common/MaybeLogger.js";
 
 //dayjs.extend(isToday);

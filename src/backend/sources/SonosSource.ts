@@ -1,21 +1,21 @@
 import { EventEmitter } from "events";
-import { PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
+import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.js";
 import {
-    FormatPlayObjectOptions,
-    InternalConfig,
+    type FormatPlayObjectOptions,
+    type InternalConfig,
     NO_DEVICE,
     NO_USER,
-    PlayerStateData,
+    type PlayerStateData,
     REPORTED_PLAYER_STATUSES,
-    ReportedPlayerStatus,
+    type ReportedPlayerStatus,
 } from "../common/infrastructure/Atomic.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { type RecentlyPlayedOptions } from "./AbstractSource.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
-import { SonosSourceConfig } from "../common/infrastructure/config/source/sonos.js";
+import { type SonosSourceConfig } from "../common/infrastructure/config/source/sonos.js";
 import { SonosDevice, SonosManager } from '@svrooij/sonos';
-import { SonosState } from "@svrooij/sonos/lib/models/sonos-state.js";
+import { type SonosState } from "@svrooij/sonos/lib/models/sonos-state.js";
 import { GroupTransportState } from "@svrooij/sonos/lib/models/transport-state.js";
-import { Track } from "@svrooij/sonos/lib/models/track.js";
+import { type Track } from "@svrooij/sonos/lib/models/track.js";
 import { parseDurationFromTimestamp } from "../utils/TimeUtils.js";
 import { FixedSizeList } from "fixed-size-list";
 import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.js";

@@ -1,28 +1,28 @@
 /* eslint-disable no-case-declarations */
-import { childLogger, Logger } from '@foxxmd/logging';
+import { childLogger, type Logger } from '@foxxmd/logging';
 import dayjs, { Dayjs } from "dayjs";
-import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
-import { ConfigMeta, InternalConfig, InternalConfigOptional, isClientType, SourceIdentifier } from "../common/infrastructure/Atomic.js";
-import { clientTypes, ClientType } from '../common/infrastructure/config/client/clients.js';
-import { AIOConfig } from "../common/infrastructure/config/aioConfig.js";
-import { ClientAIOConfig, ClientConfig } from "../common/infrastructure/config/client/clients.js";
-import { LastfmClientConfig, LastfmData } from "../common/infrastructure/config/client/lastfm.js";
-import { ListenBrainzClientConfig, ListenBrainzData } from "../common/infrastructure/config/client/listenbrainz.js";
-import { MalojaClientConfig, MalojaData } from "../common/infrastructure/config/client/maloja.js";
+import { type PlayObject, type SourcePlayerObj } from "../../core/Atomic.js";
+import { type ConfigMeta, type InternalConfig, type InternalConfigOptional, isClientType, type SourceIdentifier } from "../common/infrastructure/Atomic.js";
+import { clientTypes, type ClientType } from '../common/infrastructure/config/client/clients.js';
+import { type AIOConfig } from "../common/infrastructure/config/aioConfig.js";
+import { type ClientAIOConfig, type ClientConfig } from "../common/infrastructure/config/client/clients.js";
+import { type LastfmClientConfig, type LastfmData } from "../common/infrastructure/config/client/lastfm.js";
+import { type ListenBrainzClientConfig, type ListenBrainzData } from "../common/infrastructure/config/client/listenbrainz.js";
+import { type MalojaClientConfig, type MalojaData } from "../common/infrastructure/config/client/maloja.js";
 import { WildcardEmitter } from "../common/WildcardEmitter.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 import { isDebugMode, nonEmptyObj, parseBool, removeUndefinedKeys } from "../utils.js";
 import { getCommonComponentEnvConfig, readJson } from '../utils/DataUtils.js';
 import { validateJson } from "../utils/ValidationUtils.js";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
-import { KoitoClientConfig, KoitoData } from '../common/infrastructure/config/client/koito.js';
-import { TealClientConfig, TealData } from '../common/infrastructure/config/client/tealfm.js';
-import { RockSkyClientConfig, RockSkyData } from '../common/infrastructure/config/client/rocksky.js';
-import { CommonClientOptions } from '../common/infrastructure/config/client/index.js';
-import { ExternalMetadataTerm, PlayTransformHooks } from '../common/infrastructure/Transform.js';
-import { LibrefmClientConfig, LibrefmData } from '../common/infrastructure/config/client/librefm.js';
+import { type KoitoClientConfig, type KoitoData } from '../common/infrastructure/config/client/koito.js';
+import { type TealClientConfig, type TealData } from '../common/infrastructure/config/client/tealfm.js';
+import { type RockSkyClientConfig, type RockSkyData } from '../common/infrastructure/config/client/rocksky.js';
+import { type CommonClientOptions } from '../common/infrastructure/config/client/index.js';
+import { type ExternalMetadataTerm, type PlayTransformHooks } from '../common/infrastructure/Transform.js';
+import { type LibrefmClientConfig, type LibrefmData } from '../common/infrastructure/config/client/librefm.js';
 import clone from 'clone';
-import { DiscordClientConfig, DiscordData } from '../common/infrastructure/config/client/discord.js';
+import { type DiscordClientConfig, type DiscordData } from '../common/infrastructure/config/client/discord.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 

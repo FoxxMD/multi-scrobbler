@@ -4,7 +4,7 @@ import {FixedSizeList} from "fixed-size-list";
 import {useEventSource, useEventSourceListener} from "@react-nano/use-event-source";
 import LogLine from "./LogLine";
 import {useGetLogsQuery, useLazySetLogSettingsQuery} from "./logsApi";
-import {connect, ConnectedProps} from "react-redux";
+import {connect, type ConnectedProps} from "react-redux";
 import {RootState} from "../store";
 import Loading from "../components/loading/Loading";
 

@@ -1,11 +1,11 @@
 import EventEmitter from "events";
-import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
+import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { FormatPlayObjectOptions, InternalConfig, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { type FormatPlayObjectOptions, type InternalConfig, type PaginatedListensTimeRangeOptions, type PaginatedTimeRangeListens, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
+import { type RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
 import { KoitoApiClient, listenObjectResponseToPlay } from "../common/vendor/koito/KoitoApiClient.js";
-import { KoitoSourceConfig } from "../common/infrastructure/config/source/koito.js";
+import { type KoitoSourceConfig } from "../common/infrastructure/config/source/koito.js";
 import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.js";
 
 export default class KoitoSource extends MemorySource {

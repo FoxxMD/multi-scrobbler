@@ -2,25 +2,25 @@ import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
 import SpotifyWebApi from "spotify-web-api-node";
 import request from 'superagent';
-import { BrainzMeta, PlayObject, PlayObjectMinimal, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC, SpotifyMeta } from "../../core/Atomic.js";
+import { type BrainzMeta, type PlayObject, type PlayObjectMinimal, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, type ScrobbleTsSOC, type SpotifyMeta } from "../../core/Atomic.js";
 import { artistNamesToCredits, artistNameToCredit, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
 import {
     DEFAULT_POLLING_INTERVAL,
-    FormatPlayObjectOptions,
-    InternalConfig,
+    type FormatPlayObjectOptions,
+    type InternalConfig,
     NO_DEVICE,
     NO_USER,
-    PaginatedListensTimeRangeOptions,
-    PaginatedTimeRangeListens,
-    PaginatedTimeRangeListensResult,
-    PlayerStateData,
-    ReportedPlayerStatus,
-    SourceData,
-    TimeRangeListensFetcher,
+    type PaginatedListensTimeRangeOptions,
+    type PaginatedTimeRangeListens,
+    type PaginatedTimeRangeListensResult,
+    type PlayerStateData,
+    type ReportedPlayerStatus,
+    type SourceData,
+    type TimeRangeListensFetcher,
 } from "../common/infrastructure/Atomic.js";
-import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.js";
+import { type SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.js";
 import {
     parseRetryAfterSecsFromObj,
     sleep,
@@ -30,7 +30,7 @@ import { writeFile } from '../utils/FSUtils.js';
 import { readJson } from '../utils/DataUtils.js';
 import { findCauseByFunc } from "../utils/ErrorUtils.js";
 import { joinedUrl } from "../utils/NetworkUtils.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { type RecentlyPlayedOptions } from "./AbstractSource.js";
 import AlbumObjectSimplified = SpotifyApi.AlbumObjectSimplified;
 import ArtistObjectSimplified = SpotifyApi.ArtistObjectSimplified;
 import CurrentlyPlayingObject = SpotifyApi.CurrentlyPlayingObject;
@@ -39,7 +39,6 @@ import TrackObjectFull = SpotifyApi.TrackObjectFull;
 import UserDevice = SpotifyApi.UserDevice;
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
-import { metaFromJSON } from "@lukehagar/plexjs/sdk/models/operations/getrecentlyadded.js";
 import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.js";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];

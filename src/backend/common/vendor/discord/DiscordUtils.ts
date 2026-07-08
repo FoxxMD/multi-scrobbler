@@ -1,10 +1,10 @@
 import dayjs from "dayjs";
-import { isPlayObject, PlayObject, SourcePlayerObj } from "../../../../core/Atomic.js";
-import { asPlayerStateData, SourceData } from "../../infrastructure/Atomic.js";
-import { GatewayActivity, GatewayOpcodes, PresenceUpdateStatus } from "discord.js";
+import { isPlayObject, type PlayObject, type SourcePlayerObj } from "../../../../core/Atomic.js";
+import { asPlayerStateData, type SourceData } from "../../infrastructure/Atomic.js";
+import { GatewayOpcodes, PresenceUpdateStatus } from "discord.js";
 import { capitalize } from "../../../../core/StringUtils.js";
 import { urlToMusicService } from '../listenbrainz/lzUtils.js';
-import { ACTIVITY_TYPE, ActivityData, ActivityTypes, DiscordData, DiscordStrongData, ActivityTypeString as MSActivityType, StatusType } from "../../infrastructure/config/client/discord.js";
+import { ACTIVITY_TYPE, type ActivityData, ActivityTypes, type DiscordData, type DiscordStrongData, type ActivityTypeString as MSActivityType, type StatusType } from "../../infrastructure/config/client/discord.js";
 import { parseBool, removeUndefinedKeys } from "../../../utils.js";
 import { parseArrayFromMaybeString, parseBoolOrArrayFromMaybeString } from "../../../utils/StringUtils.js";
 

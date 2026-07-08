@@ -1,14 +1,14 @@
 import dayjs, { Dayjs } from "dayjs";
 import { sortByNewestDate } from "../../core/PlayUtils.js";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
-import { ComponentMigrationSelect } from "../common/database/drizzle/drizzleTypes.js";
-import { ErrorIsh } from "../../core/ErrorUtils.js";
-import { DrizzlePlayHistoricalRepository, playToRepositoryCreatePlayHistoricalOpts, RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.js";
+import { type ComponentMigrationSelect } from "../common/database/drizzle/drizzleTypes.js";
+import { type ErrorIsh } from "../../core/ErrorUtils.js";
+import { DrizzlePlayHistoricalRepository, playToRepositoryCreatePlayHistoricalOpts, type RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.js";
 import { spawn, isAbortError } from 'abort-controller-x';
 import { generateLoggableAbortReason } from "../common/errors/MSErrors.js";
-import { Logger } from "@foxxmd/logging";
+import { type Logger } from "@foxxmd/logging";
 import { buildTrackString } from "../../core/StringUtils.js";
-import { PlayObject } from "../../core/Atomic.js";
+import { type PlayObject } from "../../core/Atomic.js";
 
 export default abstract class AbstractHistoricalScrobbleClient extends AbstractScrobbleClient {
 

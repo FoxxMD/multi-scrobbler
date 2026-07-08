@@ -1,7 +1,7 @@
 import { Button, Menu, Portal, Box, ChakraComponent } from "@chakra-ui/react"
 import { ExternalLinkIcon } from "./icons/ChakraIcons"
 import { EXTERNAL_LINKS } from "./SideNav"
-import { ComponentProps } from "react"
+import { type ComponentProps } from "react"
 
 
 export const ExternaLinksMenu = (props: ComponentProps<typeof Box> = {}) => (

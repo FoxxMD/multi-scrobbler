@@ -7,10 +7,10 @@ import YTMusicSource, { ytiHistoryResponseFromShelfToPlays, ytiHistoryResponseTo
 import ytHistoryRes from './ytres.json' with {type: 'json'};
 import EventEmitter from "events";
 import { generatePlay, generatePlays, normalizePlays } from '../../../core/PlayTestUtils.js';
-import { YTMusicSourceConfig } from '../../common/infrastructure/config/source/ytmusic.js';
+import { type YTMusicSourceConfig } from '../../common/infrastructure/config/source/ytmusic.js';
 import { sleep } from '../../utils.js';
 import dayjs from 'dayjs';
-import { ApiResponse } from 'youtubei.js';
+import { type ApiResponse } from 'youtubei.js';
 
 chai.use(asPromised);
 

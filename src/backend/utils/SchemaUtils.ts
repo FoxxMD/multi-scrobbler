@@ -1,9 +1,9 @@
 import { resolve } from "path";
 import { projectDir } from "../common/index.js";
 import {
-    Definition as TSJDefinition,
+    type Definition as TSJDefinition,
     createFormatter,
-    CompletedConfig as TSJCompletedConfig,
+    type CompletedConfig as TSJCompletedConfig,
     DEFAULT_CONFIG,
     createProgram,
     createParser,

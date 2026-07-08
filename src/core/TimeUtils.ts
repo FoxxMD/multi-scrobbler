@@ -1,7 +1,7 @@
 import dayjs, { Dayjs } from "dayjs";
 import isToday from 'dayjs/plugin/isToday.js';
 import { SHORT_CALENDAR_NOTZ_FORMAT, SHORT_TODAY_NOTZ_FORMAT } from "./Atomic.js";
-import { Milliseconds } from "../backend/utils/TimeUtils.js";
+import { type Milliseconds } from "../backend/utils/TimeUtils.js";
 
 dayjs.extend(isToday);
 

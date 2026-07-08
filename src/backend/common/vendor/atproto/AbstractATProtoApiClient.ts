@@ -1,17 +1,17 @@
 import { getRoot } from "../../../ioc.js";
-import { AbstractApiOptions } from "../../infrastructure/Atomic.js";
+import { type AbstractApiOptions } from "../../infrastructure/Atomic.js";
 import AbstractApiClient from "../AbstractApiClient.js";
 import { MSCache } from "../../Cache.js";
 import { UpstreamError } from "../../errors/UpstreamError.js";
 import { streamBodyProgress } from "../../../utils/NetworkUtils.js";
-import { ATProtoUserIdentifierData, HandleData } from "../../infrastructure/config/client/atproto.js";
+import { type ATProtoUserIdentifierData, type HandleData } from "../../infrastructure/config/client/atproto.js";
 import { checkPds, isDID, identifierToAtProtoHandle, getATProtoIdentifier } from "./atUtils.js";
 import { Client, ClientResponseError, isXRPCErrorPayload, parseRateLimitHeaders } from '@atcute/client';
 import { ComAtprotoSyncGetRepo } from '@atcute/atproto';
-import { AtprotoDid } from "@atcute/lexicons/syntax";
+import { type AtprotoDid } from "@atcute/lexicons/syntax";
 import { todayAwareFormat } from "../../../../core/TimeUtils.js";
 import dayjs from "dayjs";
-import { Millisecond } from "../../../../core/Atomic.js";
+import { type Millisecond } from "../../../../core/Atomic.js";
 
 export interface RateLimitInfo {
     limit: number

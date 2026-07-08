@@ -1,13 +1,13 @@
-import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect, useState, useCallback } from "react"
+import React, { type ComponentProps, useMemo, forwardRef, Fragment, useEffect, useState, useCallback } from "react"
 import { Accordion, For, Span, Stack, Stat, Text, Box, Heading, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Collapsible, Card,  LinkOverlay, LinkBox } from '@chakra-ui/react';
-import { COMPONENT_STATE, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentSourceApiJson, componentStateToFriendly, isComponentClientApiJson, isComponentSourceApiJson, MsSseEvent, MsSseEventPayload } from "../../../core/Api.js";
+import { COMPONENT_STATE, type ComponentClientApiJson, type ComponentCommonApi, type ComponentCommonApiJson, type ComponentSourceApiJson, componentStateToFriendly, isComponentClientApiJson, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
 import { Link } from "react-router";
 import { TextMuted } from "../TextMuted.js";
 import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
 import { capitalize } from "../../../core/StringUtils.js";
 import { ChevronRightButton, IdleIcon } from "../icons/ChakraIcons.js";
 import { PlayersContainer, PlayersContainerFetchable } from "../chakraPlayer/Player.js";
-import { QueryFunctionContext, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type QueryFunctionContext, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ErrorAlert } from "../ErrorAlert";
 import {
   useSSEContext,
