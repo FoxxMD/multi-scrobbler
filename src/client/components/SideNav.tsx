@@ -104,18 +104,7 @@ const StatusBadge = (props: BadgeProps) => (
   />
 )
 
-export const NAV_LINKS: SideNavProps[] = [
-    {
-        title: 'Main',
-        id: 'Main',
-        items: [
-            {
-                title: 'Dashboard',
-                url: '/next/'
-            }
-        ]
-    },
-    {
+export const EXTERNAL_LINKS: SideNavProps = {
         title: 'Links',
         id: 'Links',
         items: [
@@ -135,5 +124,18 @@ export const NAV_LINKS: SideNavProps[] = [
                 external: true
             }
         ]
-    }
-]
+}
+
+export const NAV_LINKS: SideNavProps[] = [
+    {
+        title: 'Main',
+        id: 'Main',
+        items: [
+            {
+                title: 'Dashboard',
+                url: '/next/'
+            }
+        ]
+    },
+    EXTERNAL_LINKS
+];

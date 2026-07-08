@@ -48,6 +48,20 @@ export const makeIconButton = (Icon: IconType) => (props: PropsWithChildren<Comp
         </IconButton>
     );
 }
+export const makeChakraIconButton = (IconBase: IconType) => (props: PropsWithChildren<ComponentProps<typeof IconButton>> & { iconProps?: ComponentProps<typeof Icon>, loading?: boolean }) => {
+    const { 
+        iconProps = {},
+        children,
+        loading = false,
+        size = 'xs',
+        ...rest 
+    } = props;
+    return (
+        <IconButton variant="surface" disabled={loading} size={size} {...rest}>
+            {loading ? <Spinner/>  : <Icon {...iconProps}><IconBase/></Icon>}{children}
+        </IconButton>
+    );
+}
 export const makeChakraIcon = (IconComponent: IconType) => (props: ComponentProps<typeof Icon> & { iconProps?: IconBaseProps }) => {
     const {
         iconProps,
@@ -95,7 +109,7 @@ export const TerminalButton = (props: ComponentProps<typeof IconButton>) => (
 );
 
 export const MenuIcon = LuAlignJustify;
-export const MenuButton = makeIconButton(MenuIcon);
+export const MenuButton = makeChakraIconButton(MenuIcon);
 
 export const XIcon = LuX;
 export const XButton = makeIconButton(XIcon);

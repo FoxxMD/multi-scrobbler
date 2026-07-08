@@ -12,9 +12,6 @@ import { NAV_LINKS, SideNavItems } from "./SideNav";
 const MobileMenuButton = MenuButton;
 
 export const MobileSidebarNav = (props: { hideFrom?: BreakpointName | false } = {}) => {
-    const {
-        hideFrom = 'md'
-    } = props;
     const [isOpen, setIsOpen] = useState(false);
 
     let location = useLocation();
@@ -22,11 +19,11 @@ export const MobileSidebarNav = (props: { hideFrom?: BreakpointName | false } = 
     const closeMenu = () => setIsOpen(false)
 
     const menuButtonProps: ComponentProps<typeof MobileMenuButton> = {
-        variant: 'ghost'
+        variant: 'ghost',
+        iconProps: {
+            size: 'lg'
+        }
     };
-    if (hideFrom !== false) {
-        menuButtonProps.hideFrom = hideFrom;
-    }
 
     useEffect(() => {
         setIsOpen(false);

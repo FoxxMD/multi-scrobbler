@@ -17,6 +17,7 @@ import { ToggleTip } from "./ToggleTip";
 import { ErrorLike } from "../../core/Atomic";
 import { ErrorAlert } from "./ErrorAlert";
 import { MSErrorBoundary } from "./ErrorBoundary";
+import { ExternaLinksMenu } from "./ExternaLinksMenu";
 
 export const AppTitle = (props: { fetchable?: boolean } = {}) => {
     const {
@@ -121,8 +122,7 @@ export const SSEStatus = (props: {live?: boolean, status?: ReturnType<typeof use
 export const RightHeaderFloatingLogs = (props: {streamable?: boolean}) => {
     const [width, height] = useWindowSize();
 
-    return <HStack gap="2">
-        <Box marginRight="2"><SSEStatus live={props.streamable}/></Box>
+    return (
         <FloatingPanel.Root
             defaultPosition={{x: width * 0.03, y: height * 0.65}}
             defaultSize={{ width: width * 0.95, height: height * 0.3 }}
@@ -160,14 +160,18 @@ export const RightHeaderFloatingLogs = (props: {streamable?: boolean}) => {
                 </FloatingPanel.Positioner>
             </Portal>
         </FloatingPanel.Root>
-    </HStack>
+    );
 }
 
 export const AppHeader = (props: PropsWithChildren<{ fetchable?: boolean }>) => {
     return (
         <Flex justify="space-between">
             <AppTitle fetchable={props.fetchable} />
-            <Flex justify="flex-start" alignItems="flex-end">{props.children}</Flex>
+            <Flex justify="flex-start" gap="1" alignItems="flex-end">
+                <ExternaLinksMenu hideBelow="sm"/>
+                <Box marginRight="2"><SSEStatus live={props.fetchable}/></Box>
+                <RightHeaderFloatingLogs streamable={props.fetchable}/>
+            </Flex>
         </Flex>
     )
 }
