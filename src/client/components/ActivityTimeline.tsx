@@ -412,13 +412,31 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
 
     const ingressQueue = queueStates.find(x => x.queueName === CLIENT_INGRESS_QUEUE);
     if(ingressQueue !== undefined) {
-        timelineItems.push({id: 'queue-ingress-created', dt: dayjs(ingressQueue.createdAt)});
-        timelineItems.push({id: 'queue-ingress-updated', dt: dayjs(ingressQueue.updatedAt)});
+        if(ingressQueue.updatedAt === ingressQueue.createdAt) {
+            // if queue was never updated but contains extra context then only show updated
+            if(ingressQueue.error !== undefined || ingressQueue.queueStatus === QUEUE_STATUS_FAILED) {
+                timelineItems.push({id: 'queue-ingress-updated', dt: dayjs(ingressQueue.updatedAt)});
+            } else {
+                timelineItems.push({id: 'queue-ingress-created', dt: dayjs(ingressQueue.createdAt)});
+            }
+        } else {
+            timelineItems.push({id: 'queue-ingress-created', dt: dayjs(ingressQueue.createdAt)});
+            timelineItems.push({id: 'queue-ingress-updated', dt: dayjs(ingressQueue.updatedAt)});
+        }
     }
     const deadqueue = queueStates.find(x => x.queueName === CLIENT_DEAD_QUEUE);
     if(deadqueue !== undefined) {
-        timelineItems.push({id: 'queue-dead-created', dt: dayjs(deadqueue.createdAt)});
-        timelineItems.push({id: 'queue-dead-updated', dt: dayjs(deadqueue.updatedAt)});
+        if(deadqueue.updatedAt === deadqueue.createdAt) {
+            // if queue was never updated but contains extra context then only show updated
+            if(deadqueue.error !== undefined || deadqueue.queueStatus === QUEUE_STATUS_FAILED) {
+                timelineItems.push({id: 'queue-dead-updated', dt: dayjs(deadqueue.updatedAt)});
+            } else {
+                timelineItems.push({id: 'queue-dead-created', dt: dayjs(deadqueue.createdAt)});
+            }
+        } else {
+            timelineItems.push({id: 'queue-dead-created', dt: dayjs(deadqueue.createdAt)});
+            timelineItems.push({id: 'queue-dead-updated', dt: dayjs(deadqueue.updatedAt)});
+        };
     }
 
     if(match !== undefined) {
