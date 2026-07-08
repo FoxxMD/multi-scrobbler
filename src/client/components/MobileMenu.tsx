@@ -42,9 +42,7 @@ export const MobileSidebarNav = (props: { hideFrom?: BreakpointName | false } = 
                 onOpenChange={(e) => setIsOpen(e.open)}
             >
                 <Drawer.Trigger asChild>
-                    <MobileMenuButton aria-label="Open menu" {...menuButtonProps}>
-                        <MenuIcon />
-                    </MobileMenuButton>
+                    <MobileMenuButton aria-label="Open menu" {...menuButtonProps}/>
                 </Drawer.Trigger>
                 <Portal>
                     <Drawer.Backdrop />
