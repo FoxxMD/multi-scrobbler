@@ -191,9 +191,10 @@ export const slice = (str: string, index: number, count: number, add?: string): 
 
     return str.slice(0, index) + (add || "") + str.slice(index + count);
 }
-export const capitalize = (str: any) => {
-    return str.charAt(0).toUpperCase() + str.slice(1)
-}
+
+export const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1)
+
+export const capitalizeWords = (str: string, delimiter = ' ') => str.split(delimiter).map(x => capitalize(x)).join(delimiter);
 
 /**
  * Split a string-ish variable by a list of deliminators and return the first actually split array or default to returning the string as the first element.

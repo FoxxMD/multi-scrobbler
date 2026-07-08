@@ -121,13 +121,15 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
         if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === props.componentId) {
             switch (payload.type) {
               case 'playInsert':
-                const componentData = payload.data as MsSseEventPayload<PlayApiCommonDetailed>;
+                { 
+                  const componentData = payload.data as MsSseEventPayload<PlayApiCommonDetailed>;
                 console.debug(`[Insert Check ${componentData.data.uid}] Recieved playInsert for Component ${componentId}, checking if Play can be inserted...`);
                 if(playInWindow(componentData.data, query)) {
                   queryClient.setQueryData(tanQueries.activities.list(componentId, query).queryKey, (old: InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown>) => {
                       return insertInfinitePlay(componentData.data, old);
                   });
-                }
+                } 
+              }
             }
         }
     });
@@ -189,7 +191,7 @@ const insertInfinitePlay = (data: PlayApiCommonDetailed, queryData: InfiniteData
         data: [...playData.slice(0, beforeIndex),
         {
           ...data,
-          // @ts-expect-error
+          // @ts-expect-error only used for inserts in this context
           isNew: true
         }
           , ...playData.slice(beforeIndex)]

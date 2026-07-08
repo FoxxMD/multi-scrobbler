@@ -4,8 +4,6 @@ import React, { ComponentProps, Fragment, useMemo, useCallback, useState } from 
 import dayjs, { Dayjs } from 'dayjs';
 import doy from 'dayjs/plugin/dayOfYear.js';
 import "./PlayList.scss";
-import { ToggleButtonVariant } from '../ToggleButton.js';
-import { capitalize } from '../../../core/StringUtils.js';
 import { PlayStateBadge } from '../Badges.js';
 import {
     DateFormatter,
@@ -25,9 +23,10 @@ import { QueryPlaysOptsJson } from '../../../backend/common/database/drizzle/rep
 import { cardHeaderSeparator } from '../../utils/ComponentUtils.js';
 import { CompareDateBetween } from '../../../backend/common/database/drizzle/repositories/BaseRepository.js';
 import { CalendarButton, RefreshButton } from '../icons/ChakraIcons.js';
-import { nanoid } from 'nanoid';
 import { QueryPlaysOptsJsonRefreshable, tanQueries, useQueryWatcher } from '../../queries/index.js';
 import { useQueryClient } from '@tanstack/react-query';
+import { PlayStateUI } from '../../../core/Api.js';
+import { capitalizeWords } from '../../../core/StringUtils.js';
 
 const noop = (_) => null;
 
@@ -45,16 +44,16 @@ const SelectValue = () => {
 
 interface PlayStateFilterProps {
     mode: ComponentType
-    onChange?: (states: PlayState[]) => void
+    onChange?: (states: PlayStateUI[]) => void
 }
-export const PlayStateFilter = (props: PlayStateFilterProps & {value?: PlayState[] | undefined}) => {
+export const PlayStateFilter = (props: PlayStateFilterProps & {value?: PlayStateUI[] | undefined}) => {
     const {
         mode,
         onChange = noop,
         value
     } = props;
-    const availableStates = isComponentTypeSource(mode) ? PLAY_SOURCE_STATE : PLAY_CLIENT_STATE;
-    const selectOptions = createListCollection({ items: availableStates.map(x => ({ label: capitalize(x), value: x })) });
+    const availableStates = ['dead queued', ...(isComponentTypeSource(mode) ? PLAY_SOURCE_STATE : PLAY_CLIENT_STATE)];
+    const selectOptions = createListCollection({ items: availableStates.map(x => ({ label: capitalizeWords(x), value: x })) });
     //const [enabledStates, setEnabledStates] = useState<PlayState[]>([]);
     // maxW="420px"
     return (
@@ -273,7 +272,7 @@ export const ListFilters = (props: {
 
     const queryClient = useQueryClient();
 
-    const setState = useCallback((val: PlayState[]) => {
+    const setState = useCallback((val: PlayStateUI[]) => {
         const {
             state,
             ...rest
@@ -283,7 +282,7 @@ export const ListFilters = (props: {
             ...rest,
             state: val
         });
-    }, [onchange, filters]);
+    }, [onChange, filters]);
     const setDateRange = useCallback((val: [string, string]) => {
         const {
             playedAt,

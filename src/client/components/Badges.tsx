@@ -1,17 +1,17 @@
 import { Badge, Separator, HStack } from "@chakra-ui/react";
-import React, { ComponentProps, useState, useCallback, useEffect } from "react";
+import React, { ComponentProps, useState, useCallback, useEffect, PropsWithChildren } from "react";
 import { COMPONENT_STATE, ComponentCommonApiJson, componentStateToFriendly, MsSseEvent, PlayApiCommon } from "../../core/Api";
-import { capitalize } from "../../core/StringUtils";
+import { capitalizeWords } from "../../core/StringUtils";
 import {useSSEContext, useSSEEvent} from "@flamefrontend/sse-runtime-react";
 import { Second } from "../../core/Atomic";
 import { useTimeout } from 'react-use-timeout';
 
-export const PlayStateBadge = (props: ComponentProps<typeof Badge> & { state: PlayApiCommon['state'], suffix?: React.JSX.Element, hasDeadQueue?: boolean }) => {
+export const PlayStateBadge = (props: PropsWithChildren<ComponentProps<typeof Badge>> & { state: PlayApiCommon['state'], suffix?: React.JSX.Element, hasDeadQueue?: boolean }) => {
 
-  const { state, suffix, ...rest } = props;
+  const { state, suffix, children, ...rest } = props;
 
   let badgeColor = undefined;
-  let badgeText = capitalize(state);
+  let badgeText = capitalizeWords(state);
 
   switch (state) {
     case 'queued':
@@ -22,6 +22,7 @@ export const PlayStateBadge = (props: ComponentProps<typeof Badge> & { state: Pl
       badgeColor = 'green';
       break;
     case 'failed':
+    case ('dead queued' as PlayApiCommon['state']): 
       badgeColor = 'red';
       if(props.hasDeadQueue) {
         badgeText = 'Dead Queued';
@@ -35,7 +36,7 @@ export const PlayStateBadge = (props: ComponentProps<typeof Badge> & { state: Pl
       break;
   }
 
-  return <Badge variant="surface" colorPalette={badgeColor} {...rest}>{badgeText}{suffix}</Badge>
+  return <Badge variant="surface" colorPalette={badgeColor} {...rest}>{children ?? badgeText}{suffix}</Badge>
 }
 
 const DEFAULT_EXPIRES = 10000;

@@ -290,7 +290,7 @@ export const getConfigByTableName = <T extends TableName>(name: T) => {
   }
 }
 
-const schema = {playInputs, plays, components, componentMigrations, queueStates, jobs};
+export const schema = {playInputs, plays, components, componentMigrations, queueStates, jobs};
 
 export type TSchema = typeof relations;
 export type Schema = typeof schema;

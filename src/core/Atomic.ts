@@ -658,6 +658,7 @@ export type PlayClientState = PlayStateCommon | 'duped' | 'scrobbled';
 export const PLAY_CLIENT_STATE = [...PLAY_STATE_COMMON, 'duped', 'scrobbled'];
 export type PlayState = PlaySourceState | PlayClientState;
 export const PLAY_STATES = Array.from(new Set([...PLAY_CLIENT_STATE, ...PLAY_SOURCE_STATE]));
+export const isPlayState = (val: string): val is PlayState => PLAY_STATES.includes(val);
 
 
 export type QueueStatus = 'queued' | 'completed' | 'failed';

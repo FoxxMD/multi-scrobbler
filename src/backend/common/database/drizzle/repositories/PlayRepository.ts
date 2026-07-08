@@ -3,9 +3,9 @@ import { DbConcrete, runTransaction } from "../drizzleUtils.js";
 import clone from 'clone';
 import { Traverse, TraverseContext } from 'neotraverse/modern';
 import { loggerNoop } from "../../../MaybeLogger.js";
-import { DateLike, DeepReplaceValue, ErrorLike, PlayObject, PlayState, REGEX_ISO8601_LOOSE, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, TemporalAccuracy } from "../../../../../core/Atomic.js";
+import { DateLike, DeepReplaceValue, ErrorLike, PlayObject, PlayState, QueueName, REGEX_ISO8601_LOOSE, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, TemporalAccuracy } from "../../../../../core/Atomic.js";
 import { generateInputEntity, generatePlayEntity, PlayEntityOpts, hydratePlaySelect, PlayHydateOptions } from "../entityUtils.js";
-import { playInputs, plays, queueStates, relations } from "../schema/schema.js";
+import { playInputs, plays, queueStates, relations, schema } from "../schema/schema.js";
 import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, QueueStateSelect, FindWith, PlaySelectWithQueueStates, WhereClause, PlayWith } from "../drizzleTypes.js";;
 import { MarkOptional, MarkRequired, PathValue } from "ts-essentials";
 import { genGroupIdStrFromPlay, removeEmptyArrays, removeUndefinedKeys } from "../../../../utils.js";
@@ -23,7 +23,7 @@ import { SourceType } from "../../../infrastructure/config/source/sources.js";
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 
 export interface QueueCriteria {
-    queueName: string
+    queueName: QueueName
     queueStatus: QueueStateSelect['queueStatus'][] | QueueStateSelect['queueStatus']
 }
 
@@ -252,8 +252,9 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
         
         const where = buildPlayWhere({componentId: args.componentId ?? this.componentId,  ...rest});
-        // @ts-expect-error
-        const filter = relationsFilterToSQL(plays, where);
+  
+        // https://github.com/drizzle-team/drizzle-orm/issues/5218#issuecomment-3854900241
+        const filter = relationsFilterToSQL(plays, where, relations.plays.relations, relations);
         // https://github.com/drizzle-team/drizzle-orm/discussions/3119#discussioncomment-16379557
         const count = await this.db.$count(plays, filter);
 

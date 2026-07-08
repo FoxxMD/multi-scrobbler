@@ -6,10 +6,10 @@ import { QueryPlaysOpts, QueryPlaysOptsJson } from "../../backend/common/databas
 import qs from 'qs';
 import { baseUrl } from "../utils";
 import { PaginatedResponse } from "../../backend/common/database/drizzle/repositories/BaseRepository";
-import { ComponentsApiJson, PlayApiCommonDetailed } from "../../core/Api";
-import { SourcePlayerJson } from "../../core/Atomic";
+import { ComponentsApiJson, PlayApiCommonDetailed, PlayStateUI } from "../../core/Api";
+import { CLIENT_DEAD_QUEUE, CLIENT_INGRESS_QUEUE, isPlayState, SourcePlayerJson } from "../../core/Atomic";
 
-export type QueryPlaysOptsJsonRefreshable = QueryPlaysOptsJson & {nonce?: string};
+export type QueryPlaysOptsJsonRefreshable = Omit<QueryPlaysOptsJson, 'state'> & {nonce?: string, state?: PlayStateUI[]};
 
 const components = createQueryKeys('components', {
     list: () => ({
@@ -32,11 +32,26 @@ const activities = createQueryKeys('activities', {
         queryFn: (ctx) => {
             const {
                 nonce,
+                state,
                 ...rest
             } = filters;
+            const derived: QueryPlaysOptsJson = rest;
+            if(state !== undefined) {
+              derived.state = state.filter(x => isPlayState(x));
+
+              // remove 'dead queued' derived play state and replace with filter for queue = 'dead' & state = 'queued'
+              if(state.includes('dead queued') && !rest.queues?.some(x => x.queueName === CLIENT_DEAD_QUEUE)) {
+                derived.queues = [...(rest.queues ?? []), {queueName: CLIENT_DEAD_QUEUE, queueStatus: 'queued'}];
+              }
+              // remove 'queued' play state and replace with filter for queue = 'ingress' & state = 'queued'
+              if(state.includes('queued') && !rest.queues?.some(x => x.queueName === CLIENT_INGRESS_QUEUE)) {
+                derived.queues = [...(derived.queues ?? []), {queueName: CLIENT_INGRESS_QUEUE, queueStatus: 'queued'}];
+                derived.state = derived.state.filter(x => x !== 'queued');
+              }
+          }
             return ky.get(`components/${componentId}/plays`, {
                 baseUrl: baseUrl,
-                searchParams: qs.stringify({...rest, offset: ctx.pageParam})
+                searchParams: qs.stringify({...derived, offset: ctx.pageParam})
             }).json<PaginatedResponse<PlayApiCommonDetailed>>()
         }
     }),
