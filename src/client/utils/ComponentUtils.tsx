@@ -8,7 +8,7 @@ export const cardHeaderSeparator: Card.HeaderProps = {
 };
 
 export const timelineTextFormatting: HTMLChakraProps<"span"> = {
-    textAlign: "left",
+    //textAlign: "left",
     textWrap: "balance" 
 }
 
