@@ -447,7 +447,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
 
     public getNowPlayingPlayers(): Record<string, SourcePlayerJson & {expiration?: string}> {
-        if(this.nowPlayingLastPlay === undefined) {
+        if(this.nowPlayingLastPlay === undefined 
+            || (this.nowPlayingIsRealtime && shouldClearNPStatus(this.nowPlayingLastPlay))
+            || (!this.nowPlayingIsRealtime && [CALCULATED_PLAYER_STATUSES.stale,CALCULATED_PLAYER_STATUSES.orphaned].includes(this.nowPlayingLastPlay.status.calculated as ReportedPlayerStatus))) {
             return {};
         }
         return {
@@ -1661,11 +1663,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 } catch (e) {
                     this.npLogger.warn(new Error('Error occurred while trying to update upstream Client, will ignore', {cause: e}));
                 }
-                if(isClearing) {
-                    this.nowPlayingLastPlay = undefined;
-                } else {
-                    this.nowPlayingLastPlay = sourcePlayerData;
-                }
+                this.nowPlayingLastPlay = sourcePlayerData;
                 this.nowPlayingLastUpdated = dayjs();
             }
             this.nowPlayingQueue = new Map();
@@ -1849,7 +1847,12 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
 export const nowPlayingUpdateByPlayDuration: NowPlayingUpdateThreshold = (play?: PlayObject) => (play?.data?.duration ?? 30) + 1
 
-export const shouldClearNPStatus = (data: SourcePlayerObj) => [CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused].includes(data.status.calculated as ReportedPlayerStatus)
+export const shouldClearNPStatus = (data: SourcePlayerObj) => [
+    CALCULATED_PLAYER_STATUSES.stopped,
+    CALCULATED_PLAYER_STATUSES.paused,
+    CALCULATED_PLAYER_STATUSES.stale,
+    CALCULATED_PLAYER_STATUSES.orphaned,
+].includes(data.status.calculated as ReportedPlayerStatus)
 
 export const playerInNPPlayingOnlyState = (data: SourcePlayerObj): [boolean, string] => {
     // for lower-interval update clients (like listenbrainz, lastfm) IE not real-time
@@ -1870,10 +1873,16 @@ export const playerInValidNPUpdateState = (data: SourcePlayerObj): [boolean, str
     // if the source player is not a "Now Playing" type (lz, endpoint Source, etc...)
     // then we only want to allow an update if the player state is a known "good" type IE don't allow on unknown
     if(!data.nowPlayingMode) {
-        if([CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused, CALCULATED_PLAYER_STATUSES.playing].includes(data.status.calculated as ReportedPlayerStatus)) {
+        if([
+            CALCULATED_PLAYER_STATUSES.stopped,
+            CALCULATED_PLAYER_STATUSES.paused,
+            CALCULATED_PLAYER_STATUSES.playing,
+            CALCULATED_PLAYER_STATUSES.stale,
+            CALCULATED_PLAYER_STATUSES.orphaned,
+        ].includes(data.status.calculated as ReportedPlayerStatus)) {
             return [true, `player in valid update state: '${data.status.calculated }'`];
         }
-        return [false,`player is not in state: stopped | paused | playing => Found '${data.status.calculated }'`];
+        return [false,`player is not in state: stopped | paused | playing | stale | orphaned => Found '${data.status.calculated }'`];
     }
 
     return npPlayerInValidNPUpdateState(data);
