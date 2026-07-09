@@ -83,8 +83,8 @@ export const validateJson = async <T>(type: string, config: object, schemaIdenti
 
 let schemaFetchFunc;
 
-const compiledPath = 'src/backend/utils/SchemaCompiledUtils.js',
-dynamicPath = 'src/backend/utils/SchemaUtils.js';
+const compiledPath = 'src/backend/utils/SchemaCompiledUtils.ts',
+dynamicPath = 'src/backend/utils/SchemaUtils.ts';
 
 const getSchemaFunc = async () => {
     if(schemaFetchFunc !== undefined) {

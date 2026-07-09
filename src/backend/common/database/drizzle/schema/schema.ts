@@ -2,12 +2,12 @@ import { integer, sqliteTable, text, index, uniqueIndex, customType, type AnySQL
 import { defineRelations } from 'drizzle-orm';
 import dayjs, { type Dayjs } from "dayjs";
 import { nanoid } from "nanoid";
-import { type ErrorLike, type PlayObject } from "../../../../../core/Atomic.js";
-import { asPlayCheap } from "../../../../../core/PlayMarshalUtils.js";
-import { type ExternalMetadataTerm, type PlayTransformPartsConfig, type SearchAndReplaceTerm } from "../../../infrastructure/Transform.js";
-import { type JobRangeCount, type JobRangeTime } from "../../../infrastructure/Job.js";
+import { type ErrorLike, type PlayObject } from "../../../../../core/Atomic.ts";
+import { asPlayCheap } from "../../../../../core/PlayMarshalUtils.ts";
+import { type ExternalMetadataTerm, type PlayTransformPartsConfig, type SearchAndReplaceTerm } from "../../../infrastructure/Transform.ts";
+import { type JobRangeCount, type JobRangeTime } from "../../../infrastructure/Job.ts";
 import { serializeError, deserializeError } from "serialize-error";
-import { generatePlayUid } from "../../../../../core/StringUtils.js";
+import { generatePlayUid } from "../../../../../core/StringUtils.ts";
 
 const DayjsTimestamp = customType<
   {

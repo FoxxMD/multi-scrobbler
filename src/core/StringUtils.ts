@@ -13,10 +13,10 @@ import {
     SCROBBLE_TS_SOC_START,
     type ScrobbleTsSOC,
     type TrackStringOptions
-} from "./Atomic.js";
-import { DELIMETERS_REGEX, DELIMITERS } from "../backend/common/infrastructure/Atomic.js";
+} from "./Atomic.ts";
+import { DELIMETERS_REGEX, DELIMITERS } from "../backend/common/infrastructure/Atomic.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
-import { removeUndefinedKeys } from "../backend/utils.js";
+import { removeUndefinedKeys } from "../backend/utils.ts";
 import { nanoid } from "nanoid";
 
 dayjs.extend(utc)

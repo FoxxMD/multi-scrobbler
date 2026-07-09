@@ -1,5 +1,5 @@
 import { create as diffCreate } from "jsondiffpatch";
-import { type DeepReplaceValue, type numberFormatOptions, REGEX_ISO8601_LOOSE } from './Atomic.js';
+import { type DeepReplaceValue, type numberFormatOptions, REGEX_ISO8601_LOOSE } from './Atomic.ts';
 import { diff, applyChangeset, type Changeset, type Options } from 'json-diff-ts';
 // may want to return to this one day
 // but currently the jsondiffpatch formatter is the best console/ansi diff output for humans :(

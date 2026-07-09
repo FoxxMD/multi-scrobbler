@@ -1,13 +1,13 @@
 import clone from 'clone';
 import dayjs from 'dayjs';
 import { Traverse, type TraverseContext } from 'neotraverse/modern';
-import { ListenRange } from '../backend/sources/PlayerState/ListenRange.js';
-import { type AmbPlayObject, type DateLike, type ErrorLike, type JsonPlayObject, type PlayObject, type PlayProgressAmb, REGEX_ISO8601_LOOSE, type Replace } from './Atomic.js';
-import { ListenProgressPositional, ListenProgressTS } from '../backend/sources/PlayerState/ListenProgress.js';
+import { ListenRange } from '../backend/sources/PlayerState/ListenRange.ts';
+import { type AmbPlayObject, type DateLike, type ErrorLike, type JsonPlayObject, type PlayObject, type PlayProgressAmb, REGEX_ISO8601_LOOSE, type Replace } from './Atomic.ts';
+import { ListenProgressPositional, ListenProgressTS } from '../backend/sources/PlayerState/ListenProgress.ts';
 import type { DeepPick, ElementOf, MarkOptional, PickKeys } from 'ts-essentials';
-import { type PlaySelectWithQueueStates } from '../backend/common/database/drizzle/drizzleTypes.js';
+import { type PlaySelectWithQueueStates } from '../backend/common/database/drizzle/drizzleTypes.ts';
 import { type ErrorObject, serializeError } from 'serialize-error';
-import { type PlayApiCommonDetailed } from './Api.js';
+import { type PlayApiCommonDetailed } from './Api.ts';
 
 interface BlockPath { key: string, parent: string };
 type BlockPaths = BlockPath[];

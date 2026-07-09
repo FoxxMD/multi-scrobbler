@@ -1,6 +1,6 @@
 import { ActivityType, StatusDisplayType } from "discord.js"
-import { type CommonClientConfig, type CommonClientData } from "./index.js"
-import { type ComponentType } from "../../../../../core/Atomic.js"
+import { type CommonClientConfig, type CommonClientData } from "./index.ts"
+import { type ComponentType } from "../../../../../core/Atomic.ts"
 
 export interface DiscordData {
     token?: string

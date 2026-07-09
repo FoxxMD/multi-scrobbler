@@ -1,6 +1,6 @@
-import { type TealData, type TealOptions } from "../client/tealfm.js"
-import { type PollingOptions } from "../common.js"
-import { type CommonSourceConfig, type CommonSourceData, type CommonSourceOptions } from "./index.js"
+import { type TealData, type TealOptions } from "../client/tealfm.ts"
+import { type PollingOptions } from "../common.ts"
+import { type CommonSourceConfig, type CommonSourceData, type CommonSourceOptions } from "./index.ts"
 
 
 export interface TealSourceData extends TealData, CommonSourceData, PollingOptions {
