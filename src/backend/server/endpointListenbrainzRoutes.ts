@@ -2,16 +2,16 @@
 import { type Express } from 'express';
 import { childLogger, type Logger } from "@foxxmd/logging";
 import bodyParser from "body-parser";
-import { EndpointListenbrainzSource, playStateFromRequest, parseDisplayIdentifiersFromRequest } from "../sources/EndpointListenbrainzSource.js";
-import { LZEndpointNotifier } from "../sources/ingressNotifiers/LZEndpointNotifier.js";
-import ScrobbleSources from "../sources/ScrobbleSources.js";
-import { nonEmptyBody } from "./middleware.js";
-import { isDebugMode } from "../utils.js";
-import { type PlayingNowPayload } from '../common/vendor/listenbrainz/interfaces.js';
-import ScrobbleClients from '../scrobblers/ScrobbleClients.js';
-import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.js';
-import { stringToDeterministicNumber } from '../utils/StringUtils.js';
-import { messageWithCauses } from '../../core/ErrorUtils.js';
+import { EndpointListenbrainzSource, playStateFromRequest, parseDisplayIdentifiersFromRequest } from "../sources/EndpointListenbrainzSource.ts";
+import { LZEndpointNotifier } from "../sources/ingressNotifiers/LZEndpointNotifier.ts";
+import ScrobbleSources from "../sources/ScrobbleSources.ts";
+import { nonEmptyBody } from "./middleware.ts";
+import { isDebugMode } from "../utils.ts";
+import { type PlayingNowPayload } from '../common/vendor/listenbrainz/interfaces.ts';
+import ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
+import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
+import { stringToDeterministicNumber } from '../utils/StringUtils.ts';
+import { messageWithCauses } from '../../core/ErrorUtils.ts';
 
 const TEXT_WILDCARD_REGEX = new RegExp(/text\/.+/);
 

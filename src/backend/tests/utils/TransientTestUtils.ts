@@ -1,6 +1,6 @@
 import { loggerTest } from "@foxxmd/logging";
-import { MSCache } from "../../common/Cache.js";
-import { getDb, migrateDbSync, migrateDb } from "../../common/database/drizzle/drizzleUtils.js";
+import { MSCache } from "../../common/Cache.ts";
+import { getDb, migrateDbSync, migrateDb } from "../../common/database/drizzle/drizzleUtils.ts";
 
 export const transientCache = () => new MSCache(loggerTest);
 

@@ -1,18 +1,18 @@
-import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
-import { type RecentlyPlayedOptions } from "./AbstractSource.js";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
+import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
 import { EventEmitter } from "events";
-import { type PlayObject, type PlayObjectMinimal, type URLData } from "../../core/Atomic.js";
+import { type PlayObject, type PlayObjectMinimal, type URLData } from "../../core/Atomic.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
     type PlayerStateData,
     SINGLE_USER_PLATFORM_ID,
-} from "../common/infrastructure/Atomic.js";
-import { isPortReachable, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.js";
-import { type DeviceInfoResponse, type DeviceStatusResponse, MusicCastResponseCodes, type MusicCastSourceConfig, playbackToReportedStatus, type PlayInfoCDResponse, type PlayInfoNetResponse } from "../common/infrastructure/config/source/musiccast.js";
+} from "../common/infrastructure/Atomic.ts";
+import { isPortReachable, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.ts";
+import { type DeviceInfoResponse, type DeviceStatusResponse, MusicCastResponseCodes, type MusicCastSourceConfig, playbackToReportedStatus, type PlayInfoCDResponse, type PlayInfoNetResponse } from "../common/infrastructure/config/source/musiccast.ts";
 import request, { Request, Response } from 'superagent';
-import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
-import { artistNamesToCredits } from "../../core/StringUtils.js";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
+import { artistNamesToCredits } from "../../core/StringUtils.ts";
 
 
 export class MusicCastSource extends MemoryPositionalSource {

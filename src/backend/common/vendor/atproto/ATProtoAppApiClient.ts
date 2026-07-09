@@ -1,13 +1,13 @@
 import dayjs from 'dayjs';
-import { type AbstractApiOptions } from "../../infrastructure/Atomic.js";
-import { type TealClientData } from "../../infrastructure/config/client/tealfm.js";
-import { getATProtoIdentifier } from "./atUtils.js";
-import { type ATProtoAppData, type ATProtoUserIdentifierData } from "../../infrastructure/config/client/atproto.js";
-import { ATProtoAuthenticatedApiClient } from "./ATProtoAuthenticatedApiClient.js";
+import { type AbstractApiOptions } from "../../infrastructure/Atomic.ts";
+import { type TealClientData } from "../../infrastructure/config/client/tealfm.ts";
+import { getATProtoIdentifier } from "./atUtils.ts";
+import { type ATProtoAppData, type ATProtoUserIdentifierData } from "../../infrastructure/config/client/atproto.ts";
+import { ATProtoAuthenticatedApiClient } from "./ATProtoAuthenticatedApiClient.ts";
 import { PasswordSession, type PasswordSessionData } from '@atcute/password-session';
 import { Client, ClientResponseError, parseRateLimitHeaders } from "@atcute/client";
-import { UpstreamError } from "../../errors/UpstreamError.js";
-import { todayAwareFormat } from '../../../../core/TimeUtils.js';
+import { UpstreamError } from "../../errors/UpstreamError.ts";
+import { todayAwareFormat } from '../../../../core/TimeUtils.ts';
 
 export class ATProtoAppApiClient extends ATProtoAuthenticatedApiClient {
 

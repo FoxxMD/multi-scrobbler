@@ -9,7 +9,7 @@ import { existingScrobble } from '../../../backend/utils/PlayComparisonUtils.js'
 import { UpstreamError } from '../../../backend/common/errors/UpstreamError.js';
 import { playToListenPayload } from '../../../backend/common/vendor/listenbrainz/lzUtils.js';
 import { mergeSimpleError, SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from '../../../backend/common/errors/MSErrors.js';
-import dayjs, { Dayjs } from 'dayjs';
+import dayjs, { type Dayjs } from 'dayjs';
 import { type TransformHook } from '../../../backend/common/infrastructure/Transform.js';
 import { serializeError } from 'serialize-error';
 

@@ -4,12 +4,12 @@ import address from "address";
 import net from 'node:net';
 import normalizeUrl from "normalize-url";
 import { join as joinPath } from "path";
-import { getFirstNonEmptyVal, isDebugMode} from "../utils.js";
-import { type URLData } from "../../core/Atomic.js";
+import { getFirstNonEmptyVal, isDebugMode} from "../utils.ts";
+import { type URLData } from "../../core/Atomic.ts";
 import { CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket'
-import { WEBSOCKET_CLOSE_CODE_REASONS } from "../common/infrastructure/Atomic.js";
-import { loggerNoop } from "../common/MaybeLogger.js";
-import { formatBytes } from "./DataUtils.js";
+import { WEBSOCKET_CLOSE_CODE_REASONS } from "../common/infrastructure/Atomic.ts";
+import { loggerNoop } from "../common/MaybeLogger.ts";
+import { formatBytes } from "./DataUtils.ts";
 
 export interface PortReachableOpts {
     host: string,

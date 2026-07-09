@@ -1,19 +1,19 @@
 import dayjs from "dayjs";
-import { type PlayObject, type PlayObjectMinimal, type ScrobbleActionResult, type URLData } from "../../../../core/Atomic.js";
-import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, type PaginatedListensTimeRangeOptions, type PaginatedTimeRangeListens, type PaginatedTimeRangeListensResult } from "../../infrastructure/Atomic.js";
-import { type GetListensOptions, type KoitoData, type ListenObjectResponse, type ListensResponse } from "../../infrastructure/config/client/koito.js";
-import AbstractApiClient from "../AbstractApiClient.js";
-import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../../utils/NetworkUtils.js";
+import { type PlayObject, type PlayObjectMinimal, type ScrobbleActionResult, type URLData } from "../../../../core/Atomic.ts";
+import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, type PaginatedListensTimeRangeOptions, type PaginatedTimeRangeListens, type PaginatedTimeRangeListensResult } from "../../infrastructure/Atomic.ts";
+import { type GetListensOptions, type KoitoData, type ListenObjectResponse, type ListensResponse } from "../../infrastructure/config/client/koito.ts";
+import AbstractApiClient from "../AbstractApiClient.ts";
+import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../../utils/NetworkUtils.ts";
 import request, { Request, Response } from 'superagent';
-import { UpstreamError } from "../../errors/UpstreamError.js";
-import { playToListenPayload } from '../listenbrainz/lzUtils.js';
-import { type SubmitPayload } from '../listenbrainz/interfaces.js';
-import { type ListenType } from '../listenbrainz/interfaces.js';
-import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.js";
-import { ScrobbleSubmitError } from "../../errors/MSErrors.js";
-import { tryApiCall } from "../../../utils/RequestUtils.js";
+import { UpstreamError } from "../../errors/UpstreamError.ts";
+import { playToListenPayload } from '../listenbrainz/lzUtils.ts';
+import { type SubmitPayload } from '../listenbrainz/interfaces.ts';
+import { type ListenType } from '../listenbrainz/interfaces.ts';
+import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.ts";
+import { ScrobbleSubmitError } from "../../errors/MSErrors.ts";
+import { tryApiCall } from "../../../utils/RequestUtils.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
-import { artistNamesToCredits } from "../../../../core/StringUtils.js";
+import { artistNamesToCredits } from "../../../../core/StringUtils.ts";
 
 interface SubmitOptions {
     log?: boolean

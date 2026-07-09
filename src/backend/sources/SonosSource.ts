@@ -1,5 +1,5 @@
 import { EventEmitter } from "events";
-import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.js";
+import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
@@ -8,21 +8,21 @@ import {
     type PlayerStateData,
     REPORTED_PLAYER_STATUSES,
     type ReportedPlayerStatus,
-} from "../common/infrastructure/Atomic.js";
-import { type RecentlyPlayedOptions } from "./AbstractSource.js";
-import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
-import { type SonosSourceConfig } from "../common/infrastructure/config/source/sonos.js";
+} from "../common/infrastructure/Atomic.ts";
+import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
+import { type SonosSourceConfig } from "../common/infrastructure/config/source/sonos.ts";
 import { SonosDevice, SonosManager } from '@svrooij/sonos';
 import { type SonosState } from "@svrooij/sonos/lib/models/sonos-state.js";
 import { GroupTransportState } from "@svrooij/sonos/lib/models/transport-state.js";
 import { type Track } from "@svrooij/sonos/lib/models/track.js";
-import { parseDurationFromTimestamp } from "../utils/TimeUtils.js";
+import { parseDurationFromTimestamp } from "../utils/TimeUtils.ts";
 import { FixedSizeList } from "fixed-size-list";
-import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.js";
-import { isDebugMode, playObjDataMatch, sleep } from "../utils.js";
-import dayjs, { Dayjs } from "dayjs";
-import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
-import { artistNamesToCredits } from "../../core/StringUtils.js";
+import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.ts";
+import { isDebugMode, playObjDataMatch, sleep } from "../utils.ts";
+import dayjs, { type Dayjs } from "dayjs";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
+import { artistNamesToCredits } from "../../core/StringUtils.ts";
 
 export interface DeviceState {
     device: SonosDevice

@@ -1,7 +1,7 @@
 import { loggerTest } from "@foxxmd/logging";
 import { assert, expect } from 'chai';
 import clone from "clone";
-import dayjs, { Dayjs } from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import { describe, it } from 'mocha';
 import {
     CALCULATED_PLAYER_STATUSES,
@@ -10,13 +10,13 @@ import {
     type PlayerStateDataMaybePlay,
     REPORTED_PLAYER_STATUSES,
     SINGLE_USER_PLATFORM_ID
-} from "../../common/infrastructure/Atomic.js";
-import { GenericPlayerState } from "../../sources/PlayerState/GenericPlayerState.js";
-import { playObjDataMatch } from "../../utils.js";
-import { generatePlay } from "../../../core/PlayTestUtils.js";
-import { PositionalPlayerState } from "../../sources/PlayerState/PositionalPlayerState.js";
-import { ListenProgressPositional } from "../../sources/PlayerState/ListenProgress.js";
-import { ListenRangePositional } from "../../sources/PlayerState/ListenRange.js";
+} from "../../common/infrastructure/Atomic.ts";
+import { GenericPlayerState } from "../../sources/PlayerState/GenericPlayerState.ts";
+import { playObjDataMatch } from "../../utils.ts";
+import { generatePlay } from "../../../core/PlayTestUtils.ts";
+import { PositionalPlayerState } from "../../sources/PlayerState/PositionalPlayerState.ts";
+import { ListenProgressPositional } from "../../sources/PlayerState/ListenProgress.ts";
+import { ListenRangePositional } from "../../sources/PlayerState/ListenRange.ts";
 
 const logger = loggerTest;
 

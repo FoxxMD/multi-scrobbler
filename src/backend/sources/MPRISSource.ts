@@ -2,8 +2,8 @@ import { type Interfaces as Notifications } from '@dbus-types/notifications'
 import dayjs from "dayjs";
 import { DBusInterface, sessionBus, Connection, type ConnectOpts } from 'dbus-ts';
 import EventEmitter from "events";
-import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.js";
-import { type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.js";
+import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
+import { type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.ts";
 import {
     MPRIS_IFACE,
     MPRIS_PATH,
@@ -12,16 +12,16 @@ import {
     PLAYBACK_STATUS_STOPPED,
     type PlaybackStatus,
     type PlayerInfo,
-} from "../common/infrastructure/config/source/mpris.js";
-import { removeDuplicates } from "../utils.js";
-import { findCauseByMessage } from "../utils/ErrorUtils.js";
-import { type RecentlyPlayedOptions } from "./AbstractSource.js";
-import MemorySource from "./MemorySource.js";
+} from "../common/infrastructure/config/source/mpris.ts";
+import { removeDuplicates } from "../utils.ts";
+import { findCauseByMessage } from "../utils/ErrorUtils.ts";
+import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import MemorySource from "./MemorySource.ts";
 import { Readable, Writable } from 'stream';
 import net from 'net';
 import pEvent from 'p-event';
-import { baseFormatPlayObj } from '../utils/PlayTransformUtils.js';
-import { artistNamesToCredits } from '../../core/StringUtils.js';
+import { baseFormatPlayObj } from '../utils/PlayTransformUtils.ts';
+import { artistNamesToCredits } from '../../core/StringUtils.ts';
 
 
 export class MPRISSource extends MemorySource {

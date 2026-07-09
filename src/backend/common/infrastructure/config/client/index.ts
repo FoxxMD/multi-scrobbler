@@ -1,7 +1,7 @@
-import { type DurationValue } from "../../Atomic.js";
-import { type PlayTransformConfig, type PlayTransformOptions } from "../../Transform.js";
-import { type CommonConfig, type CommonData, type RequestRetryOptions } from "../common.js";
-import { type RetentionConfig } from "../database.js";
+import { type DurationValue } from "../../Atomic.ts";
+import { type PlayTransformConfig, type PlayTransformOptions } from "../../Transform.ts";
+import { type CommonConfig, type CommonData, type RequestRetryOptions } from "../common.ts";
+import { type RetentionConfig } from "../database.ts";
 
 /**
  * Scrobble matching (between new source track and existing client scrobbles) logging options. Used for debugging.

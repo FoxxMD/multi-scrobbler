@@ -1,9 +1,9 @@
 import { assert, expect } from 'chai';
 import clone from "clone";
 import { describe, it } from 'mocha';
-import { genericSourcePlayMatch, playsAreAddedOnly, playsAreBumpedOnly, playsAreSortConsistent } from "../../utils/PlayComparisonUtils.js";
-import { generatePlay, generatePlays } from "../../../core/PlayTestUtils.js";
-import { type PlayObject } from "../../../core/Atomic.js";
+import { genericSourcePlayMatch, playsAreAddedOnly, playsAreBumpedOnly, playsAreSortConsistent } from "../../utils/PlayComparisonUtils.ts";
+import { generatePlay, generatePlays } from "../../../core/PlayTestUtils.ts";
+import { type PlayObject } from "../../../core/Atomic.ts";
 
 const newPlay = generatePlay();
 

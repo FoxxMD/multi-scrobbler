@@ -1,7 +1,7 @@
 import { type ResponseError } from "superagent";
 
-import { findCauseByFunc } from "../../../utils/ErrorUtils.js";
-import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
+import { findCauseByFunc } from "../../../utils/ErrorUtils.ts";
+import { isSuperAgentResponseError } from "../../errors/ErrorUtils.ts";
 
 export interface MalojaAlbumData {
     name?: string

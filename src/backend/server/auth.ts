@@ -1,17 +1,17 @@
 import { type Express } from 'express';
 import { type Logger } from "@foxxmd/logging";
 import passport from "passport";
-import { type ExpressHandler } from "../common/infrastructure/Atomic.js";
-import LastfmScrobbler from "../scrobblers/LastfmScrobbler.js";
-import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
-import LastfmSource from "../sources/LastfmSource.js";
-import ScrobbleSources from "../sources/ScrobbleSources.js";
-import SpotifySource from "../sources/SpotifySource.js";
-import YTMusicSource from "../sources/YTMusicSource.js";
-import LibrefmScrobbler from "../scrobblers/LibrefmScrobbler.js";
-import LibrefmSource from "../sources/LibrefmSource.js";
+import { type ExpressHandler } from "../common/infrastructure/Atomic.ts";
+import LastfmScrobbler from "../scrobblers/LastfmScrobbler.ts";
+import ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
+import LastfmSource from "../sources/LastfmSource.ts";
+import ScrobbleSources from "../sources/ScrobbleSources.ts";
+import SpotifySource from "../sources/SpotifySource.ts";
+import YTMusicSource from "../sources/YTMusicSource.ts";
+import LibrefmScrobbler from "../scrobblers/LibrefmScrobbler.ts";
+import LibrefmSource from "../sources/LibrefmSource.ts";
 import e from "express";
-import AbstractSource from "../sources/AbstractSource.js";
+import AbstractSource from "../sources/AbstractSource.ts";
 
 export const setupAuthRoutes = (app: Express, logger: Logger, sourceMiddle: ExpressHandler, clientMiddle: ExpressHandler, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
     app.use('/api/client/auth', clientMiddle);

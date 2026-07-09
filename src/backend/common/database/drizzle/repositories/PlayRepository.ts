@@ -1,24 +1,24 @@
 import { childLogger, type Logger, type LoggerAppExtras } from "@foxxmd/logging";
-import { type DbConcrete, runTransaction } from "../drizzleUtils.js";
+import { type DbConcrete, runTransaction } from "../drizzleUtils.ts";
 import clone from 'clone';
 import { Traverse, type TraverseContext } from 'neotraverse/modern';
-import { loggerNoop } from "../../../MaybeLogger.js";
-import { type DateLike, type DeepReplaceValue, type ErrorLike, type PlayObject, type PlayState, type QueueName, REGEX_ISO8601_LOOSE, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, type TemporalAccuracy } from "../../../../../core/Atomic.js";
-import { generateInputEntity, generatePlayEntity, type PlayEntityOpts, hydratePlaySelect, type PlayHydateOptions } from "../entityUtils.js";
-import { playInputs, plays, queueStates, relations, schema } from "../schema/schema.js";
-import { type PlayNew, type PlaySelect, type PlayInputNew, type FindWhere, type FindMany, type QueueStateSelect, type FindWith, type PlaySelectWithQueueStates, type WhereClause, type PlayWith } from "../drizzleTypes.js";;
+import { loggerNoop } from "../../../MaybeLogger.ts";
+import { type DateLike, type DeepReplaceValue, type ErrorLike, type PlayObject, type PlayState, type QueueName, REGEX_ISO8601_LOOSE, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
+import { generateInputEntity, generatePlayEntity, type PlayEntityOpts, hydratePlaySelect, type PlayHydateOptions } from "../entityUtils.ts";
+import { playInputs, plays, queueStates, relations, schema } from "../schema/schema.ts";
+import { type PlayNew, type PlaySelect, type PlayInputNew, type FindWhere, type FindMany, type QueueStateSelect, type FindWith, type PlaySelectWithQueueStates, type WhereClause, type PlayWith } from "../drizzleTypes.ts";;
 import type { MarkOptional, MarkRequired, PathValue } from "ts-essentials";
-import { genGroupIdStrFromPlay, removeEmptyArrays, removeUndefinedKeys } from "../../../../utils.js";
-import dayjs, { Dayjs } from "dayjs";
+import { genGroupIdStrFromPlay, removeEmptyArrays, removeUndefinedKeys } from "../../../../utils.ts";
+import dayjs, { type Dayjs } from "dayjs";
 import { type RelationsFieldFilter, eq, inArray, ne, notInArray, desc, asc, and, sql, Placeholder, relationsFilterToSQL } from "drizzle-orm";
-import { type CompactableProperty, type RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.js";
-import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.js";
-import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts, type PaginatedQueryResponse, type PaginatedResponse } from "./BaseRepository.js";
+import { type CompactableProperty, type RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.ts";
+import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.ts";
+import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts, type PaginatedQueryResponse, type PaginatedResponse } from "./BaseRepository.ts";
 import assert, { Assert } from "node:assert";
-import { hashObject, parseArrayFromMaybeString } from "../../../../utils/StringUtils.js";
-import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../../utils/PlayComparisonUtils.js";
-import { comparePlayTemporally, getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext, getTemporalAccuracyCloseVal, hasAcceptableTemporalAccuracy } from "../../../../utils/TimeUtils.js";
-import { type SourceType } from "../../../infrastructure/config/source/sources.js";
+import { hashObject, parseArrayFromMaybeString } from "../../../../utils/StringUtils.ts";
+import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../../utils/PlayComparisonUtils.ts";
+import { comparePlayTemporally, getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext, getTemporalAccuracyCloseVal, hasAcceptableTemporalAccuracy } from "../../../../utils/TimeUtils.ts";
+import { type SourceType } from "../../../infrastructure/config/source/sources.ts";
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 

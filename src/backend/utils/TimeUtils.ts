@@ -1,5 +1,5 @@
 
-import dayjs, { Dayjs } from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 //import isToday from 'dayjs/plugin/isToday.js';
 import {
     type AcceptableTemporalDuringReference,
@@ -16,8 +16,8 @@ import {
     type TemporalAccuracy,
     type TemporalPlayComparison,
     type UnixTimestamp,
-} from "../../core/Atomic.js";
-import { capitalize, stringIsOnlyNumbers } from "../../core/StringUtils.js";
+} from "../../core/Atomic.ts";
+import { capitalize, stringIsOnlyNumbers } from "../../core/StringUtils.ts";
 import {
     DEFAULT_CLOSE_POSITION_ABSOLUTE,
     DEFAULT_CLOSE_POSITION_PERCENT,
@@ -28,15 +28,15 @@ import {
     type DurationValue,
     lowGranularitySources,
     type ScrobbleThresholdResult,
-} from "../common/infrastructure/Atomic.js";
-import { type ScrobbleThresholds } from "../common/infrastructure/config/source/index.js";
-import { formatNumber } from '../../core/DataUtils.js';
-import { InvalidRegexError, SimpleError } from "../common/errors/MSErrors.js";
+} from "../common/infrastructure/Atomic.ts";
+import { type ScrobbleThresholds } from "../common/infrastructure/config/source/index.ts";
+import { formatNumber } from '../../core/DataUtils.ts';
+import { InvalidRegexError, SimpleError } from "../common/errors/MSErrors.ts";
 import { type NamedGroup, parseRegex } from "@foxxmd/regex-buddy-core";
 import { type Duration } from "dayjs/plugin/duration.js";
-import { type SourceType } from "../common/infrastructure/config/source/sources.js";
+import { type SourceType } from "../common/infrastructure/config/source/sources.ts";
 import { type Logger } from "@foxxmd/logging";
-import { loggerNoop } from "../common/MaybeLogger.js";
+import { loggerNoop } from "../common/MaybeLogger.ts";
 
 //dayjs.extend(isToday);
 

@@ -1,5 +1,5 @@
 import pMap, { type Mapper, type Options, pMapIterable } from "p-map";
-import { sleep } from "../utils.js";
+import { sleep } from "../utils.ts";
 
 /** https://stackoverflow.com/a/63795192/1469797 */
 export async function findAsyncSequential<T>(

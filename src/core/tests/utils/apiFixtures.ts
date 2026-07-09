@@ -5,7 +5,7 @@ import { generatePlay, normalizePlays } from "../../PlayTestUtils.js";
 import { generatePlayInput, generatePlayWithLifecycle, playWithLifecycleScrobble, randomPlayState } from "./fixtures.js";
 import { asJsonPlayObject } from "../../PlayMarshalUtils.js";
 import { generatePlayUid } from "../../StringUtils.js";
-import dayjs, { Dayjs } from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import { type ErrorLike } from "serialize-error";
 import { nanoid } from "nanoid";
 import { isSourceType, type SourceType, sourceTypes } from "../../../backend/common/infrastructure/config/source/sources.js";

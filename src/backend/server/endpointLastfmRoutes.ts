@@ -2,11 +2,11 @@
 import { type Express } from 'express';
 import { childLogger, type Logger } from "@foxxmd/logging";
 import bodyParser from "body-parser";
-import ScrobbleSources from "../sources/ScrobbleSources.js";
-import { nonEmptyBody } from "./middleware.js";
-import { LFMEndpointNotifier } from "../sources/ingressNotifiers/LFMEndpointNotifier.js";
-import { EndpointLastfmSource, playStateFromRequest, parseDisplayIdentifiersFromRequest } from "../sources/EndpointLastfmSource.js";
-import { type LastFMScrobbleRequestPayload } from "../common/vendor/LastfmApiClient.js";
+import ScrobbleSources from "../sources/ScrobbleSources.ts";
+import { nonEmptyBody } from "./middleware.ts";
+import { LFMEndpointNotifier } from "../sources/ingressNotifiers/LFMEndpointNotifier.ts";
+import { EndpointLastfmSource, playStateFromRequest, parseDisplayIdentifiersFromRequest } from "../sources/EndpointLastfmSource.ts";
+import { type LastFMScrobbleRequestPayload } from "../common/vendor/LastfmApiClient.ts";
 
 export const setupLastfmEndpointRoutes = (app: Express, parentLogger: Logger, scrobbleSources: ScrobbleSources) => {
 

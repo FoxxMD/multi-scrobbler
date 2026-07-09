@@ -1,10 +1,10 @@
 import JSON5 from "json5";
 import { constants, promises } from "fs";
-import { MaybeLogger } from '../common/MaybeLogger.js';
+import { MaybeLogger } from '../common/MaybeLogger.ts';
 import { deepEqual } from 'fast-equals';
-import { type CommonConfigPrimitives } from "../common/infrastructure/config/common.js";
-import { parseBoolStrict, removeUndefinedKeys } from "../utils.js";
-import { nonEmptyStringOrDefault } from "../../core/StringUtils.js";
+import { type CommonConfigPrimitives } from "../common/infrastructure/config/common.ts";
+import { parseBoolStrict, removeUndefinedKeys } from "../utils.ts";
+import { nonEmptyStringOrDefault } from "../../core/StringUtils.ts";
 
 export const asArray = <T>(data: T | T[]): T[] => {
     if (Array.isArray(data)) {

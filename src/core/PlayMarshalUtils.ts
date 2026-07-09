@@ -1,5 +1,5 @@
 import clone from 'clone';
-import dayjs, { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
 import { Traverse, type TraverseContext } from 'neotraverse/modern';
 import { ListenRange } from '../backend/sources/PlayerState/ListenRange.js';
 import { type AmbPlayObject, type DateLike, type ErrorLike, type JsonPlayObject, type PlayObject, type PlayProgressAmb, REGEX_ISO8601_LOOSE, type Replace } from './Atomic.js';

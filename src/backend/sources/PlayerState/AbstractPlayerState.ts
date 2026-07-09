@@ -1,7 +1,7 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
-import dayjs, { Dayjs } from "dayjs";
-import { type PlayObject, type PlayProgress, type Second, SOURCE_SOT, type SOURCE_SOT_TYPES, type SourcePlayerObj } from "../../../core/Atomic.js";
-import { buildTrackString } from "../../../core/StringUtils.js";
+import dayjs, { type Dayjs } from "dayjs";
+import { type PlayObject, type PlayProgress, type Second, SOURCE_SOT, type SOURCE_SOT_TYPES, type SourcePlayerObj } from "../../../core/Atomic.ts";
+import { buildTrackString } from "../../../core/StringUtils.ts";
 import {
     asPlayerStateData,
     CALCULATED_PLAYER_STATUSES,
@@ -11,16 +11,16 @@ import {
     type PlayPlatformId,
     REPORTED_PLAYER_STATUSES,
     type ReportedPlayerStatus,
-} from "../../common/infrastructure/Atomic.js";
-import { type PollingOptions } from "../../common/infrastructure/config/common.js";
-import { playObjDataMatch, progressBar } from "../../utils.js";
-import { genGroupIdStr } from '../../../core/PlayUtils.js';
-import { formatNumber } from '../../../core/DataUtils.js';
-import { type ListenProgress } from "./ListenProgress.js";
-import { ListenRange, ListenRangePositional } from "./ListenRange.js";
-import { closeToPlayEnd, closeToPlayStart, repeatDurationPlayed } from "../../utils/TimeUtils.js";
-import { timeToHumanTimestamp } from "../../../core/TimeUtils.js";
-import { todayAwareFormat } from "../../../core/TimeUtils.js";
+} from "../../common/infrastructure/Atomic.ts";
+import { type PollingOptions } from "../../common/infrastructure/config/common.ts";
+import { playObjDataMatch, progressBar } from "../../utils.ts";
+import { genGroupIdStr } from '../../../core/PlayUtils.ts';
+import { formatNumber } from '../../../core/DataUtils.ts';
+import { type ListenProgress } from "./ListenProgress.ts";
+import { ListenRange, ListenRangePositional } from "./ListenRange.ts";
+import { closeToPlayEnd, closeToPlayStart, repeatDurationPlayed } from "../../utils/TimeUtils.ts";
+import { timeToHumanTimestamp } from "../../../core/TimeUtils.ts";
+import { todayAwareFormat } from "../../../core/TimeUtils.ts";
 
 export interface PlayerStateIntervals {
     staleInterval?: number

@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import dayjs, { Dayjs } from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import duration from "dayjs/plugin/duration.js";
 import isBetween from "dayjs/plugin/isBetween.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";

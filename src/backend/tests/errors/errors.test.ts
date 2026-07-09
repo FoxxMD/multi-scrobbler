@@ -1,9 +1,9 @@
 import chai, { assert, expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { after } from 'mocha';
-import { UpstreamError } from '../../common/errors/UpstreamError.js';
+import { UpstreamError } from '../../common/errors/UpstreamError.ts';
 import { serializeError, deserializeError } from 'serialize-error';
-import { AbortedError } from '../../common/errors/MSErrors.js';
+import { AbortedError } from '../../common/errors/MSErrors.ts';
 
 
 describe('#ErrorMarshalling', function() {

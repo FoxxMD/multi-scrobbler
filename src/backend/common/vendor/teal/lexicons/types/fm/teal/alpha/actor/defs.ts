@@ -1,8 +1,8 @@
 import type {} from "@atcute/lexicons";
 import * as v from "@atcute/lexicons/validations";
 import * as AppBskyRichtextFacet from "@atcute/bluesky/types/app/richtext/facet";
-import * as FmTealAlphaActorProfile from "./profile.js";
-import * as FmTealAlphaFeedDefs from "../feed/defs.js";
+import * as FmTealAlphaActorProfile from "./profile.ts";
+import * as FmTealAlphaFeedDefs from "../feed/defs.ts";
 
 const _miniProfileViewSchema = /*#__PURE__*/ v.object({
   $type: /*#__PURE__*/ v.optional(

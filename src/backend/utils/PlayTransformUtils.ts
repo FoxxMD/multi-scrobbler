@@ -1,6 +1,6 @@
 import { type Logger } from "@foxxmd/logging";
 import { searchAndReplace as searchAndReplaceFunc, testMaybeRegex as testMaybeRegexFunc } from "@foxxmd/regex-buddy-core";
-import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.js";
+import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
 
 import {
     type ConditionalSearchAndReplaceRegExp,
@@ -14,7 +14,7 @@ import {
     type StageTypedConfig,
     type WhenConditionsConfig,
     type WhenParts
-} from "../common/infrastructure/Transform.js";
+} from "../common/infrastructure/Transform.ts";
 import dayjs from "dayjs";
 
 export const isWhenCondition = (val: unknown): val is WhenParts<string> => {

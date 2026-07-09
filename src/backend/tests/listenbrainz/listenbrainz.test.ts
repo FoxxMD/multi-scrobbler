@@ -3,14 +3,14 @@ import { assert, expect } from 'chai';
 import dayjs from "dayjs";
 import { describe, it } from 'mocha';
 import { http, HttpResponse } from "msw";
-import { type PlayObject } from "../../../core/Atomic.js";
-import { UpstreamError } from "../../common/errors/UpstreamError.js";
+import { type PlayObject } from "../../../core/Atomic.ts";
+import { UpstreamError } from "../../common/errors/UpstreamError.ts";
 
-import { ListenbrainzApiClient, listenResponseToPlay, listenPayloadToPlay } from "../../common/vendor/ListenbrainzApiClient.js";
-import { playToListenPayload } from '../../common/vendor/listenbrainz/lzUtils.js';
-import { type ListenPayload, type ListenResponse, type SubmitPayload } from '../../common/vendor/listenbrainz/interfaces.js';
-import { type ExpectedResults } from "../utils/interfaces.js";
-import { withRequestInterception } from "../utils/networking.js";
+import { ListenbrainzApiClient, listenResponseToPlay, listenPayloadToPlay } from "../../common/vendor/ListenbrainzApiClient.ts";
+import { playToListenPayload } from '../../common/vendor/listenbrainz/lzUtils.ts';
+import { type ListenPayload, type ListenResponse, type SubmitPayload } from '../../common/vendor/listenbrainz/interfaces.ts';
+import { type ExpectedResults } from "../utils/interfaces.ts";
+import { withRequestInterception } from "../utils/networking.ts";
 import artistWithProperJoiner from './correctlyMapped/artistProperHasJoinerInName.json' with { type: "json" };
 // correct mappings
 import multiArtistInArtistName from './correctlyMapped/multiArtistInArtistName.json' with { type: "json" };
@@ -23,8 +23,8 @@ import slightlyDifferentNames from './correctlyMapped/trackNameSlightlyDifferent
 // incorrect mappings
 import incorrectMultiArtistsTrackName from './incorrectlyMapped/multiArtistsInTrackName.json' with { type: "json" };
 import veryWrong from './incorrectlyMapped/veryWrong.json' with { type: "json" };
-import { generatePlay } from "../../../core/PlayTestUtils.js";
-import { artistCreditsToNames, artistNamesToCredits } from "../../../core/StringUtils.js";
+import { generatePlay } from "../../../core/PlayTestUtils.ts";
+import { artistCreditsToNames, artistNamesToCredits } from "../../../core/StringUtils.ts";
 
 interface LZTestFixture {
     data: ListenResponse

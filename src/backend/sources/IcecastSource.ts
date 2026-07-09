@@ -1,21 +1,21 @@
-import { type RecentlyPlayedOptions } from "./AbstractSource.js";
+import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
 import { EventEmitter } from "events";
-import { type PlayObject, type PlayObjectMinimal, type URLData } from "../../core/Atomic.js";
+import { type PlayObject, type PlayObjectMinimal, type URLData } from "../../core/Atomic.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
     type PlayerStateData,
     REPORTED_PLAYER_STATUSES,
     SINGLE_USER_PLATFORM_ID,
-} from "../common/infrastructure/Atomic.js";
-import { isPortReachableConnect, normalizeWebAddress } from "../utils/NetworkUtils.js";
-import MemorySource from "./MemorySource.js";
-import { type IcecastMetadata, type IcecastSourceConfig } from "../common/infrastructure/config/source/icecast.js";
+} from "../common/infrastructure/Atomic.ts";
+import { isPortReachableConnect, normalizeWebAddress } from "../utils/NetworkUtils.ts";
+import MemorySource from "./MemorySource.ts";
+import { type IcecastMetadata, type IcecastSourceConfig } from "../common/infrastructure/config/source/icecast.ts";
 import IcecastMetadataStats from "icecast-metadata-stats";
-import { parseArtistCredits, parseTrackCredits } from "../utils/StringUtils.js";
-import { isDebugMode, sleep } from "../utils.js";
-import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
-import { artistNamesToCredits } from "../../core/StringUtils.js";
+import { parseArtistCredits, parseTrackCredits } from "../utils/StringUtils.ts";
+import { isDebugMode, sleep } from "../utils.ts";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
+import { artistNamesToCredits } from "../../core/StringUtils.ts";
 
 
 export class IcecastSource extends MemorySource {

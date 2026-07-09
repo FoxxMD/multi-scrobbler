@@ -8,7 +8,7 @@ import chalk from 'chalk';
 import clone from "clone";
 import ConsoleFormatter from "jsondiffpatch/formatters/console";
 import assert from "node:assert";
-import dayjs, {Dayjs} from "dayjs";
+import dayjs from "dayjs";
 import { Traverse } from "neotraverse/modern";
 import { serializeError } from "serialize-error";
 

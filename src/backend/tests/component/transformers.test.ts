@@ -2,24 +2,24 @@ import { loggerTest, loggerDebug, childLogger } from "@foxxmd/logging";
 import chai, { assert, expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
-import AbstractComponent, { type AbstractComponentConfig } from "../../common/AbstractComponent.js";
+import AbstractComponent, { type AbstractComponentConfig } from "../../common/AbstractComponent.ts";
 
-import { type ConditionalSearchAndReplaceRegExp, STAGE_TYPES, STAGE_TYPES_METADATA, STAGE_TYPES_USER, TRANSFORM_HOOK } from "../../common/infrastructure/Transform.js";
+import { type ConditionalSearchAndReplaceRegExp, STAGE_TYPES, STAGE_TYPES_METADATA, STAGE_TYPES_USER, TRANSFORM_HOOK } from "../../common/infrastructure/Transform.ts";
 
-import { isConditionalSearchAndReplace } from "../../utils/PlayTransformUtils.js";
-import { generateArtistsStr, generatePlay } from "../../../core/PlayTestUtils.js";
-import { type WebhookPayload } from "../../common/infrastructure/config/health/webhooks.js";
-import { findCauseByMessage } from "../../utils/ErrorUtils.js";
-import NativeTransformer from "../../common/transforms/NativeTransformer.js";
-import { initMemoryCache } from "../../common/Cache.js";
+import { isConditionalSearchAndReplace } from "../../utils/PlayTransformUtils.ts";
+import { generateArtistsStr, generatePlay } from "../../../core/PlayTestUtils.ts";
+import { type WebhookPayload } from "../../common/infrastructure/config/health/webhooks.ts";
+import { findCauseByMessage } from "../../utils/ErrorUtils.ts";
+import NativeTransformer from "../../common/transforms/NativeTransformer.ts";
+import { initMemoryCache } from "../../common/Cache.ts";
 import { Cacheable } from "cacheable";
-import { type TransformerCommonConfig } from "../../../core/Atomic.js";
-import TransformerManager from "../../common/transforms/TransformerManager.js";
-import { transientCache } from "../utils/TransientTestUtils.js";
+import { type TransformerCommonConfig } from "../../../core/Atomic.ts";
+import TransformerManager from "../../common/transforms/TransformerManager.ts";
+import { transientCache } from "../utils/TransientTestUtils.ts";
 import dayjs from "dayjs";
 import clone from "clone";
-import { artistCreditsToNames, artistNamesToCredits } from "../../../core/StringUtils.js";
-import { COMPONENT_STATE, type ComponentState } from "../../../core/Api.js";
+import { artistCreditsToNames, artistNamesToCredits } from "../../../core/StringUtils.ts";
+import { COMPONENT_STATE, type ComponentState } from "../../../core/Api.ts";
 
 chai.use(asPromised);
 

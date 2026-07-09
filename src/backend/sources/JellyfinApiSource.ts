@@ -42,24 +42,24 @@ import {
 from "@jellyfin/sdk/lib/index.js";
 import dayjs from "dayjs";
 import EventEmitter from "events";
-import { type ArtistCredit, type BrainzMeta, type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.js";
-import { artistNamesToCredits, artistNameToCredit, buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
+import { type ArtistCredit, type BrainzMeta, type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
+import { artistNamesToCredits, artistNameToCredit, buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
     type PlayerStateData,
     type PlayerStateDataMaybePlay,
     type PlayPlatformId, REPORTED_PLAYER_STATUSES
-} from "../common/infrastructure/Atomic.js";
-import { type JellyApiSourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
-import { getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.js";
-import { genGroupIdStr } from '../../core/PlayUtils.js';
-import { joinedUrl } from "../utils/NetworkUtils.js";
-import { hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.js";
-import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
+} from "../common/infrastructure/Atomic.ts";
+import { type JellyApiSourceConfig } from "../common/infrastructure/config/source/jellyfin.ts";
+import { getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.ts";
+import { genGroupIdStr } from '../../core/PlayUtils.ts';
+import { joinedUrl } from "../utils/NetworkUtils.ts";
+import { hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.ts";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import { FixedSizeList } from "fixed-size-list";
-import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
-import { noCasePropObj } from "../utils/DataUtils.js";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
+import { noCasePropObj } from "../utils/DataUtils.ts";
 
 const shortDeviceId = truncateStringToLength(10, '');
 

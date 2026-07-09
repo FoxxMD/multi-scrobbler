@@ -1,4 +1,4 @@
-import { type CommonSourceConfig, type CommonSourceData, type CommonSourceOptions } from "./index.js";
+import { type CommonSourceConfig, type CommonSourceData, type CommonSourceOptions } from "./index.ts";
 import {
     // @ts-expect-error weird typings?
     CollectionType,

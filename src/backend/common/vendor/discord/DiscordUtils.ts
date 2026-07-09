@@ -1,12 +1,12 @@
 import dayjs from "dayjs";
-import { isPlayObject, type PlayObject, type SourcePlayerObj } from "../../../../core/Atomic.js";
-import { asPlayerStateData, type SourceData } from "../../infrastructure/Atomic.js";
+import { isPlayObject, type PlayObject, type SourcePlayerObj } from "../../../../core/Atomic.ts";
+import { asPlayerStateData, type SourceData } from "../../infrastructure/Atomic.ts";
 import { GatewayOpcodes, PresenceUpdateStatus } from "discord.js";
-import { capitalize } from "../../../../core/StringUtils.js";
-import { urlToMusicService } from '../listenbrainz/lzUtils.js';
-import { ACTIVITY_TYPE, type ActivityData, ActivityTypes, type DiscordData, type DiscordStrongData, type ActivityTypeString as MSActivityType, type StatusType } from "../../infrastructure/config/client/discord.js";
-import { parseBool, removeUndefinedKeys } from "../../../utils.js";
-import { parseArrayFromMaybeString, parseBoolOrArrayFromMaybeString } from "../../../utils/StringUtils.js";
+import { capitalize } from "../../../../core/StringUtils.ts";
+import { urlToMusicService } from '../listenbrainz/lzUtils.ts';
+import { ACTIVITY_TYPE, type ActivityData, ActivityTypes, type DiscordData, type DiscordStrongData, type ActivityTypeString as MSActivityType, type StatusType } from "../../infrastructure/config/client/discord.ts";
+import { parseBool, removeUndefinedKeys } from "../../../utils.ts";
+import { parseArrayFromMaybeString, parseBoolOrArrayFromMaybeString } from "../../../utils/StringUtils.ts";
 
 export const playStateToActivityData = (data: SourcePlayerObj, opts: { useArt?: boolean } = {}): { activity: ActivityData, artUrl?: string } => {
     // unix timestamps in milliseconds

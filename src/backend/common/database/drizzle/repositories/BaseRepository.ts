@@ -1,14 +1,14 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
-import { type DbConcrete } from "../drizzleUtils.js";
-import { type CompareOpKey } from "../drizzleTypes.js";
-import { Dayjs } from "dayjs";
+import { type DbConcrete } from "../drizzleUtils.ts";
+import { type CompareOpKey } from "../drizzleTypes.ts";
+import { type Dayjs } from "dayjs";
 import { type RelationsFieldFilter, eq, inArray } from "drizzle-orm";
-import { loggerNoop } from "../../../MaybeLogger.js";
-import { capitalize } from "../../../../../core/StringUtils.js";
-import { getConfigByTableName, relations, type TableName } from "../schema/schema.js";
+import { loggerNoop } from "../../../MaybeLogger.ts";
+import { capitalize } from "../../../../../core/StringUtils.ts";
+import { getConfigByTableName, relations, type TableName } from "../schema/schema.ts";
 import assert from 'node:assert';
 import { Cacheable } from "cacheable";
-import { type DateLike } from "../../../../../core/Atomic.js";
+import { type DateLike } from "../../../../../core/Atomic.ts";
 
 export interface DrizzleRepositoryOpts {
     logger?: Logger

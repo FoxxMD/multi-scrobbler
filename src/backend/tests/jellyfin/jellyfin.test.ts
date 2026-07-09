@@ -2,12 +2,12 @@ import { loggerTest } from "@foxxmd/logging";
 import { assert, expect } from 'chai';
 import EventEmitter from "events";
 import { describe, it } from 'mocha';
-import { type JsonPlayObject, type PlayMeta, type PlayObject } from "../../../core/Atomic.js";
+import { type JsonPlayObject, type PlayMeta, type PlayObject } from "../../../core/Atomic.ts";
 
-import JellyfinApiSource from "../../sources/JellyfinApiSource.js";
+import JellyfinApiSource from "../../sources/JellyfinApiSource.ts";
 import validSession from './validSession.json' with { type: "json" };
-import { type JellyApiData } from "../../common/infrastructure/config/source/jellyfin.js";
-import { generatePlay } from "../../../core/PlayTestUtils.js";
+import { type JellyApiData } from "../../common/infrastructure/config/source/jellyfin.ts";
+import { generatePlay } from "../../../core/PlayTestUtils.ts";
 import { faker, fakerJA } from "@faker-js/faker";
 import {
     // @ts-expect-error weird typings?
@@ -17,7 +17,7 @@ import {
 } from "@jellyfin/sdk/lib/generated-client/index.js";
 // @ts-expect-error weird typings?
 import { getImageApi } from "@jellyfin/sdk/lib/utils/api/index.js";
-import { type PlayerStateDataMaybePlay } from "../../common/infrastructure/Atomic.js";
+import { type PlayerStateDataMaybePlay } from "../../common/infrastructure/Atomic.ts";
 
 const dataAsFixture = (data: any): TestFixture => {
     return data as TestFixture;

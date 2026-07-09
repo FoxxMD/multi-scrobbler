@@ -1,7 +1,7 @@
 import { Cacheable, createKeyv, Keyv, type KeyvStoreAdapter, type KeyvOptions, type CacheableOptions, KeyvCacheableMemory } from 'cacheable';
 import { FlatCache, type FlatCacheOptions } from 'flat-cache';
 import KeyvValkey, { type KeyvValkeyOptions } from '@keyv/valkey';
-import dayjs, { Dayjs } from 'dayjs';
+import dayjs, { type Dayjs } from 'dayjs';
 import duration from 'dayjs/plugin/duration.js';
 import isBetween from 'dayjs/plugin/isBetween.js';
 import relativeTime from 'dayjs/plugin/relativeTime.js';
@@ -10,18 +10,18 @@ import timezone from 'dayjs/plugin/timezone.js';
 import utc from 'dayjs/plugin/utc.js';
 import clone from 'clone';
 import { childLogger, type Logger } from '@foxxmd/logging';
-import { projectDir } from './index.js';
+import { projectDir } from './index.ts';
 import path from 'path';
 import { cacheFunctions } from "@foxxmd/regex-buddy-core";
-import { fileExists, fileOrDirectoryIsWriteable } from '../utils/FSUtils.js';
+import { fileExists, fileOrDirectoryIsWriteable } from '../utils/FSUtils.ts';
 import { copyFile } from 'fs/promises';
-import { asCacheConfig, type CacheAuthProvider, type CacheConfig, type CacheConfigOptions, type CacheConfigUser, type CacheScrobbleProvider } from './infrastructure/Atomic.js';
+import { asCacheConfig, type CacheAuthProvider, type CacheConfig, type CacheConfigOptions, type CacheConfigUser, type CacheScrobbleProvider } from './infrastructure/Atomic.ts';
 import { Typeson } from 'typeson';
 import { builtin } from 'typeson-registry';
-import { loggerNoop } from './MaybeLogger.js';
+import { loggerNoop } from './MaybeLogger.ts';
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
 import prom, { Gauge } from 'prom-client';
-import { nonEmptyStringOrDefault } from '../../core/StringUtils.js';
+import { nonEmptyStringOrDefault } from '../../core/StringUtils.ts';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);

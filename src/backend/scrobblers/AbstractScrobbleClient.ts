@@ -1,5 +1,5 @@
 import { childLogger, type Logger, type LogLevel } from "@foxxmd/logging";
-import dayjs, { Dayjs } from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import { type Duration } from "dayjs/plugin/duration.js";
 import EventEmitter from "events";
 import { nanoid } from "nanoid";
@@ -21,10 +21,10 @@ import {
     type PlayLifecycle,
     type SourcePlayerJson,
     QUEUE_STATUS_COMPLETED
-} from "../../core/Atomic.js";
-import { artistNamesToCredits, buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
-import AbstractComponent from "../common/AbstractComponent.js";
-import { hasUpstreamError } from "../common/errors/UpstreamError.js";
+} from "../../core/Atomic.ts";
+import { artistNamesToCredits, buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
+import AbstractComponent from "../common/AbstractComponent.ts";
+import { hasUpstreamError } from "../common/errors/UpstreamError.ts";
 import {
     ARTIST_WEIGHT,
     type Authenticatable,
@@ -40,11 +40,11 @@ import {
     TIME_WEIGHT,
     type TimeRangeListensFetcher,
     TITLE_WEIGHT,
-} from "../common/infrastructure/Atomic.js";
-import { type ClientType } from '../common/infrastructure/config/client/clients.js';
-import { type CommonClientConfig, type NowPlayingOptions, type UpstreamRefreshOptions } from "../common/infrastructure/config/client/index.js";
-import { TRANSFORM_HOOK } from "../common/infrastructure/Transform.js";
-import { Notifiers } from "../notifier/Notifiers.js";
+} from "../common/infrastructure/Atomic.ts";
+import { type ClientType } from '../common/infrastructure/config/client/clients.ts';
+import { type CommonClientConfig, type NowPlayingOptions, type UpstreamRefreshOptions } from "../common/infrastructure/config/client/index.ts";
+import { TRANSFORM_HOOK } from "../common/infrastructure/Transform.ts";
+import { Notifiers } from "../notifier/Notifiers.ts";
 import {
     comparingMultipleArtists,
     isDebugMode,
@@ -54,38 +54,38 @@ import {
     removeUndefinedKeys,
     sleep,
     sortByOldestPlayDate,
-} from "../utils.js";
-import { findCauseByReference } from "../utils/ErrorUtils.js";
-import { type ErrorIsh, messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.js";
-import { messageWithCauses } from "../../core/ErrorUtils.js";
+} from "../utils.ts";
+import { findCauseByReference } from "../utils/ErrorUtils.ts";
+import { type ErrorIsh, messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.ts";
+import { messageWithCauses } from "../../core/ErrorUtils.ts";
 import {
     comparePlayTemporally,
     getTemporalAccuracyCloseVal,
     hasAcceptableTemporalAccuracy,
     temporalAccuracyToString,
     temporalPlayComparisonSummary,
-} from "../utils/TimeUtils.js";
-import { todayAwareFormat } from "../../core/TimeUtils.js";
-import { type WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
+} from "../utils/TimeUtils.ts";
+import { todayAwareFormat } from "../../core/TimeUtils.ts";
+import { type WebhookPayload } from "../common/infrastructure/config/health/webhooks.ts";
 import { AsyncTask, SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
-import { getRoot } from "../ioc.js";
-import { findAsyncSequential, staggerMapper, type StaggerOptions } from "../utils/AsyncUtils.js";
+import { getRoot } from "../ioc.ts";
+import { findAsyncSequential, staggerMapper, type StaggerOptions } from "../utils/AsyncUtils.ts";
 import pMap, { pMapIterable } from "p-map";
-import { comparePlayArtistsNormalized, comparePlayTracksNormalized, existingScrobble, type ExistingScrobbleOpts } from "../utils/PlayComparisonUtils.js";
-import { statefulInvariantTransform } from "../../core/PlayUtils.js";
-import { normalizeStr } from "../utils/StringUtils.js";
+import { comparePlayArtistsNormalized, comparePlayTracksNormalized, existingScrobble, type ExistingScrobbleOpts } from "../utils/PlayComparisonUtils.ts";
+import { statefulInvariantTransform } from "../../core/PlayUtils.ts";
+import { normalizeStr } from "../utils/StringUtils.ts";
 import prom, { Counter, Gauge } from 'prom-client';
-import { generateLoggableAbortReason, ScrobbleSubmitError, SimpleError } from "../common/errors/MSErrors.js";
+import { generateLoggableAbortReason, ScrobbleSubmitError, SimpleError } from "../common/errors/MSErrors.ts";
 import {isErrorLike, serializeError} from 'serialize-error';
-import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetchUtils.js";
+import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetchUtils.ts";
 import { spawn, catchAbortError, isAbortError, rethrowAbortError, delay, forever, AbortError, throwIfAborted } from 'abort-controller-x';
-import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, type QueryPlaysOpts, type WithPlayRelation } from "../common/database/drizzle/repositories/PlayRepository.js";
-import { type ComponentMigrationNew, type PlaySelect, type PlaySelectWithQueueStates, type QueueStateNew, type QueueStateSelect } from "../common/database/drizzle/drizzleTypes.js";
-import { asPlay } from "../../core/PlayMarshalUtils.js";
-import { DrizzleQueueRepository } from "../common/database/drizzle/repositories/QueueRepository.js";
-import { GenericRepository } from "../common/database/drizzle/repositories/BaseRepository.js";
+import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, type QueryPlaysOpts, type WithPlayRelation } from "../common/database/drizzle/repositories/PlayRepository.ts";
+import { type ComponentMigrationNew, type PlaySelect, type PlaySelectWithQueueStates, type QueueStateNew, type QueueStateSelect } from "../common/database/drizzle/drizzleTypes.ts";
+import { asPlay } from "../../core/PlayMarshalUtils.ts";
+import { DrizzleQueueRepository } from "../common/database/drizzle/repositories/QueueRepository.ts";
+import { GenericRepository } from "../common/database/drizzle/repositories/BaseRepository.ts";
 import assert from "node:assert";
-import { COMPONENT_STATE, type ComponentClientApi, type ComponentClientApiJson, type PlayApiCommonDetailed } from "../../core/Api.js";
+import { COMPONENT_STATE, type ComponentClientApi, type ComponentClientApiJson, type PlayApiCommonDetailed } from "../../core/Api.ts";
 import { type ComponentState } from "react";
 
 type PlatformMappedPlays = Map<string, {player: SourcePlayerObj, source: SourceIdentifier}>;

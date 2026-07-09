@@ -1,4 +1,4 @@
-import { type CommonSourceConfig, type CommonSourceData, type CommonSourceOptions, type ManualListeningOptions } from "./index.js";
+import { type CommonSourceConfig, type CommonSourceData, type CommonSourceOptions, type ManualListeningOptions } from "./index.ts";
 
 export interface AzuraStationInfoResponse {
     id: string

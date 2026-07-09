@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import EventEmitter from "events";
-import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
+import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import {
     type ExpressRequest,
     type FormatPlayObjectOptions,
@@ -10,13 +10,13 @@ import {
     type PlayPlatformId,
     REPORTED_PLAYER_STATUSES,
     type ReportedPlayerStatus
-} from "../common/infrastructure/Atomic.js";
-import MemorySource from "./MemorySource.js";
-import { type LastFMEndpointSourceConfig } from "../common/infrastructure/config/source/endpointlfm.js";
-import { type LastFMScrobbleRequestPayload, scrobblePayloadToPlay } from "../common/vendor/LastfmApiClient.js";
+} from "../common/infrastructure/Atomic.ts";
+import MemorySource from "./MemorySource.ts";
+import { type LastFMEndpointSourceConfig } from "../common/infrastructure/config/source/endpointlfm.ts";
+import { type LastFMScrobbleRequestPayload, scrobblePayloadToPlay } from "../common/vendor/LastfmApiClient.ts";
 import { type Logger } from "@foxxmd/logging";
-import { type PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
-import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.js";
+import { type PlayerStateOptions } from "./PlayerState/AbstractPlayerState.ts";
+import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 
 const noSlugMatch = new RegExp(/(?:\/api\/lastfm\/?)$|(?:\/1\/?|\/2.0\/?)$/i);

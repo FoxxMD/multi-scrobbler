@@ -2,7 +2,7 @@ import { loggerTest } from "@foxxmd/logging";
 import { assert, expect } from 'chai';
 import clone from "clone";
 import { describe, it } from 'mocha';
-import { generatePlayWithLifecycle, playWithLifecycleScrobble } from "../../../core/tests/utils/fixtures.js";
+import { generatePlayWithLifecycle, playWithLifecycleScrobble } from "../../../core/tests/utils/fixtures.ts";
 
 describe('#PlayFixtures', function () {
 

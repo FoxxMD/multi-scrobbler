@@ -1,11 +1,11 @@
-import dayjs, { Dayjs } from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import EventEmitter from "events";
 import SpotifyWebApi from "spotify-web-api-node";
 import request from 'superagent';
-import { type BrainzMeta, type PlayObject, type PlayObjectMinimal, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, type ScrobbleTsSOC, type SpotifyMeta } from "../../core/Atomic.js";
-import { artistNamesToCredits, artistNameToCredit, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
+import { type BrainzMeta, type PlayObject, type PlayObjectMinimal, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, type ScrobbleTsSOC, type SpotifyMeta } from "../../core/Atomic.ts";
+import { artistNamesToCredits, artistNameToCredit, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
+import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.ts";
 import {
     DEFAULT_POLLING_INTERVAL,
     type FormatPlayObjectOptions,
@@ -19,27 +19,27 @@ import {
     type ReportedPlayerStatus,
     type SourceData,
     type TimeRangeListensFetcher,
-} from "../common/infrastructure/Atomic.js";
-import { type SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.js";
+} from "../common/infrastructure/Atomic.ts";
+import { type SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.ts";
 import {
     parseRetryAfterSecsFromObj,
     sleep,
     sortByOldestPlayDate,
-} from "../utils.js";
-import { writeFile } from '../utils/FSUtils.js';
-import { readJson } from '../utils/DataUtils.js';
-import { findCauseByFunc } from "../utils/ErrorUtils.js";
-import { joinedUrl } from "../utils/NetworkUtils.js";
-import { type RecentlyPlayedOptions } from "./AbstractSource.js";
+} from "../utils.ts";
+import { writeFile } from '../utils/FSUtils.ts';
+import { readJson } from '../utils/DataUtils.ts';
+import { findCauseByFunc } from "../utils/ErrorUtils.ts";
+import { joinedUrl } from "../utils/NetworkUtils.ts";
+import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
 // import SpotifyApi.AlbumObjectSimplified = SpotifyApi.SpotifyApi.AlbumObjectSimplified;
 // import SpotifyApi.ArtistObjectSimplified = SpotifyApi.SpotifyApi.ArtistObjectSimplified;
 // import SpotifyApi.CurrentlyPlayingObject = SpotifyApi.SpotifyApi.CurrentlyPlayingObject;
 // import SpotifyApi.PlayHistoryObject = SpotifyApi.SpotifyApi.PlayHistoryObject;
 // import SpotifyApi.TrackObjectFull = SpotifyApi.SpotifyApi.TrackObjectFull;
 // import SpotifyApi.UserDevice = SpotifyApi.SpotifyApi.UserDevice;
-import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
-import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
-import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.js";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
+import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.ts";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
 const state = 'random';

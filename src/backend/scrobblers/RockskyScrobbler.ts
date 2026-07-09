@@ -1,27 +1,27 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import EventEmitter from "events";
-import { type PlayObject, type SourcePlayerObj } from "../../core/Atomic.js";
-import { buildTrackString, capitalize } from "../../core/StringUtils.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { type FormatPlayObjectOptions, type InternalConfigOptional } from "../common/infrastructure/Atomic.js";
-import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.js";
-import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.js';
-import { type ListenPayload } from '../common/vendor/listenbrainz/interfaces.js';
-import { Notifiers } from "../notifier/Notifiers.js";
+import { type PlayObject, type SourcePlayerObj } from "../../core/Atomic.ts";
+import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
+import { type FormatPlayObjectOptions, type InternalConfigOptional } from "../common/infrastructure/Atomic.ts";
+import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.ts";
+import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
+import { type ListenPayload } from '../common/vendor/listenbrainz/interfaces.ts';
+import { Notifiers } from "../notifier/Notifiers.ts";
 
-import { durationToHuman, isDebugMode } from "../utils.js";
-import { RockSkyApiClient, rockskyScrobbleToPlay, type SubmitResponse } from "../common/vendor/RockSkyApiClient.js";
-import { type RockSkyClientConfig } from "../common/infrastructure/config/client/rocksky.js";
-import { ScrobbleSubmitError } from "../common/errors/MSErrors.js";
-import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient.js";
+import { durationToHuman, isDebugMode } from "../utils.ts";
+import { RockSkyApiClient, rockskyScrobbleToPlay, type SubmitResponse } from "../common/vendor/RockSkyApiClient.ts";
+import { type RockSkyClientConfig } from "../common/infrastructure/config/client/rocksky.ts";
+import { ScrobbleSubmitError } from "../common/errors/MSErrors.ts";
+import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient.ts";
 import { fromStream } from '@atcute/repo';
 import fsPromise from 'node:fs/promises';
 import fs from 'node:fs';
 import path from 'path';
 import dayjs from "dayjs";
 import { Readable } from 'stream';
-import { ATProtoUnauthenticatedApiClient } from "../common/vendor/atproto/ATProtoUnauthenticatedApiClient.js";
-import { playToRepositoryCreatePlayHistoricalOpts, type RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.js";
+import { ATProtoUnauthenticatedApiClient } from "../common/vendor/atproto/ATProtoUnauthenticatedApiClient.ts";
+import { playToRepositoryCreatePlayHistoricalOpts, type RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
 import { isAbortError } from "abort-controller-x";
 
 export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {

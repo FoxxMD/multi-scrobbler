@@ -1,10 +1,10 @@
-import { type PlayObject } from "../../../../core/Atomic.js";
-import { isEmptyArrayOrUndefined, removeUndefinedKeys } from "../../../utils.js";
-import { getScrobbleTsSOCDate } from "../../../utils/TimeUtils.js";
-import { type SubmitOptions } from "../ListenbrainzApiClient.js";
-import { type ListenPayload, type MinimumTrack, type SubmitListenAdditionalTrackInfo, type SubmitPayload } from "./interfaces.js";
-import {version as appVersion } from '../../../version.js';
-import { artistCreditsToNames, artistCreditToName } from "../../../../core/StringUtils.js";
+import { type PlayObject } from "../../../../core/Atomic.ts";
+import { isEmptyArrayOrUndefined, removeUndefinedKeys } from "../../../utils.ts";
+import { getScrobbleTsSOCDate } from "../../../utils/TimeUtils.ts";
+import { type SubmitOptions } from "../ListenbrainzApiClient.ts";
+import { type ListenPayload, type MinimumTrack, type SubmitListenAdditionalTrackInfo, type SubmitPayload } from "./interfaces.ts";
+import {version as appVersion } from '../../../version.ts';
+import { artistCreditsToNames, artistCreditToName } from "../../../../core/StringUtils.ts";
 
 export const playToListenPayload = (play: PlayObject, version?: string): ListenPayload => {
     const {

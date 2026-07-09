@@ -1,8 +1,8 @@
 import request, { Request, Response } from 'superagent';
 import xml2js from 'xml2js';
-import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER } from "../infrastructure/Atomic.js";
-import { type JRiverData } from "../infrastructure/config/source/jriver.js";
-import AbstractApiClient from "./AbstractApiClient.js";
+import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER } from "../infrastructure/Atomic.ts";
+import { type JRiverData } from "../infrastructure/config/source/jriver.ts";
+import AbstractApiClient from "./AbstractApiClient.ts";
 
 const parser = new xml2js.Parser({'async': true});
 

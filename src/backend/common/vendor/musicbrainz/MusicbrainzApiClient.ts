@@ -1,27 +1,27 @@
 import { Response } from 'superagent';
-import { type ArtistCredit, type PlayObject, type PlayObjectMinimal, type URLData } from "../../../../core/Atomic.js";
-import { UpstreamError } from "../../errors/UpstreamError.js";
-import { type AbstractApiOptions, type FormatPlayObjectOptions, MUSICBRAINZ_URL, type MusicbrainzApiConfigData } from "../../infrastructure/Atomic.js";
-import AbstractApiClient from "../AbstractApiClient.js";
-import { isPortReachableConnect, normalizeWebAddress } from '../../../utils/NetworkUtils.js';
+import { type ArtistCredit, type PlayObject, type PlayObjectMinimal, type URLData } from "../../../../core/Atomic.ts";
+import { UpstreamError } from "../../errors/UpstreamError.ts";
+import { type AbstractApiOptions, type FormatPlayObjectOptions, MUSICBRAINZ_URL, type MusicbrainzApiConfigData } from "../../infrastructure/Atomic.ts";
+import AbstractApiClient from "../AbstractApiClient.ts";
+import { isPortReachableConnect, normalizeWebAddress } from '../../../utils/NetworkUtils.ts';
 import { MusicBrainzApi, type IRecording, type IRecordingList, type IRelease } from 'musicbrainz-api';
-import { difference, isDebugMode, isEmptyArrayOrUndefined, sleep } from "../../../utils.js";
+import { difference, isDebugMode, isEmptyArrayOrUndefined, sleep } from "../../../utils.ts";
 import {SequentialRoundRobin} from 'round-robin-js';
 import { Cacheable } from "cacheable";
-import { getRoot } from "../../../ioc.js";
-import { version } from "../../../version.js";
-import { hashObject } from "../../../utils/StringUtils.js";
-import { playContentInvariantTransform } from "../../../utils/PlayComparisonUtils.js";
+import { getRoot } from "../../../ioc.ts";
+import { version } from "../../../version.ts";
+import { hashObject } from "../../../utils/StringUtils.ts";
+import { playContentInvariantTransform } from "../../../utils/PlayComparisonUtils.ts";
 import { childLogger } from "@foxxmd/logging";;
 import { AsyncLocalStorage } from "async_hooks";
 import { nanoid } from "nanoid";
 import { stripIndents } from "common-tags";
-import { getNodeNetworkException, hasNodeNetworkException, isNodeNetworkException } from '../../errors/NodeErrors.js';
-import { SimpleError } from '../../errors/MSErrors.js';
-import { baseFormatPlayObj } from '../../../utils/PlayTransformUtils.js';
-import { type IRecordingMSList } from '../../transforms/MusicbrainzTransformer.js';
-import dayjs, { Dayjs } from 'dayjs';
-import { artistCreditsToNames } from '../../../../core/StringUtils.js';
+import { getNodeNetworkException, hasNodeNetworkException, isNodeNetworkException } from '../../errors/NodeErrors.ts';
+import { SimpleError } from '../../errors/MSErrors.ts';
+import { baseFormatPlayObj } from '../../../utils/PlayTransformUtils.ts';
+import { type IRecordingMSList } from '../../transforms/MusicbrainzTransformer.ts';
+import dayjs, { type Dayjs } from 'dayjs';
+import { artistCreditsToNames } from '../../../../core/StringUtils.ts';
 
 export interface SubmitResponse {
     payload?: {

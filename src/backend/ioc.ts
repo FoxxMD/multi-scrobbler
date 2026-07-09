@@ -2,20 +2,20 @@ import { type Logger, loggerDebug, type LogOptions } from "@foxxmd/logging";
 import { EventEmitter } from "events";
 import { createContainer } from "iti";
 import path from "path";
-import { projectDir } from "./common/index.js";
-import { WildcardEmitter } from "./common/WildcardEmitter.js";
+import { projectDir } from "./common/index.ts";
+import { WildcardEmitter } from "./common/WildcardEmitter.ts";
 
-import { generateBaseURL } from "./utils/NetworkUtils.js";
+import { generateBaseURL } from "./utils/NetworkUtils.ts";
 import { PassThrough } from "stream";
-import { type CacheConfigOptions, type MusicBrainzSingletonMap } from "./common/infrastructure/Atomic.js";
-import { MSCache } from "./common/Cache.js";
-import TransformerManager from "./common/transforms/TransformerManager.js";
-import { type TransformerCommonConfig } from "../core/Atomic.js";
+import { type CacheConfigOptions, type MusicBrainzSingletonMap } from "./common/infrastructure/Atomic.ts";
+import { MSCache } from "./common/Cache.ts";
+import TransformerManager from "./common/transforms/TransformerManager.ts";
+import { type TransformerCommonConfig } from "../core/Atomic.ts";
 import prom, { Counter, Gauge } from 'prom-client';
-import { CoverArtApiClient } from "./common/vendor/musicbrainz/CoverArtApiClient.js";
-import { version } from "./version.js";
-import { type StaggerOptions } from "./utils/AsyncUtils.js";
-import { type DbConcrete } from "./common/database/drizzle/drizzleUtils.js";
+import { CoverArtApiClient } from "./common/vendor/musicbrainz/CoverArtApiClient.ts";
+import { version } from "./version.ts";
+import { type StaggerOptions } from "./utils/AsyncUtils.ts";
+import { type DbConcrete } from "./common/database/drizzle/drizzleUtils.ts";
 
 let root: ReturnType<typeof createRoot>;
 export interface RootOptions {

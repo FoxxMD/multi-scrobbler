@@ -1,4 +1,4 @@
-import dayjs, { Dayjs } from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 
 export const RT_TICK_DEFAULT = 500;

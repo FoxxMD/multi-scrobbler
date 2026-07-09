@@ -1,24 +1,24 @@
 import { childLogger, type Logger, type LoggerAppExtras } from "@foxxmd/logging";
-import { type DbConcrete, runTransaction } from "../drizzleUtils.js";
-import { loggerNoop } from "../../../MaybeLogger.js";
-import { type ErrorLike, type PlayObject, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, type TemporalAccuracy } from "../../../../../core/Atomic.js";
-import { generateInputEntity, generatePlayEntity, type PlayEntityOpts, hydratePlaySelect, type PlayHydateOptions, type PlayHistoricalEntityOpts } from "../entityUtils.js";
-import { playInputs, plays, playsHistorical, queueStates, relations } from "../schema/schema.js";
-import { type PlayNew, type PlaySelect, type PlayInputNew, type FindWhere, type FindMany, type QueueStateSelect, type FindWith, type PlaySelectWithQueueStates, type WhereClause, type PlayWith, type PlayHistoricalSelect, type PlayHistoricalNew } from "../drizzleTypes.js";;
+import { type DbConcrete, runTransaction } from "../drizzleUtils.ts";
+import { loggerNoop } from "../../../MaybeLogger.ts";
+import { type ErrorLike, type PlayObject, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
+import { generateInputEntity, generatePlayEntity, type PlayEntityOpts, hydratePlaySelect, type PlayHydateOptions, type PlayHistoricalEntityOpts } from "../entityUtils.ts";
+import { playInputs, plays, playsHistorical, queueStates, relations } from "../schema/schema.ts";
+import { type PlayNew, type PlaySelect, type PlayInputNew, type FindWhere, type FindMany, type QueueStateSelect, type FindWith, type PlaySelectWithQueueStates, type WhereClause, type PlayWith, type PlayHistoricalSelect, type PlayHistoricalNew } from "../drizzleTypes.ts";;
 import type { MarkOptional } from "ts-essentials";
-import { genGroupIdStrFromPlay, removeEmptyArrays, removeUndefinedKeys } from "../../../../utils.js";
-import dayjs, { Dayjs } from "dayjs";
+import { genGroupIdStrFromPlay, removeEmptyArrays, removeUndefinedKeys } from "../../../../utils.ts";
+import dayjs, { type Dayjs } from "dayjs";
 import { type RelationsFieldFilter, eq, inArray, ne, notInArray, desc, asc, and, sql, Placeholder } from "drizzle-orm";
-import { type CompactableProperty, type RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.js";
-import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.js";
-import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts, type PaginatedQueryResponse, type PaginatedResponse } from "./BaseRepository.js";
-import { asPlay } from "../../../../../core/PlayMarshalUtils.js";
+import { type CompactableProperty, type RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.ts";
+import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.ts";
+import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts, type PaginatedQueryResponse, type PaginatedResponse } from "./BaseRepository.ts";
+import { asPlay } from "../../../../../core/PlayMarshalUtils.ts";
 import assert, { Assert } from "node:assert";
-import { hashObject, parseArrayFromMaybeString } from "../../../../utils/StringUtils.js";
-import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../../utils/PlayComparisonUtils.js";
-import { comparePlayTemporally, getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext, getTemporalAccuracyCloseVal, hasAcceptableTemporalAccuracy } from "../../../../utils/TimeUtils.js";
-import { type SourceType } from "../../../infrastructure/config/source/sources.js";
-import { getTemporallyCloseDateCompareOp } from "./PlayRepository.js";
+import { hashObject, parseArrayFromMaybeString } from "../../../../utils/StringUtils.ts";
+import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../../utils/PlayComparisonUtils.ts";
+import { comparePlayTemporally, getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext, getTemporalAccuracyCloseVal, hasAcceptableTemporalAccuracy } from "../../../../utils/TimeUtils.ts";
+import { type SourceType } from "../../../infrastructure/config/source/sources.ts";
+import { getTemporallyCloseDateCompareOp } from "./PlayRepository.ts";
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 

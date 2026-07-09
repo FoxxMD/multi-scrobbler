@@ -1,15 +1,15 @@
 import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
-import { generateLastfmTrackObject, generateMbid, generatePlay } from "../../../core/PlayTestUtils.js";
+import { generateLastfmTrackObject, generateMbid, generatePlay } from "../../../core/PlayTestUtils.ts";
 
-import LastfmApiClient, { playToClientPayload, formatPlayObj } from '../../common/vendor/LastfmApiClient.js';
-import { MockNetworkError, withRequestInterception } from '../utils/networking.js';
+import LastfmApiClient, { playToClientPayload, formatPlayObj } from '../../common/vendor/LastfmApiClient.ts';
+import { MockNetworkError, withRequestInterception } from '../utils/networking.ts';
 import { http, HttpResponse, delay } from "msw";
 import { loggerDebug } from '@foxxmd/logging';
-import { configDir, projectDir } from '../../common/index.js';
+import { configDir, projectDir } from '../../common/index.ts';
 import { LastFMGeo } from 'lastfm-ts-api';
-import { artistNamesToCredits } from '../../../core/StringUtils.js';
+import { artistNamesToCredits } from '../../../core/StringUtils.ts';
 
 chai.use(asPromised);
 

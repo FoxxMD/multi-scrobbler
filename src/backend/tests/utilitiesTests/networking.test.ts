@@ -1,6 +1,6 @@
 import { assert, expect } from 'chai';
 import { describe, it } from 'mocha';
-import { generateBaseURL, joinedUrl, normalizeWebAddress } from "../../utils/NetworkUtils.js";
+import { generateBaseURL, joinedUrl, normalizeWebAddress } from "../../utils/NetworkUtils.ts";
 
 
 describe('URL Parsing', function () {

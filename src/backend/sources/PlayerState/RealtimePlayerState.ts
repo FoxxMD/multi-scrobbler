@@ -1,10 +1,10 @@
 import { type Logger } from "@foxxmd/logging";
-import { type PlayPlatformId, REPORTED_PLAYER_STATUSES } from "../../common/infrastructure/Atomic.js";
-import { AbstractPlayerState, type PlayerStateOptions } from "./AbstractPlayerState.js";
-import { GenericPlayerState } from "./GenericPlayerState.js";
-import { GenericRealtimePlayer, RealtimePlayer } from "./RealtimePlayer.js";
-import { type Second } from "../../../core/Atomic.js";
-import { Dayjs } from "dayjs";
+import { type PlayPlatformId, REPORTED_PLAYER_STATUSES } from "../../common/infrastructure/Atomic.ts";
+import { AbstractPlayerState, type PlayerStateOptions } from "./AbstractPlayerState.ts";
+import { GenericPlayerState } from "./GenericPlayerState.ts";
+import { GenericRealtimePlayer, RealtimePlayer } from "./RealtimePlayer.ts";
+import { type Second } from "../../../core/Atomic.ts";
+import { type Dayjs } from "dayjs";
 
 // export class RealtimePlayerState extends GenericPlayerState {
 

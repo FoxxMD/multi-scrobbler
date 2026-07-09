@@ -1,19 +1,19 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import EventEmitter from "events";
 import normalizeUrl from "normalize-url";
-import { type PlayObject } from "../../core/Atomic.js";
-import { buildTrackString, capitalize } from "../../core/StringUtils.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { type FormatPlayObjectOptions, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
-import { type MalojaClientConfig } from "../common/infrastructure/config/client/maloja.js";
+import { type PlayObject } from "../../core/Atomic.ts";
+import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
+import { type FormatPlayObjectOptions, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.ts";
+import { type MalojaClientConfig } from "../common/infrastructure/config/client/maloja.ts";
 import {
     type MalojaScrobbleRequestData,
-} from "../common/vendor/maloja/interfaces.js";
-import { Notifiers } from "../notifier/Notifiers.js";
-import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
-import { MalojaApiClient, formatPlayObj as formatMalojaScrobbleToPlay, playToScrobblePayload } from "../common/vendor/maloja/MalojaApiClient.js";
-import { ScrobbleSubmitError } from "../common/errors/MSErrors.js";
-import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.js";
+} from "../common/vendor/maloja/interfaces.ts";
+import { Notifiers } from "../notifier/Notifiers.ts";
+import AbstractScrobbleClient from "./AbstractScrobbleClient.ts";
+import { MalojaApiClient, formatPlayObj as formatMalojaScrobbleToPlay, playToScrobblePayload } from "../common/vendor/maloja/MalojaApiClient.ts";
+import { ScrobbleSubmitError } from "../common/errors/MSErrors.ts";
+import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.ts";
 import dayjs from "dayjs";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];

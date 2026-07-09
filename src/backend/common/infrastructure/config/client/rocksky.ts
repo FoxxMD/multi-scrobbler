@@ -1,5 +1,5 @@
-import { type RequestRetryOptions } from "../common.js";
-import { type CommonClientConfig, type CommonClientData, type CommonClientOptions, type NowPlayingOptions } from "./index.js";
+import { type RequestRetryOptions } from "../common.ts";
+import { type CommonClientConfig, type CommonClientData, type CommonClientOptions, type NowPlayingOptions } from "./index.ts";
 
 export interface RockSkyData extends RequestRetryOptions{
 

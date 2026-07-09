@@ -1,5 +1,5 @@
-import { type PollingOptions } from "../common.js";
-import { type CommonSourceConfig, type CommonSourceData } from "./index.js";
+import { type PollingOptions } from "../common.ts";
+import { type CommonSourceConfig, type CommonSourceData } from "./index.ts";
 
 export interface SubsonicData extends CommonSourceData, PollingOptions {
     /**

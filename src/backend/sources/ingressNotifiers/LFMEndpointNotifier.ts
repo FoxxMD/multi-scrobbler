@@ -1,8 +1,8 @@
 import { type Logger } from "@foxxmd/logging";
 import { type Request } from "express";
-import { parseIdentifiersFromRequest } from "../EndpointLastfmSource.js";
-import { IngressNotifier } from "./IngressNotifier.js";
-import { type LastFMScrobbleRequestPayload } from "../../common/vendor/LastfmApiClient.js";
+import { parseIdentifiersFromRequest } from "../EndpointLastfmSource.ts";
+import { IngressNotifier } from "./IngressNotifier.ts";
+import { type LastFMScrobbleRequestPayload } from "../../common/vendor/LastfmApiClient.ts";
 
 export class LFMEndpointNotifier extends IngressNotifier {
 

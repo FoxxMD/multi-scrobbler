@@ -1,10 +1,10 @@
 import { childLogger, type LogDataPretty, type LogLevel } from '@foxxmd/logging';
-import dayjs, { Dayjs } from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import { EventEmitter } from "events";
 import { FixedSizeList } from "fixed-size-list";
-import { type JsonPlayObject, type PlayMatchResult, type PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
-import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
-import AbstractComponent from "../common/AbstractComponent.js";
+import { type JsonPlayObject, type PlayMatchResult, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
+import AbstractComponent from "../common/AbstractComponent.ts";
 import {
     type Authenticatable,
     DEFAULT_POLLING_INTERVAL,
@@ -18,10 +18,10 @@ import {
     type PlayUserId,
     type ProgressAwarePlayObject,
     SINGLE_USER_PLATFORM_ID,
-} from "../common/infrastructure/Atomic.js";
-import { type SourceType, type SourceConfig } from '../common/infrastructure/config/source/sources.js';
-import { TRANSFORM_HOOK } from "../common/infrastructure/Transform.js";
-import TupleMap from "../common/TupleMap.js";
+} from "../common/infrastructure/Atomic.ts";
+import { type SourceType, type SourceConfig } from '../common/infrastructure/config/source/sources.ts';
+import { TRANSFORM_HOOK } from "../common/infrastructure/Transform.ts";
+import TupleMap from "../common/TupleMap.ts";
 import {
     difference,
     genGroupId,
@@ -30,28 +30,28 @@ import {
     pollingBackoff,
     sleep,
     sortByOldestPlayDate,
-} from "../utils.js";
-import { genGroupIdStr, sortByNewestPlayDate } from '../../core/PlayUtils.js';
-import { formatNumber } from '../../core/DataUtils.js';
-import { timeToHumanTimestamp } from "../../core/TimeUtils.js";
-import { todayAwareFormat } from "../../core/TimeUtils.js";
-import { getRoot } from '../ioc.js';
-import { componentFileLogger } from '../common/logging.js';
-import { type WebhookPayload } from '../common/infrastructure/config/health/webhooks.js';;
-import { messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.js";
-import { existingScrobble, type ExistingScrobbleOpts } from '../utils/PlayComparisonUtils.js';
-import { findAsync, staggerMapper, type StaggerOptions } from '../utils/AsyncUtils.js';
+} from "../utils.ts";
+import { genGroupIdStr, sortByNewestPlayDate } from '../../core/PlayUtils.ts';
+import { formatNumber } from '../../core/DataUtils.ts';
+import { timeToHumanTimestamp } from "../../core/TimeUtils.ts";
+import { todayAwareFormat } from "../../core/TimeUtils.ts";
+import { getRoot } from '../ioc.ts';
+import { componentFileLogger } from '../common/logging.ts';
+import { type WebhookPayload } from '../common/infrastructure/config/health/webhooks.ts';;
+import { messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.ts";
+import { existingScrobble, type ExistingScrobbleOpts } from '../utils/PlayComparisonUtils.ts';
+import { findAsync, staggerMapper, type StaggerOptions } from '../utils/AsyncUtils.ts';
 import pMap, {pMapIterable} from 'p-map';
 import prom, { Counter, Gauge } from 'prom-client';
-import { normalizeStr } from '../utils/StringUtils.js';
+import { normalizeStr } from '../utils/StringUtils.ts';
 import { spawn, catchAbortError, isAbortError, rethrowAbortError, delay, forever, AbortError, throwIfAborted } from 'abort-controller-x';
-import { AbortedError, generateLoggableAbortReason } from '../common/errors/MSErrors.js';
-import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, type QueryPlaysOpts, type RequestPlayQuery, type WithPlayRelation } from '../common/database/drizzle/repositories/PlayRepository.js';
-import { asPlay } from '../../core/PlayMarshalUtils.js';
+import { AbortedError, generateLoggableAbortReason } from '../common/errors/MSErrors.ts';
+import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, type QueryPlaysOpts, type RequestPlayQuery, type WithPlayRelation } from '../common/database/drizzle/repositories/PlayRepository.ts';
+import { asPlay } from '../../core/PlayMarshalUtils.ts';
 import { AsyncTask, SimpleIntervalJob, ToadScheduler } from 'toad-scheduler';
-import { type ComponentMinimalSelect } from '../common/database/drizzle/drizzleTypes.js';
-import { COMPONENT_STATE, type ComponentSourceApi, type ComponentSourceApiJson, type ComponentState, type PlayApiCommonDetailed } from '../../core/Api.js';
-import { type PaginatedResponse } from '../common/database/drizzle/repositories/BaseRepository.js';
+import { type ComponentMinimalSelect } from '../common/database/drizzle/drizzleTypes.ts';
+import { COMPONENT_STATE, type ComponentSourceApi, type ComponentSourceApiJson, type ComponentState, type PlayApiCommonDetailed } from '../../core/Api.ts';
+import { type PaginatedResponse } from '../common/database/drizzle/repositories/BaseRepository.ts';
 
 export interface RecentlyPlayedOptions {
     limit?: number

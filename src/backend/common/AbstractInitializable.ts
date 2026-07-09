@@ -1,10 +1,10 @@
 import { type Logger } from "@foxxmd/logging";
-import {truncateStringToLength } from "../../core/StringUtils.js";
-import { hasNodeNetworkException } from "./errors/NodeErrors.js";
-import { hasUpstreamError } from "./errors/UpstreamError.js";
-import { type WebhookPayload } from "./infrastructure/config/health/webhooks.js";
-import { AuthCheckError, BuildDataError, ConnectionCheckError, ParseCacheError, PostInitError, StageError } from "./errors/MSErrors.js";
-import { messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.js";
+import {truncateStringToLength } from "../../core/StringUtils.ts";
+import { hasNodeNetworkException } from "./errors/NodeErrors.ts";
+import { hasUpstreamError } from "./errors/UpstreamError.ts";
+import { type WebhookPayload } from "./infrastructure/config/health/webhooks.ts";
+import { AuthCheckError, BuildDataError, ConnectionCheckError, ParseCacheError, PostInitError, StageError } from "./errors/MSErrors.ts";
+import { messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.ts";
 import { spawn } from 'abort-controller-x';
 
 export default abstract class AbstractInitializable {

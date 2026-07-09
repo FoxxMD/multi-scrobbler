@@ -1,7 +1,7 @@
 import { childLogger, type Logger } from '@foxxmd/logging';
 import { AsyncTask } from "toad-scheduler";
-import ScrobbleSources from "../sources/ScrobbleSources.js";
-import ScrobbleClients from '../scrobblers/ScrobbleClients.js';
+import ScrobbleSources from "../sources/ScrobbleSources.ts";
+import ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
 
 export const createRetentionCleanupTask = (sources: ScrobbleSources, clients: ScrobbleClients, parentLogger: Logger) => {
     const logger = childLogger(parentLogger, ['Schedule', 'Retention Cleanup']);

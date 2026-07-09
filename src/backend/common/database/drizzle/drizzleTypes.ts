@@ -1,6 +1,6 @@
 import { type DBQueryConfig, type DBQueryConfigWith, type ExtractTablesFromSchema, type KnownKeysOnly, type RelationFieldsFilterInternals, Many, type InferSelectModel, type ExtractTablesWithRelations, type BuildQueryResult, type RelationsFilter } from "drizzle-orm";
-import { components, componentMigrations, playInputs, plays, queueStates, relations, playsHistorical } from "./schema/schema.js";
-import {type TSchema, type TableName } from "./schema/schema.js";
+import { components, componentMigrations, playInputs, plays, queueStates, relations, playsHistorical } from "./schema/schema.ts";
+import {type TSchema, type TableName } from "./schema/schema.ts";
 
 
 export type ComponentNew = typeof components.$inferInsert;

@@ -1,8 +1,8 @@
 import { EventEmitter } from "events";
 import request from 'superagent';
-import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
-import { type RecentlyPlayedOptions } from "./AbstractSource.js";
-import { type PlayObject, type PlayObjectMinimal, type URLData } from "../../core/Atomic.js";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
+import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import { type PlayObject, type PlayObjectMinimal, type URLData } from "../../core/Atomic.ts";
 import {
     type InternalConfig,
     NO_DEVICE,
@@ -10,12 +10,12 @@ import {
     type PlayerStateData,
     type PlayerStateDataMaybePlay,
     REPORTED_PLAYER_STATUSES,
-} from "../common/infrastructure/Atomic.js";
-import { type YandexMusicBridgeSourceConfig } from "../common/infrastructure/config/source/ymbridge.js";
-import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.js";
-import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
-import { UpstreamError } from "../common/errors/UpstreamError.js";
-import { artistNamesToCredits } from "../../core/StringUtils.js";
+} from "../common/infrastructure/Atomic.ts";
+import { type YandexMusicBridgeSourceConfig } from "../common/infrastructure/config/source/ymbridge.ts";
+import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.ts";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
+import { UpstreamError } from "../common/errors/UpstreamError.ts";
+import { artistNamesToCredits } from "../../core/StringUtils.ts";
 
 interface BridgeTrackData {
     title?: string

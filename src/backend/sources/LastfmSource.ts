@@ -1,16 +1,16 @@
 import EventEmitter from "events";
-import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
-import { type FormatPlayObjectOptions, type InternalConfig, type PlayPlatformId, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
-import { type SourceType } from '../common/infrastructure/config/source/sources.js';
-import { type LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.js";
-import LastfmApiClient, { formatPlayObj } from "../common/vendor/LastfmApiClient.js";
-import { sortByOldestPlayDate } from "../utils.js";
-import { type RecentlyPlayedOptions } from "./AbstractSource.js";
-import MemorySource from "./MemorySource.js";
+import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { type FormatPlayObjectOptions, type InternalConfig, type PlayPlatformId, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.ts";
+import { type SourceType } from '../common/infrastructure/config/source/sources.ts';
+import { type LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.ts";
+import LastfmApiClient, { formatPlayObj } from "../common/vendor/LastfmApiClient.ts";
+import { sortByOldestPlayDate } from "../utils.ts";
+import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import MemorySource from "./MemorySource.ts";
 import { type Logger } from "@foxxmd/logging";
-import { type PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
-import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.js";
-import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.js";
+import { type PlayerStateOptions } from "./PlayerState/AbstractPlayerState.ts";
+import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.ts";
+import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.ts";
 
 export default class LastfmSource extends MemorySource {
 

@@ -1,11 +1,11 @@
 import EventEmitter from "events";
-import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { type FormatPlayObjectOptions, type InternalConfig, type PlayPlatformId } from "../common/infrastructure/Atomic.js";
-import { type RecentlyPlayedOptions } from "./AbstractSource.js";
-import MemorySource from "./MemorySource.js";
-import { RockSkyApiClient } from "../common/vendor/RockSkyApiClient.js";
-import { type RockskySourceConfig } from "../common/infrastructure/config/source/rocksky.js";
+import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
+import { type FormatPlayObjectOptions, type InternalConfig, type PlayPlatformId } from "../common/infrastructure/Atomic.ts";
+import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import MemorySource from "./MemorySource.ts";
+import { RockSkyApiClient } from "../common/vendor/RockSkyApiClient.ts";
+import { type RockskySourceConfig } from "../common/infrastructure/config/source/rocksky.ts";
 
 export default class RockskySource extends MemorySource {
 

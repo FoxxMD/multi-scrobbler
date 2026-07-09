@@ -5,18 +5,18 @@ import Mopidy, { models } from "mopidy";
 import normalizeUrl from 'normalize-url';
 import pEvent from 'p-event';
 import { URL } from "url";
-import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.js";
-import { artistNamesToCredits, buildTrackString } from "../../core/StringUtils.js";
+import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
+import { artistNamesToCredits, buildTrackString } from "../../core/StringUtils.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
     type PlayerStateData,
     SINGLE_USER_PLATFORM_ID,
-} from "../common/infrastructure/Atomic.js";
-import { type MopidySourceConfig } from "../common/infrastructure/config/source/mopidy.js";
-import { type RecentlyPlayedOptions } from "./AbstractSource.js";
-import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
-import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
+} from "../common/infrastructure/Atomic.ts";
+import { type MopidySourceConfig } from "../common/infrastructure/config/source/mopidy.ts";
+import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 
 export class MopidySource extends MemoryPositionalSource {
     declare config: MopidySourceConfig;

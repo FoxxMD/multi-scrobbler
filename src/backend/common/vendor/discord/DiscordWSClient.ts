@@ -1,20 +1,20 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import { WS } from 'iso-websocket'
-import { type DiscordStrongData, type StatusType, type DiscordWSData, type ActivityData, ACTIVITY_TYPE } from "../../infrastructure/config/client/discord.js";
+import { type DiscordStrongData, type StatusType, type DiscordWSData, type ActivityData, ACTIVITY_TYPE } from "../../infrastructure/config/client/discord.ts";
 import type { _DataPayload, _NonDispatchPayload, APIUser, GatewayActivity, GatewayActivityAssets, GatewayHeartbeatRequest, GatewayHelloData, GatewayIdentify, GatewayInvalidSessionData, GatewayPresenceUpdateData, GatewayReadyDispatchData, GatewayResumeData, GatewayUpdatePresence } from "discord.js";
 import { GatewayCloseCodes, GatewayDispatchEvents, GatewayOpcodes, PresenceUpdateStatus } from "discord.js"
-import { isDebugMode, removeUndefinedKeys, sleep } from "../../../utils.js";
+import { isDebugMode, removeUndefinedKeys, sleep } from "../../../utils.ts";
 import pEvent from 'p-event';
 import EventEmitter from "events";
 import { randomInt } from "crypto";
 import request from 'superagent';
-import { type AbstractApiOptions } from "../../infrastructure/Atomic.js";
-import { isPlayObject, type SourcePlayerObj } from "../../../../core/Atomic.js";
-import dayjs, { Dayjs } from "dayjs";
-import { getRoot } from "../../../ioc.js";
-import { formatWebsocketClose, isCloseEvent, isErrorEvent, wsReadyStateToStr } from "../../../utils/NetworkUtils.js";
-import { activityIdToStr, opcodeToFriendly, playStateToActivityData } from "./DiscordUtils.js";
-import { DiscordAbstractClient } from "./DiscordAbstractClient.js";
+import { type AbstractApiOptions } from "../../infrastructure/Atomic.ts";
+import { isPlayObject, type SourcePlayerObj } from "../../../../core/Atomic.ts";
+import dayjs, { type Dayjs } from "dayjs";
+import { getRoot } from "../../../ioc.ts";
+import { formatWebsocketClose, isCloseEvent, isErrorEvent, wsReadyStateToStr } from "../../../utils/NetworkUtils.ts";
+import { activityIdToStr, opcodeToFriendly, playStateToActivityData } from "./DiscordUtils.ts";
+import { DiscordAbstractClient } from "./DiscordAbstractClient.ts";
 
 const API_GATEWAY_ENDPOINT = 'https://discord.com/api/gateway';
 

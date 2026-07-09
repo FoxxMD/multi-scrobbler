@@ -1,9 +1,9 @@
 import { eq, and, lte, inArray } from "drizzle-orm";
-import { DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.js";
-import { type DbConcrete } from "../drizzleUtils.js";
-import { type QueueStateSelect } from "../drizzleTypes.js";
-import { queueStates } from "../schema/schema.js";
-import { CLIENT_DEAD_QUEUE } from "../../../../../core/Atomic.js";
+import { DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
+import { type DbConcrete } from "../drizzleUtils.ts";
+import { type QueueStateSelect } from "../drizzleTypes.ts";
+import { queueStates } from "../schema/schema.ts";
+import { CLIENT_DEAD_QUEUE } from "../../../../../core/Atomic.ts";
 export class DrizzleQueueRepository extends DrizzleBaseRepository<'queueStates'> {
 
     constructor(db: DbConcrete, opts: DrizzleRepositoryOpts = {}) {

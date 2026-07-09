@@ -1,6 +1,6 @@
 import { integer, sqliteTable, text, index, uniqueIndex, customType, type AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import { defineRelations } from 'drizzle-orm';
-import dayjs, { Dayjs } from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import { nanoid } from "nanoid";
 import { type ErrorLike, type PlayObject } from "../../../../../core/Atomic.js";
 import { asPlayCheap } from "../../../../../core/PlayMarshalUtils.js";

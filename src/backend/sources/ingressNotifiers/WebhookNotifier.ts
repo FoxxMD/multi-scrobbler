@@ -1,7 +1,7 @@
 import { type Logger } from "@foxxmd/logging";
 import { type Request } from "express";
 import path from "path";
-import { IngressNotifier } from "./IngressNotifier.js";
+import { IngressNotifier } from "./IngressNotifier.ts";
 
 export class WebhookNotifier extends IngressNotifier {
 

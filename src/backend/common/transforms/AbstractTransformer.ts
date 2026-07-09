@@ -1,15 +1,15 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
-import { type PlayObject, type TransformerCommon, type TransformerCommonConfig } from "../../../core/Atomic.js";
-import { isStageTyped, testWhenConditions } from "../../utils/PlayTransformUtils.js";
-import AbstractInitializable from "../AbstractInitializable.js";
-import { type StageConfig } from "../infrastructure/Transform.js";
+import { type PlayObject, type TransformerCommon, type TransformerCommonConfig } from "../../../core/Atomic.ts";
+import { isStageTyped, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
+import AbstractInitializable from "../AbstractInitializable.ts";
+import { type StageConfig } from "../infrastructure/Transform.ts";
 import { cacheFunctions,  parseToRegexOrLiteralSearch, testMaybeRegex, searchAndReplace} from "@foxxmd/regex-buddy-core";
 import { Cacheable } from "cacheable";
-import { hashObject } from "../../utils/StringUtils.js";
-import { playContentInvariantTransform } from "../../utils/PlayComparisonUtils.js";
-import { isSimpleError, SkipTransformStageError, StagePrerequisiteError } from "../errors/MSErrors.js";
-import { capitalize } from "../../../core/StringUtils.js";
-import { type StaggerOptions } from "../../utils/AsyncUtils.js";
+import { hashObject } from "../../utils/StringUtils.ts";
+import { playContentInvariantTransform } from "../../utils/PlayComparisonUtils.ts";
+import { isSimpleError, SkipTransformStageError, StagePrerequisiteError } from "../errors/MSErrors.ts";
+import { capitalize } from "../../../core/StringUtils.ts";
+import { type StaggerOptions } from "../../utils/AsyncUtils.ts";
 
 export interface TransformerOptions {
         logger: Logger

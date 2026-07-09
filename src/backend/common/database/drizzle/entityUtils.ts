@@ -1,14 +1,14 @@
 import assert from "node:assert";
-import { type PlayHistoricalNew, type PlayHistoricalSelect, type PlayNew, type PlaySelect, type PlaySelectWithQueueStates } from "./drizzleTypes.js";
-import { type PlayInputNew } from "./drizzleTypes.js";
-import { type QueueStateNew } from "./drizzleTypes.js";
-import { type ComponentNew } from "./drizzleTypes.js";
+import { type PlayHistoricalNew, type PlayHistoricalSelect, type PlayNew, type PlaySelect, type PlaySelectWithQueueStates } from "./drizzleTypes.ts";
+import { type PlayInputNew } from "./drizzleTypes.ts";
+import { type QueueStateNew } from "./drizzleTypes.ts";
+import { type ComponentNew } from "./drizzleTypes.ts";
 import type { MarkOptional } from "ts-essentials";
-import { CLIENT_DEAD_QUEUE, type DeadLetterScrobble, type ErrorLike, type PlayObject } from "../../../../core/Atomic.js";
-import dayjs, { Dayjs } from "dayjs";
-import { asPlay } from "../../../../core/PlayMarshalUtils.js";
-import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../utils/PlayComparisonUtils.js";
-import { hashObject } from "../../../utils/StringUtils.js";
+import { CLIENT_DEAD_QUEUE, type DeadLetterScrobble, type ErrorLike, type PlayObject } from "../../../../core/Atomic.ts";
+import dayjs from "dayjs";
+import { asPlay } from "../../../../core/PlayMarshalUtils.ts";
+import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../utils/PlayComparisonUtils.ts";
+import { hashObject } from "../../../utils/StringUtils.ts";
 import { serializeError } from "serialize-error";
 
 export const generateComponentEntity = (data: MarkOptional<ComponentNew, 'uid'>): ComponentNew => {

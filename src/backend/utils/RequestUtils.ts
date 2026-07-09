@@ -1,23 +1,23 @@
 import { type Files, File } from "formidable";
-import VolatileFile from "formidable/VolatileFile.js";
-import { KNOWN_MEDIA_PROVIDER_URLS } from "../../core/Atomic.js";
-import { type RequestRetryOptions } from "../common/infrastructure/config/common.js";
+import type { VolatileFile } from "formidable";
+import { KNOWN_MEDIA_PROVIDER_URLS } from "../../core/Atomic.ts";
+import { type RequestRetryOptions } from "../common/infrastructure/config/common.ts";
 import { type Logger } from "@foxxmd/logging";
 import request, { Request, Response } from 'superagent';
 import pRetry, { type RetryContext, type Options } from 'p-retry';
-import { DEFAULT_RETRY_MULTIPLIER } from "../common/infrastructure/Atomic.js";
-import { SimpleError } from "../common/errors/MSErrors.js";
-import { loggerNoop } from '../common/MaybeLogger.js';
-import { findCauseByFunc } from "./ErrorUtils.js";
-import { isSuperAgentResponseError } from "../common/errors/ErrorUtils.js";
-import { isNodeNetworkException, type NodeNetworkException } from "../common/errors/NodeErrors.js";
-import { formatNumber } from '../../core/DataUtils.js';
-import { UpstreamError } from "../common/errors/UpstreamError.js";
+import { DEFAULT_RETRY_MULTIPLIER } from "../common/infrastructure/Atomic.ts";
+import { SimpleError } from "../common/errors/MSErrors.ts";
+import { loggerNoop } from '../common/MaybeLogger.ts';
+import { findCauseByFunc } from "./ErrorUtils.ts";
+import { isSuperAgentResponseError } from "../common/errors/ErrorUtils.ts";
+import { isNodeNetworkException, type NodeNetworkException } from "../common/errors/NodeErrors.ts";
+import { formatNumber } from '../../core/DataUtils.ts';
+import { UpstreamError } from "../common/errors/UpstreamError.ts";
 
 // typings from Formidable are all nuts.
 // VolatileFile is missing buffer and also does not extend File even though it should
 
-export const getValidMultipartJsonFile = (files: Files | File): [VolatileFile, string[]?] => {
+export const getValidMultipartJsonFile = (files: Files | File): [typeof VolatileFile, string[]?] => {
 
     const logs: string[] = [];
 
@@ -27,7 +27,7 @@ export const getValidMultipartJsonFile = (files: Files | File): [VolatileFile, s
             if ('mimetype' in files && files.mimetype !== undefined) {
                 if (files.mimetype.includes('json')) {
                     logs.push(`Found ${getFileIdentifier(files)} with mimetype '${files.mimetype}'`)
-                    return [files as unknown as VolatileFile, logs];
+                    return [files as unknown as typeof VolatileFile, logs];
                 } else {
                     logs.push(`${getFileIdentifier(files)} mimetype '${files.mimetype}' does not include 'json'`);
                 }
@@ -41,7 +41,7 @@ export const getValidMultipartJsonFile = (files: Files | File): [VolatileFile, s
                         if ('mimetype' in file && file.mimetype !== undefined) {
                             if (file.mimetype.includes('json')) {
                                 logs.push(`Found ${partName}.${index}.${getFileIdentifier(file)} with mimetype '${file.mimetype}'`)
-                                return [file as unknown as VolatileFile, logs];
+                                return [file as unknown as typeof VolatileFile, logs];
                             } else {
                                 logs.push(`${partName}.${index}.${getFileIdentifier(file)} mimetype '${file.mimetype}' does not include 'json'`);
                             }
@@ -55,7 +55,7 @@ export const getValidMultipartJsonFile = (files: Files | File): [VolatileFile, s
                     if (typeof singleFile === 'object' && 'mimetype' in singleFile && singleFile.mimetype !== undefined) {
                         if (singleFile.mimetype.includes('json')) {
                             logs.push(`Found ${partName}.${getFileIdentifier(singleFile)} with mimetype '${singleFile.mimetype}'`);
-                            return [namedFile as unknown as VolatileFile, logs];
+                            return [namedFile as unknown as typeof VolatileFile, logs];
                         } else {
                             logs.push(`${partName}.${getFileIdentifier(singleFile)} mimetype '${singleFile.mimetype}' does not include 'json'`);
                         }

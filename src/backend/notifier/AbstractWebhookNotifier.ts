@@ -4,7 +4,7 @@ import {
     type GotifyConfig,
     type NtfyConfig,
     type WebhookPayload
-} from "../common/infrastructure/config/health/webhooks.js";
+} from "../common/infrastructure/config/health/webhooks.ts";
 
 export abstract class AbstractWebhookNotifier {
 

@@ -1,6 +1,6 @@
-import { type ComponentType } from "../../../../../core/Atomic.js";
-import { type RequestRetryOptions } from "../common.js";
-import { type CommonClientConfig, type CommonClientData } from "./index.js";
+import { type ComponentType } from "../../../../../core/Atomic.ts";
+import { type RequestRetryOptions } from "../common.ts";
+import { type CommonClientConfig, type CommonClientData } from "./index.ts";
 
 export interface MalojaData extends RequestRetryOptions {
     /**

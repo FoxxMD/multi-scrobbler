@@ -1,27 +1,27 @@
 import chai, { assert, expect } from 'chai';
 import asPromised from 'chai-as-promised';
-import { getDb, migrateDb, getDbMigrationStatus, getMigratedDb, type DbConcrete } from '../../common/database/drizzle/drizzleUtils.js';
+import { getDb, migrateDb, getDbMigrationStatus, getMigratedDb, type DbConcrete } from '../../common/database/drizzle/drizzleUtils.ts';
 import withLocalTmpDir from 'with-local-tmp-dir';
-import { components, playInputs, plays, queueStates } from '../../common/database/drizzle/schema/schema.js';
+import { components, playInputs, plays, queueStates } from '../../common/database/drizzle/schema/schema.ts';
 import dayjs from 'dayjs';
-import { generatePlay } from '../../../core/PlayTestUtils.js';
-import { getDbPath } from '../../common/database/Database.js';
+import { generatePlay } from '../../../core/PlayTestUtils.ts';
+import { getDbPath } from '../../common/database/Database.ts';
 import { x } from 'tinyexec';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { projectDir } from '../../common/index.js';
-import { fixtureCreateComponent, fixtureCreateInput, fixtureCreatePlay } from '../utils/databaseFixtures.js';
-import { DrizzlePlayRepository, type RepositoryCreatePlayOpts } from '../../common/database/drizzle/repositories/PlayRepository.js';
-import { generatePlayWithLifecycle, generateRandomObj } from '../../../core/tests/utils/fixtures.js';
-import { formatNumber, generateArray } from '../../../core/DataUtils.js';
-import { objectsEqual } from '../../utils/DataUtils.js';
+import { projectDir } from '../../common/index.ts';
+import { fixtureCreateComponent, fixtureCreateInput, fixtureCreatePlay } from '../utils/databaseFixtures.ts';
+import { DrizzlePlayRepository, type RepositoryCreatePlayOpts } from '../../common/database/drizzle/repositories/PlayRepository.ts';
+import { generatePlayWithLifecycle, generateRandomObj } from '../../../core/tests/utils/fixtures.ts';
+import { formatNumber, generateArray } from '../../../core/DataUtils.ts';
+import { objectsEqual } from '../../utils/DataUtils.ts';
 import { eq, sql } from 'drizzle-orm';
-import { type PlaySelect } from '../../common/database/drizzle/drizzleTypes.js';
+import { type PlaySelect } from '../../common/database/drizzle/drizzleTypes.ts';
 import { loggerDebug } from '@foxxmd/logging';
-import { transientDb } from '../utils/TransientTestUtils.js';
-import { getRoot } from '../../ioc.js';
+import { transientDb } from '../utils/TransientTestUtils.ts';
+import { getRoot } from '../../ioc.ts';
 import { after } from 'mocha';
-import { migrateApp } from '../../common/database/appMigrator.js';
+import { migrateApp } from '../../common/database/appMigrator.ts';
 
 // would be great to push migrations directly from schema but doesn't seem supported in newest beta
 // https://github.com/drizzle-team/drizzle-orm/discussions/4373

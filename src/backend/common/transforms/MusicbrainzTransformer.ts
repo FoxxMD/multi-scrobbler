@@ -1,22 +1,22 @@
-import { type ArtistCredit, asMBReleasePrimaryGroupType, asMBReleaseSecondaryGroupType, asMBReleaseStatus, DEFAULT_MISSING_TYPES, isMBReleasePrimaryGroupType, type LifecycleInput, type MBReleaseGroupPrimaryType, type MBReleaseGroupSecondaryType, type MBReleaseStatus, type MissingMbidType, type PlayObject, type TrackMeta, type TransformerCommon, type TransformOptions } from "../../../core/Atomic.js";
-import { isWhenCondition, testWhenConditions } from "../../utils/PlayTransformUtils.js";
-import { type WebhookPayload } from "../infrastructure/config/health/webhooks.js";
-import { type ExternalMetadataTerm, type PlayTransformMetadataStage } from "../infrastructure/Transform.js";
-import AtomicPartsTransformer from "./AtomicPartsTransformer.js";
-import { type TransformerOptions } from "./AbstractTransformer.js";
-import { ARTIST_WEIGHT, DELIMITERS, MUSICBRAINZ_URL, type MusicbrainzApiConfigData, TITLE_WEIGHT } from "../infrastructure/Atomic.js";
-import { MaybeLogger } from '../MaybeLogger.js';
+import { type ArtistCredit, asMBReleasePrimaryGroupType, asMBReleaseSecondaryGroupType, asMBReleaseStatus, DEFAULT_MISSING_TYPES, isMBReleasePrimaryGroupType, type LifecycleInput, type MBReleaseGroupPrimaryType, type MBReleaseGroupSecondaryType, type MBReleaseStatus, type MissingMbidType, type PlayObject, type TrackMeta, type TransformerCommon, type TransformOptions } from "../../../core/Atomic.ts";
+import { isWhenCondition, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
+import { type WebhookPayload } from "../infrastructure/config/health/webhooks.ts";
+import { type ExternalMetadataTerm, type PlayTransformMetadataStage } from "../infrastructure/Transform.ts";
+import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
+import { type TransformerOptions } from "./AbstractTransformer.ts";
+import { ARTIST_WEIGHT, DELIMITERS, MUSICBRAINZ_URL, type MusicbrainzApiConfigData, TITLE_WEIGHT } from "../infrastructure/Atomic.ts";
+import { MaybeLogger } from '../MaybeLogger.ts';
 import { childLogger, type Logger } from "@foxxmd/logging";
-import { MusicbrainzApiClient, type MusicbrainzApiConfig, recordingToPlay, type UsingTypes } from "../vendor/musicbrainz/MusicbrainzApiClient.js";
+import { MusicbrainzApiClient, type MusicbrainzApiConfig, recordingToPlay, type UsingTypes } from "../vendor/musicbrainz/MusicbrainzApiClient.ts";
 import { type IRecordingList, type IRecordingMatch, type IRelease, MusicBrainzApi } from "musicbrainz-api";
-import { intersect, isDebugMode, missingMbidTypes, removeUndefinedKeys } from "../../utils.js";
-import { SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../errors/MSErrors.js";
-import { parseArrayFromMaybeString, scoreNormalizedStringsWeighted } from "../../utils/StringUtils.js";
+import { intersect, isDebugMode, missingMbidTypes, removeUndefinedKeys } from "../../utils.ts";
+import { SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../errors/MSErrors.ts";
+import { parseArrayFromMaybeString, scoreNormalizedStringsWeighted } from "../../utils/StringUtils.ts";
 import clone from "clone";
 import { Cacheable } from "cacheable";
-import { splitByFirstRegexFound } from "../../../core/StringUtils.js";
-import { nativeParse } from "./NativeTransformer.js";
-import { comparePlayArtistsNormalized, scoreTrackWeightedAndNormalized } from "../../utils/PlayComparisonUtils.js";
+import { splitByFirstRegexFound } from "../../../core/StringUtils.ts";
+import { nativeParse } from "./NativeTransformer.ts";
+import { comparePlayArtistsNormalized, scoreTrackWeightedAndNormalized } from "../../utils/PlayComparisonUtils.ts";
 
 export const asMissingMbid = (str: string): MissingMbidType => {
     const clean = str.trim().toLocaleLowerCase();

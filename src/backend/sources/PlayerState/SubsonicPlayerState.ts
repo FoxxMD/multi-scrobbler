@@ -1,6 +1,6 @@
-import { type SourcePlayerObj } from "../../../core/Atomic.js";
-import { GenericPlayerState } from "./GenericPlayerState.js";
-import { Dayjs } from "dayjs";
+import { type SourcePlayerObj } from "../../../core/Atomic.ts";
+import { GenericPlayerState } from "./GenericPlayerState.ts";
+import { type Dayjs } from "dayjs";
 
 export class SubsonicPlayerState extends GenericPlayerState {
 

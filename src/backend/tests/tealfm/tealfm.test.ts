@@ -1,17 +1,17 @@
 import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
-import { generateArtistCredits, generatePlay, generateTealPlayRecord, withBrainz } from "../../../core/PlayTestUtils.js";
-import { listRecordToPlay } from "../../common/vendor/teal/TealApiClient.js";
-import { playToRecord } from "../../common/vendor/teal/TealApiClient.js";
+import { generateArtistCredits, generatePlay, generateTealPlayRecord, withBrainz } from "../../../core/PlayTestUtils.ts";
+import { listRecordToPlay } from "../../common/vendor/teal/TealApiClient.ts";
+import { playToRecord } from "../../common/vendor/teal/TealApiClient.ts";
 import dayjs from 'dayjs';
-import { artistCreditsToNames } from '../../../core/StringUtils.js';
-import TealScrobbler from '../../scrobblers/TealfmScrobbler.js';
-import { Notifiers } from '../../notifier/Notifiers.js';
+import { artistCreditsToNames } from '../../../core/StringUtils.ts';
+import TealScrobbler from '../../scrobblers/TealfmScrobbler.ts';
+import { Notifiers } from '../../notifier/Notifiers.ts';
 import { EventEmitter } from "events";
-import { loggerNoop } from '../../common/MaybeLogger.js';
+import { loggerNoop } from '../../common/MaybeLogger.ts';
 import path from 'node:path';
-import { configDir } from '../../common/index.js';
+import { configDir } from '../../common/index.ts';
 import { loggerDebug, loggerTrace } from '@foxxmd/logging';
 
 chai.use(asPromised);

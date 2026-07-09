@@ -3,7 +3,7 @@ import * as AjvNS from "ajv";
 import Ajv from "ajv";
 import f from "ajv-formats"
 import { resolve } from "path";
-import { projectDir } from "../common/index.js";
+import { projectDir } from "../common/index.ts";
 
 const ajvInstances: Record<string, AjvNS.Ajv> = {};
 

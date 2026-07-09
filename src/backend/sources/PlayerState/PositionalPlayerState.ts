@@ -1,10 +1,10 @@
 import { type Logger } from "@foxxmd/logging";
-import { CALCULATED_PLAYER_STATUSES, type PlayPlatformId, REPORTED_PLAYER_STATUSES } from "../../common/infrastructure/Atomic.js";
-import { AbstractPlayerState, type PlayerStateOptions } from "./AbstractPlayerState.js";
-import { type PlayProgressPositional, type Second } from "../../../core/Atomic.js";
-import { Dayjs } from "dayjs";
-import { ListenProgressPositional } from "./ListenProgress.js";
-import { ListenRangePositional } from "./ListenRange.js";
+import { CALCULATED_PLAYER_STATUSES, type PlayPlatformId, REPORTED_PLAYER_STATUSES } from "../../common/infrastructure/Atomic.ts";
+import { AbstractPlayerState, type PlayerStateOptions } from "./AbstractPlayerState.ts";
+import { type PlayProgressPositional, type Second } from "../../../core/Atomic.ts";
+import { type Dayjs } from "dayjs";
+import { ListenProgressPositional } from "./ListenProgress.ts";
+import { ListenRangePositional } from "./ListenRange.ts";
 
 export class PositionalPlayerState extends AbstractPlayerState {
 

@@ -1,8 +1,8 @@
 import { readFileSync, accessSync } from "node:fs";
 import { constants, promises } from "fs";
 import { resolve } from "path";
-import { projectDir } from "../common/index.js";
-import { MaybeLogger } from '../common/MaybeLogger.js';
+import { projectDir } from "../common/index.ts";
+import { MaybeLogger } from '../common/MaybeLogger.ts';
 
 export const getSchemaForType = (type: string, logger: MaybeLogger = new MaybeLogger()): any => {
     const path = resolve(projectDir, `src/backend/common/schema/${type}.json`);

@@ -1,9 +1,9 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { resolve } from "path";
-import { projectDir } from "../common/index.js";
-import {getTypeSchemaFromConfigGenerator} from "./SchemaUtils.js";
-import { atomicClientInterfaces } from '../common/infrastructure/config/client/clients.js';
-import { atomicSourceInterfaces } from '../common/infrastructure/config/source/sources.js';
+import { projectDir } from "../common/index.ts";
+import {getTypeSchemaFromConfigGenerator} from "./SchemaUtils.ts";
+import { atomicClientInterfaces } from '../common/infrastructure/config/client/clients.ts';
+import { atomicSourceInterfaces } from '../common/infrastructure/config/source/sources.ts';
 
 mkdirSync(resolve(projectDir, 'docsite/static/schemas'), {recursive: true});
 

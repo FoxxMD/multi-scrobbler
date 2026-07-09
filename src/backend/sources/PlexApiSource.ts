@@ -1,6 +1,6 @@
 import EventEmitter from "events";
-import { type BrainzMeta, type PlayObject, type PlayObjectMinimal, type URLData } from "../../core/Atomic.js";
-import { artistNamesToCredits, buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
+import { type BrainzMeta, type PlayObject, type PlayObjectMinimal, type URLData } from "../../core/Atomic.ts";
+import { artistNamesToCredits, buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
 import {
     asPlayerStateDataMaybePlay,
     type FormatPlayObjectOptions,
@@ -10,27 +10,27 @@ import {
     type PlayerStateData,
     type PlayerStateDataMaybePlay,
     type PlayPlatformId, REPORTED_PLAYER_STATUSES
-} from "../common/infrastructure/Atomic.js";
-import { getFirstNonEmptyString, getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.js";
-import { genGroupIdStr } from '../../core/PlayUtils.js';
-import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.js";
+} from "../common/infrastructure/Atomic.ts";
+import { getFirstNonEmptyString, getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.ts";
+import { genGroupIdStr } from '../../core/PlayUtils.ts';
+import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.ts";
 import { type GetSessionsMetadata } from "@lukehagar/plexjs/sdk/models/operations/getsessions.js";
 import { PlexAPI, HTTPClient, type Fetcher } from "@lukehagar/plexjs";
 import { Agent } from 'undici';
-import { type PlexApiSourceConfig } from "../common/infrastructure/config/source/plex.js";
-import { isPortReachable, joinedUrl, normalizeWebAddress } from '../utils/NetworkUtils.js';
+import { type PlexApiSourceConfig } from "../common/infrastructure/config/source/plex.ts";
+import { isPortReachable, joinedUrl, normalizeWebAddress } from '../utils/NetworkUtils.ts';
 import { type GetTokenDetailsResponse, type GetTokenDetailsUserPlexAccount } from '@lukehagar/plexjs/sdk/models/operations/gettokendetails.js';
 import { parseRegexSingle } from '@foxxmd/regex-buddy-core';
 import { Readable } from 'node:stream';
-import { PlexPlayerState } from './PlayerState/PlexPlayerState.js';
-import { AbstractPlayerState, type PlayerStateOptions } from './PlayerState/AbstractPlayerState.js';
+import { PlexPlayerState } from './PlayerState/PlexPlayerState.ts';
+import { AbstractPlayerState, type PlayerStateOptions } from './PlayerState/AbstractPlayerState.ts';
 import { type Logger } from '@foxxmd/logging';
-import { MemoryPositionalSource } from './MemoryPositionalSource.js';
+import { MemoryPositionalSource } from './MemoryPositionalSource.ts';
 import { FixedSizeList } from 'fixed-size-list';
 import { SDKValidationError } from '@lukehagar/plexjs/sdk/models/errors/sdkvalidationerror.js';
 import { Keyv } from 'cacheable';
-import { initMemoryCache } from "../common/Cache.js";
-import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
+import { initMemoryCache } from "../common/Cache.ts";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import clone from 'clone';
 
 const shortDeviceId = truncateStringToLength(10, '');

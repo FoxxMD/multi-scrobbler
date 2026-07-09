@@ -4,15 +4,15 @@ import asPromised from 'chai-as-promised';
 import withLocalTmpDir from 'with-local-tmp-dir';
 import {constants, copyFile, access} from 'node:fs/promises';
 import path from "path";
-import {projectDir} from '../../common/index.js';
-import ScrobbleClients from '../../scrobblers/ScrobbleClients.js';
-import ScrobbleSources from '../../sources/ScrobbleSources.js';
+import {projectDir} from '../../common/index.ts';
+import ScrobbleClients from '../../scrobblers/ScrobbleClients.ts';
+import ScrobbleSources from '../../sources/ScrobbleSources.ts';
 import EventEmitter from "events";
 import {loggerTest, loggerDebug} from '@foxxmd/logging';
-import { clientTypes } from '../../common/infrastructure/config/client/clients.js';
-import { sourceTypes } from '../../common/infrastructure/config/source/sources.js';
-import { Notifiers } from '../../notifier/Notifiers.js';
-import { difference, intersect } from '../../utils.js';
+import { clientTypes } from '../../common/infrastructure/config/client/clients.ts';
+import { sourceTypes } from '../../common/infrastructure/config/source/sources.ts';
+import { Notifiers } from '../../notifier/Notifiers.ts';
+import { difference, intersect } from '../../utils.ts';
 
 chai.use(asPromised);
 

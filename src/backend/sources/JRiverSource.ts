@@ -2,14 +2,14 @@ import dayjs from "dayjs";
 import { EventEmitter } from "events";
 import normalizeUrl from 'normalize-url';
 import { URL } from "url";
-import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.js";
-import { type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.js";
-import { type JRiverSourceConfig } from "../common/infrastructure/config/source/jriver.js";
-import { type Info, JRiverApiClient, PLAYER_STATE } from "../common/vendor/JRiverApiClient.js";
-import { type RecentlyPlayedOptions } from "./AbstractSource.js";
-import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
-import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
-import { artistNamesToCredits } from "../../core/StringUtils.js";
+import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
+import { type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.ts";
+import { type JRiverSourceConfig } from "../common/infrastructure/config/source/jriver.ts";
+import { type Info, JRiverApiClient, PLAYER_STATE } from "../common/vendor/JRiverApiClient.ts";
+import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
+import { artistNamesToCredits } from "../../core/StringUtils.ts";
 
 export class JRiverSource extends MemoryPositionalSource {
     declare config: JRiverSourceConfig;
