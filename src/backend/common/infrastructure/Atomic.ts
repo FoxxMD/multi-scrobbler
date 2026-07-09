@@ -381,7 +381,7 @@ export interface PaginatedListens {
     getPaginatedListens(params: PaginatedListensOptions<CursorType>): Promise<{data: PlayObject[], meta: PaginatedListensOptions<CursorType> & PaginatedResults<CursorType>}>
 }
 
-export const hasPaginagedListens = (obj: Object): obj is PaginatedListens => {
+export const hasPaginagedListens = (obj: object): obj is PaginatedListens => {
     return 'getPaginatedListens' in obj;
 }
 
@@ -394,7 +394,7 @@ export interface PaginatedTimeRangeListens<T extends CursorType = CursorType> {
     getPaginatedUnitOfTime(): ManipulateType;
 }
 
-export const hasPaginatedTimeRangeListens = (obj: Object): obj is PaginatedTimeRangeListens => {
+export const hasPaginatedTimeRangeListens = (obj: object): obj is PaginatedTimeRangeListens => {
     return 'getPaginatedTimeRangeListens' in obj;
 }
 
@@ -407,7 +407,7 @@ export interface PagelessTimeRangeListens {
     getPaginatedUnitOfTime(): ManipulateType;
 }
 
-export const hasPagelessTimeRangeListens = (obj: Object): obj is PagelessTimeRangeListens => {
+export const hasPagelessTimeRangeListens = (obj: object): obj is PagelessTimeRangeListens => {
     return 'getPagelessTimeRangeListens' in obj;
 }
 

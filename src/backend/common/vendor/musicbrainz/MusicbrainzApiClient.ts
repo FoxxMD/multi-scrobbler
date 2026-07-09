@@ -68,7 +68,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
         const mbApis: Record<string, MusicbrainzApiConfig> = {};
         for(const mbConfig of this.config.apis) {
             const u = normalizeWebAddress(mbConfig.url ?? MUSICBRAINZ_URL);
-            let mb = mbMap.get(u.url.hostname);
+            const mb = mbMap.get(u.url.hostname);
             const mbApiConfig: Omit<MusicbrainzApiConfig, 'api'> = {
                 ...mbConfig, 
                 hostname: u.url.hostname, 
@@ -97,7 +97,6 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                     api, 
                 };
                 mbMap.set(u.url.hostname, api);
-                mb = api;
             } else if(mbApis[u.url.hostname] === undefined) {
                 mbApis[u.url.hostname] = {
                     ...mbApiConfig,
@@ -143,9 +142,8 @@ export class MusicbrainzApiClient extends AbstractApiClient {
 
             // keep track of last request init at and wait until at least 1 second since that
             // to help prevent rate limiting
-            let waitTime = 0;
             const sinceLast = dayjs().diff(apiConfig.lastRequest, 'ms');
-            waitTime = Math.max(0, apiConfig.minRequestIntervalDuration - sinceLast);
+            const waitTime = Math.max(0, apiConfig.minRequestIntervalDuration - sinceLast);
             apiConfig.lastRequest = dayjs().add(waitTime, 'ms');
             //this.logger.trace(`Waiting ${waitTime}ms to call ${apiConfig.hostname} request at ${apiConfig.lastRequest.toISOString()}`)
             if(waitTime > 0) {
@@ -458,6 +456,6 @@ export const removeNonWordCharacters = (str: string): string => {
 
     // remove any non-alphanumeric, non-whitespace characters
     // with a whitespace EX "My Cool (Title)" => "My Cool Title"
-    cleaned = str.replaceAll(NON_WORDWHITESPACE_REGEX, '');
+    cleaned = cleaned.replaceAll(NON_WORDWHITESPACE_REGEX, '');
     return cleaned;
 }

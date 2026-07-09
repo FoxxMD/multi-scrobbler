@@ -157,6 +157,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
 
         query = removeUndefinedKeys(query);
         const results = await this.db.query.playsHistorical.findMany({
+            ...query,
             limit: args.limit,
             offset: args.offset,
             columns: {id: true},

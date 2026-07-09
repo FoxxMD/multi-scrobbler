@@ -216,6 +216,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
         query = removeUndefinedKeys(query);
         const results = await this.db.query.plays.findMany({
+            ...query,
             limit: args.limit,
             offset: args.offset,
             columns: {id: true},

@@ -581,8 +581,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 }
 
                 // otherwise sort platform alphabetically and take first
-                plays.sort((a, b) => a[0].localeCompare(b[0]));
-                return plays[0][1].player;
+                preferredPlays.sort((a, b) => a[0].localeCompare(b[0]));
+                return preferredPlays[0][1].player;
             }
         }
     }
@@ -1732,7 +1732,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 // and triggering this early means less, deeper checks
                 const thresholds = this.nowPlayingThresholdsMet(sourcePlayerData);
                 if (!thresholds.minMet) {
-                    shouldUpdate = false;
                     return [false, `${npUpdateTopReason} and ${validStatusReason} --BUT-- ${thresholds.minReason}`];
                 }
                 else if (
@@ -1754,11 +1753,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 // check for valid play data if the update should be for a playing track
                 if(playerInNPPlayingOnlyState(sourcePlayerData)) {
                     if(sourcePlayerData.play?.data?.track === undefined) {
-                        shouldUpdate = false;
                         return [false, `${npUpdateTopReason} and ${validStatusReason} --BUT-- play is missing track information`];
                     }
                     if((sourcePlayerData.play?.data?.artists ?? []).length === 0) {
-                        shouldUpdate = false;
                         return [false, `${npUpdateTopReason} and ${validStatusReason} --BUT-- play is missing artist information`];
                     }
                 }
@@ -1767,7 +1764,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             if(shouldUpdate && this.nowPlayingIsRealtime) {
                 // prevent multiple clearing updates
                 if(this.nowPlayingLastPlay !== undefined && shouldClearNPStatus(sourcePlayerData) && shouldClearNPStatus(this.nowPlayingLastPlay)) {
-                    shouldUpdate = false;
                     return [false, `${npUpdateTopReason} and ${validStatusReason} --BUT-- last update already cleared now playing`];
                 }
             }

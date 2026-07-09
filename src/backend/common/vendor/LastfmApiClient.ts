@@ -68,7 +68,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
         } = config;
 
         this.url = normalizeWebAddress(urlBase, {removeTrailingSlash: false});
-        let cbPrefix = 'lastfm';
+        let cbPrefix: string;
 
         if(this.url.url.host === LASTFM_HOST) {
             this.logger.info('Using official Last.fm instance host/path');

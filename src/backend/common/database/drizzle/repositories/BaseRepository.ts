@@ -79,13 +79,12 @@ export class GenericRepository<T extends TableName> extends DrizzleBaseRepositor
 }
 
 export const buildDateCompare = (data: CompareDateOp): RelationsFieldFilter<Dayjs> => {
-    let q: RelationsFieldFilter<Dayjs> = {};
     if (data.type !== 'between') {
-        q = {
+        return {
             [data.type]: data.date
         }
     } else {
-        q = {
+        return {
             AND: [
                 {
                     [data.inclusive ?? true ? 'gte' : 'gt']: data.range[0]
@@ -96,5 +95,4 @@ export const buildDateCompare = (data: CompareDateOp): RelationsFieldFilter<Dayj
             ]
         }
     }
-    return q;
 }
