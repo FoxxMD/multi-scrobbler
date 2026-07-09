@@ -18,8 +18,9 @@
     "jsx": "react-jsx",
     "sourceMap": false,
     "rewriteRelativeImportExtensions": true,
-     "erasableSyntaxOnly": true,
-     "verbatimModuleSyntax": true
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true
   },
   "include": [
     "src",
