@@ -10,10 +10,10 @@ import {
     type FormatPlayObjectOptions,
     type InternalConfig,
     type PlayerStateData,
-    type PlayPlatformId,
     REPORTED_PLAYER_STATUSES,
     SINGLE_USER_PLATFORM_ID,
 } from "../common/infrastructure/Atomic.ts";
+import { type PlayPlatformId } from '../../core/Atomic.ts';
 import { type AzuracastSourceConfig, type AzuraNowPlayingResponse, type AzuraStationResponse } from "../common/infrastructure/config/source/azuracast.ts";
 import { isPortReachable, normalizeWSAddress } from "../utils/NetworkUtils.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";

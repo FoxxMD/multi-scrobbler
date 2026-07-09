@@ -3,7 +3,8 @@ import { WS } from 'iso-websocket'
 import { type DiscordStrongData, type StatusType, type DiscordWSData, type ActivityData, ACTIVITY_TYPE } from "../../infrastructure/config/client/discord.ts";
 import type { _DataPayload, _NonDispatchPayload, APIUser, GatewayActivity, GatewayActivityAssets, GatewayHeartbeatRequest, GatewayHelloData, GatewayIdentify, GatewayInvalidSessionData, GatewayPresenceUpdateData, GatewayReadyDispatchData, GatewayResumeData, GatewayUpdatePresence } from "discord.js";
 import { GatewayCloseCodes, GatewayDispatchEvents, GatewayOpcodes, PresenceUpdateStatus } from "discord.js"
-import { isDebugMode, removeUndefinedKeys, sleep } from "../../../utils.ts";
+import { isDebugMode, sleep } from "../../../utils.ts";
+import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
 import pEvent from 'p-event';
 import EventEmitter from "events";
 import { randomInt } from "crypto";
@@ -824,6 +825,7 @@ export const activityDataToGatewayActivity = (data: ActivityData): GatewayActivi
 
     const activity: Omit<GatewayActivity, 'id'> = removeUndefinedKeys<Omit<GatewayActivity, 'id'>>({
         status_display_type: statusDisplayType,
+        // @ts-expect-error its fine its an enum thing
         type: activityType,
         details_url: detailsUrl,
         state_url: stateUrl,

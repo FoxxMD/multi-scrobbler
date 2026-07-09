@@ -8,7 +8,8 @@ import { type PlayObject, type PlayObjectMinimal, type ScrobbleActionResult, typ
 import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type PaginatedListensTimeRangeOptions, type PaginatedTimeRangeListens, type PaginatedTimeRangeListensResult } from "../../infrastructure/Atomic.ts";
 import { isNodeNetworkException } from "../../errors/NodeErrors.ts";
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.ts";
-import { getNonEmptyVal, parseRetryAfterSecsFromObj, removeUndefinedKeys, sleep } from "../../../utils.ts";
+import { getNonEmptyVal, parseRetryAfterSecsFromObj, sleep } from "../../../utils.ts";
+import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
 import { UpstreamError } from "../../errors/UpstreamError.ts";
 import { getMalojaResponseError, isMalojaAPIErrorBody, type MalojaResponseV3CommonData, type MalojaScrobbleData, type MalojaScrobbleRequestData, type MalojaScrobbleV3RequestData, type MalojaScrobbleV3ResponseData, type MalojaScrobbleWarning } from "./interfaces.ts";
 import { getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext } from '../../../utils/TimeUtils.ts';

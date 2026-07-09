@@ -1,4 +1,4 @@
-import { type Interfaces as Notifications } from '@dbus-types/notifications'
+import type { Interfaces as Notifications } from '@dbus-types/notifications'
 import dayjs from "dayjs";
 import { DBusInterface, sessionBus, Connection, type ConnectOpts } from 'dbus-ts';
 import EventEmitter from "events";

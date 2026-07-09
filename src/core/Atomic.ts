@@ -1,12 +1,10 @@
-import type { LogDataPretty, LogLevel } from "@foxxmd/logging";
 import type { Dayjs } from "dayjs";
 import type { AdditionalTrackInfoResponse } from "../backend/common/vendor/listenbrainz/interfaces.ts";
-import type { Merge, RequiredKeys, StrictOmit } from "ts-essentials";
-import type { ErrorObject } from "serialize-error";
-import type { PlayPlatformIdStr } from "../backend/common/infrastructure/Atomic.ts";
+import { type Merge, type RequiredKeys, type StrictOmit } from "ts-essentials";
+import { type ErrorObject } from "serialize-error";
 import type { FlowControlTerm, TransformHook } from "../backend/common/infrastructure/Transform.ts";
-import type { Changeset } from "json-diff-ts";
-import type { IParseBaseOptions } from 'qs'; 
+import { type Changeset } from "json-diff-ts";
+import { type IParseBaseOptions } from 'qs'; 
 
 export type ComponentTypeClient = 'client';
 export const COMPONENT_TYPE_CLIENT: ComponentTypeClient = 'client';
@@ -403,11 +401,15 @@ export interface ObjectPlayData extends PlayData {
     playDateCompleted?: Dayjs
 }
 
+export type LogLevelStandalone = 'debug' | 'error' | 'verbose' | 'info' | 'silly' | 'silent' | 'log' | 'trace' | 'warn' | 'fatal';
+
 export interface LogOutputConfig {
-    level: LogLevel,
+    level: LogLevelStandalone,
     sort: string,
     limit: number
 }
+
+export type PlayPlatformIdStr = string;
 
 export interface SourcePlayerObj<D extends DateLike = Dayjs> {
     platformId: PlayPlatformIdStr,
@@ -497,10 +499,6 @@ export const SOURCE_SOT = {
     HISTORY: 'history' as SOURCE_SOT_TYPES
 }
 export const sourceSotTypes: SOURCE_SOT_TYPES[] = ['player','history'];
-
-export interface LeveledLogData extends LogDataPretty {
-    levelLabel: string
-}
 
 export interface URLData {
     url: URL
@@ -712,4 +710,11 @@ export const qsOptions: IParseBaseOptions = {
     arrayLimit: 20,
     plainObjects: true,
     allowPrototypes: false
-}
+};
+
+export const DELIMITERS = [',', '&', '/', '\\'];export const DELIMETERS_REGEX: RegExp = new RegExp(/[,&\/\\]/);
+export const DELIMITERS_NO_AMP = [',', '/', '\\'];
+export type DeviceId = string;
+export type PlayUserId = string;
+export type PlayPlatformId = [DeviceId, PlayUserId];
+

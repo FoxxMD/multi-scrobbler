@@ -16,7 +16,8 @@ import { generatePlay, generatePlayPlatformId, generatePlays, generateSourcePlay
 import MockDate from 'mockdate';
 
 import { NowPlayingScrobbler, TestAuthScrobbler, TestScrobbler } from "./TestScrobbler.ts";
-import { type PaginatedTimeRangeOptions, type PlayPlatformId, REFRESH_STALE_DEFAULT } from '../../common/infrastructure/Atomic.ts';
+import { type PaginatedTimeRangeOptions, REFRESH_STALE_DEFAULT } from '../../common/infrastructure/Atomic.ts';
+import { type PlayPlatformId } from '../../../core/Atomic.ts';
 import { shuffleArray } from '../../utils/DataUtils.ts';
 import { DEFAULT_CONSOLIDATE_DURATION, DEFAULT_GROUP_DURATION, groupPlaysToTimeRanges } from '../../utils/ListenFetchUtils.ts';
 import { asPlay } from '../../../core/PlayMarshalUtils.ts';

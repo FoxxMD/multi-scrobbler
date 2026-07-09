@@ -9,7 +9,8 @@ import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
 import { type ListenPayload } from '../common/vendor/listenbrainz/interfaces.ts';
 import { Notifiers } from "../notifier/Notifiers.ts";
 
-import { durationToHuman, isDebugMode } from "../utils.ts";
+import { isDebugMode } from "../utils.ts";
+import { durationToHuman } from '../../core/TimeUtils.ts';
 import { RockSkyApiClient, rockskyScrobbleToPlay, type SubmitResponse } from "../common/vendor/RockSkyApiClient.ts";
 import { type RockSkyClientConfig } from "../common/infrastructure/config/client/rocksky.ts";
 import { ScrobbleSubmitError } from "../common/errors/MSErrors.ts";

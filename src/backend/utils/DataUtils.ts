@@ -3,7 +3,8 @@ import { constants, promises } from "fs";
 import { MaybeLogger } from '../common/MaybeLogger.ts';
 import { deepEqual } from 'fast-equals';
 import { type CommonConfigPrimitives } from "../common/infrastructure/config/common.ts";
-import { parseBoolStrict, removeUndefinedKeys } from "../utils.ts";
+import { parseBoolStrict } from "../utils.ts";
+import { removeUndefinedKeys } from '../../core/DataUtils.ts';
 import { nonEmptyStringOrDefault } from "../../core/StringUtils.ts";
 
 export const asArray = <T>(data: T | T[]): T[] => {

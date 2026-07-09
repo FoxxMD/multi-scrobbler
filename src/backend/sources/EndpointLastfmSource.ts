@@ -7,10 +7,10 @@ import {
     type InternalConfig,
     NO_USER,
     type PlayerStateData,
-    type PlayPlatformId,
     REPORTED_PLAYER_STATUSES,
     type ReportedPlayerStatus
 } from "../common/infrastructure/Atomic.ts";
+import { type PlayPlatformId } from '../../core/Atomic.ts';
 import MemorySource from "./MemorySource.ts";
 import { type LastFMEndpointSourceConfig } from "../common/infrastructure/config/source/endpointlfm.ts";
 import { type LastFMScrobbleRequestPayload, scrobblePayloadToPlay } from "../common/vendor/LastfmApiClient.ts";

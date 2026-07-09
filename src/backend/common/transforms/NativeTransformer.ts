@@ -6,7 +6,7 @@ import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
 import { parseArtistCredits, parseTrackCredits, uniqueNormalizedStrArr } from "../../utils/StringUtils.ts";
 import { parseRegexSingle, parseToRegexOrLiteralSearch } from "@foxxmd/regex-buddy-core";
 import { type TransformerOptions } from "./AbstractTransformer.ts";
-import { DELIMITERS_NO_AMP } from "../infrastructure/Atomic.ts";
+import { DELIMITERS_NO_AMP } from '../../../core/Atomic.ts';
 import { asArray } from "../../utils/DataUtils.ts";
 import { MaybeLogger } from '../MaybeLogger.ts';
 import { childLogger } from "@foxxmd/logging";

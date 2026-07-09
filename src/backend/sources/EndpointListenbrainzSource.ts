@@ -7,10 +7,10 @@ import {
     type InternalConfig,
     NO_USER,
     type PlayerStateData,
-    type PlayPlatformId,
     REPORTED_PLAYER_STATUSES,
     type ReportedPlayerStatus
 } from "../common/infrastructure/Atomic.ts";
+import { type PlayPlatformId } from '../../core/Atomic.ts';
 import { type ListenbrainzEndpointSourceConfig } from "../common/infrastructure/config/source/endpointlz.ts";
 import { ListenbrainzApiClient, listenPayloadToPlay } from "../common/vendor/ListenbrainzApiClient.ts";
 import { type SubmitPayload } from '../common/vendor/listenbrainz/interfaces.ts';

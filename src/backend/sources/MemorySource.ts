@@ -8,8 +8,8 @@ import {
     asPlayerStateDataMaybePlay,
     CALCULATED_PLAYER_STATUSES,
     type InternalConfig, type PlayerStateDataMaybePlay,
-    type PlayPlatformId,
     type ProgressAwarePlayObject} from "../common/infrastructure/Atomic.ts";
+import { type PlayPlatformId } from '../../core/Atomic.ts';
 import { type SourceType, type SourceConfig } from '../common/infrastructure/config/source/sources.ts';
 import { type PollingOptions } from "../common/infrastructure/config/common.ts";
 import {

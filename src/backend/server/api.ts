@@ -9,7 +9,6 @@ import {
     CLIENT_DEAD_QUEUE,
     type ClientStatusData,
     type DeadLetterScrobble,
-    type LeveledLogData,
     type LogOutputConfig,
     PLAY_CLIENT_STATE,
     PLAY_SOURCE_STATE,
@@ -20,7 +19,7 @@ import {
     type SourceStatusData,
 } from "../../core/Atomic.ts";
 import { capitalize } from "../../core/StringUtils.ts";
-import { type ExpressHandler } from "../common/infrastructure/Atomic.ts";
+import { type ExpressHandler, type LeveledLogData } from "../common/infrastructure/Atomic.ts";
 import { getRoot } from "../ioc.ts";
 import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts";
 import AbstractSource from "../sources/AbstractSource.ts";

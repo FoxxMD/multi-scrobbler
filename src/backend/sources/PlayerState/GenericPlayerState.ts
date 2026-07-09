@@ -1,5 +1,6 @@
 import { type Logger } from "@foxxmd/logging";
-import { CALCULATED_PLAYER_STATUSES, type PlayPlatformId } from "../../common/infrastructure/Atomic.ts";
+import { CALCULATED_PLAYER_STATUSES } from "../../common/infrastructure/Atomic.ts";
+import { type PlayPlatformId } from '../../../core/Atomic.ts';
 import { AbstractPlayerState, type PlayerStateOptions } from "./AbstractPlayerState.ts";
 import { type PlayProgress } from "../../../core/Atomic.ts";
 import { type ListenProgress, ListenProgressTS } from "./ListenProgress.ts";

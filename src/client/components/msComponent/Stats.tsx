@@ -1,21 +1,11 @@
-import React, { type ComponentProps, useMemo, forwardRef, Fragment, useEffect, useState, useCallback } from "react"
-import { DataList, Badge, Box, Heading, Skeleton, Stat, Separator, HStack, Flex, Collapsible, Card, LinkOverlay, LinkBox, SkeletonText } from '@chakra-ui/react';
-import { COMPONENT_STATE, type ComponentClientApiJson, type ComponentCommonApiJson, type ComponentSourceApiJson, type ComponentState, componentStateToFriendly, isComponentClientApiJson, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
+import { type ComponentProps, useState, useCallback } from "react"
+import { Badge, Stat, HStack } from '@chakra-ui/react';
+import { type ComponentClientApiJson, type ComponentCommonApiJson, type MsSseEvent } from "../../../core/Api.js";
 import { TextMuted } from "../TextMuted.js";
-import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
-import { capitalize } from "../../../core/StringUtils.js";
-import { ShortDateDisplay } from "../DateDisplay.js";
-import { ChevronRightButton, DownArrowIcon, UpArrowIcon } from "../icons/ChakraIcons.js";
-import { ChakraPlayer, ChakraPlayerFetchable } from "../chakraPlayer/Player.js";
-import { InfoTip } from "../ToggleTip.js";
-import { type QueryFunctionContext, queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ErrorAlert } from "../ErrorAlert";
-import ky from 'ky';
-import { baseUrl } from "../../utils";
+import { DownArrowIcon, UpArrowIcon } from "../icons/ChakraIcons.js";
 import { useTimeout } from 'react-use-timeout';
 import {
     useSSEContext,
-    useSSEEvent,
     useSSEAnyEvent
 } from "@flamefrontend/sse-runtime-react";
 import dayjs from "dayjs";

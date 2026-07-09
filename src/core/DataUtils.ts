@@ -135,4 +135,31 @@ export const getAllIndexes = <T>(arr: T[], truthyFunc: (val: T) => boolean) => {
         if (truthyFunc(arr[i]))
             indexes.push(i);
     return indexes;
-}
+};
+export const removeUndefinedKeys = <T extends Record<string, any>>(obj: T, returnUndefined: boolean = true): T | undefined => {
+    const newObj: any = {};
+    Object.keys(obj).forEach((key) => {
+        if (Array.isArray(obj[key])) {
+            newObj[key] = obj[key];
+        } else if (obj[key] === Object(obj[key])) {
+            // dumb assign nested objects
+            // bc they may be third party library-objects that use prototyping and we don't want to mess with
+            newObj[key] = obj[key];
+        } else if (obj[key] !== undefined) {
+            newObj[key] = obj[key];
+        }
+    });
+    if (Object.keys(newObj).length === 0) {
+        if (returnUndefined) {
+            return undefined;
+        }
+        return newObj;
+    }
+    Object.keys(newObj).forEach(key => {
+        if (newObj[key] === undefined || (null !== newObj[key] && typeof newObj[key] === 'object' && Object.keys(newObj[key]).length === 0)) {
+            delete newObj[key];
+        }
+    });
+    //Object.keys(newObj).forEach(key => newObj[key] === undefined || newObj[key] && delete newObj[key])
+    return newObj;
+};

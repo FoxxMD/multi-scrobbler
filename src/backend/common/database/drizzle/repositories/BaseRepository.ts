@@ -1,6 +1,5 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import { type DbConcrete } from "../drizzleUtils.ts";
-import { type CompareOpKey } from "../drizzleTypes.ts";
 import { type Dayjs } from "dayjs";
 import { type RelationsFieldFilter, eq, inArray } from "drizzle-orm";
 import { loggerNoop } from "../../../MaybeLogger.ts";
@@ -9,6 +8,7 @@ import { getConfigByTableName, relations, type TableName } from "../schema/schem
 import assert from 'node:assert';
 import { Cacheable } from "cacheable";
 import { type DateLike } from "../../../../../core/Atomic.ts";
+import type { CompareDateBetween, CompareDateSingle } from "../../../../../core/Api.ts";
 
 export interface DrizzleRepositoryOpts {
     logger?: Logger
@@ -16,27 +16,7 @@ export interface DrizzleRepositoryOpts {
     componentId?: number
 }
 
-export type CompareDateSingle<D extends DateLike = Dayjs> = {
-    type: CompareOpKey<D>
-    date: D
-}
-export type CompareDateBetween<D extends DateLike = Dayjs> = {
-    type: 'between',
-    range: [D, D],
-    inclusive?: boolean
-}
 export type CompareDateOp<D extends DateLike = Dayjs> = CompareDateSingle<D> | CompareDateBetween<D>;
-export interface PaginatedQueryResponse {
-    limit: number,
-    offset: number
-    total?: number
-}
-
-export interface PaginatedResponse<T> {
-    data: T[]
-    meta: PaginatedQueryResponse
-}
-
 export interface ComponentConstrainedRepoOpts {
     componentId?: number
 }

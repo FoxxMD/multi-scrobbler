@@ -1,4 +1,3 @@
-import React, { type ComponentProps } from 'react';
 import {
   parseDiffFromFile,
   type FileContents
@@ -8,7 +7,7 @@ import {
   type FileDiffProps,
   FileDiff,
 } from '@pierre/diffs/react';
-import { MarkRequired } from 'ts-essentials';
+import { type MarkRequired } from 'ts-essentials';
 import { type Changeset } from 'json-diff-ts';
 import { MSErrorBoundary } from '../ErrorBoundary';
 import { patchObject } from "../../../core/DataUtils";

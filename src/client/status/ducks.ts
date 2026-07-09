@@ -7,7 +7,7 @@ import {
 } from '@reduxjs/toolkit'
 import { type Api } from '@reduxjs/toolkit/query/react';
 import {statusApi} from "./statusApi";
-import {ClientStatusData, SourcePlayerJson, SourceStatusData} from "../../core/Atomic";
+import {type ClientStatusData, type SourcePlayerJson, type SourceStatusData} from "../../core/Atomic";
 
 export interface ApiEventPayload {
     type: string,

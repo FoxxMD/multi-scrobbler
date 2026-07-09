@@ -1,5 +1,6 @@
 import { type Logger } from "@foxxmd/logging";
-import { type InternalConfig, type PlayPlatformId } from "../common/infrastructure/Atomic.ts";
+import { type InternalConfig } from "../common/infrastructure/Atomic.ts";
+import { type PlayPlatformId } from '../../core/Atomic.ts';
 import MemorySource from "./MemorySource.ts";
 import { type PlayerStateOptions } from "./PlayerState/AbstractPlayerState.ts";
 import { PositionalPlayerState } from "./PlayerState/PositionalPlayerState.ts";

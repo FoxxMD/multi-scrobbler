@@ -337,8 +337,6 @@ export const parseDurationFromTimestamp = (timestamp: any) => {
     });
 };
 
-export type Milliseconds = number;
-
 /** Is Position earlier than X seconds or Y% percent of the start of a Play? */
 export const closeToPlayStart = (play: PlayObject, position: number, thresholds: {absolute?: number, percent?: number, hintPrefix?: boolean} = {}): [boolean, string] => {
     const {

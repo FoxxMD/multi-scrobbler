@@ -14,9 +14,9 @@ import {
     type ScrobbleTsSOC,
     type TrackStringOptions
 } from "./Atomic.ts";
-import { DELIMETERS_REGEX, DELIMITERS } from "../backend/common/infrastructure/Atomic.ts";
+import { DELIMETERS_REGEX, DELIMITERS } from './Atomic.ts';
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
-import { removeUndefinedKeys } from "../backend/utils.ts";
+import { removeUndefinedKeys } from './DataUtils.ts';
 import { nanoid } from "nanoid";
 
 dayjs.extend(utc)

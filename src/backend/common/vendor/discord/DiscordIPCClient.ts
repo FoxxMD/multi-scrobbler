@@ -7,7 +7,7 @@ import { Client, type SetActivity } from "@xhayper/discord-rpc";
 import {realpathSync} from 'fs';
 import {sep, join} from 'path';
 import { type PathData } from "@xhayper/discord-rpc/dist/transport/IPC.js";
-import { removeUndefinedKeys } from "../../../utils.ts";
+import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
 import { playStateToActivityData } from "./DiscordUtils.ts";
 import { DiscordAbstractClient } from "./DiscordAbstractClient.ts";
 import dayjs from "dayjs";
@@ -253,6 +253,7 @@ export const activityDataToSetActivity = (data: ActivityData): SetActivity => {
     } = data;
 
     const activity: SetActivity = removeUndefinedKeys<SetActivity>({
+        // @ts-expect-error its fine its an enum thing
         type: activityType,
         largeImageUrl: largeUrl,
         largeImageText: largeText,

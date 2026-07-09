@@ -4,9 +4,9 @@ import { ErrorAlert } from "./ErrorAlert";
 import { HiOutlineCloudUpload, HiOutlineCloudDownload } from "react-icons/hi";
 import { ChakraCodeBlockShort } from "./CodeBlock";
 import { capitalize } from "../../core/StringUtils";
-import { MSCollapsible, MSCollapsibleExternalProps } from "./MSCollapsible";
+import { MSCollapsible, type MSCollapsibleExternalProps } from "./MSCollapsible";
 import { TimelineErrorIcon } from "./timeline/TimelineIcon";
-import { ScrobbleResult } from "../../core/Atomic";
+import { type ScrobbleResult } from "../../core/Atomic";
 
 export interface ScrobbleActionResultProps extends MSCollapsibleExternalProps {
     result: ScrobbleResult<string>,

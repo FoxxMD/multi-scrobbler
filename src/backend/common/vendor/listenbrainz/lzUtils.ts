@@ -1,5 +1,6 @@
 import { type PlayObject } from "../../../../core/Atomic.ts";
-import { isEmptyArrayOrUndefined, removeUndefinedKeys } from "../../../utils.ts";
+import { isEmptyArrayOrUndefined } from "../../../utils.ts";
+import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
 import { getScrobbleTsSOCDate } from "../../../utils/TimeUtils.ts";
 import { type SubmitOptions } from "../ListenbrainzApiClient.ts";
 import { type ListenPayload, type MinimumTrack, type SubmitListenAdditionalTrackInfo, type SubmitPayload } from "./interfaces.ts";

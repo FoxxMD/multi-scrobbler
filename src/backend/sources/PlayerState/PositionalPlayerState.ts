@@ -1,5 +1,6 @@
 import { type Logger } from "@foxxmd/logging";
-import { CALCULATED_PLAYER_STATUSES, type PlayPlatformId, REPORTED_PLAYER_STATUSES } from "../../common/infrastructure/Atomic.ts";
+import { CALCULATED_PLAYER_STATUSES, REPORTED_PLAYER_STATUSES } from "../../common/infrastructure/Atomic.ts";
+import { type PlayPlatformId } from '../../../core/Atomic.ts';
 import { AbstractPlayerState, type PlayerStateOptions } from "./AbstractPlayerState.ts";
 import { type PlayProgressPositional, type Second } from "../../../core/Atomic.ts";
 import { type Dayjs } from "dayjs";

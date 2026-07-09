@@ -1,7 +1,7 @@
 import {createApi, fetchBaseQuery} from "@reduxjs/toolkit/query/react";
-import {DeadLetterScrobble, JsonPlayObject} from "../../core/Atomic";
+import {type DeadLetterScrobble, type JsonPlayObject} from "../../core/Atomic";
 import {createAction, createEntityAdapter, createSlice} from "@reduxjs/toolkit";
-import {ApiEventPayload, clientUpdate} from "../status/ducks";
+import {type ApiEventPayload, clientUpdate} from "../status/ducks";
 
 type DeadResponse = DeadLetterScrobble<JsonPlayObject, string>[];
 export const deadApi = createApi({

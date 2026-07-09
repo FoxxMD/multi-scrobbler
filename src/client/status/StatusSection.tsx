@@ -5,7 +5,7 @@ import SourceStatusCard from "../components/statusCard/SourceStatusCard";
 import ClientStatusCard from "../components/statusCard/ClientStatusCard";
 import {useGetStatusQuery} from "./statusApi";
 import {clientAdapter, sourceAdapter} from "./ducks";
-import {RootState} from "../store";
+import {type RootState} from "../store";
 const StatusSection = (props: PropsFromRedux) => {
     const {
     } = props;

@@ -1,7 +1,8 @@
 import EventEmitter from "events";
 import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
-import { type FormatPlayObjectOptions, type InternalConfig, type PlayPlatformId, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.ts";
+import { type FormatPlayObjectOptions, type InternalConfig, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.ts";
+import { type PlayPlatformId } from '../../core/Atomic.ts';
 import { type ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz.ts";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.ts";
 import { type RecentlyPlayedOptions } from "./AbstractSource.ts";

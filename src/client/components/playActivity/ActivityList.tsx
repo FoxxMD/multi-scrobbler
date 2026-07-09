@@ -1,22 +1,19 @@
-import { Accordion, Span, Stack, Text, Box, HStack, Flex, Container, SkeletonText, Wrap, Card, Collapsible, Separator } from '@chakra-ui/react';
-import { type ComponentType, type PlayState, } from '../../../core/Atomic.js';
-import React, { type ComponentProps, Fragment, useMemo, useCallback, useState } from "react"
-import dayjs, { Dayjs } from 'dayjs';
+import { Accordion, Container, Stack } from '@chakra-ui/react';
+import { useSSEAnyEvent, useSSEContext } from '@flamefrontend/sse-runtime-react';
+import { type InfiniteData, useInfiniteQuery, type UseInfiniteQueryResult, useQueryClient } from '@tanstack/react-query';
+import dayjs from 'dayjs';
 import doy from 'dayjs/plugin/dayOfYear.js';
-import { ActivityDetailFetchable, ActivityDetails, ActivitySummary, ActivitySummaryFetchable, ActivitySummarySkeleton } from '../ActivityDetail.js';
-import "./PlayList.scss";
-import { type MsSseEvent, type MsSseEventPayload, type PlayApiCommon, type PlayApiCommonDetailed } from '../../../core/Api.js';
-import { useQuery, useInfiniteQuery, type UseInfiniteQueryResult, type InfiniteData, useQueryClient } from '@tanstack/react-query';
-import { ErrorAlert } from '../ErrorAlert.js';
+import { type ComponentProps, Fragment, useMemo, useState } from "react";
+import { type MsSseEvent, type MsSseEventPayload, type PaginatedResponse, type PlayApiCommonDetailed, type QueryPlaysOptsJson } from '../../../core/Api.js';
+import { type ComponentType } from '../../../core/Atomic.js';
 import { type QueryPlaysOptsJsonRefreshable, tanQueries } from '../../queries/index.js';
-import { VirtualizedListNormal } from './VirtualListNormal.js';
+import { ActivityDetailFetchable, ActivityDetails, ActivitySummary, ActivitySummaryFetchable, ActivitySummarySkeleton } from '../ActivityDetail.js';
+import { ErrorAlert } from '../ErrorAlert.js';
+import { ListFilters, todayRange } from './ListFilters.js';
+import { type ActivityLogProps, generateGroupPlays, GroupHeader } from './ListParts.js';
 import { NoPlayResults, VirtualizedListDynamic } from './VirtualListDynamic.js';
 import { VirtualizedListExp } from './VirtualListExperimental.js';
-import { type ActivityLogProps, generateGroupPlays, GroupHeader } from './ListParts.js';
-import { ListFilters, todayRange } from './ListFilters.js';
-import { type QueryPlaysOpts, type QueryPlaysOptsJson } from '../../../backend/common/database/drizzle/repositories/PlayRepository.js';
-import { type PaginatedResponse } from '../../../backend/common/database/drizzle/repositories/BaseRepository.js';
-import { useSSEAnyEvent, useSSEContext } from '@flamefrontend/sse-runtime-react';
+import { VirtualizedListNormal } from './VirtualListNormal.js';
 
 dayjs.extend(doy);
 

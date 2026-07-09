@@ -6,12 +6,15 @@ import { generateInputEntity, generatePlayEntity, type PlayEntityOpts, hydratePl
 import { playInputs, plays, playsHistorical, queueStates, relations } from "../schema/schema.ts";
 import { type PlayNew, type PlaySelect, type PlayInputNew, type FindWhere, type FindMany, type QueueStateSelect, type FindWith, type PlaySelectWithQueueStates, type WhereClause, type PlayWith, type PlayHistoricalSelect, type PlayHistoricalNew } from "../drizzleTypes.ts";;
 import type { MarkOptional } from "ts-essentials";
-import { genGroupIdStrFromPlay, removeEmptyArrays, removeUndefinedKeys } from "../../../../utils.ts";
+import { genGroupIdStrFromPlay, removeEmptyArrays } from "../../../../utils.ts";
+import { removeUndefinedKeys } from '../../../../../core/DataUtils.ts';
 import dayjs, { type Dayjs } from "dayjs";
 import { type RelationsFieldFilter, eq, inArray, ne, notInArray, desc, asc, and, sql, Placeholder } from "drizzle-orm";
 import { type CompactableProperty, type RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.ts";
 import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.ts";
-import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts, type PaginatedQueryResponse, type PaginatedResponse } from "./BaseRepository.ts";
+import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
+import { type PaginatedResponse } from "../../../../../core/Api.ts";
+import { type PaginatedQueryResponse } from "../../../../../core/Api.ts";
 import { asPlay } from "../../../../../core/PlayMarshalUtils.ts";
 import assert, { Assert } from "node:assert";
 import { hashObject, parseArrayFromMaybeString } from "../../../../utils/StringUtils.ts";

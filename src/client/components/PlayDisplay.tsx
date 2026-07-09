@@ -1,8 +1,8 @@
-import React, {Fragment, type PropsWithChildren, type ReactElement} from 'react';
+import { Fragment, type ReactElement } from 'react';
 
-import {JsonPlayObject, TrackStringOptions} from "../../core/Atomic";
-import {buildTrackString} from "../../core/StringUtils";
-import {buildTrackStringReactOptions} from "../utils/index";
+import { type JsonPlayObject, type TrackStringOptions } from "../../core/Atomic";
+import { buildTrackString } from "../../core/StringUtils";
+import { buildTrackStringReactOptions } from "../utils/index";
 
 interface PlayObjectProps {
     data: JsonPlayObject

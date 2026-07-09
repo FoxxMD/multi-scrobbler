@@ -5,7 +5,8 @@ import { GatewayOpcodes, PresenceUpdateStatus } from "discord.js";
 import { capitalize } from "../../../../core/StringUtils.ts";
 import { urlToMusicService } from '../listenbrainz/lzUtils.ts';
 import { ACTIVITY_TYPE, type ActivityData, ActivityTypes, type DiscordData, type DiscordStrongData, type ActivityTypeString as MSActivityType, type StatusType } from "../../infrastructure/config/client/discord.ts";
-import { parseBool, removeUndefinedKeys } from "../../../utils.ts";
+import { parseBool } from "../../../utils.ts";
+import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
 import { parseArrayFromMaybeString, parseBoolOrArrayFromMaybeString } from "../../../utils/StringUtils.ts";
 
 export const playStateToActivityData = (data: SourcePlayerObj, opts: { useArt?: boolean } = {}): { activity: ActivityData, artUrl?: string } => {

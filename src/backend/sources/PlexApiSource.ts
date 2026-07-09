@@ -9,8 +9,9 @@ import {
     NO_USER,
     type PlayerStateData,
     type PlayerStateDataMaybePlay,
-    type PlayPlatformId, REPORTED_PLAYER_STATUSES
+    REPORTED_PLAYER_STATUSES
 } from "../common/infrastructure/Atomic.ts";
+import { type PlayPlatformId } from '../../core/Atomic.ts';
 import { getFirstNonEmptyString, getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.ts";
 import { genGroupIdStr } from '../../core/PlayUtils.ts';
 import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.ts";

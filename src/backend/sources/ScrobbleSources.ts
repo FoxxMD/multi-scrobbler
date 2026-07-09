@@ -36,7 +36,8 @@ import { type YTMusicData, type YTMusicSourceConfig } from "../common/infrastruc
 import { type YandexMusicBridgeData, type YandexMusicBridgeSourceConfig } from "../common/infrastructure/config/source/ymbridge.ts";
 import { type SonosData, type SonosSourceConfig } from "../common/infrastructure/config/source/sonos.ts";
 import { WildcardEmitter } from "../common/WildcardEmitter.ts";
-import { nonEmptyObj, parseBool, removeUndefinedKeys } from "../utils.ts";
+import { nonEmptyObj, parseBool } from "../utils.ts";
+import { removeUndefinedKeys } from '../../core/DataUtils.ts';
 import { getCommonComponentEnvConfig, readJson } from '../utils/DataUtils.ts';
 import { validateJson } from "../utils/ValidationUtils.ts";
 import AbstractSource from "./AbstractSource.ts";

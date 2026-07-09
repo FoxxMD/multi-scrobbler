@@ -1,12 +1,12 @@
-import React, {useState, useCallback, useEffect} from 'react';
-import './LogsSection.css';
-import {FixedSizeList} from "fixed-size-list";
-import {useEventSource, useEventSourceListener} from "@react-nano/use-event-source";
-import LogLine from "./LogLine";
-import {useGetLogsQuery, useLazySetLogSettingsQuery} from "./logsApi";
-import {connect, type ConnectedProps} from "react-redux";
-import {RootState} from "../store";
+import { useEventSource, useEventSourceListener } from "@react-nano/use-event-source";
+import { FixedSizeList } from "fixed-size-list";
+import { useCallback, useEffect, useState } from 'react';
+import { connect, type ConnectedProps } from "react-redux";
 import Loading from "../components/loading/Loading";
+import { type RootState } from "../store";
+import LogLine from "./LogLine";
+import { useGetLogsQuery, useLazySetLogSettingsQuery } from "./logsApi";
+import './LogsSection.css';
 
 const logBuffer: { message: string, id: string, level: number, levelLabel:string }[] = [];
 

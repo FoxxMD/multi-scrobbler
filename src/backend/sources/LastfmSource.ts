@@ -1,6 +1,7 @@
 import EventEmitter from "events";
 import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
-import { type FormatPlayObjectOptions, type InternalConfig, type PlayPlatformId, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.ts";
+import { type FormatPlayObjectOptions, type InternalConfig, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.ts";
+import { type PlayPlatformId } from '../../core/Atomic.ts';
 import { type SourceType } from '../common/infrastructure/config/source/sources.ts';
 import { type LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.ts";
 import LastfmApiClient, { formatPlayObj } from "../common/vendor/LastfmApiClient.ts";

@@ -49,8 +49,9 @@ import {
     type InternalConfig,
     type PlayerStateData,
     type PlayerStateDataMaybePlay,
-    type PlayPlatformId, REPORTED_PLAYER_STATUSES
+    REPORTED_PLAYER_STATUSES
 } from "../common/infrastructure/Atomic.ts";
+import { type PlayPlatformId } from '../../core/Atomic.ts';
 import { type JellyApiSourceConfig } from "../common/infrastructure/config/source/jellyfin.ts";
 import { getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.ts";
 import { genGroupIdStr } from '../../core/PlayUtils.ts';

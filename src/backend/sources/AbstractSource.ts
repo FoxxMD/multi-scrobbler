@@ -10,15 +10,15 @@ import {
     DEFAULT_POLLING_INTERVAL,
     DEFAULT_POLLING_MAX_INTERVAL,
     DEFAULT_RETRY_MULTIPLIER,
-    type DeviceId,
     type GroupedFixedPlays,
     type InternalConfig,
     NO_USER,
-    type PlayPlatformId,
-    type PlayUserId,
     type ProgressAwarePlayObject,
     SINGLE_USER_PLATFORM_ID,
 } from "../common/infrastructure/Atomic.ts";
+import { type PlayPlatformId } from '../../core/Atomic.ts';
+import { type PlayUserId } from '../../core/Atomic.ts';
+import { type DeviceId } from '../../core/Atomic.ts';
 import { type SourceType, type SourceConfig } from '../common/infrastructure/config/source/sources.ts';
 import { TRANSFORM_HOOK } from "../common/infrastructure/Transform.ts";
 import TupleMap from "../common/TupleMap.ts";
@@ -51,7 +51,7 @@ import { asPlay } from '../../core/PlayMarshalUtils.ts';
 import { AsyncTask, SimpleIntervalJob, ToadScheduler } from 'toad-scheduler';
 import { type ComponentMinimalSelect } from '../common/database/drizzle/drizzleTypes.ts';
 import { COMPONENT_STATE, type ComponentSourceApi, type ComponentSourceApiJson, type ComponentState, type PlayApiCommonDetailed } from '../../core/Api.ts';
-import { type PaginatedResponse } from '../common/database/drizzle/repositories/BaseRepository.ts';
+import { type PaginatedResponse } from "../../core/Api.ts";
 
 export interface RecentlyPlayedOptions {
     limit?: number

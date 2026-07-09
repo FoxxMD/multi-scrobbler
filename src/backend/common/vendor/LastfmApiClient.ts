@@ -1,7 +1,8 @@
 import dayjs, { type Dayjs, type ManipulateType } from "dayjs";
 import { type BrainzMeta, type PlayObject, type PlayObjectMinimal, type ScrobbleActionResult, type UnixTimestamp, type URLData, type Writeable } from "../../../core/Atomic.ts";
 import { artistNamesToCredits, artistNameToCredit, nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.ts";
-import { removeUndefinedKeys, sleep } from "../../utils.ts";
+import { sleep } from "../../utils.ts";
+import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
 import { writeFile } from '../../utils/FSUtils.ts';
 import { objectIsEmpty, readJson } from '../../utils/DataUtils.ts';
 import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../utils/NetworkUtils.ts";

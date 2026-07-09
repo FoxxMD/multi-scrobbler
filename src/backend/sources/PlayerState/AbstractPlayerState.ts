@@ -8,10 +8,10 @@ import {
     type CalculatedPlayerStatus,
     type PlayerStateData,
     type PlayerStateDataMaybePlay,
-    type PlayPlatformId,
     REPORTED_PLAYER_STATUSES,
     type ReportedPlayerStatus,
 } from "../../common/infrastructure/Atomic.ts";
+import { type PlayPlatformId } from '../../../core/Atomic.ts';
 import { type PollingOptions } from "../../common/infrastructure/config/common.ts";
 import { playObjDataMatch, progressBar } from "../../utils.ts";
 import { genGroupIdStr } from '../../../core/PlayUtils.ts';

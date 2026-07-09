@@ -1,7 +1,9 @@
 import { strategies, stringSameness, type StringSamenessResult } from "@foxxmd/string-sameness";
 import { hasher } from 'node-object-hash';
 import { type PlayObject } from "../../core/Atomic.ts";
-import { asPlayerStateData, DELIMITERS, DELIMITERS_NO_AMP, type PlayerStateDataMaybePlay } from "../common/infrastructure/Atomic.ts";
+import { asPlayerStateData, type PlayerStateDataMaybePlay } from "../common/infrastructure/Atomic.ts";
+import { DELIMITERS_NO_AMP } from '../../core/Atomic.ts';
+import { DELIMITERS } from '../../core/Atomic.ts';
 import { getPlatformIdFromData, intersect, parseBool, parseBoolStrict } from "../utils.ts";
 import { genGroupIdStr } from '../../core/PlayUtils.ts';
 import { buildTrackString } from "../../core/StringUtils.ts";

@@ -1,14 +1,18 @@
-import type { Logger } from '@foxxmd/logging';
+import { type Logger, type LogDataPretty, type LogLevel } from '@foxxmd/logging';
 import type { Dayjs, ManipulateType } from "dayjs";
 import { type Request, type Response } from "express";
 import type { NextFunction, ParamsDictionary, Query } from "express-serve-static-core";
 import { FixedSizeList } from 'fixed-size-list';
-import { type ErrorLike, isPlayObject, type PlayMeta, type PlayObject, type PlayObjectMinimal, type UnixTimestamp } from "../../../core/Atomic.ts";
+import { type DeviceId, type ErrorLike, isPlayObject, type PlayMeta, type PlayObject, type PlayObjectMinimal, type PlayPlatformId, type PlayUserId, type UnixTimestamp } from "../../../core/Atomic.ts";
 import TupleMap from "../TupleMap.ts";
 import { MusicBrainzApi } from 'musicbrainz-api';
 import type { SourceType } from './config/source/sources.ts';
 import { type ClientType, clientTypes } from './config/client/clients.ts';
 import assert from 'assert';
+
+export interface LeveledLogData extends LogDataPretty {
+    levelLabel: string
+}
 
 export const lowGranularitySources: SourceType[] = ['subsonic', 'ytmusic'];
 
@@ -114,11 +118,6 @@ export interface ProgressAwarePlayObject extends PlayObjectMinimal {
         initialTrackProgressPosition?: number
     }
 }
-export type DeviceId = string;
-export type PlayUserId = string;
-export type PlayPlatformId = [DeviceId, PlayUserId];
-export type PlayPlatformIdStr = string;
-
 export type GroupedPlays = TupleMap<DeviceId,PlayUserId,ProgressAwarePlayObject[]>;
 
 export type GroupedFixedPlays = TupleMap<DeviceId,PlayUserId,FixedSizeList<ProgressAwarePlayObject>>;
@@ -190,10 +189,6 @@ export interface NamedGroup {
 export type ExpressRequest = Request<ParamsDictionary, any, any, Query, Record<string, any>>;
 export type ExpressResponse = Response<any, Record<string, any>>;
 export type ExpressHandler = (req: ExpressRequest, res: ExpressResponse, next: NextFunction) => Promise<void | Response<any, Record<string, any>>>
-
-export const DELIMITERS = [',','&','/','\\'];
-export const DELIMITERS_NO_AMP = [',','/','\\'];
-export const DELIMETERS_REGEX: RegExp = new RegExp(/[,&\/\\]/);
 
 export const ARTIST_WEIGHT = 0.3;
 export const TITLE_WEIGHT = 0.4;
