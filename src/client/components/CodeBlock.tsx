@@ -1,6 +1,6 @@
 import { ClientOnly, CodeBlock, IconButton } from "@chakra-ui/react";
 import { type ComponentProps, useMemo } from "react";
-import { type MarkOptional } from "ts-essentials";
+import type { MarkOptional } from "ts-essentials";
 import { safeStringify } from "../../core/StringUtils";
 import { shikiAdapter } from "./shikiAdapter";
 

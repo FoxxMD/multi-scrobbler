@@ -1,6 +1,6 @@
 import type { Dayjs } from "dayjs";
 import type { AdditionalTrackInfoResponse } from "../backend/common/vendor/listenbrainz/interfaces.ts";
-import { type Merge, type RequiredKeys, type StrictOmit } from "ts-essentials";
+import type { Merge, RequiredKeys, StrictOmit } from "ts-essentials";
 import { type ErrorObject } from "serialize-error";
 import type { FlowControlTerm, TransformHook } from "../backend/common/infrastructure/Transform.ts";
 import { type Changeset } from "json-diff-ts";

@@ -7,8 +7,8 @@ import {
   type FileDiffProps,
   FileDiff,
 } from '@pierre/diffs/react';
-import { type MarkRequired } from 'ts-essentials';
-import { type Changeset } from 'json-diff-ts';
+import type { MarkRequired } from 'ts-essentials';
+import type { Changeset } from 'json-diff-ts';
 import { MSErrorBoundary } from '../ErrorBoundary';
 import { patchObject } from "../../../core/DataUtils";
 

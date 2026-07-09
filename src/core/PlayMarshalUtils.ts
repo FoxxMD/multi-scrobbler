@@ -5,7 +5,7 @@ import { ListenRange } from '../backend/sources/PlayerState/ListenRange.ts';
 import { type AmbPlayObject, type DateLike, type JsonPlayObject, type PlayObject, REGEX_ISO8601_LOOSE, type Replace } from './Atomic.ts';
 import type { ElementOf, MarkOptional } from 'ts-essentials';
 import { type ErrorObject, serializeError } from 'serialize-error';
-import { type PlayApiCommonDetailed } from './Api.ts';
+import type { PlayApiCommonDetailed } from './Api.ts';
 
 interface BlockPath { key: string, parent: string };
 type BlockPaths = BlockPath[];

@@ -1,4 +1,4 @@
-import { type MarkOptional } from "ts-essentials";
+import type { MarkOptional } from "ts-essentials";
 import { truncateStringToLength } from "./StringUtils.ts";
 import { type ErrorLike, isErrorLike } from 'serialize-error';
 
