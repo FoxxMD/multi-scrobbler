@@ -7,4 +7,4 @@ echo -e "\nmulti-scrobbler is starting!"
 export NODE_ENV=production
 cd /app || exit
 exec \
-	  s6-setuidgid abc /usr/bin/node $NODE_ARGS /app/node_modules/.bin/tsx /app/src/backend/index.ts
+	  s6-setuidgid abc /usr/bin/node $NODE_ARGS /app/src/backend/index.ts

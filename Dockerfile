@@ -118,6 +118,8 @@ RUN npm ci --omit=dev --no-audit \
     && npm uninstall ts-json-schema-generator \
     && npm cache clean --force \
     && chown -R abc:abc node_modules \
+    ## peerDependency of validbot and can(?) be removed for production
+    && rm -r node_modules/typescript \
     && npx @usex/prune-mod -w \
     && rm -rf /root/.cache
 
