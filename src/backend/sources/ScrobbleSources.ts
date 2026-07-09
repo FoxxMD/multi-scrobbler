@@ -274,7 +274,7 @@ export default class ScrobbleSources {
         }
 
         for (const sourceType of sourceTypes) {
-            let defaultConfigureAs: ConfigureAsSource = 'source';
+            const defaultConfigureAs: ConfigureAsSource = 'source';
             // env builder for single user mode
             switch (sourceType) {
                 case 'spotify': {
@@ -989,31 +989,37 @@ export default class ScrobbleSources {
         this.logger.debug({labels: [`${type} - ${name}`]},`Constructing Source from ${source}...`);
         let newSource: AbstractSource;
         switch (type) {
-            case 'spotify':
+            case 'spotify': {
                 const SpotifySource = (await import('./SpotifySource.ts')).default;
                 newSource = new SpotifySource(name, compositeConfig as SpotifySourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'plex':
+            }
+            case 'plex': {
                 const PlexApiSource = (await import('./PlexApiSource.ts')).default;
                 newSource = await new PlexApiSource(name, compositeConfig as PlexApiSourceConfig, this.internalConfig, this.emitter); 
                 break;
-            case 'subsonic':
+            }
+            case 'subsonic': {
                 const {SubsonicSource} = (await import('./SubsonicSource.ts'));
                 newSource = new SubsonicSource(name, compositeConfig as SubSonicSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'jellyfin':
+            }
+            case 'jellyfin': {
                 const JellyfinApiSource = (await import('./JellyfinApiSource.ts')).default;
                 newSource = await new JellyfinApiSource(name, compositeConfig as JellyApiSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'lastfm':
+            }
+            case 'lastfm': {
                 const LastfmSource = (await import('./LastfmSource.ts')).default;
                 newSource = await new LastfmSource(name, compositeConfig as LastfmSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'librefm':
+            }
+            case 'librefm': {
                 const LibrefmSource = (await import('./LibrefmSource.ts')).default;
                 newSource = await new LibrefmSource(name, compositeConfig as LibrefmSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'deezer':
+            }
+            case 'deezer': {
                 const deezerConfig = compositeConfig as DeezerCompatConfig;
                 if('arl' in deezerConfig.data && deezerConfig.data.arl !== undefined) {
                     const DeezerInternalSource = (await import('./DeezerInternalSource.ts')).default;
@@ -1023,94 +1029,117 @@ export default class ScrobbleSources {
                     newSource = await new DeezerSource(name, compositeConfig as DeezerSourceConfig, this.internalConfig, this.emitter);
                 }
                 break;
-            case 'ytmusic':
+            }
+            case 'ytmusic': {
                 const YTMusicSource = (await import('./YTMusicSource.ts')).default;
                 newSource = await new YTMusicSource(name, compositeConfig as YTMusicSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'ymbridge':
+            }
+            case 'ymbridge': {
                 const YandexMusicBridgeSource = (await import('./YandexMusicBridgeSource.ts')).default;
                 newSource = await new YandexMusicBridgeSource(name, compositeConfig as YandexMusicBridgeSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'mpris':
+            }
+            case 'mpris': {
                 const {MPRISSource} = (await import('./MPRISSource.ts'));
                 newSource = await new MPRISSource(name, compositeConfig as MPRISSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'mopidy':
+            }
+            case 'mopidy': {
                 const {MopidySource} = (await import('./MopidySource.ts'));
                 newSource = await new MopidySource(name, compositeConfig as MopidySourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'listenbrainz':
+            }
+            case 'listenbrainz': {
                 const ListenbrainzSource = (await import('./ListenbrainzSource.ts')).default;
                 newSource = await new ListenbrainzSource(name, compositeConfig as ListenBrainzSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'endpointlz':
+            }
+            case 'endpointlz': {
                 const {EndpointListenbrainzSource} = (await import('./EndpointListenbrainzSource.ts'));
                 newSource = await new EndpointListenbrainzSource(name, compositeConfig as ListenbrainzEndpointSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'endpointlfm':
+            }
+            case 'endpointlfm': {
                 const {EndpointLastfmSource} = (await import('./EndpointLastfmSource.ts'));
                 newSource = await new EndpointLastfmSource(name, compositeConfig as LastFMEndpointSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'icecast':
+            }
+            case 'icecast': {
                 const {IcecastSource} = (await import('./IcecastSource.ts'));
                 newSource = await new IcecastSource(name, compositeConfig as IcecastSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'jriver':
+            }
+            case 'jriver': {
                 const {JRiverSource} = (await import('./JRiverSource.ts'));
                 newSource = await new JRiverSource(name, compositeConfig as JRiverSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'kodi':
+            }
+            case 'kodi': {
                 const {KodiSource} = (await import('./KodiSource.ts'));
                 newSource = await new KodiSource(name, compositeConfig as KodiSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'webscrobbler':
+            }
+            case 'webscrobbler': {
                 const {WebScrobblerSource} = (await import('./WebScrobblerSource.ts'));
                 newSource = await new WebScrobblerSource(name, compositeConfig as WebScrobblerSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'chromecast':
+            }
+            case 'chromecast': {
                 const {ChromecastSource} = (await import('./ChromecastSource.ts'));
                 newSource = await new ChromecastSource(name, compositeConfig as ChromecastSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'musikcube':
+            }
+            case 'musikcube': {
                 const {MusikcubeSource} = (await import('./MusikcubeSource.ts'));
                 newSource = await new MusikcubeSource(name, compositeConfig as MusikcubeSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'musiccast':
+            }
+            case 'musiccast': {
                 const {MusicCastSource} = (await import('./MusicCastSource.ts'));
                 newSource = await new MusicCastSource(name, compositeConfig as MusicCastSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'mpd':
+            }
+            case 'mpd': {
                 const {MPDSource} = (await import('./MPDSource.ts'));
                 newSource = await new MPDSource(name, compositeConfig as MPDSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'vlc':
+            }
+            case 'vlc': {
                 const {VLCSource} = (await import('./VLCSource.ts'));
                 newSource = await new VLCSource(name, compositeConfig as VLCSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'azuracast':
+            }
+            case 'azuracast': {
                 const {AzuracastSource} = (await import('./AzuracastSource.ts'));
                 newSource = await new AzuracastSource(name, compositeConfig as AzuracastSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'koito':
+            }
+            case 'koito': {
                 const KoitoSource = (await import('./KoitoSource.ts')).default;
                 newSource = await new KoitoSource(name, compositeConfig as KoitoSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'maloja':
+            }
+            case 'maloja': {
                 const MalojaSource = (await import('./MalojaSource.ts')).default;
                 newSource = await new MalojaSource(name, compositeConfig as MalojaSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'tealfm':
+            }
+            case 'tealfm': {
                 const TealfmSource = (await import('./TealfmSource.ts')).default;
                 newSource = await new TealfmSource(name, compositeConfig as TealSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'rocksky':
+            }
+            case 'rocksky': {
                 const RockskySource = (await import('./RockskySource.ts')).default;
                 newSource = await new RockskySource(name, compositeConfig as RockskySourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'sonos':
+            }
+            case 'sonos': {
                 const {SonosSource} = (await import('./SonosSource.ts'));
                 newSource = await new SonosSource(name, compositeConfig as SonosSourceConfig, this.internalConfig, this.emitter);
                 break;
+            }
             default:
                 break;
         }

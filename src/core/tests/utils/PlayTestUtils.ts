@@ -204,7 +204,7 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: PlayMeta = {}, opt
         const sessionTime = lf / sessions;
         let nextTime = play.data.playDate;
         switch(faker.number.int({min: 1, max: 2})) {
-            case 1:
+            case 1: {
                 // timestamps only
                 for(let i = 0; i < sessions; i++) {
                     const newTime = nextTime.add(sessionTime, 's');
@@ -212,7 +212,8 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: PlayMeta = {}, opt
                     nextTime = newTime;
                 }
                 break;
-            case 2:
+            }
+            case 2: {
                 // timestamps + position
                 let position = 0;
                 for(let i = 0; i < sessions; i++) {
@@ -223,6 +224,7 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: PlayMeta = {}, opt
                     position = nextPosition;
                 }
                 break;
+            }
         }
     }
 

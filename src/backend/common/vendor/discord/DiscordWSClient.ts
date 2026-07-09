@@ -589,7 +589,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
                     }
                     this.sendHeartbeat();
                     break;
-                case GatewayOpcodes.Dispatch:
+                case GatewayOpcodes.Dispatch: {
                     const { t } = message;
                     switch (t) {
                         case GatewayDispatchEvents.Ready:
@@ -613,6 +613,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
                             }
                     };
                     break;
+                }
                 case GatewayOpcodes.InvalidSession:
                     this.gatewayMsgLogger.verbose(`Invalid session opcode`);
                     this.handleInvalidSession(message.d as GatewayInvalidSessionData);

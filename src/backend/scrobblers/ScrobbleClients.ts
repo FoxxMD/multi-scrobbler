@@ -444,38 +444,46 @@ ${sources.join('\n')}`);
         let newClient;
         this.logger.debug({labels: [`${type} - ${name}`]}, `Constructing Client from ${source}`);
         switch (type) {
-            case 'maloja':
+            case 'maloja': {
                 const MalojaScrobbler = (await import('./MalojaScrobbler.ts')).default;
                 newClient = new MalojaScrobbler(name, ({...clientConfig, data: d, options: compositeOptions} as unknown as MalojaClientConfig), this.emitter, this.logger);
                 break;
-            case 'lastfm':
+            }
+            case 'lastfm': {
                 const LastfmScrobbler = (await import('./LastfmScrobbler.ts')).default;
                 newClient = new LastfmScrobbler(name, {...clientConfig, data: d, options: compositeOptions } as unknown as LastfmClientConfig, this.internalConfig, this.emitter, this.logger);
                 break;
-            case 'librefm':
+            }
+            case 'librefm': {
                 const LibrefmScrobbler = (await import('./LibrefmScrobbler.ts')).default;
                 newClient = new LibrefmScrobbler(name, {...clientConfig, data: d, options: compositeOptions } as unknown as LibrefmClientConfig, this.internalConfig, this.emitter, this.logger);
                 break;
-            case 'listenbrainz':
+            }
+            case 'listenbrainz': {
                 const ListenbrainzScrobbler = (await import('./ListenbrainzScrobbler.ts')).default;
                 newClient = new ListenbrainzScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...d}, options: compositeOptions } as unknown as ListenBrainzClientConfig, {}, this.emitter, this.logger);
                 break;
-            case 'koito':
+            }
+            case 'koito': {
                 const KoitoScrobbler = (await import('./KoitoScrobbler.ts')).default;
                 newClient = new KoitoScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...d}, options: compositeOptions } as unknown as KoitoClientConfig, {}, this.emitter, this.logger);
                 break;
-            case 'tealfm':
+            }
+            case 'tealfm': {
                 const TealScrobbler = (await import('./TealfmScrobbler.ts')).default;
                 newClient = new TealScrobbler(name, {...clientConfig, data: d, options: compositeOptions} as unknown as TealClientConfig, this.internalConfig, this.emitter, this.logger);
                 break;
-            case 'rocksky':
+            }
+            case 'rocksky': {
                 const RockskyScrobbler = (await import('./RockskyScrobbler.ts')).default;
                 newClient = new RockskyScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...d}, options: compositeOptions } as unknown as RockSkyClientConfig, this.internalConfig, this.emitter, this.logger);
                 break;
-            case 'discord':
+            }
+            case 'discord': {
                 const DiscordScrobbler = (await import('./DiscordScrobbler.ts')).default;
                 newClient = new DiscordScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...d}, options: compositeOptions } as unknown as DiscordClientConfig, {}, this.emitter, this.logger);
-                break;                
+                break;
+            }
             default:
                 break;
         }
