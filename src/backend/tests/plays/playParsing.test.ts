@@ -2,7 +2,7 @@ import chai, { assert, expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
 
-import { generateArtistsStr, } from "../../../core/PlayTestUtils.ts";
+import { generateArtistsStr, } from "../../../core/tests/utils/PlayTestUtils.ts";
 import { parseArtistCredits, parseCredits, parseTrackCredits, uniqueNormalizedStrArr } from "../../utils/StringUtils.ts";
 import testData from '../utils/playTestData.json' with { type: "json" };
 import { intersect } from "../../utils.ts";

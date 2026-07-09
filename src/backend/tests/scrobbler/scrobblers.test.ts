@@ -12,7 +12,7 @@ import { genGroupIdStr } from '../../../core/PlayUtils.ts';
 import mixedDuration from '../plays/mixedDuration.json' with { type: 'json' };
 import withDuration from '../plays/withDuration.json' with { type: 'json' };
 import { MockNetworkError, withRequestInterception } from "../utils/networking.ts";
-import { generatePlay, generatePlayPlatformId, generatePlays, generateSourcePlayerObj, normalizePlays } from "../../../core/PlayTestUtils.ts";
+import { generatePlay, generatePlayPlatformId, generatePlays, generateSourcePlayerObj, normalizePlays } from "../../../core/tests/utils/PlayTestUtils.ts";
 import MockDate from 'mockdate';
 
 import { NowPlayingScrobbler, TestAuthScrobbler, TestScrobbler } from "./TestScrobbler.ts";

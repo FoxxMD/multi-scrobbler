@@ -1,7 +1,7 @@
 import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
-import { generateLastfmTrackObject, generateMbid, generatePlay } from "../../../core/PlayTestUtils.ts";
+import { generateLastfmTrackObject, generateMbid, generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
 
 import LastfmApiClient, { playToClientPayload, formatPlayObj } from '../../common/vendor/LastfmApiClient.ts';
 import { MockNetworkError, withRequestInterception } from '../utils/networking.ts';

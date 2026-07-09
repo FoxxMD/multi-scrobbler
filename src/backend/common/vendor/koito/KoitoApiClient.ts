@@ -7,8 +7,8 @@ import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress 
 import request, { Request, Response } from 'superagent';
 import { UpstreamError } from "../../errors/UpstreamError.ts";
 import { playToListenPayload } from '../listenbrainz/lzUtils.ts';
-import { type SubmitPayload } from '../listenbrainz/interfaces.ts';
-import { type ListenType } from '../listenbrainz/interfaces.ts';
+import { type SubmitPayload } from '../../../../core/vendor/listenbrainz/interfaces.ts';
+import { type ListenType } from '../../../../core/vendor/listenbrainz/interfaces.ts';
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.ts";
 import { ScrobbleSubmitError } from "../../errors/MSErrors.ts";
 import { tryApiCall } from "../../../utils/RequestUtils.ts";

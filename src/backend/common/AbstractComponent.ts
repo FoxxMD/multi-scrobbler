@@ -14,7 +14,7 @@ import {
     type StageConfig,
     TRANSFORM_HOOK,
     type TransformHook
-} from "./infrastructure/Transform.ts";
+} from "../../core/Transform.ts";
 import AbstractInitializable from "./AbstractInitializable.ts";
 import TransformerManager from "./transforms/TransformerManager.ts";
 import { getRoot } from "../ioc.ts";

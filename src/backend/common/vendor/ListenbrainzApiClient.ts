@@ -20,7 +20,7 @@ import AbstractApiClient from "./AbstractApiClient.ts";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.ts';
 import { unique } from '../../utils.ts';
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
-import { type ListenPayload, type ListenResponse, type ListenType, type SubmitPayload } from './listenbrainz/interfaces.ts';
+import { type ListenPayload, type ListenResponse, type ListenType, type SubmitPayload } from '../../../core/vendor/listenbrainz/interfaces.ts';
 import { baseFormatPlayObj } from '../../utils/PlayTransformUtils.ts';
 import { ScrobbleSubmitError, SimpleError } from '../errors/MSErrors.ts';
 import pRetry from 'p-retry';

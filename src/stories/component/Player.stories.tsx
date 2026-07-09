@@ -11,7 +11,7 @@ import { SSEProvider } from "@flamefrontend/sse-runtime-react";
 import { sseProviderOptions } from "../../client/AppNext.js";
 import dayjs from "dayjs";
 import { asJsonPlayObject } from "../../core/PlayMarshalUtils.js";
-import { generatePlay } from "../../core/PlayTestUtils.js";
+import { generatePlay } from "../../core/tests/utils/PlayTestUtils.js";
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({

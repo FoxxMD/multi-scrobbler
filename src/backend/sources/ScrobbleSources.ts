@@ -46,7 +46,7 @@ import { type KoitoSourceConfig } from '../common/infrastructure/config/source/k
 import { type TealSourceConfig } from '../common/infrastructure/config/source/tealfm.ts';
 import { type RockskySourceConfig } from '../common/infrastructure/config/source/rocksky.ts';
 import { type CommonSourceOptions } from '../common/infrastructure/config/source/index.ts';
-import { type ExternalMetadataTerm, type PlayTransformHooks, type PlayTransformOptions } from '../common/infrastructure/Transform.ts';
+import { type ExternalMetadataTerm, type PlayTransformHooks, type PlayTransformOptions } from '../../core/Transform.ts';
 import { type LibrefmSourceConfig } from '../common/infrastructure/config/source/librefm.ts';
 import { type LastfmData } from '../common/infrastructure/config/client/lastfm.ts';
 import { type MalojaData } from '../common/infrastructure/config/client/maloja.ts';

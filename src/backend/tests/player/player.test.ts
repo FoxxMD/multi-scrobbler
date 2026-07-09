@@ -13,7 +13,7 @@ import {
 } from "../../common/infrastructure/Atomic.ts";
 import { GenericPlayerState } from "../../sources/PlayerState/GenericPlayerState.ts";
 import { playObjDataMatch } from "../../utils.ts";
-import { generatePlay } from "../../../core/PlayTestUtils.ts";
+import { generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
 import { PositionalPlayerState } from "../../sources/PlayerState/PositionalPlayerState.ts";
 import { ListenProgressPositional } from "../../sources/PlayerState/ListenProgress.ts";
 import { ListenRangePositional } from "../../sources/PlayerState/ListenRange.ts";

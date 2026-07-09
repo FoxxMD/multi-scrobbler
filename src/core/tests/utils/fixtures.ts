@@ -1,7 +1,7 @@
 import { Traverse } from 'neotraverse/modern';
 import { faker } from '@faker-js/faker';
 import { type AmbPlayObject, type DateLike, type LifecycleInput, type LifecycleStep, type ObjectPlayData, PLAY_STATES, type PlayMeta, type PlayObject, type PlayOriginal, type PlayState, type ScrobbleResult } from '../../Atomic.ts';
-import { generateBrainz, generateMbid, generatePlay, type GeneratePlayOpts, generatePlays } from '../../PlayTestUtils.ts';
+import { generateBrainz, generateMbid, generatePlay, type GeneratePlayOpts, generatePlays } from './PlayTestUtils.ts';
 import { statefulInvariantTransform } from '../../PlayUtils.ts';
 import clone from 'clone';
 import { diffObjects } from '../../DataUtils.ts';
@@ -10,7 +10,7 @@ import { UpstreamError } from '../../../backend/common/errors/UpstreamError.ts';
 import { playToListenPayload } from '../../../backend/common/vendor/listenbrainz/lzUtils.ts';
 import { mergeSimpleError, SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from '../../../backend/common/errors/MSErrors.ts';
 import dayjs, { type Dayjs } from 'dayjs';
-import { type TransformHook } from '../../../backend/common/infrastructure/Transform.ts';
+import { type TransformHook } from '../../Transform.ts';
 import { serializeError } from 'serialize-error';
 
 export interface ScrobbleMatchOptions {

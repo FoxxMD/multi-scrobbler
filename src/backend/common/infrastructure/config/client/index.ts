@@ -1,5 +1,5 @@
 import { type DurationValue } from "../../Atomic.ts";
-import { type PlayTransformConfig, type PlayTransformOptions } from "../../Transform.ts";
+import { type PlayTransformConfig, type PlayTransformOptions } from "../../../../../core/Transform.ts";
 import { type CommonConfig, type CommonData, type RequestRetryOptions } from "../common.ts";
 import { type RetentionConfig } from "../database.ts";
 

@@ -14,7 +14,7 @@ import {
     type StageTypedConfig,
     type WhenConditionsConfig,
     type WhenParts
-} from "../common/infrastructure/Transform.ts";
+} from "../../core/Transform.ts";
 import dayjs from "dayjs";
 
 export const isWhenCondition = (val: unknown): val is WhenParts<string> => {

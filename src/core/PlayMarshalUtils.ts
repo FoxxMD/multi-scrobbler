@@ -1,7 +1,6 @@
 import clone from 'clone';
 import dayjs from 'dayjs';
 import { Traverse, type TraverseContext } from 'neotraverse/modern';
-import { ListenRange } from '../backend/sources/PlayerState/ListenRange.ts';
 import { type AmbPlayObject, type DateLike, type JsonPlayObject, type PlayObject, REGEX_ISO8601_LOOSE, type Replace } from './Atomic.ts';
 import type { ElementOf, MarkOptional } from 'ts-essentials';
 import { type ErrorObject, serializeError } from 'serialize-error';
@@ -51,8 +50,6 @@ export const asJsonPlayObject = (play: AmbPlayObject<DateLike>): JsonPlayObject 
 
     if (dayjs.isDayjs(x)) {
       ctx.update(x.toISOString());
-    } else if (x instanceof ListenRange) {
-      ctx.update(x.toJSON(), true);
     }
   });
   return cloned as unknown as JsonPlayObject;

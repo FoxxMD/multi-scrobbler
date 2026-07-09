@@ -43,7 +43,7 @@ import {
 } from "../common/infrastructure/Atomic.ts";
 import { type ClientType } from '../common/infrastructure/config/client/clients.ts';
 import { type CommonClientConfig, type NowPlayingOptions, type UpstreamRefreshOptions } from "../common/infrastructure/config/client/index.ts";
-import { TRANSFORM_HOOK } from "../common/infrastructure/Transform.ts";
+import { TRANSFORM_HOOK } from "../../core/Transform.ts";
 import { Notifiers } from "../notifier/Notifiers.ts";
 import {
     comparingMultipleArtists,

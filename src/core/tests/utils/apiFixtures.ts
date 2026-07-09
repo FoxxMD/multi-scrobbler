@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { type ComponentClientApi, type ComponentClientApiJson, type ComponentCommonApi, type ComponentCommonApiJson, type ComponentSourceApi, type ComponentSourceApiJson, type ComponentState, type PlayApiCommon, type PlayApiCommonDetailed, type PlayInputApi, type QueueStateApi } from "../../Api.ts";
 import { CLIENT_INGRESS_QUEUE, type JsonPlayObject, type PlayObject, type PlayState, QUEUE_STATUSES, SOURCE_SOT, type SourcePlayerJson, sourceSotTypes } from "../../Atomic.ts";
-import { generatePlay, normalizePlays } from "../../PlayTestUtils.ts";
+import { generatePlay, normalizePlays } from "./PlayTestUtils.ts";
 import { generatePlayInput, generatePlayWithLifecycle, playWithLifecycleScrobble, randomPlayState } from "./fixtures.ts";
 import { asJsonPlayObject } from "../../PlayMarshalUtils.ts";
 import { generatePlayUid } from "../../StringUtils.ts";

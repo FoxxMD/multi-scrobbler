@@ -7,7 +7,7 @@ import { fn } from 'storybook/test';
 import { Container } from '@chakra-ui/react';
 import { ListContainerFetchable, ListContainerFilterable, ActivityList } from "../../client/components/playActivity/ActivityList.js";
 import {Provider} from "../../client/components/Provider.js";
-import { generateJsonPlays, generatePlay, normalizePlays } from "../../core/PlayTestUtils.js";
+import { generateJsonPlays, generatePlay, normalizePlays } from "../../core/tests/utils/PlayTestUtils.js";
 import { type ErrorLike, type JsonPlayObject, type PlayState, qsOptions } from "../../core/Atomic.js";
 import {playWithLifecycleScrobble, generatePlayWithLifecycle, randomPlayState} from '../../core/tests/utils/fixtures.js'
 import { generateArray } from "../../core/DataUtils.js";

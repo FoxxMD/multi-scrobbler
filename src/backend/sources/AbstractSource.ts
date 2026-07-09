@@ -20,7 +20,7 @@ import { type PlayPlatformId } from '../../core/Atomic.ts';
 import { type PlayUserId } from '../../core/Atomic.ts';
 import { type DeviceId } from '../../core/Atomic.ts';
 import { type SourceType, type SourceConfig } from '../common/infrastructure/config/source/sources.ts';
-import { TRANSFORM_HOOK } from "../common/infrastructure/Transform.ts";
+import { TRANSFORM_HOOK } from "../../core/Transform.ts";
 import TupleMap from "../common/TupleMap.ts";
 import {
     difference,

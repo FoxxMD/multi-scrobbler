@@ -20,7 +20,7 @@ import { type KoitoClientConfig, type KoitoData } from '../common/infrastructure
 import { type TealClientConfig, type TealData } from '../common/infrastructure/config/client/tealfm.ts';
 import { type RockSkyClientConfig, type RockSkyData } from '../common/infrastructure/config/client/rocksky.ts';
 import { type CommonClientOptions } from '../common/infrastructure/config/client/index.ts';
-import { type ExternalMetadataTerm, type PlayTransformHooks } from '../common/infrastructure/Transform.ts';
+import { type ExternalMetadataTerm, type PlayTransformHooks } from '../../core/Transform.ts';
 import { type LibrefmClientConfig, type LibrefmData } from '../common/infrastructure/config/client/librefm.ts';
 import clone from 'clone';
 import { type DiscordClientConfig, type DiscordData } from '../common/infrastructure/config/client/discord.ts';

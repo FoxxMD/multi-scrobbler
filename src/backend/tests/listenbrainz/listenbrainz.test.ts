@@ -8,7 +8,7 @@ import { UpstreamError } from "../../common/errors/UpstreamError.ts";
 
 import { ListenbrainzApiClient, listenResponseToPlay, listenPayloadToPlay } from "../../common/vendor/ListenbrainzApiClient.ts";
 import { playToListenPayload } from '../../common/vendor/listenbrainz/lzUtils.ts';
-import { type ListenPayload, type ListenResponse, type SubmitPayload } from '../../common/vendor/listenbrainz/interfaces.ts';
+import { type ListenPayload, type ListenResponse, type SubmitPayload } from '../../../core/vendor/listenbrainz/interfaces.ts';
 import { type ExpectedResults } from "../utils/interfaces.ts";
 import { withRequestInterception } from "../utils/networking.ts";
 import artistWithProperJoiner from './correctlyMapped/artistProperHasJoinerInName.json' with { type: "json" };
@@ -23,7 +23,7 @@ import slightlyDifferentNames from './correctlyMapped/trackNameSlightlyDifferent
 // incorrect mappings
 import incorrectMultiArtistsTrackName from './incorrectlyMapped/multiArtistsInTrackName.json' with { type: "json" };
 import veryWrong from './incorrectlyMapped/veryWrong.json' with { type: "json" };
-import { generatePlay } from "../../../core/PlayTestUtils.ts";
+import { generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
 import { artistCreditsToNames, artistNamesToCredits } from "../../../core/StringUtils.ts";
 
 interface LZTestFixture {

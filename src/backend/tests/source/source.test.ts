@@ -6,7 +6,7 @@ import { after, before, describe, it } from 'mocha';
 import pEvent from "p-event";
 import clone from 'clone';
 import { type PlayObject } from "../../../core/Atomic.ts";
-import { generatePlay, generatePlayerStateData, generatePlays, normalizePlays } from "../../../core/PlayTestUtils.ts";
+import { generatePlay, generatePlayerStateData, generatePlays, normalizePlays } from "../../../core/tests/utils/PlayTestUtils.ts";
 import { TestMemoryPositionalSource, TestMemorySource, TestSource } from "./TestSource.ts";
 import spotifyPayload from '../plays/spotifyCurrentPlaybackState.json' with { type: "json" };
 import SpotifySource from "../../sources/SpotifySource.ts";

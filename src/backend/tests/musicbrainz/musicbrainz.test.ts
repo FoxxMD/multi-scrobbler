@@ -12,7 +12,7 @@ import path from 'path';
 import { type MusicbrainzApiConfigData } from '../../common/infrastructure/Atomic.ts';
 import { MockNetworkError, withRequestInterception } from '../utils/networking.ts';
 import { http, HttpResponse, delay } from "msw";
-import { generatePlay, withBrainz } from '../../../core/PlayTestUtils.ts';
+import { generatePlay, withBrainz } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { intersect, missingMbidTypes } from '../../utils.ts';
 import { CoverArtApiClient, type CoverArtApiConfig } from '../../common/vendor/musicbrainz/CoverArtApiClient.ts';
 import { artistCreditToName, artistNamesToCredits, artistNameToCredit } from '../../../core/StringUtils.ts';

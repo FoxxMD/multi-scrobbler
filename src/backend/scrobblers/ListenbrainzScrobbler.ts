@@ -9,7 +9,7 @@ import { type FormatPlayObjectOptions, type TimeRangeListensFetcher } from "../c
 import { DEFAULT_MS_ITEMS_PER_GET_LZ, type ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz.ts";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.ts";
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
-import { type ListenPayload } from '../common/vendor/listenbrainz/interfaces.ts';
+import { type ListenPayload } from '../../core/vendor/listenbrainz/interfaces.ts';
 import { Notifiers } from "../notifier/Notifiers.ts";
 
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, playerInNPPlayingOnlyState } from "./AbstractScrobbleClient.ts";

@@ -3,7 +3,7 @@ import { isEmptyArrayOrUndefined } from "../../../utils.ts";
 import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
 import { getScrobbleTsSOCDate } from "../../../utils/TimeUtils.ts";
 import { type SubmitOptions } from "../ListenbrainzApiClient.ts";
-import { type ListenPayload, type MinimumTrack, type SubmitListenAdditionalTrackInfo, type SubmitPayload } from "./interfaces.ts";
+import { type ListenPayload, type MinimumTrack, type SubmitListenAdditionalTrackInfo, type SubmitPayload } from "../../../../core/vendor/listenbrainz/interfaces.ts";
 import {version as appVersion } from '../../../version.ts';
 import { artistCreditsToNames, artistCreditToName } from "../../../../core/StringUtils.ts";
 

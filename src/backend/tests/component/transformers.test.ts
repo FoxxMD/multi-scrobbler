@@ -4,10 +4,10 @@ import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
 import AbstractComponent, { type AbstractComponentConfig } from "../../common/AbstractComponent.ts";
 
-import { type ConditionalSearchAndReplaceRegExp, STAGE_TYPES, STAGE_TYPES_METADATA, STAGE_TYPES_USER, TRANSFORM_HOOK } from "../../common/infrastructure/Transform.ts";
+import { type ConditionalSearchAndReplaceRegExp, STAGE_TYPES, STAGE_TYPES_METADATA, STAGE_TYPES_USER, TRANSFORM_HOOK } from "../../../core/Transform.ts";
 
 import { isConditionalSearchAndReplace } from "../../utils/PlayTransformUtils.ts";
-import { generateArtistsStr, generatePlay } from "../../../core/PlayTestUtils.ts";
+import { generateArtistsStr, generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
 import { type WebhookPayload } from "../../common/infrastructure/config/health/webhooks.ts";
 import { findCauseByMessage } from "../../utils/ErrorUtils.ts";
 import NativeTransformer from "../../common/transforms/NativeTransformer.ts";

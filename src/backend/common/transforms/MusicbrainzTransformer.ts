@@ -1,7 +1,7 @@
 import { type ArtistCredit, asMBReleasePrimaryGroupType, asMBReleaseSecondaryGroupType, asMBReleaseStatus, DEFAULT_MISSING_TYPES, isMBReleasePrimaryGroupType, type LifecycleInput, type MBReleaseGroupPrimaryType, type MBReleaseGroupSecondaryType, type MBReleaseStatus, type MissingMbidType, type PlayObject, type TrackMeta, type TransformerCommon, type TransformOptions } from "../../../core/Atomic.ts";
 import { isWhenCondition, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
 import { type WebhookPayload } from "../infrastructure/config/health/webhooks.ts";
-import { type ExternalMetadataTerm, type PlayTransformMetadataStage } from "../infrastructure/Transform.ts";
+import { type ExternalMetadataTerm, type PlayTransformMetadataStage } from "../../../core/Transform.ts";
 import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
 import { type TransformerOptions } from "./AbstractTransformer.ts";
 import { ARTIST_WEIGHT, MUSICBRAINZ_URL, type MusicbrainzApiConfigData, TITLE_WEIGHT } from "../infrastructure/Atomic.ts";

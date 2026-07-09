@@ -7,7 +7,7 @@ import { LZEndpointNotifier } from "../sources/ingressNotifiers/LZEndpointNotifi
 import ScrobbleSources from "../sources/ScrobbleSources.ts";
 import { nonEmptyBody } from "./middleware.ts";
 import { isDebugMode } from "../utils.ts";
-import { type PlayingNowPayload } from '../common/vendor/listenbrainz/interfaces.ts';
+import { type PlayingNowPayload } from '../../core/vendor/listenbrainz/interfaces.ts';
 import ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
 import { stringToDeterministicNumber } from '../utils/StringUtils.ts';

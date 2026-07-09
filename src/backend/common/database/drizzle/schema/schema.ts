@@ -4,7 +4,7 @@ import dayjs, { type Dayjs } from "dayjs";
 import { nanoid } from "nanoid";
 import { type ErrorLike, type PlayObject } from "../../../../../core/Atomic.ts";
 import { asPlayCheap } from "../../../../../core/PlayMarshalUtils.ts";
-import { type ExternalMetadataTerm, type PlayTransformPartsConfig, type SearchAndReplaceTerm } from "../../../infrastructure/Transform.ts";
+import { type ExternalMetadataTerm, type PlayTransformPartsConfig, type SearchAndReplaceTerm } from "../../../../../core/Transform.ts";
 import { type JobRangeCount, type JobRangeTime } from "../../../infrastructure/Job.ts";
 import { serializeError, deserializeError } from "serialize-error";
 import { generatePlayUid } from "../../../../../core/StringUtils.ts";

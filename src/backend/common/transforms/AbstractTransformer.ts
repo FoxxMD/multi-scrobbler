@@ -2,7 +2,7 @@ import { childLogger, type Logger } from "@foxxmd/logging";
 import { type PlayObject, type TransformerCommon, type TransformerCommonConfig } from "../../../core/Atomic.ts";
 import { isStageTyped, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
 import AbstractInitializable from "../AbstractInitializable.ts";
-import { type StageConfig } from "../infrastructure/Transform.ts";
+import { type StageConfig } from "../../../core/Transform.ts";
 import { cacheFunctions,  parseToRegexOrLiteralSearch, testMaybeRegex, searchAndReplace} from "@foxxmd/regex-buddy-core";
 import { Cacheable } from "cacheable";
 import { hashObject } from "../../utils/StringUtils.ts";

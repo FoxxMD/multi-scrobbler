@@ -5,7 +5,7 @@ import { describe, it } from 'mocha';
 import { type PlayMeta } from "../../../core/Atomic.ts";
 
 import validSessionResponse from './validSession.json' with { type: "json" };
-import { generatePlay } from "../../../core/PlayTestUtils.ts";
+import { generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
 import { type PlayerStateDataMaybePlay } from "../../common/infrastructure/Atomic.ts";
 import { type PlexApiData } from "../../common/infrastructure/config/source/plex.ts";
 import PlexApiSource from "../../sources/PlexApiSource.ts";

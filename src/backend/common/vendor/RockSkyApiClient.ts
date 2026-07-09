@@ -8,7 +8,7 @@ import { type RockSkyClientData, type RockSkyData, type RockSkyOptions } from ".
 import AbstractApiClient from "./AbstractApiClient.ts";
 import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.ts';
 import { unique } from '../../utils.ts';
-import { type ListenPayload, type ListenResponse, type ListenType, type SubmitPayload } from './listenbrainz/interfaces.ts';
+import { type ListenPayload, type ListenResponse, type ListenType, type SubmitPayload } from '../../../core/vendor/listenbrainz/interfaces.ts';
 import { playToListenPayload } from './listenbrainz/lzUtils.ts';
 import { type RockskyScrobble } from './rocksky/interfaces.ts';
 import { type Handle } from "@atcute/lexicons";

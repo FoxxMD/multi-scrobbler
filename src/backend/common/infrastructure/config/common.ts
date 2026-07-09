@@ -1,5 +1,3 @@
-import { type keyOmit } from "../Atomic.ts";
-
 export interface CommonConfigPrimitives {
     name?: string
     id?: string

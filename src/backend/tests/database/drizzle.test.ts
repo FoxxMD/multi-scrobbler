@@ -4,7 +4,7 @@ import { getDb, migrateDb, getDbMigrationStatus, getMigratedDb, type DbConcrete 
 import withLocalTmpDir from 'with-local-tmp-dir';
 import { components, playInputs, plays, queueStates } from '../../common/database/drizzle/schema/schema.ts';
 import dayjs from 'dayjs';
-import { generatePlay } from '../../../core/PlayTestUtils.ts';
+import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { getDbPath } from '../../common/database/Database.ts';
 import { x } from 'tinyexec';
 import * as path from 'path';

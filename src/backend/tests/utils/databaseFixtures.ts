@@ -1,4 +1,4 @@
-import { generatePlay } from "../../../core/PlayTestUtils.ts";
+import { generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
 import { generateRandomObj } from "../../../core/tests/utils/fixtures.ts";
 import { generateComponentEntity, generateInputEntity, generatePlayEntity } from "../../common/database/drizzle/entityUtils.ts";
 import { type PlayNew } from "../../common/database/drizzle/drizzleTypes.ts";

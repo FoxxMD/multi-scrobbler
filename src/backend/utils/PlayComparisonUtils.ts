@@ -7,7 +7,7 @@ import { compareNormalizedStrings, compareScrobbleArtists, compareScrobbleTracks
 import { ARTIST_WEIGHT, DUP_SCORE_THRESHOLD, type ScrobbledPlayObject, TIME_WEIGHT, TITLE_WEIGHT } from "../common/infrastructure/Atomic.ts";
 import { type StringSamenessResult } from "@foxxmd/string-sameness";
 import { type Duration } from "dayjs/plugin/duration.js";
-import { type PlayTransformRules, TRANSFORM_HOOK, type TransformHook } from "../common/infrastructure/Transform.ts";
+import { type PlayTransformRules, TRANSFORM_HOOK, type TransformHook } from "../../core/Transform.ts";
 import { type Logger } from "@foxxmd/logging";
 import { loggerNoop } from '../common/MaybeLogger.ts';
 import { statefulInvariantTransform } from "../../core/PlayUtils.ts";

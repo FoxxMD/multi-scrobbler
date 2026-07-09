@@ -1,7 +1,7 @@
 import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
-import { generateArtistCredits, generatePlay, generateTealPlayRecord, withBrainz } from "../../../core/PlayTestUtils.ts";
+import { generateArtistCredits, generatePlay, generateTealPlayRecord, withBrainz } from "../../../core/tests/utils/PlayTestUtils.ts";
 import { listRecordToPlay } from "../../common/vendor/teal/TealApiClient.ts";
 import { playToRecord } from "../../common/vendor/teal/TealApiClient.ts";
 import dayjs from 'dayjs';

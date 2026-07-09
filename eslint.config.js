@@ -111,7 +111,7 @@ export default defineConfig([
         'boundaries/elements': [
             { type: 'frontend', mode: 'file', pattern: 'src/client/**/*' },
             { type: 'config', mode: 'file', pattern: 'config/*.example' },
-            { type: 'core', mode: 'file', pattern: 'src/core/**/*' },
+            { type: 'core', mode: 'file', pattern: ['src/core/!(tests)/**','src/core/!(tests)'] },
             { type: 'backend', mode: 'file', pattern: 'src/backend/**/*' },
         ],
         // So it understands TS path aliases when resolving imports

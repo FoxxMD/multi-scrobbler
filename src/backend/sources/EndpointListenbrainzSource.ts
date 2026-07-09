@@ -13,8 +13,8 @@ import {
 import { type PlayPlatformId } from '../../core/Atomic.ts';
 import { type ListenbrainzEndpointSourceConfig } from "../common/infrastructure/config/source/endpointlz.ts";
 import { ListenbrainzApiClient, listenPayloadToPlay } from "../common/vendor/ListenbrainzApiClient.ts";
-import { type SubmitPayload } from '../common/vendor/listenbrainz/interfaces.ts';
-import { type ListenPayload } from '../common/vendor/listenbrainz/interfaces.ts';
+import { type SubmitPayload } from '../../core/vendor/listenbrainz/interfaces.ts';
+import { type ListenPayload } from '../../core/vendor/listenbrainz/interfaces.ts';
 import MemorySource from "./MemorySource.ts";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.ts";
 import { type Logger } from "@foxxmd/logging";

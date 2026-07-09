@@ -6,7 +6,7 @@ import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import { type FormatPlayObjectOptions, type InternalConfigOptional } from "../common/infrastructure/Atomic.ts";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.ts";
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
-import { type ListenPayload } from '../common/vendor/listenbrainz/interfaces.ts';
+import { type ListenPayload } from '../../core/vendor/listenbrainz/interfaces.ts';
 import { Notifiers } from "../notifier/Notifiers.ts";
 
 import { isDebugMode } from "../utils.ts";
