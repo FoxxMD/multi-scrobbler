@@ -17,7 +17,28 @@ import mochaPlugin from 'eslint-plugin-mocha';
 const defaultRules = {
     'no-useless-catch': 'off',
     '@typescript-eslint/no-unused-vars': 'warn',
-    'no-unused-vars': 'warn',
+    'no-unused-vars': [
+        'warn',
+        {
+            args: 'none',
+            caughtErrors: 'none',
+            destructuredArrayIgnorePattern: "^_",
+            "argsIgnorePattern": "^_",
+            ignoreRestSiblings: true,
+            ignoreUsingDeclarations: true
+        }
+    ],
+    "@typescript-eslint/no-unused-vars": [
+      "warn",
+      {
+        args: 'none',
+        caughtErrors: 'none',
+        destructuredArrayIgnorePattern: "^_",
+        "argsIgnorePattern": "^_",
+        ignoreRestSiblings: true,
+        ignoreUsingDeclarations: true
+      }
+    ],
     "prefer-arrow-functions/prefer-arrow-functions": [
         "warn",
         {
