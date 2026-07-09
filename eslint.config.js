@@ -86,5 +86,12 @@ export default defineConfig([
                 "@typescript-eslint/no-unused-expressions": 'off',
                 'mocha/max-top-level-suites': 'off'
         },
+    },
+    {
+        // https://typescript-eslint.io/troubleshooting/faqs/eslint#i-get-errors-from-the-no-undef-rule-about-global-variables-not-being-defined-even-though-there-are-no-typescript-errors
+        files: ['**/*.{ts,tsx,mts,cts}'],
+        rules: {
+        'no-undef': 'off',
+        }
     }
 ]);
