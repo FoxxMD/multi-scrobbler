@@ -31,12 +31,12 @@ import { readJson } from '../utils/DataUtils.js';
 import { findCauseByFunc } from "../utils/ErrorUtils.js";
 import { joinedUrl } from "../utils/NetworkUtils.js";
 import { type RecentlyPlayedOptions } from "./AbstractSource.js";
-import AlbumObjectSimplified = SpotifyApi.AlbumObjectSimplified;
-import ArtistObjectSimplified = SpotifyApi.ArtistObjectSimplified;
-import CurrentlyPlayingObject = SpotifyApi.CurrentlyPlayingObject;
-import PlayHistoryObject = SpotifyApi.PlayHistoryObject;
-import TrackObjectFull = SpotifyApi.TrackObjectFull;
-import UserDevice = SpotifyApi.UserDevice;
+// import SpotifyApi.AlbumObjectSimplified = SpotifyApi.SpotifyApi.AlbumObjectSimplified;
+// import SpotifyApi.ArtistObjectSimplified = SpotifyApi.SpotifyApi.ArtistObjectSimplified;
+// import SpotifyApi.CurrentlyPlayingObject = SpotifyApi.SpotifyApi.CurrentlyPlayingObject;
+// import SpotifyApi.PlayHistoryObject = SpotifyApi.SpotifyApi.PlayHistoryObject;
+// import SpotifyApi.TrackObjectFull = SpotifyApi.SpotifyApi.TrackObjectFull;
+// import SpotifyApi.UserDevice = SpotifyApi.SpotifyApi.UserDevice;
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.js";
@@ -81,14 +81,14 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
         this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this, this.logger);
     }
 
-    static formatPlayObj(obj: PlayHistoryObject | CurrentlyPlayingObject, options: FormatPlayObjectOptions = {}): PlayObject {
+    static formatPlayObj(obj: SpotifyApi.PlayHistoryObject | SpotifyApi.CurrentlyPlayingObject, options: FormatPlayObjectOptions = {}): PlayObject {
 
         const {
             newFromSource = false
         } = options;
 
-        let artists: ArtistObjectSimplified[];
-        let album: AlbumObjectSimplified;
+        let artists: SpotifyApi.ArtistObjectSimplified[];
+        let album: SpotifyApi.AlbumObjectSimplified;
         let name: string;
         let duration_ms: number;
         let played_at: Dayjs;
@@ -165,11 +165,11 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
                     isrc
                 } = {},
                 track_number
-            } = item as TrackObjectFull;
+            } = item as SpotifyApi.TrackObjectFull;
 
-            delete (obj.item as TrackObjectFull).available_markets;
-            if((obj.item as TrackObjectFull).album !== undefined) {
-              delete (obj.item as TrackObjectFull).album.available_markets;  
+            delete (obj.item as SpotifyApi.TrackObjectFull).available_markets;
+            if((obj.item as SpotifyApi.TrackObjectFull).album !== undefined) {
+              delete (obj.item as SpotifyApi.TrackObjectFull).album.available_markets;  
             }
 
             scrobbleTsSOC = SCROBBLE_TS_SOC_START;
@@ -196,7 +196,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             images = []
         } = album || {};
 
-        let actualAlbumArtists: ArtistObjectSimplified[] = [];
+        let actualAlbumArtists: SpotifyApi.ArtistObjectSimplified[] = [];
         if ((artists.length !== albumArtists.length) || !artists.every(artist => albumArtists.some(albumArtist => artist.id === albumArtist.id))) {
             // only include album artists if they are not the EXACT same as the track artists
             // ...if they aren't the exact same then include all artists, even if they are duplicates of track artists
@@ -438,7 +438,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             const result = await this.callApi<ReturnType<typeof this.spotifyApi.getMyRecentlyPlayedTracks>>((api: SpotifyWebApi) => api.getMyRecentlyPlayedTracks(options));
 
             let more = true;
-            let plays = result.body.items.map((x: PlayHistoryObject) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate);
+            let plays = result.body.items.map((x: SpotifyApi.PlayHistoryObject) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate);
 
             if(to !== undefined) {
                 const toDate = dayjs.unix(to);
@@ -455,7 +455,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             }
 
             return {
-                data: result.body.items.map((x: PlayHistoryObject) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate),
+                data: result.body.items.map((x: SpotifyApi.PlayHistoryObject) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate),
                 meta: {
                     ...params,
                     total: result.body.total,
@@ -493,7 +493,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
         return undefined;
     }
 
-    getCurrentPlaybackState = async (logError = true): Promise<{device?: UserDevice, playerState?: PlayerStateData}> => {
+    getCurrentPlaybackState = async (logError = true): Promise<{device?: SpotifyApi.UserDevice, playerState?: PlayerStateData}> => {
         try {
             const funcState = (api: SpotifyWebApi) => api.getMyCurrentPlaybackState();
             const res = await this.callApi<ReturnType<typeof this.spotifyApi.getMyCurrentPlaybackState>>(funcState);
@@ -634,9 +634,9 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
     protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) => await this.getPlayHistory({formatted: true, ...options})
 }
 
-const asPlayHistoryObject = (obj: object): obj is PlayHistoryObject => 'played_at' in obj
+const asPlayHistoryObject = (obj: object): obj is SpotifyApi.PlayHistoryObject => 'played_at' in obj
 
-const asCurrentlyPlayingObject = (obj: object): obj is CurrentlyPlayingObject => 'is_playing' in obj
+const asCurrentlyPlayingObject = (obj: object): obj is SpotifyApi.CurrentlyPlayingObject => 'is_playing' in obj
 
 const hasApiPermissionError = (e: Error): boolean => findCauseByFunc(e, (err) => err.message.includes('Permissions missing')) !== undefined
 
