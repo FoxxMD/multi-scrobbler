@@ -56,7 +56,7 @@ export const hydratePlaySelect = <T extends PlaySelect | PlayHistoricalSelect>(s
         return select.play;
     }
 
-    let res = select.play;
+    const res = select.play;
     // if(opts.includes('asPlay')) {
     //     res = asPlay(res);
     // }

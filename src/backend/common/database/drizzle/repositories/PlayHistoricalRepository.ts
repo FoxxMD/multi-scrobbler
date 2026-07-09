@@ -225,7 +225,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
         } else {
             endRange = play.data.playDate.add(dateGranularity, 's');
         }
-        let where: FindWhere<'playsHistorical'> = {
+        const where: FindWhere<'playsHistorical'> = {
             componentId,
             playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play)),
         };
@@ -266,9 +266,9 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
             bufferTime
         } = opts;
 
-        let query: FindMany<'playsHistorical'> = {};
+        const query: FindMany<'playsHistorical'> = {};
 
-        let where: FindWhere<'playsHistorical'> = {
+        const where: FindWhere<'playsHistorical'> = {
             componentId,
             playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play, {bufferTime})),
         };
@@ -291,7 +291,7 @@ export const buildPlayHistoricalWhere = (args: PlayWhereOpts): WhereClause<'play
     // old way
     // let where: Parameters<(ReturnType<typeof getDb>)['query']['plays']['findMany']>[0]['where'] = {
     // };
-    let where: FindWhere<'playsHistorical'> = {
+    const where: FindWhere<'playsHistorical'> = {
         componentId: args.componentId
     };
     if (args.seenAt !== undefined) {

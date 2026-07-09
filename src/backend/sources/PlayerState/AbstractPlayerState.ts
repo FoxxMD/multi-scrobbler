@@ -351,7 +351,7 @@ export abstract class AbstractPlayerState {
 
         const hints: string[] = [];
 
-        let repeatHint = `New Position (${position})`;
+        const repeatHint = `New Position (${position})`;
         const trackDur = this.currentPlay.data.duration;
 
         // new position is close to start of Play

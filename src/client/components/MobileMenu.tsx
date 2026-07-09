@@ -14,7 +14,7 @@ const MobileMenuButton = MenuButton;
 export const MobileSidebarNav = (props: { hideFrom?: BreakpointName | false } = {}) => {
     const [isOpen, setIsOpen] = useState(false);
 
-    let location = useLocation();
+    const location = useLocation();
 
     const closeMenu = () => setIsOpen(false)
 

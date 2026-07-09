@@ -225,7 +225,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         } = this.transformRules;
 
         if (preCompare.length > 0) {
-            let pcInits: number[] = [0],
+            const pcInits: number[] = [0],
                 pcMaxStagger: number[] = [0];
             for (const hook of this.transformRules.preCompare) {
                 const t = this.transformManager.getTransformerByStage({ type: hook.type, name: hook.name });
@@ -236,7 +236,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         }
 
         if (postCompare.length > 0) {
-            let postInits: number[] = [0],
+            const postInits: number[] = [0],
                 postMaxStagger: number[] = [0];
             for (const hook of this.transformRules.postCompare) {
                 const t = this.transformManager.getTransformerByStage({ type: hook.type, name: hook.name });
@@ -676,7 +676,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.lastActivityAt = dayjs();
         let checkCount = 0;
         let checksOverThreshold = 0;
-        let checkActiveFor = 120;
+        const checkActiveFor = 120;
         let maxInterval = DEFAULT_POLLING_MAX_INTERVAL;
 
         if('maxInterval' in this.config.data) {
@@ -835,8 +835,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
             with: withQuery = ['input','parent-input','queues'],
             ...rest
         } = args;
-        let parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
-        let parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
+        const parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
+        const parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
         return this.playRepo.findPlaysPaginated({limit: parsedLimit, offset: parsedOffset, with: withQuery, ...rest});
     }
 

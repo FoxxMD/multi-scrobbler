@@ -13,7 +13,7 @@ export const playStateToActivityData = (data: SourcePlayerObj, opts: { useArt?: 
     let startTime: number,
         endTime: number;
 
-    let play: PlayObject = data.play;
+    const play: PlayObject = data.play;
 
     const position = data.position ?? data.play.meta?.trackProgressPosition;
     if(position !== undefined && play.data.duration !== undefined) {
@@ -29,7 +29,7 @@ export const playStateToActivityData = (data: SourcePlayerObj, opts: { useArt?: 
         endTime = dayjs().add(play.data.duration - realPosition, 's').unix() * 1000;
     }
 
-    let activityName = capitalize(play.meta?.musicService ?? play.meta?.mediaPlayerName ?? play.meta?.source ?? 'music')
+    const activityName = capitalize(play.meta?.musicService ?? play.meta?.mediaPlayerName ?? play.meta?.source ?? 'music')
 
     // discord requires all fields to be at least 2 characters long or else it returns this error
     //

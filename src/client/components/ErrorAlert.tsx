@@ -30,7 +30,7 @@ const ErrorBlock = (props: {data: ErrorData, cause?: boolean, messageProps?: Com
     }
     const errorIdentifier = `${data.name ?? ''}${data.code !== undefined ? ` (${data.code}) ` : ''}`;
     const errorElm = errorIdentifier === '' ? null : <Code variant="surface" mx="1">{errorIdentifier}</Code>
-    let messageElm: React.JSX.Element = (
+    const messageElm: React.JSX.Element = (
         <HStack {...containerProps}>
         {cause ? <FatArrowRight/> : null}
         <Text {...textProps}>{cause ? <Span fontWeight="semibold">Caused By: </Span> : ''}{errorElm}{data.message}</Text>

@@ -26,7 +26,7 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
             let plays: PlayObject[] = [];
             requestCount = 0;
             let more = true;
-            let currOpts = { ...opts };
+            const currOpts = { ...opts };
             let initial = true;
             while (more) {
                 requestCount++;
@@ -110,7 +110,7 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
             let plays: PlayObject[] = [];
             requestCount = 0;
             let more = true;
-            let currOpts: PaginatedListensTimeRangeOptions = opts;
+            const currOpts: PaginatedListensTimeRangeOptions = opts;
             let initial = true;
             let timeRangeHint: string;
             if(currOpts.to !== undefined && currOpts.from !== undefined) {

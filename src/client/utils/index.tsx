@@ -54,7 +54,7 @@ export const isoToHuman = (iso?: string | null, opts?: DateFormatOptions) => {
         return 'N/A';
     }
 
-    let parts = [];
+    const parts = [];
 
     const date = dayjs(iso);
     let useDate = includeDate;

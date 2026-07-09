@@ -292,7 +292,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             dateComparer = 'updatedAt'
         } = opts;
 
-        let where: FindWhere<'plays'> = {
+        const where: FindWhere<'plays'> = {
             component: {
                 id: componentId
             },
@@ -342,8 +342,8 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
         const loggerDel = childLogger(this.logger, ['Retention', 'Delete']);
         const loggerCom = childLogger(this.logger, ['Retention', 'Compact']);
-        let summaryDelStates: string[] = [];
-        let summaryCompactStates: string[] = [];
+        const summaryDelStates: string[] = [];
+        const summaryCompactStates: string[] = [];
 
         loggerDel.debug('Starting cleanup...');
         for(const retentionType of retentionPlayTypes) {
@@ -378,7 +378,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         }
 
         const compactTypes = retentionOpts.compact;
-        let compactedFlags: CompactableProperty[] = [];
+        const compactedFlags: CompactableProperty[] = [];
         if(compactTypes.includes('input')) {
             compactedFlags.push('input');
         }
@@ -584,7 +584,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             componentId = this.componentId,
             hydrate
         } = opts;
-        let where: FindWhere<'plays'> = {
+        const where: FindWhere<'plays'> = {
             componentId
         }
         if(retries !== undefined) {
@@ -634,7 +634,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         } else {
             endRange = play.data.playDate.add(dateGranularity, 's');
         }
-        let where: FindWhere<'plays'> = {
+        const where: FindWhere<'plays'> = {
             componentId,
             playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play)),
         };
@@ -692,9 +692,9 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             with: qWith
         } = opts;
 
-        let query: FindMany<'plays'> = {};
+        const query: FindMany<'plays'> = {};
 
-        let where: FindWhere<'plays'> = {
+        const where: FindWhere<'plays'> = {
             componentId,
             playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play, {bufferTime})),
         };
@@ -790,7 +790,7 @@ export const buildPlayWhere = (args: PlayWhereOpts): WhereClause<'plays'> => {
     // old way
     // let where: Parameters<(ReturnType<typeof getDb>)['query']['plays']['findMany']>[0]['where'] = {
     // };
-    let where: FindWhere<'plays'> = {
+    const where: FindWhere<'plays'> = {
         componentId: args.componentId
     };
     if (args.state !== undefined) {
@@ -826,7 +826,7 @@ export const buildPlayWhere = (args: PlayWhereOpts): WhereClause<'plays'> => {
         }
         // so that we can use this type
         // or else assigning an array to OR using only `typeof where.queueStates` causes a type error
-        let queueWhere: typeof where.queueStates.OR[0][] = [];
+        const queueWhere: typeof where.queueStates.OR[0][] = [];
         for(const q of queues) {
             queueWhere.push(
                 {
@@ -853,7 +853,7 @@ export const buildPlayWhere = (args: PlayWhereOpts): WhereClause<'plays'> => {
                 OR: []
             }
         ];
-        let textWhere: typeof where.RAW[] = [];
+        const textWhere: typeof where.RAW[] = [];
         for(const t of args.text) {
             textWhere.push((p) => sql`lower(json_extract(${p.play}, '$.data.track')) LIKE '%' || ${t.toLocaleLowerCase()} || '%'`)
             textWhere.push((p) => sql`lower(json_extract(${p.play}, '$.data.artists')) LIKE '%' || ${t.toLocaleLowerCase()} || '%'`)

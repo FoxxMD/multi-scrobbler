@@ -364,7 +364,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         } = this.transformRules;
 
         if(preCompare.length > 0) {
-            let pcInits: number[] = [0],
+            const pcInits: number[] = [0],
             pcMaxStagger: number[] = [];
             for(const hook of preCompare) {
                 const t = this.transformManager.getTransformerByStage({type: hook.type, name: hook.name});
@@ -375,7 +375,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
 
         if(existing.length > 0) {
-            let eInits: number[] = [0],
+            const eInits: number[] = [0],
             eMaxStagger: number[] = [];
             for(const hook of existing) {
                 const t = this.transformManager.getTransformerByStage({type: hook.type, name: hook.name});
@@ -1449,7 +1449,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
         //this.deadLetterScrobbles.splice(index, 1);
         this.deadLetterGauge.labels(this.getPrometheusLabels()).dec();
-        let queueUpdate: Partial<QueueStateNew> = {
+        const queueUpdate: Partial<QueueStateNew> = {
             updatedAt: dayjs(),
             queueStatus: 'completed'
         }
@@ -1807,8 +1807,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             with: withQuery = ['input','parent-input','queues'],
             ...rest
         } = args;
-        let parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
-        let parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
+        const parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
+        const parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
         return this.playRepo.findPlaysPaginated({limit: parsedLimit, offset: parsedOffset, with: withQuery, ...rest});
     }
 

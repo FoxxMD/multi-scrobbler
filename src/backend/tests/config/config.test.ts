@@ -57,7 +57,7 @@ describe('Sample Configs', function () {
                 it(`Sample ${componentType}.json parses and validates`, async function () {
                     this.timeout(5000);
 
-                    let emitter = new EventEmitter();
+                    const emitter = new EventEmitter();
                     await copyFile(samplePath(componentType), `${componentType}.json`);
                     const sources = new ScrobbleSources(emitter, {
                         localUrl: new URL('http://example.com'),
@@ -89,7 +89,7 @@ describe('Sample Configs', function () {
                 it(`Sample ${componentType}.json parses and validates`, async function () {
                     this.timeout(5000);
 
-                    let emitter = new EventEmitter();
+                    const emitter = new EventEmitter();
                     await copyFile(samplePath(componentType), `${componentType}.json`);
                     const clients = new ScrobbleClients(emitter, new EventEmitter, {
                         localUrl: new URL('http://example.com'),

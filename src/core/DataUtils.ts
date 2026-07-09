@@ -129,8 +129,8 @@ export const asErrorSerializedObject = <T, U>(obj: T): U => {
  * @see https://stackoverflow.com/a/20798567/1469797
  */
 export const getAllIndexes = <T>(arr: T[], truthyFunc: (val: T) => boolean) => {
-    var indexes = [], i: number;
-    for(i = 0; i < arr.length; i++)
+    const indexes = [];
+    for(let i = 0; i < arr.length; i++)
         if (truthyFunc(arr[i]))
             indexes.push(i);
     return indexes;

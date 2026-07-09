@@ -186,7 +186,7 @@ export class InvalidRegexError extends SimpleError {
         const msgParts = [
             message ?? 'Regex(es) did not match the value given.',
         ];
-        let regArr = Array.isArray(regex) ? regex : [regex];
+        const regArr = Array.isArray(regex) ? regex : [regex];
         for(const r of regArr) {
             msgParts.push(`Regex: ${r}`)
         }

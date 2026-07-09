@@ -154,7 +154,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         this.librariesAllow = parseArrayFromMaybeString(librariesAllow, {lower: true});
         this.librariesBlock = parseArrayFromMaybeString(librariesBlock, {lower: true});
         this.allowedLibraryTypes = Array.from(new Set(['music', ...parseArrayFromMaybeString(additionalAllowedLibraryTypes, {lower: true})]));
-        let mt = parseArrayFromMaybeString(allowMediaTypes, {lower: true});
+        const mt = parseArrayFromMaybeString(allowMediaTypes, {lower: true});
         if(mt.length > 0) {
             this.allowedMediaTypes = [];
             for(const a of allowMediaTypes) {
@@ -517,7 +517,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
             const validPlay = this.isActivityValid(sessionData[0], sessionData[1]);
             if(validPlay === true) {
                 if(isDebugMode()) {
-                    let stateIdentifyingInfo: string = genGroupIdStr(getPlatformIdFromData(sessionData[0]));
+                    const stateIdentifyingInfo: string = genGroupIdStr(getPlatformIdFromData(sessionData[0]));
                     this.logger.trace(`${stateIdentifyingInfo} => Activity Date ${sessionData[1].LastActivityDate} | Playback Checkin: ${sessionData[1].LastPlaybackCheckIn} `)
                 }
                 validSessions.push(sessionData[0]);

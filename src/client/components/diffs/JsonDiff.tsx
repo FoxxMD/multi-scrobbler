@@ -63,7 +63,7 @@ const valToFileContents = (val: DiffableVal, fileContentOpts: Partial<FileConten
     const {
         name = 'Content'
     } = fileContentOpts;
-    let fileName: string = name;
+    const fileName: string = name;
     let lang: FileContents['lang'];
     if(typeof val === 'string') {
         strContent = val;

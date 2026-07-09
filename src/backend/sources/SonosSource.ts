@@ -206,7 +206,7 @@ export class SonosSource extends MemoryPositionalSource {
             const deviceId = Name === undefined ? NO_DEVICE : `${Name}-${GroupName ?? 'NoGroup'}`;
 
             try {
-                let status = CLIENT_PLAYER_STATE[x.state.transportState] ?? REPORTED_PLAYER_STATUSES.unknown;
+                const status = CLIENT_PLAYER_STATE[x.state.transportState] ?? REPORTED_PLAYER_STATUSES.unknown;
 
                 // TODO if status is stopped then drop state if player is also stopped?
 
@@ -230,7 +230,7 @@ export class SonosSource extends MemoryPositionalSource {
                     }
                 }
 
-                let play: PlayObject | undefined = status === REPORTED_PLAYER_STATUSES.stopped || posTrackURI === undefined ? undefined : formatPlayObj(x.state, { device: x.device });
+                const play: PlayObject | undefined = status === REPORTED_PLAYER_STATUSES.stopped || posTrackURI === undefined ? undefined : formatPlayObj(x.state, { device: x.device });
                 let playIsEmpty = false;
 
                 if (play !== undefined && (play.data?.track === undefined && play.data?.artists === undefined)) {

@@ -52,7 +52,7 @@ output = output.slice(0, 301);
 let logger: FoxLogger;
 
 let db: DbConcrete;
-let dbConnectionsClosed = false;
+const dbConnectionsClosed = false;
 
 process.on('uncaughtExceptionMonitor', (err, origin) => {
     const appError = new Error(`Uncaught exception is crashing the app! :( Type: ${origin}`, {cause: err});
@@ -219,7 +219,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             }
         }
 
-        let runRetentionNow = parseBool(process.env.RETENTION_IMMEDIATE, false);
+        const runRetentionNow = parseBool(process.env.RETENTION_IMMEDIATE, false);
 
         const retentionTask = createRetentionCleanupTask(scrobbleSources, scrobbleClients, logger);
         let retentionJobAdded = false;

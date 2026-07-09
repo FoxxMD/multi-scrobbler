@@ -586,7 +586,7 @@ export const existingScrobble = async (playObjPre: PlayObject, existingScrobbles
             closestScrobbleParts.push(`Closest Scrobble: ${buildTrackString(result.closestMatchedPlay, scoreTrackOpts)}`);
         }
         closestScrobbleParts.push(result.reason);
-        let summaryStart = `${capitalize(playObj.meta.source ?? 'Source')}: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobbleParts.join(' => ')}`;
+        const summaryStart = `${capitalize(playObj.meta.source ?? 'Source')}: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobbleParts.join(' => ')}`;
         const summary = `${summaryStart}${result.breakdowns.length > 0 ? `\n${result.breakdowns.join('\n')}` : ''}`
         result.summary = summary;
         if(log) {

@@ -216,7 +216,7 @@ export class MSCache {
 
     protected initCacheable = async (cacheFor: string, primaryConfig: CacheConfig, secondaryConfig?: CacheConfig) => {
 
-        let logger = childLogger(this.logger, cacheFor);
+        const logger = childLogger(this.logger, cacheFor);
         const providerHints = [];
         if(primaryConfig.provider === false) {
             const cache = new Cacheable({primary: noopKeyv});

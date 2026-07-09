@@ -345,7 +345,7 @@ export const closeToPlayStart = (play: PlayObject, position: number, thresholds:
         hintPrefix = true
     } = thresholds;
 
-        let hintStart = hintPrefix ? `Position (${position}) ` : '';
+        const hintStart = hintPrefix ? `Position (${position}) ` : '';
         const trackDur = play.data.duration;
         const closeStartNum = position <= absolute;
         const hints: string[] = [];
@@ -371,7 +371,7 @@ export const closeToPlayEnd = (play: PlayObject, position: number, thresholds: {
         hintPrefix = true
     } = thresholds;
 
-        let hintStart = hintPrefix ? `Position (${position}) ` : '';
+        const hintStart = hintPrefix ? `Position (${position}) ` : '';
         const trackDur = play.data.duration;
 
         if(trackDur === undefined) {
@@ -397,7 +397,7 @@ export const repeatDurationPlayed = (play: PlayObject, duration: number, thresho
         hintPrefix = true
     } = thresholds;
 
-        let hintStart = hintPrefix ? `Duration listened (${duration}s) ` : '';
+        const hintStart = hintPrefix ? `Duration listened (${duration}s) ` : '';
         const trackDur = play.data.duration;
         const absPlayed = duration >= absolute;
         const hints: string[] = [];

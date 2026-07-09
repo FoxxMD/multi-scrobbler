@@ -99,9 +99,9 @@ export const noCasePropObj = <T extends object>(obj: T): LowercaseKeys<T> => {
 
     const newObj = new Proxy<LowercaseKeys<T>>({} as LowercaseKeys<T>, handler);
     // traverse the Original object converting string keys to upper case
-    for (var key in obj) {
+    for (const key in obj) {
         if (typeof key == "string") {
-            var objKey = key.toUpperCase();
+            const objKey = key.toUpperCase();
             if (!(key in newObj))
                 newObj[objKey] = checkAtomic(obj[key]);
         }

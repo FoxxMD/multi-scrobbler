@@ -93,7 +93,7 @@ export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof 
     let primaryAction: React.JSX.Element | undefined;
     let menuElm: React.JSX.Element | undefined;
     let menuItems: React.JSX.Element[] = [];
-    let badgeProps: BadgeProps = {};
+    const badgeProps: BadgeProps = {};
     switch(props.data.state) {
         case COMPONENT_STATE.RUNNING:
             primaryAction = <PowerOffButton {...primaryActionProps}/>

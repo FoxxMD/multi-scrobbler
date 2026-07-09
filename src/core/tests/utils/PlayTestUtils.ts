@@ -147,7 +147,7 @@ export const normalizePlays = (plays: PlayObject[],
 }
 
 export const generatePlayerStateData = (options: Omit<PlayerStateDataMaybePlay, 'platformId'> & {playData?: ObjectPlayData, playMeta?: PlayMeta, platformId?: PlayPlatformId} = {}): PlayerStateDataMaybePlay => {
-    let play: PlayObject = options.play ?? generatePlay(options.playData, options.playMeta);
+    const play: PlayObject = options.play ?? generatePlay(options.playData, options.playMeta);
     if(options.position !== undefined) {
         play.meta.trackProgressPosition = options.position;
     }
@@ -516,14 +516,13 @@ export interface GenerateSourcePlayerObjOptions {
 }
 
 export const generateSourcePlayerObj = (opts: GenerateSourcePlayerObjOptions): SourcePlayerObj => {
-    let play: PlayObject;
     let platformId: string;
     if(opts.play !== undefined) {
         platformId = opts.play.meta.deviceId;
     } else {
         platformId = opts.playPlatform ?? genGroupIdStr(SINGLE_USER_PLATFORM_ID);
     }
-    play = opts.play ?? generatePlay(opts.playOpts, {deviceId:platformId});
+    const play: PlayObject = opts.play ?? generatePlay(opts.playOpts, {deviceId:platformId});
 
     const {
         status = {},

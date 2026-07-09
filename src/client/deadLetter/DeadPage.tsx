@@ -30,7 +30,7 @@ const dead = (props: PropsFromRedux) => {
         data = [],
     } = props;
 
-    let [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const {
         isLoading,
         isSuccess

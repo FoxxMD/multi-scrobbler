@@ -19,7 +19,7 @@ export interface LifeycleStepsTimelineProps extends MSCollapsibleExternalProps {
 
 export const diffElements = (original: JsonPlayObject, steps: LifecycleStep[]): [React.JSX.Element[], JsonPlayObject?] => {
 
-    let currentPlay: JsonPlayObject = structuredClone(original); // JSON.parse(JSON.stringify(original));
+    const currentPlay: JsonPlayObject = structuredClone(original); // JSON.parse(JSON.stringify(original));
     let patchFailed = false;
 
     const diffElements: React.JSX.Element[] | null = [];
@@ -45,7 +45,7 @@ export const diffElements = (original: JsonPlayObject, steps: LifecycleStep[]): 
             diffElements.push(<ChakraCodeBlockShort key={`diffblockfallback-${index}`} title="Diff Patch" code={patch} />);
             continue;
         }
-        let left: JsonPlayObject = structuredClone(currentPlay); // JSON.parse(JSON.stringify(currentPlay));
+        const left: JsonPlayObject = structuredClone(currentPlay); // JSON.parse(JSON.stringify(currentPlay));
         left.data.meta = {
             ...(left.data.meta ?? {}),
             brainz: {

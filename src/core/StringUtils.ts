@@ -143,7 +143,7 @@ export const buildPlayHumanDiffable = (play: PlayData, options?: {expandMeta?: b
         expandMeta = false
     } = options || {};
 
-    let meta: string[] = [];
+    const meta: string[] = [];
     if(play.meta !== undefined) {
         for(const [metaType,metaObject] of Object.entries(play.meta)) {
             for(const [metaKey, metaValue] of Object.entries(metaObject)) {

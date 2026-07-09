@@ -347,7 +347,7 @@ describe('Repository Operations', function () {
         }));
         const discovered = {
             ...fixtureCreatePlay(),
-            state: 'discovered' as 'discovered',
+            state: 'discovered' as const,
             input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
         };
         playData.push(discovered)
@@ -370,22 +370,22 @@ describe('Repository Operations', function () {
         const playData: RepositoryCreatePlayOpts[] = [
             {
                 ...fixtureCreatePlay({ play: generatePlay({ playDate: dayjs().subtract(2, 'm') }) }),
-                state: 'queued' as 'queued',
+                state: 'queued' as const,
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
             },
             {
                 ...fixtureCreatePlay({ play: generatePlay({ playDate: dayjs().subtract(6, 'm') }) }),
-                state: 'queued' as 'queued',
+                state: 'queued' as const,
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
             },
             {
                 ...fixtureCreatePlay({ play: generatePlay({ playDate: dayjs().subtract(8, 'm') }) }),
-                state: 'queued' as 'queued',
+                state: 'queued' as const,
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
             },
             {
                 ...fixtureCreatePlay({ play: generatePlay({ playDate: dayjs().subtract(10, 'm') }) }),
-                state: 'queued' as 'queued',
+                state: 'queued' as const,
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
             },
         ]
@@ -421,19 +421,19 @@ describe('Repository Operations', function () {
             {
                 ...fixtureCreatePlay(),
                 componentId: component1[0].id,
-                state: 'queued' as 'queued',
+                state: 'queued' as const,
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
             },
             {
                 ...fixtureCreatePlay(),
                 componentId: component3[0].id,
-                state: 'queued' as 'queued',
+                state: 'queued' as const,
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
             },
             {
                 ...fixtureCreatePlay(),
                 componentId: component3[0].id,
-                state: 'queued' as 'queued',
+                state: 'queued' as const,
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
             }
         ]
@@ -466,25 +466,25 @@ describe('Repository Operations', function () {
             {
                 ...fixtureCreatePlay({play: generatePlay({},{seenAt: dayjs().subtract(25, 'h')})}),
                 componentId: component1[0].id,
-                state: 'queued' as 'queued',
+                state: 'queued' as const,
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
             },
             {
                 ...fixtureCreatePlay({play: generatePlay({},{seenAt: dayjs().subtract(26, 'h')})}),
                 componentId: component1[0].id,
-                state: 'queued' as 'queued',
+                state: 'queued' as const,
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
             },
             {
                 ...fixtureCreatePlay({play: generatePlay({},{seenAt: dayjs().subtract(26, 'h')})}),
                 componentId: component2[0].id,
-                state: 'queued' as 'queued',
+                state: 'queued' as const,
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
             },
             {
                 ...fixtureCreatePlay({play: generatePlay({},{seenAt: dayjs().subtract(25, 'h').subtract(1, 'm')})}),
                 componentId: component1[0].id,
-                state: 'queued' as 'queued',
+                state: 'queued' as const,
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
             },
         ]
@@ -496,7 +496,7 @@ describe('Repository Operations', function () {
                 ...fixtureCreatePlay({play: generatePlay({},{seenAt: dayjs().subtract(25, 'h')})}),
                 componentId: component2[0].id,
                 parentId: initialPlays[1].id,
-                state: 'queued' as 'queued',
+                state: 'queued' as const,
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
             },
         ])
@@ -593,7 +593,7 @@ describe('DB Size Stats', function () {
 
         await withLocalTmpDir(async () => {
             try {
-                let [db, _] = await getMigratedDb(getDbPath('ms', process.cwd()));
+                const [db, _] = await getMigratedDb(getDbPath('ms', process.cwd()));
                 const stats = await fs.stat(path.resolve('./ms.db'));
                 loggerDebug.debug(`Empty => ${stats.size / 1024}kb`);
             } catch (e) {
@@ -608,7 +608,7 @@ describe('DB Size Stats', function () {
 
         await withLocalTmpDir(async () => {
             try {
-                let [db, _] = await getMigratedDb(getDbPath('ms', process.cwd()));
+                const [db, _] = await getMigratedDb(getDbPath('ms', process.cwd()));
                 const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
                 const playRepo = new DrizzlePlayRepository(db);
@@ -641,7 +641,7 @@ describe('DB Size Stats', function () {
 
         await withLocalTmpDir(async () => {
             try {
-                let [db, _] = await getMigratedDb(getDbPath('ms', process.cwd()));
+                const [db, _] = await getMigratedDb(getDbPath('ms', process.cwd()));
                 const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
                 const playRepo = new DrizzlePlayRepository(db);
@@ -674,7 +674,7 @@ describe('DB Size Stats', function () {
 
         await withLocalTmpDir(async () => {
             try {
-                let [db, _] = await getMigratedDb(getDbPath('ms', process.cwd()));
+                const [db, _] = await getMigratedDb(getDbPath('ms', process.cwd()));
                 const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
                 const playRepo = new DrizzlePlayRepository(db);
@@ -731,13 +731,13 @@ describe('App Migrations', function() {
             {
                 ...fixtureCreatePlay(),
                 componentId: component1[0].id,
-                state: 'queued' as 'queued',
+                state: 'queued' as const,
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
             },
             {
                 ...fixtureCreatePlay(),
                 componentId: component1[0].id,
-                state: 'queued' as 'queued',
+                state: 'queued' as const,
                 input: { data: generateRandomObj(undefined, { allowUndefined: false }) }
             }
         ]

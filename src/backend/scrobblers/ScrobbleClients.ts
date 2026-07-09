@@ -524,7 +524,7 @@ ${sources.join('\n')}`);
     }
 
     getPlayingNow = (source: string, scrobbleTo: string[]): PlayObject[] => {
-        let playingNow = [];
+        const playingNow = [];
         for (const client of this.clients) {
             if(!client.supportsNowPlaying || !client.nowPlayingEnabled) {
                 continue;

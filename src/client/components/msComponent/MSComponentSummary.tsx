@@ -29,7 +29,7 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
     let sleepingRender: React.JSX.Element = null;
 
     let body = <Card.Footer/>;
-    let cardHeaderProps: Card.HeaderProps = {};
+    const cardHeaderProps: Card.HeaderProps = {};
     const isClient = isComponentClientApiJson(data);
     if(isComponentSourceApiJson(data)) {
         const {

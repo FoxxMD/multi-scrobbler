@@ -231,7 +231,7 @@ export const isIPv4 = (address: string): boolean => {
 }
 
 export const formatWebsocketClose = (e: CloseEvent): string => {
-    let closeParts = [];
+    const closeParts = [];
     let code = `${e.code}`;
     const codeHint = WEBSOCKET_CLOSE_CODE_REASONS[e.code];
     if(codeHint !== undefined) {
@@ -334,11 +334,11 @@ export const streamBodyProgress = async (stream: ReadableStream<Uint8Array<Array
     logger.trace(`Finished download!`);
 
     // Concat the chunks into a single array
-    let body = new Uint8Array(received);
+    const body = new Uint8Array(received);
     let position = 0;
 
     // Order the chunks by their respective position
-    for (let chunk of chunks) {
+    for (const chunk of chunks) {
       body.set(chunk, position);
       position += chunk.length;
     }
