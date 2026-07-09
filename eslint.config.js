@@ -1,5 +1,6 @@
 // For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
 import storybook from "eslint-plugin-storybook";
+import boundaries from 'eslint-plugin-boundaries';
 
 import { defineConfig, globalIgnores } from "eslint/config";
 
@@ -93,5 +94,55 @@ export default defineConfig([
         rules: {
         'no-undef': 'off',
         }
+    }, 
+    // this ruleset helps keep backend, frontend, and core keep imports isolated
+    // in order to prevent frontend (vite) from accidentally bundling backend files + backend packages when importing directly (backend) or transitively (through core)
+    //
+    // folder (module?) boundaries should be like
+    //
+    // backend <-- all node/server side code
+    // core <-- shared types, utils, and logic between backend and client
+    // client <-- frontend code to be bundled by vite, SHOULD NOT import directly/transitively from backend
+    {
+        files: ['src/**/*.{ts,tsx}'],
+        plugins: { boundaries },
+        settings: {
+        // Define your three architectural layers
+        'boundaries/elements': [
+            { type: 'frontend', mode: 'file', pattern: 'src/client/**/*' },
+            { type: 'config', mode: 'file', pattern: 'config/*.example' },
+            { type: 'core', mode: 'file', pattern: 'src/core/**/*' },
+            { type: 'backend', mode: 'file', pattern: 'src/backend/**/*' },
+        ],
+        // So it understands TS path aliases when resolving imports
+        'import/resolver': {
+            typescript: true,
+        },
+        },
+        rules: {
+        'boundaries/element-types': [
+            'error',
+            {
+            default: 'disallow', // deny anything not explicitly allowed
+            rules: [
+                {
+                from: 'frontend',
+                allow: ['frontend', 'core'], // frontend can use itself + core, never backend
+                },
+                {
+                from: 'core',
+                allow: ['core'], // core can only use itself — never backend, never frontend
+                },
+                {
+                from: 'backend',
+                allow: ['backend', 'core', 'config'], // backend can use itself + core
+                },
+            ],
+            },
+        ],
+        // Optional: flag any file under src/ that doesn't match one of the
+        // three element patterns above (catches stray/misplaced files)
+        'boundaries/no-unknown': 'error',
+        },
     }
 ]);
