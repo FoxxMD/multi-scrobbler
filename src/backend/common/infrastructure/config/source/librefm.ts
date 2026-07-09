@@ -1,6 +1,6 @@
-import { LibrefmData } from "../client/librefm.js";
-import { PollingOptions } from "../common.js";
-import { CommonSourceConfig, CommonSourceData } from "./index.js";
+import { type LibrefmData } from "../client/librefm.ts";
+import { type PollingOptions } from "../common.ts";
+import { type CommonSourceConfig, type CommonSourceData } from "./index.ts";
 
 export interface librefmSourceData extends CommonSourceData, PollingOptions, LibrefmData{}
 

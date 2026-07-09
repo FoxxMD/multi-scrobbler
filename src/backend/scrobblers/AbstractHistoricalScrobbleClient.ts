@@ -1,14 +1,14 @@
-import dayjs, { Dayjs } from "dayjs";
-import { sortByNewestDate } from "../../core/PlayUtils.js";
-import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
-import { ComponentMigrationSelect } from "../common/database/drizzle/drizzleTypes.js";
-import { ErrorIsh } from "../../core/ErrorUtils.js";
-import { DrizzlePlayHistoricalRepository, playToRepositoryCreatePlayHistoricalOpts, RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.js";
+import dayjs, { type Dayjs } from "dayjs";
+import { sortByNewestDate } from "../../core/PlayUtils.ts";
+import AbstractScrobbleClient from "./AbstractScrobbleClient.ts";
+import { type ComponentMigrationSelect } from "../common/database/drizzle/drizzleTypes.ts";
+import { type ErrorIsh } from "../../core/ErrorUtils.ts";
+import { DrizzlePlayHistoricalRepository, playToRepositoryCreatePlayHistoricalOpts, type RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
 import { spawn, isAbortError } from 'abort-controller-x';
-import { generateLoggableAbortReason } from "../common/errors/MSErrors.js";
-import { Logger } from "@foxxmd/logging";
-import { buildTrackString } from "../../core/StringUtils.js";
-import { PlayObject } from "../../core/Atomic.js";
+import { generateLoggableAbortReason } from "../common/errors/MSErrors.ts";
+import { type Logger } from "@foxxmd/logging";
+import { buildTrackString } from "../../core/StringUtils.ts";
+import { type PlayObject } from "../../core/Atomic.ts";
 
 export default abstract class AbstractHistoricalScrobbleClient extends AbstractScrobbleClient {
 

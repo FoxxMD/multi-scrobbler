@@ -1,17 +1,15 @@
-import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect, useState, useCallback } from "react"
-import { Accordion, For, Span, Stack, Stat, Text, Box, Heading, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Collapsible, Card,  LinkOverlay, LinkBox } from '@chakra-ui/react';
-import { COMPONENT_STATE, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentSourceApiJson, componentStateToFriendly, isComponentClientApiJson, isComponentSourceApiJson, MsSseEvent, MsSseEventPayload } from "../../../core/Api.js";
+import React, { type ComponentProps, Fragment, useEffect } from "react"
+import { Stack, Heading, Separator, HStack, Flex, Badge, Card,  LinkOverlay, LinkBox } from '@chakra-ui/react';
+import { type ComponentCommonApiJson, isComponentClientApiJson, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
 import { Link } from "react-router";
 import { TextMuted } from "../TextMuted.js";
-import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
 import { capitalize } from "../../../core/StringUtils.js";
 import { ChevronRightButton, IdleIcon } from "../icons/ChakraIcons.js";
 import { PlayersContainer, PlayersContainerFetchable } from "../chakraPlayer/Player.js";
-import { QueryFunctionContext, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type QueryFunctionContext, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ErrorAlert } from "../ErrorAlert";
 import {
   useSSEContext,
-  useSSEEvent,
   useSSEAnyEvent
 } from "@flamefrontend/sse-runtime-react";
 import { CountLiveIndicator, DeadLetterIndicator, QueuedIndicator } from "./Stats.js";
@@ -31,7 +29,7 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
     let sleepingRender: React.JSX.Element = null;
 
     let body = <Card.Footer/>;
-    let cardHeaderProps: Card.HeaderProps = {};
+    const cardHeaderProps: Card.HeaderProps = {};
     const isClient = isComponentClientApiJson(data);
     if(isComponentSourceApiJson(data)) {
         const {

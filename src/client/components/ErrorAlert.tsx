@@ -1,10 +1,9 @@
-import { Alert, Accordion, Stack, Text, Box, Collapsible, HStack, Highlight, Span, Code, useCollapsible, UseCollapsibleReturn } from '@chakra-ui/react';
-import { Fragment, ComponentProps, useEffect, useState } from 'react';
-import { ChakraCodeBlock } from './CodeBlock';
+import { Alert, Box, Code, Collapsible, HStack, Span, Stack, Text, useCollapsible, type UseCollapsibleReturn } from '@chakra-ui/react';
+import { Fragment, useEffect, useState, type ComponentProps } from 'react';
+import { isErrorIsh, type ErrorIsh } from '../../core/ErrorUtils';
 import { ChakraClip } from './ChakraClipboard';
-import { ErrorIsh, isErrorIsh } from '../../core/ErrorUtils';
+import { ChakraCodeBlock } from './CodeBlock';
 import { EllipsisButton, FatArrowRight } from './icons/ChakraIcons';
-import { ErrorObject } from 'serialize-error';
 
 export interface ErrorAlertProps {
     error: ErrorIsh
@@ -31,7 +30,7 @@ const ErrorBlock = (props: {data: ErrorData, cause?: boolean, messageProps?: Com
     }
     const errorIdentifier = `${data.name ?? ''}${data.code !== undefined ? ` (${data.code}) ` : ''}`;
     const errorElm = errorIdentifier === '' ? null : <Code variant="surface" mx="1">{errorIdentifier}</Code>
-    let messageElm: React.JSX.Element = (
+    const messageElm: React.JSX.Element = (
         <HStack {...containerProps}>
         {cause ? <FatArrowRight/> : null}
         <Text {...textProps}>{cause ? <Span fontWeight="semibold">Caused By: </Span> : ''}{errorElm}{data.message}</Text>

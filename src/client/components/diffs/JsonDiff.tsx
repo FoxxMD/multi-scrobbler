@@ -1,4 +1,3 @@
-import React, { ComponentProps } from 'react';
 import {
   parseDiffFromFile,
   type FileContents
@@ -8,8 +7,8 @@ import {
   type FileDiffProps,
   FileDiff,
 } from '@pierre/diffs/react';
-import { MarkRequired } from 'ts-essentials';
-import { Changeset } from 'json-diff-ts';
+import type { MarkRequired } from 'ts-essentials';
+import type { Changeset } from 'json-diff-ts';
 import { MSErrorBoundary } from '../ErrorBoundary';
 import { patchObject } from "../../../core/DataUtils";
 
@@ -64,7 +63,7 @@ const valToFileContents = (val: DiffableVal, fileContentOpts: Partial<FileConten
     const {
         name = 'Content'
     } = fileContentOpts;
-    let fileName: string = name;
+    const fileName: string = name;
     let lang: FileContents['lang'];
     if(typeof val === 'string') {
         strContent = val;

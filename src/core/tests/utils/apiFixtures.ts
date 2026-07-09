@@ -1,20 +1,17 @@
 import { faker } from "@faker-js/faker";
-import { ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi } from "../../Api.js";
-import { CLIENT_INGRESS_QUEUE, JsonPlayObject, PlayObject, PlayState, QUEUE_STATUSES, SOURCE_SOT, SourcePlayerJson, sourceSotTypes } from "../../Atomic.js";
-import { generatePlay, normalizePlays } from "../../PlayTestUtils.js";
-import { generatePlayInput, generatePlayWithLifecycle, playWithLifecycleScrobble, randomPlayState } from "./fixtures.js";
-import { asJsonPlayObject } from "../../PlayMarshalUtils.js";
-import { generatePlayUid } from "../../StringUtils.js";
-import dayjs, { Dayjs } from "dayjs";
-import { ErrorLike } from "serialize-error";
-import { nanoid } from "nanoid";
-import { isSourceType, SourceType, sourceTypes } from "../../../backend/common/infrastructure/config/source/sources.js";
-import { ClientType, clientTypes } from "../../../backend/common/infrastructure/config/client/clients.js";
-import { ComponentSelect } from "../../../backend/common/database/drizzle/drizzleTypes.js";
-import { CALCULATED_PLAYER_STATUSES, isClientType, REPORTED_PLAYER_STATUSES } from "../../../backend/common/infrastructure/Atomic.js";
-import { faMarker } from "@fortawesome/free-solid-svg-icons";
-import { generateArray } from "../../DataUtils.js";
-import { ErrorIsh } from "../../ErrorUtils.js";
+import { type ComponentClientApi, type ComponentClientApiJson, type ComponentCommonApi, type ComponentCommonApiJson, type ComponentSourceApi, type ComponentSourceApiJson, type ComponentState, type PlayApiCommon, type PlayApiCommonDetailed, type PlayInputApi, type QueueStateApi } from "../../Api.ts";
+import { CLIENT_INGRESS_QUEUE, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes } from "../../Atomic.ts";
+import { generatePlay, normalizePlays } from "./PlayTestUtils.ts";
+import { generatePlayInput, generatePlayWithLifecycle, playWithLifecycleScrobble, randomPlayState } from "./fixtures.ts";
+import { asJsonPlayObject } from "../../PlayMarshalUtils.ts";
+import { generatePlayUid } from "../../StringUtils.ts";
+import dayjs, { type Dayjs } from "dayjs";
+import { isSourceType, sourceTypes } from "../../../backend/common/infrastructure/config/source/sources.ts";
+import { clientTypes } from "../../../backend/common/infrastructure/config/client/clients.ts";
+import { type ComponentSelect } from "../../../backend/common/database/drizzle/drizzleTypes.ts";
+import { CALCULATED_PLAYER_STATUSES, isClientType, REPORTED_PLAYER_STATUSES } from "../../../backend/common/infrastructure/Atomic.ts";
+import { generateArray } from "../../DataUtils.ts";
+import { type ErrorIsh } from "../../ErrorUtils.ts";
 
 export const generatePlayApiCommon = (commonData: Partial<PlayApiCommon> & {play?: JsonPlayObject | PlayObject } = {}, ...playOpts: Parameters<typeof generatePlay>): PlayApiCommon => {
     let play: JsonPlayObject | PlayObject;

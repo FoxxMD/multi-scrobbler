@@ -1,6 +1,6 @@
-import { Second } from "../../../../../core/Atomic.js";
-import { PollingOptions } from "../common.js";
-import { CommonSourceConfig, CommonSourceData, CommonSourceOptions } from "./index.js";
+import { type Second } from "../../../../../core/Atomic.ts";
+import { type PollingOptions } from "../common.ts";
+import { type CommonSourceConfig, type CommonSourceData, type CommonSourceOptions } from "./index.ts";
 
 export interface DeezerData extends CommonSourceData, PollingOptions {
     /**

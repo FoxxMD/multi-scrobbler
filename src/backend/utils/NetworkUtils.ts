@@ -1,15 +1,15 @@
-import { Logger, LogLevel } from "@foxxmd/logging";
+import { type Logger } from "@foxxmd/logging";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import address from "address";
 import net from 'node:net';
 import normalizeUrl from "normalize-url";
 import { join as joinPath } from "path";
-import { getFirstNonEmptyVal, isDebugMode} from "../utils.js";
-import { URLData } from "../../core/Atomic.js";
+import { isDebugMode} from "../utils.ts";
+import { type URLData } from "../../core/Atomic.ts";
 import { CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket'
-import { WEBSOCKET_CLOSE_CODE_REASONS } from "../common/infrastructure/Atomic.js";
-import { loggerNoop } from "../common/MaybeLogger.js";
-import { formatBytes } from "./DataUtils.js";
+import { WEBSOCKET_CLOSE_CODE_REASONS } from "../common/infrastructure/Atomic.ts";
+import { loggerNoop } from "../common/MaybeLogger.ts";
+import { formatBytes } from "./DataUtils.ts";
 
 export interface PortReachableOpts {
     host: string,
@@ -231,7 +231,7 @@ export const isIPv4 = (address: string): boolean => {
 }
 
 export const formatWebsocketClose = (e: CloseEvent): string => {
-    let closeParts = [];
+    const closeParts = [];
     let code = `${e.code}`;
     const codeHint = WEBSOCKET_CLOSE_CODE_REASONS[e.code];
     if(codeHint !== undefined) {
@@ -334,11 +334,11 @@ export const streamBodyProgress = async (stream: ReadableStream<Uint8Array<Array
     logger.trace(`Finished download!`);
 
     // Concat the chunks into a single array
-    let body = new Uint8Array(received);
+    const body = new Uint8Array(received);
     let position = 0;
 
     // Order the chunks by their respective position
-    for (let chunk of chunks) {
+    for (const chunk of chunks) {
       body.set(chunk, position);
       position += chunk.length;
     }

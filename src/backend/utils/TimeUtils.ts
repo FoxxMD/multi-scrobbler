@@ -1,23 +1,23 @@
 
-import dayjs, { Dayjs } from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 //import isToday from 'dayjs/plugin/isToday.js';
 import {
-    AcceptableTemporalDuringReference,
-    PlayObject,
+    type AcceptableTemporalDuringReference,
+    type PlayObject,
     SCROBBLE_TS_SOC_END,
     SCROBBLE_TS_SOC_START,
-    ScrobbleTsSOC,
+    type ScrobbleTsSOC,
     TA_CLOSE,
     TA_DEFAULT_ACCURACY,
     TA_DURING,
     TA_EXACT,
     TA_FUZZY,
     TA_NONE,
-    TemporalAccuracy,
-    TemporalPlayComparison,
-    UnixTimestamp,
-} from "../../core/Atomic.js";
-import { capitalize, stringIsOnlyNumbers } from "../../core/StringUtils.js";
+    type TemporalAccuracy,
+    type TemporalPlayComparison,
+    type UnixTimestamp,
+} from "../../core/Atomic.ts";
+import { capitalize, stringIsOnlyNumbers } from "../../core/StringUtils.ts";
 import {
     DEFAULT_CLOSE_POSITION_ABSOLUTE,
     DEFAULT_CLOSE_POSITION_PERCENT,
@@ -25,18 +25,18 @@ import {
     DEFAULT_DURATION_REPEAT_PERCENT,
     DEFAULT_SCROBBLE_DURATION_THRESHOLD,
     DEFAULT_SCROBBLE_PERCENT_THRESHOLD,
-    DurationValue,
+    type DurationValue,
     lowGranularitySources,
-    ScrobbleThresholdResult,
-} from "../common/infrastructure/Atomic.js";
-import { ScrobbleThresholds } from "../common/infrastructure/config/source/index.js";
-import { formatNumber } from '../../core/DataUtils.js';
-import { InvalidRegexError, SimpleError } from "../common/errors/MSErrors.js";
-import { NamedGroup, parseRegex } from "@foxxmd/regex-buddy-core";
-import { Duration } from "dayjs/plugin/duration.js";
-import { SourceType } from "../common/infrastructure/config/source/sources.js";
-import { Logger } from "@foxxmd/logging";
-import { loggerNoop } from "../common/MaybeLogger.js";
+    type ScrobbleThresholdResult,
+} from "../common/infrastructure/Atomic.ts";
+import { type ScrobbleThresholds } from "../common/infrastructure/config/source/index.ts";
+import { formatNumber } from '../../core/DataUtils.ts';
+import { InvalidRegexError, SimpleError } from "../common/errors/MSErrors.ts";
+import { type NamedGroup, parseRegex } from "@foxxmd/regex-buddy-core";
+import { type Duration } from "dayjs/plugin/duration.js";
+import { type SourceType } from "../common/infrastructure/config/source/sources.ts";
+import { type Logger } from "@foxxmd/logging";
+import { loggerNoop } from "../common/MaybeLogger.ts";
 
 //dayjs.extend(isToday);
 
@@ -337,8 +337,6 @@ export const parseDurationFromTimestamp = (timestamp: any) => {
     });
 };
 
-export type Milliseconds = number;
-
 /** Is Position earlier than X seconds or Y% percent of the start of a Play? */
 export const closeToPlayStart = (play: PlayObject, position: number, thresholds: {absolute?: number, percent?: number, hintPrefix?: boolean} = {}): [boolean, string] => {
     const {
@@ -347,7 +345,7 @@ export const closeToPlayStart = (play: PlayObject, position: number, thresholds:
         hintPrefix = true
     } = thresholds;
 
-        let hintStart = hintPrefix ? `Position (${position}) ` : '';
+        const hintStart = hintPrefix ? `Position (${position}) ` : '';
         const trackDur = play.data.duration;
         const closeStartNum = position <= absolute;
         const hints: string[] = [];
@@ -373,7 +371,7 @@ export const closeToPlayEnd = (play: PlayObject, position: number, thresholds: {
         hintPrefix = true
     } = thresholds;
 
-        let hintStart = hintPrefix ? `Position (${position}) ` : '';
+        const hintStart = hintPrefix ? `Position (${position}) ` : '';
         const trackDur = play.data.duration;
 
         if(trackDur === undefined) {
@@ -399,7 +397,7 @@ export const repeatDurationPlayed = (play: PlayObject, duration: number, thresho
         hintPrefix = true
     } = thresholds;
 
-        let hintStart = hintPrefix ? `Duration listened (${duration}s) ` : '';
+        const hintStart = hintPrefix ? `Duration listened (${duration}s) ` : '';
         const trackDur = play.data.duration;
         const absPlayed = duration >= absolute;
         const hints: string[] = [];

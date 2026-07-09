@@ -1,29 +1,29 @@
-import dayjs, { Dayjs } from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import EventEmitter from "events";
-import { PlayObject, PlayObjectMinimal, SOURCE_SOT } from "../../core/Atomic.js";
+import { type PlayObjectMinimal, SOURCE_SOT } from "../../core/Atomic.ts";
 import {
-    FormatPlayObjectOptions,
-    InternalConfig,
+    type FormatPlayObjectOptions,
+    type InternalConfig,
     NO_USER,
-    PlayerStateData,
-    PlayPlatformId,
+    type PlayerStateData,
     REPORTED_PLAYER_STATUSES,
-    ReportedPlayerStatus,
-} from "../common/infrastructure/Atomic.js";
-import { WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.js";
+    type ReportedPlayerStatus,
+} from "../common/infrastructure/Atomic.ts";
+import { type PlayPlatformId } from '../../core/Atomic.ts';
+import { type WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.ts";
 import {
-    WebScrobblerHookEvent,
-    WebScrobblerPayload,
-    WebScrobblerSong
-} from "../common/vendor/webscrobbler/interfaces.js";
+    type WebScrobblerHookEvent,
+    type WebScrobblerPayload,
+    type WebScrobblerSong
+} from "../common/vendor/webscrobbler/interfaces.ts";
 
-import { joinedUrl } from "../utils/NetworkUtils.js";
-import MemorySource from "./MemorySource.js";
-import { Logger } from "@foxxmd/logging";
-import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
-import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.js";
-import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
-import { artistCreditToName, artistNameToCredit } from "../../core/StringUtils.js";
+import { joinedUrl } from "../utils/NetworkUtils.ts";
+import MemorySource from "./MemorySource.ts";
+import { type Logger } from "@foxxmd/logging";
+import { type PlayerStateOptions } from "./PlayerState/AbstractPlayerState.ts";
+import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.ts";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
+import { artistNameToCredit } from "../../core/StringUtils.ts";
 
 interface WebScrobbleMeta {
     scrobbleAllowed?: boolean

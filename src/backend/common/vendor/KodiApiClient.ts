@@ -2,13 +2,13 @@ import dayjs from "dayjs";
 import { KodiClient } from 'kodi-api'
 import normalizeUrl from "normalize-url";
 import { URL } from "url";
-import { PlayObject, PlayObjectMinimal } from "../../../core/Atomic.js";
-import { RecentlyPlayedOptions } from "../../sources/AbstractSource.js";
-import { AbstractApiOptions, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
-import { KodiData } from "../infrastructure/config/source/kodi.js";
-import AbstractApiClient from "./AbstractApiClient.js";
-import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.js";
-import { artistNamesToCredits } from "../../../core/StringUtils.js";
+import { type PlayObject, type PlayObjectMinimal } from "../../../core/Atomic.ts";
+import { type RecentlyPlayedOptions } from "../../sources/AbstractSource.ts";
+import { type AbstractApiOptions, type FormatPlayObjectOptions } from "../infrastructure/Atomic.ts";
+import { type KodiData } from "../infrastructure/config/source/kodi.ts";
+import AbstractApiClient from "./AbstractApiClient.ts";
+import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
+import { artistNamesToCredits } from "../../../core/StringUtils.ts";
 
 interface KodiDuration {
     hours: number

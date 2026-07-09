@@ -1,18 +1,18 @@
-import { after, before, afterEach, describe, it } from 'mocha';
-import chai, { assert, expect } from 'chai';
+import { before, afterEach, describe, it } from 'mocha';
+import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import withLocalTmpDir from 'with-local-tmp-dir';
 import {constants, copyFile, access} from 'node:fs/promises';
 import path from "path";
-import {projectDir} from '../../common/index.js';
-import ScrobbleClients from '../../scrobblers/ScrobbleClients.js';
-import ScrobbleSources from '../../sources/ScrobbleSources.js';
+import {projectDir} from '../../common/index.ts';
+import ScrobbleClients from '../../scrobblers/ScrobbleClients.ts';
+import ScrobbleSources from '../../sources/ScrobbleSources.ts';
 import EventEmitter from "events";
-import {loggerTest, loggerDebug} from '@foxxmd/logging';
-import { clientTypes } from '../../common/infrastructure/config/client/clients.js';
-import { sourceTypes } from '../../common/infrastructure/config/source/sources.js';
-import { Notifiers } from '../../notifier/Notifiers.js';
-import { difference, intersect } from '../../utils.js';
+import {loggerTest} from '@foxxmd/logging';
+import { clientTypes } from '../../common/infrastructure/config/client/clients.ts';
+import { sourceTypes } from '../../common/infrastructure/config/source/sources.ts';
+import { Notifiers } from '../../notifier/Notifiers.ts';
+import { difference } from '../../utils.ts';
 
 chai.use(asPromised);
 
@@ -57,7 +57,7 @@ describe('Sample Configs', function () {
                 it(`Sample ${componentType}.json parses and validates`, async function () {
                     this.timeout(5000);
 
-                    let emitter = new EventEmitter();
+                    const emitter = new EventEmitter();
                     await copyFile(samplePath(componentType), `${componentType}.json`);
                     const sources = new ScrobbleSources(emitter, {
                         localUrl: new URL('http://example.com'),
@@ -89,7 +89,7 @@ describe('Sample Configs', function () {
                 it(`Sample ${componentType}.json parses and validates`, async function () {
                     this.timeout(5000);
 
-                    let emitter = new EventEmitter();
+                    const emitter = new EventEmitter();
                     await copyFile(samplePath(componentType), `${componentType}.json`);
                     const clients = new ScrobbleClients(emitter, new EventEmitter, {
                         localUrl: new URL('http://example.com'),

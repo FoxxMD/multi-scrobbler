@@ -11,7 +11,9 @@
         "docsite/**"
     ],
     "files.associations": {
-        "*.css": "tailwindcss"
+        "*.css": "tailwindcss",
+        "**/config/*.json": "jsonc"
     },
-    "tailwindCSS.experimental.configFile": "src/client/index.css"
+    "tailwindCSS.experimental.configFile": "src/client/index.css",
+    
 }

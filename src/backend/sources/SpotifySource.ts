@@ -1,46 +1,46 @@
-import dayjs, { Dayjs } from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import EventEmitter from "events";
 import SpotifyWebApi from "spotify-web-api-node";
 import request from 'superagent';
-import { BrainzMeta, PlayObject, PlayObjectMinimal, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC, SpotifyMeta } from "../../core/Atomic.js";
-import { artistNamesToCredits, artistNameToCredit, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
+import { type BrainzMeta, type PlayObject, type PlayObjectMinimal, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, type ScrobbleTsSOC } from "../../core/Atomic.ts";
+import { artistNameToCredit, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
+import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.ts";
 import {
     DEFAULT_POLLING_INTERVAL,
-    FormatPlayObjectOptions,
-    InternalConfig,
+    type FormatPlayObjectOptions,
+    type InternalConfig,
     NO_DEVICE,
     NO_USER,
-    PaginatedListensTimeRangeOptions,
-    PaginatedTimeRangeListens,
-    PaginatedTimeRangeListensResult,
-    PlayerStateData,
-    ReportedPlayerStatus,
-    SourceData,
-    TimeRangeListensFetcher,
-} from "../common/infrastructure/Atomic.js";
-import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.js";
+    type PaginatedListensTimeRangeOptions,
+    type PaginatedTimeRangeListens,
+    type PaginatedTimeRangeListensResult,
+    type PlayerStateData,
+    type ReportedPlayerStatus,
+    type SourceData,
+    type TimeRangeListensFetcher,
+} from "../common/infrastructure/Atomic.ts";
+import { type SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.ts";
 import {
     parseRetryAfterSecsFromObj,
     sleep,
     sortByOldestPlayDate,
-} from "../utils.js";
-import { writeFile } from '../utils/FSUtils.js';
-import { readJson } from '../utils/DataUtils.js';
-import { findCauseByFunc } from "../utils/ErrorUtils.js";
-import { joinedUrl } from "../utils/NetworkUtils.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import AlbumObjectSimplified = SpotifyApi.AlbumObjectSimplified;
-import ArtistObjectSimplified = SpotifyApi.ArtistObjectSimplified;
-import CurrentlyPlayingObject = SpotifyApi.CurrentlyPlayingObject;
-import PlayHistoryObject = SpotifyApi.PlayHistoryObject;
-import TrackObjectFull = SpotifyApi.TrackObjectFull;
-import UserDevice = SpotifyApi.UserDevice;
-import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
-import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
-import { metaFromJSON } from "@lukehagar/plexjs/sdk/models/operations/getrecentlyadded.js";
-import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.js";
+} from "../utils.ts";
+import { writeFile } from '../utils/FSUtils.ts';
+import { readJson } from '../utils/DataUtils.ts';
+import { findCauseByFunc } from "../utils/ErrorUtils.ts";
+import { joinedUrl } from "../utils/NetworkUtils.ts";
+import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+// import SpotifyApi.AlbumObjectSimplified = SpotifyApi.SpotifyApi.AlbumObjectSimplified;
+// import SpotifyApi.ArtistObjectSimplified = SpotifyApi.SpotifyApi.ArtistObjectSimplified;
+// import SpotifyApi.CurrentlyPlayingObject = SpotifyApi.SpotifyApi.CurrentlyPlayingObject;
+// import SpotifyApi.PlayHistoryObject = SpotifyApi.SpotifyApi.PlayHistoryObject;
+// import SpotifyApi.TrackObjectFull = SpotifyApi.SpotifyApi.TrackObjectFull;
+// import SpotifyApi.UserDevice = SpotifyApi.SpotifyApi.UserDevice;
+import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
+import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.ts";
+import { SimpleError } from "../common/errors/MSErrors.ts";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
 const state = 'random';
@@ -82,14 +82,14 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
         this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this, this.logger);
     }
 
-    static formatPlayObj(obj: PlayHistoryObject | CurrentlyPlayingObject, options: FormatPlayObjectOptions = {}): PlayObject {
+    static formatPlayObj(obj: SpotifyApi.PlayHistoryObject | SpotifyApi.CurrentlyPlayingObject, options: FormatPlayObjectOptions = {}): PlayObject {
 
         const {
             newFromSource = false
         } = options;
 
-        let artists: ArtistObjectSimplified[];
-        let album: AlbumObjectSimplified;
+        let artists: SpotifyApi.ArtistObjectSimplified[];
+        let album: SpotifyApi.AlbumObjectSimplified;
         let name: string;
         let duration_ms: number;
         let played_at: Dayjs;
@@ -166,11 +166,11 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
                     isrc
                 } = {},
                 track_number
-            } = item as TrackObjectFull;
+            } = item as SpotifyApi.TrackObjectFull;
 
-            delete (obj.item as TrackObjectFull).available_markets;
-            if((obj.item as TrackObjectFull).album !== undefined) {
-              delete (obj.item as TrackObjectFull).album.available_markets;  
+            delete (obj.item as SpotifyApi.TrackObjectFull).available_markets;
+            if((obj.item as SpotifyApi.TrackObjectFull).album !== undefined) {
+              delete (obj.item as SpotifyApi.TrackObjectFull).album.available_markets;  
             }
 
             scrobbleTsSOC = SCROBBLE_TS_SOC_START;
@@ -197,7 +197,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             images = []
         } = album || {};
 
-        let actualAlbumArtists: ArtistObjectSimplified[] = [];
+        let actualAlbumArtists: SpotifyApi.ArtistObjectSimplified[] = [];
         if ((artists.length !== albumArtists.length) || !artists.every(artist => albumArtists.some(albumArtist => artist.id === albumArtist.id))) {
             // only include album artists if they are not the EXACT same as the track artists
             // ...if they aren't the exact same then include all artists, even if they are duplicates of track artists
@@ -439,7 +439,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             const result = await this.callApi<ReturnType<typeof this.spotifyApi.getMyRecentlyPlayedTracks>>((api: SpotifyWebApi) => api.getMyRecentlyPlayedTracks(options));
 
             let more = true;
-            let plays = result.body.items.map((x: PlayHistoryObject) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate);
+            let plays = result.body.items.map((x: SpotifyApi.PlayHistoryObject) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate);
 
             if(to !== undefined) {
                 const toDate = dayjs.unix(to);
@@ -456,7 +456,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             }
 
             return {
-                data: result.body.items.map((x: PlayHistoryObject) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate),
+                data: result.body.items.map((x: SpotifyApi.PlayHistoryObject) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate),
                 meta: {
                     ...params,
                     total: result.body.total,
@@ -494,7 +494,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
         return undefined;
     }
 
-    getCurrentPlaybackState = async (logError = true): Promise<{device?: UserDevice, playerState?: PlayerStateData}> => {
+    getCurrentPlaybackState = async (logError = true): Promise<{device?: SpotifyApi.UserDevice, playerState?: PlayerStateData}> => {
         try {
             const funcState = (api: SpotifyWebApi) => api.getMyCurrentPlaybackState();
             const res = await this.callApi<ReturnType<typeof this.spotifyApi.getMyCurrentPlaybackState>>(funcState);
@@ -551,7 +551,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             const spotifyError = new UpstreamError('Spotify API call failed', {cause: e});
             if (e.statusCode === 401 && !hasApiPermissionError(e)) {
                 if (this.spotifyApi.getRefreshToken() === undefined) {
-                    throw new Error('Access token was not valid and no refresh token was present')
+                    throw new SimpleError('Access token was not valid and no refresh token was present', {cause: e});
                 }
                 this.logger.debug('Access token was not valid, attempting to refresh');
 
@@ -635,9 +635,9 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
     protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) => await this.getPlayHistory({formatted: true, ...options})
 }
 
-const asPlayHistoryObject = (obj: object): obj is PlayHistoryObject => 'played_at' in obj
+const asPlayHistoryObject = (obj: object): obj is SpotifyApi.PlayHistoryObject => 'played_at' in obj
 
-const asCurrentlyPlayingObject = (obj: object): obj is CurrentlyPlayingObject => 'is_playing' in obj
+const asCurrentlyPlayingObject = (obj: object): obj is SpotifyApi.CurrentlyPlayingObject => 'is_playing' in obj
 
 const hasApiPermissionError = (e: Error): boolean => findCauseByFunc(e, (err) => err.message.includes('Permissions missing')) !== undefined
 

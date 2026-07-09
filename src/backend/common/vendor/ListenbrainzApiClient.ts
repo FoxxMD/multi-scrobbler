@@ -1,8 +1,8 @@
 import { stringSameness } from '@foxxmd/string-sameness';
 import dayjs from "dayjs";
 import request, { Request, Response } from 'superagent';
-import { BrainzMeta, PlayObject, PlayObjectMinimal, ScrobbleActionResult, UnixTimestamp, URLData } from "../../../core/Atomic.js";
-import { artistNamesToCredits, combinePartsToString, slice } from "../../../core/StringUtils.js";
+import { type BrainzMeta, type PlayObject, type PlayObjectMinimal, type ScrobbleActionResult, type UnixTimestamp, type URLData } from "../../../core/Atomic.ts";
+import { artistNamesToCredits, combinePartsToString, slice } from "../../../core/StringUtils.ts";
 import {
     normalizeListenbrainzUrl,
     normalizeStr,
@@ -10,21 +10,23 @@ import {
     parseCredits,
     parseTrackCredits,
     uniqueNormalizedStrArr,
-} from "../../utils/StringUtils.js";
-import { findDelimiters } from "../../../core/StringUtils.js";
-import { UpstreamError } from "../errors/UpstreamError.js";
-import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, DELIMITERS, FormatPlayObjectOptions, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PagelessTimeRangeListensResult } from "../infrastructure/Atomic.js";
-import { DEFAULT_ITEMS_PER_GET_LZ, ListenBrainzClientData, MAX_ITEMS_PER_GET_LZ } from "../infrastructure/config/client/listenbrainz.js";
-import AbstractApiClient from "./AbstractApiClient.js";
-import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.js';
-import { removeUndefinedKeys, unique } from '../../utils.js';
-import { ListenPayload, ListenResponse, ListenType, SubmitPayload } from './listenbrainz/interfaces.js';
-import { baseFormatPlayObj } from '../../utils/PlayTransformUtils.js';
-import { ScrobbleSubmitError, SimpleError } from '../errors/MSErrors.js';
+} from "../../utils/StringUtils.ts";
+import { findDelimiters } from "../../../core/StringUtils.ts";
+import { UpstreamError } from "../errors/UpstreamError.ts";
+import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type PagelessListensTimeRangeOptions, type PagelessTimeRangeListens, type PagelessTimeRangeListensResult } from "../infrastructure/Atomic.ts";
+import { DELIMITERS } from '../../../core/Atomic.ts';
+import { type ListenBrainzClientData, MAX_ITEMS_PER_GET_LZ } from "../infrastructure/config/client/listenbrainz.ts";
+import AbstractApiClient from "./AbstractApiClient.ts";
+import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.ts';
+import { unique } from '../../utils.ts';
+import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
+import { type ListenPayload, type ListenResponse, type ListenType, type SubmitPayload } from '../../../core/vendor/listenbrainz/interfaces.ts';
+import { baseFormatPlayObj } from '../../utils/PlayTransformUtils.ts';
+import { ScrobbleSubmitError, SimpleError } from '../errors/MSErrors.ts';
 import pRetry from 'p-retry';
-import { findCauseByFunc } from '../../utils/ErrorUtils.js';
-import { isSuperAgentResponseError } from '../errors/ErrorUtils.js';
-import { playToSubmitPayload } from './listenbrainz/lzUtils.js';
+import { findCauseByFunc } from '../../utils/ErrorUtils.ts';
+import { isSuperAgentResponseError } from '../errors/ErrorUtils.ts';
+import { playToSubmitPayload } from './listenbrainz/lzUtils.ts';
 
 
 export interface SubmitOptions {

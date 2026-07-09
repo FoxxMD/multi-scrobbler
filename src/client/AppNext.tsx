@@ -1,22 +1,20 @@
-import React, {useState, useRef, Fragment} from 'react';
+import { Box, Container } from '@chakra-ui/react';
+import { SSEProvider } from "@flamefrontend/sse-runtime-react";
 import {
     createBrowserRouter,
-    createHashRouter, RouteObject,
-    RouterProvider, useLocation, Outlet
+    createHashRouter,
+    Outlet,
+    type RouteObject,
+    RouterProvider, useLocation
 } from "react-router-dom";
-import {connect, ConnectedProps, Provider as ReduxProvider} from 'react-redux'
+import { type MsSseEvent } from '../core/Api';
 import './App.css';
+import { AppHeader } from './components/AppHeader';
 import CopyToClipboard from "./components/CopyToClipboard";
-import {store} from './store';
+import { MSErrorBoundary } from './components/ErrorBoundary';
+import { ComponentDetailedRoutable } from './components/msComponent/MSComponentDetailed';
 import { MSComponentListFetchable } from './components/msComponent/MSComponentList';
 import { Provider } from './components/Provider';
-import { Container, Box, Center, Splitter, useSplitter } from '@chakra-ui/react';
-import { MsSseEvent } from '../core/Api';
-import { SSEProvider } from "@flamefrontend/sse-runtime-react";
-import { AppHeader } from './components/AppHeader';
-import { NAV_LINKS, SideNavItems } from './components/SideNav';
-import { ComponentDetailedRoutable } from './components/msComponent/MSComponentDetailed';
-import { MSErrorBoundary } from './components/ErrorBoundary';
 
 function NoMatch() {
     const location = useLocation();

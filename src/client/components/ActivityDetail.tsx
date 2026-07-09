@@ -1,23 +1,21 @@
-import React, { useState, Fragment, useEffect } from "react"
-import { Accordion, Span, Code, Alert, Stack, Box, Separator, HStack, Flex, useAccordionItemContext, Skeleton, SkeletonText, Collapsible, BadgeProps } from '@chakra-ui/react';
-import { CLIENT_DEAD_QUEUE, ComponentType, Second } from "../../core/Atomic";
-import { PlayData } from "./PlayData";
-import { ErrorAlert } from "./ErrorAlert";
-import { ActivityTimeline } from "./ActivityTimeline";
-import { ExpandCollapse } from "./ExpandCollapse";
-import { MsSseEvent, PlayApiCommonDetailed, SortPlaysByProps } from "../../core/Api";
-import { InfiniteData, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ShortDateDisplay } from "./DateDisplay";
-import { TextMuted } from "./TextMuted";
-import { EphemeralElement, PlayStateBadge } from "./Badges";
-import { MarkOptional } from "ts-essentials";
-import { QueryPlaysOptsJson } from "../../backend/common/database/drizzle/repositories/PlayRepository";
-import { tanQueries } from "../queries";
-import { PaginatedResponse } from "../../backend/common/database/drizzle/repositories/BaseRepository";
-import { LuChevronRight } from "react-icons/lu";
+import { Accordion, Alert, Box, Code, Collapsible, Flex, HStack, Separator, Skeleton, SkeletonText, Span, Stack, useAccordionItemContext, type BadgeProps } from '@chakra-ui/react';
 import { useSSEContext, useSSEEvent } from "@flamefrontend/sse-runtime-react";
-import { DebugCopy, ExclamationCircleIcon, ExclamationTriangleIcon, InsertedIcon, RetryButton, UpdatedIcon } from "./icons/ChakraIcons";
+import { useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
+import React, { Fragment, useEffect, useState } from "react";
+import { LuChevronRight } from "react-icons/lu";
+import type { MarkOptional } from "ts-essentials";
+import type { MsSseEvent, PaginatedResponse, PlayApiCommonDetailed, QueryPlaysOptsJson, SortPlaysByProps } from "../../core/Api";
+import { CLIENT_DEAD_QUEUE, type ComponentType, type Second } from "../../core/Atomic";
+import { tanQueries } from "../queries";
 import { activityTimelineHasIssue } from "../utils/ComponentUtils";
+import { ActivityTimeline } from "./ActivityTimeline";
+import { EphemeralElement, PlayStateBadge } from "./Badges";
+import { ShortDateDisplay } from "./DateDisplay";
+import { ErrorAlert } from "./ErrorAlert";
+import { ExpandCollapse } from "./ExpandCollapse";
+import { DebugCopy, ExclamationCircleIcon, ExclamationTriangleIcon, InsertedIcon, RetryButton, UpdatedIcon } from "./icons/ChakraIcons";
+import { PlayData } from "./PlayData";
+import { TextMuted } from "./TextMuted";
 
 type UseActivityQueryOptions = {
     msQuery?: QueryPlaysOptsJson

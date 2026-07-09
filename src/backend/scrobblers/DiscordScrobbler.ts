@@ -1,16 +1,15 @@
-import { Logger, LogLevel } from "@foxxmd/logging";
+import { type Logger, type LogLevel } from "@foxxmd/logging";
 import EventEmitter from "events";
-import { PlayMatchResult, PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
-import { CALCULATED_PLAYER_STATUSES, FormatPlayObjectOptions, REPORTED_PLAYER_STATUSES, ReportedPlayerStatus, SINGLE_USER_PLATFORM_ID_STR, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
-import { Notifiers } from "../notifier/Notifiers.js";
+import { type PlayMatchResult, type PlayObject, type SourcePlayerObj } from "../../core/Atomic.ts";
+import { CALCULATED_PLAYER_STATUSES, type FormatPlayObjectOptions, REPORTED_PLAYER_STATUSES, SINGLE_USER_PLATFORM_ID_STR } from "../common/infrastructure/Atomic.ts";
 
-import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractScrobbleClient.js";
-import { DiscordClientConfig, DiscordStrongData } from "../common/infrastructure/config/client/discord.js";
-import { DiscordWSClient } from "../common/vendor/discord/DiscordWSClient.js";
-import { configToStrong } from "../common/vendor/discord/DiscordUtils.js";
-import { DiscordIPCClient } from "../common/vendor/discord/DiscordIPCClient.js";
-import { playStateToActivityData } from "../common/vendor/discord/DiscordUtils.js";
-import { mergeSimpleError, SimpleError } from "../common/errors/MSErrors.js";
+import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractScrobbleClient.ts";
+import { type DiscordClientConfig, type DiscordStrongData } from "../common/infrastructure/config/client/discord.ts";
+import { DiscordWSClient } from "../common/vendor/discord/DiscordWSClient.ts";
+import { configToStrong } from "../common/vendor/discord/DiscordUtils.ts";
+import { DiscordIPCClient } from "../common/vendor/discord/DiscordIPCClient.ts";
+import { playStateToActivityData } from "../common/vendor/discord/DiscordUtils.ts";
+import { mergeSimpleError, SimpleError } from "../common/errors/MSErrors.ts";
 import dayjs from "dayjs";
 
 export default class DiscordScrobbler extends AbstractScrobbleClient {

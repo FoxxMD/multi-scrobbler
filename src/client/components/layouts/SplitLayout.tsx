@@ -1,5 +1,5 @@
-import React, { useState, useRef, Fragment } from 'react';
-import { Container, Box, Center, Splitter, useSplitter } from '@chakra-ui/react';
+import React, { useState, useRef } from 'react';
+import { Splitter } from '@chakra-ui/react';
 import {
     Outlet
 } from "react-router-dom";

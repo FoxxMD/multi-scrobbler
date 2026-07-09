@@ -1,18 +1,16 @@
-import React, { ComponentProps, Fragment, useMemo } from "react"
-import { Timeline, Icon, Span, Stack, Heading, Box, Text } from '@chakra-ui/react';
-import { JsonPlayObject, LifecycleStep } from "../../core/Atomic";
-import { PlayData } from "./PlayData";
-import { ErrorAlert } from "./ErrorAlert";
-import { BsSkipForward } from "react-icons/bs";
-import { BsStoplights } from "react-icons/bs";
-import { BsExclamationTriangle, BsExclamationOctagon } from "react-icons/bs";
+import { Heading, Icon, Span, Stack, Text, Timeline } from '@chakra-ui/react';
+import React, { Fragment, useMemo } from "react";
+import { BsExclamationTriangle, BsSkipForward, BsStoplights } from "react-icons/bs";
 import { MdMusicNote } from "react-icons/md";
-import { ChakraCodeBlockShort, ChakraPlainBlockShort } from "./CodeBlock";
+import { type JsonPlayObject, type LifecycleStep } from "../../core/Atomic";
 import { patchObject } from "../../core/DataUtils";
-import { MSCollapsible, MSCollapsibleExternalProps } from "./MSCollapsible";
+import { timelineTextFormatting } from "../utils/ComponentUtils";
+import { ChakraCodeBlockShort } from "./CodeBlock";
+import { ErrorAlert } from "./ErrorAlert";
+import { MSCollapsible, type MSCollapsibleExternalProps } from "./MSCollapsible";
+import { PlayData } from "./PlayData";
 import { Muted } from "./Typography";
 import { JsonDiffPatch } from "./diffs/JsonDiff";
-import { timelineTextFormatting } from "../utils/ComponentUtils";
 
 export interface LifeycleStepsTimelineProps extends MSCollapsibleExternalProps {
     steps: LifecycleStep[]
@@ -21,7 +19,7 @@ export interface LifeycleStepsTimelineProps extends MSCollapsibleExternalProps {
 
 export const diffElements = (original: JsonPlayObject, steps: LifecycleStep[]): [React.JSX.Element[], JsonPlayObject?] => {
 
-    let currentPlay: JsonPlayObject = structuredClone(original); // JSON.parse(JSON.stringify(original));
+    const currentPlay: JsonPlayObject = structuredClone(original); // JSON.parse(JSON.stringify(original));
     let patchFailed = false;
 
     const diffElements: React.JSX.Element[] | null = [];
@@ -47,7 +45,7 @@ export const diffElements = (original: JsonPlayObject, steps: LifecycleStep[]): 
             diffElements.push(<ChakraCodeBlockShort key={`diffblockfallback-${index}`} title="Diff Patch" code={patch} />);
             continue;
         }
-        let left: JsonPlayObject = structuredClone(currentPlay); // JSON.parse(JSON.stringify(currentPlay));
+        const left: JsonPlayObject = structuredClone(currentPlay); // JSON.parse(JSON.stringify(currentPlay));
         left.data.meta = {
             ...(left.data.meta ?? {}),
             brainz: {

@@ -1,9 +1,9 @@
-import { Handle } from "@atcute/lexicons";
-import { isHandle, AtprotoDid } from "@atcute/lexicons/syntax";
-import { Logger } from "@foxxmd/logging";
+import { type Handle } from "@atcute/lexicons";
+import { isHandle, type AtprotoDid } from "@atcute/lexicons/syntax";
+import { type Logger } from "@foxxmd/logging";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
-import { loggerNoop, MaybeLogger } from '../../MaybeLogger.js';
-import { ATProtoUserIdentifierData, HandleData } from "../../infrastructure/config/client/atproto.js";
+import { loggerNoop, MaybeLogger } from '../../MaybeLogger.ts';
+import { type ATProtoUserIdentifierData, type HandleData } from "../../infrastructure/config/client/atproto.ts";
 import { Cacheable } from "cacheable";
 import {
     CompositeDidDocumentResolver,
@@ -19,8 +19,8 @@ import {
     isAtprotoDid,
 } from '@atcute/identity';
 import assert from "node:assert";
-import { isPortReachableConnect, normalizeWebAddress } from "../../../utils/NetworkUtils.js";
-import { isNodeNetworkException } from "../../errors/NodeErrors.js";
+import { isPortReachableConnect, normalizeWebAddress } from "../../../utils/NetworkUtils.ts";
+import { isNodeNetworkException } from "../../errors/NodeErrors.ts";
 
 export const HANDLE_REGEX = new RegExp(/.+\..+/);
 export const ATSIGN_REGEX = new RegExp(/^@(.+)/);

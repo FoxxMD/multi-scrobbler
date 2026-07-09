@@ -1,7 +1,6 @@
 {
   "reporter": "dot",
   "extension": "ts",
-  "import": "tsx/esm",
   "spec": "./src/backend/tests/**/*.test.ts",
   "file": [
     "./src/backend/tests/setup.ts"

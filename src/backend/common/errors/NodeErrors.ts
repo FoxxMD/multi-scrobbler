@@ -1,13 +1,12 @@
-import { findCauseByFunc } from "../../utils/ErrorUtils.js";
-import { isArbitraryObject } from "../infrastructure/Atomic.js";
-import ErrnoException = NodeJS.ErrnoException;
+import { findCauseByFunc } from "../../utils/ErrorUtils.ts";
+import { isArbitraryObject } from "../infrastructure/Atomic.ts";
 
 export type NodeNetworkErrorCode = 'ENOTFOUND' | 'ETIMEDOUT' | 'EAI_AGAIN' | 'ECONNRESET' | 'ECONNREFUSED' | 'ERRADDRINUSE' | 'EADDRNOTAVAIL' | 'ECONNABORTED' | 'EHOSTUNREACH';
 export const NETWORK_ERROR_CODES: NodeNetworkErrorCode[] = ['ENOTFOUND', 'ETIMEDOUT',  'EAI_AGAIN', 'ECONNRESET', 'ECONNREFUSED', 'ERRADDRINUSE', 'EADDRNOTAVAIL', 'ECONNABORTED', 'EHOSTUNREACH'];
 
 export const NETWORK_ERROR_FAILURE_CODES: NodeNetworkErrorCode[] = ['ENOTFOUND', 'EAI_AGAIN', 'ECONNRESET', 'ECONNREFUSED', 'ERRADDRINUSE', 'EADDRNOTAVAIL', 'ECONNABORTED', 'EHOSTUNREACH'];
 
-export const isErrnoException = (error: unknown): error is ErrnoException => {
+export const isErrnoException = (error: unknown): error is NodeJS.ErrnoException => {
     return isArbitraryObject(error) &&
         error instanceof Error &&
         (typeof error.errno === "number" || typeof error.errno === "undefined") &&
@@ -16,7 +15,7 @@ export const isErrnoException = (error: unknown): error is ErrnoException => {
         (typeof error.syscall === "string" || typeof error.syscall === "undefined");
 }
 
-export interface NodeNetworkException extends ErrnoException {
+export interface NodeNetworkException extends NodeJS.ErrnoException {
     code: NodeNetworkErrorCode
 }
 

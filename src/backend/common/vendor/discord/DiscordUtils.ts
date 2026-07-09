@@ -1,19 +1,19 @@
 import dayjs from "dayjs";
-import { isPlayObject, PlayObject, SourcePlayerObj } from "../../../../core/Atomic.js";
-import { asPlayerStateData, SourceData } from "../../infrastructure/Atomic.js";
-import { GatewayActivity, GatewayOpcodes, PresenceUpdateStatus } from "discord.js";
-import { capitalize } from "../../../../core/StringUtils.js";
-import { urlToMusicService } from '../listenbrainz/lzUtils.js';
-import { ACTIVITY_TYPE, ActivityData, ActivityTypes, DiscordData, DiscordStrongData, ActivityTypeString as MSActivityType, StatusType } from "../../infrastructure/config/client/discord.js";
-import { parseBool, removeUndefinedKeys } from "../../../utils.js";
-import { parseArrayFromMaybeString, parseBoolOrArrayFromMaybeString } from "../../../utils/StringUtils.js";
+import { type PlayObject, type SourcePlayerObj } from "../../../../core/Atomic.ts";
+import { GatewayOpcodes, PresenceUpdateStatus } from "discord.js";
+import { capitalize } from "../../../../core/StringUtils.ts";
+import { urlToMusicService } from '../listenbrainz/lzUtils.ts';
+import { ACTIVITY_TYPE, type ActivityData, type DiscordData, type DiscordStrongData, type ActivityTypeString as MSActivityType, type StatusType } from "../../infrastructure/config/client/discord.ts";
+import { parseBool } from "../../../utils.ts";
+import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
+import { parseArrayFromMaybeString } from "../../../utils/StringUtils.ts";
 
 export const playStateToActivityData = (data: SourcePlayerObj, opts: { useArt?: boolean } = {}): { activity: ActivityData, artUrl?: string } => {
     // unix timestamps in milliseconds
     let startTime: number,
         endTime: number;
 
-    let play: PlayObject = data.play;
+    const play: PlayObject = data.play;
 
     const position = data.position ?? data.play.meta?.trackProgressPosition;
     if(position !== undefined && play.data.duration !== undefined) {
@@ -29,7 +29,7 @@ export const playStateToActivityData = (data: SourcePlayerObj, opts: { useArt?: 
         endTime = dayjs().add(play.data.duration - realPosition, 's').unix() * 1000;
     }
 
-    let activityName = capitalize(play.meta?.musicService ?? play.meta?.mediaPlayerName ?? play.meta?.source ?? 'music')
+    const activityName = capitalize(play.meta?.musicService ?? play.meta?.mediaPlayerName ?? play.meta?.source ?? 'music')
 
     // discord requires all fields to be at least 2 characters long or else it returns this error
     //

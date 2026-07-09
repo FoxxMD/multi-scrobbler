@@ -1,42 +1,42 @@
 import { createPlatform, Media, MediaController, PersistentClient } from "@foxxmd/chromecast-client";
 import { ContextualValidationError } from "@foxxmd/chromecast-client/dist/cjs/src/utils.js";
-import { childLogger, Logger } from "@foxxmd/logging";
+import { childLogger, type Logger } from "@foxxmd/logging";
 import { Client as CastClient } from 'castv2';
 import dayjs from "dayjs";
 import { EventEmitter } from "events";
 import e from "express";
-import { PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
-import { artistNamesToCredits, buildTrackString } from "../../core/StringUtils.js";
-import { NETWORK_ERROR_FAILURE_CODES } from "../common/errors/NodeErrors.js";
+import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
+import { artistNamesToCredits, buildTrackString } from "../../core/StringUtils.ts";
+import { NETWORK_ERROR_FAILURE_CODES } from "../common/errors/NodeErrors.ts";
 import {
-    FormatPlayObjectOptions,
-    InternalConfig,
-    MdnsDeviceInfo,
+    type FormatPlayObjectOptions,
+    type InternalConfig,
+    type MdnsDeviceInfo,
     NO_USER,
-    PlayerStateData,
-    SourceData,
-} from "../common/infrastructure/Atomic.js";
-import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
-import { MaybeLogger } from '../common/MaybeLogger.js';
+    type PlayerStateData,
+    type SourceData,
+} from "../common/infrastructure/Atomic.ts";
+import { type ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.ts";
+import { MaybeLogger } from '../common/MaybeLogger.ts';
 import {
     chromePlayerStateToReported,
     genDeviceId,
     genPlayHash,
     getCurrentPlatformApplications,
     getMediaStatus,
-} from "../common/vendor/chromecast/ChromecastClientUtils.js";
+} from "../common/vendor/chromecast/ChromecastClientUtils.ts";
 import {
-    PlatformApplication,
-    PlatformApplicationWithContext,
-    PlatformType
-} from "../common/vendor/chromecast/interfaces.js";
-import { difference, isDebugMode, parseBool } from "../utils.js";
-import { genGroupIdStr } from '../../core/PlayUtils.js';
-import { findCauseByReference } from "../utils/ErrorUtils.js";
-import { discoveryAvahi, discoveryNative } from "../utils/MDNSUtils.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
-import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
+    type PlatformApplication,
+    type PlatformApplicationWithContext,
+    type PlatformType
+} from "../common/vendor/chromecast/interfaces.ts";
+import { difference, isDebugMode, parseBool } from "../utils.ts";
+import { genGroupIdStr } from '../../core/PlayUtils.ts';
+import { findCauseByReference } from "../utils/ErrorUtils.ts";
+import { discoveryAvahi, discoveryNative } from "../utils/MDNSUtils.ts";
+import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 
 interface ChromecastDeviceInfo {
     mdns: MdnsDeviceInfo

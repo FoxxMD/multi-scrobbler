@@ -1,7 +1,7 @@
 import type {} from "@atcute/lexicons";
 import * as v from "@atcute/lexicons/validations";
 import type {} from "@atcute/lexicons/ambient";
-import * as FmTealAlphaActorDefs from "./defs.js";
+import * as FmTealAlphaActorDefs from "./defs.ts";
 
 const _mainSchema = /*#__PURE__*/ v.query("fm.teal.alpha.actor.searchActors", {
   params: /*#__PURE__*/ v.object({

@@ -1,5 +1,5 @@
-import { PollingOptions } from "../common.js";
-import { CommonSourceConfig, CommonSourceData } from "./index.js";
+import { type PollingOptions } from "../common.ts";
+import { type CommonSourceConfig, type CommonSourceData } from "./index.ts";
 
 export interface YandexMusicBridgeData extends CommonSourceData, PollingOptions {
     /** URL of the local Python bridge, for example http://yandex-music-bridge:9980 */

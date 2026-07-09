@@ -1,5 +1,5 @@
-import { LogDataPretty, Logger, LogLevel } from "@foxxmd/logging";
-import { Express } from 'express';
+import { type LogDataPretty, type Logger, type LogLevel } from "@foxxmd/logging";
+import { type Express } from 'express';
 import bsseDef from 'better-sse';
 import bodyParser from "body-parser";
 import { FixedSizeList } from 'fixed-size-list';
@@ -7,44 +7,43 @@ import { PassThrough } from "node:stream";
 import { Transform } from "stream";
 import {
     CLIENT_DEAD_QUEUE,
-    ClientStatusData,
-    DeadLetterScrobble,
-    LeveledLogData,
-    LogOutputConfig,
+    type ClientStatusData,
+    type DeadLetterScrobble,
+    type LogOutputConfig,
     PLAY_CLIENT_STATE,
     PLAY_SOURCE_STATE,
-    PlayObject,
+    type PlayObject,
     SOURCE_SOT,
-    SOURCE_SOT_TYPES,
-    SourcePlayerJson,
-    SourceStatusData,
-} from "../../core/Atomic.js";
-import { capitalize } from "../../core/StringUtils.js";
-import { ExpressHandler } from "../common/infrastructure/Atomic.js";
-import { getRoot } from "../ioc.js";
-import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.js";
-import AbstractSource from "../sources/AbstractSource.js";
-import MemorySource from "../sources/MemorySource.js";
-import { parseBool } from "../utils.js";
-import { sortByNewestPlayDate } from '../../core/PlayUtils.js';
-import { setupAuthRoutes } from "./auth.js";
-import { setupDeezerRoutes } from "./deezerRoutes.js";
-import {setupLZEndpointRoutes} from "./endpointListenbrainzRoutes.js";
-import {setupLastfmEndpointRoutes} from "./endpointLastfmRoutes.js";
-import { ClientAwareRequest, ComponentAwareRequest, makeClientCheckMiddle, makeClientNextMiddle, makeComponentMiddle, makeSourceCheckMiddle, makeSourceNextMiddle, SourceAwareRequest } from "./middleware.js";
-import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.js";
-import ScrobbleSources from "../sources/ScrobbleSources.js";
-import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
+    type SOURCE_SOT_TYPES,
+    type SourcePlayerJson,
+    type SourceStatusData,
+} from "../../core/Atomic.ts";
+import { capitalize } from "../../core/StringUtils.ts";
+import { type ExpressHandler, type LeveledLogData } from "../common/infrastructure/Atomic.ts";
+import { getRoot } from "../ioc.ts";
+import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts";
+import AbstractSource from "../sources/AbstractSource.ts";
+import MemorySource from "../sources/MemorySource.ts";
+import { parseBool } from "../utils.ts";
+import { sortByNewestPlayDate } from '../../core/PlayUtils.ts';
+import { setupAuthRoutes } from "./auth.ts";
+import { setupDeezerRoutes } from "./deezerRoutes.ts";
+import {setupLZEndpointRoutes} from "./endpointListenbrainzRoutes.ts";
+import {setupLastfmEndpointRoutes} from "./endpointLastfmRoutes.ts";
+import { type ComponentAwareRequest, makeClientCheckMiddle, makeClientNextMiddle, makeComponentMiddle, makeSourceCheckMiddle, makeSourceNextMiddle, type SourceAwareRequest } from "./middleware.ts";
+import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.ts";
+import ScrobbleSources from "../sources/ScrobbleSources.ts";
+import ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
 import prom from 'prom-client';
-import { SimpleError } from "../common/errors/MSErrors.js";
-import { DrizzlePlayRepository, QueryPlaysOpts, QueryPlaysOptsJson } from "../common/database/drizzle/repositories/PlayRepository.js";
-import { playSelectToDeadScrobble } from "../common/database/drizzle/entityUtils.js";
-import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.js";
-import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.js";
-import { ComponentClientApi, ComponentClientApiJson, ComponentSourceApi, ComponentSourceApiJson } from "../../core/Api.js";
-import { asDayjsHydratedObject } from "../../core/DataUtils.js";
-import { Dayjs } from "dayjs";
-import { asSerializablePlaySelect } from "../../core/PlayMarshalUtils.js";
+import { SimpleError } from "../common/errors/MSErrors.ts";
+import { DrizzlePlayRepository, type QueryPlaysOpts, type QueryPlaysOptsJson } from "../common/database/drizzle/repositories/PlayRepository.ts";
+import { playSelectToDeadScrobble } from "../common/database/drizzle/entityUtils.ts";
+import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.ts";
+import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
+import { type ComponentClientApiJson, type ComponentSourceApiJson } from "../../core/Api.ts";
+import { asDayjsHydratedObject } from "../../core/DataUtils.ts";
+import { type Dayjs } from "dayjs";
+import { asSerializablePlaySelect } from "../../core/PlayMarshalUtils.ts";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};

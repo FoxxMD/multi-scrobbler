@@ -1,11 +1,10 @@
-import EventEmitter from "events";
-import { Logger } from "@foxxmd/logging";
-import LastfmScrobbler from "./LastfmScrobbler.js";
-import { Notifiers } from "../notifier/Notifiers.js";
-import { LibrefmClientConfig } from "../common/infrastructure/config/client/librefm.js";
-import { formatPlayObj, LIBREFM_HOST, LIBREFM_PATH } from "../common/vendor/LastfmApiClient.js";
-import { LastfmClientConfig, LastfmData } from "../common/infrastructure/config/client/lastfm.js";
-import { FormatPlayObjectOptions, InternalConfigOptional } from "../common/infrastructure/Atomic.js";
+import { type EventEmitter } from "events";
+import { type Logger } from "@foxxmd/logging";
+import LastfmScrobbler from "./LastfmScrobbler.ts";
+import { type LibrefmClientConfig } from "../common/infrastructure/config/client/librefm.ts";
+import { formatPlayObj, LIBREFM_HOST, LIBREFM_PATH } from "../common/vendor/LastfmApiClient.ts";
+import { type LastfmClientConfig, type LastfmData } from "../common/infrastructure/config/client/lastfm.ts";
+import { type FormatPlayObjectOptions, type InternalConfigOptional } from "../common/infrastructure/Atomic.ts";
 
 export default class LibrefmScrobbler extends LastfmScrobbler {
 

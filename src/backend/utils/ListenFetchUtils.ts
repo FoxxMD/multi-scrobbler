@@ -1,14 +1,14 @@
-import { childLogger, Logger } from "@foxxmd/logging";
-import dayjs, { Dayjs } from "dayjs";
-import { Duration } from "dayjs/plugin/duration.js";
-import { PlayObject, UnixTimestamp } from "../../core/Atomic.js";
-import { CursorType, hasPagelessTimeRangeListens, hasPaginatedTimeRangeListens, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PagelessTimeRangeListensResult, PaginatedListensTimeRangeOptions, PaginatedTimeRangeCommonOptions, PaginatedTimeRangeListens, PaginatedTimeRangeListensResult, PaginatedTimeRangeOptions, PaginatedTimeRangeSource, REFRESH_STALE_DEFAULT, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
-import { loggerNoop } from '../common/MaybeLogger.js';
-import { MaybeLogger } from '../common/MaybeLogger.js';
-import { sortByOldestPlayDate } from "../utils.js";
-import { sortByNewestPlayDate } from '../../core/PlayUtils.js';
-import { todayAwareFormat } from "../../core/TimeUtils.js";
-import { playDateWithinDurationOfAny } from "./PlayComparisonUtils.js";
+import { childLogger, type Logger } from "@foxxmd/logging";
+import dayjs, { type Dayjs } from "dayjs";
+import { type Duration } from "dayjs/plugin/duration.js";
+import { type PlayObject } from "../../core/Atomic.ts";
+import { type CursorType, hasPagelessTimeRangeListens, hasPaginatedTimeRangeListens, type PagelessTimeRangeListensResult, type PaginatedListensTimeRangeOptions, type PaginatedTimeRangeCommonOptions, type PaginatedTimeRangeListensResult, type PaginatedTimeRangeOptions, type PaginatedTimeRangeSource, REFRESH_STALE_DEFAULT, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.ts";
+import { loggerNoop } from '../common/MaybeLogger.ts';
+import { MaybeLogger } from '../common/MaybeLogger.ts';
+import { sortByOldestPlayDate } from "../utils.ts";
+import { sortByNewestPlayDate } from '../../core/PlayUtils.ts';
+import { todayAwareFormat } from "../../core/TimeUtils.ts";
+import { playDateWithinDurationOfAny } from "./PlayComparisonUtils.ts";
 
 export interface TimeRangeFetchOptions {
     logger?: MaybeLogger | Logger
@@ -26,7 +26,7 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
             let plays: PlayObject[] = [];
             requestCount = 0;
             let more = true;
-            let currOpts = { ...opts };
+            const currOpts = { ...opts };
             let initial = true;
             while (more) {
                 requestCount++;
@@ -110,7 +110,7 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
             let plays: PlayObject[] = [];
             requestCount = 0;
             let more = true;
-            let currOpts: PaginatedListensTimeRangeOptions = opts;
+            const currOpts: PaginatedListensTimeRangeOptions = opts;
             let initial = true;
             let timeRangeHint: string;
             if(currOpts.to !== undefined && currOpts.from !== undefined) {

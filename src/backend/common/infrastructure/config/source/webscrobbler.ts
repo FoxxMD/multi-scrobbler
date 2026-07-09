@@ -1,4 +1,4 @@
-import { CommonSourceConfig, CommonSourceData } from "./index.js";
+import { type CommonSourceConfig, type CommonSourceData } from "./index.ts";
 
 export interface WebScrobblerData extends CommonSourceData {
     /**

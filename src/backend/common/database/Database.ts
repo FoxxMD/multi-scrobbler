@@ -1,18 +1,16 @@
-import { configDir } from '../index.js';
+import { configDir } from '../index.ts';
 import * as path from 'path';
-import { promises as fs } from 'fs'
-import { childLogger, Logger } from '@foxxmd/logging';
-import { loggerNoop } from '../MaybeLogger.js';
-import { fileExists, fileOrDirectoryIsWriteable } from '../../utils/FSUtils.js';
-import { COMPACTABLE, compactableProperties, CompactableProperty, DEFAULT_RETENTION_COMPACT_AFTER, DEFAULT_RETENTION_DELETE_AFTER, RententionGranular, RetentionConfig, RetentionConfigValue, RetentionOption, RetentionValue, RetentionValueUnparsed } from '../infrastructure/config/database.js';
-import { DurationValue } from '../infrastructure/Atomic.js';
-import { Duration } from 'dayjs/plugin/duration.js';
+import { childLogger, type Logger } from '@foxxmd/logging';
+import { loggerNoop } from '../MaybeLogger.ts';
+import { COMPACTABLE, type CompactableProperty, DEFAULT_RETENTION_COMPACT_AFTER, DEFAULT_RETENTION_DELETE_AFTER, type RetentionConfigValue, type RetentionOption, type RetentionValue, type RetentionValueUnparsed } from '../infrastructure/config/database.ts';
+import { type DurationValue } from '../infrastructure/Atomic.ts';
+import { type Duration } from 'dayjs/plugin/duration.js';
 import dayjs from 'dayjs';
-import { parseDurationFromDurationValue } from '../../utils/TimeUtils.js';
-import assert, { AssertionError } from 'node:assert';
+import { parseDurationFromDurationValue } from '../../utils/TimeUtils.ts';
+import assert from 'node:assert';
 import * as sqlite from 'node:sqlite';
-import { parseBoolStrict } from '../../utils.js';
-import { SimpleError } from '../errors/MSErrors.js';
+import { parseBoolStrict } from '../../utils.ts';
+import { SimpleError } from '../errors/MSErrors.ts';
 
 export const MEMORY_DB_NAME = ':memory:';
 export const isMemoryDb = (name: string): boolean => name === MEMORY_DB_NAME;

@@ -1,28 +1,28 @@
 import { EventEmitter } from "events";
-import { PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
+import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
 import {
-    FormatPlayObjectOptions,
-    InternalConfig,
+    type FormatPlayObjectOptions,
+    type InternalConfig,
     NO_DEVICE,
     NO_USER,
-    PlayerStateData,
+    type PlayerStateData,
     REPORTED_PLAYER_STATUSES,
-    ReportedPlayerStatus,
-} from "../common/infrastructure/Atomic.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
-import { SonosSourceConfig } from "../common/infrastructure/config/source/sonos.js";
+    type ReportedPlayerStatus,
+} from "../common/infrastructure/Atomic.ts";
+import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
+import { type SonosSourceConfig } from "../common/infrastructure/config/source/sonos.ts";
 import { SonosDevice, SonosManager } from '@svrooij/sonos';
-import { SonosState } from "@svrooij/sonos/lib/models/sonos-state.js";
+import { type SonosState } from "@svrooij/sonos/lib/models/sonos-state.js";
 import { GroupTransportState } from "@svrooij/sonos/lib/models/transport-state.js";
-import { Track } from "@svrooij/sonos/lib/models/track.js";
-import { parseDurationFromTimestamp } from "../utils/TimeUtils.js";
+import { type Track } from "@svrooij/sonos/lib/models/track.js";
+import { parseDurationFromTimestamp } from "../utils/TimeUtils.ts";
 import { FixedSizeList } from "fixed-size-list";
-import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.js";
-import { isDebugMode, playObjDataMatch, sleep } from "../utils.js";
-import dayjs, { Dayjs } from "dayjs";
-import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
-import { artistNamesToCredits } from "../../core/StringUtils.js";
+import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.ts";
+import { isDebugMode, playObjDataMatch, sleep } from "../utils.ts";
+import dayjs, { type Dayjs } from "dayjs";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
+import { artistNamesToCredits } from "../../core/StringUtils.ts";
 
 export interface DeviceState {
     device: SonosDevice
@@ -206,7 +206,7 @@ export class SonosSource extends MemoryPositionalSource {
             const deviceId = Name === undefined ? NO_DEVICE : `${Name}-${GroupName ?? 'NoGroup'}`;
 
             try {
-                let status = CLIENT_PLAYER_STATE[x.state.transportState] ?? REPORTED_PLAYER_STATUSES.unknown;
+                const status = CLIENT_PLAYER_STATE[x.state.transportState] ?? REPORTED_PLAYER_STATUSES.unknown;
 
                 // TODO if status is stopped then drop state if player is also stopped?
 
@@ -230,7 +230,7 @@ export class SonosSource extends MemoryPositionalSource {
                     }
                 }
 
-                let play: PlayObject | undefined = status === REPORTED_PLAYER_STATUSES.stopped || posTrackURI === undefined ? undefined : formatPlayObj(x.state, { device: x.device });
+                const play: PlayObject | undefined = status === REPORTED_PLAYER_STATUSES.stopped || posTrackURI === undefined ? undefined : formatPlayObj(x.state, { device: x.device });
                 let playIsEmpty = false;
 
                 if (play !== undefined && (play.data?.track === undefined && play.data?.artists === undefined)) {

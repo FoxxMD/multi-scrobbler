@@ -1,24 +1,24 @@
 import backoffStrategies from '@kenyip/backoff-strategies';
 import { replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer } from 'common-tags';
-import dayjs, { Dayjs } from 'dayjs';
-import { Duration } from "dayjs/plugin/duration.js";
+import dayjs, { type Dayjs } from "dayjs";
+import { type Duration } from "dayjs/plugin/duration.js";
 import utc from 'dayjs/plugin/utc.js';
-import { Request } from "express";
+import { type Request } from "express";
 // https://github.com/jfromaniello/url-join#in-nodejs
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
-import { DEFAULT_MISSING_MBIDS_TYPES, DEFAULT_MISSING_TYPES, MissingMbidType, PlayObject } from "../core/Atomic.js";
+import { DEFAULT_MISSING_MBIDS_TYPES, type MissingMbidType, type PlayObject } from "../core/Atomic.ts";
 import {
     asPlayerStateDataMaybePlay,
     NO_DEVICE,
     NO_USER,
-    PlayerStateDataMaybePlay,
-    PlayPlatformId,
-    ProgressAwarePlayObject,
-    RegExResult,
-    RemoteIdentityParts,
-    ScrobbleThresholdResult,
-} from "./common/infrastructure/Atomic.js";
-import { genGroupIdStr } from '../core/PlayUtils.js';
+    type PlayerStateDataMaybePlay,
+    type ProgressAwarePlayObject,
+    type RemoteIdentityParts,
+    type ScrobbleThresholdResult,
+} from "./common/infrastructure/Atomic.ts";
+import { type PlayPlatformId } from '../core/Atomic.ts';
+import { genGroupIdStr } from '../core/PlayUtils.ts';
+import { durationToNormalizedTime } from '../core/TimeUtils.ts';
 
 //const { default: Ajv } = AjvNS;
 dayjs.extend(utc);
@@ -200,34 +200,6 @@ export const spreadDelay = (retries: any, multiplier: any) => {
     return s;
 }
 
-export const removeUndefinedKeys = <T extends Record<string, any>>(obj: T, returnUndefined: boolean = true): T | undefined => {
-    const newObj: any = {};
-    Object.keys(obj).forEach((key) => {
-        if(Array.isArray(obj[key])) {
-            newObj[key] = obj[key];
-        } else if (obj[key] === Object(obj[key])) {
-            // dumb assign nested objects
-            // bc they may be third party library-objects that use prototyping and we don't want to mess with
-            newObj[key] = obj[key]; 
-        } else if (obj[key] !== undefined) {
-            newObj[key] = obj[key];
-        }
-    });
-    if(Object.keys(newObj).length === 0) {
-        if(returnUndefined) {
-            return undefined;
-        }
-        return newObj;
-    }
-    Object.keys(newObj).forEach(key => {
-        if(newObj[key] === undefined || (null !== newObj[key] && typeof newObj[key] === 'object' && Object.keys(newObj[key]).length === 0)) {
-            delete newObj[key]
-        }
-    });
-    //Object.keys(newObj).forEach(key => newObj[key] === undefined || newObj[key] && delete newObj[key])
-    return newObj;
-}
-
 export const removeEmptyArrays = <T extends Record<string, any>>(obj: T): T => {
     const newObj: any = {};
     Object.keys(obj).forEach((key) => {
@@ -389,20 +361,6 @@ export const progressBar = (value: number, maxValue: number, size: number) => {
     return bar;
 };
 
-export const durationToNormalizedTime = (dur: Duration): { hours: number, minutes: number, seconds: number } => {
-    const totalSeconds = dur.asSeconds();
-
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds - (hours * 3600)) / 60);
-    const seconds = totalSeconds - (hours * 3600) - (minutes * 60);
-
-    return {
-        hours,
-        minutes,
-        seconds
-    };
-}
-
 // https://github.com/zspecza/common-tags/issues/176#issuecomment-1650242734
 export const doubleReturnNewline = new TemplateTag(
     stripIndentTransformer('all'),
@@ -423,18 +381,6 @@ export const durationToTimestamp = (dur: Duration): string => {
     parts.push(nTime.minutes.toString().padStart(2, "0"));
     parts.push(nTime.seconds.toString().padStart(2, "0"));
     return parts.join(':');
-}
-
-export const durationToHuman = (dur: Duration): string => {
-    const nTime = durationToNormalizedTime(dur);
-
-    const parts: string[] = [];
-    if (nTime.hours !== 0) {
-        parts.push(`${nTime.hours}hr`);
-    }
-    parts.push(`${nTime.minutes}min`);
-    parts.push(`${nTime.seconds}sec`);
-    return parts.join(' ');
 }
 
 export const comparingMultipleArtists = (existing: PlayObject, candidate: PlayObject): boolean => {

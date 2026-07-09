@@ -1,13 +1,13 @@
-import { isPlayObject } from "../../../../core/Atomic.js";
-import { getRoot } from "../../../ioc.js";
-import { isDebugMode } from "../../../utils.js";
-import { urlContainsKnownMediaDomain } from "../../../utils/RequestUtils.js";
-import { MSCache } from "../../Cache.js";
-import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
-import { AbstractApiOptions, SourceData } from "../../infrastructure/Atomic.js";
-import { ActivityAssets, ARTWORK_PLACEHOLDER, DiscordStrongData, MS_ART } from "../../infrastructure/config/client/discord.js";
-import AbstractApiClient from "../AbstractApiClient.js";
-import { CoverArtApiClient } from "../musicbrainz/CoverArtApiClient.js";
+import { isPlayObject } from "../../../../core/Atomic.ts";
+import { getRoot } from "../../../ioc.ts";
+import { isDebugMode } from "../../../utils.ts";
+import { urlContainsKnownMediaDomain } from "../../../utils/RequestUtils.ts";
+import { MSCache } from "../../Cache.ts";
+import { isSuperAgentResponseError } from "../../errors/ErrorUtils.ts";
+import { type AbstractApiOptions, type SourceData } from "../../infrastructure/Atomic.ts";
+import { type ActivityAssets, ARTWORK_PLACEHOLDER, type DiscordStrongData, MS_ART } from "../../infrastructure/config/client/discord.ts";
+import AbstractApiClient from "../AbstractApiClient.ts";
+import { CoverArtApiClient } from "../musicbrainz/CoverArtApiClient.ts";
 import EventEmitter from "events";
 import request from 'superagent';
 

@@ -1,14 +1,14 @@
 import EventEmitter from "events";
-import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import MemorySource from "./MemorySource.js";
-import { TealApiClient } from "../common/vendor/teal/TealApiClient.js";
-import { recordToPlay } from "../common/vendor/teal/TealApiClient.js";
-import { TealSourceConfig } from "../common/infrastructure/config/source/tealfm.js";
-import { ATProtoAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.js";
-import { parseArrayFromMaybeString } from "../utils/StringUtils.js";
+import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
+import { type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.ts";
+import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import MemorySource from "./MemorySource.ts";
+import { TealApiClient } from "../common/vendor/teal/TealApiClient.ts";
+import { recordToPlay } from "../common/vendor/teal/TealApiClient.ts";
+import { type TealSourceConfig } from "../common/infrastructure/config/source/tealfm.ts";
+import { ATProtoAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.ts";
+import { parseArrayFromMaybeString } from "../utils/StringUtils.ts";
 
 export default class TealfmSource extends MemorySource {
 

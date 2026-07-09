@@ -1,11 +1,10 @@
-import { PickKeys, StrictOmit } from "ts-essentials"
-import { ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.js"
-import { ClientType } from "../backend/common/infrastructure/config/client/clients.js"
-import { SourceType } from "../backend/common/infrastructure/config/source/sources.js"
-import { ComponentType, ErrorLike, JsonPlayObject, PlayState, Replace, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.js"
-import { Dayjs } from "dayjs"
-import { INITIALIZING } from "../backend/common/infrastructure/Atomic.js"
-import { ErrorIsh } from "./ErrorUtils.js"
+import type { PickKeys } from "ts-essentials"
+import type { CompareOpKey, ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
+import type { ClientType } from "../backend/common/infrastructure/config/client/clients.ts"
+import type { SourceType } from "../backend/common/infrastructure/config/source/sources.ts"
+import type { ComponentType, DateLike, ErrorLike, JsonPlayObject, PlayState, QueueName, Replace, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.ts"
+import type { Dayjs } from "dayjs"
+import type { ErrorIsh } from "./ErrorUtils.ts"
 
 export interface PlayApiCommon {
     uid: string
@@ -156,3 +155,57 @@ export interface SortPlaysByProps {
 }
 
 export type PlayStateUI = PlayState | 'dead queued';
+
+export type QueryPlaysOptsJson = {
+    sort?: "playedAt" | "seenAt";
+    order?: "asc" | "desc";
+    with?: ("input" | "parent" | "parent-input" | "queues")[];
+    limit?: number;
+    offset?: number;
+    state?: ("queued" | "discovered" | "discarded" | "scrobbled" | "failed" | "duped")[];
+    stateNot?: ("queued" | "discovered" | "discarded" | "scrobbled" | "failed" | "duped")[];
+    componentId?: number;
+    seenAt?: {
+        type: "eq" | "ne" | "gt" | "gte" | "lt" | "lte";
+        date: string;
+    } | {
+        type: "between";
+        range: [string, string];
+        inclusive?: boolean;
+    };
+    playedAt?: {
+        type: "eq" | "ne" | "gt" | "gte" | "lt" | "lte";
+        date: string;
+    } | {
+        type: "between";
+        range: [string, string];
+        inclusive?: boolean;
+    };
+queues?: {
+        queueName: QueueName;
+        queueStatus: ('queued' | 'failed' | 'completed')[] | ('queued' | 'failed' | 'completed');
+    }[];
+    uid?: string[];
+    text?: string[];
+}
+export interface PaginatedQueryResponse {
+    limit: number;
+    offset: number;
+    total?: number;
+}
+export interface PaginatedResponse<T> {
+    data: T[];
+    meta: PaginatedQueryResponse;
+}
+
+export type CompareDateBetween<D extends DateLike = Dayjs> = {
+    type: 'between';
+    range: [D, D];
+    inclusive?: boolean;
+};
+
+export type CompareDateSingle<D extends DateLike = Dayjs> = {
+    type: CompareOpKey<D>;
+    date: D;
+};
+

@@ -1,22 +1,23 @@
 import { faker } from '@faker-js/faker';
-import dayjs, { Dayjs } from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import duration from "dayjs/plugin/duration.js";
 import isBetween from "dayjs/plugin/isBetween.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
 import timezone from "dayjs/plugin/timezone.js";
 import utc from "dayjs/plugin/utc.js";
-import { ArtistCredit, BrainzMeta, FEAT, JOINERS, JOINERS_FINAL, JsonPlayObject, MBID, MissingMbidType, ObjectPlayData, PlayMeta, PlayObject, SourcePlayerObj } from "./Atomic.js";
-import { genGroupIdStr } from './PlayUtils.js';
-import { sortByNewestPlayDate } from './PlayUtils.js';
-import { CALCULATED_PLAYER_STATUSES, NO_DEVICE, NO_USER, PlayerStateDataMaybePlay, PlayPlatformId, REPORTED_PLAYER_STATUSES, SINGLE_USER_PLATFORM_ID } from '../backend/common/infrastructure/Atomic.js';
-import { arrayListAnd, artistNamesToCredits } from './StringUtils.js';
-import { findDelimiters } from "./StringUtils.js";
-import { ListRecord } from '../backend/common/infrastructure/config/client/tealfm.js';
+import { type ArtistCredit, type BrainzMeta, FEAT, JOINERS, JOINERS_FINAL, type JsonPlayObject, type MBID, type ObjectPlayData, type PlayMeta, type PlayObject, type SourcePlayerObj } from "../../Atomic.ts";
+import { genGroupIdStr } from '../../PlayUtils.ts';
+import { sortByNewestPlayDate } from '../../PlayUtils.ts';
+import { CALCULATED_PLAYER_STATUSES, NO_DEVICE, NO_USER, type PlayerStateDataMaybePlay, REPORTED_PLAYER_STATUSES, SINGLE_USER_PLATFORM_ID } from '../../../backend/common/infrastructure/Atomic.ts';
+import { type PlayPlatformId } from '../../Atomic.ts';
+import { arrayListAnd, artistNamesToCredits } from '../../StringUtils.ts';
+import { findDelimiters } from "../../StringUtils.ts";
+import { type ListRecord } from '../../../backend/common/infrastructure/config/client/tealfm.ts';
 import { nanoid } from 'nanoid';
-import { LastFMTrackObject } from '../backend/common/vendor/LastfmApiClient.js';
+import { type LastFMTrackObject } from '../../../backend/common/vendor/LastfmApiClient.ts';
 import clone from 'clone';
-import { removeUndefinedKeys } from '../backend/utils.js';
-import { FmTealAlphaFeedPlay } from '../backend/common/vendor/teal/lexicons/index.js';
+import { removeUndefinedKeys } from '../../DataUtils.ts';
+import { FmTealAlphaFeedPlay } from '../../../backend/common/vendor/teal/lexicons/index.ts';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -146,7 +147,7 @@ export const normalizePlays = (plays: PlayObject[],
 }
 
 export const generatePlayerStateData = (options: Omit<PlayerStateDataMaybePlay, 'platformId'> & {playData?: ObjectPlayData, playMeta?: PlayMeta, platformId?: PlayPlatformId} = {}): PlayerStateDataMaybePlay => {
-    let play: PlayObject = options.play ?? generatePlay(options.playData, options.playMeta);
+    const play: PlayObject = options.play ?? generatePlay(options.playData, options.playMeta);
     if(options.position !== undefined) {
         play.meta.trackProgressPosition = options.position;
     }
@@ -203,7 +204,7 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: PlayMeta = {}, opt
         const sessionTime = lf / sessions;
         let nextTime = play.data.playDate;
         switch(faker.number.int({min: 1, max: 2})) {
-            case 1:
+            case 1: {
                 // timestamps only
                 for(let i = 0; i < sessions; i++) {
                     const newTime = nextTime.add(sessionTime, 's');
@@ -211,7 +212,8 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: PlayMeta = {}, opt
                     nextTime = newTime;
                 }
                 break;
-            case 2:
+            }
+            case 2: {
                 // timestamps + position
                 let position = 0;
                 for(let i = 0; i < sessions; i++) {
@@ -222,6 +224,7 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: PlayMeta = {}, opt
                     position = nextPosition;
                 }
                 break;
+            }
         }
     }
 
@@ -513,14 +516,13 @@ export interface GenerateSourcePlayerObjOptions {
 }
 
 export const generateSourcePlayerObj = (opts: GenerateSourcePlayerObjOptions): SourcePlayerObj => {
-    let play: PlayObject;
     let platformId: string;
     if(opts.play !== undefined) {
         platformId = opts.play.meta.deviceId;
     } else {
         platformId = opts.playPlatform ?? genGroupIdStr(SINGLE_USER_PLATFORM_ID);
     }
-    play = opts.play ?? generatePlay(opts.playOpts, {deviceId:platformId});
+    const play: PlayObject = opts.play ?? generatePlay(opts.playOpts, {deviceId:platformId});
 
     const {
         status = {},

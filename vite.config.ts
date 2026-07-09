@@ -47,7 +47,7 @@ export default defineConfig(() => {
         plugins: [
             react(),
                 babel({
-      presets: [reactCompilerPreset()]
+                presets: [reactCompilerPreset()]
     }),
             tailwindcss(),
         ],
@@ -72,6 +72,13 @@ export default defineConfig(() => {
                     api: 'modern-compiler' // or "modern"
                 }
             }
-        }
+        },
+        // for some reason vite is pulling in discord.js to dependencies when it doesn't need to
+        optimizeDeps: {
+            exclude: ['discord.js', 'zlib-sync', 'bufferutil', 'utf-8-validate', '@discordjs/opus'],
+        },
+        ssr: {
+            external: ['discord.js'],
+        },
     };
 });

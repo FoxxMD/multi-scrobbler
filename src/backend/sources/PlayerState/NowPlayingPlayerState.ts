@@ -1,5 +1,5 @@
-import { SourcePlayerObj } from "../../../core/Atomic.js";
-import { GenericPlayerState } from "./GenericPlayerState.js";
+import { type SourcePlayerObj } from "../../../core/Atomic.ts";
+import { GenericPlayerState } from "./GenericPlayerState.ts";
 
 /**
  * This Player is only used for displaying data reported to EndpointListenbrainzSource, and parsed from ListenbrainzSource, as playing_now

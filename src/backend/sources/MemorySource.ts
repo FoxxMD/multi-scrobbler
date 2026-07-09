@@ -1,35 +1,33 @@
-import { Logger } from "@foxxmd/logging";
-import dayjs, { Dayjs } from "dayjs";
+import { type Logger } from "@foxxmd/logging";
+import dayjs, { type Dayjs } from "dayjs";
 import { EventEmitter } from "events";
-import { AsyncTask, SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
-import { PlayObject, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerJson, SourcePlayerObj } from "../../core/Atomic.js";
-import { buildTrackString } from "../../core/StringUtils.js";
+import { AsyncTask, SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
+import { type PlayObject, SOURCE_SOT, type SOURCE_SOT_TYPES, type SourcePlayerJson, type SourcePlayerObj } from "../../core/Atomic.ts";
+import { buildTrackString } from "../../core/StringUtils.ts";
 import {
     asPlayerStateDataMaybePlay,
     CALCULATED_PLAYER_STATUSES,
-    InternalConfig, PlayerStateDataMaybePlay,
-    PlayPlatformId,
-    ProgressAwarePlayObject} from "../common/infrastructure/Atomic.js";
-import { SourceType, SourceConfig } from '../common/infrastructure/config/source/sources.js';
-import { PollingOptions } from "../common/infrastructure/config/common.js";
+    type InternalConfig, type PlayerStateDataMaybePlay,
+    type ProgressAwarePlayObject} from "../common/infrastructure/Atomic.ts";
+import { type PlayPlatformId } from '../../core/Atomic.ts';
+import { type SourceType, type SourceConfig } from '../common/infrastructure/config/source/sources.ts';
+import { type PollingOptions } from "../common/infrastructure/config/common.ts";
 import {
-    genGroupId,
     getPlatformIdFromData,
     isDebugMode,
     playObjDataMatch,
     thresholdResultSummary,
-} from "../utils.js";
-import { genGroupIdStr } from '../../core/PlayUtils.js';
-import { formatNumber } from '../../core/DataUtils.js';
-import { timePassesScrobbleThreshold } from "../utils/TimeUtils.js";
-import { timeToHumanTimestamp } from "../../core/TimeUtils.js";
+} from "../utils.ts";
+import { genGroupIdStr } from '../../core/PlayUtils.ts';
+import { formatNumber } from '../../core/DataUtils.ts';
+import { timePassesScrobbleThreshold } from "../utils/TimeUtils.ts";
+import { timeToHumanTimestamp } from "../../core/TimeUtils.ts";
 import { PromisePool } from "@supercharge/promise-pool";
-import AbstractSource from "./AbstractSource.js";
-import { AbstractPlayerState, createPlayerOptions, PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
-import { GenericPlayerState } from "./PlayerState/GenericPlayerState.js";
-import { hashObject } from "../utils/StringUtils.js";
-import { useDebugValue } from "react";
-import { ComponentSourceApi, ComponentSourceApiJson } from "../../core/Api.js";
+import AbstractSource from "./AbstractSource.ts";
+import { AbstractPlayerState, createPlayerOptions, type PlayerStateOptions } from "./PlayerState/AbstractPlayerState.ts";
+import { GenericPlayerState } from "./PlayerState/GenericPlayerState.ts";
+import { hashObject } from "../utils/StringUtils.ts";
+import { type ComponentSourceApiJson } from "../../core/Api.ts";
 
 const EXPECTED_NON_DISCOVERED_REASON = 'not added because an identical play with the same timestamp was already discovered.';
 

@@ -1,24 +1,24 @@
 import dayjs from "dayjs";
 import EventEmitter from "events";
-import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
+import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import {
-    ExpressRequest,
-    FormatPlayObjectOptions,
-    InternalConfig,
+    type ExpressRequest,
+    type FormatPlayObjectOptions,
+    type InternalConfig,
     NO_USER,
-    PlayerStateData,
-    PlayPlatformId,
+    type PlayerStateData,
     REPORTED_PLAYER_STATUSES,
-    ReportedPlayerStatus
-} from "../common/infrastructure/Atomic.js";
-import { ListenbrainzEndpointSourceConfig } from "../common/infrastructure/config/source/endpointlz.js";
-import { ListenbrainzApiClient, listenPayloadToPlay } from "../common/vendor/ListenbrainzApiClient.js";
-import { SubmitPayload } from '../common/vendor/listenbrainz/interfaces.js';
-import { ListenPayload } from '../common/vendor/listenbrainz/interfaces.js';
-import MemorySource from "./MemorySource.js";
-import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.js";
-import { Logger } from "@foxxmd/logging";
-import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
+    type ReportedPlayerStatus
+} from "../common/infrastructure/Atomic.ts";
+import { type PlayPlatformId } from '../../core/Atomic.ts';
+import { type ListenbrainzEndpointSourceConfig } from "../common/infrastructure/config/source/endpointlz.ts";
+import { listenPayloadToPlay } from "../common/vendor/ListenbrainzApiClient.ts";
+import { type SubmitPayload } from '../../core/vendor/listenbrainz/interfaces.ts';
+import { type ListenPayload } from '../../core/vendor/listenbrainz/interfaces.ts';
+import MemorySource from "./MemorySource.ts";
+import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.ts";
+import { type Logger } from "@foxxmd/logging";
+import { type PlayerStateOptions } from "./PlayerState/AbstractPlayerState.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 
 const noSlugMatch = new RegExp(/(?:\/api\/listenbrainz\/?)$|(?:\/1\/?|\/1\/submit-listens\/?\/1\/validate-token\/|)$/i);

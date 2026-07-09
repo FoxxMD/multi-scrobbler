@@ -1,7 +1,7 @@
-import React, {useState, useCallback, Fragment} from 'react';
+import React, {useState, useCallback} from 'react';
 import './player.scss';
 import PlayerTimestamp from "./PlayerTimestamp";
-import {SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerJson} from "../../../core/Atomic";
+import {SOURCE_SOT, type SOURCE_SOT_TYPES, type SourcePlayerJson} from "../../../core/Atomic";
 import PlayerInfo from "./PlayerInfo";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faBars, faTimes, faQuestion} from '@fortawesome/free-solid-svg-icons'

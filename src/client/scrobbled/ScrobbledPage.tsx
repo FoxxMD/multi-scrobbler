@@ -14,7 +14,7 @@ const displayOpts = {
 }
 
 const scrobbled = () => {
-    let [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const {
         data = [],
         error,

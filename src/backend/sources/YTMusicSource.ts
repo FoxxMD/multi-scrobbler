@@ -1,28 +1,28 @@
-import dayjs, { Dayjs } from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import EventEmitter from "events";
-import { PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
-import { Innertube, UniversalCache, Parser, YTNodes, ApiResponse, IBrowseResponse, Log, SessionOptions } from 'youtubei.js';
-import { GenerateAuthUrlOpts, OAuth2Client } from 'google-auth-library';
+import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
+import { type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.ts";
+import { type YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.ts";
+import { Innertube, UniversalCache, Parser, YTNodes, type ApiResponse, type IBrowseResponse, Log, type SessionOptions } from 'youtubei.js';
+import { type GenerateAuthUrlOpts, OAuth2Client } from 'google-auth-library';
 import {resolve} from 'path';
-import { isDebugMode, parseBool, sleep } from "../utils.js";
-import { formatNumber } from '../../core/DataUtils.js';
+import { isDebugMode, parseBool, sleep } from "../utils.ts";
+import { formatNumber } from '../../core/DataUtils.ts';
 import {
     getPlaysDiff,
     humanReadableDiff,
-    PlayOrderChangeType,
-    PlayOrderConsistencyResults,
+    type PlayOrderChangeType,
+    type PlayOrderConsistencyResults,
     playsAreAddedOnly,
     playsAreBumpedOnly,
     playsAreSortConsistent
-} from "../utils/PlayComparisonUtils.js";
-import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { artistNamesToCredits, buildTrackString, truncateStringToLength } from "../../core/StringUtils.js";
-import { joinedUrl } from "../utils/NetworkUtils.js";
-import { todayAwareFormat } from "../../core/TimeUtils.js";
-import { parseArrayFromMaybeString, parseArtistCredits, parseCredits } from "../utils/StringUtils.js";
-import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
+} from "../utils/PlayComparisonUtils.ts";
+import AbstractSource, { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import { artistNamesToCredits, buildTrackString, truncateStringToLength } from "../../core/StringUtils.ts";
+import { joinedUrl } from "../utils/NetworkUtils.ts";
+import { todayAwareFormat } from "../../core/TimeUtils.ts";
+import { parseArrayFromMaybeString, parseArtistCredits } from "../utils/StringUtils.ts";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import { FixedSizeList } from "fixed-size-list";
 
 export interface HistoryIngressResult {

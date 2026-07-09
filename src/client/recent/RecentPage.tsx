@@ -32,7 +32,7 @@ const tsTip = <div className="mt-2">
 </div>;
 
 const recent = () => {
-    let [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const {
         data = [],
         error,

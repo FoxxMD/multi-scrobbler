@@ -2,7 +2,6 @@ import preview from "../../../../.storybook/preview.js";
 import React from 'react';
 import { Container } from '@chakra-ui/react';
 
-import { fn } from 'storybook/test';
 import { PlayDateRangeFilter } from "../../../client/components/playActivity/ListFilters.js";
 import { Provider } from "../../../client/components/Provider.js";
 

@@ -1,6 +1,5 @@
-import { ActivityType, StatusDisplayType } from "discord.js"
-import { CommonClientConfig, CommonClientData } from "./index.js"
-import { ComponentType } from "../../../../../core/Atomic.js"
+import { type CommonClientConfig, type CommonClientData } from "./index.ts"
+import { type ComponentType } from "../../../../../core/Atomic.ts"
 
 export interface DiscordData {
     token?: string
@@ -63,38 +62,14 @@ export interface ActivityTimestamps {
     end?: number
 }
 
-export enum ActivityTypeOthers {
-    Hanging = 6
-}
+export type StatusDisplayType = 0 | 1 | 2;
+export const STATUS_DISPLAY_TYPE = {
+    Name: 0,
+    State: 1,
+    Details: 2
+} as const satisfies Record<string, StatusDisplayType>
 
-export declare enum ActivityTypeReal {
-    /**
-     * Playing \{game\}
-     */
-    Playing = 0,
-    /**
-     * Streaming \{details\}
-     */
-    Streaming = 1,
-    /**
-     * Listening to \{name\}
-     */
-    Listening = 2,
-    /**
-     * Watching \{details\}
-     */
-    Watching = 3,
-    /**
-     * \{emoji\} \{state\}
-     */
-    Custom = 4,
-    /**
-     * Competing in \{name\}
-     */
-    Competing = 5,
-
-    Hanging = 6
-}
+export type ActivityType = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface ActivityData {
     name: string
@@ -120,7 +95,7 @@ export const ACTIVITY_TYPE = {
     Custom: 4,
     Competing: 5,
     Hanging: 6
-} as const satisfies Record<string, ActivityTypeReal>
+} as const satisfies Record<string, ActivityType>
 
 export const ARTWORK_PLACEHOLDER = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/default-artwork.png';
 export const MS_ART = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/icon.png';

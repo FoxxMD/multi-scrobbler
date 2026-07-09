@@ -1,13 +1,10 @@
 import clone from 'clone';
-import dayjs, { Dayjs } from 'dayjs';
-import { Traverse, TraverseContext } from 'neotraverse/modern';
-import { ListenRange } from '../backend/sources/PlayerState/ListenRange.js';
-import { AmbPlayObject, DateLike, ErrorLike, JsonPlayObject, PlayObject, PlayProgressAmb, REGEX_ISO8601_LOOSE, Replace } from './Atomic.js';
-import { ListenProgressPositional, ListenProgressTS } from '../backend/sources/PlayerState/ListenProgress.js';
-import { DeepPick, ElementOf, MarkOptional, PickKeys } from 'ts-essentials';
-import { PlaySelectWithQueueStates } from '../backend/common/database/drizzle/drizzleTypes.js';
-import { ErrorObject, serializeError } from 'serialize-error';
-import { PlayApiCommonDetailed } from './Api.js';
+import dayjs from 'dayjs';
+import { Traverse, type TraverseContext } from 'neotraverse/modern';
+import { type AmbPlayObject, type DateLike, type JsonPlayObject, type PlayObject, REGEX_ISO8601_LOOSE, type Replace } from './Atomic.ts';
+import type { ElementOf, MarkOptional } from 'ts-essentials';
+import { type ErrorObject, serializeError } from 'serialize-error';
+import type { PlayApiCommonDetailed } from './Api.ts';
 
 interface BlockPath { key: string, parent: string };
 type BlockPaths = BlockPath[];
@@ -53,8 +50,6 @@ export const asJsonPlayObject = (play: AmbPlayObject<DateLike>): JsonPlayObject 
 
     if (dayjs.isDayjs(x)) {
       ctx.update(x.toISOString());
-    } else if (x instanceof ListenRange) {
-      ctx.update(x.toJSON(), true);
     }
   });
   return cloned as unknown as JsonPlayObject;

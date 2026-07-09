@@ -1,10 +1,10 @@
-import { FileLogOptions, Logger, loggerAppRolling, LogLevel, LogLevelStreamEntry, LogOptions, parseLogOptions } from '@foxxmd/logging';
+import { type FileLogOptions, type Logger, loggerAppRolling, type LogLevel, type LogLevelStreamEntry, type LogOptions, parseLogOptions } from '@foxxmd/logging';
 import { buildDestinationJsonPrettyStream, buildDestinationRollingFile, buildDestinationStdout, buildLogger } from "@foxxmd/logging/factory";
 import { PassThrough, Transform } from "node:stream";
 import path from "path";
 import process from "process";
-import { projectDir } from "./index.js";
-import { isDebugMode } from '../utils.js';
+import { projectDir } from "./index.ts";
+import { isDebugMode } from '../utils.ts';
 
 export let logPath = path.resolve(projectDir, `./logs`);
 if (typeof process.env.CONFIG_DIR === 'string') {

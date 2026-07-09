@@ -1,9 +1,9 @@
 import { searchAndReplace } from "@foxxmd/regex-buddy-core";
-import { ArtistCredit, PlayObject } from "../../../core/Atomic.js";
-import { configValToSearchReplace, isSearchAndReplaceTerm, isUserStage, testWhenConditions } from "../../utils/PlayTransformUtils.js";
-import { WebhookPayload } from "../infrastructure/config/health/webhooks.js";
-import { ConditionalSearchAndReplaceRegExp, PlayTransformUserStage, StageConfig } from "../infrastructure/Transform.js";
-import AtomicPartsTransformer from "./AtomicPartsTransformer.js";
+import { type ArtistCredit, type PlayObject } from "../../../core/Atomic.ts";
+import { configValToSearchReplace, isSearchAndReplaceTerm, isUserStage, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
+import { type WebhookPayload } from "../infrastructure/config/health/webhooks.ts";
+import { type ConditionalSearchAndReplaceRegExp, type PlayTransformUserStage } from "../../../core/Transform.ts";
+import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
 
 export default class UserTransformer extends AtomicPartsTransformer<ConditionalSearchAndReplaceRegExp[], undefined> {
 

@@ -1,92 +1,77 @@
-import { childLogger, Logger, LogLevel } from "@foxxmd/logging";
-import dayjs, { Dayjs } from "dayjs";
-import { Duration } from "dayjs/plugin/duration.js";
+import { childLogger, type Logger, type LogLevel } from "@foxxmd/logging";
+import dayjs, { type Dayjs } from "dayjs";
+import { type Duration } from "dayjs/plugin/duration.js";
 import EventEmitter from "events";
 import { nanoid } from "nanoid";
-import { MarkOptional, MarkRequired } from "ts-essentials";
+import type { MarkOptional } from "ts-essentials";
 import {
-    DeadLetterScrobble,
-    NowPlayingUpdateThreshold,
-    PlayObject,
-    PlayObjectMinimal,
-    QueuedScrobble, ScrobbleActionResult, PlayMatchResult, SourcePlayerObj, TA_DURING,
-    TA_FUZZY,
-    TrackStringOptions,
-    TA_EXACT,
-    SOURCE_SOT,
-    ErrorLike,
+    type DeadLetterScrobble,
+    type NowPlayingUpdateThreshold,
+    type PlayObject,
+    type QueuedScrobble, type ScrobbleActionResult, type PlayMatchResult, type SourcePlayerObj,
+    type ErrorLike,
     CLIENT_INGRESS_QUEUE,
     CLIENT_DEAD_QUEUE,
-    PlayOriginal,
-    PlayLifecycle,
-    SourcePlayerJson,
+    type PlayOriginal,
+    type PlayLifecycle,
+    type SourcePlayerJson,
     QUEUE_STATUS_COMPLETED
-} from "../../core/Atomic.js";
-import { artistNamesToCredits, buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
-import AbstractComponent from "../common/AbstractComponent.js";
-import { hasUpstreamError } from "../common/errors/UpstreamError.js";
+} from "../../core/Atomic.ts";
+import { artistNamesToCredits, buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
+import AbstractComponent from "../common/AbstractComponent.ts";
+import { hasUpstreamError } from "../common/errors/UpstreamError.ts";
 import {
-    ARTIST_WEIGHT,
-    Authenticatable,
+    type Authenticatable,
     CALCULATED_PLAYER_STATUSES,
     DEFAULT_RETRY_MULTIPLIER,
-    DUP_SCORE_THRESHOLD,
-    FormatPlayObjectOptions,
-    PaginatedTimeRangeOptions,
+    type FormatPlayObjectOptions,
+    type PaginatedTimeRangeOptions,
     REFRESH_STALE_DEFAULT,
-    ReportedPlayerStatus,
-    ScrobbledPlayObject,
-    SourceIdentifier,
-    TIME_WEIGHT,
-    TimeRangeListensFetcher,
-    TITLE_WEIGHT,
-} from "../common/infrastructure/Atomic.js";
-import { ClientType } from '../common/infrastructure/config/client/clients.js';
-import { CommonClientConfig, NowPlayingOptions, UpstreamRefreshOptions } from "../common/infrastructure/config/client/index.js";
-import { TRANSFORM_HOOK } from "../common/infrastructure/Transform.js";
-import { Notifiers } from "../notifier/Notifiers.js";
+    type ReportedPlayerStatus,
+    type ScrobbledPlayObject,
+    type SourceIdentifier,
+    type TimeRangeListensFetcher,
+} from "../common/infrastructure/Atomic.ts";
+import { type ClientType } from '../common/infrastructure/config/client/clients.ts';
+import { type CommonClientConfig, type NowPlayingOptions, type UpstreamRefreshOptions } from "../common/infrastructure/config/client/index.ts";
+import { TRANSFORM_HOOK } from "../../core/Transform.ts";
+import { Notifiers } from "../notifier/Notifiers.ts";
 import {
-    comparingMultipleArtists,
     isDebugMode,
     parseBool,
     playObjDataMatch,
     pollingBackoff,
-    removeUndefinedKeys,
     sleep,
     sortByOldestPlayDate,
-} from "../utils.js";
-import { findCauseByReference } from "../utils/ErrorUtils.js";
-import { ErrorIsh, messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.js";
-import { messageWithCauses } from "../../core/ErrorUtils.js";
+} from "../utils.ts";
+import { removeUndefinedKeys } from '../../core/DataUtils.ts';
+import { findCauseByReference } from "../utils/ErrorUtils.ts";
+import { messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.ts";
 import {
     comparePlayTemporally,
-    getTemporalAccuracyCloseVal,
     hasAcceptableTemporalAccuracy,
-    temporalAccuracyToString,
-    temporalPlayComparisonSummary,
-} from "../utils/TimeUtils.js";
-import { todayAwareFormat } from "../../core/TimeUtils.js";
-import { WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
-import { AsyncTask, SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
-import { getRoot } from "../ioc.js";
-import { findAsyncSequential, staggerMapper, StaggerOptions } from "../utils/AsyncUtils.js";
+} from "../utils/TimeUtils.ts";
+import { todayAwareFormat } from "../../core/TimeUtils.ts";
+import { AsyncTask, SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
+import { getRoot } from "../ioc.ts";
+import { staggerMapper, type StaggerOptions } from "../utils/AsyncUtils.ts";
 import pMap, { pMapIterable } from "p-map";
-import { comparePlayArtistsNormalized, comparePlayTracksNormalized, existingScrobble, ExistingScrobbleOpts } from "../utils/PlayComparisonUtils.js";
-import { statefulInvariantTransform } from "../../core/PlayUtils.js";
-import { normalizeStr } from "../utils/StringUtils.js";
-import prom, { Counter, Gauge } from 'prom-client';
-import { generateLoggableAbortReason, ScrobbleSubmitError, SimpleError } from "../common/errors/MSErrors.js";
+import { existingScrobble, type ExistingScrobbleOpts } from "../utils/PlayComparisonUtils.ts";
+import { statefulInvariantTransform } from "../../core/PlayUtils.ts";
+import { normalizeStr } from "../utils/StringUtils.ts";
+import { Counter, Gauge } from 'prom-client';
+import { generateLoggableAbortReason, ScrobbleSubmitError, SimpleError } from "../common/errors/MSErrors.ts";
 import {isErrorLike, serializeError} from 'serialize-error';
-import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetchUtils.js";
-import { spawn, catchAbortError, isAbortError, rethrowAbortError, delay, forever, AbortError, throwIfAborted } from 'abort-controller-x';
-import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, QueryPlaysOpts, WithPlayRelation } from "../common/database/drizzle/repositories/PlayRepository.js";
-import { ComponentMigrationNew, PlaySelect, PlaySelectWithQueueStates, QueueStateNew, QueueStateSelect } from "../common/database/drizzle/drizzleTypes.js";
-import { asPlay } from "../../core/PlayMarshalUtils.js";
-import { DrizzleQueueRepository } from "../common/database/drizzle/repositories/QueueRepository.js";
-import { GenericRepository } from "../common/database/drizzle/repositories/BaseRepository.js";
+import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetchUtils.ts";
+import { spawn, isAbortError, delay } from 'abort-controller-x';
+import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, type QueryPlaysOpts, type WithPlayRelation } from "../common/database/drizzle/repositories/PlayRepository.ts";
+import { type ComponentMigrationNew, type PlaySelect, type PlaySelectWithQueueStates, type QueueStateNew, type QueueStateSelect } from "../common/database/drizzle/drizzleTypes.ts";
+import { asPlay } from "../../core/PlayMarshalUtils.ts";
+import { DrizzleQueueRepository } from "../common/database/drizzle/repositories/QueueRepository.ts";
+import { GenericRepository } from "../common/database/drizzle/repositories/BaseRepository.ts";
 import assert from "node:assert";
-import { COMPONENT_STATE, ComponentClientApi, ComponentClientApiJson, PlayApiCommonDetailed } from "../../core/Api.js";
-import { ComponentState } from "react";
+import { COMPONENT_STATE, type ComponentClientApiJson, type PlayApiCommonDetailed } from "../../core/Api.ts";
+import { type ComponentState } from "react";
 
 type PlatformMappedPlays = Map<string, {player: SourcePlayerObj, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
@@ -379,7 +364,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         } = this.transformRules;
 
         if(preCompare.length > 0) {
-            let pcInits: number[] = [0],
+            const pcInits: number[] = [0],
             pcMaxStagger: number[] = [];
             for(const hook of preCompare) {
                 const t = this.transformManager.getTransformerByStage({type: hook.type, name: hook.name});
@@ -390,7 +375,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
 
         if(existing.length > 0) {
-            let eInits: number[] = [0],
+            const eInits: number[] = [0],
             eMaxStagger: number[] = [];
             for(const hook of existing) {
                 const t = this.transformManager.getTransformerByStage({type: hook.type, name: hook.name});
@@ -596,8 +581,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 }
 
                 // otherwise sort platform alphabetically and take first
-                plays.sort((a, b) => a[0].localeCompare(b[0]));
-                return plays[0][1].player;
+                preferredPlays.sort((a, b) => a[0].localeCompare(b[0]));
+                return preferredPlays[0][1].player;
             }
         }
     }
@@ -1464,7 +1449,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
         //this.deadLetterScrobbles.splice(index, 1);
         this.deadLetterGauge.labels(this.getPrometheusLabels()).dec();
-        let queueUpdate: Partial<QueueStateNew> = {
+        const queueUpdate: Partial<QueueStateNew> = {
             updatedAt: dayjs(),
             queueStatus: 'completed'
         }
@@ -1629,6 +1614,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             if(sourcePlayerData === undefined) {
                 return;
             }
+            // eslint-disable-next-line prefer-const
             let [shouldUpdate, npUpdateTopReason] = this.shouldUpdatePlayingNow(sourcePlayerData);
             let clientReason: string | undefined;
             if(!shouldUpdate) {
@@ -1747,7 +1733,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 // and triggering this early means less, deeper checks
                 const thresholds = this.nowPlayingThresholdsMet(sourcePlayerData);
                 if (!thresholds.minMet) {
-                    shouldUpdate = false;
                     return [false, `${npUpdateTopReason} and ${validStatusReason} --BUT-- ${thresholds.minReason}`];
                 }
                 else if (
@@ -1769,11 +1754,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 // check for valid play data if the update should be for a playing track
                 if(playerInNPPlayingOnlyState(sourcePlayerData)) {
                     if(sourcePlayerData.play?.data?.track === undefined) {
-                        shouldUpdate = false;
                         return [false, `${npUpdateTopReason} and ${validStatusReason} --BUT-- play is missing track information`];
                     }
                     if((sourcePlayerData.play?.data?.artists ?? []).length === 0) {
-                        shouldUpdate = false;
                         return [false, `${npUpdateTopReason} and ${validStatusReason} --BUT-- play is missing artist information`];
                     }
                 }
@@ -1782,7 +1765,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             if(shouldUpdate && this.nowPlayingIsRealtime) {
                 // prevent multiple clearing updates
                 if(this.nowPlayingLastPlay !== undefined && shouldClearNPStatus(sourcePlayerData) && shouldClearNPStatus(this.nowPlayingLastPlay)) {
-                    shouldUpdate = false;
                     return [false, `${npUpdateTopReason} and ${validStatusReason} --BUT-- last update already cleared now playing`];
                 }
             }
@@ -1822,8 +1804,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             with: withQuery = ['input','parent-input','queues'],
             ...rest
         } = args;
-        let parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
-        let parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
+        const parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
+        const parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
         return this.playRepo.findPlaysPaginated({limit: parsedLimit, offset: parsedOffset, with: withQuery, ...rest});
     }
 

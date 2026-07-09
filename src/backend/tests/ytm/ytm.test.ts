@@ -1,16 +1,16 @@
-import { after, before, describe, it } from 'mocha';
-import { loggerTest, loggerDebug } from "@foxxmd/logging";
-import chai, { assert, expect } from 'chai';
+import { describe, it } from 'mocha';
+import { loggerTest } from "@foxxmd/logging";
+import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import clone from "clone";
-import YTMusicSource, { ytiHistoryResponseFromShelfToPlays, ytiHistoryResponseToListItems } from "../../sources/YTMusicSource.js";
+import YTMusicSource, { ytiHistoryResponseFromShelfToPlays, ytiHistoryResponseToListItems } from "../../sources/YTMusicSource.ts";
 import ytHistoryRes from './ytres.json' with {type: 'json'};
 import EventEmitter from "events";
-import { generatePlay, generatePlays, normalizePlays } from '../../../core/PlayTestUtils.js';
-import { YTMusicSourceConfig } from '../../common/infrastructure/config/source/ytmusic.js';
-import { sleep } from '../../utils.js';
+import { generatePlay, generatePlays } from '../../../core/tests/utils/PlayTestUtils.ts';
+import { type YTMusicSourceConfig } from '../../common/infrastructure/config/source/ytmusic.ts';
+import { sleep } from '../../utils.ts';
 import dayjs from 'dayjs';
-import { ApiResponse } from 'youtubei.js';
+import { type ApiResponse } from 'youtubei.js';
 
 chai.use(asPromised);
 

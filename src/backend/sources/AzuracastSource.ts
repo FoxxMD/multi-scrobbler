@@ -1,23 +1,21 @@
-import MemorySource from "./MemorySource.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { childLogger, Logger } from "@foxxmd/logging";
+import MemorySource from "./MemorySource.ts";
+import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import { childLogger } from "@foxxmd/logging";
 import { EventEmitter } from "events";
 import { WS, CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket'
 import pEvent from 'p-event';
-import { PlayObject, PlayObjectMinimal, URLData } from "../../core/Atomic.js";
-import { UpstreamError } from "../common/errors/UpstreamError.js";
+import { type PlayObject, type PlayObjectMinimal, type URLData } from "../../core/Atomic.ts";
 import {
-    FormatPlayObjectOptions,
-    InternalConfig,
-    PlayerStateData,
-    PlayPlatformId,
+    type FormatPlayObjectOptions,
+    type InternalConfig,
+    type PlayerStateData,
     REPORTED_PLAYER_STATUSES,
     SINGLE_USER_PLATFORM_ID,
-} from "../common/infrastructure/Atomic.js";
-import { AzuracastSourceConfig, AzuraNowPlayingResponse, AzuraStationResponse } from "../common/infrastructure/config/source/azuracast.js";
-import { isPortReachable, normalizeWSAddress } from "../utils/NetworkUtils.js";
-import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
-import { artistNamesToCredits } from "../../core/StringUtils.js";
+} from "../common/infrastructure/Atomic.ts";
+import { type AzuracastSourceConfig, type AzuraNowPlayingResponse, type AzuraStationResponse } from "../common/infrastructure/config/source/azuracast.ts";
+import { isPortReachable, normalizeWSAddress } from "../utils/NetworkUtils.ts";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
+import { artistNamesToCredits } from "../../core/StringUtils.ts";
 
 
 export class AzuracastSource extends MemorySource {

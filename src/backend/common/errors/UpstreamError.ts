@@ -1,6 +1,6 @@
 import { Response } from 'superagent';
 
-import { findCauseByFunc } from "../../utils/ErrorUtils.js";
+import { findCauseByFunc } from "../../utils/ErrorUtils.ts";
 import { addKnownErrorConstructor } from 'serialize-error';
 
 export type UpstreamErrorOptions = ErrorOptions & { showStopper?: boolean, response?: Response, responseBody?: object | string };

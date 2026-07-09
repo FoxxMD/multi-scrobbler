@@ -1,14 +1,18 @@
-import { Logger } from '@foxxmd/logging';
-import { Dayjs, ManipulateType } from "dayjs";
-import { Request, Response } from "express";
-import { type NextFunction, type ParamsDictionary, type Query } from "express-serve-static-core";
+import { type Logger, type LogDataPretty } from '@foxxmd/logging';
+import type { Dayjs, ManipulateType } from "dayjs";
+import { type Request, type Response } from "express";
+import type { NextFunction, ParamsDictionary, Query } from "express-serve-static-core";
 import { FixedSizeList } from 'fixed-size-list';
-import { ErrorLike, isPlayObject, PlayMeta, PlayObject, PlayObjectMinimal, UnixTimestamp } from "../../../core/Atomic.js";
-import TupleMap from "../TupleMap.js";
+import { type DeviceId, type ErrorLike, isPlayObject, type PlayMeta, type PlayObject, type PlayObjectMinimal, type PlayPlatformId, type PlayUserId, type UnixTimestamp } from "../../../core/Atomic.ts";
+import TupleMap from "../TupleMap.ts";
 import { MusicBrainzApi } from 'musicbrainz-api';
-import { SourceType } from './config/source/sources.js';
-import { ClientType, clientTypes } from './config/client/clients.js';
-import assert, { AssertionError } from 'assert';
+import type { SourceType } from './config/source/sources.ts';
+import { type ClientType, clientTypes } from './config/client/clients.ts';
+import assert from 'assert';
+
+export interface LeveledLogData extends LogDataPretty {
+    levelLabel: string
+}
 
 export const lowGranularitySources: SourceType[] = ['subsonic', 'ytmusic'];
 
@@ -114,11 +118,6 @@ export interface ProgressAwarePlayObject extends PlayObjectMinimal {
         initialTrackProgressPosition?: number
     }
 }
-export type DeviceId = string;
-export type PlayUserId = string;
-export type PlayPlatformId = [DeviceId, PlayUserId];
-export type PlayPlatformIdStr = string;
-
 export type GroupedPlays = TupleMap<DeviceId,PlayUserId,ProgressAwarePlayObject[]>;
 
 export type GroupedFixedPlays = TupleMap<DeviceId,PlayUserId,FixedSizeList<ProgressAwarePlayObject>>;
@@ -190,10 +189,6 @@ export interface NamedGroup {
 export type ExpressRequest = Request<ParamsDictionary, any, any, Query, Record<string, any>>;
 export type ExpressResponse = Response<any, Record<string, any>>;
 export type ExpressHandler = (req: ExpressRequest, res: ExpressResponse, next: NextFunction) => Promise<void | Response<any, Record<string, any>>>
-
-export const DELIMITERS = [',','&','/','\\'];
-export const DELIMITERS_NO_AMP = [',','/','\\'];
-export const DELIMETERS_REGEX: RegExp = new RegExp(/[,&\/\\]/);
 
 export const ARTIST_WEIGHT = 0.3;
 export const TITLE_WEIGHT = 0.4;
@@ -386,7 +381,7 @@ export interface PaginatedListens {
     getPaginatedListens(params: PaginatedListensOptions<CursorType>): Promise<{data: PlayObject[], meta: PaginatedListensOptions<CursorType> & PaginatedResults<CursorType>}>
 }
 
-export const hasPaginagedListens = (obj: Object): obj is PaginatedListens => {
+export const hasPaginagedListens = (obj: object): obj is PaginatedListens => {
     return 'getPaginatedListens' in obj;
 }
 
@@ -399,7 +394,7 @@ export interface PaginatedTimeRangeListens<T extends CursorType = CursorType> {
     getPaginatedUnitOfTime(): ManipulateType;
 }
 
-export const hasPaginatedTimeRangeListens = (obj: Object): obj is PaginatedTimeRangeListens => {
+export const hasPaginatedTimeRangeListens = (obj: object): obj is PaginatedTimeRangeListens => {
     return 'getPaginatedTimeRangeListens' in obj;
 }
 
@@ -412,7 +407,7 @@ export interface PagelessTimeRangeListens {
     getPaginatedUnitOfTime(): ManipulateType;
 }
 
-export const hasPagelessTimeRangeListens = (obj: Object): obj is PagelessTimeRangeListens => {
+export const hasPagelessTimeRangeListens = (obj: object): obj is PagelessTimeRangeListens => {
     return 'getPagelessTimeRangeListens' in obj;
 }
 

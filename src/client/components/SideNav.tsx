@@ -2,9 +2,9 @@ import {
   Stack,
   HStack,
   Link,
-  LinkProps,
-  StackProps,
-  BadgeProps,
+  type LinkProps,
+  type StackProps,
+  type BadgeProps,
   Badge
 } from "@chakra-ui/react"
 import { Link as RouterLink } from "react-router";

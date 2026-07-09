@@ -1,16 +1,16 @@
-import { childLogger, Logger } from "@foxxmd/logging";
-import AbstractTransformer from "./AbstractTransformer.js";
-import { TransformerCommonConfig } from "../../../core/Atomic.js";
-import UserTransformer from "./UserTransformer.js";
-import { StageConfig } from "../infrastructure/Transform.js";
-import { PlayObject } from "../../../core/Atomic.js";
-import { isStageTyped } from "../../utils/PlayTransformUtils.js";
-import { MSCache } from "../Cache.js";
-import NativeTransformer from "./NativeTransformer.js";
-import MusicbrainzTransformer, { configFromEnv, MusicbrainzTransformerConfig } from "./MusicbrainzTransformer.js";
+import { childLogger, type Logger } from "@foxxmd/logging";
+import AbstractTransformer from "./AbstractTransformer.ts";
+import { type TransformerCommonConfig } from "../../../core/Atomic.ts";
+import UserTransformer from "./UserTransformer.ts";
+import { type StageConfig } from "../../../core/Transform.ts";
+import { type PlayObject } from "../../../core/Atomic.ts";
+import { isStageTyped } from "../../utils/PlayTransformUtils.ts";
+import { MSCache } from "../Cache.ts";
+import NativeTransformer from "./NativeTransformer.ts";
+import MusicbrainzTransformer, { configFromEnv, type MusicbrainzTransformerConfig } from "./MusicbrainzTransformer.ts";
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { nanoid } from "nanoid";
-import { SimpleError, StageTransformError } from "../errors/MSErrors.js";
+import { SimpleError, StageTransformError } from "../errors/MSErrors.ts";
 
 export default class TransformerManager {
 

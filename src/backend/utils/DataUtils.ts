@@ -1,10 +1,11 @@
 import JSON5 from "json5";
 import { constants, promises } from "fs";
-import { MaybeLogger } from '../common/MaybeLogger.js';
+import { MaybeLogger } from '../common/MaybeLogger.ts';
 import { deepEqual } from 'fast-equals';
-import { CommonConfigPrimitives } from "../common/infrastructure/config/common.js";
-import { parseBoolStrict, removeUndefinedKeys } from "../utils.js";
-import { nonEmptyStringOrDefault } from "../../core/StringUtils.js";
+import { type CommonConfigPrimitives } from "../common/infrastructure/config/common.ts";
+import { parseBoolStrict } from "../utils.ts";
+import { removeUndefinedKeys } from '../../core/DataUtils.ts';
+import { nonEmptyStringOrDefault } from "../../core/StringUtils.ts";
 
 export const asArray = <T>(data: T | T[]): T[] => {
     if (Array.isArray(data)) {
@@ -98,9 +99,9 @@ export const noCasePropObj = <T extends object>(obj: T): LowercaseKeys<T> => {
 
     const newObj = new Proxy<LowercaseKeys<T>>({} as LowercaseKeys<T>, handler);
     // traverse the Original object converting string keys to upper case
-    for (var key in obj) {
+    for (const key in obj) {
         if (typeof key == "string") {
-            var objKey = key.toUpperCase();
+            const objKey = key.toUpperCase();
             if (!(key in newObj))
                 newObj[objKey] = checkAtomic(obj[key]);
         }

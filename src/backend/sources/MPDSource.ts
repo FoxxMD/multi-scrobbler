@@ -2,25 +2,25 @@ import dayjs from "dayjs";
 import { EventEmitter } from "events";
 import path from 'path';
 import {MPC, type Status, type Song, type PlaylistItem} from 'mpc-js';
-import { BrainzMeta, PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
+import { type BrainzMeta, type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
 import {
-    FormatPlayObjectOptions,
-    InternalConfig,
-    PlayerStateData,
+    type FormatPlayObjectOptions,
+    type InternalConfig,
+    type PlayerStateData,
     REPORTED_PLAYER_STATUSES,
-    ReportedPlayerStatus,
+    type ReportedPlayerStatus,
     SINGLE_USER_PLATFORM_ID,
-} from "../common/infrastructure/Atomic.js";
+} from "../common/infrastructure/Atomic.ts";
 import {
-    MPDSourceConfig,
-    PlayerState,
-} from "../common/infrastructure/config/source/mpd.js";
-import { isPortReachable } from "../utils/NetworkUtils.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
-import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
-import { isDebugMode, sleep } from "../utils.js";
-import { artistNamesToCredits } from "../../core/StringUtils.js";
+    type MPDSourceConfig,
+    type PlayerState,
+} from "../common/infrastructure/config/source/mpd.ts";
+import { isPortReachable } from "../utils/NetworkUtils.ts";
+import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
+import { isDebugMode, sleep } from "../utils.ts";
+import { artistNamesToCredits } from "../../core/StringUtils.ts";
 
 const CLIENT_PLAYER_STATE: Record<PlayerState, ReportedPlayerStatus> = {
     'play': REPORTED_PLAYER_STATUSES.playing,

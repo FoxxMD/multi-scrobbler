@@ -1,11 +1,10 @@
 import preview from "../../../.storybook/preview.js";
 import React from 'react';
-import { http, HttpResponse, delay } from 'msw';
+import { http, HttpResponse } from 'msw';
 
-import { Container, Box } from '@chakra-ui/react';
-import { Logs, LogsFetchable } from "../../client/components/LogsNext.js";
+import { Container } from '@chakra-ui/react';
 import {Provider} from "../../client/components/Provider.js";
-import { generateClientApiJson, generateSourceApiJson, generateSourcePlayerJson, LOG_MESSAGE_FIXTURE, logsApiResponse } from "../../core/tests/utils/apiFixtures.js";
+import { logsApiResponse } from "../../core/tests/utils/apiFixtures.js";
 import { RightHeaderFloatingLogs } from "../../client/components/AppHeader.js";
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export

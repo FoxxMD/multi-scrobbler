@@ -1,12 +1,12 @@
 import {
+    Drawer,
     IconButton,
     Portal,
-    Drawer,
-    BreakpointName,
-} from "@chakra-ui/react"
-import { useState, useEffect, ComponentProps } from 'react';
+    type BreakpointName,
+} from "@chakra-ui/react";
+import { useEffect, useState, type ComponentProps } from 'react';
 import { useLocation } from 'react-router';
-import { MenuButton, MenuIcon, XIcon } from "./icons/ChakraIcons";
+import { MenuButton, XIcon } from "./icons/ChakraIcons";
 import { NAV_LINKS, SideNavItems } from "./SideNav";
 
 const MobileMenuButton = MenuButton;
@@ -14,7 +14,7 @@ const MobileMenuButton = MenuButton;
 export const MobileSidebarNav = (props: { hideFrom?: BreakpointName | false } = {}) => {
     const [isOpen, setIsOpen] = useState(false);
 
-    let location = useLocation();
+    const location = useLocation();
 
     const closeMenu = () => setIsOpen(false)
 

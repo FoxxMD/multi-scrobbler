@@ -1,12 +1,12 @@
 import {
-    createEntityAdapter, createReducer,
-    createSlice
-} from '@reduxjs/toolkit'
-import {logsApi} from "./logsApi";
-import {LogOutputConfig} from "../../core/Atomic";
-import {LogDataPretty} from "@foxxmd/logging";
+    createReducer
+} from '@reduxjs/toolkit';
+import { type LogOutputConfig } from "../../core/Atomic";
+import { logsApi } from "./logsApi";
 export interface LogsState {
-    data: (LogDataPretty & {levelLabel: string})[],
+    // TODO remove after new ui switchover
+    // needed to remove this type to remove @foxxmd/logging from vite deps
+    data: any[],
     settings: LogOutputConfig
 }
 const initialState: LogsState = {data: [], settings: {level: 'trace', sort: 'desc', limit: 50}};
@@ -21,4 +21,5 @@ const logsReducer = createReducer(initialState, (builder) => {
    )
 });
 
-export {logsReducer};
+export { logsReducer };
+

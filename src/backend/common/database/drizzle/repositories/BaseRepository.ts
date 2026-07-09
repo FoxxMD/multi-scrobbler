@@ -1,14 +1,14 @@
-import { childLogger, Logger } from "@foxxmd/logging";
-import { DbConcrete } from "../drizzleUtils.js";
-import { CompareOpKey } from "../drizzleTypes.js";
-import { Dayjs } from "dayjs";
-import { RelationsFieldFilter, eq, inArray } from "drizzle-orm";
-import { loggerNoop } from "../../../MaybeLogger.js";
-import { capitalize } from "../../../../../core/StringUtils.js";
-import { getConfigByTableName, relations, TableName } from "../schema/schema.js";
+import { childLogger, type Logger } from "@foxxmd/logging";
+import { type DbConcrete } from "../drizzleUtils.ts";
+import { type Dayjs } from "dayjs";
+import { type RelationsFieldFilter, eq, inArray } from "drizzle-orm";
+import { loggerNoop } from "../../../MaybeLogger.ts";
+import { capitalize } from "../../../../../core/StringUtils.ts";
+import { getConfigByTableName, type TableName } from "../schema/schema.ts";
 import assert from 'node:assert';
 import { Cacheable } from "cacheable";
-import { DateLike } from "../../../../../core/Atomic.js";
+import { type DateLike } from "../../../../../core/Atomic.ts";
+import type { CompareDateBetween, CompareDateSingle } from "../../../../../core/Api.ts";
 
 export interface DrizzleRepositoryOpts {
     logger?: Logger
@@ -16,27 +16,7 @@ export interface DrizzleRepositoryOpts {
     componentId?: number
 }
 
-export type CompareDateSingle<D extends DateLike = Dayjs> = {
-    type: CompareOpKey<D>
-    date: D
-}
-export type CompareDateBetween<D extends DateLike = Dayjs> = {
-    type: 'between',
-    range: [D, D],
-    inclusive?: boolean
-}
 export type CompareDateOp<D extends DateLike = Dayjs> = CompareDateSingle<D> | CompareDateBetween<D>;
-export interface PaginatedQueryResponse {
-    limit: number,
-    offset: number
-    total?: number
-}
-
-export interface PaginatedResponse<T> {
-    data: T[]
-    meta: PaginatedQueryResponse
-}
-
 export interface ComponentConstrainedRepoOpts {
     componentId?: number
 }
@@ -66,7 +46,7 @@ export abstract class DrizzleBaseRepository<T extends TableName> {
     }
 
     async updateById(id: number, data: Partial<typeof this.table.$inferInsert>): Promise<void> {
-        assert(id !== null && id !== undefined, `${typeof id === null ? 'null' : 'undefined'} given for entity id`);
+        assert(id !== null && id !== undefined, `${id === null ? 'null' : 'undefined'} given for entity id`);
         await this.db.update(this.table).set(data).where(eq(this.table.id, id));
     }
 
@@ -99,13 +79,12 @@ export class GenericRepository<T extends TableName> extends DrizzleBaseRepositor
 }
 
 export const buildDateCompare = (data: CompareDateOp): RelationsFieldFilter<Dayjs> => {
-    let q: RelationsFieldFilter<Dayjs> = {};
     if (data.type !== 'between') {
-        q = {
+        return {
             [data.type]: data.date
         }
     } else {
-        q = {
+        return {
             AND: [
                 {
                     [data.inclusive ?? true ? 'gte' : 'gt']: data.range[0]
@@ -116,5 +95,4 @@ export const buildDateCompare = (data: CompareDateOp): RelationsFieldFilter<Dayj
             ]
         }
     }
-    return q;
 }

@@ -1,60 +1,60 @@
-/* eslint-disable no-case-declarations */
-import { childLogger, Logger } from '@foxxmd/logging';
+ 
+import { childLogger, type Logger } from '@foxxmd/logging';
 import EventEmitter from "events";
-import { ConfigMeta, ConfigureAs, ConfigureAsSource, InternalConfig, InternalConfigOptional } from "../common/infrastructure/Atomic.js";
-import { isSourceType } from '../common/infrastructure/config/source/sources.js';
-import { sourceTypes } from '../common/infrastructure/config/source/sources.js';
-import { SourceType } from '../common/infrastructure/config/source/sources.js';
-import { AIOConfig, SourceDefaults } from "../common/infrastructure/config/aioConfig.js";
-import { AzuracastData, AzuracastSourceConfig } from "../common/infrastructure/config/source/azuracast.js";
-import { ChromecastData, ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
-import { DeezerData, DeezerSourceConfig, DeezerInternalSourceConfig, DeezerCompatConfig, DeezerInternalData } from "../common/infrastructure/config/source/deezer.js";
-import { ListenbrainzEndpointSourceConfig, ListenbrainzEndpointData } from "../common/infrastructure/config/source/endpointlz.js";
-import { LastFMEndpointSourceConfig, LastFMEndpointData } from "../common/infrastructure/config/source/endpointlfm.js";
+import { type ConfigMeta, type ConfigureAsSource, type InternalConfig, type InternalConfigOptional } from "../common/infrastructure/Atomic.ts";
+import { isSourceType } from '../common/infrastructure/config/source/sources.ts';
+import { sourceTypes } from '../common/infrastructure/config/source/sources.ts';
+import { type SourceType } from '../common/infrastructure/config/source/sources.ts';
+import { type AIOConfig, type SourceDefaults } from "../common/infrastructure/config/aioConfig.ts";
+import { type AzuracastData, type AzuracastSourceConfig } from "../common/infrastructure/config/source/azuracast.ts";
+import { type ChromecastData, type ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.ts";
+import { type DeezerSourceConfig, type DeezerInternalSourceConfig, type DeezerCompatConfig } from "../common/infrastructure/config/source/deezer.ts";
+import { type ListenbrainzEndpointSourceConfig, type ListenbrainzEndpointData } from "../common/infrastructure/config/source/endpointlz.ts";
+import { type LastFMEndpointSourceConfig, type LastFMEndpointData } from "../common/infrastructure/config/source/endpointlfm.ts";
 import {
-    JellyApiData,
-    JellyApiSourceConfig,
-} from "../common/infrastructure/config/source/jellyfin.js";
-import { JRiverData, JRiverSourceConfig } from "../common/infrastructure/config/source/jriver.js";
-import { KodiData, KodiSourceConfig } from "../common/infrastructure/config/source/kodi.js";
-import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.js";
-import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz.js";
-import { MopidySourceConfig } from "../common/infrastructure/config/source/mopidy.js";
-import { MusicCastData, MusicCastSourceConfig } from "../common/infrastructure/config/source/musiccast.js";
-import { IcecastData, IcecastSourceConfig, IcecastSourceOptions } from "../common/infrastructure/config/source/icecast.js";
-import { MPDData, MPDSourceConfig } from "../common/infrastructure/config/source/mpd.js";
-import { MPRISData, MPRISSourceConfig } from "../common/infrastructure/config/source/mpris.js";
-import { MusikcubeData, MusikcubeSourceConfig } from "../common/infrastructure/config/source/musikcube.js";
-import { PlexApiData, PlexApiSourceConfig } from "../common/infrastructure/config/source/plex.js";
-import { MalojaSourceConfig } from "../common/infrastructure/config/source/maloja.js";
-import { SourceAIOConfig, SourceConfig } from "../common/infrastructure/config/source/sources.js";
-import { SpotifySourceConfig, SpotifySourceData } from "../common/infrastructure/config/source/spotify.js";
-import { SubsonicData, SubSonicSourceConfig } from "../common/infrastructure/config/source/subsonic.js";
-import { VLCData, VLCSourceConfig } from "../common/infrastructure/config/source/vlc.js";
-import { WebScrobblerData, WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.js";
-import { YTMusicData, YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
-import { YandexMusicBridgeData, YandexMusicBridgeSourceConfig } from "../common/infrastructure/config/source/ymbridge.js";
-import { SonosData, SonosSourceConfig } from "../common/infrastructure/config/source/sonos.js";
-import { WildcardEmitter } from "../common/WildcardEmitter.js";
-import { nonEmptyObj, parseBool, removeUndefinedKeys } from "../utils.js";
-import { getCommonComponentEnvConfig, readJson } from '../utils/DataUtils.js';
-import { validateJson } from "../utils/ValidationUtils.js";
-import AbstractSource from "./AbstractSource.js";
-import { nonEmptyStringOrDefault } from '../../core/StringUtils.js';
-import { KoitoSourceConfig } from '../common/infrastructure/config/source/koito.js';
-import { TealSourceConfig } from '../common/infrastructure/config/source/tealfm.js';
-import { RockskySourceConfig } from '../common/infrastructure/config/source/rocksky.js';
-import { CommonSourceOptions } from '../common/infrastructure/config/source/index.js';
-import { ExternalMetadataTerm, PlayTransformHooks, PlayTransformOptions } from '../common/infrastructure/Transform.js';
-import { LibrefmSourceConfig } from '../common/infrastructure/config/source/librefm.js';
-import { LastfmData } from '../common/infrastructure/config/client/lastfm.js';
-import { MalojaData } from '../common/infrastructure/config/client/maloja.js';
-import { LibrefmData } from '../common/infrastructure/config/client/librefm.js';
-import { ListenBrainzData } from '../common/infrastructure/config/client/listenbrainz.js';
-import { KoitoData } from '../common/infrastructure/config/client/koito.js';
-import { TealData } from '../common/infrastructure/config/client/tealfm.js';
-import { RockSkyData } from '../common/infrastructure/config/client/rocksky.js';
-import { DEFAULT_RETENTION_DELETE_AFTER } from '../common/infrastructure/config/database.js';
+    type JellyApiData,
+    type JellyApiSourceConfig,
+} from "../common/infrastructure/config/source/jellyfin.ts";
+import { type JRiverData, type JRiverSourceConfig } from "../common/infrastructure/config/source/jriver.ts";
+import { type KodiData, type KodiSourceConfig } from "../common/infrastructure/config/source/kodi.ts";
+import { type LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.ts";
+import { type ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz.ts";
+import { type MopidySourceConfig } from "../common/infrastructure/config/source/mopidy.ts";
+import { type MusicCastData, type MusicCastSourceConfig } from "../common/infrastructure/config/source/musiccast.ts";
+import { type IcecastData, type IcecastSourceConfig, type IcecastSourceOptions } from "../common/infrastructure/config/source/icecast.ts";
+import { type MPDData, type MPDSourceConfig } from "../common/infrastructure/config/source/mpd.ts";
+import { type MPRISData, type MPRISSourceConfig } from "../common/infrastructure/config/source/mpris.ts";
+import { type MusikcubeData, type MusikcubeSourceConfig } from "../common/infrastructure/config/source/musikcube.ts";
+import { type PlexApiData, type PlexApiSourceConfig } from "../common/infrastructure/config/source/plex.ts";
+import { type MalojaSourceConfig } from "../common/infrastructure/config/source/maloja.ts";
+import { type SourceAIOConfig, type SourceConfig } from "../common/infrastructure/config/source/sources.ts";
+import { type SpotifySourceConfig, type SpotifySourceData } from "../common/infrastructure/config/source/spotify.ts";
+import { type SubsonicData, type SubSonicSourceConfig } from "../common/infrastructure/config/source/subsonic.ts";
+import { type VLCData, type VLCSourceConfig } from "../common/infrastructure/config/source/vlc.ts";
+import { type WebScrobblerData, type WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.ts";
+import { type YTMusicData, type YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.ts";
+import { type YandexMusicBridgeData, type YandexMusicBridgeSourceConfig } from "../common/infrastructure/config/source/ymbridge.ts";
+import { type SonosData, type SonosSourceConfig } from "../common/infrastructure/config/source/sonos.ts";
+import { WildcardEmitter } from "../common/WildcardEmitter.ts";
+import { nonEmptyObj, parseBool } from "../utils.ts";
+import { removeUndefinedKeys } from '../../core/DataUtils.ts';
+import { getCommonComponentEnvConfig, readJson } from '../utils/DataUtils.ts';
+import { validateJson } from "../utils/ValidationUtils.ts";
+import AbstractSource from "./AbstractSource.ts";
+import { nonEmptyStringOrDefault } from '../../core/StringUtils.ts';
+import { type KoitoSourceConfig } from '../common/infrastructure/config/source/koito.ts';
+import { type TealSourceConfig } from '../common/infrastructure/config/source/tealfm.ts';
+import { type RockskySourceConfig } from '../common/infrastructure/config/source/rocksky.ts';
+import { type CommonSourceOptions } from '../common/infrastructure/config/source/index.ts';
+import { type ExternalMetadataTerm, type PlayTransformHooks } from '../../core/Transform.ts';
+import { type LibrefmSourceConfig } from '../common/infrastructure/config/source/librefm.ts';
+import { type LastfmData } from '../common/infrastructure/config/client/lastfm.ts';
+import { type MalojaData } from '../common/infrastructure/config/client/maloja.ts';
+import { type LibrefmData } from '../common/infrastructure/config/client/librefm.ts';
+import { type ListenBrainzData } from '../common/infrastructure/config/client/listenbrainz.ts';
+import { type KoitoData } from '../common/infrastructure/config/client/koito.ts';
+import { type TealData } from '../common/infrastructure/config/client/tealfm.ts';
+import { type RockSkyData } from '../common/infrastructure/config/client/rocksky.ts';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -274,7 +274,7 @@ export default class ScrobbleSources {
         }
 
         for (const sourceType of sourceTypes) {
-            let defaultConfigureAs: ConfigureAsSource = 'source';
+            const defaultConfigureAs: ConfigureAsSource = 'source';
             // env builder for single user mode
             switch (sourceType) {
                 case 'spotify': {
@@ -989,128 +989,157 @@ export default class ScrobbleSources {
         this.logger.debug({labels: [`${type} - ${name}`]},`Constructing Source from ${source}...`);
         let newSource: AbstractSource;
         switch (type) {
-            case 'spotify':
-                const SpotifySource = (await import('./SpotifySource.js')).default;
+            case 'spotify': {
+                const SpotifySource = (await import('./SpotifySource.ts')).default;
                 newSource = new SpotifySource(name, compositeConfig as SpotifySourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'plex':
-                const PlexApiSource = (await import('./PlexApiSource.js')).default;
+            }
+            case 'plex': {
+                const PlexApiSource = (await import('./PlexApiSource.ts')).default;
                 newSource = await new PlexApiSource(name, compositeConfig as PlexApiSourceConfig, this.internalConfig, this.emitter); 
                 break;
-            case 'subsonic':
-                const {SubsonicSource} = (await import('./SubsonicSource.js'));
+            }
+            case 'subsonic': {
+                const {SubsonicSource} = (await import('./SubsonicSource.ts'));
                 newSource = new SubsonicSource(name, compositeConfig as SubSonicSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'jellyfin':
-                const JellyfinApiSource = (await import('./JellyfinApiSource.js')).default;
+            }
+            case 'jellyfin': {
+                const JellyfinApiSource = (await import('./JellyfinApiSource.ts')).default;
                 newSource = await new JellyfinApiSource(name, compositeConfig as JellyApiSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'lastfm':
-                const LastfmSource = (await import('./LastfmSource.js')).default;
+            }
+            case 'lastfm': {
+                const LastfmSource = (await import('./LastfmSource.ts')).default;
                 newSource = await new LastfmSource(name, compositeConfig as LastfmSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'librefm':
-                const LibrefmSource = (await import('./LibrefmSource.js')).default;
+            }
+            case 'librefm': {
+                const LibrefmSource = (await import('./LibrefmSource.ts')).default;
                 newSource = await new LibrefmSource(name, compositeConfig as LibrefmSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'deezer':
+            }
+            case 'deezer': {
                 const deezerConfig = compositeConfig as DeezerCompatConfig;
                 if('arl' in deezerConfig.data && deezerConfig.data.arl !== undefined) {
-                    const DeezerInternalSource = (await import('./DeezerInternalSource.js')).default;
+                    const DeezerInternalSource = (await import('./DeezerInternalSource.ts')).default;
                     newSource = await new DeezerInternalSource(name, compositeConfig as DeezerInternalSourceConfig, this.internalConfig, this.emitter);
                 } else {
-                    const DeezerSource = (await import('./DeezerSource.js')).default;
+                    const DeezerSource = (await import('./DeezerSource.ts')).default;
                     newSource = await new DeezerSource(name, compositeConfig as DeezerSourceConfig, this.internalConfig, this.emitter);
                 }
                 break;
-            case 'ytmusic':
-                const YTMusicSource = (await import('./YTMusicSource.js')).default;
+            }
+            case 'ytmusic': {
+                const YTMusicSource = (await import('./YTMusicSource.ts')).default;
                 newSource = await new YTMusicSource(name, compositeConfig as YTMusicSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'ymbridge':
-                const YandexMusicBridgeSource = (await import('./YandexMusicBridgeSource.js')).default;
+            }
+            case 'ymbridge': {
+                const YandexMusicBridgeSource = (await import('./YandexMusicBridgeSource.ts')).default;
                 newSource = await new YandexMusicBridgeSource(name, compositeConfig as YandexMusicBridgeSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'mpris':
-                const {MPRISSource} = (await import('./MPRISSource.js'));
+            }
+            case 'mpris': {
+                const {MPRISSource} = (await import('./MPRISSource.ts'));
                 newSource = await new MPRISSource(name, compositeConfig as MPRISSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'mopidy':
-                const {MopidySource} = (await import('./MopidySource.js'));
+            }
+            case 'mopidy': {
+                const {MopidySource} = (await import('./MopidySource.ts'));
                 newSource = await new MopidySource(name, compositeConfig as MopidySourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'listenbrainz':
-                const ListenbrainzSource = (await import('./ListenbrainzSource.js')).default;
+            }
+            case 'listenbrainz': {
+                const ListenbrainzSource = (await import('./ListenbrainzSource.ts')).default;
                 newSource = await new ListenbrainzSource(name, compositeConfig as ListenBrainzSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'endpointlz':
-                const {EndpointListenbrainzSource} = (await import('./EndpointListenbrainzSource.js'));
+            }
+            case 'endpointlz': {
+                const {EndpointListenbrainzSource} = (await import('./EndpointListenbrainzSource.ts'));
                 newSource = await new EndpointListenbrainzSource(name, compositeConfig as ListenbrainzEndpointSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'endpointlfm':
-                const {EndpointLastfmSource} = (await import('./EndpointLastfmSource.js'));
+            }
+            case 'endpointlfm': {
+                const {EndpointLastfmSource} = (await import('./EndpointLastfmSource.ts'));
                 newSource = await new EndpointLastfmSource(name, compositeConfig as LastFMEndpointSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'icecast':
-                const {IcecastSource} = (await import('./IcecastSource.js'));
+            }
+            case 'icecast': {
+                const {IcecastSource} = (await import('./IcecastSource.ts'));
                 newSource = await new IcecastSource(name, compositeConfig as IcecastSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'jriver':
-                const {JRiverSource} = (await import('./JRiverSource.js'));
+            }
+            case 'jriver': {
+                const {JRiverSource} = (await import('./JRiverSource.ts'));
                 newSource = await new JRiverSource(name, compositeConfig as JRiverSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'kodi':
-                const {KodiSource} = (await import('./KodiSource.js'));
+            }
+            case 'kodi': {
+                const {KodiSource} = (await import('./KodiSource.ts'));
                 newSource = await new KodiSource(name, compositeConfig as KodiSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'webscrobbler':
-                const {WebScrobblerSource} = (await import('./WebScrobblerSource.js'));
+            }
+            case 'webscrobbler': {
+                const {WebScrobblerSource} = (await import('./WebScrobblerSource.ts'));
                 newSource = await new WebScrobblerSource(name, compositeConfig as WebScrobblerSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'chromecast':
-                const {ChromecastSource} = (await import('./ChromecastSource.js'));
+            }
+            case 'chromecast': {
+                const {ChromecastSource} = (await import('./ChromecastSource.ts'));
                 newSource = await new ChromecastSource(name, compositeConfig as ChromecastSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'musikcube':
-                const {MusikcubeSource} = (await import('./MusikcubeSource.js'));
+            }
+            case 'musikcube': {
+                const {MusikcubeSource} = (await import('./MusikcubeSource.ts'));
                 newSource = await new MusikcubeSource(name, compositeConfig as MusikcubeSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'musiccast':
-                const {MusicCastSource} = (await import('./MusicCastSource.js'));
+            }
+            case 'musiccast': {
+                const {MusicCastSource} = (await import('./MusicCastSource.ts'));
                 newSource = await new MusicCastSource(name, compositeConfig as MusicCastSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'mpd':
-                const {MPDSource} = (await import('./MPDSource.js'));
+            }
+            case 'mpd': {
+                const {MPDSource} = (await import('./MPDSource.ts'));
                 newSource = await new MPDSource(name, compositeConfig as MPDSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'vlc':
-                const {VLCSource} = (await import('./VLCSource.js'));
+            }
+            case 'vlc': {
+                const {VLCSource} = (await import('./VLCSource.ts'));
                 newSource = await new VLCSource(name, compositeConfig as VLCSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'azuracast':
-                const {AzuracastSource} = (await import('./AzuracastSource.js'));
+            }
+            case 'azuracast': {
+                const {AzuracastSource} = (await import('./AzuracastSource.ts'));
                 newSource = await new AzuracastSource(name, compositeConfig as AzuracastSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'koito':
-                const KoitoSource = (await import('./KoitoSource.js')).default;
+            }
+            case 'koito': {
+                const KoitoSource = (await import('./KoitoSource.ts')).default;
                 newSource = await new KoitoSource(name, compositeConfig as KoitoSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'maloja':
-                const MalojaSource = (await import('./MalojaSource.js')).default;
+            }
+            case 'maloja': {
+                const MalojaSource = (await import('./MalojaSource.ts')).default;
                 newSource = await new MalojaSource(name, compositeConfig as MalojaSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'tealfm':
-                const TealfmSource = (await import('./TealfmSource.js')).default;
+            }
+            case 'tealfm': {
+                const TealfmSource = (await import('./TealfmSource.ts')).default;
                 newSource = await new TealfmSource(name, compositeConfig as TealSourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'rocksky':
-                const RockskySource = (await import('./RockskySource.js')).default;
+            }
+            case 'rocksky': {
+                const RockskySource = (await import('./RockskySource.ts')).default;
                 newSource = await new RockskySource(name, compositeConfig as RockskySourceConfig, this.internalConfig, this.emitter);
                 break;
-            case 'sonos':
-                const {SonosSource} = (await import('./SonosSource.js'));
+            }
+            case 'sonos': {
+                const {SonosSource} = (await import('./SonosSource.ts'));
                 newSource = await new SonosSource(name, compositeConfig as SonosSourceConfig, this.internalConfig, this.emitter);
                 break;
+            }
             default:
                 break;
         }

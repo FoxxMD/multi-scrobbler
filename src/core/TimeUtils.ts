@@ -1,7 +1,7 @@
-import dayjs, { Dayjs } from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import isToday from 'dayjs/plugin/isToday.js';
-import { SHORT_CALENDAR_NOTZ_FORMAT, SHORT_TODAY_NOTZ_FORMAT } from "./Atomic.js";
-import { Milliseconds } from "../backend/utils/TimeUtils.js";
+import { SHORT_CALENDAR_NOTZ_FORMAT, SHORT_TODAY_NOTZ_FORMAT } from "./Atomic.ts";
+import type { Duration } from "dayjs/plugin/duration.js";
 
 dayjs.extend(isToday);
 
@@ -25,4 +25,29 @@ export const timeToHumanTimestamp = (val: ReturnType<typeof dayjs.duration> | Mi
     }
     // EX 01:15:45
     return new Date(ms).toISOString().substring(11, 19);
+};export type Milliseconds = number;
+export const durationToHuman = (dur: Duration): string => {
+    const nTime = durationToNormalizedTime(dur);
+
+    const parts: string[] = [];
+    if (nTime.hours !== 0) {
+        parts.push(`${nTime.hours}hr`);
+    }
+    parts.push(`${nTime.minutes}min`);
+    parts.push(`${nTime.seconds}sec`);
+    return parts.join(' ');
 };
+export const durationToNormalizedTime = (dur: Duration): { hours: number; minutes: number; seconds: number; } => {
+    const totalSeconds = dur.asSeconds();
+
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds - (hours * 3600)) / 60);
+    const seconds = totalSeconds - (hours * 3600) - (minutes * 60);
+
+    return {
+        hours,
+        minutes,
+        seconds
+    };
+};
+

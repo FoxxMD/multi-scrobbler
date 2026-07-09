@@ -1,7 +1,7 @@
-import React, { Fragment } from 'react';
-import { ArtistCredit as AC } from '../../core/Atomic';
+import { Fragment } from 'react';
+import { type ArtistCredit as AC } from '../../core/Atomic';
 
-import { HStack, Tag } from "@chakra-ui/react"
+import { HStack, Tag } from "@chakra-ui/react";
 import { SiMusicbrainz } from "react-icons/si";
 import { Tooltip } from './ChakraTooltip';
 

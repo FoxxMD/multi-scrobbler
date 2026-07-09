@@ -1,17 +1,17 @@
-import { getListDiff, ListDiff } from "@donedeal0/superdiff";
-import { PlayMatchResult, PlayObject, PlayObjectMinimal, SOURCE_SOT, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_DURING, TA_EXACT, TA_FUZZY, TemporalAccuracy, TrackStringOptions } from "../../core/Atomic.js";
-import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
-import { comparingMultipleArtists, playObjDataMatch, setIntersection } from "../utils.js";
-import { comparePlayTemporally, hasAcceptableTemporalAccuracy, temporalAccuracyToString, TemporalPlayComparisonOptions, temporalPlayComparisonSummary } from "./TimeUtils.js";
-import { compareNormalizedStrings, compareScrobbleArtists, compareScrobbleTracks, compareTracks, normalizeStr, TrackSamenessResults } from "./StringUtils.js";
-import { ARTIST_WEIGHT, DUP_SCORE_THRESHOLD, ScrobbledPlayObject, TIME_WEIGHT, TITLE_WEIGHT } from "../common/infrastructure/Atomic.js";
-import { StringSamenessResult } from "@foxxmd/string-sameness";
-import { Duration } from "dayjs/plugin/duration.js";
-import { PlayTransformRules, TRANSFORM_HOOK, TransformHook } from "../common/infrastructure/Transform.js";
-import { Logger } from "@foxxmd/logging";
-import { loggerNoop } from '../common/MaybeLogger.js';
-import { statefulInvariantTransform } from "../../core/PlayUtils.js";
-import { findAsyncSequential } from "./AsyncUtils.js";
+import { getListDiff, type ListDiff } from "@donedeal0/superdiff";
+import { type PlayMatchResult, type PlayObject, type PlayObjectMinimal, SOURCE_SOT, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy, type TrackStringOptions } from "../../core/Atomic.ts";
+import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
+import { comparingMultipleArtists, playObjDataMatch, setIntersection } from "../utils.ts";
+import { comparePlayTemporally, hasAcceptableTemporalAccuracy, temporalAccuracyToString, type TemporalPlayComparisonOptions, temporalPlayComparisonSummary } from "./TimeUtils.ts";
+import { compareNormalizedStrings, compareScrobbleArtists, compareScrobbleTracks, compareTracks, normalizeStr, type TrackSamenessResults } from "./StringUtils.ts";
+import { ARTIST_WEIGHT, DUP_SCORE_THRESHOLD, type ScrobbledPlayObject, TIME_WEIGHT, TITLE_WEIGHT } from "../common/infrastructure/Atomic.ts";
+import { type StringSamenessResult } from "@foxxmd/string-sameness";
+import { type Duration } from "dayjs/plugin/duration.js";
+import { type PlayTransformRules, TRANSFORM_HOOK, type TransformHook } from "../../core/Transform.ts";
+import { type Logger } from "@foxxmd/logging";
+import { loggerNoop } from '../common/MaybeLogger.ts';
+import { statefulInvariantTransform } from "../../core/PlayUtils.ts";
+import { findAsyncSequential } from "./AsyncUtils.ts";
 import dayjs from "dayjs";
 
 
@@ -586,7 +586,7 @@ export const existingScrobble = async (playObjPre: PlayObject, existingScrobbles
             closestScrobbleParts.push(`Closest Scrobble: ${buildTrackString(result.closestMatchedPlay, scoreTrackOpts)}`);
         }
         closestScrobbleParts.push(result.reason);
-        let summaryStart = `${capitalize(playObj.meta.source ?? 'Source')}: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobbleParts.join(' => ')}`;
+        const summaryStart = `${capitalize(playObj.meta.source ?? 'Source')}: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobbleParts.join(' => ')}`;
         const summary = `${summaryStart}${result.breakdowns.length > 0 ? `\n${result.breakdowns.join('\n')}` : ''}`
         result.summary = summary;
         if(log) {

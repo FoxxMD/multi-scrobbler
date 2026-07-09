@@ -1,15 +1,15 @@
 import { loggerTest } from "@foxxmd/logging";
-import { assert, expect } from 'chai';
+import { expect } from 'chai';
 import EventEmitter from "events";
 import { describe, it } from 'mocha';
-import { JsonPlayObject, PlayMeta, PlayObject } from "../../../core/Atomic.js";
+import { type JsonPlayObject, type PlayMeta } from "../../../core/Atomic.ts";
 
-import JellyfinApiSource from "../../sources/JellyfinApiSource.js";
+import JellyfinApiSource from "../../sources/JellyfinApiSource.ts";
 import validSession from './validSession.json' with { type: "json" };
-import { JellyApiData } from "../../common/infrastructure/config/source/jellyfin.js";
-import { generatePlay } from "../../../core/PlayTestUtils.js";
-import { faker, fakerJA } from "@faker-js/faker";
-import {
+import { type JellyApiData } from "../../common/infrastructure/config/source/jellyfin.ts";
+import { generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
+import { faker } from "@faker-js/faker";
+import type {
     // @ts-expect-error weird typings?
     SessionInfo,
     // @ts-expect-error weird typings?
@@ -17,7 +17,7 @@ import {
 } from "@jellyfin/sdk/lib/generated-client/index.js";
 // @ts-expect-error weird typings?
 import { getImageApi } from "@jellyfin/sdk/lib/utils/api/index.js";
-import { PlayerStateDataMaybePlay } from "../../common/infrastructure/Atomic.js";
+import { type PlayerStateDataMaybePlay } from "../../common/infrastructure/Atomic.ts";
 
 const dataAsFixture = (data: any): TestFixture => {
     return data as TestFixture;

@@ -1,14 +1,13 @@
-import React, {PropsWithChildren, useState, useEffect, useRef, useCallback} from 'react';
+import { Box, HStack, SegmentGroup, Separator, Span, Stack, Text } from '@chakra-ui/react';
+import { useSSE } from "@flamefrontend/sse-runtime-react";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as AnsiImport from "ansi-to-react";
-import { Text, Box, SegmentGroup, Separator, HStack, Stack, Span } from '@chakra-ui/react';
-import {FixedSizeList} from "fixed-size-list";
-import {useSSE} from "@flamefrontend/sse-runtime-react";
-import { useQueryClient, QueryFunctionContext, useQuery, useMutation } from '@tanstack/react-query'
-import { LogOutputConfig } from '../../core/Atomic';
+import { FixedSizeList } from "fixed-size-list";
 import ky from 'ky';
-import { LogLevel } from '@foxxmd/logging';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { type LogLevelStandalone, type LogOutputConfig } from '../../core/Atomic';
 import { tanQueries } from '../queries';
-import { ChakraClip, ChakraClipDynamic } from './ChakraClipboard';
+import { ChakraClipDynamic } from './ChakraClipboard';
 
 // @ts-expect-error Ansi export is built incorrectly
 const Ansi = AnsiImport.default.default as typeof AnsiImport.default;
@@ -93,7 +92,7 @@ export const LogsFetchable = (props: {settings?: LogOutputConfig, streamable?: b
     });
 
     const levelGroup = <SegmentGroup.Root value={logLevel} size="xs" onValueChange={(val) => {
-        mutateLogSettings.mutate({level: val.value as LogLevel});
+        mutateLogSettings.mutate({level: val.value as LogLevelStandalone});
         }}>
         <SegmentGroup.Indicator />
         <SegmentGroup.Items items={[

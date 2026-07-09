@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import PlayDisplay from "../components/PlayDisplay";
 import {recentIncludes} from "../../core/Atomic";
 import {useSearchParams} from "react-router-dom";
@@ -12,8 +12,8 @@ import {
     clearDead,
 } from "./deadLetterDucks";
 import dayjs from "dayjs";
-import {RootState} from "../store";
-import {connect, ConnectedProps} from "react-redux";
+import {type RootState} from "../store";
+import {connect, type ConnectedProps} from "react-redux";
 import { faBug } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import clsx from "clsx";
@@ -30,7 +30,7 @@ const dead = (props: PropsFromRedux) => {
         data = [],
     } = props;
 
-    let [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const {
         isLoading,
         isSuccess

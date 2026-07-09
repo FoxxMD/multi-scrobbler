@@ -1,5 +1,5 @@
 import { isAbortError } from "abort-controller-x";
-import { getErrorCause } from "../../core/ErrorUtils.js";
+import { getErrorCause } from "../../core/ErrorUtils.ts";
 
 /**
  * Adapted from https://github.com/voxpelli/pony-cause/blob/main/lib/helpers.js to find cause by truthy function

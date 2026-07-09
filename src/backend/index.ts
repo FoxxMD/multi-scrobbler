@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { childLogger, LogDataPretty, Logger as FoxLogger } from "@foxxmd/logging";
+import { childLogger, type LogDataPretty, type Logger as FoxLogger } from "@foxxmd/logging";
 import dayjs from 'dayjs';
 import duration from 'dayjs/plugin/duration.js';
 import isBetween from 'dayjs/plugin/isBetween.js';
@@ -10,22 +10,22 @@ import week from 'dayjs/plugin/weekOfYear.js';
 import utc from 'dayjs/plugin/utc.js';
 import * as path from "path";
 import { SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
-import { projectDir } from "./common/index.js";
-import { AIOConfig } from "./common/infrastructure/config/aioConfig.js";
-import { appLogger, initLogger as getInitLogger } from "./common/logging.js";
-import { getRoot } from "./ioc.js";
-import { parseVersion } from "./version.js";
-import { initServer } from "./server/index.js";
-import { isDebugMode, parseBool, retry, sleep } from "./utils.js";
-import { readJson } from './utils/DataUtils.js';
-import ScrobbleClients from './scrobblers/ScrobbleClients.js';
-import ScrobbleSources from './sources/ScrobbleSources.js';
-import { Notifiers } from './notifier/Notifiers.js';
-import { DbConcrete, getMigratedDb } from './common/database/drizzle/drizzleUtils.js';
-import { getDbPath } from './common/database/Database.js';
-import { createRetentionCleanupTask } from './tasks/retentionCleanup.js';
-import { parseUserConfig } from './common/Cache.js';
-import { nonEmptyStringOrDefault } from '../core/StringUtils.js';
+import { projectDir } from "./common/index.ts";
+import { type AIOConfig } from "./common/infrastructure/config/aioConfig.ts";
+import { appLogger, initLogger as getInitLogger } from "./common/logging.ts";
+import { getRoot } from "./ioc.ts";
+import { parseVersion } from "./version.ts";
+import { initServer } from "./server/index.ts";
+import { isDebugMode, parseBool, sleep } from "./utils.ts";
+import { readJson } from './utils/DataUtils.ts';
+import ScrobbleClients from './scrobblers/ScrobbleClients.ts';
+import ScrobbleSources from './sources/ScrobbleSources.ts';
+import { Notifiers } from './notifier/Notifiers.ts';
+import { type DbConcrete, getMigratedDb } from './common/database/drizzle/drizzleUtils.ts';
+import { getDbPath } from './common/database/Database.ts';
+import { createRetentionCleanupTask } from './tasks/retentionCleanup.ts';
+import { parseUserConfig } from './common/Cache.ts';
+import { nonEmptyStringOrDefault } from '../core/StringUtils.ts';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -52,7 +52,7 @@ output = output.slice(0, 301);
 let logger: FoxLogger;
 
 let db: DbConcrete;
-let dbConnectionsClosed = false;
+const dbConnectionsClosed = false;
 
 process.on('uncaughtExceptionMonitor', (err, origin) => {
     const appError = new Error(`Uncaught exception is crashing the app! :( Type: ${origin}`, {cause: err});
@@ -219,7 +219,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             }
         }
 
-        let runRetentionNow = parseBool(process.env.RETENTION_IMMEDIATE, false);
+        const runRetentionNow = parseBool(process.env.RETENTION_IMMEDIATE, false);
 
         const retentionTask = createRetentionCleanupTask(scrobbleSources, scrobbleClients, logger);
         let retentionJobAdded = false;

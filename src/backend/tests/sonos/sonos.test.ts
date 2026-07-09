@@ -1,12 +1,11 @@
-import { loggerTest, loggerDebug } from "@foxxmd/logging";
-import { assert, expect } from 'chai';
+import { loggerDebug } from "@foxxmd/logging";
 import EventEmitter from "events";
 import { describe, it } from 'mocha';
-import { SonosData } from "../../common/infrastructure/config/source/sonos.js";
-import { SonosSource } from "../../sources/SonosSource.js";
+import { type SonosData } from "../../common/infrastructure/config/source/sonos.ts";
+import { SonosSource } from "../../sources/SonosSource.ts";
 import * as dotenv from 'dotenv';
 import path from 'path';
-import { projectDir } from "../../common/index.js";
+import { projectDir } from "../../common/index.ts";
 
 const envPath = path.join(projectDir, '.env');
 dotenv.config({ path: envPath });

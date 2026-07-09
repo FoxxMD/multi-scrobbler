@@ -1,9 +1,9 @@
-import { Logger } from "@foxxmd/logging";
+import { type Logger } from "@foxxmd/logging";
 import * as AjvNS from "ajv";
-import Ajv, { Schema } from "ajv";
+import Ajv from "ajv";
 import f from "ajv-formats"
 import { resolve } from "path";
-import { projectDir } from "../common/index.js";
+import { projectDir } from "../common/index.ts";
 
 const ajvInstances: Record<string, AjvNS.Ajv> = {};
 
@@ -83,8 +83,8 @@ export const validateJson = async <T>(type: string, config: object, schemaIdenti
 
 let schemaFetchFunc;
 
-const compiledPath = 'src/backend/utils/SchemaCompiledUtils.js',
-dynamicPath = 'src/backend/utils/SchemaUtils.js';
+const compiledPath = 'src/backend/utils/SchemaCompiledUtils.ts',
+dynamicPath = 'src/backend/utils/SchemaUtils.ts';
 
 const getSchemaFunc = async () => {
     if(schemaFetchFunc !== undefined) {
@@ -96,7 +96,7 @@ const getSchemaFunc = async () => {
         const module = await import(resolve(projectDir, schemaFuncPath))
         schemaFetchFunc = module.getSchemaForType;
     } catch (e) {
-        throw new Error(`Could not load module from path: ${schemaFuncPath}`);
+        throw new Error(`Could not load module from path: ${schemaFuncPath}`, {cause: e});
     }
     return schemaFetchFunc;
 }

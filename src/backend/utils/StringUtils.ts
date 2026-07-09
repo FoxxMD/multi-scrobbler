@@ -1,10 +1,12 @@
-import { strategies, stringSameness, StringSamenessResult } from "@foxxmd/string-sameness";
+import { strategies, stringSameness, type StringSamenessResult } from "@foxxmd/string-sameness";
 import { hasher } from 'node-object-hash';
-import { PlayObject } from "../../core/Atomic.js";
-import { asPlayerStateData, DELIMITERS, DELIMITERS_NO_AMP, PlayerStateDataMaybePlay } from "../common/infrastructure/Atomic.js";
-import { getPlatformIdFromData, intersect, parseBool, parseBoolStrict } from "../utils.js";
-import { genGroupIdStr } from '../../core/PlayUtils.js';
-import { buildTrackString } from "../../core/StringUtils.js";
+import { type PlayObject } from "../../core/Atomic.ts";
+import { asPlayerStateData, type PlayerStateDataMaybePlay } from "../common/infrastructure/Atomic.ts";
+import { DELIMITERS_NO_AMP } from '../../core/Atomic.ts';
+import { DELIMITERS } from '../../core/Atomic.ts';
+import { getPlatformIdFromData, parseBoolStrict } from "../utils.ts";
+import { genGroupIdStr } from '../../core/PlayUtils.ts';
+import { buildTrackString } from "../../core/StringUtils.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 
 const {levenStrategy, diceStrategy} = strategies;

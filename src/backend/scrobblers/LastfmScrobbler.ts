@@ -1,16 +1,14 @@
-import { Logger } from "@foxxmd/logging";
-import dayjs, { Dayjs } from "dayjs";
+import { type Logger } from "@foxxmd/logging";
 import EventEmitter from "events";
-import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
-import { buildTrackString, capitalize } from "../../core/StringUtils.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { FormatPlayObjectOptions, InternalConfigOptional, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
-import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
-import LastfmApiClient, { LastFMIgnoredScrobble, playToClientPayload, formatPlayObj } from "../common/vendor/LastfmApiClient.js";
-import { Notifiers } from "../notifier/Notifiers.js";
-import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, playerInNPPlayingOnlyState } from "./AbstractScrobbleClient.js";
-import { findCauseByReference } from "../utils/ErrorUtils.js";
-import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.js";
+import { type PlayObject, type SourcePlayerObj } from "../../core/Atomic.ts";
+import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
+import { type FormatPlayObjectOptions, type InternalConfigOptional, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.ts";
+import { type LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.ts";
+import LastfmApiClient, { LastFMIgnoredScrobble, playToClientPayload, formatPlayObj } from "../common/vendor/LastfmApiClient.ts";
+import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.ts";
+import { findCauseByReference } from "../utils/ErrorUtils.ts";
+import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.ts";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 

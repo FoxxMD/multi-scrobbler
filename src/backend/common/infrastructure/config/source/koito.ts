@@ -1,7 +1,6 @@
-import { KoitoData } from "../client/koito.js";
-import { ListenBrainzData } from "../client/listenbrainz.js";
-import { PollingOptions } from "../common.js";
-import { CommonSourceConfig, CommonSourceData } from "./index.js";
+import { type KoitoData } from "../client/koito.ts";
+import { type PollingOptions } from "../common.ts";
+import { type CommonSourceConfig, type CommonSourceData } from "./index.ts";
 
 export interface KoitoSourceData extends KoitoData, CommonSourceData, PollingOptions {
 }

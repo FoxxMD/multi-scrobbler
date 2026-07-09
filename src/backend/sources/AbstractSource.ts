@@ -1,57 +1,50 @@
-import { childLogger, LogDataPretty, LogLevel } from '@foxxmd/logging';
-import dayjs, { Dayjs } from "dayjs";
+import { childLogger, type LogDataPretty, type LogLevel } from '@foxxmd/logging';
+import dayjs, { type Dayjs } from "dayjs";
 import { EventEmitter } from "events";
 import { FixedSizeList } from "fixed-size-list";
-import { JsonPlayObject, PlayMatchResult, PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
-import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
-import AbstractComponent from "../common/AbstractComponent.js";
+import { type PlayMatchResult, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
+import AbstractComponent from "../common/AbstractComponent.ts";
 import {
-    Authenticatable,
+    type Authenticatable,
     DEFAULT_POLLING_INTERVAL,
     DEFAULT_POLLING_MAX_INTERVAL,
     DEFAULT_RETRY_MULTIPLIER,
-    DeviceId,
-    GroupedFixedPlays,
-    InternalConfig,
-    NO_USER,
-    PlayPlatformId,
-    PlayUserId,
-    ProgressAwarePlayObject,
-    SINGLE_USER_PLATFORM_ID,
-} from "../common/infrastructure/Atomic.js";
-import { SourceType, SourceConfig } from '../common/infrastructure/config/source/sources.js';
-import { TRANSFORM_HOOK } from "../common/infrastructure/Transform.js";
-import TupleMap from "../common/TupleMap.js";
+    type GroupedFixedPlays,
+    type InternalConfig,
+    type ProgressAwarePlayObject,
+} from "../common/infrastructure/Atomic.ts";
+import { type PlayUserId } from '../../core/Atomic.ts';
+import { type DeviceId } from '../../core/Atomic.ts';
+import { type SourceType, type SourceConfig } from '../common/infrastructure/config/source/sources.ts';
+import { TRANSFORM_HOOK } from "../../core/Transform.ts";
+import TupleMap from "../common/TupleMap.ts";
 import {
     difference,
-    genGroupId,
-    isDebugMode,
-    playObjDataMatch,
     pollingBackoff,
     sleep,
     sortByOldestPlayDate,
-} from "../utils.js";
-import { genGroupIdStr, sortByNewestPlayDate } from '../../core/PlayUtils.js';
-import { formatNumber } from '../../core/DataUtils.js';
-import { timeToHumanTimestamp } from "../../core/TimeUtils.js";
-import { todayAwareFormat } from "../../core/TimeUtils.js";
-import { getRoot } from '../ioc.js';
-import { componentFileLogger } from '../common/logging.js';
-import { WebhookPayload } from '../common/infrastructure/config/health/webhooks.js';;
-import { messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.js";
-import { existingScrobble, ExistingScrobbleOpts } from '../utils/PlayComparisonUtils.js';
-import { findAsync, staggerMapper, StaggerOptions } from '../utils/AsyncUtils.js';
+} from "../utils.ts";
+import { sortByNewestPlayDate } from '../../core/PlayUtils.ts';
+import { formatNumber } from '../../core/DataUtils.ts';
+import { timeToHumanTimestamp } from "../../core/TimeUtils.ts";
+import { todayAwareFormat } from "../../core/TimeUtils.ts";
+import { getRoot } from '../ioc.ts';
+import { componentFileLogger } from '../common/logging.ts';
+;
+import { messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.ts";
+import { existingScrobble, type ExistingScrobbleOpts } from '../utils/PlayComparisonUtils.ts';
+import { staggerMapper } from '../utils/AsyncUtils.ts';
 import pMap, {pMapIterable} from 'p-map';
-import prom, { Counter, Gauge } from 'prom-client';
-import { normalizeStr } from '../utils/StringUtils.js';
-import { spawn, catchAbortError, isAbortError, rethrowAbortError, delay, forever, AbortError, throwIfAborted } from 'abort-controller-x';
-import { AbortedError, generateLoggableAbortReason } from '../common/errors/MSErrors.js';
-import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, QueryPlaysOpts, RequestPlayQuery, WithPlayRelation } from '../common/database/drizzle/repositories/PlayRepository.js';
-import { asPlay } from '../../core/PlayMarshalUtils.js';
+import { Counter } from 'prom-client';
+import { normalizeStr } from '../utils/StringUtils.ts';
+import { spawn, isAbortError, delay, throwIfAborted } from 'abort-controller-x';
+import { generateLoggableAbortReason } from '../common/errors/MSErrors.ts';
+import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, type QueryPlaysOpts, type RequestPlayQuery, type WithPlayRelation } from '../common/database/drizzle/repositories/PlayRepository.ts';
+import { asPlay } from '../../core/PlayMarshalUtils.ts';
 import { AsyncTask, SimpleIntervalJob, ToadScheduler } from 'toad-scheduler';
-import { ComponentMinimalSelect } from '../common/database/drizzle/drizzleTypes.js';
-import { COMPONENT_STATE, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommonDetailed } from '../../core/Api.js';
-import { PaginatedResponse } from '../common/database/drizzle/repositories/BaseRepository.js';
+import { COMPONENT_STATE, type ComponentSourceApiJson, type ComponentState, type PlayApiCommonDetailed } from '../../core/Api.ts';
+import { type PaginatedResponse } from "../../core/Api.ts";
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -232,7 +225,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         } = this.transformRules;
 
         if (preCompare.length > 0) {
-            let pcInits: number[] = [0],
+            const pcInits: number[] = [0],
                 pcMaxStagger: number[] = [0];
             for (const hook of this.transformRules.preCompare) {
                 const t = this.transformManager.getTransformerByStage({ type: hook.type, name: hook.name });
@@ -243,7 +236,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         }
 
         if (postCompare.length > 0) {
-            let postInits: number[] = [0],
+            const postInits: number[] = [0],
                 postMaxStagger: number[] = [0];
             for (const hook of this.transformRules.postCompare) {
                 const t = this.transformManager.getTransformerByStage({ type: hook.type, name: hook.name });
@@ -683,7 +676,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.lastActivityAt = dayjs();
         let checkCount = 0;
         let checksOverThreshold = 0;
-        let checkActiveFor = 120;
+        const checkActiveFor = 120;
         let maxInterval = DEFAULT_POLLING_MAX_INTERVAL;
 
         if('maxInterval' in this.config.data) {
@@ -842,8 +835,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
             with: withQuery = ['input','parent-input','queues'],
             ...rest
         } = args;
-        let parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
-        let parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
+        const parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
+        const parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
         return this.playRepo.findPlaysPaginated({limit: parsedLimit, offset: parsedOffset, with: withQuery, ...rest});
     }
 

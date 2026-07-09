@@ -1,19 +1,21 @@
-import { childLogger, Logger } from "@foxxmd/logging";
+import { childLogger, type Logger } from "@foxxmd/logging";
 import { WS } from 'iso-websocket'
-import { DiscordStrongData, StatusType, DiscordWSData, ActivityData, ACTIVITY_TYPE } from "../../infrastructure/config/client/discord.js";
-import { _DataPayload, _NonDispatchPayload, APIUser, GatewayActivity, GatewayActivityAssets, GatewayCloseCodes, GatewayDispatchEvents, GatewayHeartbeatRequest, GatewayHelloData, GatewayIdentify, GatewayInvalidSessionData, GatewayOpcodes, GatewayPresenceUpdateData, GatewayReadyDispatchData, GatewayResumeData, GatewayUpdatePresence, PresenceUpdateStatus } from "discord.js";
-import { isDebugMode, removeUndefinedKeys, sleep } from "../../../utils.js";
+import { type DiscordStrongData, type StatusType, type DiscordWSData, type ActivityData, ACTIVITY_TYPE } from "../../infrastructure/config/client/discord.ts";
+import type { _DataPayload, _NonDispatchPayload, APIUser, GatewayActivity, GatewayActivityAssets, GatewayHeartbeatRequest, GatewayHelloData, GatewayIdentify, GatewayInvalidSessionData, GatewayPresenceUpdateData, GatewayReadyDispatchData, GatewayResumeData, GatewayUpdatePresence } from "discord.js";
+import { GatewayCloseCodes, GatewayDispatchEvents, GatewayOpcodes, PresenceUpdateStatus } from "discord.js"
+import { isDebugMode, sleep } from "../../../utils.ts";
+import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
 import pEvent from 'p-event';
 import EventEmitter from "events";
 import { randomInt } from "crypto";
 import request from 'superagent';
-import { AbstractApiOptions,SourceData } from "../../infrastructure/Atomic.js";
-import { isPlayObject, SourcePlayerObj } from "../../../../core/Atomic.js";
-import dayjs, { Dayjs } from "dayjs";
-import { getRoot } from "../../../ioc.js";
-import { formatWebsocketClose, isCloseEvent, isErrorEvent, wsReadyStateToStr } from "../../../utils/NetworkUtils.js";
-import { activityIdToStr, opcodeToFriendly, playStateToActivityData } from "./DiscordUtils.js";
-import { DiscordAbstractClient } from "./DiscordAbstractClient.js";
+import { type AbstractApiOptions } from "../../infrastructure/Atomic.ts";
+import { isPlayObject, type SourcePlayerObj } from "../../../../core/Atomic.ts";
+import dayjs, { type Dayjs } from "dayjs";
+import { getRoot } from "../../../ioc.ts";
+import { formatWebsocketClose, isCloseEvent, isErrorEvent, wsReadyStateToStr } from "../../../utils/NetworkUtils.ts";
+import { activityIdToStr, opcodeToFriendly, playStateToActivityData } from "./DiscordUtils.ts";
+import { DiscordAbstractClient } from "./DiscordAbstractClient.ts";
 
 const API_GATEWAY_ENDPOINT = 'https://discord.com/api/gateway';
 
@@ -587,7 +589,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
                     }
                     this.sendHeartbeat();
                     break;
-                case GatewayOpcodes.Dispatch:
+                case GatewayOpcodes.Dispatch: {
                     const { t } = message;
                     switch (t) {
                         case GatewayDispatchEvents.Ready:
@@ -611,6 +613,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
                             }
                     };
                     break;
+                }
                 case GatewayOpcodes.InvalidSession:
                     this.gatewayMsgLogger.verbose(`Invalid session opcode`);
                     this.handleInvalidSession(message.d as GatewayInvalidSessionData);
@@ -823,6 +826,7 @@ export const activityDataToGatewayActivity = (data: ActivityData): GatewayActivi
 
     const activity: Omit<GatewayActivity, 'id'> = removeUndefinedKeys<Omit<GatewayActivity, 'id'>>({
         status_display_type: statusDisplayType,
+        // @ts-expect-error its fine its an enum thing
         type: activityType,
         details_url: detailsUrl,
         state_url: stateUrl,

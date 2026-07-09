@@ -1,6 +1,6 @@
-import { ListenBrainzData } from "../client/listenbrainz.js";
-import { PollingOptions } from "../common.js";
-import { CommonSourceConfig, CommonSourceData } from "./index.js";
+import { type ListenBrainzData } from "../client/listenbrainz.ts";
+import { type PollingOptions } from "../common.ts";
+import { type CommonSourceConfig, type CommonSourceData } from "./index.ts";
 
 export interface ListenBrainzSourceData extends ListenBrainzData, CommonSourceData, PollingOptions {
 }

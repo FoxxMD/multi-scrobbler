@@ -1,6 +1,6 @@
-import { MalojaData } from "../client/maloja.js";
-import { PollingOptions } from "../common.js";
-import { CommonSourceConfig, CommonSourceData } from "./index.js";
+import { type MalojaData } from "../client/maloja.ts";
+import { type PollingOptions } from "../common.ts";
+import { type CommonSourceConfig, type CommonSourceData } from "./index.ts";
 
 export interface MalojaSourceData extends MalojaData, CommonSourceData, PollingOptions {
 }

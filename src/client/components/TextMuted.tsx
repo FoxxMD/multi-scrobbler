@@ -1,5 +1,5 @@
 import { Text as ChakraText, Span } from "@chakra-ui/react"
-import { ComponentProps } from "react"
+import { type ComponentProps } from "react"
 
 export const TextMuted = (props: ComponentProps<typeof ChakraText>) => {
     const {

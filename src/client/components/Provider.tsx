@@ -1,20 +1,15 @@
 "use client"
 
-import { ChakraProvider, defaultSystem } from "@chakra-ui/react"
+import { ChakraProvider, createSystem, defaultConfig, defineConfig } from "@chakra-ui/react"
+import {
+  QueryClient,
+  QueryClientProvider
+} from '@tanstack/react-query'
+import '../index-next.css'
 import {
   ColorModeProvider,
   type ColorModeProviderProps,
 } from "./Color-Mode"
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-  QueryClient,
-  QueryClientProvider,
-} from '@tanstack/react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-import { createSystem, defaultConfig, defineConfig } from "@chakra-ui/react"
-import '../index-next.css';
 
 const queryClient = new QueryClient()
 

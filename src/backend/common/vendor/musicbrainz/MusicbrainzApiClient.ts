@@ -1,27 +1,27 @@
 import { Response } from 'superagent';
-import { ArtistCredit, PlayObject, PlayObjectMinimal, URLData } from "../../../../core/Atomic.js";
-import { UpstreamError } from "../../errors/UpstreamError.js";
-import { AbstractApiOptions, FormatPlayObjectOptions, MUSICBRAINZ_URL, MusicbrainzApiConfigData } from "../../infrastructure/Atomic.js";
-import AbstractApiClient from "../AbstractApiClient.js";
-import { isPortReachableConnect, normalizeWebAddress } from '../../../utils/NetworkUtils.js';
-import { MusicBrainzApi, IRecording, IRecordingList, IRelease } from 'musicbrainz-api';
-import { difference, isDebugMode, isEmptyArrayOrUndefined, sleep } from "../../../utils.js";
+import { type ArtistCredit, type PlayObject, type PlayObjectMinimal, type URLData } from "../../../../core/Atomic.ts";
+import { UpstreamError } from "../../errors/UpstreamError.ts";
+import { type AbstractApiOptions, type FormatPlayObjectOptions, MUSICBRAINZ_URL, type MusicbrainzApiConfigData } from "../../infrastructure/Atomic.ts";
+import AbstractApiClient from "../AbstractApiClient.ts";
+import { isPortReachableConnect, normalizeWebAddress } from '../../../utils/NetworkUtils.ts';
+import { MusicBrainzApi, type IRecording, type IRecordingList, type IRelease } from 'musicbrainz-api';
+import { difference, isDebugMode, sleep } from "../../../utils.ts";
 import {SequentialRoundRobin} from 'round-robin-js';
 import { Cacheable } from "cacheable";
-import { getRoot } from "../../../ioc.js";
-import { version } from "../../../version.js";
-import { hashObject } from "../../../utils/StringUtils.js";
-import { playContentInvariantTransform } from "../../../utils/PlayComparisonUtils.js";
-import { childLogger } from "@foxxmd/logging";;
+import { getRoot } from "../../../ioc.ts";
+import { version } from "../../../version.ts";
+import { hashObject } from "../../../utils/StringUtils.ts";
+import { playContentInvariantTransform } from "../../../utils/PlayComparisonUtils.ts";
+;
 import { AsyncLocalStorage } from "async_hooks";
 import { nanoid } from "nanoid";
 import { stripIndents } from "common-tags";
-import { getNodeNetworkException, hasNodeNetworkException, isNodeNetworkException } from '../../errors/NodeErrors.js';
-import { SimpleError } from '../../errors/MSErrors.js';
-import { baseFormatPlayObj } from '../../../utils/PlayTransformUtils.js';
-import { IRecordingMSList } from '../../transforms/MusicbrainzTransformer.js';
-import dayjs, { Dayjs } from 'dayjs';
-import { artistCreditsToNames } from '../../../../core/StringUtils.js';
+import { hasNodeNetworkException } from '../../errors/NodeErrors.ts';
+import { SimpleError } from '../../errors/MSErrors.ts';
+import { baseFormatPlayObj } from '../../../utils/PlayTransformUtils.ts';
+import { type IRecordingMSList } from '../../transforms/MusicbrainzTransformer.ts';
+import dayjs, { type Dayjs } from 'dayjs';
+import { artistCreditsToNames } from '../../../../core/StringUtils.ts';
 
 export interface SubmitResponse {
     payload?: {
@@ -68,7 +68,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
         const mbApis: Record<string, MusicbrainzApiConfig> = {};
         for(const mbConfig of this.config.apis) {
             const u = normalizeWebAddress(mbConfig.url ?? MUSICBRAINZ_URL);
-            let mb = mbMap.get(u.url.hostname);
+            const mb = mbMap.get(u.url.hostname);
             const mbApiConfig: Omit<MusicbrainzApiConfig, 'api'> = {
                 ...mbConfig, 
                 hostname: u.url.hostname, 
@@ -97,7 +97,6 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                     api, 
                 };
                 mbMap.set(u.url.hostname, api);
-                mb = api;
             } else if(mbApis[u.url.hostname] === undefined) {
                 mbApis[u.url.hostname] = {
                     ...mbApiConfig,
@@ -143,9 +142,8 @@ export class MusicbrainzApiClient extends AbstractApiClient {
 
             // keep track of last request init at and wait until at least 1 second since that
             // to help prevent rate limiting
-            let waitTime = 0;
             const sinceLast = dayjs().diff(apiConfig.lastRequest, 'ms');
-            waitTime = Math.max(0, apiConfig.minRequestIntervalDuration - sinceLast);
+            const waitTime = Math.max(0, apiConfig.minRequestIntervalDuration - sinceLast);
             apiConfig.lastRequest = dayjs().add(waitTime, 'ms');
             //this.logger.trace(`Waiting ${waitTime}ms to call ${apiConfig.hostname} request at ${apiConfig.lastRequest.toISOString()}`)
             if(waitTime > 0) {
@@ -458,6 +456,6 @@ export const removeNonWordCharacters = (str: string): string => {
 
     // remove any non-alphanumeric, non-whitespace characters
     // with a whitespace EX "My Cool (Title)" => "My Cool Title"
-    cleaned = str.replaceAll(NON_WORDWHITESPACE_REGEX, '');
+    cleaned = cleaned.replaceAll(NON_WORDWHITESPACE_REGEX, '');
     return cleaned;
 }

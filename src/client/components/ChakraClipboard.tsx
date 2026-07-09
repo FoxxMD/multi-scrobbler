@@ -1,6 +1,6 @@
-import { ComponentProps, useMemo, useCallback, useEffect, useState } from 'react';
-import { Clipboard, IconButton, useClipboard } from "@chakra-ui/react"
-import {safeStringify} from '../../core/StringUtils';
+import { Clipboard, IconButton, useClipboard } from "@chakra-ui/react";
+import { type ComponentProps, useCallback, useEffect, useMemo, useState } from 'react';
+import { safeStringify } from '../../core/StringUtils';
 import { CheckIcon, CopyIcon } from './icons/ChakraIcons';
 
 

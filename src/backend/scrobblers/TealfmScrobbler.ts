@@ -1,31 +1,30 @@
-import { childLogger, Logger, LogLevel } from "@foxxmd/logging";
+import { childLogger, type Logger } from "@foxxmd/logging";
 import EventEmitter from "events";
 import fsPromise from 'node:fs/promises';
 import fs from 'node:fs';
 import path from 'path';
 
 import { Readable } from 'stream';
-import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
-import { buildTrackString, capitalize } from "../../core/StringUtils.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { FormatPlayObjectOptions, CALCULATED_PLAYER_STATUSES, ReportedPlayerStatus, InternalConfigOptional } from "../common/infrastructure/Atomic.js";
-import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.js';
-import { Notifiers } from "../notifier/Notifiers.js";
+import { type PlayObject, type SourcePlayerObj } from "../../core/Atomic.ts";
+import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
+import { type FormatPlayObjectOptions, type InternalConfigOptional } from "../common/infrastructure/Atomic.ts";
+import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
 
-import { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractScrobbleClient.js";
-import { TealClientConfig } from "../common/infrastructure/config/client/tealfm.js";
-import { ATProtoAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.js";
-import { playToRecord, TealApiClient } from "../common/vendor/teal/TealApiClient.js";
-import { playToStatusRecord } from "../common/vendor/teal/TealApiClient.js";
-import { nowPlayingExpirationDuration } from "./AbstractScrobbleClient.js";
-import { recordToPlay } from "../common/vendor/teal/TealApiClient.js";
-import dayjs, { Dayjs } from "dayjs";
-import { durationToHuman, isDebugMode } from "../utils.js";
-import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient.js";
+import { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractScrobbleClient.ts";
+import { type TealClientConfig } from "../common/infrastructure/config/client/tealfm.ts";
+import { ATProtoAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.ts";
+import { playToRecord, TealApiClient } from "../common/vendor/teal/TealApiClient.ts";
+import { playToStatusRecord } from "../common/vendor/teal/TealApiClient.ts";
+import { recordToPlay } from "../common/vendor/teal/TealApiClient.ts";
+import dayjs from "dayjs";
+import { isDebugMode } from "../utils.ts";
+import { durationToHuman } from '../../core/TimeUtils.ts';
+import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient.ts";
 import { fromStream } from '@atcute/repo';
-import { playToRepositoryCreatePlayHistoricalOpts, RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.js";
+import { playToRepositoryCreatePlayHistoricalOpts, type RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
 import { isAbortError } from "abort-controller-x";
-import { FmTealAlphaFeedPlay } from "../common/vendor/teal/lexicons/index.js";
+import { FmTealAlphaFeedPlay } from "../common/vendor/teal/lexicons/index.ts";
 
 export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
 

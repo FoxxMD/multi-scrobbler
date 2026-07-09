@@ -1,11 +1,11 @@
 import React, {Fragment} from 'react';
-import {connect, ConnectedProps} from "react-redux";
+import {connect, type ConnectedProps} from "react-redux";
 import StatusCardSkeleton from "../components/statusCard/StatusCardSkeleton";
 import SourceStatusCard from "../components/statusCard/SourceStatusCard";
 import ClientStatusCard from "../components/statusCard/ClientStatusCard";
 import {useGetStatusQuery} from "./statusApi";
 import {clientAdapter, sourceAdapter} from "./ducks";
-import {RootState} from "../store";
+import {type RootState} from "../store";
 const StatusSection = (props: PropsFromRedux) => {
     const {
     } = props;

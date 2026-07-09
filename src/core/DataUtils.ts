@@ -1,14 +1,13 @@
 import { create as diffCreate } from "jsondiffpatch";
-import { DeepReplaceValue, numberFormatOptions, REGEX_ISO8601_LOOSE } from './Atomic.js';
-import { diff, applyChangeset, Changeset, Options } from 'json-diff-ts';
+import { type numberFormatOptions, REGEX_ISO8601_LOOSE } from './Atomic.ts';
+import { diff, applyChangeset, type Changeset, type Options } from 'json-diff-ts';
 // may want to return to this one day
 // but currently the jsondiffpatch formatter is the best console/ansi diff output for humans :(
 //import {DiffOptions, DiffOptionsColor, diff as jestDiff} from 'jest-diff';
-import chalk from 'chalk';
 import clone from "clone";
 import ConsoleFormatter from "jsondiffpatch/formatters/console";
 import assert from "node:assert";
-import dayjs, {Dayjs} from "dayjs";
+import dayjs from "dayjs";
 import { Traverse } from "neotraverse/modern";
 import { serializeError } from "serialize-error";
 
@@ -130,9 +129,36 @@ export const asErrorSerializedObject = <T, U>(obj: T): U => {
  * @see https://stackoverflow.com/a/20798567/1469797
  */
 export const getAllIndexes = <T>(arr: T[], truthyFunc: (val: T) => boolean) => {
-    var indexes = [], i: number;
-    for(i = 0; i < arr.length; i++)
+    const indexes = [];
+    for(let i = 0; i < arr.length; i++)
         if (truthyFunc(arr[i]))
             indexes.push(i);
     return indexes;
-}
+};
+export const removeUndefinedKeys = <T extends Record<string, any>>(obj: T, returnUndefined: boolean = true): T | undefined => {
+    const newObj: any = {};
+    Object.keys(obj).forEach((key) => {
+        if (Array.isArray(obj[key])) {
+            newObj[key] = obj[key];
+        } else if (obj[key] === Object(obj[key])) {
+            // dumb assign nested objects
+            // bc they may be third party library-objects that use prototyping and we don't want to mess with
+            newObj[key] = obj[key];
+        } else if (obj[key] !== undefined) {
+            newObj[key] = obj[key];
+        }
+    });
+    if (Object.keys(newObj).length === 0) {
+        if (returnUndefined) {
+            return undefined;
+        }
+        return newObj;
+    }
+    Object.keys(newObj).forEach(key => {
+        if (newObj[key] === undefined || (null !== newObj[key] && typeof newObj[key] === 'object' && Object.keys(newObj[key]).length === 0)) {
+            delete newObj[key];
+        }
+    });
+    //Object.keys(newObj).forEach(key => newObj[key] === undefined || newObj[key] && delete newObj[key])
+    return newObj;
+};

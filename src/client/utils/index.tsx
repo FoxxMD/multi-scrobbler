@@ -1,5 +1,5 @@
-import {TrackStringOptions} from "../../core/Atomic";
-import React, {ReactElement, Fragment} from "react";
+import {type TrackStringOptions} from "../../core/Atomic";
+import React, {type ReactElement, Fragment} from "react";
 import {defaultBuildTrackStringTransformers} from "../../core/StringUtils";
 import dayjs, {Dayjs} from 'dayjs';
 
@@ -54,7 +54,7 @@ export const isoToHuman = (iso?: string | null, opts?: DateFormatOptions) => {
         return 'N/A';
     }
 
-    let parts = [];
+    const parts = [];
 
     const date = dayjs(iso);
     let useDate = includeDate;

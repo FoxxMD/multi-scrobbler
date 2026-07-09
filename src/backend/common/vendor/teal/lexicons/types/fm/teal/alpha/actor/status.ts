@@ -1,7 +1,7 @@
 import type {} from "@atcute/lexicons";
 import * as v from "@atcute/lexicons/validations";
 import type {} from "@atcute/lexicons/ambient";
-import * as FmTealAlphaFeedDefs from "../feed/defs.js";
+import * as FmTealAlphaFeedDefs from "../feed/defs.ts";
 
 const _mainSchema = /*#__PURE__*/ v.record(
   /*#__PURE__*/ v.literal("self"),

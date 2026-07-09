@@ -1,23 +1,23 @@
-import dayjs, { Dayjs, ManipulateType } from "dayjs";
-import { PlayObject, PlayObjectMinimal, BrainzMeta, MBID, ScrobbleActionResult, UnixTimestamp } from "../../../../core/Atomic.js";
-import { getRoot } from "../../../ioc.js";
-import { removeUndefinedKeys } from "../../../utils.js";
-import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.js";
-import { MSCache } from "../../Cache.js";
-import { AbstractApiOptions, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PagelessTimeRangeListensResult } from "../../infrastructure/Atomic.js";
-import { ListRecord, RecordOptions, TealClientData } from "../../infrastructure/config/client/tealfm.js";
-import AbstractApiClient from "../AbstractApiClient.js";
-import { ATProtoAppApiClient } from "../atproto/ATProtoAppApiClient.js";
-import { FmTealAlphaActorStatus, FmTealAlphaFeedPlay } from "./lexicons/index.js";
-import { ScrobbleSubmitError } from "../../errors/MSErrors.js";
-import { getScrobbleTsSOCDateWithContext, usecToUnix } from "../../../utils/TimeUtils.js";
-import { musicServiceToCononical } from "../listenbrainz/lzUtils.js";
+import dayjs, { type Dayjs, type ManipulateType } from "dayjs";
+import { type PlayObject, type PlayObjectMinimal, type BrainzMeta, type MBID, type ScrobbleActionResult, type UnixTimestamp } from "../../../../core/Atomic.ts";
+import { getRoot } from "../../../ioc.ts";
+import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
+import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.ts";
+import { MSCache } from "../../Cache.ts";
+import { type AbstractApiOptions, type PagelessListensTimeRangeOptions, type PagelessTimeRangeListens, type PagelessTimeRangeListensResult } from "../../infrastructure/Atomic.ts";
+import { type ListRecord, type RecordOptions, type TealClientData } from "../../infrastructure/config/client/tealfm.ts";
+import AbstractApiClient from "../AbstractApiClient.ts";
+import { ATProtoAppApiClient } from "../atproto/ATProtoAppApiClient.ts";
+import { FmTealAlphaActorStatus, FmTealAlphaFeedPlay } from "./lexicons/index.ts";
+import { ScrobbleSubmitError } from "../../errors/MSErrors.ts";
+import { getScrobbleTsSOCDateWithContext, usecToUnix } from "../../../utils/TimeUtils.ts";
+import { musicServiceToCononical } from "../listenbrainz/lzUtils.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { decodeTid, generateTID } from "@ewanc26/tid";
-import { ATProtoAuthenticatedApiClient } from "../atproto/ATProtoAuthenticatedApiClient.js";
-import { UpstreamError } from "../../errors/UpstreamError.js";
+import { ATProtoAuthenticatedApiClient } from "../atproto/ATProtoAuthenticatedApiClient.ts";
+import { UpstreamError } from "../../errors/UpstreamError.ts";
 import { ComAtprotoRepoCreateRecord, ComAtprotoRepoPutRecord } from '@atcute/atproto';
-import { nowPlayingExpirationDuration } from "../../../scrobblers/AbstractScrobbleClient.js";
+import { nowPlayingExpirationDuration } from "../../../scrobblers/AbstractScrobbleClient.ts";
 
 export class TealApiClient extends AbstractApiClient implements PagelessTimeRangeListens {
 

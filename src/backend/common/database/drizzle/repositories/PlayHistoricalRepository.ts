@@ -1,24 +1,19 @@
-import { childLogger, Logger, LoggerAppExtras } from "@foxxmd/logging";
-import { DbConcrete, runTransaction } from "../drizzleUtils.js";
-import { loggerNoop } from "../../../MaybeLogger.js";
-import { ErrorLike, PlayObject, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, TemporalAccuracy } from "../../../../../core/Atomic.js";
-import { generateInputEntity, generatePlayEntity, PlayEntityOpts, hydratePlaySelect, PlayHydateOptions, PlayHistoricalEntityOpts } from "../entityUtils.js";
-import { playInputs, plays, playsHistorical, queueStates, relations } from "../schema/schema.js";
-import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, QueueStateSelect, FindWith, PlaySelectWithQueueStates, WhereClause, PlayWith, PlayHistoricalSelect, PlayHistoricalNew } from "../drizzleTypes.js";;
-import { MarkOptional, MarkRequired, PathValue } from "ts-essentials";
-import { genGroupIdStrFromPlay, removeEmptyArrays, removeUndefinedKeys } from "../../../../utils.js";
-import dayjs, { Dayjs } from "dayjs";
-import { RelationsFieldFilter, eq, inArray, ne, notInArray, desc, asc, and, sql, Placeholder } from "drizzle-orm";
-import { CompactableProperty, RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.js";
-import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.js";
-import { buildDateCompare, CompareDateOp, ComponentConstrainedRepoOpts, DrizzleBaseRepository, DrizzleRepositoryOpts, PaginatedQueryResponse, PaginatedResponse } from "./BaseRepository.js";
-import { asPlay } from "../../../../../core/PlayMarshalUtils.js";
-import assert, { Assert } from "node:assert";
-import { hashObject, parseArrayFromMaybeString } from "../../../../utils/StringUtils.js";
-import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../../utils/PlayComparisonUtils.js";
-import { comparePlayTemporally, getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext, getTemporalAccuracyCloseVal, hasAcceptableTemporalAccuracy } from "../../../../utils/TimeUtils.js";
-import { SourceType } from "../../../infrastructure/config/source/sources.js";
-import { getTemporallyCloseDateCompareOp } from "./PlayRepository.js";
+import { type DbConcrete, runTransaction } from "../drizzleUtils.ts";
+import { type PlayObject, TA_DEFAULT_ACCURACY, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
+import { generatePlayEntity, hydratePlaySelect, type PlayHydateOptions, type PlayHistoricalEntityOpts } from "../entityUtils.ts";
+import { plays, playsHistorical } from "../schema/schema.ts";
+import { type FindWhere, type FindMany, type WhereClause, type PlayHistoricalSelect, type PlayHistoricalNew } from "../drizzleTypes.ts";;
+import type { MarkOptional } from "ts-essentials";
+import { removeUndefinedKeys } from '../../../../../core/DataUtils.ts';
+import { type Dayjs } from "dayjs";
+import { inArray, sql } from "drizzle-orm";
+import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
+import { type PaginatedResponse } from "../../../../../core/Api.ts";
+import { hashObject } from "../../../../utils/StringUtils.ts";
+import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../../utils/PlayComparisonUtils.ts";
+import { comparePlayTemporally, getTemporalAccuracyCloseVal, hasAcceptableTemporalAccuracy } from "../../../../utils/TimeUtils.ts";
+import { type SourceType } from "../../../infrastructure/config/source/sources.ts";
+import { getTemporallyCloseDateCompareOp } from "./PlayRepository.ts";
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 
@@ -162,6 +157,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
 
         query = removeUndefinedKeys(query);
         const results = await this.db.query.playsHistorical.findMany({
+            ...query,
             limit: args.limit,
             offset: args.offset,
             columns: {id: true},
@@ -230,7 +226,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
         } else {
             endRange = play.data.playDate.add(dateGranularity, 's');
         }
-        let where: FindWhere<'playsHistorical'> = {
+        const where: FindWhere<'playsHistorical'> = {
             componentId,
             playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play)),
         };
@@ -271,9 +267,9 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
             bufferTime
         } = opts;
 
-        let query: FindMany<'playsHistorical'> = {};
+        const query: FindMany<'playsHistorical'> = {};
 
-        let where: FindWhere<'playsHistorical'> = {
+        const where: FindWhere<'playsHistorical'> = {
             componentId,
             playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play, {bufferTime})),
         };
@@ -296,7 +292,7 @@ export const buildPlayHistoricalWhere = (args: PlayWhereOpts): WhereClause<'play
     // old way
     // let where: Parameters<(ReturnType<typeof getDb>)['query']['plays']['findMany']>[0]['where'] = {
     // };
-    let where: FindWhere<'playsHistorical'> = {
+    const where: FindWhere<'playsHistorical'> = {
         componentId: args.componentId
     };
     if (args.seenAt !== undefined) {

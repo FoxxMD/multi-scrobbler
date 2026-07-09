@@ -1,4 +1,4 @@
-import React, {PropsWithChildren} from 'react';
+import React, {type PropsWithChildren} from 'react';
 import * as AnsiImport from "ansi-to-react";
 
 // @ts-expect-error Ansi export is built incorrectly

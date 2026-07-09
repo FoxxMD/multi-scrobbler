@@ -1,22 +1,21 @@
-import dayjs, { Dayjs } from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import duration from "dayjs/plugin/duration.js";
 import isBetween from "dayjs/plugin/isBetween.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
 import timezone from "dayjs/plugin/timezone.js";
 import utc from "dayjs/plugin/utc.js";
 import {
-    AmbPlayObject,
-    ArtistCredit,
-    PlayData,
-    PlayObject,
+    type AmbPlayObject,
+    type ArtistCredit,
+    type PlayData,
     SCROBBLE_TS_SOC_END,
     SCROBBLE_TS_SOC_START,
-    ScrobbleTsSOC,
-    TrackStringOptions
-} from "./Atomic.js";
-import { DELIMETERS_REGEX, DELIMITERS } from "../backend/common/infrastructure/Atomic.js";
+    type ScrobbleTsSOC,
+    type TrackStringOptions
+} from "./Atomic.ts";
+import { DELIMETERS_REGEX, DELIMITERS } from './Atomic.ts';
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
-import { removeUndefinedKeys } from "../backend/utils.js";
+import { removeUndefinedKeys } from './DataUtils.ts';
 import { nanoid } from "nanoid";
 
 dayjs.extend(utc)
@@ -144,7 +143,7 @@ export const buildPlayHumanDiffable = (play: PlayData, options?: {expandMeta?: b
         expandMeta = false
     } = options || {};
 
-    let meta: string[] = [];
+    const meta: string[] = [];
     if(play.meta !== undefined) {
         for(const [metaType,metaObject] of Object.entries(play.meta)) {
             for(const [metaKey, metaValue] of Object.entries(metaObject)) {

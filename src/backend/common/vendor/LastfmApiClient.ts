@@ -1,22 +1,23 @@
-import dayjs, { Dayjs, ManipulateType } from "dayjs";
-import { BrainzMeta, PlayObject, PlayObjectMinimal, ScrobbleActionResult, UnixTimestamp, URLData, Writeable } from "../../../core/Atomic.js";
-import { artistNamesToCredits, artistNameToCredit, nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.js";
-import { removeUndefinedKeys, sleep } from "../../utils.js";
-import { writeFile } from '../../utils/FSUtils.js';
-import { objectIsEmpty, readJson } from '../../utils/DataUtils.js';
-import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../utils/NetworkUtils.js";
-import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.js";
-import { getNodeNetworkException, isNodeNetworkException } from "../errors/NodeErrors.js";
-import { UpstreamError } from "../errors/UpstreamError.js";
-import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfigOptional, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens, PaginatedTimeRangeListensResult } from "../infrastructure/Atomic.js";
-import { LastfmData } from "../infrastructure/config/client/lastfm.js";
-import AbstractApiClient from "./AbstractApiClient.js";
-import { normalizeStr, parseArtistCredits } from "../../utils/StringUtils.js";
-import { LastFMUser, LastFMAuth, LastFMTrack, LastFMUserGetRecentTracksResponse, LastFMBooleanNumber, LastFMUpdateNowPlayingResponse, LastFMUserGetInfoResponse, LastFMUserGetRecentTracksParams } from 'lastfm-ts-api';
+import dayjs, { type Dayjs, type ManipulateType } from "dayjs";
+import { type BrainzMeta, type PlayObject, type PlayObjectMinimal, type ScrobbleActionResult, type UnixTimestamp, type URLData, type Writeable } from "../../../core/Atomic.ts";
+import { artistNamesToCredits, artistNameToCredit, nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.ts";
+import { sleep } from "../../utils.ts";
+import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
+import { writeFile } from '../../utils/FSUtils.ts';
+import { objectIsEmpty, readJson } from '../../utils/DataUtils.ts';
+import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../utils/NetworkUtils.ts";
+import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.ts";
+import { getNodeNetworkException, isNodeNetworkException } from "../errors/NodeErrors.ts";
+import { UpstreamError } from "../errors/UpstreamError.ts";
+import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type InternalConfigOptional, type PaginatedListensTimeRangeOptions, type PaginatedTimeRangeListens, type PaginatedTimeRangeListensResult } from "../infrastructure/Atomic.ts";
+import { type LastfmData } from "../infrastructure/config/client/lastfm.ts";
+import AbstractApiClient from "./AbstractApiClient.ts";
+import { normalizeStr, parseArtistCredits } from "../../utils/StringUtils.ts";
+import { LastFMUser, LastFMAuth, LastFMTrack, type LastFMUserGetRecentTracksResponse, type LastFMBooleanNumber, type LastFMUpdateNowPlayingResponse, type LastFMUserGetInfoResponse, type LastFMUserGetRecentTracksParams } from 'lastfm-ts-api';
 import clone from 'clone';
 import { IncomingMessage } from "http";
-import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.js";
-import { ScrobbleSubmitError, SimpleError } from "../errors/MSErrors.js";
+import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
+import { ScrobbleSubmitError, SimpleError } from "../errors/MSErrors.ts";
 import { redactString } from "@foxxmd/redact-string";
 import dns from 'node:dns/promises';
 
@@ -67,7 +68,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
         } = config;
 
         this.url = normalizeWebAddress(urlBase, {removeTrailingSlash: false});
-        let cbPrefix = 'lastfm';
+        let cbPrefix: string;
 
         if(this.url.url.host === LASTFM_HOST) {
             this.logger.info('Using official Last.fm instance host/path');
@@ -236,6 +237,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             return true;
         } catch (e) {
             const hint = e.error?.cause?.message ?? undefined;
+            // eslint-disable-next-line preserve-caught-error
             throw new Error(`Could not connect to ${this.upstreamName} API server${hint !== undefined ? ` (${hint})` : ''}`, { cause: e.error ?? e });
         }
     }
@@ -384,7 +386,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             } = resp;
             const correctedResp: Writeable<LastFMUserGetRecentTracksResponse> = {
                 ...restResp,
-                // @ts-expect-error
+                // @ts-expect-error this is fine
                 recenttracks: {
                     ...rest,
                     track: [],

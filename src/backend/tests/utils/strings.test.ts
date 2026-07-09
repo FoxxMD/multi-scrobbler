@@ -3,10 +3,10 @@ import { describe, it } from 'mocha';
 import {
     compareNormalizedStrings,
     normalizeStr,
-} from "../../utils/StringUtils.js";
-import { replaceInterpolatedValues } from "../../utils/DataUtils.js";
-import { splitByFirstFound } from '../../../core/StringUtils.js';
-import { noCasePropObj } from '../../utils/DataUtils.js';
+} from "../../utils/StringUtils.ts";
+import { replaceInterpolatedValues } from "../../utils/DataUtils.ts";
+import { splitByFirstFound } from '../../../core/StringUtils.ts';
+import { noCasePropObj } from '../../utils/DataUtils.ts';
 
 describe('String Comparisons', function () {
 

@@ -1,10 +1,10 @@
 import React, {Fragment, useCallback, useMemo} from 'react';
-import StatusCardSkeleton, {StatusCardSkeletonData} from "./StatusCardSkeleton";
+import StatusCardSkeleton, {type StatusCardSkeletonData} from "./StatusCardSkeleton";
 import SkeletonParagraph from "../skeleton/SkeletonParagraph";
 import {Link} from "react-router-dom";
 import {sourceAdapter} from "../../status/ducks";
-import {RootState} from "../../store";
-import {connect, ConnectedProps} from "react-redux";
+import {type RootState} from "../../store";
+import {connect, type ConnectedProps} from "react-redux";
 import Player from "../player/Player";
 import {useStartSourceMutation, useListenSourceMutation} from "./sourceDucks";
 import './statusCard.scss';

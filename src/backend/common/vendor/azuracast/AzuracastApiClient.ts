@@ -1,10 +1,9 @@
-import { childLogger } from "@foxxmd/logging";
-import { URLData } from "../../../../core/Atomic.js";
-import { joinedUrl, normalizeWSAddress } from "../../../utils/NetworkUtils.js";
-import { AbstractApiOptions } from "../../infrastructure/Atomic.js";
-import { AzuracastData, AzuraStationResponse } from "../../infrastructure/config/source/azuracast.js";
-import AbstractApiClient from "../AbstractApiClient.js";
-import { WS, CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket'
+import { type URLData } from "../../../../core/Atomic.ts";
+import { joinedUrl, normalizeWSAddress } from "../../../utils/NetworkUtils.ts";
+import { type AbstractApiOptions } from "../../infrastructure/Atomic.ts";
+import { type AzuracastData, type AzuraStationResponse } from "../../infrastructure/config/source/azuracast.ts";
+import AbstractApiClient from "../AbstractApiClient.ts";
+import { WS } from 'iso-websocket'
 
 
 export class AzuracastApiClient extends AbstractApiClient {

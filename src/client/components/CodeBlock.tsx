@@ -1,9 +1,7 @@
-import type { HighlighterGeneric } from "shiki"
-import { createShikiAdapter, CodeBlock, IconButton, ClientOnly, ScrollArea } from "@chakra-ui/react"
-import { useColorMode } from "./Color-Mode";
-import { ComponentProps, PropsWithChildren, useMemo } from "react";
+import { ClientOnly, CodeBlock, IconButton } from "@chakra-ui/react";
+import { type ComponentProps, useMemo } from "react";
+import type { MarkOptional } from "ts-essentials";
 import { safeStringify } from "../../core/StringUtils";
-import { MarkOptional } from "ts-essentials";
 import { shikiAdapter } from "./shikiAdapter";
 
 // const shikiAdapter = createShikiAdapter<HighlighterGeneric<any, any>>({

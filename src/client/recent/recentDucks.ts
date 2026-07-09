@@ -1,5 +1,5 @@
 import {createApi, fetchBaseQuery} from "@reduxjs/toolkit/query/react";
-import {JsonPlayObject} from "../../core/Atomic";
+import {type JsonPlayObject} from "../../core/Atomic";
 
 type RecentResponse = (JsonPlayObject & { index: number })[];
 export const recentApi = createApi({

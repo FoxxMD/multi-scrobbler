@@ -1,21 +1,22 @@
-import dayjs, { ManipulateType } from 'dayjs';
+import dayjs, { type ManipulateType } from 'dayjs';
 import request, { Response, Request } from 'superagent';
 import compareVersions from "compare-versions";
-import AbstractApiClient from "../AbstractApiClient.js";
-import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../../utils/NetworkUtils.js";
-import { MalojaData } from "../../infrastructure/config/client/maloja.js";
-import { PlayObject, PlayObjectMinimal, ScrobbleActionResult, URLData } from "../../../../core/Atomic.js";
-import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens, PaginatedTimeRangeListensResult } from "../../infrastructure/Atomic.js";
-import { isNodeNetworkException } from "../../errors/NodeErrors.js";
-import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
-import { getNonEmptyVal, parseRetryAfterSecsFromObj, removeUndefinedKeys, sleep } from "../../../utils.js";
-import { UpstreamError } from "../../errors/UpstreamError.js";
-import { getMalojaResponseError, isMalojaAPIErrorBody, MalojaResponseV3CommonData, MalojaScrobbleData, MalojaScrobbleRequestData, MalojaScrobbleV3RequestData, MalojaScrobbleV3ResponseData, MalojaScrobbleWarning } from "./interfaces.js";
-import { getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext } from '../../../utils/TimeUtils.js';
-import { artistCreditsToNames, artistNamesToCredits, buildTrackString } from '../../../../core/StringUtils.js';
-import { baseFormatPlayObj } from '../../../utils/PlayTransformUtils.js';
-import { ScrobbleSubmitError } from '../../errors/MSErrors.js';
-import { NO_RETRY_HTTP_STATUS, tryApiCall } from '../../../utils/RequestUtils.js';
+import AbstractApiClient from "../AbstractApiClient.ts";
+import { isPortReachableConnect, normalizeWebAddress } from "../../../utils/NetworkUtils.ts";
+import { type MalojaData } from "../../infrastructure/config/client/maloja.ts";
+import { type PlayObject, type PlayObjectMinimal, type ScrobbleActionResult, type URLData } from "../../../../core/Atomic.ts";
+import { type AbstractApiOptions, type FormatPlayObjectOptions, type PaginatedListensTimeRangeOptions, type PaginatedTimeRangeListens, type PaginatedTimeRangeListensResult } from "../../infrastructure/Atomic.ts";
+import { isNodeNetworkException } from "../../errors/NodeErrors.ts";
+import { isSuperAgentResponseError } from "../../errors/ErrorUtils.ts";
+import { getNonEmptyVal } from "../../../utils.ts";
+import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
+import { UpstreamError } from "../../errors/UpstreamError.ts";
+import { getMalojaResponseError, isMalojaAPIErrorBody, type MalojaResponseV3CommonData, type MalojaScrobbleData, type MalojaScrobbleV3RequestData, type MalojaScrobbleV3ResponseData, type MalojaScrobbleWarning } from "./interfaces.ts";
+import { getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext } from '../../../utils/TimeUtils.ts';
+import { artistCreditsToNames, artistNamesToCredits, buildTrackString } from '../../../../core/StringUtils.ts';
+import { baseFormatPlayObj } from '../../../utils/PlayTransformUtils.ts';
+import { ScrobbleSubmitError } from '../../errors/MSErrors.ts';
+import { NO_RETRY_HTTP_STATUS, tryApiCall } from '../../../utils/RequestUtils.ts';
 
 
 

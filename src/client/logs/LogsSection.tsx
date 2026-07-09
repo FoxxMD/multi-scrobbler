@@ -1,12 +1,12 @@
-import React, {useState, useCallback, useEffect} from 'react';
-import './LogsSection.css';
-import {FixedSizeList} from "fixed-size-list";
-import {useEventSource, useEventSourceListener} from "@react-nano/use-event-source";
-import LogLine from "./LogLine";
-import {useGetLogsQuery, useLazySetLogSettingsQuery} from "./logsApi";
-import {connect, ConnectedProps} from "react-redux";
-import {RootState} from "../store";
+import { useEventSource, useEventSourceListener } from "@react-nano/use-event-source";
+import { FixedSizeList } from "fixed-size-list";
+import { useCallback, useEffect, useState } from 'react';
+import { connect, type ConnectedProps } from "react-redux";
 import Loading from "../components/loading/Loading";
+import { type RootState } from "../store";
+import LogLine from "./LogLine";
+import { useGetLogsQuery, useLazySetLogSettingsQuery } from "./logsApi";
+import './LogsSection.css';
 
 const logBuffer: { message: string, id: string, level: number, levelLabel:string }[] = [];
 
@@ -26,7 +26,7 @@ let list = createFixedList(50);
 interface LogLevelButtonProps {
     name: string,
     active: boolean,
-    onClick: Function
+    onClick: (val: number) => void
 }
 const LogLevelButton = (props: LogLevelButtonProps) => {
     const {name, active, onClick} = props;
@@ -34,7 +34,7 @@ const LogLevelButton = (props: LogLevelButtonProps) => {
     const className = active ? "mx-1" : "capitalize underline cursor-pointer mx-1";
     return <span onClick={click} className={className}>{name.toUpperCase()}</span>;
 }
-const LogLimitButton = (props: {val: number, active: boolean, onClick: Function}) => {
+const LogLimitButton = (props: {val: number, active: boolean, onClick: (val: number) => void}) => {
     const {val, active, onClick} = props;
     const click = useCallback(() => active ? null : onClick(val), [onClick, val, active]);
     const className = active ? "mx-1" : "capitalize underline cursor-pointer mx-1";

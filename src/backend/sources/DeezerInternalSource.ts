@@ -1,21 +1,21 @@
 import dayjs from "dayjs";
 import EventEmitter from "events";
-import request, { Request, Response, SuperAgent } from 'superagent';
-import { PlayObject, PlayObjectMinimal, SOURCE_SOT, TA_CLOSE, TA_DURING, TA_EXACT, TA_FUZZY, TemporalAccuracy } from "../../core/Atomic.js";
-import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import { DeezerInternalSourceConfig, DeezerInternalTrackData, DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
-import { TRANSFORM_HOOK } from "../common/infrastructure/Transform.js";
-import { parseRetryAfterSecsFromObj, playObjDataMatch, sleep, sortByOldestPlayDate} from "../utils.js";
-import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { CookieJar, Cookie } from 'tough-cookie';
+import request, { Request } from 'superagent';
+import { type PlayObject, type PlayObjectMinimal, SOURCE_SOT, TA_CLOSE, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy } from "../../core/Atomic.ts";
+import { DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.ts";
+import { type DeezerInternalSourceConfig, type DeezerInternalTrackData } from "../common/infrastructure/config/source/deezer.ts";
+import { TRANSFORM_HOOK } from "../../core/Transform.ts";
+import { parseRetryAfterSecsFromObj, playObjDataMatch, sleep, sortByOldestPlayDate} from "../utils.ts";
+import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import { CookieJar } from 'tough-cookie';
 import { MixedCookieAgent } from 'http-cookie-agent/http';
-import MemorySource from "./MemorySource.js";
-import { genericSourcePlayMatch } from "../utils/PlayComparisonUtils.js";
-import { TemporalPlayComparisonOptions } from "../utils/TimeUtils.js";
-import { findAsync, findIndexAsync } from "../utils/AsyncUtils.js";
-import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
-import { UpstreamError } from "../common/errors/UpstreamError.js";
-import { artistNamesToCredits } from "../../core/StringUtils.js";
+import MemorySource from "./MemorySource.ts";
+import { genericSourcePlayMatch } from "../utils/PlayComparisonUtils.ts";
+import { type TemporalPlayComparisonOptions } from "../utils/TimeUtils.ts";
+import { findAsync, findIndexAsync } from "../utils/AsyncUtils.ts";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
+import { UpstreamError } from "../common/errors/UpstreamError.ts";
+import { artistNamesToCredits } from "../../core/StringUtils.ts";
 
 interface DeezerHistoryResponse {
     errors: []

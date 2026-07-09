@@ -1,11 +1,11 @@
 import EventEmitter from "events";
-import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { InternalConfig, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens } from "../common/infrastructure/Atomic.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import MemorySource from "./MemorySource.js";
-import { MalojaApiClient } from "../common/vendor/maloja/MalojaApiClient.js";
-import { MalojaSourceConfig } from "../common/infrastructure/config/source/maloja.js";
+import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
+import { type InternalConfig } from "../common/infrastructure/Atomic.ts";
+import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import MemorySource from "./MemorySource.ts";
+import { MalojaApiClient } from "../common/vendor/maloja/MalojaApiClient.ts";
+import { type MalojaSourceConfig } from "../common/infrastructure/config/source/maloja.ts";
 
 export default class MalojaSource extends MemorySource {
 

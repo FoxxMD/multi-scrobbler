@@ -1,8 +1,8 @@
-import { Accordion, Span, Stack, Text, Box, Separator, HStack, Flex, IconButton, Container, SkeletonText, Collapsible, ScrollArea } from '@chakra-ui/react';
-import React, { ComponentProps, Fragment, useMemo, useCallback } from "react"
+import { Box } from '@chakra-ui/react';
+import { type VirtualItem, useVirtualizer } from "@tanstack/react-virtual";
+import React, { useCallback, useMemo } from "react";
 import { ActivityCollapsible } from '../ActivityDetail.js';
-import { type VirtualItem, useVirtualizer } from "@tanstack/react-virtual"
-import { ActivityLogProps, generateFlatItems, GroupHeader, isGroupInfo } from './ListParts.js';
+import { type ActivityLogProps, generateFlatItems, GroupHeader, isGroupInfo } from './ListParts.js';
 
 export const VirtualizedListExp = (props: ActivityLogProps) => {
     const { 

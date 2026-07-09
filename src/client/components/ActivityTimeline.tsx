@@ -1,27 +1,27 @@
-import React, { Fragment } from "react"
-import { Timeline, Icon, Span, Card, Tabs, SkeletonCircle, Collapsible, SkeletonText, HTMLChakraProps } from '@chakra-ui/react';
-import { CLIENT_DEAD_QUEUE, CLIENT_INGRESS_QUEUE, ComponentType, JsonPlayObject, LifecycleStep, PlayMatchResult, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, QUEUE_STATUS_QUEUED, ScrobbleResult } from "../../core/Atomic";
-import { PlayData } from "./PlayData";
-import { ErrorAlert } from "./ErrorAlert";
-import { IoMdCodeDownload } from "react-icons/io";
+import { Card, Collapsible, Icon, SkeletonCircle, SkeletonText, Span, Tabs, Timeline, type HTMLChakraProps } from '@chakra-ui/react';
+import dayjs, { Dayjs } from "dayjs";
+import React from "react";
 import { BiWrench } from "react-icons/bi";
 import { HiMiniMagnifyingGlass } from "react-icons/hi2";
+import { IoMdCodeDownload } from "react-icons/io";
 import { TbDatabaseEdit } from "react-icons/tb";
-import { capitalize, capitalizeWords } from "../../core/StringUtils";
-import { shortTodayAwareFormat } from "../../core/TimeUtils";
-import dayjs, { Dayjs } from "dayjs";
-import { ChakraCodeBlockShort } from "./CodeBlock";
-import { diffElements, TransformSteps } from "./TransformSteps";
-import { ScrobbleMatchResult } from "./ScrobbleMatchResult";
-import { ScrobbleActionResult } from "./ScrobbleActionResult";
-import { MSCollapsible } from "./MSCollapsible";
-import { TimelineErrorIcon } from "./timeline/TimelineIcon";
-import { Muted } from "./Typography";
-import { PlayApiCommonDetailed, QueueStateApi } from "../../core/Api";
-import { MSErrorBoundary } from "./ErrorBoundary";
-import { activityTransformHasIssue, timelineTextFormatting } from "../utils/ComponentUtils";
-import { CheckIcon, TimelineIndicatorIconQueued } from "./icons/ChakraIcons";
+import { type PlayApiCommonDetailed, type QueueStateApi } from "../../core/Api";
+import { CLIENT_DEAD_QUEUE, CLIENT_INGRESS_QUEUE, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, QUEUE_STATUS_QUEUED, type ComponentType, type JsonPlayObject, type LifecycleStep, type PlayMatchResult, type ScrobbleResult } from "../../core/Atomic";
 import { sortByNewestDate } from "../../core/PlayUtils";
+import { capitalizeWords } from "../../core/StringUtils";
+import { shortTodayAwareFormat } from "../../core/TimeUtils";
+import { activityTransformHasIssue, timelineTextFormatting } from "../utils/ComponentUtils";
+import { ChakraCodeBlockShort } from "./CodeBlock";
+import { ErrorAlert } from "./ErrorAlert";
+import { MSErrorBoundary } from "./ErrorBoundary";
+import { CheckIcon, TimelineIndicatorIconQueued } from "./icons/ChakraIcons";
+import { MSCollapsible } from "./MSCollapsible";
+import { PlayData } from "./PlayData";
+import { ScrobbleActionResult } from "./ScrobbleActionResult";
+import { ScrobbleMatchResult } from "./ScrobbleMatchResult";
+import { TimelineErrorIcon } from "./timeline/TimelineIcon";
+import { diffElements, TransformSteps } from "./TransformSteps";
+import { Muted } from "./Typography";
 
 
 export interface ActivityDetailProps {

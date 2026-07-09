@@ -1,28 +1,29 @@
-/* eslint-disable no-case-declarations */
-import { childLogger, Logger } from '@foxxmd/logging';
-import dayjs, { Dayjs } from "dayjs";
-import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
-import { ConfigMeta, InternalConfig, InternalConfigOptional, isClientType, SourceIdentifier } from "../common/infrastructure/Atomic.js";
-import { clientTypes, ClientType } from '../common/infrastructure/config/client/clients.js';
-import { AIOConfig } from "../common/infrastructure/config/aioConfig.js";
-import { ClientAIOConfig, ClientConfig } from "../common/infrastructure/config/client/clients.js";
-import { LastfmClientConfig, LastfmData } from "../common/infrastructure/config/client/lastfm.js";
-import { ListenBrainzClientConfig, ListenBrainzData } from "../common/infrastructure/config/client/listenbrainz.js";
-import { MalojaClientConfig, MalojaData } from "../common/infrastructure/config/client/maloja.js";
-import { WildcardEmitter } from "../common/WildcardEmitter.js";
-import { Notifiers } from "../notifier/Notifiers.js";
-import { isDebugMode, nonEmptyObj, parseBool, removeUndefinedKeys } from "../utils.js";
-import { getCommonComponentEnvConfig, readJson } from '../utils/DataUtils.js';
-import { validateJson } from "../utils/ValidationUtils.js";
-import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
-import { KoitoClientConfig, KoitoData } from '../common/infrastructure/config/client/koito.js';
-import { TealClientConfig, TealData } from '../common/infrastructure/config/client/tealfm.js';
-import { RockSkyClientConfig, RockSkyData } from '../common/infrastructure/config/client/rocksky.js';
-import { CommonClientOptions } from '../common/infrastructure/config/client/index.js';
-import { ExternalMetadataTerm, PlayTransformHooks } from '../common/infrastructure/Transform.js';
-import { LibrefmClientConfig, LibrefmData } from '../common/infrastructure/config/client/librefm.js';
+ 
+import { childLogger, type Logger } from '@foxxmd/logging';
+import dayjs, { type Dayjs } from "dayjs";
+import { type PlayObject, type SourcePlayerObj } from "../../core/Atomic.ts";
+import { type ConfigMeta, type InternalConfig, type InternalConfigOptional, isClientType, type SourceIdentifier } from "../common/infrastructure/Atomic.ts";
+import { clientTypes, type ClientType } from '../common/infrastructure/config/client/clients.ts';
+import { type AIOConfig } from "../common/infrastructure/config/aioConfig.ts";
+import { type ClientAIOConfig, type ClientConfig } from "../common/infrastructure/config/client/clients.ts";
+import { type LastfmClientConfig, type LastfmData } from "../common/infrastructure/config/client/lastfm.ts";
+import { type ListenBrainzClientConfig, type ListenBrainzData } from "../common/infrastructure/config/client/listenbrainz.ts";
+import { type MalojaClientConfig, type MalojaData } from "../common/infrastructure/config/client/maloja.ts";
+import { WildcardEmitter } from "../common/WildcardEmitter.ts";
+import { Notifiers } from "../notifier/Notifiers.ts";
+import { isDebugMode, nonEmptyObj } from "../utils.ts";
+import { removeUndefinedKeys } from '../../core/DataUtils.ts';
+import { getCommonComponentEnvConfig, readJson } from '../utils/DataUtils.ts';
+import { validateJson } from "../utils/ValidationUtils.ts";
+import AbstractScrobbleClient from "./AbstractScrobbleClient.ts";
+import { type KoitoClientConfig, type KoitoData } from '../common/infrastructure/config/client/koito.ts';
+import { type TealClientConfig, type TealData } from '../common/infrastructure/config/client/tealfm.ts';
+import { type RockSkyClientConfig, type RockSkyData } from '../common/infrastructure/config/client/rocksky.ts';
+import { type CommonClientOptions } from '../common/infrastructure/config/client/index.ts';
+import { type ExternalMetadataTerm, type PlayTransformHooks } from '../../core/Transform.ts';
+import { type LibrefmClientConfig, type LibrefmData } from '../common/infrastructure/config/client/librefm.ts';
 import clone from 'clone';
-import { DiscordClientConfig, DiscordData } from '../common/infrastructure/config/client/discord.js';
+import { type DiscordClientConfig, type DiscordData } from '../common/infrastructure/config/client/discord.ts';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -443,38 +444,46 @@ ${sources.join('\n')}`);
         let newClient;
         this.logger.debug({labels: [`${type} - ${name}`]}, `Constructing Client from ${source}`);
         switch (type) {
-            case 'maloja':
-                const MalojaScrobbler = (await import('./MalojaScrobbler.js')).default;
+            case 'maloja': {
+                const MalojaScrobbler = (await import('./MalojaScrobbler.ts')).default;
                 newClient = new MalojaScrobbler(name, ({...clientConfig, data: d, options: compositeOptions} as unknown as MalojaClientConfig), this.emitter, this.logger);
                 break;
-            case 'lastfm':
-                const LastfmScrobbler = (await import('./LastfmScrobbler.js')).default;
+            }
+            case 'lastfm': {
+                const LastfmScrobbler = (await import('./LastfmScrobbler.ts')).default;
                 newClient = new LastfmScrobbler(name, {...clientConfig, data: d, options: compositeOptions } as unknown as LastfmClientConfig, this.internalConfig, this.emitter, this.logger);
                 break;
-            case 'librefm':
-                const LibrefmScrobbler = (await import('./LibrefmScrobbler.js')).default;
+            }
+            case 'librefm': {
+                const LibrefmScrobbler = (await import('./LibrefmScrobbler.ts')).default;
                 newClient = new LibrefmScrobbler(name, {...clientConfig, data: d, options: compositeOptions } as unknown as LibrefmClientConfig, this.internalConfig, this.emitter, this.logger);
                 break;
-            case 'listenbrainz':
-                const ListenbrainzScrobbler = (await import('./ListenbrainzScrobbler.js')).default;
+            }
+            case 'listenbrainz': {
+                const ListenbrainzScrobbler = (await import('./ListenbrainzScrobbler.ts')).default;
                 newClient = new ListenbrainzScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...d}, options: compositeOptions } as unknown as ListenBrainzClientConfig, {}, this.emitter, this.logger);
                 break;
-            case 'koito':
-                const KoitoScrobbler = (await import('./KoitoScrobbler.js')).default;
+            }
+            case 'koito': {
+                const KoitoScrobbler = (await import('./KoitoScrobbler.ts')).default;
                 newClient = new KoitoScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...d}, options: compositeOptions } as unknown as KoitoClientConfig, {}, this.emitter, this.logger);
                 break;
-            case 'tealfm':
-                const TealScrobbler = (await import('./TealfmScrobbler.js')).default;
+            }
+            case 'tealfm': {
+                const TealScrobbler = (await import('./TealfmScrobbler.ts')).default;
                 newClient = new TealScrobbler(name, {...clientConfig, data: d, options: compositeOptions} as unknown as TealClientConfig, this.internalConfig, this.emitter, this.logger);
                 break;
-            case 'rocksky':
-                const RockskyScrobbler = (await import('./RockskyScrobbler.js')).default;
+            }
+            case 'rocksky': {
+                const RockskyScrobbler = (await import('./RockskyScrobbler.ts')).default;
                 newClient = new RockskyScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...d}, options: compositeOptions } as unknown as RockSkyClientConfig, this.internalConfig, this.emitter, this.logger);
                 break;
-            case 'discord':
-                const DiscordScrobbler = (await import('./DiscordScrobbler.js')).default;
+            }
+            case 'discord': {
+                const DiscordScrobbler = (await import('./DiscordScrobbler.ts')).default;
                 newClient = new DiscordScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...d}, options: compositeOptions } as unknown as DiscordClientConfig, {}, this.emitter, this.logger);
-                break;                
+                break;
+            }
             default:
                 break;
         }
@@ -515,7 +524,7 @@ ${sources.join('\n')}`);
     }
 
     getPlayingNow = (source: string, scrobbleTo: string[]): PlayObject[] => {
-        let playingNow = [];
+        const playingNow = [];
         for (const client of this.clients) {
             if(!client.supportsNowPlaying || !client.nowPlayingEnabled) {
                 continue;

@@ -1,33 +1,28 @@
-import React, { ComponentProps, useState } from "react"
-import { SegmentGroup, Switch, Portal, Group, Span, Menu, ButtonGroup, Button, Box, Heading, Skeleton, Wrap, HStack, Stack, Flex, Card, LinkOverlay, SkeletonText, BadgeProps, Badge, MenuItemProps } from '@chakra-ui/react';
-import { COMPONENT_STATE, ComponentClientApiJson, ComponentCommonApiJson, ComponentsApiJson, ComponentSourceApiJson, ComponentState, componentStateToFriendly, isComponentClientApiJson, isComponentSourceApiJson, MsSseEvent, MsSseEventPayload } from "../../../core/Api.js";
-import { TextMuted } from "../TextMuted.js";
-import { isClientType } from "../../../backend/common/infrastructure/Atomic.js";
+import React, { type ComponentProps } from "react"
+import { Portal, Group, Span, Menu, Box, Heading, Skeleton, Wrap, HStack, Stack, Flex, Card, SkeletonText, type BadgeProps, type MenuItemProps } from '@chakra-ui/react';
+import { COMPONENT_STATE, type ComponentClientApiJson, type ComponentCommonApiJson, type ComponentState, isComponentClientApiJson, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
 import { capitalize } from "../../../core/StringUtils.js";
-import { ShortDateDisplay } from "../DateDisplay.js";
 import { ChevronLeftButton, EllipsisButton, EyeButton, EyeClosedIcon, EyeIcon, IdleIcon, PowerButton, PowerIcon, PowerOffButton, PowerOffIcon, RetryIcon } from "../icons/ChakraIcons.js";
-import { ChakraPlayer, ChakraPlayerFetchable, PlayersContainer, PlayersContainerFetchable } from "../chakraPlayer/Player.js";
-import { InfoTip, ToggleTip, Tooltip } from "../ToggleTip.js";
-import { QueryFunctionContext, queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
+import { PlayersContainer, PlayersContainerFetchable } from "../chakraPlayer/Player.js";
+import { Tooltip } from "../ToggleTip.js";
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ErrorAlert } from "../ErrorAlert";
 import {
     useSSEContext,
-    useSSEEvent,
     useSSEAnyEvent
 } from "@flamefrontend/sse-runtime-react";
-import { isComponentTypeSource, SourcePlayerJson } from "../../../core/Atomic.js";
+import { isComponentTypeSource } from "../../../core/Atomic.js";
 import { Link } from "react-router";
 import { CountLiveIndicator, DateIndicator, DeadLetterIndicator, QueuedIndicator } from "./Stats.js";
-import { ListContainerFetchable, ListContainerFilterable } from "../playActivity/ActivityList.js";
+import { ListContainerFilterable } from "../playActivity/ActivityList.js";
 import { useParams } from "react-router-dom";
 import { ComponentStateBadge } from "../Badges.js";
 import { ActivitySummarySkeleton } from "../ActivityDetail.js";
 import dayjs from "dayjs";
-import { shortTodayAwareFormat } from "../../../core/TimeUtils.js";
-import { durationToHuman } from "../../../backend/utils.js";
+import { durationToHuman, shortTodayAwareFormat } from "../../../core/TimeUtils.js";
 import { tanQueries } from "../../queries/index.js";
 import { MSErrorBoundary } from "../ErrorBoundary.js";
-import { IconType } from "react-icons/lib";
+import { type IconType } from "react-icons/lib";
 import { useIsWrapped } from "../../utils/hooks/useIsWrapped.js";
 
 export const ComponentBackButton = (props: ComponentProps<typeof ChevronLeftButton> = {}) => {
@@ -98,7 +93,7 @@ export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof 
     let primaryAction: React.JSX.Element | undefined;
     let menuElm: React.JSX.Element | undefined;
     let menuItems: React.JSX.Element[] = [];
-    let badgeProps: BadgeProps = {};
+    const badgeProps: BadgeProps = {};
     switch(props.data.state) {
         case COMPONENT_STATE.RUNNING:
             primaryAction = <PowerOffButton {...primaryActionProps}/>

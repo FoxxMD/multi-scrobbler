@@ -1,24 +1,24 @@
-import { childLogger, Logger, LoggerAppExtras } from "@foxxmd/logging";
-import { DbConcrete, runTransaction } from "../drizzleUtils.js";
-import clone from 'clone';
-import { Traverse, TraverseContext } from 'neotraverse/modern';
-import { loggerNoop } from "../../../MaybeLogger.js";
-import { DateLike, DeepReplaceValue, ErrorLike, PlayObject, PlayState, QueueName, REGEX_ISO8601_LOOSE, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, TemporalAccuracy } from "../../../../../core/Atomic.js";
-import { generateInputEntity, generatePlayEntity, PlayEntityOpts, hydratePlaySelect, PlayHydateOptions } from "../entityUtils.js";
-import { playInputs, plays, queueStates, relations, schema } from "../schema/schema.js";
-import { PlayNew, PlaySelect, PlayInputNew, FindWhere, FindMany, QueueStateSelect, FindWith, PlaySelectWithQueueStates, WhereClause, PlayWith } from "../drizzleTypes.js";;
-import { MarkOptional, MarkRequired, PathValue } from "ts-essentials";
-import { genGroupIdStrFromPlay, removeEmptyArrays, removeUndefinedKeys } from "../../../../utils.js";
-import dayjs, { Dayjs } from "dayjs";
-import { RelationsFieldFilter, eq, inArray, ne, notInArray, desc, asc, and, sql, Placeholder, relationsFilterToSQL } from "drizzle-orm";
-import { CompactableProperty, RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.js";
-import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.js";
-import { buildDateCompare, CompareDateOp, ComponentConstrainedRepoOpts, DrizzleBaseRepository, DrizzleRepositoryOpts, PaginatedQueryResponse, PaginatedResponse } from "./BaseRepository.js";
-import assert, { Assert } from "node:assert";
-import { hashObject, parseArrayFromMaybeString } from "../../../../utils/StringUtils.js";
-import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../../utils/PlayComparisonUtils.js";
-import { comparePlayTemporally, getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext, getTemporalAccuracyCloseVal, hasAcceptableTemporalAccuracy } from "../../../../utils/TimeUtils.js";
-import { SourceType } from "../../../infrastructure/config/source/sources.js";
+import { childLogger } from "@foxxmd/logging";
+import dayjs, { type Dayjs } from "dayjs";
+import { eq, inArray, relationsFilterToSQL, sql } from "drizzle-orm";
+import assert from "node:assert";
+import type { MarkOptional } from "ts-essentials";
+import { type DateLike, type DeepReplaceValue, type PlayObject, type PlayState, type QueueName, TA_DEFAULT_ACCURACY, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
+import { removeUndefinedKeys } from '../../../../../core/DataUtils.ts';
+import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.ts";
+import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../../utils/PlayComparisonUtils.ts";
+import { hashObject } from "../../../../utils/StringUtils.ts";
+import { comparePlayTemporally, getTemporalAccuracyCloseVal, hasAcceptableTemporalAccuracy } from "../../../../utils/TimeUtils.ts";
+import { type CompactableProperty, type RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.ts";
+import { type SourceType } from "../../../infrastructure/config/source/sources.ts";
+import { type FindMany, type FindWhere, type FindWith, type PlayInputNew, type PlayNew, type PlaySelect, type PlaySelectWithQueueStates, type PlayWith, type QueueStateSelect, type WhereClause } from "../drizzleTypes.ts";
+import { type DbConcrete, runTransaction } from "../drizzleUtils.ts";
+import { generateInputEntity, generatePlayEntity, hydratePlaySelect, type PlayEntityOpts, type PlayHydateOptions } from "../entityUtils.ts";
+import { playInputs, plays, relations } from "../schema/schema.ts";
+import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
+import { type PaginatedResponse } from "../../../../../core/Api.ts";
+import { type PaginatedQueryResponse } from "../../../../../core/Api.ts";
+;
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 
@@ -216,6 +216,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
         query = removeUndefinedKeys(query);
         const results = await this.db.query.plays.findMany({
+            ...query,
             limit: args.limit,
             offset: args.offset,
             columns: {id: true},
@@ -292,7 +293,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             dateComparer = 'updatedAt'
         } = opts;
 
-        let where: FindWhere<'plays'> = {
+        const where: FindWhere<'plays'> = {
             component: {
                 id: componentId
             },
@@ -342,8 +343,8 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
         const loggerDel = childLogger(this.logger, ['Retention', 'Delete']);
         const loggerCom = childLogger(this.logger, ['Retention', 'Compact']);
-        let summaryDelStates: string[] = [];
-        let summaryCompactStates: string[] = [];
+        const summaryDelStates: string[] = [];
+        const summaryCompactStates: string[] = [];
 
         loggerDel.debug('Starting cleanup...');
         for(const retentionType of retentionPlayTypes) {
@@ -378,7 +379,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         }
 
         const compactTypes = retentionOpts.compact;
-        let compactedFlags: CompactableProperty[] = [];
+        const compactedFlags: CompactableProperty[] = [];
         if(compactTypes.includes('input')) {
             compactedFlags.push('input');
         }
@@ -584,7 +585,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             componentId = this.componentId,
             hydrate
         } = opts;
-        let where: FindWhere<'plays'> = {
+        const where: FindWhere<'plays'> = {
             componentId
         }
         if(retries !== undefined) {
@@ -634,7 +635,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         } else {
             endRange = play.data.playDate.add(dateGranularity, 's');
         }
-        let where: FindWhere<'plays'> = {
+        const where: FindWhere<'plays'> = {
             componentId,
             playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play)),
         };
@@ -692,9 +693,9 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             with: qWith
         } = opts;
 
-        let query: FindMany<'plays'> = {};
+        const query: FindMany<'plays'> = {};
 
-        let where: FindWhere<'plays'> = {
+        const where: FindWhere<'plays'> = {
             componentId,
             playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play, {bufferTime})),
         };
@@ -790,7 +791,7 @@ export const buildPlayWhere = (args: PlayWhereOpts): WhereClause<'plays'> => {
     // old way
     // let where: Parameters<(ReturnType<typeof getDb>)['query']['plays']['findMany']>[0]['where'] = {
     // };
-    let where: FindWhere<'plays'> = {
+    const where: FindWhere<'plays'> = {
         componentId: args.componentId
     };
     if (args.state !== undefined) {
@@ -826,7 +827,7 @@ export const buildPlayWhere = (args: PlayWhereOpts): WhereClause<'plays'> => {
         }
         // so that we can use this type
         // or else assigning an array to OR using only `typeof where.queueStates` causes a type error
-        let queueWhere: typeof where.queueStates.OR[0][] = [];
+        const queueWhere: typeof where.queueStates.OR[0][] = [];
         for(const q of queues) {
             queueWhere.push(
                 {
@@ -853,7 +854,7 @@ export const buildPlayWhere = (args: PlayWhereOpts): WhereClause<'plays'> => {
                 OR: []
             }
         ];
-        let textWhere: typeof where.RAW[] = [];
+        const textWhere: typeof where.RAW[] = [];
         for(const t of args.text) {
             textWhere.push((p) => sql`lower(json_extract(${p.play}, '$.data.track')) LIKE '%' || ${t.toLocaleLowerCase()} || '%'`)
             textWhere.push((p) => sql`lower(json_extract(${p.play}, '$.data.artists')) LIKE '%' || ${t.toLocaleLowerCase()} || '%'`)

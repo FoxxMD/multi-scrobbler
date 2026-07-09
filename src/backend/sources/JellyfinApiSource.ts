@@ -1,65 +1,57 @@
-import { Logger } from "@foxxmd/logging";
 import { WS } from "iso-websocket";
 // @ts-expect-error weird typings?
 import { Api, Jellyfin } from "@jellyfin/sdk";
 import {
     // @ts-expect-error weird typings?
-    AuthenticationResult,
+    type BaseItemDto,
     // @ts-expect-error weird typings?
-    BaseItemDto,
+    type CollectionType,
     // @ts-expect-error weird typings?
-    BaseItemKind,
-    // @ts-expect-error weird typings?
-    ItemSortBy,
+    type ImageUrlsApi,
     // @ts-expect-error weird typings?
     MediaType,
     // @ts-expect-error weird typings?
-    SessionInfo,
+    type SessionInfo,
     // @ts-expect-error weird typings?
-    SortOrder, UserDto, VirtualFolderInfo, CollectionType, CollectionTypeOptions, ImageUrlsApi
+    type UserDto,
+    // @ts-expect-error weird typings?
+    type VirtualFolderInfo
 } from "@jellyfin/sdk/lib/generated-client/index.js";
 import {
     // @ts-expect-error weird typings?
-    getItemsApi,
+    SystemInfoIssue
+} from "@jellyfin/sdk/lib/index.js";
+import {
+    // @ts-expect-error weird typings?
+    getImageApi,
+    // @ts-expect-error weird typings?
+    getLibraryStructureApi,
     // @ts-expect-error weird typings?
     getSessionApi,
     // @ts-expect-error weird typings?
     getSystemApi,
     // @ts-expect-error weird typings?
-    getUserApi,
-    // @ts-expect-error weird typings?
-    getApiKeyApi,
-    // @ts-expect-error weird typings?
-    getLibraryStructureApi,
-    // @ts-expect-error weird typings?
-    getImageApi,
-
+    getUserApi
 } from "@jellyfin/sdk/lib/utils/api/index.js";
-import {
-    // @ts-expect-error weird typings?
-    SystemInfoIssue
-} 
-from "@jellyfin/sdk/lib/index.js";
 import dayjs from "dayjs";
 import EventEmitter from "events";
-import { ArtistCredit, BrainzMeta, PlayObject, PlayObjectMinimal } from "../../core/Atomic.js";
-import { artistNamesToCredits, artistNameToCredit, buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
-import {
-    FormatPlayObjectOptions,
-    InternalConfig,
-    PlayerStateData,
-    PlayerStateDataMaybePlay,
-    PlayPlatformId, REPORTED_PLAYER_STATUSES
-} from "../common/infrastructure/Atomic.js";
-import { JellyApiSourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
-import { getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.js";
-import { genGroupIdStr } from '../../core/PlayUtils.js';
-import { joinedUrl } from "../utils/NetworkUtils.js";
-import { hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.js";
-import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 import { FixedSizeList } from "fixed-size-list";
-import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
-import { noCasePropObj } from "../utils/DataUtils.js";
+import { type ArtistCredit, type BrainzMeta, type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
+import { genGroupIdStr } from '../../core/PlayUtils.ts';
+import { artistNameToCredit, buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
+import {
+    type FormatPlayObjectOptions,
+    type InternalConfig,
+    type PlayerStateDataMaybePlay,
+    REPORTED_PLAYER_STATUSES
+} from "../common/infrastructure/Atomic.ts";
+import { type JellyApiSourceConfig } from "../common/infrastructure/config/source/jellyfin.ts";
+import { getPlatformIdFromData, isDebugMode } from "../utils.ts";
+import { noCasePropObj } from "../utils/DataUtils.ts";
+import { joinedUrl } from "../utils/NetworkUtils.ts";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
+import { hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.ts";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -162,7 +154,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         this.librariesAllow = parseArrayFromMaybeString(librariesAllow, {lower: true});
         this.librariesBlock = parseArrayFromMaybeString(librariesBlock, {lower: true});
         this.allowedLibraryTypes = Array.from(new Set(['music', ...parseArrayFromMaybeString(additionalAllowedLibraryTypes, {lower: true})]));
-        let mt = parseArrayFromMaybeString(allowMediaTypes, {lower: true});
+        const mt = parseArrayFromMaybeString(allowMediaTypes, {lower: true});
         if(mt.length > 0) {
             this.allowedMediaTypes = [];
             for(const a of allowMediaTypes) {
@@ -525,7 +517,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
             const validPlay = this.isActivityValid(sessionData[0], sessionData[1]);
             if(validPlay === true) {
                 if(isDebugMode()) {
-                    let stateIdentifyingInfo: string = genGroupIdStr(getPlatformIdFromData(sessionData[0]));
+                    const stateIdentifyingInfo: string = genGroupIdStr(getPlatformIdFromData(sessionData[0]));
                     this.logger.trace(`${stateIdentifyingInfo} => Activity Date ${sessionData[1].LastActivityDate} | Playback Checkin: ${sessionData[1].LastPlaybackCheckIn} `)
                 }
                 validSessions.push(sessionData[0]);

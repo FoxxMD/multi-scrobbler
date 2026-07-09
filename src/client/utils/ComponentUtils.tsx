@@ -1,6 +1,6 @@
-import { Card, HTMLChakraProps } from '@chakra-ui/react';
-import { PlayApiCommon, PlayApiCommonDetailed } from '../../core/Api';
-import { LifecycleStep, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED } from '../../core/Atomic';
+import { Card, type HTMLChakraProps } from '@chakra-ui/react';
+import { type PlayApiCommonDetailed } from '../../core/Api';
+import { type LifecycleStep, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED } from '../../core/Atomic';
 
 export const cardHeaderSeparator: Card.HeaderProps = {
     borderBottomWidth: "1px",

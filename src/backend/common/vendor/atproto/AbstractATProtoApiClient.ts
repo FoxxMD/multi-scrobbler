@@ -1,17 +1,17 @@
-import { getRoot } from "../../../ioc.js";
-import { AbstractApiOptions } from "../../infrastructure/Atomic.js";
-import AbstractApiClient from "../AbstractApiClient.js";
-import { MSCache } from "../../Cache.js";
-import { UpstreamError } from "../../errors/UpstreamError.js";
-import { streamBodyProgress } from "../../../utils/NetworkUtils.js";
-import { ATProtoUserIdentifierData, HandleData } from "../../infrastructure/config/client/atproto.js";
-import { checkPds, isDID, identifierToAtProtoHandle, getATProtoIdentifier } from "./atUtils.js";
+import { getRoot } from "../../../ioc.ts";
+import { type AbstractApiOptions } from "../../infrastructure/Atomic.ts";
+import AbstractApiClient from "../AbstractApiClient.ts";
+import { MSCache } from "../../Cache.ts";
+import { UpstreamError } from "../../errors/UpstreamError.ts";
+import { streamBodyProgress } from "../../../utils/NetworkUtils.ts";
+import { type ATProtoUserIdentifierData, type HandleData } from "../../infrastructure/config/client/atproto.ts";
+import { checkPds, isDID, identifierToAtProtoHandle, getATProtoIdentifier } from "./atUtils.ts";
 import { Client, ClientResponseError, isXRPCErrorPayload, parseRateLimitHeaders } from '@atcute/client';
 import { ComAtprotoSyncGetRepo } from '@atcute/atproto';
-import { AtprotoDid } from "@atcute/lexicons/syntax";
-import { todayAwareFormat } from "../../../../core/TimeUtils.js";
+import { type AtprotoDid } from "@atcute/lexicons/syntax";
+import { todayAwareFormat } from "../../../../core/TimeUtils.ts";
 import dayjs from "dayjs";
-import { Millisecond } from "../../../../core/Atomic.js";
+import { type Millisecond } from "../../../../core/Atomic.ts";
 
 export interface RateLimitInfo {
     limit: number

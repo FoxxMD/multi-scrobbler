@@ -1,32 +1,23 @@
-import { Span, Stack, Text, Box, Spinner, HStack, Wrap, Flex, Container, Select, Portal, createListCollection, useSelectContext, DatePicker, VStack, Button, Spacer, TagsInput, Card } from '@chakra-ui/react';
-import { ComponentType, isComponentTypeSource, PLAY_CLIENT_STATE, PLAY_SOURCE_STATE, PlayState } from '../../../core/Atomic.js';
-import React, { ComponentProps, Fragment, useMemo, useCallback, useState } from "react"
-import dayjs, { Dayjs } from 'dayjs';
-import doy from 'dayjs/plugin/dayOfYear.js';
-import "./PlayList.scss";
-import { PlayStateBadge } from '../Badges.js';
+import { Button, Card, createListCollection, DatePicker, Flex, HStack, Portal, Select, Span, TagsInput, useSelectContext, VStack, Wrap } from '@chakra-ui/react';
 import {
-    DateFormatter,
-    getLocalTimeZone,
-    isSameDay,
-    isToday,
-    today,
-    Time,
     type DateValue,
-    toZoned,
-    parseDateTime,
-    toCalendarDateTime,
+    getLocalTimeZone,
     parseAbsolute,
+    Time,
+    toCalendarDateTime,
+    today,
+    toZoned,
     ZonedDateTime
-} from "@internationalized/date"
-import { QueryPlaysOptsJson } from '../../../backend/common/database/drizzle/repositories/PlayRepository.js';
-import { cardHeaderSeparator } from '../../utils/ComponentUtils.js';
-import { CompareDateBetween } from '../../../backend/common/database/drizzle/repositories/BaseRepository.js';
-import { CalendarButton, RefreshButton } from '../icons/ChakraIcons.js';
-import { QueryPlaysOptsJsonRefreshable, tanQueries, useQueryWatcher } from '../../queries/index.js';
+} from "@internationalized/date";
 import { useQueryClient } from '@tanstack/react-query';
-import { PlayStateUI } from '../../../core/Api.js';
+import { type ComponentProps, useCallback, useMemo, useState } from "react";
+import { type CompareDateBetween, type PlayStateUI } from '../../../core/Api.js';
+import { type ComponentType, isComponentTypeSource, PLAY_CLIENT_STATE, PLAY_SOURCE_STATE, type PlayState } from '../../../core/Atomic.js';
 import { capitalizeWords } from '../../../core/StringUtils.js';
+import { type QueryPlaysOptsJsonRefreshable, tanQueries, useQueryWatcher } from '../../queries/index.js';
+import { cardHeaderSeparator } from '../../utils/ComponentUtils.js';
+import { PlayStateBadge } from '../Badges.js';
+import { CalendarButton, RefreshButton } from '../icons/ChakraIcons.js';
 
 const noop = (_) => null;
 

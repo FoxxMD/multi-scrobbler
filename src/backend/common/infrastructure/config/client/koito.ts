@@ -1,6 +1,6 @@
-import { ComponentType, UnixTimestamp } from "../../../../../core/Atomic.js"
-import { RequestRetryOptions } from "../common.js"
-import { CommonClientConfig, CommonClientData } from "./index.js"
+import { type ComponentType, type UnixTimestamp } from "../../../../../core/Atomic.ts"
+import { type RequestRetryOptions } from "../common.ts"
+import { type CommonClientConfig, type CommonClientData } from "./index.ts"
 
 export interface ListensResponse {
     items: ListenObjectResponse[]

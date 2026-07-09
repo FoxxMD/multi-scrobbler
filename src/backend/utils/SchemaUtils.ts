@@ -1,15 +1,15 @@
 import { resolve } from "path";
-import { projectDir } from "../common/index.js";
+import { projectDir } from "../common/index.ts";
 import {
-    Definition as TSJDefinition,
+    type Definition as TSJDefinition,
     createFormatter,
-    CompletedConfig as TSJCompletedConfig,
+    type CompletedConfig as TSJCompletedConfig,
     DEFAULT_CONFIG,
     createProgram,
     createParser,
     SchemaGenerator, LiteralType, LiteralTypeFormatter
 } from "ts-json-schema-generator";
-import { MaybeLogger } from '../common/MaybeLogger.js';
+import { MaybeLogger } from '../common/MaybeLogger.ts';
 
 // https://github.com/vega/ts-json-schema-generator/issues/1899#issuecomment-2407674526
 // https://github.com/vega/ts-json-schema-generator?tab=readme-ov-file#custom-formatting

@@ -8,8 +8,8 @@ export interface TimestampProps {
 }
 
 const convertTime = (rawTime: number) => {
-    let mins = Math.floor(rawTime / 60);
-    let seconds = rawTime - (mins * 60);
+    const mins = Math.floor(rawTime / 60);
+    const seconds = rawTime - (mins * 60);
     let secStr: string = seconds.toString();
     if (seconds < 10) {
         secStr = "0" + seconds;

@@ -1,13 +1,12 @@
-import { loggerTest, loggerDebug } from "@foxxmd/logging";
-import chai, { assert, expect } from 'chai';
+import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
-import { after, before, describe, it } from 'mocha';
+import { before, describe, it } from 'mocha';
 import dayjs from "dayjs";
 import withLocalTmpDir from 'with-local-tmp-dir';
-import { initFileCache, initMemoryCache, initValkeyCache } from "../../common/Cache.js";
-import { ListenProgressPositional, ListenProgressTS } from "../../sources/PlayerState/ListenProgress.js";
-import { isPortReachableConnect } from "../../utils/NetworkUtils.js";
-import { sleep } from "../../utils.js";
+import { initFileCache, initMemoryCache, initValkeyCache } from "../../common/Cache.ts";
+import { ListenProgressPositional, ListenProgressTS } from "../../sources/PlayerState/ListenProgress.ts";
+import { isPortReachableConnect } from "../../utils/NetworkUtils.ts";
+import { sleep } from "../../utils.ts";
 
 chai.use(asPromised);
 

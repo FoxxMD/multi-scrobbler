@@ -1,23 +1,23 @@
-import React, { ComponentProps, useMemo, forwardRef, Fragment, useEffect, PropsWithChildren, useCallback, useRef, useState } from "react"
-import { Image, Heading, HStack, Link, LinkOverlay, LinkBox, Span, Flex, Box, Separator, Switch, FloatingPanel, Portal, Text, IconButton, Status, Stack } from '@chakra-ui/react';
-import { VersionNext } from "../Version";
-import { TextMuted } from "./TextMuted";
-import { TerminalButton, TerminalIcon, XButton } from "./icons/ChakraIcons";
-import { MobileSidebarNav } from "./MobileMenu";
-import { LuGripHorizontal, LuMinus } from "react-icons/lu"
-import {Link as RouterLink} from 'react-router';
+import { Box, Flex, FloatingPanel, Heading, HStack, IconButton, Image, LinkBox, LinkOverlay, Portal, Stack, Status, Switch, Text } from '@chakra-ui/react';
 import {
     useWindowSize,
-} from '@react-hook/window-size'
+} from '@react-hook/window-size';
+import React, { type ComponentProps, type PropsWithChildren } from "react";
+import { LuGripHorizontal, LuMinus } from "react-icons/lu";
+import { Link as RouterLink } from 'react-router';
+import { VersionNext } from "../Version";
+import { MobileSidebarNav } from "./MobileMenu";
+import { TextMuted } from "./TextMuted";
+import { TerminalButton, TerminalIcon, XButton } from "./icons/ChakraIcons";
 
-import { LogsFetchable } from "./LogsNext";
-import { Ripple } from "./icons/AnimatedIcons";
 import { useSSEContext, useSSEStatus } from "@flamefrontend/sse-runtime-react";
-import { ToggleTip } from "./ToggleTip";
-import { ErrorLike } from "../../core/Atomic";
+import { type ErrorLike } from "../../core/Atomic";
 import { ErrorAlert } from "./ErrorAlert";
 import { MSErrorBoundary } from "./ErrorBoundary";
 import { ExternaLinksMenu } from "./ExternaLinksMenu";
+import { LogsFetchable } from "./LogsNext";
+import { ToggleTip } from "./ToggleTip";
+import { Ripple } from "./icons/AnimatedIcons";
 
 export const AppTitle = (props: { fetchable?: boolean } = {}) => {
     const {
