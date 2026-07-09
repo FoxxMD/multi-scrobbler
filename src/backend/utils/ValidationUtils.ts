@@ -96,7 +96,7 @@ const getSchemaFunc = async () => {
         const module = await import(resolve(projectDir, schemaFuncPath))
         schemaFetchFunc = module.getSchemaForType;
     } catch (e) {
-        throw new Error(`Could not load module from path: ${schemaFuncPath}`);
+        throw new Error(`Could not load module from path: ${schemaFuncPath}`, {cause: e});
     }
     return schemaFetchFunc;
 }

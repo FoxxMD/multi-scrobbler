@@ -40,6 +40,7 @@ import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.ts";
+import { SimpleError } from "../common/errors/MSErrors.ts";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
 const state = 'random';
@@ -550,7 +551,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             const spotifyError = new UpstreamError('Spotify API call failed', {cause: e});
             if (e.statusCode === 401 && !hasApiPermissionError(e)) {
                 if (this.spotifyApi.getRefreshToken() === undefined) {
-                    throw new Error('Access token was not valid and no refresh token was present')
+                    throw new SimpleError('Access token was not valid and no refresh token was present', {cause: e});
                 }
                 this.logger.debug('Access token was not valid, attempting to refresh');
 

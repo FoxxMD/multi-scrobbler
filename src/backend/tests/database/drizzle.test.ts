@@ -15,7 +15,6 @@ import { generatePlayWithLifecycle, generateRandomObj } from '../../../core/test
 import { formatNumber, generateArray } from '../../../core/DataUtils.ts';
 import { objectsEqual } from '../../utils/DataUtils.ts';
 import { eq, sql } from 'drizzle-orm';
-import { type PlaySelect } from '../../common/database/drizzle/drizzleTypes.ts';
 import { loggerDebug } from '@foxxmd/logging';
 import { transientDb } from '../utils/TransientTestUtils.ts';
 import { getRoot } from '../../ioc.ts';
@@ -531,9 +530,8 @@ describe('Repository Operations', function () {
                 fixtureCreatePlay({ componentId: component[0].id, play: generatePlay({}, {source: 'test2'}) })
             ]).returning();
 
-            let result: PlaySelect[];
             // https://github.com/drizzle-team/drizzle-orm/discussions/938#discussioncomment-6542336
-            result = await db.query.plays.findMany({
+            const result = await db.query.plays.findMany({
                 where: {
                     AND: [
                         {

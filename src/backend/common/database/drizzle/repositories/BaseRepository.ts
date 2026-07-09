@@ -46,7 +46,7 @@ export abstract class DrizzleBaseRepository<T extends TableName> {
     }
 
     async updateById(id: number, data: Partial<typeof this.table.$inferInsert>): Promise<void> {
-        assert(id !== null && id !== undefined, `${typeof id === null ? 'null' : 'undefined'} given for entity id`);
+        assert(id !== null && id !== undefined, `${id === null ? 'null' : 'undefined'} given for entity id`);
         await this.db.update(this.table).set(data).where(eq(this.table.id, id));
     }
 

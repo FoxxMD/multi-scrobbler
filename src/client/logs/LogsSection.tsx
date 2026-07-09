@@ -26,7 +26,7 @@ let list = createFixedList(50);
 interface LogLevelButtonProps {
     name: string,
     active: boolean,
-    onClick: Function
+    onClick: (val: number) => void
 }
 const LogLevelButton = (props: LogLevelButtonProps) => {
     const {name, active, onClick} = props;
@@ -34,7 +34,7 @@ const LogLevelButton = (props: LogLevelButtonProps) => {
     const className = active ? "mx-1" : "capitalize underline cursor-pointer mx-1";
     return <span onClick={click} className={className}>{name.toUpperCase()}</span>;
 }
-const LogLimitButton = (props: {val: number, active: boolean, onClick: Function}) => {
+const LogLimitButton = (props: {val: number, active: boolean, onClick: (val: number) => void}) => {
     const {val, active, onClick} = props;
     const click = useCallback(() => active ? null : onClick(val), [onClick, val, active]);
     const className = active ? "mx-1" : "capitalize underline cursor-pointer mx-1";

@@ -183,6 +183,7 @@ export class MPRISSource extends MemorySource {
             // microseconds
             return dayjs.duration({milliseconds: Number(pos / 1000)}).asSeconds();
         } catch(e) {
+            // eslint-disable-next-line preserve-caught-error
             throw new Error('Could not get player Position', {cause: convertDBusExceptionToError(e)});
         }
     }
@@ -192,6 +193,7 @@ export class MPRISSource extends MemorySource {
             const status = await props['PlaybackStatus'];
             return status as PlaybackStatus;
         } catch (e) {
+            // eslint-disable-next-line preserve-caught-error
             throw new Error('Could not get player PlaybackStatus', {cause: convertDBusExceptionToError(e)})
         }
     }
@@ -201,6 +203,7 @@ export class MPRISSource extends MemorySource {
             const metadata = await props['Metadata'];
             return this.metadataToPlain(metadata);
         } catch(e) {
+            // eslint-disable-next-line preserve-caught-error
             throw new Error('Could not get player Metadata', {cause: convertDBusExceptionToError(e)});
         }
     }

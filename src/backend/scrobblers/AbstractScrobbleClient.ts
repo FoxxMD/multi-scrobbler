@@ -1614,6 +1614,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             if(sourcePlayerData === undefined) {
                 return;
             }
+            // eslint-disable-next-line prefer-const
             let [shouldUpdate, npUpdateTopReason] = this.shouldUpdatePlayingNow(sourcePlayerData);
             let clientReason: string | undefined;
             if(!shouldUpdate) {

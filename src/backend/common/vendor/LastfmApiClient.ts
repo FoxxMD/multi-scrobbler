@@ -237,6 +237,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             return true;
         } catch (e) {
             const hint = e.error?.cause?.message ?? undefined;
+            // eslint-disable-next-line preserve-caught-error
             throw new Error(`Could not connect to ${this.upstreamName} API server${hint !== undefined ? ` (${hint})` : ''}`, { cause: e.error ?? e });
         }
     }
@@ -385,7 +386,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             } = resp;
             const correctedResp: Writeable<LastFMUserGetRecentTracksResponse> = {
                 ...restResp,
-                // @ts-expect-error
+                // @ts-expect-error this is fine
                 recenttracks: {
                     ...rest,
                     track: [],
