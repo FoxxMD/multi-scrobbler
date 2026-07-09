@@ -16,7 +16,7 @@ import { appLogger, initLogger as getInitLogger } from "./common/logging.ts";
 import { getRoot } from "./ioc.ts";
 import { parseVersion } from "./version.ts";
 import { initServer } from "./server/index.ts";
-import { isDebugMode, parseBool, retry, sleep } from "./utils.ts";
+import { isDebugMode, parseBool, sleep } from "./utils.ts";
 import { readJson } from './utils/DataUtils.ts';
 import ScrobbleClients from './scrobblers/ScrobbleClients.ts';
 import ScrobbleSources from './sources/ScrobbleSources.ts';

@@ -2,9 +2,7 @@ import { childLogger } from "@foxxmd/logging";
 import { EventEmitter } from "events";
 import { WS, CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket'
 import { randomUUID } from "node:crypto";
-import normalizeUrl from 'normalize-url';
 import pEvent from 'p-event';
-import { URL } from "url";
 import { type PlayObject, type PlayObjectMinimal, type URLData } from "../../core/Atomic.ts";
 import { UpstreamError } from "../common/errors/UpstreamError.ts";
 import {

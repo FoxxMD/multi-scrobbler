@@ -1,7 +1,7 @@
 import { type Logger } from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
 import { EventEmitter } from "events";
-import { AsyncTask, SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
+import { AsyncTask, SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
 import { type PlayObject, SOURCE_SOT, type SOURCE_SOT_TYPES, type SourcePlayerJson, type SourcePlayerObj } from "../../core/Atomic.ts";
 import { buildTrackString } from "../../core/StringUtils.ts";
 import {
@@ -13,7 +13,6 @@ import { type PlayPlatformId } from '../../core/Atomic.ts';
 import { type SourceType, type SourceConfig } from '../common/infrastructure/config/source/sources.ts';
 import { type PollingOptions } from "../common/infrastructure/config/common.ts";
 import {
-    genGroupId,
     getPlatformIdFromData,
     isDebugMode,
     playObjDataMatch,
@@ -28,8 +27,7 @@ import AbstractSource from "./AbstractSource.ts";
 import { AbstractPlayerState, createPlayerOptions, type PlayerStateOptions } from "./PlayerState/AbstractPlayerState.ts";
 import { GenericPlayerState } from "./PlayerState/GenericPlayerState.ts";
 import { hashObject } from "../utils/StringUtils.ts";
-import { useDebugValue } from "react";
-import { type ComponentSourceApi, type ComponentSourceApiJson } from "../../core/Api.ts";
+import { type ComponentSourceApiJson } from "../../core/Api.ts";
 
 const EXPECTED_NON_DISCOVERED_REASON = 'not added because an identical play with the same timestamp was already discovered.';
 

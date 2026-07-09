@@ -10,7 +10,6 @@ import SpotifySource from "../sources/SpotifySource.ts";
 import YTMusicSource from "../sources/YTMusicSource.ts";
 import LibrefmScrobbler from "../scrobblers/LibrefmScrobbler.ts";
 import LibrefmSource from "../sources/LibrefmSource.ts";
-import e from "express";
 import AbstractSource from "../sources/AbstractSource.ts";
 
 export const setupAuthRoutes = (app: Express, logger: Logger, sourceMiddle: ExpressHandler, clientMiddle: ExpressHandler, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {

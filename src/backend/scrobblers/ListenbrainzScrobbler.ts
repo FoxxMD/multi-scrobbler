@@ -1,18 +1,15 @@
 import { type Logger } from "@foxxmd/logging";
-import dayjs, { type Dayjs } from "dayjs";
 import EventEmitter from "events";
 import { type PlayObject, type SourcePlayerObj } from "../../core/Atomic.ts";
 import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
-import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.ts";
 import { type FormatPlayObjectOptions, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.ts";
 import { DEFAULT_MS_ITEMS_PER_GET_LZ, type ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz.ts";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.ts";
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
 import { type ListenPayload } from '../../core/vendor/listenbrainz/interfaces.ts';
-import { Notifiers } from "../notifier/Notifiers.ts";
 
-import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, playerInNPPlayingOnlyState } from "./AbstractScrobbleClient.ts";
+import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.ts";
 import { isDebugMode } from "../utils.ts";
 import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.ts";
 

@@ -2,7 +2,7 @@ import { type AzuracastSourceAIOConfig, type AzuracastSourceConfig } from "./azu
 import { type ChromecastSourceAIOConfig, type ChromecastSourceConfig } from "./chromecast.ts";
 import { type ListenbrainzEndpointSourceAIOConfig, type ListenbrainzEndpointSourceConfig } from "./endpointlz.ts";
 import { type LastFMEndpointSourceAIOConfig, type LastFMEndpointSourceConfig } from "./endpointlfm.ts";
-import { type DeezerInternalSourceConfig, type DeezerInternalAIOConfig, type DeezerSourceAIOConfig, type DeezerSourceConfig, type DeezerCompatConfig, type DeezerAIOCompatConfig } from "./deezer.ts";
+import { type DeezerInternalSourceConfig, type DeezerSourceConfig, type DeezerCompatConfig, type DeezerAIOCompatConfig } from "./deezer.ts";
 import { type JellyApiSourceAIOConfig, type JellyApiSourceConfig } from "./jellyfin.ts";
 import { type JRiverSourceAIOConfig, type JRiverSourceConfig } from "./jriver.ts";
 import { type KodiSourceAIOConfig, type KodiSourceConfig } from "./kodi.ts";

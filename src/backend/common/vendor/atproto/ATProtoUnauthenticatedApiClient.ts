@@ -1,7 +1,5 @@
 import { UpstreamError } from "../../errors/UpstreamError.ts";
-import { type HandleData } from "../../infrastructure/config/client/atproto.ts";
 import { AbstractATProtoApiClient } from "./AbstractATProtoApiClient.ts";
-import { getATProtoIdentifier, checkPds } from "./atUtils.ts";
 import { Client, simpleFetchHandler } from '@atcute/client';
 import type {} from '@atcute/atproto';
 import { type Nsid } from "@atcute/lexicons";

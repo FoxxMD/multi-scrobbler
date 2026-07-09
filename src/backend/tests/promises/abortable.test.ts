@@ -2,7 +2,7 @@ import chai from 'chai';
 import asPromised from 'chai-as-promised';
 import { describe, it } from 'mocha';
 import { sleep } from "../../utils.ts";
-import { spawn, catchAbortError, isAbortError, rethrowAbortError, delay, forever } from 'abort-controller-x';
+import { spawn, catchAbortError, rethrowAbortError, delay, forever } from 'abort-controller-x';
 
 chai.should();
 chai.use(asPromised);

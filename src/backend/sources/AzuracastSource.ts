@@ -1,11 +1,10 @@
 import MemorySource from "./MemorySource.ts";
 import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
-import { childLogger, type Logger } from "@foxxmd/logging";
+import { childLogger } from "@foxxmd/logging";
 import { EventEmitter } from "events";
 import { WS, CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket'
 import pEvent from 'p-event';
 import { type PlayObject, type PlayObjectMinimal, type URLData } from "../../core/Atomic.ts";
-import { UpstreamError } from "../common/errors/UpstreamError.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
@@ -13,7 +12,6 @@ import {
     REPORTED_PLAYER_STATUSES,
     SINGLE_USER_PLATFORM_ID,
 } from "../common/infrastructure/Atomic.ts";
-import { type PlayPlatformId } from '../../core/Atomic.ts';
 import { type AzuracastSourceConfig, type AzuraNowPlayingResponse, type AzuraStationResponse } from "../common/infrastructure/config/source/azuracast.ts";
 import { isPortReachable, normalizeWSAddress } from "../utils/NetworkUtils.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";

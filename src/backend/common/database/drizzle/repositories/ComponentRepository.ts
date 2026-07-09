@@ -1,7 +1,6 @@
-import { type Logger } from "drizzle-orm";
 import { DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
 import { type DbConcrete } from "../drizzleUtils.ts";
-import { type ComponentNew, type ComponentSelect, type FindWhere } from "../drizzleTypes.ts";
+import { type ComponentSelect, type FindWhere } from "../drizzleTypes.ts";
 import { components } from "../schema/schema.ts";
 import { generateComponentEntity } from "../entityUtils.ts";
 import { type ComponentType } from "../../../../../core/Atomic.ts";

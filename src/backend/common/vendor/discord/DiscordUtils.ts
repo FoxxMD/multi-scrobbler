@@ -1,13 +1,12 @@
 import dayjs from "dayjs";
-import { isPlayObject, type PlayObject, type SourcePlayerObj } from "../../../../core/Atomic.ts";
-import { asPlayerStateData, type SourceData } from "../../infrastructure/Atomic.ts";
+import { type PlayObject, type SourcePlayerObj } from "../../../../core/Atomic.ts";
 import { GatewayOpcodes, PresenceUpdateStatus } from "discord.js";
 import { capitalize } from "../../../../core/StringUtils.ts";
 import { urlToMusicService } from '../listenbrainz/lzUtils.ts';
-import { ACTIVITY_TYPE, type ActivityData, ActivityTypes, type DiscordData, type DiscordStrongData, type ActivityTypeString as MSActivityType, type StatusType } from "../../infrastructure/config/client/discord.ts";
+import { ACTIVITY_TYPE, type ActivityData, type DiscordData, type DiscordStrongData, type ActivityTypeString as MSActivityType, type StatusType } from "../../infrastructure/config/client/discord.ts";
 import { parseBool } from "../../../utils.ts";
 import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
-import { parseArrayFromMaybeString, parseBoolOrArrayFromMaybeString } from "../../../utils/StringUtils.ts";
+import { parseArrayFromMaybeString } from "../../../utils/StringUtils.ts";
 
 export const playStateToActivityData = (data: SourcePlayerObj, opts: { useArt?: boolean } = {}): { activity: ActivityData, artUrl?: string } => {
     // unix timestamps in milliseconds

@@ -1,8 +1,7 @@
 import { type Logger, type LogLevel } from "@foxxmd/logging";
 import EventEmitter from "events";
 import { type PlayMatchResult, type PlayObject, type SourcePlayerObj } from "../../core/Atomic.ts";
-import { CALCULATED_PLAYER_STATUSES, type FormatPlayObjectOptions, REPORTED_PLAYER_STATUSES, type ReportedPlayerStatus, SINGLE_USER_PLATFORM_ID_STR, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.ts";
-import { Notifiers } from "../notifier/Notifiers.ts";
+import { CALCULATED_PLAYER_STATUSES, type FormatPlayObjectOptions, REPORTED_PLAYER_STATUSES, SINGLE_USER_PLATFORM_ID_STR } from "../common/infrastructure/Atomic.ts";
 
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractScrobbleClient.ts";
 import { type DiscordClientConfig, type DiscordStrongData } from "../common/infrastructure/config/client/discord.ts";

@@ -1,4 +1,4 @@
-import React, { type ComponentProps, useState, useLayoutEffect } from "react"
+import React, { useLayoutEffect } from "react"
 import useResizeObserver from '@react-hook/resize-observer';
 
 const getTop = item => Math.round(item.getBoundingClientRect().top);

@@ -1,5 +1,5 @@
-import { after, before, afterEach, describe, it } from 'mocha';
-import chai, { assert, expect } from 'chai';
+import { before, afterEach, describe, it } from 'mocha';
+import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import withLocalTmpDir from 'with-local-tmp-dir';
 import {constants, copyFile, access} from 'node:fs/promises';
@@ -8,11 +8,11 @@ import {projectDir} from '../../common/index.ts';
 import ScrobbleClients from '../../scrobblers/ScrobbleClients.ts';
 import ScrobbleSources from '../../sources/ScrobbleSources.ts';
 import EventEmitter from "events";
-import {loggerTest, loggerDebug} from '@foxxmd/logging';
+import {loggerTest} from '@foxxmd/logging';
 import { clientTypes } from '../../common/infrastructure/config/client/clients.ts';
 import { sourceTypes } from '../../common/infrastructure/config/source/sources.ts';
 import { Notifiers } from '../../notifier/Notifiers.ts';
-import { difference, intersect } from '../../utils.ts';
+import { difference } from '../../utils.ts';
 
 chai.use(asPromised);
 

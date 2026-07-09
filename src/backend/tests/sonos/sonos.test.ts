@@ -1,5 +1,4 @@
-import { loggerTest, loggerDebug } from "@foxxmd/logging";
-import { assert, expect } from 'chai';
+import { loggerDebug } from "@foxxmd/logging";
 import EventEmitter from "events";
 import { describe, it } from 'mocha';
 import { type SonosData } from "../../common/infrastructure/config/source/sonos.ts";

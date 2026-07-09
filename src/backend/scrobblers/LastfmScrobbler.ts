@@ -1,5 +1,4 @@
 import { type Logger } from "@foxxmd/logging";
-import dayjs, { type Dayjs } from "dayjs";
 import EventEmitter from "events";
 import { type PlayObject, type SourcePlayerObj } from "../../core/Atomic.ts";
 import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
@@ -7,8 +6,7 @@ import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import { type FormatPlayObjectOptions, type InternalConfigOptional, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.ts";
 import { type LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.ts";
 import LastfmApiClient, { LastFMIgnoredScrobble, playToClientPayload, formatPlayObj } from "../common/vendor/LastfmApiClient.ts";
-import { Notifiers } from "../notifier/Notifiers.ts";
-import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, playerInNPPlayingOnlyState } from "./AbstractScrobbleClient.ts";
+import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.ts";
 import { findCauseByReference } from "../utils/ErrorUtils.ts";
 import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.ts";
 

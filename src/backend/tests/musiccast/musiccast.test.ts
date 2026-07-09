@@ -1,8 +1,7 @@
-import { loggerTest, loggerDebug } from "@foxxmd/logging";
-import { assert, expect } from 'chai';
+import { loggerTest } from "@foxxmd/logging";
+import { expect } from 'chai';
 import EventEmitter from "events";
-import dayjs from "dayjs";
-import { describe, it, before, after } from 'mocha';
+import { describe, it, after } from 'mocha';
 import { http, HttpResponse } from "msw";
 import { withRequestInterception } from "../utils/networking.ts";
 import { type MusicCastData } from "../../common/infrastructure/config/source/musiccast.ts";

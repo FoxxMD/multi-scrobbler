@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import { type PlayObject, type PlayObjectMinimal, type ScrobbleActionResult, type URLData } from "../../../../core/Atomic.ts";
-import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, type PaginatedListensTimeRangeOptions, type PaginatedTimeRangeListens, type PaginatedTimeRangeListensResult } from "../../infrastructure/Atomic.ts";
+import { type AbstractApiOptions, type PaginatedListensTimeRangeOptions, type PaginatedTimeRangeListens, type PaginatedTimeRangeListensResult } from "../../infrastructure/Atomic.ts";
 import { type GetListensOptions, type KoitoData, type ListenObjectResponse, type ListensResponse } from "../../infrastructure/config/client/koito.ts";
 import AbstractApiClient from "../AbstractApiClient.ts";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../../utils/NetworkUtils.ts";

@@ -1,9 +1,7 @@
 import { type Logger } from "@foxxmd/logging";
-import { type PlayObject } from "../../../core/Atomic.ts";
 import { type PlayerStateDataMaybePlay, type ReportedPlayerStatus } from "../../common/infrastructure/Atomic.ts";
 import { type PlayPlatformId } from '../../../core/Atomic.ts';
 import { type PlayerStateOptions } from "./AbstractPlayerState.ts";
-import { GenericPlayerState } from "./GenericPlayerState.ts";
 import { PositionalPlayerState } from "./PositionalPlayerState.ts";
 
 export class JellyfinPlayerState extends PositionalPlayerState {

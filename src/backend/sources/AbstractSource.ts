@@ -2,7 +2,7 @@ import { childLogger, type LogDataPretty, type LogLevel } from '@foxxmd/logging'
 import dayjs, { type Dayjs } from "dayjs";
 import { EventEmitter } from "events";
 import { FixedSizeList } from "fixed-size-list";
-import { type JsonPlayObject, type PlayMatchResult, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { type PlayMatchResult, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
 import AbstractComponent from "../common/AbstractComponent.ts";
 import {
@@ -12,11 +12,8 @@ import {
     DEFAULT_RETRY_MULTIPLIER,
     type GroupedFixedPlays,
     type InternalConfig,
-    NO_USER,
     type ProgressAwarePlayObject,
-    SINGLE_USER_PLATFORM_ID,
 } from "../common/infrastructure/Atomic.ts";
-import { type PlayPlatformId } from '../../core/Atomic.ts';
 import { type PlayUserId } from '../../core/Atomic.ts';
 import { type DeviceId } from '../../core/Atomic.ts';
 import { type SourceType, type SourceConfig } from '../common/infrastructure/config/source/sources.ts';
@@ -24,33 +21,29 @@ import { TRANSFORM_HOOK } from "../../core/Transform.ts";
 import TupleMap from "../common/TupleMap.ts";
 import {
     difference,
-    genGroupId,
-    isDebugMode,
-    playObjDataMatch,
     pollingBackoff,
     sleep,
     sortByOldestPlayDate,
 } from "../utils.ts";
-import { genGroupIdStr, sortByNewestPlayDate } from '../../core/PlayUtils.ts';
+import { sortByNewestPlayDate } from '../../core/PlayUtils.ts';
 import { formatNumber } from '../../core/DataUtils.ts';
 import { timeToHumanTimestamp } from "../../core/TimeUtils.ts";
 import { todayAwareFormat } from "../../core/TimeUtils.ts";
 import { getRoot } from '../ioc.ts';
 import { componentFileLogger } from '../common/logging.ts';
-import { type WebhookPayload } from '../common/infrastructure/config/health/webhooks.ts';;
+;
 import { messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.ts";
 import { existingScrobble, type ExistingScrobbleOpts } from '../utils/PlayComparisonUtils.ts';
-import { findAsync, staggerMapper, type StaggerOptions } from '../utils/AsyncUtils.ts';
+import { staggerMapper } from '../utils/AsyncUtils.ts';
 import pMap, {pMapIterable} from 'p-map';
-import prom, { Counter, Gauge } from 'prom-client';
+import { Counter } from 'prom-client';
 import { normalizeStr } from '../utils/StringUtils.ts';
-import { spawn, catchAbortError, isAbortError, rethrowAbortError, delay, forever, AbortError, throwIfAborted } from 'abort-controller-x';
-import { AbortedError, generateLoggableAbortReason } from '../common/errors/MSErrors.ts';
+import { spawn, isAbortError, delay, throwIfAborted } from 'abort-controller-x';
+import { generateLoggableAbortReason } from '../common/errors/MSErrors.ts';
 import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, type QueryPlaysOpts, type RequestPlayQuery, type WithPlayRelation } from '../common/database/drizzle/repositories/PlayRepository.ts';
 import { asPlay } from '../../core/PlayMarshalUtils.ts';
 import { AsyncTask, SimpleIntervalJob, ToadScheduler } from 'toad-scheduler';
-import { type ComponentMinimalSelect } from '../common/database/drizzle/drizzleTypes.ts';
-import { COMPONENT_STATE, type ComponentSourceApi, type ComponentSourceApiJson, type ComponentState, type PlayApiCommonDetailed } from '../../core/Api.ts';
+import { COMPONENT_STATE, type ComponentSourceApiJson, type ComponentState, type PlayApiCommonDetailed } from '../../core/Api.ts';
 import { type PaginatedResponse } from "../../core/Api.ts";
 
 export interface RecentlyPlayedOptions {

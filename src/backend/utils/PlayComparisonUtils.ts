@@ -1,5 +1,5 @@
 import { getListDiff, type ListDiff } from "@donedeal0/superdiff";
-import { type PlayMatchResult, type PlayObject, type PlayObjectMinimal, SOURCE_SOT, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy, type TrackStringOptions } from "../../core/Atomic.ts";
+import { type PlayMatchResult, type PlayObject, type PlayObjectMinimal, SOURCE_SOT, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy, type TrackStringOptions } from "../../core/Atomic.ts";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
 import { comparingMultipleArtists, playObjDataMatch, setIntersection } from "../utils.ts";
 import { comparePlayTemporally, hasAcceptableTemporalAccuracy, temporalAccuracyToString, type TemporalPlayComparisonOptions, temporalPlayComparisonSummary } from "./TimeUtils.ts";

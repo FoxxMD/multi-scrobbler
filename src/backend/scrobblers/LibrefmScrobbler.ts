@@ -1,7 +1,6 @@
 import { type EventEmitter } from "events";
 import { type Logger } from "@foxxmd/logging";
 import LastfmScrobbler from "./LastfmScrobbler.ts";
-import { Notifiers } from "../notifier/Notifiers.ts";
 import { type LibrefmClientConfig } from "../common/infrastructure/config/client/librefm.ts";
 import { formatPlayObj, LIBREFM_HOST, LIBREFM_PATH } from "../common/vendor/LastfmApiClient.ts";
 import { type LastfmClientConfig, type LastfmData } from "../common/infrastructure/config/client/lastfm.ts";

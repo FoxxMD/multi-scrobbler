@@ -1,4 +1,4 @@
-import { assert, expect } from 'chai';
+import { expect } from 'chai';
 import { describe, it } from 'mocha';
 import { closeToPlayEnd, closeToPlayStart, repeatDurationPlayed, timePassesScrobbleThreshold } from '../../utils/TimeUtils.ts';
 import { DEFAULT_CLOSE_POSITION_ABSOLUTE, DEFAULT_CLOSE_POSITION_PERCENT, DEFAULT_DURATION_REPEAT_ABSOLUTE, DEFAULT_DURATION_REPEAT_PERCENT, DEFAULT_SCROBBLE_DURATION_THRESHOLD, DEFAULT_SCROBBLE_PERCENT_THRESHOLD } from '../../common/infrastructure/Atomic.ts';

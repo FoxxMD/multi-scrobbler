@@ -2,8 +2,8 @@ import dayjs, { type Dayjs } from "dayjs";
 import EventEmitter from "events";
 import SpotifyWebApi from "spotify-web-api-node";
 import request from 'superagent';
-import { type BrainzMeta, type PlayObject, type PlayObjectMinimal, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, type ScrobbleTsSOC, type SpotifyMeta } from "../../core/Atomic.ts";
-import { artistNamesToCredits, artistNameToCredit, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
+import { type BrainzMeta, type PlayObject, type PlayObjectMinimal, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, type ScrobbleTsSOC } from "../../core/Atomic.ts";
+import { artistNameToCredit, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.ts";
 import {

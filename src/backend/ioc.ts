@@ -11,10 +11,9 @@ import { type CacheConfigOptions, type MusicBrainzSingletonMap } from "./common/
 import { MSCache } from "./common/Cache.ts";
 import TransformerManager from "./common/transforms/TransformerManager.ts";
 import { type TransformerCommonConfig } from "../core/Atomic.ts";
-import prom, { Counter, Gauge } from 'prom-client';
+import prom from 'prom-client';
 import { CoverArtApiClient } from "./common/vendor/musicbrainz/CoverArtApiClient.ts";
 import { version } from "./version.ts";
-import { type StaggerOptions } from "./utils/AsyncUtils.ts";
 import { type DbConcrete } from "./common/database/drizzle/drizzleUtils.ts";
 
 let root: ReturnType<typeof createRoot>;

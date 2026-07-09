@@ -15,7 +15,7 @@ import { findDelimiters } from "../../../core/StringUtils.ts";
 import { UpstreamError } from "../errors/UpstreamError.ts";
 import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type PagelessListensTimeRangeOptions, type PagelessTimeRangeListens, type PagelessTimeRangeListensResult } from "../infrastructure/Atomic.ts";
 import { DELIMITERS } from '../../../core/Atomic.ts';
-import { DEFAULT_ITEMS_PER_GET_LZ, type ListenBrainzClientData, MAX_ITEMS_PER_GET_LZ } from "../infrastructure/config/client/listenbrainz.ts";
+import { type ListenBrainzClientData, MAX_ITEMS_PER_GET_LZ } from "../infrastructure/config/client/listenbrainz.ts";
 import AbstractApiClient from "./AbstractApiClient.ts";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.ts';
 import { unique } from '../../utils.ts';

@@ -1,6 +1,7 @@
 // For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
 import storybook from "eslint-plugin-storybook";
 import boundaries from 'eslint-plugin-boundaries';
+import unusedImports from 'eslint-plugin-unused-imports';
 
 import { defineConfig, globalIgnores } from "eslint/config";
 
@@ -35,14 +36,18 @@ export default defineConfig([
     globalIgnores([
         'docsite/build',
         'docsite/.docusaurus',
-        'public/mockServiceWorker.js'
+        'public/mockServiceWorker.js',
+        'dist'
     ]),
     {
         plugins: {
             "prefer-arrow-functions": arrow,
-            js
+            js,
+            'unused-imports': unusedImports
         },
-        rules: defaultRules,
+        rules: {
+            ...defaultRules,
+        },
         extends: [
             tsEslint.configs.recommended,
             "js/recommended"
@@ -91,8 +96,12 @@ export default defineConfig([
     {
         // https://typescript-eslint.io/troubleshooting/faqs/eslint#i-get-errors-from-the-no-undef-rule-about-global-variables-not-being-defined-even-though-there-are-no-typescript-errors
         files: ['**/*.{ts,tsx,mts,cts}'],
+        plugins: {
+            'unused-imports': unusedImports
+        },
         rules: {
-        'no-undef': 'off',
+            'no-undef': 'off',
+            'unused-imports/no-unused-imports': 'error'
         }
     }, 
     // this ruleset helps keep backend, frontend, and core keep imports isolated
@@ -142,7 +151,7 @@ export default defineConfig([
         ],
         // Optional: flag any file under src/ that doesn't match one of the
         // three element patterns above (catches stray/misplaced files)
-        'boundaries/no-unknown': 'error',
+        'boundaries/no-unknown': 'error'
         },
     }
 ]);

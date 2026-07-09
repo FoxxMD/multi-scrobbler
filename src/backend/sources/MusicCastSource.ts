@@ -8,9 +8,9 @@ import {
     type PlayerStateData,
     SINGLE_USER_PLATFORM_ID,
 } from "../common/infrastructure/Atomic.ts";
-import { isPortReachable, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.ts";
+import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.ts";
 import { type DeviceInfoResponse, type DeviceStatusResponse, MusicCastResponseCodes, type MusicCastSourceConfig, playbackToReportedStatus, type PlayInfoCDResponse, type PlayInfoNetResponse } from "../common/infrastructure/config/source/musiccast.ts";
-import request, { Request, Response } from 'superagent';
+import request from 'superagent';
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import { artistNamesToCredits } from "../../core/StringUtils.ts";
 

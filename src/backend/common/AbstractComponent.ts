@@ -31,7 +31,7 @@ import { objectsEqual } from "../utils/DataUtils.ts";
 import { type RetentionOptions } from "./infrastructure/config/database.ts";
 import { getRetentionCompactAfterFromEnv, getRetentionDeleteAfterFromEnv, isCompactableProperty, parseRetentionOptions, parseRetentionOptionsDurations } from "./database/Database.ts";
 import { type DbConcrete } from "./database/drizzle/drizzleUtils.ts";
-import { type ComponentMinimalSelect, type ComponentSelect } from "./database/drizzle/drizzleTypes.ts";
+import { type ComponentSelect } from "./database/drizzle/drizzleTypes.ts";
 import { DrizzlePlayRepository } from "./database/drizzle/repositories/PlayRepository.ts";
 import { type ClientType } from "./infrastructure/config/client/clients.ts";
 import { type SourceType } from "./infrastructure/config/source/sources.ts";

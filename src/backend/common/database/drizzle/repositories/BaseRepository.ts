@@ -4,7 +4,7 @@ import { type Dayjs } from "dayjs";
 import { type RelationsFieldFilter, eq, inArray } from "drizzle-orm";
 import { loggerNoop } from "../../../MaybeLogger.ts";
 import { capitalize } from "../../../../../core/StringUtils.ts";
-import { getConfigByTableName, relations, type TableName } from "../schema/schema.ts";
+import { getConfigByTableName, type TableName } from "../schema/schema.ts";
 import assert from 'node:assert';
 import { Cacheable } from "cacheable";
 import { type DateLike } from "../../../../../core/Atomic.ts";

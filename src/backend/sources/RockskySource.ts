@@ -2,7 +2,6 @@ import EventEmitter from "events";
 import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import { type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.ts";
-import { type PlayPlatformId } from '../../core/Atomic.ts';
 import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
 import MemorySource from "./MemorySource.ts";
 import { RockSkyApiClient } from "../common/vendor/RockSkyApiClient.ts";

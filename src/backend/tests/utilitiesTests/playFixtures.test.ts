@@ -1,6 +1,4 @@
-import { loggerTest } from "@foxxmd/logging";
-import { assert, expect } from 'chai';
-import clone from "clone";
+import { assert } from 'chai';
 import { describe, it } from 'mocha';
 import { generatePlayWithLifecycle, playWithLifecycleScrobble } from "../../../core/tests/utils/fixtures.ts";
 

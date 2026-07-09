@@ -4,7 +4,6 @@ import { generateComponentEntity, generateInputEntity, generatePlayEntity } from
 import { type PlayNew } from "../../common/database/drizzle/drizzleTypes.ts";
 import { type PlayInputNew } from "../../common/database/drizzle/drizzleTypes.ts";
 import { type ComponentNew } from "../../common/database/drizzle/drizzleTypes.ts";
-import { type ObjectPlayData } from "../../../core/Atomic.ts";
 
 export const fixtureCreateComponent = (data: Partial<ComponentNew> = {}): ComponentNew => {
     return generateComponentEntity(

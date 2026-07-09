@@ -2,7 +2,6 @@ import preview from "../../../.storybook/preview.js";
 import React from 'react';
 import { Container } from '@chakra-ui/react';
 
-import { fn } from 'storybook/test';
 import { ErrorAlert } from "../../client/components/ErrorAlert.js";
 import {Provider} from "../../client/components/Provider.js";
 import { type ErrorLike } from "../../core/Atomic.js";

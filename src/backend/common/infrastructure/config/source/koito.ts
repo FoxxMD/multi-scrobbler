@@ -1,5 +1,4 @@
 import { type KoitoData } from "../client/koito.ts";
-import { type ListenBrainzData } from "../client/listenbrainz.ts";
 import { type PollingOptions } from "../common.ts";
 import { type CommonSourceConfig, type CommonSourceData } from "./index.ts";
 

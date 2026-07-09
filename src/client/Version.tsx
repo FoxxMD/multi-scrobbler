@@ -1,7 +1,6 @@
 import React, {type ComponentProps} from 'react';
-import { type QueryFunctionContext, queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type QueryFunctionContext, useQuery } from '@tanstack/react-query';
 import {createApi, fetchBaseQuery} from "@reduxjs/toolkit/query/react";
-import { Span } from '@chakra-ui/react';
 
 import ky from 'ky';
 import { baseUrl } from './utils';

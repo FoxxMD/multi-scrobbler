@@ -6,14 +6,13 @@ import utc from 'dayjs/plugin/utc.js';
 import { type Request } from "express";
 // https://github.com/jfromaniello/url-join#in-nodejs
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
-import { DEFAULT_MISSING_MBIDS_TYPES, DEFAULT_MISSING_TYPES, type MissingMbidType, type PlayObject } from "../core/Atomic.ts";
+import { DEFAULT_MISSING_MBIDS_TYPES, type MissingMbidType, type PlayObject } from "../core/Atomic.ts";
 import {
     asPlayerStateDataMaybePlay,
     NO_DEVICE,
     NO_USER,
     type PlayerStateDataMaybePlay,
     type ProgressAwarePlayObject,
-    type RegExResult,
     type RemoteIdentityParts,
     type ScrobbleThresholdResult,
 } from "./common/infrastructure/Atomic.ts";

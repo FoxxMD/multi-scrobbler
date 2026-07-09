@@ -1,4 +1,4 @@
-import { childLogger, type Logger, type LogLevel } from "@foxxmd/logging";
+import { childLogger, type Logger } from "@foxxmd/logging";
 import EventEmitter from "events";
 import fsPromise from 'node:fs/promises';
 import fs from 'node:fs';
@@ -8,18 +8,16 @@ import { Readable } from 'stream';
 import { type PlayObject, type SourcePlayerObj } from "../../core/Atomic.ts";
 import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
-import { type FormatPlayObjectOptions, CALCULATED_PLAYER_STATUSES, type ReportedPlayerStatus, type InternalConfigOptional } from "../common/infrastructure/Atomic.ts";
+import { type FormatPlayObjectOptions, type InternalConfigOptional } from "../common/infrastructure/Atomic.ts";
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
-import { Notifiers } from "../notifier/Notifiers.ts";
 
 import { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractScrobbleClient.ts";
 import { type TealClientConfig } from "../common/infrastructure/config/client/tealfm.ts";
 import { ATProtoAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.ts";
 import { playToRecord, TealApiClient } from "../common/vendor/teal/TealApiClient.ts";
 import { playToStatusRecord } from "../common/vendor/teal/TealApiClient.ts";
-import { nowPlayingExpirationDuration } from "./AbstractScrobbleClient.ts";
 import { recordToPlay } from "../common/vendor/teal/TealApiClient.ts";
-import dayjs, { type Dayjs } from "dayjs";
+import dayjs from "dayjs";
 import { isDebugMode } from "../utils.ts";
 import { durationToHuman } from '../../core/TimeUtils.ts';
 import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient.ts";

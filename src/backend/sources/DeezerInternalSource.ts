@@ -1,13 +1,13 @@
 import dayjs from "dayjs";
 import EventEmitter from "events";
-import request, { Request, Response, type SuperAgent } from 'superagent';
+import request, { Request } from 'superagent';
 import { type PlayObject, type PlayObjectMinimal, SOURCE_SOT, TA_CLOSE, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy } from "../../core/Atomic.ts";
 import { DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.ts";
-import { type DeezerInternalSourceConfig, type DeezerInternalTrackData, type DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.ts";
+import { type DeezerInternalSourceConfig, type DeezerInternalTrackData } from "../common/infrastructure/config/source/deezer.ts";
 import { TRANSFORM_HOOK } from "../../core/Transform.ts";
 import { parseRetryAfterSecsFromObj, playObjDataMatch, sleep, sortByOldestPlayDate} from "../utils.ts";
-import AbstractSource, { type RecentlyPlayedOptions } from "./AbstractSource.ts";
-import { CookieJar, Cookie } from 'tough-cookie';
+import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import { CookieJar } from 'tough-cookie';
 import { MixedCookieAgent } from 'http-cookie-agent/http';
 import MemorySource from "./MemorySource.ts";
 import { genericSourcePlayMatch } from "../utils/PlayComparisonUtils.ts";

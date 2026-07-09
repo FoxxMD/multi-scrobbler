@@ -6,7 +6,6 @@ import { EndpointListenbrainzSource, playStateFromRequest, parseDisplayIdentifie
 import { LZEndpointNotifier } from "../sources/ingressNotifiers/LZEndpointNotifier.ts";
 import ScrobbleSources from "../sources/ScrobbleSources.ts";
 import { nonEmptyBody } from "./middleware.ts";
-import { isDebugMode } from "../utils.ts";
 import { type PlayingNowPayload } from '../../core/vendor/listenbrainz/interfaces.ts';
 import ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';

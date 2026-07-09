@@ -1,4 +1,4 @@
-import { type Logger, type LogDataPretty, type LogLevel } from '@foxxmd/logging';
+import { type Logger, type LogDataPretty } from '@foxxmd/logging';
 import type { Dayjs, ManipulateType } from "dayjs";
 import { type Request, type Response } from "express";
 import type { NextFunction, ParamsDictionary, Query } from "express-serve-static-core";

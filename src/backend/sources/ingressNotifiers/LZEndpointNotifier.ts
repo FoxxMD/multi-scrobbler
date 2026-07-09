@@ -1,6 +1,6 @@
 import { type Logger } from "@foxxmd/logging";
 import { type Request } from "express";
-import { EndpointListenbrainzSource, parseIdentifiersFromRequest } from "../EndpointListenbrainzSource.ts";
+import { parseIdentifiersFromRequest } from "../EndpointListenbrainzSource.ts";
 import { IngressNotifier } from "./IngressNotifier.ts";
 
 export class LZEndpointNotifier extends IngressNotifier {

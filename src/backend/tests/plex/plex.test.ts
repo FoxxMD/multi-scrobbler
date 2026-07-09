@@ -1,5 +1,5 @@
 import { loggerTest } from "@foxxmd/logging";
-import { assert, expect } from 'chai';
+import { expect } from 'chai';
 import EventEmitter from "events";
 import { describe, it } from 'mocha';
 import { type PlayMeta } from "../../../core/Atomic.ts";

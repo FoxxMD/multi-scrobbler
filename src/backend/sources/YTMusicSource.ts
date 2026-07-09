@@ -21,7 +21,7 @@ import AbstractSource, { type RecentlyPlayedOptions } from "./AbstractSource.ts"
 import { artistNamesToCredits, buildTrackString, truncateStringToLength } from "../../core/StringUtils.ts";
 import { joinedUrl } from "../utils/NetworkUtils.ts";
 import { todayAwareFormat } from "../../core/TimeUtils.ts";
-import { parseArrayFromMaybeString, parseArtistCredits, parseCredits } from "../utils/StringUtils.ts";
+import { parseArrayFromMaybeString, parseArtistCredits } from "../utils/StringUtils.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import { FixedSizeList } from "fixed-size-list";
 

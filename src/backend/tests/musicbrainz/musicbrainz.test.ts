@@ -1,8 +1,7 @@
 import * as dotenv from 'dotenv';
-import { loggerTest, loggerDebug, childLogger } from "@foxxmd/logging";
-import chai, { assert, expect } from 'chai';
-import asPromised from 'chai-as-promised';
-import { after, before, describe, it } from 'mocha';
+import { loggerTest } from "@foxxmd/logging";
+import { expect } from 'chai';
+import { before, describe, it } from 'mocha';
 import { initMemoryCache } from "../../common/Cache.ts";
 import { Cacheable } from "cacheable";
 import MusicbrainzTransformer, { DEFAULT_SEARCHTYPE_ORDER, type MusicbrainzTransformerDataStage } from "../../common/transforms/MusicbrainzTransformer.ts";
@@ -15,7 +14,7 @@ import { http, HttpResponse, delay } from "msw";
 import { generatePlay, withBrainz } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { intersect, missingMbidTypes } from '../../utils.ts';
 import { CoverArtApiClient, type CoverArtApiConfig } from '../../common/vendor/musicbrainz/CoverArtApiClient.ts';
-import { artistCreditToName, artistNamesToCredits, artistNameToCredit } from '../../../core/StringUtils.ts';
+import { artistNamesToCredits, artistNameToCredit } from '../../../core/StringUtils.ts';
 
 const envPath = path.join(projectDir, '.env');
 dotenv.config({ path: envPath });

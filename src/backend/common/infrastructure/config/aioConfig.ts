@@ -5,7 +5,7 @@ import { type RequestRetryOptions } from "./common.ts";
 import { type WebhookConfig } from "./health/webhooks.ts";
 import { type CommonSourceOptions, type SourceRetryOptions } from "./source/index.ts";
 import { type SourceAIOConfig } from "./source/sources.ts";
-import { type CacheConfigOptions, type CacheConfigUser, type DurationValue } from "../Atomic.ts";
+import { type CacheConfigUser, type DurationValue } from "../Atomic.ts";
 import { type TransformerCommonConfig } from "../../../../core/Atomic.ts";
 import { type RetentionConfig } from "./database.ts";
 

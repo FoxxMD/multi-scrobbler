@@ -1,26 +1,23 @@
 import EventEmitter from "events";
 import { type BrainzMeta, type PlayObject, type PlayObjectMinimal, type URLData } from "../../core/Atomic.ts";
-import { artistNamesToCredits, buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
+import { artistNamesToCredits, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
 import {
     asPlayerStateDataMaybePlay,
     type FormatPlayObjectOptions,
     type InternalConfig,
     MBID_VARIOUS_ARTISTS,
-    NO_USER,
-    type PlayerStateData,
     type PlayerStateDataMaybePlay,
     REPORTED_PLAYER_STATUSES
 } from "../common/infrastructure/Atomic.ts";
 import { type PlayPlatformId } from '../../core/Atomic.ts';
-import { getFirstNonEmptyString, getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.ts";
-import { genGroupIdStr } from '../../core/PlayUtils.ts';
+import { getFirstNonEmptyString, isDebugMode, } from "../utils.ts";
 import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.ts";
 import { type GetSessionsMetadata } from "@lukehagar/plexjs/sdk/models/operations/getsessions.js";
 import { PlexAPI, HTTPClient, type Fetcher } from "@lukehagar/plexjs";
 import { Agent } from 'undici';
 import { type PlexApiSourceConfig } from "../common/infrastructure/config/source/plex.ts";
-import { isPortReachable, joinedUrl, normalizeWebAddress } from '../utils/NetworkUtils.ts';
-import { type GetTokenDetailsResponse, type GetTokenDetailsUserPlexAccount } from '@lukehagar/plexjs/sdk/models/operations/gettokendetails.js';
+import { isPortReachable, normalizeWebAddress } from '../utils/NetworkUtils.ts';
+import { type GetTokenDetailsUserPlexAccount } from '@lukehagar/plexjs/sdk/models/operations/gettokendetails.js';
 import { parseRegexSingle } from '@foxxmd/regex-buddy-core';
 import { Readable } from 'node:stream';
 import { PlexPlayerState } from './PlayerState/PlexPlayerState.ts';
@@ -32,7 +29,6 @@ import { SDKValidationError } from '@lukehagar/plexjs/sdk/models/errors/sdkvalid
 import { Keyv } from 'cacheable';
 import { initMemoryCache } from "../common/Cache.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
-import clone from 'clone';
 
 const shortDeviceId = truncateStringToLength(10, '');
 

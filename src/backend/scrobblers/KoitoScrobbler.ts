@@ -5,7 +5,6 @@ import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import { type FormatPlayObjectOptions, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.ts";
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
-import { Notifiers } from "../notifier/Notifiers.ts";
 
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.ts";
 import { isDebugMode } from "../utils.ts";

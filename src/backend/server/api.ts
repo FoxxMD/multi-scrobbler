@@ -30,7 +30,7 @@ import { setupAuthRoutes } from "./auth.ts";
 import { setupDeezerRoutes } from "./deezerRoutes.ts";
 import {setupLZEndpointRoutes} from "./endpointListenbrainzRoutes.ts";
 import {setupLastfmEndpointRoutes} from "./endpointLastfmRoutes.ts";
-import { type ClientAwareRequest, type ComponentAwareRequest, makeClientCheckMiddle, makeClientNextMiddle, makeComponentMiddle, makeSourceCheckMiddle, makeSourceNextMiddle, type SourceAwareRequest } from "./middleware.ts";
+import { type ComponentAwareRequest, makeClientCheckMiddle, makeClientNextMiddle, makeComponentMiddle, makeSourceCheckMiddle, makeSourceNextMiddle, type SourceAwareRequest } from "./middleware.ts";
 import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.ts";
 import ScrobbleSources from "../sources/ScrobbleSources.ts";
 import ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
@@ -40,7 +40,7 @@ import { DrizzlePlayRepository, type QueryPlaysOpts, type QueryPlaysOptsJson } f
 import { playSelectToDeadScrobble } from "../common/database/drizzle/entityUtils.ts";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.ts";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
-import { type ComponentClientApi, type ComponentClientApiJson, type ComponentSourceApi, type ComponentSourceApiJson } from "../../core/Api.ts";
+import { type ComponentClientApiJson, type ComponentSourceApiJson } from "../../core/Api.ts";
 import { asDayjsHydratedObject } from "../../core/DataUtils.ts";
 import { type Dayjs } from "dayjs";
 import { asSerializablePlaySelect } from "../../core/PlayMarshalUtils.ts";

@@ -7,7 +7,7 @@ import { cacheFunctions,  parseToRegexOrLiteralSearch, testMaybeRegex, searchAnd
 import { Cacheable } from "cacheable";
 import { hashObject } from "../../utils/StringUtils.ts";
 import { playContentInvariantTransform } from "../../utils/PlayComparisonUtils.ts";
-import { isSimpleError, SkipTransformStageError, StagePrerequisiteError } from "../errors/MSErrors.ts";
+import { SkipTransformStageError, StagePrerequisiteError } from "../errors/MSErrors.ts";
 import { capitalize } from "../../../core/StringUtils.ts";
 import { type StaggerOptions } from "../../utils/AsyncUtils.ts";
 

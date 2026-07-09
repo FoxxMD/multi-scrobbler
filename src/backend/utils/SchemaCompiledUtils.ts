@@ -1,5 +1,5 @@
 import { readFileSync, accessSync } from "node:fs";
-import { constants, promises } from "fs";
+import { constants } from "fs";
 import { resolve } from "path";
 import { projectDir } from "../common/index.ts";
 import { MaybeLogger } from '../common/MaybeLogger.ts';

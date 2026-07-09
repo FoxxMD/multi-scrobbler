@@ -1,4 +1,4 @@
-/* eslint-disable no-case-declarations */
+ 
 import { childLogger, type Logger } from '@foxxmd/logging';
 import dayjs, { type Dayjs } from "dayjs";
 import { type PlayObject, type SourcePlayerObj } from "../../core/Atomic.ts";
@@ -11,7 +11,7 @@ import { type ListenBrainzClientConfig, type ListenBrainzData } from "../common/
 import { type MalojaClientConfig, type MalojaData } from "../common/infrastructure/config/client/maloja.ts";
 import { WildcardEmitter } from "../common/WildcardEmitter.ts";
 import { Notifiers } from "../notifier/Notifiers.ts";
-import { isDebugMode, nonEmptyObj, parseBool } from "../utils.ts";
+import { isDebugMode, nonEmptyObj } from "../utils.ts";
 import { removeUndefinedKeys } from '../../core/DataUtils.ts';
 import { getCommonComponentEnvConfig, readJson } from '../utils/DataUtils.ts';
 import { validateJson } from "../utils/ValidationUtils.ts";

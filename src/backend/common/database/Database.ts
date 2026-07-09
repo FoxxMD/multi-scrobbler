@@ -1,15 +1,13 @@
 import { configDir } from '../index.ts';
 import * as path from 'path';
-import { promises as fs } from 'fs'
 import { childLogger, type Logger } from '@foxxmd/logging';
 import { loggerNoop } from '../MaybeLogger.ts';
-import { fileExists, fileOrDirectoryIsWriteable } from '../../utils/FSUtils.ts';
-import { COMPACTABLE, compactableProperties, type CompactableProperty, DEFAULT_RETENTION_COMPACT_AFTER, DEFAULT_RETENTION_DELETE_AFTER, type RententionGranular, type RetentionConfig, type RetentionConfigValue, type RetentionOption, type RetentionValue, type RetentionValueUnparsed } from '../infrastructure/config/database.ts';
+import { COMPACTABLE, type CompactableProperty, DEFAULT_RETENTION_COMPACT_AFTER, DEFAULT_RETENTION_DELETE_AFTER, type RetentionConfigValue, type RetentionOption, type RetentionValue, type RetentionValueUnparsed } from '../infrastructure/config/database.ts';
 import { type DurationValue } from '../infrastructure/Atomic.ts';
 import { type Duration } from 'dayjs/plugin/duration.js';
 import dayjs from 'dayjs';
 import { parseDurationFromDurationValue } from '../../utils/TimeUtils.ts';
-import assert, { AssertionError } from 'node:assert';
+import assert from 'node:assert';
 import * as sqlite from 'node:sqlite';
 import { parseBoolStrict } from '../../utils.ts';
 import { SimpleError } from '../errors/MSErrors.ts';

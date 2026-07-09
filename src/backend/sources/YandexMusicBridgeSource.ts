@@ -7,7 +7,6 @@ import {
     type InternalConfig,
     NO_DEVICE,
     NO_USER,
-    type PlayerStateData,
     type PlayerStateDataMaybePlay,
     REPORTED_PLAYER_STATUSES,
 } from "../common/infrastructure/Atomic.ts";

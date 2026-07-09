@@ -1,14 +1,14 @@
-/* eslint-disable no-case-declarations */
+ 
 import { childLogger, type Logger } from '@foxxmd/logging';
 import EventEmitter from "events";
-import { type ConfigMeta, type ConfigureAs, type ConfigureAsSource, type InternalConfig, type InternalConfigOptional } from "../common/infrastructure/Atomic.ts";
+import { type ConfigMeta, type ConfigureAsSource, type InternalConfig, type InternalConfigOptional } from "../common/infrastructure/Atomic.ts";
 import { isSourceType } from '../common/infrastructure/config/source/sources.ts';
 import { sourceTypes } from '../common/infrastructure/config/source/sources.ts';
 import { type SourceType } from '../common/infrastructure/config/source/sources.ts';
 import { type AIOConfig, type SourceDefaults } from "../common/infrastructure/config/aioConfig.ts";
 import { type AzuracastData, type AzuracastSourceConfig } from "../common/infrastructure/config/source/azuracast.ts";
 import { type ChromecastData, type ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.ts";
-import { type DeezerData, type DeezerSourceConfig, type DeezerInternalSourceConfig, type DeezerCompatConfig, type DeezerInternalData } from "../common/infrastructure/config/source/deezer.ts";
+import { type DeezerSourceConfig, type DeezerInternalSourceConfig, type DeezerCompatConfig } from "../common/infrastructure/config/source/deezer.ts";
 import { type ListenbrainzEndpointSourceConfig, type ListenbrainzEndpointData } from "../common/infrastructure/config/source/endpointlz.ts";
 import { type LastFMEndpointSourceConfig, type LastFMEndpointData } from "../common/infrastructure/config/source/endpointlfm.ts";
 import {
@@ -46,7 +46,7 @@ import { type KoitoSourceConfig } from '../common/infrastructure/config/source/k
 import { type TealSourceConfig } from '../common/infrastructure/config/source/tealfm.ts';
 import { type RockskySourceConfig } from '../common/infrastructure/config/source/rocksky.ts';
 import { type CommonSourceOptions } from '../common/infrastructure/config/source/index.ts';
-import { type ExternalMetadataTerm, type PlayTransformHooks, type PlayTransformOptions } from '../../core/Transform.ts';
+import { type ExternalMetadataTerm, type PlayTransformHooks } from '../../core/Transform.ts';
 import { type LibrefmSourceConfig } from '../common/infrastructure/config/source/librefm.ts';
 import { type LastfmData } from '../common/infrastructure/config/client/lastfm.ts';
 import { type MalojaData } from '../common/infrastructure/config/client/maloja.ts';
@@ -55,7 +55,6 @@ import { type ListenBrainzData } from '../common/infrastructure/config/client/li
 import { type KoitoData } from '../common/infrastructure/config/client/koito.ts';
 import { type TealData } from '../common/infrastructure/config/client/tealfm.ts';
 import { type RockSkyData } from '../common/infrastructure/config/client/rocksky.ts';
-import { DEFAULT_RETENTION_DELETE_AFTER } from '../common/infrastructure/config/database.ts';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 

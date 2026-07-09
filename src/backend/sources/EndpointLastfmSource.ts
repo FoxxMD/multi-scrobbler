@@ -7,8 +7,7 @@ import {
     type InternalConfig,
     NO_USER,
     type PlayerStateData,
-    REPORTED_PLAYER_STATUSES,
-    type ReportedPlayerStatus
+    REPORTED_PLAYER_STATUSES
 } from "../common/infrastructure/Atomic.ts";
 import { type PlayPlatformId } from '../../core/Atomic.ts';
 import MemorySource from "./MemorySource.ts";

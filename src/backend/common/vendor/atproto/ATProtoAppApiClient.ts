@@ -1,13 +1,10 @@
-import dayjs from 'dayjs';
 import { type AbstractApiOptions } from "../../infrastructure/Atomic.ts";
 import { type TealClientData } from "../../infrastructure/config/client/tealfm.ts";
 import { getATProtoIdentifier } from "./atUtils.ts";
 import { type ATProtoAppData, type ATProtoUserIdentifierData } from "../../infrastructure/config/client/atproto.ts";
 import { ATProtoAuthenticatedApiClient } from "./ATProtoAuthenticatedApiClient.ts";
 import { PasswordSession, type PasswordSessionData } from '@atcute/password-session';
-import { Client, ClientResponseError, parseRateLimitHeaders } from "@atcute/client";
-import { UpstreamError } from "../../errors/UpstreamError.ts";
-import { todayAwareFormat } from '../../../../core/TimeUtils.ts';
+import { Client } from "@atcute/client";
 
 export class ATProtoAppApiClient extends ATProtoAuthenticatedApiClient {
 

@@ -8,7 +8,6 @@ import {
     type AmbPlayObject,
     type ArtistCredit,
     type PlayData,
-    type PlayObject,
     SCROBBLE_TS_SOC_END,
     SCROBBLE_TS_SOC_START,
     type ScrobbleTsSOC,

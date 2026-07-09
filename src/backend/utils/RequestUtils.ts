@@ -3,7 +3,7 @@ import type { VolatileFile } from "formidable";
 import { KNOWN_MEDIA_PROVIDER_URLS } from "../../core/Atomic.ts";
 import { type RequestRetryOptions } from "../common/infrastructure/config/common.ts";
 import { type Logger } from "@foxxmd/logging";
-import request, { Request, Response } from 'superagent';
+import request, { Response } from 'superagent';
 import pRetry, { type RetryContext, type Options } from 'p-retry';
 import { DEFAULT_RETRY_MULTIPLIER } from "../common/infrastructure/Atomic.ts";
 import { SimpleError } from "../common/errors/MSErrors.ts";

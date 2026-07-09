@@ -9,12 +9,9 @@ import { type MalojaClientConfig } from "../common/infrastructure/config/client/
 import {
     type MalojaScrobbleRequestData,
 } from "../common/vendor/maloja/interfaces.ts";
-import { Notifiers } from "../notifier/Notifiers.ts";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.ts";
 import { MalojaApiClient, formatPlayObj as formatMalojaScrobbleToPlay, playToScrobblePayload } from "../common/vendor/maloja/MalojaApiClient.ts";
-import { ScrobbleSubmitError } from "../common/errors/MSErrors.ts";
 import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.ts";
-import dayjs from "dayjs";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 

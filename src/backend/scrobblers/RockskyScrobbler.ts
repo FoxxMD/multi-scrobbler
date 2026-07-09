@@ -7,7 +7,6 @@ import { type FormatPlayObjectOptions, type InternalConfigOptional } from "../co
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.ts";
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
 import { type ListenPayload } from '../../core/vendor/listenbrainz/interfaces.ts';
-import { Notifiers } from "../notifier/Notifiers.ts";
 
 import { isDebugMode } from "../utils.ts";
 import { durationToHuman } from '../../core/TimeUtils.ts';

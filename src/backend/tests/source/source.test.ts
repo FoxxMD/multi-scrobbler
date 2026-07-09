@@ -1,8 +1,8 @@
-import { loggerTest, loggerDebug } from "@foxxmd/logging";
-import chai, { assert, expect } from 'chai';
+import { loggerTest } from "@foxxmd/logging";
+import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import EventEmitter from "events";
-import { after, before, describe, it } from 'mocha';
+import { describe, it } from 'mocha';
 import pEvent from "p-event";
 import clone from 'clone';
 import { type PlayObject } from "../../../core/Atomic.ts";
@@ -11,7 +11,7 @@ import { TestMemoryPositionalSource, TestMemorySource, TestSource } from "./Test
 import spotifyPayload from '../plays/spotifyCurrentPlaybackState.json' with { type: "json" };
 import SpotifySource from "../../sources/SpotifySource.ts";
 import MockDate from 'mockdate';
-import dayjs, { type Dayjs } from "dayjs";
+import dayjs from "dayjs";
 import { REPORTED_PLAYER_STATUSES } from "../../common/infrastructure/Atomic.ts";
 import { type SourceConfig } from "../../common/infrastructure/config/source/sources.ts";
 import MemorySource from "../../sources/MemorySource.ts";

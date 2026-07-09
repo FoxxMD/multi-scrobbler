@@ -1,6 +1,6 @@
 import preview from "../../../.storybook/preview.js";
 import React from 'react';
-import { http, HttpResponse, delay, sse } from 'msw';
+import { http, HttpResponse, sse } from 'msw';
 
 import { Container } from '@chakra-ui/react';
 import { ComponentDetailedDesktop } from "../../client/components/msComponent/MSComponentDetailed.js";

@@ -6,11 +6,9 @@ import {
     type ConditionalSearchAndReplaceRegExp,
     type ConditionalSearchAndReplaceTerm,
     type ExternalMetadataTerm,
-    type PlayTransformParts,
     type PlayTransformStage,
     type SearchAndReplaceTerm,
     STAGE_TYPES,
-    type StageType,
     type StageTypedConfig,
     type WhenConditionsConfig,
     type WhenParts

@@ -1,6 +1,6 @@
 import dayjs, { type Dayjs } from "dayjs";
 import EventEmitter from "events";
-import { type PlayObject, type PlayObjectMinimal, SOURCE_SOT } from "../../core/Atomic.ts";
+import { type PlayObjectMinimal, SOURCE_SOT } from "../../core/Atomic.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
@@ -23,7 +23,7 @@ import { type Logger } from "@foxxmd/logging";
 import { type PlayerStateOptions } from "./PlayerState/AbstractPlayerState.ts";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
-import { artistCreditToName, artistNameToCredit } from "../../core/StringUtils.ts";
+import { artistNameToCredit } from "../../core/StringUtils.ts";
 
 interface WebScrobbleMeta {
     scrobbleAllowed?: boolean

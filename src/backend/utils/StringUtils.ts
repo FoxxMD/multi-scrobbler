@@ -4,7 +4,7 @@ import { type PlayObject } from "../../core/Atomic.ts";
 import { asPlayerStateData, type PlayerStateDataMaybePlay } from "../common/infrastructure/Atomic.ts";
 import { DELIMITERS_NO_AMP } from '../../core/Atomic.ts';
 import { DELIMITERS } from '../../core/Atomic.ts';
-import { getPlatformIdFromData, intersect, parseBool, parseBoolStrict } from "../utils.ts";
+import { getPlatformIdFromData, parseBoolStrict } from "../utils.ts";
 import { genGroupIdStr } from '../../core/PlayUtils.ts';
 import { buildTrackString } from "../../core/StringUtils.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";

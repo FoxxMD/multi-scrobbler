@@ -1,5 +1,4 @@
-import chai, { assert, expect } from 'chai';
-import asPromised from 'chai-as-promised';
+import { expect } from 'chai';
 import { getDb, migrateDb, getDbMigrationStatus, getMigratedDb, type DbConcrete } from '../../common/database/drizzle/drizzleUtils.ts';
 import withLocalTmpDir from 'with-local-tmp-dir';
 import { components, playInputs, plays, queueStates } from '../../common/database/drizzle/schema/schema.ts';

@@ -1,4 +1,4 @@
-import React, {useState, useCallback, Fragment} from 'react';
+import React, {useState, useCallback} from 'react';
 import './player.scss';
 import PlayerTimestamp from "./PlayerTimestamp";
 import {SOURCE_SOT, type SOURCE_SOT_TYPES, type SourcePlayerJson} from "../../../core/Atomic";
