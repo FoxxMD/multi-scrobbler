@@ -2,14 +2,14 @@ import { loggerTest } from "@foxxmd/logging";
 import { assert, expect } from 'chai';
 import EventEmitter from "events";
 import { describe, it } from 'mocha';
-import { type JsonPlayObject, type PlayMeta, type PlayObject } from "../../../core/Atomic.ts";
+import { type JsonPlayObject, type PlayMeta } from "../../../core/Atomic.ts";
 
 import JellyfinApiSource from "../../sources/JellyfinApiSource.ts";
 import validSession from './validSession.json' with { type: "json" };
 import { type JellyApiData } from "../../common/infrastructure/config/source/jellyfin.ts";
 import { generatePlay } from "../../../core/PlayTestUtils.ts";
 import { faker, fakerJA } from "@faker-js/faker";
-import {
+import type {
     // @ts-expect-error weird typings?
     SessionInfo,
     // @ts-expect-error weird typings?

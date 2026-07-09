@@ -1,7 +1,7 @@
 import { loggerTest } from "@foxxmd/logging";
 import dayjs from "dayjs";
 import { EventEmitter } from "events";
-import Mopidy, { models } from "mopidy";
+import Mopidy, { type models } from "mopidy";
 import normalizeUrl from 'normalize-url';
 import pEvent from 'p-event';
 import { URL } from "url";

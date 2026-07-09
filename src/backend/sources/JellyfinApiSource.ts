@@ -1,66 +1,57 @@
-import { type Logger } from "@foxxmd/logging";
 import { WS } from "iso-websocket";
 // @ts-expect-error weird typings?
 import { Api, Jellyfin } from "@jellyfin/sdk";
 import {
     // @ts-expect-error weird typings?
-    AuthenticationResult,
+    type BaseItemDto,
     // @ts-expect-error weird typings?
-    BaseItemDto,
+    type CollectionType,
     // @ts-expect-error weird typings?
-    BaseItemKind,
-    // @ts-expect-error weird typings?
-    ItemSortBy,
+    type ImageUrlsApi,
     // @ts-expect-error weird typings?
     MediaType,
     // @ts-expect-error weird typings?
-    SessionInfo,
+    type SessionInfo,
     // @ts-expect-error weird typings?
-    SortOrder, UserDto, VirtualFolderInfo, CollectionType, CollectionTypeOptions, ImageUrlsApi
+    type UserDto,
+    // @ts-expect-error weird typings?
+    type VirtualFolderInfo
 } from "@jellyfin/sdk/lib/generated-client/index.js";
 import {
     // @ts-expect-error weird typings?
-    getItemsApi,
+    SystemInfoIssue
+} from "@jellyfin/sdk/lib/index.js";
+import {
+    // @ts-expect-error weird typings?
+    getImageApi,
+    // @ts-expect-error weird typings?
+    getLibraryStructureApi,
     // @ts-expect-error weird typings?
     getSessionApi,
     // @ts-expect-error weird typings?
     getSystemApi,
     // @ts-expect-error weird typings?
-    getUserApi,
-    // @ts-expect-error weird typings?
-    getApiKeyApi,
-    // @ts-expect-error weird typings?
-    getLibraryStructureApi,
-    // @ts-expect-error weird typings?
-    getImageApi,
-
+    getUserApi
 } from "@jellyfin/sdk/lib/utils/api/index.js";
-import {
-    // @ts-expect-error weird typings?
-    SystemInfoIssue
-} 
-from "@jellyfin/sdk/lib/index.js";
 import dayjs from "dayjs";
 import EventEmitter from "events";
+import { FixedSizeList } from "fixed-size-list";
 import { type ArtistCredit, type BrainzMeta, type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
-import { artistNamesToCredits, artistNameToCredit, buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
+import { genGroupIdStr } from '../../core/PlayUtils.ts';
+import { artistNameToCredit, buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
-    type PlayerStateData,
     type PlayerStateDataMaybePlay,
     REPORTED_PLAYER_STATUSES
 } from "../common/infrastructure/Atomic.ts";
-import { type PlayPlatformId } from '../../core/Atomic.ts';
 import { type JellyApiSourceConfig } from "../common/infrastructure/config/source/jellyfin.ts";
-import { getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.ts";
-import { genGroupIdStr } from '../../core/PlayUtils.ts';
+import { getPlatformIdFromData, isDebugMode } from "../utils.ts";
+import { noCasePropObj } from "../utils/DataUtils.ts";
 import { joinedUrl } from "../utils/NetworkUtils.ts";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import { hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.ts";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
-import { FixedSizeList } from "fixed-size-list";
-import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
-import { noCasePropObj } from "../utils/DataUtils.ts";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
