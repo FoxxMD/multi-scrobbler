@@ -566,20 +566,17 @@ describe('Repository Operations', function () {
 describe('Serializes Errors', function() {
 
     it('serializes errors correctly', async function () {
+        try {
+            const db = await transientDb();
+            const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
-        await withLocalTmpDir(async () => {
-            try {
-                let [db, _] = await getMigratedDb(getDbPath('ms', process.cwd()));
-                const component = await db.insert(components).values(fixtureCreateComponent()).returning();
-
-                const playRepo = new DrizzlePlayRepository(db);
-                const playData: RepositoryCreatePlayOpts = { ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlayWithLifecycle({ lifecycleSteps: { preCompare: [false] } }) }), state: 'queued', input: { data: undefined } };
-                const p = await playRepo.createPlays([playData]);
-                expect(p[0].play.lifecycle[0].error.cause).is.not.undefined;
-            } catch (e) {
-                throw e;
-            }
-        }, { unsafeCleanup: true, postfix: 'serializeStageError' });
+            const playRepo = new DrizzlePlayRepository(db);
+            const playData: RepositoryCreatePlayOpts = { ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlayWithLifecycle({ lifecycleSteps: { preCompare: [false] } }) }), state: 'queued', input: { data: undefined } };
+            const p = await playRepo.createPlays([playData]);
+            expect(p[0].play.lifecycle[0].error.cause).is.not.undefined;
+        } catch (e) {
+            throw e;
+        }
     });
 
 });
