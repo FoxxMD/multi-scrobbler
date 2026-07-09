@@ -29,7 +29,13 @@ const defaultRules = {
         }
     ],
     "arrow-body-style": ["warn", "as-needed"],
-    "@typescript-eslint/no-explicit-any": "warn"
+    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/no-empty-object-type": [
+        "warn",
+        {
+            "allowInterfaces": 'with-single-extends'
+        }
+    ]
 };
 
 export default defineConfig([
