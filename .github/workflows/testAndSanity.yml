@@ -60,7 +60,7 @@ jobs:
         run: |
           set +e
           export NODE_ENV=production
-          timeout --preserve-status 10s node node_modules/.bin/tsx src/backend/index.ts
+          timeout --preserve-status 10s node src/backend/index.ts
           exitcode="$?"
           if [[ "$exitcode" -eq 143 ]] || [[ "$exitcode" -eq 137 ]]; then
             echo "App stayed up long enough and exited with expected status"
