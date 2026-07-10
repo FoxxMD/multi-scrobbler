@@ -81,14 +81,14 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                     appVersion: version,
                     appContactInfo: mbConfig.contact,
                     baseUrl: u.url.toString(),
-                    preRequest: options.logUrl === true || isDebugMode() ? (method, url, headers) => {
+                    preRequest: (method, url, headers) => {
                         const cacheKey = this.asyncStore.getStore() ?? nanoid();
                         this.cache.set(`${cacheKey}-url`, `${method} - ${url}`);
                         if(mbConfig.apiKey !== undefined) {
                             headers.set('X-Api_key', mbConfig.apiKey);
                         }
                         return [method, url, headers];
-                    } : undefined,
+                    },
                     requestTimeout: mbConfig.requestTimeout ?? 6000,
                     retryLimit: 2
                 });
@@ -170,7 +170,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                     debugUrlData.push(`URL: ${cacheUrl}`);
                 }
                 if(debugUrlData.length > 0) {
-                    this.logger.debug({labels: ['Call Info']}, `\n${debugUrlData.join('\n')}`);
+                    this.logger.trace({labels: ['Call Info']}, `\n${debugUrlData.join('\n')}`);
                 }
             }
 
@@ -350,15 +350,17 @@ export class MusicbrainzApiClient extends AbstractApiClient {
         });
 
         if(res === undefined) {
+            await this.cache.delete(cacheKey);
             throw new Error('results were unexpectedly undefined! API should have thrown...');
         }
 
         if(res.recordings === undefined) {
             this.logger.debug(res);
+            await this.cache.delete(cacheKey);
             throw new Error('results returned but no recordings list in response data, something handled incorrectly?');
         }
 
-        (res as IRecordingMSList).requestQuery = q;
+        (res as IRecordingMSList).requestQuery = `${q}\n${await this.cache.get(`${cacheKey}-url`)}`;
 
         return res as IRecordingMSList;
     }
