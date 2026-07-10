@@ -1,7 +1,7 @@
 import { WS } from "iso-websocket";
 // @ts-expect-error weird typings?
-import type { Api} from "@jellyfin/sdk";
-import { Jellyfin } from "@jellyfin/sdk";
+import type { Api } from "@jellyfin/sdk";
+import { Jellyfin } from "@jellyfin/sdk/lib/jellyfin.js";
 import {
     // @ts-expect-error weird typings?
     type BaseItemDto,
