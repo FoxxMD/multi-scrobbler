@@ -1,7 +1,6 @@
 import preview from "../../../.storybook/preview.js";
 import React from 'react';
 
-import { Container } from '@chakra-ui/react';
 import { MSComponentList } from "../../client/components/msComponent/MSComponentList.js";
 import {Provider} from "../../client/components/Provider.js";
 import { generateClientApiJson, generateSourceApiJson, generateSourcePlayerJson } from "../../core/tests/utils/apiFixtures.js";
@@ -46,7 +45,7 @@ const meta = preview.meta({
     },
 decorators: [
     withRouter,
-    (Story) => (<Provider><Container maxWidth="8xl"><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Container></Provider>),
+    (Story) => (<Provider><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Provider>),
   ]
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });

@@ -72,7 +72,7 @@ const routesNested: RouteObject[] = [
         Component: Layout,
         children: [ {
             index: true,
-            element: <Container boxSize="full" p="0" maxWidth="4xl"><MSErrorBoundary><MSComponentListFetchable/></MSErrorBoundary></Container>,
+            element: <MSErrorBoundary><MSComponentListFetchable/></MSErrorBoundary>,
         },
         {
             path: "components/:componentId",
