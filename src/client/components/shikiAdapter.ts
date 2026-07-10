@@ -7,12 +7,11 @@ import { createOnigurumaEngine } from 'shiki/engine/oniguruma'
 // import githubLight from '@shikijs/themes/github-light';
 //import engine from 'shiki/wasm';
 
-let highlighterSingleton: HighlighterGeneric<any, any>;
+//let highlighterSingleton: HighlighterGeneric<any, any>;
 
 export const shikiAdapter = createShikiAdapter<HighlighterGeneric<any, any>>({
   load: async () => {
-    if (highlighterSingleton == undefined) {
-      highlighterSingleton = await createHighlighterCore({
+    return await createHighlighterCore({
         themes
           : [
             // or a dynamic import if you want to do chunk splitting
@@ -28,9 +27,6 @@ export const shikiAdapter = createShikiAdapter<HighlighterGeneric<any, any>>({
         // `shiki/wasm` contains the wasm binary inlined as base64 string.
         engine: createOnigurumaEngine(import('shiki/wasm'))
       });
-    }
-
-    return highlighterSingleton;
 
     // const { createHighlighter } = await import("shiki")
     // return createHighlighter({
