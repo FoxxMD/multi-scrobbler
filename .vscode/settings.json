@@ -1,5 +1,4 @@
 {
-    "mochaExplorer.require": "tsx/esm",
     "mochaExplorer.timeout": 1200000,
     "mochaExplorer.exit": true,
     "search.exclude": {
