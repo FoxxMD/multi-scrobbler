@@ -611,7 +611,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
         // if brainz meta contains track MBID then we should be able to get the exact release
         let explicitList: IRecordingMatch[];
-        let filtered = false;
+        let filtered: boolean;
         [explicitList, filtered] = filterByExplicitTrackMbid(transformData.recordings, play);
         if(filtered) {
             this.logger.debug(`Found exact release using track MBID`);
@@ -752,8 +752,7 @@ export const filterByValidReleaseStatus = <T extends IRecordingMatch[]>(list: T,
     if(releaseStatusAllow.length === 0 && releaseStatusDeny.length === 0) {
         return list;
     }
-    const releaseFiltered = list.map(x => {
-        return {
+    const releaseFiltered = list.map(x => ({
             ...x,
             releases: x.releases === undefined ? [] : x.releases.filter(y => {
                 if(releaseStatusAllow.length > 0) {
@@ -761,8 +760,7 @@ export const filterByValidReleaseStatus = <T extends IRecordingMatch[]>(list: T,
                 }
                  return !releaseStatusDeny.includes(y.status?.toLocaleLowerCase() as MBReleaseStatus)
             })
-        }
-    });
+        }));
     return releaseFiltered.filter(x => (
         (list.find(y => y.id === x.id).releases ?? []).length === 0 
         && releaseAllowEmpty
@@ -779,8 +777,7 @@ export const filterByValidReleaseGroupPrimary = <T extends IRecordingMatch[]>(li
     if(releaseGroupPrimaryTypeAllow.length === 0 && releaseGroupPrimaryTypeAllow.length === 0) {
         return list;
     }
-    const releaseFiltered = list.map(x => {
-        return {
+    const releaseFiltered = list.map(x => ({
             ...x,
             releases: x.releases === undefined ? [] : x.releases.filter(y => {
                 if(releaseGroupPrimaryTypeAllow.length > 0) {
@@ -788,8 +785,7 @@ export const filterByValidReleaseGroupPrimary = <T extends IRecordingMatch[]>(li
                 }
                  return !releaseGroupPrimaryTypeDeny.includes(y["release-group"]?.["primary-type"]?.toLocaleLowerCase() as MBReleaseGroupPrimaryType)
             })
-        }
-    });
+        }));
     return releaseFiltered.filter(x => (
         (list.find(y => y.id === x.id).releases ?? []).length === 0 
         && releaseAllowEmpty
@@ -806,8 +802,7 @@ export const filterByValidReleaseGroupSecondary = (list: IRecordingMatch[], stag
     if(releaseGroupSecondaryTypeAllow.length === 0 && releaseGroupSecondaryTypeDeny.length === 0) {
         return list;
     }
-    const releaseFiltered = list.map(x => {
-        return {
+    const releaseFiltered = list.map(x => ({
             ...x,
             releases: x.releases === undefined ? [] : x.releases.filter(y => {
                 if(releaseGroupSecondaryTypeAllow.length > 0) {
@@ -815,8 +810,7 @@ export const filterByValidReleaseGroupSecondary = (list: IRecordingMatch[], stag
                 }
                   return intersect(releaseGroupSecondaryTypeDeny, (y["release-group"]?.["secondary-types"] ?? []).map(x => x.toLocaleLowerCase()) as MBReleaseGroupSecondaryType[]).length === 0;
             })
-        }
-    });
+        }));
     return releaseFiltered.filter(x => (
         (list.find(y => y.id === x.id).releases ?? []).length === 0 
         && releaseAllowEmpty
@@ -833,8 +827,7 @@ export const filterByValidReleaseCountry = (list: IRecordingMatch[], stageConfig
     if(releaseCountryAllow.length === 0 && releaseCountryDeny.length === 0) {
         return list;
     }
-    const releaseFiltered = list.map(x => {
-        return {
+    const releaseFiltered = list.map(x => ({
             ...x,
             releases: x.releases === undefined ? [] : x.releases.filter(y => {
                 if(releaseCountryAllow.length > 0) {
@@ -842,8 +835,7 @@ export const filterByValidReleaseCountry = (list: IRecordingMatch[], stageConfig
                 }
                  return !releaseCountryDeny.includes(y.country?.toLocaleLowerCase())
             })
-        }
-    });
+        }));
     return releaseFiltered.filter(x => (
         (list.find(y => y.id === x.id).releases ?? []).length === 0 
         && releaseAllowEmpty
@@ -862,8 +854,7 @@ export const filterByExplicitTrackMbid = (list: IRecordingMatch[], play: PlayObj
             break;
         }
         for (const rel of rec.releases) {
-            // @ts-ignore
-            if (rel.media.some(x => x.track.some(y => y.id === play.data.meta.brainz.track))) {
+            if (rel.media.some(x => x.tracks.some(y => y.id === play.data.meta.brainz.track))) {
                 releaseMatchId = rel.id;
                 recMatch = rec;
                 break;
