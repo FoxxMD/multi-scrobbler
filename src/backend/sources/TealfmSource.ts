@@ -1,12 +1,12 @@
-import EventEmitter from "events";
+import type EventEmitter from "events";
 import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
-import { type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.ts";
-import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import type {FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic.ts";
+import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import MemorySource from "./MemorySource.ts";
 import { TealApiClient } from "../common/vendor/teal/TealApiClient.ts";
 import { recordToPlay } from "../common/vendor/teal/TealApiClient.ts";
-import { type TealSourceConfig } from "../common/infrastructure/config/source/tealfm.ts";
+import type {TealSourceConfig} from "../common/infrastructure/config/source/tealfm.ts";
 import { ATProtoAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.ts";
 import { parseArrayFromMaybeString } from "../utils/StringUtils.ts";
 

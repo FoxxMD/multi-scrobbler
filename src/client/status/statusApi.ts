@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import {type ClientStatusData, type SourceStatusData} from "../../core/Atomic";
+import type {ClientStatusData, SourceStatusData} from "../../core/Atomic";
 
 export const statusApi = createApi({
     reducerPath: 'statusApi',

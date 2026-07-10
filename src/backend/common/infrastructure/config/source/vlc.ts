@@ -1,6 +1,6 @@
-import { type VlcMeta } from "vlc-client/dist/Types.js";
-import { type PollingOptions } from "../common.ts";
-import { type CommonSourceConfig, type CommonSourceData, type CommonSourceOptions } from "./index.ts";
+import type {VlcMeta} from "vlc-client/dist/Types.js";
+import type {PollingOptions} from "../common.ts";
+import type {CommonSourceConfig, CommonSourceData, CommonSourceOptions} from "./index.ts";
 
 export interface VLCData extends CommonSourceData, PollingOptions {
     /**

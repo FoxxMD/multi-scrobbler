@@ -1,8 +1,8 @@
-import { type Logger } from "@foxxmd/logging";
+import type { Logger } from "@foxxmd/logging";
 import {truncateStringToLength } from "../../core/StringUtils.ts";
 import { hasNodeNetworkException } from "./errors/NodeErrors.ts";
 import { hasUpstreamError } from "./errors/UpstreamError.ts";
-import { type WebhookPayload } from "./infrastructure/config/health/webhooks.ts";
+import type {WebhookPayload} from "./infrastructure/config/health/webhooks.ts";
 import { AuthCheckError, BuildDataError, ConnectionCheckError, ParseCacheError, PostInitError, StageError } from "./errors/MSErrors.ts";
 import { messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.ts";
 import { spawn } from 'abort-controller-x';

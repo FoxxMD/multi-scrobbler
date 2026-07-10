@@ -1,11 +1,11 @@
-import { type KoitoClientAIOConfig, type KoitoClientConfig } from "./koito.ts";
-import { type LastfmClientAIOConfig, type LastfmClientConfig } from "./lastfm.ts";
-import { type ListenBrainzClientAIOConfig, type ListenBrainzClientConfig } from "./listenbrainz.ts";
-import { type MalojaClientAIOConfig, type MalojaClientConfig } from "./maloja.ts";
-import { type TealClientAIOConfig, type TealClientConfig } from "./tealfm.ts";
-import { type RockSkyClientAIOConfig, type RockSkyClientConfig } from "./rocksky.ts";
-import { type LibrefmClientConfig, type LibrefmClientAIOConfig } from "./librefm.ts";
-import { type DiscordClientAIOConfig, type DiscordClientConfig } from "./discord.ts";
+import type {KoitoClientAIOConfig, KoitoClientConfig} from "./koito.ts";
+import type {LastfmClientAIOConfig, LastfmClientConfig} from "./lastfm.ts";
+import type {ListenBrainzClientAIOConfig, ListenBrainzClientConfig} from "./listenbrainz.ts";
+import type {MalojaClientAIOConfig, MalojaClientConfig} from "./maloja.ts";
+import type {TealClientAIOConfig, TealClientConfig} from "./tealfm.ts";
+import type {RockSkyClientAIOConfig, RockSkyClientConfig} from "./rocksky.ts";
+import type {LibrefmClientConfig, LibrefmClientAIOConfig} from "./librefm.ts";
+import type {DiscordClientAIOConfig, DiscordClientConfig} from "./discord.ts";
 
 export type ClientConfig = 
 MalojaClientConfig 
@@ -57,23 +57,3 @@ export const clientInterfaces = [
     ...atomicClientInterfaces
 ];
 
-export type ClientType =
-    'maloja'
-    | 'lastfm'
-    | 'librefm'
-    | 'listenbrainz'
-    | 'koito'
-    | 'tealfm'
-    | 'rocksky'
-    | 'discord';
-    
-export const clientTypes: ClientType[] = [
-    'maloja',
-    'lastfm',
-    'librefm',
-    'listenbrainz',
-    'koito',
-    'tealfm',
-    'rocksky',
-    'discord'
-];

@@ -1,11 +1,12 @@
-import { createPlatform, Media, MediaController, PersistentClient } from "@foxxmd/chromecast-client";
+import type { Media} from "@foxxmd/chromecast-client";
+import { createPlatform, MediaController, PersistentClient } from "@foxxmd/chromecast-client";
 import { ContextualValidationError } from "@foxxmd/chromecast-client/dist/cjs/src/utils.js";
 import { childLogger, type Logger } from "@foxxmd/logging";
 import { Client as CastClient } from 'castv2';
 import dayjs from "dayjs";
-import { EventEmitter } from "events";
+import type { EventEmitter } from "events";
 import e from "express";
-import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
+import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
 import { artistNamesToCredits, buildTrackString } from "../../core/StringUtils.ts";
 import { NETWORK_ERROR_FAILURE_CODES } from "../common/errors/NodeErrors.ts";
 import {
@@ -16,7 +17,7 @@ import {
     type PlayerStateData,
     type SourceData,
 } from "../common/infrastructure/Atomic.ts";
-import { type ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.ts";
+import type {ChromecastSourceConfig} from "../common/infrastructure/config/source/chromecast.ts";
 import { MaybeLogger } from '../common/MaybeLogger.ts';
 import {
     chromePlayerStateToReported,
@@ -25,16 +26,12 @@ import {
     getCurrentPlatformApplications,
     getMediaStatus,
 } from "../common/vendor/chromecast/ChromecastClientUtils.ts";
-import {
-    type PlatformApplication,
-    type PlatformApplicationWithContext,
-    type PlatformType
-} from "../common/vendor/chromecast/interfaces.ts";
+import type {PlatformApplication, PlatformApplicationWithContext, PlatformType} from "../common/vendor/chromecast/interfaces.ts";
 import { difference, isDebugMode, parseBool } from "../utils.ts";
 import { genGroupIdStr } from '../../core/PlayUtils.ts';
 import { findCauseByReference } from "../utils/ErrorUtils.ts";
 import { discoveryAvahi, discoveryNative } from "../utils/MDNSUtils.ts";
-import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 

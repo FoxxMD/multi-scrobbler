@@ -1,6 +1,6 @@
 import React from 'react';
 import './trackInfo.scss';
-import {type SourcePlayerJson} from "../../../core/Atomic";
+import type {SourcePlayerJson} from "../../../core/Atomic";
 import {isoToHuman} from "../../utils/index";
 
 export interface PlayerInfoProps {

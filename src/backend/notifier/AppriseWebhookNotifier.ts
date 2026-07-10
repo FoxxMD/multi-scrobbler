@@ -1,17 +1,13 @@
-import { type Logger } from "@foxxmd/logging";
-import request, { Request } from "superagent";
+import type {Logger} from "@foxxmd/logging";
+import type { Request } from "superagent";
+import request from "superagent";
 import { truncateStringToLength } from "../../core/StringUtils.ts";
 import { isSuperAgentResponseError } from "../common/errors/ErrorUtils.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import { UpstreamError } from "../common/errors/UpstreamError.ts";
-import {
-    type AppriseConfig,
-    type PrioritiesConfig,
-    type Priority,
-    type WebhookPayload
-} from "../common/infrastructure/config/health/webhooks.ts";
+import type {AppriseConfig, PrioritiesConfig, Priority, WebhookPayload} from "../common/infrastructure/config/health/webhooks.ts";
 import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.ts";
-import { type URLData } from "../../core/Atomic.ts";
+import type {URLData} from "../../core/Atomic.ts";
 import { isPortReachable, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.ts";
 import { isDebugMode } from "../utils.ts";
 

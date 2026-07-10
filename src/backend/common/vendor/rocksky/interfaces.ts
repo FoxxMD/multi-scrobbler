@@ -1,3 +1,3 @@
-import { type ScrobbleViewBasic } from "@rocksky/sdk";
+import type {ScrobbleViewBasic} from "@rocksky/sdk";
 
 export type RockskyScrobble = ScrobbleViewBasic;

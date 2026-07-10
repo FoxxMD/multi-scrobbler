@@ -1,11 +1,11 @@
 import { loggerTest } from "@foxxmd/logging";
 import dayjs from "dayjs";
-import { EventEmitter } from "events";
+import type { EventEmitter } from "events";
 import Mopidy, { type models } from "mopidy";
 import normalizeUrl from 'normalize-url';
 import pEvent from 'p-event';
 import { URL } from "url";
-import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
+import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
 import { artistNamesToCredits, buildTrackString } from "../../core/StringUtils.ts";
 import {
     type FormatPlayObjectOptions,
@@ -13,8 +13,8 @@ import {
     type PlayerStateData,
     SINGLE_USER_PLATFORM_ID,
 } from "../common/infrastructure/Atomic.ts";
-import { type MopidySourceConfig } from "../common/infrastructure/config/source/mopidy.ts";
-import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import type {MopidySourceConfig} from "../common/infrastructure/config/source/mopidy.ts";
+import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 

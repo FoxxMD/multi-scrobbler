@@ -1,5 +1,5 @@
 import {createApi, fetchBaseQuery} from "@reduxjs/toolkit/query/react";
-import {type DeadLetterScrobble, type JsonPlayObject} from "../../core/Atomic";
+import type {DeadLetterScrobble, JsonPlayObject} from "../../core/Atomic";
 import {createAction, createEntityAdapter, createSlice} from "@reduxjs/toolkit";
 import {type ApiEventPayload, clientUpdate} from "../status/ducks";
 

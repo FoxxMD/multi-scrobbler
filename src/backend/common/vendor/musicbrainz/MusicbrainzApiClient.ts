@@ -1,13 +1,13 @@
-import { Response } from 'superagent';
-import { type ArtistCredit, type PlayObject, type PlayObjectMinimal, type URLData } from "../../../../core/Atomic.ts";
+import type { Response } from 'superagent';
+import type {ArtistCredit, PlayObject, PlayObjectMinimal, URLData} from "../../../../core/Atomic.ts";
 import { UpstreamError } from "../../errors/UpstreamError.ts";
 import { type AbstractApiOptions, type FormatPlayObjectOptions, MUSICBRAINZ_URL, type MusicbrainzApiConfigData } from "../../infrastructure/Atomic.ts";
 import AbstractApiClient from "../AbstractApiClient.ts";
 import { isPortReachableConnect, normalizeWebAddress } from '../../../utils/NetworkUtils.ts';
 import { MusicBrainzApi, type IRecording, type IRecordingList, type IRelease } from 'musicbrainz-api';
-import { difference, isDebugMode, sleep } from "../../../utils.ts";
+import { difference, sleep } from "../../../utils.ts";
 import {SequentialRoundRobin} from 'round-robin-js';
-import { Cacheable } from "cacheable";
+import type { Cacheable } from "cacheable";
 import { getRoot } from "../../../ioc.ts";
 import { version } from "../../../version.ts";
 import { hashObject } from "../../../utils/StringUtils.ts";
@@ -19,7 +19,7 @@ import { stripIndents } from "common-tags";
 import { hasNodeNetworkException } from '../../errors/NodeErrors.ts';
 import { SimpleError } from '../../errors/MSErrors.ts';
 import { baseFormatPlayObj } from '../../../utils/PlayTransformUtils.ts';
-import { type IRecordingMSList } from '../../transforms/MusicbrainzTransformer.ts';
+import type {IRecordingMSList} from '../../transforms/MusicbrainzTransformer.ts';
 import dayjs, { type Dayjs } from 'dayjs';
 import { artistCreditsToNames } from '../../../../core/StringUtils.ts';
 

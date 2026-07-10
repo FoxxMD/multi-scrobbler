@@ -1,13 +1,14 @@
 /* eslint-disable prefer-arrow-functions/prefer-arrow-functions */
-import { type Express } from 'express';
+import type {Express} from 'express';
 import { childLogger, type Logger } from "@foxxmd/logging";
 import bodyParser from "body-parser";
-import { EndpointListenbrainzSource, playStateFromRequest, parseDisplayIdentifiersFromRequest } from "../sources/EndpointListenbrainzSource.ts";
+import type { EndpointListenbrainzSource} from "../sources/EndpointListenbrainzSource.ts";
+import { playStateFromRequest, parseDisplayIdentifiersFromRequest } from "../sources/EndpointListenbrainzSource.ts";
 import { LZEndpointNotifier } from "../sources/ingressNotifiers/LZEndpointNotifier.ts";
-import ScrobbleSources from "../sources/ScrobbleSources.ts";
+import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import { nonEmptyBody } from "./middleware.ts";
-import { type PlayingNowPayload } from '../../core/vendor/listenbrainz/interfaces.ts';
-import ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
+import type {PlayingNowPayload} from '../../core/vendor/listenbrainz/interfaces.ts';
+import type ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
 import { stringToDeterministicNumber } from '../utils/StringUtils.ts';
 import { messageWithCauses } from '../../core/ErrorUtils.ts';

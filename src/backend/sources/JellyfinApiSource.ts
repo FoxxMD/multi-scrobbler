@@ -1,6 +1,7 @@
 import { WS } from "iso-websocket";
 // @ts-expect-error weird typings?
-import { Api, Jellyfin } from "@jellyfin/sdk";
+import type { Api} from "@jellyfin/sdk";
+import { Jellyfin } from "@jellyfin/sdk";
 import {
     // @ts-expect-error weird typings?
     type BaseItemDto,
@@ -34,18 +35,14 @@ import {
     getUserApi
 } from "@jellyfin/sdk/lib/utils/api/index.js";
 import dayjs from "dayjs";
-import EventEmitter from "events";
+import type EventEmitter from "events";
 import { FixedSizeList } from "fixed-size-list";
-import { type ArtistCredit, type BrainzMeta, type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
+import type {ArtistCredit, BrainzMeta, PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
 import { genGroupIdStr } from '../../core/PlayUtils.ts';
 import { artistNameToCredit, buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
-import {
-    type FormatPlayObjectOptions,
-    type InternalConfig,
-    type PlayerStateDataMaybePlay,
-    REPORTED_PLAYER_STATUSES
-} from "../common/infrastructure/Atomic.ts";
-import { type JellyApiSourceConfig } from "../common/infrastructure/config/source/jellyfin.ts";
+import type {FormatPlayObjectOptions, InternalConfig, PlayerStateDataMaybePlay} from "../common/infrastructure/Atomic.ts";
+import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
+import type {JellyApiSourceConfig} from "../common/infrastructure/config/source/jellyfin.ts";
 import { getPlatformIdFromData, isDebugMode } from "../utils.ts";
 import { noCasePropObj } from "../utils/DataUtils.ts";
 import { joinedUrl } from "../utils/NetworkUtils.ts";

@@ -2,11 +2,11 @@ import { childLogger, type Logger } from "@foxxmd/logging";
 import {
     cacheFunctions,
 } from "@foxxmd/regex-buddy-core";
-import EventEmitter from "events";
-import { type ComponentType, type LifecycleInput, type LifecycleStep, type PlayData, type PlayObject } from "../../core/Atomic.ts";
+import type EventEmitter from "events";
+import type {ComponentType, LifecycleInput, LifecycleStep, PlayData, PlayObject} from "../../core/Atomic.ts";
 import { buildTrackString } from "../../core/StringUtils.ts";
-import { type CommonClientConfig } from "./infrastructure/config/client/index.ts";
-import { type CommonSourceConfig } from "./infrastructure/config/source/index.ts";
+import type {CommonClientConfig} from "./infrastructure/config/client/index.ts";
+import type {CommonSourceConfig} from "./infrastructure/config/source/index.ts";
 import { mergeSimpleError, SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError, TransformRulesError } from "./errors/MSErrors.ts";
 import {
     FLOW_CONTROL_TERM,
@@ -16,29 +16,29 @@ import {
     type TransformHook
 } from "../../core/Transform.ts";
 import AbstractInitializable from "./AbstractInitializable.ts";
-import TransformerManager from "./transforms/TransformerManager.ts";
+import type TransformerManager from "./transforms/TransformerManager.ts";
 import { getRoot } from "../ioc.ts";
 import { nanoid } from "nanoid";
 import { isDebugMode } from "../utils.ts";
 import { findCauseByFunc, findCauseByReference } from "../utils/ErrorUtils.ts";
 import { hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.ts";
 import { playContentInvariantTransform } from "../utils/PlayComparisonUtils.ts";
-import { MSCache } from "./Cache.ts";
+import type { MSCache } from "./Cache.ts";
 import { diffObjects, diffObjectsConsoleOutput, patchObject } from "../../core/DataUtils.ts";
 import clone from "clone";
 import { loggerNoop } from "./MaybeLogger.ts";
 import { objectsEqual } from "../utils/DataUtils.ts";
-import { type RetentionOptions } from "./infrastructure/config/database.ts";
+import type {RetentionOptions} from "./infrastructure/config/database.ts";
 import { getRetentionCompactAfterFromEnv, getRetentionDeleteAfterFromEnv, isCompactableProperty, parseRetentionOptions, parseRetentionOptionsDurations } from "./database/Database.ts";
-import { type DbConcrete } from "./database/drizzle/drizzleUtils.ts";
-import { type ComponentSelect } from "./database/drizzle/drizzleTypes.ts";
+import type {DbConcrete} from "./database/drizzle/drizzleUtils.ts";
+import type {ComponentSelect} from "./database/drizzle/drizzleTypes.ts";
 import { DrizzlePlayRepository } from "./database/drizzle/repositories/PlayRepository.ts";
-import { type ClientType } from "./infrastructure/config/client/clients.ts";
-import { type SourceType } from "./infrastructure/config/source/sources.ts";
+import type {ClientType} from "../../core/Atomic.ts";
+import type {SourceType} from "../../core/Atomic.ts";
 import { DrizzleComponentRepository } from "./database/drizzle/repositories/ComponentRepository.ts";
 import dayjs from "dayjs";
 import { COMPONENT_STATE, type ComponentCommonApi, type ComponentCommonApiJson, type ComponentState, type PlayApiCommonDetailed } from "../../core/Api.ts";
-import { type WebhookPayload } from "./infrastructure/config/health/webhooks.ts";
+import type {WebhookPayload} from "./infrastructure/config/health/webhooks.ts";
 import type { MarkRequired } from "ts-essentials";
 import { serializeError } from "serialize-error";
 

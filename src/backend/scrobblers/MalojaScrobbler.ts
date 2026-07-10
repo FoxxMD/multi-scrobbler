@@ -1,14 +1,12 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
-import EventEmitter from "events";
+import type EventEmitter from "events";
 import normalizeUrl from "normalize-url";
-import { type PlayObject } from "../../core/Atomic.ts";
+import type {PlayObject} from "../../core/Atomic.ts";
 import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
-import { type FormatPlayObjectOptions, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.ts";
-import { type MalojaClientConfig } from "../common/infrastructure/config/client/maloja.ts";
-import {
-    type MalojaScrobbleRequestData,
-} from "../common/vendor/maloja/interfaces.ts";
+import type {FormatPlayObjectOptions, TimeRangeListensFetcher} from "../common/infrastructure/Atomic.ts";
+import type {MalojaClientConfig} from "../common/infrastructure/config/client/maloja.ts";
+import type {MalojaScrobbleRequestData} from "../common/vendor/maloja/interfaces.ts";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.ts";
 import { MalojaApiClient, formatPlayObj as formatMalojaScrobbleToPlay, playToScrobblePayload } from "../common/vendor/maloja/MalojaApiClient.ts";
 import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.ts";

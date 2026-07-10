@@ -1,6 +1,6 @@
 import { type ComponentProps, useState, useCallback } from "react"
 import { Badge, Stat, HStack } from '@chakra-ui/react';
-import { type ComponentClientApiJson, type ComponentCommonApiJson, type MsSseEvent } from "../../../core/Api.js";
+import type {ComponentClientApiJson, ComponentCommonApiJson, MsSseEvent} from "../../../core/Api.js";
 import { TextMuted } from "../TextMuted.js";
 import { DownArrowIcon, UpArrowIcon } from "../icons/ChakraIcons.js";
 import { useTimeout } from 'react-use-timeout';

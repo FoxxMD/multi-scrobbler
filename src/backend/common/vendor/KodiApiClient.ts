@@ -2,10 +2,10 @@ import dayjs from "dayjs";
 import { KodiClient } from 'kodi-api'
 import normalizeUrl from "normalize-url";
 import { URL } from "url";
-import { type PlayObject, type PlayObjectMinimal } from "../../../core/Atomic.ts";
-import { type RecentlyPlayedOptions } from "../../sources/AbstractSource.ts";
-import { type AbstractApiOptions, type FormatPlayObjectOptions } from "../infrastructure/Atomic.ts";
-import { type KodiData } from "../infrastructure/config/source/kodi.ts";
+import type {PlayObject, PlayObjectMinimal} from "../../../core/Atomic.ts";
+import type {RecentlyPlayedOptions} from "../../sources/AbstractSource.ts";
+import type {AbstractApiOptions, FormatPlayObjectOptions} from "../infrastructure/Atomic.ts";
+import type {KodiData} from "../infrastructure/config/source/kodi.ts";
 import AbstractApiClient from "./AbstractApiClient.ts";
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
 import { artistNamesToCredits } from "../../../core/StringUtils.ts";

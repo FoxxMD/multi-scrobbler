@@ -1,10 +1,5 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
-import {
-    type AppriseConfig,
-    type GotifyConfig,
-    type NtfyConfig,
-    type WebhookPayload
-} from "../common/infrastructure/config/health/webhooks.ts";
+import type {AppriseConfig, GotifyConfig, NtfyConfig, WebhookPayload} from "../common/infrastructure/config/health/webhooks.ts";
 
 export abstract class AbstractWebhookNotifier {
 

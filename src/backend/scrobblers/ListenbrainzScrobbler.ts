@@ -1,13 +1,13 @@
-import { type Logger } from "@foxxmd/logging";
-import EventEmitter from "events";
-import { type PlayObject, type SourcePlayerObj } from "../../core/Atomic.ts";
+import type {Logger} from "@foxxmd/logging";
+import type EventEmitter from "events";
+import type {PlayObject, SourcePlayerObj} from "../../core/Atomic.ts";
 import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
-import { type FormatPlayObjectOptions, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.ts";
+import type {FormatPlayObjectOptions, TimeRangeListensFetcher} from "../common/infrastructure/Atomic.ts";
 import { DEFAULT_MS_ITEMS_PER_GET_LZ, type ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz.ts";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.ts";
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
-import { type ListenPayload } from '../../core/vendor/listenbrainz/interfaces.ts';
+import type {ListenPayload} from '../../core/vendor/listenbrainz/interfaces.ts';
 
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.ts";
 import { isDebugMode } from "../utils.ts";

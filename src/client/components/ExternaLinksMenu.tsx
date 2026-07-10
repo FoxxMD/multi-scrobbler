@@ -1,5 +1,5 @@
 import { Box, Button, Menu, Portal } from "@chakra-ui/react"
-import { type ComponentProps } from "react"
+import type {ComponentProps} from "react";
 import { ExternalLinkIcon } from "./icons/ChakraIcons"
 import { EXTERNAL_LINKS } from "./SideNav"
 

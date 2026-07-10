@@ -1,4 +1,4 @@
-import { type AtprotoDid } from "@atcute/lexicons/syntax";
+import type {AtprotoDid} from "@atcute/lexicons/syntax";
 
 export interface ATProtoUserIdentifierData {
     /**

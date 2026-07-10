@@ -1,10 +1,10 @@
-import { type Express } from 'express';
+import type {Express} from 'express';
 import { childLogger, type Logger } from "@foxxmd/logging";
 import bodyParser from "body-parser";
 import cors from 'cors';
 import path from "path";
 import { WebhookNotifier } from "../sources/ingressNotifiers/WebhookNotifier.ts";
-import ScrobbleSources from "../sources/ScrobbleSources.ts";
+import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import { WebScrobblerSource } from "../sources/WebScrobblerSource.ts";
 import { nonEmptyBody } from "./middleware.ts";
 

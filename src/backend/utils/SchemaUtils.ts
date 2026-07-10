@@ -1,5 +1,6 @@
 import { resolve } from "path";
 import { projectDir } from "../common/index.ts";
+import type { LiteralType} from "ts-json-schema-generator";
 import {
     type Definition as TSJDefinition,
     createFormatter,
@@ -7,7 +8,7 @@ import {
     DEFAULT_CONFIG,
     createProgram,
     createParser,
-    SchemaGenerator, LiteralType, LiteralTypeFormatter
+    SchemaGenerator, LiteralTypeFormatter
 } from "ts-json-schema-generator";
 import { MaybeLogger } from '../common/MaybeLogger.ts';
 

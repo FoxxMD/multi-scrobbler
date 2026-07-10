@@ -4,20 +4,21 @@ import { type PlayObject, type PlayProgress, type Second, SOURCE_SOT, type SOURC
 import { buildTrackString } from "../../../core/StringUtils.ts";
 import {
     asPlayerStateData,
-    CALCULATED_PLAYER_STATUSES,
-    type CalculatedPlayerStatus,
     type PlayerStateData,
     type PlayerStateDataMaybePlay,
-    REPORTED_PLAYER_STATUSES,
-    type ReportedPlayerStatus,
 } from "../../common/infrastructure/Atomic.ts";
-import { type PlayPlatformId } from '../../../core/Atomic.ts';
-import { type PollingOptions } from "../../common/infrastructure/config/common.ts";
+import { CALCULATED_PLAYER_STATUSES } from '../../../core/Atomic.ts';
+import type {CalculatedPlayerStatus} from '../../../core/Atomic.ts';
+import { REPORTED_PLAYER_STATUSES } from '../../../core/Atomic.ts';
+import type {ReportedPlayerStatus} from '../../../core/Atomic.ts';
+import type {PlayPlatformId} from '../../../core/Atomic.ts';
+import type {PollingOptions} from "../../common/infrastructure/config/common.ts";
 import { playObjDataMatch, progressBar } from "../../utils.ts";
 import { genGroupIdStr } from '../../../core/PlayUtils.ts';
 import { formatNumber } from '../../../core/DataUtils.ts';
-import { type ListenProgress } from "./ListenProgress.ts";
-import { ListenRange, ListenRangePositional } from "./ListenRange.ts";
+import type {ListenProgress} from "./ListenProgress.ts";
+import type { ListenRange} from "./ListenRange.ts";
+import { ListenRangePositional } from "./ListenRange.ts";
 import { closeToPlayEnd, closeToPlayStart, repeatDurationPlayed } from "../../utils/TimeUtils.ts";
 import { timeToHumanTimestamp } from "../../../core/TimeUtils.ts";
 import { todayAwareFormat } from "../../../core/TimeUtils.ts";

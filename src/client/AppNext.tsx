@@ -7,7 +7,7 @@ import {
     type RouteObject,
     RouterProvider, useLocation
 } from "react-router-dom";
-import { type MsSseEvent } from '../core/Api';
+import type {MsSseEvent} from '../core/Api';
 import './App.css';
 import { AppHeader } from './components/AppHeader';
 import CopyToClipboard from "./components/CopyToClipboard";

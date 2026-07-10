@@ -1,9 +1,10 @@
 import type { Interfaces as Notifications } from '@dbus-types/notifications'
 import dayjs from "dayjs";
-import { DBusInterface, sessionBus, Connection, type ConnectOpts } from 'dbus-ts';
-import EventEmitter from "events";
-import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
-import { type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.ts";
+import type { DBusInterface} from 'dbus-ts';
+import { sessionBus, Connection, type ConnectOpts } from 'dbus-ts';
+import type EventEmitter from "events";
+import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
+import type {FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic.ts";
 import {
     MPRIS_IFACE,
     MPRIS_PATH,
@@ -15,9 +16,9 @@ import {
 } from "../common/infrastructure/config/source/mpris.ts";
 import { removeDuplicates } from "../utils.ts";
 import { findCauseByMessage } from "../utils/ErrorUtils.ts";
-import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import MemorySource from "./MemorySource.ts";
-import { Readable, Writable } from 'stream';
+import type { Readable, Writable } from 'stream';
 import net from 'net';
 import pEvent from 'p-event';
 import { baseFormatPlayObj } from '../utils/PlayTransformUtils.ts';
@@ -183,7 +184,7 @@ export class MPRISSource extends MemorySource {
             // microseconds
             return dayjs.duration({milliseconds: Number(pos / 1000)}).asSeconds();
         } catch(e) {
-            // eslint-disable-next-line preserve-caught-error
+             
             throw new Error('Could not get player Position', {cause: convertDBusExceptionToError(e)});
         }
     }
@@ -193,7 +194,7 @@ export class MPRISSource extends MemorySource {
             const status = await props['PlaybackStatus'];
             return status as PlaybackStatus;
         } catch (e) {
-            // eslint-disable-next-line preserve-caught-error
+             
             throw new Error('Could not get player PlaybackStatus', {cause: convertDBusExceptionToError(e)})
         }
     }
@@ -203,7 +204,7 @@ export class MPRISSource extends MemorySource {
             const metadata = await props['Metadata'];
             return this.metadataToPlain(metadata);
         } catch(e) {
-            // eslint-disable-next-line preserve-caught-error
+             
             throw new Error('Could not get player Metadata', {cause: convertDBusExceptionToError(e)});
         }
     }

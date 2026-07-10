@@ -1,18 +1,18 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
-import EventEmitter from "events";
+import type EventEmitter from "events";
 import fsPromise from 'node:fs/promises';
 import fs from 'node:fs';
 import path from 'path';
 
 import { Readable } from 'stream';
-import { type PlayObject, type SourcePlayerObj } from "../../core/Atomic.ts";
+import type {PlayObject, SourcePlayerObj} from "../../core/Atomic.ts";
 import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
-import { type FormatPlayObjectOptions, type InternalConfigOptional } from "../common/infrastructure/Atomic.ts";
+import type {FormatPlayObjectOptions, InternalConfigOptional} from "../common/infrastructure/Atomic.ts";
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
 
 import { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractScrobbleClient.ts";
-import { type TealClientConfig } from "../common/infrastructure/config/client/tealfm.ts";
+import type {TealClientConfig} from "../common/infrastructure/config/client/tealfm.ts";
 import { ATProtoAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.ts";
 import { playToRecord, TealApiClient } from "../common/vendor/teal/TealApiClient.ts";
 import { playToStatusRecord } from "../common/vendor/teal/TealApiClient.ts";
@@ -24,7 +24,7 @@ import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient
 import { fromStream } from '@atcute/repo';
 import { playToRepositoryCreatePlayHistoricalOpts, type RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
 import { isAbortError } from "abort-controller-x";
-import { FmTealAlphaFeedPlay } from "../common/vendor/teal/lexicons/index.ts";
+import type { FmTealAlphaFeedPlay } from "../common/vendor/teal/lexicons/index.ts";
 
 export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
 

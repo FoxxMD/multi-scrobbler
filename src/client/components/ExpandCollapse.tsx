@@ -1,5 +1,5 @@
 import { HStack, IconButton } from "@chakra-ui/react";
-import { type ComponentProps } from "react";
+import type {ComponentProps} from "react";
 import { FaRegSquareMinus, FaRegSquarePlus } from "react-icons/fa6";
 
 export interface ExpandCollapseProps {

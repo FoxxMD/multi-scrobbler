@@ -1,7 +1,7 @@
 import {
     createReducer
 } from '@reduxjs/toolkit';
-import { type LogOutputConfig } from "../../core/Atomic";
+import type {LogOutputConfig} from "../../core/Atomic";
 import { logsApi } from "./logsApi";
 export interface LogsState {
     // TODO remove after new ui switchover

@@ -1,13 +1,13 @@
-import { type LogOptions } from "@foxxmd/logging";
-import { type ClientAIOConfig } from "./client/clients.ts";
-import { type CommonClientOptions } from "./client/index.ts";
-import { type RequestRetryOptions } from "./common.ts";
-import { type WebhookConfig } from "./health/webhooks.ts";
-import { type CommonSourceOptions, type SourceRetryOptions } from "./source/index.ts";
-import { type SourceAIOConfig } from "./source/sources.ts";
-import { type CacheConfigUser, type DurationValue } from "../Atomic.ts";
-import { type TransformerCommonConfig } from "../../../../core/Atomic.ts";
-import { type RetentionConfig } from "./database.ts";
+import type { LogOptions } from "@foxxmd/logging";
+import type { ClientAIOConfig } from "./client/clients.ts";
+import type { CommonClientOptions } from "./client/index.ts";
+import type { RequestRetryOptions } from "./common.ts";
+import type { WebhookConfig } from "./health/webhooks.ts";
+import type { CommonSourceOptions, SourceRetryOptions } from "./source/index.ts";
+import type { SourceAIOConfig } from "./source/sources.ts";
+import type { CacheConfigUser, DurationValue } from "../Atomic.ts";
+import type { TransformerCommonConfig } from "../../../../core/Atomic.ts";
+import type { RetentionConfig } from "./database.ts";
 
 
 export interface SourceDefaults extends CommonSourceOptions {

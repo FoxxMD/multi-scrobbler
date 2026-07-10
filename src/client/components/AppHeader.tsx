@@ -11,7 +11,7 @@ import { TextMuted } from "./TextMuted";
 import { TerminalButton, TerminalIcon, XButton } from "./icons/ChakraIcons";
 
 import { useSSEContext, useSSEStatus } from "@flamefrontend/sse-runtime-react";
-import { type ErrorLike } from "../../core/Atomic";
+import type {ErrorLike} from "../../core/Atomic";
 import { ErrorAlert } from "./ErrorAlert";
 import { MSErrorBoundary } from "./ErrorBoundary";
 import { ExternaLinksMenu } from "./ExternaLinksMenu";

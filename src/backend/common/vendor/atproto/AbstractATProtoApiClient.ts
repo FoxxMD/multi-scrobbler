@@ -1,17 +1,18 @@
 import { getRoot } from "../../../ioc.ts";
-import { type AbstractApiOptions } from "../../infrastructure/Atomic.ts";
+import type {AbstractApiOptions} from "../../infrastructure/Atomic.ts";
 import AbstractApiClient from "../AbstractApiClient.ts";
-import { MSCache } from "../../Cache.ts";
+import type { MSCache } from "../../Cache.ts";
 import { UpstreamError } from "../../errors/UpstreamError.ts";
 import { streamBodyProgress } from "../../../utils/NetworkUtils.ts";
-import { type ATProtoUserIdentifierData, type HandleData } from "../../infrastructure/config/client/atproto.ts";
+import type {ATProtoUserIdentifierData, HandleData} from "../../infrastructure/config/client/atproto.ts";
 import { checkPds, isDID, identifierToAtProtoHandle, getATProtoIdentifier } from "./atUtils.ts";
-import { Client, ClientResponseError, isXRPCErrorPayload, parseRateLimitHeaders } from '@atcute/client';
+import type { Client} from '@atcute/client';
+import { ClientResponseError, isXRPCErrorPayload, parseRateLimitHeaders } from '@atcute/client';
 import { ComAtprotoSyncGetRepo } from '@atcute/atproto';
-import { type AtprotoDid } from "@atcute/lexicons/syntax";
+import type {AtprotoDid} from "@atcute/lexicons/syntax";
 import { todayAwareFormat } from "../../../../core/TimeUtils.ts";
 import dayjs from "dayjs";
-import { type Millisecond } from "../../../../core/Atomic.ts";
+import type {Millisecond} from "../../../../core/Atomic.ts";
 
 export interface RateLimitInfo {
     limit: number

@@ -2,7 +2,7 @@ import { Heading, Icon, Span, Stack, Text, Timeline } from '@chakra-ui/react';
 import React, { Fragment, useMemo } from "react";
 import { BsExclamationTriangle, BsSkipForward, BsStoplights } from "react-icons/bs";
 import { MdMusicNote } from "react-icons/md";
-import { type JsonPlayObject, type LifecycleStep } from "../../core/Atomic";
+import type {JsonPlayObject, LifecycleStep} from "../../core/Atomic";
 import { patchObject } from "../../core/DataUtils";
 import { timelineTextFormatting } from "../utils/ComponentUtils";
 import { ChakraCodeBlockShort } from "./CodeBlock";

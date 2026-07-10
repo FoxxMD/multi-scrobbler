@@ -1,4 +1,4 @@
-import { Response } from 'superagent';
+import type { Response } from 'superagent';
 
 import { findCauseByFunc } from "../../utils/ErrorUtils.ts";
 import { addKnownErrorConstructor } from 'serialize-error';

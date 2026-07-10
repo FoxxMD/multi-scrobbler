@@ -1,5 +1,5 @@
 import { type SystemStyleObject, Box, EmptyState, HStack, ScrollArea, Separator, Spinner, Text, VStack } from '@chakra-ui/react';
-import { type UseInfiniteQueryResult } from '@tanstack/react-query';
+import type {UseInfiniteQueryResult} from '@tanstack/react-query';
 import { useVirtualizer } from "@tanstack/react-virtual";
 import React, { type ComponentProps, useCallback, useMemo } from "react";
 import { LuCaptionsOff } from "react-icons/lu";

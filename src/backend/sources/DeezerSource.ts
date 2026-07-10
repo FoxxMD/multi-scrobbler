@@ -1,11 +1,11 @@
 import dayjs from "dayjs";
-import EventEmitter from "events";
+import type EventEmitter from "events";
 import passport from "passport";
 import { Strategy as DeezerStrategy } from 'passport-deezer';
 import request from 'superagent';
-import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
+import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
 import { DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.ts";
-import { type DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.ts";
+import type {DeezerSourceConfig} from "../common/infrastructure/config/source/deezer.ts";
 import { parseRetryAfterSecsFromObj, sleep, sortByOldestPlayDate, } from "../utils.ts";
 import { writeFile } from '../utils/FSUtils.ts';
 import { readJson } from '../utils/DataUtils.ts';

@@ -7,7 +7,7 @@ import { QueuedIndicator } from "../../client/components/msComponent/Stats.js";
 import { sseProviderOptions } from "../../client/AppNext.js";
 import {Provider} from "../../client/components/Provider.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
-import { type MsSseEvent } from "../../core/Api.js";
+import type {MsSseEvent} from "../../core/Api.js";
 import { faker } from "@faker-js/faker";
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export

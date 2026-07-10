@@ -17,14 +17,14 @@ import MockDate from 'mockdate';
 
 import { NowPlayingScrobbler, TestAuthScrobbler, TestScrobbler } from "./TestScrobbler.ts";
 import { type PaginatedTimeRangeOptions, REFRESH_STALE_DEFAULT } from '../../common/infrastructure/Atomic.ts';
-import { type PlayPlatformId } from '../../../core/Atomic.ts';
+import type {PlayPlatformId} from '../../../core/Atomic.ts';
 import { shuffleArray } from '../../utils/DataUtils.ts';
 import { DEFAULT_CONSOLIDATE_DURATION, groupPlaysToTimeRanges } from '../../utils/ListenFetchUtils.ts';
 import { asPlay } from '../../../core/PlayMarshalUtils.ts';
 import { getRoot } from '../../ioc.ts';
 import { transientCache } from '../utils/TransientTestUtils.ts';
 import { generateArray } from '../../../core/DataUtils.ts';
-import { type RepositoryCreatePlayOpts } from '../../common/database/drizzle/repositories/PlayRepository.ts';
+import type {RepositoryCreatePlayOpts} from '../../common/database/drizzle/repositories/PlayRepository.ts';
 import { fixtureCreatePlay } from '../utils/databaseFixtures.ts';
 import { isAbortError } from 'abort-controller-x';
 import { artistNamesToCredits } from '../../../core/StringUtils.ts';

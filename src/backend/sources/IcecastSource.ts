@@ -1,16 +1,16 @@
-import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
-import { EventEmitter } from "events";
-import { type PlayObject, type PlayObjectMinimal, type URLData } from "../../core/Atomic.ts";
+import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
+import type { EventEmitter } from "events";
+import type {PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
     type PlayerStateData,
-    REPORTED_PLAYER_STATUSES,
     SINGLE_USER_PLATFORM_ID,
 } from "../common/infrastructure/Atomic.ts";
+import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import { isPortReachableConnect, normalizeWebAddress } from "../utils/NetworkUtils.ts";
 import MemorySource from "./MemorySource.ts";
-import { type IcecastMetadata, type IcecastSourceConfig } from "../common/infrastructure/config/source/icecast.ts";
+import type {IcecastMetadata, IcecastSourceConfig} from "../common/infrastructure/config/source/icecast.ts";
 import IcecastMetadataStats from "icecast-metadata-stats";
 import { parseArtistCredits, parseTrackCredits } from "../utils/StringUtils.ts";
 import { isDebugMode, sleep } from "../utils.ts";

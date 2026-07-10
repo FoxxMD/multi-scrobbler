@@ -1,12 +1,12 @@
 import { childLogger } from "@foxxmd/logging";
-import { type AbstractApiOptions } from "../../infrastructure/Atomic.ts";
-import { type ActivityData, type DiscordIPCData, type DiscordStrongData } from "../../infrastructure/config/client/discord.ts";
+import type {AbstractApiOptions} from "../../infrastructure/Atomic.ts";
+import type {ActivityData, DiscordIPCData, DiscordStrongData} from "../../infrastructure/config/client/discord.ts";
 import EventEmitter from "events";
 import { getRoot } from "../../../ioc.ts";
 import { Client, type SetActivity } from "@xhayper/discord-rpc";
 import {realpathSync} from 'fs';
 import {sep, join} from 'path';
-import { type PathData } from "@xhayper/discord-rpc/dist/transport/IPC.js";
+import type {PathData} from "@xhayper/discord-rpc/dist/transport/IPC.js";
 import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
 import { playStateToActivityData } from "./DiscordUtils.ts";
 import { DiscordAbstractClient } from "./DiscordAbstractClient.ts";

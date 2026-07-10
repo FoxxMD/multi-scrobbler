@@ -1,6 +1,7 @@
 import { type FileLogOptions, type Logger, loggerAppRolling, type LogLevel, type LogLevelStreamEntry, type LogOptions, parseLogOptions } from '@foxxmd/logging';
 import { buildDestinationJsonPrettyStream, buildDestinationRollingFile, buildDestinationStdout, buildLogger } from "@foxxmd/logging/factory";
-import { PassThrough, Transform } from "node:stream";
+import type { Transform } from "node:stream";
+import { PassThrough } from "node:stream";
 import path from "path";
 import process from "process";
 import { projectDir } from "./index.ts";

@@ -1,7 +1,8 @@
-import {type TrackStringOptions} from "../../core/Atomic";
+import type {TrackStringOptions} from "../../core/Atomic";
 import React, {type ReactElement, Fragment} from "react";
 import {defaultBuildTrackStringTransformers} from "../../core/StringUtils";
-import dayjs, {Dayjs} from 'dayjs';
+import type {Dayjs} from 'dayjs';
+import dayjs from 'dayjs';
 
 export const buildTrackStringReactOptions: TrackStringOptions<ReactElement> = {
     transformers: {

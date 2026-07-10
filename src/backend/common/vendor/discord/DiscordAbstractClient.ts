@@ -2,12 +2,12 @@ import { isPlayObject } from "../../../../core/Atomic.ts";
 import { getRoot } from "../../../ioc.ts";
 import { isDebugMode } from "../../../utils.ts";
 import { urlContainsKnownMediaDomain } from "../../../utils/RequestUtils.ts";
-import { MSCache } from "../../Cache.ts";
+import type { MSCache } from "../../Cache.ts";
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.ts";
-import { type AbstractApiOptions, type SourceData } from "../../infrastructure/Atomic.ts";
+import type {AbstractApiOptions, SourceData} from "../../infrastructure/Atomic.ts";
 import { type ActivityAssets, ARTWORK_PLACEHOLDER, type DiscordStrongData, MS_ART } from "../../infrastructure/config/client/discord.ts";
 import AbstractApiClient from "../AbstractApiClient.ts";
-import { CoverArtApiClient } from "../musicbrainz/CoverArtApiClient.ts";
+import type { CoverArtApiClient } from "../musicbrainz/CoverArtApiClient.ts";
 import EventEmitter from "events";
 import request from 'superagent';
 

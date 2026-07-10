@@ -2,7 +2,7 @@ import React, {Fragment, useCallback} from 'react';
 import StatusCardSkeleton, {type StatusCardSkeletonData} from "./StatusCardSkeleton";
 import SkeletonParagraph from "../skeleton/SkeletonParagraph";
 import {clientAdapter} from "../../status/ducks";
-import {type RootState} from "../../store";
+import type {RootState} from "../../store";
 import {connect, type ConnectedProps} from "react-redux";
 import {Link} from "react-router-dom";
 import {useStartClientMutation} from "./clientDucks";

@@ -1,32 +1,32 @@
-import EventEmitter from "events";
-import { type BrainzMeta, type PlayObject, type PlayObjectMinimal, type URLData } from "../../core/Atomic.ts";
+import type EventEmitter from "events";
+import type {BrainzMeta, PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
 import { artistNamesToCredits, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
 import {
     asPlayerStateDataMaybePlay,
     type FormatPlayObjectOptions,
     type InternalConfig,
     MBID_VARIOUS_ARTISTS,
-    type PlayerStateDataMaybePlay,
-    REPORTED_PLAYER_STATUSES
-} from "../common/infrastructure/Atomic.ts";
-import { type PlayPlatformId } from '../../core/Atomic.ts';
+    type PlayerStateDataMaybePlay} from "../common/infrastructure/Atomic.ts";
+import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
+import type {PlayPlatformId} from '../../core/Atomic.ts';
 import { getFirstNonEmptyString, isDebugMode, } from "../utils.ts";
 import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.ts";
-import { type GetSessionsMetadata } from "@lukehagar/plexjs/sdk/models/operations/getsessions.js";
+import type {GetSessionsMetadata} from "@lukehagar/plexjs/sdk/models/operations/getsessions.js";
 import { PlexAPI, HTTPClient, type Fetcher } from "@lukehagar/plexjs";
 import { Agent } from 'undici';
-import { type PlexApiSourceConfig } from "../common/infrastructure/config/source/plex.ts";
+import type {PlexApiSourceConfig} from "../common/infrastructure/config/source/plex.ts";
 import { isPortReachable, normalizeWebAddress } from '../utils/NetworkUtils.ts';
-import { type GetTokenDetailsUserPlexAccount } from '@lukehagar/plexjs/sdk/models/operations/gettokendetails.js';
+import type {GetTokenDetailsUserPlexAccount} from '@lukehagar/plexjs/sdk/models/operations/gettokendetails.js';
 import { parseRegexSingle } from '@foxxmd/regex-buddy-core';
 import { Readable } from 'node:stream';
 import { PlexPlayerState } from './PlayerState/PlexPlayerState.ts';
-import { AbstractPlayerState, type PlayerStateOptions } from './PlayerState/AbstractPlayerState.ts';
-import { type Logger } from '@foxxmd/logging';
+import type { AbstractPlayerState} from './PlayerState/AbstractPlayerState.ts';
+import type {PlayerStateOptions} from './PlayerState/AbstractPlayerState.ts';
+import type {Logger} from '@foxxmd/logging';
 import { MemoryPositionalSource } from './MemoryPositionalSource.ts';
 import { FixedSizeList } from 'fixed-size-list';
 import { SDKValidationError } from '@lukehagar/plexjs/sdk/models/errors/sdkvalidationerror.js';
-import { Keyv } from 'cacheable';
+import type { Keyv } from 'cacheable';
 import { initMemoryCache } from "../common/Cache.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 

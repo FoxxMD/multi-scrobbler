@@ -8,12 +8,12 @@ import { type ConditionalSearchAndReplaceRegExp, TRANSFORM_HOOK } from "../../..
 
 import { isConditionalSearchAndReplace } from "../../utils/PlayTransformUtils.ts";
 import { generateArtistsStr, generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
-import { type WebhookPayload } from "../../common/infrastructure/config/health/webhooks.ts";
+import type {WebhookPayload} from "../../common/infrastructure/config/health/webhooks.ts";
 import { findCauseByMessage } from "../../utils/ErrorUtils.ts";
 import NativeTransformer from "../../common/transforms/NativeTransformer.ts";
 import { initMemoryCache } from "../../common/Cache.ts";
 import { Cacheable } from "cacheable";
-import { type TransformerCommonConfig } from "../../../core/Atomic.ts";
+import type {TransformerCommonConfig} from "../../../core/Atomic.ts";
 import TransformerManager from "../../common/transforms/TransformerManager.ts";
 import { transientCache } from "../utils/TransientTestUtils.ts";
 import dayjs from "dayjs";

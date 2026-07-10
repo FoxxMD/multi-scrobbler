@@ -74,6 +74,36 @@ export default defineConfig([
         },
         rules: {
             ...defaultRules,
+            // https://typescript-eslint.io/rules/consistent-type-imports/#comparison-with-importsnotusedasvalues--verbatimmodulesyntax
+            //
+            // when using tsconfig compiler verbatimModuleSyntax and EX import {type Foo, type Bar} from 'a';
+            // true => typescript will *still* import a module if all types are inline  
+            // false => typescript will erase the entire module import
+            //
+            // we need to use verbatimModuleSyntax: true for nodejs type stripping compatibility so
+            // its important that we use top-level type imports so we don't accidentally import server-side modules into frontend
+            // but can still use types where necessary
+            //
+            // this rule *should* do this...it does detect imports that are typed but not explicitly declared
+            // but its not moving inline -> top-level
+            "@typescript-eslint/consistent-type-imports": [
+                "error",
+                {
+                    prefer: 'type-imports',
+                    fixStyle: "separate-type-imports"
+                }
+            ],
+            // however, import/consistent-type-specifier-style from eslint-plugin-import *does* move inline => top-level
+            // but it does not yet support eslint10 :(
+            //
+            // TODO eventually add this once plugin-import supports eslint10
+            // https://github.com/import-js/eslint-plugin-import
+            // https://github.com/import-js/eslint-plugin-import/blob/main/docs/rules/consistent-type-specifier-style.md
+            // -- this enforces that type-only imports are fixed to top-level type imports IE
+            // import {type Foo, type Bar} from 'a'; => import type { Foo, Bar} from 'a';
+            // "import/consistent-type-specifier-style": [
+            //     "error", "prefer-top-level-if-only-type-imports"
+            // ]
         },
         extends: [
             tsEslint.configs.recommended,
@@ -148,7 +178,9 @@ export default defineConfig([
             { type: 'frontend', mode: 'file', pattern: 'src/client/**/*' },
             { type: 'config', mode: 'file', pattern: 'config/*.example' },
             { type: 'core', mode: 'file', pattern: ['src/core/!(tests)/**','src/core/!(tests)'] },
+            { type: 'core-tests', mode: 'file', pattern: ['src/core/tests/**'] },
             { type: 'backend', mode: 'file', pattern: 'src/backend/**/*' },
+            { type: 'stories', mode: 'file', pattern: ['src/stories/**/*', '.storybook/**'] },
         ],
         // So it understands TS path aliases when resolving imports
         'import/resolver': {
@@ -172,6 +204,14 @@ export default defineConfig([
                 {
                 from: 'backend',
                 allow: ['backend', 'core', 'config'], // backend can use itself + core
+                },
+                {
+                from: 'stories',
+                allow: ['stories', 'core', 'frontend', 'core-tests'], // backend can use itself + core
+                },
+                {
+                from: 'core-tests',
+                allow: ['core', 'core-tests'], // backend can use itself + core
                 },
             ],
             },

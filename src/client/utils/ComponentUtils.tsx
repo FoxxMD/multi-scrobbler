@@ -1,5 +1,6 @@
-import { Card, type HTMLChakraProps } from '@chakra-ui/react';
-import { type PlayApiCommonDetailed } from '../../core/Api';
+import type { Card} from '@chakra-ui/react';
+import type {HTMLChakraProps} from '@chakra-ui/react';
+import type {PlayApiCommonDetailed} from '../../core/Api';
 import { type LifecycleStep, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED } from '../../core/Atomic';
 
 export const cardHeaderSeparator: Card.HeaderProps = {

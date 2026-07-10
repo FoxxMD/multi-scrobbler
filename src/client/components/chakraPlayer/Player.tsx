@@ -11,7 +11,7 @@ import {
   useSSEContext,
   useSSEEvent,
 } from "@flamefrontend/sse-runtime-react";
-import { type ComponentCommonApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api";
+import type {ComponentCommonApiJson, MsSseEvent, MsSseEventPayload} from "../../../core/Api";
 import LinearProgress from '@mui/material/LinearProgress';
 import { InfoTip } from "../ToggleTip";
 import { tanQueries } from "../../queries";

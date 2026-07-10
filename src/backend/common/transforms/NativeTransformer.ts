@@ -1,11 +1,11 @@
-import { type ArtistCredit, type PlayObject, type TransformerCommon } from "../../../core/Atomic.ts";
+import type {ArtistCredit, PlayObject, TransformerCommon} from "../../../core/Atomic.ts";
 import { isWhenCondition, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
-import { type WebhookPayload } from "../infrastructure/config/health/webhooks.ts";
-import { type ExternalMetadataTerm, type PlayTransformNativeStage } from "../../../core/Transform.ts";
+import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";
+import type {ExternalMetadataTerm, PlayTransformNativeStage} from "../../../core/Transform.ts";
 import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
 import { parseArtistCredits, parseTrackCredits, uniqueNormalizedStrArr } from "../../utils/StringUtils.ts";
 import { parseRegexSingle, parseToRegexOrLiteralSearch } from "@foxxmd/regex-buddy-core";
-import { type TransformerOptions } from "./AbstractTransformer.ts";
+import type {TransformerOptions} from "./AbstractTransformer.ts";
 import { DELIMITERS_NO_AMP } from '../../../core/Atomic.ts';
 import { asArray } from "../../utils/DataUtils.ts";
 import { MaybeLogger } from '../MaybeLogger.ts';

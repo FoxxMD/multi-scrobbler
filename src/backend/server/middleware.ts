@@ -1,10 +1,10 @@
-import { type Logger } from "@foxxmd/logging";
-import { type ExpressHandler } from "../common/infrastructure/Atomic.ts";
-import ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
-import ScrobbleSources from "../sources/ScrobbleSources.ts";
-import { type Request, type Response, type NextFunction } from "express";
-import AbstractSource from "../sources/AbstractSource.ts";
-import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts";
+import type {Logger} from "@foxxmd/logging";
+import type {ExpressHandler} from "../common/infrastructure/Atomic.ts";
+import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
+import type ScrobbleSources from "../sources/ScrobbleSources.ts";
+import type {Request, Response, NextFunction} from "express";
+import type AbstractSource from "../sources/AbstractSource.ts";
+import type AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts";
 
 export const makeSourceCheckMiddle = (sources: any) => (required: boolean): ExpressHandler => (req: any, res: any, next: any) => {
     const {

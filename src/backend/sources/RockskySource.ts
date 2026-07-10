@@ -1,11 +1,11 @@
-import EventEmitter from "events";
+import type EventEmitter from "events";
 import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
-import { type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.ts";
-import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import type {FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic.ts";
+import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import MemorySource from "./MemorySource.ts";
 import { RockSkyApiClient } from "../common/vendor/RockSkyApiClient.ts";
-import { type RockskySourceConfig } from "../common/infrastructure/config/source/rocksky.ts";
+import type {RockskySourceConfig} from "../common/infrastructure/config/source/rocksky.ts";
 
 export default class RockskySource extends MemorySource {
 

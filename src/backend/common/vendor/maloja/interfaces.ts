@@ -1,4 +1,4 @@
-import { type ResponseError } from "superagent";
+import type {ResponseError} from "superagent";
 
 import { findCauseByFunc } from "../../../utils/ErrorUtils.ts";
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.ts";

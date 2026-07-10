@@ -1,5 +1,5 @@
 import dayjs, { type Dayjs, type ManipulateType } from "dayjs";
-import { type BrainzMeta, type PlayObject, type PlayObjectMinimal, type ScrobbleActionResult, type UnixTimestamp, type URLData, type Writeable } from "../../../core/Atomic.ts";
+import type {BrainzMeta, PlayObject, PlayObjectMinimal, ScrobbleActionResult, UnixTimestamp, URLData, Writeable} from "../../../core/Atomic.ts";
 import { artistNamesToCredits, artistNameToCredit, nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.ts";
 import { sleep } from "../../utils.ts";
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
@@ -10,12 +10,12 @@ import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.ts";
 import { getNodeNetworkException, isNodeNetworkException } from "../errors/NodeErrors.ts";
 import { UpstreamError } from "../errors/UpstreamError.ts";
 import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type InternalConfigOptional, type PaginatedListensTimeRangeOptions, type PaginatedTimeRangeListens, type PaginatedTimeRangeListensResult } from "../infrastructure/Atomic.ts";
-import { type LastfmData } from "../infrastructure/config/client/lastfm.ts";
+import type {LastfmData} from "../infrastructure/config/client/lastfm.ts";
 import AbstractApiClient from "./AbstractApiClient.ts";
 import { normalizeStr, parseArtistCredits } from "../../utils/StringUtils.ts";
 import { LastFMUser, LastFMAuth, LastFMTrack, type LastFMUserGetRecentTracksResponse, type LastFMBooleanNumber, type LastFMUpdateNowPlayingResponse, type LastFMUserGetInfoResponse, type LastFMUserGetRecentTracksParams } from 'lastfm-ts-api';
 import clone from 'clone';
-import { IncomingMessage } from "http";
+import type { IncomingMessage } from "http";
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
 import { ScrobbleSubmitError, SimpleError } from "../errors/MSErrors.ts";
 import { redactString } from "@foxxmd/redact-string";
@@ -237,7 +237,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             return true;
         } catch (e) {
             const hint = e.error?.cause?.message ?? undefined;
-            // eslint-disable-next-line preserve-caught-error
+             
             throw new Error(`Could not connect to ${this.upstreamName} API server${hint !== undefined ? ` (${hint})` : ''}`, { cause: e.error ?? e });
         }
     }

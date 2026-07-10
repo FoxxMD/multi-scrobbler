@@ -1,20 +1,19 @@
 import dayjs from "dayjs";
-import EventEmitter from "events";
+import type EventEmitter from "events";
 import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import {
     type ExpressRequest,
     type FormatPlayObjectOptions,
     type InternalConfig,
     NO_USER,
-    type PlayerStateData,
-    REPORTED_PLAYER_STATUSES
-} from "../common/infrastructure/Atomic.ts";
-import { type PlayPlatformId } from '../../core/Atomic.ts';
+    type PlayerStateData} from "../common/infrastructure/Atomic.ts";
+import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
+import type {PlayPlatformId} from '../../core/Atomic.ts';
 import MemorySource from "./MemorySource.ts";
-import { type LastFMEndpointSourceConfig } from "../common/infrastructure/config/source/endpointlfm.ts";
+import type {LastFMEndpointSourceConfig} from "../common/infrastructure/config/source/endpointlfm.ts";
 import { type LastFMScrobbleRequestPayload, scrobblePayloadToPlay } from "../common/vendor/LastfmApiClient.ts";
-import { type Logger } from "@foxxmd/logging";
-import { type PlayerStateOptions } from "./PlayerState/AbstractPlayerState.ts";
+import type {Logger} from "@foxxmd/logging";
+import type {PlayerStateOptions} from "./PlayerState/AbstractPlayerState.ts";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 

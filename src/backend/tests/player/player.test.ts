@@ -4,19 +4,19 @@ import clone from "clone";
 import dayjs, { type Dayjs } from "dayjs";
 import { describe, it } from 'mocha';
 import {
-    CALCULATED_PLAYER_STATUSES,
     NO_DEVICE,
     NO_USER,
     type PlayerStateDataMaybePlay,
-    REPORTED_PLAYER_STATUSES,
     SINGLE_USER_PLATFORM_ID
 } from "../../common/infrastructure/Atomic.ts";
+import { CALCULATED_PLAYER_STATUSES } from '../../../core/Atomic.ts';
+import { REPORTED_PLAYER_STATUSES } from '../../../core/Atomic.ts';
 import { GenericPlayerState } from "../../sources/PlayerState/GenericPlayerState.ts";
 import { playObjDataMatch } from "../../utils.ts";
 import { generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
 import { PositionalPlayerState } from "../../sources/PlayerState/PositionalPlayerState.ts";
-import { ListenProgressPositional } from "../../sources/PlayerState/ListenProgress.ts";
-import { ListenRangePositional } from "../../sources/PlayerState/ListenRange.ts";
+import type { ListenProgressPositional } from "../../sources/PlayerState/ListenProgress.ts";
+import type { ListenRangePositional } from "../../sources/PlayerState/ListenRange.ts";
 
 const logger = loggerTest;
 

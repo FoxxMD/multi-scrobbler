@@ -1,7 +1,7 @@
 import { loggerDebug } from "@foxxmd/logging";
 import EventEmitter from "events";
 import { describe, it } from 'mocha';
-import { type SonosData } from "../../common/infrastructure/config/source/sonos.ts";
+import type {SonosData} from "../../common/infrastructure/config/source/sonos.ts";
 import { SonosSource } from "../../sources/SonosSource.ts";
 import * as dotenv from 'dotenv';
 import path from 'path';

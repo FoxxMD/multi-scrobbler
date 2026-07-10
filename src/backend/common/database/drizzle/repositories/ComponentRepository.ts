@@ -1,9 +1,9 @@
 import { DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
-import { type DbConcrete } from "../drizzleUtils.ts";
-import { type ComponentSelect, type FindWhere } from "../drizzleTypes.ts";
+import type {DbConcrete} from "../drizzleUtils.ts";
+import type {ComponentSelect, FindWhere} from "../drizzleTypes.ts";
 import { components } from "../schema/schema.ts";
 import { generateComponentEntity } from "../entityUtils.ts";
-import { type ComponentType } from "../../../../../core/Atomic.ts";
+import type {ComponentType} from "../../../../../core/Atomic.ts";
 
 export class DrizzleComponentRepository extends DrizzleBaseRepository<'components'> {
 

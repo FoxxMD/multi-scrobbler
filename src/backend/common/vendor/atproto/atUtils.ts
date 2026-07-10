@@ -1,10 +1,10 @@
-import { type Handle } from "@atcute/lexicons";
+import type { Handle } from "@atcute/lexicons";
 import { isHandle, type AtprotoDid } from "@atcute/lexicons/syntax";
-import { type Logger } from "@foxxmd/logging";
+import type { Logger } from "@foxxmd/logging";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { loggerNoop, MaybeLogger } from '../../MaybeLogger.ts';
-import { type ATProtoUserIdentifierData, type HandleData } from "../../infrastructure/config/client/atproto.ts";
-import { Cacheable } from "cacheable";
+import type { ATProtoUserIdentifierData, HandleData } from "../../infrastructure/config/client/atproto.ts";
+import type { Cacheable } from "cacheable";
 import {
     CompositeDidDocumentResolver,
     CompositeHandleResolver,

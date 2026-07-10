@@ -6,7 +6,7 @@ import { Container } from '@chakra-ui/react';
 import { ChakraPlayer, ChakraPlayerFetchable } from "../../client/components/chakraPlayer/Player.js";
 import {Provider} from "../../client/components/Provider.js";
 import { generateSourcePlayerJson } from "../../core/tests/utils/apiFixtures.js";
-import { type MsSseEvent } from "../../core/Api.js";
+import type {MsSseEvent} from "../../core/Api.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
 import { sseProviderOptions } from "../../client/AppNext.js";
 import dayjs from "dayjs";

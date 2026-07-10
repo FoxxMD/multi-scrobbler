@@ -1,7 +1,7 @@
 import { Browser, type Service, ServiceType } from "@astronautlabs/mdns";
-import { type Logger } from "@foxxmd/logging";
+import type {Logger} from "@foxxmd/logging";
 import AvahiBrowser from 'avahi-browse';
-import { type MdnsDeviceInfo } from "../common/infrastructure/Atomic.ts";
+import type {MdnsDeviceInfo} from "../common/infrastructure/Atomic.ts";
 import { MaybeLogger } from '../common/MaybeLogger.ts';
 import { sleep } from "../utils.ts";
 import { debounce, type DebouncedFunction } from "./debounce.ts";

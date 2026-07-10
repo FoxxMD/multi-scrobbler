@@ -1,7 +1,8 @@
 import { stringSameness } from '@foxxmd/string-sameness';
 import dayjs from "dayjs";
-import request, { Request, Response } from 'superagent';
-import { type BrainzMeta, type PlayObject, type PlayObjectMinimal, type ScrobbleActionResult, type UnixTimestamp, type URLData } from "../../../core/Atomic.ts";
+import type { Request, Response } from 'superagent';
+import request from 'superagent';
+import type {BrainzMeta, PlayObject, PlayObjectMinimal, ScrobbleActionResult, UnixTimestamp, URLData} from "../../../core/Atomic.ts";
 import { artistNamesToCredits, combinePartsToString, slice } from "../../../core/StringUtils.ts";
 import {
     normalizeListenbrainzUrl,
@@ -20,7 +21,7 @@ import AbstractApiClient from "./AbstractApiClient.ts";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.ts';
 import { unique } from '../../utils.ts';
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
-import { type ListenPayload, type ListenResponse, type ListenType, type SubmitPayload } from '../../../core/vendor/listenbrainz/interfaces.ts';
+import type {ListenPayload, ListenResponse, ListenType, SubmitPayload} from '../../../core/vendor/listenbrainz/interfaces.ts';
 import { baseFormatPlayObj } from '../../utils/PlayTransformUtils.ts';
 import { ScrobbleSubmitError, SimpleError } from '../errors/MSErrors.ts';
 import pRetry from 'p-retry';

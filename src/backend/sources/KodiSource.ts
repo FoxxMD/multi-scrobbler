@@ -1,9 +1,9 @@
-import { EventEmitter } from "events";
-import { type PlayObject } from "../../core/Atomic.ts";
-import { type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.ts";
-import { type KodiSourceConfig } from "../common/infrastructure/config/source/kodi.ts";
+import type { EventEmitter } from "events";
+import type {PlayObject} from "../../core/Atomic.ts";
+import type {FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic.ts";
+import type {KodiSourceConfig} from "../common/infrastructure/config/source/kodi.ts";
 import { KodiApiClient } from "../common/vendor/KodiApiClient.ts";
-import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 
 export class KodiSource extends MemoryPositionalSource {

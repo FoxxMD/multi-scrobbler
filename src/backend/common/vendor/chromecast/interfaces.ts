@@ -1,7 +1,7 @@
-import { createPlatform, MediaController } from "@foxxmd/chromecast-client";
-import { type Logger } from "@foxxmd/logging";
-import { type Dayjs } from "dayjs";
-import { type FormatPlayObjectOptions } from "../../infrastructure/Atomic.ts";
+import type { createPlatform, MediaController } from "@foxxmd/chromecast-client";
+import type {Logger} from "@foxxmd/logging";
+import type {Dayjs} from "dayjs";
+import type {FormatPlayObjectOptions} from "../../infrastructure/Atomic.ts";
 
 export type PlatformType = ReturnType<typeof createPlatform>;
 export interface PlatformApplication {

@@ -1,5 +1,5 @@
 import { GenericPlayerState } from "./GenericPlayerState.ts";
-import { type Dayjs } from "dayjs";
+import type {Dayjs} from "dayjs";
 
 export class SubsonicPlayerState extends GenericPlayerState {
 

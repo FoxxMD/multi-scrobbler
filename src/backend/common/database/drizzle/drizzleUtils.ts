@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/node-sqlite';
 import { migrate } from 'drizzle-orm/node-sqlite/migrator';
-import { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
+import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import { sql as dsl, type Logger as DrizzleLogger } from 'drizzle-orm';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -12,7 +12,7 @@ import { projectDir } from '../../index.ts';
 import { relations } from './schema/schema.ts';
 import { addToContext, executeQuery } from './logContext.ts';
 import { migrateApp, getAppMigrationStatus } from '../appMigrator.ts';
-import { type MigrationStatus } from '../../infrastructure/Atomic.ts';
+import type {MigrationStatus} from '../../infrastructure/Atomic.ts';
 
 export async function getDbMigrationStatus(dbVal: string | DbConcrete, opts: {logger?: Logger, migrationsFolder?: string} = {}): Promise<MigrationStatus> {
   const {

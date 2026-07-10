@@ -11,7 +11,7 @@ import utc from 'dayjs/plugin/utc.js';
 import * as path from "path";
 import { SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
 import { projectDir } from "./common/index.ts";
-import { type AIOConfig } from "./common/infrastructure/config/aioConfig.ts";
+import type {AIOConfig} from "./common/infrastructure/config/aioConfig.ts";
 import { appLogger, initLogger as getInitLogger } from "./common/logging.ts";
 import { getRoot } from "./ioc.ts";
 import { parseVersion } from "./version.ts";

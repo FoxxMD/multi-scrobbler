@@ -3,7 +3,7 @@ import { FixedSizeList } from "fixed-size-list";
 import { useCallback, useEffect, useState } from 'react';
 import { connect, type ConnectedProps } from "react-redux";
 import Loading from "../components/loading/Loading";
-import { type RootState } from "../store";
+import type {RootState} from "../store";
 import LogLine from "./LogLine";
 import { useGetLogsQuery, useLazySetLogSettingsQuery } from "./logsApi";
 import './LogsSection.css';

@@ -3,7 +3,7 @@ import {
     createSlice
 } from '@reduxjs/toolkit'
 import {statusApi} from "./statusApi";
-import {type ClientStatusData, type SourcePlayerJson, type SourceStatusData} from "../../core/Atomic";
+import type {ClientStatusData, SourcePlayerJson, SourceStatusData} from "../../core/Atomic";
 
 export interface ApiEventPayload {
     type: string,

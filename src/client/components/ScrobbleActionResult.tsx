@@ -6,7 +6,7 @@ import { ChakraCodeBlockShort } from "./CodeBlock";
 import { capitalize } from "../../core/StringUtils";
 import { MSCollapsible, type MSCollapsibleExternalProps } from "./MSCollapsible";
 import { TimelineErrorIcon } from "./timeline/TimelineIcon";
-import { type ScrobbleResult } from "../../core/Atomic";
+import type {ScrobbleResult} from "../../core/Atomic";
 
 export interface ScrobbleActionResultProps extends MSCollapsibleExternalProps {
     result: ScrobbleResult<string>,

@@ -1,11 +1,11 @@
-import EventEmitter from "events";
+import type EventEmitter from "events";
 import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
-import { type FormatPlayObjectOptions, type InternalConfig, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.ts";
-import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import type {FormatPlayObjectOptions, InternalConfig, TimeRangeListensFetcher} from "../common/infrastructure/Atomic.ts";
+import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import MemorySource from "./MemorySource.ts";
 import { KoitoApiClient, listenObjectResponseToPlay } from "../common/vendor/koito/KoitoApiClient.ts";
-import { type KoitoSourceConfig } from "../common/infrastructure/config/source/koito.ts";
+import type {KoitoSourceConfig} from "../common/infrastructure/config/source/koito.ts";
 import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.ts";
 
 export default class KoitoSource extends MemorySource {

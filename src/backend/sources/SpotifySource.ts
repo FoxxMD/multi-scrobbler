@@ -1,5 +1,5 @@
 import dayjs, { type Dayjs } from "dayjs";
-import EventEmitter from "events";
+import type EventEmitter from "events";
 import SpotifyWebApi from "spotify-web-api-node";
 import request from 'superagent';
 import { type BrainzMeta, type PlayObject, type PlayObjectMinimal, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, type ScrobbleTsSOC } from "../../core/Atomic.ts";
@@ -16,11 +16,11 @@ import {
     type PaginatedTimeRangeListens,
     type PaginatedTimeRangeListensResult,
     type PlayerStateData,
-    type ReportedPlayerStatus,
     type SourceData,
     type TimeRangeListensFetcher,
 } from "../common/infrastructure/Atomic.ts";
-import { type SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.ts";
+import type {ReportedPlayerStatus} from '../../core/Atomic.ts';
+import type {SpotifySourceConfig} from "../common/infrastructure/config/source/spotify.ts";
 import {
     parseRetryAfterSecsFromObj,
     sleep,
@@ -30,7 +30,7 @@ import { writeFile } from '../utils/FSUtils.ts';
 import { readJson } from '../utils/DataUtils.ts';
 import { findCauseByFunc } from "../utils/ErrorUtils.ts";
 import { joinedUrl } from "../utils/NetworkUtils.ts";
-import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 // import SpotifyApi.AlbumObjectSimplified = SpotifyApi.SpotifyApi.AlbumObjectSimplified;
 // import SpotifyApi.ArtistObjectSimplified = SpotifyApi.SpotifyApi.ArtistObjectSimplified;
 // import SpotifyApi.CurrentlyPlayingObject = SpotifyApi.SpotifyApi.CurrentlyPlayingObject;

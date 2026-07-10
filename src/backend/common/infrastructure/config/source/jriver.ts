@@ -1,5 +1,5 @@
-import { type PollingOptions, type RequestRetryOptions } from "../common.ts";
-import { type CommonSourceConfig, type CommonSourceData } from "./index.ts";
+import type {PollingOptions, RequestRetryOptions} from "../common.ts";
+import type {CommonSourceConfig, CommonSourceData} from "./index.ts";
 
 export interface JRiverData extends CommonSourceData, PollingOptions, RequestRetryOptions {
     /**

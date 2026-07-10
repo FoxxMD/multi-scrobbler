@@ -1,11 +1,12 @@
-import { type Logger } from "@foxxmd/logging";
-import { CALCULATED_PLAYER_STATUSES } from "../../common/infrastructure/Atomic.ts";
-import { type PlayPlatformId } from '../../../core/Atomic.ts';
+import type {Logger} from "@foxxmd/logging";
+import { CALCULATED_PLAYER_STATUSES } from '../../../core/Atomic.ts';
+import type {PlayPlatformId} from '../../../core/Atomic.ts';
 import { AbstractPlayerState, type PlayerStateOptions } from "./AbstractPlayerState.ts";
-import { type PlayProgress } from "../../../core/Atomic.ts";
+import type {PlayProgress} from "../../../core/Atomic.ts";
 import { type ListenProgress, ListenProgressTS } from "./ListenProgress.ts";
-import { ListenRange, ListenRangeTS } from "./ListenRange.ts";
-import { type Dayjs } from "dayjs";
+import type { ListenRange} from "./ListenRange.ts";
+import { ListenRangeTS } from "./ListenRange.ts";
+import type {Dayjs} from "dayjs";
 
 export class GenericPlayerState extends AbstractPlayerState {
     protected newListenProgress(data?: Partial<PlayProgress>): ListenProgress {

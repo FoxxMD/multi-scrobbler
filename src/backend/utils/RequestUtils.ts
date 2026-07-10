@@ -1,9 +1,10 @@
-import { type Files, File } from "formidable";
-import type { VolatileFile } from "formidable";
+import type {Files} from "formidable";
+import type { VolatileFile , File } from "formidable";
 import { KNOWN_MEDIA_PROVIDER_URLS } from "../../core/Atomic.ts";
-import { type RequestRetryOptions } from "../common/infrastructure/config/common.ts";
-import { type Logger } from "@foxxmd/logging";
-import request, { Response } from 'superagent';
+import type {RequestRetryOptions} from "../common/infrastructure/config/common.ts";
+import type {Logger} from "@foxxmd/logging";
+import type { Response } from 'superagent';
+import type request from 'superagent';
 import pRetry, { type RetryContext, type Options } from 'p-retry';
 import { DEFAULT_RETRY_MULTIPLIER } from "../common/infrastructure/Atomic.ts";
 import { SimpleError } from "../common/errors/MSErrors.ts";

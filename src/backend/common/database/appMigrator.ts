@@ -1,10 +1,10 @@
-import { type DbConcrete } from "./drizzle/drizzleUtils.ts";
+import type {DbConcrete} from "./drizzle/drizzleUtils.ts";
 import { loggerNoop } from "../MaybeLogger.ts";
 import * as path from 'path';
 import { childLogger, type Logger } from "@foxxmd/logging";
 import { projectDir } from "../index.ts";
 import { Migrator } from 'sqlite-up';
-import { type MigrationStatus } from "../infrastructure/Atomic.ts";
+import type {MigrationStatus} from "../infrastructure/Atomic.ts";
 
 export interface MigrateBaseContext {
     db: DbConcrete

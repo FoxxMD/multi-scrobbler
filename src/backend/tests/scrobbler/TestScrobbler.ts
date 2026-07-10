@@ -1,14 +1,15 @@
 import EventEmitter from "events";
 import request from "superagent";
-import { type PlayObject } from "../../../core/Atomic.ts";
+import type {PlayObject} from "../../../core/Atomic.ts";
 import AbstractScrobbleClient from "../../scrobblers/AbstractScrobbleClient.ts";
-import { type CommonClientConfig, type CommonClientOptions, type NowPlayingOptions } from "../../common/infrastructure/config/client/index.ts";
+import type {CommonClientConfig, CommonClientOptions, NowPlayingOptions} from "../../common/infrastructure/config/client/index.ts";
 import clone from "clone";
-import { type TimeRangeListensFetcher } from "../../common/infrastructure/Atomic.ts";
+import type {TimeRangeListensFetcher} from "../../common/infrastructure/Atomic.ts";
 import { loggerNoop } from "../../common/MaybeLogger.ts";
-import { DrizzlePlayRepository, type RepositoryCreatePlayOpts } from "../../common/database/drizzle/repositories/PlayRepository.ts";
-import { DrizzleQueueRepository } from "../../common/database/drizzle/repositories/QueueRepository.ts";
-import { type PlaySelect } from "../../common/database/drizzle/drizzleTypes.ts";
+import type { DrizzlePlayRepository} from "../../common/database/drizzle/repositories/PlayRepository.ts";
+import type {RepositoryCreatePlayOpts} from "../../common/database/drizzle/repositories/PlayRepository.ts";
+import type { DrizzleQueueRepository } from "../../common/database/drizzle/repositories/QueueRepository.ts";
+import type {PlaySelect} from "../../common/database/drizzle/drizzleTypes.ts";
 import dayjs from "dayjs";
 
 export class TestScrobbler extends AbstractScrobbleClient {

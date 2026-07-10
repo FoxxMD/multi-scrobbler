@@ -29,13 +29,13 @@ import {
     lowGranularitySources,
     type ScrobbleThresholdResult,
 } from "../common/infrastructure/Atomic.ts";
-import { type ScrobbleThresholds } from "../common/infrastructure/config/source/index.ts";
+import type {ScrobbleThresholds} from "../common/infrastructure/config/source/index.ts";
 import { formatNumber } from '../../core/DataUtils.ts';
 import { InvalidRegexError, SimpleError } from "../common/errors/MSErrors.ts";
 import { type NamedGroup, parseRegex } from "@foxxmd/regex-buddy-core";
-import { type Duration } from "dayjs/plugin/duration.js";
-import { type SourceType } from "../common/infrastructure/config/source/sources.ts";
-import { type Logger } from "@foxxmd/logging";
+import type {Duration} from "dayjs/plugin/duration.js";
+import type {SourceType} from "../../core/Atomic.ts";
+import type {Logger} from "@foxxmd/logging";
 import { loggerNoop } from "../common/MaybeLogger.ts";
 
 //dayjs.extend(isToday);

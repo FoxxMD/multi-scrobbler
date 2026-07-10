@@ -1,5 +1,5 @@
-import { type CommonClientConfig, type CommonClientData } from "./index.ts"
-import { type ComponentType } from "../../../../../core/Atomic.ts"
+import type {CommonClientConfig, CommonClientData} from "./index.ts";
+import type {ComponentType} from "../../../../../core/Atomic.ts";
 
 export interface DiscordData {
     token?: string

@@ -2,11 +2,11 @@ import { loggerTest } from "@foxxmd/logging";
 import { expect } from 'chai';
 import EventEmitter from "events";
 import { describe, it } from 'mocha';
-import { type JsonPlayObject, type PlayMeta } from "../../../core/Atomic.ts";
+import type {JsonPlayObject, PlayMeta} from "../../../core/Atomic.ts";
 
 import JellyfinApiSource from "../../sources/JellyfinApiSource.ts";
 import validSession from './validSession.json' with { type: "json" };
-import { type JellyApiData } from "../../common/infrastructure/config/source/jellyfin.ts";
+import type {JellyApiData} from "../../common/infrastructure/config/source/jellyfin.ts";
 import { generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
 import { faker } from "@faker-js/faker";
 import type {
@@ -17,7 +17,7 @@ import type {
 } from "@jellyfin/sdk/lib/generated-client/index.js";
 // @ts-expect-error weird typings?
 import { getImageApi } from "@jellyfin/sdk/lib/utils/api/index.js";
-import { type PlayerStateDataMaybePlay } from "../../common/infrastructure/Atomic.ts";
+import type {PlayerStateDataMaybePlay} from "../../common/infrastructure/Atomic.ts";
 
 const dataAsFixture = (data: any): TestFixture => {
     return data as TestFixture;

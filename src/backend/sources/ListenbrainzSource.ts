@@ -1,17 +1,17 @@
-import EventEmitter from "events";
+import type EventEmitter from "events";
 import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
-import { type FormatPlayObjectOptions, type InternalConfig, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.ts";
-import { type PlayPlatformId } from '../../core/Atomic.ts';
-import { type ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz.ts";
+import type {FormatPlayObjectOptions, InternalConfig, TimeRangeListensFetcher} from "../common/infrastructure/Atomic.ts";
+import type {PlayPlatformId} from '../../core/Atomic.ts';
+import type {ListenBrainzSourceConfig} from "../common/infrastructure/config/source/listenbrainz.ts";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.ts";
-import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import MemorySource from "./MemorySource.ts";
 import { isPortReachableConnect } from "../utils/NetworkUtils.ts";
-import { type Logger } from "@foxxmd/logging";
-import { type PlayerStateOptions } from "./PlayerState/AbstractPlayerState.ts";
+import type {Logger} from "@foxxmd/logging";
+import type {PlayerStateOptions} from "./PlayerState/AbstractPlayerState.ts";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.ts";
-import { type ManipulateType } from "dayjs";
+import type {ManipulateType} from "dayjs";
 import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.ts";
 
 export default class ListenbrainzSource extends MemorySource {

@@ -3,7 +3,7 @@ import { useSSEContext, useSSEEvent } from "@flamefrontend/sse-runtime-react";
 import React, { type ComponentProps, type PropsWithChildren, useCallback, useEffect, useState } from "react";
 import { useTimeout } from 'react-use-timeout';
 import { COMPONENT_STATE, type ComponentCommonApiJson, componentStateToFriendly, type MsSseEvent, type PlayApiCommon } from "../../core/Api";
-import { type Second } from "../../core/Atomic";
+import type {Second} from "../../core/Atomic";
 import { capitalizeWords } from "../../core/StringUtils";
 
 export const PlayStateBadge = (props: PropsWithChildren<ComponentProps<typeof Badge>> & { state: PlayApiCommon['state'], suffix?: React.JSX.Element, hasDeadQueue?: boolean }) => {

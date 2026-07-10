@@ -6,7 +6,7 @@ import { Container } from '@chakra-ui/react';
 import { MSComponentSummary } from "../../client/components/msComponent/MSComponentSummary.js";
 import {Provider} from "../../client/components/Provider.js";
 import { generateClientApiJson, generateSourceApiJson, generateSourcePlayerJson } from "../../core/tests/utils/apiFixtures.js";
-import { type MsSseEvent } from "../../core/Api.js";
+import type {MsSseEvent} from "../../core/Api.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
 import { sseProviderOptions } from "../../client/AppNext.js";
 import { faker } from "@faker-js/faker";

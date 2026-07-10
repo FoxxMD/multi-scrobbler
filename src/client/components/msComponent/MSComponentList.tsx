@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Stack, SegmentGroup, Center, Card, SkeletonText } from '@chakra-ui/react';
-import { type ComponentsApiJson } from "../../../core/Api";
+import type {ComponentsApiJson} from "../../../core/Api";
 import { MSComponentSummary, MSComponentSummaryFetchable } from "./MSComponentSummary";
 import { useQuery } from '@tanstack/react-query';
 import { ErrorAlert } from "../ErrorAlert";

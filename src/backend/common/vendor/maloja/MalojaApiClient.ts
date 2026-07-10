@@ -1,11 +1,12 @@
 import dayjs, { type ManipulateType } from 'dayjs';
-import request, { Response, Request } from 'superagent';
+import type { Response, Request } from 'superagent';
+import request from 'superagent';
 import compareVersions from "compare-versions";
 import AbstractApiClient from "../AbstractApiClient.ts";
 import { isPortReachableConnect, normalizeWebAddress } from "../../../utils/NetworkUtils.ts";
-import { type MalojaData } from "../../infrastructure/config/client/maloja.ts";
-import { type PlayObject, type PlayObjectMinimal, type ScrobbleActionResult, type URLData } from "../../../../core/Atomic.ts";
-import { type AbstractApiOptions, type FormatPlayObjectOptions, type PaginatedListensTimeRangeOptions, type PaginatedTimeRangeListens, type PaginatedTimeRangeListensResult } from "../../infrastructure/Atomic.ts";
+import type {MalojaData} from "../../infrastructure/config/client/maloja.ts";
+import type {PlayObject, PlayObjectMinimal, ScrobbleActionResult, URLData} from "../../../../core/Atomic.ts";
+import type {AbstractApiOptions, FormatPlayObjectOptions, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens, PaginatedTimeRangeListensResult} from "../../infrastructure/Atomic.ts";
 import { isNodeNetworkException } from "../../errors/NodeErrors.ts";
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.ts";
 import { getNonEmptyVal } from "../../../utils.ts";

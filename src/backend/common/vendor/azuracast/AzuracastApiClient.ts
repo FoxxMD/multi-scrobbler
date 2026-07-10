@@ -1,9 +1,9 @@
-import { type URLData } from "../../../../core/Atomic.ts";
+import type {URLData} from "../../../../core/Atomic.ts";
 import { joinedUrl, normalizeWSAddress } from "../../../utils/NetworkUtils.ts";
-import { type AbstractApiOptions } from "../../infrastructure/Atomic.ts";
-import { type AzuracastData, type AzuraStationResponse } from "../../infrastructure/config/source/azuracast.ts";
+import type {AbstractApiOptions} from "../../infrastructure/Atomic.ts";
+import type {AzuracastData, AzuraStationResponse} from "../../infrastructure/config/source/azuracast.ts";
 import AbstractApiClient from "../AbstractApiClient.ts";
-import { WS } from 'iso-websocket'
+import type { WS } from 'iso-websocket'
 
 
 export class AzuracastApiClient extends AbstractApiClient {

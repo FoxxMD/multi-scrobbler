@@ -1,9 +1,9 @@
-import { type LogDataPretty, type Logger, type LogLevel } from "@foxxmd/logging";
-import { type Express } from 'express';
+import type {LogDataPretty, Logger, LogLevel} from "@foxxmd/logging";
+import type {Express} from 'express';
 import bsseDef from 'better-sse';
 import bodyParser from "body-parser";
 import { FixedSizeList } from 'fixed-size-list';
-import { PassThrough } from "node:stream";
+import type { PassThrough } from "node:stream";
 import { Transform } from "stream";
 import {
     CLIENT_DEAD_QUEUE,
@@ -19,10 +19,10 @@ import {
     type SourceStatusData,
 } from "../../core/Atomic.ts";
 import { capitalize } from "../../core/StringUtils.ts";
-import { type ExpressHandler, type LeveledLogData } from "../common/infrastructure/Atomic.ts";
+import type {ExpressHandler, LeveledLogData} from "../common/infrastructure/Atomic.ts";
 import { getRoot } from "../ioc.ts";
 import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts";
-import AbstractSource from "../sources/AbstractSource.ts";
+import type AbstractSource from "../sources/AbstractSource.ts";
 import MemorySource from "../sources/MemorySource.ts";
 import { parseBool } from "../utils.ts";
 import { sortByNewestPlayDate } from '../../core/PlayUtils.ts';
@@ -32,17 +32,17 @@ import {setupLZEndpointRoutes} from "./endpointListenbrainzRoutes.ts";
 import {setupLastfmEndpointRoutes} from "./endpointLastfmRoutes.ts";
 import { type ComponentAwareRequest, makeClientCheckMiddle, makeClientNextMiddle, makeComponentMiddle, makeSourceCheckMiddle, makeSourceNextMiddle, type SourceAwareRequest } from "./middleware.ts";
 import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.ts";
-import ScrobbleSources from "../sources/ScrobbleSources.ts";
-import ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
+import type ScrobbleSources from "../sources/ScrobbleSources.ts";
+import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
 import prom from 'prom-client';
 import { SimpleError } from "../common/errors/MSErrors.ts";
 import { DrizzlePlayRepository, type QueryPlaysOpts, type QueryPlaysOptsJson } from "../common/database/drizzle/repositories/PlayRepository.ts";
 import { playSelectToDeadScrobble } from "../common/database/drizzle/entityUtils.ts";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.ts";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
-import { type ComponentClientApiJson, type ComponentSourceApiJson } from "../../core/Api.ts";
+import type {ComponentClientApiJson, ComponentSourceApiJson} from "../../core/Api.ts";
 import { asDayjsHydratedObject } from "../../core/DataUtils.ts";
-import { type Dayjs } from "dayjs";
+import type {Dayjs} from "dayjs";
 import { asSerializablePlaySelect } from "../../core/PlayMarshalUtils.ts";
 
 const maxBufferSize = 300;

@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import ky from 'ky';
 import qs from 'qs';
 import { baseUrl } from "../utils";
-import { type ComponentsApiJson, type PaginatedResponse, type PlayApiCommonDetailed, type PlayStateUI, type QueryPlaysOptsJson } from "../../core/Api";
+import type {ComponentsApiJson, PaginatedResponse, PlayApiCommonDetailed, PlayStateUI, QueryPlaysOptsJson} from "../../core/Api";
 import { CLIENT_DEAD_QUEUE, CLIENT_INGRESS_QUEUE, isPlayState, type SourcePlayerJson } from "../../core/Atomic";
 
 export type QueryPlaysOptsJsonRefreshable = Omit<QueryPlaysOptsJson, 'state'> & {nonce?: string, state?: PlayStateUI[]};

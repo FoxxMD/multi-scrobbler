@@ -1,22 +1,19 @@
 import dayjs from "dayjs";
-import { EventEmitter } from "events";
+import type { EventEmitter } from "events";
 import path from 'path';
 import {MPC, type Status, type Song, type PlaylistItem} from 'mpc-js';
-import { type BrainzMeta, type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
+import type {BrainzMeta, PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
     type PlayerStateData,
-    REPORTED_PLAYER_STATUSES,
-    type ReportedPlayerStatus,
     SINGLE_USER_PLATFORM_ID,
 } from "../common/infrastructure/Atomic.ts";
-import {
-    type MPDSourceConfig,
-    type PlayerState,
-} from "../common/infrastructure/config/source/mpd.ts";
+import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
+import type {ReportedPlayerStatus} from '../../core/Atomic.ts';
+import type {MPDSourceConfig, PlayerState} from "../common/infrastructure/config/source/mpd.ts";
 import { isPortReachable } from "../utils/NetworkUtils.ts";
-import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import { isDebugMode, sleep } from "../utils.ts";

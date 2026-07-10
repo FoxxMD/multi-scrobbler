@@ -1,5 +1,5 @@
-import { type PollingOptions } from "../common.ts";
-import { type CommonSourceConfig, type CommonSourceData } from "./index.ts";
+import type {PollingOptions} from "../common.ts";
+import type {CommonSourceConfig, CommonSourceData} from "./index.ts";
 
 export interface MopidyData extends CommonSourceData, PollingOptions {
     /**

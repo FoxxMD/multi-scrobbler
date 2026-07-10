@@ -1,9 +1,10 @@
 import { childLogger } from "@foxxmd/logging";
-import { EventEmitter } from "events";
-import { WS, CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket'
+import type { EventEmitter } from "events";
+import type { CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket';
+import { WS } from 'iso-websocket'
 import { randomUUID } from "node:crypto";
 import pEvent from 'p-event';
-import { type PlayObject, type PlayObjectMinimal, type URLData } from "../../core/Atomic.ts";
+import type {PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
 import { UpstreamError } from "../common/errors/UpstreamError.ts";
 import {
     type FormatPlayObjectOptions,
@@ -11,15 +12,9 @@ import {
     type PlayerStateData,
     SINGLE_USER_PLATFORM_ID,
 } from "../common/infrastructure/Atomic.ts";
-import {
-    type MCAuthenticateRequest,
-    type MCAuthenticateResponse,
-    type MCPlaybackOverviewRequest,
-    type MCPlaybackOverviewResponse,
-    type MusikcubeSourceConfig
-} from "../common/infrastructure/config/source/musikcube.ts";
+import type {MCAuthenticateRequest, MCAuthenticateResponse, MCPlaybackOverviewRequest, MCPlaybackOverviewResponse, MusikcubeSourceConfig} from "../common/infrastructure/config/source/musikcube.ts";
 import { sleep } from "../utils.ts";
-import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import { normalizeWSAddress } from "../utils/NetworkUtils.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";

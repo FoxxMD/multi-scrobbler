@@ -1,4 +1,4 @@
-import { type UnixTimestamp } from "../../../core/Atomic.ts"
+import type {UnixTimestamp} from "../../../core/Atomic.ts";
 
 export interface JobParameters {
     /** maximum number of results to get for the entire job */

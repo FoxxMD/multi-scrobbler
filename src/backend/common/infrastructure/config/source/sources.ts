@@ -1,32 +1,32 @@
-import { type AzuracastSourceAIOConfig, type AzuracastSourceConfig } from "./azuracast.ts";
-import { type ChromecastSourceAIOConfig, type ChromecastSourceConfig } from "./chromecast.ts";
-import { type ListenbrainzEndpointSourceAIOConfig, type ListenbrainzEndpointSourceConfig } from "./endpointlz.ts";
-import { type LastFMEndpointSourceAIOConfig, type LastFMEndpointSourceConfig } from "./endpointlfm.ts";
-import { type DeezerInternalSourceConfig, type DeezerSourceConfig, type DeezerCompatConfig, type DeezerAIOCompatConfig } from "./deezer.ts";
-import { type JellyApiSourceAIOConfig, type JellyApiSourceConfig } from "./jellyfin.ts";
-import { type JRiverSourceAIOConfig, type JRiverSourceConfig } from "./jriver.ts";
-import { type KodiSourceAIOConfig, type KodiSourceConfig } from "./kodi.ts";
-import { type LastFmSouceAIOConfig, type LastfmSourceConfig } from "./lastfm.ts";
-import { type ListenBrainzSourceAIOConfig, type ListenBrainzSourceConfig } from "./listenbrainz.ts";
-import { type MopidySourceAIOConfig, type MopidySourceConfig } from "./mopidy.ts";
-import { type MPDSourceAIOConfig, type MPDSourceConfig } from "./mpd.ts";
-import { type MPRISSourceAIOConfig, type MPRISSourceConfig } from "./mpris.ts";
-import { type MusikcubeSourceAIOConfig, type MusikcubeSourceConfig } from "./musikcube.ts";
-import { type MusicCastSourceConfig, type MusicCastSourceAIOConfig } from "./musiccast.ts";
-import { type PlexApiSourceConfig, type PlexApiSourceAIOConfig } from "./plex.ts";
-import { type SpotifySourceAIOConfig, type SpotifySourceConfig } from "./spotify.ts";
-import { type SubsonicSourceAIOConfig, type SubSonicSourceConfig } from "./subsonic.ts";
-import { type VLCSourceAIOConfig, type VLCSourceConfig } from "./vlc.ts";
-import { type WebScrobblerSourceAIOConfig, type WebScrobblerSourceConfig } from "./webscrobbler.ts";
-import { type YTMusicSourceAIOConfig, type YTMusicSourceConfig } from "./ytmusic.ts";
-import { type YandexMusicBridgeSourceAIOConfig, type YandexMusicBridgeSourceConfig } from "./ymbridge.ts";
-import { type IcecastSourceAIOConfig, type IcecastSourceConfig } from "./icecast.ts";
-import { type KoitoSourceAIOConfig, type KoitoSourceConfig } from "./koito.ts";
-import { type MalojaSourceAIOConfig, type MalojaSourceConfig } from "./maloja.ts";
-import { type TealSourceAIOConfig, type TealSourceConfig } from "./tealfm.ts";
-import { type RockskySourceAIOConfig, type RockskySourceConfig } from "./rocksky.ts";
-import { type LibrefmSouceAIOConfig, type LibrefmSourceConfig } from "./librefm.ts";
-import { type SonosSourceAIOConfig, type SonosSourceConfig } from "./sonos.ts";
+import type {AzuracastSourceAIOConfig, AzuracastSourceConfig} from "./azuracast.ts";
+import type {ChromecastSourceAIOConfig, ChromecastSourceConfig} from "./chromecast.ts";
+import type {ListenbrainzEndpointSourceAIOConfig, ListenbrainzEndpointSourceConfig} from "./endpointlz.ts";
+import type {LastFMEndpointSourceAIOConfig, LastFMEndpointSourceConfig} from "./endpointlfm.ts";
+import type {DeezerInternalSourceConfig, DeezerSourceConfig, DeezerCompatConfig, DeezerAIOCompatConfig} from "./deezer.ts";
+import type {JellyApiSourceAIOConfig, JellyApiSourceConfig} from "./jellyfin.ts";
+import type {JRiverSourceAIOConfig, JRiverSourceConfig} from "./jriver.ts";
+import type {KodiSourceAIOConfig, KodiSourceConfig} from "./kodi.ts";
+import type {LastFmSouceAIOConfig, LastfmSourceConfig} from "./lastfm.ts";
+import type {ListenBrainzSourceAIOConfig, ListenBrainzSourceConfig} from "./listenbrainz.ts";
+import type {MopidySourceAIOConfig, MopidySourceConfig} from "./mopidy.ts";
+import type {MPDSourceAIOConfig, MPDSourceConfig} from "./mpd.ts";
+import type {MPRISSourceAIOConfig, MPRISSourceConfig} from "./mpris.ts";
+import type {MusikcubeSourceAIOConfig, MusikcubeSourceConfig} from "./musikcube.ts";
+import type {MusicCastSourceConfig, MusicCastSourceAIOConfig} from "./musiccast.ts";
+import type {PlexApiSourceConfig, PlexApiSourceAIOConfig} from "./plex.ts";
+import type {SpotifySourceAIOConfig, SpotifySourceConfig} from "./spotify.ts";
+import type {SubsonicSourceAIOConfig, SubSonicSourceConfig} from "./subsonic.ts";
+import type {VLCSourceAIOConfig, VLCSourceConfig} from "./vlc.ts";
+import type {WebScrobblerSourceAIOConfig, WebScrobblerSourceConfig} from "./webscrobbler.ts";
+import type {YTMusicSourceAIOConfig, YTMusicSourceConfig} from "./ytmusic.ts";
+import type {YandexMusicBridgeSourceAIOConfig, YandexMusicBridgeSourceConfig} from "./ymbridge.ts";
+import type {IcecastSourceAIOConfig, IcecastSourceConfig} from "./icecast.ts";
+import type {KoitoSourceAIOConfig, KoitoSourceConfig} from "./koito.ts";
+import type {MalojaSourceAIOConfig, MalojaSourceConfig} from "./maloja.ts";
+import type {TealSourceAIOConfig, TealSourceConfig} from "./tealfm.ts";
+import type {RockskySourceAIOConfig, RockskySourceConfig} from "./rocksky.ts";
+import type {LibrefmSouceAIOConfig, LibrefmSourceConfig} from "./librefm.ts";
+import type {SonosSourceAIOConfig, SonosSourceConfig} from "./sonos.ts";
 
 
 export type SourceConfig =
@@ -130,69 +130,6 @@ export type RockskySourceConfigs = RockskySourceConfig[];
 export type SonosSourceConfigs = SonosSourceConfig[];
 
 
-export type SourceType =
-    'spotify'
-    | 'plex'
-    | 'subsonic'
-    | 'jellyfin'
-    | 'lastfm'
-    | 'librefm'
-    | 'deezer'
-    | 'endpointlz'
-    | 'endpointlfm'
-    | 'ytmusic'
-    | 'ymbridge'
-    | 'mpris'
-    | 'mopidy'
-    | 'musiccast'
-    | 'listenbrainz'
-    | 'jriver'
-    | 'kodi'
-    | 'webscrobbler'
-    | 'chromecast'
-    | 'maloja'
-    | 'musikcube'
-    | 'mpd'
-    | 'vlc'
-    | 'icecast'
-    | 'azuracast'
-    | 'koito'
-    | 'tealfm'
-    | 'rocksky'
-    | 'sonos';
-    
-export const sourceTypes: SourceType[] = [
-    'spotify',
-    'plex',
-    'subsonic',
-    'jellyfin',
-    'lastfm',
-    'librefm',
-    'deezer',
-    'endpointlz',
-    'endpointlfm',
-    'ytmusic',
-    'ymbridge',
-    'mpris',
-    'mopidy',
-    'musiccast',
-    'listenbrainz',
-    'jriver',
-    'kodi',
-    'webscrobbler',
-    'chromecast',
-    'maloja',
-    'musikcube',
-    'mpd',
-    'vlc',
-    'icecast',
-    'azuracast',
-    'koito',
-    'tealfm',
-    'rocksky',
-    'sonos'
-];
-
 export const atomicSourceInterfaces = [
     'SpotifySourceConfig',
     'PlexApiSourceConfig',
@@ -230,7 +167,4 @@ export const sourceInterfaces = [
     ...atomicSourceInterfaces
 ];
 
-export const isSourceType = (data: string): data is SourceType => {
-    return sourceTypes.includes(data as SourceType);
-};
 

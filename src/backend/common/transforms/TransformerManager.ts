@@ -1,11 +1,11 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
-import AbstractTransformer from "./AbstractTransformer.ts";
-import { type TransformerCommonConfig } from "../../../core/Atomic.ts";
+import type AbstractTransformer from "./AbstractTransformer.ts";
+import type {TransformerCommonConfig} from "../../../core/Atomic.ts";
 import UserTransformer from "./UserTransformer.ts";
-import { type StageConfig } from "../../../core/Transform.ts";
-import { type PlayObject } from "../../../core/Atomic.ts";
+import type {StageConfig} from "../../../core/Transform.ts";
+import type {PlayObject} from "../../../core/Atomic.ts";
 import { isStageTyped } from "../../utils/PlayTransformUtils.ts";
-import { MSCache } from "../Cache.ts";
+import type { MSCache } from "../Cache.ts";
 import NativeTransformer from "./NativeTransformer.ts";
 import MusicbrainzTransformer, { configFromEnv, type MusicbrainzTransformerConfig } from "./MusicbrainzTransformer.ts";
 import { AsyncLocalStorage } from 'node:async_hooks';

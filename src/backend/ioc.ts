@@ -6,15 +6,15 @@ import { projectDir } from "./common/index.ts";
 import { WildcardEmitter } from "./common/WildcardEmitter.ts";
 
 import { generateBaseURL } from "./utils/NetworkUtils.ts";
-import { PassThrough } from "stream";
-import { type CacheConfigOptions, type MusicBrainzSingletonMap } from "./common/infrastructure/Atomic.ts";
+import type { PassThrough } from "stream";
+import type {CacheConfigOptions, MusicBrainzSingletonMap} from "./common/infrastructure/Atomic.ts";
 import { MSCache } from "./common/Cache.ts";
 import TransformerManager from "./common/transforms/TransformerManager.ts";
-import { type TransformerCommonConfig } from "../core/Atomic.ts";
+import type {TransformerCommonConfig} from "../core/Atomic.ts";
 import prom from 'prom-client';
 import { CoverArtApiClient } from "./common/vendor/musicbrainz/CoverArtApiClient.ts";
 import { version } from "./version.ts";
-import { type DbConcrete } from "./common/database/drizzle/drizzleUtils.ts";
+import type {DbConcrete} from "./common/database/drizzle/drizzleUtils.ts";
 
 let root: ReturnType<typeof createRoot>;
 export interface RootOptions {

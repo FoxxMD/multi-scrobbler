@@ -1,4 +1,4 @@
-import { type SearchAndReplaceRegExp } from "@foxxmd/regex-buddy-core";
+import type {SearchAndReplaceRegExp} from "@foxxmd/regex-buddy-core";
 
 export interface ConditionalSearchAndReplaceRegExp extends SearchAndReplaceRegExp, Whennable {
 }

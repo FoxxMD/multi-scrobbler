@@ -8,7 +8,7 @@ import MusicbrainzTransformer, { DEFAULT_SEARCHTYPE_ORDER, type MusicbrainzTrans
 import { DEFAULT_MISSING_TYPES, type PlayObject } from "../../../core/Atomic.ts";
 import { projectDir } from '../../common/index.ts';
 import path from 'path';
-import { type MusicbrainzApiConfigData } from '../../common/infrastructure/Atomic.ts';
+import type {MusicbrainzApiConfigData} from '../../common/infrastructure/Atomic.ts';
 import { MockNetworkError, withRequestInterception } from '../utils/networking.ts';
 import { http, HttpResponse, delay } from "msw";
 import { generatePlay, withBrainz } from '../../../core/tests/utils/PlayTestUtils.ts';

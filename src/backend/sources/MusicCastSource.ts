@@ -1,7 +1,7 @@
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
-import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
-import { EventEmitter } from "events";
-import { type PlayObject, type PlayObjectMinimal, type URLData } from "../../core/Atomic.ts";
+import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
+import type { EventEmitter } from "events";
+import type {PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,

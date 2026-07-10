@@ -1,4 +1,4 @@
-import { Response } from 'superagent';
+import type { Response } from 'superagent';
 
 export interface SubsonicResponseCommon {
     status: 'failed' | 'ok'

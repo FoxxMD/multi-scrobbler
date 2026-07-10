@@ -1,5 +1,5 @@
 import { type ArtistCredit, isPlayObject, type ObjectPlayData, type PlayObject, type TrackMeta } from "../../../core/Atomic.ts";
-import { type AtomicStageConfig, type StageConfig } from "../../../core/Transform.ts";
+import type {AtomicStageConfig, StageConfig} from "../../../core/Transform.ts";
 import AbstractTransformer from "./AbstractTransformer.ts";
 
 //export type GenericAtomicStageConfig<A> = 

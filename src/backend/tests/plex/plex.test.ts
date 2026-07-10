@@ -2,14 +2,14 @@ import { loggerTest } from "@foxxmd/logging";
 import { expect } from 'chai';
 import EventEmitter from "events";
 import { describe, it } from 'mocha';
-import { type PlayMeta } from "../../../core/Atomic.ts";
+import type {PlayMeta} from "../../../core/Atomic.ts";
 
 import validSessionResponse from './validSession.json' with { type: "json" };
 import { generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
-import { type PlayerStateDataMaybePlay } from "../../common/infrastructure/Atomic.ts";
-import { type PlexApiData } from "../../common/infrastructure/config/source/plex.ts";
+import type {PlayerStateDataMaybePlay} from "../../common/infrastructure/Atomic.ts";
+import type {PlexApiData} from "../../common/infrastructure/config/source/plex.ts";
 import PlexApiSource from "../../sources/PlexApiSource.ts";
-import { type GetSessionsMetadata } from "@lukehagar/plexjs/sdk/models/operations/getsessions.js";
+import type {GetSessionsMetadata} from "@lukehagar/plexjs/sdk/models/operations/getsessions.js";
 
 const validSession = validSessionResponse.object.mediaContainer.metadata[0];
 

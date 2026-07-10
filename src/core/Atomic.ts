@@ -1,10 +1,10 @@
 import type { Dayjs } from "dayjs";
 import type { AdditionalTrackInfoResponse } from "./vendor/listenbrainz/interfaces.ts";
 import type { Merge, RequiredKeys, StrictOmit } from "ts-essentials";
-import { type ErrorObject } from "serialize-error";
+import type {ErrorObject} from "serialize-error";
 import type { FlowControlTerm, TransformHook } from "./Transform.ts";
-import { type Changeset } from "json-diff-ts";
-import { type IParseBaseOptions } from 'qs'; 
+import type {Changeset} from "json-diff-ts";
+import type {IParseBaseOptions} from 'qs'; 
 
 export type ComponentTypeClient = 'client';
 export const COMPONENT_TYPE_CLIENT: ComponentTypeClient = 'client';
@@ -717,4 +717,103 @@ export const DELIMITERS_NO_AMP = [',', '/', '\\'];
 export type DeviceId = string;
 export type PlayUserId = string;
 export type PlayPlatformId = [DeviceId, PlayUserId];
+export type SourceType =
+    'spotify' |
+    'plex' |
+    'subsonic' |
+    'jellyfin' |
+    'lastfm' |
+    'librefm' |
+    'deezer' |
+    'endpointlz' |
+    'endpointlfm' |
+    'ytmusic' |
+    'ymbridge' |
+    'mpris' |
+    'mopidy' |
+    'musiccast' |
+    'listenbrainz' |
+    'jriver' |
+    'kodi' |
+    'webscrobbler' |
+    'chromecast' |
+    'maloja' |
+    'musikcube' |
+    'mpd' |
+    'vlc' |
+    'icecast' |
+    'azuracast' |
+    'koito' |
+    'tealfm' |
+    'rocksky' |
+    'sonos';
+export const sourceTypes: SourceType[] = [
+    'spotify',
+    'plex',
+    'subsonic',
+    'jellyfin',
+    'lastfm',
+    'librefm',
+    'deezer',
+    'endpointlz',
+    'endpointlfm',
+    'ytmusic',
+    'ymbridge',
+    'mpris',
+    'mopidy',
+    'musiccast',
+    'listenbrainz',
+    'jriver',
+    'kodi',
+    'webscrobbler',
+    'chromecast',
+    'maloja',
+    'musikcube',
+    'mpd',
+    'vlc',
+    'icecast',
+    'azuracast',
+    'koito',
+    'tealfm',
+    'rocksky',
+    'sonos'
+];
+export const isSourceType = (data: string): data is SourceType => {
+    return sourceTypes.includes(data as SourceType);
+};
+export type ClientType =
+    'maloja' |
+    'lastfm' |
+    'librefm' |
+    'listenbrainz' |
+    'koito' |
+    'tealfm' |
+    'rocksky' |
+    'discord';
+export const clientTypes: ClientType[] = [
+    'maloja',
+    'lastfm',
+    'librefm',
+    'listenbrainz',
+    'koito',
+    'tealfm',
+    'rocksky',
+    'discord'
+];
+export type ReportedPlayerStatus = 'playing' | 'stopped' | 'paused' | 'unknown';
+export const REPORTED_PLAYER_STATUSES = {
+    playing: 'playing' as ReportedPlayerStatus,
+    stopped: 'stopped' as ReportedPlayerStatus,
+    paused: 'paused' as ReportedPlayerStatus,
+    unknown: 'unknown' as ReportedPlayerStatus
+};
+export type CalculatedPlayerStatus = ReportedPlayerStatus | 'stale' | 'orphaned';
+export const CALCULATED_PLAYER_STATUSES = {
+    ...REPORTED_PLAYER_STATUSES,
+    stale: 'stale' as CalculatedPlayerStatus,
+    orphaned: 'orphaned' as CalculatedPlayerStatus,
+};
+export const isClientType = (data: string): data is ClientType => {
+    return clientTypes.includes(data as ClientType);
+};
 

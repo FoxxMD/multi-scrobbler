@@ -1,17 +1,19 @@
 import { faker } from "@faker-js/faker";
-import { type ComponentClientApi, type ComponentClientApiJson, type ComponentCommonApi, type ComponentCommonApiJson, type ComponentSourceApi, type ComponentSourceApiJson, type ComponentState, type PlayApiCommon, type PlayApiCommonDetailed, type PlayInputApi, type QueueStateApi } from "../../Api.ts";
-import { CLIENT_INGRESS_QUEUE, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes } from "../../Atomic.ts";
+import type {ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi} from "../../Api.ts";
+import { CLIENT_INGRESS_QUEUE, type ComponentType, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes } from "../../Atomic.ts";
 import { generatePlay, normalizePlays } from "./PlayTestUtils.ts";
 import { generatePlayInput, generatePlayWithLifecycle, playWithLifecycleScrobble, randomPlayState } from "./fixtures.ts";
 import { asJsonPlayObject } from "../../PlayMarshalUtils.ts";
 import { generatePlayUid } from "../../StringUtils.ts";
 import dayjs, { type Dayjs } from "dayjs";
-import { isSourceType, sourceTypes } from "../../../backend/common/infrastructure/config/source/sources.ts";
-import { clientTypes } from "../../../backend/common/infrastructure/config/client/clients.ts";
-import { type ComponentSelect } from "../../../backend/common/database/drizzle/drizzleTypes.ts";
-import { CALCULATED_PLAYER_STATUSES, isClientType, REPORTED_PLAYER_STATUSES } from "../../../backend/common/infrastructure/Atomic.ts";
+import { isSourceType } from "../../Atomic.ts";
+import { sourceTypes } from "../../Atomic.ts";
+import { clientTypes } from "../../Atomic.ts";
+import { isClientType } from '../../Atomic.ts';
+import { CALCULATED_PLAYER_STATUSES } from '../../Atomic.ts';
+import { REPORTED_PLAYER_STATUSES } from '../../Atomic.ts';
 import { generateArray } from "../../DataUtils.ts";
-import { type ErrorIsh } from "../../ErrorUtils.ts";
+import type {ErrorIsh} from "../../ErrorUtils.ts";
 
 export const generatePlayApiCommon = (commonData: Partial<PlayApiCommon> & {play?: JsonPlayObject | PlayObject } = {}, ...playOpts: Parameters<typeof generatePlay>): PlayApiCommon => {
     let play: JsonPlayObject | PlayObject;
@@ -117,7 +119,7 @@ export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApi>
     } = data;
 
 
-    let mode: ComponentSelect['mode'] = data.mode;
+    let mode: ComponentType = data.mode;
     if(mode === undefined) {
         if(isSourceType(type)) {
             mode = 'source';

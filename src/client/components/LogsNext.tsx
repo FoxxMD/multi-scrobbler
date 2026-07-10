@@ -5,7 +5,7 @@ import * as AnsiImport from "ansi-to-react";
 import { FixedSizeList } from "fixed-size-list";
 import ky from 'ky';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { type LogLevelStandalone, type LogOutputConfig } from '../../core/Atomic';
+import type {LogLevelStandalone, LogOutputConfig} from '../../core/Atomic';
 import { tanQueries } from '../queries';
 import { ChakraClipDynamic } from './ChakraClipboard';
 

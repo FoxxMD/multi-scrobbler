@@ -9,7 +9,7 @@ import pEvent from 'p-event';
 import EventEmitter from "events";
 import { randomInt } from "crypto";
 import request from 'superagent';
-import { type AbstractApiOptions } from "../../infrastructure/Atomic.ts";
+import type {AbstractApiOptions} from "../../infrastructure/Atomic.ts";
 import { isPlayObject, type SourcePlayerObj } from "../../../../core/Atomic.ts";
 import dayjs, { type Dayjs } from "dayjs";
 import { getRoot } from "../../../ioc.ts";

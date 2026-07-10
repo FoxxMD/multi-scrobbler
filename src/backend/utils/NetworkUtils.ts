@@ -1,12 +1,12 @@
-import { type Logger } from "@foxxmd/logging";
+import type {Logger} from "@foxxmd/logging";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import address from "address";
 import net from 'node:net';
 import normalizeUrl from "normalize-url";
 import { join as joinPath } from "path";
 import { isDebugMode} from "../utils.ts";
-import { type URLData } from "../../core/Atomic.ts";
-import { CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket'
+import type {URLData} from "../../core/Atomic.ts";
+import type { CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket'
 import { WEBSOCKET_CLOSE_CODE_REASONS } from "../common/infrastructure/Atomic.ts";
 import { loggerNoop } from "../common/MaybeLogger.ts";
 import { formatBytes } from "./DataUtils.ts";

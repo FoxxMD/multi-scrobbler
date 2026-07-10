@@ -1,13 +1,13 @@
-import { type Logger, type LogDataPretty } from '@foxxmd/logging';
+import type { Logger, LogDataPretty } from '@foxxmd/logging';
 import type { Dayjs, ManipulateType } from "dayjs";
-import { type Request, type Response } from "express";
+import type { Request, Response } from "express";
 import type { NextFunction, ParamsDictionary, Query } from "express-serve-static-core";
-import { FixedSizeList } from 'fixed-size-list';
+import type { FixedSizeList } from 'fixed-size-list';
 import { type DeviceId, type ErrorLike, isPlayObject, type PlayMeta, type PlayObject, type PlayObjectMinimal, type PlayPlatformId, type PlayUserId, type UnixTimestamp } from "../../../core/Atomic.ts";
-import TupleMap from "../TupleMap.ts";
-import { MusicBrainzApi } from 'musicbrainz-api';
-import type { SourceType } from './config/source/sources.ts';
-import { type ClientType, clientTypes } from './config/client/clients.ts';
+import type TupleMap from "../TupleMap.ts";
+import type { MusicBrainzApi } from 'musicbrainz-api';
+import type { ReportedPlayerStatus, SourceType } from "../../../core/Atomic.ts";
+import type { ClientType } from "../../../core/Atomic.ts";
 import assert from 'assert';
 
 export interface LeveledLogData extends LogDataPretty {
@@ -15,10 +15,6 @@ export interface LeveledLogData extends LogDataPretty {
 }
 
 export const lowGranularitySources: SourceType[] = ['subsonic', 'ytmusic'];
-
-export const isClientType = (data: string): data is ClientType => {
-    return clientTypes.includes(data as ClientType);
-}
 
 export interface ComponentIdentifier {
     type: SourceType | ClientType
@@ -54,21 +50,6 @@ export interface InternalConfig {
 }
 
 export type InternalConfigOptional = Omit<InternalConfig, 'logger'>
-
-export type ReportedPlayerStatus = 'playing' | 'stopped' | 'paused' | 'unknown';
-export const REPORTED_PLAYER_STATUSES = {
-    playing: 'playing' as ReportedPlayerStatus,
-    stopped: 'stopped' as ReportedPlayerStatus,
-    paused: 'paused' as ReportedPlayerStatus,
-    unknown: 'unknown' as ReportedPlayerStatus
-}
-
-export type CalculatedPlayerStatus = ReportedPlayerStatus | 'stale' | 'orphaned';
-export const CALCULATED_PLAYER_STATUSES = {
-    ...REPORTED_PLAYER_STATUSES,
-    stale: 'stale' as CalculatedPlayerStatus,
-    orphaned: 'orphaned' as CalculatedPlayerStatus,
-}
 
 export type ConfigureAsSource = 'source';
 export type ConfigureAsClient = 'client';

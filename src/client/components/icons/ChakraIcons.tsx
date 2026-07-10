@@ -30,9 +30,10 @@ import { VscDebugRestart } from 'react-icons/vsc';
 import { MdOutlineFiberNew } from "react-icons/md";
 import { RiZzzFill } from "react-icons/ri";
 import { SiGoogledocs } from "react-icons/si";
-import { IconButton, Clipboard, useClipboard, Spinner, Icon } from "@chakra-ui/react"
-import { type ComponentProps, type PropsWithChildren } from 'react';
-import { type IconBaseProps, type IconType } from "react-icons/lib";
+import type { Clipboard} from "@chakra-ui/react";
+import { IconButton, useClipboard, Spinner, Icon } from "@chakra-ui/react"
+import type {ComponentProps, PropsWithChildren} from 'react';
+import type {IconBaseProps, IconType} from "react-icons/lib";
 
 export const makeIconButton = (Icon: IconType) => (props: PropsWithChildren<ComponentProps<typeof IconButton>> & { iconProps?: IconBaseProps, loading?: boolean }) => {
     const { 

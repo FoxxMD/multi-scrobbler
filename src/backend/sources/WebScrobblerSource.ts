@@ -1,26 +1,22 @@
 import dayjs, { type Dayjs } from "dayjs";
-import EventEmitter from "events";
+import type EventEmitter from "events";
 import { type PlayObjectMinimal, SOURCE_SOT } from "../../core/Atomic.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
     NO_USER,
     type PlayerStateData,
-    REPORTED_PLAYER_STATUSES,
-    type ReportedPlayerStatus,
 } from "../common/infrastructure/Atomic.ts";
-import { type PlayPlatformId } from '../../core/Atomic.ts';
-import { type WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.ts";
-import {
-    type WebScrobblerHookEvent,
-    type WebScrobblerPayload,
-    type WebScrobblerSong
-} from "../common/vendor/webscrobbler/interfaces.ts";
+import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
+import type {ReportedPlayerStatus} from '../../core/Atomic.ts';
+import type {PlayPlatformId} from '../../core/Atomic.ts';
+import type {WebScrobblerSourceConfig} from "../common/infrastructure/config/source/webscrobbler.ts";
+import type {WebScrobblerHookEvent, WebScrobblerPayload, WebScrobblerSong} from "../common/vendor/webscrobbler/interfaces.ts";
 
 import { joinedUrl } from "../utils/NetworkUtils.ts";
 import MemorySource from "./MemorySource.ts";
-import { type Logger } from "@foxxmd/logging";
-import { type PlayerStateOptions } from "./PlayerState/AbstractPlayerState.ts";
+import type {Logger} from "@foxxmd/logging";
+import type {PlayerStateOptions} from "./PlayerState/AbstractPlayerState.ts";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import { artistNameToCredit } from "../../core/StringUtils.ts";

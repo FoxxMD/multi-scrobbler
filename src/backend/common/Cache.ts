@@ -19,7 +19,8 @@ import { Typeson } from 'typeson';
 import { builtin } from 'typeson-registry';
 import { loggerNoop } from './MaybeLogger.ts';
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
-import prom, { Gauge } from 'prom-client';
+import type { Gauge } from 'prom-client';
+import prom from 'prom-client';
 import { nonEmptyStringOrDefault } from '../../core/StringUtils.ts';
 
 dayjs.extend(utc)

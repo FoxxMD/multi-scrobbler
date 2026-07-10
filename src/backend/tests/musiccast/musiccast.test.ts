@@ -4,10 +4,10 @@ import EventEmitter from "events";
 import { describe, it, after } from 'mocha';
 import { http, HttpResponse } from "msw";
 import { withRequestInterception } from "../utils/networking.ts";
-import { type MusicCastData } from "../../common/infrastructure/config/source/musiccast.ts";
+import type {MusicCastData} from "../../common/infrastructure/config/source/musiccast.ts";
 import { MusicCastSource } from "../../sources/MusicCastSource.ts";
 import netInterceptor from "@gr2m/net-interceptor";
-import { REPORTED_PLAYER_STATUSES } from "../../common/infrastructure/Atomic.ts";
+import { REPORTED_PLAYER_STATUSES } from '../../../core/Atomic.ts';
 
 const TEST_IP = '192.168.10.101';
 

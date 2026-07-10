@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { type PlayObject, type SourcePlayerObj } from "../../../../core/Atomic.ts";
+import type {PlayObject, SourcePlayerObj} from "../../../../core/Atomic.ts";
 import { GatewayOpcodes, PresenceUpdateStatus } from "discord.js";
 import { capitalize } from "../../../../core/StringUtils.ts";
 import { urlToMusicService } from '../listenbrainz/lzUtils.ts';

@@ -1,5 +1,5 @@
-import { type Logger } from "@foxxmd/logging";
-import * as AjvNS from "ajv";
+import type {Logger} from "@foxxmd/logging";
+import type * as AjvNS from "ajv";
 import Ajv from "ajv";
 import f from "ajv-formats"
 import { resolve } from "path";

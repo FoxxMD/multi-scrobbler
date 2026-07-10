@@ -1,5 +1,5 @@
-import { type Duration } from "dayjs/plugin/duration.js";
-import { type DurationValue } from "../Atomic.ts";
+import type {Duration} from "dayjs/plugin/duration.js";
+import type {DurationValue} from "../Atomic.ts";
 
 export type RetentionPlayType = 'failed' | 'completed' | 'duped';
 export const retentionPlayTypes: RetentionPlayType[] = ['failed','completed','duped'];

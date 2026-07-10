@@ -1,4 +1,4 @@
-import { type AmbPlayObject, type DateLike, type PlayObject, type PlayObjectMinimal, type PlayPlatformId } from "./Atomic.ts";
+import type {AmbPlayObject, DateLike, PlayObject, PlayObjectMinimal, PlayPlatformId} from "./Atomic.ts";
 import dayjs from "dayjs";
 
 export const sortByNewestDate = (aPlayDate: DateLike, bPlayDate: DateLike) => {

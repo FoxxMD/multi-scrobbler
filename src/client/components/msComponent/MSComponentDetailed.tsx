@@ -22,7 +22,7 @@ import dayjs from "dayjs";
 import { durationToHuman, shortTodayAwareFormat } from "../../../core/TimeUtils.js";
 import { tanQueries } from "../../queries/index.js";
 import { MSErrorBoundary } from "../ErrorBoundary.js";
-import { type IconType } from "react-icons/lib";
+import type {IconType} from "react-icons/lib";
 import { useIsWrapped } from "../../utils/hooks/useIsWrapped.js";
 
 export const ComponentBackButton = (props: ComponentProps<typeof ChevronLeftButton> = {}) => {

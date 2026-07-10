@@ -1,4 +1,4 @@
-import { type ComponentProps } from 'react';
+import type {ComponentProps} from 'react';
 import { Icon } from '@chakra-ui/react';
 
 /** Ripple animated "loading" icon

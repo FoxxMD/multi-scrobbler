@@ -1,24 +1,25 @@
 import dayjs from "dayjs";
-import request, { Request, Response } from 'superagent';
-import { type PlayObject, type PlayObjectMinimal, type ScrobbleActionResult, type URLData } from "../../../core/Atomic.ts";
+import type { Request, Response } from 'superagent';
+import request from 'superagent';
+import type {PlayObject, PlayObjectMinimal, ScrobbleActionResult, URLData} from "../../../core/Atomic.ts";
 import { artistCreditsToNames, artistNamesToCredits, nonEmptyStringOrDefault } from "../../../core/StringUtils.ts";
 import { UpstreamError } from "../errors/UpstreamError.ts";
-import { type AbstractApiOptions, type FormatPlayObjectOptions } from "../infrastructure/Atomic.ts";
-import { type RockSkyClientData, type RockSkyData, type RockSkyOptions } from "../infrastructure/config/client/rocksky.ts";
+import type {AbstractApiOptions, FormatPlayObjectOptions} from "../infrastructure/Atomic.ts";
+import type {RockSkyClientData, RockSkyData, RockSkyOptions} from "../infrastructure/config/client/rocksky.ts";
 import AbstractApiClient from "./AbstractApiClient.ts";
 import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.ts';
-import { type ListenResponse, type ListenType, type SubmitPayload } from '../../../core/vendor/listenbrainz/interfaces.ts';
+import type {ListenResponse, ListenType, SubmitPayload} from '../../../core/vendor/listenbrainz/interfaces.ts';
 import { playToListenPayload } from './listenbrainz/lzUtils.ts';
-import { type RockskyScrobble } from './rocksky/interfaces.ts';
-import { type Handle } from "@atcute/lexicons";
+import type {RockskyScrobble} from './rocksky/interfaces.ts';
+import type {Handle} from "@atcute/lexicons";
 import { getATProtoIdentifier, identifierToAtProtoHandle } from './atproto/atUtils.ts';
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
 import { ScrobbleSubmitError } from "../errors/MSErrors.ts";
 import { tryApiCall } from "../../utils/RequestUtils.ts";
 import { type CreateScrobbleInput, RockskyClient } from "@rocksky/sdk";
 import { getRoot } from "../../ioc.ts";
-import { MSCache } from "../Cache.ts";
-import { type HandleData } from "../infrastructure/config/client/atproto.ts";
+import type { MSCache } from "../Cache.ts";
+import type {HandleData} from "../infrastructure/config/client/atproto.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 
 interface SubmitOptions {

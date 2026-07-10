@@ -1,7 +1,7 @@
-import { type Logger } from "@foxxmd/logging";
-import { REPORTED_PLAYER_STATUSES } from "../../common/infrastructure/Atomic.ts";
-import { type PlayPlatformId } from '../../../core/Atomic.ts';
-import { type PlayerStateOptions } from "./AbstractPlayerState.ts";
+import type {Logger} from "@foxxmd/logging";
+import { REPORTED_PLAYER_STATUSES } from '../../../core/Atomic.ts';
+import type {PlayPlatformId} from '../../../core/Atomic.ts';
+import type {PlayerStateOptions} from "./AbstractPlayerState.ts";
 import { PositionalPlayerState } from "./PositionalPlayerState.ts";
 
 export class PlexPlayerState extends PositionalPlayerState {

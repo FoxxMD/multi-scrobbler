@@ -2,7 +2,7 @@ import JSON5 from "json5";
 import { constants, promises } from "fs";
 import { MaybeLogger } from '../common/MaybeLogger.ts';
 import { deepEqual } from 'fast-equals';
-import { type CommonConfigPrimitives } from "../common/infrastructure/config/common.ts";
+import type {CommonConfigPrimitives} from "../common/infrastructure/config/common.ts";
 import { parseBoolStrict } from "../utils.ts";
 import { removeUndefinedKeys } from '../../core/DataUtils.ts';
 import { nonEmptyStringOrDefault } from "../../core/StringUtils.ts";

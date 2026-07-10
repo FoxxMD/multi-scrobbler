@@ -1,6 +1,6 @@
-import { type RockSkyData, type RockSkyOptions } from "../client/rocksky.ts";
-import { type PollingOptions } from "../common.ts";
-import { type CommonSourceConfig, type CommonSourceData, type CommonSourceOptions } from "./index.ts";
+import type {RockSkyData, RockSkyOptions} from "../client/rocksky.ts";
+import type {PollingOptions} from "../common.ts";
+import type {CommonSourceConfig, CommonSourceData, CommonSourceOptions} from "./index.ts";
 
 export interface RockskySourceData extends RockSkyData, CommonSourceData, PollingOptions {
 }

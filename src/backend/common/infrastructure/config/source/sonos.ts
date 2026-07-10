@@ -1,5 +1,5 @@
-import { type PollingOptions } from "../common.ts";
-import { type CommonSourceConfig, type CommonSourceData, type CommonSourceOptions } from "./index.ts";
+import type {PollingOptions} from "../common.ts";
+import type {CommonSourceConfig, CommonSourceData, CommonSourceOptions} from "./index.ts";
 
 export interface SonosData extends CommonSourceData, PollingOptions {
     /**

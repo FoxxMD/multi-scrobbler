@@ -1,21 +1,22 @@
-import { EventEmitter } from "events";
-import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
+import type { EventEmitter } from "events";
+import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
     NO_DEVICE,
     NO_USER,
     type PlayerStateData,
-    REPORTED_PLAYER_STATUSES,
-    type ReportedPlayerStatus,
 } from "../common/infrastructure/Atomic.ts";
-import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
+import type {ReportedPlayerStatus} from '../../core/Atomic.ts';
+import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
-import { type SonosSourceConfig } from "../common/infrastructure/config/source/sonos.ts";
-import { SonosDevice, SonosManager } from '@svrooij/sonos';
-import { type SonosState } from "@svrooij/sonos/lib/models/sonos-state.js";
+import type {SonosSourceConfig} from "../common/infrastructure/config/source/sonos.ts";
+import type { SonosDevice} from '@svrooij/sonos';
+import { SonosManager } from '@svrooij/sonos';
+import type {SonosState} from "@svrooij/sonos/lib/models/sonos-state.js";
 import { GroupTransportState } from "@svrooij/sonos/lib/models/transport-state.js";
-import { type Track } from "@svrooij/sonos/lib/models/track.js";
+import type {Track} from "@svrooij/sonos/lib/models/track.js";
 import { parseDurationFromTimestamp } from "../utils/TimeUtils.ts";
 import { FixedSizeList } from "fixed-size-list";
 import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.ts";

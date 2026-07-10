@@ -9,8 +9,8 @@ import ScrobbleClients from '../../scrobblers/ScrobbleClients.ts';
 import ScrobbleSources from '../../sources/ScrobbleSources.ts';
 import EventEmitter from "events";
 import {loggerTest} from '@foxxmd/logging';
-import { clientTypes } from '../../common/infrastructure/config/client/clients.ts';
-import { sourceTypes } from '../../common/infrastructure/config/source/sources.ts';
+import { clientTypes } from "../../../core/Atomic.ts";
+import { sourceTypes } from "../../../core/Atomic.ts";
 import { Notifiers } from '../../notifier/Notifiers.ts';
 import { difference } from '../../utils.ts';
 

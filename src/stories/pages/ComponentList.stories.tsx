@@ -7,7 +7,7 @@ import {Provider} from "../../client/components/Provider.js";
 import { generateClientApiJson, generateSourceApiJson, generateSourcePlayerJson } from "../../core/tests/utils/apiFixtures.js";
 import { generateArray } from "../../core/DataUtils.js";
 import { faker } from "@faker-js/faker";
-import { type MsSseEvent } from "../../core/Api.js";
+import type {MsSseEvent} from "../../core/Api.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
 import { sseProviderOptions } from "../../client/AppNext.js";
 import { withRouter, reactRouterParameters } from 'storybook-addon-remix-react-router';

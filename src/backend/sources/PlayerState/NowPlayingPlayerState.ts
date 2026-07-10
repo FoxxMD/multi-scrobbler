@@ -1,4 +1,4 @@
-import { type SourcePlayerObj } from "../../../core/Atomic.ts";
+import type {SourcePlayerObj} from "../../../core/Atomic.ts";
 import { GenericPlayerState } from "./GenericPlayerState.ts";
 
 /**

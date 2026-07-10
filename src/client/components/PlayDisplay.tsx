@@ -1,6 +1,6 @@
 import { Fragment, type ReactElement } from 'react';
 
-import { type JsonPlayObject, type TrackStringOptions } from "../../core/Atomic";
+import type {JsonPlayObject, TrackStringOptions} from "../../core/Atomic";
 import { buildTrackString } from "../../core/StringUtils";
 import { buildTrackStringReactOptions } from "../utils/index";
 

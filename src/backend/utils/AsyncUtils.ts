@@ -1,4 +1,4 @@
-import { type Mapper } from "p-map";
+import type {Mapper} from "p-map";
 import { sleep } from "../utils.ts";
 
 /** https://stackoverflow.com/a/63795192/1469797 */

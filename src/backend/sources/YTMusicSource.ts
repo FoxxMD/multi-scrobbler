@@ -1,8 +1,8 @@
 import dayjs, { type Dayjs } from "dayjs";
-import EventEmitter from "events";
-import { type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
-import { type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.ts";
-import { type YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.ts";
+import type EventEmitter from "events";
+import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
+import type {FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic.ts";
+import type {YTMusicSourceConfig} from "../common/infrastructure/config/source/ytmusic.ts";
 import { Innertube, UniversalCache, Parser, YTNodes, type ApiResponse, type IBrowseResponse, Log, type SessionOptions } from 'youtubei.js';
 import { type GenerateAuthUrlOpts, OAuth2Client } from 'google-auth-library';
 import {resolve} from 'path';

@@ -1,8 +1,8 @@
 import assert from "node:assert";
-import { type PlayHistoricalNew, type PlayHistoricalSelect, type PlayNew, type PlaySelect, type PlaySelectWithQueueStates } from "./drizzleTypes.ts";
-import { type PlayInputNew } from "./drizzleTypes.ts";
-import { type QueueStateNew } from "./drizzleTypes.ts";
-import { type ComponentNew } from "./drizzleTypes.ts";
+import type {PlayHistoricalNew, PlayHistoricalSelect, PlayNew, PlaySelect, PlaySelectWithQueueStates} from "./drizzleTypes.ts";
+import type {PlayInputNew} from "./drizzleTypes.ts";
+import type {QueueStateNew} from "./drizzleTypes.ts";
+import type {ComponentNew} from "./drizzleTypes.ts";
 import type { MarkOptional } from "ts-essentials";
 import { CLIENT_DEAD_QUEUE, type DeadLetterScrobble, type ErrorLike, type PlayObject } from "../../../../core/Atomic.ts";
 import dayjs from "dayjs";

@@ -1,13 +1,13 @@
 import { Cacheable } from "cacheable";
-import { type AbstractApiOptions } from "../../infrastructure/Atomic.ts";
+import type {AbstractApiOptions} from "../../infrastructure/Atomic.ts";
 import AbstractApiClient from "../AbstractApiClient.ts";
 import request from 'superagent';
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.ts";
 import { UpstreamError } from "../../errors/UpstreamError.ts";
 import { initMemoryCache } from "../../Cache.ts";
 import { joinedUrl } from "../../../utils/NetworkUtils.ts";
-import { type RequestRetryOptions } from "../../infrastructure/config/common.ts";
-import { type RetryContext } from "p-retry";
+import type {RequestRetryOptions} from "../../infrastructure/config/common.ts";
+import type {RetryContext} from "p-retry";
 import { NO_RETRY_HTTP_STATUS, tryApiCall } from "../../../utils/RequestUtils.ts";
 
 export type ThumbSize = 250 | 500 | 1200;

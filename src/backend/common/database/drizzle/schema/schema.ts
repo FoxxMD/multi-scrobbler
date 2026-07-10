@@ -1,10 +1,10 @@
 import { integer, sqliteTable, text, index, uniqueIndex, customType, type AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import { defineRelations } from 'drizzle-orm';
 import dayjs, { type Dayjs } from "dayjs";
-import { type ErrorLike, type PlayObject } from "../../../../../core/Atomic.ts";
+import { COMPONENT_TYPE_CLIENT, COMPONENT_TYPE_SOURCE, type ErrorLike, type PlayObject } from "../../../../../core/Atomic.ts";
 import { asPlayCheap } from "../../../../../core/PlayMarshalUtils.ts";
-import { type ExternalMetadataTerm, type PlayTransformPartsConfig, type SearchAndReplaceTerm } from "../../../../../core/Transform.ts";
-import { type JobRangeCount, type JobRangeTime } from "../../../infrastructure/Job.ts";
+import type {ExternalMetadataTerm, PlayTransformPartsConfig, SearchAndReplaceTerm} from "../../../../../core/Transform.ts";
+import type {JobRangeCount, JobRangeTime} from "../../../infrastructure/Job.ts";
 import { serializeError, deserializeError } from "serialize-error";
 import { generatePlayUid } from "../../../../../core/StringUtils.ts";
 
@@ -165,7 +165,7 @@ export const components = sqliteTable("components", {
   id: integer({ mode: 'number' }).primaryKey(),
   // user-provided id
   uid: text({ length: 200 }).notNull(),
-  mode: text({enum: ['source','client']}).notNull(),
+  mode: text({enum: [COMPONENT_TYPE_SOURCE,COMPONENT_TYPE_CLIENT]}).notNull(),
   // spotify, lastfm, etc...
   type: text({length: 50}).notNull(),
   // vanity display name

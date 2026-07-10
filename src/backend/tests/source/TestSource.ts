@@ -1,4 +1,4 @@
-import { type PlayObject } from "../../../core/Atomic.ts";
+import type {PlayObject} from "../../../core/Atomic.ts";
 import AbstractSource from "../../sources/AbstractSource.ts";
 import { MemoryPositionalSource } from "../../sources/MemoryPositionalSource.ts";
 import MemorySource from "../../sources/MemorySource.ts";

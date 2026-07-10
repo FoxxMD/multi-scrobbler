@@ -1,7 +1,7 @@
 import { eq, and, lte, inArray } from "drizzle-orm";
 import { DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
-import { type DbConcrete } from "../drizzleUtils.ts";
-import { type QueueStateSelect } from "../drizzleTypes.ts";
+import type {DbConcrete} from "../drizzleUtils.ts";
+import type {QueueStateSelect} from "../drizzleTypes.ts";
 import { queueStates } from "../schema/schema.ts";
 import { CLIENT_DEAD_QUEUE } from "../../../../../core/Atomic.ts";
 export class DrizzleQueueRepository extends DrizzleBaseRepository<'queueStates'> {

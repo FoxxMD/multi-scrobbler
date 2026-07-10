@@ -1,17 +1,17 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
-import EventEmitter from "events";
-import { type PlayObject, type SourcePlayerObj } from "../../core/Atomic.ts";
+import type EventEmitter from "events";
+import type {PlayObject, SourcePlayerObj} from "../../core/Atomic.ts";
 import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
-import { type FormatPlayObjectOptions, type InternalConfigOptional } from "../common/infrastructure/Atomic.ts";
+import type {FormatPlayObjectOptions, InternalConfigOptional} from "../common/infrastructure/Atomic.ts";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.ts";
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
-import { type ListenPayload } from '../../core/vendor/listenbrainz/interfaces.ts';
+import type {ListenPayload} from '../../core/vendor/listenbrainz/interfaces.ts';
 
 import { isDebugMode } from "../utils.ts";
 import { durationToHuman } from '../../core/TimeUtils.ts';
 import { RockSkyApiClient, rockskyScrobbleToPlay, type SubmitResponse } from "../common/vendor/RockSkyApiClient.ts";
-import { type RockSkyClientConfig } from "../common/infrastructure/config/client/rocksky.ts";
+import type {RockSkyClientConfig} from "../common/infrastructure/config/client/rocksky.ts";
 import { ScrobbleSubmitError } from "../common/errors/MSErrors.ts";
 import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient.ts";
 import { fromStream } from '@atcute/repo';

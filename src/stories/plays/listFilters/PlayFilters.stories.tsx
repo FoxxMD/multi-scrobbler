@@ -4,7 +4,7 @@ import { Container, Stack } from '@chakra-ui/react';
 
 import {Provider} from "../../../client/components/Provider.js";
 import { ListFilters, todayRange } from "../../../client/components/playActivity/ListFilters.js";
-import { type QueryPlaysOptsJson } from "../../../backend/common/database/drizzle/repositories/PlayRepository.js";
+import type {QueryPlaysOptsJson} from "../../../core/Api.js";
 
 const ContainedFilter = (props: any) => {
     const [filters, setFilter] = useState<QueryPlaysOptsJson>({

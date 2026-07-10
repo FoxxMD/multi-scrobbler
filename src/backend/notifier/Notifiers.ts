@@ -1,13 +1,7 @@
 import { childLogger, type Logger } from '@foxxmd/logging';
-import { EventEmitter } from "events";
-import {
-    type AppriseConfig,
-    type GotifyConfig,
-    type NtfyConfig,
-    type WebhookConfig,
-    type WebhookPayload
-} from "../common/infrastructure/config/health/webhooks.ts";
-import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.ts";
+import type { EventEmitter } from "events";
+import type {AppriseConfig, GotifyConfig, NtfyConfig, WebhookConfig, WebhookPayload} from "../common/infrastructure/config/health/webhooks.ts";
+import type { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.ts";
 import { AppriseWebhookNotifier } from "./AppriseWebhookNotifier.ts";
 import { GotifyWebhookNotifier } from "./GotifyWebhookNotifier.ts";
 import { NtfyWebhookNotifier } from "./NtfyWebhookNotifier.ts";

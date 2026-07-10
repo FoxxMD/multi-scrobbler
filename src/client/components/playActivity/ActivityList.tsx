@@ -4,8 +4,8 @@ import { type InfiniteData, useInfiniteQuery, type UseInfiniteQueryResult, useQu
 import dayjs from 'dayjs';
 import doy from 'dayjs/plugin/dayOfYear.js';
 import { type ComponentProps, Fragment, useMemo, useState } from "react";
-import { type MsSseEvent, type MsSseEventPayload, type PaginatedResponse, type PlayApiCommonDetailed, type QueryPlaysOptsJson } from '../../../core/Api.js';
-import { type ComponentType } from '../../../core/Atomic.js';
+import type {MsSseEvent, MsSseEventPayload, PaginatedResponse, PlayApiCommonDetailed, QueryPlaysOptsJson} from '../../../core/Api.js';
+import type {ComponentType} from '../../../core/Atomic.js';
 import { type QueryPlaysOptsJsonRefreshable, tanQueries } from '../../queries/index.js';
 import { ActivityDetailFetchable, ActivityDetails, ActivitySummary, ActivitySummaryFetchable, ActivitySummarySkeleton } from '../ActivityDetail.js';
 import { ErrorAlert } from '../ErrorAlert.js';

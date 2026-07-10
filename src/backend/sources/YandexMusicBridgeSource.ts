@@ -1,16 +1,16 @@
-import { EventEmitter } from "events";
+import type { EventEmitter } from "events";
 import request from 'superagent';
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
-import { type RecentlyPlayedOptions } from "./AbstractSource.ts";
-import { type PlayObject, type PlayObjectMinimal, type URLData } from "../../core/Atomic.ts";
+import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
+import type {PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
 import {
     type InternalConfig,
     NO_DEVICE,
     NO_USER,
     type PlayerStateDataMaybePlay,
-    REPORTED_PLAYER_STATUSES,
 } from "../common/infrastructure/Atomic.ts";
-import { type YandexMusicBridgeSourceConfig } from "../common/infrastructure/config/source/ymbridge.ts";
+import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
+import type {YandexMusicBridgeSourceConfig} from "../common/infrastructure/config/source/ymbridge.ts";
 import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import { UpstreamError } from "../common/errors/UpstreamError.ts";

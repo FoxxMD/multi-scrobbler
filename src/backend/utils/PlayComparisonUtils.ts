@@ -5,10 +5,10 @@ import { comparingMultipleArtists, playObjDataMatch, setIntersection } from "../
 import { comparePlayTemporally, hasAcceptableTemporalAccuracy, temporalAccuracyToString, type TemporalPlayComparisonOptions, temporalPlayComparisonSummary } from "./TimeUtils.ts";
 import { compareNormalizedStrings, compareScrobbleArtists, compareScrobbleTracks, compareTracks, normalizeStr, type TrackSamenessResults } from "./StringUtils.ts";
 import { ARTIST_WEIGHT, DUP_SCORE_THRESHOLD, type ScrobbledPlayObject, TIME_WEIGHT, TITLE_WEIGHT } from "../common/infrastructure/Atomic.ts";
-import { type StringSamenessResult } from "@foxxmd/string-sameness";
-import { type Duration } from "dayjs/plugin/duration.js";
+import type {StringSamenessResult} from "@foxxmd/string-sameness";
+import type {Duration} from "dayjs/plugin/duration.js";
 import { type PlayTransformRules, TRANSFORM_HOOK, type TransformHook } from "../../core/Transform.ts";
-import { type Logger } from "@foxxmd/logging";
+import type { Logger } from "@foxxmd/logging";
 import { loggerNoop } from '../common/MaybeLogger.ts';
 import { statefulInvariantTransform } from "../../core/PlayUtils.ts";
 import { findAsyncSequential } from "./AsyncUtils.ts";

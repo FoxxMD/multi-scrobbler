@@ -1,24 +1,23 @@
 import dayjs from "dayjs";
-import EventEmitter from "events";
+import type EventEmitter from "events";
 import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import {
     type ExpressRequest,
     type FormatPlayObjectOptions,
     type InternalConfig,
     NO_USER,
-    type PlayerStateData,
-    REPORTED_PLAYER_STATUSES,
-    type ReportedPlayerStatus
-} from "../common/infrastructure/Atomic.ts";
-import { type PlayPlatformId } from '../../core/Atomic.ts';
-import { type ListenbrainzEndpointSourceConfig } from "../common/infrastructure/config/source/endpointlz.ts";
+    type PlayerStateData} from "../common/infrastructure/Atomic.ts";
+import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
+import type {ReportedPlayerStatus} from '../../core/Atomic.ts';
+import type {PlayPlatformId} from '../../core/Atomic.ts';
+import type {ListenbrainzEndpointSourceConfig} from "../common/infrastructure/config/source/endpointlz.ts";
 import { listenPayloadToPlay } from "../common/vendor/ListenbrainzApiClient.ts";
-import { type SubmitPayload } from '../../core/vendor/listenbrainz/interfaces.ts';
-import { type ListenPayload } from '../../core/vendor/listenbrainz/interfaces.ts';
+import type {SubmitPayload} from '../../core/vendor/listenbrainz/interfaces.ts';
+import type {ListenPayload} from '../../core/vendor/listenbrainz/interfaces.ts';
 import MemorySource from "./MemorySource.ts";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.ts";
-import { type Logger } from "@foxxmd/logging";
-import { type PlayerStateOptions } from "./PlayerState/AbstractPlayerState.ts";
+import type {Logger} from "@foxxmd/logging";
+import type {PlayerStateOptions} from "./PlayerState/AbstractPlayerState.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 
 const noSlugMatch = new RegExp(/(?:\/api\/listenbrainz\/?)$|(?:\/1\/?|\/1\/submit-listens\/?\/1\/validate-token\/|)$/i);

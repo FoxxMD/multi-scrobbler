@@ -1,9 +1,9 @@
 import type { SqliteDatabase, Migration } from 'sqlite-up';
-import { type MigrateBaseContext } from '../appMigrator.ts';
+import type {MigrateBaseContext} from '../appMigrator.ts';
 import { plays as drizzlePlays } from '../drizzle/schema/schema.ts';
 import clone from 'clone';
 import { eq } from 'drizzle-orm';
-import { type PlayLifecycle, type PlayObject } from '../../../../core/Atomic.ts';
+import type {PlayLifecycle, PlayObject} from '../../../../core/Atomic.ts';
 
 
 export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase, ctx: MigrateBaseContext): Promise<void> => {

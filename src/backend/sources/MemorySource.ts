@@ -1,17 +1,18 @@
-import { type Logger } from "@foxxmd/logging";
+import type {Logger} from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
-import { EventEmitter } from "events";
+import type { EventEmitter } from "events";
 import { AsyncTask, SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
 import { type PlayObject, SOURCE_SOT, type SOURCE_SOT_TYPES, type SourcePlayerJson, type SourcePlayerObj } from "../../core/Atomic.ts";
 import { buildTrackString } from "../../core/StringUtils.ts";
 import {
     asPlayerStateDataMaybePlay,
-    CALCULATED_PLAYER_STATUSES,
     type InternalConfig, type PlayerStateDataMaybePlay,
     type ProgressAwarePlayObject} from "../common/infrastructure/Atomic.ts";
-import { type PlayPlatformId } from '../../core/Atomic.ts';
-import { type SourceType, type SourceConfig } from '../common/infrastructure/config/source/sources.ts';
-import { type PollingOptions } from "../common/infrastructure/config/common.ts";
+import { CALCULATED_PLAYER_STATUSES } from '../../core/Atomic.ts';
+import type {PlayPlatformId} from '../../core/Atomic.ts';
+import type {SourceConfig} from '../common/infrastructure/config/source/sources.ts';
+import type {SourceType} from "../../core/Atomic.ts";
+import type {PollingOptions} from "../common/infrastructure/config/common.ts";
 import {
     getPlatformIdFromData,
     isDebugMode,
@@ -24,10 +25,11 @@ import { timePassesScrobbleThreshold } from "../utils/TimeUtils.ts";
 import { timeToHumanTimestamp } from "../../core/TimeUtils.ts";
 import { PromisePool } from "@supercharge/promise-pool";
 import AbstractSource from "./AbstractSource.ts";
-import { AbstractPlayerState, createPlayerOptions, type PlayerStateOptions } from "./PlayerState/AbstractPlayerState.ts";
+import type { AbstractPlayerState} from "./PlayerState/AbstractPlayerState.ts";
+import { createPlayerOptions, type PlayerStateOptions } from "./PlayerState/AbstractPlayerState.ts";
 import { GenericPlayerState } from "./PlayerState/GenericPlayerState.ts";
 import { hashObject } from "../utils/StringUtils.ts";
-import { type ComponentSourceApiJson } from "../../core/Api.ts";
+import type {ComponentSourceApiJson} from "../../core/Api.ts";
 
 const EXPECTED_NON_DISCOVERED_REASON = 'not added because an identical play with the same timestamp was already discovered.';
 
