@@ -52,8 +52,38 @@
 .chakra-stack .MuiLinearProgress-bar2 {
       background-color: var(--chakra-colors-color-palette-500) !important;
 }
+
+/** high animation **/
+
+/* .chakra-stack .MuiLinearProgress-indeterminate {
+      background-color: var(--chakra-colors-color-palette-500) !important;
+} */
+
+
+/** low animation **/
+
+@keyframes slide { to { background-position: 26px 0; } }
 .chakra-stack .MuiLinearProgress-indeterminate {
       background-color: var(--chakra-colors-color-palette-500) !important;
+      background: linear-gradient(45deg,
+      #fff 25%,
+      #71717a 25%,
+      #71717a 50%,
+      #fff 50%,
+      #fff 75%,
+      #71717a 75%);
+      background: linear-gradient(45deg, 
+      var(--chakra-colors-color-palette-700) 25%,
+      var(--chakra-colors-color-palette-400) 25%,
+      var(--chakra-colors-color-palette-400) 50%,
+      var(--chakra-colors-color-palette-700) 50%,
+      var(--chakra-colors-color-palette-700) 75%,
+      var(--chakra-colors-color-palette-400) 75%);
+      background-size: 25px 26px;
+      animation: slide 3s linear infinite;
+}
+.chakra-stack .MuiLinearProgress-indeterminate .MuiLinearProgress-bar1,.chakra-stack .MuiLinearProgress-indeterminate .MuiLinearProgress-bar2  {
+      display: none;
 }
 .chakra-stack .MuiLinearProgress-root {
       height: 8px;
