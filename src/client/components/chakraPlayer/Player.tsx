@@ -1,5 +1,5 @@
 import React, { type ComponentProps, useMemo, useState, useEffect } from "react"
-import { Em, Span, Stack, Spacer, Text, Image, Box, Heading, HStack, Flex, Center, Container } from '@chakra-ui/react';
+import { Em, Span, Stack, Spacer, Text, Image, Box, Heading, HStack, Flex, Center, Container, Status } from '@chakra-ui/react';
 import { TextMuted } from "../TextMuted";
 import { SOURCE_SOT, type SOURCE_SOT_TYPES, type SourcePlayerJson } from "../../../core/Atomic";
 import { timeToHumanTimestamp } from "../../../core/TimeUtils";
@@ -194,6 +194,39 @@ export const ChakraPlayer = (props: PlayerProps) => {
     
 }
 
+export const ClientNowPlaying = (props: PlayerProps) => {
+    const {
+        data: {
+            play: {
+                data: {
+                    track = '???',
+                    artists = [{ name: '???' }],
+                    duration = 0
+                } = {},
+                meta: {
+                    art = {},
+                } = {},
+            } = {},
+            expiration
+        } = {}
+    } = props;
+
+    if(expiration !== undefined && dayjs().isAfter(dayjs(expiration))) {
+        return null;
+    }
+
+    return (
+        <Stack bg="bg.emphasized" borderWidth="1px" p="2" py="3" rounded="md">
+            <HStack><TextMuted>Now Playing</TextMuted>
+            <Status.Root>
+                <Status.Indicator colorPalette="green" style={{animation: 'icon-fade-half 3s infinite linear'}}/>
+            </Status.Root>
+            </HStack>
+            <Span truncate>{artists.map(x => x.name).join('/')} - {track}</Span>
+        </Stack>
+    )
+}
+
 export interface ChakraPlayerFetchableProps {
     componentId: number
     nowPlaying?: boolean
@@ -217,6 +250,9 @@ export const ChakraPlayerFetchable = (props: ChakraPlayerFetchableProps) => {
     }
 
     if (!isPending) {
+        if(nowPlaying) {
+            return <ClientNowPlaying data={data}/>
+        }
         return <ChakraPlayer nowPlaying={nowPlaying} data={data} sot={sot} />
     }
 }
@@ -274,7 +310,7 @@ export const PlayersContainer = (props: { data: ComponentCommonApiJson, live?: b
                 //     }
                 // }
                 playerContainers.push(
-                live ? <ChakraPlayerFetchable key={key} nowPlaying={nowPlaying} componentId={data.id} platformId={key} data={x} /> : <ChakraPlayer key={key} nowPlaying={nowPlaying} data={x} />
+                live ? <ChakraPlayerFetchable key={key} nowPlaying={nowPlaying} componentId={data.id} platformId={key} data={x} /> : (nowPlaying ? <ClientNowPlaying key={key} data={x}/> : <ChakraPlayer key={key} nowPlaying={nowPlaying} data={x} /> )
                 );
             };
         }
