@@ -7,7 +7,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as AnsiImport from "ansi-to-react";
 import { FixedSizeList } from "fixed-size-list";
 import ky from 'ky';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, type ComponentProps } from 'react';
 import type {LogLevelStandalone, LogOutputConfig} from '../../core/Atomic';
 import { tanQueries } from '../queries';
 import { ChakraClipDynamic } from './ChakraClipboard';
@@ -15,6 +15,7 @@ import { TerminalButton, XButton } from './icons/ChakraIcons';
 import { LuGripHorizontal, LuMinus } from 'react-icons/lu';
 import { Ripple } from './icons/AnimatedIcons';
 import { MSErrorBoundary } from './ErrorBoundary';
+import { useLocalStorage } from 'usehooks-ts'
 
 // @ts-expect-error Ansi export is built incorrectly
 const Ansi = AnsiImport.default.default as typeof AnsiImport.default;
@@ -148,13 +149,70 @@ export const LogsFetchable = (props: {settings?: LogOutputConfig, streamable?: b
     
 }
 
+interface Rectangle {
+  x: number;      // left edge
+  y: number;      // top edge
+  width: number;
+  height: number;
+}
+
+const isAnyCornerOutside = (rectangleA: Rectangle, rectangleB: Rectangle): boolean => {
+  const corners = [
+    { x: rectangleA.x, y: rectangleA.y },                                   // top-left
+    { x: rectangleA.x + rectangleA.width, y: rectangleA.y },                // top-right
+    { x: rectangleA.x, y: rectangleA.y + rectangleA.height },               // bottom-left
+    { x: rectangleA.x + rectangleA.width, y: rectangleA.y + rectangleA.height }, // bottom-right
+  ];
+
+  const bLeft = rectangleB.x;
+  const bRight = rectangleB.x + rectangleB.width;
+  const bTop = rectangleB.y;
+  const bBottom = rectangleB.y + rectangleB.height;
+
+  return corners.some(
+    (corner) =>
+      corner.x < bLeft ||
+      corner.x > bRight ||
+      corner.y < bTop ||
+      corner.y > bBottom
+  );
+};
+
+const defaultPosition = (width: number, height: number): ComponentProps<typeof FloatingPanel['Root']>['position'] =>  ({x: width * 0.03, y: height * 0.65});
+const defaultSize = (width: number, height: number): ComponentProps<typeof FloatingPanel['Root']>['size'] =>  ({ width: width * 0.95, height: height * 0.3 });
+
 export const FloatingLogs = (props: {streamable?: boolean}) => {
     const [width, height] = useWindowSize();
 
+    // remember logs state across refreshes
+    // keep logs open if it was last opened, in the last position/size *if still within viewport bounds*
+    const [logsOpen, setLogsOpen] = useLocalStorage('logsOpen', false);
+    const [logsPosition, setLogsPosition] = useLocalStorage<ComponentProps<typeof FloatingPanel['Root']>['position']>('logsPosition', defaultPosition(width, height));
+    const [logsSize, setLogsSize] = useLocalStorage<ComponentProps<typeof FloatingPanel['Root']>['size']>('logsSize', defaultSize(width, height));
+
+    // when logs are opened
+    // check if any part of the logs window is outside the bounds of the viewport
+    // and if it is then reset size/position to default so that user can't accidentally make logs irretrievable
+    useEffect(() => {
+        if(logsOpen) {
+            const logRectangle: Rectangle = {x: logsPosition.x, y: logsPosition.y, width: logsSize.width, height: logsSize.height};
+            const windowRectangle: Rectangle = {x: 0, y: 0, width, height}; 
+            if(isAnyCornerOutside(logRectangle, windowRectangle)) {
+                console.log('resetting logs height/size due to boundary conflict');
+                setLogsPosition(defaultPosition(width, height));
+                setLogsSize(defaultSize(width, height));
+            }
+        }
+    },[logsOpen]);
+
     return (
         <FloatingPanel.Root
-            defaultPosition={{x: width * 0.03, y: height * 0.65}}
-            defaultSize={{ width: width * 0.95, height: height * 0.3 }}
+            open={logsOpen}
+            onOpenChange={(details) => setLogsOpen(details.open)}
+            position={logsPosition}
+            onPositionChange={(details) => setLogsPosition(details.position)}
+            size={logsSize}
+            onSizeChange={(details) => setLogsSize(details.size)}
             persistRect
             closeOnEscape
             lazyMount
