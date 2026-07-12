@@ -1,23 +1,17 @@
-import { Box, Flex, FloatingPanel, Heading, HStack, IconButton, Image, LinkBox, LinkOverlay, Portal, Stack, Status, Switch, Text } from '@chakra-ui/react';
-import {
-    useWindowSize,
-} from '@react-hook/window-size';
+import { Box, Flex, Heading, HStack, IconButton, Image, LinkBox, LinkOverlay, Stack, Status, Switch, Text } from '@chakra-ui/react';;
 import React, { type ComponentProps, type PropsWithChildren } from "react";
-import { LuGripHorizontal, LuMinus } from "react-icons/lu";
 import { Link as RouterLink } from 'react-router';
 import { VersionNext } from "../Version";
 import { MobileSidebarNav } from "./MobileMenu";
 import { TextMuted } from "./TextMuted";
-import { TerminalButton, TerminalIcon, XButton } from "./icons/ChakraIcons";
+import { TerminalIcon } from "./icons/ChakraIcons";
 
 import { useSSEContext, useSSEStatus } from "@flamefrontend/sse-runtime-react";
 import type {ErrorLike} from "../../core/Atomic";
 import { ErrorAlert } from "./ErrorAlert";
-import { MSErrorBoundary } from "./ErrorBoundary";
 import { ExternaLinksMenu } from "./ExternaLinksMenu";
-import { LogsFetchable } from "./LogsNext";
+import { FloatingLogs } from "./LogsNext";
 import { ToggleTip } from "./ToggleTip";
-import { Ripple } from "./icons/AnimatedIcons";
 
 export const AppTitle = (props: { fetchable?: boolean } = {}) => {
     const {
@@ -40,11 +34,6 @@ export const AppTitle = (props: { fetchable?: boolean } = {}) => {
             {fetchable ? <VersionNext /> : <TextMuted>dev</TextMuted>}
         </HStack>
     )
-}
-
-interface RightHeaderSwitchLogsProps {
-    logsEnabled?: boolean
-    setLogsEnabled?: (val: boolean) => void
 }
 
 export const RightHeaderSwitchLogs = (props: {
@@ -72,17 +61,14 @@ export const RightHeaderSwitchLogs = (props: {
     </HStack>
 }
 
-export const SSEStatus = (props: {live?: boolean, status?: ReturnType<typeof useSSEStatus>['status'], error?: ErrorLike}) => {
+interface SSEStatusProps {
+    status?: ReturnType<typeof useSSEStatus>['status']
+    error?: ErrorLike
+}
 
-    let status = props.status ?? 'closed'
-    let error: ErrorLike = props.error;
+export const SSEStatusElement = (props: SSEStatusProps) => {
 
-    if(props.live) {
-        const client = useSSEContext();
-        const { status: sseStatus, error: sseError } = useSSEStatus(client);
-        status = sseStatus;
-        error = sseError as ErrorLike;
-    }
+    const status = props.status ?? 'closed';
     let content: string | React.JSX.Element;
     let color: ComponentProps<typeof Status.Indicator>['colorPalette'];
     switch(status) {
@@ -92,7 +78,7 @@ export const SSEStatus = (props: {live?: boolean, status?: ReturnType<typeof use
             content = (
                 <Stack>
                     <Text>Live events connection is <strong>{status}</strong></Text>
-                    <ErrorAlert error={error}/>
+                    <ErrorAlert error={props.error}/>
                 </Stack>                
             );
             break;
@@ -109,7 +95,7 @@ export const SSEStatus = (props: {live?: boolean, status?: ReturnType<typeof use
     }
 
   return (
-    <ToggleTip content={content}>
+    <ToggleTip content={<Box py="2">{content}</Box>}>
         <IconButton variant="ghost" size="xs">
             <Status.Root>
                 <Status.Indicator colorPalette={color} style={color === 'green' ? {animation: 'icon-fade-half 3s infinite linear'} : undefined}/>
@@ -119,59 +105,30 @@ export const SSEStatus = (props: {live?: boolean, status?: ReturnType<typeof use
   )
 }
 
-export const RightHeaderFloatingLogs = (props: {streamable?: boolean}) => {
-    const [width, height] = useWindowSize();
+const SSEStatus = (props: {live?: boolean} & SSEStatusProps) => {
+    if(props.live) {
+        return <SSEStatusLive/>;
+    }
 
-    return (
-        <FloatingPanel.Root
-            defaultPosition={{x: width * 0.03, y: height * 0.65}}
-            defaultSize={{ width: width * 0.95, height: height * 0.3 }}
-            persistRect
-            closeOnEscape
-            lazyMount
-        >
-            <FloatingPanel.Trigger asChild>
-                <TerminalButton  />
-            </FloatingPanel.Trigger>
-            <Portal>
-                <FloatingPanel.Positioner zIndex="1400">
-                    <FloatingPanel.Content>
-                        <FloatingPanel.Header>
-                            <FloatingPanel.DragTrigger>
-                                <LuGripHorizontal />
-                                <FloatingPanel.Title>Logs <Ripple/></FloatingPanel.Title>
-                            </FloatingPanel.DragTrigger>
-                            <FloatingPanel.Control>
-                                <FloatingPanel.StageTrigger stage="minimized" asChild>
-                                    <IconButton variant="ghost" size="2xs">
-                                        <LuMinus />
-                                    </IconButton>
-                                </FloatingPanel.StageTrigger>
-                                <FloatingPanel.CloseTrigger asChild>
-                                    <XButton variant="ghost" size="2xs" />
-                                </FloatingPanel.CloseTrigger>
-                            </FloatingPanel.Control>
-                        </FloatingPanel.Header>
-                        <FloatingPanel.Body>
-                            <MSErrorBoundary><LogsFetchable streamable={props.streamable} /></MSErrorBoundary>
-                        </FloatingPanel.Body>
-                        <FloatingPanel.ResizeTriggers />
-                    </FloatingPanel.Content>
-                </FloatingPanel.Positioner>
-            </Portal>
-        </FloatingPanel.Root>
-    );
+    return <SSEStatusElement {...props}/>
 }
 
-export const AppHeader = (props: PropsWithChildren<{ fetchable?: boolean }>) => {
-    return (
+const SSEStatusLive = () => {
+    const client = useSSEContext();
+    const { status: sseStatus, error: sseError } = useSSEStatus(client);
+    return <SSEStatus status={sseStatus} error={sseError as ErrorLike}/>
+}
+
+
+export const AppHeader = (props: PropsWithChildren<{ fetchable?: boolean }>) => (
         <Flex justify="space-between">
             <AppTitle fetchable={props.fetchable} />
             <Flex justify="flex-start" gap="1" alignItems="flex-end">
                 <ExternaLinksMenu hideBelow="sm"/>
-                <Box marginRight="2"><SSEStatus live={props.fetchable}/></Box>
-                <RightHeaderFloatingLogs streamable={props.fetchable}/>
+                <Box marginRight="2">
+                    <SSEStatus live={props.fetchable}/>
+                </Box>
+                <FloatingLogs streamable={props.fetchable}/>
             </Flex>
         </Flex>
     )
-}

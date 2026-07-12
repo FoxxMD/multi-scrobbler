@@ -5,12 +5,12 @@ import { http, HttpResponse } from 'msw';
 import { Container } from '@chakra-ui/react';
 import {Provider} from "../../client/components/Provider.js";
 import { logsApiResponse } from "../../core/tests/utils/apiFixtures.js";
-import { RightHeaderFloatingLogs } from "../../client/components/AppHeader.js";
+import { FloatingLogs } from "../../client/components/LogsNext.js";
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
-  title: 'Logs/Floating Panel',
-  component: RightHeaderFloatingLogs,
+  title: 'Header/Logs',
+  component: FloatingLogs,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
@@ -29,7 +29,7 @@ const meta = preview.meta({
      streamable: false,
   },
   render: function Render(args) {
-     return (<RightHeaderFloatingLogs {...args} />) 
+     return (<FloatingLogs {...args} />) 
     },
 decorators: [
     (Story) => (<Provider><Container fluid><Story/></Container></Provider>),

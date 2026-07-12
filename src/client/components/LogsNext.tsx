@@ -1,4 +1,7 @@
-import { Box, HStack, SegmentGroup, Separator, Span, Stack, Text } from '@chakra-ui/react';
+import { Box, HStack, SegmentGroup, Separator, Span, Stack, Text, FloatingPanel, Portal, IconButton } from '@chakra-ui/react';
+import {
+    useWindowSize,
+} from '@react-hook/window-size';
 import { useSSE } from "@flamefrontend/sse-runtime-react";
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as AnsiImport from "ansi-to-react";
@@ -8,6 +11,10 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type {LogLevelStandalone, LogOutputConfig} from '../../core/Atomic';
 import { tanQueries } from '../queries';
 import { ChakraClipDynamic } from './ChakraClipboard';
+import { TerminalButton, XButton } from './icons/ChakraIcons';
+import { LuGripHorizontal, LuMinus } from 'react-icons/lu';
+import { Ripple } from './icons/AnimatedIcons';
+import { MSErrorBoundary } from './ErrorBoundary';
 
 // @ts-expect-error Ansi export is built incorrectly
 const Ansi = AnsiImport.default.default as typeof AnsiImport.default;
@@ -139,4 +146,48 @@ export const LogsFetchable = (props: {settings?: LogOutputConfig, streamable?: b
         <Logs ref={logRef} logs={logList}/>
         </Stack>);
     
+}
+
+export const FloatingLogs = (props: {streamable?: boolean}) => {
+    const [width, height] = useWindowSize();
+
+    return (
+        <FloatingPanel.Root
+            defaultPosition={{x: width * 0.03, y: height * 0.65}}
+            defaultSize={{ width: width * 0.95, height: height * 0.3 }}
+            persistRect
+            closeOnEscape
+            lazyMount
+        >
+            <FloatingPanel.Trigger asChild>
+                <TerminalButton  />
+            </FloatingPanel.Trigger>
+            <Portal>
+                <FloatingPanel.Positioner zIndex="1400">
+                    <FloatingPanel.Content>
+                        <FloatingPanel.Header>
+                            <FloatingPanel.DragTrigger>
+                                <LuGripHorizontal />
+                                <FloatingPanel.Title>Logs <Ripple/></FloatingPanel.Title>
+                            </FloatingPanel.DragTrigger>
+                            <FloatingPanel.Control>
+                                <FloatingPanel.StageTrigger stage="minimized" asChild>
+                                    <IconButton variant="ghost" size="2xs">
+                                        <LuMinus />
+                                    </IconButton>
+                                </FloatingPanel.StageTrigger>
+                                <FloatingPanel.CloseTrigger asChild>
+                                    <XButton variant="ghost" size="2xs" />
+                                </FloatingPanel.CloseTrigger>
+                            </FloatingPanel.Control>
+                        </FloatingPanel.Header>
+                        <FloatingPanel.Body>
+                            <MSErrorBoundary><LogsFetchable streamable={props.streamable} /></MSErrorBoundary>
+                        </FloatingPanel.Body>
+                        <FloatingPanel.ResizeTriggers />
+                    </FloatingPanel.Content>
+                </FloatingPanel.Positioner>
+            </Portal>
+        </FloatingPanel.Root>
+    );
 }
