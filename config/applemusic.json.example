@@ -1,0 +1,27 @@
+[
+  {
+    "id": "myAppleMusic",
+    "name": "My Apple Music",
+    "enable": true,
+    "clients": [],
+    "data": {
+      // either key or token needs to be provided
+      "key": {
+        "id": "2HPSNJZ88N",
+        "teamId": "SN6YASW8G4",
+        "p8": "-----BEGIN PRIVATE KEY-----\nMIGTAgEAMBMGByqGSM49AgEG...-----END PRIVATE KEY-----"
+      },
+      "token": "your-jwt-token-here",
+      "mediaUserToken": "your-media-user-token-here",
+      // optional: custom headers for API requests (e.g. Origin)
+      //"headers": {
+      //  "Origin": "https://music.apple.com"
+      //}
+      // optional: polling interval in seconds (default 60)
+      //"interval": 60
+    },
+    "options": {
+      "logDiff": true
+    }
+  }
+]

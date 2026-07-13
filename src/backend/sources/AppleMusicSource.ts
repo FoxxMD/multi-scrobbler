@@ -53,6 +53,7 @@ export default class AppleMusicSource extends AbstractSource {
             key,
             token,
             mediaUserToken,
+            headers,
         } = this.config.data || {};
 
         if (!key && !token) {
@@ -70,6 +71,10 @@ export default class AppleMusicSource extends AbstractSource {
                 mediaUserToken,
             });
             this.musicKit.token = token!;
+        }
+
+        if (headers) {
+            this.musicKit.headers = headers;
         }
 
         return true;
