@@ -27,6 +27,10 @@ export interface HistoryConsistencyResult {
 
 export default class AppleMusicSource extends AbstractSource {
 
+    private readonly MAX_HISTORY_KEPT = 3;
+    private readonly POLL_TRACK_LIMIT = 20;
+    private readonly UPSTREAM_TRACK_LIMIT = 30;
+
     requiresAuth = true;
     requiresAuthInteraction = false;
 
@@ -109,16 +113,16 @@ export default class AppleMusicSource extends AbstractSource {
     recentlyPlayedTrackIsValid = (playObj: PlayObject) => playObj.meta.newFromSource
 
     getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
-        return this.getTracks(30);
+        return this.getTracks(this.UPSTREAM_TRACK_LIMIT);
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
-        const plays = await this.getTracks(20);
+        const plays = await this.getTracks(this.POLL_TRACK_LIMIT);
         return this.parseRecentAgainstResponse(plays).plays;
     }
 
     private getTracks = async (limit: number): Promise<PlayObject[]> => {
-        const clampedLimit = Math.max(1, Math.min(30, Math.round(limit)));
+        const clampedLimit = Math.max(1, Math.min(this.UPSTREAM_TRACK_LIMIT, Math.round(limit)));
         const result = await this.musicKit.me.history.getRecentlyPlayedTracks({ limit: clampedLimit as MeHistoryRecentlyPlayedTracksProps["limit"], types: ["songs"] });
         if (result.error) {
             throw new Error(result.error);
@@ -173,7 +177,7 @@ export default class AppleMusicSource extends AbstractSource {
             consistent: true
         }
 
-        const plays = responsePlays.slice(0, 20);
+        const plays = responsePlays.slice(0, this.POLL_TRACK_LIMIT);
         if(this.polling === false) {
             results.plays = plays;
             results.plays = results.plays.map((x, index) => ({
@@ -236,7 +240,7 @@ export default class AppleMusicSource extends AbstractSource {
         this.recentlyPlayed = plays;
 
         if(results.plays.length > 0) {
-            this.recentChangedHistoryResponses = [{plays, ts: dayjs()}, ...this.recentChangedHistoryResponses.slice(0, 3)]
+            this.recentChangedHistoryResponses = [{plays, ts: dayjs()}, ...this.recentChangedHistoryResponses.slice(0, this.MAX_HISTORY_KEPT)]
         }
 
         return results;
