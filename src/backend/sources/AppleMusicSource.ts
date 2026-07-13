@@ -169,8 +169,8 @@ export default class AppleMusicSource extends AbstractSource {
             }
         }
     }
-
-    // Extract the reduceRight logic:
+    
+    // Apple Music does not provide timestamps for recently played tracks, so hacky method
     private applyCalculatedTimestamps(plays: PlayObject[]): PlayObject[] {
         let durSinceNow = 0;
         const now = dayjs();
