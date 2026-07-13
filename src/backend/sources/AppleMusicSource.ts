@@ -17,15 +17,6 @@ import {
     playsAreSortConsistent
 } from "../utils/PlayComparisonUtils.ts";
 
-interface AppleMusicTrack {
-    id: string
-    name: string
-    artistName: string
-    albumName: string
-    durationInMillis: number
-    [key: string]: any
-}
-
 export default class AppleMusicSource extends AbstractSource {
 
     requiresAuth = true;
@@ -88,7 +79,7 @@ export default class AppleMusicSource extends AbstractSource {
         return undefined;
     }
 
-    static formatPlayObj(track: AppleMusicTrack, options: {newFromSource?: boolean} = {}): PlayObject {
+    static formatPlayObj(track: Song, options: {newFromSource?: boolean} = {}): PlayObject {
         const {newFromSource = false} = options;
         const play: PlayObjectMinimal = {
             data: {
@@ -127,7 +118,7 @@ export default class AppleMusicSource extends AbstractSource {
         if (!result.data) {
             return [];
         }
-        return (result.data as unknown as AppleMusicTrack[]).map(track => AppleMusicSource.formatPlayObj(track));
+        return (result.data as unknown as Song[]).map(track => AppleMusicSource.formatPlayObj(track));
     }
 
     getIncomingHistoryConsistencyResult = (plays: PlayObject[]): {plays: PlayObject[], consistent: boolean, diffType?: 'bump' | 'added', diffResults?: PlayOrderConsistencyResults<PlayOrderChangeType>, reason?: string} => {
