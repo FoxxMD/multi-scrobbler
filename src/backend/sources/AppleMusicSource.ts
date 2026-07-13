@@ -130,7 +130,7 @@ export default class AppleMusicSource extends AbstractSource {
         if (!result.data) {
             return [];
         }
-        return (result.data as unknown as Song[]).map(track => AppleMusicSource.formatPlayObj(track));
+        return (result.data as Song[]).map(track => AppleMusicSource.formatPlayObj(track));
     }
 
     getIncomingHistoryConsistencyResult = (plays: PlayObject[]): HistoryConsistencyResult => {
