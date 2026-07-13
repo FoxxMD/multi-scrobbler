@@ -17,36 +17,7 @@ export const isComponentTypeClient = (type: string): type is ComponentTypeClient
 export const isComponentType = (type: string): type is ComponentType => isComponentTypeClient(type) || isComponentTypeSource(type);
 export interface SourceStatusData {
     status: string;
-    type: 'spotify'
-    | 'plex'
-    | 'tautulli'
-    | 'subsonic'
-    | 'jellyfin'
-    | 'lastfm'
-    | 'librefm'
-    | 'deezer'
-    | 'endpointlz'
-    | 'endpointlfm'
-    | 'ytmusic'
-    | 'ymbridge'
-    | 'mpris'
-    | 'mopidy'
-    | 'musiccast'
-    | 'listenbrainz'
-    | 'jriver'
-    | 'kodi'
-    | 'webscrobbler'
-    | 'chromecast'
-    | 'maloja'
-    | 'musikcube'
-    | 'mpd'
-    | 'vlc'
-    | 'icecast'
-    | 'azuracast'
-    | 'koito'
-    | 'tealfm'
-    | 'rocksky'
-    | 'sonos';
+    type: SourceType;
     display: string;
     tracksDiscovered: number;
     name: string;
@@ -746,7 +717,8 @@ export type SourceType =
     'koito' |
     'tealfm' |
     'rocksky' |
-    'sonos';
+    'sonos' |
+    'applemusic';
 export const sourceTypes: SourceType[] = [
     'spotify',
     'plex',
@@ -776,7 +748,8 @@ export const sourceTypes: SourceType[] = [
     'koito',
     'tealfm',
     'rocksky',
-    'sonos'
+    'sonos',
+    'applemusic'
 ];
 export const isSourceType = (data: string): data is SourceType => {
     return sourceTypes.includes(data as SourceType);

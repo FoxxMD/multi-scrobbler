@@ -156,3 +156,7 @@ storybook-static
 *.db*
 
 **/lexicons/**/*.json
+
+bun.lock
+.DS_Store
+**/.DS_Store
