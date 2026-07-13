@@ -1,6 +1,6 @@
 import dayjs, { type Dayjs } from "dayjs";
 import type EventEmitter from "events";
-import { MusicKit, type Song } from "node-musickit-api";
+import { MusicKit, type MeHistoryRecentlyPlayedTracksProps, type Song } from "node-musickit-api";
 import type { PlayObject, PlayObjectMinimal } from "../../core/Atomic.ts";
 import type { InternalConfig } from "../common/infrastructure/Atomic.ts";
 import type { AppleMusicSourceConfig } from "../common/infrastructure/config/source/applemusic.ts";
@@ -16,6 +16,14 @@ import {
     playsAreBumpedOnly,
     playsAreSortConsistent
 } from "../utils/PlayComparisonUtils.ts";
+
+export interface HistoryConsistencyResult {
+    plays: PlayObject[];
+    consistent: boolean;
+    diffType?: 'bump' | 'added';
+    diffResults?: PlayOrderConsistencyResults<PlayOrderChangeType>;
+    reason?: string;
+}
 
 export default class AppleMusicSource extends AbstractSource {
 
@@ -111,7 +119,7 @@ export default class AppleMusicSource extends AbstractSource {
 
     private getTracks = async (limit: number): Promise<PlayObject[]> => {
         const clampedLimit = Math.max(1, Math.min(30, Math.round(limit)));
-        const result = await this.musicKit.me.history.getRecentlyPlayedTracks({ limit: clampedLimit as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30, types: ["songs"] });
+        const result = await this.musicKit.me.history.getRecentlyPlayedTracks({ limit: clampedLimit as MeHistoryRecentlyPlayedTracksProps["limit"], types: ["songs"] });
         if (result.error) {
             throw new Error(result.error);
         }
@@ -121,8 +129,8 @@ export default class AppleMusicSource extends AbstractSource {
         return (result.data as unknown as Song[]).map(track => AppleMusicSource.formatPlayObj(track));
     }
 
-    getIncomingHistoryConsistencyResult = (plays: PlayObject[]): {plays: PlayObject[], consistent: boolean, diffType?: 'bump' | 'added', diffResults?: PlayOrderConsistencyResults<PlayOrderChangeType>, reason?: string} => {
-        const results: {plays: PlayObject[], consistent: boolean} = {
+    getIncomingHistoryConsistencyResult = (plays: PlayObject[]): HistoryConsistencyResult => {
+        const results: HistoryConsistencyResult = {
             plays: [],
             consistent: true
         }
@@ -207,7 +215,7 @@ export default class AppleMusicSource extends AbstractSource {
             let durSinceNow = 0;
             const now = dayjs();
 
-            const rrPlays = results.plays.reduceRight((acc, curr) => {
+            const reducedRightPlays = results.plays.reduceRight((acc, curr) => {
                 const durDatedPlay = {
                     data: {
                         ...curr.data,
@@ -222,7 +230,7 @@ export default class AppleMusicSource extends AbstractSource {
                 return [durDatedPlay, ...acc];
             }, [] as PlayObject[]);
 
-            results.plays = rrPlays
+            results.plays = reducedRightPlays
         }
 
         this.recentlyPlayed = plays;
