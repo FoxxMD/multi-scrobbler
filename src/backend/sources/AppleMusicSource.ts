@@ -118,21 +118,6 @@ export default class AppleMusicSource extends AbstractSource {
         return this.parseRecentAgainstResponse(plays).plays;
     }
 
-    protected getBackloggedPlays = async (options: RecentlyPlayedOptions): Promise<PlayObject[]> => {
-        const plays = await this.getUpstreamRecentlyPlayed(options);
-        if (plays.length === 0) return plays;
-        let cumDur = 0;
-        const now = dayjs();
-        return plays.map(play => {
-            const dated = {
-                ...play,
-                data: { ...play.data, playDate: now.subtract(cumDur, 'seconds') },
-            };
-            cumDur += play.data.duration ?? 1;
-            return dated;
-        });
-    }
-
     private getTracks = async (limit: number): Promise<PlayObject[]> => {
         const clampedLimit = Math.max(1, Math.min(30, Math.round(limit)));
         const result = await this.musicKit.me.history.getRecentlyPlayedTracks({ limit: clampedLimit as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30, types: ["songs"] });
@@ -264,11 +249,9 @@ export default class AppleMusicSource extends AbstractSource {
             const referencePlays = await this.getRecentlyPlayed();
             const reversedPlays = [...referencePlays];
             reversedPlays.reverse();
-            const currentDiscovered = await this.getRecentlyDiscoveredPlays(false);
-            if(currentDiscovered === undefined || currentDiscovered.length === 0) {
-                for(const refPlay of reversedPlays) {
-                    await this.addPlayToDiscovered(refPlay);
-                }
+
+            for(const refPlay of reversedPlays) {
+                await this.addPlayToDiscovered(refPlay);
             }
         }
         return true;
