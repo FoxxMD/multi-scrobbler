@@ -188,7 +188,7 @@ export default class AppleMusicSource extends AbstractSource {
         }, [] as PlayObject[]);
     }
 
-    parseRecentAgainstResponse = (responsePlays: PlayObject[]): {plays: PlayObject[], consistent: boolean} => {
+    parseRecentAgainstResponse = (responsePlays: PlayObject[]): HistoryConsistencyResult => {
 
         let results: {plays: PlayObject[], consistent: boolean} = {
             plays: [],
