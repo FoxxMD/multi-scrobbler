@@ -170,6 +170,24 @@ export default class AppleMusicSource extends AbstractSource {
         }
     }
 
+    // Extract the reduceRight logic:
+    private applyCalculatedTimestamps(plays: PlayObject[]): PlayObject[] {
+        let durSinceNow = 0;
+        const now = dayjs();
+
+        return plays.reduceRight((acc, curr) => {
+            const durDatedPlay = {
+                data: {
+                    ...curr.data,
+                    playDate: durSinceNow === 0 ? now : now.subtract(durSinceNow, 'seconds'),
+                },
+                meta: { ...curr.meta, newFromSource: true }
+            }
+            durSinceNow += curr.data.duration ?? 1;
+            return [durDatedPlay, ...acc];
+        }, [] as PlayObject[]);
+    }
+
     parseRecentAgainstResponse = (responsePlays: PlayObject[]): {plays: PlayObject[], consistent: boolean} => {
 
         let results: {plays: PlayObject[], consistent: boolean} = {
@@ -216,25 +234,7 @@ export default class AppleMusicSource extends AbstractSource {
                 }
             }
 
-            let durSinceNow = 0;
-            const now = dayjs();
-
-            const reducedRightPlays = results.plays.reduceRight((acc, curr) => {
-                const durDatedPlay = {
-                    data: {
-                        ...curr.data,
-                        playDate: durSinceNow === 0 ? now : now.subtract(durSinceNow, 'seconds'),
-                    },
-                    meta: {
-                        ...curr.meta,
-                        newFromSource: true
-                    }
-                }
-                durSinceNow += curr.data.duration ?? 1;
-                return [durDatedPlay, ...acc];
-            }, [] as PlayObject[]);
-
-            results.plays = reducedRightPlays
+            results.plays = this.applyCalculatedTimestamps(results.plays);
         }
 
         this.recentlyPlayed = plays;
