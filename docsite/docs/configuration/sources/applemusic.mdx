@@ -43,7 +43,7 @@ Choose your preferred method below:
 
         While browsing [music.apple.com](https://music.apple.com) with Developer Tools open, inspect the **Network** tab. Look at the request headers for any request made to `amp-api.music.apple.com`. Copy the `authorization` header value (use everything *after* the `Bearer ` prefix).
 
-        ```json
+        ```json title="applemusic.json"
         {
             "data": {
                 "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiIsIm...",
@@ -76,7 +76,7 @@ Choose your preferred method below:
 
         Add these details to your config:
 
-        ```json
+        ```json title="applemusic.json"
         {
             "data": {
                 "key": {
@@ -121,5 +121,6 @@ The Apple Music API **does not provide timestamps** for when tracks were played.
     | `APPLEMUSIC_KEY_P8`           | No        |         | The contents of your MusicKit `.p8` private key file.|
     | `APPLEMUSIC_TOKEN`            | No        |         | The authentication JWT extracted from the browser.   |
     | `APPLEMUSIC_INTERVAL`         | No        | `60`    | Polling interval in seconds.                         |
+    | `APPLEMUSIC_HEADERS`          | No        |         | JSON string of custom headers for API requests, e.g. `{"Origin":"https://music.apple.com"}` |
     | `APPLEMUSIC_NAME`             | No        |         | A vanity name different than the ID.                 |
 </Config>
