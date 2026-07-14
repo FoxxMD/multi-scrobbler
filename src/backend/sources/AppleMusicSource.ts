@@ -17,10 +17,12 @@ import {
     playsAreSortConsistent
 } from "../utils/PlayComparisonUtils.ts";
 
+export type AppleMusicHistoryDiffType = 'bump' | 'added' | 'top-rebound';
+
 export interface HistoryConsistencyResult {
     plays: PlayObject[];
     consistent: boolean;
-    diffType?: 'bump' | 'added';
+    diffType?: AppleMusicHistoryDiffType;
     diffResults?: PlayOrderConsistencyResults<PlayOrderChangeType>;
     reason?: string;
 }
@@ -165,8 +167,13 @@ export default class AppleMusicSource extends AbstractSource {
             return {plays: [], consistent: true};
         }
 
+        const recovered = this.tryRecoverUnchangedTopHistory(plays);
+        if(recovered !== undefined) {
+            return recovered;
+        }
+
         let diffResults: PlayOrderConsistencyResults<PlayOrderChangeType>;
-        let diffType: 'bump' | 'added' | undefined;
+        let diffType: AppleMusicHistoryDiffType | undefined;
         diffResults = playsAreBumpedOnly(this.recentlyPlayed, plays);
         if(diffResults[0] === true) {
             diffType = 'bump';
@@ -190,6 +197,71 @@ export default class AppleMusicSource extends AbstractSource {
                 return {...results, consistent: false, reason: 'Apple Music History returned temporally inconsistent order, resetting history to new list.'};
             }
         }
+    }
+
+    
+    private tryRecoverUnchangedTopHistory = (plays: PlayObject[]): HistoryConsistencyResult | undefined => {
+        if(this.config.options?.recoverUnchangedTopHistory === false) {
+            return undefined;
+        }
+        if(this.recentlyPlayed.length === 0 || plays.length === 0) {
+            return undefined;
+        }
+
+        if(!playsAreSortConsistent([this.recentlyPlayed[0]], [plays[0]])) {
+            return undefined;
+        }
+
+        const prevTail = this.recentlyPlayed.slice(1);
+        const nextTail = plays.slice(1);
+
+        if(playsAreSortConsistent(prevTail, nextTail)) {
+            return undefined;
+        }
+
+        let tailDiff: PlayOrderConsistencyResults<PlayOrderChangeType> = playsAreBumpedOnly(prevTail, nextTail);
+        let tailKind: 'bump' | 'added';
+
+        if(tailDiff[0] === true) {
+            if(tailDiff[2] !== 'prepend') {
+                return undefined;
+            }
+            tailKind = 'bump';
+        } else {
+            tailDiff = playsAreAddedOnly(prevTail, nextTail);
+            if(tailDiff[0] !== true || tailDiff[2] !== 'prepend') {
+                return undefined;
+            }
+            const revertedToRecent = this.recentChangedHistoryResponses.findIndex(x => playsAreSortConsistent(x.plays, plays));
+            if(revertedToRecent !== -1) {
+                return {
+                    plays: [],
+                    consistent: false,
+                    diffType: 'top-rebound',
+                    diffResults: tailDiff,
+                    reason: `Apple Music History has exact order as another recent response during top-rebound recovery. Resetting history to current list and NOT ADDING tracks.`,
+                };
+            }
+            tailKind = 'added';
+        }
+
+        const interimNewestFirst = tailDiff[1] ?? [];
+        if(interimNewestFirst.length === 0) {
+            return undefined;
+        }
+
+        const recoveredPlays = [...interimNewestFirst].reverse().concat(plays[0]);
+
+        this.logger.verbose(
+            `Recovered ${interimNewestFirst.length} interim play(s) under unchanged top track (tail ${tailKind}-prepend) and re-scrobbling top as a re-listen (top-rebound).`
+        );
+
+        return {
+            plays: recoveredPlays,
+            consistent: true,
+            diffType: 'top-rebound',
+            diffResults: tailDiff,
+        };
     }
     
     // Apple Music does not provide timestamps for recently played tracks, so hacky method

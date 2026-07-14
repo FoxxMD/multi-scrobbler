@@ -21,7 +21,8 @@
       //"interval": 60
     },
     "options": {
-      "logDiff": true
+      "logDiff": true,
+      "recoverUnchangedTopHistory": true
     }
   }
 ]

@@ -25,6 +25,18 @@ export interface AppleMusicSourceConfig extends CommonSourceConfig {
     options?: CommonSourceOptions & {
         logAuth?: boolean
         logDiff?: boolean
+        /**
+         * Fixes a quirk where Apple Music's history API hides duplicate plays.
+         * If you listen to A → B → A, the API returns [A, B, X, Y ...] instead of [A, B, A, X, Y ...].
+         * This can cause MS to skip the second A play.
+         *
+         * When enabled (default), MS detects this pattern, keeps the interim tracks (B),
+         * and re-scrobbles A as a re-listen. Disable only if you notice false positives.
+         *
+         * @default true
+         * @examples [true, false]
+         */
+        recoverUnchangedTopHistory?: boolean
     }
 }
 

@@ -108,6 +108,17 @@ The Apple Music API **does not provide timestamps** for when tracks were played.
 
 *For the most accurate scrobble timestamps, it is highly recommended to keep the polling interval (`APPLEMUSIC_INTERVAL`) low (the default is 60 seconds).*
 
+**Duplicate Play Recovery**
+
+The Apple Music history API strictly deduplicates tracks. Instead of showing the same song multiple times in a row, it simply bumps the re-played track back to the #1 spot and removes the older entry. 
+
+For example, if you listen to **Song A** → **Song B**, your history is `[Song B, Song A]`. If you then listen to **Song A** again, the API returns `[Song A, Song B]` (Song A was bumped to the top). 
+
+If Multi-Scrobbler polled when the top track was Song A, and polls again after it's bumped back to the top, the top track appears functionally unchanged. This usually confuses standard scrobblers into ignoring the update entirely. By default, MS correctly detects this "top-rebound" pattern, extracts the intermediate tracks that were squeezed in (Song B), and scrobbles Song A again as a re-listen. 
+
+*Note: Because of this strict deduplication, **"pure loops"** (listening to Song A continuously on repeat without playing anything else in between) cannot be tracked. The history list never changes shape, so MS has no way of knowing it was played again.*
+
+If you ever experience false positives (tracks being scrobbled that you didn't actually re-listen to), you can disable this recovery behavior with `"recoverUnchangedTopHistory": false` in your config options or by setting the `APPLEMUSIC_RECOVER_UNCHANGED_TOP_HISTORY=false` env var.
 
 ## Configuration Reference
 
@@ -122,5 +133,6 @@ The Apple Music API **does not provide timestamps** for when tracks were played.
     | `APPLEMUSIC_TOKEN`            | No        |         | The authentication JWT extracted from the browser.   |
     | `APPLEMUSIC_INTERVAL`         | No        | `60`    | Polling interval in seconds.                         |
     | `APPLEMUSIC_HEADERS`          | No        |         | JSON string of custom headers for API requests, e.g. `{"Origin":"https://music.apple.com"}` |
+    | `APPLEMUSIC_RECOVER_UNCHANGED_TOP_HISTORY` | No | `true` | Apple Music deduplicates its history by bumping re-played tracks to the top. If you listen to Song A → Song B → Song A, the history changes from `[A]` to `[A, B]` (bumping A). MS detects this "top-rebound" to recover the intermediate play (B) and the re-listen (A). Disable this only if you see incorrect duplicate scrobbles. |
     | `APPLEMUSIC_NAME`             | No        |         | A vanity name different than the ID.                 |
 </Config>

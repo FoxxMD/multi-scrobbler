@@ -857,6 +857,10 @@ export default class ScrobbleSources {
                         key,
                         headers,
                     }, false);
+                    const recoverEnv = process.env.APPLEMUSIC_RECOVER_UNCHANGED_TOP_HISTORY;
+                    const recoverUnchangedTopHistory = recoverEnv !== undefined && recoverEnv.trim() !== ''
+                        ? parseBool(recoverEnv)
+                        : undefined;
                     const p = getCommonComponentEnvConfig('APPLEMUSIC');
                     if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
@@ -867,7 +871,9 @@ export default class ScrobbleSources {
                             configureAs: defaultConfigureAs,
                             data: data,
                             ...p,
-                            options: transformPresetEnv('APPLEMUSIC')
+                            options: transformPresetEnv('APPLEMUSIC', {
+                                recoverUnchangedTopHistory,
+                            } as AppleMusicSourceConfig['options'])
                         });
                     }
                 }    break;
