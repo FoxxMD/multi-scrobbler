@@ -25,6 +25,7 @@ import { getDbPath } from './common/database/Database.ts';
 import { createRetentionCleanupTask } from './tasks/retentionCleanup.ts';
 import { parseUserConfig } from './common/Cache.ts';
 import { nonEmptyStringOrDefault } from '../core/StringUtils.ts';
+import { createDir, fileExists } from './utils/FSUtils.ts';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -86,16 +87,38 @@ process.on('SIGINT', async () => {
 })
 
 
-const configDir = getConfigDir()
+const configDir = getConfigDir();
+const dataDir = getDataDir();
 
     try {
-        initLogger.verbose(`Config Dir ENV : ${process.env.CONFIG_DIR} -> Resolved: ${configDir}`);
-        initLogger.verbose(`Data Dir ENV   : ${process.env.DATA_DIR} -> Resolved: ${getDataDir()}`);
+        initLogger.info(`Config Dir ENV : ${process.env.CONFIG_DIR} -> Resolved: ${configDir}`);
+        try {
+            const exists = fileExists(configDir);
+            if(!exists) {
+                initLogger.verbose(`Config Dir does not exist, creating now...`);
+                await createDir(configDir);
+            }
+        } catch (e) {
+            initLogger.warn(new Error('Could not access config dir. It is likely your config files will not be able to be read.', {cause: e}));
+        }
+        initLogger.info(`Data Dir ENV   : ${process.env.DATA_DIR} -> Resolved: ${getDataDir()}`);
+        try {
+            const exists = fileExists(dataDir);
+            if(!exists) {
+                initLogger.verbose(`Data Dir does not exist, creating now...`);
+                await createDir(dataDir);
+            }
+        } catch (e) {
+            initLogger.warn(new Error('Could not access data dir. It is likely your data files will not be able to be read.', {cause: e}));
+        }
         // try to read a configuration file
         let appConfigFail: Error | undefined = undefined;
         let config = {};
         try {
             config = await readJson(`${configDir}/config.json`, {throwOnNotFound: false, logger: childLogger(initLogger, 'Secrets')});
+            if(config === undefined) {
+                initLogger.verbose(`No AIO config found at ${configDir}/config.json`);
+            }
         } catch (e) {
             appConfigFail = e;
         }

@@ -34,6 +34,8 @@ export async function readText(path: any) {
     // });
 }
 
+export const createDir = (location: string) => promises.mkdir(location, {recursive: true});
+
 export const fileOrDirectoryIsWriteable = (location: string) => {
     const pathInfo = pathUtil.parse(location);
     const isDir = pathInfo.ext === '';
