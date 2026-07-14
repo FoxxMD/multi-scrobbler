@@ -1,0 +1,115 @@
+---
+title: Apple Music
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import AppleMusicConfig from '!!raw-loader!@site/../config/applemusic.json.example';
+
+This Source **monitors your Apple Music listening history** via the official Apple Music API and scrobbles new activity to your configured [Clients](/configuration/clients). 
+
+Because of how the Apple Music API works, Multi-Scrobbler (MS) requires two different tokens to function: a **Media User Token** (identifies your personal account) and an **Authentication Token** (authorizes API access).
+
+#### 1. Getting a Media User Token
+
+The `mediaUserToken` is required to access your recently played history. You can extract it directly from the Apple Music web app:
+
+1. Visit [music.apple.com](https://music.apple.com) in your browser and log in.
+2. Open your browser's Developer Tools (usually `F12` or `Cmd+Option+I`).
+3. Navigate to the **Application** tab (Chrome/Edge) or **Storage** tab (Safari/Firefox).
+4. Expand **Cookies** in the left sidebar and select `https://music.apple.com`.
+5. Find the cookie named `media-user-token` and copy its value (it typically starts with `0.`).
+
+:::caution[Token Expiry]
+The `mediaUserToken` will eventually expire. If Multi-Scrobbler begins throwing authentication errors in the logs, simply repeat these steps to obtain and configure a fresh token.
+:::
+
+#### 2. Authentication
+
+The Apple Music API requires a Developer Token (JWT). Multi-Scrobbler can either automatically **generate** this JWT for you using an Apple Music API key, or you can manually provide a **pre-generated token**.
+
+<Tabs groupId="appleMusicAuth" queryString>
+    <TabItem value="key" label="MusicKit Key (Recommended)">
+
+        To generate JWTs automatically and avoid manual token refreshes, you need an Apple Music API key:
+
+        1. Go to the [Apple Developer portal](https://developer.apple.com/account/resources/authkeys/list) and create a **MusicKit** key.
+        2. Download the `.p8` file — this is your private key.
+        3. Note your **Key ID** and **Team ID** (found in your Apple Developer account Membership details).
+
+        Add these details to your config:
+
+        ```json
+        {
+            "data": {
+                "key": {
+                    "id": "2HPSNJZ88N",
+                    "teamId": "SN6YASW8G4",
+                    "p8": "-----BEGIN PRIVATE KEY-----\nMIGTAgEAMBMGByqGSM49AgEG...-----END PRIVATE KEY-----"
+                },
+                "mediaUserToken": "your-media-user-token-here"
+            }
+        }
+        ```
+
+        :::tip
+        When pasting the contents of your `.p8` file into JSON, make sure to replace physical line breaks with `\n` so it remains a valid, single-line JSON string.
+        :::
+
+    </TabItem>
+    <TabItem value="token" label="Pre-generated Token">
+
+        If you don't have an Apple Developer account, you can piggyback off the web app's token. 
+
+        While browsing [music.apple.com](https://music.apple.com) with Developer Tools open, inspect the **Network** tab. Look at the request headers for any request made to `amp-api.music.apple.com`. Copy the `authorization` header value (use everything *after* the `Bearer ` prefix).
+
+        ```json
+        {
+            "data": {
+                "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiIsIm...",
+                "mediaUserToken": "your-media-user-token-here",
+                "headers": {
+                    "Origin": "https://music.apple.com"
+                }
+            }
+        }
+        ```
+
+        :::info[Custom Header Required]
+        When using a JWT extracted from the browser, Apple requires the request to match the domain it was issued to. You **must** include the `Origin` header in your config as shown above.
+        :::
+
+        *Note: Browser-generated JWTs are valid for a maximum of 35 days and must be updated manually when they expire.*
+
+    </TabItem>
+</Tabs>
+
+---
+
+#### How Multi-Scrobbler handles Apple Music quirks
+
+**Timestamp Estimation**
+The Apple Music API **does not provide timestamps** for when tracks were played. Multi-Scrobbler estimates play times by taking the current time and subtracting track durations backwards:
+* The most recent track is assumed to have finished playing **now**.
+* Each older track is estimated to have played `duration` seconds before the previous one.
+
+*For the most accurate scrobble timestamps, it is highly recommended to keep the polling `APPLEMUSIC_INTERVAL` low (the default is 60 seconds).*
+
+
+## Configuration Reference
+
+<Config config="AppleMusicSourceConfig" fileContent={AppleMusicConfig} name="applemusic">
+    | Environment Variable          | Required? | Default | Description                                          |
+    | ----------------------------- | --------- | ------- | ---------------------------------------------------- |
+    | `APPLEMUSIC_ID`               | Yes       |         | A unique ID for this source.                         |
+    | `APPLEMUSIC_MEDIA_USER_TOKEN` | Yes       |         | The media-user-token extracted from the browser.     |
+    | `APPLEMUSIC_KEY_ID`           | No        |         | Key ID from your MusicKit key.                       |
+    | `APPLEMUSIC_TEAM_ID`          | No        |         | Team ID from your Apple Developer account.           |
+    | `APPLEMUSIC_KEY_P8`           | No        |         | The contents of your MusicKit `.p8` private key file.|
+    | `APPLEMUSIC_TOKEN`            | No        |         | A pre-generated JWT (alternative to key properties). |
+    | `APPLEMUSIC_INTERVAL`         | No        | `60`    | Polling interval in seconds.                         |
+    | `APPLEMUSIC_NAME`             | No        |         | A vanity name different than the ID.                 |
+</Config>
