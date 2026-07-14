@@ -8,9 +8,8 @@ import isToday from 'dayjs/plugin/isToday.js';
 import timezone from 'dayjs/plugin/timezone.js';
 import week from 'dayjs/plugin/weekOfYear.js';
 import utc from 'dayjs/plugin/utc.js';
-import * as path from "path";
 import { SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
-import { projectDir } from "./common/index.ts";
+import { getConfigDir, getDataDir } from "./common/index.ts";
 import type {AIOConfig} from "./common/infrastructure/config/aioConfig.ts";
 import { appLogger, initLogger as getInitLogger } from "./common/logging.ts";
 import { getRoot } from "./ioc.ts";
@@ -87,10 +86,11 @@ process.on('SIGINT', async () => {
 })
 
 
-const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
+const configDir = getConfigDir()
 
     try {
-        initLogger.verbose(`Config Dir ENV: ${process.env.CONFIG_DIR} -> Resolved: ${configDir}`)
+        initLogger.verbose(`Config Dir ENV : ${process.env.CONFIG_DIR} -> Resolved: ${configDir}`);
+        initLogger.verbose(`Data Dir ENV   : ${process.env.DATA_DIR} -> Resolved: ${getDataDir()}`);
         // try to read a configuration file
         let appConfigFail: Error | undefined = undefined;
         let config = {};
@@ -127,7 +127,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         
         const dbPath = getDbPath('ms');
         logger.info(`Using database at ${db}`);
-        const [migratedDb, isNew] = await getMigratedDb(dbPath, {logger});
+        const [migratedDb, _] = await getMigratedDb(dbPath, {logger});
         db = migratedDb;
 
         const root = getRoot({

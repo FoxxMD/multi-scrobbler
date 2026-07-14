@@ -9,7 +9,7 @@ import { artistCreditsToNames } from '../../../core/StringUtils.ts';
 import TealScrobbler from '../../scrobblers/TealfmScrobbler.ts';
 import { EventEmitter } from "events";
 import path from 'node:path';
-import { configDir } from '../../common/index.ts';
+import { getConfigDir } from '../../common/index.ts';
 import { loggerDebug } from '@foxxmd/logging';
 
 chai.use(asPromised);
@@ -115,6 +115,6 @@ describe('#tealfmCar', function() {
         );
         await tfm.buildDatabase();
 
-        await tfm.parseScrobblesFromCar(path.resolve(configDir, 'tealfm-myteal-1778870858.car'), 100);
+        await tfm.parseScrobblesFromCar(path.resolve(getConfigDir(), 'tealfm-myteal-1778870858.car'), 100);
     });
 });
