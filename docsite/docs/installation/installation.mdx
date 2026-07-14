@@ -42,7 +42,7 @@ Cross-platform images are built for x86 (Intel/AMD) and ARM64 (IE Raspberry Pi)
 
 <Tabs groupId="dockerSetting" queryString>
 <TabItem value="storage" label="Storage">
-You **should** bind a host directory into the container for storing configurations and credentials. Otherwise, these will be lost when the container is updated.
+You **should** bind a host directory into the container for storing configurations, credentials, database, and other files. Otherwise, these will be lost when the container is updated.
 
 ```yaml title="docker-compose.yml"
 services:
@@ -51,6 +51,24 @@ services:
   // highlight-start
   volumes:
     - "./config:/config"
+  // highlight-end
+```
+
+Optionally, use a separate directory for data (database, cache, etc...) by mounting an additional directory and setting the `DATA_DIR` ENV to the directory that should be used inside the container:
+
+```yaml title="docker-compose.yml"
+services:
+  multi-scrobbler:
+  # ...
+  environment:
+    # ...
+    // highlight-start
+    - DATA_DIR=/msData
+    // highlight-end
+  volumes:
+    - "./config:/config" # used for config files
+  // highlight-start
+    - "./my/host/folder:/msData" # used for data files
   // highlight-end
 ```
 
@@ -230,6 +248,33 @@ npm install
 npm run docs:install && npm run build
 npm run start
 ```
+
+#### Config And Data Directories
+
+The directories MS uses for **Configuration** (`config.json`, `jellyfin.json`, etc...) and **Data** (database, cache, etc...) can be specified by environmental variables passed directly to `npm`/`node`, or set in an `.env` file in the working directory.
+
+When parsing these ENVs MS will resolve relative directories but *not* bash expansions like `~` for home. Examples:
+
+* `CONFIG_DIR=/my/absolute/path` => sets directory to use for config files
+* `DATA_DIR=./relative/data` => sets directory relative to working directory for data files
+
+If you do not set these environmental variables then MS will attempt to use OS-standardized directories:
+
+<Tabs>
+    <TabItem value="linux" label="Linux">
+        * Config => `$XDG_CONFIG_HOME/multi-scrobbler` or `~/.config/multi-scrobbler`
+        * Data => `$XDG_DATA_HOME/multi-scrobbler` or `~/.local/share/multi-scrobbler`
+    </TabItem>
+    <TabItem value="mac" label="MacOS">
+        * Config => `~/Library/Preferences/multi-scrobbler`
+        * Data => `~/Library/Application Support/multi-scrobbler`
+    </TabItem>
+    <TabItem value="win" label="Windows">
+        * Config => `%APPDATA%\multi-scrobbler\Config`
+        * Data => `%LOCALAPPDATA%\multi-scrobbler\Data`
+    </TabItem>
+</Tabs>
+
 
 #### Rollup build error
 
