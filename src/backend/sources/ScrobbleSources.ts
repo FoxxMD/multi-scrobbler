@@ -833,12 +833,31 @@ export default class ScrobbleSources {
                     }
                 }    break;
                 case 'applemusic': {
+                    const key = (() => {
+                        const id = process.env.APPLEMUSIC_KEY_ID;
+                        const teamId = process.env.APPLEMUSIC_TEAM_ID;
+                        const p8 = process.env.APPLEMUSIC_KEY_P8;
+                        if (id !== undefined && teamId !== undefined && p8 !== undefined) {
+                            return { id, teamId, p8 };
+                        }
+                        return undefined;
+                    })();
+                    const headersEnv = process.env.APPLEMUSIC_HEADERS;
+                    let headers: Record<string, string> | undefined;
+                    if (headersEnv !== undefined && headersEnv.trim() !== '') {
+                        try {
+                            headers = JSON.parse(headersEnv);
+                        } catch (e) {
+                            throw new Error(`APPLEMUSIC_HEADERS could not be parsed as JSON: ${headersEnv}`, { cause: e });
+                        }
+                    }
                     const data = removeUndefinedKeys({
-                        mediaUserToken: process.env.AM_MEDIA_USER_TOKEN,
-                        token: process.env.AM_TOKEN,
-                        storefront: process.env.AM_STOREFRONT,
+                        mediaUserToken: process.env.APPLEMUSIC_MEDIA_USER_TOKEN,
+                        token: process.env.APPLEMUSIC_TOKEN,
+                        key,
+                        headers,
                     }, false);
-                    const p = getCommonComponentEnvConfig('AM');
+                    const p = getCommonComponentEnvConfig('APPLEMUSIC');
                     if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
                             type: 'applemusic',
@@ -848,7 +867,7 @@ export default class ScrobbleSources {
                             configureAs: defaultConfigureAs,
                             data: data,
                             ...p,
-                            options: transformPresetEnv('AM')
+                            options: transformPresetEnv('APPLEMUSIC')
                         });
                     }
                 }    break;
