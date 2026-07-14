@@ -4,19 +4,18 @@ import asPromised from 'chai-as-promised';
 import withLocalTmpDir from 'with-local-tmp-dir';
 import {constants, copyFile, access} from 'node:fs/promises';
 import path from "path";
-import {projectDir} from '../../common/index.ts';
 import ScrobbleClients from '../../scrobblers/ScrobbleClients.ts';
 import ScrobbleSources from '../../sources/ScrobbleSources.ts';
 import EventEmitter from "events";
 import {loggerTest} from '@foxxmd/logging';
-import { clientTypes } from "../../../core/Atomic.ts";
+import { clientTypes, projectRootDir } from "../../../core/Atomic.ts";
 import { sourceTypes } from "../../../core/Atomic.ts";
 import { Notifiers } from '../../notifier/Notifiers.ts';
 import { difference } from '../../utils.ts';
 
 chai.use(asPromised);
 
-const samplePath = (name: string) => path.resolve(projectDir, 'config', `${name}.json.example`);
+const samplePath = (name: string) => path.resolve(projectRootDir, 'config', `${name}.json.example`);
 
 describe('Sample Configs', function () {
 

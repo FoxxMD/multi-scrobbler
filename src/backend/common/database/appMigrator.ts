@@ -2,9 +2,9 @@ import type {DbConcrete} from "./drizzle/drizzleUtils.ts";
 import { loggerNoop } from "../MaybeLogger.ts";
 import * as path from 'path';
 import { childLogger, type Logger } from "@foxxmd/logging";
-import { projectDir } from "../index.ts";
 import { Migrator } from 'sqlite-up';
 import type {MigrationStatus} from "../infrastructure/Atomic.ts";
+import { projectRootDir } from "../../../core/Atomic.ts";
 
 export interface MigrateBaseContext {
     db: DbConcrete
@@ -16,7 +16,7 @@ const migrationsTable = '__app_migrations';
 export const getAppMigrationStatus = async (db: DbConcrete, opts: {logger?: Logger, migrationsAppFolder?: string} = {}): Promise<MigrationStatus> => {
     const {
     logger: parentLogger = loggerNoop,
-    migrationsAppFolder = path.resolve(projectDir, 'src/backend/common/database/appMigrations')
+    migrationsAppFolder = path.resolve(projectRootDir, 'src/backend/common/database/appMigrations')
     } = opts;
     const logger = childLogger(parentLogger, 'App Migrations');
 
@@ -40,7 +40,7 @@ export const getAppMigrationStatus = async (db: DbConcrete, opts: {logger?: Logg
 export const migrateApp = async (db: DbConcrete, opts: {logger?: Logger, migrationsAppFolder?: string} = {}): Promise<string[]> => {
     const {
     logger: parentLogger = loggerNoop,
-    migrationsAppFolder = path.resolve(projectDir, 'src/backend/common/database/appMigrations')
+    migrationsAppFolder = path.resolve(projectRootDir, 'src/backend/common/database/appMigrations')
     } = opts;
     const logger = childLogger(parentLogger, ['App', 'Migrations']);
 

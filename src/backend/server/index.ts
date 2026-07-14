@@ -8,14 +8,13 @@ import passport from 'passport';
 import path from "path";
 import qs from 'qs';
 import ViteExpress from "vite-express";
-import { projectDir } from "../common/index.ts";
 import { getRoot } from "../ioc.ts";
 import { parseBool } from "../utils.ts";
 import { getAddress } from "../utils/NetworkUtils.ts";
 import { setupApi } from "./api.ts";
 import type ScrobbleSources from '../sources/ScrobbleSources.ts';
 import type ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
-import { qsOptions } from '../../core/Atomic.ts';
+import { projectRootDir, qsOptions } from '../../core/Atomic.ts';
 
 const app = express();
 const router = Router();
@@ -79,7 +78,7 @@ export const initServer = async (parentLogger: Logger, appLoggerStream: PassThro
             }
         }
 
-        app.use('/docs', express.static(path.resolve(projectDir, `./docsite/build`)));
+        app.use('/docs', express.static(path.resolve(projectRootDir, `./docsite/build`)));
 
         if(process.env.USE_HASH_ROUTER === undefined) {
             process.env.USE_HASH_ROUTER = root.get('isSubPath').toString();

@@ -7,7 +7,7 @@ import { initMemoryCache } from "../../common/Cache.ts";
 import { Cacheable } from "cacheable";
 import MusicbrainzTransformer, { DEFAULT_SEARCHTYPE_ORDER, type MusicbrainzTransformerDataStage } from "../../common/transforms/MusicbrainzTransformer.ts";
 import { DEFAULT_MISSING_TYPES, type PlayObject } from "../../../core/Atomic.ts";
-import { projectDir } from '../../common/index.ts';
+import { getPathFromCWD } from '../../common/index.ts';
 import path from 'path';
 import type {MusicbrainzApiConfigData} from '../../common/infrastructure/Atomic.ts';
 import { MockNetworkError, withRequestInterception } from '../utils/networking.ts';
@@ -19,7 +19,7 @@ import { artistNamesToCredits, artistNameToCredit } from '../../../core/StringUt
 
 chai.use(asPromised);
 
-const envPath = path.join(projectDir, '.env');
+const envPath = path.join(getPathFromCWD(), '.env');
 dotenv.config({ path: envPath });
 
 const memorycache = () => new Cacheable({ primary: initMemoryCache({ ttl: '1ms' }) });

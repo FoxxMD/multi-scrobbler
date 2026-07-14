@@ -8,16 +8,16 @@ import { backupDb, getDbBackupPath, MEMORY_DB_NAME } from '../Database.ts';
 import { fileExists, fileOrDirectoryIsWriteable } from '../../../utils/FSUtils.ts';
 import { childLogger, type Logger, type LogLevel } from '@foxxmd/logging';
 import { loggerNoop } from '../../MaybeLogger.ts';
-import { projectDir } from '../../index.ts';
 import { relations } from './schema/schema.ts';
 import { addToContext, executeQuery } from './logContext.ts';
 import { migrateApp, getAppMigrationStatus } from '../appMigrator.ts';
 import type {MigrationStatus} from '../../infrastructure/Atomic.ts';
+import { projectRootDir } from '../../../../core/Atomic.ts';
 
 export async function getDbMigrationStatus(dbVal: string | DbConcrete, opts: {logger?: Logger, migrationsFolder?: string} = {}): Promise<MigrationStatus> {
   const {
     logger: parentLogger = loggerNoop,
-    migrationsFolder = path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations')
+    migrationsFolder = path.resolve(projectRootDir, 'src/backend/common/database/drizzle/migrations')
   } = opts;
   const logger = childLogger(parentLogger, 'Migrations');
   
@@ -91,7 +91,7 @@ export const migrateDb = async (db: DbConcrete, opts: {logger?: Logger, migratio
 
   try {
     logger.info('Starting migrations...');
-    await executeQuery('migrations', async () => migrate(db, { migrationsFolder: migrationsFolder ?? path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations') }), logger, process.env.LOG_MIGRATION === 'true' ? true : 'error');
+    await executeQuery('migrations', async () => migrate(db, { migrationsFolder: migrationsFolder ?? path.resolve(projectRootDir, 'src/backend/common/database/drizzle/migrations') }), logger, process.env.LOG_MIGRATION === 'true' ? true : 'error');
     logger.info('Migrations complete');
   } catch (e) {
     throw new Error('Failed to migrate database', { cause: e });
@@ -107,7 +107,7 @@ export const migrateDbSync = (db: ReturnType<typeof drizzle>, opts: {logger?: Lo
 
   try {
     logger.info('Starting migrations...');
-    migrate(db, { migrationsFolder: migrationsFolder ?? path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations') });
+    migrate(db, { migrationsFolder: migrationsFolder ?? path.resolve(projectRootDir, 'src/backend/common/database/drizzle/migrations') });
     logger.info('Migrations complete');
   } catch (e) {
     throw new Error('Failed to migrate database', { cause: e });

@@ -1,5 +1,4 @@
 import { resolve } from "path";
-import { projectDir } from "../common/index.ts";
 import type { LiteralType} from "ts-json-schema-generator";
 import {
     type Definition as TSJDefinition,
@@ -11,6 +10,7 @@ import {
     SchemaGenerator, LiteralTypeFormatter
 } from "ts-json-schema-generator";
 import { MaybeLogger } from '../common/MaybeLogger.ts';
+import { projectRootDir } from "../../core/Atomic.ts";
 
 // https://github.com/vega/ts-json-schema-generator/issues/1899#issuecomment-2407674526
 // https://github.com/vega/ts-json-schema-generator?tab=readme-ov-file#custom-formatting
@@ -34,8 +34,8 @@ const tsjConfig: TSJCompletedConfig = {
     markdownDescription: true,
     minify: false,
     topRef: false,
-    path: resolve(projectDir, "src/backend/common/infrastructure/config/aioConfig.ts"),
-    tsconfig: resolve(projectDir, "src/backend/tsconfig.json"),
+    path: resolve(projectRootDir, "src/backend/common/infrastructure/config/aioConfig.ts"),
+    tsconfig: resolve(projectRootDir, "src/backend/tsconfig.json"),
 };
 
 const formatter = createFormatter(tsjConfig, (fmt, circularReferenceTypeFormatter) => {

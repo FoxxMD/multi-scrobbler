@@ -5,9 +5,9 @@ import type {SonosData} from "../../common/infrastructure/config/source/sonos.ts
 import { SonosSource } from "../../sources/SonosSource.ts";
 import * as dotenv from 'dotenv';
 import path from 'path';
-import { projectDir } from "../../common/index.ts";
+import { getPathFromCWD } from "../../common/index.ts";
 
-const envPath = path.join(projectDir, '.env');
+const envPath = path.join(getPathFromCWD(), '.env');
 dotenv.config({ path: envPath });
 
 const createSource = async (data: SonosData): Promise<SonosSource> => {

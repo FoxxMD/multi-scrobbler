@@ -1,11 +1,12 @@
 import 'dotenv/config';
 import { defineConfig } from 'drizzle-kit';
-import { configDir, projectDir } from './src/backend/common/index.js';
+import { configDir } from './src/backend/common/index.js';
 import * as path from 'path';
+import { projectRootDir } from './src/core/Atomic.ts';
 
 export default defineConfig({
-  schema: path.resolve(projectDir, 'src/backend/common/database/drizzle/schema'),
-  out: path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations'),
+  schema: path.resolve(projectRootDir, 'src/backend/common/database/drizzle/schema'),
+  out: path.resolve(projectRootDir, 'src/backend/common/database/drizzle/migrations'),
   dialect: 'sqlite',
   dbCredentials: {
     url: path.resolve(configDir, 'ms.db'),

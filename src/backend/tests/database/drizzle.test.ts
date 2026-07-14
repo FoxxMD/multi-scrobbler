@@ -8,7 +8,6 @@ import { getDbPath } from '../../common/database/Database.ts';
 import { x } from 'tinyexec';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { projectDir } from '../../common/index.ts';
 import { fixtureCreateComponent, fixtureCreateInput, fixtureCreatePlay } from '../utils/databaseFixtures.ts';
 import { DrizzlePlayRepository, type RepositoryCreatePlayOpts } from '../../common/database/drizzle/repositories/PlayRepository.ts';
 import { generatePlayWithLifecycle, generateRandomObj } from '../../../core/tests/utils/fixtures.ts';
@@ -20,6 +19,7 @@ import { transientDb } from '../utils/TransientTestUtils.ts';
 import { getRoot } from '../../ioc.ts';
 import { after } from 'mocha';
 import { migrateApp } from '../../common/database/appMigrator.ts';
+import { projectRootDir } from '../../../core/Atomic.ts';
 
 // would be great to push migrations directly from schema but doesn't seem supported in newest beta
 // https://github.com/drizzle-team/drizzle-orm/discussions/4373
@@ -50,7 +50,7 @@ describe('Migrations', function () {
 
     it('Detects pending migrations', async function () {
 
-        const allFiles = await fs.readdir(path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations'));
+        const allFiles = await fs.readdir(path.resolve(projectRootDir, 'src/backend/common/database/drizzle/migrations'));
         const migrationFiles = allFiles
             .sort();
 
@@ -59,7 +59,7 @@ describe('Migrations', function () {
             // copy first migration
             await fs.mkdir('migrations');
             try {
-                await fs.cp(path.resolve(projectDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
+                await fs.cp(path.resolve(projectRootDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
                 const mf = path.resolve('./migrations');
                 const db = await getDb(':memory:');
                 await migrateDb(db, { migrationsFolder: mf });
@@ -71,7 +71,7 @@ describe('Migrations', function () {
                     `${mf}`,
                     '--custom',
                     '--schema',
-                    path.resolve(projectDir, 'src/backend/common/database/drizzle/schema'),
+                    path.resolve(projectRootDir, 'src/backend/common/database/drizzle/schema'),
                     '--dialect',
                     'sqlite'
                 ], {throwOnError: true});
@@ -88,7 +88,7 @@ describe('Migrations', function () {
 
     it('Detects no pending migrations correctly', async function () {
 
-        const allFiles = await fs.readdir(path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations'));
+        const allFiles = await fs.readdir(path.resolve(projectRootDir, 'src/backend/common/database/drizzle/migrations'));
         const migrationFiles = allFiles
             .sort();
 
@@ -97,7 +97,7 @@ describe('Migrations', function () {
             // copy first migration
             await fs.mkdir('migrations');
             try {
-                await fs.cp(path.resolve(projectDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
+                await fs.cp(path.resolve(projectRootDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
                 const mf = path.resolve('./migrations');
                 const db = await getDb(':memory:');
                 await migrateDb(db, { migrationsFolder: mf });
@@ -113,7 +113,7 @@ describe('Migrations', function () {
 
     it('Backs up database when migrations are pending', async function () {
 
-        const allFiles = await fs.readdir(path.resolve(projectDir, 'src/backend/common/database/drizzle/migrations'));
+        const allFiles = await fs.readdir(path.resolve(projectRootDir, 'src/backend/common/database/drizzle/migrations'));
         const migrationFiles = allFiles
             .sort();
 
@@ -123,7 +123,7 @@ describe('Migrations', function () {
             // copy first migration
             await fs.mkdir('migrations');
             try {
-                await fs.cp(path.resolve(projectDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
+                await fs.cp(path.resolve(projectRootDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
                 const mf = path.resolve('./migrations');
                 const [db, _] = await getMigratedDb(dbPath, {migrationsFolder: mf});
                 await migrateDb(db, { migrationsFolder: mf });
@@ -135,7 +135,7 @@ describe('Migrations', function () {
                     `${mf}`,
                     '--custom',
                     '--schema',
-                    path.resolve(projectDir, 'src/backend/common/database/drizzle/schema'),
+                    path.resolve(projectRootDir, 'src/backend/common/database/drizzle/schema'),
                     '--dialect',
                     'sqlite'
                 ], {throwOnError: true});
@@ -742,7 +742,7 @@ describe('App Migrations', function() {
         ]
         await repo.createPlays(playData);
 
-        await migrateApp(db, {migrationsAppFolder: path.resolve(projectDir, `src/backend/tests/database/testAppMigrations`)});
+        await migrateApp(db, {migrationsAppFolder: path.resolve(projectRootDir, `src/backend/tests/database/testAppMigrations`)});
 
         const plays = await repo.findPlays({});
 
