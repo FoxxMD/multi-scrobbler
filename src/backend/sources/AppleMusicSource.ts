@@ -85,15 +85,32 @@ export default class AppleMusicSource extends AbstractSource {
             if (this.config.data?.key) {
                 await this.musicKit.auth();
             }
+
+            const status = await this.musicKit.testAuth();
+
+            if (status !== 200) {
+                throw new Error(`Apple Music test auth returned status code ${status}`);
+            }
+
             return true;
         } catch (e) {
             this.logger.error(new Error('Apple Music authentication failed', {cause: e}));
-            return false;
+            throw e;
         }
     }
 
     protected async doCheckConnection(): Promise<true | string | undefined> {
-        return undefined;
+        if (this.config.data?.key) {
+            await this.musicKit.auth();
+        }
+
+        const status = await this.musicKit.testAuth();
+
+        if (status !== 200) {
+            throw new Error(`Apple Music connection check failed with status ${status}`);
+        }
+        
+        return `Apple Music API is reachable (status ${status})`;
     }
 
     static formatPlayObj(track: Song, options: {newFromSource?: boolean} = {}): PlayObject {
