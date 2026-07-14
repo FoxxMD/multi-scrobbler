@@ -1,6 +1,7 @@
 "use client"
 
-import { ChakraProvider, createSystem, defaultConfig, defineConfig } from "@chakra-ui/react"
+import { ChakraProvider, createSystem, defaultConfig, defineConfig, defineSlotRecipe } from "@chakra-ui/react"
+import { timelineAnatomy } from "@chakra-ui/react/anatomy";
 import {
   QueryClient,
   QueryClientProvider
@@ -10,6 +11,15 @@ import {
   ColorModeProvider,
   type ColorModeProviderProps,
 } from "./Color-Mode"
+
+const timelineSlotRecipe = defineSlotRecipe({
+    slots: timelineAnatomy.keys(),
+    base: {
+        item: {
+          "--timeline-content-gap": "spacing.5"  // was spacing.6
+        }
+    }
+});
 
 const queryClient = new QueryClient()
 
@@ -37,6 +47,11 @@ const customConfig = defineConfig({
       color: "gray.500"
     }
   },
+  theme: {
+    slotRecipes: {
+      timeline: timelineSlotRecipe
+    }
+  }
 })
 
 export const system = createSystem(defaultConfig, customConfig)

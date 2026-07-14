@@ -1,4 +1,4 @@
-import type { Collapsible} from '@chakra-ui/react';
+import type { Collapsible, IconProps} from '@chakra-ui/react';
 import { Card, Icon, SkeletonCircle, SkeletonText, Span, Tabs, Timeline, type HTMLChakraProps } from '@chakra-ui/react';
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
@@ -12,7 +12,7 @@ import { CLIENT_DEAD_QUEUE, CLIENT_INGRESS_QUEUE, QUEUE_STATUS_COMPLETED, QUEUE_
 import { sortByNewestDate } from "../../core/PlayUtils";
 import { capitalizeWords } from "../../core/StringUtils";
 import { shortTodayAwareFormat } from "../../core/TimeUtils";
-import { activityTransformHasIssue, timelineTextFormatting } from "../utils/ComponentUtils";
+import { activityTransformHasIssue, timelineTextFormatting, timelineIconProps } from "../utils/ComponentUtils";
 import { ChakraCodeBlockShort } from "./CodeBlock";
 import { ErrorAlert } from "./ErrorAlert";
 import { MSErrorBoundary } from "./ErrorBoundary";
@@ -42,7 +42,7 @@ const TimelineLoading = () => (
                 <Timeline.Connector>
                     <Timeline.Separator />
                     <Timeline.Indicator>
-                        <Icon fontSize="lg">
+                        <Icon {...timelineIconProps}>
                             <SkeletonCircle />
                         </Icon>
                     </Timeline.Indicator>
@@ -62,10 +62,10 @@ const QueuedCreatedItem = (props: { dead?: boolean, datetime: string }) => (
         <Timeline.Connector>
             <Timeline.Separator />
             <Timeline.Indicator>
-                <TimelineIndicatorIconQueued fontSize="lg" />
+                <TimelineIndicatorIconQueued {...timelineIconProps} />
             </Timeline.Indicator>
         </Timeline.Connector>
-        <Timeline.Content gap="4">
+        <Timeline.Content>
             <Timeline.Title>
                 <ItemSummaryText>{props.dead ? 'Dead ' : ''}Queued <Muted>at</Muted> {shortTodayAwareFormat(dayjs(props.datetime))}</ItemSummaryText>
             </Timeline.Title>
@@ -98,7 +98,7 @@ const NewItem = (props: Pick<ActivityDetailProps, 'collapsibleOpen' | 'activity'
             <Timeline.Connector>
                 <Timeline.Separator />
                 <Timeline.Indicator>
-                    <Icon fontSize="lg">
+                    <Icon {...timelineIconProps}>
                         <IoMdCodeDownload />
                     </Icon>
                 </Timeline.Indicator>
@@ -157,12 +157,12 @@ const TransformsItem = (props: Pick<ActivityDetailProps, 'activity' | 'collapsib
         <Timeline.Connector>
             <Timeline.Separator />
             <Timeline.Indicator>
-                <Icon fontSize="lg">
+                <Icon {...timelineIconProps}>
                     <BiWrench />
                 </Icon>
             </Timeline.Indicator>
         </Timeline.Connector>
-        <Timeline.Content gap="4">
+        <Timeline.Content>
             <Timeline.Title>
                 <MSCollapsible
                     triggerProps={timelineCollapsibleProps}
@@ -186,12 +186,12 @@ const NoTransformsItem = () => (
         <Timeline.Connector>
             <Timeline.Separator />
             <Timeline.Indicator>
-                <Icon fontSize="lg">
+                <Icon {...timelineIconProps}>
                     <BiWrench />
                 </Icon>
             </Timeline.Indicator>
         </Timeline.Connector>
-        <Timeline.Content gap="4">
+        <Timeline.Content>
             <Timeline.Title >
                 <ItemSummaryText>Play <Muted>was</Muted> not transformed <Muted>because no</Muted> Transform Rules <Muted> were used/configured.</Muted></ItemSummaryText>
             </Timeline.Title>
@@ -210,12 +210,12 @@ const ScrobbleMatchItem = (props: Pick<ActivityDetailProps, 'collapsibleOpen'> &
             <Timeline.Connector>
                 <Timeline.Separator />
                 <Timeline.Indicator>
-                    <Icon fontSize="lg" color={`${match.match ? 'orange' : 'green'}.focusRing`}>
+                    <Icon {...timelineIconProps} color={`${match.match ? 'orange' : 'green'}.focusRing`}>
                         <HiMiniMagnifyingGlass />
                     </Icon>
                 </Timeline.Indicator>
             </Timeline.Connector>
-            <Timeline.Content gap="4">
+            <Timeline.Content>
                 <Timeline.Title>
                     <MSCollapsible
                         triggerProps={timelineCollapsibleProps}
@@ -268,13 +268,13 @@ const ScrobbleResponseItem = (props: Pick<ActivityDetailProps, 'collapsibleOpen'
                 <Timeline.Separator />
                 <Timeline.Indicator>
                     {error !== undefined ? <TimelineErrorIcon /> : (
-                        <Icon fontSize="lg" {...scrobbleIconProps}>
+                        <Icon {...timelineIconProps} {...scrobbleIconProps}>
                             <TbDatabaseEdit />
                         </Icon>
                     )}
                 </Timeline.Indicator>
             </Timeline.Connector>
-            <Timeline.Content gap="4">
+            <Timeline.Content >
                 <Timeline.Title>
                     <MSCollapsible
                         triggerProps={timelineCollapsibleProps}
@@ -305,7 +305,7 @@ const QueueTimelineItem = (props: {queueState: QueueStateApi, collapsibleOpen: b
                     <Timeline.Connector>
                         <Timeline.Separator />
                         <Timeline.Indicator>
-                            <TimelineIndicatorIconQueued fontSize="lg"/>
+                            <TimelineIndicatorIconQueued {...timelineIconProps}/>
                         </Timeline.Indicator>
                     </Timeline.Connector>
                     <Timeline.Content gap="4">
@@ -323,7 +323,7 @@ const QueueTimelineItem = (props: {queueState: QueueStateApi, collapsibleOpen: b
                     <Timeline.Connector>
                         <Timeline.Separator />
                         <Timeline.Indicator>
-                            <CheckIcon fontSize="lg"/>
+                            <CheckIcon {...timelineIconProps}/>
                         </Timeline.Indicator>
                     </Timeline.Connector>
                     <Timeline.Content gap="4">
@@ -356,10 +356,10 @@ const QueueTimelineItem = (props: {queueState: QueueStateApi, collapsibleOpen: b
                     <Timeline.Connector>
                         <Timeline.Separator />
                         <Timeline.Indicator>
-                            <CheckIcon fontSize="lg"/>
+                            <CheckIcon {...timelineIconProps}/>
                         </Timeline.Indicator>
                     </Timeline.Connector>
-                    <Timeline.Content gap="4">
+                    <Timeline.Content >
                         <Timeline.Title>
                             {titleContent}
                         </Timeline.Title>

@@ -20,7 +20,15 @@ export interface MSCollapsibleExternalProps {
 
 export const timelineCollapsibleProps = {
     indicatorProps: { paddingBottom: '4px' },
-    triggerProps: { paddingBlockStart: "0.3em" }
+    triggerProps: { paddingBlockStart: "0.3em" },
+    triggerPropsClosed: {
+         //paddingBlockStart: "0.3em",
+         paddingBlock: 'initial' 
+        },
+    triggerPropsOpen: {
+        paddingBlock: 'initial',
+        paddingBlockEnd: "var(--chakra-spacing-3)"
+    }
 }
 
 export type MSCollapsibleProps = PropsWithChildren<ComponentProps<typeof Collapsible.Root>> & MSCollapsibleInternalProps;
@@ -104,7 +112,7 @@ export const MSCollapsible = (props: MSCollapsibleProps) => {
         iProps.display = 'none';
     }
 
-    const tProps = { ...(timeline ? timelineCollapsibleProps.triggerProps : {}), ...triggerProps }
+    const tProps = { ...(timeline ? (open? timelineCollapsibleProps.triggerPropsOpen : timelineCollapsibleProps.triggerPropsClosed) : {}), ...triggerProps }
 
     return (
         <Collapsible.Root open={open} onOpenChange={(val) => setOpen(val.open)} flexGrow="1" disabled={isDisabled} {...rest}>

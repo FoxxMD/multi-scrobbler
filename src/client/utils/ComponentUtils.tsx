@@ -1,4 +1,4 @@
-import type { Card} from '@chakra-ui/react';
+import type { Card, IconProps} from '@chakra-ui/react';
 import type {HTMLChakraProps} from '@chakra-ui/react';
 import type {PlayApiCommonDetailed} from '../../core/Api';
 import { type LifecycleStep, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED } from '../../core/Atomic';
@@ -11,6 +11,10 @@ export const cardHeaderSeparator: Card.HeaderProps = {
 export const timelineTextFormatting: HTMLChakraProps<"span"> = {
     //textAlign: "left",
     textWrap: "balance" 
+}
+
+export const timelineIconProps: IconProps = {
+    fontSize: 'md'
 }
 
 export const activityTransformHasIssue = (steps: LifecycleStep[]): 'warn' | 'error' | undefined => {

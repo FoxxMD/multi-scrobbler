@@ -1,10 +1,10 @@
-import { Heading, Icon, Span, Stack, Text, Timeline } from '@chakra-ui/react';
+import { Heading, Icon, Span, Stack, Text, Timeline} from '@chakra-ui/react';
 import React, { Fragment, useMemo } from "react";
 import { BsExclamationTriangle, BsSkipForward, BsStoplights } from "react-icons/bs";
 import { MdMusicNote } from "react-icons/md";
 import type {JsonPlayObject, LifecycleStep} from "../../core/Atomic";
 import { patchObject } from "../../core/DataUtils";
-import { timelineTextFormatting } from "../utils/ComponentUtils";
+import { timelineIconProps, timelineTextFormatting } from "../utils/ComponentUtils";
 import { ChakraCodeBlockShort } from "./CodeBlock";
 import { ErrorAlert } from "./ErrorAlert";
 import { MSCollapsible, type MSCollapsibleExternalProps } from "./MSCollapsible";
@@ -84,7 +84,7 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
     const [diffs, finalPlay] = useMemo(() => diffElements(original, steps), [steps, original]);
 
     return (
-        <Timeline.Root  variant="subtle" css={{ "--timeline-separator-display": 'block' }}>
+        <Timeline.Root  variant="subtle" size="lg" css={{ "--timeline-separator-display": 'block' }}>
             {steps.map((x, index) => {
                 const {
                     patch,
@@ -137,7 +137,7 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                     <Timeline.Connector>
                         <Timeline.Separator />
                         <Timeline.Indicator>
-                            <Icon fontSize="lg" {...iconProps}>
+                            <Icon {...timelineIconProps} {...iconProps}>
                                 {timelineIcon}
                             </Icon>
                         </Timeline.Indicator>
@@ -175,7 +175,7 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                     <Timeline.Connector>
                         <Timeline.Separator />
                         <Timeline.Indicator>
-                            <Icon fontSize="lg">
+                            <Icon {...timelineIconProps}>
                                 <MdMusicNote />
                             </Icon>
                         </Timeline.Indicator>
