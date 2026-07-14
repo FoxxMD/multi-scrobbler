@@ -135,7 +135,7 @@ export const playWithLifecycleScrobble = async (play: PlayObject, opts: Scrobble
     return play;
   }
 
-  scrobbleRes.payload = play;
+  scrobbleRes.payload = generateRandomObj(1);
   if(error) {
     scrobbleRes.error = serializeError(new Error('Failed to scrobble to client', {cause: new Error('Client returned a 400 or something')}));
     play.scrobble = scrobbleRes;
