@@ -473,6 +473,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 step.flowReason = skipMsg;
 
                 logger.debug(merged, skipMsg);
+                return [step, playTruth];
             } else {
                 step.flowResult = onFailure;
                 let reason: string;
@@ -520,7 +521,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             delete newTransformedPlay.meta.lifecycleInputs;
         }
 
-        return [step, newTransformedPlay];
+        return [step, newTransformedPlay ?? playTruth];
     }
 
     public abstract getRunningState(): ComponentState
