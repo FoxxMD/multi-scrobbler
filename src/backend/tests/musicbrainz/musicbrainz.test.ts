@@ -1,6 +1,7 @@
 import * as dotenv from 'dotenv';
 import { loggerTest } from "@foxxmd/logging";
-import { expect } from 'chai';
+import chai, { expect, assert } from 'chai';
+import asPromised from 'chai-as-promised';
 import { before, describe, it } from 'mocha';
 import { initMemoryCache } from "../../common/Cache.ts";
 import { Cacheable } from "cacheable";
@@ -15,6 +16,8 @@ import { generatePlay, withBrainz } from '../../../core/tests/utils/PlayTestUtil
 import { intersect, missingMbidTypes } from '../../utils.ts';
 import { CoverArtApiClient, type CoverArtApiConfig } from '../../common/vendor/musicbrainz/CoverArtApiClient.ts';
 import { artistNamesToCredits, artistNameToCredit } from '../../../core/StringUtils.ts';
+
+chai.use(asPromised);
 
 const envPath = path.join(projectDir, '.env');
 dotenv.config({ path: envPath });
@@ -375,6 +378,50 @@ describe('Musicbrainz API', function () {
                 artistWeight: 0.3,
             });
             expect(chosenPlay.data.meta.brainz.album).to.eq("82de33b1-1cd6-4236-b116-561d0ecc8acf")
+        });
+
+        it('records prerequisite failures', async function () {
+
+            this.timeout(3500);
+
+            const play: PlayObject = {
+                data: {
+                    track: "Hopes And Dreams (10th Anniversary Arrangement)",
+                    artists: artistNamesToCredits(["KrakenPower"]),
+                    album: "Hopes And Dreams (10th Anniversary Arrangement) - Single",
+                    duration: 278
+                },
+                meta: {
+                    musicService: "Apple Music",
+                    trackId: "1840310777"
+                }
+            }
+            await mbTransformer.initialize();
+
+            const res = await mbTransformer.getTransformerData(play, {
+                type: "musicbrainz",
+                searchWhenMissing: ["artists", "album", "title"],
+                "searchOrder": ["mbidrecording", "isrc"],
+                "albumWeight": 0.4,
+                "artistWeight": 0.3,
+                "releaseStatusPriority": ["official"],
+                "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
+                "releaseCountryPriority": ["XW"],
+            });
+            expect(res.requestQueries).to.exist;
+            expect(res.requestQueries).to.not.be.empty;
+
+
+            await assert.isRejected(mbTransformer.handlePostFetch(play,res, {
+                    type: "musicbrainz",
+                    searchWhenMissing: ["artists", "album", "title"],
+                    "searchOrder": ["mbidrecording", "isrc"],
+                    "albumWeight": 0.4,
+                    "artistWeight": 0.3,
+                    "releaseStatusPriority": ["official"],
+                    "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
+                    "releaseCountryPriority": ["XW"],
+                }), "All search prerequisites failed")
         });
 
     });

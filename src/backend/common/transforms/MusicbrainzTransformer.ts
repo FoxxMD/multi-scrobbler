@@ -435,7 +435,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             // preserve order of search from before searchOrder
             searchOrder = this.defaults.searchOrder ?? ['isrc', 'basic']
         } = stageConfig;
-
+        
         let results: IRecordingMSList;
         const queries: LifecycleInput[] = [];
 
@@ -472,6 +472,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
                 }
             } catch (e) {
                 if(e instanceof SearchPrerequisiteError) {
+                    queries.push({type: `mbQuery-${searchType}-prereqFailure`, input: `Search type ${searchType} did not meet prerequesites: ${e.message}`});
                     this.logger.debug(`Search type ${searchType} did not meet prerequesites: ${e.message}`);
                 } else {
                     // we should be catching any unrecoverable errors in api calls
@@ -601,6 +602,14 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
     }
 
     public async handlePostFetch(play: PlayObject, transformData: IRecordingMSList, stageConfig: MusicbrainzTransformerDataStage): Promise<PlayObject> {
+        // if all searches fail prereqs then no recording lists are assigned to results
+        if(transformData.recordings === undefined) {
+            throw new StagePrerequisiteError('All search prerequisites failed, Musicbrainz API could not be searched with the given searchOrder options',
+                {
+                    shortStack: true,
+                    inputs: transformData.requestQueries
+                });
+        }
         if(transformData.recordings.length === 0) {
             throw new StagePrerequisiteError('No matches returned from Musicbrainz API', {shortStack: true, inputs: transformData.requestQueries});
         }
