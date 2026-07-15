@@ -33,11 +33,11 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
                 const reqOptsHint: string[] = [
                 ];
                 if(currOpts.to !== undefined && currOpts.from !== undefined) {
-                    reqOptsHint.push(`Between ${todayAwareFormat(dayjs(currOpts.from))} and ${todayAwareFormat(dayjs(currOpts.to))}`);
+                    reqOptsHint.push(`Between ${todayAwareFormat(dayjs.unix(currOpts.from))} and ${todayAwareFormat(dayjs.unix(currOpts.to))}`);
                 } else if(currOpts.to) {
-                    reqOptsHint.push(`Until ${todayAwareFormat(dayjs(currOpts.to))}`);
-                } else if(currOpts.to) {
-                    reqOptsHint.push(`From ${todayAwareFormat(dayjs(currOpts.from))}`);
+                    reqOptsHint.push(`Until ${todayAwareFormat(dayjs.unix(currOpts.to))}`);
+                } else if(currOpts.from) {
+                    reqOptsHint.push(`From ${todayAwareFormat(dayjs.unix(currOpts.from))}`);
                 }
 
                 if(currOpts.limit !== undefined) {
