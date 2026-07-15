@@ -13,12 +13,12 @@
       },
       "token": "your-jwt-token-here",
       "mediaUserToken": "your-media-user-token-here",
-      // optional: custom headers for API requests (e.g. Origin)
-      //"headers": {
-      //  "Origin": "https://music.apple.com"
-      //}
+
+      // optional: Origin header for API requests (required when using a browser token)
+      "origin": "https://music.apple.com",
+
       // optional: polling interval in seconds (default 60)
-      //"interval": 60
+      "interval": 60
     },
     "options": {
       "logDiff": true,

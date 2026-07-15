@@ -12,12 +12,12 @@ export interface AppleMusicData extends CommonSourceData, PollingOptions {
     token?: string
     mediaUserToken?: string
     /**
-     * Custom headers to include in every Apple Music API request.
-     * Useful for setting Origin header, etc.
+     * Origin header to include in every Apple Music API request.
+     * Required when using a browser token (not a MusicKit key).
      *
-     * @examples [{"Origin": "https://music.apple.com"}]
+     * @example "https://music.apple.com"
      */
-    headers?: Record<string, string>
+    origin?: string
 }
 
 export interface AppleMusicSourceConfig extends CommonSourceConfig {

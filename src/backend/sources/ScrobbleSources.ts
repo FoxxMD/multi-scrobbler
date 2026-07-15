@@ -842,20 +842,11 @@ export default class ScrobbleSources {
                         }
                         return undefined;
                     })();
-                    const headersEnv = process.env.APPLEMUSIC_HEADERS;
-                    let headers: Record<string, string> | undefined;
-                    if (headersEnv !== undefined && headersEnv.trim() !== '') {
-                        try {
-                            headers = JSON.parse(headersEnv);
-                        } catch (e) {
-                            throw new Error(`APPLEMUSIC_HEADERS could not be parsed as JSON: ${headersEnv}`, { cause: e });
-                        }
-                    }
                     const data = removeUndefinedKeys({
                         mediaUserToken: process.env.APPLEMUSIC_MEDIA_USER_TOKEN,
                         token: process.env.APPLEMUSIC_TOKEN,
                         key,
-                        headers,
+                        origin: nonEmptyStringOrDefault(process.env.APPLEMUSIC_ORIGIN_HEADER, undefined),
                     }, false);
                     const recoverEnv = process.env.APPLEMUSIC_RECOVER_UNCHANGED_TOP_HISTORY;
                     const recoverUnchangedTopHistory = recoverEnv !== undefined && recoverEnv.trim() !== ''
