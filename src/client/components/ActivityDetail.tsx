@@ -4,9 +4,9 @@ import { useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-que
 import React, { Fragment, useEffect, useState } from "react";
 import { LuChevronRight } from "react-icons/lu";
 import type { MarkOptional } from "ts-essentials";
-import type { MsSseEvent, PaginatedResponse, PlayApiCommonDetailed, QueryPlaysOptsJson, SortPlaysByProps } from "../../core/Api";
+import type { ComponentsApiJson, MsSseEvent, PaginatedResponse, PlayApiCommonDetailed, QueryPlaysOptsJson, SortPlaysByProps } from "../../core/Api";
 import { CLIENT_DEAD_QUEUE, type ComponentType, type Second } from "../../core/Atomic";
-import { tanQueries } from "../queries";
+import { tanQueries, useQueryWatcher } from "../queries";
 import { activityTimelineHasIssue } from "../utils/ComponentUtils";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { EphemeralElement, PlayStateBadge } from "./Badges";
@@ -84,6 +84,7 @@ export function useActivityQuery(
 export interface ActivityDetailProps {
     activity: PlayApiCommonDetailed
     componentType: ComponentType
+    componentName?: string
 }
 
 export interface ActivitySummaryProps extends SortPlaysByProps {
@@ -215,6 +216,7 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
     const {
         activity,
         componentType,
+        componentName,
         activity: {
             error,
             input: {
@@ -271,7 +273,7 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
                 </Flex>
                 <Accordion.ItemContent>
                     <Accordion.ItemBody>
-                        <ActivityTimeline activity={activity} collapsibleOpen={collapsibleOpen} componentType={componentType} />
+                        <ActivityTimeline activity={activity} collapsibleOpen={collapsibleOpen} componentType={componentType} componentName={componentName} />
                     </Accordion.ItemBody>
                 </Accordion.ItemContent>
             </Accordion.Item>
@@ -290,6 +292,8 @@ export interface ActivityDetailFetchableProps {
 export const ActivityDetailFetchable = (props: ActivityDetailFetchableProps) => {
     const {isError, error, isPending, activity} = useActivityQuery(props.componentId, props.uid, {activity: props.activity, refetchOnMount: 'always'});
 
+    const { data } = useQueryWatcher<ComponentsApiJson>(tanQueries.components.single(props.componentId).queryKey);
+
     if(isPending) {
         return <Fragment><Skeleton height="100px"/><Skeleton height="100px"/></Fragment>
     }
@@ -298,7 +302,7 @@ export const ActivityDetailFetchable = (props: ActivityDetailFetchableProps) => 
         return <ErrorAlert error={error}/>
     }
 
-    return <ActivityDetails componentType={props.componentType} key={props.uid} activity={activity}/>
+    return <ActivityDetails componentType={props.componentType} componentName={data?.type} key={props.uid} activity={activity}/>
 }
 
 export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed}) => {

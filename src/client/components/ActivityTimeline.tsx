@@ -1,5 +1,5 @@
-import type { Collapsible, IconProps} from '@chakra-ui/react';
-import { Card, Icon, SkeletonCircle, SkeletonText, Span, Tabs, Timeline, type HTMLChakraProps } from '@chakra-ui/react';
+import type { Collapsible } from '@chakra-ui/react';
+import { Card, Icon, SkeletonCircle, SkeletonText, Span, Tabs, Timeline} from '@chakra-ui/react';
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import React from "react";
@@ -12,7 +12,7 @@ import { CLIENT_DEAD_QUEUE, CLIENT_INGRESS_QUEUE, QUEUE_STATUS_COMPLETED, QUEUE_
 import { sortByNewestDate } from "../../core/PlayUtils";
 import { capitalizeWords } from "../../core/StringUtils";
 import { shortTodayAwareFormat } from "../../core/TimeUtils";
-import { activityTransformHasIssue, timelineTextFormatting, timelineIconProps } from "../utils/ComponentUtils";
+import { activityTransformHasIssue, timelineIconProps, TimelineItemSummaryText } from "../utils/ComponentUtils";
 import { ChakraCodeBlockShort } from "./CodeBlock";
 import { ErrorAlert } from "./ErrorAlert";
 import { MSErrorBoundary } from "./ErrorBoundary";
@@ -26,13 +26,12 @@ import { diffElements, TransformSteps } from "./TransformSteps";
 import { Muted } from "./Typography";
 
 
-export interface ActivityDetailProps {
+interface ActivityTimelineProps {
     activity?: PlayApiCommonDetailed
     collapsibleOpen?: boolean,
     componentType?: ComponentType
+    componentName?: string
 }
-
-const ItemSummaryText = (props: HTMLChakraProps<"span"> & {children: React.ReactNode}) => <Span {...timelineTextFormatting}>{props.children}</Span>
 
 const timelineCollapsibleProps: Collapsible.TriggerProps = {alignItems: "flex-end"};
 
@@ -67,13 +66,13 @@ const QueuedCreatedItem = (props: { dead?: boolean, datetime: string }) => (
         </Timeline.Connector>
         <Timeline.Content>
             <Timeline.Title>
-                <ItemSummaryText>{props.dead ? 'Dead ' : ''}Queued <Muted>at</Muted> {shortTodayAwareFormat(dayjs(props.datetime))}</ItemSummaryText>
+                <TimelineItemSummaryText>{props.dead ? 'Dead ' : ''}Queued <Muted>at</Muted> {shortTodayAwareFormat(dayjs(props.datetime))}</TimelineItemSummaryText>
             </Timeline.Title>
         </Timeline.Content>
     </Timeline.Item>
 )
 
-const NewItem = (props: Pick<ActivityDetailProps, 'collapsibleOpen' | 'activity' | 'componentType'>) => {
+const NewItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpen' | 'activity' | 'componentType'>) => {
     const {
         activity: {
             play,
@@ -107,9 +106,9 @@ const NewItem = (props: Pick<ActivityDetailProps, 'collapsibleOpen' | 'activity'
                 <Timeline.Title>
                     <MSCollapsible
                         triggerProps={timelineCollapsibleProps}
-                        indicator={<ItemSummaryText>
+                        indicator={<TimelineItemSummaryText>
                             {componentType === 'source' ? 'Discovered' : 'Recieved'} <Muted>new Play from</Muted> <Span fontWeight="medium">{capitalizeWords(source)}</Span> <Muted>at {shortTodayAwareFormat(dayjs(seenAt))}</Muted>
-                        </ItemSummaryText>}
+                        </TimelineItemSummaryText>}
                         defaultOpen={collapsibleOpen}
                         timeline
                         disableUntil="md">
@@ -136,7 +135,7 @@ const NewItem = (props: Pick<ActivityDetailProps, 'collapsibleOpen' | 'activity'
     )
 }
 
-const TransformsItem = (props: Pick<ActivityDetailProps, 'activity' | 'collapsibleOpen'> & { steps: LifecycleStep[], original: JsonPlayObject }) => {
+const TransformsItem = (props: Pick<ActivityTimelineProps, 'activity' | 'collapsibleOpen'> & { steps: LifecycleStep[], original: JsonPlayObject }) => {
     const {
         steps = [],
         collapsibleOpen,
@@ -166,7 +165,7 @@ const TransformsItem = (props: Pick<ActivityDetailProps, 'activity' | 'collapsib
             <Timeline.Title>
                 <MSCollapsible
                     triggerProps={timelineCollapsibleProps}
-                    indicator={<ItemSummaryText>{transformVerb} <Muted>using configured Rules</Muted> <Muted>for</Muted> {steps[0].hook} {transformResult}</ItemSummaryText>}
+                    indicator={<TimelineItemSummaryText>{transformVerb} <Muted>using configured Rules</Muted> <Muted>for</Muted> {steps[0].hook} {transformResult}</TimelineItemSummaryText>}
                     defaultOpen={collapsibleOpen}
                     timeline>
                     <Card.Root bgColor="bg.muted" size="sm">
@@ -193,13 +192,13 @@ const NoTransformsItem = () => (
         </Timeline.Connector>
         <Timeline.Content>
             <Timeline.Title >
-                <ItemSummaryText>Play <Muted>was</Muted> not transformed <Muted>because no</Muted> Transform Rules <Muted> were used/configured.</Muted></ItemSummaryText>
+                <TimelineItemSummaryText>Play <Muted>was</Muted> not transformed <Muted>because no</Muted> Transform Rules <Muted> were used/configured.</Muted></TimelineItemSummaryText>
             </Timeline.Title>
         </Timeline.Content>
     </Timeline.Item>
 )
 
-const ScrobbleMatchItem = (props: Pick<ActivityDetailProps, 'collapsibleOpen'> & { match: PlayMatchResult<string> }) => {
+const ScrobbleMatchItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpen'> & { match: PlayMatchResult<string> }) => {
     const {
         match,
         collapsibleOpen
@@ -219,7 +218,7 @@ const ScrobbleMatchItem = (props: Pick<ActivityDetailProps, 'collapsibleOpen'> &
                 <Timeline.Title>
                     <MSCollapsible
                         triggerProps={timelineCollapsibleProps}
-                        indicator={<ItemSummaryText><Muted>Found </Muted>{match.match ? <Span color="orange.solid"> a duplicate Scrobble</Span> : 'no duplicate Scrobbles'}</ItemSummaryText>}
+                        indicator={<TimelineItemSummaryText><Muted>Found </Muted>{match.match ? <Span color="orange.solid"> a duplicate Scrobble</Span> : 'no duplicate Scrobbles'}</TimelineItemSummaryText>}
                         defaultOpen={collapsibleOpen}
                         disableUntil="md"
                         timeline>
@@ -236,7 +235,7 @@ const ScrobbleMatchItem = (props: Pick<ActivityDetailProps, 'collapsibleOpen'> &
 
 }
 
-const ScrobbleResponseItem = (props: Pick<ActivityDetailProps, 'collapsibleOpen'> & { scrobble: ScrobbleResult<string> }) => {
+const ScrobbleResponseItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpen'> & { scrobble: ScrobbleResult<string>, componentName?: string }) => {
     const {
         scrobble: {
             payload,
@@ -244,7 +243,8 @@ const ScrobbleResponseItem = (props: Pick<ActivityDetailProps, 'collapsibleOpen'
             warnings = []
         } = {},
         scrobble,
-        collapsibleOpen
+        collapsibleOpen,
+        componentName = 'downstream service'
     } = props;
 
     let scrobbleSummary: React.JSX.Element;
@@ -253,12 +253,11 @@ const ScrobbleResponseItem = (props: Pick<ActivityDetailProps, 'collapsibleOpen'
     };
     if (payload !== undefined) {
         if (error !== undefined) {
-            scrobbleSummary = <ItemSummaryText>Scrobble attempt <Muted>to Client resulted in</Muted> <Span color="red.solid">an error.</Span></ItemSummaryText>
+            scrobbleSummary = <TimelineItemSummaryText>Scrobble attempt <Muted>to {capitalizeWords(componentName)} resulted in</Muted> <Span color="red.solid">an error.</Span></TimelineItemSummaryText>
         } else if (warnings.length > 0) {
-            scrobbleSummary = <ItemSummaryText>Scrobbled <Muted>to Client but response </Muted> <Span color="orange.solid">has warnings.</Span></ItemSummaryText>;
-            scrobbleIconProps.color = 'orange.focusRing';
+            scrobbleSummary = <TimelineItemSummaryText>Scrobbled <Muted>to {capitalizeWords(componentName)} but response </Muted> <Span color="orange.solid">has warnings.</Span></TimelineItemSummaryText>
         } else {
-            scrobbleSummary = <ItemSummaryText>Scrobbled <Muted>to Client</Muted> successfully.</ItemSummaryText>;
+            scrobbleSummary = <TimelineItemSummaryText>Scrobbled <Muted>to {capitalizeWords(componentName)}</Muted> successfully.</TimelineItemSummaryText>;
         }
     }
 
@@ -284,7 +283,7 @@ const ScrobbleResponseItem = (props: Pick<ActivityDetailProps, 'collapsibleOpen'
                         disableUntil="md">
                         <Card.Root bgColor="bg.muted" size="sm">
                             <Card.Body textStyle="sm">
-                                <ScrobbleActionResult result={scrobble} scrobbler="Koito" collapsibleOpen={collapsibleOpen} />
+                                <ScrobbleActionResult componentName={componentName} result={scrobble} collapsibleOpen={collapsibleOpen} />
                             </Card.Body>
                         </Card.Root>
                     </MSCollapsible>
@@ -310,7 +309,7 @@ const QueueTimelineItem = (props: {queueState: QueueStateApi, collapsibleOpen: b
                     </Timeline.Connector>
                     <Timeline.Content gap="4">
                         <Timeline.Title>
-                            <ItemSummaryText>{queueState.queueName === CLIENT_DEAD_QUEUE ? 'Dead ' : ''}Queued <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}</ItemSummaryText>
+                            <TimelineItemSummaryText>{queueState.queueName === CLIENT_DEAD_QUEUE ? 'Dead ' : ''}Queued <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}</TimelineItemSummaryText>
                         </Timeline.Title>
                     </Timeline.Content>
                 </Timeline.Item>
@@ -328,7 +327,7 @@ const QueueTimelineItem = (props: {queueState: QueueStateApi, collapsibleOpen: b
                     </Timeline.Connector>
                     <Timeline.Content gap="4">
                         <Timeline.Title>
-                            <ItemSummaryText>{queueState.queueName === CLIENT_DEAD_QUEUE ? 'Dead ' : ''}Queue finished processing <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}</ItemSummaryText>
+                            <TimelineItemSummaryText>{queueState.queueName === CLIENT_DEAD_QUEUE ? 'Dead ' : ''}Queue finished processing <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}</TimelineItemSummaryText>
                         </Timeline.Title>
                     </Timeline.Content>
                 </Timeline.Item>
@@ -338,12 +337,12 @@ const QueueTimelineItem = (props: {queueState: QueueStateApi, collapsibleOpen: b
     if(queueState.queueStatus === QUEUE_STATUS_FAILED) {
         let titleContent: React.JSX.Element;
         if(queueState.error === undefined) {
-            titleContent = <ItemSummaryText>{queueState.queueName === CLIENT_DEAD_QUEUE ? 'Dead ' : ''}Queue failed <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}</ItemSummaryText>;
+            titleContent = <TimelineItemSummaryText>{queueState.queueName === CLIENT_DEAD_QUEUE ? 'Dead ' : ''}Queue failed <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}</TimelineItemSummaryText>;
         } else {
             titleContent = (
                 <MSCollapsible 
                 triggerProps={timelineCollapsibleProps}
-                indicator={<ItemSummaryText>{queueState.queueName === CLIENT_DEAD_QUEUE ? 'Dead ' : ''}Queue failed <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}</ItemSummaryText>}
+                indicator={<TimelineItemSummaryText>{queueState.queueName === CLIENT_DEAD_QUEUE ? 'Dead ' : ''}Queue failed <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}</TimelineItemSummaryText>}
                                             defaultOpen={collapsibleOpen}
                                             disableUntil="md"
                                             timeline>
@@ -373,7 +372,7 @@ type TransformStepsTimelineData = {id: 'transform-steps', dt: Dayjs, steps: Life
 type TimelineDataTypes = 'new' | 'queue-created-ingress' | 'queue-created-dead' | 'queue-updated-ingress' | 'queue-updated-dead' | 'scrobble-match' | 'scrobble-response' | 'transform-steps';
 type TimelineData = {id: TimelineDataTypes, dt: Dayjs};
 
-export const ActivityTimeline = (props: ActivityDetailProps) => {
+export const ActivityTimeline = (props: ActivityTimelineProps) => {
 
     if(props.activity === undefined) {
         return <TimelineLoading/>;
@@ -387,7 +386,8 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
             queueStates,
         } = {},
         collapsibleOpen,
-        componentType
+        componentType,
+        componentName
     } = props;
     const {
         lifecycle: steps = [],
@@ -539,7 +539,7 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
             case 'scrobble-match':
                 return <ScrobbleMatchItem key={timelineKey} match={match} collapsibleOpen={collapsibleOpen}/>;
             case 'scrobble-response':
-                return <ScrobbleResponseItem key={timelineKey} scrobble={scrobble} collapsibleOpen={collapsibleOpen}/>;
+                return <ScrobbleResponseItem key={timelineKey} scrobble={scrobble} componentName={componentName} collapsibleOpen={collapsibleOpen}/>;
             case 'transform-steps':
                 {
                     const val = x as TransformStepsTimelineData;

@@ -1,16 +1,19 @@
 import React, { Fragment } from "react"
-import { Timeline, Icon, Span, Stack, Alert, List, HStack } from '@chakra-ui/react';
+import { Timeline, Icon, Span, Stack, Alert, List } from '@chakra-ui/react';
 import { ErrorAlert } from "./ErrorAlert";
 import { HiOutlineCloudUpload, HiOutlineCloudDownload } from "react-icons/hi";
 import { ChakraCodeBlockShort } from "./CodeBlock";
-import { capitalize } from "../../core/StringUtils";
+import { capitalizeWords } from "../../core/StringUtils";
 import { MSCollapsible, type MSCollapsibleExternalProps } from "./MSCollapsible";
 import { TimelineErrorIcon } from "./timeline/TimelineIcon";
 import type {ScrobbleResult} from "../../core/Atomic";
+import { TimelineItemSummaryText } from "../utils/ComponentUtils";
+import { Muted } from "./Typography";
 
 export interface ScrobbleActionResultProps extends MSCollapsibleExternalProps {
     result: ScrobbleResult<string>,
     scrobbler?: string,
+    componentName?: string
 }
 
 export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
@@ -22,8 +25,8 @@ export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
             payload,
             response,
         } = {},
-        scrobbler,
-        collapsibleOpen
+        collapsibleOpen,
+        componentName = 'downstream service'
     } = props;
 
     let responseSuffix: React.JSX.Element,
@@ -38,11 +41,12 @@ export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
     }
 
     if (warningsElm !== undefined && errorElm !== undefined) {
-        responseSuffix = <Fragment>with {warningsElm} and {errorElm}</Fragment>;
+        responseSuffix = <Fragment><Muted>with</Muted> {warningsElm} and {errorElm}</Fragment>;
     } else if (warningsElm !== undefined || errorElm !== undefined) {
-        responseSuffix = <Fragment>with {warningsElm ?? errorElm}</Fragment>;
+        responseSuffix = <Fragment><Muted>with</Muted> {warningsElm ?? errorElm}</Fragment>;
     }
 
+    //{capitalizeWords(componentName)}
     return (
         <Timeline.Root variant="subtle" css={{ "--timeline-separator-display": 'block' }}>
             <Timeline.Item>
@@ -56,7 +60,7 @@ export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
                 </Timeline.Connector>
                 <Timeline.Content>
                     <Timeline.Title>
-                        <MSCollapsible indicator={<Fragment><Span color="fg.muted">Sent</Span> Scrobble Payload{scrobbler !== undefined ? <Fragment><Span color="fg.muted">to</Span> {capitalize(scrobbler)}</Fragment> : null}</Fragment>}
+                        <MSCollapsible indicator={<TimelineItemSummaryText><Span color="fg.muted">Sent</Span> Scrobble Payload <Span color="fg.muted"> to {capitalizeWords(componentName)}</Span></TimelineItemSummaryText>}
                             defaultOpen={collapsibleOpen}
                             disableUntil="md"
                             timeline>
@@ -80,7 +84,7 @@ export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
                     <Timeline.Content>
                         <Timeline.Title>
                             <MSCollapsible
-                                indicator={<HStack gap="1"><Span color="fg.muted">Received</Span> Response{scrobbler !== undefined ? <Fragment><Span color="fg.muted">from</Span> {capitalize(scrobbler)}</Fragment> : null}{responseSuffix !== undefined ? <Span> {responseSuffix}</Span> : null}</HStack>}
+                                indicator={<TimelineItemSummaryText><Span color="fg.muted">Received</Span> Response <Span color="fg.muted"> from {capitalizeWords(componentName)}</Span>{responseSuffix !== undefined ? <Span> {responseSuffix}</Span> : null}</TimelineItemSummaryText>}
                                 timeline
                                 defaultOpen={collapsibleOpen}
                                 disableUntil="md">

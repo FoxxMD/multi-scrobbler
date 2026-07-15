@@ -1,5 +1,5 @@
-import type { Card, IconProps} from '@chakra-ui/react';
-import type {HTMLChakraProps} from '@chakra-ui/react';
+import type { Card, IconProps, HTMLChakraProps} from '@chakra-ui/react';
+import { Span } from '@chakra-ui/react';
 import type {PlayApiCommonDetailed} from '../../core/Api';
 import { type LifecycleStep, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED } from '../../core/Atomic';
 
@@ -16,6 +16,8 @@ export const timelineTextFormatting: HTMLChakraProps<"span"> = {
 export const timelineIconProps: IconProps = {
     fontSize: 'md'
 }
+
+export const TimelineItemSummaryText = (props: HTMLChakraProps<"span"> & {children: React.ReactNode}) => <Span {...timelineTextFormatting}>{props.children}</Span>
 
 export const activityTransformHasIssue = (steps: LifecycleStep[]): 'warn' | 'error' | undefined => {
     for(const step of steps) {

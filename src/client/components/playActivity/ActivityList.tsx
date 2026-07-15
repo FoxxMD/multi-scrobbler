@@ -139,7 +139,17 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
   } else if(!isFetching && allPlays.length === 0) {
     rendered = <NoPlayResults type="empty"/>
   } else {
-    rendered = <ActivityList total={data?.pages.length > 0 ? data.pages[0].meta.total : undefined} hasNextPage={hasNextPage} fetchNextPage={fetchNextPage} isFetchingNextPage={isFetchingNextPage} render="virtDynamic" data={allPlays} live {...props} sortBy="played" query={query} />;
+    rendered = <ActivityList 
+    total={data?.pages.length > 0 ? data.pages[0].meta.total : undefined}
+    hasNextPage={hasNextPage}
+    fetchNextPage={fetchNextPage}
+    isFetchingNextPage={isFetchingNextPage}
+    render="virtDynamic"
+    data={allPlays}
+    live
+    {...props}
+    sortBy="played"
+    query={query} />;
   }
 
   return rendered;
