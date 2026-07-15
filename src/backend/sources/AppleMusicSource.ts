@@ -129,13 +129,16 @@ export default class AppleMusicSource extends AbstractSource {
                 album: albumName,
                 track: track.name,
                 duration: track.durationInMillis ? Math.round(track.durationInMillis / 1000) : undefined,
-                isrc: track.isrc,
+                isrc: track.isrc
             },
             meta: {
                 source: 'AppleMusic',
                 musicService: 'Apple Music',
                 trackId: track.id,
                 newFromSource,
+                url: {
+                    web: track.url
+                },
             }
         }
         return baseFormatPlayObj(track, play);
