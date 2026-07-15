@@ -289,7 +289,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
 
         try {
             const lr = await this.getUserListens({...lzListensOptions, user});
-            const more = to > lr.latest_listen_ts;
+            const more = lr.count > 0 && lr.count === lzListensOptions.count;
             return {data: lr.listens.map(x => listenResponseToPlay(x)), meta: {...options, total: lr.count, more}};
         } catch (e) {
             throw e;
