@@ -16,7 +16,7 @@ import { activityTransformHasIssue, timelineTextFormatting, timelineIconProps } 
 import { ChakraCodeBlockShort } from "./CodeBlock";
 import { ErrorAlert } from "./ErrorAlert";
 import { MSErrorBoundary } from "./ErrorBoundary";
-import { CheckIcon, TimelineIndicatorIconQueued } from "./icons/ChakraIcons";
+import { CheckIcon, ExclamationTriangleIcon, TimelineIndicatorIconQueued } from "./icons/ChakraIcons";
 import { MSCollapsible } from "./MSCollapsible";
 import { PlayData } from "./PlayData";
 import { ScrobbleActionResult } from "./ScrobbleActionResult";
@@ -256,7 +256,7 @@ const ScrobbleResponseItem = (props: Pick<ActivityDetailProps, 'collapsibleOpen'
             scrobbleSummary = <ItemSummaryText>Scrobble attempt <Muted>to Client resulted in</Muted> <Span color="red.solid">an error.</Span></ItemSummaryText>
         } else if (warnings.length > 0) {
             scrobbleSummary = <ItemSummaryText>Scrobbled <Muted>to Client but response </Muted> <Span color="orange.solid">has warnings.</Span></ItemSummaryText>;
-            scrobbleIconProps.orange = 'orange.focusRing';
+            scrobbleIconProps.color = 'orange.focusRing';
         } else {
             scrobbleSummary = <ItemSummaryText>Scrobbled <Muted>to Client</Muted> successfully.</ItemSummaryText>;
         }
@@ -323,7 +323,7 @@ const QueueTimelineItem = (props: {queueState: QueueStateApi, collapsibleOpen: b
                     <Timeline.Connector>
                         <Timeline.Separator />
                         <Timeline.Indicator>
-                            <CheckIcon {...timelineIconProps}/>
+                            <CheckIcon color="green.focusRing" {...timelineIconProps}/>
                         </Timeline.Indicator>
                     </Timeline.Connector>
                     <Timeline.Content gap="4">
@@ -356,7 +356,7 @@ const QueueTimelineItem = (props: {queueState: QueueStateApi, collapsibleOpen: b
                     <Timeline.Connector>
                         <Timeline.Separator />
                         <Timeline.Indicator>
-                            <CheckIcon {...timelineIconProps}/>
+                            <ExclamationTriangleIcon color="orange.focusRing" {...timelineIconProps}/>
                         </Timeline.Indicator>
                     </Timeline.Connector>
                     <Timeline.Content >
@@ -370,7 +370,8 @@ const QueueTimelineItem = (props: {queueState: QueueStateApi, collapsibleOpen: b
 }
 
 type TransformStepsTimelineData = {id: 'transform-steps', dt: Dayjs, steps: LifecycleStep[], original?: JsonPlayObject};
-type TimelineData = {id: string, dt: Dayjs};
+type TimelineDataTypes = 'new' | 'queue-created-ingress' | 'queue-created-dead' | 'queue-updated-ingress' | 'queue-updated-dead' | 'scrobble-match' | 'scrobble-response' | 'transform-steps';
+type TimelineData = {id: TimelineDataTypes, dt: Dayjs};
 
 export const ActivityTimeline = (props: ActivityDetailProps) => {
 
@@ -426,13 +427,13 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
         if(ingressQueue.updatedAt === ingressQueue.createdAt) {
             // if queue was never updated but contains extra context then only show updated
             if(ingressQueue.error !== undefined || ingressQueue.queueStatus === QUEUE_STATUS_FAILED) {
-                timelineItems.push({id: 'queue-ingress-updated', dt: dayjs(ingressQueue.updatedAt)});
+                timelineItems.push({id: 'queue-updated-ingress', dt: dayjs(ingressQueue.updatedAt)});
             } else {
-                timelineItems.push({id: 'queue-ingress-created', dt: dayjs(ingressQueue.createdAt)});
+                timelineItems.push({id: 'queue-created-ingress', dt: dayjs(ingressQueue.createdAt)});
             }
         } else {
-            timelineItems.push({id: 'queue-ingress-created', dt: dayjs(ingressQueue.createdAt)});
-            timelineItems.push({id: 'queue-ingress-updated', dt: dayjs(ingressQueue.updatedAt)});
+            timelineItems.push({id: 'queue-created-ingress', dt: dayjs(ingressQueue.createdAt)});
+            timelineItems.push({id: 'queue-updated-ingress', dt: dayjs(ingressQueue.updatedAt)});
         }
     }
     const deadqueue = queueStates.find(x => x.queueName === CLIENT_DEAD_QUEUE);
@@ -440,13 +441,13 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
         if(deadqueue.updatedAt === deadqueue.createdAt) {
             // if queue was never updated but contains extra context then only show updated
             if(deadqueue.error !== undefined || deadqueue.queueStatus === QUEUE_STATUS_FAILED) {
-                timelineItems.push({id: 'queue-dead-updated', dt: dayjs(deadqueue.updatedAt)});
+                timelineItems.push({id: 'queue-updated-dead', dt: dayjs(deadqueue.updatedAt)});
             } else {
-                timelineItems.push({id: 'queue-dead-created', dt: dayjs(deadqueue.createdAt)});
+                timelineItems.push({id: 'queue-created-dead', dt: dayjs(deadqueue.createdAt)});
             }
         } else {
-            timelineItems.push({id: 'queue-dead-created', dt: dayjs(deadqueue.createdAt)});
-            timelineItems.push({id: 'queue-dead-updated', dt: dayjs(deadqueue.updatedAt)});
+            timelineItems.push({id: 'queue-created-dead', dt: dayjs(deadqueue.createdAt)});
+            timelineItems.push({id: 'queue-updated-dead', dt: dayjs(deadqueue.updatedAt)});
         };
     }
 
@@ -457,12 +458,65 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
     // since scrobbleResultCreatedAt has just been implemented older play data will not have it
     // and if match was never run, due to error earlier in lifecycle, we need to fallback to oldest event + 1s
     timelineItems.sort((a, b) => sortByNewestDate(b.dt, a.dt));
-
     if(payload !== undefined) {
-        timelineItems.push({id: 'scrobble-response', dt: dayjs(scrobbleResultCreatedAt ?? match?.createdAt ?? timelineItems[timelineItems.length - 1].dt.add(5, 's'))});
-        // then, make sure added payload is in the right order
-        timelineItems.sort((a, b) => sortByNewestDate(b.dt, a.dt));
+        timelineItems.push({id: 'scrobble-response', dt: dayjs(scrobbleResultCreatedAt ?? match?.createdAt ?? timelineItems[timelineItems.length - 1].dt)});
     }
+
+    // now we sort by date as well as logical order
+    timelineItems.sort((a, b) => {
+        // new is always sorted to first in order regardless of timestamp
+        if(b.id === 'new') {
+            return 1;
+        }
+        if(a.id === 'new') {
+            return -1;
+        }
+       
+        if(!a.dt.isSame(b.dt)) {
+            return a.dt.isBefore(b.dt) ? -1 : 1;
+        } else {
+            // if they are the same timestamp then we need to determine the likely logical order
+
+            // queue created always occurs before other actions as the play is queued first, then processed
+            if(b.id.includes('queue-created')) {
+                return 1;
+            }
+            if(a.id.includes('queue-created')) {
+                return -1;
+            }
+            
+            // transform steps always occur before scrobble actions
+            if(a.id.includes('scrobble') && b.id === 'transform-steps') {
+                return 1;
+            }
+            if(b.id.includes('scrobble') && a.id === 'transform-steps') {
+                return -1;
+            }
+
+            // dupe matching always occurs before scrobbling
+            if(b.id === 'scrobble-match' && a.id === 'scrobble-response') {
+                return 1;
+            }
+            if(a.id === 'scrobble-match' && b.id === 'scrobble-response') {
+                return -1;
+            }
+
+            // queue updated (finished) always occurs last
+            if(a.id.includes('queue-updated')) {
+                return 1;
+            }
+            if(b.id.includes('queue-updated')) {
+                return -1;
+            }
+        }
+
+        // nothing else matched, keep order
+        return 0;
+    });
+
+    const f = timelineItems;
+    console.log(f);
+
 
     const timelineElements: React.JSX.Element[] = timelineItems.map((x) => {
         const timelineKey = `${x.id}-${x.dt.unix()}`;
@@ -475,12 +529,12 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                     }
                     return newElm;
                 }
-            case 'queue-ingress-created':
-            case 'queue-dead-created':
+            case 'queue-created-ingress':
+            case 'queue-created-dead':
                 return <QueuedCreatedItem key={timelineKey} dead={x.id.includes('dead')} datetime={x.dt.toISOString()}/>;
-            case 'queue-ingress-updated':
+            case 'queue-updated-ingress':
                 return <QueueTimelineItem key={timelineKey} queueState={ingressQueue} collapsibleOpen={collapsibleOpen}/>;
-            case 'queue-dead-updated':
+            case 'queue-updated-dead':
                 return <QueueTimelineItem key={timelineKey} queueState={deadqueue} collapsibleOpen={collapsibleOpen}/>;
             case 'scrobble-match':
                 return <ScrobbleMatchItem key={timelineKey} match={match} collapsibleOpen={collapsibleOpen}/>;
