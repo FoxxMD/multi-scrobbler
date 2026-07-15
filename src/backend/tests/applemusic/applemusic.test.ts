@@ -246,3 +246,59 @@ describe('Apple Music - Timestamp Estimation', function () {
         expect(diffMiddleToOldest).to.be.closeTo(200, 1);
     });
 });
+
+describe('Apple Music - Format Play Object', function () {
+    
+    it(`Strips " - EP" and " - Single" suffixes from album names`, function () {
+        // Mock Apple Music API Song objects
+        const trackEP = {
+            id: '1',
+            type: 'songs',
+            name: 'SONG A',
+            artistName: 'ARIST A',
+            albumName: 'ALBUM A - EP',
+            durationInMillis: 200000
+        } as any; // Cast as any to bypass TS complaining about missing API fields (artworks, etc.)
+
+        const trackSingle = {
+            id: '2',
+            type: 'songs',
+            name: 'SONG B',
+            artistName: 'ARIST B',
+            albumName: 'ALBUM B - Single',
+            durationInMillis: 200000
+        } as any;
+
+        const trackNormal = {
+            id: '3',
+            type: 'songs',
+            name: 'SONG C',
+            artistName: 'ARIST C',
+            albumName: 'ALBUM C - The 2nd Album',
+            durationInMillis: 200000
+        } as any;
+
+        const trackLowercase = {
+            id: '4',
+            type: 'songs',
+            name: 'song d',
+            artistName: 'artist d',
+            albumName: 'album d - ep',
+            durationInMillis: 200000
+        } as any;
+
+        // Run them through the formatter
+        const playEP = AppleMusicSource.formatPlayObj(trackEP);
+        const playSingle = AppleMusicSource.formatPlayObj(trackSingle);
+        const playNormal = AppleMusicSource.formatPlayObj(trackNormal);
+        const playLowercase = AppleMusicSource.formatPlayObj(trackLowercase);
+
+        // Assert the suffixes are removed
+        expect(playEP.data.album).to.equal('ALBUM A');
+        expect(playSingle.data.album).to.equal('ALBUM B');
+        expect(playLowercase.data.album).to.equal('album d');
+
+        // Assert normal album names are untouched
+        expect(playNormal.data.album).to.equal(trackNormal.albumName);
+    });
+});
