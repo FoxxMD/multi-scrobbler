@@ -150,13 +150,12 @@ export const ActivitySummaryFetchable = (props: MarkOptional<ActivitySummaryProp
 export const ActivityErrorSummary = (props: {activity: ActivityDetailProps['activity']}) => {
         const {
         activity: {
-            queueStates = [],
             play: {
                 lifecycle = [],
                 scrobble,
             } = {},
             error,
-        }
+        } = {}
     } = props;
     if(error !== undefined && error !== null) {
         return <ErrorAlert error={error} />;
@@ -381,7 +380,7 @@ export const ActivityCollapsible = (props: ActivitySummaryProps & { key?: string
                     </Collapsible.Indicator>
                     <ActivitySummaryFetchable activityUid={activity.uid} {...props}/>
                 </Collapsible.Trigger>
-                <ActivityStateActionsFetchable activity={activity} componentId={props.componentId} componentType={props.componentType} uid={props.activity.uid}/>
+                <ActivityStateActionsFetchable activity={activity} componentId={props.componentId} componentType={props.componentType} uid={activity.uid}/>
                 </HStack>
             <Collapsible.Content borderTopColor="gray.border"
                 style={{

@@ -1011,13 +1011,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             } = {},
         } = this.config;
 
-        // can't have negative retries!
-        const maxRetries = Math.max(0, maxRequestRetries);
-
         if(this.scrobbling === true) {
             this.logger.warn(`Already scrobble processing! Processing needs to be stopped before it can be started`);
             return;
         }
+
+        // can't have negative retries!
+        const maxRetries = Math.max(0, maxRequestRetries);
 
         while (this.scrobbleRetries <= maxRetries) {
             try {
@@ -1030,11 +1030,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     this.logger.warn('Stopping scrobble processing due to client no longer usable.');
                     await this.notify({title: `Processing Error`, message: `Encountered error while scrobble processing and client is no longer usable, stopping processing!. | Error: ${e.message}`, priority: 'error'});
                     throw e;
-                } else if (this.authGated()) {
+                }
+                if (this.authGated()) {
                     this.logger.warn('Stopping scrobble processing due to client no longer being authenticated.');
                     await this.notify({title: ` Processing Error`, message: `Encountered error while scrobble processing and client is no longer authenticated, stopping processing!. | Error: ${e.message}`, priority: 'error'});
                     throw e;
-                } else if (this.scrobbleRetries < maxRetries) {
+                }
+                if (this.scrobbleRetries < maxRetries) {
                     const delayFor = pollingBackoff(this.scrobbleRetries + 1, retryMultiplier);
                     this.logger.info(`Scrobble processing retries (${this.scrobbleRetries}) less than max processing retries (${maxRetries}), restarting processing after ${delayFor} second delay...`);
                     await this.notify({title: `Processing Retry`, message: `Encountered error while polling but retries (${this.scrobbleRetries}) are less than max poll retries (${maxRetries}), restarting processing after ${delayFor} second delay. | Error: ${e.message}`, priority: 'warn'});
@@ -1294,9 +1296,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             if (processable === 0) {
                 this.deadLogger.verbose(queueStatus);
                 return;
-            } else {
-                this.setStatus(`Processing ${processable} Dead Plays`);
             }
+            this.setStatus(`Processing ${processable} Dead Plays`);
             this.logger.info(queueStatus);
             if(!this.upstreamRefresh.refreshEnabled) {
                 this.deadLogger.verbose('Scrobble refresh is DISABLED. All dead scrobbles will likely always be scrobbled (nothing to check duplicates against).');
@@ -1456,10 +1457,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         //     return;
         // }
         const deadQueueState = deadScrobble.queueStates.find(x => x.queueName === CLIENT_DEAD_QUEUE && x.queueStatus !== 'completed');
-        const isQueued = deadQueueState.queueStatus === 'queued';
         if(deadQueueState === undefined) {
             throw new Error(`Play ${deadScrobble.uid} is not currently queued in dead letter.`);
         }
+        const isQueued = deadQueueState.queueStatus === 'queued';
         //this.deadLetterScrobbles.splice(index, 1);
         this.deadLetterGauge.labels(this.getPrometheusLabels()).dec();
         const queueUpdate: Partial<QueueStateNew> = {
@@ -1723,9 +1724,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 if(npUpdateTopReason === 'previous update data matches current') {
                     if(thresholds.maxMet) {
                         return [true, `previous matches current update --AND-- ${thresholds.maxReason}`];
-                    } else {
-                        return [false, `previous matches current update --BUT-- ${thresholds.maxReason}`];
                     }
+                    return [false, `previous matches current update --BUT-- ${thresholds.maxReason}`];
                 }
 
                 return [false, npUpdateTopReason];
@@ -1749,7 +1749,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 if (!thresholds.minMet) {
                     return [false, `${npUpdateTopReason} and ${validStatusReason} --BUT-- ${thresholds.minReason}`];
                 }
-                else if (
+                if (
                     // status hasn't changed
                     this.nowPlayingLastPlay.status?.calculated === sourcePlayerData.status?.calculated
                     // and both plays are defined and have not changed

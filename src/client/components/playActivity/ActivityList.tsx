@@ -115,7 +115,7 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
     const queryClient = useQueryClient();
     const client = useSSEContext<MsSseEvent>();
     useSSEAnyEvent(client, (payload) => {
-        if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === props.componentId) {
+        if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === componentId) {
             switch (payload.type) {
               case 'playInsert':
                 { 
@@ -285,7 +285,7 @@ export const ListContainerFilterable = (props: { componentId: number, componentT
   return (
     <Stack width="100%" gap="4">
       <Heading size="3xl" width="100%">{componentType === 'source' ? 'Plays' : 'Scrobbles'}<ListRefereshButton size="md" componentId={props.componentId} filters={filters}/></Heading>
-      <ListFilters componentType={props.componentType} filters={filters} onChange={setFilter}/>
+      <ListFilters componentType={componentType} filters={filters} onChange={setFilter}/>
       <ListContainerFetchable {...props} filters={filters} />
     </Stack>
   )

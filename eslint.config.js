@@ -13,6 +13,7 @@ import tsEslint from 'typescript-eslint';
 import arrow from 'eslint-plugin-prefer-arrow-functions';
 import hooks from 'eslint-plugin-react-hooks';
 import mochaPlugin from 'eslint-plugin-mocha';
+import unicorn from 'eslint-plugin-unicorn';
 
 const defaultRules = {
     'no-useless-catch': 'off',
@@ -70,7 +71,8 @@ export default defineConfig([
         plugins: {
             "prefer-arrow-functions": arrow,
             js,
-            'unused-imports': unusedImports
+            'unused-imports': unusedImports,
+            unicorn,
         },
         rules: {
             ...defaultRules,
@@ -104,6 +106,26 @@ export default defineConfig([
             // "import/consistent-type-specifier-style": [
             //     "error", "prefer-top-level-if-only-type-imports"
             // ]
+            "unicorn/prefer-then-catch": "error",
+            "unicorn/consistent-destructuring": "warn",
+            "unicorn/consistent-function-scoping": "warn",
+            "unicorn/consistent-optional-chaining": "error",
+            "unicorn/no-array-callback-reference": "warn",
+            "unicorn/no-accidental-bitwise-operator": "warn",
+            "no-obj-calls": "error",
+            "unicorn/new-for-builtins": "error",
+            "unicorn/no-impossible-length-comparison": "error",
+            "unicorn/no-duplicate-loops": "warn",
+            "unicorn/no-duplicate-logical-operands": "warn",
+            "unicorn/no-declarations-before-early-exit": "warn",
+            "unicorn/prefer-negative-index": "warn",
+            "unicorn/prefer-import-meta-properties": "error",
+            "unicorn/prefer-array-from-async": "warn",
+            "unicorn/prefer-array-flat-map": "warn",
+            "unicorn/no-useless-else": "warn",
+            "unicorn/no-unused-array-method-return": "error",
+            //"unicorn/no-unreadable-object-destructuring": "warn",
+            "unicorn/prefer-object-destructuring-defaults": "warn"
         },
         extends: [
             tsEslint.configs.recommended,

@@ -51,16 +51,16 @@ export const fileOrDirectoryIsWriteable = (location: string) => {
             } catch (accessError: any) {
                 if (accessError.code === 'EACCES') {
                     // also can't access directory :(
-                    throw new Error(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application does not have permission to write to the parent directory`);
-                } else {
-                    throw new Error(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application is unable to access the parent directory due to a system error`, { cause: accessError });
+                    throw new Error(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application does not have permission to write to the parent directory`,{cause: accessError});
                 }
+                    
+                throw new Error(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application is unable to access the parent directory due to a system error`, { cause: accessError });
             }
-        } else if (code === 'EACCES') {
-            throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application does not have permission to write to it.`);
-        } else {
-            throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application is unable to access it due to a system error`, { cause: err });
         }
+        if (code === 'EACCES') {
+            throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application does not have permission to write to it.`,{cause: err});
+        }
+        throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application is unable to access it due to a system error`, { cause: err });
     }
 };
 
@@ -74,10 +74,10 @@ export const fileExists = (location: string) => {
         const { code } = err;
         if (code === 'ENOENT') {
             return false;
-        } else if (code === 'EACCES') {
-            throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application does not have permission to write to it.`);
-        } else {
-            throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application is unable to access it due to a system error`, { cause: err });
         }
+        if (code === 'EACCES') {
+            throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application does not have permission to write to it.`, {cause: err});
+        }
+        throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application is unable to access it due to a system error`, { cause: err });
     }
 };

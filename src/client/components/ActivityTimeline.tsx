@@ -474,40 +474,39 @@ export const ActivityTimeline = (props: ActivityTimelineProps) => {
        
         if(!a.dt.isSame(b.dt)) {
             return a.dt.isBefore(b.dt) ? -1 : 1;
-        } else {
-            // if they are the same timestamp then we need to determine the likely logical order
+        }
+        // if they are the same timestamp then we need to determine the likely logical order
 
-            // queue created always occurs before other actions as the play is queued first, then processed
-            if(b.id.includes('queue-created')) {
-                return 1;
-            }
-            if(a.id.includes('queue-created')) {
-                return -1;
-            }
-            
-            // transform steps always occur before scrobble actions
-            if(a.id.includes('scrobble') && b.id === 'transform-steps') {
-                return 1;
-            }
-            if(b.id.includes('scrobble') && a.id === 'transform-steps') {
-                return -1;
-            }
+        // queue created always occurs before other actions as the play is queued first, then processed
+        if(b.id.includes('queue-created')) {
+            return 1;
+        }
+        if(a.id.includes('queue-created')) {
+            return -1;
+        }
+        
+        // transform steps always occur before scrobble actions
+        if(a.id.includes('scrobble') && b.id === 'transform-steps') {
+            return 1;
+        }
+        if(b.id.includes('scrobble') && a.id === 'transform-steps') {
+            return -1;
+        }
 
-            // dupe matching always occurs before scrobbling
-            if(b.id === 'scrobble-match' && a.id === 'scrobble-response') {
-                return 1;
-            }
-            if(a.id === 'scrobble-match' && b.id === 'scrobble-response') {
-                return -1;
-            }
+        // dupe matching always occurs before scrobbling
+        if(b.id === 'scrobble-match' && a.id === 'scrobble-response') {
+            return 1;
+        }
+        if(a.id === 'scrobble-match' && b.id === 'scrobble-response') {
+            return -1;
+        }
 
-            // queue updated (finished) always occurs last
-            if(a.id.includes('queue-updated')) {
-                return 1;
-            }
-            if(b.id.includes('queue-updated')) {
-                return -1;
-            }
+        // queue updated (finished) always occurs last
+        if(a.id.includes('queue-updated')) {
+            return 1;
+        }
+        if(b.id.includes('queue-updated')) {
+            return -1;
         }
 
         // nothing else matched, keep order
@@ -518,7 +517,7 @@ export const ActivityTimeline = (props: ActivityTimelineProps) => {
     console.log(f);
 
 
-    const timelineElements: React.JSX.Element[] = timelineItems.map((x) => {
+    const timelineElements: React.JSX.Element[] = timelineItems.flatMap((x) => {
         const timelineKey = `${x.id}-${x.dt.unix()}`;
         switch(x.id) {
             case 'new':
@@ -547,7 +546,7 @@ export const ActivityTimeline = (props: ActivityTimelineProps) => {
                 }
         }
         return undefined;
-    }).flat();
+    });
 
     return (
         <MSErrorBoundary>

@@ -176,12 +176,12 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
         <Flex direction="row" wrap="wrap" style={{whiteSpace: 'break-spaces'}} truncate rowGap="4">
             <Wrap width="100%" ref={target}>
                 <Box marginEnd="auto" truncate>
-                    <MSComponentName data={props.data}/>
-                    <MSComponentType data={props.data}/>
+                    <MSComponentName data={data}/>
+                    <MSComponentType data={data}/>
                 </Box>
                 <Stack alignItems={isWrapped ? 'flex-start' : 'flex-end'}>
-                    <ComponentStateBadgeActionable size="lg" maxWidth="fit-content" data={props.data} />
-                    <HStack style={{whiteSpace: 'break-spaces'}}>{sleepingRender}{props.data.status}</HStack>
+                    <ComponentStateBadgeActionable size="lg" maxWidth="fit-content" data={data} />
+                    <HStack style={{whiteSpace: 'break-spaces'}}>{sleepingRender}{data.status}</HStack>
                 </Stack>
             </Wrap>
             <Flex justifyContent="flex-end" rowGap="6" flexDirection="row-reverse" wrap="wrap">
@@ -189,8 +189,8 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
             </Flex>
             {error !== undefined && error !== null ? <ErrorAlert error={error}/> : undefined}
             {warning !== undefined && warning !== null ? <ErrorAlert error={warning} status="warning"/> : undefined}
-            <MSErrorBoundary>{props.live ? <PlayersContainerFetchable nowPlaying={isSource ? undefined : true} data={props.data}/> : <PlayersContainer nowPlaying={isSource ? undefined : true} data={props.data} live={props.live}/>}</MSErrorBoundary>
-            <MSErrorBoundary><ListContainerFilterable render="virtDynamic" componentType={props.data.mode} componentId={props.data.id}/></MSErrorBoundary>
+            <MSErrorBoundary>{props.live ? <PlayersContainerFetchable nowPlaying={isSource ? undefined : true} data={data}/> : <PlayersContainer nowPlaying={isSource ? undefined : true} data={data} live={props.live}/>}</MSErrorBoundary>
+            <MSErrorBoundary><ListContainerFilterable render="virtDynamic" componentType={data.mode} componentId={data.id}/></MSErrorBoundary>
         </Flex>
         </MSErrorBoundary>
     )
