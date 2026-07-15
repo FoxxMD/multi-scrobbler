@@ -13,7 +13,7 @@ This Source **monitors your Apple Music listening history** via the official App
 
 Because of how the Apple Music API works, Multi-Scrobbler (MS) requires two different tokens to function: a **Media User Token** (identifies your personal account) and an **Authentication Token** (authorizes API access).
 
-#### 1. Getting a Media User Token
+### 1. Getting a Media User Token
 
 The `mediaUserToken` is required to access your recently played history. You can extract it directly from the Apple Music web app:
 
@@ -27,7 +27,7 @@ The `mediaUserToken` is required to access your recently played history. You can
 The `mediaUserToken` will eventually expire. If Multi-Scrobbler begins throwing authentication errors in the logs, simply repeat these steps to obtain and configure a fresh token.
 :::
 
-#### 2. Authentication
+### 2. Authentication
 
 To authorize API access, Multi-Scrobbler requires an Authentication Token (JWT). Because the official Apple Music API is designed for developers, there are two ways to provide this token depending on your situation:
 
@@ -98,9 +98,9 @@ Choose your preferred method below:
 
 ---
 
-#### How Multi-Scrobbler handles Apple Music quirks
+### How Multi-Scrobbler handles Apple Music quirks
 
-**Timestamp Estimation**
+#### Timestamp Estimation
 
 The Apple Music API **does not provide timestamps** for when tracks were played. Multi-Scrobbler estimates play times by taking the current time and subtracting track durations backwards:
 * The most recent track is assumed to have finished playing **now**.
@@ -108,7 +108,7 @@ The Apple Music API **does not provide timestamps** for when tracks were played.
 
 *For the most accurate scrobble timestamps, it is highly recommended to keep the polling interval (`APPLEMUSIC_INTERVAL`) low (the default is 60 seconds).*
 
-**Duplicate Play Recovery**
+#### Duplicate Play Recovery
 
 The Apple Music history API strictly deduplicates tracks. Instead of showing the same song multiple times in a row, it simply bumps the re-played track back to the #1 spot and removes the older entry. 
 
