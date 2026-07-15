@@ -1131,6 +1131,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         let historicalError: Error | undefined;
         let queueError: Error | undefined;
         let successState: PlaySelect['state'];
+        let deadQueueEntity: QueueStateSelect;
 
         try {
             
@@ -1147,7 +1148,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                         queueError = new SimpleError(`${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.play.meta.source}' => cannot get historical scrobbles, will queue as dead for now.`, { cause: e, shortStack: true });
                         this.logger.warn(queueError);
                     }
-                    await this.addDeadLetterScrobble(currQueuedPlay, e);
+                    deadQueueEntity = await this.addDeadLetterScrobble(currQueuedPlay, e);
                     //handledShiftedPlay = true;
                 }
                 signal.throwIfAborted();
@@ -1184,7 +1185,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                         }
 
                         queueError = e;
-                        await this.addDeadLetterScrobble(currQueuedPlay, e);
+                        deadQueueEntity = await this.addDeadLetterScrobble(currQueuedPlay, e);
                         //handledShiftedPlay = true;
                         if (hasUpstreamError(e, false)) {
                             //handledShiftedPlay = true;
@@ -1218,7 +1219,12 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         } finally {
             const queueState = currQueuedPlay.queueStates.find(x => x.queueName === CLIENT_INGRESS_QUEUE);
             if(queueError !== undefined) {
-                await this.queueRepo.updateById(queueState.id, {queueStatus: 'failed', error: queueError});
+                await this.queueRepo.updateById(queueState.id, {
+                    queueStatus: 'failed',
+                    error: queueError,
+                    // ensure that ingress queue updatedAt is always older than dead queue creation so timeline is ordered correctly
+                    updatedAt: deadQueueEntity !== undefined ? deadQueueEntity.createdAt.subtract(1, 'ms') : dayjs()
+                });
                 queueState.queueStatus = 'failed';
                 queueState.error = queueError;
                 await this.playRepo.updateById(currQueuedPlay.id, {state: 'failed', error: queueError, play: currQueuedPlay.play});
@@ -1393,7 +1399,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             } catch (e) {
                 deadScrobble.play.scrobble = {
                     ...(deadScrobble.play.scrobble ?? {}),
-                    createdAt: dayjs()
+                    //createdAt: dayjs()
                 }
                 const submitError = findCauseByReference(e, ScrobbleSubmitError);
                 if(submitError !== undefined) {
@@ -1556,7 +1562,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return createdQueuedPlays;
     }
 
-    addDeadLetterScrobble = async (data: PlaySelect, error: (Error | string) = 'Unspecified error') => {
+    addDeadLetterScrobble = async (data: PlaySelect, error: (Error | string) = 'Unspecified error'): Promise<QueueStateSelect> => {
         let e: ErrorLike;
         if(isErrorLike(error)) 
         {
@@ -1567,17 +1573,18 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.deadLetterLength += 1;
         this.deadLetterQueued += 1;
         //this.playRepo.updateById(data.id, {state: 'failed', error: e});
-        await this.queueRepo.create({
+        const newQueue = await this.queueRepo.create({
             componentId: this.dbComponent.id,
             playId: data.id,
             queueName: CLIENT_DEAD_QUEUE
-        });
+        }) as QueueStateSelect;
         const deadData = {id: nanoid(), retries: 0, error: e, play: data.play};
         //this.deadLetterScrobbles.push(deadData);
         //this.deadLetterScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
         this.emitEvent('deadLetter', {dead: deadData});
         this.setStatus(`Moved ${data.uid} to Dead Play queue`);
         this.deadLetterGauge.labels(this.getPrometheusLabels()).inc();
+        return newQueue;
     }
 
     queuePlayingNow = async (data: SourcePlayerObj, source: SourceIdentifier) => {
