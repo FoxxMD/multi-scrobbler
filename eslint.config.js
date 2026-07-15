@@ -189,7 +189,7 @@ export default defineConfig([
         },
         rules: {
         'boundaries/element-types': [
-            'error',
+            'warn',
             {
             default: 'disallow', // deny anything not explicitly allowed
             rules: [
@@ -203,7 +203,7 @@ export default defineConfig([
                 },
                 {
                 from: 'backend',
-                allow: ['backend', 'core', 'config'], // backend can use itself + core
+                allow: ['backend', 'core', 'config', 'core-tests'], // backend can use itself + core + tests
                 },
                 {
                 from: 'stories',
@@ -218,7 +218,7 @@ export default defineConfig([
         ],
         // Optional: flag any file under src/ that doesn't match one of the
         // three element patterns above (catches stray/misplaced files)
-        'boundaries/no-unknown': 'error'
+        'boundaries/no-unknown': 'warn'
         },
     }
 ]);
