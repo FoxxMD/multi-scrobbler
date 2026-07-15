@@ -2,6 +2,7 @@
 import storybook from "eslint-plugin-storybook";
 import boundaries from 'eslint-plugin-boundaries';
 import unusedImports from 'eslint-plugin-unused-imports';
+import { importX } from 'eslint-plugin-import-x'
 
 import { defineConfig, globalIgnores } from "eslint/config";
 
@@ -73,6 +74,7 @@ export default defineConfig([
             js,
             'unused-imports': unusedImports,
             unicorn,
+            'import-x': importX,
         },
         rules: {
             ...defaultRules,
@@ -103,9 +105,13 @@ export default defineConfig([
             // https://github.com/import-js/eslint-plugin-import/blob/main/docs/rules/consistent-type-specifier-style.md
             // -- this enforces that type-only imports are fixed to top-level type imports IE
             // import {type Foo, type Bar} from 'a'; => import type { Foo, Bar} from 'a';
-            // "import/consistent-type-specifier-style": [
-            //     "error", "prefer-top-level-if-only-type-imports"
-            // ]
+            //
+            // USE eslint-plugin-import-x since its more actively developed?
+            // waiting on the status of this for supporting mixed inline types
+            // https://github.com/un-ts/eslint-plugin-import-x/issues/501
+            // "import-x/consistent-type-specifier-style": [
+            //     "error", "prefer-top-level"
+            // ],
             "unicorn/prefer-then-catch": "error",
             "unicorn/consistent-destructuring": "warn",
             "unicorn/consistent-function-scoping": "warn",
@@ -134,7 +140,9 @@ export default defineConfig([
         languageOptions: {
             globals: {
                 ...globals.node,
-            }
+            },
+            ecmaVersion: 'latest',
+            sourceType: 'module',
         },
         files: ['src/**/*.ts','src/**/*.tsx']
     },
