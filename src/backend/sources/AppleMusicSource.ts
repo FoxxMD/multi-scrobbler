@@ -117,10 +117,16 @@ export default class AppleMusicSource extends AbstractSource {
 
     static formatPlayObj(track: Song, options: {newFromSource?: boolean} = {}): PlayObject {
         const {newFromSource = false} = options;
+
+        // Apple Music appends " - EP" or " - Single" to the album name for EPs and singles
+        // We strip this out so it matches other sources
+        let albumName = track.albumName
+        albumName = albumName.replace(/ - (EP|Single)$/i, '');
+
         const play: PlayObjectMinimal = {
             data: {
                 artists: artistNamesToCredits([track.artistName]),
-                album: track.albumName,
+                album: albumName,
                 track: track.name,
                 duration: track.durationInMillis ? Math.round(track.durationInMillis / 1000) : undefined,
             },

@@ -120,6 +120,10 @@ If Multi-Scrobbler polled when the top track was Song A, and polls again after i
 
 If you ever experience false positives (tracks being scrobbled that you didn't actually re-listen to), you can disable this recovery behavior with `"recoverUnchangedTopHistory": false` in your config options or by setting the `APPLEMUSIC_RECOVER_UNCHANGED_TOP_HISTORY=false` env var.
 
+#### Album name normalization
+
+The Apple Music API appends ` - EP` or ` - Single` to the album name for EPs and singles. Multi-Scrobbler strips this out so that the album name matches other sources.
+
 ## Configuration Reference
 
 <Config config="AppleMusicSourceConfig" fileContent={AppleMusicConfig} name="applemusic">
