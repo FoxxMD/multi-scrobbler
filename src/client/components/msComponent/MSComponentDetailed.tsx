@@ -190,7 +190,6 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
             {error !== undefined && error !== null ? <ErrorAlert error={error}/> : undefined}
             {warning !== undefined && warning !== null ? <ErrorAlert error={warning} status="warning"/> : undefined}
             <MSErrorBoundary>{props.live ? <PlayersContainerFetchable nowPlaying={isSource ? undefined : true} data={props.data}/> : <PlayersContainer nowPlaying={isSource ? undefined : true} data={props.data} live={props.live}/>}</MSErrorBoundary>
-            <Heading size="3xl" width="100%">{isComponentTypeSource(props.data.mode) ? 'Plays' : 'Scrobbles'}</Heading>
             <MSErrorBoundary><ListContainerFilterable render="virtDynamic" componentType={props.data.mode} componentId={props.data.id}/></MSErrorBoundary>
         </Flex>
         </MSErrorBoundary>

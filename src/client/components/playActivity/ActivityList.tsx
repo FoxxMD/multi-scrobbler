@@ -1,4 +1,4 @@
-import { Accordion, Container, Stack } from '@chakra-ui/react';
+import { Accordion, Container, Stack, Heading } from '@chakra-ui/react';
 import { useSSEAnyEvent, useSSEContext } from '@flamefrontend/sse-runtime-react';
 import { type InfiniteData, useInfiniteQuery, type UseInfiniteQueryResult, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -9,7 +9,7 @@ import type {ComponentType} from '../../../core/Atomic.js';
 import { type QueryPlaysOptsJsonRefreshable, tanQueries } from '../../queries/index.js';
 import { ActivityDetailFetchable, ActivityDetails, ActivitySummary, ActivitySummaryFetchable, ActivitySummarySkeleton } from '../ActivityDetail.js';
 import { ErrorAlert } from '../ErrorAlert.js';
-import { ListFilters, todayRange } from './ListFilters.js';
+import { ListFilters, ListRefereshButton, todayRange } from './ListFilters.js';
 import { type ActivityLogProps, generateGroupPlays, GroupHeader } from './ListParts.js';
 import { NoPlayResults, VirtualizedListDynamic } from './VirtualListDynamic.js';
 import { VirtualizedListExp } from './VirtualListExperimental.js';
@@ -262,6 +262,7 @@ const playInWindow = (data: PlayApiCommonDetailed, query: QueryPlaysOptsJson): b
 }
 
 export const ListContainerFilterable = (props: { componentId: number, componentType: ComponentType } & Pick<ComponentProps<typeof ActivityList>, 'render'>) => {
+  const {componentType} = props;
   const [filters, setFilter] = useState<QueryPlaysOptsJsonRefreshable>({
     playedAt: {
       type: 'between',
@@ -273,7 +274,8 @@ export const ListContainerFilterable = (props: { componentId: number, componentT
   });
   return (
     <Stack width="100%" gap="4">
-      <ListFilters componentType={props.componentType} componentId={props.componentId} filters={filters} onChange={setFilter}/>
+      <Heading size="3xl" width="100%">{componentType === 'source' ? 'Plays' : 'Scrobbles'}<ListRefereshButton size="md" componentId={props.componentId} filters={filters}/></Heading>
+      <ListFilters componentType={props.componentType} filters={filters} onChange={setFilter}/>
       <ListContainerFetchable {...props} filters={filters} />
     </Stack>
   )

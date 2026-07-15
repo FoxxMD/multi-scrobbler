@@ -1,4 +1,4 @@
-import { Button, Card, createListCollection, DatePicker, Flex, HStack, Portal, Select, Span, TagsInput, useSelectContext, VStack, Wrap } from '@chakra-ui/react';
+import { Button, Card, createListCollection, DatePicker, Flex, HStack, Portal, Select, Span, TagsInput, useSelectContext, VStack, Wrap, type IconProps } from '@chakra-ui/react';
 import type {
     ZonedDateTime
 } from "@internationalized/date";
@@ -255,15 +255,11 @@ export const ListFilters = (props: {
     loading?: boolean
     filters: QueryPlaysOptsJsonRefreshable
     componentType: ComponentType,
-    componentId: number
 }) => {
     const {
         filters,
         onChange,
-        componentId,
     } = props;
-
-    const queryClient = useQueryClient();
 
     const setState = useCallback((val: PlayStateUI[]) => {
         const {
@@ -299,26 +295,9 @@ export const ListFilters = (props: {
         onChange({...rest, text: val});
     }, [onChange, filters]);
 
-    const onRefresh = useCallback(() => {
-    queryClient.invalidateQueries({
-        queryKey: tanQueries.activities.list(componentId, filters).queryKey
-    });
-    // const nonce = nanoid();
-    // const {
-    //     ...rest
-    // } = filters;
-    // console.log(`Adding nonce for refresh ${nonce}`);
-    // onChange({...rest, nonce});
-    }, [componentId, filters]);
-
-    const { isFetching } = useQueryWatcher(tanQueries.activities.list(componentId, filters).queryKey)
-
     return (
         <Card.Root size="sm" variant="outline">
-            <Card.Header {...cardHeaderSeparator}>
-                <HStack>Filters <RefreshButton variant="ghost" size="sm" loading={isFetching} onClick={(e) => onRefresh()}/></HStack>
-            </Card.Header>
-            <Card.Body px="3" py="4">
+            <Card.Body>
                 <Wrap gap="5">
                     <PhraseFilter value={filters.text} onChange={setPhrases} />
                     <PlayStateFilter value={filters.state} onChange={setState} mode={props.componentType} />
@@ -328,4 +307,23 @@ export const ListFilters = (props: {
         </Card.Root>
     )
 
+}
+
+export const ListRefereshButton = (props: ComponentProps<typeof RefreshButton> & {componentId: number, filters: QueryPlaysOptsJsonRefreshable}) => {
+    const {
+        componentId,
+        filters,
+        ...rest
+    } = props;
+    const queryClient = useQueryClient();
+    
+    const onRefresh = useCallback(() => {
+        queryClient.invalidateQueries({
+            queryKey: tanQueries.activities.list(componentId, filters).queryKey
+        });
+    }, [componentId, filters]);
+
+    const { isFetching } = useQueryWatcher(tanQueries.activities.list(componentId, filters).queryKey)
+
+    return <RefreshButton variant="ghost" size="sm" {...rest} loading={isFetching} onClick={(e) => onRefresh()}/>
 }
