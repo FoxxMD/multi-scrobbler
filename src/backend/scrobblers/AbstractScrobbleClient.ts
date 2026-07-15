@@ -830,6 +830,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             };
             this.scrobbleSOTRanges.push(range);
         }
+        if(range.from === range.to) {
+            // most apis don't allow same to/from
+            // and this *probably* means we only have one play in recent history
+            // so expand this with default padding to be safe
+            range.from = range.from - DEFAULT_NEW_PADDING.asSeconds();
+            range.to = Math.min(dayjs().unix(), range.to + 30) // 30 seconds after "to", or now
+        }
         const cachedPlaysRes = await this.cache.cacheClientScrobbles.get<PlayObject[] | Error>(this.getScrobbleCacheKey(range.from, range.to));
         if(cachedPlaysRes instanceof Error) {
             throw new SimpleError('Cannot get historical plays due to cached error', {cause: cachedPlaysRes, shortStack: true});
