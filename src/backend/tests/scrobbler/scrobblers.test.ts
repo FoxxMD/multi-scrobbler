@@ -28,6 +28,10 @@ import type {RepositoryCreatePlayOpts} from '../../common/database/drizzle/repos
 import { fixtureCreatePlay } from '../utils/databaseFixtures.ts';
 import { isAbortError } from 'abort-controller-x';
 import { artistNamesToCredits } from '../../../core/StringUtils.ts';
+import ScrobbleClients from '../../scrobblers/ScrobbleClients.ts';
+import { WildcardEmitter } from '../../common/WildcardEmitter.ts';
+import type { CommonClientConfig } from '../../common/infrastructure/config/client/index.ts';
+import { loggerNoop } from '../../common/MaybeLogger.ts';
 
 chai.use(asPromised);
 
@@ -42,8 +46,8 @@ const normalizedWithMixedDur = normalizePlays(mixedDurPlays, {initialDate: first
 
 const normalizedWithMixedDurOlder = normalizePlays(mixedDurPlays, {initialDate: olderFirstPlayDate});
 
-const generateTestScrobbler = async () => {
-    const testScrobbler = new TestScrobbler();
+const generateTestScrobbler = async (config?: CommonClientConfig) => {
+    const testScrobbler = new TestScrobbler(config);
     testScrobbler.verboseOptions = {
         match: {
             onMatch: true,
@@ -1139,4 +1143,153 @@ describe('Scrobble Temporal Grouping', function () {
         const consolidatedRanges = groupPlaysToTimeRanges(plays, [], {consolidateDuration: DEFAULT_CONSOLIDATE_DURATION});
         expect(consolidatedRanges.length).eq(3);
     });
-})
+});
+
+describe('Scrobble Clients Behavior', function() {
+
+    describe('Source filtering', function() {
+
+        let cEmitter: WildcardEmitter,
+        sEmitter: WildcardEmitter,
+        clients: ScrobbleClients;
+
+        beforeEach(function() {
+            cEmitter = new WildcardEmitter();
+            sEmitter = new WildcardEmitter();
+            clients = new ScrobbleClients(cEmitter, sEmitter, {
+                localUrl: new URL('http://example.com'),
+                configDir: process.cwd(),
+                version: 'test'
+            },
+            loggerNoop);
+        });
+
+        it('does not scrobble when both name and id do not match', async function() {
+
+            const testClient = await generateTestScrobbler({id: 'test', name: 'test'});
+            clients.clients.push(testClient);
+
+            sEmitter.emit('discoveredToScrobble', {
+                data: [generatePlay()],
+                options: {
+                    scrobbleFrom: 'testSource',
+                    scrobbleTo: ['foo']
+                }
+            });
+            expect(clients.scrobbleToNamesWarnings).is.empty;
+            await Promise.race([
+                pEvent(testClient.emitter, 'scrobbleQueued'),
+                sleep(10)
+            ]);
+            const queued = await testClient.getQueued(CLIENT_INGRESS_QUEUE);
+            expect(queued.data).is.empty;
+        });
+
+        it('warns when scrobbleTo matches name but not id', async function() {
+
+            const testClient = await generateTestScrobbler({id: 'testid', name: 'test'});
+            clients.clients.push(testClient);
+
+            sEmitter.emit('discoveredToScrobble', {
+                data: [generatePlay()],
+                options: {
+                    scrobbleFrom: 'testSource',
+                    scrobbleTo: ['test']
+                }
+            });
+            expect(clients.scrobbleToNamesWarnings).length.greaterThan(0);
+            await Promise.race([
+                pEvent(testClient.emitter, 'scrobbleQueued'),
+                sleep(100)
+            ])
+            const queued = await testClient.getQueued(CLIENT_INGRESS_QUEUE);
+            expect(queued.data).is.not.empty;
+        });
+
+        it('scrobbles when both name and id match', async function() {
+
+            const testClient = await generateTestScrobbler({id: 'test', name: 'test'});
+            clients.clients.push(testClient);
+
+            sEmitter.emit('discoveredToScrobble', {
+                data: [generatePlay()],
+                options: {
+                    scrobbleFrom: 'testSource',
+                    scrobbleTo: ['test']
+                }
+            });
+            expect(clients.scrobbleToNamesWarnings).is.empty;
+            await Promise.race([
+                pEvent(testClient.emitter, 'scrobbleQueued'),
+                sleep(50)
+            ])
+            const queued = await testClient.getQueued(CLIENT_INGRESS_QUEUE);
+            expect(queued.data).is.not.empty;
+        });
+
+        it('scrobbles without warning when only id matches', async function() {
+
+            const testClient = await generateTestScrobbler({id: 'test foo', name: 'test'});
+            clients.clients.push(testClient);
+
+            sEmitter.emit('discoveredToScrobble', {
+                data: [generatePlay()],
+                options: {
+                    scrobbleFrom: 'testSource',
+                    scrobbleTo: ['test foo']
+                }
+            });
+            expect(clients.scrobbleToNamesWarnings).is.empty;
+            await Promise.race([
+                pEvent(testClient.emitter, 'scrobbleQueued'),
+                sleep(50)
+            ])
+            const queued = await testClient.getQueued(CLIENT_INGRESS_QUEUE);
+            expect(queued.data).is.not.empty;
+        });
+
+        it('scrobbles when scrobbleTo is empty', async function() {
+
+            const testClient = await generateTestScrobbler({id: 'test foo', name: 'test'});
+            clients.clients.push(testClient);
+
+            sEmitter.emit('discoveredToScrobble', {
+                data: [generatePlay()],
+                options: {
+                    scrobbleFrom: 'testSource',
+                    scrobbleTo: []
+                }
+            });
+            expect(clients.scrobbleToNamesWarnings).is.empty;
+            await Promise.race([
+                pEvent(testClient.emitter, 'scrobbleQueued'),
+                sleep(50)
+            ])
+            const queued = await testClient.getQueued(CLIENT_INGRESS_QUEUE);
+            expect(queued.data).is.not.empty;
+        });
+
+        it('scrobbleTo is case-insensitive and ignores whitespace', async function() {
+
+            const testClient = await generateTestScrobbler({id: 'test  foo ', name: 'test'});
+            clients.clients.push(testClient);
+
+            sEmitter.emit('discoveredToScrobble', {
+                data: [generatePlay()],
+                options: {
+                    scrobbleFrom: 'testSource',
+                    scrobbleTo: ['TesT foO']
+                }
+            });
+            expect(clients.scrobbleToNamesWarnings).is.empty;
+            await Promise.race([
+                pEvent(testClient.emitter, 'scrobbleQueued'),
+                sleep(50)
+            ])
+            const queued = await testClient.getQueued(CLIENT_INGRESS_QUEUE);
+            expect(queued.data).is.not.empty;
+        });
+
+    });
+
+});

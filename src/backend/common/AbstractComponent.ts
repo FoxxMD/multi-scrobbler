@@ -79,6 +79,10 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         };
     }
 
+    public getUid() {
+        return this.config?.id ?? this.config?.name ?? this.name;
+    }
+
     protected postCache(): Promise<void> {
         try {
             this.buildTransformRules();
@@ -96,18 +100,13 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     protected async doBuildDatabase(): Promise<true | string | undefined> {
         await super.doBuildDatabase();
 
-        let name: string;
-        if('name' in this) {
-            name = this.name as string;
-        }
-
         this.db = await getRoot().items.db();
         this.componentRepo = new DrizzleComponentRepository(this.db, {logger: this.logger});
         this.dbComponent = await this.componentRepo.findOrInsert({
             mode: this.componentType,
             type: this.type,
-            uid: this.config.id ?? this.config.name ?? name,
-            name: this.config.name ?? name
+            uid: this.getUid(),
+            name: this.config?.name ?? this.name
         });
         this.componentId = this.dbComponent.id;
         return true;

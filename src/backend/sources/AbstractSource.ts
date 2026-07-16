@@ -119,6 +119,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.loggerLabel = this.getIdentifier();
         this.config = config;
         this.clients = clients;
+        this.logger.debug(`Scrobble To: ${this.clients.length === 0 ? 'All' : this.clients.join(' | ')}`);
         this.instantiatedAt = dayjs();
         this.lastActivityAt = this.instantiatedAt;
         this.localUrl = internal.localUrl;

@@ -26,10 +26,19 @@ import type {ExternalMetadataTerm, PlayTransformHooks} from '../../core/Transfor
 import type {LibrefmClientConfig, LibrefmData} from '../common/infrastructure/config/client/librefm.ts';
 import clone from 'clone';
 import type {DiscordClientConfig, DiscordData} from '../common/infrastructure/config/client/discord.ts';
+import { stripIndents } from 'common-tags';
+import { normalizeStr, type StringNormalizationOptions } from '../utils/StringUtils.ts';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
 type ParsedConfig = ClientAIOConfig & ConfigMeta;
+
+const clientScrobbleToNormalization: StringNormalizationOptions = {
+    removeWhitespace: true,
+    removeSymbols: false,
+    normalizeUnicode: false,
+    removeDiacritics: false
+}
 
 export default class ScrobbleClients {
 
@@ -41,6 +50,8 @@ export default class ScrobbleClients {
     emitter: WildcardEmitter;
 
     sourceEmitter: WildcardEmitter;
+
+    scrobbleToNamesWarnings: string[] = [];
 
     constructor(emitter: WildcardEmitter, sourceEmitter: WildcardEmitter, internal: InternalConfigOptional, parentLogger: Logger) {
         this.emitter = emitter;
@@ -509,19 +520,34 @@ ${sources.join('\n')}`);
             this.logger.trace('Cannot update Now Playing! No clients are configured.');
         }
 
+        const excluded: string[] = [];
         for (const client of this.clients) {
             if(!client.supportsNowPlaying || !client.nowPlayingEnabled) {
                 continue;
             }
-            if (scrobbleTo.length > 0 && !scrobbleTo.includes(client.name)) {
-                if(isDebugMode()) {
-                    client.logger.debug(`Client was filtered out by Source '${scrobbleFrom.type} - ${scrobbleFrom.name}'`);
+            if (scrobbleTo.length > 0) {
+                // removing whitespace, case-insensitive, and trimming
+                const cNameNormal = normalizeStr(client.name, clientScrobbleToNormalization);
+                const cUidNormal = normalizeStr(client.getUid(), clientScrobbleToNormalization);
+                const name = scrobbleTo.find(x => normalizeStr(x, clientScrobbleToNormalization) === cNameNormal)
+                const id = scrobbleTo.find(x => normalizeStr(x, clientScrobbleToNormalization) === cUidNormal);
+
+                if(name === undefined && id === undefined) {
+                    excluded.push(client.getUid());
+                    continue;
+                } else if(name !== undefined && id === undefined && !this.scrobbleToNamesWarnings.includes(`${name}-${scrobbleFrom.type}-${scrobbleFrom.name}`)) {
+                    client.logger.warn(stripIndents`Using Client *name* '${name}' in the \`clients\` fields for a Source (${scrobbleFrom}) is DEPRECATED and will be removed in a future release.
+                        Replace the *name* with the *id* '${client.getUid()}' of this Client.`);
+                    this.scrobbleToNamesWarnings.push(`${name}-${scrobbleFrom}`);
+                    
                 }
-                continue;
             }
             for (const playObj of playObjs) {
                 await client.queuePlayingNow(playObj, scrobbleFrom);
             }
+        }
+        if(excluded.length > 0) {
+            this.logger.trace(`These Now Playing clients were filtered from Source '${scrobbleFrom.type} - ${scrobbleFrom.name}' => ${excluded.join(' | ')}`);
         }
     }
 
@@ -554,14 +580,31 @@ ${sources.join('\n')}`);
             this.logger.warn('Cannot scrobble! No clients are configured.');
         }
 
+        const excluded: string[] = [];
         for (const client of this.clients) {
-            if (scrobbleTo.length > 0 && !scrobbleTo.includes(client.name)) {
-                client.logger.debug(`Client was filtered out by Source '${scrobbleFrom}'`);
-                continue;
+            if (scrobbleTo.length > 0) {
+                // removing whitespace, case-insensitive, and trimming
+                const cNameNormal = normalizeStr(client.name, clientScrobbleToNormalization);
+                const cUidNormal = normalizeStr(client.getUid(), clientScrobbleToNormalization);
+                const name = scrobbleTo.find(x => normalizeStr(x, clientScrobbleToNormalization) === cNameNormal)
+                const id = scrobbleTo.find(x => normalizeStr(x, clientScrobbleToNormalization) === cUidNormal);
+
+                if(name === undefined && id === undefined) {
+                    excluded.push(client.getUid());
+                    continue;
+                } else if(name !== undefined && id === undefined && !this.scrobbleToNamesWarnings.includes(`${name}-${scrobbleFrom}`)) {
+                    client.logger.warn(stripIndents`Using Client *name* '${name}' in the \`clients\` fields for a Source (${scrobbleFrom}) is DEPRECATED and will be removed in a future release.
+                        Replace the *name* with the *id* '${client.getUid()}' of this Client.`);
+                    this.scrobbleToNamesWarnings.push(`${name}-${scrobbleFrom}`);
+                    
+                }
             }
             for (const playObj of playObjs) {
                 await client.queueScrobble(clone(playObj), scrobbleFrom);
             }
+        }
+        if(excluded.length > 0) {
+            this.logger.trace(`These clients were filtered from scrobbling from Source '${scrobbleFrom}' => ${excluded.join(' | ')}`);
         }
     }
 }

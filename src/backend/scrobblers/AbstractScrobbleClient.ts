@@ -1807,7 +1807,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return dayjs().isAfter(this.nowPlayingExpirationDate);
     }
 
-    public getQueued = (queueName: string, statuses: string[], offset?: number) => {
+    public getQueued = (queueName: string, offset?: number) => {
         return this.playRepo.getQueued(queueName, {offset});
     }
 
