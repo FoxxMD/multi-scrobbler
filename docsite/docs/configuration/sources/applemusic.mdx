@@ -18,7 +18,7 @@ Because of how the Apple Music API works, Multi-Scrobbler (MS) requires two diff
 The `mediaUserToken` is required to access your recently played history. You can extract it directly from the Apple Music web app:
 
 1. Visit [music.apple.com](https://music.apple.com) in your browser and log in.
-2. Open your browser's Developer Tools (usually `F12` or `Cmd+Option+I`).
+2. Open your browser's Developer Tools (usually `F12` or `⌘+Option+I`).
 3. Navigate to the **Application** tab (Chrome/Edge) or **Storage** tab (Safari/Firefox).
 4. Expand **Cookies** in the left sidebar and select `https://music.apple.com`.
 5. Find the cookie named `media-user-token` and copy its value (it typically starts with `0.`).
@@ -41,7 +41,48 @@ Choose your preferred method below:
 
         Since most users don't have a paid developer account, extracting the token from the web player is the standard approach.
 
-        While browsing [music.apple.com](https://music.apple.com) with Developer Tools open, inspect the **Network** tab. Look at the request headers for any request made to `amp-api.music.apple.com`. Copy the `authorization` header value (use everything *after* the `Bearer ` prefix).
+        Behind the scenes, the Apple Music website makes a lot of background requests, which can make finding the right token confusing. To filter out the noise and grab the exact token we need, follow the steps for your browser below:
+
+        <details>
+        <summary>Chrome, Edge & Firefox</summary>
+
+        1. Visit [music.apple.com](https://music.apple.com) and log in.
+        2. Open Developer Tools (`F12` or `Ctrl+Shift+I` / <kbd>⌘</kbd> + <kbd>⌥</kbd> + <kbd>I</kbd>) and navigate to the **Network** tab.
+        3. In the filter box at the top left, paste exactly: `https://amp-api.music.apple.com/v1/me/account` (**Label 1**).
+        4. Click the **Fetch/XHR** filter button to hide irrelevant requests (**Label 2**).
+        5. Reload the page (**Label 3**).
+        6. Under the "Name" column, click the request starting with `account?meta=` (**Label 4**).
+        7. In the panel that opens, scroll down to the **Request Headers** section.
+        8. Find the `authorization` header. Copy the long string of text **after** the `Bearer ` prefix (**Label 5**).
+
+        ![Chrome Network Tab Instructions](../applemusic_chrome_devtools.png)
+
+        </details>
+
+        <details>
+        <summary>Safari</summary>
+
+        Before you can extract the token in Safari, you must enable developer tools.
+
+        {/* This weird formatting is because ⌘ is usually incredibly tiny */}
+        1. Open Safari Settings (<kbd>⌘</kbd> + <kbd>,</kbd>), navigate to the **Advanced** tab, and check **"Show features for web developers"** at the very bottom.
+        
+        ![Safari Advanced Settings](../applemusic_safari_settings.png)
+        
+        2. Visit [music.apple.com](https://music.apple.com) and log in.
+        3. Open the Web Inspector (<kbd>⌘</kbd>+<kbd>⌥</kbd>+<kbd>I</kbd> or Develop > Show Web Inspector) and navigate to the **Network** tab.
+        4. In the filter bar on the left side of the inspector, paste exactly: `https://amp-api.music.apple.com/v1/me/account` (**Label 1**).
+        5. Reload the page (**Label 2**).
+        6. Click the `account` request that appears in the Name list (**Label 3**).
+        7. In the details sidebar, look under the **Request** section for the `Authorization` header. Copy the long string of text **after** the `Bearer ` prefix (**Label 4**).
+
+        ![Safari Network Tab Instructions](../applemusic_safari_devtools.png)
+
+        </details>
+        
+        <br />
+
+        Once you have your token, add it to your configuration file along with the origin header:
 
         ```json title="applemusic.json"
         {
