@@ -23,14 +23,44 @@ export const uniqueNormalizedStrArr = (arr: string[]): string[] => arr.reduce((a
         }
         return acc;
     }, [])
-// https://stackoverflow.com/a/37511463/1469797
-export const normalizeStr = (str: string, options?: {keepSingleWhitespace?: boolean}): string => {
-    const {keepSingleWhitespace = false} = options || {};
-    const normal = str.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
-    if(!keepSingleWhitespace) {
-        return normal.replace(SYMBOLS_WHITESPACE_REGEX, '').toLocaleLowerCase();
+export interface StringNormalizationOptions {
+    keepSingleWhitespace?: boolean
+    removeWhitespace?: boolean
+    charCase?: 'lower' | 'upper' | false
+    removeSymbols?: boolean
+    normalizeUnicode?: boolean
+    removeDiacritics?: boolean
+}
+export const normalizeStr = (str: string, options: StringNormalizationOptions = {}): string => {
+    const {
+        keepSingleWhitespace = false,
+        removeWhitespace = true,
+        charCase = 'lower',
+        normalizeUnicode = true,
+        removeSymbols = true,
+        removeDiacritics = true
+    } = options
+    let normal: string = str;
+
+    // https://stackoverflow.com/a/37511463/1469797
+    if(normalizeUnicode) {
+        normal = normal.normalize('NFD');
     }
-    return normal.replace(SYMBOLS_REGEX, '').replace(MULTI_WHITESPACE_REGEX, ' ').toLocaleLowerCase().trim();
+    // https://stackoverflow.com/a/37511463/1469797
+    if(removeDiacritics) {
+        normal = normal.replace(/[\u0300-\u036f]/g, "");
+    }
+    if(removeSymbols) {
+        normal = normal.replace(SYMBOLS_REGEX, '');
+    }
+    if(removeWhitespace) {
+        normal = keepSingleWhitespace ? normal.replace(MULTI_WHITESPACE_REGEX, ' ') : normal.replace(/\s/g, '')
+    }
+    if(charCase !== false) {
+        normal = charCase === 'lower' ? normal.toLocaleLowerCase() : normal.toLocaleUpperCase()
+    }
+
+    return normal.trim();
 }
 
 export interface PlayCredits {
