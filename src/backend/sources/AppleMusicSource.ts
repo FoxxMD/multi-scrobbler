@@ -115,13 +115,15 @@ export default class AppleMusicSource extends AbstractSource {
         return `Apple Music API is reachable (status ${status})`;
     }
 
-    static formatPlayObj(track: Song, options: {newFromSource?: boolean} = {}): PlayObject {
-        const {newFromSource = false} = options;
+    static formatPlayObj(track: Song, options: {newFromSource?: boolean, normalizeAlbum?: boolean} = {}): PlayObject {
+        const {newFromSource = false, normalizeAlbum = true} = options;
 
-        // Apple Music appends " - EP" or " - Single" to the album name for EPs and singles
-        // We strip this out so it matches other sources
         let albumName = track.albumName
-        albumName = albumName.replace(/ - (EP|Single)$/i, '');
+        if(normalizeAlbum) {
+            // Apple Music appends " - EP" or " - Single" to the album name for EPs and singles
+            // We strip this out so it matches other sources
+            albumName = albumName.replace(/ - (EP|Single)$/i, '');
+        }
 
         const play: PlayObjectMinimal = {
             data: {
@@ -164,7 +166,7 @@ export default class AppleMusicSource extends AbstractSource {
         if (!result.data) {
             return [];
         }
-        return (result.data as Song[]).map(track => AppleMusicSource.formatPlayObj(track));
+        return (result.data as Song[]).map(track => AppleMusicSource.formatPlayObj(track, {normalizeAlbum: this.config?.options?.normalizeAlbum}));
     }
 
     getIncomingHistoryConsistencyResult = (plays: PlayObject[]): HistoryConsistencyResult => {

@@ -34,7 +34,7 @@ import type {YandexMusicBridgeData, YandexMusicBridgeSourceConfig} from "../comm
 import type {SonosData, SonosSourceConfig} from "../common/infrastructure/config/source/sonos.ts";
 import type {AppleMusicSourceConfig} from "../common/infrastructure/config/source/applemusic.ts";
 import type { WildcardEmitter } from "../common/WildcardEmitter.ts";
-import { nonEmptyObj, parseBool } from "../utils.ts";
+import { nonEmptyObj, parseBool, parseBoolStrict } from "../utils.ts";
 import { removeUndefinedKeys } from '../../core/DataUtils.ts';
 import { getCommonComponentEnvConfig, readJson } from '../utils/DataUtils.ts';
 import { validateJson } from "../utils/ValidationUtils.ts";
@@ -848,10 +848,10 @@ export default class ScrobbleSources {
                         key,
                         origin: nonEmptyStringOrDefault(process.env.APPLEMUSIC_ORIGIN_HEADER, undefined),
                     }, false);
-                    const recoverEnv = process.env.APPLEMUSIC_RECOVER_UNCHANGED_TOP_HISTORY;
-                    const recoverUnchangedTopHistory = recoverEnv !== undefined && recoverEnv.trim() !== ''
-                        ? parseBool(recoverEnv)
-                        : undefined;
+                    const recoverEnv = nonEmptyStringOrDefault(process.env.APPLEMUSIC_RECOVER_UNCHANGED_TOP_HISTORY);
+                    const recoverUnchangedTopHistory = recoverEnv !== undefined ? parseBoolStrict(recoverEnv) : undefined;
+                    const albumNormalizeEnv = nonEmptyStringOrDefault(process.env.APPLEMUSIC_NORMALIZE_ALBUM);
+                    const normalizeAlbumName = albumNormalizeEnv !== undefined ? parseBoolStrict(albumNormalizeEnv) : undefined;
                     const p = getCommonComponentEnvConfig('APPLEMUSIC');
                     if (nonEmptyObj(data) || nonEmptyObj(p)) {
                         configs.push({
@@ -864,6 +864,7 @@ export default class ScrobbleSources {
                             ...p,
                             options: transformPresetEnv('APPLEMUSIC', {
                                 recoverUnchangedTopHistory,
+                                normalizeAlbumName
                             } as AppleMusicSourceConfig['options'])
                         });
                     }

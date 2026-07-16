@@ -22,7 +22,8 @@
     },
     "options": {
       "logDiff": true,
-      "recoverUnchangedTopHistory": true
+      "recoverUnchangedTopHistory": true,
+      "normalizeAlbum": true
     }
   }
 ]

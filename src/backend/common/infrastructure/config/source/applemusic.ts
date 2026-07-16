@@ -37,6 +37,19 @@ export interface AppleMusicSourceConfig extends CommonSourceConfig {
          * @examples [true, false]
          */
         recoverUnchangedTopHistory?: boolean
+        /**
+         * Removes extraneous suffixes from album data
+         * 
+         * Apple Music add ' - EP' and ' - Single' to album names for EP's and singles, respectively.
+         * These suffixes are not part of the official names for the album and can cause issues in scrobble services
+         * or when matching metadata (musicbrainz).
+         * 
+         * When this option is true (default), Multi-scrobbler automatically removes these suffixes.
+         * 
+         * @default true
+         * @examples [true, false]
+         */
+        normalizeAlbum?: boolean
     }
 }
 

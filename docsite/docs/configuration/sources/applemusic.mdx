@@ -161,21 +161,102 @@ If you ever experience false positives (tracks being scrobbled that you didn't a
 
 #### Album name normalization
 
-The Apple Music API appends ` - EP` or ` - Single` to the album name for EPs and singles. Multi-Scrobbler strips this out so that the album name matches other sources.
+The Apple Music API appends ` - EP` or ` - Single` to the album name for EPs and singles. These suffixes are *not* part of the official names of the album and can cause issues when trying to scrobble or match metadata.
+
+By default, Multi-Scrobbler strips these suffixes out so only the official name is used.
+
+If you do not want this behavior it can be disabled with ENV `APPLEMUSIC_NORMALIZE_ALBUM=false` or File/AIO option `"normalizeAlbum": false`.
+
+<DetailsAdmo type="tip" summary="Stripping Suffix with User Stage">
+
+If you still want this stripping functionality but with more control over how it is applied you can use a [User Stage](/configuration/transforms/user).
+
+Here is an example of creating a User Stage to only strip suffixes for a specific scrobble client:
+
+<details>
+
+<summary>Example</summary>
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "user",
+      "name": "AppleAlbumStip",
+      "defaults": {
+        "album": [
+          "/ - (EP|Single)$/i"
+        ]
+      }
+    }
+  ]
+}
+```
+
+```json5 title="applemusic.json"
+{
+  {
+    "id": "myAppleMusic",
+    "name": "My Apple Music",
+    "data": {
+      // ...
+    },
+    // highlight-start
+    "options": {
+      "normalizeAlbum": false
+    }
+    // highlight-end
+  }
+}
+```
+
+```json5 title="lastfm.json"
+[
+  {
+    "name": "Foxx LFM Client",
+    "id": "myLastFmClient",
+    "enable": true,
+    "configureAs": "client",
+    "data": {
+      "apiKey": "a89cba1569901a0671d5a9875fed4be1",
+      "secret": "ec42e09d5ae0ee0f0816ca151008412a",
+      "redirectUri": "http://localhost:9078/lastfm/callback"
+    },
+    // highlight-start
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "user",
+            "name": "AppleAlbumStip",
+          }
+        ]
+      }
+    }
+    // highlight-end
+  }
+]
+```
+
+</details>
+
+</DetailsAdmo>
 
 ## Configuration Reference
 
 <Config config="AppleMusicSourceConfig" fileContent={AppleMusicConfig} name="applemusic">
-    | Environment Variable          | Required? | Default | Description                                          |
-    | ----------------------------- | --------- | ------- | ---------------------------------------------------- |
-    | `APPLEMUSIC_ID`               | Yes       |         | A unique ID for this source.                         |
-    | `APPLEMUSIC_MEDIA_USER_TOKEN` | Yes       |         | The media-user-token extracted from the browser.     |
-    | `APPLEMUSIC_KEY_ID`           | No        |         | Key ID from your MusicKit key.                       |
-    | `APPLEMUSIC_TEAM_ID`          | No        |         | Team ID from your Apple Developer account.           |
-    | `APPLEMUSIC_KEY_P8`           | No        |         | The contents of your MusicKit `.p8` private key file.|
-    | `APPLEMUSIC_TOKEN`            | No        |         | The authentication JWT extracted from the browser.   |
-    | `APPLEMUSIC_INTERVAL`         | No        | `60`    | Polling interval in seconds.                         |
-    | `APPLEMUSIC_ORIGIN_HEADER`     | No        |         | Origin header for API requests, e.g. `https://music.apple.com`. Required when using a browser token. |
-    | `APPLEMUSIC_RECOVER_UNCHANGED_TOP_HISTORY` | No | `true` | Apple Music deduplicates its history by bumping re-played tracks to the top. If you listen to Song A → Song B → Song A, the history changes from `[A]` to `[A, B]` (bumping A). MS detects this "top-rebound" to recover the intermediate play (B) and the re-listen (A). Disable this only if you see incorrect duplicate scrobbles. |
-    | `APPLEMUSIC_NAME`             | No        |         | A vanity name different than the ID.                 |
+    | Environment Variable                       | Required? | Default | Description                                                                                                                                                                                                                                                                                                                           |
+    | ------------------------------------------ | --------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+    | `APPLEMUSIC_ID`                            | Yes       |         | A unique ID for this source.                                                                                                                                                                                                                                                                                                          |
+    | `APPLEMUSIC_MEDIA_USER_TOKEN`              | Yes       |         | The media-user-token extracted from the browser.                                                                                                                                                                                                                                                                                      |
+    | `APPLEMUSIC_KEY_ID`                        | No        |         | Key ID from your MusicKit key.                                                                                                                                                                                                                                                                                                        |
+    | `APPLEMUSIC_TEAM_ID`                       | No        |         | Team ID from your Apple Developer account.                                                                                                                                                                                                                                                                                            |
+    | `APPLEMUSIC_KEY_P8`                        | No        |         | The contents of your MusicKit `.p8` private key file.                                                                                                                                                                                                                                                                                 |
+    | `APPLEMUSIC_TOKEN`                         | No        |         | The authentication JWT extracted from the browser.                                                                                                                                                                                                                                                                                    |
+    | `APPLEMUSIC_INTERVAL`                      | No        | `60`    | Polling interval in seconds.                                                                                                                                                                                                                                                                                                          |
+    | `APPLEMUSIC_ORIGIN_HEADER`                 | No        |         | Origin header for API requests, e.g. `https://music.apple.com`. Required when using a browser token.                                                                                                                                                                                                                                  |
+    | `APPLEMUSIC_RECOVER_UNCHANGED_TOP_HISTORY` | No        | `true`  | Apple Music deduplicates its history by bumping re-played tracks to the top. If you listen to Song A → Song B → Song A, the history changes from `[A]` to `[A, B]` (bumping A). MS detects this "top-rebound" to recover the intermediate play (B) and the re-listen (A). Disable this only if you see incorrect duplicate scrobbles. |
+    | `APPLEMUSIC_NORMALIZE_ALBUM`               | No        | `true`  | Strips extraneous `- EP` and `- Single` suffixes from album names                                                                                                                                                                                                                                                                                                                                      |
+    | `APPLEMUSIC_NAME`                          | No        |         | A vanity name different than the ID.                                                                                                                                                                                                                                                                                                  |
 </Config>

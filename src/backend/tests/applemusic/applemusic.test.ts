@@ -287,11 +287,13 @@ describe('Apple Music - Format Play Object', function () {
             durationInMillis: 200000
         } as any;
 
+        const formatOptions = {normalizeAlbum: true};
+
         // Run them through the formatter
-        const playEP = AppleMusicSource.formatPlayObj(trackEP);
-        const playSingle = AppleMusicSource.formatPlayObj(trackSingle);
-        const playNormal = AppleMusicSource.formatPlayObj(trackNormal);
-        const playLowercase = AppleMusicSource.formatPlayObj(trackLowercase);
+        const playEP = AppleMusicSource.formatPlayObj(trackEP, formatOptions);
+        const playSingle = AppleMusicSource.formatPlayObj(trackSingle, formatOptions);
+        const playNormal = AppleMusicSource.formatPlayObj(trackNormal, formatOptions);
+        const playLowercase = AppleMusicSource.formatPlayObj(trackLowercase, formatOptions);
 
         // Assert the suffixes are removed
         expect(playEP.data.album).to.equal('ALBUM A');
