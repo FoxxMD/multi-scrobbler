@@ -1,0 +1,262 @@
+---
+title: Apple Music
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import AppleMusicConfig from '!!raw-loader!@site/../config/applemusic.json.example';
+
+This Source **monitors your Apple Music listening history** via the official Apple Music API and scrobbles new activity to your configured [Clients](/configuration/clients). 
+
+Because of how the Apple Music API works, Multi-Scrobbler (MS) requires two different tokens to function: a **Media User Token** (identifies your personal account) and an **Authentication Token** (authorizes API access).
+
+### 1. Getting a Media User Token
+
+The `mediaUserToken` is required to access your recently played history. You can extract it directly from the Apple Music web app:
+
+1. Visit [music.apple.com](https://music.apple.com) in your browser and log in.
+2. Open your browser's Developer Tools (usually `F12` or <kbd>⌘</kbd> + <kbd>⌥</kbd> + <kbd>I</kbd>).
+3. Navigate to the **Application** tab (Chrome/Edge) or **Storage** tab (Safari/Firefox).
+4. Expand **Cookies** in the left sidebar and select `https://music.apple.com`.
+5. Find the cookie named `media-user-token` and copy its value (it typically starts with `0.`).
+
+:::caution[Token Expiry]
+The `mediaUserToken` will eventually expire. If Multi-Scrobbler begins throwing authentication errors in the logs, simply repeat these steps to obtain and configure a fresh token.
+:::
+
+### 2. Authentication
+
+To authorize API access, Multi-Scrobbler requires an Authentication Token (JWT). Because the official Apple Music API is designed for developers, there are two ways to provide this token depending on your situation:
+
+* **Browser Token (Free & Most Common):** Best for 99% of users. You can easily extract a temporary token from the Apple Music web player without needing an Apple Developer account.
+* **MusicKit Key (Requires Paid Apple Developer Account):** If you happen to be enrolled in the paid Apple Developer Program ($99/year), you can provide a private key to automatically generate permanent tokens.
+
+Choose your preferred method below:
+
+<Tabs groupId="appleMusicAuth" queryString>
+    <TabItem value="token" label="Browser Token (Free)">
+
+        Since most users don't have a paid developer account, extracting the token from the web player is the standard approach.
+
+        Behind the scenes, the Apple Music website makes a lot of background requests, which can make finding the right token confusing. To filter out the noise and grab the exact token we need, follow the steps for your browser below:
+
+        <details>
+        <summary>Chrome, Edge & Firefox</summary>
+
+        1. Visit [music.apple.com](https://music.apple.com) and log in.
+        2. Open Developer Tools (`F12` or `Ctrl+Shift+I` / <kbd>⌘</kbd> + <kbd>⌥</kbd> + <kbd>I</kbd>) and navigate to the **Network** tab.
+        3. In the filter box at the top left, paste exactly: `https://amp-api.music.apple.com/v1/me/account` (**Label 1**).
+        4. Click the **Fetch/XHR** filter button to hide irrelevant requests (**Label 2**).
+        5. Reload the page (**Label 3**).
+        6. Under the "Name" column, click the request starting with `account?meta=` (**Label 4**).
+        7. In the panel that opens, scroll down to the **Request Headers** section.
+        8. Find the `authorization` header. Copy the long string of text **after** the `Bearer ` prefix (**Label 5**).
+
+        ![Chrome Network Tab Instructions](../applemusic_chrome_devtools.png)
+
+        </details>
+
+        <details>
+        <summary>Safari</summary>
+
+        Before you can extract the token in Safari, you must enable developer tools.
+
+        {/* This weird formatting is because ⌘ is usually incredibly tiny */}
+        1. Open Safari Settings (<kbd>⌘</kbd> + <kbd>,</kbd>), navigate to the **Advanced** tab, and check **"Show features for web developers"** at the very bottom.
+        
+        ![Safari Advanced Settings](../applemusic_safari_settings.png)
+        
+        2. Visit [music.apple.com](https://music.apple.com) and log in.
+        3. Open the Web Inspector (<kbd>⌘</kbd>+<kbd>⌥</kbd>+<kbd>I</kbd> or Develop > Show Web Inspector) and navigate to the **Network** tab.
+        4. In the filter bar on the left side of the inspector, paste exactly: `https://amp-api.music.apple.com/v1/me/account` (**Label 1**).
+        5. Reload the page (**Label 2**).
+        6. Click the `account` request that appears in the Name list (**Label 3**).
+        7. In the details sidebar, look under the **Request** section for the `Authorization` header. Copy the long string of text **after** the `Bearer ` prefix (**Label 4**).
+
+        ![Safari Network Tab Instructions](../applemusic_safari_devtools.png)
+
+        </details>
+        
+        <br />
+
+        Once you have your token, add it to your configuration file along with the origin header:
+
+        ```json title="applemusic.json"
+        {
+            "data": {
+                "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiIsIm...",
+                "mediaUserToken": "your-media-user-token-here",
+                "origin": "https://music.apple.com"
+            }
+        }
+        ```
+
+        :::info[Origin Header Required]
+        When using a JWT extracted from the browser, Apple requires the request to match the domain it was issued to. You **must** include the `origin` field in your config as shown above.
+        :::
+
+        *Note: Browser-generated JWTs are valid for a maximum of 35 days and must be updated manually when they expire.*
+
+    </TabItem>
+    <TabItem value="key" label="MusicKit Key (Paid Account)">
+
+        :::warning[Apple Developer Account Required]
+        To generate JWTs automatically, you must be enrolled in the paid [Apple Developer Program](https://developer.apple.com/programs/) ($99/year) and create a MusicKit key. If you don't have an account, use the **Browser Token (Free)** tab instead.
+        :::
+
+        To generate JWTs automatically and avoid manual token refreshes, you need an Apple Music API key:
+
+        1. Go to the [Apple Developer portal](https://developer.apple.com/account/resources/authkeys/list) and create a **MusicKit** key.
+        2. Download the `.p8` file — this is your private key.
+        3. Note your **Key ID** and **Team ID** (found in your Apple Developer account Membership details).
+
+        Add these details to your config:
+
+        ```json title="applemusic.json"
+        {
+            "data": {
+                "key": {
+                    "id": "2HPSNJZ88N",
+                    "teamId": "SN6YASW8G4",
+                    "p8": "-----BEGIN PRIVATE KEY-----\nMIGTAgEAMBMGByqGSM49AgEG...-----END PRIVATE KEY-----"
+                },
+                "mediaUserToken": "your-media-user-token-here"
+            }
+        }
+        ```
+
+        :::tip
+        When pasting the contents of your `.p8` file into JSON, make sure to replace physical line breaks with `\n` so it remains a valid, single-line JSON string.
+        :::
+
+    </TabItem>
+</Tabs>
+
+---
+
+### How Multi-Scrobbler handles Apple Music quirks
+
+#### Timestamp Estimation
+
+The Apple Music API **does not provide timestamps** for when tracks were played. Multi-Scrobbler estimates play times by taking the current time and subtracting track durations backwards:
+* The most recent track is assumed to have finished playing **now**.
+* Each older track is estimated to have played `duration` seconds before the previous one.
+
+*For the most accurate scrobble timestamps, it is highly recommended to keep the polling interval (`APPLEMUSIC_INTERVAL`) low (the default is 60 seconds).*
+
+#### Duplicate Play Recovery
+
+The Apple Music history API strictly deduplicates tracks. Instead of showing the same song multiple times in a row, it simply bumps the re-played track back to the #1 spot and removes the older entry. 
+
+For example, if you listen to **Song A** → **Song B**, your history is `[Song B, Song A]`. If you then listen to **Song A** again, the API returns `[Song A, Song B]` (Song A was bumped to the top). 
+
+If Multi-Scrobbler polled when the top track was Song A, and polls again after it's bumped back to the top, the top track appears functionally unchanged. This usually confuses standard scrobblers into ignoring the update entirely. By default, MS correctly detects this "top-rebound" pattern, extracts the intermediate tracks that were squeezed in (Song B), and scrobbles Song A again as a re-listen. 
+
+*Note: Because of this strict deduplication, **"pure loops"** (listening to Song A continuously on repeat without playing anything else in between) cannot be tracked. The history list never changes shape, so MS has no way of knowing it was played again.*
+
+If you ever experience false positives (tracks being scrobbled that you didn't actually re-listen to), you can disable this recovery behavior with `"recoverUnchangedTopHistory": false` in your config options or by setting the `APPLEMUSIC_RECOVER_UNCHANGED_TOP_HISTORY=false` env var.
+
+#### Album name normalization
+
+The Apple Music API appends ` - EP` or ` - Single` to the album name for EPs and singles. These suffixes are *not* part of the official names of the album and can cause issues when trying to scrobble or match metadata.
+
+By default, Multi-Scrobbler strips these suffixes out so only the official name is used.
+
+If you do not want this behavior it can be disabled with ENV `APPLEMUSIC_NORMALIZE_ALBUM=false` or File/AIO option `"normalizeAlbum": false`.
+
+<DetailsAdmo type="tip" summary="Stripping Suffix with User Stage">
+
+If you still want this stripping functionality but with more control over how it is applied you can use a [User Stage](/configuration/transforms/user).
+
+Here is an example of creating a User Stage to only strip suffixes for a specific scrobble client:
+
+<details>
+
+<summary>Example</summary>
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "user",
+      "name": "AppleAlbumStip",
+      "defaults": {
+        "album": [
+          "/ - (EP|Single)$/i"
+        ]
+      }
+    }
+  ]
+}
+```
+
+```json5 title="applemusic.json"
+{
+  {
+    "id": "myAppleMusic",
+    "name": "My Apple Music",
+    "data": {
+      // ...
+    },
+    // highlight-start
+    "options": {
+      "normalizeAlbum": false
+    }
+    // highlight-end
+  }
+}
+```
+
+```json5 title="lastfm.json"
+[
+  {
+    "name": "Foxx LFM Client",
+    "id": "myLastFmClient",
+    "enable": true,
+    "configureAs": "client",
+    "data": {
+      "apiKey": "a89cba1569901a0671d5a9875fed4be1",
+      "secret": "ec42e09d5ae0ee0f0816ca151008412a",
+      "redirectUri": "http://localhost:9078/lastfm/callback"
+    },
+    // highlight-start
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "user",
+            "name": "AppleAlbumStip",
+          }
+        ]
+      }
+    }
+    // highlight-end
+  }
+]
+```
+
+</details>
+
+</DetailsAdmo>
+
+## Configuration Reference
+
+<Config config="AppleMusicSourceConfig" fileContent={AppleMusicConfig} name="applemusic">
+    | Environment Variable                       | Required? | Default | Description                                                                                                                                                                                                                                                                                                                           |
+    | ------------------------------------------ | --------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+    | `APPLEMUSIC_ID`                            | Yes       |         | A unique ID for this source.                                                                                                                                                                                                                                                                                                          |
+    | `APPLEMUSIC_MEDIA_USER_TOKEN`              | Yes       |         | The media-user-token extracted from the browser.                                                                                                                                                                                                                                                                                      |
+    | `APPLEMUSIC_KEY_ID`                        | No        |         | Key ID from your MusicKit key.                                                                                                                                                                                                                                                                                                        |
+    | `APPLEMUSIC_TEAM_ID`                       | No        |         | Team ID from your Apple Developer account.                                                                                                                                                                                                                                                                                            |
+    | `APPLEMUSIC_KEY_P8`                        | No        |         | The contents of your MusicKit `.p8` private key file.                                                                                                                                                                                                                                                                                 |
+    | `APPLEMUSIC_TOKEN`                         | No        |         | The authentication JWT extracted from the browser.                                                                                                                                                                                                                                                                                    |
+    | `APPLEMUSIC_INTERVAL`                      | No        | `60`    | Polling interval in seconds.                                                                                                                                                                                                                                                                                                          |
+    | `APPLEMUSIC_ORIGIN_HEADER`                 | No        |         | Origin header for API requests, e.g. `https://music.apple.com`. Required when using a browser token.                                                                                                                                                                                                                                  |
+    | `APPLEMUSIC_RECOVER_UNCHANGED_TOP_HISTORY` | No        | `true`  | Apple Music deduplicates its history by bumping re-played tracks to the top. If you listen to Song A → Song B → Song A, the history changes from `[A]` to `[A, B]` (bumping A). MS detects this "top-rebound" to recover the intermediate play (B) and the re-listen (A). Disable this only if you see incorrect duplicate scrobbles. |
+    | `APPLEMUSIC_NORMALIZE_ALBUM`               | No        | `true`  | Strips extraneous `- EP` and `- Single` suffixes from album names                                                                                                                                                                                                                                                                                                                                      |
+    | `APPLEMUSIC_NAME`                          | No        |         | A vanity name different than the ID.                                                                                                                                                                                                                                                                                                  |
+</Config>

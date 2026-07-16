@@ -32,8 +32,9 @@ import type {WebScrobblerData, WebScrobblerSourceConfig} from "../common/infrast
 import type {YTMusicData, YTMusicSourceConfig} from "../common/infrastructure/config/source/ytmusic.ts";
 import type {YandexMusicBridgeData, YandexMusicBridgeSourceConfig} from "../common/infrastructure/config/source/ymbridge.ts";
 import type {SonosData, SonosSourceConfig} from "../common/infrastructure/config/source/sonos.ts";
+import type {AppleMusicSourceConfig} from "../common/infrastructure/config/source/applemusic.ts";
 import type { WildcardEmitter } from "../common/WildcardEmitter.ts";
-import { nonEmptyObj, parseBool } from "../utils.ts";
+import { nonEmptyObj, parseBool, parseBoolStrict } from "../utils.ts";
 import { removeUndefinedKeys } from '../../core/DataUtils.ts';
 import { getCommonComponentEnvConfig, readJson } from '../utils/DataUtils.ts';
 import { validateJson } from "../utils/ValidationUtils.ts";
@@ -170,6 +171,8 @@ export default class ScrobbleSources {
                     return "RockskySourceConfig";
                 case 'sonos':
                     return 'SonosSourceConfig';
+                case 'applemusic':
+                    return 'AppleMusicSourceConfig';
             }
     }
 
@@ -829,6 +832,43 @@ export default class ScrobbleSources {
                         });
                     }
                 }    break;
+                case 'applemusic': {
+                    const key = (() => {
+                        const id = process.env.APPLEMUSIC_KEY_ID;
+                        const teamId = process.env.APPLEMUSIC_TEAM_ID;
+                        const p8 = process.env.APPLEMUSIC_KEY_P8;
+                        if (id !== undefined && teamId !== undefined && p8 !== undefined) {
+                            return { id, teamId, p8 };
+                        }
+                        return undefined;
+                    })();
+                    const data = removeUndefinedKeys({
+                        mediaUserToken: process.env.APPLEMUSIC_MEDIA_USER_TOKEN,
+                        token: process.env.APPLEMUSIC_TOKEN,
+                        key,
+                        origin: nonEmptyStringOrDefault(process.env.APPLEMUSIC_ORIGIN_HEADER, undefined),
+                    }, false);
+                    const recoverEnv = nonEmptyStringOrDefault(process.env.APPLEMUSIC_RECOVER_UNCHANGED_TOP_HISTORY);
+                    const recoverUnchangedTopHistory = recoverEnv !== undefined ? parseBoolStrict(recoverEnv) : undefined;
+                    const albumNormalizeEnv = nonEmptyStringOrDefault(process.env.APPLEMUSIC_NORMALIZE_ALBUM);
+                    const normalizeAlbumName = albumNormalizeEnv !== undefined ? parseBoolStrict(albumNormalizeEnv) : undefined;
+                    const p = getCommonComponentEnvConfig('APPLEMUSIC');
+                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
+                        configs.push({
+                            type: 'applemusic',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: data,
+                            ...p,
+                            options: transformPresetEnv('APPLEMUSIC', {
+                                recoverUnchangedTopHistory,
+                                normalizeAlbumName
+                            } as AppleMusicSourceConfig['options'])
+                        });
+                    }
+                }    break;
                 case 'sonos': {
                     const data: SonosData = removeUndefinedKeys<SonosData>({
                         host: process.env.SONOS_HOST,
@@ -1135,6 +1175,11 @@ export default class ScrobbleSources {
             case 'sonos': {
                 const {SonosSource} = (await import('./SonosSource.ts'));
                 newSource = await new SonosSource(name, compositeConfig as SonosSourceConfig, this.internalConfig, this.emitter);
+                break;
+            }
+            case 'applemusic': {
+                const AppleMusicSource = (await import('./AppleMusicSource.ts')).default;
+                newSource = await new AppleMusicSource(name, compositeConfig as AppleMusicSourceConfig, this.internalConfig, this.emitter);
                 break;
             }
             default:

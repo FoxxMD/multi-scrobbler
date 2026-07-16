@@ -12,6 +12,7 @@ alt="multi-scrobbler logo" width="180" height="180">
 A dockerized app that monitors your music listening activity from *everywhere* and scrobbles it *anywhere*.
 
 * Supports scrobbling from many [**Sources**](https://docs.multi-scrobbler.app/configuration/sources)
+    * [Apple Music](https://docs.multi-scrobbler.app/configuration/sources/applemusic/?configType=file)
     * [Azuracast](https://docs.multi-scrobbler.app/configuration/sources/azuracast)
     * [Deezer](https://docs.multi-scrobbler.app/configuration/sources/deezer)
     * [Google Cast (Chromecast)](https://docs.multi-scrobbler.app/configuration/sources/google-cast)

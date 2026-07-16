@@ -15,7 +15,7 @@ export interface LeveledLogData extends LogDataPretty {
     levelLabel: string
 }
 
-export const lowGranularitySources: SourceType[] = ['subsonic', 'ytmusic'];
+export const lowGranularitySources: SourceType[] = ['subsonic', 'ytmusic', 'applemusic'];
 
 export interface ComponentIdentifier {
     type: SourceType | ClientType

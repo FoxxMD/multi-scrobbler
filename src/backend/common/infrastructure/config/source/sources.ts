@@ -27,6 +27,7 @@ import type {TealSourceAIOConfig, TealSourceConfig} from "./tealfm.ts";
 import type {RockskySourceAIOConfig, RockskySourceConfig} from "./rocksky.ts";
 import type {LibrefmSouceAIOConfig, LibrefmSourceConfig} from "./librefm.ts";
 import type {SonosSourceAIOConfig, SonosSourceConfig} from "./sonos.ts";
+import type {AppleMusicSourceAIOConfig, AppleMusicSourceConfig} from "./applemusic.ts";
 
 
 export type SourceConfig =
@@ -58,7 +59,8 @@ export type SourceConfig =
     | KoitoSourceConfig
     | TealSourceConfig
     | RockskySourceConfig
-    | SonosSourceConfig;
+    | SonosSourceConfig
+    | AppleMusicSourceConfig;
 
 export type SourceAIOConfig =
     SpotifySourceAIOConfig
@@ -89,7 +91,8 @@ export type SourceAIOConfig =
     | KoitoSourceAIOConfig
     | TealSourceAIOConfig
     | RockskySourceAIOConfig
-    | SonosSourceAIOConfig;
+    | SonosSourceAIOConfig
+    | AppleMusicSourceAIOConfig;
 
 /** Used for docusaurus schemas
  *  We need to show "array of" for each type of config when looking at File Config
@@ -128,6 +131,7 @@ export type KoitoSourceConfigs = KoitoSourceConfig[];
 export type TealSourceConfigs = TealSourceConfig[];
 export type RockskySourceConfigs = RockskySourceConfig[];
 export type SonosSourceConfigs = SonosSourceConfig[];
+export type AppleMusicSourceConfigs = AppleMusicSourceConfig[];
 
 
 export const atomicSourceInterfaces = [
@@ -159,7 +163,8 @@ export const atomicSourceInterfaces = [
     'KoitoSourceConfig',
     'TealSourceConfig',
     'RockskySourceConfig',
-    'SonosSourceConfig'
+    'SonosSourceConfig',
+    'AppleMusicSourceConfig'
 ];
 
 export const sourceInterfaces = [
