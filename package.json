@@ -149,6 +149,7 @@
   },
   "devDependencies": {
     "@atcute/lex-cli": "^3.1.0",
+    "@chakra-ui/cli": "^3.36.0",
     "@chakra-ui/react": "^3.36.0",
     "@chromatic-com/storybook": "^5.1.2",
     "@dbus-types/notifications": "^0.0.5",
@@ -232,7 +233,7 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-error-boundary": "^6.1.1",
-    "react-icons": "^5.6.0",
+    "react-icons": "^5.7.0",
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.15.0",
     "react-virtuoso": "^4.18.7",

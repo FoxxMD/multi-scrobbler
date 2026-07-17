@@ -218,7 +218,7 @@ export const FloatingLogs = (props: {streamable?: boolean}) => {
             lazyMount
         >
             <FloatingPanel.Trigger asChild>
-                <TerminalButton  />
+                <TerminalButton hideBelow="sm" />
             </FloatingPanel.Trigger>
             <Portal>
                 <FloatingPanel.Positioner zIndex="1400">

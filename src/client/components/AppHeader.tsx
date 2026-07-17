@@ -12,6 +12,7 @@ import { ErrorAlert } from "./ErrorAlert";
 import { ExternaLinksMenu } from "./ExternaLinksMenu";
 import { FloatingLogs } from "./LogsNext";
 import { ToggleTip } from "./ToggleTip";
+import { ColorModeButton } from './Color-Mode';
 
 export const AppTitle = (props: { fetchable?: boolean } = {}) => {
     const {
@@ -123,12 +124,10 @@ const SSEStatusLive = () => {
 export const AppHeader = (props: PropsWithChildren<{ fetchable?: boolean }>) => (
         <Flex justify="space-between">
             <AppTitle fetchable={props.fetchable} />
-            <Flex justify="flex-start" gap="1" alignItems="flex-end">
-                <ExternaLinksMenu hideBelow="sm"/>
-                <Box marginRight="2">
-                    <SSEStatus live={props.fetchable}/>
-                </Box>
+            <Flex justify="flex-start" gap="1.5" alignItems="flex-end">
+                <SSEStatus live={props.fetchable}/>
                 <FloatingLogs streamable={props.fetchable}/>
+                <ColorModeButton/>
             </Flex>
         </Flex>
     )
