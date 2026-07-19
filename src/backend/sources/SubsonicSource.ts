@@ -1,5 +1,5 @@
 import * as crypto from 'crypto';
-import dayjs from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
 import type EventEmitter from "events";
 import type { Request } from 'superagent';
@@ -21,6 +21,7 @@ import type {Logger} from '@foxxmd/logging';
 import { baseFormatPlayObj } from '../utils/PlayTransformUtils.ts';
 import { noRetryOnUpstreamError, tryApiCall } from '../utils/RequestUtils.ts';
 import { artistNameToCredit } from '../../core/StringUtils.ts';
+import { timeToHumanTimestamp, todayAwareFormat } from '../../core/TimeUtils.ts';
 
 dayjs.extend(isSameOrAfter);
 
@@ -278,6 +279,23 @@ export class SubsonicSource extends MemorySource {
         }
     }
 
+    protected filterExpiredNowPlaying(plays: PlayObject[]): PlayObject[]{
+        return plays.map(x => SubsonicSource.formatPlayObj(x, {sourceData: this.sourceData}))
+                    .filter(play => {
+                        const {artists = [], duration, playDate, track} = play.data;
+                        if (duration === undefined || playDate === undefined) {
+                            return true;
+                        }
+                        if (!isSubsonicNowPlayingExpired(play)) {
+                            return true;
+                        }
+                        const tolerance = getSubsonicNowPlayingTolerance(duration);
+                        const expiresAt = playDate.add(duration + tolerance, 'second');
+                        this.logger.trace(`Ignoring Subsonic now-playing entry as inactive: '${artists.map(x => x.name).join(', ')} - ${track}'. Estimated start: ${todayAwareFormat(playDate)}; track duration: ${timeToHumanTimestamp(duration * 1000)}. The entry expired at ${todayAwareFormat(expiresAt)}.`);
+                        return false;
+                    });
+    }
+
     doAuthentication = async () => {
         const {url} = this.config.data;
         try {
@@ -298,8 +316,10 @@ export class SubsonicSource extends MemorySource {
                 entry = []
             } = {}
         } = resp;
+        // Some servers continue reporting the same song as playing after playback stops. Ignore it so it cannot be treated as a new repeat session.
+        const active = this.filterExpiredNowPlaying(entry);
         // sometimes subsonic sources will return the same track as being played twice on the same player, need to remove this so we don't duplicate plays
-        const deduped = removeDuplicates(entry.map(x => SubsonicSource.formatPlayObj(x, {sourceData: this.sourceData})));
+        const deduped = removeDuplicates(active);
         const userFiltered = this.usersAllow.length == 0 ? deduped : deduped.filter(x => x.meta.user === undefined || this.usersAllow.map(x => x.toLocaleLowerCase()).includes(x.meta.user.toLocaleLowerCase()));
         return await this.processRecentPlays(userFiltered);
     }
@@ -366,3 +386,20 @@ export const identifiersFromResponse = (data: SubsonicResponseCommon) => {
     }
     return identifiers.join(' | ');
 }
+
+export const isSubsonicNowPlayingExpired = (play: PlayObject, now: Dayjs = dayjs()): boolean => {
+    const {duration, playDate} = play.data;
+    if (duration === undefined || duration <= 0 || playDate === undefined) {
+        return false;
+    }
+    const tolerance = getSubsonicNowPlayingTolerance(duration);
+    return now.isAfter(playDate.add(duration + tolerance, 'second'));
+}
+
+/**
+ * Subsonic only reports the track start in whole minutes. Allow for that lost precision before treating a lingering now-playing row as stale.
+ */
+const getSubsonicNowPlayingTolerance = (duration: number): number => {
+    const nowPlayingMinToleranceTimeSeconds = 60;
+    return nowPlayingMinToleranceTimeSeconds + (duration * 0.05)
+};
