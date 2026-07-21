@@ -56,6 +56,7 @@ RUN npm install -g concurrently
 ARG data_dir=/config
 VOLUME $data_dir
 ENV CONFIG_DIR=$data_dir
+ENV DATA_DIR=$data_dir
 
 COPY docker/root /
 

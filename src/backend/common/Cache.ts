@@ -10,7 +10,7 @@ import timezone from 'dayjs/plugin/timezone.js';
 import utc from 'dayjs/plugin/utc.js';
 import clone from 'clone';
 import { childLogger, type Logger } from '@foxxmd/logging';
-import { projectDir } from './index.ts';
+import { getConfigDir } from './index.ts';
 import path from 'path';
 import { cacheFunctions } from "@foxxmd/regex-buddy-core";
 import { fileOrDirectoryIsWriteable } from '../utils/FSUtils.ts';
@@ -18,7 +18,6 @@ import { asCacheConfig, type CacheAuthProvider, type CacheConfig, type CacheConf
 import { Typeson } from 'typeson';
 import { builtin } from 'typeson-registry';
 import { loggerNoop } from './MaybeLogger.ts';
-const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
 import type { Gauge } from 'prom-client';
 import prom from 'prom-client';
 import { nonEmptyStringOrDefault } from '../../core/StringUtils.ts';
@@ -277,11 +276,12 @@ export class MSCache {
                 throw e;
             }
         }
+        const confDir = getConfigDir();
         if (config.provider === 'file') {
-            logger.debug(`Building file cache from ${path.join(config.connection ?? configDir, `${namespace}.cache`)}`);
+            logger.debug(`Building file cache from ${path.join(config.connection ?? confDir, `${namespace}.cache`)}`);
 
             try {
-                const [keyvFile] = await initFileCache({ ...config, cacheDir: config.connection ?? configDir, cacheId: `${namespace}.cache` }, {ttl: config.ttl}, logger);
+                const [keyvFile] = await initFileCache({ ...config, cacheDir: config.connection ?? confDir, cacheId: `${namespace}.cache` }, {ttl: config.ttl}, logger);
                 return keyvFile;
             } catch (e) {
                 throw e;
@@ -538,7 +538,7 @@ export const parseUserConfig = (config: CacheConfigUser = {}, parentLogger: Logg
             // } = {},
             scrobble: {
                 provider: sProvider = (process.env.CACHE_SCROBBLE as (CacheScrobbleProvider | undefined) ?? 'file'),
-                connection = (process.env.CACHE_SCROBBLE_CONN ?? configDir),
+                connection = (process.env.CACHE_SCROBBLE_CONN ?? getConfigDir()),
                 ...restScrobble
             } = {},
             auth: {
@@ -563,7 +563,7 @@ export const parseUserConfig = (config: CacheConfigUser = {}, parentLogger: Logg
         if(authProvider === 'valkey') {
             if(valkey === undefined) {
                 logger.warn(`Auth Provider set to 'valkey' but not valkey connection string was not provided, falling back to file.`);
-                authConn = configDir;
+                authConn = getConfigDir();
                 authProvider = 'file';
             } else {
                 authConn = valkey;
@@ -572,7 +572,7 @@ export const parseUserConfig = (config: CacheConfigUser = {}, parentLogger: Logg
             if(authProvider !== 'file') {
                 logger.warn(`Unsupported provider given for auth: ${authProvider}`);
             }
-            authConn = configDir;
+            authConn = getConfigDir();
             authProvider = 'file';
         }
 

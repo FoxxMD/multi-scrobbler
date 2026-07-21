@@ -1,4 +1,4 @@
-import { configDir } from '../index.ts';
+import { getDataDir } from '../index.ts';
 import * as path from 'path';
 import { childLogger, type Logger } from '@foxxmd/logging';
 import { loggerNoop } from '../MaybeLogger.ts';
@@ -19,7 +19,7 @@ export const getDbPath = (name: string = 'ms', workingDirectory?: string): strin
     if (isMemoryDb(name)) {
         return MEMORY_DB_NAME;
     }
-    return path.resolve(workingDirectory ?? configDir, `${name}.db`);
+    return path.resolve(workingDirectory ?? getDataDir(), `${name}.db`);
 }
 
 export const getDbBackupPath = (dbPath: string, suffix?: string): string => {

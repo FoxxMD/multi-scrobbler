@@ -5,6 +5,11 @@ import type {ErrorObject} from "serialize-error";
 import type { FlowControlTerm, TransformHook } from "./Transform.ts";
 import type {Changeset} from "json-diff-ts";
 import type {IParseBaseOptions} from 'qs'; 
+import { fileURLToPath } from 'url';
+import * as path from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+export const projectRootDir = path.resolve(__filename, '../../../');
 
 export type ComponentTypeClient = 'client';
 export const COMPONENT_TYPE_CLIENT: ComponentTypeClient = 'client';

@@ -3,7 +3,7 @@ import type * as AjvNS from "ajv";
 import Ajv from "ajv";
 import f from "ajv-formats"
 import { resolve } from "path";
-import { projectDir } from "../common/index.ts";
+import { projectRootDir } from "../../core/Atomic.ts";
 
 const ajvInstances: Record<string, AjvNS.Ajv> = {};
 
@@ -91,9 +91,9 @@ const getSchemaFunc = async () => {
         return schemaFetchFunc;
     }
     const useCompiled = process.env.NODE_ENV === 'production' || process.env.COMPILED_VALIDATION === 'true';
-    const schemaFuncPath = resolve(projectDir, useCompiled ? compiledPath : dynamicPath);
+    const schemaFuncPath = resolve(projectRootDir, useCompiled ? compiledPath : dynamicPath);
     try {
-        const module = await import(resolve(projectDir, schemaFuncPath))
+        const module = await import(resolve(projectRootDir, schemaFuncPath))
         schemaFetchFunc = module.getSchemaForType;
     } catch (e) {
         throw new Error(`Could not load module from path: ${schemaFuncPath}`, {cause: e});

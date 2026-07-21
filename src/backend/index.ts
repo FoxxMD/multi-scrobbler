@@ -8,9 +8,8 @@ import isToday from 'dayjs/plugin/isToday.js';
 import timezone from 'dayjs/plugin/timezone.js';
 import week from 'dayjs/plugin/weekOfYear.js';
 import utc from 'dayjs/plugin/utc.js';
-import * as path from "path";
 import { SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
-import { projectDir } from "./common/index.ts";
+import { getConfigDir, getDataDir } from "./common/index.ts";
 import type {AIOConfig} from "./common/infrastructure/config/aioConfig.ts";
 import { appLogger, initLogger as getInitLogger } from "./common/logging.ts";
 import { getRoot } from "./ioc.ts";
@@ -26,6 +25,7 @@ import { getDbPath } from './common/database/Database.ts';
 import { createRetentionCleanupTask } from './tasks/retentionCleanup.ts';
 import { parseUserConfig } from './common/Cache.ts';
 import { nonEmptyStringOrDefault } from '../core/StringUtils.ts';
+import { createDir, fileExists } from './utils/FSUtils.ts';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -87,15 +87,38 @@ process.on('SIGINT', async () => {
 })
 
 
-const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
+const configDir = getConfigDir();
+const dataDir = getDataDir();
 
     try {
-        initLogger.verbose(`Config Dir ENV: ${process.env.CONFIG_DIR} -> Resolved: ${configDir}`)
+        initLogger.info(`Config Dir ENV : ${process.env.CONFIG_DIR} -> Resolved: ${configDir}`);
+        try {
+            const exists = fileExists(configDir);
+            if(!exists) {
+                initLogger.verbose(`Config Dir does not exist, creating now...`);
+                await createDir(configDir);
+            }
+        } catch (e) {
+            initLogger.warn(new Error('Could not access config dir. It is likely your config files will not be able to be read.', {cause: e}));
+        }
+        initLogger.info(`Data Dir ENV   : ${process.env.DATA_DIR} -> Resolved: ${getDataDir()}`);
+        try {
+            const exists = fileExists(dataDir);
+            if(!exists) {
+                initLogger.verbose(`Data Dir does not exist, creating now...`);
+                await createDir(dataDir);
+            }
+        } catch (e) {
+            initLogger.warn(new Error('Could not access data dir. It is likely your data files will not be able to be read.', {cause: e}));
+        }
         // try to read a configuration file
         let appConfigFail: Error | undefined = undefined;
         let config = {};
         try {
             config = await readJson(`${configDir}/config.json`, {throwOnNotFound: false, logger: childLogger(initLogger, 'Secrets')});
+            if(config === undefined) {
+                initLogger.verbose(`No AIO config found at ${configDir}/config.json`);
+            }
         } catch (e) {
             appConfigFail = e;
         }
@@ -127,7 +150,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         
         const dbPath = getDbPath('ms');
         logger.info(`Using database at ${db}`);
-        const [migratedDb, isNew] = await getMigratedDb(dbPath, {logger});
+        const [migratedDb, _] = await getMigratedDb(dbPath, {logger});
         db = migratedDb;
 
         const root = getRoot({
