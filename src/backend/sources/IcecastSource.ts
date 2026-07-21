@@ -30,6 +30,8 @@ export class IcecastSource extends MemorySource {
     streamError?: Error;
     streaming: boolean = false;
 
+    override monitoringActivityDefault = false;
+
     constructor(name: any, config: IcecastSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         const {
             data,
@@ -38,7 +40,7 @@ export class IcecastSource extends MemorySource {
         const {
             ...rest
         } = data || {};
-        super('icecast', name, { ...config, options: {systemScrobble: false, ...options}, data: { ...rest } }, internal, emitter);
+        super('icecast', name, config, internal, emitter);
 
         this.requiresAuth = false;
         this.canPoll = true;

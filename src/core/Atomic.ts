@@ -790,3 +790,10 @@ export const isClientType = (data: string): data is ClientType => {
     return clientTypes.includes(data as ClientType);
 };
 
+export type MonitoringOrigin = 'user' | 'system';
+export const MONITORING_ORIGIN_USER: MonitoringOrigin = 'user';
+export const MONITORING_ORIGIN_SYSTEM: MonitoringOrigin = 'system';
+export interface MonitoringStatus {
+    monitoring: boolean
+    origin: MonitoringOrigin
+}

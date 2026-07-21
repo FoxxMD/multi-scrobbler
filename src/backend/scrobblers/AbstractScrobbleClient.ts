@@ -1143,6 +1143,14 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         let deadQueueEntity: QueueStateSelect;
 
         try {
+
+            // want to fail scrobbles that are being *ingested* by component
+            // but not those that have already failed but will be dead queue processed
+            // since dead queued scrobbles are likely from a different time period that had monitoring
+            const monitoringStatus = this.getMonitoringStatus();
+            if(!monitoringStatus.monitoring) {
+                throw new SimpleError(`Monitoring is disabled by ${capitalize(monitoringStatus.origin)}`);
+            }
             
             if (this.upstreamRefresh.refreshEnabled) {
                 try {

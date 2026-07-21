@@ -1,7 +1,7 @@
 import type { FileLogOptions, LogLevel } from "@foxxmd/logging";
 
 import type { PlayTransformOptions } from "../../../../../core/Transform.ts";
-import type { CommonConfig, RequestRetryOptions } from "../common.ts";
+import type { CommonConfig, MonitorOptions, RequestRetryOptions } from "../common.ts";
 import type { RetentionConfig } from "../database.ts";
 import type { DurationValue } from "../../Atomic.ts";
 
@@ -44,7 +44,7 @@ export interface ScrobbleThresholds {
     percent?: number | null
 }
 
-export interface CommonSourceOptions extends SourceRetryOptions {
+export interface CommonSourceOptions extends SourceRetryOptions, MonitorOptions {
     /**
      * * If this source has INGRESS to MS (sends a payload, rather than MS GETTING requesting a payload) then setting this option to true will make MS log the payload JSON to DEBUG output
      * * If this source is POLLING then it will log the raw data for each unique track/response the first time it is seen
@@ -112,15 +112,6 @@ export interface CommonSourceOptions extends SourceRetryOptions {
     playTransform?: PlayTransformOptions
 
     retention?: RetentionConfig<DurationValue>
-}
-
-export interface ManualListeningOptions {
-    /** 
-     * For Sources that support manual listening, should MS default to scrobbling when no user interaction has occurred?
-     * 
-     * If not specified MS will use a Source's specific behavior, see Source's documentation.
-     */
-    systemScrobble?: boolean
 }
 
 export interface CommonSourceData  {

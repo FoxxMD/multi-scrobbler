@@ -88,3 +88,12 @@ export interface PollingOptions {
      orphanedAfter?: number
 }
 
+export interface MonitorOptions {
+    /**
+     * Set the default behavior for wether this component should automatically monitor any activity, or scrobble, it encounters
+     * 
+     * @default true
+     * @examples [true, false]
+     */
+    autoMonitor?: boolean
+}

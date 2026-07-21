@@ -380,9 +380,9 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
                 players: 'players' in x ? (x as MemorySource).playersToObject() as unknown as Record<string,SourcePlayerJson> : {},
                 sot: ('playerSourceOfTruth' in x) ? x.playerSourceOfTruth as SOURCE_SOT_TYPES : SOURCE_SOT.HISTORY,
                 supportsUpstreamRecentlyPlayed: x.supportsUpstreamRecentlyPlayed,
-                supportsManualListening: x.supportsManualListening,
-                manualListening: x.manualListening,
-                systemListeningBehavior: x.getSystemListeningBehavior(),
+                supportsManualListening: true,
+                manualListening: x.monitoringActivity,
+                systemListeningBehavior: x.getSystemMonitoring(),
                 ...x.additionalApiData()
             };
             if(!x.isReady()) {

@@ -28,25 +28,11 @@ export class AzuracastSource extends MemorySource {
     wsNowPlaying: AzuraStationResponse
     wsCurrenTime: number = 0;
     client!: WS;
+    override monitoringActivityDefault = false;
 
 
     constructor(name: any, config: AzuracastSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
-        const {
-            data = {},
-            options = {},
-        } = config;
-        const {
-            ...rest
-        } = data;
-
-        const {
-            data: {
-                monitorWhenListeners,
-                monitorWhenLive
-            } = {}
-        } = config;
-
-        super('azuracast', name, { ...config, options: {systemScrobble: monitorWhenListeners !== undefined || monitorWhenLive === true, ...options}, data: { ...rest } }, internal, emitter);
+        super('azuracast', name, config, internal, emitter);
 
 
         this.requiresAuth = false;
@@ -227,6 +213,14 @@ export class AzuracastSource extends MemorySource {
 
         return await this.processRecentPlays([playerState]);
     }
+
+     protected getSystemDefaultMonitoring = (): boolean => {
+        const {
+           monitorWhenLive,
+           monitorWhenListeners
+        } = this.config.data;
+        return monitorWhenLive !== undefined || monitorWhenListeners !== undefined;
+     }
 
 }
 

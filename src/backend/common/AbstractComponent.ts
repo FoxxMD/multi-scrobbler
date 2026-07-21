@@ -3,7 +3,7 @@ import {
     cacheFunctions,
 } from "@foxxmd/regex-buddy-core";
 import type EventEmitter from "events";
-import type {ComponentType, LifecycleInput, LifecycleStep, PlayData, PlayObject} from "../../core/Atomic.ts";
+import {MONITORING_ORIGIN_SYSTEM, MONITORING_ORIGIN_USER, type ComponentType, type LifecycleInput, type LifecycleStep, type PlayData, type PlayObject} from "../../core/Atomic.ts";
 import { buildTrackString } from "../../core/StringUtils.ts";
 import type {CommonClientConfig} from "./infrastructure/config/client/index.ts";
 import type {CommonSourceConfig} from "./infrastructure/config/source/index.ts";
@@ -33,7 +33,7 @@ import { getRetentionCompactAfterFromEnv, getRetentionDeleteAfterFromEnv, isComp
 import type {DbConcrete} from "./database/drizzle/drizzleUtils.ts";
 import type {ComponentSelect} from "./database/drizzle/drizzleTypes.ts";
 import { DrizzlePlayRepository } from "./database/drizzle/repositories/PlayRepository.ts";
-import type {ClientType} from "../../core/Atomic.ts";
+import type {ClientType, MonitoringStatus} from "../../core/Atomic.ts";
 import type {SourceType} from "../../core/Atomic.ts";
 import { DrizzleComponentRepository } from "./database/drizzle/repositories/ComponentRepository.ts";
 import dayjs from "dayjs";
@@ -59,6 +59,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     protected retentionOpts: RetentionOptions;
     status: string = 'Waiting to initialize...';
     emitter: EventEmitter;
+
+    monitoringActivity?: boolean | undefined;
+    monitoringActivityDefault: boolean = true;
 
     protected componentType: ComponentType;
     type: ClientType | SourceType;
@@ -540,6 +543,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             name: this.dbComponent.name,
             state,
             mode: this.dbComponent.mode,
+            monitoringStatus: this.getMonitoringStatus(),
             countNonLive: this.dbComponent.countNonLive,
             createdAt: this.dbComponent.createdAt?.toISOString(),
             lastReadyAt: this.dbComponent.lastReadyAt?.toISOString(),
@@ -585,4 +589,15 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         this.status = status;
         this.emitComponentUpdate({status});
     }
+
+    public getSystemMonitoring = (): boolean => this.config.options?.autoMonitor ?? this.getSystemDefaultMonitoring();
+
+    protected getSystemDefaultMonitoring = (): boolean => this.monitoringActivityDefault;
+
+    public isMonitoring = (): boolean => this.monitoringActivity ?? this.getSystemMonitoring();
+
+    public getMonitoringStatus = (): MonitoringStatus => ({
+        monitoring: this.isMonitoring(),
+        origin: this.monitoringActivity !== undefined ? MONITORING_ORIGIN_USER : MONITORING_ORIGIN_SYSTEM
+    })
 }
