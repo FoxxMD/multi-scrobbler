@@ -303,10 +303,18 @@ export const rockskyScrobbleToPlay = (obj: RockskyScrobble, opts: {playId?: stri
     return baseFormatPlayObj(obj, play);
 }
 
-export const playToRockskyRecord = (play: PlayObject): CreateScrobbleInput => {
-    const csi: CreateScrobbleInput = {
+// TODO remove once albumArtist is correctly included in CreateScrobbleInput interface
+type RealCreateScrobbleInput = CreateScrobbleInput & {albumArtist: string};
+
+export const playToRockskyRecord = (play: PlayObject): RealCreateScrobbleInput => {
+    const artistStr = artistCreditsToNames(play.data.artists).join(', ');
+
+    const csi: RealCreateScrobbleInput = {
         title: play.data.track,
-        artist: artistCreditsToNames(play.data.artists).join(', '),
+        artist: artistStr,
+        // albumArtist is a required field on rocksky server-side
+        // tsiry's advice is that if there really is no album artists then just use the same value as artist
+        albumArtist: (play.data.albumArtists ?? []).length === 0 ? artistStr : artistCreditsToNames(play.data.albumArtists).join(', '),
         album: play.data.album,
         mbId: play.data.meta?.brainz?.track,
         isrc: play.data.isrc,
