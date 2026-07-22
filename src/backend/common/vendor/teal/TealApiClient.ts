@@ -18,6 +18,7 @@ import type { ATProtoAuthenticatedApiClient } from "../atproto/ATProtoAuthentica
 import { UpstreamError } from "../../errors/UpstreamError.ts";
 import type { ComAtprotoRepoCreateRecord, ComAtprotoRepoPutRecord } from '@atcute/atproto';
 import { nowPlayingExpirationDuration } from "../../../scrobblers/AbstractScrobbleClient.ts";
+import { isrcNoHyphens } from "../../../../core/PlayUtils.ts";
 
 export class TealApiClient extends AbstractApiClient implements PagelessTimeRangeListens {
 
@@ -196,7 +197,7 @@ export const playToRecord = (play: PlayObject): FmTealAlphaFeedPlay.Main => {
         releaseName: play.data.album,
         submissionClientAgent: `multi-scrobbler/${getRoot().items.version}`,
         musicServiceBaseDomain: musicServiceToCononical(play.meta.musicService) ?? play.meta.musicService,
-        isrc: play.data.isrc,
+        isrc: play.data.isrc !== undefined ? isrcNoHyphens(play.data.isrc) : undefined,
         trackMbId: mbidUriOrUndefined(play.data.meta?.brainz?.track as MBID),
         recordingMbId: mbidUriOrUndefined(play.data.meta?.brainz?.recording as MBID),
         releaseMbId: mbidUriOrUndefined(play.data.meta?.brainz?.album as MBID)

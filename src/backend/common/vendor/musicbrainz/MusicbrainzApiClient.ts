@@ -22,6 +22,7 @@ import { baseFormatPlayObj } from '../../../utils/PlayTransformUtils.ts';
 import type {IRecordingMSList} from '../../transforms/MusicbrainzTransformer.ts';
 import dayjs, { type Dayjs } from 'dayjs';
 import { artistCreditsToNames } from '../../../../core/StringUtils.ts';
+import { isrcNoHyphens } from '../../../../core/PlayUtils.ts';
 
 export interface SubmitResponse {
     payload?: {
@@ -259,7 +260,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                 query.artist_mbids = play.data.meta.brainz.artist
             }
             if(play.data.isrc !== undefined && using.includes('isrc')) {
-                query.isrc = play.data.isrc;
+                query.isrc = isrcNoHyphens(play.data.isrc);
             }
             if(using.includes('title')) {
                 query.recording = play.data.track;
