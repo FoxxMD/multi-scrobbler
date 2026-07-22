@@ -21,6 +21,7 @@ import { getRoot } from "../../ioc.ts";
 import type { MSCache } from "../Cache.ts";
 import type {HandleData} from "../infrastructure/config/client/atproto.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
+import { removeUndefinedKeys } from "../../../core/DataUtils.ts";
 
 interface SubmitOptions {
     log?: boolean
@@ -230,11 +231,11 @@ export class RockSkyApiClient extends AbstractApiClient {
                 throw new ScrobbleSubmitError(`Error occurred while making Rocksky API scrobble (${listenType}) request`, {cause: e, payload: submitPayload});
             }
         } else {
-            const payload = playToRockskyRecord(play);
+            const payload = removeUndefinedKeys(playToRockskyRecord(play));
             if(log) {
                 this.logger.debug(`Submit Payload: ${JSON.stringify(payload)}`);
             }
-            const resp = await this.rsClient.scrobble.createScrobble(playToRockskyRecord(play));
+            const resp = await this.rsClient.scrobble.createScrobble(payload);
             return {payload, response: resp, createdAt: dayjs().toISOString()}
         }
     }
