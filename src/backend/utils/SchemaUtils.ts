@@ -10,7 +10,7 @@ import {
     SchemaGenerator, LiteralTypeFormatter
 } from "ts-json-schema-generator";
 import { MaybeLogger } from '../common/MaybeLogger.ts';
-import { projectRootDir } from "../../core/Atomic.ts";
+import { projectRootDir } from "../common/infrastructure/Atomic.ts";
 
 // https://github.com/vega/ts-json-schema-generator/issues/1899#issuecomment-2407674526
 // https://github.com/vega/ts-json-schema-generator?tab=readme-ov-file#custom-formatting

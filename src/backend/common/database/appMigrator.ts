@@ -4,7 +4,7 @@ import * as path from 'path';
 import { childLogger, type Logger } from "@foxxmd/logging";
 import { Migrator } from 'sqlite-up';
 import type {MigrationStatus} from "../infrastructure/Atomic.ts";
-import { projectRootDir } from "../../../core/Atomic.ts";
+import { projectRootDir } from "../infrastructure/Atomic.ts";
 
 export interface MigrateBaseContext {
     db: DbConcrete

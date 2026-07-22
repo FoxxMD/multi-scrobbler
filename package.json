@@ -26,7 +26,7 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "atproto:lex:tealfm": "npm exec -- lex-cli pull -c src/backend/common/vendor/teal/lex.config.ts && npm exec -- lex-cli generate -c src/backend/common/vendor/teal/lex.config.ts",
-    "frontend:analyze": "npx esbuild src/client/index-next.tsx --bundle --platform=node --metafile=meta.json --outfile=/dev/null"
+    "frontend:analyze": "npx esbuild src/client/index-next.tsx --bundle --format=esm --platform=node --metafile=meta.json --outfile=/dev/null"
   },
   "exports": {
     ".": {

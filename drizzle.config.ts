@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { defineConfig } from 'drizzle-kit';
 import { getDataDir } from './src/backend/common/index.js';
 import * as path from 'path';
-import { projectRootDir } from './src/core/Atomic.ts';
+import { projectRootDir } from "./src/backend/common/infrastructure/Atomic.ts";
 
 export default defineConfig({
   schema: path.resolve(projectRootDir, 'src/backend/common/database/drizzle/schema'),

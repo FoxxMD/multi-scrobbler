@@ -19,7 +19,7 @@ import { transientDb } from '../utils/TransientTestUtils.ts';
 import { getRoot } from '../../ioc.ts';
 import { after } from 'mocha';
 import { migrateApp } from '../../common/database/appMigrator.ts';
-import { projectRootDir } from '../../../core/Atomic.ts';
+import { projectRootDir } from "../../common/infrastructure/Atomic.ts";
 
 // would be great to push migrations directly from schema but doesn't seem supported in newest beta
 // https://github.com/drizzle-team/drizzle-orm/discussions/4373

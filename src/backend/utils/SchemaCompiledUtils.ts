@@ -2,7 +2,7 @@ import { readFileSync, accessSync } from "node:fs";
 import { constants } from "fs";
 import { resolve } from "path";
 import { MaybeLogger } from '../common/MaybeLogger.ts';
-import { projectRootDir } from "../../core/Atomic.ts";
+import { projectRootDir } from "../common/infrastructure/Atomic.ts";
 
 export const getSchemaForType = (type: string, logger: MaybeLogger = new MaybeLogger()): any => {
     const path = resolve(projectRootDir, `src/backend/common/schema/${type}.json`);

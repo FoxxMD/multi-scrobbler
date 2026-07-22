@@ -10,6 +10,10 @@ import type { MusicBrainzApi } from 'musicbrainz-api';
 import type { ReportedPlayerStatus, SourceType } from "../../../core/Atomic.ts";
 import type { ClientType } from "../../../core/Atomic.ts";
 import assert from 'assert';
+import * as path from 'path';
+
+export const __filename = import.meta.filename;
+export const projectRootDir = path.resolve(__filename, '../../../../../');
 
 export interface LeveledLogData extends LogDataPretty {
     levelLabel: string

@@ -12,7 +12,7 @@ import { relations } from './schema/schema.ts';
 import { addToContext, executeQuery } from './logContext.ts';
 import { migrateApp, getAppMigrationStatus } from '../appMigrator.ts';
 import type {MigrationStatus} from '../../infrastructure/Atomic.ts';
-import { projectRootDir } from '../../../../core/Atomic.ts';
+import { projectRootDir } from "../../infrastructure/Atomic.ts";
 
 export async function getDbMigrationStatus(dbVal: string | DbConcrete, opts: {logger?: Logger, migrationsFolder?: string} = {}): Promise<MigrationStatus> {
   const {

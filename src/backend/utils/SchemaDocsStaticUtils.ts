@@ -3,7 +3,7 @@ import { resolve } from "path";
 import {getTypeSchemaFromConfigGenerator} from "./SchemaUtils.ts";
 import { atomicClientInterfaces } from '../common/infrastructure/config/client/clients.ts';
 import { atomicSourceInterfaces } from '../common/infrastructure/config/source/sources.ts';
-import { projectRootDir } from "../../core/Atomic.ts";
+import { projectRootDir } from "../common/infrastructure/Atomic.ts";
 
 mkdirSync(resolve(projectRootDir, 'docsite/static/schemas'), {recursive: true});
 

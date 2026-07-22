@@ -3,7 +3,7 @@ import { resolve } from "path";
 import {getTypeSchemaFromConfigGenerator} from "./SchemaUtils.ts";
 import { clientInterfaces } from '../common/infrastructure/config/client/clients.ts';
 import { sourceInterfaces } from '../common/infrastructure/config/source/sources.ts';
-import { projectRootDir } from "../../core/Atomic.ts";
+import { projectRootDir } from "../common/infrastructure/Atomic.ts";
 
 for(const inter of sourceInterfaces) {
     const schema = getTypeSchemaFromConfigGenerator(inter);

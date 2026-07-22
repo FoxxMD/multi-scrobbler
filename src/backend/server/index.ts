@@ -14,7 +14,8 @@ import { getAddress } from "../utils/NetworkUtils.ts";
 import { setupApi } from "./api.ts";
 import type ScrobbleSources from '../sources/ScrobbleSources.ts';
 import type ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
-import { projectRootDir, qsOptions } from '../../core/Atomic.ts';
+import { qsOptions } from '../../core/Atomic.ts';
+import { projectRootDir } from "../common/infrastructure/Atomic.ts";
 
 const app = express();
 const router = Router();
