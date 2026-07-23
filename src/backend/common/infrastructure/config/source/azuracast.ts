@@ -1,4 +1,4 @@
-import type {CommonSourceConfig, CommonSourceData, CommonSourceOptions, ManualListeningOptions} from "./index.ts";
+import type {CommonSourceConfig, CommonSourceData, CommonSourceOptions} from "./index.ts";
 
 export interface AzuraStationInfoResponse {
     id: string
@@ -93,7 +93,7 @@ export interface AzuracastData extends CommonSourceData {
     apiKey?: string
 }
 
-export interface AzuracastSourceoptions extends CommonSourceOptions, ManualListeningOptions {
+export interface AzuracastSourceoptions extends CommonSourceOptions {
     
 }
 

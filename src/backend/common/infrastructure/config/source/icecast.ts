@@ -1,4 +1,4 @@
-import type {CommonSourceConfig, CommonSourceData, CommonSourceOptions, ManualListeningOptions} from "./index.ts";
+import type {CommonSourceConfig, CommonSourceData, CommonSourceOptions} from "./index.ts";
 
 
 export interface IcecastMetadata {
@@ -34,7 +34,7 @@ export interface IcecastData extends CommonSourceData, IcecastOptions {
     url: string
 }
 
-export interface IcecastSourceOptions extends CommonSourceOptions, ManualListeningOptions {
+export interface IcecastSourceOptions extends CommonSourceOptions {
 }
 
 export interface IcecastSourceConfig extends CommonSourceConfig {

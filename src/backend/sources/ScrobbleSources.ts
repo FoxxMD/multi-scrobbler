@@ -600,7 +600,7 @@ export default class ScrobbleSources {
                     }
                 }    break;
                 case 'icecast': {
-                    const scrobbleStart = parseBool(process.env.ICECAST_SCROBBLE_START);
+                    const scrobbleStart = parseBool(process.env.ICECAST_AUTO_MONITOR);
                     const data: IcecastData = removeUndefinedKeys<IcecastData>({
                         url: process.env.ICECAST_URL,
                     }, false);
@@ -615,7 +615,7 @@ export default class ScrobbleSources {
                             data: data,
                             ...p,
                             options: transformPresetEnv<IcecastSourceOptions>('ICECAST', {
-                                systemScrobble: scrobbleStart
+                                autoMonitor: scrobbleStart
                             })
                         });
                     }

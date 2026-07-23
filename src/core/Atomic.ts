@@ -28,7 +28,6 @@ export interface SourceStatusData {
     players: Record<string, SourcePlayerJson>
     sot: SOURCE_SOT_TYPES
     supportsUpstreamRecentlyPlayed: boolean;
-    supportsManualListening: boolean;
     manualListening?: boolean
     systemListeningBehavior?: boolean
 }
@@ -46,6 +45,8 @@ export interface ClientStatusData {
     hasAuthInteraction: boolean;
     authed: boolean;
     initialized: boolean;
+    manualListening?: boolean
+    systemListeningBehavior?: boolean
 }
 
 export type PlayObjectIncludeTypes = 'album' | 'time' | 'artist' | 'track' | 'timeFromNow' | 'trackId' | 'comment' | 'platform' | 'session';
@@ -790,3 +791,10 @@ export const isClientType = (data: string): data is ClientType => {
     return clientTypes.includes(data as ClientType);
 };
 
+export type MonitoringOrigin = 'user' | 'system';
+export const MONITORING_ORIGIN_USER: MonitoringOrigin = 'user';
+export const MONITORING_ORIGIN_SYSTEM: MonitoringOrigin = 'system';
+export interface MonitoringStatus {
+    monitoring: boolean
+    origin: MonitoringOrigin
+}

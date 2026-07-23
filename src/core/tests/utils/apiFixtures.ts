@@ -114,6 +114,7 @@ export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApi>
         lastActiveAt = dayjs(),
         lastReadyAt = dayjs(),
         state = faker.number.int({min: 1, max: 7}) as ComponentState,
+        monitoringStatus = { monitoring: faker.datatype.boolean({probability: 0.1}), origin: 'system' },
         players = {},
         ...rest
     } = data;
@@ -142,6 +143,7 @@ export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApi>
         state,
         players,
         status: faker.helpers.arrayElement(statusSamples),
+        monitoringStatus,
         ...rest
     }
 }
@@ -160,9 +162,6 @@ export const generateSourceApiJson = (data: Partial<ComponentSourceApi> = {}): C
     const {
         sot = faker.helpers.arrayElement(sourceSotTypes),
         supportsUpstreamRecentlyPlayed = faker.datatype.boolean(),
-        supportsManualListening = faker.datatype.boolean({probability: 0.1}),
-        manualListening = faker.datatype.boolean({probability: 0.1}),
-        systemListeningBehavior = true,
         tracksDiscovered = faker.number.int({min: 1, max: 2000}),
         players = (data.players ?? {}),
         sleeping = false,
@@ -170,10 +169,7 @@ export const generateSourceApiJson = (data: Partial<ComponentSourceApi> = {}): C
     return {
         ...common,
         sot,
-        supportsManualListening,
         supportsUpstreamRecentlyPlayed,
-        manualListening,
-        systemListeningBehavior,
         tracksDiscovered,
         players,
         sleeping

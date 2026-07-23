@@ -5,7 +5,7 @@ import {clientAdapter} from "../../status/ducks";
 import type {RootState} from "../../store";
 import {connect, type ConnectedProps} from "react-redux";
 import {Link} from "react-router-dom";
-import {useStartClientMutation} from "./clientDucks";
+import {useStartClientMutation, useListenClientMutation} from "./clientDucks";
 
 export interface ClientStatusCardData extends StatusCardSkeletonData, PropsFromRedux {
     loading?: boolean
@@ -40,8 +40,25 @@ const ClientStatusCard = (props: ClientStatusCardData) => {
     } = props;
 
     const [startClientPut, startResult] = useStartClientMutation();
+        const [listenPut, listenResult] = useListenClientMutation();
 
     const tryStart = useCallback((name: string, force?: boolean) => startClientPut({name, force}), [startClientPut]);
+    const tryListen = useCallback((name: string, type: string, currentListening?: boolean) => {
+        // cycle through states
+        let nextListen: boolean | undefined;
+        switch(currentListening) {
+            case true:
+                nextListen = false;
+                break;
+            case false:
+                nextListen = undefined;
+                break;
+            case undefined:
+                nextListen = true;
+                break;
+        }
+        listenPut({name, type, listening: nextListen});
+    }, [listenPut]);
 
     let header: string | undefined = display;
     let body = <SkeletonParagraph/>;
@@ -50,10 +67,13 @@ const ClientStatusCard = (props: ClientStatusCardData) => {
     <div onClick={()  => tryStart(name)} className="capitalize underline cursor-pointer inline mr-1">{status === 'Running' ? 'Restart' : 'Start'}</div>
     (<div onClick={()  => tryStart(name, true)} className="capitalize underline cursor-pointer inline">Force</div>)
     </Fragment>)
+    let subtitleElement = startClientElement;
     if(data !== undefined) {
         const {
             hasAuth,
             hasAuthInteraction,
+            manualListening,
+            systemListeningBehavior,
             name,
             type,
             authed,
@@ -61,9 +81,27 @@ const ClientStatusCard = (props: ClientStatusCardData) => {
         } = data;
         header = `${display} (Client)`;
 
-        const scrobbled = initialized && (!hasAuth || (hasAuth && authed)) ? <Link to={`/scrobbled?type=${type}&name=${name}`}>Tracks Scrobbled</Link> : <span>Tracks Scrobbled</span>;
+        const ml = useMemo(() => {
+            if(listenResult.status !== 'fulfilled' || listenResult.data === undefined) {
+                return manualListening;
+            }
+            return (listenResult.data as any).listening;
+        }, [manualListening, listenResult]);
 
-        // TODO links
+        const manualListenElement = (<Fragment>
+                <span>Monitoring:</span>
+                <div onClick={() => tryListen(name, type, ml)} 
+                className="capitalize underline cursor-pointer inline mr-1 ml-1">
+                    {ml !== undefined ? (ml ? 'Yes' : 'No') : null}
+                    {ml === undefined ? <span>System {systemListeningBehavior ? '(Yes)' : '(No)'}</span> : null}
+                </div>
+                {/* {ml !== undefined ? <div onClick={() => tryListen(name, type, undefined)} 
+                className="capitalize underline cursor-pointer inline">Clear
+                </div> : null} */}
+            </Fragment>);
+        subtitleElement = <Fragment>{startClientElement}</Fragment>;//<Fragment>{manualListenElement} | {startClientElement}</Fragment>;
+
+        const scrobbled = initialized && (!hasAuth || (hasAuth && authed)) ? <Link to={`/scrobbled?type=${type}&name=${name}`}>Tracks Scrobbled</Link> : <span>Tracks Scrobbled</span>;
         body = (<Fragment>
             <div>{scrobbled}: {scrobbledCount}</div>
             <div>Queued Scrobbles: {queued}</div>
@@ -77,7 +115,7 @@ const ClientStatusCard = (props: ClientStatusCardData) => {
             title={header}
             subtitle={name}
             status={status}
-            subtitleRight={startClientElement}
+            subtitleRight={subtitleElement}
             statusType={statusToStatusType(status)}>
                 {body}
         </StatusCardSkeleton>

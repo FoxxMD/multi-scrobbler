@@ -28,30 +28,15 @@ export class AzuracastSource extends MemorySource {
     wsNowPlaying: AzuraStationResponse
     wsCurrenTime: number = 0;
     client!: WS;
+    override monitoringActivityDefault = false;
 
 
     constructor(name: any, config: AzuracastSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
-        const {
-            data = {},
-            options = {},
-        } = config;
-        const {
-            ...rest
-        } = data;
-
-        const {
-            data: {
-                monitorWhenListeners,
-                monitorWhenLive
-            } = {}
-        } = config;
-
-        super('azuracast', name, { ...config, options: {systemScrobble: monitorWhenListeners !== undefined || monitorWhenLive === true, ...options}, data: { ...rest } }, internal, emitter);
+        super('azuracast', name, config, internal, emitter);
 
 
         this.requiresAuth = false;
         this.canPoll = true;
-        this.supportsManualListening = true;
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
@@ -189,9 +174,9 @@ export class AzuracastSource extends MemorySource {
             this.logger.debug({labels: `Station ${this.config.data.station}`}, `Currently offline`);
             return false;
         }
-        if(this.manualListening === true) {
-            this.logger.debug({labels: `Station ${this.config.data.station}`}, `Using manual listening status ${this.manualListening}`);
-            return this.manualListening;
+        if(this.monitoringActivity !== undefined) {
+            this.logger.debug({labels: `Station ${this.config.data.station}`}, `Using manual listening status ${this.monitoringActivity}`);
+            return this.monitoringActivity;
         }
         if(this.config.data.monitorWhenListeners !== undefined) {
             if(this.config.data.monitorWhenListeners === true && this.wsNowPlaying.listeners.current === 0) {
@@ -227,6 +212,14 @@ export class AzuracastSource extends MemorySource {
 
         return await this.processRecentPlays([playerState]);
     }
+
+     protected getSystemDefaultMonitoring = (): boolean => {
+        const {
+           monitorWhenLive,
+           monitorWhenListeners
+        } = this.config.data;
+        return monitorWhenLive !== undefined || monitorWhenListeners !== undefined;
+     }
 
 }
 

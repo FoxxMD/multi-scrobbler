@@ -380,9 +380,8 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
                 players: 'players' in x ? (x as MemorySource).playersToObject() as unknown as Record<string,SourcePlayerJson> : {},
                 sot: ('playerSourceOfTruth' in x) ? x.playerSourceOfTruth as SOURCE_SOT_TYPES : SOURCE_SOT.HISTORY,
                 supportsUpstreamRecentlyPlayed: x.supportsUpstreamRecentlyPlayed,
-                supportsManualListening: x.supportsManualListening,
-                manualListening: x.manualListening,
-                systemListeningBehavior: x.getSystemListeningBehavior(),
+                manualListening: x.monitoringActivity,
+                systemListeningBehavior: x.getSystemMonitoring(),
                 ...x.additionalApiData()
             };
             if(!x.isReady()) {
@@ -427,7 +426,9 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
                 initialized: x.isReady(),
                 deadLetterScrobbles: x.deadLetterQueued, // x.deadLetterScrobbles.length,
                 deadLetterScrobblesTotal: x.deadLetterLength,
-                queued: x.queuedLength // x.queuedScrobbles.length
+                queued: x.queuedLength, // x.queuedScrobbles.length
+                manualListening: x.monitoringActivity,
+                systemListeningBehavior: x.getSystemMonitoring(),
             };
             if (!base.initialized) {
                 if(x.buildOK === false) {
@@ -671,19 +672,35 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
             }
         } = req;
 
-        if(!source.supportsManualListening)
-        {
-            source.logger.warn('This source does not support manual Should Scrobble state');
-            res.status(400).send();
-            return;
-        }
         let listening: boolean | undefined;
         if(listeningQ !== undefined) {
             listening = parseBool(listeningQ)
         }
-        source.logger.verbose(`User requested Should Scrobble status ${listening === undefined ? 'system' : listening}`);
+        source.logger.verbose(`User requested Monitoring status ${listening === undefined ? 'system' : listening}`);
 
-        source.manualListening = listening;
+        source.monitoringActivity = listening;
+
+        res.status(200).json({listening});
+    });
+
+    app.use('/api/client/listen', clientRequiredMiddle);
+    app.post('/api/client/listen', async (req, res) => {
+        // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+        const client = req.scrobbleClient as AbstractScrobbleClient;
+
+        const {
+            query: {
+                listening: listeningQ
+            }
+        } = req;
+
+        let listening: boolean | undefined;
+        if(listeningQ !== undefined) {
+            listening = parseBool(listeningQ)
+        }
+        client.logger.verbose(`User requested Monitoring status ${listening === undefined ? 'system' : listening}`);
+
+        client.monitoringActivity = listening;
 
         res.status(200).json({listening});
     });

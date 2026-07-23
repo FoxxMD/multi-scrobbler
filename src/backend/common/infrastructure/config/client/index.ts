@@ -1,6 +1,6 @@
 import type {DurationValue} from "../../Atomic.ts";
 import type {PlayTransformOptions} from "../../../../../core/Transform.ts";
-import type {CommonConfig, RequestRetryOptions} from "../common.ts";
+import type {CommonConfig, MonitorOptions, RequestRetryOptions} from "../common.ts";
 import type {RetentionConfig} from "../database.ts";
 
 /**
@@ -83,7 +83,7 @@ export interface NowPlayingOptions {
     nowPlaying?: boolean | string[]
 }
 
-export interface CommonClientOptions extends RequestRetryOptions, UpstreamRefreshOptions {
+export interface CommonClientOptions extends RequestRetryOptions, UpstreamRefreshOptions, MonitorOptions {
 
     /**
      * Check client for an existing scrobble at the same recorded time as the "new" track to be scrobbled. If an existing scrobble is found this track is not track scrobbled.

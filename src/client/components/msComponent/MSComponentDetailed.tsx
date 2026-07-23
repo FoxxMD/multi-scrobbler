@@ -11,7 +11,6 @@ import {
     useSSEContext,
     useSSEAnyEvent
 } from "@flamefrontend/sse-runtime-react";
-import { isComponentTypeSource } from "../../../core/Atomic.js";
 import { Link } from "react-router";
 import { CountLiveIndicator, DateIndicator, DeadLetterIndicator, QueuedIndicator } from "./Stats.js";
 import { ListContainerFilterable } from "../playActivity/ActivityList.js";
@@ -225,7 +224,7 @@ export const ComponentDetailedFetchable = (props: { componentId: number }) => {
     });
 
     let rendered;
-    if (isPending && data === undefined) {
+    if (data === undefined) {
         rendered = <ComponentDetailedSkeleton />
     } else if (isError) {
         rendered = <ErrorAlert error={error} />

@@ -16,8 +16,23 @@ export const scrobblerApi = createApi({
                     force: params.force
                 }
             })
+        }),
+        listenClient: builder.mutation<undefined, {
+            name: string,
+            type: string,
+            listening?: boolean
+        }>({
+            query: (params) => ({
+                url: '/client/listen',
+                method: 'POST',
+                params: {
+                    name: params.name,
+                    type: params.type,
+                    listening: params.listening
+                }
+            })
         })
     })
 });
 
-export const {useStartClientMutation} = scrobblerApi;
+export const {useStartClientMutation, useListenClientMutation} = scrobblerApi;

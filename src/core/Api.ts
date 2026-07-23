@@ -1,6 +1,6 @@
 import type { PickKeys } from "ts-essentials"
 import type { CompareOpKey, ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
-import type { ClientType } from "./Atomic.ts"
+import type { ClientType, MonitoringStatus } from "./Atomic.ts"
 import type { SourceType } from "./Atomic.ts"
 import type { ComponentType, DateLike, ErrorLike, JsonPlayObject, PlayState, QueueName, Replace, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.ts"
 import type { Dayjs } from "dayjs"
@@ -82,6 +82,7 @@ export type ComponentCommonApi = {
     players: Record<string, SourcePlayerJson>
     error?: ErrorIsh
     warning?: ErrorIsh
+    monitoringStatus?: MonitoringStatus
 } & Omit<ComponentMinimalSelect, 'type'>
 
 export type ComponentCommonApiJson = Replace<ComponentCommonApi, PickKeys<ComponentCommonApi, Dayjs>, string>;
@@ -108,9 +109,6 @@ export type ComponentClientApiJson = Replace<ComponentClientApi, PickKeys<Compon
 export type ComponentSourceApiBase = {
     sot: SOURCE_SOT_TYPES
     supportsUpstreamRecentlyPlayed: boolean;
-    supportsManualListening: boolean;
-    manualListening?: boolean
-    systemListeningBehavior?: boolean
     tracksDiscovered: number;
     wakeAt?: string
     sleeping: boolean

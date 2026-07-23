@@ -14,7 +14,7 @@ import {
     type InternalConfig,
     type ProgressAwarePlayObject,
 } from "../common/infrastructure/Atomic.ts";
-import type {PlayUserId} from '../../core/Atomic.ts';
+import type {PlayState, PlayUserId} from '../../core/Atomic.ts';
 import type {DeviceId} from '../../core/Atomic.ts';
 import type {SourceConfig} from '../common/infrastructure/config/source/sources.ts';
 import type {SourceType} from "../../core/Atomic.ts";
@@ -46,6 +46,7 @@ import { asPlay } from '../../core/PlayMarshalUtils.ts';
 import { AsyncTask, SimpleIntervalJob, ToadScheduler } from 'toad-scheduler';
 import { COMPONENT_STATE, type ComponentSourceApiJson, type ComponentState, type PlayApiCommonDetailed } from '../../core/Api.ts';
 import type {PaginatedResponse} from "../../core/Api.ts";
+import type { PlayWith } from '../common/database/drizzle/drizzleTypes.ts';
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -85,8 +86,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
     supportsUpstreamRecentlyPlayed: boolean = false;
     supportsUpstreamNowPlaying: boolean = false;
     supportsManualListening: boolean = false;
-
-    manualListening?: boolean
 
     scheduler: ToadScheduler = new ToadScheduler();
 
@@ -267,12 +266,12 @@ export default abstract class AbstractSource extends AbstractComponent implement
     }
 
     public getRunningState(): ComponentState {
-        const monitoring = (this.canPoll && this.polling) || !this.canPoll;
+        const running = (this.canPoll && this.polling) || !this.canPoll;
 
-        if(monitoring && this.supportsManualListening && this.manualListening === false) {
+        if(running && !this.isMonitoring()) {
             return COMPONENT_STATE.MUTED;
         }
-        return monitoring ? COMPONENT_STATE.RUNNING : COMPONENT_STATE.IDLE;
+        return running ? COMPONENT_STATE.RUNNING : COMPONENT_STATE.IDLE;
     }
 
     protected getComponentApiData() {
@@ -293,20 +292,10 @@ export default abstract class AbstractSource extends AbstractComponent implement
             tracksDiscovered: this.tracksDiscovered,
             sot: SOURCE_SOT.HISTORY,
             supportsUpstreamRecentlyPlayed: this.supportsUpstreamRecentlyPlayed,
-            supportsManualListening: this.supportsManualListening,
-            manualListening: this.manualListening,
-            systemListeningBehavior: this.getSystemListeningBehavior(),
             sleeping: this.getIsSleeping(),
             wakeAt: this.wakeAt !== undefined ? this.wakeAt.toISOString() : undefined,
             countLive: this.tracksDiscoveredTotal
         }
-    }
-
-    getSystemListeningBehavior = (): boolean | undefined => {
-        if(this.supportsManualListening) {
-            return this.config.options !== undefined && 'systemScrobble' in this.config.options ? this.config.options?.systemScrobble : undefined;
-        }
-        return undefined;
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => []
@@ -324,8 +313,14 @@ export default abstract class AbstractSource extends AbstractComponent implement
     // TODO make this more descriptive? or move it elsewhere
     recentlyPlayedTrackIsValid = (playObj: PlayObject) => true
 
-    protected addPlayToDiscovered = async (play: PlayObject): Promise<PlayObject> => {
-        const playRow = await this.playRepo.createPlays([(playToRepositoryCreatePlayOpts({play, state: 'discovered'}))]);
+    protected addPlayToDB = async (play: PlayObject): Promise<PlayWith<'input'>> => {
+        const monitorStatus = this.getMonitoringStatus();
+        let state: PlayState = 'discovered';
+        if(!monitorStatus.monitoring) {
+            this.logger.debug(`Not adding ${buildTrackString(play)} as discovered because monitoring is disabled by ${capitalize(monitorStatus.origin)}`);
+            state = 'discarded';
+        }
+        const playRow = await this.playRepo.createPlays([(playToRepositoryCreatePlayOpts({play, state}))]);
         const recentPlays = await this.getRecentlyDiscoveredPlays(false);
         // only need to update if its already in memory,
         // and better to update in-memory than clear cache so we aren't refetching from db on every discover
@@ -334,15 +329,17 @@ export default abstract class AbstractSource extends AbstractComponent implement
             recentPlays.sort(sortByOldestPlayDate);
             this.cache.cacheDb.set(this.recentDiscoveredCacheKey(), recentPlays, '2m');
         }
-        this.tracksDiscovered++;
-        this.tracksDiscoveredTotal++
-        this.logger.info(`Discovered => ${buildTrackString(play)}`);
+        if(state === 'discovered') {
+            this.tracksDiscovered++;
+            this.tracksDiscoveredTotal++
+            this.discoveredCounter.labels(this.getPrometheusLabels()).inc();
+        }
+        this.logger.info(`${capitalize(state)} => ${buildTrackString(play)}`);
         this.emitEvent('discovered', {play});
         this.emitPlayInsert({...playRow[0], queueStates: []} as unknown as PlayApiCommonDetailed);
-        this.discoveredCounter.labels(this.getPrometheusLabels()).inc();
-        play.id = playRow[0].id;
-        play.uid = playRow[0].uid;
-        return play;
+        playRow[0].play.id = playRow[0].id;
+        playRow[0].play.uid = playRow[0].uid;
+        return playRow[0];
     }
 
     getFlatRecentlyDiscoveredPlays = async (): Promise<PlayObject[]> => {
@@ -398,8 +395,10 @@ export default abstract class AbstractSource extends AbstractComponent implement
             const existing = await this.existingDiscovered(play);
             if(existing === undefined) {
                 options.signal?.throwIfAborted()
-                const hydratedPlay = await this.addPlayToDiscovered(play);
-                newDiscoveredPlays.push(hydratedPlay);
+                const hydratedPlay = await this.addPlayToDB(play);
+                if(hydratedPlay.state === 'discovered') {
+                    newDiscoveredPlays.push(hydratedPlay.play);
+                }
             } else {
                 this.playRepo.updateById(existing.id, {updatedAt: dayjs()});
             }
@@ -419,26 +418,10 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return newDiscoveredPlays;
     }
 
-    protected shouldScrobble = (discoverLocation?: 'backlog' | [key: string]) => {
-        if(this.supportsManualListening && discoverLocation !== 'backlog') {
-            const manualFlag = this.manualListening ?? this.getSystemListeningBehavior() ?? true;
-            if(manualFlag === false) {
-                this.logger.debug(`NOT scrobbling because Should Scrobble is FALSE (${this.manualListening === false ? 'user' : 'system'})`);
-                return false;
-            }
-        }
-        return true;
-    }
-
 
     protected scrobble = async (newDiscoveredPlays: PlayObject[], options: { forceRefresh?: boolean, [key: string]: any, discoverLocation?: 'backlog' | [key: string] } = {}) => {
 
         if(newDiscoveredPlays.length > 0) {
-            if(!this.shouldScrobble(options.discoverLocation)) {
-                await this.playRepo.setStateById('discarded', newDiscoveredPlays.map(x => x.id));
-                this.setStatus(`Discarded ${newDiscoveredPlays} new Plays${options.discoverLocation !== undefined ? ` from ${options.discoverLocation} ` : ''}`);
-                return;
-            }
             newDiscoveredPlays.sort(sortByOldestPlayDate);
             this.emitter.emit('discoveredToScrobble', {
                 data: await pMap(newDiscoveredPlays, this.staggerMappers.postCompare(async (x) =>  await this.transformPlay(x, TRANSFORM_HOOK.postCompare)), {concurrency: 3}),
@@ -470,7 +453,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
             this.logger.info('Discovering backlogged tracks from recently played API...');
             this.setStatus('Discovering backlogged tracks from recently played API...');
-            let backlogPlays: PlayObject[] = [];
+            let backlogPlays: PlayObject[];
             const {
                 scrobbleBacklogCount = this.SCROBBLE_BACKLOG_COUNT
             } = this.config.options || {};
@@ -652,11 +635,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
         }
         this.abortController.abort(reason);
         let elapsed = 0;
-        let lastlog: Dayjs;
         while(this.polling && elapsed < (10 * this.stopPollingWaitInterval)) {
-            if(lastlog === undefined || dayjs().diff(lastlog, 's') >= 2) {
-                this.logger.verbose(`Waiting for polling stop signal to be acknowledged (waited ${formatNumber(elapsed/1000)}s)`);
-            }
+            this.logger.verbose(`Waiting for polling stop signal to be acknowledged (waited ${formatNumber(elapsed/1000)}s)`);
             await sleep(this.stopPollingWaitInterval);
             elapsed += this.stopPollingWaitInterval;
         }

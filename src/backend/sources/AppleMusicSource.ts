@@ -360,7 +360,7 @@ export default class AppleMusicSource extends AbstractSource {
             reversedPlays.reverse();
 
             for(const refPlay of reversedPlays) {
-                await this.addPlayToDiscovered(refPlay);
+                await this.addPlayToDB(refPlay);
             }
         }
         return true;

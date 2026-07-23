@@ -38,14 +38,14 @@ URL From Config                => MS Uses
 
 <ShouldScrobble filename="azuracast"/>
 
-Multi-scrobbler will set the default **scrobbling behavior** based on if either of these settings is configured:
+When `autoMonitor` is not explicitly set, Multi-scrobbler will set the **default monitoring behavior** based on if either of these settings is configured:
 
 * live status (`AZURA_LIVE` or `monitorWhenLive`) or
 * listener count (`AZURA_LISTENERS_NUM` or `monitorWhenListeners`)
 
-If either is configured then MS will automatically scrobble based on when these conditions are met.
+If either is configured then MS will automatically monitor based on when these conditions are met.
 
-If neither is configured automatic scrobble defaults to **off** and you should either manually initiate it or explicitly set the default behavior.
+If neither is configured automatic monitoring defaults to **off** and you should either manually initiate it or explicitly set the default behavior.
 
 ### Station
 
