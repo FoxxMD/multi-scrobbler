@@ -37,7 +37,6 @@ export class AzuracastSource extends MemorySource {
 
         this.requiresAuth = false;
         this.canPoll = true;
-        this.supportsManualListening = true;
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
@@ -175,9 +174,9 @@ export class AzuracastSource extends MemorySource {
             this.logger.debug({labels: `Station ${this.config.data.station}`}, `Currently offline`);
             return false;
         }
-        if(this.manualListening === true) {
-            this.logger.debug({labels: `Station ${this.config.data.station}`}, `Using manual listening status ${this.manualListening}`);
-            return this.manualListening;
+        if(this.monitoringActivity !== undefined) {
+            this.logger.debug({labels: `Station ${this.config.data.station}`}, `Using manual listening status ${this.monitoringActivity}`);
+            return this.monitoringActivity;
         }
         if(this.config.data.monitorWhenListeners !== undefined) {
             if(this.config.data.monitorWhenListeners === true && this.wsNowPlaying.listeners.current === 0) {

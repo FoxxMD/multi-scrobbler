@@ -44,7 +44,6 @@ export class IcecastSource extends MemorySource {
 
         this.requiresAuth = false;
         this.canPoll = true;
-        this.supportsManualListening = true;
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {

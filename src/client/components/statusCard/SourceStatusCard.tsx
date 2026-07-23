@@ -8,6 +8,9 @@ import {connect, type ConnectedProps} from "react-redux";
 import Player from "../player/Player";
 import {useStartSourceMutation, useListenSourceMutation} from "./sourceDucks";
 import './statusCard.scss';
+import Tooltip from '../Tooltip';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {faQuestionCircle} from '@fortawesome/free-solid-svg-icons'
 
 const ambiguousTypes = ['lastfm','listenbrainz','koito','librefm','maloja','rocksky'];
 export interface SourceStatusCardData extends StatusCardSkeletonData, PropsFromRedux {
@@ -59,8 +62,6 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
         }
         listenPut({name, type, listening: nextListen});
     }, [listenPut]);
-    let startSourceElement = null;
-    let manualListenElement = null;
     let subtitleElement = null;
 
     if(data !== undefined)
@@ -78,7 +79,6 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
             players = {},
             sot,
             supportsUpstreamRecentlyPlayed,
-            supportsManualListening,
             manualListening,
             systemListeningBehavior
         } = data;
@@ -100,9 +100,13 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
             return (listenResult.data as any).listening;
         }, [manualListening, listenResult]);
 
-        if(supportsManualListening) {
-            manualListenElement = (<Fragment>
-                <span>Should Scrobble:</span>
+        const manualListenElement = type !== 'azuracast' && type !== 'icecast' ? null : (<Fragment>
+                <span>Monitoring <Tooltip message="test"
+                    style={{
+                        display: 'inline-flex'
+                    }}>
+                    <FontAwesomeIcon color="white" icon={faQuestionCircle}/></Tooltip> :
+                </span>
                 <div onClick={() => tryListen(name, type, ml)} 
                 className="capitalize underline cursor-pointer inline mr-1 ml-1">
                     {ml !== undefined ? (ml ? 'Yes' : 'No') : null}
@@ -112,9 +116,8 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
                 className="capitalize underline cursor-pointer inline">Clear
                 </div> : null} */}
             </Fragment>);
-        }
 
-        startSourceElement = (<Fragment>
+        const startSourceElement = (<Fragment>
             <div onClick={() => tryStart(name, type)} 
             className="capitalize underline cursor-pointer inline mr-1">{startText}
             </div>

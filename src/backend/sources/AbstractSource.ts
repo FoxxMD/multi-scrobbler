@@ -87,8 +87,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
     supportsUpstreamNowPlaying: boolean = false;
     supportsManualListening: boolean = false;
 
-    manualListening?: boolean
-
     scheduler: ToadScheduler = new ToadScheduler();
 
     protected SCROBBLE_BACKLOG_COUNT: number = 30;
@@ -268,12 +266,12 @@ export default abstract class AbstractSource extends AbstractComponent implement
     }
 
     public getRunningState(): ComponentState {
-        const monitoring = (this.canPoll && this.polling) || !this.canPoll;
+        const running = (this.canPoll && this.polling) || !this.canPoll;
 
-        if(monitoring && this.supportsManualListening && this.manualListening === false) {
+        if(running && !this.isMonitoring()) {
             return COMPONENT_STATE.MUTED;
         }
-        return monitoring ? COMPONENT_STATE.RUNNING : COMPONENT_STATE.IDLE;
+        return running ? COMPONENT_STATE.RUNNING : COMPONENT_STATE.IDLE;
     }
 
     protected getComponentApiData() {
