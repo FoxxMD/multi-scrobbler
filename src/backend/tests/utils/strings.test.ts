@@ -7,6 +7,7 @@ import {
 import { replaceInterpolatedValues } from "../../utils/DataUtils.ts";
 import { splitByFirstFound } from '../../../core/StringUtils.ts';
 import { noCasePropObj } from '../../utils/DataUtils.ts';
+import { isrcNoHyphens, isrcWithHyphens, REGEX_ISRC_HYPHENS, REGEX_ISRC_NO_HYPHENS } from '../../../core/PlayUtils.ts';
 
 describe('String Comparisons', function () {
 
@@ -172,3 +173,87 @@ describe('Interpolation', function() {
     });
 });
 
+describe('ISRC Parsing', function() {
+
+    describe('Regex tests', function() {
+
+        it('isrc no-hypen regex matches isrc with no hyphens', function() {
+            const isrcs = ['USRC17607839','GBWUL1805639','USUG11902962','QT65X2609829'];
+            for(const i of isrcs) {
+                expect(REGEX_ISRC_NO_HYPHENS.test(i)).is.true;
+            }
+        });
+
+        it('isrc no-hypen regex does not match isrc with hyphens or invalid', function() {
+            const isrcs = ['US-RC1-76-07839','GB-WUL1-80-5639','US-UG1-19-02962','QTLASDSDASD',''];
+            for(const i of isrcs) {
+                expect(REGEX_ISRC_NO_HYPHENS.test(i)).is.false;
+            }
+        });
+
+        it('isrc hypen regex matches isrc with hyphens', function() {
+            const isrcs = ['US-RC1-76-07839','GB-WUL-18-05639','US-UG1-19-02962'];
+            for(const i of isrcs) {
+                expect(REGEX_ISRC_HYPHENS.test(i), `${i} did not match`).is.true;
+            }
+        });
+
+        it('isrc hypen regex does not match isrc with no hyphens or invalid', function() {
+            const isrcs = ['USRC17607839','GBWUL1805639','USUG11902962','QT65X2609829','QTLASDSDASD',''];
+            for(const i of isrcs) {
+                expect(REGEX_ISRC_HYPHENS.test(i)).is.false;
+            }
+        });
+
+    });
+
+    describe('ISRC Transform', function() {
+
+        describe('To non-hyphenated', function() {
+            it('Transforms from hyphenated', function() {
+                const isrcs = ['US-RC1-76-07839','GB-WUL-18-05639','US-UG1-19-02962'];
+                for(const i of isrcs) {
+                    const res = isrcNoHyphens(i);
+                    expect(res).eq(i.replaceAll(/-/g, ''));
+                }
+            });
+
+            it('Returns already non-hyphenated', function() {
+                const isrcs = ['USRC17607839','GBWUL1805639','USUG11902962','QT65X2609829'];
+                for(const i of isrcs) {
+                    const res = isrcNoHyphens(i);
+                    expect(res).eq(i);
+                }
+            });
+
+            it('Fails on invalid', function() {
+                const isrcs = ['GB-WUL1-80-5639','QTLASDSDASD',''];
+                for(const i of isrcs) {
+                    expect(() => isrcNoHyphens(i)).to.throw();
+                }
+            });
+        });
+
+        describe('To hyphenated', function() {
+            it('Transforms from non-hyphenated', function() {
+                const res = isrcWithHyphens('USRC17607839');
+                expect(res).eq('US-RC1-76-07839');
+            });
+
+            it('Returns already non-hyphenated', function() {
+                const isrcs = ['US-RC1-76-07839','GB-WUL-18-05639','US-UG1-19-02962'];
+                for(const i of isrcs) {
+                    const res = isrcWithHyphens(i);
+                    expect(res).eq(i);
+                }
+            });
+
+            it('Fails on invalid', function() {
+                const isrcs = ['GB-WUL1-80-5639','QTLASDSDASD',''];
+                for(const i of isrcs) {
+                    expect(() => isrcNoHyphens(i)).to.throw();
+                }
+            });
+        });
+    });
+});

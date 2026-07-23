@@ -22,6 +22,7 @@ import type { MSCache } from "../Cache.ts";
 import type {HandleData} from "../infrastructure/config/client/atproto.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { removeUndefinedKeys } from "../../../core/DataUtils.ts";
+import { isrcNoHyphens } from '../../../core/PlayUtils.ts';
 
 interface SubmitOptions {
     log?: boolean
@@ -317,7 +318,7 @@ export const playToRockskyRecord = (play: PlayObject): RealCreateScrobbleInput =
         albumArtist: (play.data.albumArtists ?? []).length === 0 ? artistStr : artistCreditsToNames(play.data.albumArtists).join(', '),
         album: play.data.album,
         mbId: play.data.meta?.brainz?.track,
-        isrc: play.data.isrc,
+        isrc: play.data.isrc !== undefined ? isrcNoHyphens(play.data.isrc) : undefined,
         duration: play.data.duration !== undefined ? play.data.duration * 1000 : undefined,
         spotifyLink: play.meta.source === 'spotify' && play.meta.url?.web !== undefined ? play.meta.url?.web : undefined,
         timestamp: play.data.playDate.unix()

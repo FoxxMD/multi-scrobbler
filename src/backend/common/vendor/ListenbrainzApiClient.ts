@@ -28,6 +28,7 @@ import pRetry from 'p-retry';
 import { findCauseByFunc } from '../../utils/ErrorUtils.ts';
 import { isSuperAgentResponseError } from '../errors/ErrorUtils.ts';
 import { playToSubmitPayload } from './listenbrainz/lzUtils.ts';
+import { isrcNoHyphens } from '../../../core/PlayUtils.ts';
 
 
 export interface SubmitOptions {
@@ -694,7 +695,7 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
                 album: release_name,
                 albumArtists: artistNamesToCredits(albumArtists),
                 duration: dur,
-                isrc: isrc !== undefined ? isrc : undefined,
+                isrc: isrc !== undefined ? isrcNoHyphens(isrc) : undefined,
                 meta: {
                 }
             },
