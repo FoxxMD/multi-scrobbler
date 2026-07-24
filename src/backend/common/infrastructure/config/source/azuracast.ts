@@ -1,5 +1,5 @@
 import * as z from "zod";
-import type {CommonSourceConfig, CommonSourceData, CommonSourceOptions} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, manualListeningOptionsSchema} from "./index.ts";
 
 export const azuraStationInfoResponseSchema = z.object({
     id: z.string(),
@@ -61,6 +61,7 @@ export type AzuraStationResponse = z.infer<typeof azuraStationResponseSchema>;
 
 
 export const azuracastDataSchema = z.object({
+    ...commonSourceDataSchema.shape,
     /**
      * Base URL of the Azuracast instance
      *
@@ -119,26 +120,25 @@ export const azuracastDataSchema = z.object({
     })
 });
 
-export type AzuracastData = z.infer<typeof azuracastDataSchema> & CommonSourceData;
+export type AzuracastData = z.infer<typeof azuracastDataSchema>;
 
-// `AzuracastSourceoptions` has no properties of its own - it is purely a merge of `CommonSourceOptions` and
-// `ManualListeningOptions`, neither of which has a zod schema yet (they live in ./index.ts and haven't been
-// converted). There is nothing to validate here beyond those parent shapes, so this is a plain intersection type.
-export const azuracastSourceoptionsSchema = z.object({});
+export const azuracastSourceoptionsSchema = z.object({
+    ...commonSourceOptionsSchema.shape,
+    ...manualListeningOptionsSchema.shape,
+});
 
-export type AzuracastSourceoptions = z.infer<typeof azuracastSourceoptionsSchema> & CommonSourceOptions & ManualListeningOptions;
+export type AzuracastSourceoptions = z.infer<typeof azuracastSourceoptionsSchema>;
 
-// `CommonSourceConfig` (./index.ts) doesn't have a zod schema yet, so only this interface's own `data` field
-// is represented here; the parent's fields are restored via intersection on the exported type.
 export const azuracastSourceConfigSchema = z.object({
+    ...commonSourceConfigSchema.shape,
     data: azuracastDataSchema
 });
 
-export type AzuracastSourceConfig = z.infer<typeof azuracastSourceConfigSchema> & CommonSourceConfig;
+export type AzuracastSourceConfig = z.infer<typeof azuracastSourceConfigSchema>;
 
 export const azuracastSourceAIOConfigSchema = z.object({
     ...azuracastSourceConfigSchema.shape,
     type: z.literal('azuracast')
 });
 
-export type AzuracastSourceAIOConfig = z.infer<typeof azuracastSourceAIOConfigSchema> & CommonSourceConfig;
+export type AzuracastSourceAIOConfig = z.infer<typeof azuracastSourceAIOConfigSchema>;
