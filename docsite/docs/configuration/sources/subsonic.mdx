@@ -28,6 +28,12 @@ Service-specific scrobble implementations tend to be more accurate and provide m
 
 Use the optional `usersAllow` property with **File** or **AIO** configuration to restrict scrobbling to a list of defined users.
 
+## Stale Now-Playing Detection
+
+By default, multi-scrobbler uses the `minutesAgo` and duration values returned by `getNowPlaying` of the subsonic server to ignore entries that have likely finished playing. This prevents repeated scrobbles from Subsonic-compatible servers that continue returning a track after playback stops. 
+
+If the server properly reports no playing song when playback has stopped, this behavior can be disabled by setting `detectStaleNowPlayingFromMinutesAgo` to `false`.
+
 ## Configuration
 
 <Config config="SubSonicSourceConfig" fileContent={SubsonicConfig} name="subsonic">

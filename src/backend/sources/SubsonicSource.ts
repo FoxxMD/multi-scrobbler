@@ -280,20 +280,23 @@ export class SubsonicSource extends MemorySource {
     }
 
     protected filterExpiredNowPlaying(plays: PlayObject[]): PlayObject[]{
-        return plays.map(x => SubsonicSource.formatPlayObj(x, {sourceData: this.sourceData}))
-                    .filter(play => {
-                        const {artists = [], duration, playDate, track} = play.data;
-                        if (duration === undefined || playDate === undefined) {
-                            return true;
-                        }
-                        if (!isSubsonicNowPlayingExpired(play)) {
-                            return true;
-                        }
-                        const tolerance = getSubsonicNowPlayingTolerance(duration);
-                        const expiresAt = playDate.add(duration + tolerance, 'second');
-                        this.logger.trace(`Ignoring Subsonic now-playing entry as inactive: '${artists.map(x => x.name).join(', ')} - ${track}'. Estimated start: ${todayAwareFormat(playDate)}; track duration: ${timeToHumanTimestamp(duration * 1000)}. The entry expired at ${todayAwareFormat(expiresAt)}.`);
-                        return false;
-                    });
+        if(this.config.data.detectStaleNowPlayingFromMinutesAgo === false){
+            return plays;
+        }
+
+        return plays.filter(play => {
+            const {artists = [], duration, playDate, track} = play.data;
+            if (duration === undefined || playDate === undefined) {
+                return true;
+            }
+            if (!isSubsonicNowPlayingExpired(play)) {
+                return true;
+            }
+            const tolerance = getSubsonicNowPlayingTolerance(duration);
+            const expiresAt = playDate.add(duration + tolerance, 'second');
+            this.logger.trace(`Ignoring Subsonic now-playing entry as inactive: '${artists.map(x => x.name).join(', ')} - ${track}'. Estimated start: ${todayAwareFormat(playDate)}; track duration: ${timeToHumanTimestamp(duration * 1000)}. The entry expired at ${todayAwareFormat(expiresAt)}.`);
+            return false;
+        });
     }
 
     doAuthentication = async () => {
@@ -317,7 +320,7 @@ export class SubsonicSource extends MemorySource {
             } = {}
         } = resp;
         // Some servers continue reporting the same song as playing after playback stops. Ignore it so it cannot be treated as a new repeat session.
-        const active = this.filterExpiredNowPlaying(entry);
+        const active = this.filterExpiredNowPlaying(entry.map(x => SubsonicSource.formatPlayObj(x, {sourceData: this.sourceData})));
         // sometimes subsonic sources will return the same track as being played twice on the same player, need to remove this so we don't duplicate plays
         const deduped = removeDuplicates(active);
         const userFiltered = this.usersAllow.length == 0 ? deduped : deduped.filter(x => x.meta.user === undefined || this.usersAllow.map(x => x.toLocaleLowerCase()).includes(x.meta.user.toLocaleLowerCase()));

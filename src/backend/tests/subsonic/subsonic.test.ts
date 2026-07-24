@@ -2,7 +2,18 @@ import {expect} from 'chai';
 import {afterEach, describe, it} from 'mocha';
 import MockDate from 'mockdate';
 import dayjs from 'dayjs';
+import { loggerTest } from '@foxxmd/logging';
+import EventEmitter from 'events';
+import type {PlayObject} from '../../../core/Atomic.ts';
+import type {SubSonicSourceConfig} from '../../common/infrastructure/config/source/subsonic.ts';
 import {isSubsonicNowPlayingExpired, SubsonicSource} from '../../sources/SubsonicSource.ts';
+
+class TestSubsonicSource extends SubsonicSource {
+    // make protected method available for tests
+    filterNowPlaying(entries: PlayObject[]): PlayObject[] {
+        return this.filterExpiredNowPlaying(entries);
+    }
+}
 
 const entry = (minutesAgo: number, duration = 180) => ({
     id: 'track-id',
@@ -14,6 +25,26 @@ const entry = (minutesAgo: number, duration = 180) => ({
     playerId: 'player-id',
     username: 'user'
 });
+
+const createSource = (detectStaleNowPlayingFromMinutesAgo?: boolean) => {
+    const config: SubSonicSourceConfig = {
+        data: {
+            url: 'https://example.com',
+            user: 'user',
+            password: 'password',
+            detectStaleNowPlayingFromMinutesAgo
+        },
+        options: {}
+    };
+    const source = new TestSubsonicSource('test', config, {
+        localUrl: new URL('https://example.com'),
+        configDir: 'test',
+        logger: loggerTest,
+        version: 'test'
+    }, new EventEmitter());
+    source.scheduler.stop();
+    return source;
+};
 
 describe('Subsonic now-playing expiration', () => {
     afterEach(() => MockDate.reset());
@@ -72,5 +103,26 @@ describe('Subsonic now-playing expiration', () => {
 
         expect(isSubsonicNowPlayingExpired(SubsonicSource.formatPlayObj(entry(8)))).to.be.true;
         expect(isSubsonicNowPlayingExpired(SubsonicSource.formatPlayObj(entry(0)))).to.be.false;
+    });
+
+    it('filters expired now-playing rows by default', () => {
+        MockDate.set('2026-01-01T12:05:30Z');
+        const source = createSource();
+
+        expect(source.filterNowPlaying([SubsonicSource.formatPlayObj(entry(4))])).to.be.empty;
+    });
+
+    it('filters expired now-playing rows when detecting stale entries is enabled by configuration', () => {
+        MockDate.set('2026-01-01T12:05:30Z');
+        const source = createSource(true);
+
+        expect(source.filterNowPlaying([SubsonicSource.formatPlayObj(entry(4))])).to.be.empty;
+    });
+
+    it('keeps expired now-playing rows when minutesAgo detection is disabled', () => {
+        MockDate.set('2026-01-01T12:05:30Z');
+        const source = createSource(false);
+
+        expect(source.filterNowPlaying([SubsonicSource.formatPlayObj(entry(4))])).to.have.length(1);
     });
 });
