@@ -1,6 +1,8 @@
-import type {CommonSourceConfig, CommonSourceData} from "./index.ts";
+import * as z from "zod";
+import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
 
-export interface LastFMEndpointData extends CommonSourceData {
+export const lastFmEndpointDataSchema = z.object({
+    ...commonSourceDataSchema.shape,
     /**
      * The URL ending that should be used to identify scrobbles for this source
      *
@@ -13,13 +15,23 @@ export interface LastFMEndpointData extends CommonSourceData {
      *
      * If no slug is found from an extension's incoming webhook event the first Last.fm source without a slug will be used
      * */
-    slug?: string | null
-}
+    slug: z.union([z.string(), z.null()]).optional().meta({
+        description: "The URL ending that should be used to identify scrobbles for this source"
+    }),
+});
 
-export interface LastFMEndpointSourceConfig extends CommonSourceConfig {
-    data?: LastFMEndpointData
-}
+export type LastFMEndpointData = z.infer<typeof lastFmEndpointDataSchema>;
 
-export interface LastFMEndpointSourceAIOConfig extends LastFMEndpointSourceConfig {
-    type: 'endpointlfm'
-}
+export const lastFmEndpointSourceConfigSchema = z.object({
+    ...commonSourceConfigSchema.shape,
+    data: lastFmEndpointDataSchema.optional(),
+});
+
+export type LastFMEndpointSourceConfig = z.infer<typeof lastFmEndpointSourceConfigSchema>;
+
+export const lastFmEndpointSourceAIOConfigSchema = z.object({
+    ...lastFmEndpointSourceConfigSchema.shape,
+    type: z.literal('endpointlfm'),
+});
+
+export type LastFMEndpointSourceAIOConfig = z.infer<typeof lastFmEndpointSourceAIOConfigSchema>;

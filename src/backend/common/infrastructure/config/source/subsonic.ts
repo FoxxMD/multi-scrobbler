@@ -1,26 +1,37 @@
-import type {PollingOptions} from "../common.ts";
-import type {CommonSourceConfig, CommonSourceData} from "./index.ts";
+import * as z from "zod";
+import {pollingOptionsSchema} from "../common.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
 
-export interface SubsonicData extends CommonSourceData, PollingOptions {
+export const subsonicDataSchema = z.object({
+    ...commonSourceDataSchema.shape,
+    ...pollingOptionsSchema.shape,
     /**
      * URL of the subsonic media server to query
      *
      * @examples ["http://airsonic.local"]
      * */
-    url: string
+    url: z.string().meta({
+        description: "URL of the subsonic media server to query",
+        examples: ["http://airsonic.local"]
+    }),
     /**
      * Username to login to the server with
      *
      * @example ["MyUser"]
      * */
-    user: string
+    user: z.string().meta({
+        description: "Username to login to the server with"
+    }),
 
     /**
     * Password for the user to login to the server with
      *
      * @examples ["MyPassword"]
     * */
-    password: string
+    password: z.string().meta({
+        description: "Password for the user to login to the server with",
+        examples: ["MyPassword"]
+    }),
 
     /**
      * How long to wait before polling the source API for new tracks (in seconds)
@@ -28,7 +39,11 @@ export interface SubsonicData extends CommonSourceData, PollingOptions {
      * @default 10
      * @examples [10]
      * */
-    interval?: number
+    interval: z.number().optional().meta({
+        description: "How long to wait before polling the source API for new tracks (in seconds)",
+        default: 10,
+        examples: [10]
+    }),
 
     /**
      * When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)
@@ -36,7 +51,11 @@ export interface SubsonicData extends CommonSourceData, PollingOptions {
      * @default 30
      * @examples [30]
      * */
-    maxInterval?: number
+    maxInterval: z.number().optional().meta({
+        description: "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
+        default: 30,
+        examples: [30]
+    }),
 
     /**
      * If your subsonic server is using self-signed certs you may need to disable TLS errors in order to get a connection
@@ -45,7 +64,10 @@ export interface SubsonicData extends CommonSourceData, PollingOptions {
      *
      * @default false
      * */
-    ignoreTlsErrors?: boolean
+    ignoreTlsErrors: z.boolean().optional().meta({
+        description: "If your subsonic server is using self-signed certs you may need to disable TLS errors in order to get a connection",
+        default: false
+    }),
 
     /**
      * Older Subsonic versions, and some badly implemented servers (Nextcloud), use legacy authentication which sends your password in CLEAR TEXT. This is less secure than the newer, recommended hashing authentication method but in some cases it is needed. See "Authentication" section here => https://www.subsonic.org/pages/api.jsp
@@ -54,19 +76,33 @@ export interface SubsonicData extends CommonSourceData, PollingOptions {
      *
      * @default false
      * */
-    legacyAuthentication?: boolean
+    legacyAuthentication: z.boolean().optional().meta({
+        description: "Older Subsonic versions, and some badly implemented servers (Nextcloud), use legacy authentication which sends your password in CLEAR TEXT.",
+        default: false
+    }),
 
     /**
      * Only scrobble for specific users (case-insensitive)
      *
      * If undefined or an empty string/list MS will scrobble activity from all users
      * */
-    usersAllow?: string | string[]
-}
-export interface SubSonicSourceConfig extends CommonSourceConfig {
-    data: SubsonicData
-}
+    usersAllow: z.union([z.string(), z.array(z.string())]).optional().meta({
+        description: "Only scrobble for specific users (case-insensitive)"
+    }),
+});
 
-export interface SubsonicSourceAIOConfig extends SubSonicSourceConfig {
-    type: 'subsonic'
-}
+export type SubsonicData = z.infer<typeof subsonicDataSchema>;
+
+export const subSonicSourceConfigSchema = z.object({
+    ...commonSourceConfigSchema.shape,
+    data: subsonicDataSchema,
+});
+
+export type SubSonicSourceConfig = z.infer<typeof subSonicSourceConfigSchema>;
+
+export const subsonicSourceAIOConfigSchema = z.object({
+    ...subSonicSourceConfigSchema.shape,
+    type: z.literal('subsonic'),
+});
+
+export type SubsonicSourceAIOConfig = z.infer<typeof subsonicSourceAIOConfigSchema>;

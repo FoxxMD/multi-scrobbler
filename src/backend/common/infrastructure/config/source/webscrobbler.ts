@@ -1,6 +1,8 @@
-import type {CommonSourceConfig, CommonSourceData} from "./index.ts";
+import * as z from "zod";
+import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
 
-export interface WebScrobblerData extends CommonSourceData {
+export const webScrobblerDataSchema = z.object({
+    ...commonSourceDataSchema.shape,
     /**
      * The URL ending that should be used to identify scrobbles for this source
      *
@@ -17,27 +19,43 @@ export interface WebScrobblerData extends CommonSourceData {
      *
      * If no slug is found from an extension's incoming webhook event the first WebScrobbler source without a slug will be used
      * */
-    slug?: string | null
+    slug: z.union([z.string(), z.null()]).optional().meta({
+        description: "The URL ending that should be used to identify scrobbles for this source"
+    }),
 
     /**
      * Block scrobbling from specific WebScrobbler Connectors
      *
-     * @examples [["youtube"]]
+     * @examples ["youtube"]
      * */
-    blacklist?: string | string[]
+    blacklist: z.union([z.string(), z.array(z.string())]).optional().meta({
+        description: "Block scrobbling from specific WebScrobbler Connectors",
+        examples: ["youtube"]
+    }),
 
     /**
      * Only allow scrobbling from specific WebScrobbler Connectors
      *
-     * @examples [["mixcloud","soundcloud","bandcamp"]]
+     * @examples ["mixcloud","soundcloud","bandcamp"]
      * */
-    whitelist?: string | string[]
-}
+    whitelist: z.union([z.string(), z.array(z.string())]).optional().meta({
+        description: "Only allow scrobbling from specific WebScrobbler Connectors",
+        examples: ["mixcloud", "soundcloud", "bandcamp"]
+    }),
+});
 
-export interface WebScrobblerSourceConfig extends CommonSourceConfig {
-    data?: WebScrobblerData
-}
+export type WebScrobblerData = z.infer<typeof webScrobblerDataSchema>;
 
-export interface WebScrobblerSourceAIOConfig extends WebScrobblerSourceConfig {
-    type: 'webscrobbler'
-}
+export const webScrobblerSourceConfigSchema = z.object({
+    ...commonSourceConfigSchema.shape,
+    data: webScrobblerDataSchema.optional(),
+});
+
+export type WebScrobblerSourceConfig = z.infer<typeof webScrobblerSourceConfigSchema>;
+
+export const webScrobblerSourceAIOConfigSchema = z.object({
+    ...webScrobblerSourceConfigSchema.shape,
+    type: z.literal('webscrobbler'),
+});
+
+export type WebScrobblerSourceAIOConfig = z.infer<typeof webScrobblerSourceAIOConfigSchema>;

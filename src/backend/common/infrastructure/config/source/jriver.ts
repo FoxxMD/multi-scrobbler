@@ -1,7 +1,11 @@
-import type {PollingOptions, RequestRetryOptions} from "../common.ts";
-import type {CommonSourceConfig, CommonSourceData} from "./index.ts";
+import * as z from "zod";
+import {pollingOptionsSchema, requestRetryOptionsSchema} from "../common.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
 
-export interface JRiverData extends CommonSourceData, PollingOptions, RequestRetryOptions {
+export const jRiverDataSchema = z.object({
+    ...commonSourceDataSchema.shape,
+    ...pollingOptionsSchema.shape,
+    ...requestRetryOptionsSchema.shape,
     /**
      * URL of the JRiver HTTP server to connect to
      *
@@ -20,22 +24,39 @@ export interface JRiverData extends CommonSourceData, PollingOptions, RequestRet
      * @examples ["http://localhost:52199/MCWS/v1/"]
      * @default "http://localhost:52199/MCWS/v1/"
      * */
-    url: string
+    url: z.string().meta({
+        description: "URL of the JRiver HTTP server to connect to",
+        default: "http://localhost:52199/MCWS/v1/",
+        examples: ["http://localhost:52199/MCWS/v1/"]
+    }),
 
     /**
      * If you have enabled authentication, the username you set
      * */
-    username?: string
+    username: z.string().optional().meta({
+        description: "If you have enabled authentication, the username you set"
+    }),
 
     /**
      * If you have enabled authentication, the password you set
      * */
-    password?: string
-}
-export interface JRiverSourceConfig extends CommonSourceConfig {
-    data: JRiverData
-}
+    password: z.string().optional().meta({
+        description: "If you have enabled authentication, the password you set"
+    }),
+});
 
-export interface JRiverSourceAIOConfig extends JRiverSourceConfig {
-    type: 'jriver'
-}
+export type JRiverData = z.infer<typeof jRiverDataSchema>;
+
+export const jRiverSourceConfigSchema = z.object({
+    ...commonSourceConfigSchema.shape,
+    data: jRiverDataSchema,
+});
+
+export type JRiverSourceConfig = z.infer<typeof jRiverSourceConfigSchema>;
+
+export const jRiverSourceAIOConfigSchema = z.object({
+    ...jRiverSourceConfigSchema.shape,
+    type: z.literal('jriver'),
+});
+
+export type JRiverSourceAIOConfig = z.infer<typeof jRiverSourceAIOConfigSchema>;

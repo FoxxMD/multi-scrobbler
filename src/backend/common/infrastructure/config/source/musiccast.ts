@@ -1,6 +1,7 @@
+import * as z from "zod";
 import { REPORTED_PLAYER_STATUSES } from '../../../../../core/Atomic.ts';
 import type {ReportedPlayerStatus} from '../../../../../core/Atomic.ts';
-import type {CommonSourceConfig, CommonSourceData} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
 
 export type PlaybackStatus = 'play' | 'stop' | 'pause' | 'fast_reverse' | 'fast_forward'
 
@@ -70,19 +71,31 @@ export const playbackToReportedStatus = (pb: PlaybackStatus): ReportedPlayerStat
     }
 }
 
-export interface MusicCastData extends CommonSourceData {
+export const musicCastDataSchema = z.object({
+    ...commonSourceDataSchema.shape,
     /**
      * The host or URL of the YamahaExtendedControl endpoint to use
      *
      * @examples [["192.168.0.101","http://192.168.0.101/YamahaExtendedControl"]]
      * */
-    url: string
-}
+    url: z.string().meta({
+        description: "The host or URL of the YamahaExtendedControl endpoint to use",
+        examples: [["192.168.0.101", "http://192.168.0.101/YamahaExtendedControl"]]
+    }),
+});
 
-export interface MusicCastSourceConfig extends CommonSourceConfig {
-    data: MusicCastData
-}
+export type MusicCastData = z.infer<typeof musicCastDataSchema>;
 
-export interface MusicCastSourceAIOConfig extends MusicCastSourceConfig {
-    type: 'musiccast'
-}
+export const musicCastSourceConfigSchema = z.object({
+    ...commonSourceConfigSchema.shape,
+    data: musicCastDataSchema,
+});
+
+export type MusicCastSourceConfig = z.infer<typeof musicCastSourceConfigSchema>;
+
+export const musicCastSourceAIOConfigSchema = z.object({
+    ...musicCastSourceConfigSchema.shape,
+    type: z.literal('musiccast'),
+});
+
+export type MusicCastSourceAIOConfig = z.infer<typeof musicCastSourceAIOConfigSchema>;

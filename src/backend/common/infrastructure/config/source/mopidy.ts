@@ -1,7 +1,10 @@
-import type {PollingOptions} from "../common.ts";
-import type {CommonSourceConfig, CommonSourceData} from "./index.ts";
+import * as z from "zod";
+import {pollingOptionsSchema} from "../common.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
 
-export interface MopidyData extends CommonSourceData, PollingOptions {
+export const mopidyDataSchema = z.object({
+    ...commonSourceDataSchema.shape,
+    ...pollingOptionsSchema.shape,
     /**
      * URL of the Mopidy HTTP server to connect to
      *
@@ -22,7 +25,11 @@ export interface MopidyData extends CommonSourceData, PollingOptions {
      * @examples ["ws://localhost:6680/mopidy/ws/"]
      * @default "ws://localhost:6680/mopidy/ws/"
      * */
-    url?: string
+    url: z.string().optional().meta({
+        description: "URL of the Mopidy HTTP server to connect to",
+        default: "ws://localhost:6680/mopidy/ws/",
+        examples: ["ws://localhost:6680/mopidy/ws/"]
+    }),
 
     /**
      * Do not scrobble tracks whose URI STARTS WITH any of these strings, case-insensitive
@@ -31,7 +38,9 @@ export interface MopidyData extends CommonSourceData, PollingOptions {
      *
      * List is ignored if uriWhitelist is used.
      * */
-    uriBlacklist?: string[]
+    uriBlacklist: z.array(z.string()).optional().meta({
+        description: "Do not scrobble tracks whose URI STARTS WITH any of these strings, case-insensitive"
+    }),
 
     /**
      * Only scrobble tracks whose URI STARTS WITH any of these strings, case-insensitive
@@ -39,7 +48,9 @@ export interface MopidyData extends CommonSourceData, PollingOptions {
      * EX: Only scrobble tracks from soundcloud by adding 'soundcloud' to this list.
      *
      * */
-    uriWhitelist?: string[]
+    uriWhitelist: z.array(z.string()).optional().meta({
+        description: "Only scrobble tracks whose URI STARTS WITH any of these strings, case-insensitive"
+    }),
 
     /**
      * Remove album data that matches any case-insensitive string from this list when scrobbling,
@@ -49,7 +60,11 @@ export interface MopidyData extends CommonSourceData, PollingOptions {
      * @examples [["Soundcloud", "Mixcloud"]]
      * @default ["Soundcloud"]
      * */
-    albumBlacklist?: string[]
+    albumBlacklist: z.array(z.string()).optional().meta({
+        description: "Remove album data that matches any case-insensitive string from this list when scrobbling,",
+        default: ["Soundcloud"],
+        examples: [["Soundcloud", "Mixcloud"]]
+    }),
 
     /**
      * How long to wait before polling the source API for new tracks (in seconds)
@@ -57,7 +72,11 @@ export interface MopidyData extends CommonSourceData, PollingOptions {
      * @default 10
      * @examples [10]
      * */
-    interval?: number
+    interval: z.number().optional().meta({
+        description: "How long to wait before polling the source API for new tracks (in seconds)",
+        default: 10,
+        examples: [10]
+    }),
 
     /**
      * When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)
@@ -65,12 +84,25 @@ export interface MopidyData extends CommonSourceData, PollingOptions {
      * @default 30
      * @examples [30]
      * */
-    maxInterval?: number
-}
-export interface MopidySourceConfig extends CommonSourceConfig {
-    data: MopidyData
-}
+    maxInterval: z.number().optional().meta({
+        description: "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
+        default: 30,
+        examples: [30]
+    }),
+});
 
-export interface MopidySourceAIOConfig extends MopidySourceConfig {
-    type: 'mopidy'
-}
+export type MopidyData = z.infer<typeof mopidyDataSchema>;
+
+export const mopidySourceConfigSchema = z.object({
+    ...commonSourceConfigSchema.shape,
+    data: mopidyDataSchema,
+});
+
+export type MopidySourceConfig = z.infer<typeof mopidySourceConfigSchema>;
+
+export const mopidySourceAIOConfigSchema = z.object({
+    ...mopidySourceConfigSchema.shape,
+    type: z.literal('mopidy'),
+});
+
+export type MopidySourceAIOConfig = z.infer<typeof mopidySourceAIOConfigSchema>;

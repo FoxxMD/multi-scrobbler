@@ -1,21 +1,37 @@
-import type {KoitoData} from "../client/koito.ts";
-import type {PollingOptions} from "../common.ts";
-import type {CommonSourceConfig, CommonSourceData} from "./index.ts";
+import * as z from "zod";
+import {koitoDataSchema} from "../client/koito.ts";
+import {pollingOptionsSchema} from "../common.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
 
-export interface KoitoSourceData extends KoitoData, CommonSourceData, PollingOptions {
-}
+export const koitoSourceDataSchema = z.object({
+    ...koitoDataSchema.shape,
+    ...commonSourceDataSchema.shape,
+    ...pollingOptionsSchema.shape,
+});
 
-export interface KoitoSourceConfig extends CommonSourceConfig {
+export type KoitoSourceData = z.infer<typeof koitoSourceDataSchema>;
+
+export const koitoSourceConfigSchema = z.object({
+    ...commonSourceConfigSchema.shape,
     /**
      * When used in `koito.config` this tells multi-scrobbler whether to use this data to configure a source or client.
      *
      * @default source
      * @examples ["source"]
      * */
-    configureAs: 'source'
-    data: KoitoSourceData
-}
+    configureAs: z.literal('source').meta({
+        description: "When used in `koito.config` this tells multi-scrobbler whether to use this data to configure a source or client.",
+        default: "source",
+        examples: ["source"]
+    }),
+    data: koitoSourceDataSchema,
+});
 
-export interface KoitoSourceAIOConfig extends KoitoSourceConfig {
-    type: 'koito'
-}
+export type KoitoSourceConfig = z.infer<typeof koitoSourceConfigSchema>;
+
+export const koitoSourceAIOConfigSchema = z.object({
+    ...koitoSourceConfigSchema.shape,
+    type: z.literal('koito'),
+});
+
+export type KoitoSourceAIOConfig = z.infer<typeof koitoSourceAIOConfigSchema>;

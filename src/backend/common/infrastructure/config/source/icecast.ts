@@ -1,5 +1,5 @@
-import type {CommonSourceConfig, CommonSourceData, CommonSourceOptions} from "./index.ts";
-
+import * as z from "zod";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, manualListeningOptionsSchema} from "./index.ts";
 
 export interface IcecastMetadata {
     icy?: {
@@ -16,32 +16,52 @@ export interface IcecastMetadata {
     }
 }
 
-export type IcecastSource = 'icy' | 'ogg' | 'icestats' | 'stats' | 'sevenhtml' | 'nextsongs';
+export const icecastSourceSchema = z.union([z.literal('icy'), z.literal('ogg'), z.literal('icestats'), z.literal('stats'), z.literal('sevenhtml'), z.literal('nextsongs')]);
 
-export interface IcecastOptions {
-    sources?: IcecastSource[]
-    icestatsEndpoint?: string
-    statsEndpoint?: string
-    nextsongsEndpoint?: string
-    sevenhtmlEndpoint?: string
-    icyMetaInt?: number
-}
+export type IcecastSource = z.infer<typeof icecastSourceSchema>;
 
-export interface IcecastData extends CommonSourceData, IcecastOptions {
+export const icecastOptionsSchema = z.object({
+    sources: z.array(icecastSourceSchema).optional(),
+    icestatsEndpoint: z.string().optional(),
+    statsEndpoint: z.string().optional(),
+    nextsongsEndpoint: z.string().optional(),
+    sevenhtmlEndpoint: z.string().optional(),
+    icyMetaInt: z.number().optional(),
+});
+
+export type IcecastOptions = z.infer<typeof icecastOptionsSchema>;
+
+export const icecastDataSchema = z.object({
+    ...commonSourceDataSchema.shape,
+    ...icecastOptionsSchema.shape,
     /**
      * The Icecast stream URL
      * */
-    url: string
-}
+    url: z.string().meta({
+        description: "The Icecast stream URL"
+    }),
+});
 
-export interface IcecastSourceOptions extends CommonSourceOptions {
-}
+export type IcecastData = z.infer<typeof icecastDataSchema>;
 
-export interface IcecastSourceConfig extends CommonSourceConfig {
-    data: IcecastData
-    options?: IcecastSourceOptions
-}
+export const icecastSourceOptionsSchema = z.object({
+    ...commonSourceOptionsSchema.shape,
+    ...manualListeningOptionsSchema.shape,
+});
 
-export interface IcecastSourceAIOConfig extends IcecastSourceConfig {
-    type: 'icecast'
-}
+export type IcecastSourceOptions = z.infer<typeof icecastSourceOptionsSchema>;
+
+export const icecastSourceConfigSchema = z.object({
+    ...commonSourceConfigSchema.shape,
+    data: icecastDataSchema,
+    options: icecastSourceOptionsSchema.optional(),
+});
+
+export type IcecastSourceConfig = z.infer<typeof icecastSourceConfigSchema>;
+
+export const icecastSourceAIOConfigSchema = z.object({
+    ...icecastSourceConfigSchema.shape,
+    type: z.literal('icecast'),
+});
+
+export type IcecastSourceAIOConfig = z.infer<typeof icecastSourceAIOConfigSchema>;

@@ -1,17 +1,32 @@
-import type {PollingOptions} from "../common.ts";
-import type {CommonSourceConfig, CommonSourceData} from "./index.ts";
+import * as z from "zod";
+import {pollingOptionsSchema} from "../common.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
 
-export interface YandexMusicBridgeData extends CommonSourceData, PollingOptions {
+export const yandexMusicBridgeDataSchema = z.object({
+    ...commonSourceDataSchema.shape,
+    ...pollingOptionsSchema.shape,
     /** URL of the local Python bridge, for example http://yandex-music-bridge:9980 */
-    url: string
+    url: z.string().meta({
+        description: "URL of the local Python bridge, for example http://yandex-music-bridge:9980"
+    }),
     /** Optional API key sent as X-API-Key to the bridge */
-    apiKey?: string
-}
+    apiKey: z.string().optional().meta({
+        description: "Optional API key sent as X-API-Key to the bridge"
+    }),
+});
 
-export interface YandexMusicBridgeSourceConfig extends CommonSourceConfig {
-    data?: YandexMusicBridgeData
-}
+export type YandexMusicBridgeData = z.infer<typeof yandexMusicBridgeDataSchema>;
 
-export interface YandexMusicBridgeSourceAIOConfig extends YandexMusicBridgeSourceConfig {
-    type: 'ymbridge'
-}
+export const yandexMusicBridgeSourceConfigSchema = z.object({
+    ...commonSourceConfigSchema.shape,
+    data: yandexMusicBridgeDataSchema.optional(),
+});
+
+export type YandexMusicBridgeSourceConfig = z.infer<typeof yandexMusicBridgeSourceConfigSchema>;
+
+export const yandexMusicBridgeSourceAIOConfigSchema = z.object({
+    ...yandexMusicBridgeSourceConfigSchema.shape,
+    type: z.literal('ymbridge'),
+});
+
+export type YandexMusicBridgeSourceAIOConfig = z.infer<typeof yandexMusicBridgeSourceAIOConfigSchema>;

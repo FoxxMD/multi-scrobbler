@@ -1,20 +1,37 @@
-import type {LibrefmData} from "../client/librefm.ts";
-import type {PollingOptions} from "../common.ts";
-import type {CommonSourceConfig, CommonSourceData} from "./index.ts";
+import * as z from "zod";
+import {librefmDataSchema} from "../client/librefm.ts";
+import {pollingOptionsSchema} from "../common.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
 
-export interface librefmSourceData extends CommonSourceData, PollingOptions, LibrefmData{}
+export const librefmSourceDataSchema = z.object({
+    ...commonSourceDataSchema.shape,
+    ...pollingOptionsSchema.shape,
+    ...librefmDataSchema.shape,
+});
 
-export interface LibrefmSourceConfig extends CommonSourceConfig {
+export type librefmSourceData = z.infer<typeof librefmSourceDataSchema>;
+
+export const librefmSourceConfigSchema = z.object({
+    ...commonSourceConfigSchema.shape,
     /**
      * When used in `librefm.config` this tells multi-scrobbler whether to use this data to configure a source or client.
      *
      * @default source
      * @examples ["source"]
      * */
-    configureAs?: 'source'
-    data: LibrefmData
-}
+    configureAs: z.literal('source').optional().meta({
+        description: "When used in `librefm.config` this tells multi-scrobbler whether to use this data to configure a source or client.",
+        default: "source",
+        examples: ["source"]
+    }),
+    data: librefmDataSchema,
+});
 
-export interface LibrefmSouceAIOConfig extends LibrefmSourceConfig {
-    type: 'librefm'
-}
+export type LibrefmSourceConfig = z.infer<typeof librefmSourceConfigSchema>;
+
+export const librefmSouceAIOConfigSchema = z.object({
+    ...librefmSourceConfigSchema.shape,
+    type: z.literal('librefm'),
+});
+
+export type LibrefmSouceAIOConfig = z.infer<typeof librefmSouceAIOConfigSchema>;
