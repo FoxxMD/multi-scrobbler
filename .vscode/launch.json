@@ -2,6 +2,24 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Debug Zod Conversion",
+            "type": "node",
+            "request": "launch",
+            // Debug app in VSCode
+            "program": "${workspaceFolder}/ts-zod.ts",
+            "args": [
+                "${file}"
+            ],
+            "runtimeExecutable": "node",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "skipFiles": [
+                "<node_internals>/**",
+                // Ignore all dependencies (optional)
+                "${workspaceFolder}/node_modules/**",
+            ],
+        },
+        {
             "name": "Run Canonical Replace",
             "program": "${workspaceFolder}/docsite/canonical-replace.ts",
             "runtimeArgs": ["--experimental-strip-types"],

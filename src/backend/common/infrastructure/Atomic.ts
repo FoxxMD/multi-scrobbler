@@ -11,6 +11,7 @@ import type { ReportedPlayerStatus, SourceType } from "../../../core/Atomic.ts";
 import type { ClientType } from "../../../core/Atomic.ts";
 import assert from 'assert';
 import * as path from 'path';
+import * as z from 'zod';
 
 export const __filename = import.meta.filename;
 export const projectRootDir = path.resolve(__filename, '../../../../../');
@@ -409,6 +410,7 @@ export interface ScrobbleRangeResult {
 
 export const REFRESH_STALE_DEFAULT = 60;
 
+export const durationValueSchema = z.union([z.number(), z.string()]);
 /**
  * A duration of time
  * 
@@ -419,7 +421,8 @@ export const REFRESH_STALE_DEFAULT = 60;
  * 
  * @example [60, 3600, "1 hour", "4 days"]
  */
-export type DurationValue = number | string;
+export type DurationValue = z.infer<typeof durationValueSchema>; // number | string;
+
 
 export type MigrationStatus = {
     backupRequired: boolean, 
