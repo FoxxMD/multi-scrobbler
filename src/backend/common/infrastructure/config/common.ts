@@ -125,12 +125,16 @@ export const pollingOptionsSchema = z.object({
 });
 
 export type PollingOptions = z.infer<typeof pollingOptionsSchema>;
-export interface MonitorOptions {
+
+export const monitorOptionsSchema = z.object({
     /**
      * Set the default behavior for wether this component should automatically monitor any activity, or scrobble, it encounters
      * 
      * @default true
-     * @examples [true, false]
      */
-    autoMonitor?: boolean
-}
+    autoMonitor: z.boolean().optional().meta({
+        default: true,
+        description: 'Set the default behavior for wether this component should automatically monitor any activity, or scrobble, it encounters'
+    })
+})
+export type MonitorOptions = z.infer<typeof monitorOptionsSchema>;

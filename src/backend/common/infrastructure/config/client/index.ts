@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {playTransformOptionsSchema} from "../../../../../core/Transform.ts";
-import {commonConfigSchema, requestRetryOptionsSchema, MonitorOptions} from "../common.ts";
+import {commonConfigSchema, requestRetryOptionsSchema, monitorOptionsSchema} from "../common.ts";
 import {retentionConfigDurationValueSchema} from "../database.ts";
 
 /**
@@ -125,6 +125,7 @@ export const nowPlayingOptionsSchema = z.object({
 export type NowPlayingOptions = z.infer<typeof nowPlayingOptionsSchema>;
 
 export const commonClientOptionsSchema = z.object({
+    ...monitorOptionsSchema.shape,
     ...requestRetryOptionsSchema.shape,
     ...upstreamRefreshOptionsSchema.shape,
 

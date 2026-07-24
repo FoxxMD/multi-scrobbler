@@ -1,5 +1,5 @@
 import * as z from "zod";
-import {requestRetryOptionsSchema, commonConfigSchema, MonitorOptions} from "../common.ts";
+import {requestRetryOptionsSchema, commonConfigSchema, monitorOptionsSchema} from "../common.ts";
 import {retentionConfigDurationValueSchema} from "../database.ts";
 import {playTransformOptionsSchema} from "../../../../../core/Transform.ts";
 
@@ -74,6 +74,7 @@ export const fileLogOptionsSchema = z.object({
 });
 
 export const commonSourceOptionsSchema = z.object({
+    ...monitorOptionsSchema.shape,
     ...sourceRetryOptionsSchema.shape,
     /**
      * * If this source has INGRESS to MS (sends a payload, rather than MS GETTING requesting a payload) then setting this option to true will make MS log the payload JSON to DEBUG output
