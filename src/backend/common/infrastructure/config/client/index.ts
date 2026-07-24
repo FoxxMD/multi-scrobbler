@@ -1,7 +1,6 @@
-import type {DurationValue} from "../../Atomic.ts";
 import type {PlayTransformOptions} from "../../../../../core/Transform.ts";
 import type {CommonConfig, RequestRetryOptions} from "../common.ts";
-import type {RetentionConfig} from "../database.ts";
+import type {RetentionConfigDurationValue} from "../database.ts";
 
 /**
  * Scrobble matching (between new source track and existing client scrobbles) logging options. Used for debugging.
@@ -108,7 +107,7 @@ export interface CommonClientOptions extends RequestRetryOptions, UpstreamRefres
 
     playTransform?: PlayTransformOptions
 
-    retention?: RetentionConfig<DurationValue>
+    retention?: RetentionConfigDurationValue
 }
 
 export interface CommonClientConfig extends CommonConfig {

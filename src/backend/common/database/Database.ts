@@ -2,9 +2,7 @@ import { getDataDir } from '../index.ts';
 import * as path from 'path';
 import { childLogger, type Logger } from '@foxxmd/logging';
 import { loggerNoop } from '../MaybeLogger.ts';
-import { COMPACTABLE, type CompactableProperty, DEFAULT_RETENTION_COMPACT_AFTER, DEFAULT_RETENTION_DELETE_AFTER, type RetentionConfigValue, type RetentionOption, type RetentionValue, type RetentionValueUnparsed } from '../infrastructure/config/database.ts';
-import type {DurationValue} from '../infrastructure/Atomic.ts';
-import type {Duration} from 'dayjs/plugin/duration.js';
+import { COMPACTABLE, type CompactableProperty, DEFAULT_RETENTION_COMPACT_AFTER, DEFAULT_RETENTION_DELETE_AFTER, type RetentionConfigValueDurationValue, type RetentionConfigValueDuration, type RetentionOptionDuration, type RetentionOptionRetentionValue, type RetentionValue, type RetentionValueUnparsed } from '../infrastructure/config/database.ts';
 import dayjs from 'dayjs';
 import { parseDurationFromDurationValue } from '../../utils/TimeUtils.ts';
 import assert from 'node:assert';
@@ -69,7 +67,7 @@ const parseRetentionValue = (val: RetentionValueUnparsed): RetentionValue => {
     throw new SimpleError('retention value be of one: false, number, or string');
 }
 
-const parseRetentionFromEnv = (type: string, defaultVal: number = DEFAULT_RETENTION_DELETE_AFTER): RetentionOption<RetentionValue> => {
+const parseRetentionFromEnv = (type: string, defaultVal: number = DEFAULT_RETENTION_DELETE_AFTER): RetentionOptionRetentionValue => {
     const deleteAfterEnv = process.env[`RETENTION_${type}_AFTER`] ?? defaultVal,
         deleteCompletedEnv = process.env[`RETENTION_${type}_COMPLETED_AFTER`] ?? deleteAfterEnv,
         deleteFailedEnv = process.env[`RETENTION_${type}_FAILED_AFTER`] ?? deleteAfterEnv,
@@ -82,14 +80,14 @@ const parseRetentionFromEnv = (type: string, defaultVal: number = DEFAULT_RETENT
     }
 }
 
-const isRetentionOptionDurations = (val: RetentionOption<RetentionValue>): val is RetentionOption<Duration> => {
+const isRetentionOptionDurations = (val: RetentionOptionRetentionValue): val is RetentionOptionDuration => {
     return dayjs.isDuration(val.completed)
     && dayjs.isDuration(val.duped)
     && dayjs.isDuration(val.failed);
 }
 
-let retentionDeleteAfterFromEnv: RetentionOption<Duration>,
-retentionCompactAfterFromEnv: RetentionOption<RetentionValue>;
+let retentionDeleteAfterFromEnv: RetentionOptionDuration,
+retentionCompactAfterFromEnv: RetentionOptionRetentionValue;
 
 export const getRetentionDeleteAfterFromEnv = () => {
     if (retentionDeleteAfterFromEnv === undefined) {
@@ -110,7 +108,7 @@ export const getRetentionCompactAfterFromEnv = () => {
     return retentionCompactAfterFromEnv;
 }
 
-export const parseRetentionOptions = (opts: RetentionConfigValue<DurationValue> = {}, defaults: RetentionOption<RetentionValue>): RetentionOption<RetentionValue> => {
+export const parseRetentionOptions = (opts: RetentionConfigValueDurationValue = {}, defaults: RetentionOptionRetentionValue): RetentionOptionRetentionValue => {
     if (typeof opts === 'number' || typeof opts === 'string') {
         const dur = parseDurationFromDurationValue(opts);
         return {
@@ -145,7 +143,7 @@ export const parseRetentionOptions = (opts: RetentionConfigValue<DurationValue> 
     }
 }
 
-export const parseRetentionOptionsDurations = (opts: RetentionConfigValue<Exclude<RetentionValueUnparsed, false>> = {}, defaults: RetentionOption<Duration>): RetentionOption<Duration> => {
+export const parseRetentionOptionsDurations = (opts: RetentionConfigValueDurationValue | RetentionConfigValueDuration = {}, defaults: RetentionOptionDuration): RetentionOptionDuration => {
     if (typeof opts === 'number' || typeof opts === 'string') {
         const dur = parseDurationFromDurationValue(opts);
         return {

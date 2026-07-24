@@ -2,8 +2,7 @@ import type { FileLogOptions, LogLevel } from "@foxxmd/logging";
 
 import type { PlayTransformOptions } from "../../../../../core/Transform.ts";
 import type { CommonConfig, RequestRetryOptions } from "../common.ts";
-import type { RetentionConfig } from "../database.ts";
-import type { DurationValue } from "../../Atomic.ts";
+import type { RetentionConfigDurationValue } from "../database.ts";
 
 /** @zod */
 export interface SourceRetryOptions extends RequestRetryOptions {
@@ -114,7 +113,7 @@ export interface CommonSourceOptions extends SourceRetryOptions {
 
     playTransform?: PlayTransformOptions
 
-    retention?: RetentionConfig<DurationValue>
+    retention?: RetentionConfigDurationValue
 }
 
 /** @zod */

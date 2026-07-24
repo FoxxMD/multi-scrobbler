@@ -25,18 +25,57 @@ export const retentionValueSchema = z.union([durationSchema, z.literal(false)]);
 
 export type RetentionValue = z.infer<typeof retentionValueSchema>;
 
-// `RententionGranular<T>`, `RetentionConfigValue<T>`, and `RetentionOption<T>` are generic and are consumed
-// elsewhere via generic type-argument syntax with several different concrete `T`s (e.g.
-// `RetentionConfigValue<DurationValue>`, `RetentionOption<Duration>`, `RetentionOption<RetentionValue>` in
-// Database.ts). Zod can't represent a generic object schema the way a TS interface can, and replacing these
-// with a single concrete schema would break those call sites, so they're left as plain generic types.
-export interface RententionGranular<T extends RetentionValueUnparsed> {
-    failed?: T
-    completed?: T
-    duped?: T
-}
-export type RetentionConfigValue<T extends RetentionValueUnparsed> =  T | RententionGranular<T>;
-export type RetentionOption<T extends RetentionValue> = Required<RententionGranular<T>>;
+// `RententionGranular<T>`, `RetentionConfigValue<T>`, `RetentionOption<T>`, and `RetentionConfig<T>` were
+// previously left as plain generics since zod can't represent a generic object schema the way a TS interface
+// can. In practice though each is only ever instantiated with one of three known terms - `DurationValue`,
+// `Duration`, and `RetentionValue` - so below builds one concrete schema per term actually valid for each
+// family (per each type's original generic constraint) and unifies them with `z.union` into a single
+// non-generic replacement. Call sites elsewhere now use the specific per-term type where the term is
+// statically known.
+
+export const rententionGranularDurationValueSchema = z.object({
+    failed: durationValueSchema.optional(),
+    completed: durationValueSchema.optional(),
+    duped: durationValueSchema.optional(),
+});
+export type RententionGranularDurationValue = z.infer<typeof rententionGranularDurationValueSchema>;
+
+export const rententionGranularDurationSchema = z.object({
+    failed: durationSchema.optional(),
+    completed: durationSchema.optional(),
+    duped: durationSchema.optional(),
+});
+export type RententionGranularDuration = z.infer<typeof rententionGranularDurationSchema>;
+
+export const rententionGranularRetentionValueSchema = z.object({
+    failed: retentionValueSchema.optional(),
+    completed: retentionValueSchema.optional(),
+    duped: retentionValueSchema.optional(),
+});
+export type RententionGranularRetentionValue = z.infer<typeof rententionGranularRetentionValueSchema>;
+
+export const rententionGranularSchema = z.union([
+    rententionGranularDurationValueSchema,
+    rententionGranularDurationSchema,
+    rententionGranularRetentionValueSchema,
+]);
+export type RententionGranular = z.infer<typeof rententionGranularSchema>;
+
+export const retentionConfigValueDurationValueSchema = z.union([durationValueSchema, rententionGranularDurationValueSchema]);
+export type RetentionConfigValueDurationValue = z.infer<typeof retentionConfigValueDurationValueSchema>;
+
+export const retentionConfigValueDurationSchema = z.union([durationSchema, rententionGranularDurationSchema]);
+export type RetentionConfigValueDuration = z.infer<typeof retentionConfigValueDurationSchema>;
+
+export const retentionConfigValueRetentionValueSchema = z.union([retentionValueSchema, rententionGranularRetentionValueSchema]);
+export type RetentionConfigValueRetentionValue = z.infer<typeof retentionConfigValueRetentionValueSchema>;
+
+export const retentionConfigValueSchema = z.union([
+    retentionConfigValueDurationValueSchema,
+    retentionConfigValueDurationSchema,
+    retentionConfigValueRetentionValueSchema,
+]);
+export type RetentionConfigValue = z.infer<typeof retentionConfigValueSchema>;
 
 export const compactablePropertySchema = z.enum(['transform', 'input']);
 
@@ -49,27 +88,52 @@ export const COMPACTABLE = {
 
 export const compactableProperties: CompactableProperty[] = [COMPACTABLE.transform, COMPACTABLE.input];
 
-// `RetentionConfig<T>` is generic and is consumed elsewhere via generic type-argument syntax
-// (`RetentionConfig<DurationValue>` in source/index.ts, aioConfig.ts, and client/index.ts). Left untouched
-// for the same reason as `RententionGranular`/`RetentionConfigValue`/`RetentionOption` above.
-export interface RetentionConfig<T extends RetentionValueUnparsed> {
-    deleteAfter?: RetentionConfigValue<T>
-    compactAfter?: RetentionConfigValue<T>
-    compact?: CompactableProperty[]
-}
-
-// Concrete instantiations of the generic `RetentionOption<T>` (`Required<RententionGranular<T>>`), needed
-// here since `RetentionOptions` itself is non-generic and always uses these exact two `T`s.
-const retentionOptionDurationSchema = z.object({
+// `RetentionOption<T>`'s original constraint (`T extends RetentionValue`) only ever admits `Duration` and
+// `RetentionValue` itself - not `DurationValue` - so there are only two valid terms here.
+export const retentionOptionDurationSchema = z.object({
     failed: durationSchema,
     completed: durationSchema,
     duped: durationSchema,
 });
-const retentionOptionRetentionValueSchema = z.object({
+export type RetentionOptionDuration = z.infer<typeof retentionOptionDurationSchema>;
+
+export const retentionOptionRetentionValueSchema = z.object({
     failed: retentionValueSchema,
     completed: retentionValueSchema,
     duped: retentionValueSchema,
 });
+export type RetentionOptionRetentionValue = z.infer<typeof retentionOptionRetentionValueSchema>;
+
+export const retentionOptionSchema = z.union([retentionOptionDurationSchema, retentionOptionRetentionValueSchema]);
+export type RetentionOption = z.infer<typeof retentionOptionSchema>;
+
+export const retentionConfigDurationValueSchema = z.object({
+    deleteAfter: retentionConfigValueDurationValueSchema.optional(),
+    compactAfter: retentionConfigValueDurationValueSchema.optional(),
+    compact: z.array(compactablePropertySchema).optional(),
+});
+export type RetentionConfigDurationValue = z.infer<typeof retentionConfigDurationValueSchema>;
+
+export const retentionConfigDurationSchema = z.object({
+    deleteAfter: retentionConfigValueDurationSchema.optional(),
+    compactAfter: retentionConfigValueDurationSchema.optional(),
+    compact: z.array(compactablePropertySchema).optional(),
+});
+export type RetentionConfigDuration = z.infer<typeof retentionConfigDurationSchema>;
+
+export const retentionConfigRetentionValueSchema = z.object({
+    deleteAfter: retentionConfigValueRetentionValueSchema.optional(),
+    compactAfter: retentionConfigValueRetentionValueSchema.optional(),
+    compact: z.array(compactablePropertySchema).optional(),
+});
+export type RetentionConfigRetentionValue = z.infer<typeof retentionConfigRetentionValueSchema>;
+
+export const retentionConfigSchema = z.union([
+    retentionConfigDurationValueSchema,
+    retentionConfigDurationSchema,
+    retentionConfigRetentionValueSchema,
+]);
+export type RetentionConfig = z.infer<typeof retentionConfigSchema>;
 
 export const retentionOptionsSchema = z.object({
     deleteAfter: retentionOptionDurationSchema,
