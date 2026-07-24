@@ -278,20 +278,26 @@ export interface CacheConfigOptions {
     regex?: number
 }
 
-export interface CacheConfigUser {
-    auth?: {
-        provider: 'valkey' | 'file',
-        [key: string]: any
-    };
-    valkey?: string
+export const cacheConfigUserAuthSchema = z.object({
+    provider: z.union([z.literal('valkey'), z.literal('file')]),
+}).catchall(z.any());
+
+// The top-level (and `auth`) catchalls allow deprecated `scrobble`/`metadata` config keys to still be read off
+// this type at runtime (see Cache.ts#parseUserConfig) without having them show up in schema docs.
+export const cacheConfigUserSchema = z.object({
+    auth: cacheConfigUserAuthSchema.optional(),
+    valkey: z.string().optional(),
     /** Number of regex functions to cache (LRU)
-     * 
+     *
      * @default 200
      */
-    regex?: number
-    // to allow deprecated scrobble config without having it show up in schema docs
-    [key: string]: any
-}
+    regex: z.number().optional().meta({
+        description: "Number of regex functions to cache (LRU)",
+        default: 200
+    }),
+}).catchall(z.any());
+
+export type CacheConfigUser = z.infer<typeof cacheConfigUserSchema>;
 
 export interface MusicbrainzApiConfigData {
     url?: string

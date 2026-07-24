@@ -60,12 +60,12 @@ export const scrobbleThresholdsSchema = z.object({
 export type ScrobbleThresholds = z.infer<typeof scrobbleThresholdsSchema>;
 
 // `LogLevel` (from `@foxxmd/logging`) is a simple string-literal union, reconstructed directly.
-const logLevelSchema = z.enum(["silent", "fatal", "error", "warn", "info", "log", "verbose", "debug", "trace"]);
+export const logLevelSchema = z.enum(["silent", "fatal", "error", "warn", "info", "log", "verbose", "debug", "trace"]);
 
 // `FileLogOptions` (from `@foxxmd/logging`) extends `FileOptions`, which itself extends `PinoRollOptions` and
 // `RollOptions` - two levels deep, but all plain data fields, so it's reconstructed in full here rather than
 // stubbed.
-const fileLogOptionsSchema = z.object({
+export const fileLogOptionsSchema = z.object({
     size: z.union([z.number(), z.string()]).optional(),
     frequency: z.union([z.literal('daily'), z.literal('hourly'), z.number()]).optional(),
     timestamp: z.union([z.literal('unix'), z.literal('iso'), z.literal('auto')]).optional(),
