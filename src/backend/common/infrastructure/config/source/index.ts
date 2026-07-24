@@ -5,6 +5,7 @@ import type { CommonConfig, RequestRetryOptions } from "../common.ts";
 import type { RetentionConfig } from "../database.ts";
 import type { DurationValue } from "../../Atomic.ts";
 
+/** @zod */
 export interface SourceRetryOptions extends RequestRetryOptions {
     /**
      * default # of automatic polling restarts on error
@@ -15,6 +16,7 @@ export interface SourceRetryOptions extends RequestRetryOptions {
     maxPollRetries?: number
 }
 
+/** @zod */
 export interface ScrobbleThresholds {
     /**
      * The number of seconds a track has been listened to before it should be considered scrobbled.
@@ -44,6 +46,7 @@ export interface ScrobbleThresholds {
     percent?: number | null
 }
 
+/** @zod */
 export interface CommonSourceOptions extends SourceRetryOptions {
     /**
      * * If this source has INGRESS to MS (sends a payload, rather than MS GETTING requesting a payload) then setting this option to true will make MS log the payload JSON to DEBUG output
@@ -114,6 +117,7 @@ export interface CommonSourceOptions extends SourceRetryOptions {
     retention?: RetentionConfig<DurationValue>
 }
 
+/** @zod */
 export interface ManualListeningOptions {
     /** 
      * For Sources that support manual listening, should MS default to scrobbling when no user interaction has occurred?
@@ -123,10 +127,12 @@ export interface ManualListeningOptions {
     systemScrobble?: boolean
 }
 
+/** @zod */
 export interface CommonSourceData  {
 
 }
 
+/** @zod */
 export interface CommonSourceConfig extends CommonConfig {
     /**
      * Unique identifier for this source.
