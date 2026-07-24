@@ -1,43 +1,61 @@
-import type {RequestRetryOptions} from "../common.ts";
-import type {CommonClientConfig, CommonClientData, CommonClientOptions, NowPlayingOptions} from "./index.ts";
+import * as z from "zod";
+import {requestRetryOptionsSchema} from "../common.ts";
+import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema, nowPlayingOptionsSchema} from "./index.ts";
 
-export interface RockSkyData extends RequestRetryOptions{
+export const rockSkyDataSchema = z.object({
+    ...requestRetryOptionsSchema.shape,
 
     /**
      * API Key generated from [API Applications](https://docs.rocksky.app/migrating-from-listenbrainz-to-rocksky-1040189m0) in Rocksky for your account
      *
      * @examples ["6794186bf-1157-4de6-80e5-uvb411f3ea2b"]
      * */
-    key?: string
+    key: z.string().optional().meta({
+        description: "API Key generated from [API Applications](https://docs.rocksky.app/migrating-from-listenbrainz-to-rocksky-1040189m0) in Rocksky for your account",
+        examples: ["6794186bf-1157-4de6-80e5-uvb411f3ea2b"]
+    }),
 
     /**
      * Access Token generated from https://rocksky.app/access-tokens in Rocksky for your account
      *
      * @examples ["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaWQ....."]
      * */
-    token?: string
+    token: z.string().optional().meta({
+        description: "Access Token generated from https://rocksky.app/access-tokens in Rocksky for your account",
+        examples: ["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaWQ....."]
+    }),
 
     /**
      * The **fully-qualified** handle for your ATPRoto/Bluesky account, like:
-     * 
+     *
      * * alice.bsky.social
      * * foxxmd.com
      * * mysuer.blacksky.app
-     * 
+     *
      * */
-    handle: string
-}
+    handle: z.string().meta({
+        description: "The **fully-qualified** handle for your ATPRoto/Bluesky account, like:"
+    }),
+});
 
-export interface RockSkyClientData extends RockSkyData, CommonClientData {}
+export type RockSkyData = z.infer<typeof rockSkyDataSchema>;
 
-export interface RockSkyOptions {
+export const rockSkyClientDataSchema = rockSkyDataSchema.extend(commonClientDataSchema.shape);
+
+export type RockSkyClientData = z.infer<typeof rockSkyClientDataSchema>;
+
+export const rockSkyOptionsSchema = z.object({
     /**
      * URL for the Rocksky *Listenbrainz* endpoint, if not using the default
      *
      * @examples ["https://audioscrobbler.rocksky.app"]
      * @default "https://audioscrobbler.rocksky.app"
      * */
-    audioScrobblerUrl?: string
+    audioScrobblerUrl: z.string().optional().meta({
+        description: "URL for the Rocksky *Listenbrainz* endpoint, if not using the default",
+        default: "https://audioscrobbler.rocksky.app",
+        examples: ["https://audioscrobbler.rocksky.app"]
+    }),
 
     /**
      * URL for the Rocksky *API* endpoint, if not using the default
@@ -45,25 +63,45 @@ export interface RockSkyOptions {
      * @examples ["https://api.rocksky.app"]
      * @default "https://api.rocksky.app"
      * */
-    apiUrl?: string
-}
+    apiUrl: z.string().optional().meta({
+        description: "URL for the Rocksky *API* endpoint, if not using the default",
+        default: "https://api.rocksky.app",
+        examples: ["https://api.rocksky.app"]
+    }),
+});
 
-export interface RockSkyClientOptions extends RockSkyOptions, CommonClientOptions, NowPlayingOptions {
+export type RockSkyOptions = z.infer<typeof rockSkyOptionsSchema>;
 
-}
+export const rockSkyClientOptionsSchema = z.object({
+    ...rockSkyOptionsSchema.shape,
+    ...commonClientOptionsSchema.shape,
+    ...nowPlayingOptionsSchema.shape,
+});
 
-export interface RockSkyClientConfig extends CommonClientConfig {
+export type RockSkyClientOptions = z.infer<typeof rockSkyClientOptionsSchema>;
+
+export const rockSkyClientConfigSchema = z.object({
+    ...commonClientConfigSchema.shape,
     /**
      * Should always be `client` when using RockSky as a client
      *
      * @default client
      * @examples ["client"]
      * */
-    configureAs?: 'client' | 'source'
-    data: RockSkyClientData
-    options?: RockSkyClientOptions
-}
+    configureAs: z.union([z.literal('client'), z.literal('source')]).optional().meta({
+        description: "Should always be `client` when using RockSky as a client",
+        default: "client",
+        examples: ["client"]
+    }),
+    data: rockSkyClientDataSchema,
+    options: rockSkyClientOptionsSchema.optional(),
+});
 
-export interface RockSkyClientAIOConfig extends RockSkyClientConfig {
-    type: 'rocksky'
-}
+export type RockSkyClientConfig = z.infer<typeof rockSkyClientConfigSchema>;
+
+export const rockSkyClientAIOConfigSchema = z.object({
+    ...rockSkyClientConfigSchema.shape,
+    type: z.literal('rocksky'),
+});
+
+export type RockSkyClientAIOConfig = z.infer<typeof rockSkyClientAIOConfigSchema>;

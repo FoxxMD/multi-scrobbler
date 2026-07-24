@@ -1,6 +1,8 @@
-import type {ComponentType, UnixTimestamp} from "../../../../../core/Atomic.ts";
-import type {RequestRetryOptions} from "../common.ts";
-import type {CommonClientConfig, CommonClientData} from "./index.ts";
+import * as z from "zod";
+import type {UnixTimestamp} from "../../../../../core/Atomic.ts";
+import {componentTypeSchema} from "../../../../../core/Atomic.ts";
+import {requestRetryOptionsSchema} from "../common.ts";
+import {commonClientConfigSchema, commonClientDataSchema} from "./index.ts";
 
 export interface ListensResponse {
     items: ListenObjectResponse[]
@@ -45,39 +47,62 @@ export interface ArtistResponse {
     name: string
 }
 
-export interface KoitoData extends RequestRetryOptions {
+export const koitoDataSchema = z.object({
+    ...requestRetryOptionsSchema.shape,
     /**
      * URL for the Koito server
      *
      * @examples ["http://192.168.0.100:4110"]
      * */
-    url: string
+    url: z.string().meta({
+        description: "URL for the Koito server",
+        examples: ["http://192.168.0.100:4110"]
+    }),
     /**
      * User token for the user to scrobble for
      *
      * @examples ["pM195xPV98CDpk0QW47FIIOR8AKATAX5DblBF-Jq0t1MbbKL"]
      * */
-    token: string
+    token: z.string().meta({
+        description: "User token for the user to scrobble for",
+        examples: ["pM195xPV98CDpk0QW47FIIOR8AKATAX5DblBF-Jq0t1MbbKL"]
+    }),
 
     /**
      * Username of the user to scrobble for
      * */
-    username: string
-}
+    username: z.string().meta({
+        description: "Username of the user to scrobble for"
+    }),
+});
 
-export interface KoitoClientData extends KoitoData, CommonClientData {}
+export type KoitoData = z.infer<typeof koitoDataSchema>;
 
-export interface KoitoClientConfig extends CommonClientConfig {
+export const koitoClientDataSchema = koitoDataSchema.extend(commonClientDataSchema.shape);
+
+export type KoitoClientData = z.infer<typeof koitoClientDataSchema>;
+
+export const koitoClientConfigSchema = z.object({
+    ...commonClientConfigSchema.shape,
     /**
      * Should always be `client` when using Koito as a client
      *
      * @default client
      * @examples ["client"]
      * */
-    configureAs?: ComponentType
-    data: KoitoClientData
-}
+    configureAs: componentTypeSchema.optional().meta({
+        description: "Should always be `client` when using Koito as a client",
+        default: "client",
+        examples: ["client"]
+    }),
+    data: koitoClientDataSchema,
+});
 
-export interface KoitoClientAIOConfig extends KoitoClientConfig {
-    type: 'koito'
-}
+export type KoitoClientConfig = z.infer<typeof koitoClientConfigSchema>;
+
+export const koitoClientAIOConfigSchema = z.object({
+    ...koitoClientConfigSchema.shape,
+    type: z.literal('koito'),
+});
+
+export type KoitoClientAIOConfig = z.infer<typeof koitoClientAIOConfigSchema>;
