@@ -71,7 +71,7 @@
             "type": "node",
             "request": "launch",
             // Debug app in VSCode
-            "program": "${workspaceFolder}/src/backend/utils/SchemaStaticUtil.ts",
+            "program": "${workspaceFolder}/src/backend/utils/SchemaDocsStaticUtils.ts",
             "runtimeExecutable": "node",
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",

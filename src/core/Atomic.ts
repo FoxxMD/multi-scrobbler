@@ -13,7 +13,7 @@ export const COMPONENT_TYPE_CLIENT: ComponentTypeClient = 'client';
 export const componentTypeSourceSchema = z.literal('source');
 export type ComponentTypeSource = z.infer<typeof componentTypeSourceSchema>;
 export const COMPONENT_TYPE_SOURCE: ComponentTypeSource = 'source';
-export const componentTypeSchema = z.union([componentTypeClientSchema, componentTypeSourceSchema]);
+export const componentTypeSchema = z.enum(['client','source']); // z.union([componentTypeClientSchema, componentTypeSourceSchema]);
 export type ComponentType = z.infer<typeof componentTypeSchema>;
 export const COMPONENT_TYPES: ComponentType[] = [COMPONENT_TYPE_SOURCE, COMPONENT_TYPE_CLIENT];
 export const isComponentTypeSource = (type: string): type is ComponentTypeSource => type === COMPONENT_TYPE_SOURCE;

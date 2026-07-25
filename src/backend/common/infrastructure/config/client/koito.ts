@@ -74,11 +74,11 @@ export const koitoDataSchema = z.object({
     username: z.string().meta({
         description: "Username of the user to scrobble for"
     }),
-});
+}).meta({title: 'KoitoData'});
 
 export type KoitoData = z.infer<typeof koitoDataSchema>;
 
-export const koitoClientDataSchema = koitoDataSchema.extend(commonClientDataSchema.shape);
+export const koitoClientDataSchema = koitoDataSchema.extend(commonClientDataSchema.shape).meta({title: 'KoitoData'});
 
 export type KoitoClientData = z.infer<typeof koitoClientDataSchema>;
 
