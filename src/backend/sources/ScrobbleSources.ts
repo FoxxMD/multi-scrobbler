@@ -24,7 +24,7 @@ import type {MPRISData, MPRISSourceConfig} from "../common/infrastructure/config
 import type {MusikcubeData, MusikcubeSourceConfig} from "../common/infrastructure/config/source/musikcube.ts";
 import type {PlexApiData, PlexApiSourceConfig} from "../common/infrastructure/config/source/plex.ts";
 import type {MalojaSourceConfig} from "../common/infrastructure/config/source/maloja.ts";
-import type {SourceAIOConfig, SourceConfig} from "../common/infrastructure/config/source/sources.ts";
+import {validateSourceJson, type SourceAIOConfig, type SourceConfig} from "../common/infrastructure/config/source/sources.ts";
 import type {SpotifySourceConfig, SpotifySourceData} from "../common/infrastructure/config/source/spotify.ts";
 import type {SubsonicData, SubSonicSourceConfig} from "../common/infrastructure/config/source/subsonic.ts";
 import type {VLCData, VLCSourceConfig} from "../common/infrastructure/config/source/vlc.ts";
@@ -53,6 +53,7 @@ import type {ListenBrainzData} from '../common/infrastructure/config/client/list
 import type {KoitoData} from '../common/infrastructure/config/client/koito.ts';
 import type {TealData} from '../common/infrastructure/config/client/tealfm.ts';
 import type {RockSkyData} from '../common/infrastructure/config/client/rocksky.ts';
+import { prettifyError, ZodError } from 'zod';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -256,11 +257,17 @@ export default class ScrobbleSources {
                    continue;
                 }
                 try {
-                    await validateJson<SourceConfig>('source', c, this.getSchemaByType(c.type.toLocaleLowerCase() as SourceType), this.logger);
+                    validateSourceJson(c.type.toLocaleLowerCase() as SourceType, c); // validateJson<SourceConfig>('source', c, this.getSchemaByType(c.type.toLocaleLowerCase() as SourceType), this.logger);
                 } catch (e) {
-                    const err = new Error(`Source config ${index + 1} (${c.type} - ${name}) in config.json is invalid and will not be used.`, {cause: e});
+                    const msg = `Source config ${index + 1} (${c.type} - ${name}) in config.json is invalid and will not be used.`;
+                    const err = new Error(msg, {cause: e});
                     this.emitter.emit('error', err);
-                    this.logger.error(err);
+                    // pretty print error if its a zod error
+                    if(e instanceof ZodError) {
+                        this.logger.error(`${msg}:\n${prettifyError(e)}`);
+                    } else {
+                        this.logger.error(err);
+                    }
                     continue;
                 }
                 configs.push({...c,

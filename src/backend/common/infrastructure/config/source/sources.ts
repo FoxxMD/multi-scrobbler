@@ -1,34 +1,36 @@
 import * as z from "zod";
-import {azuracastSourceAIOConfigSchema, azuracastSourceConfigSchema} from "./azuracast.ts";
-import {chromecastSourceAIOConfigSchema, chromecastSourceConfigSchema} from "./chromecast.ts";
-import {listenbrainzEndpointSourceAIOConfigSchema, listenbrainzEndpointSourceConfigSchema} from "./endpointlz.ts";
-import {lastFmEndpointSourceAIOConfigSchema, lastFmEndpointSourceConfigSchema} from "./endpointlfm.ts";
-import {deezerInternalSourceConfigSchema, deezerSourceConfigSchema, deezerCompatConfigSchema, deezerAIOCompatConfigSchema} from "./deezer.ts";
-import {jellyApiSourceAIOConfigSchema, jellyApiSourceConfigSchema} from "./jellyfin.ts";
-import {jRiverSourceAIOConfigSchema, jRiverSourceConfigSchema} from "./jriver.ts";
-import {kodiSourceAIOConfigSchema, kodiSourceConfigSchema} from "./kodi.ts";
-import {lastFmSouceAIOConfigSchema, lastfmSourceConfigSchema} from "./lastfm.ts";
-import {listenBrainzSourceAIOConfigSchema, listenBrainzSourceConfigSchema} from "./listenbrainz.ts";
-import {mopidySourceAIOConfigSchema, mopidySourceConfigSchema} from "./mopidy.ts";
-import {mpdSourceAIOConfigSchema, mpdSourceConfigSchema} from "./mpd.ts";
-import {mprisSourceAIOConfigSchema, mprisSourceConfigSchema} from "./mpris.ts";
-import {musikcubeSourceAIOConfigSchema, musikcubeSourceConfigSchema} from "./musikcube.ts";
-import {musicCastSourceConfigSchema, musicCastSourceAIOConfigSchema} from "./musiccast.ts";
-import {plexApiSourceConfigSchema, plexApiSourceAIOConfigSchema} from "./plex.ts";
-import {spotifySourceAIOConfigSchema, spotifySourceConfigSchema} from "./spotify.ts";
-import {subsonicSourceAIOConfigSchema, subSonicSourceConfigSchema} from "./subsonic.ts";
-import {vlcSourceAIOConfigSchema, vlcSourceConfigSchema} from "./vlc.ts";
-import {webScrobblerSourceAIOConfigSchema, webScrobblerSourceConfigSchema} from "./webscrobbler.ts";
-import {ytMusicSourceAIOConfigSchema, ytMusicSourceConfigSchema} from "./ytmusic.ts";
-import {yandexMusicBridgeSourceAIOConfigSchema, yandexMusicBridgeSourceConfigSchema} from "./ymbridge.ts";
-import {icecastSourceAIOConfigSchema, icecastSourceConfigSchema} from "./icecast.ts";
-import {koitoSourceAIOConfigSchema, koitoSourceConfigSchema} from "./koito.ts";
-import {malojaSourceAIOConfigSchema, malojaSourceConfigSchema} from "./maloja.ts";
-import {tealSourceAIOConfigSchema, tealSourceConfigSchema} from "./tealfm.ts";
-import {rockskySourceAIOConfigSchema, rockskySourceConfigSchema} from "./rocksky.ts";
-import {librefmSouceAIOConfigSchema, librefmSourceConfigSchema} from "./librefm.ts";
-import {sonosSourceAIOConfigSchema, sonosSourceConfigSchema} from "./sonos.ts";
-import {appleMusicSourceAIOConfigSchema, appleMusicSourceConfigSchema} from "./applemusic.ts";
+import {azuracastSourceAIOConfigSchema, azuracastSourceConfigSchema, type AzuracastSourceConfig} from "./azuracast.ts";
+import {chromecastSourceAIOConfigSchema, chromecastSourceConfigSchema, type ChromecastSourceConfig} from "./chromecast.ts";
+import {listenbrainzEndpointSourceAIOConfigSchema, listenbrainzEndpointSourceConfigSchema, type ListenbrainzEndpointSourceConfig} from "./endpointlz.ts";
+import {lastFmEndpointSourceAIOConfigSchema, lastFmEndpointSourceConfigSchema, type LastFMEndpointSourceConfig} from "./endpointlfm.ts";
+import {deezerInternalSourceConfigSchema, deezerSourceConfigSchema, deezerCompatConfigSchema, deezerAIOCompatConfigSchema, type DeezerCompatConfig} from "./deezer.ts";
+import {jellyApiSourceAIOConfigSchema, jellyApiSourceConfigSchema, type JellyApiSourceConfig} from "./jellyfin.ts";
+import {jRiverSourceAIOConfigSchema, jRiverSourceConfigSchema, type JRiverSourceConfig} from "./jriver.ts";
+import {kodiSourceAIOConfigSchema, kodiSourceConfigSchema, type KodiSourceConfig} from "./kodi.ts";
+import {lastFmSouceAIOConfigSchema, lastfmSourceConfigSchema, type LastfmSourceConfig} from "./lastfm.ts";
+import {listenBrainzSourceAIOConfigSchema, listenBrainzSourceConfigSchema, type ListenBrainzSourceConfig} from "./listenbrainz.ts";
+import {mopidySourceAIOConfigSchema, mopidySourceConfigSchema, type MopidySourceConfig} from "./mopidy.ts";
+import {mpdSourceAIOConfigSchema, mpdSourceConfigSchema, type MPDSourceConfig} from "./mpd.ts";
+import {mprisSourceAIOConfigSchema, mprisSourceConfigSchema, type MPRISSourceConfig} from "./mpris.ts";
+import {musikcubeSourceAIOConfigSchema, musikcubeSourceConfigSchema, type MusikcubeSourceConfig} from "./musikcube.ts";
+import {musicCastSourceConfigSchema, musicCastSourceAIOConfigSchema, type MusicCastSourceConfig} from "./musiccast.ts";
+import {plexApiSourceConfigSchema, plexApiSourceAIOConfigSchema, type PlexApiSourceConfig} from "./plex.ts";
+import {spotifySourceAIOConfigSchema, spotifySourceConfigSchema, type SpotifySourceConfig} from "./spotify.ts";
+import {subsonicSourceAIOConfigSchema, subSonicSourceConfigSchema, type SubSonicSourceConfig} from "./subsonic.ts";
+import {vlcSourceAIOConfigSchema, vlcSourceConfigSchema, type VLCSourceConfig} from "./vlc.ts";
+import {webScrobblerSourceAIOConfigSchema, webScrobblerSourceConfigSchema, type WebScrobblerSourceConfig} from "./webscrobbler.ts";
+import {ytMusicSourceAIOConfigSchema, ytMusicSourceConfigSchema, type YTMusicSourceConfig} from "./ytmusic.ts";
+import {yandexMusicBridgeSourceAIOConfigSchema, yandexMusicBridgeSourceConfigSchema, type YandexMusicBridgeSourceConfig} from "./ymbridge.ts";
+import {icecastSourceAIOConfigSchema, icecastSourceConfigSchema, type IcecastSourceConfig} from "./icecast.ts";
+import {koitoSourceAIOConfigSchema, koitoSourceConfigSchema, type KoitoSourceConfig} from "./koito.ts";
+import {malojaSourceAIOConfigSchema, malojaSourceConfigSchema, type MalojaSourceConfig} from "./maloja.ts";
+import {tealSourceAIOConfigSchema, tealSourceConfigSchema, type TealSourceConfig} from "./tealfm.ts";
+import {rockskySourceAIOConfigSchema, rockskySourceConfigSchema, type RockskySourceConfig} from "./rocksky.ts";
+import {librefmSouceAIOConfigSchema, librefmSourceConfigSchema, type LibrefmSourceConfig} from "./librefm.ts";
+import {sonosSourceAIOConfigSchema, sonosSourceConfigSchema, type SonosSourceConfig} from "./sonos.ts";
+import {appleMusicSourceAIOConfigSchema, appleMusicSourceConfigSchema, type AppleMusicSourceConfig} from "./applemusic.ts";
+import type { SourceType } from "../../../../../core/Atomic.ts";
+import type { CommonSourceConfig } from "./index.ts";
 
 export const sourceConfigSchema = z.union([
     spotifySourceConfigSchema,
@@ -266,6 +268,74 @@ export const atomicSourceInterfaces = [
     'SonosSourceConfig',
     'AppleMusicSourceConfig'
 ];
+
+export interface SourceTypeConfigMap extends Record<SourceType, CommonSourceConfig> {
+    spotify: SpotifySourceConfig,
+    plex: PlexApiSourceConfig,
+    deezer: DeezerCompatConfig,
+    endpointlz: ListenbrainzEndpointSourceConfig,
+    endpointlfm: LastFMEndpointSourceConfig,
+    icecast: IcecastSourceConfig,
+    subsonic: SubSonicSourceConfig,
+    jellyfin: JellyApiSourceConfig,
+    lastfm: LastfmSourceConfig,
+    librefm: LibrefmSourceConfig,
+    ytmusic: YTMusicSourceConfig,
+    ymbridge: YandexMusicBridgeSourceConfig,
+    maloja: MalojaSourceConfig,
+    mpris: MPRISSourceConfig,
+    mopidy: MopidySourceConfig,
+    listenbrainz: ListenBrainzSourceConfig,
+    jriver: JRiverSourceConfig,
+    kodi: KodiSourceConfig,
+    chromecast: ChromecastSourceConfig,
+    webscrobbler: WebScrobblerSourceConfig,
+    musikcube: MusikcubeSourceConfig,
+    musiccast: MusicCastSourceConfig,
+    mpd: MPDSourceConfig,
+    vlc: VLCSourceConfig,
+    azuracast: AzuracastSourceConfig,
+    koito: KoitoSourceConfig,
+    tealfm: TealSourceConfig,
+    rocksky: RockskySourceConfig,
+    sonos: SonosSourceConfig,
+    applemusic: AppleMusicSourceConfig
+}
+
+const sourceConfigSchemaMap: { [K in keyof SourceTypeConfigMap]: z.ZodType<SourceTypeConfigMap[K]> } = {
+    spotify: spotifySourceConfigSchema,
+    plex: plexApiSourceConfigSchema,
+    deezer: deezerCompatConfigSchema,
+    endpointlz: listenbrainzEndpointSourceConfigSchema,
+    endpointlfm: lastFmEndpointSourceConfigSchema,
+    icecast: icecastSourceConfigSchema,
+    subsonic: subSonicSourceConfigSchema,
+    jellyfin: jellyApiSourceConfigSchema,
+    lastfm: lastfmSourceConfigSchema,
+    librefm: librefmSourceConfigSchema,
+    ytmusic: ytMusicSourceConfigSchema,
+    ymbridge: yandexMusicBridgeSourceConfigSchema,
+    maloja: malojaSourceConfigSchema,
+    mpris: mprisSourceConfigSchema,
+    mopidy: mopidySourceConfigSchema,
+    listenbrainz: listenBrainzSourceConfigSchema,
+    jriver: jRiverSourceConfigSchema,
+    kodi: kodiSourceConfigSchema,
+    chromecast: chromecastSourceConfigSchema,
+    webscrobbler: webScrobblerSourceConfigSchema,
+    musikcube: musikcubeSourceConfigSchema,
+    musiccast: musicCastSourceConfigSchema,
+    mpd: mpdSourceConfigSchema,
+    vlc: vlcSourceConfigSchema,
+    azuracast: azuracastSourceConfigSchema,
+    koito: koitoSourceConfigSchema,
+    tealfm: tealSourceConfigSchema,
+    rocksky: rockskySourceConfigSchema,
+    sonos: sonosSourceConfigSchema,
+    applemusic: appleMusicSourceConfigSchema
+};
+
+export const validateSourceJson = <T extends keyof SourceTypeConfigMap>(sourceType: T, json: object): SourceTypeConfigMap[T] => sourceConfigSchemaMap[sourceType].parse(json);
 
 export const sourceInterfaces = [
     'AIOSourceRelaxedConfig',

@@ -13,6 +13,9 @@ import { projectRootDir } from "../../common/infrastructure/Atomic.ts";
 import { sourceTypes } from "../../../core/Atomic.ts";
 import { Notifiers } from '../../notifier/Notifiers.ts';
 import { difference } from '../../utils.ts';
+import { validateSourceJson } from '../../common/infrastructure/config/source/sources.ts';
+import { readJson } from '../../utils/DataUtils.ts';
+import { prettifyError, ZodError } from 'zod';
 
 chai.use(asPromised);
 
@@ -51,10 +54,32 @@ describe('Sample Configs', function () {
                 await reset();
             });
 
+
             for(const componentType of sourceTypes) {
 
                 //trueName = componentType;
-                it(`Sample ${componentType}.json parses and validates`, async function () {
+                it(`Sample ${componentType}.json parses and validates in isolation`, async function () {
+                    this.timeout(5000);
+
+                    const emitter = new EventEmitter();
+                    await copyFile(samplePath(componentType), `${componentType}.json`);
+
+                    let fileContents = await readJson(`${componentType}.json`);
+                    fileContents = fileContents.filter(x => x.configureAs === undefined || x.configureAs === 'source');
+                    for (const [i,rawConf] of fileContents.entries()) {
+                        try {
+                            validateSourceJson(componentType, rawConf);
+                        } catch (e) {
+                            if(e instanceof ZodError) {
+                                expect.fail(`Validation failed for config entry ${i}:\n${prettifyError(e)}`);
+                            } else {
+                                throw e;
+                            }
+                        }
+                    }
+                });
+
+                it(`Sample ${componentType}.json parses and validates in ScrobbleSources`, async function () {
                     this.timeout(5000);
 
                     const emitter = new EventEmitter();
