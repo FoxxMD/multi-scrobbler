@@ -7,7 +7,7 @@ import { isClientType } from '../../core/Atomic.ts';
 import { clientTypes } from "../../core/Atomic.ts";
 import type {ClientType} from "../../core/Atomic.ts";
 import type {AIOConfig} from "../common/infrastructure/config/aioConfig.ts";
-import type {ClientAIOConfig, ClientConfig} from "../common/infrastructure/config/client/clients.ts";
+import {validateClientJson, type ClientAIOConfig, type ClientConfig} from "../common/infrastructure/config/client/clients.ts";
 import type {LastfmClientConfig, LastfmData} from "../common/infrastructure/config/client/lastfm.ts";
 import type {ListenBrainzClientConfig, ListenBrainzData} from "../common/infrastructure/config/client/listenbrainz.ts";
 import type {MalojaClientConfig, MalojaData} from "../common/infrastructure/config/client/maloja.ts";
@@ -28,6 +28,7 @@ import clone from 'clone';
 import type {DiscordClientConfig, DiscordData} from '../common/infrastructure/config/client/discord.ts';
 import { stripIndents } from 'common-tags';
 import { normalizeStr, type StringNormalizationOptions } from '../utils/StringUtils.ts';
+import { prettifyError, ZodError } from 'zod';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -383,7 +384,7 @@ export default class ScrobbleClients {
                        continue;
                     }
                     try {
-                        const validConfig = await validateJson<ClientConfig>('client', rawConf, this.getSchemaByType(clientType), this.logger);
+                        const validConfig = await validateClientJson(clientType, rawConf); // await validateJson<ClientConfig>('client', rawConf, this.getSchemaByType(clientType), this.logger);
                         const {configureAs = defaultConfigureAs} = validConfig;
                         if (configureAs === 'client') {
                             const parsedConfig: ParsedConfig = {
@@ -394,9 +395,15 @@ export default class ScrobbleClients {
                             configs.push(parsedConfig);
                         }
                     } catch (e: any) {
-                        const configErr = new Error(`The config entry at index ${i} from ${clientType}.json was not valid`, {cause: e});
+                        const msg = `The config entry at index ${i} from ${clientType}.json was not valid`;
+                        const configErr = new Error(msg, {cause: e});
                         this.emitter.emit('error', configErr);
-                        this.logger.error(configErr);
+                        // pretty print error if its a zod error
+                        if(e instanceof ZodError) {
+                            this.logger.error(`${msg}:\n${prettifyError(e)}`);
+                        } else {
+                            this.logger.error(configErr);
+                        }
                     }
                 }
             }
