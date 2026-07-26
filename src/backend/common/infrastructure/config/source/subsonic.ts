@@ -66,7 +66,7 @@ export interface SubsonicData extends CommonSourceData, PollingOptions {
     /**
      * Ignore `getNowPlaying` entries whose `minutesAgo`-derived start time is older than their reported duration.
      *
-     * This prevents servers that retain stale now-playing entries after playback stops from repeatedly scrobbling the same track. Can be disabled if the server properly reports no playing songs when playback is stopped.
+     * This fallback is used only when the active client does not report OpenSubsonic Playback Report state or position. It prevents servers that retain stale now-playing entries after playback stops from repeatedly scrobbling the same track. Can be disabled if the server properly reports no playing songs when playback is stopped.
      *
      * @default true
      * */

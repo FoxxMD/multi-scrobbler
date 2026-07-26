@@ -28,11 +28,16 @@ Service-specific scrobble implementations tend to be more accurate and provide m
 
 Use the optional `usersAllow` property with **File** or **AIO** configuration to restrict scrobbling to a list of defined users.
 
-## Stale Now-Playing Detection
+## Playback Report Support
 
-By default, multi-scrobbler uses the `minutesAgo` and duration values returned by `getNowPlaying` of the subsonic server to ignore entries that have likely finished playing. This prevents repeated scrobbles from Subsonic-compatible servers that continue returning a track after playback stops. 
+During source initialization, multi-scrobbler probes the OpenSubsonic [`getOpenSubsonicExtensions`](https://opensubsonic.netlify.app/docs/endpoints/getopensubsonicextensions/) endpoint for [Playback Report](https://opensubsonic.netlify.app/docs/extensions/playbackreport/) support. Playback Report is available only when both the server supports the extension and the active playback client reports it.
 
-If the server properly reports no playing song when playback has stopped, this behavior can be disabled by setting `detectStaleNowPlayingFromMinutesAgo` to `false`.
+When the active client reports Playback Report data, multi-scrobbler uses the `state` and `positionMs` fields returned by [`getNowPlaying`](https://opensubsonic.netlify.app/docs/endpoints/getnowplaying/). This provides more accurate playback tracking and stale now-playing handling.
+
+An extension probe failure does not prevent the source from initializing. multi-scrobbler continues with the standard `getNowPlaying` behavior, and also uses Playback Report fields if they are present in a response.
+
+For classic Subsonic clients and entries without `state` or `positionMs`, multi-scrobbler uses the `minutesAgo` and duration values returned by `getNowPlaying` to ignore entries that have likely finished playing. This prevents repeated scrobbles from Subsonic-compatible servers that continue returning a track after playback stops.
+If the server properly reports no playing song when playback has stopped, this detection can be disabled by setting `detectStaleNowPlayingFromMinutesAgo` to `false`.
 
 ## Configuration
 
