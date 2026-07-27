@@ -343,7 +343,9 @@ export const playTransformConfigSchema = z.object({
     }).optional().meta({description: stripIndents`Stages to be applied when comparing a candidate Play to any existing Plays such as when checking for duplicates or discovered Plays
         
         **Note:** Transforms applies are not persistent. They are used only during comparison operations.`}),
-    postCompare: playTransformPartsConfigOptionsSchema.optional(),
+    postCompare: playTransformPartsConfigOptionsSchema.optional().meta({
+        description: 'Stages applied before Play is sent downstream (to MS Client or just before being scrobbling)'
+    }),
 }).meta({title: 'Transform Config'});
 
 export type PlayTransformConfig = z.infer<typeof playTransformConfigSchema>;
