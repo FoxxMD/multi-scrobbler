@@ -10,7 +10,7 @@ import { koitoClientConfigSchema } from "../common/infrastructure/config/client/
 mkdirSync(resolve(projectRootDir, 'docsite/static/schemas'), {recursive: true});
 
 const jsonSchema = z.toJSONSchema(koitoClientConfigSchema, { 
-    io: "input",
+    io: "output",
     //reused: "ref",
     unrepresentable: "any",
     override: (ctx) => {

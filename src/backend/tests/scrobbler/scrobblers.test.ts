@@ -669,6 +669,7 @@ describe('Scrobble client uses transform plays correctly', function() {
         testScrobbler.config.options = {
             playTransform: {
                 postCompare: {
+                    type: 'user',
                     title: [
                         'cool'
                     ]
@@ -695,6 +696,7 @@ describe('Scrobble client uses transform plays correctly', function() {
             playTransform: {
                 compare: {
                     candidate: {
+                        type: 'user',
                         title: [
                             'hugely cool and very different track'
                         ]
@@ -718,6 +720,7 @@ describe('Scrobble client uses transform plays correctly', function() {
             playTransform: {
                 compare: {
                     existing: {
+                        type: 'user',
                         title: [
                             'hugely cool and very different track'
                         ]

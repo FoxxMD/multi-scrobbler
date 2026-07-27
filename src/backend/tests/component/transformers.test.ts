@@ -4,7 +4,7 @@ import asPromised from 'chai-as-promised';
 import { describe, it } from 'mocha';
 import AbstractComponent, { type AbstractComponentConfig } from "../../common/AbstractComponent.ts";
 
-import { type ConditionalSearchAndReplaceRegExp, TRANSFORM_HOOK } from "../../../core/Transform.ts";
+import { type ConditionalSearchAndReplaceRegExp, type StageTypeMetadata, TRANSFORM_HOOK } from "../../../core/Transform.ts";
 
 import { isConditionalSearchAndReplace } from "../../utils/PlayTransformUtils.ts";
 import { generateArtistsStr, generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
@@ -89,7 +89,9 @@ describe('Play Transforms', function () {
                     options: {
                         playTransform: {
                             preCompare: {
+                                // @ts-expect-error no type named test
                                 type: "test",
+                                // @ts-expect-error stage is untyped
                                 title: ['something']
                             }
                         }
@@ -105,25 +107,6 @@ describe('Play Transforms', function () {
         });
 
         describe('User Stage Parsing', function () {
-
-            it(`Assumes user 'type' if no type is present`, function () {
-                component.config = {
-                    options: {
-                        playTransform: {
-                            preCompare: {
-                                title: ['something']
-                            }
-                        }
-                    }
-                }
-
-                component.buildTransformRules();
-
-                expect(component.transformRules.preCompare).to.be.an('array');
-                expect(component.transformRules.preCompare).to.be.length(1);
-                expect(component.transformRules.preCompare).to.have.nested.property('0.type');
-                expect(component.transformRules.preCompare[0].type).eq('user');
-            });
 
             it(`Allows user 'type'`, function () {
                 component.config = {
@@ -151,9 +134,11 @@ describe('Play Transforms', function () {
                         playTransform: {
                             preCompare: [
                                 {
+                                    type: 'user',
                                     title: ['something']
                                 },
                                 {
+                                    type: 'user',
                                     title: ['something else']
                                 }
                             ]
@@ -174,6 +159,7 @@ describe('Play Transforms', function () {
                     options: {
                         playTransform: {
                             preCompare: {
+                                type: 'user',
                                 title: ['something']
                             }
                         }
@@ -193,6 +179,7 @@ describe('Play Transforms', function () {
                     options: {
                         playTransform: {
                             preCompare: {
+                                type: 'user',
                                 title: ['something']
                             }
                         }
@@ -215,6 +202,7 @@ describe('Play Transforms', function () {
                     options: {
                         playTransform: {
                             preCompare: {
+                                type: 'user',
                                 title: [
                                     {
 
@@ -250,7 +238,7 @@ describe('Play Transforms', function () {
                             options: {
                                 playTransform: {
                                     preCompare: {
-                                        type: t,
+                                        type: t as StageTypeMetadata,
                                         title: true
                                     }
                                 }
@@ -286,6 +274,7 @@ describe('Play Transforms', function () {
                         options: {
                             playTransform: {
                                 preCompare: {
+                                    type: 'user',
                                     title: ['something']
                                 }
                             }
@@ -303,6 +292,7 @@ describe('Play Transforms', function () {
                         options: {
                             playTransform: {
                                 preCompare: {
+                                    type: 'user',
                                     title: ['something', 'cool']
                                 }
                             }
@@ -320,6 +310,7 @@ describe('Play Transforms', function () {
                         options: {
                             playTransform: {
                                 preCompare: {
+                                    type: 'user',
                                     title: [
                                         {
                                             search: '/(cool )(some)(thing)/i',
@@ -343,6 +334,7 @@ describe('Play Transforms', function () {
                         options: {
                             playTransform: {
                                 preCompare: {
+                                    type: 'user',
                                     artists: [
                                         {
                                             search: '/(.*?)(\\s*\\/\\s*)(.*$)/i',
@@ -366,6 +358,7 @@ describe('Play Transforms', function () {
                         options: {
                             playTransform: {
                                 preCompare: {
+                                    type: 'user',
                                     title: ['something']
                                 }
                             }
@@ -383,6 +376,7 @@ describe('Play Transforms', function () {
                         options: {
                             playTransform: {
                                 preCompare: {
+                                    type: 'user',
                                     album: ['something']
                                 }
                             }
@@ -400,6 +394,7 @@ describe('Play Transforms', function () {
                         options: {
                             playTransform: {
                                 preCompare: {
+                                    type: 'user',
                                     artists: ['something']
                                 }
                             }
@@ -477,6 +472,7 @@ describe('Play Transforms', function () {
                     options: {
                         playTransform: {
                             preCompare: {
+                                type: 'user',
                                 when: [
                                     {
                                         album: "Has This"
@@ -500,6 +496,7 @@ describe('Play Transforms', function () {
                     options: {
                         playTransform: {
                             preCompare: {
+                                type: 'user',
                                 when: [
                                     {
                                         album: "Has This"
@@ -525,6 +522,7 @@ describe('Play Transforms', function () {
                     options: {
                         playTransform: {
                             preCompare: {
+                                type: 'user',
                                 artists: [
                                     {
                                         search: "something",
@@ -553,6 +551,7 @@ describe('Play Transforms', function () {
                     options: {
                         playTransform: {
                             preCompare: {
+                                type: 'user',
                                 artists: [
                                     {
                                         search: "something",
@@ -587,6 +586,7 @@ describe('Play Transforms', function () {
                     playTransform: {
                         preCompare: [
                             {
+                                type: 'user',
                                 title: [
                                     {
                                         search: "something",
@@ -595,6 +595,7 @@ describe('Play Transforms', function () {
                                 ]
                             },
                             {
+                                type: 'user',
                                 title: [
                                     {
                                         search: "another else",
@@ -619,6 +620,7 @@ describe('Play Transforms', function () {
                     playTransform: {
                         preCompare: [
                             {
+                                type: 'user',
                                 title: [
                                     {
                                         search: "something",
@@ -653,6 +655,7 @@ describe('Play Transforms', function () {
                     playTransform: {
                         preCompare: [
                             {
+                                type: 'user',
                                 name: "barChange",
                                 title: [
                                     {

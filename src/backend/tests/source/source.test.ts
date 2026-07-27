@@ -53,6 +53,7 @@ describe('Sources use transform plays correctly', function () {
         source.config.options = {
             playTransform: {
                 preCompare: {
+                    type: 'user',
                     title: [
                         {
                             search: 'cool',
@@ -76,6 +77,7 @@ describe('Sources use transform plays correctly', function () {
         source.config.options = {
             playTransform: {
                 postCompare: {
+                    type: 'user',
                     title: [
                         {
                             search: 'cool',
@@ -106,6 +108,7 @@ describe('Sources use transform plays correctly', function () {
             playTransform: {
                 compare: {
                     existing: {
+                        type: 'user',
                         title: [
                             {
                                 search: 'hugely cool and very different track',
@@ -133,6 +136,7 @@ describe('Sources use transform plays correctly', function () {
             playTransform: {
                 compare: {
                     candidate: {
+                        type: 'user',
                         title: [
                             {
                                 search: 'hugely cool and very different track',

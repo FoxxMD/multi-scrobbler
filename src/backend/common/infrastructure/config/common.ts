@@ -1,3 +1,4 @@
+import { stripIndents } from "common-tags";
 import * as z from "zod";
 
 export const commonConfigPrimitivesSchema = z.object({
@@ -47,7 +48,8 @@ export const requestRetryOptionsSchema = z.object({
      * @examples [1]
      * */
     maxRequestRetries: z.number().optional().meta({
-        description: "default # of http request retries a source/client can make before error is thrown",
+        description: stripIndents`default # of http **request** retries a source/client can make before error is thrown
+        a test`,
         default: 1,
         examples: [1]
     }),
@@ -62,7 +64,7 @@ export const requestRetryOptionsSchema = z.object({
         default: 1.5,
         examples: [1.5]
     })
-});
+}).meta({title: 'RequestRetryOptions'});
 
 export type RequestRetryOptions = z.infer<typeof requestRetryOptionsSchema>;
 
