@@ -22,6 +22,7 @@ const jsonSchema = z.toJSONSchema(koitoClientConfigSchema, {
                     delete a.const;
                 }
             }
+            //return;
         }
         if(ctx.jsonSchema.oneOf !== undefined) {
             for(const a of ctx.jsonSchema.oneOf) {
@@ -30,11 +31,27 @@ const jsonSchema = z.toJSONSchema(koitoClientConfigSchema, {
                     delete a.const;
                 }
             }
+            //return;
         }
         if(ctx.jsonSchema.const !== undefined) {
             ctx.jsonSchema.enum = [ctx.jsonSchema.const];
             delete ctx.jsonSchema.const;
+            return
         }
+        // if(ctx.zodSchema.type === 'object') {
+        //     const ks = Object.keys(ctx.jsonSchema.properties);
+        //     for(const k of ks) {
+        //         if(ctx.jsonSchema.properties[k]?.description !== undefined) {
+        //             let isUnion = ctx.zodSchema.shape[k].type === 'union';
+        //             if(!isUnion && ctx.zodSchema.shape[k].type === 'optional' && ctx.zodSchema.shape[k].unwrap().type === 'union') {
+        //                 isUnion = true;
+        //             }
+        //             if(ctx.zodSchema.shape[k].type === 'union')
+        //             // ctx.zodSchema.shape[k].
+        //         }
+        //     }
+        // }
+
         // if (ctx.jsonSchema.anyOf) {
         //     ctx.jsonSchema.oneOf = ctx.jsonSchema.anyOf;
         //     delete ctx.jsonSchema.anyOf;

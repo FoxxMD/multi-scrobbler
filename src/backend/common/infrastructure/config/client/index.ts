@@ -159,9 +159,11 @@ export const commonClientOptionsSchema = z.object({
         examples: [3]
     }),
 
-    playTransform: playTransformOptionsSchema.optional(),
+    /** Enhance/correct Play data by applying a transform pipeline */
+    playTransform: playTransformOptionsSchema.optional().meta({description: 'Enhance/correct Play data by applying a transform pipeline'}),
 
-    retention: retentionConfigDurationValueSchema.optional(),
+    /** Retention policy for Plays stored in the database */
+    retention: retentionConfigDurationValueSchema.optional().meta({description: 'Retention policy for Plays stored in the database'}),
 });
 
 export type CommonClientOptions = z.infer<typeof commonClientOptionsSchema>;

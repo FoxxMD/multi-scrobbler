@@ -1,6 +1,7 @@
 import * as z from "zod";
 import type {SearchAndReplaceRegExp} from "@foxxmd/regex-buddy-core";
 import type { MarkRequired } from "ts-essentials";
+import { stripIndents } from "common-tags";
 
 // The following generic types are used elsewhere in the codebase with several different concrete type
 // parameters (e.g. `PlayTransformHooks<ExternalMetadataTerm>`, `PlayTransformStage<SearchAndReplaceTerm[]>`,
@@ -28,7 +29,7 @@ export interface PlayTransformPartsAtomic<T> {
 }
 
 export const STAGE_TYPES_USER: StageTypeUser[] = ['user'];
-export const STAGE_TYPES_METADATA: StageTypeMetadata[] = ['spotify','musicbrainz','native'];
+export const STAGE_TYPES_METADATA: StageTypeMetadata[] = ['musicbrainz','native'];
 export const STAGE_TYPES: StageType[] = [...STAGE_TYPES_METADATA, ...STAGE_TYPES_USER];
 
 export interface StageTyped {
@@ -193,9 +194,9 @@ export const flowControlSchema = z.object({
 
 export type FlowControl = z.infer<typeof flowControlSchema>;
 
-export const stageTypeMetadataSchema = z.enum(['spotify', 'musicbrainz', 'native']).meta({title: 'Stage Type Metadata'});
+export const stageTypeMetadataSchema = z.enum(['musicbrainz', 'native']).meta({title: 'Stage Type Metadata'});
 
-export const typedStageSchema = z.enum(['spotify', 'musicbrainz', 'native','user']).meta({title: 'Stage Type'});
+export const typedStageSchema = z.enum(['musicbrainz', 'native','user']).meta({title: 'Stage Type'});
 
 export type StageTypeMetadata = z.infer<typeof stageTypeMetadataSchema>;
 
@@ -291,8 +292,8 @@ const playTransformUserStageRulesSchema = z.object({
 // metadata branch to `'spotify' | 'musicbrainz'` only for the purposes of this union - the overall set of
 // `type` values covered across the whole union is unchanged.
 const metadataStageForUnionSchema = playTransformMetadataStageSchema.extend({
-    type: z.enum(['spotify', 'musicbrainz']),
-}).meta({title: 'Metadata Types'});
+    type: z.enum(['musicbrainz']),
+}).meta({title: 'Transform External Stage'});
 
 // `PlayTransformParts<T, Y> = Extract<PlayTransformStage<T>, Y> & Whennable` - the `& Whennable` intersection
 // is redundant here since every stage schema already includes `when` via `stageConfigSchema`/`untypedStageConfigSchema`.
@@ -328,11 +329,20 @@ const playTransformPartsConfigOptionsSchema = z.union([
 ]);
 
 export const playTransformConfigSchema = z.object({
-    preCompare: playTransformPartsConfigOptionsSchema.optional(),
+    /** Stages to be applied when a Play is first seen by this component */
+    preCompare: playTransformPartsConfigOptionsSchema.optional().meta({description: 'Stages to be applied when a Play is first seen by this component'}),
+    /** Stages to be applied when comparing a candidate Play to any existing Plays such as when checking for duplicates or discovered Plays
+     * 
+     * **Note:** Transforms applies are not persistent. They are used only during comparison operations.
+     */
     compare: z.object({
-        candidate: playTransformPartsConfigOptionsSchema.optional(),
-        existing: playTransformPartsConfigOptionsSchema.optional(),
-    }).optional(),
+        /** Stages to apply to the Play being considered for discovery or scrobbling */
+        candidate: playTransformPartsConfigOptionsSchema.optional().meta({description: `Stages to apply to the Play being considered for discovery or scrobbling`}),
+        /** Stages to apply to the existing Plays (already discovered, existing scrobbles) */
+        existing: playTransformPartsConfigOptionsSchema.optional().meta({description: `Stages to apply to the existing Plays (already discovered, existing scrobbles)`}),
+    }).optional().meta({description: stripIndents`Stages to be applied when comparing a candidate Play to any existing Plays such as when checking for duplicates or discovered Plays
+        
+        **Note:** Transforms applies are not persistent. They are used only during comparison operations.`}),
     postCompare: playTransformPartsConfigOptionsSchema.optional(),
 }).meta({title: 'Transform Config'});
 
@@ -350,7 +360,7 @@ const playTransformPartsArrayRulesSchema = z.array(playTransformTypedStageRulesS
 
 /** Represents the final, strongly-typed transform configuration used during runtime. */
 export const playTransformRulesSchema = z.object({
-    preCompare: playTransformPartsArrayRulesSchema.optional(),
+    preCompare: playTransformPartsArrayRulesSchema.optional().meta({description: 'Stages to be applied when a Play is first seen by this component'}),
     compare: z.object({
         candidate: playTransformPartsArrayRulesSchema.optional(),
         existing: playTransformPartsArrayRulesSchema.optional(),

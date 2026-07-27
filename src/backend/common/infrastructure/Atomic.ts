@@ -12,6 +12,7 @@ import type { ClientType } from "../../../core/Atomic.ts";
 import assert from 'assert';
 import * as path from 'path';
 import * as z from 'zod';
+import { stripIndents } from 'common-tags';
 
 export const __filename = import.meta.filename;
 export const projectRootDir = path.resolve(__filename, '../../../../../');
@@ -416,7 +417,12 @@ export interface ScrobbleRangeResult {
 
 export const REFRESH_STALE_DEFAULT = 60;
 
-export const durationValueSchema = z.union([z.number(), z.string()]);
+export const durationValueSchema = z.union([z.number(), z.string()]).meta({
+    description: stripIndents`A duration of time as either
+    
+    * a number of seconds
+    * or a string containing a number and a unit of time compatible with dayjs`,
+    example: [60, 3600, "1 hour", "4 days"]});
 /**
  * A duration of time
  * 

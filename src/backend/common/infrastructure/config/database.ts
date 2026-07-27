@@ -17,7 +17,7 @@ const durationSchema = z.custom<Duration>(
     {message: 'Expected a dayjs Duration instance'}
 );
 
-export const retentionValueUnparsedSchema = z.union([durationValueSchema, durationSchema, z.literal(false)]);
+export const retentionValueUnparsedSchema = z.union([durationValueSchema, z.literal(false)]);
 
 export type RetentionValueUnparsed = z.infer<typeof retentionValueUnparsedSchema>;
 
