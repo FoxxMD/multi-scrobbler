@@ -237,8 +237,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         if(data === undefined) {
             return undefined;
         }
-        // default to user transform type for backward compatibility
-        const partArr = (Array.isArray(data) ? data : [data]).map(x => ({type: 'user', ...x}));
+        const partArr = (Array.isArray(data) ? data : [data]);
 
         return partArr.map(x => this.transformManager.parseTransformerConfig(x));
     }
