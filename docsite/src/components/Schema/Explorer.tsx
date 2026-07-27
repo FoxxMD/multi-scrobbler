@@ -21,6 +21,7 @@ export default function Explorer(props: ExplorerProps): JSX.Element {
   renderRootTreeLines={true}
   emptyText="No schema defined"
   defaultExpandedDepth={0}
+  skipTopLevelDescription={false}
   markup
 />
         </div>
