@@ -9,6 +9,7 @@ import assert from 'node:assert';
 import * as sqlite from 'node:sqlite';
 import { parseBoolStrict } from '../../utils.ts';
 import { SimpleError } from '../errors/MSErrors.ts';
+import type { Duration } from 'dayjs/plugin/duration.js';
 
 export const MEMORY_DB_NAME = ':memory:';
 export const isMemoryDb = (name: string): boolean => name === MEMORY_DB_NAME;
@@ -50,7 +51,7 @@ export const backupDb = async (db: sqlite.DatabaseSync, dbPath: string, opts: { 
     logger.info('Backed up!');
 }
 
-const parseRetentionValue = (val: RetentionValueUnparsed): RetentionValue => {
+const parseRetentionValue = (val: RetentionValueUnparsed | Duration): RetentionValue => {
     if(typeof val === 'string' || typeof val === 'boolean') {
         try {
             const boolVal = parseBoolStrict(val);

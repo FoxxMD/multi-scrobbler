@@ -2,10 +2,10 @@
 import { childLogger, type Logger } from '@foxxmd/logging';
 import type EventEmitter from "events";
 import type {ConfigMeta, ConfigureAsSource, InternalConfig, InternalConfigOptional} from "../common/infrastructure/Atomic.ts";
-import { isSourceType } from "../../core/Atomic.ts";
+import { clientTypes, isSourceType } from "../../core/Atomic.ts";
 import { sourceTypes } from "../../core/Atomic.ts";
-import type {SourceType} from "../../core/Atomic.ts";
-import type {AIOConfig, SourceDefaults} from "../common/infrastructure/config/aioConfig.ts";
+import type {ClientType, SourceType} from "../../core/Atomic.ts";
+import {aioSourceRelaxedConfigSchema, type SourceDefaults} from "../common/infrastructure/config/aioConfig.ts";
 import type {AzuracastData, AzuracastSourceConfig} from "../common/infrastructure/config/source/azuracast.ts";
 import type {ChromecastData, ChromecastSourceConfig} from "../common/infrastructure/config/source/chromecast.ts";
 import type {DeezerSourceConfig, DeezerInternalSourceConfig, DeezerCompatConfig} from "../common/infrastructure/config/source/deezer.ts";
@@ -24,7 +24,7 @@ import type {MPRISData, MPRISSourceConfig} from "../common/infrastructure/config
 import type {MusikcubeData, MusikcubeSourceConfig} from "../common/infrastructure/config/source/musikcube.ts";
 import type {PlexApiData, PlexApiSourceConfig} from "../common/infrastructure/config/source/plex.ts";
 import type {MalojaSourceConfig} from "../common/infrastructure/config/source/maloja.ts";
-import {validateSourceJson, type SourceAIOConfig, type SourceConfig} from "../common/infrastructure/config/source/sources.ts";
+import {validateSourceAIOJson, validateSourceJson, type SourceAIOConfig, type SourceConfig} from "../common/infrastructure/config/source/sources.ts";
 import type {SpotifySourceConfig, SpotifySourceData} from "../common/infrastructure/config/source/spotify.ts";
 import type {SubsonicData, SubSonicSourceConfig} from "../common/infrastructure/config/source/subsonic.ts";
 import type {VLCData, VLCSourceConfig} from "../common/infrastructure/config/source/vlc.ts";
@@ -37,7 +37,6 @@ import type { WildcardEmitter } from "../common/WildcardEmitter.ts";
 import { nonEmptyObj, parseBool, parseBoolStrict } from "../utils.ts";
 import { removeUndefinedKeys } from '../../core/DataUtils.ts';
 import { getCommonComponentEnvConfig, readJson } from '../utils/DataUtils.ts';
-import { validateJson } from "../utils/ValidationUtils.ts";
 import type AbstractSource from "./AbstractSource.ts";
 import { nonEmptyStringOrDefault } from '../../core/StringUtils.ts';
 import type {KoitoSourceConfig} from '../common/infrastructure/config/source/koito.ts';
@@ -112,71 +111,6 @@ export default class ScrobbleSources {
         return [sourcesReady, messages];
     }
 
-    private getSchemaByType = (type: SourceType): string => {
-            switch(type) {
-                case 'spotify':
-                    return "SpotifySourceConfig";
-                case 'plex':
-                    return "PlexApiSourceConfig";
-                case 'deezer':
-                    return "DeezerCompatConfig";
-                case 'endpointlz':
-                    return "ListenbrainzEndpointSourceConfig";
-                case 'endpointlfm':
-                    return "LastFMEndpointSourceConfig";
-                case 'icecast':
-                    return "IcecastSourceConfig";
-                case 'subsonic':
-                    return "SubSonicSourceConfig";
-                case 'jellyfin':
-                    return "JellyApiSourceConfig";
-                case 'lastfm':
-                    return "LastfmSourceConfig";
-                case 'librefm':
-                    return "LibrefmSourceConfig";
-                case 'ytmusic':
-                    return "YTMusicSourceConfig";
-                case 'ymbridge':
-                    return "YandexMusicBridgeSourceConfig";
-                case 'maloja':
-                    return "MalojaSourceConfig";
-                case 'mpris':
-                    return "MPRISSourceConfig";
-                case 'mopidy':
-                    return "MopidySourceConfig";
-                case 'listenbrainz':
-                    return "ListenBrainzSourceConfig";
-                case 'jriver':
-                    return "JRiverSourceConfig";
-                case 'kodi':
-                    return "KodiSourceConfig";
-                case 'chromecast':
-                    return "ChromecastSourceConfig";
-                case 'webscrobbler':
-                    return "WebScrobblerSourceConfig";
-                case 'musikcube':
-                    return "MusikcubeSourceConfig";
-                case 'musiccast':
-                    return "MusicCastSourceConfig";
-                case 'mpd':
-                    return "MPDSourceConfig";
-                case 'vlc':
-                    return "VLCSourceConfig";
-                case 'azuracast':
-                    return "AzuracastSourceConfig";
-                case 'koito':
-                    return "KoitoSourceConfig";
-                case 'tealfm':
-                    return "TealSourceConfig";
-                case 'rocksky':
-                    return "RockskySourceConfig";
-                case 'sonos':
-                    return 'SonosSourceConfig';
-                case 'applemusic':
-                    return 'AppleMusicSourceConfig';
-            }
-    }
-
     buildSourceDefaults = (fileDefaults: SourceDefaults = {}): SourceDefaults => {
         const scrobbleDurationEnv = process.env.SOURCE_SCROBBLE_DURATION;
         const scrobblePercentEnv = process.env.SOURCE_SCROBBLE_PERCENT;
@@ -223,12 +157,12 @@ export default class ScrobbleSources {
         try {
             configFile = await readJson(`${this.internalConfig.configDir}/config.json`, {throwOnNotFound: false, logger: childLogger(this.logger, `Secrets`)});
         } catch (e) {
-            throw new Error('config.json could not be parsed');
+            throw new Error('config.json could not be parsed', {cause: e});
         }
 
-        let sourceDefaults = {};
+        let sourceDefaults: SourceDefaults;
         if (configFile !== undefined) {
-            const aioConfig = await validateJson<AIOConfig>('source', configFile, 'AIOSourceRelaxedConfig', this.logger);
+            const aioConfig = aioSourceRelaxedConfigSchema.parse(configFile); // await validateJson<AIOConfig>('source', configFile, 'AIOSourceRelaxedConfig', this.logger);
             const {
                 sources: mainConfigSourcesConfigs = [],
                 sourceDefaults: sd = {},
@@ -251,13 +185,14 @@ export default class ScrobbleSources {
                     this.logger.error(invalidMsgType);
                     continue;
                 }
-                if(['lastfm','listenbrainz','koito','tealfm','rocksky'].includes(c.type.toLocaleLowerCase()) && ((c as LastfmSourceConfig | ListenBrainzSourceConfig | KoitoSourceConfig | TealSourceConfig | RockskySourceConfig).configureAs !== 'source')) 
+                if(clientTypes.includes(c.type.toLocaleLowerCase() as ClientType) && (c.configureAs !== 'source'))
                 {
                    this.logger.debug(`Skipping config ${index + 1} (${name}) in config.json because it is configured as a client.`);
                    continue;
                 }
+                let validatedSourceConfig: SourceAIOConfig;
                 try {
-                    validateSourceJson(c.type.toLocaleLowerCase() as SourceType, c); // validateJson<SourceConfig>('source', c, this.getSchemaByType(c.type.toLocaleLowerCase() as SourceType), this.logger);
+                    validatedSourceConfig = validateSourceAIOJson(c.type.toLocaleLowerCase() as SourceType, c); // validateJson<SourceConfig>('source', c, this.getSchemaByType(c.type.toLocaleLowerCase() as SourceType), this.logger);
                 } catch (e) {
                     const msg = `Source config ${index + 1} (${c.type} - ${name}) in config.json is invalid and will not be used.`;
                     const err = new Error(msg, {cause: e});
@@ -270,8 +205,8 @@ export default class ScrobbleSources {
                     }
                     continue;
                 }
-                configs.push({...c,
-                    name,
+                configs.push({...validatedSourceConfig,
+                    name: validatedSourceConfig.name ?? 'unnamed',
                     source: 'config.json',
                     configureAs: 'source' // override user value
                 });
@@ -930,7 +865,7 @@ export default class ScrobbleSources {
                 continue;
             }
             if (rawSourceConfigs !== undefined) {
-                let sourceConfigs: ParsedConfig[] = [];
+                let sourceConfigs: ParsedConfig[];
                 if (Array.isArray(rawSourceConfigs)) {
                     sourceConfigs = rawSourceConfigs;
                 } else if (rawSourceConfigs === null) {
@@ -943,15 +878,14 @@ export default class ScrobbleSources {
                     continue;
                 }
                 for (const [i,rawConf] of sourceConfigs.entries()) {
-                    if(['lastfm','listenbrainz','koito','maloja','tealfm','rocksky','librefm'].includes(sourceType) && 
-                    ((rawConf as LastfmSourceConfig | LibrefmSourceConfig | ListenBrainzSourceConfig | KoitoSourceConfig | MalojaSourceConfig | TealSourceConfig | RockskySourceConfig).configureAs !== 'source')) 
+                    if(clientTypes.includes(sourceType as ClientType) && 
+                    (rawConf.configureAs !== 'source'))
                     {
                         this.logger.debug(`Skipping config ${i + 1} from ${sourceType}.json because it is configured as a client.`);
                         continue;
                     }
                     try {
-                        const validConfig = await validateJson<SourceConfig>('source', rawConf, this.getSchemaByType(sourceType), this.logger);
-
+                        await validateSourceJson(sourceType, rawConf);
                         // @ts-expect-error will eventually have all info (lazy)
                         const parsedConfig: ParsedConfig = {
                             ...rawConf,
@@ -960,9 +894,14 @@ export default class ScrobbleSources {
                         }
                         configs.push(parsedConfig);
                     } catch (e: any) {
-                        const configErr = new Error(`The config entry at index ${i} from ${sourceType}.json was not valid`, {cause: e});
+                        const msg = `The config entry at index ${i} from ${sourceType}.json was not valid`;
+                        const configErr = new Error(msg, {cause: e});
                         this.emitter.emit('error', configErr);
-                        this.logger.error(configErr);
+                        if(e instanceof ZodError) {
+                            this.logger.error(`${msg}:\n${prettifyError(e)}`);
+                        } else {
+                            this.logger.error(configErr);
+                        }
                     }
                 }
             }
@@ -1225,7 +1164,7 @@ const transformPresetEnv = <T extends CommonSourceOptions = CommonSourceOptions>
         }
     }
 
-    // @ts-ignore
+    // @ts-expect-error T is fine
     return {
         ...(existing || {}),
         playTransform: popts

@@ -1,12 +1,12 @@
 import * as z from "zod";
-import {koitoClientAIOConfigSchema, koitoClientConfigSchema, type KoitoClientConfig} from "./koito.ts";
-import {lastfmClientAIOConfigSchema, lastfmClientConfigSchema, type LastfmClientConfig} from "./lastfm.ts";
-import {listenBrainzClientAIOConfigSchema, listenBrainzClientConfigSchema, type ListenBrainzClientConfig} from "./listenbrainz.ts";
-import {malojaClientAIOConfigSchema, malojaClientConfigSchema, type MalojaClientConfig} from "./maloja.ts";
-import {tealClientAIOConfigSchema, tealClientConfigSchema, type TealClientConfig} from "./tealfm.ts";
-import {rockSkyClientAIOConfigSchema, rockSkyClientConfigSchema, type RockSkyClientConfig} from "./rocksky.ts";
-import {librefmClientAIOConfigSchema, librefmClientConfigSchema, type LibrefmClientConfig} from "./librefm.ts";
-import {discordClientAIOConfigSchema, discordClientConfigSchema, type DiscordClientConfig} from "./discord.ts";
+import {koitoClientAIOConfigSchema, koitoClientConfigSchema, type KoitoClientAIOConfig, type KoitoClientConfig} from "./koito.ts";
+import {lastfmClientAIOConfigSchema, lastfmClientConfigSchema, type LastfmClientAIOConfig, type LastfmClientConfig} from "./lastfm.ts";
+import {listenBrainzClientAIOConfigSchema, listenBrainzClientConfigSchema, type ListenBrainzClientAIOConfig, type ListenBrainzClientConfig} from "./listenbrainz.ts";
+import {malojaClientAIOConfigSchema, malojaClientConfigSchema, type MalojaClientAIOConfig, type MalojaClientConfig} from "./maloja.ts";
+import {tealClientAIOConfigSchema, tealClientConfigSchema, type TealClientAIOConfig, type TealClientConfig} from "./tealfm.ts";
+import {rockSkyClientAIOConfigSchema, rockSkyClientConfigSchema, type RockSkyClientAIOConfig, type RockSkyClientConfig} from "./rocksky.ts";
+import {librefmClientAIOConfigSchema, librefmClientConfigSchema, type LibrefmClientAIOConfig, type LibrefmClientConfig} from "./librefm.ts";
+import {discordClientAIOConfigSchema, discordClientConfigSchema, type DiscordClientAIOConfig, type DiscordClientConfig} from "./discord.ts";
 import type { CommonClientConfig } from "./index.ts";
 import type { ClientType } from "../../../../../core/Atomic.ts";
 
@@ -101,7 +101,7 @@ export interface ClientTypeConfigMap extends Record<ClientType, CommonClientConf
     discord: DiscordClientConfig
 }
 
-const clientConfigSchemaMap: { [K in keyof ClientTypeConfigMap]: z.ZodType<ClientTypeConfigMap[K]> } = {
+export const clientConfigSchemaMap: { [K in keyof ClientTypeConfigMap]: z.ZodType<ClientTypeConfigMap[K]> } = {
     maloja: malojaClientConfigSchema,
     lastfm: lastfmClientConfigSchema,
     librefm: librefmClientConfigSchema,
@@ -113,3 +113,27 @@ const clientConfigSchemaMap: { [K in keyof ClientTypeConfigMap]: z.ZodType<Clien
 }
 
 export const validateClientJson = <T extends keyof ClientTypeConfigMap>(clientType: T, json: object): ClientTypeConfigMap[T] => clientConfigSchemaMap[clientType].parse(json);
+
+export interface ClientTypeAIOConfigMap extends Record<ClientType, ClientAIOConfig> {
+    maloja: MalojaClientAIOConfig,
+    lastfm: LastfmClientAIOConfig,
+    librefm: LibrefmClientAIOConfig,
+    listenbrainz: ListenBrainzClientAIOConfig,
+    koito: KoitoClientAIOConfig,
+    tealfm: TealClientAIOConfig,
+    rocksky: RockSkyClientAIOConfig,
+    discord: DiscordClientAIOConfig
+}
+
+export const clientAIOConfigSchemaMap: { [K in keyof ClientTypeAIOConfigMap]: z.ZodType<ClientTypeAIOConfigMap[K]> } = {
+    maloja: malojaClientAIOConfigSchema,
+    lastfm: lastfmClientAIOConfigSchema,
+    librefm: librefmClientAIOConfigSchema,
+    listenbrainz: listenBrainzClientAIOConfigSchema,
+    koito: koitoClientAIOConfigSchema,
+    tealfm: tealClientAIOConfigSchema,
+    rocksky: rockSkyClientAIOConfigSchema,
+    discord: discordClientAIOConfigSchema
+}
+
+export const validateClientAIOJson = <T extends keyof ClientTypeAIOConfigMap>(clientType: T, json: object): ClientTypeAIOConfigMap[T] => clientAIOConfigSchemaMap[clientType].parse(json);

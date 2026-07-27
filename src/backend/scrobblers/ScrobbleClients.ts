@@ -6,17 +6,16 @@ import type {ConfigMeta, InternalConfig, InternalConfigOptional, SourceIdentifie
 import { isClientType } from '../../core/Atomic.ts';
 import { clientTypes } from "../../core/Atomic.ts";
 import type {ClientType} from "../../core/Atomic.ts";
-import type {AIOConfig} from "../common/infrastructure/config/aioConfig.ts";
-import {validateClientJson, type ClientAIOConfig, type ClientConfig} from "../common/infrastructure/config/client/clients.ts";
+import {aioClientRelaxedConfigSchema} from "../common/infrastructure/config/aioConfig.ts";
+import {validateClientAIOJson, validateClientJson, type ClientAIOConfig} from "../common/infrastructure/config/client/clients.ts";
 import type {LastfmClientConfig, LastfmData} from "../common/infrastructure/config/client/lastfm.ts";
 import type {ListenBrainzClientConfig, ListenBrainzData} from "../common/infrastructure/config/client/listenbrainz.ts";
 import type {MalojaClientConfig, MalojaData} from "../common/infrastructure/config/client/maloja.ts";
 import type { WildcardEmitter } from "../common/WildcardEmitter.ts";
 import type { Notifiers } from "../notifier/Notifiers.ts";
-import { isDebugMode, nonEmptyObj } from "../utils.ts";
+import { nonEmptyObj } from "../utils.ts";
 import { removeUndefinedKeys } from '../../core/DataUtils.ts';
 import { getCommonComponentEnvConfig, readJson } from '../utils/DataUtils.ts';
-import { validateJson } from "../utils/ValidationUtils.ts";
 import type AbstractScrobbleClient from "./AbstractScrobbleClient.ts";
 import type {KoitoClientConfig, KoitoData} from '../common/infrastructure/config/client/koito.ts';
 import type {TealClientConfig, TealData} from '../common/infrastructure/config/client/tealfm.ts';
@@ -107,27 +106,6 @@ export default class ScrobbleClients {
         return [clientsReady, messages];
     }
 
-    private getSchemaByType = (type: ClientType): string => {
-            switch(type) {
-                case 'maloja':
-                    return "MalojaClientConfig";
-                case 'lastfm':
-                    return "LastfmClientConfig";
-                case 'librefm':
-                    return "LibrefmClientConfig";
-                case 'listenbrainz':
-                    return "ListenBrainzClientConfig";
-                case 'koito':
-                    return "KoitoClientConfig";
-                case 'tealfm':
-                    return "TealClientConfig";
-                case 'rocksky':
-                    return "RockSkyClientConfig";
-                case 'discord':
-                    return 'DiscordClientConfig';
-            }
-    }
-
     buildClientsFromConfig = async (notifier: Notifiers) => {
         const configs: ParsedConfig[] = [];
 
@@ -136,12 +114,12 @@ export default class ScrobbleClients {
             configFile = await readJson(`${this.internalConfig.configDir}/config.json`, {throwOnNotFound: false, logger: childLogger(this.logger, `Secrets`)});
         } catch (e) {
             // think this should stay as show-stopper since config could include important defaults (delay, retries) we don't want to ignore
-            throw new Error('config.json could not be parsed');
+            throw new Error('config.json could not be parsed', {cause: e});
         }
 
         let clientDefaults = {};
         if (configFile !== undefined) {
-            const aioConfig = await validateJson<AIOConfig>('client', configFile, 'AIOClientRelaxedConfig', this.logger);
+            const aioConfig = aioClientRelaxedConfigSchema.parse(configFile); // await validateJson<AIOConfig>('client', configFile, 'AIOClientRelaxedConfig', this.logger);
             const {
                 clients: mainConfigClientConfigs = [],
                 clientDefaults: cd = {},
@@ -167,16 +145,17 @@ export default class ScrobbleClients {
                        this.logger.debug(`Skipping config ${index + 1} (${name}) in config.json because it is configured as a source.`);
                        continue;
                 }
+                let validatedConfig: ClientAIOConfig;
                 try {
-                    await validateJson<AIOConfig>('client', c, this.getSchemaByType(c.type.toLocaleLowerCase() as ClientType), this.logger);
+                    validatedConfig = await validateClientAIOJson(c.type.toLocaleLowerCase() as ClientType, c) // validateJson<AIOConfig>('client', c, this.getSchemaByType(c.type.toLocaleLowerCase() as ClientType), this.logger);
                 } catch (e) {
                     const err = new Error(`Client config ${index + 1} (${c.type} - ${name}) in config.json is invalid and will not be used.`, {cause: e});
                     this.emitter.emit('error', err);
                     this.logger.error(err);
                     continue;
                 }
-                configs.push({...c,
-                    name,
+                configs.push({...validatedConfig,
+                    name: validatedConfig.name ?? 'unnamed',
                     source: 'config.json',
                     configureAs: 'client', //override user value
                 });
@@ -638,7 +617,7 @@ const transformPresetEnv = <T extends CommonClientOptions = CommonClientOptions>
         }
     }
 
-    // @ts-ignore
+    // @ts-expect-error T is fine
     return {
         ...(existing || {}),
         playTransform: popts

@@ -131,7 +131,10 @@ export type AIOClientConfig = z.infer<typeof aioClientConfigSchema>;
 
 export const aioClientRelaxedConfigSchema = z.object({
     clientDefaults: requestRetryOptionsSchema.optional(),
-    clients: z.array(z.looseObject({})).optional(),
+    clients: z.array(z.looseObject({ type: z.string(), configureAs: z.string().optional() })).optional(),
+    database: z.object({
+        retention: retentionConfigDurationValueSchema.optional(),
+    }).optional(),
 });
 
 export type AIOClientRelaxedConfig = z.infer<typeof aioClientRelaxedConfigSchema>;
@@ -145,7 +148,10 @@ export type AIOSourceConfig = z.infer<typeof aioSourceConfigSchema>;
 
 export const aioSourceRelaxedConfigSchema = z.object({
     sourceDefaults: sourceRetryOptionsSchema.optional(),
-    sources: z.array(z.looseObject({})).optional(),
+    sources: z.array(z.looseObject({ type: z.string(), configureAs: z.string().optional() })).optional(),
+    database: z.object({
+        retention: retentionConfigDurationValueSchema.optional(),
+    }).optional(),
 });
 
 export type AIOSourceRelaxedConfig = z.infer<typeof aioSourceRelaxedConfigSchema>;
