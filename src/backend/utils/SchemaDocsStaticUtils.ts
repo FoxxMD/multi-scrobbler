@@ -1,20 +1,18 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { resolve } from "path";
 import * as z from 'zod';
-import {getTypeSchemaFromConfigGenerator} from "./SchemaUtils.ts";
-import { atomicClientInterfaces } from '../common/infrastructure/config/client/clients.ts';
-import { atomicSourceInterfaces } from '../common/infrastructure/config/source/sources.ts';
+import { clientConfigSchemaMap } from '../common/infrastructure/config/client/clients.ts';
+import { sourceConfigSchemaMap } from '../common/infrastructure/config/source/sources.ts';
 import { projectRootDir } from "../common/infrastructure/Atomic.ts";
-import { koitoClientConfigSchema } from "../common/infrastructure/config/client/koito.ts";
 
 mkdirSync(resolve(projectRootDir, 'docsite/static/schemas'), {recursive: true});
 
-const jsonSchema = z.toJSONSchema(koitoClientConfigSchema, { 
-    io: "output",
+const generateSchema = (schema: z.ZodType) => z.toJSONSchema(z.array(schema), { 
+    io: "input",
     reused: "inline",
+    target: "draft-07",
     unrepresentable: "any",
     override: (ctx) => {
-        //const def = ctx.zodSchema._zod.def;
         if(ctx.jsonSchema.anyOf !== undefined && Array.isArray(ctx.jsonSchema.anyOf)) {
             for(const a of ctx.jsonSchema.anyOf) {
                 if(a.const !== undefined) {
@@ -38,37 +36,15 @@ const jsonSchema = z.toJSONSchema(koitoClientConfigSchema, {
             delete ctx.jsonSchema.const;
             return
         }
-        // if(ctx.zodSchema.type === 'object') {
-        //     const ks = Object.keys(ctx.jsonSchema.properties);
-        //     for(const k of ks) {
-        //         if(ctx.jsonSchema.properties[k]?.description !== undefined) {
-        //             let isUnion = ctx.zodSchema.shape[k].type === 'union';
-        //             if(!isUnion && ctx.zodSchema.shape[k].type === 'optional' && ctx.zodSchema.shape[k].unwrap().type === 'union') {
-        //                 isUnion = true;
-        //             }
-        //             if(ctx.zodSchema.shape[k].type === 'union')
-        //             // ctx.zodSchema.shape[k].
-        //         }
-        //     }
-        // }
-
-        // if (ctx.jsonSchema.anyOf) {
-        //     ctx.jsonSchema.oneOf = ctx.jsonSchema.anyOf;
-        //     delete ctx.jsonSchema.anyOf;
-        // }
     }
- });
-writeFileSync(resolve(projectRootDir, `docsite/static/schemas/KoitoClientConfig.json`), JSON.stringify(jsonSchema));
+ })
 
-// const aio = getTypeSchemaFromConfigGenerator('AIOConfig');
-// writeFileSync(resolve(projectRootDir, 'docsite/static/schemas/aio.json'), JSON.stringify(aio));
+const clientEntries = Object.entries(clientConfigSchemaMap);
+for(const [k,v] of clientEntries) {
+    writeFileSync(resolve(projectRootDir, `docsite/static/schemas/${k}-client.json`), JSON.stringify(generateSchema(v)));
+}
 
-// for(const inter of atomicSourceInterfaces) {
-//     const schema = getTypeSchemaFromConfigGenerator(`${inter}s`);
-//     writeFileSync(resolve(projectRootDir, `docsite/static/schemas/${inter}.json`), JSON.stringify(schema));
-// }
-
-// for(const inter of atomicClientInterfaces) {
-//     const schema = getTypeSchemaFromConfigGenerator(`${inter}s`);
-//     writeFileSync(resolve(projectRootDir, `docsite/static/schemas/${inter}.json`), JSON.stringify(schema));
-// }
+const sourcesEntries = Object.entries(sourceConfigSchemaMap);
+for(const [k,v] of sourcesEntries) {
+    writeFileSync(resolve(projectRootDir, `docsite/static/schemas/${k}-source.json`), JSON.stringify(generateSchema(v[0])));
+}
