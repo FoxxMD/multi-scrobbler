@@ -36,7 +36,9 @@ export type RetentionValue = z.infer<typeof retentionValueSchema>;
 export const rententionGranularDurationValueSchema = z.object({
     failed: durationValueSchema.optional(),
     completed: durationValueSchema.optional(),
-    duped: durationValueSchema.optional(),
+    duped: durationValueSchema.optional()
+}).meta({
+    description: 'Individual duration policies based on the state of the Play'
 });
 export type RententionGranularDurationValue = z.infer<typeof rententionGranularDurationValueSchema>;
 
@@ -77,7 +79,9 @@ export const retentionConfigValueSchema = z.union([
 ]);
 export type RetentionConfigValue = z.infer<typeof retentionConfigValueSchema>;
 
-export const compactablePropertySchema = z.enum(['transform', 'input']);
+export const compactablePropertySchema = z.enum(['transform', 'input']).meta({
+    description: 'The type of data to compact on the Play'
+});
 
 export type CompactableProperty = z.infer<typeof compactablePropertySchema>;
 
@@ -108,22 +112,22 @@ export const retentionOptionSchema = z.union([retentionOptionDurationSchema, ret
 export type RetentionOption = z.infer<typeof retentionOptionSchema>;
 
 export const retentionConfigDurationValueSchema = z.object({
-    deleteAfter: retentionConfigValueDurationValueSchema.optional(),
-    compactAfter: retentionConfigValueDurationValueSchema.optional(),
-    compact: z.array(compactablePropertySchema).optional(),
+    deleteAfter: retentionConfigValueDurationValueSchema.optional().meta({description: 'Delete Plays using these retention policies'}),
+    compactAfter: retentionConfigValueDurationValueSchema.optional().meta({description: 'Compact Plays using these retention policies'}),
+    compact: z.array(compactablePropertySchema).optional().meta({ description: 'The type of data to compact on the Play'})
 });
 export type RetentionConfigDurationValue = z.infer<typeof retentionConfigDurationValueSchema>;
 
 export const retentionConfigDurationSchema = z.object({
-    deleteAfter: retentionConfigValueDurationSchema.optional(),
-    compactAfter: retentionConfigValueDurationSchema.optional(),
+    deleteAfter: retentionConfigValueDurationSchema.optional().meta({description: 'test'}),
+    compactAfter: retentionConfigValueDurationSchema.optional().meta({description: 'test'}),
     compact: z.array(compactablePropertySchema).optional(),
 });
 export type RetentionConfigDuration = z.infer<typeof retentionConfigDurationSchema>;
 
 export const retentionConfigRetentionValueSchema = z.object({
-    deleteAfter: retentionConfigValueRetentionValueSchema.optional(),
-    compactAfter: retentionConfigValueRetentionValueSchema.optional(),
+    deleteAfter: retentionConfigValueRetentionValueSchema.optional().meta({description: 'test'}),
+    compactAfter: retentionConfigValueRetentionValueSchema.optional().meta({description: 'test'}),
     compact: z.array(compactablePropertySchema).optional(),
 });
 export type RetentionConfigRetentionValue = z.infer<typeof retentionConfigRetentionValueSchema>;
@@ -136,8 +140,8 @@ export const retentionConfigSchema = z.union([
 export type RetentionConfig = z.infer<typeof retentionConfigSchema>;
 
 export const retentionOptionsSchema = z.object({
-    deleteAfter: retentionOptionDurationSchema,
-    compactAfter: retentionOptionRetentionValueSchema,
+    deleteAfter: retentionOptionDurationSchema.meta({description: 'test'}),
+    compactAfter: retentionOptionRetentionValueSchema.meta({description: 'test'}),
     compact: z.array(compactablePropertySchema),
 });
 

@@ -11,7 +11,7 @@ mkdirSync(resolve(projectRootDir, 'docsite/static/schemas'), {recursive: true});
 
 const jsonSchema = z.toJSONSchema(koitoClientConfigSchema, { 
     io: "output",
-    //reused: "ref",
+    reused: "inline",
     unrepresentable: "any",
     override: (ctx) => {
         //const def = ctx.zodSchema._zod.def;
