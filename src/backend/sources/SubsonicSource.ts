@@ -1,26 +1,27 @@
 import * as crypto from 'crypto';
-import dayjs from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
 import type EventEmitter from "events";
 import type { Request } from 'superagent';
 import request from 'superagent';
-import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
+import { REPORTED_PLAYER_STATUSES, type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import { UpstreamError } from "../common/errors/UpstreamError.ts";
-import { DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.ts";
+import { DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type InternalConfig, type PlayerStateDataMaybePlay } from "../common/infrastructure/Atomic.ts";
 import type {PlayPlatformId} from '../../core/Atomic.ts';
 import type {SubSonicSourceConfig} from "../common/infrastructure/config/source/subsonic.ts";
-import { getSubsonicResponse, type SubsonicResponse, type SubsonicResponseCommon } from "../common/vendor/subsonic/interfaces.ts";
+import { getSubsonicResponse, type EntryData, type OpenSubsonicExtensionsResponse, type SubsonicNowPlayingResponse, type SubsonicResponse, type SubsonicResponseCommon } from "../common/vendor/subsonic/interfaces.ts";
 import { removeDuplicates } from "../utils.ts";
 import { findCauseByFunc } from "../utils/ErrorUtils.ts";
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
-import MemorySource from "./MemorySource.ts";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import { SubsonicPlayerState } from './PlayerState/SubsonicPlayerState.ts';
 import type {PlayerStateOptions} from './PlayerState/AbstractPlayerState.ts';
 import type {Logger} from '@foxxmd/logging';
 import { baseFormatPlayObj } from '../utils/PlayTransformUtils.ts';
 import { noRetryOnUpstreamError, tryApiCall } from '../utils/RequestUtils.ts';
 import { artistNameToCredit } from '../../core/StringUtils.ts';
+import { timeToHumanTimestamp, todayAwareFormat } from '../../core/TimeUtils.ts';
 
 dayjs.extend(isSameOrAfter);
 
@@ -34,7 +35,7 @@ interface SourceIdentifierData {
     openSubsonic?: boolean
 }
 
-export class SubsonicSource extends MemorySource {
+export class SubsonicSource extends MemoryPositionalSource {
 
     requiresAuth = true;
 
@@ -45,6 +46,8 @@ export class SubsonicSource extends MemorySource {
     usersAllow: string[] = [];
 
     sourceData: SourceIdentifierData = {};
+
+    playbackReportSupported = false;
 
     constructor(name: any, config: SubSonicSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         const {
@@ -58,7 +61,7 @@ export class SubsonicSource extends MemorySource {
         this.canPoll = true;
     }
 
-    static formatPlayObj(obj: any, options: FormatPlayObjectOptions & { sourceData?: SourceIdentifierData } = {}): PlayObject {
+    static formatPlayObj(obj: EntryData, options: FormatPlayObjectOptions & { sourceData?: SourceIdentifierData } = {}): PlayerStateDataMaybePlay {
         const {
             newFromSource = false,
             sourceData: {
@@ -77,7 +80,11 @@ export class SubsonicSource extends MemorySource {
             minutesAgo,
             playerId,
             username,
+            state,
+            positionMs
         } = obj;
+
+        const position = positionMs !== undefined ? positionMs / 1000 : undefined;
 
         const play: PlayObjectMinimal = {
             data: {
@@ -89,6 +96,7 @@ export class SubsonicSource extends MemorySource {
                 // so we need to force the time to be 0 seconds always so that when we compare against scrobbles from client the time isn't off
                 playDate: minutesAgo === 0 ? dayjs().startOf('minute') : dayjs().startOf('minute').subtract(minutesAgo, 'minute'),
             },
+
             meta: {
                 source: 'Subsonic',
                 trackId: id,
@@ -96,10 +104,18 @@ export class SubsonicSource extends MemorySource {
                 user: username,
                 deviceId: playerId,
                 mediaPlayerName: type ?? `${openSubsonic ? 'Open ' : ''}Subsonic`,
-                mediaPlayerVersion: type !== undefined && serverVersion !== undefined ? serverVersion : version
+                mediaPlayerVersion: type !== undefined && serverVersion !== undefined ? serverVersion : version,
+                ...(position === undefined ? {} : {trackProgressPosition: position})
             }
         }
-        return baseFormatPlayObj(obj, play);
+        const status = subsonicPlaybackStateToReportedStatus(state);
+
+        return {
+            platformId: [playerId, username],
+            play: baseFormatPlayObj(obj, play),
+            ...(status === undefined ? {} : {status}),
+            ...(position === undefined ? {} : {position})
+        };
     }
 
     doCallApi = async <T extends SubsonicResponseCommon = SubsonicResponseCommon>(req: Request, retries = 0): Promise<T> => {
@@ -208,7 +224,7 @@ export class SubsonicSource extends MemorySource {
     callApi = async <T extends SubsonicResponseCommon = SubsonicResponseCommon>(reqFunc: () => Request): Promise<T> => {
         try {
             return await tryApiCall(() => this.doCallApi(reqFunc()), {
-                ...this.config,
+                ...this.config.options,
                 logger: this.logger,
                 shouldRetry: noRetryOnUpstreamError
             }) as T;
@@ -255,6 +271,7 @@ export class SubsonicSource extends MemorySource {
             const resp = await this.callApi(() => request.get(`${url}/rest/ping`));
             this.sourceData = resp as SourceIdentifierData;
             this.logger.info(`Subsonic Server reachable: ${identifiersFromResponse(resp)}`);
+            await this.discoverPlaybackReportSupport();
             return true;
         } catch (e) {
 
@@ -263,6 +280,7 @@ export class SubsonicSource extends MemorySource {
                 const resp = getSubsonicResponse(subResponseError.response)
                 this.logger.info(`Subsonic Server reachable: ${identifiersFromResponse(resp)}`);
                 this.sourceData = resp as SourceIdentifierData;
+                await this.discoverPlaybackReportSupport();
                 return true;
             }
 
@@ -276,6 +294,43 @@ export class SubsonicSource extends MemorySource {
                 throw new Error('Unexpected error occurred', {cause: e})
             }
         }
+    }
+
+    private async discoverPlaybackReportSupport() {
+        const {url} = this.config.data;
+        this.playbackReportSupported = false;
+        try {
+            const {openSubsonicExtensions} = await this.callApi<OpenSubsonicExtensionsResponse>(() => request.get(`${url}/rest/getOpenSubsonicExtensions`));
+            this.playbackReportSupported = openSubsonicExtensions.some(({name}) => name === 'playbackReport');
+            this.logger.info(`OpenSubsonic Playback Report support: ${this.playbackReportSupported ? 'available' : 'unavailable'}`);
+        } catch (e) {
+            this.logger.info({error: e}, 'Could not determine OpenSubsonic Playback Report support');
+        }
+    }
+
+    protected filterExpiredNowPlaying(states: PlayerStateDataMaybePlay[]): PlayerStateDataMaybePlay[]{
+        if(this.config.data.detectStaleNowPlayingFromMinutesAgo === false){
+            return states;
+        }
+
+        return states.filter(state => {
+            // Playback reports are more accurate than the minute-granularity fallback.
+            if (state.position !== undefined || state.status !== undefined || state.play === undefined) {
+                return true;
+            }
+            const {play} = state;
+            const {artists = [], duration, playDate, track} = play.data;
+            if (duration === undefined || playDate === undefined) {
+                return true;
+            }
+            if (!isSubsonicNowPlayingExpired(play)) {
+                return true;
+            }
+            const tolerance = getSubsonicNowPlayingTolerance(duration);
+            const expiresAt = playDate.add(duration + tolerance, 'second');
+            this.logger.trace(`Ignoring Subsonic now-playing entry as inactive: '${artists.map(x => x.name).join(', ')} - ${track}'. Estimated start: ${todayAwareFormat(playDate)}; track duration: ${timeToHumanTimestamp(duration * 1000)}. The entry expired at ${todayAwareFormat(expiresAt)}.`);
+            return false;
+        });
     }
 
     doAuthentication = async () => {
@@ -292,20 +347,48 @@ export class SubsonicSource extends MemorySource {
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
         const {formatted = false} = options;
         const {url} = this.config.data;
-        const resp = await this.callApi(() => request.get(`${url}/rest/getNowPlaying`));
+        const resp = await this.callApi<SubsonicNowPlayingResponse>(() => request.get(`${url}/rest/getNowPlaying`));
         const {
             nowPlaying: {
                 entry = []
             } = {}
         } = resp;
+        const states = entry.map(x => {
+            if (this.playbackReportSupported && x.state === undefined && x.positionMs === undefined) {
+                this.logger.debug({entry: x}, 'Playback Report support was advertised by the server but a now-playing entry contained no playback report fields. This is likely caused by the client used for playback not reporting playback information to the server.');
+            }
+            return SubsonicSource.formatPlayObj(x, {sourceData: this.sourceData});
+        });
+        // Some servers continue reporting the same song as playing after playback stops. Ignore it so it cannot be treated as a new repeat session.
+        const active = this.filterExpiredNowPlaying(states);
         // sometimes subsonic sources will return the same track as being played twice on the same player, need to remove this so we don't duplicate plays
-        const deduped = removeDuplicates(entry.map(x => SubsonicSource.formatPlayObj(x, {sourceData: this.sourceData})));
-        const userFiltered = this.usersAllow.length == 0 ? deduped : deduped.filter(x => x.meta.user === undefined || this.usersAllow.map(x => x.toLocaleLowerCase()).includes(x.meta.user.toLocaleLowerCase()));
+        const dedupedPlays = removeDuplicates(active.flatMap(({play}) => play === undefined ? [] : [play]));
+        const deduped = active.filter(({play}) => play === undefined || dedupedPlays.includes(play));
+        const allowedUsers = this.usersAllow.map(x => x.toLocaleLowerCase());
+        const userFiltered = allowedUsers.length === 0 ? deduped : deduped.filter(state => {
+            const user = state.play?.meta.user;
+            return user === undefined || allowedUsers.includes(user.toLocaleLowerCase());
+        });
         return await this.processRecentPlays(userFiltered);
     }
 
     getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new SubsonicPlayerState(logger, id, opts);
 }
+
+const subsonicPlaybackStateToReportedStatus = (state: string | undefined) => {
+    switch (state) {
+        case 'playing':
+            return REPORTED_PLAYER_STATUSES.playing;
+        case 'paused':
+            return REPORTED_PLAYER_STATUSES.paused;
+        case 'stopped':
+            return REPORTED_PLAYER_STATUSES.stopped;
+        case undefined:
+            return undefined;
+        default:
+            return REPORTED_PLAYER_STATUSES.unknown;
+    }
+};
 
 export const getSubsonicResponseFromError = (error: unknown): UpstreamError => findCauseByFunc(error, (err) => {
         if(err instanceof UpstreamError && err.response !== undefined) {
@@ -366,3 +449,20 @@ export const identifiersFromResponse = (data: SubsonicResponseCommon) => {
     }
     return identifiers.join(' | ');
 }
+
+export const isSubsonicNowPlayingExpired = (play: PlayObject, now: Dayjs = dayjs()): boolean => {
+    const {duration, playDate} = play.data;
+    if (duration === undefined || duration <= 0 || playDate === undefined) {
+        return false;
+    }
+    const tolerance = getSubsonicNowPlayingTolerance(duration);
+    return now.isAfter(playDate.add(duration + tolerance, 'second'));
+}
+
+/**
+ * Subsonic only reports the track start in whole minutes. Allow for that lost precision before treating a lingering now-playing row as stale.
+ */
+const getSubsonicNowPlayingTolerance = (duration: number): number => {
+    const nowPlayingMinToleranceTimeSeconds = 60;
+    return nowPlayingMinToleranceTimeSeconds + (duration * 0.05)
+};
