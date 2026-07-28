@@ -4,12 +4,13 @@ import * as z from 'zod';
 import { clientConfigSchemaMap } from '../common/infrastructure/config/client/clients.ts';
 import { sourceConfigSchemaMap } from '../common/infrastructure/config/source/sources.ts';
 import { projectRootDir } from "../common/infrastructure/Atomic.ts";
+import { aioConfigSchema } from "../common/infrastructure/config/aioConfig.ts";
 
 mkdirSync(resolve(projectRootDir, 'docsite/static/schemas'), {recursive: true});
 
-const generateSchema = (schema: z.ZodType) => z.toJSONSchema(z.array(schema), { 
+const generateSchema = (schema: z.ZodType, reused: z.core.ToJSONSchemaParams['reused'] = 'inline') => z.toJSONSchema(schema, { 
     io: "input",
-    reused: "inline",
+    reused,
     target: "draft-07",
     unrepresentable: "any",
     override: (ctx) => {
@@ -41,10 +42,12 @@ const generateSchema = (schema: z.ZodType) => z.toJSONSchema(z.array(schema), {
 
 const clientEntries = Object.entries(clientConfigSchemaMap);
 for(const [k,v] of clientEntries) {
-    writeFileSync(resolve(projectRootDir, `docsite/static/schemas/${k}-client.json`), JSON.stringify(generateSchema(v)));
+    writeFileSync(resolve(projectRootDir, `docsite/static/schemas/${k}-client.json`), JSON.stringify(generateSchema(z.array(v))));
 }
 
 const sourcesEntries = Object.entries(sourceConfigSchemaMap);
 for(const [k,v] of sourcesEntries) {
-    writeFileSync(resolve(projectRootDir, `docsite/static/schemas/${k}-source.json`), JSON.stringify(generateSchema(v[0])));
+    writeFileSync(resolve(projectRootDir, `docsite/static/schemas/${k}-source.json`), JSON.stringify(generateSchema(z.array(v[0]))));
 }
+
+writeFileSync(resolve(projectRootDir, 'docsite/static/schemas/aio.json'), JSON.stringify(generateSchema(aioConfigSchema, 'ref')));
