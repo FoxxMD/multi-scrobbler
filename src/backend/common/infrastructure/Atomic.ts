@@ -274,12 +274,12 @@ export interface CacheConfigOptions {
 }
 
 export const cacheConfigUserAuthSchema = z.object({
-    provider: z.union([z.literal('valkey'), z.literal('file')]),
+    provider: z.enum(['valkey', 'file']),
 }).meta({description: 'The cache type to use for Auth'});
 
 export const cacheConfigUserSchema = z.object({
     auth: cacheConfigUserAuthSchema.optional(),
-    valkey: z.string().optional()
+    valkey: z.string().optional().meta({description: 'The connection string to a valkey server with the syntax `redis://HOST_IP:HOST_PORT`'})
 }).meta({title: 'Cache Config', description: 'Configuration for Caching'});
 
 export type CacheConfigUser = z.infer<typeof cacheConfigUserSchema>;

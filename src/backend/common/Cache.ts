@@ -40,14 +40,6 @@ typeson.register({
     ]
 });
 
-const unsupportedEnvKeys = [
-    'CACHE_AUTH_CONN',
-    'CACHE_METADATA',
-    'CACHE_SCROBBLE',
-    'CACHE_SCROBBLE_CONN',
-    'CACHE_AUTH_CONN'
-];
-
 export class MSCache {
 
     config: Required<CacheConfigOptions>
@@ -513,30 +505,11 @@ const noopKeyv: KeyvStoreAdapter = {
 export const parseUserConfig = (config: CacheConfigUser = {}, parentLogger: Logger = loggerNoop): CacheConfigOptions => {
     const logger = childLogger(parentLogger, 'Cache');
 
-        let valkeyEnvVal: string | undefined = nonEmptyStringOrDefault(process.env.CACHE_VALKEY);
-        if(valkeyEnvVal === undefined) {
-            valkeyEnvVal = nonEmptyStringOrDefault(process.env.CACHE_METADATA_CONN);
-            if(valkeyEnvVal !== undefined) {
-                logger.warn('ENV CACHE_METADATA_CONN is deprecated! Replace it with CACHE_VALKEY');
-            }
-        }
-
-        for(const key of unsupportedEnvKeys) {
-            if(nonEmptyStringOrDefault(process.env[key]) !== undefined) {
-                logger.warn(`ENV ${key} is no longer supported. Refer to the Caching docs.`);
-            }
-        }
-
+        const valkeyEnvVal: string | undefined = nonEmptyStringOrDefault(process.env.CACHE_VALKEY);
         const {
             valkey = valkeyEnvVal,
-            // metadata: {
-            //     provider: mProvider = (process.env.CACHE_METADATA as (CacheMetadataProvider | undefined) ?? false),
-            //     connection: mConn = process.env.CACHE_METADATA_CONN,
-            //     //...restMetadata
-            // } = {},
             auth: {
                 provider: aProvider = (process.env.CACHE_AUTH as (CacheAuthProvider | undefined) ?? 'file'),
-                //...restAuth
             } = {}
         } = config;
         
