@@ -194,10 +194,11 @@ export type CommonSourceData = {};
 export const commonSourceConfigSchema = z.object({
     ...commonConfigSchema.shape,
     /**
-     * Unique identifier for this source.
+     * Vanity anme for this source.
      * */
     name: z.string().optional().meta({
-        description: "Unique identifier for this source."
+        description: "Vanity Name for this source.",
+        examples: ["Foxx's Cool Source"]
     }),
     /**
      * Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.

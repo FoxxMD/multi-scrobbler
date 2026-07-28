@@ -171,13 +171,13 @@ export type CommonClientOptions = z.infer<typeof commonClientOptionsSchema>;
 export const commonClientConfigSchema = z.object({
     ...commonConfigSchema.shape,
     /**
-     * Unique identifier for this client. Used with sources to restrict where scrobbles are sent.
+     * Vanity name for this client
      *
      * @examples ["MyConfig"]
      * */
     name: z.string().meta({
-        description: "Unique identifier for this client.",
-        examples: ["MyConfig"]
+        description: "Vanity name for this client.",
+        examples: ["Foxx's Cool Client"]
     }),
     /**
      * Specific data required to configure this client

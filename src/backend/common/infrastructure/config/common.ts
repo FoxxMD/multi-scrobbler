@@ -22,17 +22,18 @@ export const commonConfigSchema = z.object({
      * If no id is given the name of this component will be used.
      */
     id: z.string().optional().meta({
-        description: "A UNIQUE identifier for this Source/Client"
+        description: "A UNIQUE identifier for this Source/Client",
+        examples: ["fooGlobalA"]
     }),
     data: commonDataSchema.optional(),
     /**
-     * Should MS use this client/source? Defaults to true
+     * Should MS parse this config and create a client/source from it?
      *
      * @default true
      * @examples [true]
      * */
     enable: z.boolean().optional().meta({
-        description: "Should MS use this client/source?",
+        description: "Should MS parse this config and create a client/source from it?",
         default: true,
         examples: [true]
     })
