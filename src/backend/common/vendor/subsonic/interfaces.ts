@@ -27,7 +27,29 @@ export interface SubsonicNowPlayingResponse extends SubsonicResponseCommon {
     }
 }
 
-export interface EntryData {
+export interface OpenSubsonicExtension {
+    name: string,
+    versions: number[]
+}
+
+export interface OpenSubsonicExtensionsResponse extends SubsonicResponseCommon {
+    openSubsonicExtensions: OpenSubsonicExtension[]
+}
+
+export type SubsonicPlaybackState = 'playing' | 'paused' | 'stopped' | 'starting' | string;
+
+export interface PlaybackReportData {
+    /**
+     * State is only provided by the server if the playback report extension is implemented by the server and used by the active client (see https://opensubsonic.netlify.app/docs/extensions/playbackreport/)
+     * */
+    state?: SubsonicPlaybackState,
+    /**
+     * PositionMs is only provided by the server if the playback report extension is implemented by the server and used by the active client (see https://opensubsonic.netlify.app/docs/extensions/playbackreport/)
+     * */
+    positionMs?: number
+}
+
+export interface EntryData extends PlaybackReportData {
     id: string,
     title: string,
     album?: string,

@@ -89,6 +89,15 @@ export const subsonicDataSchema = z.object({
     usersAllow: z.union([z.string(), z.array(z.string())]).optional().meta({
         description: "Only scrobble for specific users (case-insensitive)"
     }),
+
+    /**
+     * Ignore `getNowPlaying` entries whose `minutesAgo`-derived start time is older than their reported duration.
+     *
+     * This fallback is used only when the active client does not report OpenSubsonic Playback Report state or position. It prevents servers that retain stale now-playing entries after playback stops from repeatedly scrobbling the same track. Can be disabled if the server properly reports no playing songs when playback is stopped.
+     *
+     * @default true
+     * */
+     detectStaleNowPlayingFromMinutesAgo: z.boolean().optional().meta({description: 'Ignore `getNowPlaying` entries whose `minutesAgo`-derived start time is older than their reported duration.\n\n Only used when server/client does not implement OpenSubsonic Playback Report'})
 });
 
 export type SubsonicData = z.infer<typeof subsonicDataSchema>;

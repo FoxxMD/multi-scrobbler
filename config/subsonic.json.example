@@ -7,7 +7,8 @@
       "url": "http://localhost:4040/airsonic",
       "user": "yourUser",
       "password": "yourPassword",
-      "usersAllow": ["yourUser"]
+      "usersAllow": ["yourUser"],
+      "detectStaleNowPlayingFromMinutesAgo": true
     }
   }
 ]

@@ -254,7 +254,7 @@ export abstract class AbstractPlayerState {
                 this.logger.debug(`Last Play ${shortDiff ? 'was' : 'was not'} within 20s of new Player session and ${lastPlayMatch ? 'does' : 'does not'} match new Play -- ${this.isRepeatPlay ? 'is' : 'is not'} a repeat Play`);
             }
             
-            this.setCurrentPlay(state);
+            this.setCurrentPlay(state, {reportedTS});
             this.calculatedStatus = CALCULATED_PLAYER_STATUSES.unknown;
         }
 
