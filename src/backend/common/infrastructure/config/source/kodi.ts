@@ -56,6 +56,6 @@ export type KodiSourceConfig = z.infer<typeof kodiSourceConfigSchema>;
 export const kodiSourceAIOConfigSchema = z.object({
     ...kodiSourceConfigSchema.shape,
     type: z.literal('kodi'),
-});
+}).meta({title: 'Kodi'});
 
 export type KodiSourceAIOConfig = z.infer<typeof kodiSourceAIOConfigSchema>;

@@ -32,6 +32,6 @@ export type LastfmSourceConfig = z.infer<typeof lastfmSourceConfigSchema>;
 export const lastFmSouceAIOConfigSchema = z.object({
     ...lastfmSourceConfigSchema.shape,
     type: z.literal('lastfm'),
-});
+}).meta({title: "Last.fm"});
 
 export type LastFmSouceAIOConfig = z.infer<typeof lastFmSouceAIOConfigSchema>;

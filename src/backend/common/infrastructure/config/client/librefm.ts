@@ -90,6 +90,6 @@ export type LibrefmClientConfig = z.infer<typeof librefmClientConfigSchema>;
 export const librefmClientAIOConfigSchema = z.object({
     ...librefmClientConfigSchema.shape,
     type: z.literal('librefm'),
-});
+}).meta({title: 'Libre.fm'});
 
 export type LibrefmClientAIOConfig = z.infer<typeof librefmClientAIOConfigSchema>;

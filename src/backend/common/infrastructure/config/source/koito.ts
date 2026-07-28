@@ -32,6 +32,6 @@ export type KoitoSourceConfig = z.infer<typeof koitoSourceConfigSchema>;
 export const koitoSourceAIOConfigSchema = z.object({
     ...koitoSourceConfigSchema.shape,
     type: z.literal('koito'),
-});
+}).meta({title: "Koito"});
 
 export type KoitoSourceAIOConfig = z.infer<typeof koitoSourceAIOConfigSchema>;

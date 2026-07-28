@@ -420,7 +420,7 @@ export const REFRESH_STALE_DEFAULT = 60;
 /** A number of seconds */
 export const secondsSchema = z.number().meta({
     description: 'number of seconds',
-    example: [60, 3600],
+    examples: [60, 3600],
     title: 'Seconds'
 });
 
@@ -428,11 +428,11 @@ export const secondsSchema = z.number().meta({
 /** A string representing a number and unit of time comptabile with dayjs */
 export const durationStringSchema = z.string().meta({
     description: 'a string containing a number and a unit of time compatible with dayjs',
-    example:["1 hour", "4 days"],
+    examples:["1 hour", "4 days"],
     title: 'Duration Value'
 })
 
-export const durationValueSchema = z.xor([secondsSchema, durationStringSchema]);
+export const durationValueSchema = z.xor([secondsSchema, durationStringSchema]).meta({title: 'Duration Value'});
 
 // .meta({
 //     description: stripIndents`A duration of time as either

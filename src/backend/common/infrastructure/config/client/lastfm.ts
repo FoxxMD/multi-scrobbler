@@ -73,6 +73,6 @@ export type LastfmClientConfig = z.infer<typeof lastfmClientConfigSchema>;
 export const lastfmClientAIOConfigSchema = z.object({
     ...lastfmClientConfigSchema.shape,
     type: z.literal('lastfm'),
-});
+}).meta({title: 'Last.fm'});
 
 export type LastfmClientAIOConfig = z.infer<typeof lastfmClientAIOConfigSchema>;

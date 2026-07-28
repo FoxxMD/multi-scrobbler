@@ -102,6 +102,6 @@ export type RockSkyClientConfig = z.infer<typeof rockSkyClientConfigSchema>;
 export const rockSkyClientAIOConfigSchema = z.object({
     ...rockSkyClientConfigSchema.shape,
     type: z.literal('rocksky'),
-});
+}).meta({title: 'Rocksky'});
 
 export type RockSkyClientAIOConfig = z.infer<typeof rockSkyClientAIOConfigSchema>;

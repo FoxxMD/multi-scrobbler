@@ -354,7 +354,7 @@ export type PlayTransformConfig = z.infer<typeof playTransformConfigSchema>;
 export const playTransformOptionsSchema = z.object({
     ...playTransformConfigSchema.shape,
     log: z.union([z.boolean(), z.literal('all')]).optional(),
-}).meta({title: 'Transform Options'});
+}).meta({title: 'Transform Options', description: 'Enhance/correct Play data by applying a transform pipeline'});
 
 export type PlayTransformOptions = z.infer<typeof playTransformOptionsSchema>;
 

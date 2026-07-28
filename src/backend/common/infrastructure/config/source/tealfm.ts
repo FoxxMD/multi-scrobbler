@@ -42,6 +42,6 @@ export type TealSourceConfig = z.infer<typeof tealSourceConfigSchema>;
 export const tealSourceAIOConfigSchema = z.object({
     ...tealSourceConfigSchema.shape,
     type: z.literal('tealfm'),
-});
+}).meta({title: 'teal.fm'});
 
 export type TealSourceAIOConfig = z.infer<typeof tealSourceAIOConfigSchema>;

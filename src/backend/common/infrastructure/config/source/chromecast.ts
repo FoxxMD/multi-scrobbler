@@ -142,6 +142,6 @@ export type ChromecastSourceConfig = z.infer<typeof chromecastSourceConfigSchema
 export const chromecastSourceAIOConfigSchema = z.object({
     ...chromecastSourceConfigSchema.shape,
     type: z.literal('chromecast'),
-});
+}).meta({title: 'Chromecast'});
 
 export type ChromecastSourceAIOConfig = z.infer<typeof chromecastSourceAIOConfigSchema>;

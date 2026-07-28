@@ -97,7 +97,7 @@ export type DeezerInternalSourceConfig = z.infer<typeof deezerInternalSourceConf
 export const deezerInternalAIOConfigSchema = z.object({
     ...deezerInternalSourceConfigSchema.shape,
     type: z.literal('deezer'),
-});
+}).meta({title: 'Deezer'});
 
 export type DeezerInternalAIOConfig = z.infer<typeof deezerInternalAIOConfigSchema>;
 

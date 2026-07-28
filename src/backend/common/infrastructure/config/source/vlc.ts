@@ -75,7 +75,7 @@ export type VLCSourceConfig = z.infer<typeof vlcSourceConfigSchema>;
 export const vlcSourceAIOConfigSchema = z.object({
     ...vlcSourceConfigSchema.shape,
     type: z.literal('vlc'),
-});
+}).meta({title: 'VLC'});
 
 export type VLCSourceAIOConfig = z.infer<typeof vlcSourceAIOConfigSchema>;
 

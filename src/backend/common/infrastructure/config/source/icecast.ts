@@ -62,6 +62,6 @@ export type IcecastSourceConfig = z.infer<typeof icecastSourceConfigSchema>;
 export const icecastSourceAIOConfigSchema = z.object({
     ...icecastSourceConfigSchema.shape,
     type: z.literal('icecast'),
-});
+}).meta({title: 'Icecast'});
 
 export type IcecastSourceAIOConfig = z.infer<typeof icecastSourceAIOConfigSchema>;

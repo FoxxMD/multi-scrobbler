@@ -87,6 +87,6 @@ export type PlexApiSourceConfig = z.infer<typeof plexApiSourceConfigSchema>;
 export const plexApiSourceAIOConfigSchema = z.object({
     ...plexApiSourceConfigSchema.shape,
     type: z.literal('plex'),
-});
+}).meta({title: 'Plex'});
 
 export type PlexApiSourceAIOConfig = z.infer<typeof plexApiSourceAIOConfigSchema>;

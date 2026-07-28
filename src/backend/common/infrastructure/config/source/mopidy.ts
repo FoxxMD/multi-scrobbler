@@ -103,6 +103,6 @@ export type MopidySourceConfig = z.infer<typeof mopidySourceConfigSchema>;
 export const mopidySourceAIOConfigSchema = z.object({
     ...mopidySourceConfigSchema.shape,
     type: z.literal('mopidy'),
-});
+}).meta({title: 'Mopidy'});
 
 export type MopidySourceAIOConfig = z.infer<typeof mopidySourceAIOConfigSchema>;

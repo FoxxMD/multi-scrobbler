@@ -32,6 +32,6 @@ export type MalojaSourceConfig = z.infer<typeof malojaSourceConfigSchema>;
 export const malojaSourceAIOConfigSchema = z.object({
     ...malojaSourceConfigSchema.shape,
     type: z.literal('maloja'),
-});
+}).meta({title: 'Maloja'});
 
 export type MalojaSourceAIOConfig = z.infer<typeof malojaSourceAIOConfigSchema>;

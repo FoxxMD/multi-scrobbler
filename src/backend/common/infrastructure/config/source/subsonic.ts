@@ -103,6 +103,6 @@ export type SubSonicSourceConfig = z.infer<typeof subSonicSourceConfigSchema>;
 export const subsonicSourceAIOConfigSchema = z.object({
     ...subSonicSourceConfigSchema.shape,
     type: z.literal('subsonic'),
-});
+}).meta({title: 'Subsonic'});
 
 export type SubsonicSourceAIOConfig = z.infer<typeof subsonicSourceAIOConfigSchema>;

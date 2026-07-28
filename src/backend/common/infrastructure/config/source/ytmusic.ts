@@ -129,6 +129,6 @@ export type YTMusicSourceConfig = z.infer<typeof ytMusicSourceConfigSchema>;
 export const ytMusicSourceAIOConfigSchema = z.object({
     ...ytMusicSourceConfigSchema.shape,
     type: z.literal('ytmusic'),
-});
+}).meta({title: 'Youtube Music'});
 
 export type YTMusicSourceAIOConfig = z.infer<typeof ytMusicSourceAIOConfigSchema>;

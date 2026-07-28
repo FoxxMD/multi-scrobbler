@@ -48,7 +48,7 @@ export type DiscordClientConfig = z.infer<typeof discordClientConfigSchema>;
 export const discordClientAIOConfigSchema = z.object({
     ...discordClientConfigSchema.shape,
     type: z.literal('discord'),
-});
+}).meta({title: 'Discord'});
 
 export type DiscordClientAIOConfig = z.infer<typeof discordClientAIOConfigSchema>;
 

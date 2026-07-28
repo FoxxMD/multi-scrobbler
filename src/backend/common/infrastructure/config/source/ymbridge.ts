@@ -27,6 +27,6 @@ export type YandexMusicBridgeSourceConfig = z.infer<typeof yandexMusicBridgeSour
 export const yandexMusicBridgeSourceAIOConfigSchema = z.object({
     ...yandexMusicBridgeSourceConfigSchema.shape,
     type: z.literal('ymbridge'),
-});
+}).meta({title: 'Yandex Music'});
 
 export type YandexMusicBridgeSourceAIOConfig = z.infer<typeof yandexMusicBridgeSourceAIOConfigSchema>;

@@ -38,7 +38,8 @@ export const rententionGranularDurationValueSchema = z.object({
     completed: durationValueSchema.optional(),
     duped: durationValueSchema.optional()
 }).meta({
-    description: 'Individual duration policies based on the state of the Play'
+    description: 'Individual duration policies based on the state of the Play',
+    title: 'Duration Value per Play Type'
 });
 export type RententionGranularDurationValue = z.infer<typeof rententionGranularDurationValueSchema>;
 
@@ -115,19 +116,19 @@ export const retentionConfigDurationValueSchema = z.object({
     deleteAfter: retentionConfigValueDurationValueSchema.optional().meta({description: 'Delete Plays using these retention policies'}),
     compactAfter: retentionConfigValueDurationValueSchema.optional().meta({description: 'Compact Plays using these retention policies'}),
     compact: z.array(compactablePropertySchema).optional().meta({ description: 'The type of data to compact on the Play'})
-});
+}).meta({description: 'Retention policy for Plays stored in the database'});
 export type RetentionConfigDurationValue = z.infer<typeof retentionConfigDurationValueSchema>;
 
 export const retentionConfigDurationSchema = z.object({
-    deleteAfter: retentionConfigValueDurationSchema.optional().meta({description: 'test'}),
-    compactAfter: retentionConfigValueDurationSchema.optional().meta({description: 'test'}),
+    deleteAfter: retentionConfigValueDurationSchema.optional(),
+    compactAfter: retentionConfigValueDurationSchema.optional(),
     compact: z.array(compactablePropertySchema).optional(),
 });
 export type RetentionConfigDuration = z.infer<typeof retentionConfigDurationSchema>;
 
 export const retentionConfigRetentionValueSchema = z.object({
-    deleteAfter: retentionConfigValueRetentionValueSchema.optional().meta({description: 'test'}),
-    compactAfter: retentionConfigValueRetentionValueSchema.optional().meta({description: 'test'}),
+    deleteAfter: retentionConfigValueRetentionValueSchema.optional(),
+    compactAfter: retentionConfigValueRetentionValueSchema.optional(),
     compact: z.array(compactablePropertySchema).optional(),
 });
 export type RetentionConfigRetentionValue = z.infer<typeof retentionConfigRetentionValueSchema>;
@@ -140,8 +141,8 @@ export const retentionConfigSchema = z.union([
 export type RetentionConfig = z.infer<typeof retentionConfigSchema>;
 
 export const retentionOptionsSchema = z.object({
-    deleteAfter: retentionOptionDurationSchema.meta({description: 'test'}),
-    compactAfter: retentionOptionRetentionValueSchema.meta({description: 'test'}),
+    deleteAfter: retentionOptionDurationSchema,
+    compactAfter: retentionOptionRetentionValueSchema,
     compact: z.array(compactablePropertySchema),
 });
 

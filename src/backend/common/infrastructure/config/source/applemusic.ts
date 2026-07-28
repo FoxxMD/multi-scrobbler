@@ -78,6 +78,6 @@ export type AppleMusicSourceConfig = z.infer<typeof appleMusicSourceConfigSchema
 export const appleMusicSourceAIOConfigSchema = z.object({
     ...appleMusicSourceConfigSchema.shape,
     type: z.literal('applemusic'),
-});
+}).meta({title: 'Apple Music'});
 
 export type AppleMusicSourceAIOConfig = z.infer<typeof appleMusicSourceAIOConfigSchema>;

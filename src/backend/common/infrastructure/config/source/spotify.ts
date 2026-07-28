@@ -68,6 +68,6 @@ export type SpotifySourceConfig = z.infer<typeof spotifySourceConfigSchema>;
 export const spotifySourceAIOConfigSchema = z.object({
     ...spotifySourceConfigSchema.shape,
     type: z.literal('spotify'),
-});
+}).meta({title: 'Spotify'});
 
 export type SpotifySourceAIOConfig = z.infer<typeof spotifySourceAIOConfigSchema>;

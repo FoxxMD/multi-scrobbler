@@ -62,6 +62,6 @@ export type SonosSourceConfig = z.infer<typeof sonosSourceConfigSchema>;
 export const sonosSourceAIOConfigSchema = z.object({
     ...sonosSourceConfigSchema.shape,
     type: z.literal('sonos'),
-});
+}).meta({title: 'Sonos'});
 
 export type SonosSourceAIOConfig = z.infer<typeof sonosSourceAIOConfigSchema>;

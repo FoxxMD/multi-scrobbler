@@ -57,6 +57,6 @@ export type JRiverSourceConfig = z.infer<typeof jRiverSourceConfigSchema>;
 export const jRiverSourceAIOConfigSchema = z.object({
     ...jRiverSourceConfigSchema.shape,
     type: z.literal('jriver'),
-});
+}).meta({title: 'JRiver'});
 
 export type JRiverSourceAIOConfig = z.infer<typeof jRiverSourceAIOConfigSchema>;

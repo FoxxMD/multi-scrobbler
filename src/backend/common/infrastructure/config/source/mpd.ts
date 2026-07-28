@@ -56,7 +56,7 @@ export type MPDSourceConfig = z.infer<typeof mpdSourceConfigSchema>;
 export const mpdSourceAIOConfigSchema = z.object({
     ...mpdSourceConfigSchema.shape,
     type: z.literal('mpd'),
-});
+}).meta({title: 'MPD'});
 
 export type MPDSourceAIOConfig = z.infer<typeof mpdSourceAIOConfigSchema>;
 

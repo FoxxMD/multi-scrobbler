@@ -103,6 +103,6 @@ export type KoitoClientConfig = z.infer<typeof koitoClientConfigSchema>;
 export const koitoClientAIOConfigSchema = z.object({
     ...koitoClientConfigSchema.shape,
     type: z.literal('koito'),
-});
+}).meta({title: 'Koito'});
 
 export type KoitoClientAIOConfig = z.infer<typeof koitoClientAIOConfigSchema>;

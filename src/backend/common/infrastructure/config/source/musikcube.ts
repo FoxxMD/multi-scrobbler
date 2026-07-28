@@ -127,6 +127,6 @@ export type MusikcubeSourceConfig = z.infer<typeof musikcubeSourceConfigSchema>;
 export const musikcubeSourceAIOConfigSchema = z.object({
     ...musikcubeSourceConfigSchema.shape,
     type: z.literal('musikcube'),
-});
+}).meta({title: 'Musikcube'});
 
 export type MusikcubeSourceAIOConfig = z.infer<typeof musikcubeSourceAIOConfigSchema>;

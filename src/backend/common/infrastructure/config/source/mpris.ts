@@ -66,6 +66,6 @@ export type MPRISSourceConfig = z.infer<typeof mprisSourceConfigSchema>;
 export const mprisSourceAIOConfigSchema = z.object({
     ...mprisSourceConfigSchema.shape,
     type: z.literal('mpris'),
-});
+}).meta({title: 'MPRIS'});
 
 export type MPRISSourceAIOConfig = z.infer<typeof mprisSourceAIOConfigSchema>;

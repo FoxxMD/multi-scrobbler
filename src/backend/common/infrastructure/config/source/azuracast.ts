@@ -139,6 +139,6 @@ export type AzuracastSourceConfig = z.infer<typeof azuracastSourceConfigSchema>;
 export const azuracastSourceAIOConfigSchema = z.object({
     ...azuracastSourceConfigSchema.shape,
     type: z.literal('azuracast')
-});
+}).meta({title: "Azuracast"});
 
 export type AzuracastSourceAIOConfig = z.infer<typeof azuracastSourceAIOConfigSchema>;

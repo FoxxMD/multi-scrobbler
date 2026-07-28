@@ -56,6 +56,6 @@ export type WebScrobblerSourceConfig = z.infer<typeof webScrobblerSourceConfigSc
 export const webScrobblerSourceAIOConfigSchema = z.object({
     ...webScrobblerSourceConfigSchema.shape,
     type: z.literal('webscrobbler'),
-});
+}).meta({title: 'Webscrobbler'});
 
 export type WebScrobblerSourceAIOConfig = z.infer<typeof webScrobblerSourceAIOConfigSchema>;

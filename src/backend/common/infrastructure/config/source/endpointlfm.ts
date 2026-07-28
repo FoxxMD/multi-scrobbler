@@ -32,6 +32,6 @@ export type LastFMEndpointSourceConfig = z.infer<typeof lastFmEndpointSourceConf
 export const lastFmEndpointSourceAIOConfigSchema = z.object({
     ...lastFmEndpointSourceConfigSchema.shape,
     type: z.literal('endpointlfm'),
-});
+}).meta({title: 'Endpoint Last.fm'});
 
 export type LastFMEndpointSourceAIOConfig = z.infer<typeof lastFmEndpointSourceAIOConfigSchema>;

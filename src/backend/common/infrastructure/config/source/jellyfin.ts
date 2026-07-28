@@ -142,6 +142,6 @@ export type JellyApiSourceConfig = z.infer<typeof jellyApiSourceConfigSchema>;
 export const jellyApiSourceAIOConfigSchema = z.object({
     ...jellyApiSourceConfigSchema.shape,
     type: z.literal('jellyfin'),
-});
+}).meta({title: 'Jellyfin'});
 
 export type JellyApiSourceAIOConfig = z.infer<typeof jellyApiSourceAIOConfigSchema>;

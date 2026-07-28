@@ -52,6 +52,6 @@ export type ListenbrainzEndpointSourceConfig = z.infer<typeof listenbrainzEndpoi
 export const listenbrainzEndpointSourceAIOConfigSchema = z.object({
     ...listenbrainzEndpointSourceConfigSchema.shape,
     type: z.literal('endpointlz'),
-});
+}).meta({title: 'Endpoint Listenbrainz'});
 
 export type ListenbrainzEndpointSourceAIOConfig = z.infer<typeof listenbrainzEndpointSourceAIOConfigSchema>;

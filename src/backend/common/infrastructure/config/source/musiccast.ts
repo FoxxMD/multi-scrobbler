@@ -96,6 +96,6 @@ export type MusicCastSourceConfig = z.infer<typeof musicCastSourceConfigSchema>;
 export const musicCastSourceAIOConfigSchema = z.object({
     ...musicCastSourceConfigSchema.shape,
     type: z.literal('musiccast'),
-});
+}).meta({title: 'Musiccast'});
 
 export type MusicCastSourceAIOConfig = z.infer<typeof musicCastSourceAIOConfigSchema>;

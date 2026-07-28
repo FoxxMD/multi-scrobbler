@@ -52,6 +52,6 @@ export type MalojaClientConfig = z.infer<typeof malojaClientConfigSchema>;
 export const malojaClientAIOConfigSchema = z.object({
     ...malojaClientConfigSchema.shape,
     type: z.literal('maloja'),
-});
+}).meta({title: 'Maloja'});
 
 export type MalojaClientAIOConfig = z.infer<typeof malojaClientAIOConfigSchema>;

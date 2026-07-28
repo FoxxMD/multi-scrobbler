@@ -52,7 +52,7 @@ export type TealClientConfig = z.infer<typeof tealClientConfigSchema>;
 export const tealClientAIOConfigSchema = z.object({
     ...tealClientConfigSchema.shape,
     type: z.literal('tealfm'),
-});
+}).meta({title: 'teal.fm'});
 
 export type TealClientAIOConfig = z.infer<typeof tealClientAIOConfigSchema>;
 

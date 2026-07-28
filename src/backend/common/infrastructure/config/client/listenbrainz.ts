@@ -61,7 +61,7 @@ export type ListenBrainzClientConfig = z.infer<typeof listenBrainzClientConfigSc
 export const listenBrainzClientAIOConfigSchema = z.object({
     ...listenBrainzClientConfigSchema.shape,
     type: z.literal('listenbrainz'),
-});
+}).meta({title: "Listenbrainz"});
 
 export type ListenBrainzClientAIOConfig = z.infer<typeof listenBrainzClientAIOConfigSchema>;
 
