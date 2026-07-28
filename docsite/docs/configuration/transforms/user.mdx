@@ -67,7 +67,6 @@ In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?co
         "preCompare": [
           {
             "type": "user",
-            // do not include name, the default user stage will be used
             "title": [
                 // removes badterm from track title
                 "badterm"
@@ -139,9 +138,9 @@ Each [Rule](/configuration/transforms#stage-rules) must be an array of [search-a
     },
     "options": {
       "playTransform": {
-        "type": "user",
         "preCompare": [
             {
+                "type": "user",
                 "title": [
                     // removes "badTerm" from title
                     "badTerm",
@@ -182,6 +181,7 @@ Using `when` for [Conditional Modification](/configuration/transforms#conditiona
 //
 //   Run live|remastered regex remove on title
 {
+    "type": "user",
     "title": [
         {
             "search": "/\\s\\-\\s滾石40\\s滾石撞樂隊\\s40團拚經典(.+)$/i",
@@ -210,6 +210,7 @@ Removes the phrase `(Album Version)` from the Title of a Play
 
 ```json5
 {
+    "type": "user",
     "title": [
         "(Album Version)"
     ]
@@ -227,11 +228,13 @@ Removes the phrase `(Album Version)` from the Title of a Play
 {
 "compare": {
         "candidate": {
+            "type": "user",
             "title": [
                 "/(\(.+\))\s*$/"
             ]
         },
         "existing": {
+            "type": "user",
             "title": [
                 "/(\(.+\))\s*$/"
             ]
@@ -248,6 +251,7 @@ Removes the phrase `(Album Version)` from the Title of a Play
     <summary>Example</summary>
 ```json5
 {
+    "type": "user",
     "artists": [
         {
         "search": "Boz Skaggs",
@@ -265,6 +269,7 @@ Removes the phrase `(Album Version)` from the Title of a Play
     <summary>Example</summary>
 ```json5
 {
+    "type": "user",
     "album": [
         {
         "search": "Various Artists",
@@ -299,6 +304,7 @@ Removes the phrase `(Album Version)` from the Title of a Play
       <summary>Example</summary>
 ```json
 {
+    "type": "user",
     "artists": [
         {
             "search": "(.*?)(?<delim>\\s*\\/\\s*)(.*$)",
