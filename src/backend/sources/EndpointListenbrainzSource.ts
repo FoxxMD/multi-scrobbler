@@ -5,8 +5,8 @@ import {
     type ExpressRequest,
     type FormatPlayObjectOptions,
     type InternalConfig,
-    NO_USER,
     type PlayerStateData} from "../common/infrastructure/Atomic.ts";
+import { NO_USER } from '../../core/Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type {ReportedPlayerStatus} from '../../core/Atomic.ts';
 import type {PlayPlatformId} from '../../core/Atomic.ts';

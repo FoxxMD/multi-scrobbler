@@ -4,11 +4,10 @@ import clone from "clone";
 import dayjs, { type Dayjs } from "dayjs";
 import { describe, it } from 'mocha';
 import {
-    NO_DEVICE,
-    NO_USER,
-    type PlayerStateDataMaybePlay,
-    SINGLE_USER_PLATFORM_ID
-} from "../../common/infrastructure/Atomic.ts";
+    type PlayerStateDataMaybePlay} from "../../common/infrastructure/Atomic.ts";
+import { SINGLE_USER_PLATFORM_ID } from '../../../core/Atomic.ts';
+import { NO_USER } from '../../../core/Atomic.ts';
+import { NO_DEVICE } from '../../../core/Atomic.ts';
 import { CALCULATED_PLAYER_STATUSES } from '../../../core/Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../../core/Atomic.ts';
 import { GenericPlayerState } from "../../sources/PlayerState/GenericPlayerState.ts";

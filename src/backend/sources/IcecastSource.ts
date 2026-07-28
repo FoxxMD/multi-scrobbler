@@ -5,8 +5,8 @@ import {
     type FormatPlayObjectOptions,
     type InternalConfig,
     type PlayerStateData,
-    SINGLE_USER_PLATFORM_ID,
 } from "../common/infrastructure/Atomic.ts";
+import { SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import { isPortReachableConnect, normalizeWebAddress } from "../utils/NetworkUtils.ts";
 import MemorySource from "./MemorySource.ts";

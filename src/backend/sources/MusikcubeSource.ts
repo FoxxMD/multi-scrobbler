@@ -10,8 +10,8 @@ import {
     type FormatPlayObjectOptions,
     type InternalConfig,
     type PlayerStateData,
-    SINGLE_USER_PLATFORM_ID,
 } from "../common/infrastructure/Atomic.ts";
+import { SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
 import type {MCAuthenticateRequest, MCAuthenticateResponse, MCPlaybackOverviewRequest, MCPlaybackOverviewResponse, MusikcubeSourceConfig} from "../common/infrastructure/config/source/musikcube.ts";
 import { sleep } from "../utils.ts";
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";

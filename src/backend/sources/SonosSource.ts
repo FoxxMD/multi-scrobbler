@@ -3,10 +3,10 @@ import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
-    NO_DEVICE,
-    NO_USER,
     type PlayerStateData,
 } from "../common/infrastructure/Atomic.ts";
+import { NO_USER } from '../../core/Atomic.ts';
+import { NO_DEVICE } from '../../core/Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type {ReportedPlayerStatus} from '../../core/Atomic.ts';
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";

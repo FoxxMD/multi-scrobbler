@@ -9,13 +9,13 @@ import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-err
 import { DEFAULT_MISSING_MBIDS_TYPES, type MissingMbidType, type PlayObject } from "../core/Atomic.ts";
 import {
     asPlayerStateDataMaybePlay,
-    NO_DEVICE,
-    NO_USER,
     type PlayerStateDataMaybePlay,
     type ProgressAwarePlayObject,
     type RemoteIdentityParts,
     type ScrobbleThresholdResult,
 } from "./common/infrastructure/Atomic.ts";
+import { NO_USER } from '../core/Atomic.ts';
+import { NO_DEVICE } from '../core/Atomic.ts';
 import type {PlayPlatformId} from '../core/Atomic.ts';
 import { genGroupIdStr } from '../core/PlayUtils.ts';
 import { durationToNormalizedTime } from '../core/TimeUtils.ts';

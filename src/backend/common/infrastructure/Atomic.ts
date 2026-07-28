@@ -109,12 +109,6 @@ export type GroupedPlays = TupleMap<DeviceId,PlayUserId,ProgressAwarePlayObject[
 
 export type GroupedFixedPlays = TupleMap<DeviceId,PlayUserId,FixedSizeList<ProgressAwarePlayObject>>;
 
-export const NO_DEVICE = 'NoDevice';
-export const NO_USER = 'SingleUser';
-
-export const SINGLE_USER_PLATFORM_ID: PlayPlatformId = [NO_DEVICE, NO_USER];
-export const SINGLE_USER_PLATFORM_ID_STR = `${NO_DEVICE}-${NO_USER}`;
-
 export interface ScrobbledPlayObject {
     play: PlayObject
     scrobble: PlayObjectMinimal

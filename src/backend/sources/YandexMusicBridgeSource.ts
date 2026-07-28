@@ -5,10 +5,10 @@ import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import type {PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
 import {
     type InternalConfig,
-    NO_DEVICE,
-    NO_USER,
     type PlayerStateDataMaybePlay,
 } from "../common/infrastructure/Atomic.ts";
+import { NO_USER } from '../../core/Atomic.ts';
+import { NO_DEVICE } from '../../core/Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type {YandexMusicBridgeSourceConfig} from "../common/infrastructure/config/source/ymbridge.ts";
 import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.ts";

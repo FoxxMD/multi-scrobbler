@@ -13,10 +13,10 @@ import {
     type FormatPlayObjectOptions,
     type InternalConfig,
     type MdnsDeviceInfo,
-    NO_USER,
     type PlayerStateData,
     type SourceData,
 } from "../common/infrastructure/Atomic.ts";
+import { NO_USER } from '../../core/Atomic.ts';
 import type {ChromecastSourceConfig} from "../common/infrastructure/config/source/chromecast.ts";
 import { MaybeLogger } from '../common/MaybeLogger.ts';
 import {

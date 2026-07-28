@@ -22,6 +22,7 @@ import { baseFormatPlayObj } from '../utils/PlayTransformUtils.ts';
 import { noRetryOnUpstreamError, tryApiCall } from '../utils/RequestUtils.ts';
 import { artistNameToCredit } from '../../core/StringUtils.ts';
 import { timeToHumanTimestamp, todayAwareFormat } from '../../core/TimeUtils.ts';
+import type { ComponentSourceApiJson, SubsonicSourceApiJson } from '../../core/Api.ts';
 
 dayjs.extend(isSameOrAfter);
 
@@ -373,6 +374,13 @@ export class SubsonicSource extends MemoryPositionalSource {
     }
 
     getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new SubsonicPlayerState(logger, id, opts);
+
+    public getApiData(): SubsonicSourceApiJson {
+        return {
+            ...super.getApiData(),
+            playbackReporting: this.playbackReportSupported
+        }
+    }
 }
 
 const subsonicPlaybackStateToReportedStatus = (state: string | undefined) => {

@@ -11,8 +11,8 @@ import {
     type FormatPlayObjectOptions,
     type InternalConfig,
     type PlayerStateData,
-    SINGLE_USER_PLATFORM_ID,
 } from "../common/infrastructure/Atomic.ts";
+import { SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
 import type {MopidySourceConfig} from "../common/infrastructure/config/source/mopidy.ts";
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";

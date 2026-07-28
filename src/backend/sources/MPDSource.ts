@@ -7,8 +7,8 @@ import {
     type FormatPlayObjectOptions,
     type InternalConfig,
     type PlayerStateData,
-    SINGLE_USER_PLATFORM_ID,
 } from "../common/infrastructure/Atomic.ts";
+import { SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type {ReportedPlayerStatus} from '../../core/Atomic.ts';
 import type {MPDSourceConfig, PlayerState} from "../common/infrastructure/config/source/mpd.ts";

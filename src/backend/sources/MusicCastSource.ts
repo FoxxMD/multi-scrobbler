@@ -6,8 +6,8 @@ import {
     type FormatPlayObjectOptions,
     type InternalConfig,
     type PlayerStateData,
-    SINGLE_USER_PLATFORM_ID,
 } from "../common/infrastructure/Atomic.ts";
+import { SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
 import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.ts";
 import { type DeviceInfoResponse, type DeviceStatusResponse, MusicCastResponseCodes, type MusicCastSourceConfig, playbackToReportedStatus, type PlayInfoCDResponse, type PlayInfoNetResponse } from "../common/infrastructure/config/source/musiccast.ts";
 import request from 'superagent';

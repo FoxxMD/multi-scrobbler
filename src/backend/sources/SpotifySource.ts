@@ -10,8 +10,6 @@ import {
     DEFAULT_POLLING_INTERVAL,
     type FormatPlayObjectOptions,
     type InternalConfig,
-    NO_DEVICE,
-    NO_USER,
     type PaginatedListensTimeRangeOptions,
     type PaginatedTimeRangeListens,
     type PaginatedTimeRangeListensResult,
@@ -19,6 +17,8 @@ import {
     type SourceData,
     type TimeRangeListensFetcher,
 } from "../common/infrastructure/Atomic.ts";
+import { NO_USER } from '../../core/Atomic.ts';
+import { NO_DEVICE } from '../../core/Atomic.ts';
 import type {ReportedPlayerStatus} from '../../core/Atomic.ts';
 import type {SpotifySourceConfig} from "../common/infrastructure/config/source/spotify.ts";
 import {
