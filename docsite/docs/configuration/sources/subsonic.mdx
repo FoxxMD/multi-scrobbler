@@ -20,7 +20,7 @@ This Source can be used for any application that implements the [Subsonic API](h
 
 <DetailsAdmo type="tip" summary="Recommended Alternative Sources">
 
-If your serivce supports scrobbling to **Listenbrainz** (such as Navidrome), considering using a [**Listenbrainz (Endpoint)** Source](/configuration/sources/listenbrainz-endpoint) instead of this one.
+If your service supports scrobbling to **Listenbrainz** (such as Navidrome), considering using a [**Listenbrainz (Endpoint)** Source](/configuration/sources/listenbrainz-endpoint) instead of this one.
 
 Service-specific scrobble implementations tend to be more accurate and provide more information (multiple artists) compared to the Subsonic API.
 
@@ -28,12 +28,21 @@ Service-specific scrobble implementations tend to be more accurate and provide m
 
 Use the optional `usersAllow` property with **File** or **AIO** configuration to restrict scrobbling to a list of defined users.
 
-## Playback Report Support
+## Enhanced Playback Reporting
 
-During source initialization, multi-scrobbler probes the OpenSubsonic [`getOpenSubsonicExtensions`](https://opensubsonic.netlify.app/docs/endpoints/getopensubsonicextensions/) endpoint for [Playback Report](https://opensubsonic.netlify.app/docs/extensions/playbackreport/) support. Playback Report is available only when both the server supports the extension and the active playback client reports it. This extension is optional and not strictly required for multi-scrobbler to work with Subsonic servers, but will lead to more accurate playback tracking and stale now-playing handling. 
+Multi-Scrobbler supports the new [Open Subsonic](https://opensubsonic.netlify.app) extension, [Playback Report](https://opensubsonic.netlify.app/docs/extensions/playbackreport/), that enables millisecond-accurate player position and state reporting.
 
-For classic Subsonic clients and entries without `state` or `positionMs`, multi-scrobbler uses the `minutesAgo` and duration values returned by `getNowPlaying` to ignore entries that have likely finished playing. This prevents repeated scrobbles from Subsonic-compatible servers that continue returning a track after playback stops.
-If the server properly reports no playing song when playback has stopped, this detection can be disabled by setting `detectStaleNowPlayingFromMinutesAgo` to `false`.
+To use this new data, your Subsonic server must support the extension **and** the active playback Client must report it. The UI for your Subsonic Source and active Player will indicate support using contextual icons.
+
+Usage of Enhanced Playback Reporting is optional: MS will fallback to classic, less accurate Subsonic Now Playing when it is not available.
+
+<DetailsAdmo type="info" summary="Stale Players without Playback Reporting">
+
+For Subsonic server/client combinations that do not support [Enhanced Playback Reporting](#enhanced-playback-reporting), multi-scrobbler will cleanup players that report they are playing for much longer period of time than the track's length (when length is reported). This prevents repeated scrobbles from Subsonic-compatible servers that continue returning a track after playback stops.
+
+If the server properly reports no playing song when playback has stopped or this causes issues for your setup, the detection can be disabled by setting `detectStaleNowPlayingFromMinutesAgo` to `false` in File/AIO config.
+
+</DetailsAdmo>
 
 ## Configuration
 
