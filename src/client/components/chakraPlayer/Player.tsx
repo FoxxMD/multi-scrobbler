@@ -17,11 +17,13 @@ import { InfoTip } from "../ToggleTip";
 import { tanQueries } from "../../queries";
 import dayjs from "dayjs";
 import { MSErrorBoundary } from "../ErrorBoundary";
+import { PlaybackReportingPlayer } from "../icons/PlaybackReporting";
 
 export interface PlayerProps {
     data: SourcePlayerJson & {expiration?: string}
     nowPlaying?: boolean
     sot?: SOURCE_SOT_TYPES
+    playbackReporting?: boolean
 }
 
 const bufferExplanation = (<>
@@ -38,7 +40,8 @@ export const ChakraPlayer = (props: PlayerProps) => {
     const {
         data,
         nowPlaying = false,
-        sot = SOURCE_SOT.PLAYER
+        sot = SOURCE_SOT.PLAYER,
+        playbackReporting
     } = props;
 
     const {
@@ -147,6 +150,11 @@ export const ChakraPlayer = (props: PlayerProps) => {
     const durationTimestamp = duration === undefined ? '-' : timeToHumanTimestamp(duration * 1000);
 
     const bufferTip = positionBuffer !== undefined ? <InfoTip positioning={{placement: "bottom-start"}} buttonProps={{height: 'var(--chakra-sizes-4)'}} content={bufferExplanation}/> : null;
+
+    let playbackReportingTip: React.JSX.Element;
+    if(playbackReporting !== undefined) {
+        playbackReportingTip = <PlaybackReportingPlayer playbackReporting={playbackReporting} hasFields={reported !== 'unknown' || data.position !== undefined}/>
+    }
      
     return (
     <MSErrorBoundary>
@@ -183,7 +191,7 @@ export const ChakraPlayer = (props: PlayerProps) => {
                         </HStack>
                     </Progress.Root> */}
                     <Flex alignItems="center">
-                        <TextMuted>{['unknown', 'playing'].includes(calculated) && isNowPlaying ? 'Now Playing' : capitalize(calculated)}{!isNowPlaying ? bufferTip : null}</TextMuted>
+                        <TextMuted>{['unknown', 'playing'].includes(calculated) && isNowPlaying ? 'Now Playing' : capitalize(calculated)}{!isNowPlaying ? bufferTip : null}{playbackReportingTip}</TextMuted>
                         <Spacer />
                         <TextMuted>Listened: {isNowPlaying !== true && calculated !== 'stopped' && listenedDuration !== null ? `${listenedDuration.toFixed(0)}s` : '-'}{durPer}</TextMuted>
                     </Flex>

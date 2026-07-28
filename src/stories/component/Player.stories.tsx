@@ -123,3 +123,27 @@ export const PlayerLive = meta.story({
       (<Provider><Container maxWidth="4xl"><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Container></Provider>),
   ],
 });
+
+export const SubsonicPlayer = meta.story({
+    argTypes: {
+      playbackReporting: {
+        control: { type: 'select' },
+        options: [undefined, false, true],
+      }
+    },
+    args: {
+      data: generateSourcePlayerJson(undefined, {art: true})
+    }
+});
+
+export const SubsonicPlayerNotEnhanced = meta.story({
+    argTypes: {
+      playbackReporting: {
+        control: { type: 'select' },
+        options: [undefined, false, true],
+      }
+    },
+    args: {
+      data: generateSourcePlayerJson(undefined, {art: true, position: false, status: false})
+    }
+});

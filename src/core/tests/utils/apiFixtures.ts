@@ -230,11 +230,11 @@ export const generateComponentApiJson = (data: Partial<ComponentCommonApi> = {})
     return generateClientApiJson({mode, type, ...data});
 }
 
-export const generateSourcePlayerJson = (data: Partial<SourcePlayerJson> = {}, opts: {art?: boolean} = {}): SourcePlayerJson => {
+export const generateSourcePlayerJson = (data: Partial<SourcePlayerJson> = {}, opts: {art?: boolean, position?: boolean, status?: boolean} = {}): SourcePlayerJson => {
     const {
         platformId = `${faker.word.noun()}-${faker.word.adjective()}`,
         play = asJsonPlayObject(generatePlay()),
-        position = play.meta.trackProgressPosition ?? faker.number.int({min: 0, max: play.data.duration}),
+        position = opts.position === false ? undefined : (play.meta.trackProgressPosition ?? faker.number.int({min: 0, max: play.data.duration})),
         listenedDuration = play.data.listenedFor ?? faker.number.int({min: 0, max: play.data.duration}),
         playFirstSeenAt = dayjs().subtract(30, 's').toISOString(),
         playLastUpdatedAt = dayjs().subtract(10, 's').toISOString(),
@@ -268,7 +268,7 @@ export const generateSourcePlayerJson = (data: Partial<SourcePlayerJson> = {}, o
         playLastUpdatedAt,
         createdAt,
         status: {
-            reported,
+            reported: opts.status === false ? REPORTED_PLAYER_STATUSES.unknown : reported,
             calculated,
             stale,
             orphaned

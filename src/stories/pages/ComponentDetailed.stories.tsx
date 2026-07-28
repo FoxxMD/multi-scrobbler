@@ -139,3 +139,15 @@ export const SourceDetailedSleeping = meta.story({
       data: generateSourceApiJson({sleeping: true, wakeAt: dayjs().add(45, 's').toISOString()})
     }
 });
+
+export const SubsonicEnhanced = meta.story({
+    args: {
+      data: {...generateClientApiJson(), playbackReporting: true}
+    }
+});
+
+export const SubsonicNotEnhanced = meta.story({
+    args: {
+      data: {...generateClientApiJson(), playbackReporting: false}
+    }
+});

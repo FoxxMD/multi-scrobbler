@@ -24,7 +24,8 @@ import {
     LuCalendar,
     LuRefreshCw,
     LuCopy,
-    LuClock
+    LuClock,
+    LuSparkles
 } from "react-icons/lu"
 import { VscDebugRestart } from 'react-icons/vsc';
 import { MdOutlineFiberNew } from "react-icons/md";
@@ -194,3 +195,5 @@ export const ExclamationCircleIcon = makeChakraIcon(LuCircleAlert);
 export const ExclamationTriangleIcon = makeChakraIcon(LuTriangleAlert);
 
 export const TimelineIndicatorIconQueued = makeChakraIcon(LuClock);
+
+export const SparkleIcon = makeChakraIcon(LuSparkles);

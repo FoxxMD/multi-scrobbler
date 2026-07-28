@@ -23,6 +23,7 @@ import { tanQueries } from "../../queries/index.js";
 import { MSErrorBoundary } from "../ErrorBoundary.js";
 import type {IconType} from "react-icons/lib";
 import { useIsWrapped } from "../../utils/hooks/useIsWrapped.js";
+import { PlaybackReportingServer } from "../icons/PlaybackReporting.js";
 
 export const ComponentBackButton = (props: ComponentProps<typeof ChevronLeftButton> = {}) => {
     return (
@@ -32,11 +33,15 @@ export const ComponentBackButton = (props: ComponentProps<typeof ChevronLeftButt
     );
 }
 
-export const MSComponentName = (props: {data?: Pick<ComponentCommonApiJson, 'name'>}) => {
+export const MSComponentName = (props: {data?: Pick<ComponentCommonApiJson, 'name'> & {playbackReporting?: boolean}}) => {
     if(props.data === undefined) {
         return <HStack><ComponentBackButton/><Skeleton width="5rem" height="5rem" /></HStack>;
     }
-    return <Heading truncate size="2xl"><ComponentBackButton/>{props.data.name}</Heading>;
+    let subsonicPlaybackReporting: React.JSX.Element;
+    if('playbackReporting' in props.data) {
+        subsonicPlaybackReporting = <PlaybackReportingServer playbackReporting={props.data.playbackReporting}/>
+    }
+    return <Heading truncate size="2xl"><ComponentBackButton/>{props.data.name}{subsonicPlaybackReporting}</Heading>;
 }
 
 export const MSComponentType = (props: {data?: Pick<ComponentCommonApiJson, 'mode' | 'type'>}) => {
