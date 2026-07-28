@@ -12,7 +12,6 @@ import type { ClientType } from "../../../core/Atomic.ts";
 import assert from 'assert';
 import * as path from 'path';
 import * as z from 'zod';
-import { stripIndents } from 'common-tags';
 
 export const __filename = import.meta.filename;
 export const projectRootDir = path.resolve(__filename, '../../../../../');
@@ -272,31 +271,16 @@ export interface CacheConfigOptions {
     metadata?: CacheMetadataConfig;
     scrobble?: CacheScrobbleConfig;
     auth?: CacheAuthConfig;
-    /** Number of regex functions to cache (LRU)
-     * 
-     * @default 200
-     */
-    regex?: number
 }
 
 export const cacheConfigUserAuthSchema = z.object({
     provider: z.union([z.literal('valkey'), z.literal('file')]),
-}).catchall(z.any());
+}).meta({description: 'The cache type to use for Auth'});
 
-// The top-level (and `auth`) catchalls allow deprecated `scrobble`/`metadata` config keys to still be read off
-// this type at runtime (see Cache.ts#parseUserConfig) without having them show up in schema docs.
 export const cacheConfigUserSchema = z.object({
     auth: cacheConfigUserAuthSchema.optional(),
-    valkey: z.string().optional(),
-    /** Number of regex functions to cache (LRU)
-     *
-     * @default 200
-     */
-    regex: z.number().optional().meta({
-        description: "Number of regex functions to cache (LRU)",
-        default: 200
-    }),
-}).catchall(z.any());
+    valkey: z.string().optional()
+}).meta({title: 'Cache Config', description: 'Configuration for Caching'});
 
 export type CacheConfigUser = z.infer<typeof cacheConfigUserSchema>;
 

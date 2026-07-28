@@ -14,7 +14,7 @@ import { getConfigDir } from './index.ts';
 import path from 'path';
 import { cacheFunctions } from "@foxxmd/regex-buddy-core";
 import { fileOrDirectoryIsWriteable } from '../utils/FSUtils.ts';
-import { asCacheConfig, type CacheAuthProvider, type CacheConfig, type CacheConfigOptions, type CacheConfigUser, type CacheScrobbleProvider } from './infrastructure/Atomic.ts';
+import { asCacheConfig, type CacheAuthProvider, type CacheConfig, type CacheConfigOptions, type CacheConfigUser } from './infrastructure/Atomic.ts';
 import { Typeson } from 'typeson';
 import { builtin } from 'typeson-registry';
 import { loggerNoop } from './MaybeLogger.ts';
@@ -89,7 +89,6 @@ export class MSCache {
                 connection: aConn,
                 //...restAuth
             } = {},
-            regex = 200,
         } = config;
 
         this.config = {
@@ -104,11 +103,10 @@ export class MSCache {
             auth: {
                 provider: aProvider,
                 connection: aConn,
-            },
-            regex
+            }
         };
 
-        this.regexCache = cacheFunctions(this.config.regex);
+        this.regexCache = cacheFunctions(200);
 
         // for testing we default to in memory
         const inMemory = new Cacheable({primary: initMemoryCache({lruSize: 500, ttl: '1m'})});
@@ -536,27 +534,11 @@ export const parseUserConfig = (config: CacheConfigUser = {}, parentLogger: Logg
             //     connection: mConn = process.env.CACHE_METADATA_CONN,
             //     //...restMetadata
             // } = {},
-            scrobble: {
-                provider: sProvider = (process.env.CACHE_SCROBBLE as (CacheScrobbleProvider | undefined) ?? 'file'),
-                connection = (process.env.CACHE_SCROBBLE_CONN ?? getConfigDir()),
-                ...restScrobble
-            } = {},
             auth: {
                 provider: aProvider = (process.env.CACHE_AUTH as (CacheAuthProvider | undefined) ?? 'file'),
                 //...restAuth
-            } = {},
-            regex = 200,
+            } = {}
         } = config;
-
-        if(config.metadata !== undefined) {
-            logger.warn('Configuring cache.metadata is no longer supported. Refer to the Caching docs.');
-        }
-        if(config.scrobble !== undefined) {
-            logger.warn('Configuring cache.scrobble is no longer supported. Refer to the Caching docs.');
-        }
-        if(config.auth?.connection !== undefined) {
-            logger.warn('Configuring cache.auth.connection is no longer supported. Refer to the Caching docs.');
-        }
         
         let authConn: string,
         authProvider = aProvider;
@@ -581,15 +563,9 @@ export const parseUserConfig = (config: CacheConfigUser = {}, parentLogger: Logg
                 provider: valkey !== undefined ? 'valkey' : false,
                 connection: valkey,
             },
-            scrobble: {
-                provider: sProvider,
-                connection,
-                ...restScrobble
-            },
             auth: {
                 provider: authProvider,
                 connection: authConn,
-            },
-            regex
+            }
         };
 }

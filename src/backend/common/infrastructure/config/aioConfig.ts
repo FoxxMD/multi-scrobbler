@@ -111,7 +111,7 @@ export const aioConfigSchema = z.object({
         examples: [false]
     }),
 
-    cache: cacheConfigUserSchema.optional(),
+    cache: cacheConfigUserSchema.optional().meta({description: 'Configuration for Caching'}),
 
     transformers: z.array(transformerCommonConfigSchema).optional(),
 
