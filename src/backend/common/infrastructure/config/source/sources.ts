@@ -31,6 +31,7 @@ import {sonosSourceAIOConfigSchema, sonosSourceConfigSchema, type SonosSourceAIO
 import {appleMusicSourceAIOConfigSchema, appleMusicSourceConfigSchema, type AppleMusicSourceAIOConfig, type AppleMusicSourceConfig} from "./applemusic.ts";
 import type { SourceType } from "../../../../../core/Atomic.ts";
 import type { CommonSourceConfig } from "./index.ts";
+import { SimpleError } from "../../../errors/MSErrors.ts";
 
 export const sourceConfigSchema = z.union([
     spotifySourceConfigSchema,
@@ -168,5 +169,15 @@ export const sourceConfigSchemaMap: { [K in keyof SourceTypeConfigMap]: [z.ZodTy
     applemusic: [appleMusicSourceConfigSchema, appleMusicSourceAIOConfigSchema]
 };
 
-export const validateSourceJson = <T extends keyof SourceTypeConfigMap>(sourceType: T, json: object): SourceTypeConfigMap[T][0] => sourceConfigSchemaMap[sourceType][0].parse(json);
-export const validateSourceAIOJson = <T extends keyof SourceTypeConfigMap>(sourceType: T, json: object): SourceTypeConfigMap[T][1] => sourceConfigSchemaMap[sourceType][1].parse(json);
+export const validateSourceJson = <T extends keyof SourceTypeConfigMap>(sourceType: T, json: object): SourceTypeConfigMap[T][0] => {
+    if(sourceConfigSchemaMap[sourceType] === undefined) {
+        throw new SimpleError(`No Source has a 'type' of '${sourceType}'`);
+    }
+    return sourceConfigSchemaMap[sourceType][0].parse(json)
+};
+export const validateSourceAIOJson = <T extends keyof SourceTypeConfigMap>(sourceType: T, json: object): SourceTypeConfigMap[T][1] => {
+    if(sourceConfigSchemaMap[sourceType] === undefined) {
+        throw new SimpleError(`No Source has a 'type' of '${sourceType}'`);
+    }
+    return sourceConfigSchemaMap[sourceType][1].parse(json)
+};

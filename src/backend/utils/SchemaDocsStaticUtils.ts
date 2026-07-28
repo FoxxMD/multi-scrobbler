@@ -42,7 +42,7 @@ const generateSchema = (schema: z.ZodType, reused: z.core.ToJSONSchemaParams['re
 
 const clientEntries = Object.entries(clientConfigSchemaMap);
 for(const [k,v] of clientEntries) {
-    writeFileSync(resolve(projectRootDir, `docsite/static/schemas/${k}-client.json`), JSON.stringify(generateSchema(z.array(v))));
+    writeFileSync(resolve(projectRootDir, `docsite/static/schemas/${k}-client.json`), JSON.stringify(generateSchema(z.array(v[0]))));
 }
 
 const sourcesEntries = Object.entries(sourceConfigSchemaMap);

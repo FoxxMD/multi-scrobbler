@@ -9,6 +9,7 @@ import {librefmClientAIOConfigSchema, librefmClientConfigSchema, type LibrefmCli
 import {discordClientAIOConfigSchema, discordClientConfigSchema, type DiscordClientAIOConfig, type DiscordClientConfig} from "./discord.ts";
 import type { CommonClientConfig } from "./index.ts";
 import type { ClientType } from "../../../../../core/Atomic.ts";
+import { SimpleError } from "../../../errors/MSErrors.ts";
 
 export const clientConfigSchema = z.union([
     malojaClientConfigSchema,
@@ -36,50 +37,37 @@ export const clientAIOConfigSchema = z.union([
 
 export type ClientAIOConfig = z.infer<typeof clientAIOConfigSchema>;
 
-export interface ClientTypeConfigMap extends Record<ClientType, CommonClientConfig> {
-    maloja: MalojaClientConfig,
-    lastfm: LastfmClientConfig,
-    librefm: LibrefmClientConfig,
-    listenbrainz: ListenBrainzClientConfig,
-    koito: KoitoClientConfig,
-    tealfm: TealClientConfig,
-    rocksky: RockSkyClientConfig,
-    discord: DiscordClientConfig
+export interface ClientTypeConfigMap extends Record<ClientType, [CommonClientConfig, ClientAIOConfig]> {
+    maloja: [MalojaClientConfig,MalojaClientAIOConfig],
+    lastfm: [LastfmClientConfig,LastfmClientAIOConfig],
+    librefm: [LibrefmClientConfig,LibrefmClientAIOConfig],
+    listenbrainz: [ListenBrainzClientConfig,ListenBrainzClientAIOConfig],
+    koito: [KoitoClientConfig,KoitoClientAIOConfig],
+    tealfm: [TealClientConfig,TealClientAIOConfig],
+    rocksky: [RockSkyClientConfig,RockSkyClientAIOConfig],
+    discord: [DiscordClientConfig,DiscordClientAIOConfig]
 }
 
-export const clientConfigSchemaMap: { [K in keyof ClientTypeConfigMap]: z.ZodType<ClientTypeConfigMap[K]> } = {
-    maloja: malojaClientConfigSchema,
-    lastfm: lastfmClientConfigSchema,
-    librefm: librefmClientConfigSchema,
-    listenbrainz: listenBrainzClientConfigSchema,
-    koito: koitoClientConfigSchema,
-    tealfm: tealClientConfigSchema,
-    rocksky: rockSkyClientConfigSchema,
-    discord: discordClientConfigSchema
+export const clientConfigSchemaMap: { [K in keyof ClientTypeConfigMap]: [z.ZodType<ClientTypeConfigMap[K][0]>,z.ZodType<ClientTypeConfigMap[K][1]>] } = {
+    maloja: [malojaClientConfigSchema,malojaClientAIOConfigSchema],
+    lastfm: [lastfmClientConfigSchema,lastfmClientAIOConfigSchema],
+    librefm: [librefmClientConfigSchema,librefmClientAIOConfigSchema],
+    listenbrainz: [listenBrainzClientConfigSchema,listenBrainzClientAIOConfigSchema],
+    koito: [koitoClientConfigSchema,koitoClientAIOConfigSchema],
+    tealfm: [tealClientConfigSchema,tealClientAIOConfigSchema],
+    rocksky: [rockSkyClientConfigSchema,rockSkyClientAIOConfigSchema],
+    discord: [discordClientConfigSchema,discordClientAIOConfigSchema]
 }
 
-export const validateClientJson = <T extends keyof ClientTypeConfigMap>(clientType: T, json: object): ClientTypeConfigMap[T] => clientConfigSchemaMap[clientType].parse(json);
-
-export interface ClientTypeAIOConfigMap extends Record<ClientType, ClientAIOConfig> {
-    maloja: MalojaClientAIOConfig,
-    lastfm: LastfmClientAIOConfig,
-    librefm: LibrefmClientAIOConfig,
-    listenbrainz: ListenBrainzClientAIOConfig,
-    koito: KoitoClientAIOConfig,
-    tealfm: TealClientAIOConfig,
-    rocksky: RockSkyClientAIOConfig,
-    discord: DiscordClientAIOConfig
+export const validateClientJson = <T extends keyof ClientTypeConfigMap>(clientType: T, json: object): ClientTypeConfigMap[T][0] => {
+    if(clientConfigSchemaMap[clientType] === undefined) {
+        throw new SimpleError(`No Client has a 'type' of '${clientType}'`);
+    }
+    return clientConfigSchemaMap[clientType][0].parse(json);
 }
-
-export const clientAIOConfigSchemaMap: { [K in keyof ClientTypeAIOConfigMap]: z.ZodType<ClientTypeAIOConfigMap[K]> } = {
-    maloja: malojaClientAIOConfigSchema,
-    lastfm: lastfmClientAIOConfigSchema,
-    librefm: librefmClientAIOConfigSchema,
-    listenbrainz: listenBrainzClientAIOConfigSchema,
-    koito: koitoClientAIOConfigSchema,
-    tealfm: tealClientAIOConfigSchema,
-    rocksky: rockSkyClientAIOConfigSchema,
-    discord: discordClientAIOConfigSchema
+export const validateClientAIOJson = <T extends keyof ClientTypeConfigMap>(clientType: T, json: object): ClientTypeConfigMap[T][1] => {
+    if(clientConfigSchemaMap[clientType] === undefined) {
+        throw new SimpleError(`No Client has a 'type' of '${clientType}'`);
+    }
+    return clientConfigSchemaMap[clientType][1].parse(json);
 }
-
-export const validateClientAIOJson = <T extends keyof ClientTypeAIOConfigMap>(clientType: T, json: object): ClientTypeAIOConfigMap[T] => clientAIOConfigSchemaMap[clientType].parse(json);

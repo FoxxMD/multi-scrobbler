@@ -6,7 +6,7 @@ import type {ConfigMeta, InternalConfig, InternalConfigOptional, SourceIdentifie
 import { isClientType } from '../../core/Atomic.ts';
 import { clientTypes } from "../../core/Atomic.ts";
 import type {ClientType} from "../../core/Atomic.ts";
-import {aioClientRelaxedConfigSchema} from "../common/infrastructure/config/aioConfig.ts";
+import {aioClientRelaxedConfigSchema, type AIOClientRelaxedConfig} from "../common/infrastructure/config/aioConfig.ts";
 import {validateClientAIOJson, validateClientJson, type ClientAIOConfig} from "../common/infrastructure/config/client/clients.ts";
 import type {LastfmClientConfig, LastfmData} from "../common/infrastructure/config/client/lastfm.ts";
 import type {ListenBrainzClientConfig, ListenBrainzData} from "../common/infrastructure/config/client/listenbrainz.ts";
@@ -119,7 +119,18 @@ export default class ScrobbleClients {
 
         let clientDefaults = {};
         if (configFile !== undefined) {
-            const aioConfig = aioClientRelaxedConfigSchema.parse(configFile); // await validateJson<AIOConfig>('client', configFile, 'AIOClientRelaxedConfig', this.logger);
+            let aioConfig: AIOClientRelaxedConfig;
+            try {
+                aioConfig = aioClientRelaxedConfigSchema.parse(configFile);
+            } catch (e) {
+                const msg = `Validation error occurred while trying to parse 'config.json' for Client data/options`;
+                if(e instanceof ZodError) {
+                    this.logger.error(`${msg}:\n${prettifyError(e)}`);
+                } else {
+                    this.logger.error(new Error(msg, {cause: e}));
+                }
+                return;
+            }
             const {
                 clients: mainConfigClientConfigs = [],
                 clientDefaults: cd = {},
@@ -135,23 +146,23 @@ export default class ScrobbleClients {
                     this.logger.error(invalidMsgType);
                     continue;
                 }
-                if(!isClientType(c.type.toLocaleLowerCase())) {
-                    const invalidTypeMsg = `Client config ${index + 1} (${name}) in config.json has an invalid client type of '${c.type}'. Must be one of ${clientTypes.join(' | ')}`;
-                    //this.emitter.emit('error', new Error(invalidTypeMsg));
-                    this.logger.error(invalidTypeMsg);
-                    continue;
-                }
                 if(c.configureAs === 'source') {
                        this.logger.debug(`Skipping config ${index + 1} (${name}) in config.json because it is configured as a source.`);
                        continue;
                 }
                 let validatedConfig: ClientAIOConfig;
                 try {
-                    validatedConfig = await validateClientAIOJson(c.type.toLocaleLowerCase() as ClientType, c) // validateJson<AIOConfig>('client', c, this.getSchemaByType(c.type.toLocaleLowerCase() as ClientType), this.logger);
+                    validatedConfig = await validateClientAIOJson(c.type.toLocaleLowerCase() as ClientType, c);
                 } catch (e) {
-                    const err = new Error(`Client config ${index + 1} (${c.type} - ${name}) in config.json is invalid and will not be used.`, {cause: e});
+                    const msg = `Client config ${index + 1} (${c.type} - ${name}) in config.json is invalid and will not be used.`;
+                    const err = new Error(msg, {cause: e});
                     this.emitter.emit('error', err);
-                    this.logger.error(err);
+                    // pretty print error if its a zod error
+                    if(e instanceof ZodError) {
+                        this.logger.error(`${msg}:\n${prettifyError(e)}`);
+                    } else {
+                        this.logger.error(err);
+                    }
                     continue;
                 }
                 configs.push({...validatedConfig,

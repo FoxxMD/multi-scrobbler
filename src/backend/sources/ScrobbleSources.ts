@@ -5,7 +5,7 @@ import type {ConfigMeta, ConfigureAsSource, InternalConfig, InternalConfigOption
 import { clientTypes, isSourceType } from "../../core/Atomic.ts";
 import { sourceTypes } from "../../core/Atomic.ts";
 import type {ClientType, SourceType} from "../../core/Atomic.ts";
-import {aioSourceRelaxedConfigSchema, type SourceDefaults} from "../common/infrastructure/config/aioConfig.ts";
+import {aioSourceRelaxedConfigSchema, type AIOSourceRelaxedConfig, type SourceDefaults} from "../common/infrastructure/config/aioConfig.ts";
 import type {AzuracastData, AzuracastSourceConfig} from "../common/infrastructure/config/source/azuracast.ts";
 import type {ChromecastData, ChromecastSourceConfig} from "../common/infrastructure/config/source/chromecast.ts";
 import type {DeezerSourceConfig, DeezerInternalSourceConfig, DeezerCompatConfig} from "../common/infrastructure/config/source/deezer.ts";
@@ -162,7 +162,18 @@ export default class ScrobbleSources {
 
         let sourceDefaults: SourceDefaults;
         if (configFile !== undefined) {
-            const aioConfig = aioSourceRelaxedConfigSchema.parse(configFile); // await validateJson<AIOConfig>('source', configFile, 'AIOSourceRelaxedConfig', this.logger);
+            let aioConfig: AIOSourceRelaxedConfig;
+            try {
+                aioConfig = aioSourceRelaxedConfigSchema.parse(configFile);
+            } catch (e) {
+                const msg = `Validation error occurred while trying to parse 'config.json' for Source data/options`;
+                if(e instanceof ZodError) {
+                    this.logger.error(`${msg}:\n${prettifyError(e)}`);
+                } else {
+                    this.logger.error(new Error(msg, {cause: e}));
+                }
+                return;
+            }
             const {
                 sources: mainConfigSourcesConfigs = [],
                 sourceDefaults: sd = {},
@@ -179,12 +190,6 @@ export default class ScrobbleSources {
                     this.logger.error(invalidMsgType);
                     continue;
                 }
-                if(!isSourceType(c.type.toLocaleLowerCase())) {
-                    const invalidMsgType = `Source config ${index + 1} (${name}) in config.json has an invalid source "type" of "${c.type}". Must be one of ${sourceTypes.join(' | ')}`;
-                    this.emitter.emit('error', new Error(invalidMsgType));
-                    this.logger.error(invalidMsgType);
-                    continue;
-                }
                 if(clientTypes.includes(c.type.toLocaleLowerCase() as ClientType) && (c.configureAs !== 'source'))
                 {
                    this.logger.debug(`Skipping config ${index + 1} (${name}) in config.json because it is configured as a client.`);
@@ -192,7 +197,7 @@ export default class ScrobbleSources {
                 }
                 let validatedSourceConfig: SourceAIOConfig;
                 try {
-                    validatedSourceConfig = validateSourceAIOJson(c.type.toLocaleLowerCase() as SourceType, c); // validateJson<SourceConfig>('source', c, this.getSchemaByType(c.type.toLocaleLowerCase() as SourceType), this.logger);
+                    validatedSourceConfig = validateSourceAIOJson(c.type.toLocaleLowerCase() as SourceType, c);
                 } catch (e) {
                     const msg = `Source config ${index + 1} (${c.type} - ${name}) in config.json is invalid and will not be used.`;
                     const err = new Error(msg, {cause: e});
