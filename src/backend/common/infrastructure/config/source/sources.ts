@@ -102,39 +102,6 @@ export const sourceAIOConfigSchema = z.union([
 
 export type SourceAIOConfig = z.infer<typeof sourceAIOConfigSchema>;
 
-export const atomicSourceInterfaces = [
-    'SpotifySourceConfig',
-    'PlexApiSourceConfig',
-    'DeezerCompatConfig',
-    'ListenbrainzEndpointSourceConfig',
-    'LastFMEndpointSourceConfig',
-    'IcecastSourceConfig',
-    'SubSonicSourceConfig',
-    'JellyApiSourceConfig',
-    'LastfmSourceConfig',
-    'LibrefmSourceConfig',
-    'YTMusicSourceConfig',
-    'YandexMusicBridgeSourceConfig',
-    'MalojaSourceConfig',
-    'MPRISSourceConfig',
-    'MopidySourceConfig',
-    'ListenBrainzSourceConfig',
-    'JRiverSourceConfig',
-    'KodiSourceConfig',
-    'ChromecastSourceConfig',
-    'WebScrobblerSourceConfig',
-    'MusikcubeSourceConfig',
-    'MusicCastSourceConfig',
-    'MPDSourceConfig',
-    'VLCSourceConfig',
-    'AzuracastSourceConfig',
-    'KoitoSourceConfig',
-    'TealSourceConfig',
-    'RockskySourceConfig',
-    'SonosSourceConfig',
-    'AppleMusicSourceConfig'
-];
-
 export interface SourceTypeConfigMap extends Record<SourceType, [CommonSourceConfig,SourceAIOConfig]> {
     spotify: [SpotifySourceConfig, SpotifySourceAIOConfig],
     plex: [PlexApiSourceConfig, PlexApiSourceAIOConfig],
@@ -203,8 +170,3 @@ export const sourceConfigSchemaMap: { [K in keyof SourceTypeConfigMap]: [z.ZodTy
 
 export const validateSourceJson = <T extends keyof SourceTypeConfigMap>(sourceType: T, json: object): SourceTypeConfigMap[T][0] => sourceConfigSchemaMap[sourceType][0].parse(json);
 export const validateSourceAIOJson = <T extends keyof SourceTypeConfigMap>(sourceType: T, json: object): SourceTypeConfigMap[T][1] => sourceConfigSchemaMap[sourceType][1].parse(json);
-
-export const sourceInterfaces = [
-    'AIOSourceRelaxedConfig',
-    ...atomicSourceInterfaces
-];
