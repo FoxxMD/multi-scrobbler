@@ -3,7 +3,6 @@ import { buildDestinationJsonPrettyStream, buildDestinationRollingFile, buildDes
 import type { Transform } from "node:stream";
 import { PassThrough } from "node:stream";
 import path from "path";
-import process from "process";
 import { getDataDir } from "./index.ts";
 import { isDebugMode } from '../utils.ts';
 
@@ -22,7 +21,7 @@ export const initLogger = (): [Logger, Transform] => {
 export const appLogger = async (config: LogOptions = {}): Promise<[Logger, PassThrough]> => {
     const stream = new PassThrough({objectMode: true});
     const { file } = config;
-    const opts = parseLogOptions(isDebugMode() ? {...config, file: typeof file === 'object' ? {...file, level: 'trace'} : 'trace', console: 'trace', level: 'trace'} : config);
+    const opts = parseLogOptions(isDebugMode() ? {...config, file: typeof file === 'object' ? {...file, level: 'trace'} : 'trace', console: 'trace', level: 'trace'} : {...config}, {logBaseDir: logPath, logDefaultPath: './scrobble.log'});
     const logger = await loggerAppRolling(opts, {
         logBaseDir: logPath,
         logDefaultPath: './scrobble.log',
