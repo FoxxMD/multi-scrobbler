@@ -46,11 +46,6 @@ export type MatchLoggingOptions = z.infer<typeof matchLoggingOptionsSchema>;
 
 export const commonClientDataSchema = z.looseObject({});
 
-// `z.infer` of an empty object schema (strict or loose) picks up a `never`/`unknown` index signature that a
-// plain empty TS interface never had, which breaks the many `interface FooData extends CommonClientData, ...`
-// declarations elsewhere (see the same fix applied to `CommonSourceData` in `../source/index.ts`). The
-// original `interface CommonClientData {}` is structurally identical to `{}` itself, so the type is declared
-// directly rather than derived from the schema for this one empty-shape case.
 export type CommonClientData = {};
 
 export const upstreamRefreshOptionsSchema = z.object({
@@ -188,6 +183,4 @@ export const commonClientConfigSchema = z.object({
     options: commonClientOptionsSchema.optional(),
 });
 
-// `data`'s type is overridden here for the same reason `CommonClientData` is declared directly above rather
-// than derived from `commonClientDataSchema`.
 export type CommonClientConfig = Omit<z.infer<typeof commonClientConfigSchema>, 'data'> & { data?: CommonClientData };

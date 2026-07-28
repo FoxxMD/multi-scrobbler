@@ -20,11 +20,6 @@ export const clientDefaultsSchema = z.object({
 
 export type ClientDefaults = z.infer<typeof clientDefaultsSchema>;
 
-// `TransformOptions`/`TransformerCommonConfig<T,Y>` (from `../../../../core/Atomic.ts`) are only ever used at
-// their default type params (`Record<string, any>`) everywhere in the codebase, but `TransformerCommonConfig`
-// stays generic there and `TransformerCommon<T,Y> extends TransformerCommonConfig<T,Y>` - converting the
-// exported interface itself would break that extends clause. Reconstructed locally here instead, scoped to
-// this file's `transformers` field only.
 const transformOptionsSchema = z.object({
     failOnFetch: z.boolean().optional(),
     throwOnFailure: z.union([

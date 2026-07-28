@@ -1,10 +1,6 @@
 import * as z from "zod";
 import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema} from "./index.ts";
 
-// `CollectionType`/`MediaType` (from `@jellyfin/sdk`) don't resolve cleanly - the package's typings don't
-// line up with its actual exports (see the `@ts-expect-error` this replaced). Represented as `string`/`string[]`
-// per instruction rather than chasing the SDK's broken typings.
-
 export const jellyApiDataSchema = z.object({
     ...commonSourceDataSchema.shape,
     /**

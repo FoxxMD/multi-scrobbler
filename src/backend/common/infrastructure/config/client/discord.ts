@@ -6,9 +6,6 @@ export const statusTypeSchema = z.union([z.literal("online"), z.literal("idle"),
 
 export type StatusType = z.infer<typeof statusTypeSchema>;
 
-// `z.tuple([z.number(), z.string()])` in the installed zod version infers as `[number?, string?, ...unknown[]]`
-// rather than `[number, string]`, which breaks real consumers (e.g. DiscordIPCClient.ts) expecting a strict
-// 2-tuple. `z.custom` sidesteps the bug while still checking shape at runtime.
 const ipcLocationTupleSchema = z.custom<[number, string]>((val) => Array.isArray(val) && val.length === 2 && typeof val[0] === 'number' && typeof val[1] === 'string');
 
 export const discordDataSchema = z.object({

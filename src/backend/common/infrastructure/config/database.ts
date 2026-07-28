@@ -8,10 +8,6 @@ export type RetentionPlayType = z.infer<typeof retentionPlayTypeSchema>;
 
 export const retentionPlayTypes: RetentionPlayType[] = ['failed','completed','duped'];
 
-// `Duration` (from `dayjs/plugin/duration.js`) is a class instance with dozens of methods (`asSeconds`,
-// `humanize`, `add`, `clone`, etc.), not a plain data shape - reconstructing its full interface as a zod
-// object wouldn't provide any real validation value. This checks for a Duration-shaped object via one of its
-// signature methods and relies on the imported type for full static typing.
 const durationSchema = z.custom<Duration>(
     (val) => val !== null && typeof val === 'object' && typeof (val as Duration).asMilliseconds === 'function',
     {message: 'Expected a dayjs Duration instance'}
@@ -24,14 +20,6 @@ export type RetentionValueUnparsed = z.infer<typeof retentionValueUnparsedSchema
 export const retentionValueSchema = z.union([durationSchema, z.literal(false)]);
 
 export type RetentionValue = z.infer<typeof retentionValueSchema>;
-
-// `RententionGranular<T>`, `RetentionConfigValue<T>`, `RetentionOption<T>`, and `RetentionConfig<T>` were
-// previously left as plain generics since zod can't represent a generic object schema the way a TS interface
-// can. In practice though each is only ever instantiated with one of three known terms - `DurationValue`,
-// `Duration`, and `RetentionValue` - so below builds one concrete schema per term actually valid for each
-// family (per each type's original generic constraint) and unifies them with `z.union` into a single
-// non-generic replacement. Call sites elsewhere now use the specific per-term type where the term is
-// statically known.
 
 export const rententionGranularDurationValueSchema = z.object({
     failed: durationValueSchema.optional(),
@@ -93,8 +81,6 @@ export const COMPACTABLE = {
 
 export const compactableProperties: CompactableProperty[] = [COMPACTABLE.transform, COMPACTABLE.input];
 
-// `RetentionOption<T>`'s original constraint (`T extends RetentionValue`) only ever admits `Duration` and
-// `RetentionValue` itself - not `DurationValue` - so there are only two valid terms here.
 export const retentionOptionDurationSchema = z.object({
     failed: durationSchema,
     completed: durationSchema,

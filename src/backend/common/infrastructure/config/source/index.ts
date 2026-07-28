@@ -59,12 +59,8 @@ export const scrobbleThresholdsSchema = z.object({
 
 export type ScrobbleThresholds = z.infer<typeof scrobbleThresholdsSchema>;
 
-// `LogLevel` (from `@foxxmd/logging`) is a simple string-literal union, reconstructed directly.
 export const logLevelSchema = z.enum(["silent", "fatal", "error", "warn", "info", "log", "verbose", "debug", "trace"]);
 
-// `FileLogOptions` (from `@foxxmd/logging`) extends `FileOptions`, which itself extends `PinoRollOptions` and
-// `RollOptions` - two levels deep, but all plain data fields, so it's reconstructed in full here rather than
-// stubbed.
 export const fileLogOptionsSchema = z.object({
     size: z.union([z.number(), z.string()]).optional(),
     frequency: z.union([z.literal('daily'), z.literal('hourly'), z.number()]).optional(),
@@ -184,11 +180,6 @@ export type ManualListeningOptions = z.infer<typeof manualListeningOptionsSchema
 
 export const commonSourceDataSchema = z.looseObject({});
 
-// `z.infer` of an empty object schema (strict or loose) picks up a `never`/`unknown` index signature that a
-// plain empty TS interface never had, which breaks the many `interface FooData extends CommonSourceData, ...`
-// declarations elsewhere (some in the "extends" direction, some in the "assign a plain object" direction).
-// The original `interface CommonSourceData {}` is structurally identical to `{}` itself, so the type is
-// declared directly rather than derived from the schema for this one empty-shape case.
 export type CommonSourceData = {};
 
 export const commonSourceConfigSchema = z.object({
@@ -213,7 +204,4 @@ export const commonSourceConfigSchema = z.object({
     options: commonSourceOptionsSchema.optional(),
 });
 
-// `data`'s type is overridden here for the same reason `CommonSourceData` is declared directly above rather
-// than derived from `commonSourceDataSchema` - the schema-inferred type carries an index signature that the
-// original empty `data?: CommonSourceData` field never had.
 export type CommonSourceConfig = Omit<z.infer<typeof commonSourceConfigSchema>, 'data'> & { data?: CommonSourceData };
