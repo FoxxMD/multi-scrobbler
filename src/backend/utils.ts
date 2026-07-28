@@ -20,7 +20,6 @@ import type {PlayPlatformId} from '../core/Atomic.ts';
 import { genGroupIdStr } from '../core/PlayUtils.ts';
 import { durationToNormalizedTime } from '../core/TimeUtils.ts';
 
-//const { default: Ajv } = AjvNS;
 dayjs.extend(utc);
 
 export function sleep(ms: any) {

@@ -25,7 +25,7 @@ import {useWindowSize} from '@docusaurus/theme-common';
             <DetailsAdmo type="note" summary="Config Structure">
                 This displays the **structure** of the [File Configuration](/configuration?configType=aio#configuration-types) for a <strong children={props.name}/> type <strong children={props.client ? 'Client' : 'Source'}/> with all possible properties, their shape, and descriptions/types. Use this to understand how to write a valid config.
             </DetailsAdmo>
-                <ExplorerFetch name={`schemas/${props.config}`} />
+                <ExplorerFetch name={`schemas/${props.name}-${props.client ? 'client' : 'source'}`} />
             </div>
             <div style={{ flexBasis: 'auto', flexGrow: 3 }}>
             <div className="fileEditor">
@@ -51,7 +51,7 @@ import {useWindowSize} from '@docusaurus/theme-common';
                 filePathName={`CONFIG/${props.name}.json`}
                 configureAs={props.client ? 'client' : 'source'} 
                 data={props.fileContent}
-                schemaName={props.config}
+                schemaName={`${props.name}-${props.client ? 'client' : 'source'}`}
                 readOnlyAtWidth={500}
              />
             </div>

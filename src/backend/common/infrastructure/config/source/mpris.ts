@@ -1,4 +1,5 @@
-import type {CommonSourceConfig, CommonSourceData} from "./index.ts";
+import * as z from "zod";
+import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
 
 export const PLAYBACK_STATUS_PLAYING = 'Playing';
 export const PLAYBACK_STATUS_PAUSED = 'Paused';
@@ -28,13 +29,17 @@ export interface PlayerInfo {
     metadata: MPRISMetadata
 }
 
-export interface MPRISData extends CommonSourceData {
+export const mprisDataSchema = z.object({
+    ...commonSourceDataSchema.shape,
     /**
      * DO NOT scrobble from any players that START WITH these values, case-insensitive
      *
      * @examples [["spotify","vlc"]]
      * */
-    blacklist?: string | string[]
+    blacklist: z.union([z.string(), z.array(z.string())]).optional().meta({
+        description: "DO NOT scrobble from any players that START WITH these values, case-insensitive",
+        examples: [["spotify", "vlc"]]
+    }),
 
     /**
      * ONLY from any players that START WITH these values, case-insensitive
@@ -43,13 +48,24 @@ export interface MPRISData extends CommonSourceData {
      *
      * @examples [["spotify","vlc"]]
      * */
-    whitelist?: string | string[]
-}
+    whitelist: z.union([z.string(), z.array(z.string())]).optional().meta({
+        description: "ONLY from any players that START WITH these values, case-insensitive",
+        examples: [["spotify", "vlc"]]
+    }),
+});
 
-export interface MPRISSourceConfig extends CommonSourceConfig {
-    data: MPRISData
-}
+export type MPRISData = z.infer<typeof mprisDataSchema>;
 
-export interface MPRISSourceAIOConfig extends MPRISSourceConfig {
-    type: 'mpris'
-}
+export const mprisSourceConfigSchema = z.object({
+    ...commonSourceConfigSchema.shape,
+    data: mprisDataSchema,
+});
+
+export type MPRISSourceConfig = z.infer<typeof mprisSourceConfigSchema>;
+
+export const mprisSourceAIOConfigSchema = z.object({
+    ...mprisSourceConfigSchema.shape,
+    type: z.literal('mpris'),
+}).meta({title: 'MPRIS'});
+
+export type MPRISSourceAIOConfig = z.infer<typeof mprisSourceAIOConfigSchema>;

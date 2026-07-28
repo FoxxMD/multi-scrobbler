@@ -1,8 +1,10 @@
-import type {PollingOptions} from "../common.ts";
-import type {CommonSourceConfig, CommonSourceData} from "./index.ts";
+import * as z from "zod";
+import {pollingOptionsSchema} from "../common.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
 
-
-export interface KodiData extends CommonSourceData, PollingOptions {
+export const kodiDataSchema = z.object({
+    ...commonSourceDataSchema.shape,
+    ...pollingOptionsSchema.shape,
     /**
      * URL of the Kodi HTTP server to connect to
      *
@@ -21,22 +23,39 @@ export interface KodiData extends CommonSourceData, PollingOptions {
      * @examples ["http://localhost:8080/jsonrpc"]
      * @default "http://localhost:8080/jsonrpc"
      * */
-    url: string
+    url: z.string().meta({
+        description: "URL of the Kodi HTTP server to connect to",
+        default: "http://localhost:8080/jsonrpc",
+        examples: ["http://localhost:8080/jsonrpc"]
+    }),
 
     /**
      * The username set for Remote Control via Web Sever
      * */
-    username: string
+    username: z.string().meta({
+        description: "The username set for Remote Control via Web Sever"
+    }),
 
     /**
      * The password set for Remote Control via Web Sever
      * */
-    password: string
-}
-export interface KodiSourceConfig extends CommonSourceConfig {
-    data: KodiData
-}
+    password: z.string().meta({
+        description: "The password set for Remote Control via Web Sever"
+    }),
+});
 
-export interface KodiSourceAIOConfig extends KodiSourceConfig {
-    type: 'kodi'
-}
+export type KodiData = z.infer<typeof kodiDataSchema>;
+
+export const kodiSourceConfigSchema = z.object({
+    ...commonSourceConfigSchema.shape,
+    data: kodiDataSchema,
+});
+
+export type KodiSourceConfig = z.infer<typeof kodiSourceConfigSchema>;
+
+export const kodiSourceAIOConfigSchema = z.object({
+    ...kodiSourceConfigSchema.shape,
+    type: z.literal('kodi'),
+}).meta({title: 'Kodi'});
+
+export type KodiSourceAIOConfig = z.infer<typeof kodiSourceAIOConfigSchema>;

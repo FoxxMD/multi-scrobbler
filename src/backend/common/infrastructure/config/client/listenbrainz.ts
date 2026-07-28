@@ -1,45 +1,69 @@
-import type {ComponentType} from "../../../../../core/Atomic.ts";
-import type {RequestRetryOptions} from "../common.ts";
-import type {CommonClientConfig, CommonClientData} from "./index.ts";
+import * as z from "zod";
+import {componentTypeSchema} from "../../../../../core/Atomic.ts";
+import {requestRetryOptionsSchema} from "../common.ts";
+import {commonClientConfigSchema, commonClientDataSchema} from "./index.ts";
 
-export interface ListenBrainzData extends RequestRetryOptions{
+export const listenBrainzDataSchema = z.object({
+    ...requestRetryOptionsSchema.shape,
     /**
      * URL for the ListenBrainz server, if not using the default
      *
      * @examples ["https://api.listenbrainz.org/"]
      * @default "https://api.listenbrainz.org/"
      * */
-    url?: string
+    url: z.string().optional().meta({
+        description: "URL for the ListenBrainz server, if not using the default",
+        default: "https://api.listenbrainz.org/",
+        examples: ["https://api.listenbrainz.org/"]
+    }),
     /**
      * User token for the user to scrobble for
      *
      * @examples ["6794186bf-1157-4de6-80e5-uvb411f3ea2b"]
      * */
-    token: string
+    token: z.string().meta({
+        description: "User token for the user to scrobble for",
+        examples: ["6794186bf-1157-4de6-80e5-uvb411f3ea2b"]
+    }),
 
     /**
      * Username of the user to scrobble for
      * */
-    username: string
-}
+    username: z.string().meta({
+        description: "Username of the user to scrobble for"
+    }),
+});
 
-export interface ListenBrainzClientData extends ListenBrainzData, CommonClientData {}
+export type ListenBrainzData = z.infer<typeof listenBrainzDataSchema>;
 
-export interface ListenBrainzClientConfig extends CommonClientConfig {
+export const listenBrainzClientDataSchema = listenBrainzDataSchema.extend(commonClientDataSchema.shape);
+
+export type ListenBrainzClientData = z.infer<typeof listenBrainzClientDataSchema>;
+
+export const listenBrainzClientConfigSchema = z.object({
+    ...commonClientConfigSchema.shape,
     /**
      * Should always be `client` when using Listenbrainz as a client
      *
      * @default client
      * @examples ["client"]
      * */
-    configureAs?: ComponentType
-    data: ListenBrainzClientData
-}
+    configureAs: componentTypeSchema.optional().meta({
+        description: "Should always be `client` when using Listenbrainz as a client",
+        default: "client",
+        examples: ["client"]
+    }),
+    data: listenBrainzClientDataSchema,
+});
 
-export interface ListenBrainzClientAIOConfig extends ListenBrainzClientConfig {
-    type: 'listenbrainz'
-}
+export type ListenBrainzClientConfig = z.infer<typeof listenBrainzClientConfigSchema>;
 
+export const listenBrainzClientAIOConfigSchema = z.object({
+    ...listenBrainzClientConfigSchema.shape,
+    type: z.literal('listenbrainz'),
+}).meta({title: "Listenbrainz"});
+
+export type ListenBrainzClientAIOConfig = z.infer<typeof listenBrainzClientAIOConfigSchema>;
 
 /** https://github.com/metabrainz/listenbrainz-server/pull/2572
  * https://github.com/metabrainz/listenbrainz-server/blob/master/listenbrainz/webserver/views/api_tools.py#L48

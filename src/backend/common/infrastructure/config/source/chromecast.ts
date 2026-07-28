@@ -1,6 +1,31 @@
-import type {CommonSourceConfig, CommonSourceData} from "./index.ts";
+import * as z from "zod";
+import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
 
-export interface ChromecastData extends CommonSourceData {
+export const chromecastDeviceInfoSchema = z.object({
+    /**
+     * A friendly name to identify this device
+     *
+     * @examples ["MySmartTV"]
+     * */
+    name: z.string().meta({
+        description: "A friendly name to identify this device",
+        examples: ["MySmartTV"]
+    }),
+    /**
+     * The IP address of the device
+     *
+     * @examples ["192.168.0.115"]
+     * */
+    address: z.string().meta({
+        description: "The IP address of the device",
+        examples: ["192.168.0.115"]
+    }),
+});
+
+export type ChromecastDeviceInfo = z.infer<typeof chromecastDeviceInfoSchema>;
+
+export const chromecastDataSchema = z.object({
+    ...commonSourceDataSchema.shape,
     /**
      * DO NOT scrobble from any cast devices that START WITH these values, case-insensitive
      *
@@ -8,7 +33,10 @@ export interface ChromecastData extends CommonSourceData {
      *
      * @examples [["home-mini","family-tv"]]
      * */
-    blacklistDevices?: string | string[]
+    blacklistDevices: z.union([z.string(), z.array(z.string())]).optional().meta({
+        description: "DO NOT scrobble from any cast devices that START WITH these values, case-insensitive",
+        examples: [["home-mini", "family-tv"]]
+    }),
 
     /**
      * ONLY scrobble from any cast device that START WITH these values, case-insensitive
@@ -19,14 +47,20 @@ export interface ChromecastData extends CommonSourceData {
      *
      * @examples [["home-mini","family-tv"]]
      * */
-    whitelistDevices?: string | string[]
+    whitelistDevices: z.union([z.string(), z.array(z.string())]).optional().meta({
+        description: "ONLY scrobble from any cast device that START WITH these values, case-insensitive",
+        examples: [["home-mini", "family-tv"]]
+    }),
 
     /**
      * DO NOT scrobble from any application that START WITH these values, case-insensitive
      *
      * @examples [["spotify","pandora"]]
      * */
-    blacklistApps?: string | string[]
+    blacklistApps: z.union([z.string(), z.array(z.string())]).optional().meta({
+        description: "DO NOT scrobble from any application that START WITH these values, case-insensitive",
+        examples: [["spotify", "pandora"]]
+    }),
 
     /**
      * ONLY scrobble from any application that START WITH these values, case-insensitive
@@ -35,7 +69,10 @@ export interface ChromecastData extends CommonSourceData {
      *
      * @examples [["spotify","pandora"]]
      * */
-    whitelistApps?: string | string[]
+    whitelistApps: z.union([z.string(), z.array(z.string())]).optional().meta({
+        description: "ONLY scrobble from any application that START WITH these values, case-insensitive",
+        examples: [["spotify", "pandora"]]
+    }),
 
     /**
      * Try to use Avahi and avahi-browse to resolve mDNS devices instead of native mDNS querying
@@ -44,21 +81,28 @@ export interface ChromecastData extends CommonSourceData {
      *
      * @default false
      * */
-    useAvahi?: boolean
+    useAvahi: z.boolean().optional().meta({
+        description: "Try to use Avahi and avahi-browse to resolve mDNS devices instead of native mDNS querying",
+        default: false
+    }),
 
     /**
      * Use mDNS to discovery Google Cast devices on your next automatically?
      *
      * If not explicitly set then it is TRUE if `devices` is not set
      * */
-    useAutoDiscovery?: boolean | undefined
+    useAutoDiscovery: z.union([z.boolean(), z.undefined()]).optional().meta({
+        description: "Use mDNS to discovery Google Cast devices on your next automatically?"
+    }),
 
     /**
      * A list of Google Cast devices to monitor
      *
      * If this is used then `useAutoDiscovery` is set to FALSE, if not explicitly set
      * */
-    devices?: ChromecastDeviceInfo[]
+    devices: z.array(chromecastDeviceInfoSchema).optional().meta({
+        description: "A list of Google Cast devices to monitor"
+    }),
 
     /**
      * Chromecast Apps report a "media type" in the status info returned for whatever is currently playing
@@ -71,35 +115,33 @@ export interface ChromecastData extends CommonSourceData {
      *
      * @default false
      * */
-    allowUnknownMedia?: boolean | string[]
+    allowUnknownMedia: z.union([z.boolean(), z.array(z.string())]).optional().meta({
+        description: "Chromecast Apps report a \"media type\" in the status info returned for whatever is currently playing",
+        default: false
+    }),
 
     /**
      * Media provided by any App whose name is listed here will ALWAYS be tracked, regardless of the "media type" reported
      *
      * Apps will be recognized if they CONTAIN any of these values, case-insensitive
      * */
-    forceMediaRecognitionOn?: string[]
-}
+    forceMediaRecognitionOn: z.array(z.string()).optional().meta({
+        description: "Media provided by any App whose name is listed here will ALWAYS be tracked, regardless of the \"media type\" reported"
+    }),
+});
 
-export interface ChromecastDeviceInfo {
-    /**
-     * A friendly name to identify this device
-     *
-     * @examples ["MySmartTV"]
-     * */
-    name: string
-    /**
-     * The IP address of the device
-     *
-     * @examples ["192.168.0.115"]
-     * */
-    address: string
-}
+export type ChromecastData = z.infer<typeof chromecastDataSchema>;
 
-export interface ChromecastSourceConfig extends CommonSourceConfig {
-    data: ChromecastData
-}
+export const chromecastSourceConfigSchema = z.object({
+    ...commonSourceConfigSchema.shape,
+    data: chromecastDataSchema,
+});
 
-export interface ChromecastSourceAIOConfig extends ChromecastSourceConfig {
-    type: 'chromecast'
-}
+export type ChromecastSourceConfig = z.infer<typeof chromecastSourceConfigSchema>;
+
+export const chromecastSourceAIOConfigSchema = z.object({
+    ...chromecastSourceConfigSchema.shape,
+    type: z.literal('chromecast'),
+}).meta({title: 'Chromecast'});
+
+export type ChromecastSourceAIOConfig = z.infer<typeof chromecastSourceAIOConfigSchema>;

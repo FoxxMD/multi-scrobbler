@@ -1,37 +1,57 @@
-import type {ComponentType} from "../../../../../core/Atomic.ts";
-import type {RequestRetryOptions} from "../common.ts";
-import type {CommonClientConfig, CommonClientData} from "./index.ts";
+import * as z from "zod";
+import {componentTypeSchema} from "../../../../../core/Atomic.ts";
+import {requestRetryOptionsSchema} from "../common.ts";
+import {commonClientConfigSchema, commonClientDataSchema} from "./index.ts";
 
-export interface MalojaData extends RequestRetryOptions {
+export const malojaDataSchema = z.object({
+    ...requestRetryOptionsSchema.shape,
     /**
      * URL for maloja server
      *
      * @examples ["http://localhost:42010"]
      * */
-    url: string
+    url: z.string().meta({
+        description: "URL for maloja server",
+        examples: ["http://localhost:42010"]
+    }),
     /**
      * API Key for Maloja server
      *
      * @examples ["myApiKey"]
      * */
-    apiKey: string
-}
+    apiKey: z.string().meta({
+        description: "API Key for Maloja server",
+        examples: ["myApiKey"]
+    }),
+});
 
-export interface MalojaClientData extends MalojaData, CommonClientData {
+export type MalojaData = z.infer<typeof malojaDataSchema>;
 
-}
+export const malojaClientDataSchema = malojaDataSchema.extend(commonClientDataSchema.shape);
 
-export interface MalojaClientConfig extends CommonClientConfig {
+export type MalojaClientData = z.infer<typeof malojaClientDataSchema>;
+
+export const malojaClientConfigSchema = z.object({
+    ...commonClientConfigSchema.shape,
     /**
      * Should always be `client` when using Maloja as a client
      *
      * @default client
      * @examples ["client"]
      * */
-    configureAs?: ComponentType
-    data: MalojaClientData
-}
+    configureAs: componentTypeSchema.optional().meta({
+        description: "Should always be `client` when using Maloja as a client",
+        default: "client",
+        examples: ["client"]
+    }),
+    data: malojaClientDataSchema,
+});
 
-export interface MalojaClientAIOConfig extends MalojaClientConfig {
-    type: 'maloja'
-}
+export type MalojaClientConfig = z.infer<typeof malojaClientConfigSchema>;
+
+export const malojaClientAIOConfigSchema = z.object({
+    ...malojaClientConfigSchema.shape,
+    type: z.literal('maloja'),
+}).meta({title: 'Maloja'});
+
+export type MalojaClientAIOConfig = z.infer<typeof malojaClientAIOConfigSchema>;

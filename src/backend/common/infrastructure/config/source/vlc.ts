@@ -1,8 +1,11 @@
+import * as z from "zod";
 import type {VlcMeta} from "vlc-client/dist/Types.js";
-import type {PollingOptions} from "../common.ts";
-import type {CommonSourceConfig, CommonSourceData, CommonSourceOptions} from "./index.ts";
+import {pollingOptionsSchema} from "../common.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema} from "./index.ts";
 
-export interface VLCData extends CommonSourceData, PollingOptions {
+export const vlcDataSchema = z.object({
+    ...commonSourceDataSchema.shape,
+    ...pollingOptionsSchema.shape,
     /**
      * URL:PORT of the VLC server to connect to
      *
@@ -11,27 +14,41 @@ export interface VLCData extends CommonSourceData, PollingOptions {
      * @examples ["localhost:8080"]
      * @default "localhost:8080"
      * */
-    url?: string
+    url: z.string().optional().meta({
+        description: "URL:PORT of the VLC server to connect to",
+        default: "localhost:8080",
+        examples: ["localhost:8080"]
+    }),
 
     /**
      * Password for the server
      * */
-    password: string
+    password: z.string().meta({
+        description: "Password for the server"
+    }),
 
-}
+});
 
-export interface VLCSourceOptions extends CommonSourceOptions {
+export type VLCData = z.infer<typeof vlcDataSchema>;
+
+export const vlcSourceOptionsSchema = z.object({
+    ...commonSourceOptionsSchema.shape,
     /** A list of regular expressions to use to extract metadata (title, album, artist) from a filename
      *
      * Used when VLC reports only the filename for the current audio track
      * */
-    filenamePatterns?: string | string[]
+    filenamePatterns: z.union([z.string(), z.array(z.string())]).optional().meta({
+        description: "A list of regular expressions to use to extract metadata (title, album, artist) from a filename"
+    }),
     /**
      * Log to DEBUG when a filename-only track is matched or not matched by filenamePatterns
      *
      * @default false
      * */
-    logFilenamePatterns?: boolean
+    logFilenamePatterns: z.boolean().optional().meta({
+        description: "Log to DEBUG when a filename-only track is matched or not matched by filenamePatterns",
+        default: false
+    }),
     /**
      * Dump all the metadata VLC reports for an audio track to DEBUG.
      *
@@ -39,17 +56,28 @@ export interface VLCSourceOptions extends CommonSourceOptions {
      *
      * @default false
      * */
-    dumpVlcMetadata?: boolean
-}
+    dumpVlcMetadata: z.boolean().optional().meta({
+        description: "Dump all the metadata VLC reports for an audio track to DEBUG.",
+        default: false
+    }),
+});
 
-export interface VLCSourceConfig extends CommonSourceConfig {
-    data: VLCData
-    options?: VLCSourceOptions
-}
+export type VLCSourceOptions = z.infer<typeof vlcSourceOptionsSchema>;
 
-export interface VLCSourceAIOConfig extends VLCSourceConfig {
-    type: 'vlc'
-}
+export const vlcSourceConfigSchema = z.object({
+    ...commonSourceConfigSchema.shape,
+    data: vlcDataSchema,
+    options: vlcSourceOptionsSchema.optional(),
+});
+
+export type VLCSourceConfig = z.infer<typeof vlcSourceConfigSchema>;
+
+export const vlcSourceAIOConfigSchema = z.object({
+    ...vlcSourceConfigSchema.shape,
+    type: z.literal('vlc'),
+}).meta({title: 'VLC'});
+
+export type VLCSourceAIOConfig = z.infer<typeof vlcSourceAIOConfigSchema>;
 
 export type PlayerState = 'playing' | 'stopped' | 'paused';
 

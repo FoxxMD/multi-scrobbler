@@ -11,7 +11,7 @@ index 0536c69..be6274b 100644
  
  type JsonSchemaProps = Partial<JSVOptions> & {
 diff --git a/node_modules/cf-json-schema-viz/dist/index.js b/node_modules/cf-json-schema-viz/dist/index.js
-index b23316c..ef8be1e 100644
+index b23316c..d89b3ea 100644
 --- a/node_modules/cf-json-schema-viz/dist/index.js
 +++ b/node_modules/cf-json-schema-viz/dist/index.js
 @@ -41,19 +41,19 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
@@ -3462,7 +3462,19 @@ index b23316c..ef8be1e 100644
      }
      return [makeChoice(schemaNode)];
    }, [schemaNode]);
-@@ -8468,22 +8501,6 @@ var TopLevelSchemaRow = ({
+@@ -8313,7 +8346,10 @@ var SchemaRow = React2.memo(
+     );
+     const { selectedChoice, setSelectedChoice, choices } = useChoices(schemaNode);
+     const typeToShow = selectedChoice.type;
+-    const description = isRegularNode(typeToShow) ? typeToShow.annotations.description : null;
++    let description = isRegularNode(typeToShow) ? typeToShow.annotations.description : null;
++    if ((description === null || description === void 0) && "annotations" in schemaNode && (schemaNode.annotations?.description !== null && schemaNode.annotations?.description !== void 0)) {
++      description = schemaNode.annotations?.description;
++    }
+     const rootLevel = renderRootTreeLines ? 1 : 2;
+     const childNodes = React2.useMemo(() => visibleChildren(typeToShow), [typeToShow]);
+     const combiner = isRegularNode(schemaNode) && schemaNode.combiners?.length ? schemaNode.combiners[0] : null;
+@@ -8468,22 +8504,6 @@ var TopLevelSchemaRow = ({
      [schemaNode.fragment]
    );
    const hasVendorProperties = totalVendorExtensions > 0;
@@ -3485,7 +3497,7 @@ index b23316c..ef8be1e 100644
    if (isRegularNode(schemaNode) && choices.length > 1) {
      const combiner = isRegularNode(schemaNode) && schemaNode.combiners?.length ? schemaNode.combiners[0] : null;
      return /* @__PURE__ */ jsxs(Fragment, { children: [
-@@ -8517,6 +8534,22 @@ var TopLevelSchemaRow = ({
+@@ -8517,6 +8537,22 @@ var TopLevelSchemaRow = ({
        ) : combiner ? /* @__PURE__ */ jsx(SchemaRow, { schemaNode: selectedChoice.type, nestingLevel }) : null
      ] });
    }
@@ -3508,7 +3520,7 @@ index b23316c..ef8be1e 100644
    if (isComplexArray(schemaNode) && isPureObjectNode(schemaNode.children[0])) {
      const validations = isRegularNode(schemaNode) ? getValidationsFromSchema(schemaNode) : {};
      return /* @__PURE__ */ jsxs(Fragment, { children: [
-@@ -8550,6 +8583,7 @@ var JsonSchemaViewer = ({
+@@ -8550,6 +8586,7 @@ var JsonSchemaViewer = ({
    disableCrumbs,
    nodeHasChanged,
    skipTopLevelDescription,
@@ -3516,7 +3528,7 @@ index b23316c..ef8be1e 100644
    ...rest
  }) => {
    const options = React2.useMemo(
-@@ -8562,7 +8596,8 @@ var JsonSchemaViewer = ({
+@@ -8562,7 +8599,8 @@ var JsonSchemaViewer = ({
        hideExamples,
        renderRootTreeLines,
        disableCrumbs,
@@ -3526,7 +3538,7 @@ index b23316c..ef8be1e 100644
      }),
      [
        defaultExpandedDepth,
-@@ -8573,7 +8608,8 @@ var JsonSchemaViewer = ({
+@@ -8573,7 +8611,8 @@ var JsonSchemaViewer = ({
        hideExamples,
        renderRootTreeLines,
        disableCrumbs,

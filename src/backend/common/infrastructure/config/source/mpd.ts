@@ -1,7 +1,10 @@
-import type {PollingOptions} from "../common.ts";
-import type {CommonSourceConfig, CommonSourceData, CommonSourceOptions} from "./index.ts";
+import * as z from "zod";
+import {pollingOptionsSchema} from "../common.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema} from "./index.ts";
 
-export interface MPDData extends CommonSourceData, PollingOptions {
+export const mpdDataSchema = z.object({
+    ...commonSourceDataSchema.shape,
+    ...pollingOptionsSchema.shape,
     /**
      * URL:PORT of the MPD server to connect to
      *
@@ -10,33 +13,51 @@ export interface MPDData extends CommonSourceData, PollingOptions {
      * @examples ["localhost:6600"]
      * @default "localhost:6600"
      * */
-    url?: string
+    url: z.string().optional().meta({
+        description: "URL:PORT of the MPD server to connect to",
+        default: "localhost:6600",
+        examples: ["localhost:6600"]
+    }),
 
     /**
      * If using socket specify the path instead of url.
      *
      * trailing `~` is replaced by your home directory
      * */
-    path?: string
+    path: z.string().optional().meta({
+        description: "If using socket specify the path instead of url."
+    }),
 
     /**
      * Password for the server, if set https://mpd.readthedocs.io/en/stable/user.html#permissions-and-passwords
      * */
-    password?: string
+    password: z.string().optional().meta({
+        description: "Password for the server, if set https://mpd.readthedocs.io/en/stable/user.html#permissions-and-passwords"
+    }),
 
-}
+});
 
-export interface MPDSourceOptions extends CommonSourceOptions {
-    //disableDiscovery?: boolean
-}
+export type MPDData = z.infer<typeof mpdDataSchema>;
 
-export interface MPDSourceConfig extends CommonSourceConfig {
-    data: MPDData
-    options: MPDSourceOptions
-}
+export const mpdSourceOptionsSchema = z.object({
+    ...commonSourceOptionsSchema.shape,
+});
 
-export interface MPDSourceAIOConfig extends MPDSourceConfig {
-    type: 'mpd'
-}
+export type MPDSourceOptions = z.infer<typeof mpdSourceOptionsSchema>;
+
+export const mpdSourceConfigSchema = z.object({
+    ...commonSourceConfigSchema.shape,
+    data: mpdDataSchema,
+    options: mpdSourceOptionsSchema,
+});
+
+export type MPDSourceConfig = z.infer<typeof mpdSourceConfigSchema>;
+
+export const mpdSourceAIOConfigSchema = z.object({
+    ...mpdSourceConfigSchema.shape,
+    type: z.literal('mpd'),
+}).meta({title: 'MPD'});
+
+export type MPDSourceAIOConfig = z.infer<typeof mpdSourceAIOConfigSchema>;
 
 export type PlayerState = 'play' | 'stop' | 'pause';

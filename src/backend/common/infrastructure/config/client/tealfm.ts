@@ -1,43 +1,60 @@
-import type {ComponentType} from "../../../../../core/Atomic.ts";
-import type {RequestRetryOptions} from "../common.ts";
-import type {ATProtoAppData, ATProtoUserIdentifierData} from "./atproto.ts";
-import type {CommonClientConfig, CommonClientData, CommonClientOptions} from "./index.ts";
+import * as z from "zod";
+import {componentTypeSchema} from "../../../../../core/Atomic.ts";
+import {requestRetryOptionsSchema} from "../common.ts";
+import {atProtoAppDataSchema, atProtoUserIdentifierDataSchema} from "./atproto.ts";
+import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema} from "./index.ts";
 
-export type TealData = RequestRetryOptions & ATProtoUserIdentifierData & Partial<ATProtoAppData> & {
-        /**
+export const tealDataSchema = z.object({
+    ...requestRetryOptionsSchema.shape,
+    ...atProtoUserIdentifierDataSchema.shape,
+    ...atProtoAppDataSchema.partial().shape,
+    /**
      * The base URI of the Multi-Scrobbler to use for ATProto OAuth
-     * 
+     *
      * Only include this if you want to use OAuth. The URI must be a non-IP/non-local domain using https: protocol.
     */
-    baseUri?: string
-}
+    baseUri: z.string().optional().meta({
+        description: "The base URI of the Multi-Scrobbler to use for ATProto OAuth"
+    }),
+});
 
-export interface TealClientData extends TealData, CommonClientData {
+export type TealData = z.infer<typeof tealDataSchema>;
 
-}
-export interface TealClientConfig extends CommonClientConfig {
+export const tealClientDataSchema = tealDataSchema.extend(commonClientDataSchema.shape);
+
+export type TealClientData = z.infer<typeof tealClientDataSchema>;
+
+export const tealClientOptionsSchema = z.object({
+    ...commonClientOptionsSchema.shape,
+});
+
+export type TealClientOptions = z.infer<typeof tealClientOptionsSchema>;
+
+export const tealClientConfigSchema = z.object({
+    ...commonClientConfigSchema.shape,
     /**
      * Should always be `client` when using Tealfm as a client
      *
      * @default client
      * @examples ["client"]
      * */
-    configureAs?: ComponentType
-    data: TealClientData
-    options?: TealClientOptions
-}
+    configureAs: componentTypeSchema.optional().meta({
+        description: "Should always be `client` when using Tealfm as a client",
+        default: "client",
+        examples: ["client"]
+    }),
+    data: tealClientDataSchema,
+    options: tealClientOptionsSchema.optional(),
+});
 
-export interface TealOptions {
-}
+export type TealClientConfig = z.infer<typeof tealClientConfigSchema>;
 
+export const tealClientAIOConfigSchema = z.object({
+    ...tealClientConfigSchema.shape,
+    type: z.literal('tealfm'),
+}).meta({title: 'teal.fm'});
 
-export interface TealClientOptions extends TealOptions,CommonClientOptions {
-
-}
-
-export interface TealClientAIOConfig extends TealClientConfig {
-    type: 'tealfm'
-}
+export type TealClientAIOConfig = z.infer<typeof tealClientAIOConfigSchema>;
 
 export interface ListRecord<T> {
   uri: string;

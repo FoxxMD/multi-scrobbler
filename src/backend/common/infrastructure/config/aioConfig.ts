@@ -1,28 +1,54 @@
-import type { LogOptions } from "@foxxmd/logging";
-import type { ClientAIOConfig } from "./client/clients.ts";
-import type { CommonClientOptions } from "./client/index.ts";
-import type { RequestRetryOptions } from "./common.ts";
-import type { WebhookConfig } from "./health/webhooks.ts";
-import type { CommonSourceOptions, SourceRetryOptions } from "./source/index.ts";
-import type { SourceAIOConfig } from "./source/sources.ts";
-import type { CacheConfigUser, DurationValue } from "../Atomic.ts";
-import type { TransformerCommonConfig } from "../../../../core/Atomic.ts";
-import type { RetentionConfig } from "./database.ts";
+import * as z from "zod";
+import {clientAIOConfigSchema} from "./client/clients.ts";
+import {commonClientOptionsSchema} from "./client/index.ts";
+import {requestRetryOptionsSchema} from "./common.ts";
+import {webhookConfigSchema} from "./health/webhooks.ts";
+import {commonSourceOptionsSchema, fileLogOptionsSchema, logLevelSchema, sourceRetryOptionsSchema} from "./source/index.ts";
+import {sourceAIOConfigSchema} from "./source/sources.ts";
+import {cacheConfigUserSchema} from "../Atomic.ts";
+import {retentionConfigDurationValueSchema} from "./database.ts";
 
+export const sourceDefaultsSchema = z.object({
+    ...commonSourceOptionsSchema.shape,
+});
 
-export interface SourceDefaults extends CommonSourceOptions {
-}
+export type SourceDefaults = z.infer<typeof sourceDefaultsSchema>;
 
-export interface ClientDefaults extends CommonClientOptions {
-}
+export const clientDefaultsSchema = z.object({
+    ...commonClientOptionsSchema.shape,
+});
 
-export interface AIOConfig {
-    sourceDefaults?: SourceDefaults
-    clientDefaults?: ClientDefaults
-    sources?: SourceAIOConfig[]
-    clients?: ClientAIOConfig[]
+export type ClientDefaults = z.infer<typeof clientDefaultsSchema>;
 
-    webhooks?: WebhookConfig[]
+// `TransformOptions`/`TransformerCommonConfig<T,Y>` (from `../../../../core/Atomic.ts`) are only ever used at
+// their default type params (`Record<string, any>`) everywhere in the codebase, but `TransformerCommonConfig`
+// stays generic there and `TransformerCommon<T,Y> extends TransformerCommonConfig<T,Y>` - converting the
+// exported interface itself would break that extends clause. Reconstructed locally here instead, scoped to
+// this file's `transformers` field only.
+const transformOptionsSchema = z.object({
+    failOnFetch: z.boolean().optional(),
+    throwOnFailure: z.union([
+        z.boolean(),
+        z.array(z.union([z.literal('artists'), z.literal('title'), z.literal('albumArtists'), z.literal('album'), z.literal('duration'), z.literal('meta'), z.literal('art')])),
+    ]).optional(),
+    ttl: z.string().optional(),
+});
+
+const transformerCommonConfigSchema = z.object({
+    defaults: z.record(z.string(), z.any()).optional(),
+    data: z.record(z.string(), z.any()).optional(),
+    type: z.string(),
+    name: z.string().optional(),
+    options: transformOptionsSchema.optional(),
+});
+
+export const aioConfigSchema = z.object({
+    sourceDefaults: sourceDefaultsSchema.optional(),
+    clientDefaults: clientDefaultsSchema.optional(),
+    sources: z.array(sourceAIOConfigSchema).optional(),
+    clients: z.array(clientAIOConfigSchema).optional(),
+
+    webhooks: z.array(webhookConfigSchema).optional(),
 
     /**
      * Set the port the multi-scrobbler UI will be served from
@@ -30,7 +56,11 @@ export interface AIOConfig {
      * @default 9078
      * @examples [9078]
      * */
-    port?: number
+    port: z.number().optional().meta({
+        description: "Set the port the multi-scrobbler UI will be served from",
+        default: 9078,
+        examples: [9078]
+    }),
 
     /**
      * Set the Base URL the application should assume the UI is served from.
@@ -44,16 +74,26 @@ export interface AIOConfig {
      * @default "http://localhost"
      * @examples ["http://localhost", "http://192.168.0.101", "https://ms.myDomain.tld"]
      * */
-    baseUrl?: string
+    baseUrl: z.string().optional().meta({
+        description: "Set the Base URL the application should assume the UI is served from.",
+        default: "http://localhost",
+        examples: ["http://localhost", "http://192.168.0.101", "https://ms.myDomain.tld"]
+    }),
 
-    logging?: LogOptions
+    logging: z.object({
+        level: logLevelSchema.optional(),
+        file: z.union([logLevelSchema, z.literal(false), fileLogOptionsSchema]).optional(),
+        console: logLevelSchema.optional(),
+    }).optional(),
 
     /**
      * Disable web server from running/listening on port.
      *
      * This will also make any ingress sources (Plex, Jellyfin, Tautulli, etc...) unusable
      * */
-    disableWeb?: boolean
+    disableWeb: z.boolean().optional().meta({
+        description: "Disable web server from running/listening on port."
+    }),
 
     /**
      * Enables ALL relevant logging and debug options for all sources/clients, when none are defined.
@@ -65,38 +105,59 @@ export interface AIOConfig {
      * @default false
      * @examples [false]
      * */
-    debugMode?: boolean
+    debugMode: z.boolean().optional().meta({
+        description: "Enables ALL relevant logging and debug options for all sources/clients, when none are defined.",
+        default: false,
+        examples: [false]
+    }),
 
-    cache?: CacheConfigUser
+    cache: cacheConfigUserSchema.optional().meta({description: 'Configuration for Caching'}),
 
-    transformers?: TransformerCommonConfig[]
+    transformers: z.array(transformerCommonConfigSchema).optional(),
 
-    database?: {
-        retention?: RetentionConfig<DurationValue>
-    }
-}
+    database: z.object({
+        retention: retentionConfigDurationValueSchema.optional(),
+    }).optional(),
+});
 
-export interface AIOClientConfig {
-    clientDefaults?: RequestRetryOptions
-    clients?: ClientAIOConfig[]
-}
+export type AIOConfig = z.infer<typeof aioConfigSchema>;
 
-export interface AIOClientRelaxedConfig {
-    clientDefaults?: RequestRetryOptions
-    clients?: object[]
-}
+export const aioClientConfigSchema = z.object({
+    clientDefaults: requestRetryOptionsSchema.optional(),
+    clients: z.array(clientAIOConfigSchema).optional(),
+});
 
-export interface AIOSourceConfig {
-    sourceDefaults?: SourceRetryOptions
-    sources?: SourceAIOConfig[]
-}
+export type AIOClientConfig = z.infer<typeof aioClientConfigSchema>;
 
-export interface AIOSourceRelaxedConfig {
-    sourceDefaults?: SourceRetryOptions
-    sources?: object[]
-}
+export const aioClientRelaxedConfigSchema = z.object({
+    clientDefaults: requestRetryOptionsSchema.optional(),
+    clients: z.array(z.looseObject({ type: z.string(), configureAs: z.string().optional() })).optional(),
+    database: z.object({
+        retention: retentionConfigDurationValueSchema.optional(),
+    }).optional(),
+});
 
-export interface TypedConfig<T = string> {
-    type: T
-    // [key: string]: any
-}
+export type AIOClientRelaxedConfig = z.infer<typeof aioClientRelaxedConfigSchema>;
+
+export const aioSourceConfigSchema = z.object({
+    sourceDefaults: sourceRetryOptionsSchema.optional(),
+    sources: z.array(sourceAIOConfigSchema).optional(),
+});
+
+export type AIOSourceConfig = z.infer<typeof aioSourceConfigSchema>;
+
+export const aioSourceRelaxedConfigSchema = z.object({
+    sourceDefaults: sourceRetryOptionsSchema.optional(),
+    sources: z.array(z.looseObject({ type: z.string(), configureAs: z.string().optional() })).optional(),
+    database: z.object({
+        retention: retentionConfigDurationValueSchema.optional(),
+    }).optional(),
+});
+
+export type AIOSourceRelaxedConfig = z.infer<typeof aioSourceRelaxedConfigSchema>;
+
+export const typedConfigSchema = z.object({
+    type: z.string(),
+});
+
+export type TypedConfig = z.infer<typeof typedConfigSchema>;

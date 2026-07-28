@@ -1,59 +1,85 @@
-import type {KoitoClientAIOConfig, KoitoClientConfig} from "./koito.ts";
-import type {LastfmClientAIOConfig, LastfmClientConfig} from "./lastfm.ts";
-import type {ListenBrainzClientAIOConfig, ListenBrainzClientConfig} from "./listenbrainz.ts";
-import type {MalojaClientAIOConfig, MalojaClientConfig} from "./maloja.ts";
-import type {TealClientAIOConfig, TealClientConfig} from "./tealfm.ts";
-import type {RockSkyClientAIOConfig, RockSkyClientConfig} from "./rocksky.ts";
-import type {LibrefmClientConfig, LibrefmClientAIOConfig} from "./librefm.ts";
-import type {DiscordClientAIOConfig, DiscordClientConfig} from "./discord.ts";
+import * as z from "zod";
+import {koitoClientAIOConfigSchema, koitoClientConfigSchema, type KoitoClientAIOConfig, type KoitoClientConfig} from "./koito.ts";
+import {lastfmClientAIOConfigSchema, lastfmClientConfigSchema, type LastfmClientAIOConfig, type LastfmClientConfig} from "./lastfm.ts";
+import {listenBrainzClientAIOConfigSchema, listenBrainzClientConfigSchema, type ListenBrainzClientAIOConfig, type ListenBrainzClientConfig} from "./listenbrainz.ts";
+import {malojaClientAIOConfigSchema, malojaClientConfigSchema, type MalojaClientAIOConfig, type MalojaClientConfig} from "./maloja.ts";
+import {tealClientAIOConfigSchema, tealClientConfigSchema, type TealClientAIOConfig, type TealClientConfig} from "./tealfm.ts";
+import {rockSkyClientAIOConfigSchema, rockSkyClientConfigSchema, type RockSkyClientAIOConfig, type RockSkyClientConfig} from "./rocksky.ts";
+import {librefmClientAIOConfigSchema, librefmClientConfigSchema, type LibrefmClientAIOConfig, type LibrefmClientConfig} from "./librefm.ts";
+import {discordClientAIOConfigSchema, discordClientConfigSchema, type DiscordClientAIOConfig, type DiscordClientConfig} from "./discord.ts";
+import type { CommonClientConfig } from "./index.ts";
+import type { ClientType } from "../../../../../core/Atomic.ts";
 
-export type ClientConfig = 
-MalojaClientConfig 
-| LastfmClientConfig 
-| LibrefmClientConfig 
-| ListenBrainzClientConfig 
-| KoitoClientConfig 
-| TealClientConfig 
-| RockSkyClientConfig 
-| DiscordClientConfig;
+export const clientConfigSchema = z.union([
+    malojaClientConfigSchema,
+    lastfmClientConfigSchema,
+    librefmClientConfigSchema,
+    listenBrainzClientConfigSchema,
+    koitoClientConfigSchema,
+    tealClientConfigSchema,
+    rockSkyClientConfigSchema,
+    discordClientConfigSchema,
+]);
 
-export type ClientAIOConfig = MalojaClientAIOConfig 
-| LastfmClientAIOConfig 
-| LibrefmClientAIOConfig 
-| ListenBrainzClientAIOConfig 
-| KoitoClientAIOConfig 
-| TealClientAIOConfig 
-| RockSkyClientAIOConfig 
-| DiscordClientAIOConfig;
+export type ClientConfig = z.infer<typeof clientConfigSchema>;
 
-/** Used for docusaurus schemas
- *  We need to show "array of" for each type of config when looking at File Config
- * 
- *  This is defined in the AIO config and we *assume* arrays in individual files when parsing in builders
- *  But we don't have any actual definitions for this that we can pull for generating individual schema files
- */
-export type MalojaClientConfigs = MalojaClientConfig[];
-export type LastfmClientConfigs = LastfmClientConfig[];
-export type LibrefmClientConfigs = LibrefmClientConfig[];
-export type ListenBrainzClientConfigs = ListenBrainzClientConfig[];
-export type KoitoClientConfigs = KoitoClientConfig[];
-export type TealClientConfigs = TealClientConfig[];
-export type RockSkyClientConfigs = RockSkyClientConfig[];
-export type DiscordClientConfigs = DiscordClientConfig[];
+export const clientAIOConfigSchema = z.union([
+    malojaClientAIOConfigSchema,
+    lastfmClientAIOConfigSchema,
+    librefmClientAIOConfigSchema,
+    listenBrainzClientAIOConfigSchema,
+    koitoClientAIOConfigSchema,
+    tealClientAIOConfigSchema,
+    rockSkyClientAIOConfigSchema,
+    discordClientAIOConfigSchema,
+]);
 
-export const atomicClientInterfaces = [
-    'MalojaClientConfig',
-    'LastfmClientConfig',
-    'LibrefmClientConfig',
-    'ListenBrainzClientConfig',
-    'KoitoClientConfig',
-    'TealClientConfig',
-    'RockSkyClientConfig',
-    'DiscordClientConfig'
-];
+export type ClientAIOConfig = z.infer<typeof clientAIOConfigSchema>;
 
-export const clientInterfaces = [
-    'AIOClientRelaxedConfig',
-    ...atomicClientInterfaces
-];
+export interface ClientTypeConfigMap extends Record<ClientType, CommonClientConfig> {
+    maloja: MalojaClientConfig,
+    lastfm: LastfmClientConfig,
+    librefm: LibrefmClientConfig,
+    listenbrainz: ListenBrainzClientConfig,
+    koito: KoitoClientConfig,
+    tealfm: TealClientConfig,
+    rocksky: RockSkyClientConfig,
+    discord: DiscordClientConfig
+}
 
+export const clientConfigSchemaMap: { [K in keyof ClientTypeConfigMap]: z.ZodType<ClientTypeConfigMap[K]> } = {
+    maloja: malojaClientConfigSchema,
+    lastfm: lastfmClientConfigSchema,
+    librefm: librefmClientConfigSchema,
+    listenbrainz: listenBrainzClientConfigSchema,
+    koito: koitoClientConfigSchema,
+    tealfm: tealClientConfigSchema,
+    rocksky: rockSkyClientConfigSchema,
+    discord: discordClientConfigSchema
+}
+
+export const validateClientJson = <T extends keyof ClientTypeConfigMap>(clientType: T, json: object): ClientTypeConfigMap[T] => clientConfigSchemaMap[clientType].parse(json);
+
+export interface ClientTypeAIOConfigMap extends Record<ClientType, ClientAIOConfig> {
+    maloja: MalojaClientAIOConfig,
+    lastfm: LastfmClientAIOConfig,
+    librefm: LibrefmClientAIOConfig,
+    listenbrainz: ListenBrainzClientAIOConfig,
+    koito: KoitoClientAIOConfig,
+    tealfm: TealClientAIOConfig,
+    rocksky: RockSkyClientAIOConfig,
+    discord: DiscordClientAIOConfig
+}
+
+export const clientAIOConfigSchemaMap: { [K in keyof ClientTypeAIOConfigMap]: z.ZodType<ClientTypeAIOConfigMap[K]> } = {
+    maloja: malojaClientAIOConfigSchema,
+    lastfm: lastfmClientAIOConfigSchema,
+    librefm: librefmClientAIOConfigSchema,
+    listenbrainz: listenBrainzClientAIOConfigSchema,
+    koito: koitoClientAIOConfigSchema,
+    tealfm: tealClientAIOConfigSchema,
+    rocksky: rockSkyClientAIOConfigSchema,
+    discord: discordClientAIOConfigSchema
+}
+
+export const validateClientAIOJson = <T extends keyof ClientTypeAIOConfigMap>(clientType: T, json: object): ClientTypeAIOConfigMap[T] => clientAIOConfigSchemaMap[clientType].parse(json);

@@ -11,6 +11,7 @@ import type { ReportedPlayerStatus, SourceType } from "../../../core/Atomic.ts";
 import type { ClientType } from "../../../core/Atomic.ts";
 import assert from 'assert';
 import * as path from 'path';
+import * as z from 'zod';
 
 export const __filename = import.meta.filename;
 export const projectRootDir = path.resolve(__filename, '../../../../../');
@@ -270,27 +271,18 @@ export interface CacheConfigOptions {
     metadata?: CacheMetadataConfig;
     scrobble?: CacheScrobbleConfig;
     auth?: CacheAuthConfig;
-    /** Number of regex functions to cache (LRU)
-     * 
-     * @default 200
-     */
-    regex?: number
 }
 
-export interface CacheConfigUser {
-    auth?: {
-        provider: 'valkey' | 'file',
-        [key: string]: any
-    };
-    valkey?: string
-    /** Number of regex functions to cache (LRU)
-     * 
-     * @default 200
-     */
-    regex?: number
-    // to allow deprecated scrobble config without having it show up in schema docs
-    [key: string]: any
-}
+export const cacheConfigUserAuthSchema = z.object({
+    provider: z.enum(['valkey', 'file']),
+}).meta({description: 'The cache type to use for Auth'});
+
+export const cacheConfigUserSchema = z.object({
+    auth: cacheConfigUserAuthSchema.optional(),
+    valkey: z.string().optional().meta({description: 'The connection string to a valkey server with the syntax `redis://HOST_IP:HOST_PORT`'})
+}).meta({title: 'Cache Config', description: 'Configuration for Caching'});
+
+export type CacheConfigUser = z.infer<typeof cacheConfigUserSchema>;
 
 export interface MusicbrainzApiConfigData {
     url?: string
@@ -409,6 +401,29 @@ export interface ScrobbleRangeResult {
 
 export const REFRESH_STALE_DEFAULT = 60;
 
+/** A number of seconds */
+export const secondsSchema = z.number().meta({
+    description: 'number of seconds',
+    examples: [60, 3600],
+    title: 'Seconds'
+});
+
+
+/** A string representing a number and unit of time comptabile with dayjs */
+export const durationStringSchema = z.string().meta({
+    description: 'a string containing a number and a unit of time compatible with dayjs',
+    examples:["1 hour", "4 days"],
+    title: 'Duration Value'
+})
+
+export const durationValueSchema = z.xor([secondsSchema, durationStringSchema]).meta({title: 'Duration Value'});
+
+// .meta({
+//     description: stripIndents`A duration of time as either
+    
+//     * a number of seconds
+//     * or a string containing a number and a unit of time compatible with dayjs`,
+//     example: [60, 3600, "1 hour", "4 days"]});
 /**
  * A duration of time
  * 
@@ -419,7 +434,8 @@ export const REFRESH_STALE_DEFAULT = 60;
  * 
  * @example [60, 3600, "1 hour", "4 days"]
  */
-export type DurationValue = number | string;
+export type DurationValue = z.infer<typeof durationValueSchema>; // number | string;
+
 
 export type MigrationStatus = {
     backupRequired: boolean, 

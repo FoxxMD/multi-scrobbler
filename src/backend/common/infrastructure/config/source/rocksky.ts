@@ -1,26 +1,45 @@
-import type {RockSkyData, RockSkyOptions} from "../client/rocksky.ts";
-import type {PollingOptions} from "../common.ts";
-import type {CommonSourceConfig, CommonSourceData, CommonSourceOptions} from "./index.ts";
+import * as z from "zod";
+import {rockSkyDataSchema, rockSkyOptionsSchema} from "../client/rocksky.ts";
+import {pollingOptionsSchema} from "../common.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema} from "./index.ts";
 
-export interface RockskySourceData extends RockSkyData, CommonSourceData, PollingOptions {
-}
+export const rockskySourceDataSchema = z.object({
+    ...rockSkyDataSchema.shape,
+    ...commonSourceDataSchema.shape,
+    ...pollingOptionsSchema.shape,
+});
 
-export interface RockskySourceOptions extends RockSkyOptions, CommonSourceOptions {
+export type RockskySourceData = z.infer<typeof rockskySourceDataSchema>;
 
-}
+export const rockskySourceOptionsSchema = z.object({
+    ...rockSkyOptionsSchema.shape,
+    ...commonSourceOptionsSchema.shape,
+});
 
-export interface RockskySourceConfig extends CommonSourceConfig {
+export type RockskySourceOptions = z.infer<typeof rockskySourceOptionsSchema>;
+
+export const rockskySourceConfigSchema = z.object({
+    ...commonSourceConfigSchema.shape,
     /**
      * When used in `rocksky.config` this tells multi-scrobbler whether to use this data to configure a source or client.
      *
      * @default source
      * @examples ["source"]
      * */
-    configureAs: 'source'
-    data: RockskySourceData
-    options?: RockskySourceOptions
-}
+    configureAs: z.literal('source').meta({
+        description: "When used in `rocksky.config` this tells multi-scrobbler whether to use this data to configure a source or client.",
+        default: "source",
+        examples: ["source"]
+    }),
+    data: rockskySourceDataSchema,
+    options: rockskySourceOptionsSchema.optional(),
+});
 
-export interface RockskySourceAIOConfig extends RockskySourceConfig {
-    type: 'rocksky'
-}
+export type RockskySourceConfig = z.infer<typeof rockskySourceConfigSchema>;
+
+export const rockskySourceAIOConfigSchema = z.object({
+    ...rockskySourceConfigSchema.shape,
+    type: z.literal('rocksky'),
+}).meta({title: 'Rocksky'});
+
+export type RockskySourceAIOConfig = z.infer<typeof rockskySourceAIOConfigSchema>;

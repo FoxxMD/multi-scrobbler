@@ -1,4 +1,5 @@
-import type {CommonSourceConfig, CommonSourceData} from "./index.ts";
+import * as z from "zod";
+import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
 
 export const PLAYBACK_STATUS_PLAYING_MC = 'playing';
 export const PLAYBACK_STATUS_PAUSED_MC = 'paused';
@@ -75,7 +76,8 @@ export interface MCPlaybackOverviewRequest extends MCRequestCommon {
     device_id: string
 }
 
-export interface MusikcubeData extends CommonSourceData {
+export const musikcubeDataSchema = z.object({
+    ...commonSourceDataSchema.shape,
     /**
      * URL of the Musikcube Websocket (Metadata) server to connect to
      *
@@ -94,23 +96,37 @@ export interface MusikcubeData extends CommonSourceData {
      * @examples ["ws://localhost:7905"]
      * @default "ws://localhost:7905"
      * */
-    url?: string
+    url: z.string().optional().meta({
+        description: "URL of the Musikcube Websocket (Metadata) server to connect to",
+        default: "ws://localhost:7905",
+        examples: ["ws://localhost:7905"]
+    }),
 
     /**
      * Password set in Musikcube https://github.com/clangen/musikcube/wiki/remote-api-documentation
      *
      * * musikcube -> settings -> server setup -> password
      * */
-    password: string
+    password: z.string().meta({
+        description: "Password set in Musikcube https://github.com/clangen/musikcube/wiki/remote-api-documentation"
+    }),
 
-    device_id?: string
+    device_id: z.string().optional(),
 
-}
+});
 
-export interface MusikcubeSourceConfig extends CommonSourceConfig {
-    data: MusikcubeData
-}
+export type MusikcubeData = z.infer<typeof musikcubeDataSchema>;
 
-export interface MusikcubeSourceAIOConfig extends MusikcubeSourceConfig {
-    type: 'musikcube'
-}
+export const musikcubeSourceConfigSchema = z.object({
+    ...commonSourceConfigSchema.shape,
+    data: musikcubeDataSchema,
+});
+
+export type MusikcubeSourceConfig = z.infer<typeof musikcubeSourceConfigSchema>;
+
+export const musikcubeSourceAIOConfigSchema = z.object({
+    ...musikcubeSourceConfigSchema.shape,
+    type: z.literal('musikcube'),
+}).meta({title: 'Musikcube'});
+
+export type MusikcubeSourceAIOConfig = z.infer<typeof musikcubeSourceAIOConfigSchema>;
