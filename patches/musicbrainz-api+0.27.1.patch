@@ -115,3 +115,17 @@ index 72fb15d..f6bdfe5 100644
          });
          return response.json();
      }
+diff --git a/node_modules/musicbrainz-api/lib/musicbrainz.types.d.ts b/node_modules/musicbrainz-api/lib/musicbrainz.types.d.ts
+index 1ebc7b2..e004b9b 100644
+--- a/node_modules/musicbrainz-api/lib/musicbrainz.types.d.ts
++++ b/node_modules/musicbrainz-api/lib/musicbrainz.types.d.ts
+@@ -156,7 +156,8 @@ export interface IMedium {
+     title: string;
+     format?: string;
+     'format-id': string;
+-    tracks: ITrack[];
++    tracks?: ITrack[];
++    track?: ITrack[]
+     'track-count': number;
+     'track-offset': number;
+     position: number;

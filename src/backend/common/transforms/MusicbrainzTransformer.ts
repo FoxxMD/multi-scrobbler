@@ -863,7 +863,15 @@ export const filterByExplicitTrackMbid = (list: IRecordingMatch[], play: PlayObj
             break;
         }
         for (const rel of rec.releases) {
-            if (rel.media.some(x => x.tracks.some(y => y.id === play.data.meta.brainz.track))) {
+            if (rel.media.some(x => {
+                if(x.tracks !== undefined) {
+                    return x.tracks.some(y => y.id === play.data.meta.brainz.track);
+                }
+                if(x.track !== undefined) {
+                    return x.track.some(y => y.id === play.data.meta.brainz.track);
+                }
+                return false;
+            })) {
                 releaseMatchId = rel.id;
                 recMatch = rec;
                 break;
