@@ -123,7 +123,23 @@ Otherwise, use the `name` property you gave the client in it's File/AIO config.
 
 :::
 
-### Scrobble Thresholds
+### When Is Activity Scrobbled?
+
+##### From Listening History
+
+For [**Listening History**](./?sot=history#by-data-source-of-truth) Source-Of-Truth based Sources, like Listenbrainz and Last.fm, newely discovered history is immediately forwarded to relevant Clients.
+
+##### From Ingress
+
+For [**Ingress**](./?sot=activity&sourceComm=ingress#by-communication-method) communication based Sources, like [Listenbrainz (Endpoint)](/configuration/sources/listenbrainz-endpoint) and [Webscrobbler](/configuration/sources/webscrobbler), the client sending data to Multi-Scrobbler is what determines when activity is scrobbled. This means that it up to the behavior and implementation of whatever application you point at these Source endpoints: when the client sends "this is scrobbled", MS immediately forwards it to relevant Clients.
+
+##### From Listening Activity
+
+For Sources that use [**Active**](./?sot=activity&sourceComm=active#by-communication-method) communication with [**Listening Activity**](./?sot=activity#by-data-source-of-truth) as the Source-Of-Truth -- like Jellyfin, Plex, Spotify, Subsonic, etc... -- *Multi-Scrobbler waits until the track changes or the active player becomes stale/disappears* before determining if the activity should be scrobbled.
+
+This allows MS to record how long you listened to the track for as well as more accurately determine if **Scrobble Thresholds** have been met.
+
+#### Scrobble Thresholds
 
 <ScrobbleThreshold filename="spotify"/>
 
