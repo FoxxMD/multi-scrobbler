@@ -190,7 +190,7 @@ export class WebScrobblerSource extends MemorySource {
         await this.processRecentPlays([stateData]);
 
         if(this.isValidScrobble(stateData.play)) {
-            if(stateData[0].play.meta.nowPlaying === true) {
+            if(stateData.play.meta.nowPlaying === true) {
                 this.setStatus('Received Now Playing');
             } else {
                 this.setStatus('Received Play');
