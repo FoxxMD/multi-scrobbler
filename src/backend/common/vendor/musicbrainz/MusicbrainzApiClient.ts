@@ -201,7 +201,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                 throw new SimpleError('Timeout occurred while waiting for Musicbrainz API rate limit');
             }
             if(`error` in res) {
-                throw Error(res.error);
+                throw new Error(res.error);
             }
             return res as T;
         } catch (e) {
