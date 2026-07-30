@@ -1,5 +1,7 @@
 import { stripIndents } from "common-tags";
 import * as z from "zod";
+import type { PlayTransformHooks, ExternalMetadataTerm } from "../../../../core/Transform.ts";
+import type { CommonClientOptions } from "./client/index.ts";
 
 export const commonConfigPrimitivesSchema = z.object({
     name: z.string().optional(),
@@ -141,3 +143,64 @@ export const monitorOptionsSchema = z.object({
     })
 })
 export type MonitorOptions = z.infer<typeof monitorOptionsSchema>;
+
+export const transformPresetEnv = <T extends CommonClientOptions = CommonClientOptions>(prefix: string, existing: T = undefined): undefined | T => {
+
+    const env = process.env[`${prefix}_TRANSFORMS`];
+    if (env === undefined || env.trim() === '') {
+        return existing;
+    }
+
+    const popts: PlayTransformHooks<ExternalMetadataTerm> = {
+        preCompare: []
+    };
+    for (const p of env.split(',').map(x => x.trim().toLocaleLowerCase())) {
+        switch (p) {
+            case 'native':
+                popts.preCompare.push({ type: 'native' });
+                break;
+            case 'musicbrainz':
+                popts.preCompare.push({ type: 'musicbrainz' });
+                break;
+        }
+    }
+
+    // @ts-expect-error T is fine
+    return {
+        ...(existing || {}),
+        playTransform: popts
+    };
+};
+
+
+type CommonComponentEnvShape<T extends string> = {
+    [K in `${T}_ID`]: z.ZodString
+} & {
+    [K in `${T}_NAME`]: z.ZodOptional<z.ZodString>
+} & {
+    [K in `${T}_ENABLE`]: z.ZodOptional<ReturnType<typeof z.stringbool>>
+};
+
+export const generateCommonComponentEnvConfigSchema = <T extends string>(prefix: T) =>
+    z.object({
+        [`${prefix}_ID`]: z.string().meta({description: 'A globally unique ID'}),
+        [`${prefix}_NAME`]: z.string().optional().meta({description: 'A vanity name', default: `Value of \`${prefix}_ID\``}),
+        [`${prefix}_ENABLE`]: z.stringbool().optional()
+    } as CommonComponentEnvShape<T>);
+
+type CommonComponentEnvConfigParsed<T extends string> = {
+    [K in `${T}_ID`]: string
+} & {
+    [K in `${T}_NAME`]?: string
+} & {
+    [K in `${T}_ENABLE`]?: boolean
+};
+
+export const commonComponentEnvConfigToConfigPrimitives = <T extends string>(prefix: T, envConfig: CommonComponentEnvConfigParsed<T>): CommonConfigPrimitives  => {
+    const raw = envConfig as Record<string, string | boolean | undefined>;
+    return {
+        id: raw[`${prefix}_ID`] as string,
+        name: raw[`${prefix}_NAME`] as string | undefined,
+        enable: raw[`${prefix}_ENABLE`] as boolean | undefined
+    };
+};

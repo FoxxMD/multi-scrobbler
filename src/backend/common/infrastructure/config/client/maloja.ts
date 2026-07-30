@@ -31,6 +31,15 @@ export const malojaClientDataSchema = malojaDataSchema.extend(commonClientDataSc
 
 export type MalojaClientData = z.infer<typeof malojaClientDataSchema>;
 
+const envDataSchema = z.object({
+    MALOJA_URL: z.string().meta({description: 'Base URL of your installation'}),
+    MALOJA_API_KEY: z.string().default('fsdfsd')
+});
+
+export const envSchemas = {
+    data: envDataSchema
+};
+
 export const malojaClientConfigSchema = z.object({
     ...commonClientConfigSchema.shape,
     /**

@@ -5,8 +5,35 @@ import { clientConfigSchemaMap } from '../common/infrastructure/config/client/cl
 import { sourceConfigSchemaMap } from '../common/infrastructure/config/source/sources.ts';
 import { projectRootDir } from "../common/infrastructure/Atomic.ts";
 import { aioConfigSchema } from "../common/infrastructure/config/aioConfig.ts";
+import { envSchemas } from "../common/infrastructure/config/client/maloja.ts";
+import { generateCommonComponentEnvConfigSchema } from "../common/infrastructure/config/common.ts";
+import { zodObjectToTableColumns } from "./ZodUtils.ts";
+import {markdownTable} from 'markdown-table'
 
 mkdirSync(resolve(projectRootDir, 'docsite/static/schemas'), {recursive: true});
+
+const common = generateCommonComponentEnvConfigSchema('MALOJA');
+const schema = z.object({
+    ...common.shape,
+    ...envSchemas.data.shape
+});
+const col = zodObjectToTableColumns(schema, 'out');
+
+const mdCols: string[][] = col.map((x) => {
+    const name = `\`${x.title}\``;
+    return [
+        x.required ? `**${name}**` : name,
+        x.type,
+        (x.default ?? '').toString(),
+        x.description ?? ''
+    ]
+});
+const tableContent = markdownTable([
+    ['Environmental Variable', 'Type', 'Default', 'Description'],
+    ...mdCols
+]);
+
+writeFileSync(resolve(projectRootDir, `docsite/static/schemas/maloja-env-test.md`), tableContent);
 
 const generateSchema = (schema: z.ZodType, reused: z.core.ToJSONSchemaParams['reused'] = 'inline') => z.toJSONSchema(schema, { 
     io: "input",

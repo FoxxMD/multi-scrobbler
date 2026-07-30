@@ -20,14 +20,13 @@ import type AbstractScrobbleClient from "./AbstractScrobbleClient.ts";
 import type {KoitoClientConfig, KoitoData} from '../common/infrastructure/config/client/koito.ts';
 import type {TealClientConfig, TealData} from '../common/infrastructure/config/client/tealfm.ts';
 import type {RockSkyClientConfig, RockSkyData} from '../common/infrastructure/config/client/rocksky.ts';
-import type {CommonClientOptions} from '../common/infrastructure/config/client/index.ts';
-import type {ExternalMetadataTerm, PlayTransformHooks} from '../../core/Transform.ts';
 import type {LibrefmClientConfig, LibrefmData} from '../common/infrastructure/config/client/librefm.ts';
 import clone from 'clone';
 import type {DiscordClientConfig, DiscordData} from '../common/infrastructure/config/client/discord.ts';
 import { stripIndents } from 'common-tags';
 import { normalizeStr, type StringNormalizationOptions } from '../utils/StringUtils.ts';
 import { prettifyError, ZodError } from 'zod';
+import { transformPresetEnv } from '../common/infrastructure/config/common.ts';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -604,33 +603,4 @@ ${sources.join('\n')}`);
             this.logger.trace(`These clients were filtered from scrobbling from Source '${scrobbleFrom}' => ${excluded.join(' | ')}`);
         }
     }
-}
-
-const transformPresetEnv = <T extends CommonClientOptions = CommonClientOptions>(prefix: string, existing: T = undefined): undefined | T => {
-
-    const env = process.env[`${prefix}_TRANSFORMS`];
-    if(env === undefined || env.trim() === '') {
-        return existing;
-    }
-
-    const popts: PlayTransformHooks<ExternalMetadataTerm> = {
-        preCompare: [
-        ]
-    }
-    for(const p of env.split(',').map(x => x.trim().toLocaleLowerCase())) {
-        switch(p) {
-            case 'native':
-                popts.preCompare.push({type: 'native'});
-                break;
-            case 'musicbrainz':
-                popts.preCompare.push({type: 'musicbrainz'});
-                break;
-        }
-    }
-
-    // @ts-expect-error T is fine
-    return {
-        ...(existing || {}),
-        playTransform: popts
-    };
 }
