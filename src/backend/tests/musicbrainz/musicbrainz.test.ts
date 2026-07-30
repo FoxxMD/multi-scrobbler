@@ -16,6 +16,7 @@ import { generatePlay, withBrainz } from '../../../core/tests/utils/PlayTestUtil
 import { intersect, missingMbidTypes } from '../../utils.ts';
 import { CoverArtApiClient, type CoverArtApiConfig } from '../../common/vendor/musicbrainz/CoverArtApiClient.ts';
 import { artistNamesToCredits, artistNameToCredit } from '../../../core/StringUtils.ts';
+import dayjs from 'dayjs';
 
 chai.use(asPromised);
 
@@ -422,6 +423,76 @@ describe('Musicbrainz API', function () {
                     "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
                     "releaseCountryPriority": ["XW"],
                 }), "All search prerequisites failed")
+        });
+
+        it('does not fail on media tracks', async function () {
+            this.timeout(35000);
+
+            await mbTransformer.initialize();
+
+            const play: PlayObject = {
+                "data": {
+                    "artists": [
+                        {
+                            "name": "Au5",
+                            "mbid": "3569c2ed-2315-40d9-b041-3c48dae1be43"
+                        }
+                    ],
+                    "albumArtists": [],
+                    "album": "Inverse",
+                    "track": "Scission",
+                    "duration": 214.125,
+                    "meta": {
+                        "brainz": {
+                            "track": "c63b7e96-928c-48dd-b558-a181cb245cb6",
+                            "album": "cbc89dff-3555-498c-bb1e-2ff983b13e59",
+                            "artist": [
+                                "3569c2ed-2315-40d9-b041-3c48dae1be43"
+                            ],
+                            "albumArtist": [
+                                "3569c2ed-2315-40d9-b041-3c48dae1be43"
+                            ]
+                        }
+                    },
+                    "playDate": dayjs(),
+                    "listenedFor": 209.601,
+                    "listenRanges": [],
+                    "repeat": false
+                },
+                "meta": {
+                    "seenAt": dayjs(),
+                    "trackId": "plex://track/6a5ee492569fa956516b9b1a",
+                    "mediaType": "track",
+                    "source": "Plex",
+                    "library": "Music",
+                    "deviceId": "sonos-0116-Plex for Sonos",
+                    "sessionId": "106",
+                    "trackProgressPosition": 214.125,
+                    "art": {
+                        "track": "/api/source/art?name=PlexBox&type=plex&data=84389"
+                    }
+                },
+            };
+
+            try {
+                const res = await mbTransformer.getTransformerData(play, {
+                    type: "musicbrainz",
+                    searchWhenMissing: DEFAULT_MISSING_TYPES,
+                    searchOrder: ["isrc", "mbidrecording", "basicorids", "basic"],
+                });
+
+                expect(res.recordings).to.exist;
+                expect(res.recordings).to.not.be.empty;
+                const chosenPlay = await mbTransformer.handlePostFetch(play, res, {
+                    type: "musicbrainz",
+                    searchWhenMissing: DEFAULT_MISSING_TYPES,
+                    searchOrder: ["isrc", "mbidrecording", "basicorids", "basic"],
+                });
+                expect(chosenPlay).to.exist;
+            } catch (e) {
+                throw e;
+            }
+
         });
 
     });
