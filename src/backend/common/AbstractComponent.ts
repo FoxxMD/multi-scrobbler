@@ -36,7 +36,7 @@ import { DrizzlePlayRepository } from "./database/drizzle/repositories/PlayRepos
 import type {ClientType, MonitoringStatus} from "../../core/Atomic.ts";
 import type {SourceType} from "../../core/Atomic.ts";
 import { DrizzleComponentRepository } from "./database/drizzle/repositories/ComponentRepository.ts";
-import dayjs from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import { COMPONENT_STATE, type ComponentCommonApi, type ComponentCommonApiJson, type ComponentState, type PlayApiCommonDetailed } from "../../core/Api.ts";
 import type {WebhookPayload} from "./infrastructure/config/health/webhooks.ts";
 import type { MarkRequired } from "ts-essentials";
@@ -66,6 +66,10 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     protected componentType: ComponentType;
     type: ClientType | SourceType;
     name: string;
+
+    lastActiveAt?: Dayjs
+    lastReadyAt?: Dayjs;
+    protected lastUpdatedComponentDatesAt?: Dayjs
 
     protected constructor(config: AbstractComponentConfig) {
         super(config);
@@ -112,6 +116,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             name: this.config?.name ?? this.name
         });
         this.componentId = this.dbComponent.id;
+        this.lastActiveAt = this.dbComponent.lastActiveAt;
+        this.lastReadyAt = this.dbComponent.lastReadyAt;
         return true;
     }
 
@@ -545,8 +551,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             monitoringStatus: this.getMonitoringStatus(),
             countNonLive: this.dbComponent.countNonLive,
             createdAt: this.dbComponent.createdAt?.toISOString(),
-            lastReadyAt: this.dbComponent.lastReadyAt?.toISOString(),
-            lastActiveAt: this.dbComponent.lastActiveAt?.toISOString(),
+            lastReadyAt: this.lastReadyAt?.toISOString(),
+            lastActiveAt: this.lastActiveAt?.toISOString(),
             error: this.error !== undefined && this.error instanceof Error ? serializeError(this.error) : this.error,
             warning: this.warning !== undefined && this.warning instanceof Error ? serializeError(this.warning) : this.warning,
             ...this.additionalApiData()
@@ -598,5 +604,34 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     public getMonitoringStatus = (): MonitoringStatus => ({
         monitoring: this.isMonitoring(),
         origin: this.monitoringActivity !== undefined ? MONITORING_ORIGIN_USER : MONITORING_ORIGIN_SYSTEM
-    })
+    });
+
+    protected async updateDates(data: {lastActiveAt?: Dayjs, lastReadyAt?: Dayjs, force?: boolean}) {
+        const {
+            lastActiveAt,
+            lastReadyAt,
+            force = false
+        } = data;
+        let updated = false;
+        if(lastActiveAt !== undefined && lastActiveAt !== this.lastActiveAt) {
+            this.lastActiveAt = lastActiveAt;
+            updated = true;
+        }
+        if(lastReadyAt !== undefined && lastReadyAt !== this.lastReadyAt) {
+            this.lastReadyAt = lastReadyAt;
+            updated = true;
+        }
+        if(updated && (
+            force 
+            || this.lastUpdatedComponentDatesAt === undefined 
+            || Math.abs(this.lastUpdatedComponentDatesAt.diff(dayjs(), 's')) >= 60
+            )
+        ) {
+            await this.componentRepo.updateById(this.dbComponent.id, {
+                lastActiveAt: this.lastActiveAt,
+                lastReadyAt: this.lastReadyAt
+            });
+            this.lastUpdatedComponentDatesAt = dayjs();
+        }
+    }
 }

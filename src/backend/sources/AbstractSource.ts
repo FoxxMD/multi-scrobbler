@@ -198,7 +198,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 }
                 return true;
             } else if(!this.canPoll) {
-                this.componentRepo.updateById(this.dbComponent.id, {lastReadyAt: dayjs()});
+                this.updateDates({lastReadyAt: dayjs(), force: true});
             }
         }
         return true;
@@ -751,7 +751,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 this.setIsSleeping(true);
                 this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({sleeping: true, wakeAt: this.getWakeAt().toISOString()})
                 // set last active before we sleep
-                this.componentRepo.updateById(this.dbComponent.id, {lastActiveAt: dayjs(), lastReadyAt: dayjs()});
+                this.updateDates({lastActiveAt: dayjs(), lastReadyAt: dayjs()});
                 while(dayjs().isBefore(this.getWakeAt())) {
                     // check for polling status every half second and wait till wake up time
                    await delay(signal, 500);

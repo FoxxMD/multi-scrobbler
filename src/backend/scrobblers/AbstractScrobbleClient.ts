@@ -1103,7 +1103,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     this.emitEvent('queueEmptied', {});
                     this.setStatus('Waiting for Plays from Sources');
                 }
-                this.componentRepo.updateById(this.dbComponent.id, {lastActiveAt: dayjs(), lastReadyAt: dayjs()});
+                this.updateDates({lastActiveAt: dayjs(), lastReadyAt: dayjs()});
                 await delay(signal, this.scrobbleSleep);
             }
         } catch (e) {
