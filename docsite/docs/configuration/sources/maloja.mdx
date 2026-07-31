@@ -8,6 +8,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import MalojaConfig from '!!raw-loader!@site/../config/maloja.json.example';
+import ENVConfig from "@site/docs/configuration/sources/_env_configs/_maloja.md"
 
 :::tip[Other Uses]
 
@@ -22,10 +23,5 @@ See the [Maloja (Client)](/configuration/clients/maloja) configuration for gener
 ## Configuration
 
 <Config config="MalojaSourceConfig" fileContent={MalojaConfig} name="maloja">
-        | Environmental Variable  | Required? | Default | Description                     |
-        | ----------------------- | --------- | ------- | ------------------------------- |
-        | `SOURCE_MALOJA_ID`      | Yes       |         | A unique ID                     |
-        | `SOURCE_MALOJA_URL`     | Yes       |         | Base URL of your installation   |
-        | `SOURCE_MALOJA_API_KEY` | Yes       |         | Api Key                         |
-        | `SOURCE_MALOJA_NAME`    | Yes       |         | A vanity name different than ID |
+<ENVConfig/>
 </Config>

@@ -8,6 +8,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import SubsonicConfig from '!!raw-loader!@site/../config/subsonic.json.example';
+import ENVConfig from "@site/docs/configuration/sources/_env_configs/_subsonic.md"
 
 This Source can be used for any application that implements the [Subsonic API](http://www.subsonic.org/pages/api.jsp) and supports the [`getNowPlaying`](http://www.subsonic.org/pages/api.jsp#getNowPlaying) endpoint (such as [Airsonic](https://airsonic.github.io/) and [Navidrome](https://www.navidrome.org/))
 
@@ -47,11 +48,5 @@ If the server properly reports no playing song when playback has stopped or this
 ## Configuration
 
 <Config config="SubSonicSourceConfig" fileContent={SubsonicConfig} name="subsonic">
-        | Environmental Variable | Required? | Default | Description                          |
-        | ---------------------- | --------- | ------- | ------------------------------------ |
-        | `SUBSONIC_ID`          | Yes       |         | A unique ID                          |
-        | `SUBSONIC_USER`        | Yes       |         |                                      |
-        | `SUBSONIC_PASSWORD`    | Yes       |         |                                      |
-        | `SUBSONIC_URL`         | Yes       |         | Base url of your subsonic-api server |
-        | `SUBSONIC_NAME`        | No        |         | A vanity name different than ID      |
+<ENVConfig/>
 </Config>

@@ -8,6 +8,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import JriverConfig from '!!raw-loader!@site/../config/jriver.json.example';
+import ENVConfig from "@site/docs/configuration/sources/_env_configs/_jriver.md"
 
 In order for multi-scrobbler to communicate with JRiver you must have [Web Server Interface](https://wiki.jriver.com/index.php/Web_Service_Interface#Documentation_of_Functions) enabled. This can be found in the JRiver GUI:
 
@@ -50,11 +51,5 @@ If any part of this URL is missing multi-scrobbler will use a default value. Thi
 ## Configuration
 
 <Config config="JRiverSourceConfig" fileContent={JriverConfig} name="jriver">
-        | Environmental Variable | Required | Default                         | Description                                    |
-        | ---------------------- | -------- | ------------------------------- | ---------------------------------------------- |
-        | JRIVER_ID              | Yes      |                                 | A unique ID                                    |
-        | JRIVER_URL             | Yes      | http://localhost:52199/MCWS/v1/ | The URL of the JRiver server                   |
-        | JRIVER_USERNAME        | No       |                                 | If authentication is enabled, the username set |
-        | JRIVER_PASSWORD        | No       |                                 | If authenticated is enabled, the password set  |
-        | JRIVER_NAME            | No       |                                 | A vanity name different than ID                |
+<ENVConfig/>
 </Config>

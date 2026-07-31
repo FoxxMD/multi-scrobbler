@@ -8,6 +8,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import JsonConfig from '!!raw-loader!@site/../config/musiccast.json.example';
+import ENVConfig from "@site/docs/configuration/sources/_env_configs/_musiccast.md"
 
 Monitor [MusicCast](https://usa.yamaha.com/products/contents/audio_visual/musiccast/index.html) device/receivers for music played on Network/USB/CD inputs.
 
@@ -31,9 +32,5 @@ EX
 ## Configuration
 
 <Config config="MusicCastSourceConfig" fileContent={JsonConfig} name="musiccast">
-        | Environmental Variable | Required? | Default | Description                     |
-        | :--------------------- | :-------- | ------- | :------------------------------ |
-        | `MCAST_ID`             | Yes       |         | A unique ID                     |
-        | `MCAST_URL`            | Yes       |         | The Musiccast device URL        |
-        | `MCAST_NAME`           | No        |         | A vanity name different than ID |
+<EnvConfig/>
 </Config>

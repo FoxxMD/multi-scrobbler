@@ -8,6 +8,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import ChromecastConfig from '!!raw-loader!@site/../config/chromecast.json.example';
+import ENVConfig from "@site/docs/configuration/sources/_env_configs/_chromecast.md"
 
 If your media device can be **Cast** to using this button ![Chromecast Icon](https://upload.wikimedia.org/wikipedia/commons/2/26/Chromecast_cast_button_icon.svg) on your phone/computer then multi-scrobbler can monitor it in order to scrobble music you play.
 
@@ -149,13 +150,5 @@ To diagnose bad/incomplete track information or strange MS player behavior pleas
         [Manually configuring cast device connections](#connecting-devices) is only available through file-based config.
         :::
 
-        | Environmental Variable | Required? | Default | Description                                                                          |
-        | ---------------------- | --------- | ------- | ------------------------------------------------------------------------------------ |
-        | `CC_ID`                | Yes       |         | A unique ID                                                                          |
-        | `CC_ENABLE`            | No        |         | Set to 'true' to enable Cast monitoring without needing to define other ENVs         |
-        | `CC_WHITELIST_DEVICES` | No        |         | Only scrobble from these Cast devices. Comma-delimited list. EX mini-home, family-tv |
-        | `CC_BLACKLIST_DEVICES` | No        |         | Do not scrobble from these Cast devices. Comma-delimited list                        |
-        | `CC_WHITELIST_APPS`    | No        |         | Only scrobble from these casted Apps. Comma-delimited list. EX spotify, pandora      |
-        | `CC_BLACKLIST_APPS`    | No        |         | Do not scrobble from these casted Apps. Comma-delimited list                         |
-        | `CC_NAME`              | No        |         | A vanity name different than ID                                                      |
+<EnvConfig/>
 </Config>

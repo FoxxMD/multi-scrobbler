@@ -8,6 +8,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import MPRISConfig from '!!raw-loader!@site/../config/mpris.json.example';
+import ENVConfig from "@site/docs/configuration/sources/_env_configs/_mpris.md"
 
 [MPRIS](https://specifications.freedesktop.org/mpris-spec/latest) is a standard interface for communicating with Music Players on **linux operating systems.**
 
@@ -71,11 +72,5 @@ MPRIS communication requires multi-scrobbler to have access to the host's dbus-d
 ## Configuration
 
 <Config config="MPRISSourceConfig" fileContent={MPRISConfig} name="mpris">
-        | Environmental Variable | Required? | Default | Description                                                                      |
-        | ---------------------- | --------- | ------- | -------------------------------------------------------------------------------- |
-        | MPRIS_ID               | Yes       |         | A unique ID                                                                      |
-        | MPRIS_ENABLE           | No        |         | Use MPRIS as a Source (useful when you don't need any other options)             |
-        | MPRIS_BLACKLIST        | No        |         | Comma-delimited list of player names not to scrobble from                        |
-        | MPRIS_WHITELIST        | No        |         | Comma-delimited list of players names to ONLY scrobble from. Overrides blacklist |
-        | MPRIS_NAME             | No        |         | A vanity name different than ID                                                  |
+<ENVConfig/>
 </Config>

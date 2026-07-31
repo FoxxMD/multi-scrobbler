@@ -9,6 +9,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import ListenbrainzConfig from '!!raw-loader!@site/../config/listenbrainz.json.example';
+import ENVConfig from "@site/docs/configuration/sources/_env_configs/_listenbrainz.md"
 
 This Source monitors a Listenbrainz account's scrobble history and then re-scrobbles discovered tracks to configured clients.
 
@@ -26,11 +27,5 @@ On your [profile page](https://listenbrainz.org/profile/) find your **User Token
 ## Configuration
 
 <Config config="ListenBrainzSourceConfig" fileContent={ListenbrainzConfig} name="listenbrainz">
-        | Environmental Variable | Required? | Default                       | Description                     |
-        | ---------------------- | --------- | ----------------------------- | ------------------------------- |
-        | `SOURCE_LZ_ID`         | Yes       |                               | A unique ID                     |
-        | `SOURCE_LZ_TOKEN`      | Yes       |                               | User token from your LZ profile |
-        | `SOURCE_LZ_USER`       | Yes       |                               | Your LZ username                |
-        | `SOURCE_LZ_URL`        | No        | https://api.listenbrainz.org/ | The base URL for the LZ server  |
-        | `SOURCE_LZ_NAME`       | No        |                               | A vanity name different than ID |d
+<ENVConfig/>
 </Config>

@@ -8,6 +8,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import JsonConfig from '!!raw-loader!@site/../config/vlc.json.example';
+import ENVConfig from "@site/docs/configuration/sources/_env_configs/_vlc.md"
 
 MS communicates with [VLC](https://www.videolan.org/vlc/) using the [Web (`http`) interface module](https://wiki.videolan.org/VLC_HTTP_requests/)
 
@@ -99,10 +100,5 @@ If you find that VLC is incorrectly reporting track information (in its interfac
 ## Configuration
 
 <Config config="VLCSourceConfig" fileContent={JsonConfig} name="vlc">
-        | Environmental Variable | Required? | Default          | Description                     |
-        | ---------------------- | --------- | ---------------- | ------------------------------- |
-        | `VLC_ID`               | Yes       |                  | A unique ID                     |
-        | `VLC_URL`              | No        | `localhost:8080` |                                 |
-        | `VLC_PASSWORD`         | Yes       |                  |                                 |
-        | `VLC_NAME`             | No        |                  | A vanity name different than ID |
+<ENVConfig/>
 </Config>

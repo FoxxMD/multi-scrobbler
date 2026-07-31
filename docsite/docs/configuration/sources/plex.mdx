@@ -9,6 +9,7 @@ import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import AzuracastConfig from '!!raw-loader!@site/../config/azuracast.json.example';
 import PlexConfig from '!!raw-loader!@site/../config/plex.json.example';
+import ENVConfig from "@site/docs/configuration/sources/_env_configs/_plex.md"
 
 Find your [**Plex Token**](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/) and make note of the **URL** and **Port** used to connect to your Plex instance.
 
@@ -194,16 +195,5 @@ To configure MS to use Musicbrainz with your Plex metadata use one of the method
 #### Configuration
 
 <Config config="PlexApiSourceConfig" fileContent={PlexConfig} name="plex">
-        | Environmental Variable | Required? | Default | Description                                                            |
-        | ---------------------- | --------- | ------- | ---------------------------------------------------------------------- |
-        | `PLEX_ID`              | **Yes**   |         | A unique ID                                                            |
-        | `PLEX_URL`             | **Yes**   |         | The URL of the Plex server IE `http://localhost:32400`                 |
-        | `PLEX_TOKEN`           | **Yes**   |         | The **Plex Token** to use with the API                                 |
-        | `PLEX_USERS_ALLOW`     | No        |         | Comma-separated list of usernames (from Plex) to scrobble for          |
-        | `PLEX_USERS_BLOCK`     | No        |         | Comma-separated list of usernames (from Plex) to disallow scrobble for |
-        | `PLEX_DEVICES_ALLOW`   | No        |         | Comma-separated list of devices to scrobble from                       |
-        | `PLEX_DEVICES_BLOCK`   | No        |         | Comma-separated list of devices to disallow scrobbles from             |
-        | `PLEX_LIBRARIES_ALLOW` | No        |         | Comma-separated list of libraries to allow scrobbles from              |
-        | `PLEX_LIBRARIES_BLOCK` | No        |         | Comma-separated list of libraries to disallow scrobbles from           |
-        | `PLEX_NAME`            | No        |         | A vanity name different than ID                                        |
+<ENVConfig/>
 </Config>

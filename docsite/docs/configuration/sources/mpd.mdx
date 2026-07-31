@@ -8,6 +8,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import MPDConfig from '!!raw-loader!@site/../config/mpd.json.example';
+import ENVConfig from "@site/docs/configuration/sources/_env_configs/_mpd.md"
 
 MS communicates with MPD using the [TCP client connection.](https://mpd.readthedocs.io/en/stable/user.html#client-connections)
 
@@ -23,10 +24,5 @@ Multi-scrobbler requires only the [`read`](https://mpd.readthedocs.io/en/stable/
 ## Configuration
 
 <Config config="MPDSourceConfig" fileContent={MPDConfig} name="mpd">
-        | Environmental Variable | Required? | Default          | Description                     |
-        | ---------------------- | --------- | ---------------- | ------------------------------- |
-        | `MPD_ID`               | Yes       |                  | A unique ID                     |
-        | `MPD_URL`              | No        | `localhost:6600` |                                 |
-        | `MPD_PASSWORD`         | No        |                  |                                 |
-        | `MPD_NAME`             | No        |                  | A vanity name different than ID |
+<ENVConfig/>
 </Config>

@@ -8,6 +8,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import MusikcubeConfig from '!!raw-loader!@site/../config/musikcube.json.example';
+import ENVConfig from "@site/docs/configuration/sources/_env_configs/_musikcube.md"
 
 In order to use [Musikcube](https://musikcube.com) configure it to accept [websocket connections](https://github.com/clangen/musikcube/wiki/remote-api-documentation) in **server setup**:
 
@@ -31,10 +32,5 @@ If no URL is provided to MS it will try to use `ws://localhost:7905`
 ## Configuration
 
 <Config config="MusikcubeSourceConfig" fileContent={MusikcubeConfig} name="musikcube">
-        | Environmental Variable | Required? | Default               | Description                          |
-        | ---------------------- | --------- | --------------------- | ------------------------------------ |
-        | `MC_ID`                | Yes       |                       | A unique ID                          |
-        | `MC_URL`               | No        | `ws://localhost:7905` | Use port set for **metadata server** |
-        | `MC_PASSWORD`          | Yes       |                       |                                      |
-        | `MC_NAME`              | No        |                       | A vanity name different than ID      |
+<ENVConfig/>
 </Config>

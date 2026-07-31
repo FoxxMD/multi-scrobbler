@@ -9,6 +9,7 @@ import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import DeezerConfig from '!!raw-loader!@site/../config/deezer.json.example';
 import DeezerDeprecatedConfig from '!!raw-loader!@site/../config/deezer-deprecated.json.example';
+import ENVConfig from "@site/docs/configuration/sources/_env_configs/_deezer.md"
 
 <Tabs groupId="deezerSource" queryString>
     <TabItem value="arl" label="Unofficial ARL">
@@ -134,9 +135,7 @@ import DeezerDeprecatedConfig from '!!raw-loader!@site/../config/deezer-deprecat
         ## Configuration
 
         <Config config="DeezerCompatConfig" fileContent={DeezerConfig} name="deezer">
-                | Environmental Variable | Required? | Default | Description                                      |
-                | :--------------------- | --------- | ------- | ------------------------------------------------ |
-                | `DEEZER_ARL`           | Yes       |         | The ARL cookie value retrieved from your browser |
+<ENVConfig/>
         </Config>
 
     </TabItem>
