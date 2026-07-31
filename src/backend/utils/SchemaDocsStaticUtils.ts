@@ -14,7 +14,7 @@ mkdirSync(resolve(projectRootDir, 'docsite/static/schemas'), {recursive: true});
 const mdCols =  (cols: TableColumn[]): string[][] => cols.map((x) => {
     const name = `\`${x.title}\``;
     return [
-        x.required ? `**${name}**` : name,
+        x.required ? `_**${name}**_` : name,
         x.type,
         (x.default ?? '').toString(),
         x.description ?? ''
