@@ -1,5 +1,6 @@
 import * as z from "zod";
 import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
+import { transformSplitMaybeString } from "../../../../utils/ZodUtils.ts";
 
 export const chromecastDeviceInfoSchema = z.object({
     /**
@@ -133,10 +134,10 @@ export const chromecastDataSchema = z.object({
 export type ChromecastData = z.infer<typeof chromecastDataSchema>;
 
 const envDataSchema = z.object({
-    CC_BLACKLIST_DEVICES: chromecastDataSchema.shape.blacklistDevices,
-    CC_WHITELIST_DEVICES: chromecastDataSchema.shape.whitelistDevices,
-    CC_BLACKLIST_APPS: chromecastDataSchema.shape.blacklistApps,
-    CC_WHITELIST_APPS: chromecastDataSchema.shape.whitelistApps,
+    CC_BLACKLIST_DEVICES: z.string().optional().pipe(transformSplitMaybeString).meta(chromecastDataSchema.shape.blacklistDevices.meta()),
+    CC_WHITELIST_DEVICES: z.string().optional().pipe(transformSplitMaybeString).meta(chromecastDataSchema.shape.whitelistDevices.meta()),
+    CC_BLACKLIST_APPS: z.string().optional().pipe(transformSplitMaybeString).meta(chromecastDataSchema.shape.blacklistApps.meta()),
+    CC_WHITELIST_APPS: z.string().optional().pipe(transformSplitMaybeString).meta(chromecastDataSchema.shape.whitelistApps.meta()),
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, ChromecastSourceConfig> = {

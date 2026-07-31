@@ -1,5 +1,6 @@
 import * as z from "zod";
-import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, manualListeningOptionsSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, manualListeningOptionsSchema, type EnvSourceSchema} from "./index.ts";
+import { parseBoolStrict } from "../../../../utils.ts";
 
 export const azuraStationInfoResponseSchema = z.object({
     id: z.string(),
@@ -135,6 +136,27 @@ export const azuracastSourceConfigSchema = z.object({
 });
 
 export type AzuracastSourceConfig = z.infer<typeof azuracastSourceConfigSchema>;
+
+const envDataSchema = z.object({
+    AZURA_STATION: azuracastDataSchema.shape.station,
+    AZURA_URL: azuracastDataSchema.shape.url,
+    AZURA_KEY: azuracastDataSchema.shape.apiKey,
+    AZURA_LISTENERS_NUM: z.string().optional().transform((val) => !isNaN(Number.parseInt(val)) ? Number.parseInt(val) : parseBoolStrict(val)),
+    AZURA_LIVE: z.stringbool().optional()
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, AzuracastSourceConfig> = {
+    env: envDataSchema,
+    toConfig: (partial) => ({
+            data: {
+                url: partial.AZURA_URL,
+                station: partial.AZURA_STATION,
+                apiKey: partial.AZURA_KEY,
+                monitorWhenListeners: partial.AZURA_LISTENERS_NUM,
+                monitorWhenLive: partial.AZURA_LIVE
+            }
+    })
+};
 
 export const azuracastSourceAIOConfigSchema = z.object({
     ...azuracastSourceConfigSchema.shape,

@@ -46,6 +46,7 @@ export type IcecastData = z.infer<typeof icecastDataSchema>;
 
 const envDataSchema = z.object({
     ICECAST_URL: icecastDataSchema.shape.url,
+    ICECAST_AUTO_MONITOR: z.stringbool().optional()
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, IcecastSourceConfig> = {
@@ -53,6 +54,9 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, IcecastSourceConf
     toConfig: (partial) => ({
             data: {
                 url: partial.ICECAST_URL
+            },
+            options: {
+                autoMonitor: partial.ICECAST_AUTO_MONITOR
             }
     })
 };

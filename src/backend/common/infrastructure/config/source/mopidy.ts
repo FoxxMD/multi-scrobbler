@@ -1,6 +1,7 @@
 import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
+import { transformSplitMaybeString } from "../../../../utils/ZodUtils.ts";
 
 export const mopidyDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -99,6 +100,25 @@ export const mopidySourceConfigSchema = z.object({
 });
 
 export type MopidySourceConfig = z.infer<typeof mopidySourceConfigSchema>;
+
+const envDataSchema = z.object({
+    MOPIDY_URL: mopidyDataSchema.shape.url,
+    MOPIDY_URI_DENYLIST: z.string().optional().pipe(transformSplitMaybeString).meta(mopidyDataSchema.shape.uriBlacklist.meta()),
+    MOPIDY_URI_ALLOWLIST: z.string().optional().pipe(transformSplitMaybeString).meta(mopidyDataSchema.shape.uriWhitelist.meta()),
+    MOPIDY_ALBUM_DENYLIST: z.string().optional().pipe(transformSplitMaybeString).meta(mopidyDataSchema.shape.albumBlacklist.meta()),
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, MopidySourceConfig> = {
+    env: envDataSchema,
+    toConfig: (partial) => ({
+        data: {
+            url: partial.MOPIDY_URL,
+            uriBlacklist: partial.MOPIDY_URI_DENYLIST,
+            uriWhitelist: partial.MOPIDY_URI_ALLOWLIST,
+            albumBlacklist: partial.MOPIDY_ALBUM_DENYLIST
+        }
+    })
+};
 
 export const mopidySourceAIOConfigSchema = z.object({
     ...mopidySourceConfigSchema.shape,

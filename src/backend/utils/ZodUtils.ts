@@ -1,4 +1,5 @@
 import z from 'zod';
+import { parseArrayFromMaybeString, parseBoolOrArrayFromMaybeString } from './StringUtils.ts';
 
 export interface TableColumn {
     title: string
@@ -49,4 +50,7 @@ export const zodObjectToTableColumns = <Shape extends z.ZodRawShape>(schema: z.Z
             default: getExplicitDefault(fieldSchema) ?? (meta?.default as unknown),
             description: meta?.description as string | undefined
         };
-    });
+});
+
+export const transformSplitMaybeString = z.transform((val: string) => parseArrayFromMaybeString(val));
+export const transformSplitMaybeStringOrBoolean = z.transform((val: string | string[] | boolean) => parseBoolOrArrayFromMaybeString(val));
