@@ -7,7 +7,6 @@ import { isClientType } from '../../core/Atomic.ts';
 import { clientTypes } from "../../core/Atomic.ts";
 import type {ClientType} from "../../core/Atomic.ts";
 import {aioClientRelaxedConfigSchema, type AIOClientRelaxedConfig, type ClientDefaults} from "../common/infrastructure/config/aioConfig.ts";
-import {clientConfigSchemaMap, validateClientAIOJson, validateClientJson, type ClientTypeConfigMap} from "../common/infrastructure/config/client/clients.ts";
 import type { WildcardEmitter } from "../common/WildcardEmitter.ts";
 import { pick } from '../../core/DataUtils.ts';
 import { readJson } from '../utils/DataUtils.ts';
@@ -18,6 +17,7 @@ import { normalizeStr, type StringNormalizationOptions } from '../utils/StringUt
 import { prettifyError, ZodError } from 'zod';
 import { commonComponentEnvConfigToConfigPrimitives, generateCommonComponentEnvConfigSchema, transformPresetEnv, type CommonConfigPrimitives } from '../common/infrastructure/config/common.ts';
 import type { CommonClientConfig } from '../common/infrastructure/config/client/index.ts';
+import { getClientEnvSchema, validateClientAIOJson, validateClientJson, type ClientTypeConfigMap } from '../common/infrastructure/config/client/clientsMap.ts';
 
 type UnparsedConfig = {config: object, type: ClientType, source?: 'file' | 'aio' | 'env', pos: string};
 
@@ -198,7 +198,7 @@ export default class ScrobbleClients {
                     const sourceStr = `${entry.source} ${entry.pos}`;
                     switch (entry.source) {
                         case 'env': {
-                            const envSchema = clientConfigSchemaMap[clientType][2];
+                            const envSchema = await getClientEnvSchema(clientType);
                             const primitiveSchema = generateCommonComponentEnvConfigSchema(envSchema.prefix.toUpperCase());
                             const parsed = primitiveSchema.parse(entry.config);
                             const primitives: CommonConfigPrimitives = commonComponentEnvConfigToConfigPrimitives(envSchema.prefix.toUpperCase(), parsed);
@@ -222,7 +222,7 @@ export default class ScrobbleClients {
                                 this.logger.debug(`Skipping ${clientType} Config ${entry.source} ${entry.pos} because it is configured as a Source`);
                                 continue;
                             }
-                            const parsed = entry.source === 'file' ? validateClientJson(entry.type, entry.config) : validateClientAIOJson(entry.type, entry.config);
+                            const parsed = entry.source === 'file' ? (await validateClientJson(entry.type, entry.config)) : (await validateClientAIOJson(entry.type, entry.config));
                             parsedConfig = {
                                 ...parsed,
                                 source: sourceStr
@@ -259,7 +259,7 @@ export default class ScrobbleClients {
     ) => {
         for (const s of strongConfigs) {
             try {
-                const config = clientConfigSchemaMap[clientType][0].parse(s);
+                const config = await validateClientJson(clientType, s);
                 const compositeOptions = { ...clientDefaults, ...config.options };
                 const newClient = new Ctor(...buildArgs(config, compositeOptions));
                 newClient.logger.info(`Client added from ${s.source}`);

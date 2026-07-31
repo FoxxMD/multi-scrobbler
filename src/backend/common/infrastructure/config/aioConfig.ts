@@ -1,5 +1,4 @@
 import * as z from "zod";
-import {clientAIOConfigSchema} from "./client/clients.ts";
 import {commonClientOptionsSchema} from "./client/index.ts";
 import {requestRetryOptionsSchema} from "./common.ts";
 import {webhookConfigSchema} from "./health/webhooks.ts";
@@ -117,13 +116,6 @@ export const aioConfigSchema = z.object({
 });
 
 export type AIOConfig = z.infer<typeof aioConfigSchema>;
-
-export const aioClientConfigSchema = z.object({
-    clientDefaults: requestRetryOptionsSchema.optional(),
-    clients: z.array(clientAIOConfigSchema).optional(),
-});
-
-export type AIOClientConfig = z.infer<typeof aioClientConfigSchema>;
 
 export const aioClientRelaxedConfigSchema = z.object({
     clientDefaults: requestRetryOptionsSchema.optional(),

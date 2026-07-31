@@ -1,7 +1,7 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { resolve } from "path";
 import * as z from 'zod';
-import { clientConfigSchemaMap } from '../common/infrastructure/config/client/clients.ts';
+import { clientConfigSchemaMapAsync } from '../common/infrastructure/config/client/clientsMap.ts';
 import { projectRootDir } from "../common/infrastructure/Atomic.ts";
 import { aioConfigSchema } from "../common/infrastructure/config/aioConfig.ts";
 import { generateCommonComponentEnvConfigSchema } from "../common/infrastructure/config/common.ts";
@@ -54,13 +54,14 @@ const generateSchema = (schema: z.ZodType, reused: z.core.ToJSONSchemaParams['re
     }
  })
 
-const clientEntries = Object.entries(clientConfigSchemaMap);
+const clientEntries = Object.entries(clientConfigSchemaMapAsync);
 for(const [k,v] of clientEntries) {
-    writeFileSync(resolve(projectRootDir, `docsite/static/schemas/${k}-client.json`), JSON.stringify(generateSchema(z.array(v[0]))));
+    const [fileSchema, aioSchema, envSchemas] = await v();
+    writeFileSync(resolve(projectRootDir, `docsite/static/schemas/${k}-client.json`), JSON.stringify(generateSchema(z.array(fileSchema))));
 
-    const envSchema = v[2];
+    const envSchema = envSchemas;
     const common = generateCommonComponentEnvConfigSchema(envSchema.prefix.toUpperCase());
-    const col = zodObjectToTableColumns(z.object({...common.shape,...v[2].env.shape}), 'out');
+    const col = zodObjectToTableColumns(z.object({...common.shape,...envSchema.env.shape}), 'out');
     const tableContent = markdownTable([
         ['Environmental Variable', 'Type', 'Default', 'Description'],
         ...mdCols(col)

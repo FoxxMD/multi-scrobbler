@@ -15,7 +15,7 @@ import { difference } from '../../utils.ts';
 import { validateSourceJson } from '../../common/infrastructure/config/source/sourcesMap.ts';
 import { readJson } from '../../utils/DataUtils.ts';
 import { prettifyError, ZodError } from 'zod';
-import { validateClientJson } from '../../common/infrastructure/config/client/clients.ts';
+import { validateClientJson } from '../../common/infrastructure/config/client/clientsMap.ts';
 
 chai.use(asPromised);
 
@@ -122,7 +122,7 @@ describe('Sample Configs', function () {
                     fileContents = fileContents.filter(x => x.configureAs === undefined || x.configureAs === 'client');
                     for (const [i,rawConf] of fileContents.entries()) {
                         try {
-                            validateClientJson(componentType, rawConf);
+                            await validateClientJson(componentType, rawConf);
                         } catch (e) {
                             if(e instanceof ZodError) {
                                 expect.fail(`Validation failed for config entry ${i}:\n${prettifyError(e)}`);

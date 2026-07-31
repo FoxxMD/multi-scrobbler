@@ -218,7 +218,7 @@ export default class ScrobbleSources {
                     const sourceStr = `${entry.source} ${entry.pos}`;
                     switch (entry.source) {
                         case 'env': {
-                            const envSchema = await getSourceEnvSchema(configType); // sourceConfigSchemaMap[configType][2];
+                            const envSchema = await getSourceEnvSchema(configType);
                             const primitiveSchema = generateCommonComponentEnvConfigSchema(envSchema.prefix.toUpperCase());
                             const parsed = primitiveSchema.parse(entry.config);
                             const primitives: CommonConfigPrimitives = commonComponentEnvConfigToConfigPrimitives(envSchema.prefix.toUpperCase(), parsed);
@@ -278,7 +278,7 @@ export default class ScrobbleSources {
     ) => {
         for (const s of strongConfigs) {
             try {
-                const config = await validateSourceJson(sourceType, s); // sourceConfigSchemaMap[sourceType][0].parse(s);
+                const config = await validateSourceJson(sourceType, s);
                 const compositeOptions = { ...defaults, ...config.options };
                 const newComponent = new Ctor(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
                 newComponent.logger.info(`Source added from ${s.source}`);
