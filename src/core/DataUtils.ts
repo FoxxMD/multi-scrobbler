@@ -162,3 +162,11 @@ export const removeUndefinedKeys = <T extends Record<string, any>>(obj: T, retur
     //Object.keys(newObj).forEach(key => newObj[key] === undefined || newObj[key] && delete newObj[key])
     return newObj;
 };
+
+export const pick = <T extends {}, K extends keyof T>(obj: T, ...keys: K[]) => (
+  Object.fromEntries(
+    keys
+    .filter(key => key in obj)
+    .map(key => [key, obj[key]])
+  ) as Pick<T, K>
+);

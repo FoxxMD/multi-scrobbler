@@ -2,6 +2,7 @@ import { stripIndents } from "common-tags";
 import * as z from "zod";
 import type { PlayTransformHooks, ExternalMetadataTerm } from "../../../../core/Transform.ts";
 import type { CommonClientOptions } from "./client/index.ts";
+import type { MarkRequired } from "ts-essentials";
 
 export const commonConfigPrimitivesSchema = z.object({
     name: z.string().optional(),
@@ -9,7 +10,7 @@ export const commonConfigPrimitivesSchema = z.object({
     enable: z.boolean().optional()
 });
 
-export type CommonConfigPrimitives = z.infer<typeof commonConfigPrimitivesSchema>;
+export type CommonConfigPrimitives = MarkRequired<z.infer<typeof commonConfigPrimitivesSchema>, 'id'>;
 
 export const commonDataSchema = z.record(z.string(), z.any()); // keyOmit<{ [key: string]: any }, "options">
 

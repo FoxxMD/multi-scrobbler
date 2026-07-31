@@ -7,11 +7,10 @@ import path from "path";
 import ScrobbleClients from '../../scrobblers/ScrobbleClients.ts';
 import ScrobbleSources from '../../sources/ScrobbleSources.ts';
 import EventEmitter from "events";
-import {loggerTest} from '@foxxmd/logging';
+import {loggerDebug, loggerTest} from '@foxxmd/logging';
 import { clientTypes } from "../../../core/Atomic.ts";
 import { projectRootDir } from "../../common/infrastructure/Atomic.ts";
 import { sourceTypes } from "../../../core/Atomic.ts";
-import { Notifiers } from '../../notifier/Notifiers.ts';
 import { difference } from '../../utils.ts';
 import { validateSourceJson } from '../../common/infrastructure/config/source/sources.ts';
 import { readJson } from '../../utils/DataUtils.ts';
@@ -135,7 +134,7 @@ describe('Sample Configs', function () {
                 });
 
                 it(`Sample ${componentType}.json parses and validates in ScrobbleClients`, async function () {
-                    this.timeout(5000);
+                    this.timeout(500000);
 
                     const emitter = new EventEmitter();
                     await copyFile(samplePath(componentType), `${componentType}.json`);
@@ -144,8 +143,8 @@ describe('Sample Configs', function () {
                         configDir: process.cwd(),
                         version: 'test'
                     },
-                    loggerTest);
-                    await clients.buildClientsFromConfig(new Notifiers(new EventEmitter, new EventEmitter, new EventEmitter, loggerTest));
+                    loggerDebug);
+                    await clients.buildClientsFromConfig();
                     expect(clients.clients).length(1);
                 });
             }

@@ -2,35 +2,26 @@
 import { childLogger, type Logger } from '@foxxmd/logging';
 import dayjs, { type Dayjs } from "dayjs";
 import type {PlayObject, SourcePlayerObj} from "../../core/Atomic.ts";
-import type {ConfigMeta, InternalConfig, InternalConfigOptional, SourceIdentifier} from "../common/infrastructure/Atomic.ts";
+import type {InternalConfig, InternalConfigOptional, SourceIdentifier} from "../common/infrastructure/Atomic.ts";
 import { isClientType } from '../../core/Atomic.ts';
 import { clientTypes } from "../../core/Atomic.ts";
 import type {ClientType} from "../../core/Atomic.ts";
-import {aioClientRelaxedConfigSchema, type AIOClientRelaxedConfig} from "../common/infrastructure/config/aioConfig.ts";
-import {validateClientAIOJson, validateClientJson, type ClientAIOConfig} from "../common/infrastructure/config/client/clients.ts";
-import type {LastfmClientConfig, LastfmData} from "../common/infrastructure/config/client/lastfm.ts";
-import type {ListenBrainzClientConfig, ListenBrainzData} from "../common/infrastructure/config/client/listenbrainz.ts";
-import type {MalojaClientConfig, MalojaData} from "../common/infrastructure/config/client/maloja.ts";
+import {aioClientRelaxedConfigSchema, type AIOClientRelaxedConfig, type ClientDefaults} from "../common/infrastructure/config/aioConfig.ts";
+import {clientConfigSchemaMap, validateClientAIOJson, validateClientJson} from "../common/infrastructure/config/client/clients.ts";
 import type { WildcardEmitter } from "../common/WildcardEmitter.ts";
-import type { Notifiers } from "../notifier/Notifiers.ts";
-import { nonEmptyObj } from "../utils.ts";
-import { removeUndefinedKeys } from '../../core/DataUtils.ts';
-import { getCommonComponentEnvConfig, readJson } from '../utils/DataUtils.ts';
+import { pick } from '../../core/DataUtils.ts';
+import { readJson } from '../utils/DataUtils.ts';
 import type AbstractScrobbleClient from "./AbstractScrobbleClient.ts";
-import type {KoitoClientConfig, KoitoData} from '../common/infrastructure/config/client/koito.ts';
-import type {TealClientConfig, TealData} from '../common/infrastructure/config/client/tealfm.ts';
-import type {RockSkyClientConfig, RockSkyData} from '../common/infrastructure/config/client/rocksky.ts';
-import type {LibrefmClientConfig, LibrefmData} from '../common/infrastructure/config/client/librefm.ts';
 import clone from 'clone';
-import type {DiscordClientConfig, DiscordData} from '../common/infrastructure/config/client/discord.ts';
 import { stripIndents } from 'common-tags';
 import { normalizeStr, type StringNormalizationOptions } from '../utils/StringUtils.ts';
 import { prettifyError, ZodError } from 'zod';
-import { transformPresetEnv } from '../common/infrastructure/config/common.ts';
+import { commonComponentEnvConfigToConfigPrimitives, generateCommonComponentEnvConfigSchema, transformPresetEnv, type CommonConfigPrimitives } from '../common/infrastructure/config/common.ts';
+import type { CommonClientConfig } from '../common/infrastructure/config/client/index.ts';
 
-type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
+type UnparsedConfig = {config: object, type: ClientType, source?: 'file' | 'aio' | 'env', pos: string};
 
-type ParsedConfig = ClientAIOConfig & ConfigMeta;
+type CommonParsedConfig = (CommonClientConfig & {source: string});
 
 const clientScrobbleToNormalization: StringNormalizationOptions = {
     removeWhitespace: true,
@@ -105,28 +96,28 @@ export default class ScrobbleClients {
         return [clientsReady, messages];
     }
 
-    buildClientsFromConfig = async (notifier: Notifiers) => {
-        const configs: ParsedConfig[] = [];
+    buildClientsFromConfig = async () => {
+        const unparsedConfigs: UnparsedConfig[] = [];
 
         let configFile;
         try {
-            configFile = await readJson(`${this.internalConfig.configDir}/config.json`, {throwOnNotFound: false, logger: childLogger(this.logger, `Secrets`)});
+            configFile = await readJson(`${this.internalConfig.configDir}/config.json`, { throwOnNotFound: false, logger: childLogger(this.logger, `Secrets`) });
         } catch (e) {
             // think this should stay as show-stopper since config could include important defaults (delay, retries) we don't want to ignore
-            throw new Error('config.json could not be parsed', {cause: e});
+            throw new Error('config.json could not be parsed', { cause: e });
         }
 
-        let clientDefaults = {};
+        let clientDefaults: ClientDefaults = {};
         if (configFile !== undefined) {
             let aioConfig: AIOClientRelaxedConfig;
             try {
                 aioConfig = aioClientRelaxedConfigSchema.parse(configFile);
             } catch (e) {
                 const msg = `Validation error occurred while trying to parse 'config.json' for Client data/options`;
-                if(e instanceof ZodError) {
+                if (e instanceof ZodError) {
                     this.logger.error(`${msg}:\n${prettifyError(e)}`);
                 } else {
-                    this.logger.error(new Error(msg, {cause: e}));
+                    this.logger.error(new Error(msg, { cause: e }));
                 }
                 return;
             }
@@ -137,372 +128,245 @@ export default class ScrobbleClients {
                     retention
                 } = {},
             } = aioConfig;
-            clientDefaults = {retention, ...cd};
+            clientDefaults = { retention, ...cd };
             for (const [index, c] of mainConfigClientConfigs.entries()) {
-                const {name = 'unnamed'} = c;
-                if(c.type === undefined) {
+                const { name = 'unnamed' } = c;
+                if (c.type === undefined) {
                     const invalidMsgType = `Client config ${index + 1} (${name}) in config.json does not have a "type" property! "type": "[clientType]" must be one of ${clientTypes.join(' | ')}`;
                     this.logger.error(invalidMsgType);
                     continue;
                 }
-                if(c.configureAs === 'source') {
-                       this.logger.debug(`Skipping config ${index + 1} (${name}) in config.json because it is configured as a source.`);
-                       continue;
-                }
-                let validatedConfig: ClientAIOConfig;
-                try {
-                    validatedConfig = await validateClientAIOJson(c.type.toLocaleLowerCase() as ClientType, c);
-                } catch (e) {
-                    const msg = `Client config ${index + 1} (${c.type} - ${name}) in config.json is invalid and will not be used.`;
-                    const err = new Error(msg, {cause: e});
-                    this.emitter.emit('error', err);
-                    // pretty print error if its a zod error
-                    if(e instanceof ZodError) {
-                        this.logger.error(`${msg}:\n${prettifyError(e)}`);
-                    } else {
-                        this.logger.error(err);
-                    }
+                if (isClientType(c.type)) {
+                    unparsedConfigs.push({
+                        config: c,
+                        source: 'aio',
+                        type: c.type,
+                        pos: `${index + 1} (${name})`
+                    });
+                } else {
+                    const invalidMsgType = `Client config ${index + 1} (${name}) in config.json has an invalid "type" property. Must be one of must be one of ${clientTypes.join(' | ')}`;
+                    this.logger.error(invalidMsgType);
                     continue;
                 }
-                configs.push({...validatedConfig,
-                    name: validatedConfig.name ?? 'unnamed',
-                    source: 'config.json',
-                    configureAs: 'client', //override user value
-                });
             }
         }
 
+        const envKeys = Object.keys(process.env).map(x => x.toUpperCase());
+
         for (const clientType of clientTypes) {
-            const defaultConfigureAs = 'client';
-            switch (clientType) {
-                case 'maloja': {
-                    // env builder for single user mode
-                    const data = removeUndefinedKeys<MalojaData>({
-                        url: process.env.MALOJA_URL,
-                        apiKey: process.env.MALOJA_API_KEY
-                    }, false);
-                    const p = getCommonComponentEnvConfig('MALOJA');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'maloja',
-                            name: 'unnamed-mlj',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: 'client',
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('MALOJA')
-                        })
-                    }
-                }  break;
-                case 'lastfm': {
-                    const data = removeUndefinedKeys<LastfmData>({
-                        apiKey: process.env.LASTFM_API_KEY,
-                        secret: process.env.LASTFM_SECRET,
-                        redirectUri: process.env.LASTFM_REDIRECT_URI,
-                        session: process.env.LASTFM_SESSION
-                    }, false);
-                    const p = getCommonComponentEnvConfig('LASTFM');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'lastfm',
-                            name: 'unnamed-lfm',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: 'client',
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('LASTFM')
-                        })
-                    }
-                }    break;
-                case 'librefm': {
-                    const data = removeUndefinedKeys<LibrefmData>({
-                        apiKey: process.env.LIBREFM_API_KEY,
-                        secret: process.env.LIBREFM_SECRET,
-                        redirectUri: process.env.LIBREFM_REDIRECT_URI,
-                        session: process.env.LIBREFM_SESSION,
-                        urlBase: process.env.LIBREFM_URLBASE,
-                    }, false);
-                    const p = getCommonComponentEnvConfig('LIBREFM');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'librefm',
-                            name: 'unnamed-librefm',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: 'client',
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('LIBREFM')
-                        })
-                    }
-                }    break;
-                case 'listenbrainz': {
-                    const data = removeUndefinedKeys<ListenBrainzData>({
-                        url: process.env.LZ_URL,
-                        token: process.env.LZ_TOKEN,
-                        username: process.env.LZ_USER
-                    }, false);
-                    const p = getCommonComponentEnvConfig('LZ');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'listenbrainz',
-                            name: 'unnamed-lz',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: 'client',
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('LZ')
-                        })
-                    }
-                }    break;
-                case 'koito': {
-                    const data = removeUndefinedKeys<KoitoData>({
-                        url: process.env.KOITO_URL,
-                        token: process.env.KOITO_TOKEN,
-                        username: process.env.KOITO_USER
-                    }, false);
-                    const p = getCommonComponentEnvConfig('KOITO');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'koito',
-                            name: 'unnamed-koito',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: 'client',
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('KOITO')
-                        })
-                    }
-                }    break;
-                case 'tealfm': {
-                    const data: TealData = removeUndefinedKeys<TealData>({
-                        identifier: process.env.TEALFM_IDENTIFIER,
-                        appPassword: process.env.TEALFM_APP_PW,
-                    }, false);
-                    const p = getCommonComponentEnvConfig('TEALFM');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'tealfm',
-                            name: 'unnamed-tealfm',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: 'client',
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('TEALFM')
-                        })
-                    }
-                }    break;
-                case 'rocksky': {
-                    const data: RockSkyData = removeUndefinedKeys<RockSkyData>({
-                        key: process.env.ROCKSKY_KEY,
-                        token: process.env.ROCKSKY_TOKEN,
-                        handle: process.env.ROCKSKY_HANDLE
-                    }, false);
-                    const p = getCommonComponentEnvConfig('ROCKSKY');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'rocksky',
-                            name: 'unnamed-rocksky',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: 'client',
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('ROCKSKY')
-                        })
-                    }
-                }   break;
-                case 'discord': {
-                    const data: DiscordData = removeUndefinedKeys<DiscordData>({
-                        token: process.env.DISCORD_TOKEN,
-                        artwork: process.env.DISCORD_ARTWORK,
-                        applicationId: process.env.DISCORD_APPLICATION_ID,
-                        ipcLocations: process.env.DISCORD_IPC_LOCATIONS,
-                        artworkDefaultUrl: process.env.DISCORD_ARTWORK_DEFAULT_URL,
-                        statusOverrideAllow: process.env.DISCORD_STATUS_OVERRIDE_ALLOW,
-                        listeningActivityAllow: process.env.DISCORD_LISTENING_ACTIVITY_ALLOW
-                    }, false);
-                    const p = getCommonComponentEnvConfig('DISCORD');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'discord',
-                            name: 'unnamed-discord',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: 'client',
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('DISCORD')
-                        })
-                    }
-                }   break;
-                default:
-                    break;
-            }
+
+            let clientUnparsedConfigs = unparsedConfigs.filter(x => x.type === clientType);
+
+            const clientUpper = clientType.toUpperCase();
+
             let rawClientConfigs;
             try {
-                rawClientConfigs = await readJson(`${this.internalConfig.configDir}/${clientType}.json`, {throwOnNotFound: false, logger: childLogger(this.logger, `${clientType} Secrets`)});
+                rawClientConfigs = await readJson(`${this.internalConfig.configDir}/${clientType}.json`, { throwOnNotFound: false, logger: childLogger(this.logger, `${clientType} Secrets`) });
             } catch (e) {
                 const errMsg = `${clientType}.json config file could not be parsed`;
                 this.emitter.emit('error', errMsg);
                 this.logger.error(errMsg);
-                continue;
             }
+
             if (rawClientConfigs !== undefined) {
-                let clientConfigs: ParsedConfig[] = [];
+                this.logger.debug(`Found config file ${clientType}.json`);
                 if (Array.isArray(rawClientConfigs)) {
-                    clientConfigs = rawClientConfigs;
-                } else if(rawClientConfigs === null) {
-                    this.logger.error(`${clientType}.json contained no data`);
-                    continue;
-                } else if(typeof rawClientConfigs === 'object') {
-                    clientConfigs = [rawClientConfigs];
+                    clientUnparsedConfigs = clientUnparsedConfigs.concat(rawClientConfigs.map((x, i) => ({ config: x, type: clientType, source: 'file', pos: `${i + 1}` })));
+                } else if (rawClientConfigs === null) {
+                    this.logger.warn(`${clientType}.json contained no data`);
+                } else if (typeof rawClientConfigs === 'object') {
+                    clientUnparsedConfigs.push({ config: rawClientConfigs, type: clientType, source: 'file', pos: `object` })
                 } else {
                     this.logger.error(`All top level data from ${clientType}.json must be an object or an array of objects, will not parse configs from file`);
+                }
+            }
+
+            const clientKeys = envKeys.filter(x => x.includes(clientUpper));
+            if (clientKeys.length > 0) {
+                clientUnparsedConfigs.push({
+                    config: pick(process.env, ...clientKeys),
+                    type: clientType,
+                    source: 'env',
+                    pos: ''
+                })
+            }
+
+            const strongConfigs: CommonParsedConfig[] = [];
+            for (const entry of clientUnparsedConfigs) {
+                let parsedConfig: CommonParsedConfig;
+                try {
+                    const sourceStr = `${entry.source} ${entry.pos}`;
+                    switch (entry.source) {
+                        case 'env': {
+                            const primitiveSchema = generateCommonComponentEnvConfigSchema(clientUpper);
+                            const parsed = primitiveSchema.parse(entry.config);
+                            const primitives: CommonConfigPrimitives = commonComponentEnvConfigToConfigPrimitives(clientUpper, parsed);
+                            const envSchema = clientConfigSchemaMap[clientType][2];
+                            const parsedEnvConfigValues = envSchema.env.parse(entry.config);
+                            const { data = {}, options = {} } = envSchema.toConfig(parsedEnvConfigValues);
+                            const transformOptions = transformPresetEnv(clientUpper);
+                            parsedConfig = {
+                                name: `${clientType} - ${entry.source}${entry.pos !== '' ? ` - ${entry.pos}` : ''} `,
+                                ...primitives,
+                                data,
+                                source: sourceStr,
+                                options: {
+                                    ...options,
+                                    ...(transformOptions ?? {})
+                                }
+                            };
+                        } break;
+                        case 'file':
+                        case 'aio': {
+                            if ('configureAs' in entry.config && entry.config.configureAs === 'source') {
+                                this.logger.debug(`Skipping ${clientType} Config ${entry.source} ${entry.pos} because it is configured as a Source`);
+                                continue;
+                            }
+                            const parsed = entry.source === 'file' ? validateClientJson(entry.type, entry.config) : validateClientAIOJson(entry.type, entry.config);
+                            parsedConfig = {
+                                ...parsed,
+                                source: sourceStr
+                            }
+                        } break;
+                    }
+                } catch (e) {
+                    const msg = `Failed to validate ${clientType} Config ${entry.source} ${entry.pos}`;
+                    if (e instanceof ZodError) {
+                        this.logger.error(`${msg}:\n${prettifyError(e)}`);
+                    } else {
+                        this.logger.error(new Error(msg, { cause: e }));
+                    }
                     continue;
                 }
-                for(const [i,rawConf] of rawClientConfigs.entries()) {
-                    if(rawConf.configureAs === 'source') 
-                    {
-                        this.logger.debug(`Skipping config ${i + 1} from ${clientType}.json because it is configured as a source.`);
-                       continue;
-                    }
-                    try {
-                        const validConfig = await validateClientJson(clientType, rawConf); // await validateJson<ClientConfig>('client', rawConf, this.getSchemaByType(clientType), this.logger);
-                        const {configureAs = defaultConfigureAs} = validConfig;
-                        if (configureAs === 'client') {
-                            const parsedConfig: ParsedConfig = {
-                                ...rawConf,
-                                source: `${clientType}.json`,
-                                type: clientType
-                            }
-                            configs.push(parsedConfig);
-                        }
-                    } catch (e: any) {
-                        const msg = `The config entry at index ${i} from ${clientType}.json was not valid`;
-                        const configErr = new Error(msg, {cause: e});
-                        this.emitter.emit('error', configErr);
-                        // pretty print error if its a zod error
-                        if(e instanceof ZodError) {
-                            this.logger.error(`${msg}:\n${prettifyError(e)}`);
-                        } else {
-                            this.logger.error(configErr);
-                        }
-                    }
+
+                if (parsedConfig.enable === false) {
+                    this.logger.debug(`Not using Config ${parsedConfig.id} (${parsedConfig.name}) because it was marked as not enabled.`);
+                } else {
+                    strongConfigs.push(parsedConfig);
                 }
             }
-        }
 
-        // all client configs are minimally valid
-        // now check that names are unique
-        const nameGroupedConfigs = configs.reduce((acc: groupedNamedConfigs, curr: ParsedConfig) => {
-            const {name = 'unnamed'} = curr;
-            const {[name]: n = []} = acc;
-            return {...acc, [name]: [...n, curr]};
-        }, {});
-        let noConflictConfigs: ParsedConfig[] = [];
-        for (const [name, configs] of Object.entries(nameGroupedConfigs)) {
-            if (configs.length > 1) {
-                const sources = configs.map((c: any) => `Config object from ${c.source} of type [${c.type}]`);
-                this.logger.error(`The following clients will not be built because of config naming conflicts (they have the same name of "${name}"): 
-${sources.join('\n')}`);
-                if (name === 'unnamed') {
-                    this.logger.info('HINT: "unnamed" configs occur when using ENVs, if a multi-user mode config does not have a "name" property, or if a config is built in single-user mode');
-                }
-            } else {
-                noConflictConfigs = [...noConflictConfigs, ...configs];
-            }
-        }
-
-        // finally! all configs are valid, structurally, and can now be passed to addClient
-        // just need to re-map unnnamed to default
-        const finalConfigs: ParsedConfig[] = noConflictConfigs.map(({name = 'unnamed', ...x}) => ({
-            ...x,
-            name
-        }));
-        for (const c of finalConfigs) {
-            try {
-                await this.addClient(c, clientDefaults, notifier);
-            } catch(e) {
-                const addError = new Error(`Client ${c.name} from ${c.source} was not added because it had unrecoverable errors`, {cause: e});
-                this.emitter.emit('error', addError);
-                this.logger.error(addError);
-            }
+            await this.addClient(clientType, strongConfigs, clientDefaults);
         }
     }
      
-    addClient = async (clientConfig: ParsedConfig, defaults = {}, notifier: Notifiers) => {
-/*        const isValidConfig = isValidConfigStructure(clientConfig, {name: true, data: true, type: true});
-        if (isValidConfig !== true) {
-            throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
-        }*/
-        const {type, name, enable = true, source, data: d = {}, options = {}} = clientConfig;
+    addClient = async (clientType: ClientType, strongConfigs: CommonParsedConfig[], clientDefaults: ClientDefaults = {}) => {
+            switch (clientType) {
+                case 'discord': {
+                    const DiscordScrobbler = (await import('./DiscordScrobbler.ts')).default;
+                    for (const s of strongConfigs) {
+                        try {
+                            const config = clientConfigSchemaMap[clientType][0].parse(s);
+                            const compositeOptions = { ...clientDefaults, ...config.options };
+                            const newClient = new DiscordScrobbler(config.name, { ...config, options: compositeOptions }, {}, this.emitter, this.logger);
+                            newClient.logger.info(`Client added from ${s.source}`);
+                            this.clients.push(newClient);
+                        } catch (e) {
+                            this.logger.error(new Error(`Client from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
+                        }
+                    }
+                } break;
+                case 'koito': {
+                    const KoitoScrobbler = (await import('./KoitoScrobbler.ts')).default;
+                    for (const s of strongConfigs) {
+                        try {
+                            const config = clientConfigSchemaMap[clientType][0].parse(s);
+                            const compositeOptions = { ...clientDefaults, ...config.options, configDir: this.internalConfig.configDir };
 
-        if(enable === false) {
-            this.logger.warn({labels: [`${type} - ${name}`]}, `Client from ${source} was disabled by config`);
-            return;
-        }
+                            const newClient = new KoitoScrobbler(config.name, { ...config, options: compositeOptions }, {}, this.emitter, this.logger);
+                            newClient.logger.info(`Client added from ${s.source}`);
+                            this.clients.push(newClient);
+                        } catch (e) {
+                            this.logger.error(new Error(`Client from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
+                        }
+                    }
+                } break;
+                case 'lastfm': {
+                    const LastfmScrobbler = (await import('./LastfmScrobbler.ts')).default;
+                    for (const s of strongConfigs) {
+                        try {
+                            const config = clientConfigSchemaMap[clientType][0].parse(s);
+                            const compositeOptions = { ...clientDefaults, ...config.options };
 
-        // add defaults
-        const compositeOptions = {...defaults, ...options};
-        let newClient;
-        this.logger.debug({labels: [`${type} - ${name}`]}, `Constructing Client from ${source}`);
-        switch (type) {
-            case 'maloja': {
-                const MalojaScrobbler = (await import('./MalojaScrobbler.ts')).default;
-                newClient = new MalojaScrobbler(name, ({...clientConfig, data: d, options: compositeOptions} as unknown as MalojaClientConfig), this.emitter, this.logger);
-                break;
+                            const newClient = new LastfmScrobbler(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter, this.logger);
+                            newClient.logger.info(`Client added from ${s.source}`);
+                            this.clients.push(newClient);
+                        } catch (e) {
+                            this.logger.error(new Error(`Client from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
+                        }
+                    }
+                } break;
+                case 'librefm': {
+                    const LibrefmScrobbler = (await import('./LibrefmScrobbler.ts')).default;
+                    for (const s of strongConfigs) {
+                        try {
+                            const config = clientConfigSchemaMap[clientType][0].parse(s);
+                            const compositeOptions = { ...clientDefaults, ...config.options };
+                            const newClient = new LibrefmScrobbler(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter, this.logger);
+                            newClient.logger.info(`Client added from ${s.source}`);
+                            this.clients.push(newClient);
+                        } catch (e) {
+                            this.logger.error(new Error(`Client from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
+                        }
+                    }
+                } break;
+                case 'listenbrainz': {
+                    const ListenbrainzScrobbler = (await import('./ListenbrainzScrobbler.ts')).default;
+                    for (const s of strongConfigs) {
+                        try {
+                            const config = clientConfigSchemaMap[clientType][0].parse(s);
+                            const compositeOptions = { ...clientDefaults, ...config.options };
+                            const newClient = new ListenbrainzScrobbler(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter, this.logger);
+                            newClient.logger.info(`Client added from ${s.source}`);
+                            this.clients.push(newClient);
+                        } catch (e) {
+                            this.logger.error(new Error(`Client from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
+                        }
+                    }
+                } break;
+                case 'maloja': {
+                    const MalojaScrobbler = (await import('./MalojaScrobbler.ts')).default;
+                    for (const s of strongConfigs) {
+                        try {
+                            const config = clientConfigSchemaMap[clientType][0].parse(s);
+                            const compositeOptions = { ...clientDefaults, ...config.options };
+                            const newClient = new MalojaScrobbler(config.name, { ...config, options: compositeOptions }, this.emitter, this.logger);
+                            newClient.logger.info(`Client added from ${s.source}`);
+                            this.clients.push(newClient);
+                        } catch (e) {
+                            this.logger.error(new Error(`Client from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
+                        }
+                    }
+                } break;
+                case 'rocksky': {
+                    const RockskyScrobbler = (await import('./RockskyScrobbler.ts')).default;
+                    for (const s of strongConfigs) {
+                        try {
+                            const config = clientConfigSchemaMap[clientType][0].parse(s);
+                            const compositeOptions = { ...clientDefaults, ...config.options };
+                            const newClient = new RockskyScrobbler(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter, this.logger);
+                            newClient.logger.info(`Client added from ${s.source}`);
+                            this.clients.push(newClient);
+                        } catch (e) {
+                            this.logger.error(new Error(`Client from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
+                        }
+                    }
+                } break;
+                case 'tealfm': {
+                    const TealScrobbler = (await import('./TealfmScrobbler.ts')).default;
+                    for (const s of strongConfigs) {
+                        try {
+                            const config = clientConfigSchemaMap[clientType][0].parse(s);
+                            const compositeOptions = { ...clientDefaults, ...config.options };
+                            const newClient = new TealScrobbler(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter, this.logger);
+                            newClient.logger.info(`Client added from ${s.source}`);
+                            this.clients.push(newClient);
+                        } catch (e) {
+                            this.logger.error(new Error(`Client from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
+                        }
+                    }
+                }
             }
-            case 'lastfm': {
-                const LastfmScrobbler = (await import('./LastfmScrobbler.ts')).default;
-                newClient = new LastfmScrobbler(name, {...clientConfig, data: d, options: compositeOptions } as unknown as LastfmClientConfig, this.internalConfig, this.emitter, this.logger);
-                break;
-            }
-            case 'librefm': {
-                const LibrefmScrobbler = (await import('./LibrefmScrobbler.ts')).default;
-                newClient = new LibrefmScrobbler(name, {...clientConfig, data: d, options: compositeOptions } as unknown as LibrefmClientConfig, this.internalConfig, this.emitter, this.logger);
-                break;
-            }
-            case 'listenbrainz': {
-                const ListenbrainzScrobbler = (await import('./ListenbrainzScrobbler.ts')).default;
-                newClient = new ListenbrainzScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...d}, options: compositeOptions } as unknown as ListenBrainzClientConfig, {}, this.emitter, this.logger);
-                break;
-            }
-            case 'koito': {
-                const KoitoScrobbler = (await import('./KoitoScrobbler.ts')).default;
-                newClient = new KoitoScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...d}, options: compositeOptions } as unknown as KoitoClientConfig, {}, this.emitter, this.logger);
-                break;
-            }
-            case 'tealfm': {
-                const TealScrobbler = (await import('./TealfmScrobbler.ts')).default;
-                newClient = new TealScrobbler(name, {...clientConfig, data: d, options: compositeOptions} as unknown as TealClientConfig, this.internalConfig, this.emitter, this.logger);
-                break;
-            }
-            case 'rocksky': {
-                const RockskyScrobbler = (await import('./RockskyScrobbler.ts')).default;
-                newClient = new RockskyScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...d}, options: compositeOptions } as unknown as RockSkyClientConfig, this.internalConfig, this.emitter, this.logger);
-                break;
-            }
-            case 'discord': {
-                const DiscordScrobbler = (await import('./DiscordScrobbler.ts')).default;
-                newClient = new DiscordScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...d}, options: compositeOptions } as unknown as DiscordClientConfig, {}, this.emitter, this.logger);
-                break;
-            }
-            default:
-                break;
-        }
-
-        if(newClient === undefined) {
-            // really shouldn't get here!
-            throw new Error(`Client of type ${type} from ${source} was not recognized??`);
-        }
-        newClient.logger.info(`Client Added from ${source}`);
-        this.clients.push(newClient);
     }
 
     playingNow = async (data: SourcePlayerObj, options: {scrobbleTo: string[], scrobbleFrom: SourceIdentifier}) => {
