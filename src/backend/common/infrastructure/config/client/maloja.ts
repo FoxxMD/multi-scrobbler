@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {componentTypeSchema} from "../../../../../core/Atomic.ts";
-import {requestRetryOptionsSchema} from "../common.ts";
+import {requestRetryOptionsSchema, type EnvSchemas} from "../common.ts";
 import {commonClientConfigSchema, commonClientDataSchema} from "./index.ts";
 
 export const malojaDataSchema = z.object({
@@ -36,7 +36,7 @@ const envDataSchema = z.object({
     MALOJA_API_KEY: z.string().default('fsdfsd')
 });
 
-export const envSchemas = {
+export const envSchemas: EnvSchemas = {
     data: envDataSchema
 };
 
