@@ -12,7 +12,7 @@ import { clientTypes } from "../../../core/Atomic.ts";
 import { projectRootDir } from "../../common/infrastructure/Atomic.ts";
 import { sourceTypes } from "../../../core/Atomic.ts";
 import { difference } from '../../utils.ts';
-import { validateSourceJson } from '../../common/infrastructure/config/source/sources.ts';
+import { validateSourceJson } from '../../common/infrastructure/config/source/sourcesMap.ts';
 import { readJson } from '../../utils/DataUtils.ts';
 import { prettifyError, ZodError } from 'zod';
 import { validateClientJson } from '../../common/infrastructure/config/client/clients.ts';
@@ -68,7 +68,7 @@ describe('Sample Configs', function () {
                     fileContents = fileContents.filter(x => x.configureAs === undefined || x.configureAs === 'source');
                     for (const [i,rawConf] of fileContents.entries()) {
                         try {
-                            validateSourceJson(componentType, rawConf);
+                            await validateSourceJson(componentType, rawConf);
                         } catch (e) {
                             if(e instanceof ZodError) {
                                 expect.fail(`Validation failed for config entry ${i}:\n${prettifyError(e)}`);

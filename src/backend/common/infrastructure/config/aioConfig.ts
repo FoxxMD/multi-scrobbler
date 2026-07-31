@@ -4,7 +4,6 @@ import {commonClientOptionsSchema} from "./client/index.ts";
 import {requestRetryOptionsSchema} from "./common.ts";
 import {webhookConfigSchema} from "./health/webhooks.ts";
 import {commonSourceOptionsSchema, fileLogOptionsSchema, logLevelSchema, sourceRetryOptionsSchema} from "./source/index.ts";
-import {sourceAIOConfigSchema} from "./source/sources.ts";
 import {cacheConfigUserSchema} from "../Atomic.ts";
 import {retentionConfigDurationValueSchema} from "./database.ts";
 
@@ -29,6 +28,8 @@ const transformOptionsSchema = z.object({
     ttl: z.string().optional(),
 });
 
+const looseComponent = z.looseObject({ type: z.string(), configureAs: z.string().optional() });
+
 const transformerCommonConfigSchema = z.object({
     defaults: z.record(z.string(), z.any()).optional(),
     data: z.record(z.string(), z.any()).optional(),
@@ -40,8 +41,8 @@ const transformerCommonConfigSchema = z.object({
 export const aioConfigSchema = z.object({
     sourceDefaults: sourceDefaultsSchema.optional(),
     clientDefaults: clientDefaultsSchema.optional(),
-    sources: z.array(sourceAIOConfigSchema).optional(),
-    clients: z.array(clientAIOConfigSchema).optional(),
+    sources: z.array(looseComponent).optional(),
+    clients: z.array(looseComponent).optional(),
 
     webhooks: z.array(webhookConfigSchema).optional(),
 
@@ -133,13 +134,6 @@ export const aioClientRelaxedConfigSchema = z.object({
 });
 
 export type AIOClientRelaxedConfig = z.infer<typeof aioClientRelaxedConfigSchema>;
-
-export const aioSourceConfigSchema = z.object({
-    sourceDefaults: sourceRetryOptionsSchema.optional(),
-    sources: z.array(sourceAIOConfigSchema).optional(),
-});
-
-export type AIOSourceConfig = z.infer<typeof aioSourceConfigSchema>;
 
 export const aioSourceRelaxedConfigSchema = z.object({
     sourceDefaults: sourceRetryOptionsSchema.optional(),

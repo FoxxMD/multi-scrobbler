@@ -194,11 +194,11 @@ const dataDir = getDataDir();
         /*
         * setup clients
         * */
-        await scrobbleClients.buildClientsFromConfig(notifiers);
+        await scrobbleClients.buildClientsFromConfig();
         /*
         * setup sources
         * */
-        await scrobbleSources.buildSourcesFromConfig([]);
+        await scrobbleSources.buildSourcesFromConfig();
 
         // check ambiguous client/source types like this for now
         const lastfmSources = scrobbleSources.getByType('lastfm');

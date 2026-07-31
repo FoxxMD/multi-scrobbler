@@ -6,7 +6,6 @@ import { isSourceType } from "../../core/Atomic.ts";
 import { sourceTypes } from "../../core/Atomic.ts";
 import type {SourceType} from "../../core/Atomic.ts";
 import {aioSourceRelaxedConfigSchema, type AIOSourceRelaxedConfig, type SourceDefaults} from "../common/infrastructure/config/aioConfig.ts";
-import {sourceConfigSchemaMap, validateSourceAIOJson, validateSourceJson, type SourceTypeConfigMap} from "../common/infrastructure/config/source/sources.ts";
 import type { WildcardEmitter } from "../common/WildcardEmitter.ts";
 import { pick } from '../../core/DataUtils.ts';
 import { readJson } from '../utils/DataUtils.ts';
@@ -16,6 +15,8 @@ import type {CommonSourceConfig, CommonSourceOptions} from '../common/infrastruc
 import type {ExternalMetadataTerm, PlayTransformHooks} from '../../core/Transform.ts';
 import { prettifyError, ZodError } from 'zod';
 import { commonComponentEnvConfigToConfigPrimitives, generateCommonComponentEnvConfigSchema, type CommonConfigPrimitives } from '../common/infrastructure/config/common.ts';
+import { getSourceEnvSchema, validateSourceAIOJson, validateSourceJson } from '../common/infrastructure/config/source/sourcesMap.ts';
+import type { SourceTypeConfigMap } from "../common/infrastructure/config/source/sourcesMap.ts";
 
 type UnparsedConfig = {config: object, type: SourceType, source?: 'file' | 'aio' | 'env', pos: string};
 
@@ -217,7 +218,7 @@ export default class ScrobbleSources {
                     const sourceStr = `${entry.source} ${entry.pos}`;
                     switch (entry.source) {
                         case 'env': {
-                            const envSchema = sourceConfigSchemaMap[configType][2];
+                            const envSchema = await getSourceEnvSchema(configType); // sourceConfigSchemaMap[configType][2];
                             const primitiveSchema = generateCommonComponentEnvConfigSchema(envSchema.prefix.toUpperCase());
                             const parsed = primitiveSchema.parse(entry.config);
                             const primitives: CommonConfigPrimitives = commonComponentEnvConfigToConfigPrimitives(envSchema.prefix.toUpperCase(), parsed);
@@ -241,7 +242,7 @@ export default class ScrobbleSources {
                                 this.logger.debug(`Skipping ${configType} Config ${entry.source} ${entry.pos} because it is configured as a Source`);
                                 continue;
                             }
-                            const parsed = entry.source === 'file' ? validateSourceJson(entry.type, entry.config) : validateSourceAIOJson(entry.type, entry.config);
+                            const parsed = entry.source === 'file' ? (await validateSourceJson(entry.type, entry.config)) : (await validateSourceAIOJson(entry.type, entry.config));
                             parsedConfig = {
                                 ...parsed,
                                 source: sourceStr
@@ -277,7 +278,7 @@ export default class ScrobbleSources {
     ) => {
         for (const s of strongConfigs) {
             try {
-                const config = sourceConfigSchemaMap[sourceType][0].parse(s);
+                const config = await validateSourceJson(sourceType, s); // sourceConfigSchemaMap[sourceType][0].parse(s);
                 const compositeOptions = { ...defaults, ...config.options };
                 const newComponent = new Ctor(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
                 newComponent.logger.info(`Source added from ${s.source}`);
