@@ -184,3 +184,8 @@ export const commonClientConfigSchema = z.object({
 });
 
 export type CommonClientConfig = Omit<z.infer<typeof commonClientConfigSchema>, 'data'> & { data?: CommonClientData };
+
+export interface EnvClientSchema<Y extends z.ZodObject, T extends CommonClientConfig> {
+    env: Y
+    toConfig: (parsed: z.output<Y>) => Partial<Pick<T, 'data' | 'options'>>
+}

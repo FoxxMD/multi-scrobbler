@@ -15,7 +15,7 @@ mkdirSync(resolve(projectRootDir, 'docsite/static/schemas'), {recursive: true});
 const common = generateCommonComponentEnvConfigSchema('MALOJA');
 const schema = z.object({
     ...common.shape,
-    ...envSchemas.data.shape
+    ...envSchemas.env.shape
 });
 const col = zodObjectToTableColumns(schema, 'out');
 

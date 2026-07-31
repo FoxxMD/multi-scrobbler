@@ -204,8 +204,3 @@ export const commonComponentEnvConfigToConfigPrimitives = <T extends string>(pre
         enable: raw[`${prefix}_ENABLE`] as boolean | undefined
     };
 };
-
-export interface EnvSchemas {
-    data?: z.ZodObject
-    options?: z.ZodObject
-}

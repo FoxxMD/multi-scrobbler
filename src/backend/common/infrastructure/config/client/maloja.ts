@@ -1,7 +1,7 @@
 import * as z from "zod";
 import {componentTypeSchema} from "../../../../../core/Atomic.ts";
 import {requestRetryOptionsSchema, type EnvSchemas} from "../common.ts";
-import {commonClientConfigSchema, commonClientDataSchema} from "./index.ts";
+import {commonClientConfigSchema, commonClientDataSchema, type EnvClientSchema} from "./index.ts";
 
 export const malojaDataSchema = z.object({
     ...requestRetryOptionsSchema.shape,
@@ -33,11 +33,17 @@ export type MalojaClientData = z.infer<typeof malojaClientDataSchema>;
 
 const envDataSchema = z.object({
     MALOJA_URL: z.string().meta({description: 'Base URL of your installation'}),
-    MALOJA_API_KEY: z.string().default('fsdfsd')
+    MALOJA_API_KEY: z.string()
 });
 
-export const envSchemas: EnvSchemas = {
-    data: envDataSchema
+export const envSchemas: EnvClientSchema<typeof envDataSchema, MalojaClientConfig>  = {
+    env: envDataSchema,
+    toConfig: (partial) => ({
+            data: {
+                url: partial.MALOJA_URL,
+                apiKey: partial.MALOJA_API_KEY
+            }
+    })
 };
 
 export const malojaClientConfigSchema = z.object({
