@@ -1,5 +1,5 @@
 import * as z from "zod";
-import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, manualListeningOptionsSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, manualListeningOptionsSchema, type EnvSourceSchema} from "./index.ts";
 
 export interface IcecastMetadata {
     icy?: {
@@ -43,6 +43,19 @@ export const icecastDataSchema = z.object({
 });
 
 export type IcecastData = z.infer<typeof icecastDataSchema>;
+
+const envDataSchema = z.object({
+    ICECAST_URL: icecastDataSchema.shape.url,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, IcecastSourceConfig> = {
+    env: envDataSchema,
+    toConfig: (partial) => ({
+            data: {
+                url: partial.ICECAST_URL
+            }
+    })
+};
 
 export const icecastSourceOptionsSchema = z.object({
     ...commonSourceOptionsSchema.shape,

@@ -1,7 +1,7 @@
 import * as z from "zod";
 import {malojaDataSchema} from "../client/maloja.ts";
 import {pollingOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
 
 export const malojaSourceDataSchema = z.object({
     ...malojaDataSchema.shape,
@@ -10,6 +10,21 @@ export const malojaSourceDataSchema = z.object({
 });
 
 export type MalojaSourceData = z.infer<typeof malojaSourceDataSchema>;
+
+const envDataSchema = z.object({
+    SOURCE_MALOJA_URL: malojaSourceDataSchema.shape.url,
+    SOURCE_MALOJA_API_KEY: malojaSourceDataSchema.shape.apiKey,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, MalojaSourceConfig> = {
+    env: envDataSchema,
+    toConfig: (partial) => ({
+            data: {
+                url: partial.SOURCE_MALOJA_URL,
+                apiKey: partial.SOURCE_MALOJA_API_KEY
+            }
+    })
+};
 
 export const malojaSourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,

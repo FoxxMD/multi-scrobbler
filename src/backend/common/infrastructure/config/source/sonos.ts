@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
 
 export const sonosDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -43,6 +43,27 @@ export const sonosDataSchema = z.object({
 });
 
 export type SonosData = z.infer<typeof sonosDataSchema>;
+
+const envDataSchema = z.object({
+    SONOS_HOST: sonosDataSchema.shape.host,
+    SONOS_DEVICES_ALLOW: sonosDataSchema.shape.devicesAllow,
+    SONOS_DEVICES_BLOCK: sonosDataSchema.shape.devicesBlock,
+    SONOS_GROUPS_ALLOW: sonosDataSchema.shape.groupsAllow,
+    SONOS_GROUPS_BLOCK: sonosDataSchema.shape.groupsBlock,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, SonosSourceConfig> = {
+    env: envDataSchema,
+    toConfig: (partial) => ({
+            data: {
+                host: partial.SONOS_HOST,
+                devicesAllow: partial.SONOS_DEVICES_ALLOW,
+                devicesBlock: partial.SONOS_DEVICES_BLOCK,
+                groupsAllow: partial.SONOS_GROUPS_ALLOW,
+                groupsBlock: partial.SONOS_GROUPS_BLOCK
+            }
+    })
+};
 
 export const sonosSourceOptionsSchema = z.object({
     ...commonSourceOptionsSchema.shape,

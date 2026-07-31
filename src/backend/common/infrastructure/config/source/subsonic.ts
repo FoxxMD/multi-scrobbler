@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
 
 export const subsonicDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -101,6 +101,23 @@ export const subsonicDataSchema = z.object({
 });
 
 export type SubsonicData = z.infer<typeof subsonicDataSchema>;
+
+const envDataSchema = z.object({
+    SUBSONIC_USER: subsonicDataSchema.shape.user,
+    SUBSONIC_PASSWORD: subsonicDataSchema.shape.password,
+    SUBSONIC_URL: subsonicDataSchema.shape.url,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, SubSonicSourceConfig> = {
+    env: envDataSchema,
+    toConfig: (partial) => ({
+            data: {
+                user: partial.SUBSONIC_USER,
+                password: partial.SUBSONIC_PASSWORD,
+                url: partial.SUBSONIC_URL
+            }
+    })
+};
 
 export const subSonicSourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,

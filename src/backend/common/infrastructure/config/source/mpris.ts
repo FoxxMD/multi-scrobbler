@@ -1,5 +1,5 @@
 import * as z from "zod";
-import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
 
 export const PLAYBACK_STATUS_PLAYING = 'Playing';
 export const PLAYBACK_STATUS_PAUSED = 'Paused';
@@ -55,6 +55,21 @@ export const mprisDataSchema = z.object({
 });
 
 export type MPRISData = z.infer<typeof mprisDataSchema>;
+
+const envDataSchema = z.object({
+    MPRIS_BLACKLIST: mprisDataSchema.shape.blacklist,
+    MPRIS_WHITELIST: mprisDataSchema.shape.whitelist,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, MPRISSourceConfig> = {
+    env: envDataSchema,
+    toConfig: (partial) => ({
+            data: {
+                blacklist: partial.MPRIS_BLACKLIST,
+                whitelist: partial.MPRIS_WHITELIST
+            }
+    })
+};
 
 export const mprisSourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,

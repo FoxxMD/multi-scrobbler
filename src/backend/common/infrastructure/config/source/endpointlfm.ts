@@ -1,5 +1,5 @@
 import * as z from "zod";
-import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
 
 export const lastFmEndpointDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -21,6 +21,19 @@ export const lastFmEndpointDataSchema = z.object({
 });
 
 export type LastFMEndpointData = z.infer<typeof lastFmEndpointDataSchema>;
+
+const envDataSchema = z.object({
+    LFM_SLUG: lastFmEndpointDataSchema.shape.slug,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, LastFMEndpointSourceConfig> = {
+    env: envDataSchema,
+    toConfig: (partial) => ({
+            data: {
+                slug: partial.LFM_SLUG
+            }
+    })
+};
 
 export const lastFmEndpointSourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,

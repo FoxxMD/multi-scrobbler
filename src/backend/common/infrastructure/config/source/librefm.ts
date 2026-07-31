@@ -1,7 +1,7 @@
 import * as z from "zod";
 import {librefmDataSchema} from "../client/librefm.ts";
 import {pollingOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
 
 export const librefmSourceDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -10,6 +10,27 @@ export const librefmSourceDataSchema = z.object({
 });
 
 export type librefmSourceData = z.infer<typeof librefmSourceDataSchema>;
+
+const envDataSchema = z.object({
+    SOURCE_LIBREFM_API_KEY: librefmSourceDataSchema.shape.apiKey,
+    SOURCE_LIBREFM_SECRET: librefmSourceDataSchema.shape.secret,
+    SOURCE_LIBREFM_REDIRECT_URI: librefmSourceDataSchema.shape.redirectUri,
+    SOURCE_LIBREFM_SESSION: librefmSourceDataSchema.shape.session,
+    SOURCE_LIBREFM_URLBASE: librefmSourceDataSchema.shape.urlBase,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, LibrefmSourceConfig> = {
+    env: envDataSchema,
+    toConfig: (partial) => ({
+            data: {
+                apiKey: partial.SOURCE_LIBREFM_API_KEY,
+                secret: partial.SOURCE_LIBREFM_SECRET,
+                redirectUri: partial.SOURCE_LIBREFM_REDIRECT_URI,
+                session: partial.SOURCE_LIBREFM_SESSION,
+                urlBase: partial.SOURCE_LIBREFM_URLBASE
+            }
+    })
+};
 
 export const librefmSourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,

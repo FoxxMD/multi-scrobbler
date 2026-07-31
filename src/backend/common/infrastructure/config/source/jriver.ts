@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {pollingOptionsSchema, requestRetryOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
 
 export const jRiverDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -46,6 +46,23 @@ export const jRiverDataSchema = z.object({
 });
 
 export type JRiverData = z.infer<typeof jRiverDataSchema>;
+
+const envDataSchema = z.object({
+    JRIVER_URL: jRiverDataSchema.shape.url,
+    JRIVER_USER: jRiverDataSchema.shape.username,
+    JRIVER_PASSWORD: jRiverDataSchema.shape.password,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, JRiverSourceConfig> = {
+    env: envDataSchema,
+    toConfig: (partial) => ({
+            data: {
+                url: partial.JRIVER_URL,
+                username: partial.JRIVER_USER,
+                password: partial.JRIVER_PASSWORD
+            }
+    })
+};
 
 export const jRiverSourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,

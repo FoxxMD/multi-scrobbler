@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
 
 export const plexApiDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -56,6 +56,33 @@ export const plexApiDataSchema = z.object({
 });
 
 export type PlexApiData = z.infer<typeof plexApiDataSchema>;
+
+const envDataSchema = z.object({
+    PLEX_URL: plexApiDataSchema.shape.url,
+    PLEX_TOKEN: plexApiDataSchema.shape.token,
+    PLEX_USERS_ALLOW: plexApiDataSchema.shape.usersAllow,
+    PLEX_USERS_BLOCK: plexApiDataSchema.shape.usersBlock,
+    PLEX_DEVICES_ALLOW: plexApiDataSchema.shape.devicesAllow,
+    PLEX_DEVICES_BLOCK: plexApiDataSchema.shape.devicesBlock,
+    PLEX_LIBRARIES_ALLOW: plexApiDataSchema.shape.librariesAllow,
+    PLEX_LIBRARIES_BLOCK: plexApiDataSchema.shape.librariesBlock,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, PlexApiSourceConfig> = {
+    env: envDataSchema,
+    toConfig: (partial) => ({
+            data: {
+                url: partial.PLEX_URL,
+                token: partial.PLEX_TOKEN,
+                usersAllow: partial.PLEX_USERS_ALLOW,
+                usersBlock: partial.PLEX_USERS_BLOCK,
+                devicesAllow: partial.PLEX_DEVICES_ALLOW,
+                devicesBlock: partial.PLEX_DEVICES_BLOCK,
+                librariesAllow: partial.PLEX_LIBRARIES_ALLOW,
+                librariesBlock: partial.PLEX_LIBRARIES_BLOCK
+            }
+    })
+};
 
 export const plexApiOptionsSchema = z.object({
     ...commonSourceOptionsSchema.shape,

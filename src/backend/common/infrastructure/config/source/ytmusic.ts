@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
 
 export const innertubeOptionsSchema = z.object({
     /**
@@ -97,6 +97,25 @@ export const ytMusicDataSchema = z.object({
 });
 
 export type YTMusicData = z.infer<typeof ytMusicDataSchema>;
+
+const envDataSchema = z.object({
+    YTM_REDIRECT_URI: ytMusicDataSchema.shape.redirectUri,
+    YTM_CLIENT_ID: ytMusicDataSchema.shape.clientId,
+    YTM_CLIENT_SECRET: ytMusicDataSchema.shape.clientSecret,
+    YTM_COOKIE: ytMusicDataSchema.shape.cookie,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, YTMusicSourceConfig> = {
+    env: envDataSchema,
+    toConfig: (partial) => ({
+            data: {
+                redirectUri: partial.YTM_REDIRECT_URI,
+                clientId: partial.YTM_CLIENT_ID,
+                clientSecret: partial.YTM_CLIENT_SECRET,
+                cookie: partial.YTM_COOKIE
+            }
+    })
+};
 
 export const ytMusicSourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,

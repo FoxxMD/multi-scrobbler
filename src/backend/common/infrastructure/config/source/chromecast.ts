@@ -1,5 +1,5 @@
 import * as z from "zod";
-import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
 
 export const chromecastDeviceInfoSchema = z.object({
     /**
@@ -131,6 +131,25 @@ export const chromecastDataSchema = z.object({
 });
 
 export type ChromecastData = z.infer<typeof chromecastDataSchema>;
+
+const envDataSchema = z.object({
+    CC_BLACKLIST_DEVICES: chromecastDataSchema.shape.blacklistDevices,
+    CC_WHITELIST_DEVICES: chromecastDataSchema.shape.whitelistDevices,
+    CC_BLACKLIST_APPS: chromecastDataSchema.shape.blacklistApps,
+    CC_WHITELIST_APPS: chromecastDataSchema.shape.whitelistApps,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, ChromecastSourceConfig> = {
+    env: envDataSchema,
+    toConfig: (partial) => ({
+            data: {
+                blacklistDevices: partial.CC_BLACKLIST_DEVICES,
+                whitelistDevices: partial.CC_WHITELIST_DEVICES,
+                blacklistApps: partial.CC_BLACKLIST_APPS,
+                whitelistApps: partial.CC_WHITELIST_APPS
+            }
+    })
+};
 
 export const chromecastSourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,

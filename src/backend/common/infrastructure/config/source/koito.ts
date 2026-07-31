@@ -1,7 +1,7 @@
 import * as z from "zod";
 import {koitoDataSchema} from "../client/koito.ts";
 import {pollingOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
 
 export const koitoSourceDataSchema = z.object({
     ...koitoDataSchema.shape,
@@ -10,6 +10,23 @@ export const koitoSourceDataSchema = z.object({
 });
 
 export type KoitoSourceData = z.infer<typeof koitoSourceDataSchema>;
+
+const envDataSchema = z.object({
+    SOURCE_KOITO_URL: koitoSourceDataSchema.shape.url,
+    SOURCE_KOITO_TOKEN: koitoSourceDataSchema.shape.token,
+    SOURCE_KOITO_USER: koitoSourceDataSchema.shape.username,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, KoitoSourceConfig> = {
+    env: envDataSchema,
+    toConfig: (partial) => ({
+            data: {
+                url: partial.SOURCE_KOITO_URL,
+                token: partial.SOURCE_KOITO_TOKEN,
+                username: partial.SOURCE_KOITO_USER
+            }
+    })
+};
 
 export const koitoSourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,

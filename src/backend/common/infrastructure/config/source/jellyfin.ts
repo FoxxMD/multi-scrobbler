@@ -1,5 +1,5 @@
 import * as z from "zod";
-import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
 
 export const jellyApiDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -120,6 +120,41 @@ export const jellyApiDataSchema = z.object({
 });
 
 export type JellyApiData = z.infer<typeof jellyApiDataSchema>;
+
+const envDataSchema = z.object({
+    JELLYFIN_USER: jellyApiDataSchema.shape.user,
+    JELLYFIN_PASSWORD: jellyApiDataSchema.shape.password,
+    JELLYFIN_APIKEY: jellyApiDataSchema.shape.apiKey,
+    JELLYFIN_URL: jellyApiDataSchema.shape.url,
+    JELLYFIN_USERS_ALLOW: jellyApiDataSchema.shape.usersAllow,
+    JELLYFIN_USERS_BLOCK: jellyApiDataSchema.shape.usersBlock,
+    JELLYFIN_DEVICES_ALLOW: jellyApiDataSchema.shape.devicesAllow,
+    JELLYFIN_DEVICES_BLOCK: jellyApiDataSchema.shape.devicesBlock,
+    JELLYFIN_LIBRARIES_ALLOW: jellyApiDataSchema.shape.librariesAllow,
+    JELLYFIN_LIBRARIES_BLOCK: jellyApiDataSchema.shape.librariesBlock,
+    JELLYFIN_FRONTEND_URL_OVERRIDE: jellyApiDataSchema.shape.frontendUrlOverride,
+    JELLYFIN_MEDIATYPES_ALLOW: jellyApiDataSchema.shape.allowMediaTypes,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, JellyApiSourceConfig> = {
+    env: envDataSchema,
+    toConfig: (partial) => ({
+            data: {
+                user: partial.JELLYFIN_USER,
+                password: partial.JELLYFIN_PASSWORD,
+                apiKey: partial.JELLYFIN_APIKEY,
+                url: partial.JELLYFIN_URL,
+                usersAllow: partial.JELLYFIN_USERS_ALLOW,
+                usersBlock: partial.JELLYFIN_USERS_BLOCK,
+                devicesAllow: partial.JELLYFIN_DEVICES_ALLOW,
+                devicesBlock: partial.JELLYFIN_DEVICES_BLOCK,
+                librariesAllow: partial.JELLYFIN_LIBRARIES_ALLOW,
+                librariesBlock: partial.JELLYFIN_LIBRARIES_BLOCK,
+                frontendUrlOverride: partial.JELLYFIN_FRONTEND_URL_OVERRIDE,
+                allowMediaTypes: partial.JELLYFIN_MEDIATYPES_ALLOW
+            }
+    })
+};
 
 export const jellyApiOptionsSchema = z.object({
     ...commonSourceOptionsSchema.shape,

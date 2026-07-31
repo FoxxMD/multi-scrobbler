@@ -1,7 +1,7 @@
 import * as z from "zod";
 import type {VlcMeta} from "vlc-client/dist/Types.js";
 import {pollingOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
 
 export const vlcDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -30,6 +30,21 @@ export const vlcDataSchema = z.object({
 });
 
 export type VLCData = z.infer<typeof vlcDataSchema>;
+
+const envDataSchema = z.object({
+    VLC_URL: vlcDataSchema.shape.url,
+    VLC_PASSWORD: vlcDataSchema.shape.password,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, VLCSourceConfig> = {
+    env: envDataSchema,
+    toConfig: (partial) => ({
+            data: {
+                url: partial.VLC_URL,
+                password: partial.VLC_PASSWORD
+            }
+    })
+};
 
 export const vlcSourceOptionsSchema = z.object({
     ...commonSourceOptionsSchema.shape,

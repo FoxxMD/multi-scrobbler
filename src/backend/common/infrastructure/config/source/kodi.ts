@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
 
 export const kodiDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -45,6 +45,23 @@ export const kodiDataSchema = z.object({
 });
 
 export type KodiData = z.infer<typeof kodiDataSchema>;
+
+const envDataSchema = z.object({
+    KODI_URL: kodiDataSchema.shape.url,
+    KODI_USER: kodiDataSchema.shape.username,
+    KODI_PASSWORD: kodiDataSchema.shape.password,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, KodiSourceConfig> = {
+    env: envDataSchema,
+    toConfig: (partial) => ({
+            data: {
+                url: partial.KODI_URL,
+                username: partial.KODI_USER,
+                password: partial.KODI_PASSWORD
+            }
+    })
+};
 
 export const kodiSourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,
