@@ -63,11 +63,11 @@ export const librefmDataSchema = z.object({
 export type LibrefmData = z.infer<typeof librefmDataSchema>;
 
 const envDataSchema = z.object({
-    LIBREFM_API_KEY: z.string().optional().meta({description: 'Optional Secret for Libre.fm account'}),
-    LIBREFM_SECRET: z.string().optional().meta({description: 'Optional Secret for Libre.fm account'}),
-    LIBREFM_REDIRECT_URI: z.string().optional().meta({description: 'Optional URI to use for callback.'}),
-    LIBREFM_SESSION: z.string().optional().meta({description: 'Optional session id returned from a completed auth flow'}),
-    LIBREFM_URLBASE: z.string().optional().meta({description: '(Optional) The host and path prefix for your Libre.fm instance'}),
+    LIBREFM_API_KEY: librefmDataSchema.shape.apiKey,
+    LIBREFM_SECRET: librefmDataSchema.shape.secret,
+    LIBREFM_REDIRECT_URI: librefmDataSchema.shape.redirectUri,
+    LIBREFM_SESSION: librefmDataSchema.shape.session,
+    LIBREFM_URLBASE: librefmDataSchema.shape.urlBase,
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, LibrefmClientConfig> = {

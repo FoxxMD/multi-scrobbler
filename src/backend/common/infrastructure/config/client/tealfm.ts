@@ -21,8 +21,8 @@ export const tealDataSchema = z.object({
 export type TealData = z.infer<typeof tealDataSchema>;
 
 const envDataSchema = z.object({
-    TEALFM_IDENTIFIER: z.string().meta({description: 'Identify the account to login as'}),
-    TEALFM_APP_PW: z.string().optional().meta({description: 'The App Password you created for your account'}),
+    TEALFM_IDENTIFIER: tealDataSchema.shape.identifier,
+    TEALFM_APP_PW: tealDataSchema.shape.appPassword,
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, TealClientConfig> = {

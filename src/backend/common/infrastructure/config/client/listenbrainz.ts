@@ -37,9 +37,9 @@ export const listenBrainzDataSchema = z.object({
 export type ListenBrainzData = z.infer<typeof listenBrainzDataSchema>;
 
 const envDataSchema = z.object({
-    LZ_URL: z.string().optional().meta({description: 'URL for the ListenBrainz server, if not using the default'}),
-    LZ_TOKEN: z.string().meta({description: 'User token for the user to scrobble for'}),
-    LZ_USER: z.string().meta({description: 'Username of the user to scrobble for'}),
+    LZ_URL: listenBrainzDataSchema.shape.url,
+    LZ_TOKEN: listenBrainzDataSchema.shape.token,
+    LZ_USER: listenBrainzDataSchema.shape.username,
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, ListenBrainzClientConfig> = {

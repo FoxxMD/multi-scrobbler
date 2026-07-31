@@ -21,13 +21,13 @@ export const discordDataSchema = z.object({
 export type DiscordData = z.infer<typeof discordDataSchema>;
 
 const envDataSchema = z.object({
-    DISCORD_TOKEN: z.string().optional(),
-    DISCORD_ARTWORK: z.string().optional(),
-    DISCORD_APPLICATION_ID: z.string().optional(),
-    DISCORD_IPC_LOCATIONS: z.string().optional(),
-    DISCORD_ARTWORK_DEFAULT_URL: z.string().optional(),
-    DISCORD_STATUS_OVERRIDE_ALLOW: z.string().optional(),
-    DISCORD_LISTENING_ACTIVITY_ALLOW: z.string().optional(),
+    DISCORD_TOKEN: discordDataSchema.shape.token,
+    DISCORD_ARTWORK: discordDataSchema.shape.artwork,
+    DISCORD_APPLICATION_ID: discordDataSchema.shape.applicationId,
+    DISCORD_IPC_LOCATIONS: discordDataSchema.shape.ipcLocations,
+    DISCORD_ARTWORK_DEFAULT_URL: discordDataSchema.shape.artworkDefaultUrl,
+    DISCORD_STATUS_OVERRIDE_ALLOW: discordDataSchema.shape.statusOverrideAllow,
+    DISCORD_LISTENING_ACTIVITY_ALLOW: discordDataSchema.shape.listeningActivityAllow,
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, DiscordClientConfig> = {

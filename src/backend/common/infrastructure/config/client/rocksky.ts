@@ -41,9 +41,9 @@ export const rockSkyDataSchema = z.object({
 export type RockSkyData = z.infer<typeof rockSkyDataSchema>;
 
 const envDataSchema = z.object({
-    ROCKSKY_KEY: z.string().optional().meta({description: 'API Key generated from API Applications in Rocksky for your account'}),
-    ROCKSKY_TOKEN: z.string().optional().meta({description: 'Access Token generated from https://rocksky.app/access-tokens in Rocksky for your account'}),
-    ROCKSKY_HANDLE: z.string().meta({description: 'The fully-qualified handle for your ATPRoto/Bluesky account'}),
+    ROCKSKY_KEY: rockSkyDataSchema.shape.key,
+    ROCKSKY_TOKEN: rockSkyDataSchema.shape.token,
+    ROCKSKY_HANDLE: rockSkyDataSchema.shape.handle,
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, RockSkyClientConfig> = {

@@ -45,10 +45,10 @@ export const lastfmDataSchema = z.object({
 export type LastfmData = z.infer<typeof lastfmDataSchema>;
 
 const envDataSchema = z.object({
-    LASTFM_API_KEY: z.string().meta({description: 'API Key generated from Last.fm/Libre.fm account'}),
-    LASTFM_SECRET: z.string().meta({description: 'Secret generated from Last.fm/Libre.fm account'}),
-    LASTFM_REDIRECT_URI: z.string().optional().meta({description: 'Optional URI to use for callback.'}),
-    LASTFM_SESSION: z.string().optional().meta({description: 'Optional session id returned from a completed auth flow'}),
+    LASTFM_API_KEY: lastfmDataSchema.shape.apiKey,
+    LASTFM_SECRET: lastfmDataSchema.shape.secret,
+    LASTFM_REDIRECT_URI: lastfmDataSchema.shape.redirectUri,
+    LASTFM_SESSION: lastfmDataSchema.shape.session,
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, LastfmClientConfig> = {

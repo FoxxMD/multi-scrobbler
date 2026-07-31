@@ -79,9 +79,9 @@ export const koitoDataSchema = z.object({
 export type KoitoData = z.infer<typeof koitoDataSchema>;
 
 const envDataSchema = z.object({
-    KOITO_URL: z.string().meta({description: 'URL for the Koito server'}),
-    KOITO_TOKEN: z.string().meta({description: 'User token for the user to scrobble for'}),
-    KOITO_USER: z.string().meta({description: 'Username of the user to scrobble for'}),
+    KOITO_URL: koitoDataSchema.shape.url,
+    KOITO_TOKEN: koitoDataSchema.shape.token,
+    KOITO_USER: koitoDataSchema.shape.username,
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, KoitoClientConfig> = {
