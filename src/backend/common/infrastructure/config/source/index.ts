@@ -205,3 +205,8 @@ export const commonSourceConfigSchema = z.object({
 });
 
 export type CommonSourceConfig = Omit<z.infer<typeof commonSourceConfigSchema>, 'data'> & { data?: CommonSourceData };
+
+export interface EnvSourceSchema<Y extends z.ZodObject, T extends CommonSourceConfig> {
+    env: Y
+    toConfig: (parsed: z.output<Y>) => Partial<Pick<T, 'data' | 'options'>>
+}
