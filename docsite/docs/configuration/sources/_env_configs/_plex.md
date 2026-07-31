@@ -1,9 +1,9 @@
 | Environmental Variable | Type    | Default            | Description                                                                                      |
 | ---------------------- | ------- | ------------------ | ------------------------------------------------------------------------------------------------ |
-| **`PLEX_ID`**          | string  |                    | A globally unique ID                                                                             |
+| _**`PLEX_ID`**_        | string  |                    | A globally unique ID                                                                             |
 | `PLEX_NAME`            | string  | Value of `PLEX_ID` | A vanity name                                                                                    |
 | `PLEX_ENABLE`          | boolean |                    |                                                                                                  |
-| **`PLEX_URL`**         | string  |                    | http(s)://HOST:PORT of the Plex server to connect to                                             |
+| _**`PLEX_URL`**_       | string  |                    | http(s)://HOST:PORT of the Plex server to connect to                                             |
 | `PLEX_TOKEN`           | string  |                    |                                                                                                  |
 | `PLEX_USERS_ALLOW`     | union   |                    | Only scrobble for specific users (case-insensitive)                                              |
 | `PLEX_USERS_BLOCK`     | union   |                    | Do not scrobble for these users (case-insensitive)                                               |

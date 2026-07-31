@@ -1,6 +1,6 @@
 | Environmental Variable | Type    | Default           | Description                                                                                                                          |
 | ---------------------- | ------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| **`LZE_ID`**           | string  |                   | A globally unique ID                                                                                                                 |
+| _**`LZE_ID`**_         | string  |                   | A globally unique ID                                                                                                                 |
 | `LZE_NAME`             | string  | Value of `LZE_ID` | A vanity name                                                                                                                        |
 | `LZE_ENABLE`           | boolean |                   |                                                                                                                                      |
 | `LZE_SLUG`             | string  |                   | The URL ending that should be used to identify scrobbles for this source                                                             |

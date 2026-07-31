@@ -1,6 +1,6 @@
 | Environmental Variable | Type    | Default           | Description                                                                          |
 | ---------------------- | ------- | ----------------- | ------------------------------------------------------------------------------------ |
-| **`YTM_ID`**           | string  |                   | A globally unique ID                                                                 |
+| _**`YTM_ID`**_         | string  |                   | A globally unique ID                                                                 |
 | `YTM_NAME`             | string  | Value of `YTM_ID` | A vanity name                                                                        |
 | `YTM_ENABLE`           | boolean |                   |                                                                                      |
 | `YTM_REDIRECT_URI`     | string  |                   | Google Cloud Console project OAuth Client Authorized redirect URI                    |

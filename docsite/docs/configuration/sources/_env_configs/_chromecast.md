@@ -1,6 +1,6 @@
 | Environmental Variable | Type      | Default          | Description                                                                          |
 | ---------------------- | --------- | ---------------- | ------------------------------------------------------------------------------------ |
-| **`CC_ID`**            | string    |                  | A globally unique ID                                                                 |
+| _**`CC_ID`**_          | string    |                  | A globally unique ID                                                                 |
 | `CC_NAME`              | string    | Value of `CC_ID` | A vanity name                                                                        |
 | `CC_ENABLE`            | boolean   |                  |                                                                                      |
 | `CC_BLACKLIST_DEVICES` | transform |                  | DO NOT scrobble from any cast devices that START WITH these values, case-insensitive |

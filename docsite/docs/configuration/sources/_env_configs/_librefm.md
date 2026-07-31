@@ -1,6 +1,6 @@
 | Environmental Variable        | Type    | Default                                | Description                                                    |
 | ----------------------------- | ------- | -------------------------------------- | -------------------------------------------------------------- |
-| **`SOURCE_LIBREFM_ID`**       | string  |                                        | A globally unique ID                                           |
+| _**`SOURCE_LIBREFM_ID`**_     | string  |                                        | A globally unique ID                                           |
 | `SOURCE_LIBREFM_NAME`         | string  | Value of `SOURCE_LIBREFM_ID`           | A vanity name                                                  |
 | `SOURCE_LIBREFM_ENABLE`       | boolean |                                        |                                                                |
 | `SOURCE_LIBREFM_API_KEY`      | string  |                                        | Optional Secret for Libre.fm account                           |

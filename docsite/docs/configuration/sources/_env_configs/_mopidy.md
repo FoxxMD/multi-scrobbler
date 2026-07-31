@@ -1,6 +1,6 @@
 | Environmental Variable  | Type      | Default                        | Description                                                                                |
 | ----------------------- | --------- | ------------------------------ | ------------------------------------------------------------------------------------------ |
-| **`MOPIDY_ID`**         | string    |                                | A globally unique ID                                                                       |
+| _**`MOPIDY_ID`**_       | string    |                                | A globally unique ID                                                                       |
 | `MOPIDY_NAME`           | string    | Value of `MOPIDY_ID`           | A vanity name                                                                              |
 | `MOPIDY_ENABLE`         | boolean   |                                |                                                                                            |
 | `MOPIDY_URL`            | string    | ws://localhost:6680/mopidy/ws/ | URL of the Mopidy HTTP server to connect to                                                |

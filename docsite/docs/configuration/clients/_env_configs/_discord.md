@@ -1,6 +1,6 @@
 | Environmental Variable             | Type    | Default               | Description          |
 | ---------------------------------- | ------- | --------------------- | -------------------- |
-| **`DISCORD_ID`**                   | string  |                       | A globally unique ID |
+| _**`DISCORD_ID`**_                 | string  |                       | A globally unique ID |
 | `DISCORD_NAME`                     | string  | Value of `DISCORD_ID` | A vanity name        |
 | `DISCORD_ENABLE`                   | boolean |                       |                      |
 | `DISCORD_TOKEN`                    | string  |                       |                      |

@@ -1,12 +1,12 @@
 | Environmental Variable           | Type    | Default                | Description                                                                                                                       |
 | -------------------------------- | ------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **`JELLYFIN_ID`**                | string  |                        | A globally unique ID                                                                                                              |
+| _**`JELLYFIN_ID`**_              | string  |                        | A globally unique ID                                                                                                              |
 | `JELLYFIN_NAME`                  | string  | Value of `JELLYFIN_ID` | A vanity name                                                                                                                     |
 | `JELLYFIN_ENABLE`                | boolean |                        |                                                                                                                                   |
-| **`JELLYFIN_USER`**              | string  |                        | The username of the user to authenticate for or track scrobbles for                                                               |
+| _**`JELLYFIN_USER`**_            | string  |                        | The username of the user to authenticate for or track scrobbles for                                                               |
 | `JELLYFIN_PASSWORD`              | string  |                        | Password of the username to authenticate for                                                                                      |
 | `JELLYFIN_APIKEY`                | string  |                        | API Key to authenticate with.                                                                                                     |
-| **`JELLYFIN_URL`**               | string  |                        | HOST:PORT of the Jellyfin server to connect to                                                                                    |
+| _**`JELLYFIN_URL`**_             | string  |                        | HOST:PORT of the Jellyfin server to connect to                                                                                    |
 | `JELLYFIN_USERS_ALLOW`           | union   |                        | Only scrobble for specific users (case-insensitive)                                                                               |
 | `JELLYFIN_USERS_BLOCK`           | union   |                        | Do not scrobble for these users (case-insensitive)                                                                                |
 | `JELLYFIN_DEVICES_ALLOW`         | union   |                        | Only scrobble if device or application name contains strings from this list (case-insensitive)                                    |

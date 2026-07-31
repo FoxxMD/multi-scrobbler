@@ -1,6 +1,6 @@
 | Environmental Variable | Type    | Default           | Description                                                                                              |
 | ---------------------- | ------- | ----------------- | -------------------------------------------------------------------------------------------------------- |
-| **`MPD_ID`**           | string  |                   | A globally unique ID                                                                                     |
+| _**`MPD_ID`**_         | string  |                   | A globally unique ID                                                                                     |
 | `MPD_NAME`             | string  | Value of `MPD_ID` | A vanity name                                                                                            |
 | `MPD_ENABLE`           | boolean |                   |                                                                                                          |
 | `MPD_URL`              | string  | localhost:6600    | URL:PORT of the MPD server to connect to                                                                 |
