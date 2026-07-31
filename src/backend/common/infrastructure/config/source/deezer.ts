@@ -111,7 +111,7 @@ const envDataSchema = z.object({
     DEEZER_USER_AGENT: deezerInternalDataSchema.shape.userAgent
 });
 
-export const envSchemas: EnvSourceSchema<typeof envDataSchema, DeezerCompatConfig> = {
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, DeezerInternalSourceConfig> = {
     env: envDataSchema,
     toConfig: (partial) => ({
         data: {
