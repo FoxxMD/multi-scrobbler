@@ -6,7 +6,7 @@ import { isSourceType } from "../../core/Atomic.ts";
 import { sourceTypes } from "../../core/Atomic.ts";
 import type {SourceType} from "../../core/Atomic.ts";
 import {aioSourceRelaxedConfigSchema, type AIOSourceRelaxedConfig, type SourceDefaults} from "../common/infrastructure/config/aioConfig.ts";
-import {sourceConfigSchemaMap, validateSourceAIOJson, validateSourceJson} from "../common/infrastructure/config/source/sources.ts";
+import {sourceConfigSchemaMap, validateSourceAIOJson, validateSourceJson, type SourceTypeConfigMap} from "../common/infrastructure/config/source/sources.ts";
 import type { WildcardEmitter } from "../common/WildcardEmitter.ts";
 import { pick } from '../../core/DataUtils.ts';
 import { readJson } from '../utils/DataUtils.ts';
@@ -267,427 +267,146 @@ export default class ScrobbleSources {
         }
     }
 
+    private instantiateSources = async <T extends SourceType>(
+        sourceType: T,
+        strongConfigs: CommonParsedConfig[],
+        defaults: SourceDefaults,
+        Ctor: new (name: string, config: SourceTypeConfigMap[T][0], internalConfig: InternalConfig, emitter: WildcardEmitter) => AbstractSource,
+    ) => {
+        for (const s of strongConfigs) {
+            try {
+                const config = sourceConfigSchemaMap[sourceType][0].parse(s);
+                const compositeOptions = { ...defaults, ...config.options };
+                const newComponent = new Ctor(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
+                newComponent.logger.info(`Source added from ${s.source}`);
+                this.sources.push(newComponent);
+            } catch (e) {
+                this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
+            }
+        }
+    }
+
     addSource = async (sourceType: SourceType, strongConfigs: CommonParsedConfig[], defaults: SourceDefaults = {}) => {
         switch (sourceType) {
             case 'spotify': {
                 const SpotifySource = (await import('./SpotifySource.ts')).default;
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new SpotifySource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('spotify', strongConfigs, defaults, SpotifySource);
             } break;
             case 'plex': {
                 const PlexApiSource = (await import('./PlexApiSource.ts')).default;
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new PlexApiSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('plex', strongConfigs, defaults, PlexApiSource);
             } break;
             case 'subsonic': {
                 const {SubsonicSource} = (await import('./SubsonicSource.ts'));
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new SubsonicSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('subsonic', strongConfigs, defaults, SubsonicSource);
             } break;
             case 'jellyfin': {
                 const JellyfinApiSource = (await import('./JellyfinApiSource.ts')).default;
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new JellyfinApiSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('jellyfin', strongConfigs, defaults, JellyfinApiSource);
             } break;
             case 'lastfm': {
                 const LastfmSource = (await import('./LastfmSource.ts')).default;
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new LastfmSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('lastfm', strongConfigs, defaults, LastfmSource);
             } break;
             case 'librefm': {
                 const LibrefmSource = (await import('./LibrefmSource.ts')).default;
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new LibrefmSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('librefm', strongConfigs, defaults, LibrefmSource);
             } break;
             case 'deezer': {
                 const DeezerInternalSource = (await import('./DeezerInternalSource.ts')).default;
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new DeezerInternalSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('deezer', strongConfigs, defaults, DeezerInternalSource);
             } break;
             case 'ytmusic': {
                 const YTMusicSource = (await import('./YTMusicSource.ts')).default;
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new YTMusicSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('ytmusic', strongConfigs, defaults, YTMusicSource);
             } break;
             case 'ymbridge': {
                 const YandexMusicBridgeSource = (await import('./YandexMusicBridgeSource.ts')).default;
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new YandexMusicBridgeSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('ymbridge', strongConfigs, defaults, YandexMusicBridgeSource);
             } break;
             case 'mpris': {
                 const {MPRISSource} = (await import('./MPRISSource.ts'));
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new MPRISSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('mpris', strongConfigs, defaults, MPRISSource);
             } break;
             case 'mopidy': {
                 const {MopidySource} = (await import('./MopidySource.ts'));
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new MopidySource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('mopidy', strongConfigs, defaults, MopidySource);
             } break;
             case 'listenbrainz': {
                 const ListenbrainzSource = (await import('./ListenbrainzSource.ts')).default;
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new ListenbrainzSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('listenbrainz', strongConfigs, defaults, ListenbrainzSource);
             } break;
             case 'endpointlz': {
                 const {EndpointListenbrainzSource} = (await import('./EndpointListenbrainzSource.ts'));
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new EndpointListenbrainzSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('endpointlz', strongConfigs, defaults, EndpointListenbrainzSource);
             } break;
             case 'endpointlfm': {
                 const {EndpointLastfmSource} = (await import('./EndpointLastfmSource.ts'));
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new EndpointLastfmSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('endpointlfm', strongConfigs, defaults, EndpointLastfmSource);
             } break;
             case 'icecast': {
                 const {IcecastSource} = (await import('./IcecastSource.ts'));
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new IcecastSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('icecast', strongConfigs, defaults, IcecastSource);
             } break;
             case 'jriver': {
                 const {JRiverSource} = (await import('./JRiverSource.ts'));
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new JRiverSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('jriver', strongConfigs, defaults, JRiverSource);
             } break;
             case 'kodi': {
                 const {KodiSource} = (await import('./KodiSource.ts'));
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new KodiSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('kodi', strongConfigs, defaults, KodiSource);
             } break;
             case 'webscrobbler': {
                 const {WebScrobblerSource} = (await import('./WebScrobblerSource.ts'));
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new WebScrobblerSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('webscrobbler', strongConfigs, defaults, WebScrobblerSource);
             } break;
             case 'chromecast': {
                 const {ChromecastSource} = (await import('./ChromecastSource.ts'));
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new ChromecastSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('chromecast', strongConfigs, defaults, ChromecastSource);
             } break;
             case 'musikcube': {
                 const {MusikcubeSource} = (await import('./MusikcubeSource.ts'));
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new MusikcubeSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('musikcube', strongConfigs, defaults, MusikcubeSource);
             } break;
             case 'musiccast': {
                 const {MusicCastSource} = (await import('./MusicCastSource.ts'));
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new MusicCastSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('musiccast', strongConfigs, defaults, MusicCastSource);
             } break;
             case 'mpd': {
                 const {MPDSource} = (await import('./MPDSource.ts'));
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new MPDSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('mpd', strongConfigs, defaults, MPDSource);
             } break;
             case 'vlc': {
                 const {VLCSource} = (await import('./VLCSource.ts'));
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new VLCSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('vlc', strongConfigs, defaults, VLCSource);
             } break;
             case 'azuracast': {
                 const {AzuracastSource} = (await import('./AzuracastSource.ts'));
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new AzuracastSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('azuracast', strongConfigs, defaults, AzuracastSource);
             } break;
             case 'koito': {
                 const KoitoSource = (await import('./KoitoSource.ts')).default;
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new KoitoSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('koito', strongConfigs, defaults, KoitoSource);
             } break;
             case 'maloja': {
                 const MalojaSource = (await import('./MalojaSource.ts')).default;
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new MalojaSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('maloja', strongConfigs, defaults, MalojaSource);
             } break;
             case 'tealfm': {
                 const TealfmSource = (await import('./TealfmSource.ts')).default;
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new TealfmSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('tealfm', strongConfigs, defaults, TealfmSource);
             } break;
             case 'rocksky': {
                 const RockskySource = (await import('./RockskySource.ts')).default;
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new RockskySource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('rocksky', strongConfigs, defaults, RockskySource);
             } break;
             case 'sonos': {
                 const {SonosSource} = (await import('./SonosSource.ts'));
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new SonosSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('sonos', strongConfigs, defaults, SonosSource);
             } break;
             case 'applemusic': {
                 const AppleMusicSource = (await import('./AppleMusicSource.ts')).default;
-                for (const s of strongConfigs) {
-                    try {
-                        const config = sourceConfigSchemaMap[sourceType][0].parse(s);
-                        const compositeOptions = { ...defaults, ...config.options };
-                        const newComponent = new AppleMusicSource(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
-                        newComponent.logger.info(`Source added from ${s.source}`);
-                        this.sources.push(newComponent);
-                    } catch (e) {
-                        this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                    }
-                }
+                await this.instantiateSources('applemusic', strongConfigs, defaults, AppleMusicSource);
             } break;
             default:
                 break;

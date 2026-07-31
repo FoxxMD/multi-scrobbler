@@ -7,7 +7,7 @@ import { isClientType } from '../../core/Atomic.ts';
 import { clientTypes } from "../../core/Atomic.ts";
 import type {ClientType} from "../../core/Atomic.ts";
 import {aioClientRelaxedConfigSchema, type AIOClientRelaxedConfig, type ClientDefaults} from "../common/infrastructure/config/aioConfig.ts";
-import {clientConfigSchemaMap, validateClientAIOJson, validateClientJson} from "../common/infrastructure/config/client/clients.ts";
+import {clientConfigSchemaMap, validateClientAIOJson, validateClientJson, type ClientTypeConfigMap} from "../common/infrastructure/config/client/clients.ts";
 import type { WildcardEmitter } from "../common/WildcardEmitter.ts";
 import { pick } from '../../core/DataUtils.ts';
 import { readJson } from '../utils/DataUtils.ts';
@@ -250,122 +250,68 @@ export default class ScrobbleClients {
         }
     }
      
+    private instantiateClients = async <T extends ClientType>(
+        clientType: T,
+        strongConfigs: CommonParsedConfig[],
+        clientDefaults: ClientDefaults,
+        Ctor: new (...args: any[]) => AbstractScrobbleClient,
+        buildArgs: (config: ClientTypeConfigMap[T][0], compositeOptions: Record<string, unknown>) => ConstructorParameters<typeof Ctor>,
+    ) => {
+        for (const s of strongConfigs) {
+            try {
+                const config = clientConfigSchemaMap[clientType][0].parse(s);
+                const compositeOptions = { ...clientDefaults, ...config.options };
+                const newClient = new Ctor(...buildArgs(config, compositeOptions));
+                newClient.logger.info(`Client added from ${s.source}`);
+                this.clients.push(newClient);
+            } catch (e) {
+                this.logger.error(new Error(`Client from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
+            }
+        }
+    }
+
     addClient = async (clientType: ClientType, strongConfigs: CommonParsedConfig[], clientDefaults: ClientDefaults = {}) => {
             switch (clientType) {
                 case 'discord': {
                     const DiscordScrobbler = (await import('./DiscordScrobbler.ts')).default;
-                    for (const s of strongConfigs) {
-                        try {
-                            const config = clientConfigSchemaMap[clientType][0].parse(s);
-                            const compositeOptions = { ...clientDefaults, ...config.options };
-                            const newClient = new DiscordScrobbler(config.name, { ...config, options: compositeOptions }, {}, this.emitter, this.logger);
-                            newClient.logger.info(`Client added from ${s.source}`);
-                            this.clients.push(newClient);
-                        } catch (e) {
-                            this.logger.error(new Error(`Client from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                        }
-                    }
+                    await this.instantiateClients('discord', strongConfigs, clientDefaults, DiscordScrobbler,
+                        (config, options) => [config.name, { ...config, options }, {}, this.emitter, this.logger]);
                 } break;
                 case 'koito': {
                     const KoitoScrobbler = (await import('./KoitoScrobbler.ts')).default;
-                    for (const s of strongConfigs) {
-                        try {
-                            const config = clientConfigSchemaMap[clientType][0].parse(s);
-                            const compositeOptions = { ...clientDefaults, ...config.options, configDir: this.internalConfig.configDir };
-
-                            const newClient = new KoitoScrobbler(config.name, { ...config, options: compositeOptions }, {}, this.emitter, this.logger);
-                            newClient.logger.info(`Client added from ${s.source}`);
-                            this.clients.push(newClient);
-                        } catch (e) {
-                            this.logger.error(new Error(`Client from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                        }
-                    }
+                    await this.instantiateClients('koito', strongConfigs, clientDefaults, KoitoScrobbler,
+                        (config, options) => [config.name, { ...config, options: { ...options, configDir: this.internalConfig.configDir } }, {}, this.emitter, this.logger]);
                 } break;
                 case 'lastfm': {
                     const LastfmScrobbler = (await import('./LastfmScrobbler.ts')).default;
-                    for (const s of strongConfigs) {
-                        try {
-                            const config = clientConfigSchemaMap[clientType][0].parse(s);
-                            const compositeOptions = { ...clientDefaults, ...config.options };
-
-                            const newClient = new LastfmScrobbler(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter, this.logger);
-                            newClient.logger.info(`Client added from ${s.source}`);
-                            this.clients.push(newClient);
-                        } catch (e) {
-                            this.logger.error(new Error(`Client from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                        }
-                    }
+                    await this.instantiateClients('lastfm', strongConfigs, clientDefaults, LastfmScrobbler,
+                        (config, options) => [config.name, { ...config, options }, this.internalConfig, this.emitter, this.logger]);
                 } break;
                 case 'librefm': {
                     const LibrefmScrobbler = (await import('./LibrefmScrobbler.ts')).default;
-                    for (const s of strongConfigs) {
-                        try {
-                            const config = clientConfigSchemaMap[clientType][0].parse(s);
-                            const compositeOptions = { ...clientDefaults, ...config.options };
-                            const newClient = new LibrefmScrobbler(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter, this.logger);
-                            newClient.logger.info(`Client added from ${s.source}`);
-                            this.clients.push(newClient);
-                        } catch (e) {
-                            this.logger.error(new Error(`Client from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                        }
-                    }
+                    await this.instantiateClients('librefm', strongConfigs, clientDefaults, LibrefmScrobbler,
+                        (config, options) => [config.name, { ...config, options }, this.internalConfig, this.emitter, this.logger]);
                 } break;
                 case 'listenbrainz': {
                     const ListenbrainzScrobbler = (await import('./ListenbrainzScrobbler.ts')).default;
-                    for (const s of strongConfigs) {
-                        try {
-                            const config = clientConfigSchemaMap[clientType][0].parse(s);
-                            const compositeOptions = { ...clientDefaults, ...config.options };
-                            const newClient = new ListenbrainzScrobbler(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter, this.logger);
-                            newClient.logger.info(`Client added from ${s.source}`);
-                            this.clients.push(newClient);
-                        } catch (e) {
-                            this.logger.error(new Error(`Client from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                        }
-                    }
+                    await this.instantiateClients('listenbrainz', strongConfigs, clientDefaults, ListenbrainzScrobbler,
+                        (config, options) => [config.name, { ...config, options }, this.internalConfig, this.emitter, this.logger]);
                 } break;
                 case 'maloja': {
                     const MalojaScrobbler = (await import('./MalojaScrobbler.ts')).default;
-                    for (const s of strongConfigs) {
-                        try {
-                            const config = clientConfigSchemaMap[clientType][0].parse(s);
-                            const compositeOptions = { ...clientDefaults, ...config.options };
-                            const newClient = new MalojaScrobbler(config.name, { ...config, options: compositeOptions }, this.emitter, this.logger);
-                            newClient.logger.info(`Client added from ${s.source}`);
-                            this.clients.push(newClient);
-                        } catch (e) {
-                            this.logger.error(new Error(`Client from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                        }
-                    }
+                    await this.instantiateClients('maloja', strongConfigs, clientDefaults, MalojaScrobbler,
+                        (config, options) => [config.name, { ...config, options }, this.emitter, this.logger]);
                 } break;
                 case 'rocksky': {
                     const RockskyScrobbler = (await import('./RockskyScrobbler.ts')).default;
-                    for (const s of strongConfigs) {
-                        try {
-                            const config = clientConfigSchemaMap[clientType][0].parse(s);
-                            const compositeOptions = { ...clientDefaults, ...config.options };
-                            const newClient = new RockskyScrobbler(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter, this.logger);
-                            newClient.logger.info(`Client added from ${s.source}`);
-                            this.clients.push(newClient);
-                        } catch (e) {
-                            this.logger.error(new Error(`Client from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                        }
-                    }
+                    await this.instantiateClients('rocksky', strongConfigs, clientDefaults, RockskyScrobbler,
+                        (config, options) => [config.name, { ...config, options }, this.internalConfig, this.emitter, this.logger]);
                 } break;
                 case 'tealfm': {
                     const TealScrobbler = (await import('./TealfmScrobbler.ts')).default;
-                    for (const s of strongConfigs) {
-                        try {
-                            const config = clientConfigSchemaMap[clientType][0].parse(s);
-                            const compositeOptions = { ...clientDefaults, ...config.options };
-                            const newClient = new TealScrobbler(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter, this.logger);
-                            newClient.logger.info(`Client added from ${s.source}`);
-                            this.clients.push(newClient);
-                        } catch (e) {
-                            this.logger.error(new Error(`Client from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
-                        }
-                    }
-                }
+                    await this.instantiateClients('tealfm', strongConfigs, clientDefaults, TealScrobbler,
+                        (config, options) => [config.name, { ...config, options }, this.internalConfig, this.emitter, this.logger]);
+                } break;
             }
     }
 
