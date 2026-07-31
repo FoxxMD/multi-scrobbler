@@ -141,7 +141,7 @@ const envDataSchema = z.object({
     AZURA_STATION: azuracastDataSchema.shape.station,
     AZURA_URL: azuracastDataSchema.shape.url,
     AZURA_KEY: azuracastDataSchema.shape.apiKey,
-    AZURA_LISTENERS_NUM: z.string().optional().transform((val) => !isNaN(Number.parseInt(val)) ? Number.parseInt(val) : parseBoolStrict(val)),
+    AZURA_LISTENERS_NUM: z.string().optional().transform((val) => val === undefined ? undefined : (!isNaN(Number.parseInt(val)) ? Number.parseInt(val) : parseBoolStrict(val))),
     AZURA_LIVE: z.stringbool().optional()
 });
 

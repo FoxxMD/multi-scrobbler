@@ -1,0 +1,17 @@
+| Environmental Variable           | Type    | Default                | Description                                                                                                                       |
+| -------------------------------- | ------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **`JELLYFIN_ID`**                | string  |                        | A globally unique ID                                                                                                              |
+| `JELLYFIN_NAME`                  | string  | Value of `JELLYFIN_ID` | A vanity name                                                                                                                     |
+| `JELLYFIN_ENABLE`                | boolean |                        |                                                                                                                                   |
+| **`JELLYFIN_USER`**              | string  |                        | The username of the user to authenticate for or track scrobbles for                                                               |
+| `JELLYFIN_PASSWORD`              | string  |                        | Password of the username to authenticate for                                                                                      |
+| `JELLYFIN_APIKEY`                | string  |                        | API Key to authenticate with.                                                                                                     |
+| **`JELLYFIN_URL`**               | string  |                        | HOST:PORT of the Jellyfin server to connect to                                                                                    |
+| `JELLYFIN_USERS_ALLOW`           | union   |                        | Only scrobble for specific users (case-insensitive)                                                                               |
+| `JELLYFIN_USERS_BLOCK`           | union   |                        | Do not scrobble for these users (case-insensitive)                                                                                |
+| `JELLYFIN_DEVICES_ALLOW`         | union   |                        | Only scrobble if device or application name contains strings from this list (case-insensitive)                                    |
+| `JELLYFIN_DEVICES_BLOCK`         | union   |                        | Do not scrobble if device or application name contains strings from this list (case-insensitive)                                  |
+| `JELLYFIN_LIBRARIES_ALLOW`       | union   |                        | Only scrobble if library name contains string from this list (case-insensitive)                                                   |
+| `JELLYFIN_LIBRARIES_BLOCK`       | union   |                        | Do not scrobble if library name contains strings from this list (case-insensitive)                                                |
+| `JELLYFIN_FRONTEND_URL_OVERRIDE` | string  |                        | HOST:PORT of the Jellyfin server that your browser will be able to access from the frontend (and thus load images and links from) |
+| `JELLYFIN_MEDIATYPES_ALLOW`      | union   |                        | Allow these media types to be scrobbled.                                                                                          |

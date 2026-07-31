@@ -1,0 +1,8 @@
+| Environmental Variable | Type    | Default               | Description                                                                                                                                      |
+| ---------------------- | ------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`ROCKSKY_ID`**       | string  |                       | A globally unique ID                                                                                                                             |
+| `ROCKSKY_NAME`         | string  | Value of `ROCKSKY_ID` | A vanity name                                                                                                                                    |
+| `ROCKSKY_ENABLE`       | boolean |                       |                                                                                                                                                  |
+| `ROCKSKY_KEY`          | string  |                       | API Key generated from [API Applications](https://docs.rocksky.app/migrating-from-listenbrainz-to-rocksky-1040189m0) in Rocksky for your account |
+| `ROCKSKY_TOKEN`        | string  |                       | Access Token generated from https://rocksky.app/access-tokens in Rocksky for your account                                                        |
+| **`ROCKSKY_HANDLE`**   | string  |                       | The **fully-qualified** handle for your ATPRoto/Bluesky account, like:                                                                           |

@@ -1,0 +1,10 @@
+| Environmental Variable | Type    | Default             | Description                                                                                                             |
+| ---------------------- | ------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **`SONOS_ID`**         | string  |                     | A globally unique ID                                                                                                    |
+| `SONOS_NAME`           | string  | Value of `SONOS_ID` | A vanity name                                                                                                           |
+| `SONOS_ENABLE`         | boolean |                     |                                                                                                                         |
+| **`SONOS_HOST`**       | string  |                     | IP address of any connected Sonos speaker or device                                                                     |
+| `SONOS_DEVICES_ALLOW`  | union   |                     | Only scrobble if device name contains strings from this list (case-insensitive)                                         |
+| `SONOS_DEVICES_BLOCK`  | union   |                     | Do not scrobble if device name contains strings from this list (case-insensitive)                                       |
+| `SONOS_GROUPS_ALLOW`   | union   |                     | Only scrobble if the name of a group the playing device belongs to contains strings from this list (case-insensitive)   |
+| `SONOS_GROUPS_BLOCK`   | union   |                     | Do not scrobble if the name of a group the playing device belongs to contains strings from this list (case-insensitive) |

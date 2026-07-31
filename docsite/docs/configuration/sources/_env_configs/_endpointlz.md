@@ -1,0 +1,8 @@
+| Environmental Variable | Type    | Default           | Description                                                                                                                          |
+| ---------------------- | ------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **`LZE_ID`**           | string  |                   | A globally unique ID                                                                                                                 |
+| `LZE_NAME`             | string  | Value of `LZE_ID` | A vanity name                                                                                                                        |
+| `LZE_ENABLE`           | boolean |                   |                                                                                                                                      |
+| `LZE_SLUG`             | string  |                   | The URL ending that should be used to identify scrobbles for this source                                                             |
+| `LZE_TOKEN`            | string  |                   | If an LZ submission request contains this token in the Authorization Header it will be used to match the submission with this Source |
+| `LZE_USERNAME`         | string  |                   | The listenbrainz "username" to associate with this Source                                                                            |
