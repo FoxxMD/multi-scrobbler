@@ -138,6 +138,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, JellyApiSourceConfig> = {
     env: envDataSchema,
+    prefix: 'JELLYFIN',
     toConfig: (partial) => ({
             data: {
                 user: partial.JELLYFIN_USER,

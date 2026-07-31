@@ -198,13 +198,13 @@ export default class ScrobbleClients {
                     const sourceStr = `${entry.source} ${entry.pos}`;
                     switch (entry.source) {
                         case 'env': {
-                            const primitiveSchema = generateCommonComponentEnvConfigSchema(clientUpper);
-                            const parsed = primitiveSchema.parse(entry.config);
-                            const primitives: CommonConfigPrimitives = commonComponentEnvConfigToConfigPrimitives(clientUpper, parsed);
                             const envSchema = clientConfigSchemaMap[clientType][2];
+                            const primitiveSchema = generateCommonComponentEnvConfigSchema(envSchema.prefix.toUpperCase());
+                            const parsed = primitiveSchema.parse(entry.config);
+                            const primitives: CommonConfigPrimitives = commonComponentEnvConfigToConfigPrimitives(envSchema.prefix.toUpperCase(), parsed);
                             const parsedEnvConfigValues = envSchema.env.parse(entry.config);
                             const { data = {}, options = {} } = envSchema.toConfig(parsedEnvConfigValues);
-                            const transformOptions = transformPresetEnv(clientUpper);
+                            const transformOptions = transformPresetEnv(envSchema.prefix.toUpperCase());
                             parsedConfig = {
                                 name: `${clientType} - ${entry.source}${entry.pos !== '' ? ` - ${entry.pos}` : ''} `,
                                 ...primitives,

@@ -72,6 +72,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, LibrefmClientConfig> = {
     env: envDataSchema,
+    prefix: 'LIBREFM',
     toConfig: (partial) => ({
             data: {
                 apiKey: partial.LIBREFM_API_KEY,

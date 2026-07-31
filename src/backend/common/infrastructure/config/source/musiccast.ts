@@ -92,6 +92,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, MusicCastSourceConfig> = {
     env: envDataSchema,
+    prefix: 'MCAST',
     toConfig: (partial) => ({
             data: {
                 url: partial.MCAST_URL

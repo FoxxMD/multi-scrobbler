@@ -32,6 +32,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, DiscordClientConfig> = {
     env: envDataSchema,
+    prefix: 'DISCORD',
     toConfig: (partial) => ({
             data: {
                 token: partial.DISCORD_TOKEN,

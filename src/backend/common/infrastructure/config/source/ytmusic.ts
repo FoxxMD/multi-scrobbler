@@ -107,6 +107,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, YTMusicSourceConfig> = {
     env: envDataSchema,
+    prefix: 'YTM',
     toConfig: (partial) => ({
             data: {
                 redirectUri: partial.YTM_REDIRECT_URI,

@@ -51,6 +51,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, IcecastSourceConfig> = {
     env: envDataSchema,
+    prefix: 'ICECAST',
     toConfig: (partial) => ({
             data: {
                 url: partial.ICECAST_URL

@@ -63,6 +63,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, MPRISSourceConfig> = {
     env: envDataSchema,
+    prefix: 'MPRIS',
     toConfig: (partial) => ({
             data: {
                 blacklist: partial.MPRIS_BLACKLIST,

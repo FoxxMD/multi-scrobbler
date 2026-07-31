@@ -38,6 +38,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, MalojaClientConfig>  = {
     env: envDataSchema,
+    prefix: 'MALOJA',
     toConfig: (partial) => ({
             data: {
                 url: partial.MALOJA_URL,

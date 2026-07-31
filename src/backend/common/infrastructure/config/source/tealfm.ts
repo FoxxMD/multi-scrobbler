@@ -20,6 +20,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, TealSourceConfig> = {
     env: envDataSchema,
+    prefix: 'SOURCE_TEALFM',
     toConfig: (partial) => ({
             data: {
                 identifier: partial.SOURCE_TEALFM_IDENTIFIER,

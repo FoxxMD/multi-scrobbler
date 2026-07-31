@@ -28,6 +28,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, LastFMEndpointSourceConfig> = {
     env: envDataSchema,
+    prefix: 'LFM',
     toConfig: (partial) => ({
             data: {
                 slug: partial.LFM_SLUG

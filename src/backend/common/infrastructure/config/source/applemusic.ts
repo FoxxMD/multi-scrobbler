@@ -96,6 +96,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, AppleMusicSourceConfig> = {
     env: envDataSchema,
+    prefix: 'APPLEMUSIC',
     toConfig: (partial) => {
         let appleMusicKey: AppleMusicKey | undefined;
         let token: string | undefined;

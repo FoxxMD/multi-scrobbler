@@ -113,6 +113,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, DeezerInternalSourceConfig> = {
     env: envDataSchema,
+    prefix: 'DEEZER',
     toConfig: (partial) => ({
         data: {
             arl: partial.DEEZER_ARL,

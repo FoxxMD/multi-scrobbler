@@ -66,6 +66,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, SpotifySourceConfig> = {
     env: envDataSchema,
+    prefix: 'SPOTIFY',
     toConfig: (partial) => ({
             data: {
                 clientId: partial.SPOTIFY_CLIENT_ID,

@@ -19,6 +19,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, ListenBrainzSourceConfig> = {
     env: envDataSchema,
+    prefix: 'SOURCE_LZ',
     toConfig: (partial) => ({
             data: {
                 url: partial.SOURCE_LZ_URL,

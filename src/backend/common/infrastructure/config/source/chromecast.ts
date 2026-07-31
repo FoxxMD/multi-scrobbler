@@ -142,6 +142,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, ChromecastSourceConfig> = {
     env: envDataSchema,
+    prefix: 'CC',
     toConfig: (partial) => ({
             data: {
                 blacklistDevices: partial.CC_BLACKLIST_DEVICES,

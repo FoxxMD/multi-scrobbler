@@ -110,6 +110,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, SubSonicSourceConfig> = {
     env: envDataSchema,
+    prefix: 'SUBSONIC',
     toConfig: (partial) => ({
             data: {
                 user: partial.SUBSONIC_USER,

@@ -110,6 +110,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, MopidySourceConfig> = {
     env: envDataSchema,
+    prefix: 'MOPIDY',
     toConfig: (partial) => ({
         data: {
             url: partial.MOPIDY_URL,

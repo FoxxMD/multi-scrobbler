@@ -44,6 +44,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, ListenBrainzClientConfig> = {
     env: envDataSchema,
+    prefix: 'LZ',
     toConfig: (partial) => ({
             data: {
                 url: partial.LZ_URL,

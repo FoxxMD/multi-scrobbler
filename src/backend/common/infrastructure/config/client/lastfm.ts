@@ -53,6 +53,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, LastfmClientConfig> = {
     env: envDataSchema,
+    prefix: 'LASTFM',
     toConfig: (partial) => ({
             data: {
                 apiKey: partial.LASTFM_API_KEY,

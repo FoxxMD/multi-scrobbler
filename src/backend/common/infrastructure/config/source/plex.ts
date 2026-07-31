@@ -70,6 +70,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, PlexApiSourceConfig> = {
     env: envDataSchema,
+    prefix: 'PLEX',
     toConfig: (partial) => ({
             data: {
                 url: partial.PLEX_URL,

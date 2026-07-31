@@ -38,6 +38,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, VLCSourceConfig> = {
     env: envDataSchema,
+    prefix: 'VLC',
     toConfig: (partial) => ({
             data: {
                 url: partial.VLC_URL,

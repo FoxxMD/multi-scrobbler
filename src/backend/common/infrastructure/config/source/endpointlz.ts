@@ -50,6 +50,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, ListenbrainzEndpointSourceConfig> = {
     env: envDataSchema,
+    prefix: 'LZE',
     toConfig: (partial) => ({
             data: {
                 slug: partial.LZE_SLUG,

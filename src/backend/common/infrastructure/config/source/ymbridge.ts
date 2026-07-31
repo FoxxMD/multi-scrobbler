@@ -24,6 +24,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, YandexMusicBridgeSourceConfig> = {
     env: envDataSchema,
+    prefix: 'YMBRIDGE',
     toConfig: (partial) => ({
             data: {
                 url: partial.YMBRIDGE_URL,

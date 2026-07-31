@@ -18,6 +18,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, RockskySourceConfig> = {
     env: envDataSchema,
+    prefix: 'SOURCE_ROCKSKY',
     toConfig: (partial) => ({
             data: {
                 key: partial.SOURCE_ROCKSKY_KEY,

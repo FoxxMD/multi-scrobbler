@@ -124,6 +124,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, MusikcubeSourceConfig> = {
     env: envDataSchema,
+    prefix: 'MC',
     toConfig: (partial) => ({
             data: {
                 url: partial.MC_URL,

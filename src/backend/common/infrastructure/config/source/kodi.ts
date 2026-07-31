@@ -54,6 +54,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, KodiSourceConfig> = {
     env: envDataSchema,
+    prefix: 'KODI',
     toConfig: (partial) => ({
             data: {
                 url: partial.KODI_URL,

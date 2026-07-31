@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {playTransformOptionsSchema} from "../../../../../core/Transform.ts";
-import {commonConfigSchema, requestRetryOptionsSchema, monitorOptionsSchema} from "../common.ts";
+import {commonConfigSchema, requestRetryOptionsSchema, monitorOptionsSchema, type CommonComponentEnvShape} from "../common.ts";
 import {retentionConfigDurationValueSchema} from "../database.ts";
 
 /**
@@ -187,5 +187,6 @@ export type CommonClientConfig = Omit<z.infer<typeof commonClientConfigSchema>, 
 
 export interface EnvClientSchema<Y extends z.ZodObject, T extends CommonClientConfig> {
     env: Y
+    prefix: string
     toConfig: (parsed: z.output<Y>) => Partial<Pick<T, 'data' | 'options'>>
 }

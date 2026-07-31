@@ -55,6 +55,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, JRiverSourceConfig> = {
     env: envDataSchema,
+    prefix: 'JRIVER',
     toConfig: (partial) => ({
             data: {
                 url: partial.JRIVER_URL,

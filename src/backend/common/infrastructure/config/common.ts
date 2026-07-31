@@ -174,7 +174,7 @@ export const transformPresetEnv = <T extends CommonClientOptions = CommonClientO
 };
 
 
-type CommonComponentEnvShape<T extends string> = {
+export type CommonComponentEnvShape<T extends string> = {
     [K in `${T}_ID`]: z.ZodString
 } & {
     [K in `${T}_NAME`]: z.ZodOptional<z.ZodString>
@@ -189,7 +189,7 @@ export const generateCommonComponentEnvConfigSchema = <T extends string>(prefix:
         [`${prefix}_ENABLE`]: z.stringbool().optional()
     } as CommonComponentEnvShape<T>);
 
-type CommonComponentEnvConfigParsed<T extends string> = {
+export type CommonComponentEnvConfigParsed<T extends string> = {
     [K in `${T}_ID`]: string
 } & {
     [K in `${T}_NAME`]?: string

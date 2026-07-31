@@ -46,6 +46,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, MPDSourceConfig> = {
     env: envDataSchema,
+    prefix: 'MPD',
     toConfig: (partial) => ({
             data: {
                 url: partial.MPD_URL,

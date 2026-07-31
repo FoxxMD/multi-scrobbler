@@ -27,6 +27,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, TealClientConfig> = {
     env: envDataSchema,
+    prefix: 'TEALFM',
     toConfig: (partial) => ({
             data: {
                 identifier: partial.TEALFM_IDENTIFIER,

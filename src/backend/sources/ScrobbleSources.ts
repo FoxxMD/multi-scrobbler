@@ -217,13 +217,13 @@ export default class ScrobbleSources {
                     const sourceStr = `${entry.source} ${entry.pos}`;
                     switch (entry.source) {
                         case 'env': {
-                            const primitiveSchema = generateCommonComponentEnvConfigSchema(configTypeUpper);
-                            const parsed = primitiveSchema.parse(entry.config);
-                            const primitives: CommonConfigPrimitives = commonComponentEnvConfigToConfigPrimitives(configTypeUpper, parsed);
                             const envSchema = sourceConfigSchemaMap[configType][2];
+                            const primitiveSchema = generateCommonComponentEnvConfigSchema(envSchema.prefix.toUpperCase());
+                            const parsed = primitiveSchema.parse(entry.config);
+                            const primitives: CommonConfigPrimitives = commonComponentEnvConfigToConfigPrimitives(envSchema.prefix.toUpperCase(), parsed);
                             const parsedEnvConfigValues = envSchema.env.parse(entry.config);
                             const { data = {}, options = {} } = envSchema.toConfig(parsedEnvConfigValues);
-                            const transformOptions = transformPresetEnv(configTypeUpper);
+                            const transformOptions = transformPresetEnv(envSchema.prefix.toUpperCase());
                             parsedConfig = {
                                 name: `${configType} - ${entry.source}${entry.pos !== '' ? ` - ${entry.pos}` : ''} `,
                                 ...primitives,

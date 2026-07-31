@@ -54,6 +54,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, WebScrobblerSourceConfig> = {
     env: envDataSchema,
+    prefix: 'WS',
     toConfig: (partial) => ({
             data: {
                 blacklist: partial.WS_BLACKLIST,

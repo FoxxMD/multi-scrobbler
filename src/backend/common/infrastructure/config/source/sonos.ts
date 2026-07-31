@@ -54,6 +54,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, SonosSourceConfig> = {
     env: envDataSchema,
+    prefix: 'SONOS',
     toConfig: (partial) => ({
             data: {
                 host: partial.SONOS_HOST,

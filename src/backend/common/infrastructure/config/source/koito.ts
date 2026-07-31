@@ -19,6 +19,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, KoitoSourceConfig> = {
     env: envDataSchema,
+    prefix: 'SOURCE_KOITO',
     toConfig: (partial) => ({
             data: {
                 url: partial.SOURCE_KOITO_URL,

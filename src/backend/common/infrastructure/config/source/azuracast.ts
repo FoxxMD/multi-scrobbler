@@ -147,6 +147,7 @@ const envDataSchema = z.object({
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, AzuracastSourceConfig> = {
     env: envDataSchema,
+    prefix: 'AZURA',
     toConfig: (partial) => ({
             data: {
                 url: partial.AZURA_URL,
