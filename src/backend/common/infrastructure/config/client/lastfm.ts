@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {requestRetryOptionsSchema} from "../common.ts";
-import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema, nowPlayingOptionsSchema} from "./index.ts";
+import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema, nowPlayingOptionsSchema, type EnvClientSchema} from "./index.ts";
 
 export const lastfmDataSchema = z.object({
     ...commonClientDataSchema.shape,
@@ -43,6 +43,25 @@ export const lastfmDataSchema = z.object({
 });
 
 export type LastfmData = z.infer<typeof lastfmDataSchema>;
+
+const envDataSchema = z.object({
+    LASTFM_API_KEY: z.string().meta({description: 'API Key generated from Last.fm/Libre.fm account'}),
+    LASTFM_SECRET: z.string().meta({description: 'Secret generated from Last.fm/Libre.fm account'}),
+    LASTFM_REDIRECT_URI: z.string().optional().meta({description: 'Optional URI to use for callback.'}),
+    LASTFM_SESSION: z.string().optional().meta({description: 'Optional session id returned from a completed auth flow'}),
+});
+
+export const envSchemas: EnvClientSchema<typeof envDataSchema, LastfmClientConfig> = {
+    env: envDataSchema,
+    toConfig: (partial) => ({
+            data: {
+                apiKey: partial.LASTFM_API_KEY,
+                secret: partial.LASTFM_SECRET,
+                redirectUri: partial.LASTFM_REDIRECT_URI,
+                session: partial.LASTFM_SESSION
+            }
+    })
+};
 
 export const lastfmClientOptionsSchema = z.object({
     ...commonClientOptionsSchema.shape,

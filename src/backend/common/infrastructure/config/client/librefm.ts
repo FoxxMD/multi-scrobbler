@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {requestRetryOptionsSchema} from "../common.ts";
-import {commonClientConfigSchema, commonClientDataSchema} from "./index.ts";
+import {commonClientConfigSchema, commonClientDataSchema, type EnvClientSchema} from "./index.ts";
 import {lastfmClientOptionsSchema} from "./lastfm.ts";
 
 export const librefmDataSchema = z.object({
@@ -61,6 +61,27 @@ export const librefmDataSchema = z.object({
 });
 
 export type LibrefmData = z.infer<typeof librefmDataSchema>;
+
+const envDataSchema = z.object({
+    LIBREFM_API_KEY: z.string().optional().meta({description: 'Optional Secret for Libre.fm account'}),
+    LIBREFM_SECRET: z.string().optional().meta({description: 'Optional Secret for Libre.fm account'}),
+    LIBREFM_REDIRECT_URI: z.string().optional().meta({description: 'Optional URI to use for callback.'}),
+    LIBREFM_SESSION: z.string().optional().meta({description: 'Optional session id returned from a completed auth flow'}),
+    LIBREFM_URLBASE: z.string().optional().meta({description: '(Optional) The host and path prefix for your Libre.fm instance'}),
+});
+
+export const envSchemas: EnvClientSchema<typeof envDataSchema, LibrefmClientConfig> = {
+    env: envDataSchema,
+    toConfig: (partial) => ({
+            data: {
+                apiKey: partial.LIBREFM_API_KEY,
+                secret: partial.LIBREFM_SECRET,
+                redirectUri: partial.LIBREFM_REDIRECT_URI,
+                session: partial.LIBREFM_SESSION,
+                urlBase: partial.LIBREFM_URLBASE
+            }
+    })
+};
 
 export const librefmClientOptionsSchema = z.object({
     ...lastfmClientOptionsSchema.shape,

@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {componentTypeSchema} from "../../../../../core/Atomic.ts";
-import {requestRetryOptionsSchema, type EnvSchemas} from "../common.ts";
+import {requestRetryOptionsSchema} from "../common.ts";
 import {commonClientConfigSchema, commonClientDataSchema, type EnvClientSchema} from "./index.ts";
 
 export const malojaDataSchema = z.object({
