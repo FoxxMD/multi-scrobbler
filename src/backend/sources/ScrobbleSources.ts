@@ -124,7 +124,7 @@ export default class ScrobbleSources {
             throw new Error('config.json could not be parsed', { cause: e });
         }
 
-        let sourceDefaults: SourceDefaults = {};
+        let sourceDefaults: SourceDefaults;
         if (configFile !== undefined) {
             let aioConfig: AIOSourceRelaxedConfig;
             try {
@@ -166,6 +166,8 @@ export default class ScrobbleSources {
                     continue;
                 }
             }
+        } else {
+            sourceDefaults = this.buildSourceDefaults();
         }
 
         const envKeys = Object.keys(process.env).map(x => x.toUpperCase());

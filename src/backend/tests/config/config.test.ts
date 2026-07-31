@@ -7,7 +7,7 @@ import path from "path";
 import ScrobbleClients from '../../scrobblers/ScrobbleClients.ts';
 import ScrobbleSources from '../../sources/ScrobbleSources.ts';
 import EventEmitter from "events";
-import {loggerDebug, loggerTest} from '@foxxmd/logging';
+import {loggerTest} from '@foxxmd/logging';
 import { clientTypes } from "../../../core/Atomic.ts";
 import { projectRootDir } from "../../common/infrastructure/Atomic.ts";
 import { sourceTypes } from "../../../core/Atomic.ts";
@@ -143,7 +143,7 @@ describe('Sample Configs', function () {
                         configDir: process.cwd(),
                         version: 'test'
                     },
-                    loggerDebug);
+                    loggerTest);
                     await clients.buildClientsFromConfig();
                     expect(clients.clients).length(1);
                 });
@@ -169,6 +169,7 @@ describe('Global ENVs with Config', function () {
 
     it('Parses default scrobble duration', async function () {
         process.env.SOURCE_SCROBBLE_DURATION = '20';
+        process.env.MPRIS_ID = 'test';
         process.env.MPRIS_ENABLE = 'true';
 
         const emitter = new EventEmitter();
@@ -185,6 +186,7 @@ describe('Global ENVs with Config', function () {
 
     it('Parses default scrobble precentage', async function () {
         process.env.SOURCE_SCROBBLE_PERCENT = '20';
+        process.env.MPRIS_ID = 'test';
         process.env.MPRIS_ENABLE = 'true';
 
         const emitter = new EventEmitter();
