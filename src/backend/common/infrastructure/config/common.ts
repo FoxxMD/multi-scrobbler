@@ -184,9 +184,9 @@ export type CommonComponentEnvShape<T extends string> = {
 
 export const generateCommonComponentEnvConfigSchema = <T extends string>(prefix: T) =>
     z.object({
-        [`${prefix}_ID`]: z.string().meta({description: 'A globally unique ID'}),
-        [`${prefix}_NAME`]: z.string().optional().meta({description: 'A vanity name', default: `Value of \`${prefix}_ID\``}),
-        [`${prefix}_ENABLE`]: z.stringbool().optional()
+        [`${prefix}_ID`]: z.string().meta({description: 'A globally unique ID EX `myComponentId`', examples: ['myComponentId']}),
+        [`${prefix}_NAME`]: z.string().optional().meta({description: 'A vanity name EX `My Cool Component`', default: `Value of \`${prefix}_ID\``, examples: ['My Cool Component']}),
+        [`${prefix}_ENABLE`]: z.stringbool().optional().meta({description: 'Should this component be used?', default: true}),
     } as CommonComponentEnvShape<T>);
 
 export type CommonComponentEnvConfigParsed<T extends string> = {
