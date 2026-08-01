@@ -246,7 +246,9 @@ export default class ScrobbleClients {
                 }
             }
 
-            await this.addClient(clientType, strongConfigs, clientDefaults);
+            if(strongConfigs.length > 0) {
+                await this.addClient(clientType, strongConfigs, clientDefaults);
+            }
         }
     }
      

@@ -266,7 +266,9 @@ export default class ScrobbleSources {
                 }
             }
 
-            await this.addSource(configType, strongConfigs, sourceDefaults);
+            if(strongConfigs.length > 0) {
+                await this.addSource(configType, strongConfigs, sourceDefaults);
+            }
         }
     }
 
