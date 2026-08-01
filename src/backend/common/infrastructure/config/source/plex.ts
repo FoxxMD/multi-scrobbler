@@ -1,6 +1,8 @@
 import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
 import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
+import { envMetaNormalize, transformSplitMaybeString } from "../../../../utils/ZodUtils.ts";
+import { commaSeparatedListReplace } from "../../../../utils/StringUtils.ts";
 
 export const plexApiDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -14,44 +16,44 @@ export const plexApiDataSchema = z.object({
     }),
 
     /**
-     * Only scrobble for specific users (case-insensitive)
+     * Only scrobble for specific users
      *
      * If `true` MS will scrobble activity from all users
      * */
     usersAllow: z.union([z.string(), z.literal(true), z.array(z.string())]).optional().meta({
-        description: "Only scrobble for specific users (case-insensitive)"
+        description: "Only scrobble for specific users from this list"
     }),
     /**
-     * Do not scrobble for these users (case-insensitive)
+     * Do not scrobble for these users
      * */
     usersBlock: z.union([z.string(), z.array(z.string())]).optional().meta({
-        description: "Do not scrobble for these users (case-insensitive)"
+        description: "Do not scrobble for users from this list"
     }),
 
     /**
-     * Only scrobble if device or application name contains strings from this list (case-insensitive)
+     * Only scrobble if device or application name contains strings from this list
      * */
     devicesAllow: z.union([z.string(), z.array(z.string())]).optional().meta({
-        description: "Only scrobble if device or application name contains strings from this list (case-insensitive)"
+        description: "Only scrobble if device or application name contains strings from this list"
     }),
     /**
-     * Do not scrobble if device or application name contains strings from this list (case-insensitive)
+     * Do not scrobble if device or application name contains strings from this list
      * */
     devicesBlock: z.union([z.string(), z.array(z.string())]).optional().meta({
-        description: "Do not scrobble if device or application name contains strings from this list (case-insensitive)"
+        description: "Do not scrobble if device or application name contains strings from this list"
     }),
 
     /**
-     * Only scrobble if library name contains string from this list (case-insensitive)
+     * Only scrobble if library name contains string from this list
      * */
     librariesAllow: z.union([z.string(), z.array(z.string())]).optional().meta({
-        description: "Only scrobble if library name contains string from this list (case-insensitive)"
+        description: "Only scrobble if library name contains string from this list"
     }),
     /**
-     * Do not scrobble if library name contains strings from this list (case-insensitive)
+     * Do not scrobble if library name contains strings from this list
      * */
     librariesBlock: z.union([z.string(), z.array(z.string())]).optional().meta({
-        description: "Do not scrobble if library name contains strings from this list (case-insensitive)"
+        description: "Do not scrobble if library name contains strings from this list"
     }),
 });
 
@@ -60,16 +62,17 @@ export type PlexApiData = z.infer<typeof plexApiDataSchema>;
 const envDataSchema = z.object({
     PLEX_URL: plexApiDataSchema.shape.url,
     PLEX_TOKEN: plexApiDataSchema.shape.token,
-    PLEX_USERS_ALLOW: plexApiDataSchema.shape.usersAllow,
-    PLEX_USERS_BLOCK: plexApiDataSchema.shape.usersBlock,
-    PLEX_DEVICES_ALLOW: plexApiDataSchema.shape.devicesAllow,
-    PLEX_DEVICES_BLOCK: plexApiDataSchema.shape.devicesBlock,
-    PLEX_LIBRARIES_ALLOW: plexApiDataSchema.shape.librariesAllow,
-    PLEX_LIBRARIES_BLOCK: plexApiDataSchema.shape.librariesBlock,
+    PLEX_USERS_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(plexApiDataSchema.shape.usersAllow.meta())),
+    PLEX_USERS_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(plexApiDataSchema.shape.usersBlock.meta())),
+    PLEX_DEVICES_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(plexApiDataSchema.shape.devicesBlock.meta())),
+    PLEX_DEVICES_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(plexApiDataSchema.shape.devicesAllow.meta())),
+    PLEX_LIBRARIES_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(plexApiDataSchema.shape.librariesAllow.meta())),
+    PLEX_LIBRARIES_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(plexApiDataSchema.shape.librariesBlock.meta())),
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, PlexApiSourceConfig> = {
     env: envDataSchema,
+    pipe: 'in',
     prefix: 'PLEX',
     toConfig: (partial) => ({
             data: {

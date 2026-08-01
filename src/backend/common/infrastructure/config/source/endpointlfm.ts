@@ -15,7 +15,7 @@ export const lastFmEndpointDataSchema = z.object({
      *
      * If no slug is found from an extension's incoming webhook event the first Last.fm source without a slug will be used
      * */
-    slug: z.union([z.string(), z.null()]).optional().meta({
+    slug: z.string().optional().meta({
         description: "The URL ending that should be used to identify scrobbles for this source"
     }),
 });

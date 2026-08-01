@@ -2,6 +2,7 @@ import * as z from "zod";
 import {requestRetryOptionsSchema, commonConfigSchema, monitorOptionsSchema} from "../common.ts";
 import {retentionConfigDurationValueSchema} from "../database.ts";
 import {playTransformOptionsSchema} from "../../../../../core/Transform.ts";
+import type { PipeUnwrapDirection } from "../../../../utils/ZodUtils.ts";
 
 export const sourceRetryOptionsSchema = z.object({
     ...requestRetryOptionsSchema.shape,
@@ -208,6 +209,7 @@ export type CommonSourceConfig = Omit<z.infer<typeof commonSourceConfigSchema>, 
 
 export interface EnvSourceSchema<Y extends z.ZodObject, T extends CommonSourceConfig> {
     env: Y
+    pipe?: PipeUnwrapDirection
     prefix: string,
     toConfig: (parsed: z.output<Y>) => Partial<Pick<T, 'data' | 'options'>>
 }

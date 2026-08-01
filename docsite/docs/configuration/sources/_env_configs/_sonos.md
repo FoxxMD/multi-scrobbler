@@ -1,10 +1,10 @@
-| Environmental Variable | Type    | Default             | Description                                                                                                             |
-| ---------------------- | ------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| _**`SONOS_ID`**_       | string  |                     | A globally unique ID EX `myComponentId`                                                                                 |
-| `SONOS_NAME`           | string  | Value of `SONOS_ID` | A vanity name EX `My Cool Component`                                                                                    |
-| `SONOS_ENABLE`         | boolean | true                | Should this component be used?                                                                                          |
-| _**`SONOS_HOST`**_     | string  |                     | IP address of any connected Sonos speaker or device                                                                     |
-| `SONOS_DEVICES_ALLOW`  | union   |                     | Only scrobble if device name contains strings from this list (case-insensitive)                                         |
-| `SONOS_DEVICES_BLOCK`  | union   |                     | Do not scrobble if device name contains strings from this list (case-insensitive)                                       |
-| `SONOS_GROUPS_ALLOW`   | union   |                     | Only scrobble if the name of a group the playing device belongs to contains strings from this list (case-insensitive)   |
-| `SONOS_GROUPS_BLOCK`   | union   |                     | Do not scrobble if the name of a group the playing device belongs to contains strings from this list (case-insensitive) |
+| Environmental Variable | Type    | Default             | Description                                                                                                          |
+| ---------------------- | ------- | ------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| _**`SONOS_ID`**_       | string  |                     | A globally unique ID EX `myComponentId`                                                                              |
+| `SONOS_NAME`           | string  | Value of `SONOS_ID` | A vanity name EX `My Cool Component`                                                                                 |
+| `SONOS_ENABLE`         | boolean | true                | Should this component be used?                                                                                       |
+| _**`SONOS_HOST`**_     | string  |                     | IP address of any connected Sonos speaker or device                                                                  |
+| `SONOS_DEVICES_ALLOW`  | string  |                     | Only scrobble if device name contains strings from this comma-delimited list                                         |
+| `SONOS_DEVICES_BLOCK`  | string  |                     | Do not scrobble if device name contains strings from this comma-delimited list                                       |
+| `SONOS_GROUPS_ALLOW`   | string  |                     | Only scrobble if the name of a group the playing device belongs to contains strings from this comma-delimited list   |
+| `SONOS_GROUPS_BLOCK`   | string  |                     | Do not scrobble if the name of a group the playing device belongs to contains strings from this comma-delimited list |

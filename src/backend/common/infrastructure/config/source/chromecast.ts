@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
-import { transformSplitMaybeString } from "../../../../utils/ZodUtils.ts";
+import { envMetaNormalize, transformSplitMaybeString } from "../../../../utils/ZodUtils.ts";
 
 export const chromecastDeviceInfoSchema = z.object({
     /**
@@ -35,12 +35,12 @@ export const chromecastDataSchema = z.object({
      * @examples [["home-mini","family-tv"]]
      * */
     blacklistDevices: z.union([z.string(), z.array(z.string())]).optional().meta({
-        description: "DO NOT scrobble from any cast devices that START WITH these values, case-insensitive",
+        description: "DO NOT scrobble from any cast devices on this list that START WITH these values",
         examples: [["home-mini", "family-tv"]]
     }),
 
     /**
-     * ONLY scrobble from any cast device that START WITH these values, case-insensitive
+     * ONLY scrobble from any cast device that START WITH these values
      *
      * If whitelist is present then blacklist is ignored
      *
@@ -49,29 +49,29 @@ export const chromecastDataSchema = z.object({
      * @examples [["home-mini","family-tv"]]
      * */
     whitelistDevices: z.union([z.string(), z.array(z.string())]).optional().meta({
-        description: "ONLY scrobble from any cast device that START WITH these values, case-insensitive",
+        description: "ONLY scrobble from any cast device on this list that START WITH these values",
         examples: [["home-mini", "family-tv"]]
     }),
 
     /**
-     * DO NOT scrobble from any application that START WITH these values, case-insensitive
+     * DO NOT scrobble from any application that START WITH these values
      *
      * @examples [["spotify","pandora"]]
      * */
     blacklistApps: z.union([z.string(), z.array(z.string())]).optional().meta({
-        description: "DO NOT scrobble from any application that START WITH these values, case-insensitive",
+        description: "DO NOT scrobble from any application on this list that START WITH these values",
         examples: [["spotify", "pandora"]]
     }),
 
     /**
-     * ONLY scrobble from any application that START WITH these values, case-insensitive
+     * ONLY scrobble from any application that START WITH these values
      *
      * If whitelist is present then blacklist is ignored
      *
      * @examples [["spotify","pandora"]]
      * */
     whitelistApps: z.union([z.string(), z.array(z.string())]).optional().meta({
-        description: "ONLY scrobble from any application that START WITH these values, case-insensitive",
+        description: "ONLY scrobble from any application on this list that START WITH these values",
         examples: [["spotify", "pandora"]]
     }),
 
@@ -134,10 +134,10 @@ export const chromecastDataSchema = z.object({
 export type ChromecastData = z.infer<typeof chromecastDataSchema>;
 
 const envDataSchema = z.object({
-    CC_BLACKLIST_DEVICES: z.string().optional().pipe(transformSplitMaybeString).meta(chromecastDataSchema.shape.blacklistDevices.meta()),
-    CC_WHITELIST_DEVICES: z.string().optional().pipe(transformSplitMaybeString).meta(chromecastDataSchema.shape.whitelistDevices.meta()),
-    CC_BLACKLIST_APPS: z.string().optional().pipe(transformSplitMaybeString).meta(chromecastDataSchema.shape.blacklistApps.meta()),
-    CC_WHITELIST_APPS: z.string().optional().pipe(transformSplitMaybeString).meta(chromecastDataSchema.shape.whitelistApps.meta()),
+    CC_BLACKLIST_DEVICES: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(chromecastDataSchema.shape.blacklistDevices.meta())),
+    CC_WHITELIST_DEVICES: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(chromecastDataSchema.shape.whitelistDevices.meta())),
+    CC_BLACKLIST_APPS: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(chromecastDataSchema.shape.blacklistApps.meta())),
+    CC_WHITELIST_APPS: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(chromecastDataSchema.shape.whitelistApps.meta())),
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, ChromecastSourceConfig> = {
