@@ -1,5 +1,5 @@
 import z from 'zod';
-import { parseArrayFromMaybeString, parseBoolOrArrayFromMaybeString } from './StringUtils.ts';
+import { commaSeparatedListReplace, parseArrayFromMaybeString, parseBoolOrArrayFromMaybeString } from './StringUtils.ts';
 
 export interface TableColumn {
     title: string
@@ -92,5 +92,14 @@ export const zodObjectToTableColumns = <Shape extends z.ZodRawShape>(schema: z.Z
         };
 });
 
-export const transformSplitMaybeString = z.transform((val: string) => parseArrayFromMaybeString(val));
-export const transformSplitMaybeStringOrBoolean = z.transform((val: string | string[] | boolean) => parseBoolOrArrayFromMaybeString(val));
+export const transformSplitMaybeString = z.transform((val: string) => val === undefined ? undefined : parseArrayFromMaybeString(val));
+export const transformSplitMaybeStringOrBoolean = z.transform((val: string | true) => val === undefined ? undefined : parseBoolOrArrayFromMaybeString(val));
+
+export const envMetaNormalize = (meta: z.GlobalMeta): z.GlobalMeta => {
+    if(meta.description !== undefined) {
+        return {
+            ...meta,
+            description: commaSeparatedListReplace(meta.description)
+        }
+    }
+}

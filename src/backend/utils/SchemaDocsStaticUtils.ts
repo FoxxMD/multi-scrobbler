@@ -62,7 +62,8 @@ for(const [k,v] of clientEntries) {
 
     const envSchema = envSchemas;
     const common = generateCommonComponentEnvConfigSchema(envSchema.prefix.toUpperCase());
-    const col = zodObjectToTableColumns(z.object({...common.shape,...envSchema.env.shape}), 'out');
+    const commonCol = zodObjectToTableColumns(z.object(common.shape), 'out');
+    const col = [...commonCol,...zodObjectToTableColumns(z.object(envSchema.env.shape), envSchemas.pipe ?? 'out')]
     const tableContent = markdownTable([
         ['Environmental Variable', 'Type', 'Default', 'Description'],
         ...mdCols(col)
@@ -77,7 +78,8 @@ for(const [k,v] of sourcesEntries) {
 
     const envSchema = envSchemas;
     const common = generateCommonComponentEnvConfigSchema(envSchema.prefix.toUpperCase());
-    const col = zodObjectToTableColumns(z.object({...common.shape,...envSchema.env.shape}), 'out');
+    const commonCol = zodObjectToTableColumns(z.object(common.shape), 'out');
+    const col = [...commonCol,...zodObjectToTableColumns(z.object(envSchema.env.shape), envSchemas.pipe ?? 'out')]
     const tableContent = markdownTable([
         ['Environmental Variable', 'Type', 'Default', 'Description'],
         ...mdCols(col)

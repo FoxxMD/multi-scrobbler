@@ -503,3 +503,5 @@ export const stringToDeterministicNumber = (str: string): number => {
   // Convert to unsigned 32-bit integer to avoid negative values
   return hash >>> 0; 
 }
+
+export const commaSeparatedListReplace = (str: string): string => str.replace('list', 'comma-delimited list');
