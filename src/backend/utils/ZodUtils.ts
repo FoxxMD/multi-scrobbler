@@ -11,14 +11,22 @@ export interface TableColumn {
 
 export type PipeUnwrapDirection = 'in' | 'out';
 
+const otherPipeDirection: Record<PipeUnwrapDirection, PipeUnwrapDirection> = { in: 'out', out: 'in' };
+
 const unwrapZodType = (schema: z.ZodTypeAny, pipeDirection: PipeUnwrapDirection = 'in'): z.ZodTypeAny => {
     let current = schema;
     while (current instanceof z.ZodOptional || current instanceof z.ZodNullable || current instanceof z.ZodDefault || current instanceof z.ZodPipe) {
-        current = (current instanceof z.ZodPipe ? current[pipeDirection] : current.unwrap()) as z.ZodTypeAny;
+        if (current instanceof z.ZodPipe) {
+            const side = current[pipeDirection];
+            // ZodTransform carries no schema of its own, so its side of the pipe can't tell us
+            // anything about the resulting shape, fall back to the other side of the pipe.
+            current = (side instanceof z.ZodTransform ? current[otherPipeDirection[pipeDirection]] : side) as z.ZodTypeAny;
+        } else {
+            current = current.unwrap() as z.ZodTypeAny;
+        }
     }
     return current;
 };
-
 const getExplicitDefault = (schema: z.ZodTypeAny): unknown => {
     let current = schema;
     while (true) {
