@@ -1,8 +1,8 @@
 | Environmental Variable | Type    | Default                                | Description                                                    |
 | ---------------------- | ------- | -------------------------------------- | -------------------------------------------------------------- |
-| _**`LIBREFM_ID`**_     | string  |                                        | A globally unique ID                                           |
-| `LIBREFM_NAME`         | string  | Value of `LIBREFM_ID`                  | A vanity name                                                  |
-| `LIBREFM_ENABLE`       | boolean |                                        |                                                                |
+| _**`LIBREFM_ID`**_     | string  |                                        | A globally unique ID EX `myComponentId`                        |
+| `LIBREFM_NAME`         | string  | Value of `LIBREFM_ID`                  | A vanity name EX `My Cool Component`                           |
+| `LIBREFM_ENABLE`       | boolean | true                                   | Should this component be used?                                 |
 | `LIBREFM_API_KEY`      | string  |                                        | Optional Secret for Libre.fm account                           |
 | `LIBREFM_SECRET`       | string  |                                        | Optional Secret for Libre.fm account                           |
 | `LIBREFM_REDIRECT_URI` | string  | http://localhost:9078/librefm/callback | Optional URI to use for callback.                              |

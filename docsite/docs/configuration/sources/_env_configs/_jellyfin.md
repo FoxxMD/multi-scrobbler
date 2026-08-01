@@ -1,8 +1,8 @@
 | Environmental Variable           | Type    | Default                | Description                                                                                                                       |
 | -------------------------------- | ------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| _**`JELLYFIN_ID`**_              | string  |                        | A globally unique ID                                                                                                              |
-| `JELLYFIN_NAME`                  | string  | Value of `JELLYFIN_ID` | A vanity name                                                                                                                     |
-| `JELLYFIN_ENABLE`                | boolean |                        |                                                                                                                                   |
+| _**`JELLYFIN_ID`**_              | string  |                        | A globally unique ID EX `myComponentId`                                                                                           |
+| `JELLYFIN_NAME`                  | string  | Value of `JELLYFIN_ID` | A vanity name EX `My Cool Component`                                                                                              |
+| `JELLYFIN_ENABLE`                | boolean | true                   | Should this component be used?                                                                                                    |
 | _**`JELLYFIN_USER`**_            | string  |                        | The username of the user to authenticate for or track scrobbles for                                                               |
 | `JELLYFIN_PASSWORD`              | string  |                        | Password of the username to authenticate for                                                                                      |
 | `JELLYFIN_APIKEY`                | string  |                        | API Key to authenticate with.                                                                                                     |
