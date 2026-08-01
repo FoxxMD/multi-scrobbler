@@ -2,7 +2,8 @@ import * as z from "zod";
 import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
 import { envMetaNormalize, transformSplitMaybeString, transformSplitMaybeStringOrBoolean } from "../../../../utils/ZodUtils.ts";
 
-export const jellyfinMediaTypesSchema = z.enum(['unknown','video','audio','photo','book','musicvideo']);
+//export const jellyfinMediaTypesSchema = z.enum(['unknown','video','audio','photo','book','musicvideo']);
+//export type JellyfinMediaType = z.infer<typeof jellyfinMediaTypesSchema>;
 export const jellyApiDataSchema = z.object({
     ...commonSourceDataSchema.shape,
     /**
@@ -105,7 +106,7 @@ export const jellyApiDataSchema = z.object({
     * See https://github.com/jellyfin/jellyfin-sdk-typescript/blob/master/src/generated-client/models/media-type.ts#L22 for possible types
     *
     */
-    allowMediaTypes: z.union([z.array(jellyfinMediaTypesSchema), jellyfinMediaTypesSchema]).optional().meta({
+    allowMediaTypes: z.union([z.array(z.string()), z.string()]).optional().meta({
         description: "Allow media types from this list to be scrobbled"
     }),
 
@@ -147,7 +148,7 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, JellyApiSourceCon
                 password: partial.JELLYFIN_PASSWORD,
                 apiKey: partial.JELLYFIN_APIKEY,
                 url: partial.JELLYFIN_URL,
-                usersAllow: partial.JELLYFIN_USERS_ALLOW,
+                usersAllow: partial.JELLYFIN_USERS_ALLOW as undefined | string[] | true,
                 usersBlock: partial.JELLYFIN_USERS_BLOCK,
                 devicesAllow: partial.JELLYFIN_DEVICES_ALLOW,
                 devicesBlock: partial.JELLYFIN_DEVICES_BLOCK,
