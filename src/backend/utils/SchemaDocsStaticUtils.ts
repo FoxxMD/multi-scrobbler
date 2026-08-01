@@ -9,6 +9,7 @@ import { zodObjectToTableColumns, type TableColumn } from "./ZodUtils.ts";
 import {markdownTable} from 'markdown-table'
 import { sourceAIOConfigSchema } from "../common/infrastructure/config/source/sources.ts";
 import { sourceConfigSchemaMapAsync } from "../common/infrastructure/config/source/sourcesMap.ts";
+import { clientAIOConfigSchema } from "../common/infrastructure/config/client/clients.ts";
 
 mkdirSync(resolve(projectRootDir, 'docsite/static/schemas'), {recursive: true});
 
@@ -85,7 +86,8 @@ for(const [k,v] of sourcesEntries) {
 }
 
 const aioStrongConfigSchema = aioConfigSchema.extend({
-    sources: z.array(sourceAIOConfigSchema).optional()
+    sources: z.array(sourceAIOConfigSchema).optional(),
+    clients: z.array(clientAIOConfigSchema).optional()
 })
 
 writeFileSync(resolve(projectRootDir, 'docsite/static/schemas/aio.json'), JSON.stringify(generateSchema(aioStrongConfigSchema, 'ref')));
