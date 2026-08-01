@@ -17,7 +17,7 @@ const mdCols =  (cols: TableColumn[]): string[][] => cols.map((x) => {
     const name = `\`${x.title}\``;
     return [
         x.required ? `_**${name}**_` : name,
-        x.type,
+        Array.isArray(x.type) ? x.type.join(' OR ') : x.type,
         (x.default ?? '').toString(),
         x.description ?? ''
     ]
