@@ -2,7 +2,7 @@
 import { childLogger, type Logger } from '@foxxmd/logging';
 import type EventEmitter from "events";
 import type {InternalConfig, InternalConfigOptional} from "../common/infrastructure/Atomic.ts";
-import { isSourceType } from "../../core/Atomic.ts";
+import { clientTypes, isSourceType } from "../../core/Atomic.ts";
 import { sourceTypes } from "../../core/Atomic.ts";
 import type {SourceType} from "../../core/Atomic.ts";
 import {aioSourceRelaxedConfigSchema, type AIOSourceRelaxedConfig, type SourceDefaults} from "../common/infrastructure/config/aioConfig.ts";
@@ -238,8 +238,10 @@ export default class ScrobbleSources {
                         } break;
                         case 'file':
                         case 'aio': {
-                            if ('configureAs' in entry.config && entry.config.configureAs === 'client') {
-                                this.logger.debug(`Skipping ${configType} Config ${entry.source} ${entry.pos} because it is configured as a Source`);
+                            if (('configureAs' in entry.config && entry.config.configureAs === 'client')
+                                // @ts-expect-error could be a client type
+                                || (clientTypes.includes(entry.type) && entry.config.configureAs !== 'source')) {
+                                this.logger.debug(`Skipping ${configType} Config ${entry.source} ${entry.pos} because it is configured as a Client`);
                                 continue;
                             }
                             const parsed = entry.source === 'file' ? (await validateSourceJson(entry.type, entry.config)) : (await validateSourceAIOJson(entry.type, entry.config));
