@@ -7,7 +7,7 @@ export const tealSourceDataSchema = z.object({
     ...tealDataSchema.shape,
     ...commonSourceDataSchema.shape,
     ...pollingOptionsSchema.shape,
-    appPassword: tealDataSchema.shape.appPassword.optional(),
+    appPassword: tealDataSchema.shape.appPassword,
     serviceAllow: z.array(z.string()).optional(),
     serviceDeny: z.array(z.string()).optional(),
 });
