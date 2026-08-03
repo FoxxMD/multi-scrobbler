@@ -1,5 +1,5 @@
 import * as z from "zod";
-import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
 
 export const listenbrainzEndpointDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -41,6 +41,24 @@ export const listenbrainzEndpointDataSchema = z.object({
 });
 
 export type ListenbrainzEndpointData = z.infer<typeof listenbrainzEndpointDataSchema>;
+
+const envDataSchema = z.object({
+    LZE_SLUG: listenbrainzEndpointDataSchema.shape.slug,
+    LZE_TOKEN: listenbrainzEndpointDataSchema.shape.token,
+    LZE_USERNAME: listenbrainzEndpointDataSchema.shape.username,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, ListenbrainzEndpointSourceConfig> = {
+    env: envDataSchema,
+    prefix: 'LZE',
+    toConfig: (partial) => ({
+            data: {
+                slug: partial.LZE_SLUG,
+                token: partial.LZE_TOKEN,
+                username: partial.LZE_USERNAME
+            }
+    })
+};
 
 export const listenbrainzEndpointSourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,

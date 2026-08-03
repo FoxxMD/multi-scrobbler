@@ -1,7 +1,7 @@
 import * as z from "zod";
 import {lastfmDataSchema} from "../client/lastfm.ts";
 import {pollingOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
 
 export const lastFmSourceDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -10,6 +10,26 @@ export const lastFmSourceDataSchema = z.object({
 });
 
 export type LastFmSourceData = z.infer<typeof lastFmSourceDataSchema>;
+
+const envDataSchema = z.object({
+    SOURCE_LASTFM_API_KEY: lastFmSourceDataSchema.shape.apiKey,
+    SOURCE_LASTFM_SECRET: lastFmSourceDataSchema.shape.secret,
+    SOURCE_LASTFM_REDIRECT_URI: lastFmSourceDataSchema.shape.redirectUri,
+    SOURCE_LASTFM_SESSION: lastFmSourceDataSchema.shape.session,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, LastfmSourceConfig> = {
+    env: envDataSchema,
+    prefix: 'SOURCE_LASTFM',
+    toConfig: (partial) => ({
+            data: {
+                apiKey: partial.SOURCE_LASTFM_API_KEY,
+                secret: partial.SOURCE_LASTFM_SECRET,
+                redirectUri: partial.SOURCE_LASTFM_REDIRECT_URI,
+                session: partial.SOURCE_LASTFM_SESSION
+            }
+    })
+};
 
 export const lastfmSourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,

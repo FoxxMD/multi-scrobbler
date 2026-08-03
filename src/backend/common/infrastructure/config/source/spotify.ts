@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
 
 export const spotifySourceDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -57,6 +57,24 @@ export const spotifySourceDataSchema = z.object({
 });
 
 export type SpotifySourceData = z.infer<typeof spotifySourceDataSchema>;
+
+const envDataSchema = z.object({
+    SPOTIFY_CLIENT_ID: spotifySourceDataSchema.shape.clientId,
+    SPOTIFY_CLIENT_SECRET: spotifySourceDataSchema.shape.clientSecret,
+    SPOTIFY_REDIRECT_URI: spotifySourceDataSchema.shape.redirectUri,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, SpotifySourceConfig> = {
+    env: envDataSchema,
+    prefix: 'SPOTIFY',
+    toConfig: (partial) => ({
+            data: {
+                clientId: partial.SPOTIFY_CLIENT_ID,
+                clientSecret: partial.SPOTIFY_CLIENT_SECRET,
+                redirectUri: partial.SPOTIFY_REDIRECT_URI
+            }
+    })
+};
 
 export const spotifySourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,

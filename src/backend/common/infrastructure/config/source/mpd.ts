@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
 
 export const mpdDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -38,6 +38,22 @@ export const mpdDataSchema = z.object({
 });
 
 export type MPDData = z.infer<typeof mpdDataSchema>;
+
+const envDataSchema = z.object({
+    MPD_URL: mpdDataSchema.shape.url,
+    MPD_PASSWORD: mpdDataSchema.shape.password,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, MPDSourceConfig> = {
+    env: envDataSchema,
+    prefix: 'MPD',
+    toConfig: (partial) => ({
+            data: {
+                url: partial.MPD_URL,
+                password: partial.MPD_PASSWORD
+            }
+    })
+};
 
 export const mpdSourceOptionsSchema = z.object({
     ...commonSourceOptionsSchema.shape,

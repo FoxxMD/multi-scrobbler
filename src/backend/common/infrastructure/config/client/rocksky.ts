@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {requestRetryOptionsSchema} from "../common.ts";
-import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema, nowPlayingOptionsSchema} from "./index.ts";
+import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema, nowPlayingOptionsSchema, type EnvClientSchema} from "./index.ts";
 
 export const rockSkyDataSchema = z.object({
     ...requestRetryOptionsSchema.shape,
@@ -39,6 +39,24 @@ export const rockSkyDataSchema = z.object({
 });
 
 export type RockSkyData = z.infer<typeof rockSkyDataSchema>;
+
+const envDataSchema = z.object({
+    ROCKSKY_KEY: rockSkyDataSchema.shape.key,
+    ROCKSKY_TOKEN: rockSkyDataSchema.shape.token,
+    ROCKSKY_HANDLE: rockSkyDataSchema.shape.handle,
+});
+
+export const envSchemas: EnvClientSchema<typeof envDataSchema, RockSkyClientConfig> = {
+    env: envDataSchema,
+    prefix: 'ROCKSKY',
+    toConfig: (partial) => ({
+            data: {
+                key: partial.ROCKSKY_KEY,
+                token: partial.ROCKSKY_TOKEN,
+                handle: partial.ROCKSKY_HANDLE
+            }
+    })
+};
 
 export const rockSkyClientDataSchema = rockSkyDataSchema.extend(commonClientDataSchema.shape);
 

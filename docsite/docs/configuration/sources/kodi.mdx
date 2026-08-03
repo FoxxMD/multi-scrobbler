@@ -9,6 +9,7 @@ import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import KodiConfig from '!!raw-loader!@site/../config/kodi.json.example';
 import Config from '@site/src/components/GenericConfiguration.mdx';
+import ENVConfig from "@site/docs/configuration/sources/_env_configs/_kodi.md"
 
 In order for multi-scrobbler to communicate with Kodi you must have the [Web Interface](https://kodi.wiki/view/Web_interface) enabled. This can be done in the Kodi GUI:
 
@@ -51,11 +52,5 @@ If any part of this URL is missing multi-scrobbler will use a default value. Thi
 ## Configuration
 
 <Config config="KodiSourceConfig" fileContent={KodiConfig} name="kodi">
-        | Environmental Variable | Required | Default                       | Description                     |
-        | ---------------------- | -------- | ----------------------------- | ------------------------------- |
-        | KODI_ID                | Yes      |                               | A unique ID                     |
-        | KODI_URL               | Yes      | http://localhost:8080/jsonrpc | The URL of the Kodi server      |
-        | KODI_USERNAME          | No       |                               | The username set                |
-        | KODI_PASSWORD          | No       |                               | The password set                |
-        | KODI_NAME              | No       |                               | A vanity name different than ID |
+<ENVConfig/>
 </Config>

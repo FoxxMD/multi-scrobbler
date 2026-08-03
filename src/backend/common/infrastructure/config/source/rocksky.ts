@@ -1,7 +1,7 @@
 import * as z from "zod";
 import {rockSkyDataSchema, rockSkyOptionsSchema} from "../client/rocksky.ts";
 import {pollingOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
 
 export const rockskySourceDataSchema = z.object({
     ...rockSkyDataSchema.shape,
@@ -10,6 +10,22 @@ export const rockskySourceDataSchema = z.object({
 });
 
 export type RockskySourceData = z.infer<typeof rockskySourceDataSchema>;
+
+const envDataSchema = z.object({
+    SOURCE_ROCKSKY_KEY: rockskySourceDataSchema.shape.key,
+    SOURCE_ROCKSKY_HANDLE: rockskySourceDataSchema.shape.handle,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, RockskySourceConfig> = {
+    env: envDataSchema,
+    prefix: 'SOURCE_ROCKSKY',
+    toConfig: (partial) => ({
+            data: {
+                key: partial.SOURCE_ROCKSKY_KEY,
+                handle: partial.SOURCE_ROCKSKY_HANDLE
+            }
+    })
+};
 
 export const rockskySourceOptionsSchema = z.object({
     ...rockSkyOptionsSchema.shape,

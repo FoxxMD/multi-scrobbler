@@ -1,6 +1,9 @@
 import * as z from "zod";
-import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
+import { envMetaNormalize, transformSplitMaybeString, transformSplitMaybeStringOrBoolean } from "../../../../utils/ZodUtils.ts";
 
+//export const jellyfinMediaTypesSchema = z.enum(['unknown','video','audio','photo','book','musicvideo']);
+//export type JellyfinMediaType = z.infer<typeof jellyfinMediaTypesSchema>;
 export const jellyApiDataSchema = z.object({
     ...commonSourceDataSchema.shape,
     /**
@@ -33,44 +36,44 @@ export const jellyApiDataSchema = z.object({
     }),
 
     /**
-     * Only scrobble for specific users (case-insensitive)
+     * Only scrobble for specific users
      *
      * If `true` MS will scrobble activity from all users
      * */
     usersAllow: z.union([z.string(), z.literal(true), z.array(z.string())]).optional().meta({
-        description: "Only scrobble for specific users (case-insensitive)"
+        description: "Only scrobble for specific users from this list. If `true`, scrobble for all users."
     }),
     /**
-     * Do not scrobble for these users (case-insensitive)
+     * Do not scrobble for these users
      * */
     usersBlock: z.union([z.string(), z.array(z.string())]).optional().meta({
-        description: "Do not scrobble for these users (case-insensitive)"
+        description: "Do not scrobble for users from this list"
     }),
 
     /**
-     * Only scrobble if device or application name contains strings from this list (case-insensitive)
+     * Only scrobble if device or application name contains strings from this list
      * */
     devicesAllow: z.union([z.string(), z.array(z.string())]).optional().meta({
-        description: "Only scrobble if device or application name contains strings from this list (case-insensitive)"
+        description: "Only scrobble if device or application name contains strings from this list"
     }),
     /**
-     * Do not scrobble if device or application name contains strings from this list (case-insensitive)
+     * Do not scrobble if device or application name contains strings from this list
      * */
     devicesBlock: z.union([z.string(), z.array(z.string())]).optional().meta({
-        description: "Do not scrobble if device or application name contains strings from this list (case-insensitive)"
+        description: "Do not scrobble if device or application name contains strings from this list"
     }),
 
     /**
-     * Only scrobble if library name contains string from this list (case-insensitive)
+     * Only scrobble if library name contains string from this list
      * */
     librariesAllow: z.union([z.string(), z.array(z.string())]).optional().meta({
-        description: "Only scrobble if library name contains string from this list (case-insensitive)"
+        description: "Only scrobble if library name contains string from this list"
     }),
     /**
-     * Do not scrobble if library name contains strings from this list (case-insensitive)
+     * Do not scrobble if library name contains strings from this list
      * */
     librariesBlock: z.union([z.string(), z.array(z.string())]).optional().meta({
-        description: "Do not scrobble if library name contains strings from this list (case-insensitive)"
+        description: "Do not scrobble if library name contains strings from this list"
     }),
 
     /**
@@ -104,7 +107,7 @@ export const jellyApiDataSchema = z.object({
     *
     */
     allowMediaTypes: z.union([z.array(z.string()), z.string()]).optional().meta({
-        description: "Allow these media types to be scrobbled."
+        description: "Allow media types from this list to be scrobbled"
     }),
 
     /**
@@ -120,6 +123,42 @@ export const jellyApiDataSchema = z.object({
 });
 
 export type JellyApiData = z.infer<typeof jellyApiDataSchema>;
+
+const envDataSchema = z.object({
+    JELLYFIN_USER: jellyApiDataSchema.shape.user,
+    JELLYFIN_PASSWORD: jellyApiDataSchema.shape.password,
+    JELLYFIN_APIKEY: jellyApiDataSchema.shape.apiKey,
+    JELLYFIN_URL: jellyApiDataSchema.shape.url,
+    JELLYFIN_USERS_ALLOW: z.union([z.string(),z.literal(true)]).optional().pipe(transformSplitMaybeStringOrBoolean).meta(envMetaNormalize(jellyApiDataSchema.shape.usersAllow.meta())),
+    JELLYFIN_USERS_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(jellyApiDataSchema.shape.usersBlock.meta())),
+    JELLYFIN_DEVICES_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(jellyApiDataSchema.shape.devicesAllow.meta())),
+    JELLYFIN_DEVICES_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(jellyApiDataSchema.shape.devicesBlock.meta())),
+    JELLYFIN_LIBRARIES_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(jellyApiDataSchema.shape.librariesAllow.meta())),
+    JELLYFIN_LIBRARIES_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(jellyApiDataSchema.shape.librariesBlock.meta())),
+    JELLYFIN_FRONTEND_URL_OVERRIDE: jellyApiDataSchema.shape.frontendUrlOverride,
+    JELLYFIN_MEDIATYPES_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(jellyApiDataSchema.shape.allowMediaTypes.meta())),
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, JellyApiSourceConfig> = {
+    env: envDataSchema,
+    prefix: 'JELLYFIN',
+    toConfig: (partial) => ({
+            data: {
+                user: partial.JELLYFIN_USER,
+                password: partial.JELLYFIN_PASSWORD,
+                apiKey: partial.JELLYFIN_APIKEY,
+                url: partial.JELLYFIN_URL,
+                usersAllow: partial.JELLYFIN_USERS_ALLOW as undefined | string[] | true,
+                usersBlock: partial.JELLYFIN_USERS_BLOCK,
+                devicesAllow: partial.JELLYFIN_DEVICES_ALLOW,
+                devicesBlock: partial.JELLYFIN_DEVICES_BLOCK,
+                librariesAllow: partial.JELLYFIN_LIBRARIES_ALLOW,
+                librariesBlock: partial.JELLYFIN_LIBRARIES_BLOCK,
+                frontendUrlOverride: partial.JELLYFIN_FRONTEND_URL_OVERRIDE,
+                allowMediaTypes: partial.JELLYFIN_MEDIATYPES_ALLOW
+            }
+    })
+};
 
 export const jellyApiOptionsSchema = z.object({
     ...commonSourceOptionsSchema.shape,

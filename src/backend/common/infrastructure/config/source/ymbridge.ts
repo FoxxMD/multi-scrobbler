@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
 
 export const yandexMusicBridgeDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -16,6 +16,22 @@ export const yandexMusicBridgeDataSchema = z.object({
 });
 
 export type YandexMusicBridgeData = z.infer<typeof yandexMusicBridgeDataSchema>;
+
+const envDataSchema = z.object({
+    YMBRIDGE_URL: yandexMusicBridgeDataSchema.shape.url,
+    YMBRIDGE_API_KEY: yandexMusicBridgeDataSchema.shape.apiKey,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, YandexMusicBridgeSourceConfig> = {
+    env: envDataSchema,
+    prefix: 'YMBRIDGE',
+    toConfig: (partial) => ({
+            data: {
+                url: partial.YMBRIDGE_URL,
+                apiKey: partial.YMBRIDGE_API_KEY
+            }
+    })
+};
 
 export const yandexMusicBridgeSourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,

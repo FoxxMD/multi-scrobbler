@@ -12,6 +12,7 @@ dotenv.config({ path: envPath });
 
 const createSource = async (data: SonosData): Promise<SonosSource> => {
     const source = new SonosSource('Test', {
+        id: `test-${Date.now()}`,
         data,
         options: {}
     }, { localUrl: new URL('http://test'), configDir: 'test', logger: loggerDebug, version: 'test' }, new EventEmitter());

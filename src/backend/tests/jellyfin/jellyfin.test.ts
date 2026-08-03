@@ -30,6 +30,7 @@ interface TestFixture {
 
 const createJfApi = (data: JellyApiData): JellyfinApiSource => {
     const jf = new JellyfinApiSource('Test', {
+        id: `test-${Date.now()}`,
         data,
         options: {}
     }, { localUrl: new URL('http://test'), configDir: 'test', logger: loggerTest, version: 'test' }, new EventEmitter());

@@ -9,6 +9,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import KoitoConfig from '!!raw-loader!@site/../config/koito.json.example';
+import ENVConfig from "@site/docs/configuration/sources/_env_configs/_koito.md"
 
 This Source monitors a Koito account's scrobble history and then re-scrobbles discovered tracks to configured [Clients.](/configuration/clients)
 
@@ -25,11 +26,5 @@ See the [Koito (Client)](/configuration/clients/koito) configuration for general
 #### Configuration
 
 <Config config="KoitoSourceConfig" fileContent={KoitoConfig} name="koito">
-        | Environmental Variable | Required? | Default | Description                       |
-        | :--------------------- | --------- | ------- | --------------------------------- |
-        | `SOURCE_KOITO_ID`      | Yes       |         | A unique ID                       |
-        | `SOURCE_KOITO_TOKEN`   | Yes       |         | API Key from your Koito Account   |
-        | `SOURCE_KOITO_USER`    | Yes       |         | Your Koito username               |
-        | `SOURCE_KOITO_URL`     | No        |         | The base URL for the Koito server |
-        | `SOURCE_KOITO_NAME`    | No        |         | A vanity name differen than ID    |
+<ENVConfig/>
 </Config>

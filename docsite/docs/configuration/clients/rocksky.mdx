@@ -6,6 +6,7 @@ toc_max_heading_level: 5
 
 import Bluesky from "@site/src/components/snippets/_bluesky.mdx";
 import JsonConfig from '!!raw-loader!@site/../config/rocksky.json.example';
+import ENVConfig from "@site/docs/configuration/clients/_env_configs/_rocksky.md"
 
 :::tip[Other Uses]
 
@@ -76,10 +77,5 @@ Keys are now **deprecated** and functionality for them will be removed in a futu
 </DetailsAdmo>
 
 <Config config="RockSkyClientConfig" fileContent={JsonConfig} client name="rocksky">
-        | Environmental Variable | Required? | Default | Description                                                                         |
-        | :--------------------- | --------- | ------- | ----------------------------------------------------------------------------------- |
-        | `ROCKSKY_ID`           | Yes       |         | A unique ID used in MS                                                              |
-        | `ROCKSKY_HANDLE`       | Yes       |         | Your **full** ATProto handle. For Bluesky account this is like `myUser.bsky.social` |
-        | `ROCKSKY_TOKEN`        | Yes       |         | Access Token obtained from Rocksky                                                  |
-        | `ROCKSKY_NAME`         | No        |         | A vanity name different than ID                                                     |
+<ENVConfig/>
 </Config>

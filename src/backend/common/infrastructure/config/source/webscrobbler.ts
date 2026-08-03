@@ -1,5 +1,6 @@
 import * as z from "zod";
-import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
+import { transformSplitMaybeString } from "../../../../utils/ZodUtils.ts";
 
 export const webScrobblerDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -45,6 +46,22 @@ export const webScrobblerDataSchema = z.object({
 });
 
 export type WebScrobblerData = z.infer<typeof webScrobblerDataSchema>;
+
+const envDataSchema = z.object({
+    WS_BLACKLIST: z.string().optional().pipe(transformSplitMaybeString).default([]).meta(webScrobblerDataSchema.shape.blacklist.meta()),
+    WS_WHITELIST: z.string().optional().pipe(transformSplitMaybeString).default([]).meta(webScrobblerDataSchema.shape.whitelist.meta())
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, WebScrobblerSourceConfig> = {
+    env: envDataSchema,
+    prefix: 'WS',
+    toConfig: (partial) => ({
+            data: {
+                blacklist: partial.WS_BLACKLIST,
+                whitelist: partial.WS_WHITELIST
+            }
+    })
+};
 
 export const webScrobblerSourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,

@@ -1,12 +1,14 @@
 import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
+import { SimpleError } from "../../../errors/MSErrors.ts";
 
 export const appleMusicKeySchema = z.object({
     id: z.string(),
     teamId: z.string(),
     p8: z.string()
 });
+const envKeyKeys = ['APPLEMUSIC_KEY_ID','APPLEMUSIC_KEY_P8','APPLEMUSIC_TEAM_ID'];
 
 export type AppleMusicKey = z.infer<typeof appleMusicKeySchema>;
 
@@ -15,7 +17,7 @@ export const appleMusicDataSchema = z.object({
     ...pollingOptionsSchema.shape,
     key: appleMusicKeySchema.optional(),
     token: z.string().optional(),
-    mediaUserToken: z.string().optional(),
+    mediaUserToken: z.string(),
     /**
      * Origin header to include in every Apple Music API request.
      * Required when using a browser token (not a MusicKit key).
@@ -30,11 +32,7 @@ export const appleMusicDataSchema = z.object({
 
 export type AppleMusicData = z.infer<typeof appleMusicDataSchema>;
 
-export const appleMusicSourceConfigSchema = z.object({
-    ...commonSourceConfigSchema.shape,
-    data: appleMusicDataSchema.optional(),
-    options: z.object({
-        ...commonSourceOptionsSchema.shape,
+export const appleMusicOptions = z.object({
         logAuth: z.boolean().optional(),
         logDiff: z.boolean().optional(),
         /**
@@ -70,10 +68,75 @@ export const appleMusicSourceConfigSchema = z.object({
             default: true,
             examples: [true, false]
         }),
+});
+
+export type AppleMusicOptions = z.infer<typeof appleMusicOptions>;
+
+export const appleMusicSourceConfigSchema = z.object({
+    ...commonSourceConfigSchema.shape,
+    data: appleMusicDataSchema.optional(),
+    options: z.object({
+        ...commonSourceOptionsSchema.shape,
+        ...appleMusicOptions.shape
     }).optional(),
 });
 
 export type AppleMusicSourceConfig = z.infer<typeof appleMusicSourceConfigSchema>;
+
+const envDataSchema = z.object({
+    APPLEMUSIC_KEY_ID: appleMusicKeySchema.shape.id.optional(),
+    APPLEMUSIC_TEAM_ID: appleMusicKeySchema.shape.teamId.optional(),
+    APPLEMUSIC_KEY_P8: appleMusicKeySchema.shape.p8.optional(),
+    APPLEMUSIC_MEDIA_USER_TOKEN: appleMusicDataSchema.shape.mediaUserToken,
+    APPLEMUSIC_TOKEN: appleMusicDataSchema.shape.token,
+    APPLEMUSIC_ORIGIN_HEADER: appleMusicDataSchema.shape.origin,
+    APPLEMUSIC_RECOVER_UNCHANGED_TOP_HISTORY: z.stringbool().optional().meta(appleMusicOptions.shape.recoverUnchangedTopHistory.meta()),
+    APPLEMUSIC_NORMALIZE_ALBUM: z.stringbool().optional().meta(appleMusicOptions.shape.normalizeAlbum.meta())
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, AppleMusicSourceConfig> = {
+    env: envDataSchema,
+    prefix: 'APPLEMUSIC',
+    toConfig: (partial) => {
+        let appleMusicKey: AppleMusicKey | undefined;
+        let token: string | undefined;
+        let origin: string | undefined;
+        if(envKeyKeys.some(x => partial[x] !== undefined)) {
+            for(const k of envKeyKeys) {
+                if(partial[k] === undefined) {
+                    throw new SimpleError(`ENV ${partial[k]} is not defined but when providing auth via MusicKit Key you must provide all of these: ${envKeyKeys.join(', ')}`);
+                }
+                appleMusicKey = {
+                    id: partial.APPLEMUSIC_KEY_ID,
+                    teamId: partial.APPLEMUSIC_TEAM_ID,
+                    p8: partial.APPLEMUSIC_KEY_P8
+                };
+            }
+        } else {
+            token = partial.APPLEMUSIC_TOKEN;
+            if(token === undefined) {
+                throw new SimpleError('If not providing auth via MusicKit then you must provide a browser token with ENV APPLEMUSIC_TOKEN, but none was defined.');
+            }
+            origin = partial.APPLEMUSIC_ORIGIN_HEADER;
+            if(token === undefined) {
+                throw new SimpleError('If not providing auth via MusicKit then you must provide an origin header with ENV APPLEMUSIC_ORIGIN_HEADER, but none was defined.');
+            }
+        }
+
+        return {
+            data: {
+                key: appleMusicKey,
+                token,
+                origin,
+                mediaUserToken: partial.APPLEMUSIC_MEDIA_USER_TOKEN
+            },
+            options: {
+                recoverUnchangedTopHistory: partial.APPLEMUSIC_RECOVER_UNCHANGED_TOP_HISTORY,
+                normalizeAlbum: partial.APPLEMUSIC_NORMALIZE_ALBUM
+            }
+        }
+    }
+};
 
 export const appleMusicSourceAIOConfigSchema = z.object({
     ...appleMusicSourceConfigSchema.shape,

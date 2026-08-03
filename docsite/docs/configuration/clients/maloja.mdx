@@ -8,6 +8,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import JsonConfig from '!!raw-loader!@site/../config/maloja.json.example';
+import ENVConfig from "@site/docs/configuration/clients/_env_configs/_maloja.md"
 
 Setup a [Maloja server](https://github.com/krateng/maloja?tab=readme-ov-file#how-to-install) if you have not already done this.
 
@@ -38,10 +39,5 @@ Finally, add the Maloja server URL and API Key to the configuration type you cho
 ## Configuration
 
 <Config config="MalojaClientConfig" fileContent={JsonConfig} client name="maloja">
-        | Environmental Variable | Required? | Default | Description                     |
-        | ---------------------- | --------- | ------- | ------------------------------- |
-        | `MALOJA_ID`            | Yes       |         | A unique ID                     |
-        | `MALOJA_URL`           | Yes       |         | Base URL of your installation   |
-        | `MALOJA_API_KEY`       | Yes       |         | Api Key                         |
-        | `MALOJA_NAME`          | No        |         | A vanity name different than ID |
+<ENVConfig/>
 </Config>

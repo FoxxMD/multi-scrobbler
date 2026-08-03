@@ -108,7 +108,7 @@ describe('#tealfmCar', function() {
         this.timeout(100000);
 
         const tfm = new TealScrobbler('test', 
-            {name: 'test', data: {identifier: 'test', appPassword: 'test'}}, 
+            {id: `test-${Date.now()}`, name: 'test', data: {identifier: 'test', appPassword: 'test'}}, 
             {configDir: 'test', localUrl: new URL('https://example.com'), version: 'test'},
             new EventEmitter(),
             loggerDebug

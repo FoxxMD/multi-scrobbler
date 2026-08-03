@@ -9,6 +9,7 @@ import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import JsonConfig from '!!raw-loader!@site/../config/tealfm.json.example';
 import Bluesky from "@site/src/components/snippets/_bluesky.mdx";
+import ENVConfig from "@site/docs/configuration/clients/_env_configs/_tealfm.md"
 
 :::tip[Other Uses]
 
@@ -78,10 +79,5 @@ If using a handle:
 If your identifier does not look like a DID and does not include a TLD then multi-scrobbler will automatically append `.bsky.social` to your handle value.
 
 <Config config="TealClientConfig" fileContent={JsonConfig} client name="tealfm">
-        | Environmental Variable | Required? | Default | Description                                                                                |
-        | :--------------------- | --------- | ------- | ------------------------------------------------------------------------------------------ |
-        | `TEAMFM_ID`            | Yes       |         | A unique ID                                                                                |
-        | `TEALFM_IDENTIFIER`    | Yes       |         | Your **full** ATProto handle or DID. For Bluesky account this is like `myUser.bsky.social` |
-        | `TEALFM_APP_PW`        | Yes       |         | Bluesky/ATProto network App Password                                                       |
-        | `TEALFM_NAME`          | No        |         | A vanity name different than ID                                                            |
+<ENVConfig/>
 </Config>

@@ -1,7 +1,7 @@
 import * as z from "zod";
 import type {Second} from "../../../../../core/Atomic.ts";
 import {pollingOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
 
 export const deezerDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -104,6 +104,24 @@ export type DeezerInternalAIOConfig = z.infer<typeof deezerInternalAIOConfigSche
 export const deezerCompatConfigSchema = z.union([deezerSourceConfigSchema, deezerInternalSourceConfigSchema]);
 
 export type DeezerCompatConfig = z.infer<typeof deezerCompatConfigSchema>;
+
+const envDataSchema = z.object({
+    DEEZER_ARL: deezerInternalDataSchema.shape.arl,
+    DEEZER_ACCOUNT_ID: deezerInternalDataSchema.shape.accountId,
+    DEEZER_USER_AGENT: deezerInternalDataSchema.shape.userAgent
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, DeezerInternalSourceConfig> = {
+    env: envDataSchema,
+    prefix: 'DEEZER',
+    toConfig: (partial) => ({
+        data: {
+            arl: partial.DEEZER_ARL,
+            accountId: partial.DEEZER_ACCOUNT_ID,
+            userAgent: partial.DEEZER_USER_AGENT
+        }
+    })
+}
 
 export const deezerAIOCompatConfigSchema = z.union([deezerSourceAIOConfigSchema, deezerInternalAIOConfigSchema]);
 

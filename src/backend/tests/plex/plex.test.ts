@@ -15,6 +15,7 @@ const validSession = validSessionResponse.object.mediaContainer.metadata[0];
 
 const createSource = async (data: PlexApiData, authedUser: string | false = 'MyUser'): Promise<PlexApiSource> => {
     const source = new PlexApiSource('Test', {
+        id: `test-${Date.now()}`,
         data,
         options: {}
     }, { localUrl: new URL('http://test'), configDir: 'test', logger: loggerTest, version: 'test' }, new EventEmitter());

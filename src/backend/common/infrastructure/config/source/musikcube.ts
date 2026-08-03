@@ -1,5 +1,5 @@
 import * as z from "zod";
-import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
 
 export const PLAYBACK_STATUS_PLAYING_MC = 'playing';
 export const PLAYBACK_STATUS_PAUSED_MC = 'paused';
@@ -116,6 +116,22 @@ export const musikcubeDataSchema = z.object({
 });
 
 export type MusikcubeData = z.infer<typeof musikcubeDataSchema>;
+
+const envDataSchema = z.object({
+    MC_URL: musikcubeDataSchema.shape.url,
+    MC_PASSWORD: musikcubeDataSchema.shape.password,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, MusikcubeSourceConfig> = {
+    env: envDataSchema,
+    prefix: 'MC',
+    toConfig: (partial) => ({
+            data: {
+                url: partial.MC_URL,
+                password: partial.MC_PASSWORD
+            }
+    })
+};
 
 export const musikcubeSourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,

@@ -2,7 +2,7 @@ import * as z from "zod";
 import type {UnixTimestamp} from "../../../../../core/Atomic.ts";
 import {componentTypeSchema} from "../../../../../core/Atomic.ts";
 import {requestRetryOptionsSchema} from "../common.ts";
-import {commonClientConfigSchema, commonClientDataSchema} from "./index.ts";
+import {commonClientConfigSchema, commonClientDataSchema, type EnvClientSchema} from "./index.ts";
 
 export interface ListensResponse {
     items: ListenObjectResponse[]
@@ -77,6 +77,24 @@ export const koitoDataSchema = z.object({
 }).meta({title: 'KoitoData'});
 
 export type KoitoData = z.infer<typeof koitoDataSchema>;
+
+const envDataSchema = z.object({
+    KOITO_URL: koitoDataSchema.shape.url,
+    KOITO_TOKEN: koitoDataSchema.shape.token,
+    KOITO_USER: koitoDataSchema.shape.username,
+});
+
+export const envSchemas: EnvClientSchema<typeof envDataSchema, KoitoClientConfig> = {
+    env: envDataSchema,
+    prefix: 'KOITO',
+    toConfig: (partial) => ({
+            data: {
+                url: partial.KOITO_URL,
+                token: partial.KOITO_TOKEN,
+                username: partial.KOITO_USER
+            }
+    })
+};
 
 export const koitoClientDataSchema = koitoDataSchema.extend(commonClientDataSchema.shape).meta({title: 'KoitoData'});
 

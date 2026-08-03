@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {requestRetryOptionsSchema} from "../common.ts";
-import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema, nowPlayingOptionsSchema} from "./index.ts";
+import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema, nowPlayingOptionsSchema, type EnvClientSchema} from "./index.ts";
 
 export const lastfmDataSchema = z.object({
     ...commonClientDataSchema.shape,
@@ -43,6 +43,26 @@ export const lastfmDataSchema = z.object({
 });
 
 export type LastfmData = z.infer<typeof lastfmDataSchema>;
+
+const envDataSchema = z.object({
+    LASTFM_API_KEY: lastfmDataSchema.shape.apiKey,
+    LASTFM_SECRET: lastfmDataSchema.shape.secret,
+    LASTFM_REDIRECT_URI: lastfmDataSchema.shape.redirectUri,
+    LASTFM_SESSION: lastfmDataSchema.shape.session,
+});
+
+export const envSchemas: EnvClientSchema<typeof envDataSchema, LastfmClientConfig> = {
+    env: envDataSchema,
+    prefix: 'LASTFM',
+    toConfig: (partial) => ({
+            data: {
+                apiKey: partial.LASTFM_API_KEY,
+                secret: partial.LASTFM_SECRET,
+                redirectUri: partial.LASTFM_REDIRECT_URI,
+                session: partial.LASTFM_SESSION
+            }
+    })
+};
 
 export const lastfmClientOptionsSchema = z.object({
     ...commonClientOptionsSchema.shape,

@@ -1,5 +1,5 @@
 import * as z from "zod";
-import {commonClientConfigSchema, commonClientDataSchema} from "./index.ts";
+import {commonClientConfigSchema, commonClientDataSchema, type EnvClientSchema} from "./index.ts";
 import {componentTypeSchema} from "../../../../../core/Atomic.ts";
 
 export const statusTypeSchema = z.union([z.literal("online"), z.literal("idle"), z.literal("dnd"), z.literal("invisible")]);
@@ -19,6 +19,32 @@ export const discordDataSchema = z.object({
 });
 
 export type DiscordData = z.infer<typeof discordDataSchema>;
+
+const envDataSchema = z.object({
+    DISCORD_TOKEN: discordDataSchema.shape.token,
+    DISCORD_ARTWORK: discordDataSchema.shape.artwork,
+    DISCORD_APPLICATION_ID: discordDataSchema.shape.applicationId,
+    DISCORD_IPC_LOCATIONS: discordDataSchema.shape.ipcLocations,
+    DISCORD_ARTWORK_DEFAULT_URL: discordDataSchema.shape.artworkDefaultUrl,
+    DISCORD_STATUS_OVERRIDE_ALLOW: discordDataSchema.shape.statusOverrideAllow,
+    DISCORD_LISTENING_ACTIVITY_ALLOW: discordDataSchema.shape.listeningActivityAllow,
+});
+
+export const envSchemas: EnvClientSchema<typeof envDataSchema, DiscordClientConfig> = {
+    env: envDataSchema,
+    prefix: 'DISCORD',
+    toConfig: (partial) => ({
+            data: {
+                token: partial.DISCORD_TOKEN,
+                artwork: partial.DISCORD_ARTWORK,
+                applicationId: partial.DISCORD_APPLICATION_ID,
+                ipcLocations: partial.DISCORD_IPC_LOCATIONS,
+                artworkDefaultUrl: partial.DISCORD_ARTWORK_DEFAULT_URL,
+                statusOverrideAllow: partial.DISCORD_STATUS_OVERRIDE_ALLOW,
+                listeningActivityAllow: partial.DISCORD_LISTENING_ACTIVITY_ALLOW
+            }
+    })
+};
 
 export const discordClientDataSchema = discordDataSchema.extend(commonClientDataSchema.shape);
 

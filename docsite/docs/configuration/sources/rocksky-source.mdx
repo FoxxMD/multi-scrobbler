@@ -9,6 +9,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import JsonConfig from '!!raw-loader!@site/../config/rocksky.json.example';
+import ENVConfig from "@site/docs/configuration/sources/_env_configs/_rocksky.md"
 
 :::tip[Other Uses]
 
@@ -33,10 +34,5 @@ See the [Rocksky (Client)](/configuration/clients/rocksky#setup) configuration f
 * [File/AIO config](/configuration?configType=file#configuration-types) must include `"configureAs": "source"`
 
 <Config config="RockskySourceConfig" fileContent={JsonConfig} name="rocksky">
-        | Environmental Variable  | Required? | Default | Description                                                                         |
-        | :---------------------- | --------- | ------- | ----------------------------------------------------------------------------------- |
-        | `SOURCE_ROCKSKY_ID`     | Yes       |         | A unique ID                                                                         |
-        | `SOURCE_ROCKSKY_HANDLE` | Yes       |         | Your **full** ATProto handle. For Bluesky account this is like `myUser.bsky.social` |
-        | `SOURCE_ROCKSKY_KEY`    | Yes       |         | API Key obtained from Rocksky developer dashboard                                   |
-        | `SOURCE_ROCKSKY_NAME`   | No        |         | A vanity name different than ID                                                     |
+<ENVConfig/>
 </Config>

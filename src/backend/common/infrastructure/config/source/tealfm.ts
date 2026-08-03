@@ -1,7 +1,7 @@
 import * as z from "zod";
 import {tealClientOptionsSchema, tealDataSchema} from "../client/tealfm.ts";
 import {pollingOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
 
 export const tealSourceDataSchema = z.object({
     ...tealDataSchema.shape,
@@ -12,6 +12,22 @@ export const tealSourceDataSchema = z.object({
 });
 
 export type TealSourceData = z.infer<typeof tealSourceDataSchema>;
+
+const envDataSchema = z.object({
+    SOURCE_TEALFM_IDENTIFIER: tealSourceDataSchema.shape.identifier,
+    SOURCE_TEALFM_APP_PW: tealSourceDataSchema.shape.appPassword,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, TealSourceConfig> = {
+    env: envDataSchema,
+    prefix: 'SOURCE_TEALFM',
+    toConfig: (partial) => ({
+            data: {
+                identifier: partial.SOURCE_TEALFM_IDENTIFIER,
+                appPassword: partial.SOURCE_TEALFM_APP_PW
+            }
+    })
+};
 
 export const tealSourceOptionsSchema = z.object({
     ...commonSourceOptionsSchema.shape,

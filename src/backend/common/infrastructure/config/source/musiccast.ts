@@ -1,7 +1,7 @@
 import * as z from "zod";
 import { REPORTED_PLAYER_STATUSES } from '../../../../../core/Atomic.ts';
 import type {ReportedPlayerStatus} from '../../../../../core/Atomic.ts';
-import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
 
 export type PlaybackStatus = 'play' | 'stop' | 'pause' | 'fast_reverse' | 'fast_forward'
 
@@ -85,6 +85,20 @@ export const musicCastDataSchema = z.object({
 });
 
 export type MusicCastData = z.infer<typeof musicCastDataSchema>;
+
+const envDataSchema = z.object({
+    MCAST_URL: musicCastDataSchema.shape.url,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, MusicCastSourceConfig> = {
+    env: envDataSchema,
+    prefix: 'MCAST',
+    toConfig: (partial) => ({
+            data: {
+                url: partial.MCAST_URL
+            }
+    })
+};
 
 export const musicCastSourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,

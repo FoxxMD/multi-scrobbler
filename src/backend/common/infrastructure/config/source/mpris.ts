@@ -1,5 +1,6 @@
 import * as z from "zod";
-import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
+import { envMetaNormalize, transformSplitMaybeString } from "../../../../utils/ZodUtils.ts";
 
 export const PLAYBACK_STATUS_PLAYING = 'Playing';
 export const PLAYBACK_STATUS_PAUSED = 'Paused';
@@ -37,7 +38,7 @@ export const mprisDataSchema = z.object({
      * @examples [["spotify","vlc"]]
      * */
     blacklist: z.union([z.string(), z.array(z.string())]).optional().meta({
-        description: "DO NOT scrobble from any players that START WITH these values, case-insensitive",
+        description: "DO NOT scrobble from any players that START WITH values from this list",
         examples: [["spotify", "vlc"]]
     }),
 
@@ -49,12 +50,28 @@ export const mprisDataSchema = z.object({
      * @examples [["spotify","vlc"]]
      * */
     whitelist: z.union([z.string(), z.array(z.string())]).optional().meta({
-        description: "ONLY from any players that START WITH these values, case-insensitive",
+        description: "ONLY scrobble from any players that START WITH values from this list",
         examples: [["spotify", "vlc"]]
     }),
 });
 
 export type MPRISData = z.infer<typeof mprisDataSchema>;
+
+const envDataSchema = z.object({
+    MPRIS_BLACKLIST: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(mprisDataSchema.shape.blacklist.meta())),
+    MPRIS_WHITELIST: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(mprisDataSchema.shape.whitelist.meta())),
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, MPRISSourceConfig> = {
+    env: envDataSchema,
+    prefix: 'MPRIS',
+    toConfig: (partial) => ({
+            data: {
+                blacklist: partial.MPRIS_BLACKLIST,
+                whitelist: partial.MPRIS_WHITELIST
+            }
+    })
+};
 
 export const mprisSourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,

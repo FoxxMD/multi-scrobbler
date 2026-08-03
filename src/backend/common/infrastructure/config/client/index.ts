@@ -1,7 +1,8 @@
 import * as z from "zod";
 import {playTransformOptionsSchema} from "../../../../../core/Transform.ts";
-import {commonConfigSchema, requestRetryOptionsSchema, monitorOptionsSchema} from "../common.ts";
+import {commonConfigSchema, requestRetryOptionsSchema, monitorOptionsSchema, type CommonComponentEnvShape} from "../common.ts";
 import {retentionConfigDurationValueSchema} from "../database.ts";
+import type { PipeUnwrapDirection } from "../../../../utils/ZodUtils.ts";
 
 /**
  * Scrobble matching (between new source track and existing client scrobbles) logging options. Used for debugging.
@@ -166,15 +167,6 @@ export type CommonClientOptions = z.infer<typeof commonClientOptionsSchema>;
 export const commonClientConfigSchema = z.object({
     ...commonConfigSchema.shape,
     /**
-     * Vanity name for this client
-     *
-     * @examples ["MyConfig"]
-     * */
-    name: z.string().meta({
-        description: "Vanity name for this client.",
-        examples: ["Foxx's Cool Client"]
-    }),
-    /**
      * Specific data required to configure this client
      * */
     data: commonClientDataSchema.optional().meta({
@@ -184,3 +176,10 @@ export const commonClientConfigSchema = z.object({
 });
 
 export type CommonClientConfig = Omit<z.infer<typeof commonClientConfigSchema>, 'data'> & { data?: CommonClientData };
+
+export interface EnvClientSchema<Y extends z.ZodObject, T extends CommonClientConfig> {
+    env: Y
+    pipe?: PipeUnwrapDirection
+    prefix: string
+    toConfig: (parsed: z.output<Y>) => Partial<Pick<T, 'data' | 'options'>>
+}

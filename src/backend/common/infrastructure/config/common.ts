@@ -1,5 +1,10 @@
 import { stripIndents } from "common-tags";
 import * as z from "zod";
+import type { PlayTransformHooks, ExternalMetadataTerm } from "../../../../core/Transform.ts";
+import type { CommonClientOptions } from "./client/index.ts";
+import type { MarkRequired } from "ts-essentials";
+import type { ClientType, SourceType } from "../../../../core/Atomic.ts";
+import { capitalize } from "../../../../core/StringUtils.ts";
 
 export const commonConfigPrimitivesSchema = z.object({
     name: z.string().optional(),
@@ -7,21 +12,29 @@ export const commonConfigPrimitivesSchema = z.object({
     enable: z.boolean().optional()
 });
 
-export type CommonConfigPrimitives = z.infer<typeof commonConfigPrimitivesSchema>;
+export type CommonConfigPrimitives = MarkRequired<z.infer<typeof commonConfigPrimitivesSchema>, 'id'>;
 
 export const commonDataSchema = z.record(z.string(), z.any()); // keyOmit<{ [key: string]: any }, "options">
 
 export type CommonData = z.infer<typeof commonDataSchema>;
 
 export const commonConfigSchema = z.object({
-    name: z.string().optional(),
+    /**
+     * Vanity name for this Source/Client
+     *
+     * @examples ["My Cool Component"]
+     * */
+    name: z.string().optional().meta({
+        description: "Vanity name for this Source/Client",
+        examples: ["Foxx's Cool Client"]
+    }),
     /** A UNIQUE identifier for this Source/Client
      *
      * It should be unique for the given Source/Client type. No other Source/Client of the same type should have this ID. This ID will be used to register this Source/Client in the database so that it can be identified even if you change the name of the component.
      *
      * If no id is given the name of this component will be used.
      */
-    id: z.string().optional().meta({
+    id: z.string().meta({
         description: "A UNIQUE identifier for this Source/Client",
         examples: ["fooGlobalA"]
     }),
@@ -141,3 +154,86 @@ export const monitorOptionsSchema = z.object({
     })
 })
 export type MonitorOptions = z.infer<typeof monitorOptionsSchema>;
+
+export type UnparsedConfig<T extends (SourceType | ClientType)> = {config: object, type: T, source?: 'file' | 'aio' | 'env', pos: string};
+
+export const generateConfigLocation = (configType: string, config: UnparsedConfig<any>): string => {
+    const identifiers: string[] = [];
+    if(config.config !== undefined) {
+        if('id' in config.config) {
+            identifiers.push(`ID ${config.config.id}`);
+        }
+        if('name' in config.config) {
+            identifiers.push(`Name ${config.config.name}`);
+        }
+    }
+
+    if(config.source === 'file') {
+        return `${capitalize(configType)} #${config.pos}${identifiers.length > 0 ? ` (${identifiers.join(',')})` : ''} in ${config.type}.json`;
+    }
+    if(config.source === 'aio') {
+        return `${capitalize(configType)} ${config.type} #${config.pos}${identifiers.length > 0 ? ` (${identifiers.join(',')})` : ''} in config.json`;
+    }
+    return `${capitalize(configType)} ${config.type}${identifiers.length > 0 ? ` (${identifiers.join(',')})` : ''} from ENV`;
+}
+
+export const transformPresetEnv = <T extends CommonClientOptions = CommonClientOptions>(prefix: string, existing: T = undefined): undefined | T => {
+
+    const env = process.env[`${prefix}_TRANSFORMS`];
+    if (env === undefined || env.trim() === '') {
+        return existing;
+    }
+
+    const popts: PlayTransformHooks<ExternalMetadataTerm> = {
+        preCompare: []
+    };
+    for (const p of env.split(',').map(x => x.trim().toLocaleLowerCase())) {
+        switch (p) {
+            case 'native':
+                popts.preCompare.push({ type: 'native' });
+                break;
+            case 'musicbrainz':
+                popts.preCompare.push({ type: 'musicbrainz' });
+                break;
+        }
+    }
+
+    // @ts-expect-error T is fine
+    return {
+        ...(existing || {}),
+        playTransform: popts
+    };
+};
+
+
+export type CommonComponentEnvShape<T extends string> = {
+    [K in `${T}_ID`]: z.ZodString
+} & {
+    [K in `${T}_NAME`]: z.ZodOptional<z.ZodString>
+} & {
+    [K in `${T}_ENABLE`]: z.ZodOptional<ReturnType<typeof z.stringbool>>
+};
+
+export const generateCommonComponentEnvConfigSchema = <T extends string>(prefix: T) =>
+    z.object({
+        [`${prefix}_ID`]: z.string().meta({description: 'A globally unique ID EX `myComponentId`', examples: ['myComponentId']}),
+        [`${prefix}_NAME`]: z.string().optional().meta({description: 'A vanity name EX `My Cool Component`', default: `Value of \`${prefix}_ID\``, examples: ['My Cool Component']}),
+        [`${prefix}_ENABLE`]: z.stringbool().optional().meta({description: 'Should this component be used?', default: true}),
+    } as CommonComponentEnvShape<T>);
+
+export type CommonComponentEnvConfigParsed<T extends string> = {
+    [K in `${T}_ID`]: string
+} & {
+    [K in `${T}_NAME`]?: string
+} & {
+    [K in `${T}_ENABLE`]?: boolean
+};
+
+export const commonComponentEnvConfigToConfigPrimitives = <T extends string>(prefix: T, envConfig: CommonComponentEnvConfigParsed<T>): CommonConfigPrimitives  => {
+    const raw = envConfig as Record<string, string | boolean | undefined>;
+    return {
+        id: raw[`${prefix}_ID`] as string,
+        name: raw[`${prefix}_NAME`] as string | undefined,
+        enable: raw[`${prefix}_ENABLE`] as boolean | undefined
+    };
+};

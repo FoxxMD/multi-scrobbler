@@ -8,6 +8,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import LastfmEndpointConfig from '!!raw-loader!@site/../config/endpointlfm.json.example';
+import ENVConfig from "@site/docs/configuration/sources/_env_configs/_endpointlfm.md"
 
 This Source enables multi-scrobbler to accept scrobbles from outside applications as if it was a Last.fm server.
 
@@ -39,10 +40,5 @@ http://localhost:9078/api/lastfm/mySlug
 ## Configuration
 
 <Config config="LastFMEndpointSourceConfig" fileContent={LastfmEndpointConfig} name="endpointlfm">
-        | Environmental Variable | Required? | Default | Description                                                                                                        |
-        | :--------------------- | :-------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
-        | `LFM_ID`               | Yes       |         | A unique ID                                                                                                        |
-        | `LFM_ENABLE`           | No        |         | Use LFM Endpoint as a Source without any other configuration. Only required if slug/token are not provided as ENVs |
-        | `LFM_SLUG`             | No        |         | (Optional) The URL suffix to use for accepting LFM scrobbles                                                       |
-        | `LFM_NAME`             | No        |         | A vanity name different than ID                                                                                    |
+<ENVConfig/>
 </Config>

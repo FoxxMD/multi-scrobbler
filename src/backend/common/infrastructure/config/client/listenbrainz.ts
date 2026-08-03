@@ -1,7 +1,7 @@
 import * as z from "zod";
 import {componentTypeSchema} from "../../../../../core/Atomic.ts";
 import {requestRetryOptionsSchema} from "../common.ts";
-import {commonClientConfigSchema, commonClientDataSchema} from "./index.ts";
+import {commonClientConfigSchema, commonClientDataSchema, type EnvClientSchema} from "./index.ts";
 
 export const listenBrainzDataSchema = z.object({
     ...requestRetryOptionsSchema.shape,
@@ -35,6 +35,24 @@ export const listenBrainzDataSchema = z.object({
 });
 
 export type ListenBrainzData = z.infer<typeof listenBrainzDataSchema>;
+
+const envDataSchema = z.object({
+    LZ_URL: listenBrainzDataSchema.shape.url,
+    LZ_TOKEN: listenBrainzDataSchema.shape.token,
+    LZ_USER: listenBrainzDataSchema.shape.username,
+});
+
+export const envSchemas: EnvClientSchema<typeof envDataSchema, ListenBrainzClientConfig> = {
+    env: envDataSchema,
+    prefix: 'LZ',
+    toConfig: (partial) => ({
+            data: {
+                url: partial.LZ_URL,
+                token: partial.LZ_TOKEN,
+                username: partial.LZ_USER
+            }
+    })
+};
 
 export const listenBrainzClientDataSchema = listenBrainzDataSchema.extend(commonClientDataSchema.shape);
 

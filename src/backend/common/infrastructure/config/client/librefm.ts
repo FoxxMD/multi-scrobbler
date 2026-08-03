@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {requestRetryOptionsSchema} from "../common.ts";
-import {commonClientConfigSchema, commonClientDataSchema} from "./index.ts";
+import {commonClientConfigSchema, commonClientDataSchema, type EnvClientSchema} from "./index.ts";
 import {lastfmClientOptionsSchema} from "./lastfm.ts";
 
 export const librefmDataSchema = z.object({
@@ -61,6 +61,28 @@ export const librefmDataSchema = z.object({
 });
 
 export type LibrefmData = z.infer<typeof librefmDataSchema>;
+
+const envDataSchema = z.object({
+    LIBREFM_API_KEY: librefmDataSchema.shape.apiKey,
+    LIBREFM_SECRET: librefmDataSchema.shape.secret,
+    LIBREFM_REDIRECT_URI: librefmDataSchema.shape.redirectUri,
+    LIBREFM_SESSION: librefmDataSchema.shape.session,
+    LIBREFM_URLBASE: librefmDataSchema.shape.urlBase,
+});
+
+export const envSchemas: EnvClientSchema<typeof envDataSchema, LibrefmClientConfig> = {
+    env: envDataSchema,
+    prefix: 'LIBREFM',
+    toConfig: (partial) => ({
+            data: {
+                apiKey: partial.LIBREFM_API_KEY,
+                secret: partial.LIBREFM_SECRET,
+                redirectUri: partial.LIBREFM_REDIRECT_URI,
+                session: partial.LIBREFM_SESSION,
+                urlBase: partial.LIBREFM_URLBASE
+            }
+    })
+};
 
 export const librefmClientOptionsSchema = z.object({
     ...lastfmClientOptionsSchema.shape,

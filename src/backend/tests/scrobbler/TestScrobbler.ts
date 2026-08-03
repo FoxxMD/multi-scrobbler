@@ -11,6 +11,7 @@ import type {RepositoryCreatePlayOpts} from "../../common/database/drizzle/repos
 import type { DrizzleQueueRepository } from "../../common/database/drizzle/repositories/QueueRepository.ts";
 import type {PlaySelect} from "../../common/database/drizzle/drizzleTypes.ts";
 import dayjs from "dayjs";
+import type { MarkOptional, MarkRequired } from "ts-essentials";
 
 export class TestScrobbler extends AbstractScrobbleClient {
 
@@ -20,9 +21,9 @@ export class TestScrobbler extends AbstractScrobbleClient {
     public playRepoTest: DrizzlePlayRepository;
     public queueRepoTest: DrizzleQueueRepository;
 
-    constructor(config: CommonClientConfig = {name: 'test'}) {
+    constructor(config: MarkOptional<CommonClientConfig, 'id'> = {name: 'test'}) {
         const logger = loggerNoop;
-        super('test', 'Test', {name: 'test', ...config}, new EventEmitter(), logger);
+        super('test', 'Test', {name: 'test', id: `test-${Date.now()}`, ...config}, new EventEmitter(), logger);
         this.supportsNowPlaying = false;
         this.getScrobblesForTimeRange = async (_) =>  {
             return this.testRecentScrobbles;
@@ -73,10 +74,10 @@ export class TestAuthScrobbler extends TestScrobbler {
     }
 }
 
-export type TestNowPlayingConfig = CommonClientConfig & {options?: CommonClientOptions & NowPlayingOptions};
+export type TestNowPlayingConfig = MarkOptional<CommonClientConfig, 'id'> & {options?: CommonClientOptions & NowPlayingOptions};
 
 export class NowPlayingScrobbler extends TestScrobbler {
-    declare config: TestNowPlayingConfig
+    declare config: MarkRequired<TestNowPlayingConfig, 'id'>
 
     constructor(config?: TestNowPlayingConfig) {
         super(config);

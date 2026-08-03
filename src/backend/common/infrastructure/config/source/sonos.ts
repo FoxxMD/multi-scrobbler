@@ -1,6 +1,7 @@
 import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
+import { envMetaNormalize, transformSplitMaybeString } from "../../../../utils/ZodUtils.ts";
 
 export const sonosDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -16,33 +17,56 @@ export const sonosDataSchema = z.object({
     }),
 
     /**
-     * Only scrobble if device name contains strings from this list (case-insensitive)
+     * Only scrobble if device name contains strings from this list
      * */
     devicesAllow: z.union([z.string(), z.array(z.string())]).optional().meta({
-        description: "Only scrobble if device name contains strings from this list (case-insensitive)"
+        description: "Only scrobble if device name contains strings from this list"
     }),
     /**
-     * Do not scrobble if device name contains strings from this list (case-insensitive)
+     * Do not scrobble if device name contains strings from this list
      * */
     devicesBlock: z.union([z.string(), z.array(z.string())]).optional().meta({
-        description: "Do not scrobble if device name contains strings from this list (case-insensitive)"
+        description: "Do not scrobble if device name contains strings from this list"
     }),
 
     /**
-     * Only scrobble if the name of a group the playing device belongs to contains strings from this list (case-insensitive)
+     * Only scrobble if the name of a group the playing device belongs to contains strings from this list
      * */
     groupsAllow: z.union([z.string(), z.array(z.string())]).optional().meta({
-        description: "Only scrobble if the name of a group the playing device belongs to contains strings from this list (case-insensitive)"
+        description: "Only scrobble if the name of a group the playing device belongs to contains strings from this list"
     }),
     /**
-     * Do not scrobble if the name of a group the playing device belongs to contains strings from this list (case-insensitive)
+     * Do not scrobble if the name of a group the playing device belongs to contains strings from this list
      * */
     groupsBlock: z.union([z.string(), z.array(z.string())]).optional().meta({
-        description: "Do not scrobble if the name of a group the playing device belongs to contains strings from this list (case-insensitive)"
+        description: "Do not scrobble if the name of a group the playing device belongs to contains strings from this list"
     }),
 });
 
 export type SonosData = z.infer<typeof sonosDataSchema>;
+
+const envDataSchema = z.object({
+    SONOS_HOST: sonosDataSchema.shape.host,
+    SONOS_DEVICES_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(sonosDataSchema.shape.devicesAllow.meta())),
+    SONOS_DEVICES_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(sonosDataSchema.shape.devicesBlock.meta())),
+    SONOS_GROUPS_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(sonosDataSchema.shape.groupsAllow.meta())),
+    SONOS_GROUPS_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(sonosDataSchema.shape.groupsBlock.meta())),
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, SonosSourceConfig> = {
+    env: envDataSchema,
+    prefix: 'SONOS',
+    pipe: 'in',
+    toConfig: (partial) => ({
+            data: {
+                host: partial.SONOS_HOST,
+                devicesAllow: partial.SONOS_DEVICES_ALLOW,
+                devicesBlock: partial.SONOS_DEVICES_BLOCK,
+                groupsAllow: partial.SONOS_GROUPS_ALLOW,
+                groupsBlock: partial.SONOS_GROUPS_BLOCK
+            }
+    })
+};
 
 export const sonosSourceOptionsSchema = z.object({
     ...commonSourceOptionsSchema.shape,

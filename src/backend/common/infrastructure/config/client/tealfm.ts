@@ -2,7 +2,7 @@ import * as z from "zod";
 import {componentTypeSchema} from "../../../../../core/Atomic.ts";
 import {requestRetryOptionsSchema} from "../common.ts";
 import {atProtoAppDataSchema, atProtoUserIdentifierDataSchema} from "./atproto.ts";
-import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema} from "./index.ts";
+import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema, type EnvClientSchema} from "./index.ts";
 
 export const tealDataSchema = z.object({
     ...requestRetryOptionsSchema.shape,
@@ -19,6 +19,22 @@ export const tealDataSchema = z.object({
 });
 
 export type TealData = z.infer<typeof tealDataSchema>;
+
+const envDataSchema = z.object({
+    TEALFM_IDENTIFIER: tealDataSchema.shape.identifier,
+    TEALFM_APP_PW: tealDataSchema.shape.appPassword,
+});
+
+export const envSchemas: EnvClientSchema<typeof envDataSchema, TealClientConfig> = {
+    env: envDataSchema,
+    prefix: 'TEALFM',
+    toConfig: (partial) => ({
+            data: {
+                identifier: partial.TEALFM_IDENTIFIER,
+                appPassword: partial.TEALFM_APP_PW
+            }
+    })
+};
 
 export const tealClientDataSchema = tealDataSchema.extend(commonClientDataSchema.shape);
 

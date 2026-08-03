@@ -1,7 +1,7 @@
 import * as z from "zod";
 import {listenBrainzDataSchema} from "../client/listenbrainz.ts";
 import {pollingOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
 
 export const listenBrainzSourceDataSchema = z.object({
     ...listenBrainzDataSchema.shape,
@@ -10,6 +10,24 @@ export const listenBrainzSourceDataSchema = z.object({
 });
 
 export type ListenBrainzSourceData = z.infer<typeof listenBrainzSourceDataSchema>;
+
+const envDataSchema = z.object({
+    SOURCE_LZ_URL: listenBrainzSourceDataSchema.shape.url,
+    SOURCE_LZ_TOKEN: listenBrainzSourceDataSchema.shape.token,
+    SOURCE_LZ_USER: listenBrainzSourceDataSchema.shape.username,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, ListenBrainzSourceConfig> = {
+    env: envDataSchema,
+    prefix: 'SOURCE_LZ',
+    toConfig: (partial) => ({
+            data: {
+                url: partial.SOURCE_LZ_URL,
+                token: partial.SOURCE_LZ_TOKEN,
+                username: partial.SOURCE_LZ_USER
+            }
+    })
+};
 
 export const listenBrainzSourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,

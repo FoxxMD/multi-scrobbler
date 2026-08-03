@@ -1,12 +1,27 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { resolve } from "path";
 import * as z from 'zod';
-import { clientConfigSchemaMap } from '../common/infrastructure/config/client/clients.ts';
-import { sourceConfigSchemaMap } from '../common/infrastructure/config/source/sources.ts';
+import { clientConfigSchemaMapAsync } from '../common/infrastructure/config/client/clientsMap.ts';
 import { projectRootDir } from "../common/infrastructure/Atomic.ts";
 import { aioConfigSchema } from "../common/infrastructure/config/aioConfig.ts";
+import { generateCommonComponentEnvConfigSchema } from "../common/infrastructure/config/common.ts";
+import { zodObjectToTableColumns, type TableColumn } from "./ZodUtils.ts";
+import {markdownTable} from 'markdown-table'
+import { sourceAIOConfigSchema } from "../common/infrastructure/config/source/sources.ts";
+import { sourceConfigSchemaMapAsync } from "../common/infrastructure/config/source/sourcesMap.ts";
+import { clientAIOConfigSchema } from "../common/infrastructure/config/client/clients.ts";
 
 mkdirSync(resolve(projectRootDir, 'docsite/static/schemas'), {recursive: true});
+
+const mdCols =  (cols: TableColumn[]): string[][] => cols.map((x) => {
+    const name = `\`${x.title}\``;
+    return [
+        x.required ? `_**${name}**_` : name,
+        Array.isArray(x.type) ? x.type.join(' OR ') : x.type,
+        (x.default ?? '').toString(),
+        x.description ?? ''
+    ]
+})
 
 const generateSchema = (schema: z.ZodType, reused: z.core.ToJSONSchemaParams['reused'] = 'inline') => z.toJSONSchema(schema, { 
     io: "input",
@@ -40,14 +55,41 @@ const generateSchema = (schema: z.ZodType, reused: z.core.ToJSONSchemaParams['re
     }
  })
 
-const clientEntries = Object.entries(clientConfigSchemaMap);
+const clientEntries = Object.entries(clientConfigSchemaMapAsync);
 for(const [k,v] of clientEntries) {
-    writeFileSync(resolve(projectRootDir, `docsite/static/schemas/${k}-client.json`), JSON.stringify(generateSchema(z.array(v[0]))));
+    const [fileSchema, aioSchema, envSchemas] = await v();
+    writeFileSync(resolve(projectRootDir, `docsite/static/schemas/${k}-client.json`), JSON.stringify(generateSchema(z.array(fileSchema))));
+
+    const envSchema = envSchemas;
+    const common = generateCommonComponentEnvConfigSchema(envSchema.prefix.toUpperCase());
+    const commonCol = zodObjectToTableColumns(z.object(common.shape), 'out');
+    const col = [...commonCol,...zodObjectToTableColumns(z.object(envSchema.env.shape), envSchemas.pipe ?? 'out')]
+    const tableContent = markdownTable([
+        ['Environmental Variable', 'Type', 'Default', 'Description'],
+        ...mdCols(col)
+    ]);
+    writeFileSync(resolve(projectRootDir, `docsite/docs/configuration/clients/_env_configs/_${k}.md`), tableContent);
 }
 
-const sourcesEntries = Object.entries(sourceConfigSchemaMap);
+const sourcesEntries = Object.entries(sourceConfigSchemaMapAsync);
 for(const [k,v] of sourcesEntries) {
-    writeFileSync(resolve(projectRootDir, `docsite/static/schemas/${k}-source.json`), JSON.stringify(generateSchema(z.array(v[0]))));
+    const [fileSchema, aioSchema, envSchemas] = await v();
+    writeFileSync(resolve(projectRootDir, `docsite/static/schemas/${k}-source.json`), JSON.stringify(generateSchema(z.array(fileSchema))));
+
+    const envSchema = envSchemas;
+    const common = generateCommonComponentEnvConfigSchema(envSchema.prefix.toUpperCase());
+    const commonCol = zodObjectToTableColumns(z.object(common.shape), 'out');
+    const col = [...commonCol,...zodObjectToTableColumns(z.object(envSchema.env.shape), envSchemas.pipe ?? 'out')]
+    const tableContent = markdownTable([
+        ['Environmental Variable', 'Type', 'Default', 'Description'],
+        ...mdCols(col)
+    ]);
+    writeFileSync(resolve(projectRootDir, `docsite/docs/configuration/sources/_env_configs/_${k}.md`), tableContent);
 }
 
-writeFileSync(resolve(projectRootDir, 'docsite/static/schemas/aio.json'), JSON.stringify(generateSchema(aioConfigSchema, 'ref')));
+const aioStrongConfigSchema = aioConfigSchema.extend({
+    sources: z.array(sourceAIOConfigSchema).optional(),
+    clients: z.array(clientAIOConfigSchema).optional()
+})
+
+writeFileSync(resolve(projectRootDir, 'docsite/static/schemas/aio.json'), JSON.stringify(generateSchema(aioStrongConfigSchema, 'ref')));

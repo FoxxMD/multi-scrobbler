@@ -91,9 +91,7 @@ describe('Networking', function () {
                     const authScrobbler = new TestAuthScrobbler();
                     try {
                         await authScrobbler.testAuth();
-                    } catch (e) {
-
-                    }
+                    } catch (e) { /* empty */ }
                     assert.isTrue(authScrobbler.authGated());
                     assert.isFalse(authScrobbler.authFailure);
                 }
@@ -111,9 +109,7 @@ describe('Networking', function () {
                     const authScrobbler = new TestAuthScrobbler();
                     try {
                         await authScrobbler.testAuth();
-                    } catch (e) {
-
-                    }
+                    } catch (e) { /* empty */ }
                     assert.isTrue(authScrobbler.authGated());
                     assert.isTrue(authScrobbler.authFailure);
                 }

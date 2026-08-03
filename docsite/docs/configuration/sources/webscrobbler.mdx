@@ -8,6 +8,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import JsonConfig from '!!raw-loader!@site/../config/webscrobbler.json.example';
+import ENVConfig from "@site/docs/configuration/sources/_env_configs/_webscrobbler.md"
 
 After installing the [Webscrobbler extension](https://web-scrobbler.com/) open the preferences/settings for it:
 
@@ -87,11 +88,5 @@ This affects **only** MS's behavior and does not affect the general connector be
 ## Configuration
 
 <Config config="WebScrobblerSourceConfig" fileContent={JsonConfig} name="webscrobbler">
-        | Environmental Variable | Required? | Default | Description                                                              |
-        | ---------------------- | --------- | ------- | ------------------------------------------------------------------------ |
-        | WS_ID                  | Yes       |         | A unique ID                                                              |
-        | WS_ENABLE              | No        |         | Set to 'true' to enable WS without needing to define other ENVs          |
-        | WS_WHITELIST           | No        |         | Only scrobble from these WebScrobbler Connectors. Comma-delimited list   |
-        | WS_BLACKLIST           | No        |         | Do not scrobble from these WebScrobbler Connectors. Comma-delimited list |
-        | WS_NAME                | No        |         | A vanity name different than ID                                          |
+<ENVConfig/>
 </Config>

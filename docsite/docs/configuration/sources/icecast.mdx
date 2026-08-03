@@ -9,6 +9,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import IcecastConfig from '!!raw-loader!@site/../config/icecast.json.example';
+import ENVConfig from "@site/docs/configuration/sources/_env_configs/_icecast.md"
 import ShouldScrobble from "@site/src/components/snippets/_should-scrobble-details.mdx"
 
 Parse metadata from any Icecast Station (streams) to use for scrobbling.
@@ -64,9 +65,5 @@ If no `sources` are configured for multi-scrobbler it will automatically try to 
 ## Configuration
 
 <Config config="IcecastSourceConfig" fileContent={IcecastConfig} name="icecast">
-        | Environmental Variable | Required? | Default | Description                     |
-        | :--------------------- | :-------- | :------ | ------------------------------- |
-        | `ICECAST_ID`           | Yes       |         | A unique ID                     |
-        | `ICECAST_URL`          | Yes       |         | Icecast URL                     |
-        | `ICECAST_NAME`         | No        |         | A vanity name different than ID |
+<ENVConfig/>
 </Config>

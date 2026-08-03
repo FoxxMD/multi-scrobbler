@@ -1,5 +1,5 @@
 import * as z from "zod";
-import {commonSourceConfigSchema, commonSourceDataSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
 
 export const lastFmEndpointDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -15,12 +15,26 @@ export const lastFmEndpointDataSchema = z.object({
      *
      * If no slug is found from an extension's incoming webhook event the first Last.fm source without a slug will be used
      * */
-    slug: z.union([z.string(), z.null()]).optional().meta({
+    slug: z.string().optional().meta({
         description: "The URL ending that should be used to identify scrobbles for this source"
     }),
 });
 
 export type LastFMEndpointData = z.infer<typeof lastFmEndpointDataSchema>;
+
+const envDataSchema = z.object({
+    LFM_SLUG: lastFmEndpointDataSchema.shape.slug,
+});
+
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, LastFMEndpointSourceConfig> = {
+    env: envDataSchema,
+    prefix: 'LFM',
+    toConfig: (partial) => ({
+            data: {
+                slug: partial.LFM_SLUG
+            }
+    })
+};
 
 export const lastFmEndpointSourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,

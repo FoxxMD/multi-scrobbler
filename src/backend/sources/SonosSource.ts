@@ -15,7 +15,6 @@ import type {SonosSourceConfig} from "../common/infrastructure/config/source/son
 import type { SonosDevice} from '@svrooij/sonos';
 import { SonosManager } from '@svrooij/sonos';
 import type {SonosState} from "@svrooij/sonos/lib/models/sonos-state.js";
-import { GroupTransportState } from "@svrooij/sonos/lib/models/transport-state.js";
 import type {Track} from "@svrooij/sonos/lib/models/track.js";
 import { parseDurationFromTimestamp } from "../utils/TimeUtils.ts";
 import { FixedSizeList } from "fixed-size-list";
@@ -36,8 +35,6 @@ export interface SimpleDeviceState {
     device: SimpleDevice
     state: SonosState
 }
-
-GroupTransportState.GroupPlaying
 
 const CLIENT_PLAYER_STATE: Record<string, ReportedPlayerStatus> = {
     'GROUP_PLAYING': REPORTED_PLAYER_STATUSES.playing,

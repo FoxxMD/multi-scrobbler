@@ -1,62 +1,27 @@
  
 import { childLogger, type Logger } from '@foxxmd/logging';
 import type EventEmitter from "events";
-import type {ConfigMeta, ConfigureAsSource, InternalConfig, InternalConfigOptional} from "../common/infrastructure/Atomic.ts";
+import type {InternalConfig, InternalConfigOptional} from "../common/infrastructure/Atomic.ts";
 import { clientTypes, isSourceType } from "../../core/Atomic.ts";
 import { sourceTypes } from "../../core/Atomic.ts";
-import type {ClientType, SourceType} from "../../core/Atomic.ts";
+import type {SourceType} from "../../core/Atomic.ts";
 import {aioSourceRelaxedConfigSchema, type AIOSourceRelaxedConfig, type SourceDefaults} from "../common/infrastructure/config/aioConfig.ts";
-import type {AzuracastData, AzuracastSourceConfig} from "../common/infrastructure/config/source/azuracast.ts";
-import type {ChromecastData, ChromecastSourceConfig} from "../common/infrastructure/config/source/chromecast.ts";
-import type {DeezerSourceConfig, DeezerInternalSourceConfig, DeezerCompatConfig} from "../common/infrastructure/config/source/deezer.ts";
-import type {ListenbrainzEndpointSourceConfig, ListenbrainzEndpointData} from "../common/infrastructure/config/source/endpointlz.ts";
-import type {LastFMEndpointSourceConfig, LastFMEndpointData} from "../common/infrastructure/config/source/endpointlfm.ts";
-import type {JellyApiData, JellyApiSourceConfig} from "../common/infrastructure/config/source/jellyfin.ts";
-import type {JRiverData, JRiverSourceConfig} from "../common/infrastructure/config/source/jriver.ts";
-import type {KodiData, KodiSourceConfig} from "../common/infrastructure/config/source/kodi.ts";
-import type {LastfmSourceConfig} from "../common/infrastructure/config/source/lastfm.ts";
-import type {ListenBrainzSourceConfig} from "../common/infrastructure/config/source/listenbrainz.ts";
-import type {MopidySourceConfig} from "../common/infrastructure/config/source/mopidy.ts";
-import type {MusicCastData, MusicCastSourceConfig} from "../common/infrastructure/config/source/musiccast.ts";
-import type {IcecastData, IcecastSourceConfig, IcecastSourceOptions} from "../common/infrastructure/config/source/icecast.ts";
-import type {MPDData, MPDSourceConfig} from "../common/infrastructure/config/source/mpd.ts";
-import type {MPRISData, MPRISSourceConfig} from "../common/infrastructure/config/source/mpris.ts";
-import type {MusikcubeData, MusikcubeSourceConfig} from "../common/infrastructure/config/source/musikcube.ts";
-import type {PlexApiData, PlexApiSourceConfig} from "../common/infrastructure/config/source/plex.ts";
-import type {MalojaSourceConfig} from "../common/infrastructure/config/source/maloja.ts";
-import {validateSourceAIOJson, validateSourceJson, type SourceAIOConfig, type SourceConfig} from "../common/infrastructure/config/source/sources.ts";
-import type {SpotifySourceConfig, SpotifySourceData} from "../common/infrastructure/config/source/spotify.ts";
-import type {SubsonicData, SubSonicSourceConfig} from "../common/infrastructure/config/source/subsonic.ts";
-import type {VLCData, VLCSourceConfig} from "../common/infrastructure/config/source/vlc.ts";
-import type {WebScrobblerData, WebScrobblerSourceConfig} from "../common/infrastructure/config/source/webscrobbler.ts";
-import type {YTMusicData, YTMusicSourceConfig} from "../common/infrastructure/config/source/ytmusic.ts";
-import type {YandexMusicBridgeData, YandexMusicBridgeSourceConfig} from "../common/infrastructure/config/source/ymbridge.ts";
-import type {SonosData, SonosSourceConfig} from "../common/infrastructure/config/source/sonos.ts";
-import type {AppleMusicSourceConfig} from "../common/infrastructure/config/source/applemusic.ts";
 import type { WildcardEmitter } from "../common/WildcardEmitter.ts";
-import { nonEmptyObj, parseBool, parseBoolStrict } from "../utils.ts";
-import { removeUndefinedKeys } from '../../core/DataUtils.ts';
-import { getCommonComponentEnvConfig, readJson } from '../utils/DataUtils.ts';
+import { pick } from '../../core/DataUtils.ts';
+import { readJson } from '../utils/DataUtils.ts';
 import type AbstractSource from "./AbstractSource.ts";
 import { nonEmptyStringOrDefault } from '../../core/StringUtils.ts';
-import type {KoitoSourceConfig} from '../common/infrastructure/config/source/koito.ts';
-import type {TealSourceConfig} from '../common/infrastructure/config/source/tealfm.ts';
-import type {RockskySourceConfig} from '../common/infrastructure/config/source/rocksky.ts';
-import type {CommonSourceOptions} from '../common/infrastructure/config/source/index.ts';
+import type {CommonSourceConfig, CommonSourceOptions} from '../common/infrastructure/config/source/index.ts';
 import type {ExternalMetadataTerm, PlayTransformHooks} from '../../core/Transform.ts';
-import type {LibrefmSourceConfig} from '../common/infrastructure/config/source/librefm.ts';
-import type {LastfmData} from '../common/infrastructure/config/client/lastfm.ts';
-import type {MalojaData} from '../common/infrastructure/config/client/maloja.ts';
-import type {LibrefmData} from '../common/infrastructure/config/client/librefm.ts';
-import type {ListenBrainzData} from '../common/infrastructure/config/client/listenbrainz.ts';
-import type {KoitoData} from '../common/infrastructure/config/client/koito.ts';
-import type {TealData} from '../common/infrastructure/config/client/tealfm.ts';
-import type {RockSkyData} from '../common/infrastructure/config/client/rocksky.ts';
 import { prettifyError, ZodError } from 'zod';
+import { commonComponentEnvConfigToConfigPrimitives, generateCommonComponentEnvConfigSchema, generateConfigLocation, type CommonConfigPrimitives, type UnparsedConfig } from '../common/infrastructure/config/common.ts';
+import { getSourceEnvSchema, validateSourceAIOJson, validateSourceJson } from '../common/infrastructure/config/source/sourcesMap.ts';
+import type { SourceTypeConfigMap } from "../common/infrastructure/config/source/sourcesMap.ts";
+import { stripIndents } from 'common-tags';
 
-type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
+type UnparsedSourceConfig = UnparsedConfig<SourceType>;
 
-type ParsedConfig = SourceAIOConfig & ConfigMeta;
+type CommonParsedConfig = (CommonSourceConfig & {source: string});
 
 export default class ScrobbleSources {
 
@@ -150,14 +115,15 @@ export default class ScrobbleSources {
         return buildDefaults;
     }
 
-    buildSourcesFromConfig = async (additionalConfigs: ParsedConfig[] = []) => {
-        const configs: ParsedConfig[] = additionalConfigs;
+    buildSourcesFromConfig = async () => {
+        const unparsedConfigs: UnparsedSourceConfig[] = [];
 
         let configFile;
         try {
-            configFile = await readJson(`${this.internalConfig.configDir}/config.json`, {throwOnNotFound: false, logger: childLogger(this.logger, `Secrets`)});
+            configFile = await readJson(`${this.internalConfig.configDir}/config.json`, { throwOnNotFound: false, logger: childLogger(this.logger, `Secrets`) });
         } catch (e) {
-            throw new Error('config.json could not be parsed', {cause: e});
+            // think this should stay as show-stopper since config could include important defaults (delay, retries) we don't want to ignore
+            throw new Error('config.json could not be parsed', { cause: e });
         }
 
         let sourceDefaults: SourceDefaults;
@@ -167,983 +133,301 @@ export default class ScrobbleSources {
                 aioConfig = aioSourceRelaxedConfigSchema.parse(configFile);
             } catch (e) {
                 const msg = `Validation error occurred while trying to parse 'config.json' for Source data/options`;
-                if(e instanceof ZodError) {
+                if (e instanceof ZodError) {
                     this.logger.error(`${msg}:\n${prettifyError(e)}`);
                 } else {
-                    this.logger.error(new Error(msg, {cause: e}));
+                    this.logger.error(new Error(msg, { cause: e }));
                 }
                 return;
             }
             const {
-                sources: mainConfigSourcesConfigs = [],
-                sourceDefaults: sd = {},
+                sources: mainConfigs = [],
+                sourceDefaults: cd = {},
                 database: {
                     retention
                 } = {},
             } = aioConfig;
-            sourceDefaults = this.buildSourceDefaults({retention, ...sd});
-            for (const [index, c] of mainConfigSourcesConfigs.entries()) {
-                const {name = 'unnamed'} = c;
-                if(c.type === undefined) {
+            sourceDefaults = this.buildSourceDefaults({ retention, ...cd });
+            for (const [index, c] of mainConfigs.entries()) {
+                const { name = 'unnamed' } = c;
+                if (c.type === undefined) {
                     const invalidMsgType = `Source config ${index + 1} (${name}) in config.json does not have a "type" property! "type": "[sourceType]" must be one of ${sourceTypes.join(' | ')}`;
-                    this.emitter.emit('error', new Error(invalidMsgType));
                     this.logger.error(invalidMsgType);
                     continue;
                 }
-                if(clientTypes.includes(c.type.toLocaleLowerCase() as ClientType) && (c.configureAs !== 'source'))
-                {
-                   this.logger.debug(`Skipping config ${index + 1} (${name}) in config.json because it is configured as a client.`);
-                   continue;
-                }
-                let validatedSourceConfig: SourceAIOConfig;
-                try {
-                    validatedSourceConfig = validateSourceAIOJson(c.type.toLocaleLowerCase() as SourceType, c);
-                } catch (e) {
-                    const msg = `Source config ${index + 1} (${c.type} - ${name}) in config.json is invalid and will not be used.`;
-                    const err = new Error(msg, {cause: e});
-                    this.emitter.emit('error', err);
-                    // pretty print error if its a zod error
-                    if(e instanceof ZodError) {
-                        this.logger.error(`${msg}:\n${prettifyError(e)}`);
-                    } else {
-                        this.logger.error(err);
-                    }
+                if (isSourceType(c.type)) {
+                    unparsedConfigs.push({
+                        config: c,
+                        source: 'aio',
+                        type: c.type,
+                        pos: `${index + 1} (${name})`
+                    });
+                } else {
+                    const invalidMsgType = `Source config ${index + 1} (${name}) in config.json has an invalid "type" property. Must be one of must be one of ${sourceTypes.join(' | ')}`;
+                    this.logger.error(invalidMsgType);
                     continue;
                 }
-                configs.push({...validatedSourceConfig,
-                    name: validatedSourceConfig.name ?? 'unnamed',
-                    source: 'config.json',
-                    configureAs: 'source' // override user value
-                });
             }
         } else {
             sourceDefaults = this.buildSourceDefaults();
         }
 
-        for (const sourceType of sourceTypes) {
-            const defaultConfigureAs: ConfigureAsSource = 'source';
-            // env builder for single user mode
-            switch (sourceType) {
-                case 'spotify': {
-                    const data: SpotifySourceData = removeUndefinedKeys<SpotifySourceData>({
-                        clientId: process.env.SPOTIFY_CLIENT_ID as string,
-                        clientSecret: process.env.SPOTIFY_CLIENT_SECRET as string,
-                        redirectUri: process.env.SPOTIFY_REDIRECT_URI,
-                    }, false);
-                    const p = getCommonComponentEnvConfig('SPOTIFY');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'spotify',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('SPOTIFY')
-                        })
-                    }
-                }    break;
-                case 'plex': {
-                    const data: PlexApiData =  removeUndefinedKeys<PlexApiData>({
-                        url: process.env.PLEX_URL,
-                        token: process.env.PLEX_TOKEN,
-                        usersAllow: process.env.PLEX_USERS_ALLOW,
-                        usersBlock: process.env.PLEX_USERS_BLOCK,
-                        devicesAllow: process.env.PLEX_DEVICES_ALLOW,
-                        devicesBlock: process.env.PLEX_DEVICES_BLOCK,
-                        librariesAllow: process.env.PLEX_LIBRARIES_ALLOW,
-                        librariesBlock: process.env.PLEX_LIBRARIES_BLOCK
-                    }, false);
-                    const p = getCommonComponentEnvConfig('PLEX');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'plex',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('PLEX')
-                        })
-                    }
-                }    break;
-                case 'subsonic': {
-                    const data: SubsonicData = removeUndefinedKeys<SubsonicData>({
-                        user: process.env.SUBSONIC_USER,
-                        password: process.env.SUBSONIC_PASSWORD,
-                        url: process.env.SUBSONIC_URL,
-                    }, false);
-                    const p = getCommonComponentEnvConfig('SUBSONIC');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'subsonic',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('SUBSONIC')
-                        })
-                    }
-                }    break;
-                case 'jellyfin': {
-                    const data: JellyApiData = removeUndefinedKeys<JellyApiData>({
-                        user: process.env.JELLYFIN_USER,
-                        password: process.env.JELLYFIN_PASSWORD,
-                        apiKey: process.env.JELLYFIN_APIKEY,
-                        url: process.env.JELLYFIN_URL,
-                        usersAllow: process.env.JELLYFIN_USERS_ALLOW,
-                        usersBlock: process.env.JELLYFIN_USERS_BLOCK,
-                        devicesAllow: process.env.JELLYFIN_DEVICES_ALLOW,
-                        devicesBlock: process.env.JELLYFIN_DEVICES_BLOCK,
-                        librariesAllow: process.env.JELLYFIN_LIBRARIES_ALLOW,
-                        librariesBlock: process.env.JELLYFIN_LIBRARIES_BLOCK,
-                        frontendUrlOverride: process.env.JELLYFIN_FRONTEND_URL_OVERRIDE,
-                        allowMediaTypes: process.env.JELLYFIN_MEDIATYPES_ALLOW
-                    }, false);
-                    const p = getCommonComponentEnvConfig('JELLYFIN');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'jellyfin',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('JELLYFIN')
-                        })
-                    }
-                }    break;
-                case 'lastfm':
-                        {
-                        const data: LastfmData = removeUndefinedKeys<LastfmData>({
-                            apiKey: process.env.SOURCE_LASTFM_API_KEY,
-                            secret: process.env.SOURCE_LASTFM_SECRET,
-                            redirectUri: process.env.SOURCE_LASTFM_REDIRECT_URI,
-                            session: process.env.SOURCE_LASTFM_SESSION,
-                        }, false);
-                        const p = getCommonComponentEnvConfig('SOURCE_LASTFM');
-                        if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                            configs.push({
-                                type: 'lastfm',
-                                name: 'unnamed-lfm-source',
-                                source: 'ENV',
-                                mode: 'single',
-                                configureAs: 'source',
-                                data: data,
-                                ...p,
-                                options: transformPresetEnv('SOURCE_LASTFM')
-                            })
-                        }
-                    }
-                    break;
-                case 'deezer': {
-                    const data = removeUndefinedKeys({
-                        clientId: process.env.DEEZER_CLIENT_ID,
-                        clientSecret: process.env.DEEZER_CLIENT_SECRET,
-                        redirectUri: process.env.DEEZER_REDIRECT_URI,
-                        accessToken: process.env.DEEZER_ACCESS_TOKEN,
-                        arl: process.env.DEEZER_ARL,
-                        accountId: process.env.DEEZER_ACCOUNT_ID
-                    }, false);
-                    const p = getCommonComponentEnvConfig('DEEZER');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'deezer',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('DEEZER')
-                        });
-                    }
-                }   break;
-                case 'mpris': {
-                    const data: MPRISData = removeUndefinedKeys<MPRISData>({
-                        blacklist: process.env.MPRIS_BLACKLIST,
-                        whitelist: process.env.MPRIS_WHITELIST
-                    }, false);
-                    const p = getCommonComponentEnvConfig('MPRIS');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'mpris',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('MPRIS')
-                        });
-                    }
-                }    break;
-                case 'maloja': {
-                    const data = removeUndefinedKeys<MalojaData>({
-                        url: process.env.SOURCE_MALOJA_URL,
-                        apiKey: process.env.SOURCE_MALOJA_API_KEY
-                    }, false);
-                    const p = getCommonComponentEnvConfig('SOURCE_MALOJA');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'maloja',
-                            name: 'unnamed-mlj-source',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: 'source',
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('SOURCE_MALOJA')
-                        })
-                    }
-                }
-                    break;
-                case 'librefm':{
-                    const data: LibrefmData = removeUndefinedKeys<LibrefmData>({
-                        apiKey: process.env.SOURCE_LIBREFM_API_KEY,
-                        secret: process.env.SOURCE_LIBREFM_SECRET,
-                        redirectUri: process.env.SOURCE_LIBREFM_REDIRECT_URI,
-                        session: process.env.SOURCE_LIBREFM_SESSION,
-                        urlBase: process.env.SOURCE_LIBREFM_URLBASE,
-                    }, false);
-                    const p = getCommonComponentEnvConfig('SOURCE_LIBREFM');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'librefm',
-                            name: 'unnamed-librefm-source',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: 'source',
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('SOURCE_LIBREFM')
-                        })
-                    }
-                }
-                    break;
-                case 'listenbrainz': {
-                    const data: ListenBrainzData = removeUndefinedKeys<ListenBrainzData>({
-                        url: process.env.SOURCE_LZ_URL,
-                        token: process.env.SOURCE_LZ_TOKEN,
-                        username: process.env.SOURCE_LZ_USER
-                    }, false);
-                    const p = getCommonComponentEnvConfig('SOURCE_LZ');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'listenbrainz',
-                            name: 'unnamed-lz-source',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: 'source',
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('SOURCE_LZ')
-                        })
-                    }
-                }
-                    break;
-                case 'koito': {
-                    const data: KoitoData = removeUndefinedKeys<KoitoData>({
-                        url: process.env.SOURCE_KOITO_URL,
-                        token: process.env.SOURCE_KOITO_TOKEN,
-                        username: process.env.SOURCE_KOITO_USER
-                    }, false);
-                    const p = getCommonComponentEnvConfig('SOURCE_KOITO');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'koito',
-                            name: 'unnamed-koito-source',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: 'source',
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('SOURCE_KOITO')
-                        })
-                    }
-                }
-                    break;
-                case 'tealfm': {
-                    const data: TealData = removeUndefinedKeys<TealData>({
-                        identifier: process.env.SOURCE_TEALFM_IDENTIFIER,
-                        appPassword: process.env.SOURCE_TEALFM_APP_PW,
-                    }, false);
-                    const p = getCommonComponentEnvConfig('SOURCE_TEALFM');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'tealfm',
-                            name: 'unnamed-tealfm-source',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: 'source',
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('SOURCE_TEALFM')
-                        })
-                    }
-                }
-                    break;
-                case 'rocksky': {
-                    const data: RockSkyData = removeUndefinedKeys<RockSkyData>({
-                        key: process.env.SOURCE_ROCKSKY_KEY,
-                        handle: process.env.SOURCE_ROCKSKY_HANDLE
-                    }, false);
-                    const p = getCommonComponentEnvConfig('SOURCE_ROCKSKY');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'rocksky',
-                            name: 'unnamed-rocksky-source',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: 'source',
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('SOURCE_ROCKSKY')
-                        })
-                    }
-                }
-                    break;
-                case 'endpointlz': {
-                    const data: ListenbrainzEndpointData = removeUndefinedKeys<ListenbrainzEndpointData>({
-                        slug: process.env.LZE_SLUG,
-                        token: process.env.LZE_TOKEN,
-                        username: process.env.LZE_USERNAME
-                    }, false);
-                    const p = getCommonComponentEnvConfig('LZE');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'endpointlz',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('LZE')
-                        });
-                    }
-                }    break;
-                case 'endpointlfm': {
-                    const data: LastFMEndpointData = removeUndefinedKeys<LastFMEndpointData>({
-                        slug: process.env.LFM_SLUG,
-                    }, false);
-                    const p = getCommonComponentEnvConfig('LFM');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'endpointlfm',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('LFM')
-                        });
-                    }
-                }    break;
-                case 'icecast': {
-                    const scrobbleStart = parseBool(process.env.ICECAST_AUTO_MONITOR);
-                    const data: IcecastData = removeUndefinedKeys<IcecastData>({
-                        url: process.env.ICECAST_URL,
-                    }, false);
-                    const p = getCommonComponentEnvConfig('ICECAST');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'icecast',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv<IcecastSourceOptions>('ICECAST', {
-                                autoMonitor: scrobbleStart
-                            })
-                        });
-                    }
-                    }    break;
-                case 'jriver': {
-                    const data: JRiverData = removeUndefinedKeys<JRiverData>({
-                        url: process.env.JRIVER_URL,
-                        username: process.env.JRIVER_USER,
-                        password: process.env.JRIVER_PASSWORD
-                    }, false);
-                    const p = getCommonComponentEnvConfig('JRIVER');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'jriver',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('JRIVER')
-                        });
-                    }
-                }   break;
-                case 'kodi': {
-                    const data: KodiData = removeUndefinedKeys<KodiData>({
-                        url: process.env.KODI_URL,
-                        username: process.env.KODI_USER,
-                        password: process.env.KODI_PASSWORD
-                    }, false);
-                    const p = getCommonComponentEnvConfig('KODI');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'kodi',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('KODI')
-                        });
-                    }
-                }    break;
-                case 'webscrobbler': {
-                    const data: WebScrobblerData = removeUndefinedKeys<WebScrobblerData>({
-                        blacklist: process.env.WS_BLACKLIST,
-                        whitelist: process.env.WS_WHITELIST
-                    }, false);
-                    const p = getCommonComponentEnvConfig('WS');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'webscrobbler',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: {
-                                blacklist: data.blacklist !== undefined ? (data.blacklist as string).split(',') : [],
-                                whitelist: data.whitelist !== undefined ? (data.whitelist as string).split(',') : [],
-                            },
-                            ...p,
-                            options: transformPresetEnv('WS')
-                        });
-                    }
-                }   break;
-                case 'chromecast': {
-                    const data: ChromecastData = removeUndefinedKeys<ChromecastData>({
-                        blacklistDevices: process.env.CC_BLACKLIST_DEVICES,
-                        whitelistDevices: process.env.CC_WHITELIST_DEVICES,
-                        blacklistApps: process.env.CC_BLACKLIST_APPS,
-                        whitelistApps: process.env.CC_WHITELIST_APPS
-                    }, false);
-                    const p = getCommonComponentEnvConfig('CC');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'chromecast',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: {
-                                blacklistDevices: data.blacklistDevices !== undefined ? (data.blacklistDevices as string).split(',') : [],
-                                whitelistDevices: data.whitelistDevices !== undefined ? (data.whitelistDevices as string).split(',') : [],
-                                blacklistApps: data.blacklistApps !== undefined ? (data.blacklistApps as string).split(',') : [],
-                                whitelistApps: data.whitelistApps !== undefined ? (data.whitelistApps as string).split(',') : [],
-                            },
-                            ...p,
-                            options: transformPresetEnv('CC')
-                        });
-                    }
-                }    break;
-                case 'musiccast': {
-                    const data: MusicCastData = removeUndefinedKeys<MusicCastData>({
-                        url: process.env.MCAST_URL,
-                    }, false);
-                    const p = getCommonComponentEnvConfig('MCAST');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'musiccast',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('MCAST')
-                        });
-                    }
-                }    break;
-                case 'musikcube': {
-                    const data: MusikcubeData = removeUndefinedKeys<MusikcubeData>({
-                        url: process.env.MC_URL,
-                        password: process.env.MC_PASSWORD
-                    }, false);
-                    const p = getCommonComponentEnvConfig('MC');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'musikcube',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: data as MusikcubeData,
-                            ...p,
-                            options: transformPresetEnv('MC')
-                        });
-                    }
-                }    break;
-                case 'mpd': {
-                    const data: MPDData = removeUndefinedKeys<MPDData>({
-                        url: process.env.MPD_URL,
-                        password: process.env.MPD_PASSWORD
-                    }, false);
-                    const p = getCommonComponentEnvConfig('MPD');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'mpd',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('MPD')
-                        });
-                    }
-                }   break;
-                case 'vlc': {
-                    const data: VLCData = removeUndefinedKeys<VLCData>({
-                        url: process.env.VLC_URL,
-                        password: process.env.VLC_PASSWORD
-                    }, false);
-                    const p = getCommonComponentEnvConfig('VLC');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'vlc',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('VLC')
-                        });
-                    }
-                }    break;
-                case 'ytmusic': {
-                    const data: YTMusicData = removeUndefinedKeys<YTMusicData>({
-                        redirectUri: process.env.YTM_REDIRECT_URI,
-                        clientId: process.env.YTM_CLIENT_ID,
-                        clientSecret: process.env.YTM_CLIENT_SECRET,
-                        cookie: process.env.YTM_COOKIE
-                    }, false);
-                    const p = getCommonComponentEnvConfig('YTM');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'ytmusic',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('YTM')
-                        });
-                    }
-                }    break;
-                case 'azuracast': {
-                    const data: AzuracastData = removeUndefinedKeys<AzuracastData>({
-                        station: process.env.AZURA_STATION,
-                        url: process.env.AZURA_URL,
-                        apiKey: process.env.AZURA_KEY
-                    }, false);
-                    const listenerNum = process.env.AZURA_LISTENERS_NUM ?? '';
-                    if(listenerNum.trim() !== '') {
-                        data.monitorWhenListeners = !isNaN(Number.parseInt(listenerNum)) ? Number.parseInt(listenerNum) : parseBool(listenerNum);
-                    }
-                    const live = process.env.AZURA_LIVE ?? '';
-                    if(live.trim() !== '') {
-                        data.monitorWhenLive = parseBool(live);
-                    }
-                    const p = getCommonComponentEnvConfig('AZURA');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'azuracast',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('AZURA')
-                        });
-                    }
-                }    break;
-                case 'applemusic': {
-                    const key = (() => {
-                        const id = process.env.APPLEMUSIC_KEY_ID;
-                        const teamId = process.env.APPLEMUSIC_TEAM_ID;
-                        const p8 = process.env.APPLEMUSIC_KEY_P8;
-                        if (id !== undefined && teamId !== undefined && p8 !== undefined) {
-                            return { id, teamId, p8 };
-                        }
-                        return undefined;
-                    })();
-                    const data = removeUndefinedKeys({
-                        mediaUserToken: process.env.APPLEMUSIC_MEDIA_USER_TOKEN,
-                        token: process.env.APPLEMUSIC_TOKEN,
-                        key,
-                        origin: nonEmptyStringOrDefault(process.env.APPLEMUSIC_ORIGIN_HEADER, undefined),
-                    }, false);
-                    const recoverEnv = nonEmptyStringOrDefault(process.env.APPLEMUSIC_RECOVER_UNCHANGED_TOP_HISTORY);
-                    const recoverUnchangedTopHistory = recoverEnv !== undefined ? parseBoolStrict(recoverEnv) : undefined;
-                    const albumNormalizeEnv = nonEmptyStringOrDefault(process.env.APPLEMUSIC_NORMALIZE_ALBUM);
-                    const normalizeAlbumName = albumNormalizeEnv !== undefined ? parseBoolStrict(albumNormalizeEnv) : undefined;
-                    const p = getCommonComponentEnvConfig('APPLEMUSIC');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'applemusic',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('APPLEMUSIC', {
-                                recoverUnchangedTopHistory,
-                                normalizeAlbumName
-                            } as AppleMusicSourceConfig['options'])
-                        });
-                    }
-                }    break;
-                case 'sonos': {
-                    const data: SonosData = removeUndefinedKeys<SonosData>({
-                        host: process.env.SONOS_HOST,
-                        devicesAllow: process.env.SONOS_DEVICES_ALLOW,
-                        devicesBlock: process.env.SONOS_DEVICES_BLOCK,
-                        groupsAllow: process.env.SONOS_GROUPS_ALLOW,
-                        groupsBlock: process.env.SONOS_GROUPS_BLOCK
-                    }, false);
-                    const p = getCommonComponentEnvConfig('SONOS');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'sonos',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('SONOS')
-                        });
-                    }
-                }    break;
-                case 'ymbridge': {
-                    const data: YandexMusicBridgeData = removeUndefinedKeys<YandexMusicBridgeData>({
-                        url: process.env.YMBRIDGE_URL,
-                        apiKey: process.env.YMBRIDGE_API_KEY,
-                    }, false);
-                    const p = getCommonComponentEnvConfig('YMBRIDGE');
-                    if (nonEmptyObj(data) || nonEmptyObj(p)) {
-                        configs.push({
-                            type: 'ymbridge',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: data,
-                            ...p,
-                            options: transformPresetEnv('YMBRIDGE')
-                        });
-                    }
-                }    break;
-                default:
-                    break;
-            }
-            let rawSourceConfigs;
+        const envKeys = Object.keys(process.env).map(x => x.toUpperCase());
+
+        for (const configType of sourceTypes) {
+
+            let sourceUnparsedConfigs = unparsedConfigs.filter(x => x.type === configType);
+
+            const configTypeUpper = configType.toUpperCase();
+
+            let rawConfigs;
             try {
-                rawSourceConfigs = await readJson(`${this.internalConfig.configDir}/${sourceType}.json`, {throwOnNotFound: false, logger: childLogger(this.logger, `${sourceType} Secrets`)});
+                rawConfigs = await readJson(`${this.internalConfig.configDir}/${configType}.json`, { throwOnNotFound: false, logger: childLogger(this.logger, `${configType} Secrets`) });
             } catch (e) {
-                const errMsg = `${sourceType}.json config file could not be parsed`;
+                const errMsg = `${configType}.json config file could not be parsed`;
                 this.emitter.emit('error', errMsg);
                 this.logger.error(errMsg);
-                continue;
             }
-            if (rawSourceConfigs !== undefined) {
-                let sourceConfigs: ParsedConfig[];
-                if (Array.isArray(rawSourceConfigs)) {
-                    sourceConfigs = rawSourceConfigs;
-                } else if (rawSourceConfigs === null) {
-                    this.logger.error(`${sourceType}.json contained no data`);
-                    continue;
-                } else if (typeof rawSourceConfigs === 'object') {
-                    sourceConfigs = [rawSourceConfigs];
-                } else {
-                    this.logger.error(`All top level data from ${sourceType}.json must be an object or an array of objects, will not parse configs from file`);
-                    continue;
-                }
-                for (const [i,rawConf] of sourceConfigs.entries()) {
-                    if(clientTypes.includes(sourceType as ClientType) && 
-                    (rawConf.configureAs !== 'source'))
-                    {
-                        this.logger.debug(`Skipping config ${i + 1} from ${sourceType}.json because it is configured as a client.`);
-                        continue;
-                    }
-                    try {
-                        await validateSourceJson(sourceType, rawConf);
-                        // @ts-expect-error will eventually have all info (lazy)
-                        const parsedConfig: ParsedConfig = {
-                            ...rawConf,
-                            source: `${sourceType}.json`,
-                            type: sourceType
-                        }
-                        configs.push(parsedConfig);
-                    } catch (e: any) {
-                        const msg = `The config entry at index ${i} from ${sourceType}.json was not valid`;
-                        const configErr = new Error(msg, {cause: e});
-                        this.emitter.emit('error', configErr);
-                        if(e instanceof ZodError) {
-                            this.logger.error(`${msg}:\n${prettifyError(e)}`);
-                        } else {
-                            this.logger.error(configErr);
-                        }
-                    }
-                }
-            }
-        }
 
-        // finally! all configs are valid, structurally, and can now be passed to addClient
-        // do a last check that names (within each type) are unique and warn if not, but add anyways
-        const typeGroupedConfigs = configs.reduce((acc: groupedNamedConfigs, curr: ParsedConfig) => {
-            const {type} = curr;
-            const {[type]: t = []} = acc;
-            return {...acc, [type]: [...t, curr]};
-        }, {});
-        // only need to warn if dup names PER TYPE
-        for (const [type, typedConfigs] of Object.entries(typeGroupedConfigs)) {
-            const nameGroupedConfigs = typedConfigs.reduce((acc: any, curr: any) => {
-                const {name = 'unnamed'} = curr;
-                const {[name]: n = []} = acc;
-                return {...acc, [name]: [...n, curr]};
-            }, {});
-            for (const [name, namedConfigs] of Object.entries(nameGroupedConfigs)) {
-                let tempNamedConfigs = namedConfigs;
-                // @ts-expect-error TS(2571): Object is of type 'unknown'.
-                const hasDups = namedConfigs.length > 1;
-                if (hasDups) {
-                    // @ts-expect-error TS(2571): Object is of type 'unknown'.
-                    const sources = namedConfigs.map((c: any) => `Config object from ${c.source} of type [${c.type}]`);
-                    this.logger.warn(`Source configs have naming conflicts -- the following configs have the same name "${name}":\n\n${sources.join('\n')}\n`);
-                    if (name === 'unnamed') {
-                        this.logger.info('HINT: "unnamed" configs occur when using ENVs, if a multi-user mode config does not have a "name" property, or if a config is built in single-user mode');
-                    }
+            if (rawConfigs !== undefined) {
+                this.logger.debug(`Found config file ${configType}.json`);
+                if (Array.isArray(rawConfigs)) {
+                    sourceUnparsedConfigs = sourceUnparsedConfigs.concat(rawConfigs.map((x, i) => ({ config: x, type: configType, source: 'file', pos: `${i + 1}` })));
+                } else if (rawConfigs === null) {
+                    this.logger.warn(`${configType}.json contained no data`);
+                } else if (typeof rawConfigs === 'object') {
+                    sourceUnparsedConfigs.push({ config: rawConfigs, type: configType, source: 'file', pos: `1` })
+                } else {
+                    this.logger.error(`All top level data from ${configType}.json must be an object or an array of objects, will not parse configs from file`);
                 }
-                // @ts-expect-error TS(2571): Object is of type 'unknown'.
-                tempNamedConfigs = tempNamedConfigs.map(({name = 'unnamed', ...x}, i) => ({
-                    ...x,
-                    name: hasDups ? `${name}${i + 1}` : name
-                }));
-                // @ts-expect-error TS(2571): Object is of type 'unknown'.
-                for (const c of tempNamedConfigs) {
-                    try {
-                        await this.addSource(c, sourceDefaults);
-                    } catch(e) {
-                        const addError = new Error(`Source ${c.name} of type ${c.type} from source ${c.source} was not added because of unrecoverable errors`, {cause: e});
-                        this.emitter.emit('error', addError);
-                        this.logger.error(addError);
+            }
+
+            const configKeys = envKeys.filter(x => x.includes(configTypeUpper));
+            if (configKeys.length > 0) {
+                sourceUnparsedConfigs.push({
+                    config: pick(process.env, ...configKeys),
+                    type: configType,
+                    source: 'env',
+                    pos: ''
+                })
+            }
+
+            let strongConfigs: CommonParsedConfig[] = [];
+            for (const entry of sourceUnparsedConfigs) {
+                let parsedConfig: CommonParsedConfig;
+                try {
+                    switch (entry.source) {
+                        case 'env': {
+                            const envSchema = await getSourceEnvSchema(configType);
+                            const primitiveSchema = generateCommonComponentEnvConfigSchema(envSchema.prefix.toUpperCase());
+                            const parsed = primitiveSchema.parse(entry.config);
+                            const primitives: CommonConfigPrimitives = commonComponentEnvConfigToConfigPrimitives(envSchema.prefix.toUpperCase(), parsed);
+                            const parsedEnvConfigValues = envSchema.env.parse(entry.config);
+                            const { data = {}, options = {} } = envSchema.toConfig(parsedEnvConfigValues);
+                            const transformOptions = transformPresetEnv(envSchema.prefix.toUpperCase());
+                            parsedConfig = {
+                                name: `${configType} - ${entry.source}${entry.pos !== '' ? ` - ${entry.pos}` : ''} `,
+                                ...primitives,
+                                data,
+                                source: generateConfigLocation('source', entry),
+                                options: {
+                                    ...options,
+                                    ...(transformOptions ?? {})
+                                }
+                            };
+                        } break;
+                        case 'file':
+                        case 'aio': {
+                            if (('configureAs' in entry.config && entry.config.configureAs === 'client')
+                                // @ts-expect-error could be a client type
+                                || (clientTypes.includes(entry.type) && entry.config.configureAs !== 'source')) {
+                                this.logger.debug(`Skipping ${generateConfigLocation('source', entry)} because it is configured as a Client`);
+                                continue;
+                            }
+                            const parsed = entry.source === 'file' ? (await validateSourceJson(entry.type, entry.config)) : (await validateSourceAIOJson(entry.type, entry.config));
+                            parsedConfig = {
+                                ...parsed,
+                                name: parsed.name ?? parsed.id,
+                                source: generateConfigLocation('source', entry)
+                            }
+                        } break;
                     }
+                } catch (e) {
+                    const msg = `Failed to validate ${generateConfigLocation('source', entry)}`;
+                    if (e instanceof ZodError) {
+                        this.logger.error(`${msg}:\n${prettifyError(e)}`);
+                    } else {
+                        this.logger.error(new Error(msg, { cause: e }));
+                    }
+                    continue;
                 }
+
+                const existingById = strongConfigs.find(x => x.id === parsedConfig.id);
+                if(undefined !== existingById) {
+                    this.logger.error(stripIndents`There are two ${configType} Sources that have the same ID:
+                        ${existingById.source}
+                        ${parsedConfig.source}
+                        BOTH of these Sources will be disabled to prevent tainting database history. Correct this issue by using a different ID for at least one of them.`);
+                        strongConfigs = strongConfigs.filter(x => x.id !== parsedConfig.id);
+                        continue;
+                }
+                if (parsedConfig.enable === false) {
+                    this.logger.debug(`Not using Config ${parsedConfig.source} because it was marked as not enabled.`);
+                    continue;
+                }
+                strongConfigs.push(parsedConfig);
+            }
+
+            if(strongConfigs.length > 0) {
+                await this.addSource(configType, strongConfigs, sourceDefaults);
             }
         }
     }
 
-    addSource = async (clientConfig: ParsedConfig, defaults: SourceDefaults = {}) => {
-        // const isValidConfig = isValidConfigStructure(clientConfig, {name: true, data: true, type: true});
-        // if (isValidConfig !== true) {
-        //     throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
-        // }
-
-        const {type, name, data: d = {}, enable = true, source, options: clientOptions = {}} = clientConfig;
-
-        if(enable === false) {
-            this.logger.warn({labels: [`${type} - ${name}`]},`Source from ${source} was disabled by config`);
-            return;
+    private instantiateSources = async <T extends SourceType>(
+        sourceType: T,
+        strongConfigs: CommonParsedConfig[],
+        defaults: SourceDefaults,
+        Ctor: new (name: string, config: SourceTypeConfigMap[T][0], internalConfig: InternalConfig, emitter: WildcardEmitter) => AbstractSource,
+    ) => {
+        for (const s of strongConfigs) {
+            try {
+                const config = await validateSourceJson(sourceType, s);
+                const compositeOptions = { ...defaults, ...config.options };
+                const newComponent = new Ctor(config.name ?? config.id, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
+                newComponent.logger.info(`Source added from ${s.source}`);
+                this.sources.push(newComponent);
+            } catch (e) {
+                this.logger.error(new Error(`${s.source} was not added due to unrecoverable errors`, { cause: e }));
+            }
         }
-        
-        // add defaults
-        // @ts-expect-error idk why this has so many issues
-        const compositeConfig: SourceConfig = {...clientConfig, data: d, options: {...defaults, ...clientOptions}};
+    }
 
-        this.logger.debug({labels: [`${type} - ${name}`]},`Constructing Source from ${source}...`);
-        let newSource: AbstractSource;
-        switch (type) {
+    addSource = async (sourceType: SourceType, strongConfigs: CommonParsedConfig[], defaults: SourceDefaults = {}) => {
+        switch (sourceType) {
             case 'spotify': {
                 const SpotifySource = (await import('./SpotifySource.ts')).default;
-                newSource = new SpotifySource(name, compositeConfig as SpotifySourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('spotify', strongConfigs, defaults, SpotifySource);
+            } break;
             case 'plex': {
                 const PlexApiSource = (await import('./PlexApiSource.ts')).default;
-                newSource = await new PlexApiSource(name, compositeConfig as PlexApiSourceConfig, this.internalConfig, this.emitter); 
-                break;
-            }
+                await this.instantiateSources('plex', strongConfigs, defaults, PlexApiSource);
+            } break;
             case 'subsonic': {
                 const {SubsonicSource} = (await import('./SubsonicSource.ts'));
-                newSource = new SubsonicSource(name, compositeConfig as SubSonicSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('subsonic', strongConfigs, defaults, SubsonicSource);
+            } break;
             case 'jellyfin': {
                 const JellyfinApiSource = (await import('./JellyfinApiSource.ts')).default;
-                newSource = await new JellyfinApiSource(name, compositeConfig as JellyApiSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('jellyfin', strongConfigs, defaults, JellyfinApiSource);
+            } break;
             case 'lastfm': {
                 const LastfmSource = (await import('./LastfmSource.ts')).default;
-                newSource = await new LastfmSource(name, compositeConfig as LastfmSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('lastfm', strongConfigs, defaults, LastfmSource);
+            } break;
             case 'librefm': {
                 const LibrefmSource = (await import('./LibrefmSource.ts')).default;
-                newSource = await new LibrefmSource(name, compositeConfig as LibrefmSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('librefm', strongConfigs, defaults, LibrefmSource);
+            } break;
             case 'deezer': {
-                const deezerConfig = compositeConfig as DeezerCompatConfig;
-                if('arl' in deezerConfig.data && deezerConfig.data.arl !== undefined) {
-                    const DeezerInternalSource = (await import('./DeezerInternalSource.ts')).default;
-                    newSource = await new DeezerInternalSource(name, compositeConfig as DeezerInternalSourceConfig, this.internalConfig, this.emitter);
-                } else {
-                    const DeezerSource = (await import('./DeezerSource.ts')).default;
-                    newSource = await new DeezerSource(name, compositeConfig as DeezerSourceConfig, this.internalConfig, this.emitter);
-                }
-                break;
-            }
+                const DeezerInternalSource = (await import('./DeezerInternalSource.ts')).default;
+                await this.instantiateSources('deezer', strongConfigs, defaults, DeezerInternalSource);
+            } break;
             case 'ytmusic': {
                 const YTMusicSource = (await import('./YTMusicSource.ts')).default;
-                newSource = await new YTMusicSource(name, compositeConfig as YTMusicSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('ytmusic', strongConfigs, defaults, YTMusicSource);
+            } break;
             case 'ymbridge': {
                 const YandexMusicBridgeSource = (await import('./YandexMusicBridgeSource.ts')).default;
-                newSource = await new YandexMusicBridgeSource(name, compositeConfig as YandexMusicBridgeSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('ymbridge', strongConfigs, defaults, YandexMusicBridgeSource);
+            } break;
             case 'mpris': {
                 const {MPRISSource} = (await import('./MPRISSource.ts'));
-                newSource = await new MPRISSource(name, compositeConfig as MPRISSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('mpris', strongConfigs, defaults, MPRISSource);
+            } break;
             case 'mopidy': {
                 const {MopidySource} = (await import('./MopidySource.ts'));
-                newSource = await new MopidySource(name, compositeConfig as MopidySourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('mopidy', strongConfigs, defaults, MopidySource);
+            } break;
             case 'listenbrainz': {
                 const ListenbrainzSource = (await import('./ListenbrainzSource.ts')).default;
-                newSource = await new ListenbrainzSource(name, compositeConfig as ListenBrainzSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('listenbrainz', strongConfigs, defaults, ListenbrainzSource);
+            } break;
             case 'endpointlz': {
                 const {EndpointListenbrainzSource} = (await import('./EndpointListenbrainzSource.ts'));
-                newSource = await new EndpointListenbrainzSource(name, compositeConfig as ListenbrainzEndpointSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('endpointlz', strongConfigs, defaults, EndpointListenbrainzSource);
+            } break;
             case 'endpointlfm': {
                 const {EndpointLastfmSource} = (await import('./EndpointLastfmSource.ts'));
-                newSource = await new EndpointLastfmSource(name, compositeConfig as LastFMEndpointSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('endpointlfm', strongConfigs, defaults, EndpointLastfmSource);
+            } break;
             case 'icecast': {
                 const {IcecastSource} = (await import('./IcecastSource.ts'));
-                newSource = await new IcecastSource(name, compositeConfig as IcecastSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('icecast', strongConfigs, defaults, IcecastSource);
+            } break;
             case 'jriver': {
                 const {JRiverSource} = (await import('./JRiverSource.ts'));
-                newSource = await new JRiverSource(name, compositeConfig as JRiverSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('jriver', strongConfigs, defaults, JRiverSource);
+            } break;
             case 'kodi': {
                 const {KodiSource} = (await import('./KodiSource.ts'));
-                newSource = await new KodiSource(name, compositeConfig as KodiSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('kodi', strongConfigs, defaults, KodiSource);
+            } break;
             case 'webscrobbler': {
                 const {WebScrobblerSource} = (await import('./WebScrobblerSource.ts'));
-                newSource = await new WebScrobblerSource(name, compositeConfig as WebScrobblerSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('webscrobbler', strongConfigs, defaults, WebScrobblerSource);
+            } break;
             case 'chromecast': {
                 const {ChromecastSource} = (await import('./ChromecastSource.ts'));
-                newSource = await new ChromecastSource(name, compositeConfig as ChromecastSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('chromecast', strongConfigs, defaults, ChromecastSource);
+            } break;
             case 'musikcube': {
                 const {MusikcubeSource} = (await import('./MusikcubeSource.ts'));
-                newSource = await new MusikcubeSource(name, compositeConfig as MusikcubeSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('musikcube', strongConfigs, defaults, MusikcubeSource);
+            } break;
             case 'musiccast': {
                 const {MusicCastSource} = (await import('./MusicCastSource.ts'));
-                newSource = await new MusicCastSource(name, compositeConfig as MusicCastSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('musiccast', strongConfigs, defaults, MusicCastSource);
+            } break;
             case 'mpd': {
                 const {MPDSource} = (await import('./MPDSource.ts'));
-                newSource = await new MPDSource(name, compositeConfig as MPDSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('mpd', strongConfigs, defaults, MPDSource);
+            } break;
             case 'vlc': {
                 const {VLCSource} = (await import('./VLCSource.ts'));
-                newSource = await new VLCSource(name, compositeConfig as VLCSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('vlc', strongConfigs, defaults, VLCSource);
+            } break;
             case 'azuracast': {
                 const {AzuracastSource} = (await import('./AzuracastSource.ts'));
-                newSource = await new AzuracastSource(name, compositeConfig as AzuracastSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('azuracast', strongConfigs, defaults, AzuracastSource);
+            } break;
             case 'koito': {
                 const KoitoSource = (await import('./KoitoSource.ts')).default;
-                newSource = await new KoitoSource(name, compositeConfig as KoitoSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('koito', strongConfigs, defaults, KoitoSource);
+            } break;
             case 'maloja': {
                 const MalojaSource = (await import('./MalojaSource.ts')).default;
-                newSource = await new MalojaSource(name, compositeConfig as MalojaSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('maloja', strongConfigs, defaults, MalojaSource);
+            } break;
             case 'tealfm': {
                 const TealfmSource = (await import('./TealfmSource.ts')).default;
-                newSource = await new TealfmSource(name, compositeConfig as TealSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('tealfm', strongConfigs, defaults, TealfmSource);
+            } break;
             case 'rocksky': {
                 const RockskySource = (await import('./RockskySource.ts')).default;
-                newSource = await new RockskySource(name, compositeConfig as RockskySourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('rocksky', strongConfigs, defaults, RockskySource);
+            } break;
             case 'sonos': {
                 const {SonosSource} = (await import('./SonosSource.ts'));
-                newSource = await new SonosSource(name, compositeConfig as SonosSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('sonos', strongConfigs, defaults, SonosSource);
+            } break;
             case 'applemusic': {
                 const AppleMusicSource = (await import('./AppleMusicSource.ts')).default;
-                newSource = await new AppleMusicSource(name, compositeConfig as AppleMusicSourceConfig, this.internalConfig, this.emitter);
-                break;
-            }
+                await this.instantiateSources('applemusic', strongConfigs, defaults, AppleMusicSource);
+            } break;
             default:
                 break;
         }
-
-        if(newSource === undefined) {
-            // really shouldn't get here!
-            this.logger.error(new Error(`Source of type ${type} from ${source} was not recognized??`));
-            return;
-        }
-        this.sources.push(newSource);
-        newSource.logger.info(`Source Added from ${source}`);
     }
 }
 
