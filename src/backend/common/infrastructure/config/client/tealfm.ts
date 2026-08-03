@@ -7,7 +7,7 @@ import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSch
 export const tealDataSchema = z.object({
     ...requestRetryOptionsSchema.shape,
     ...atProtoUserIdentifierDataSchema.shape,
-    ...atProtoAppDataSchema.partial().shape,
+    ...atProtoAppDataSchema.shape,
     /**
      * The base URI of the Multi-Scrobbler to use for ATProto OAuth
      *

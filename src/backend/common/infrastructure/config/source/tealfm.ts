@@ -15,7 +15,7 @@ export type TealSourceData = z.infer<typeof tealSourceDataSchema>;
 
 const envDataSchema = z.object({
     SOURCE_TEALFM_IDENTIFIER: tealSourceDataSchema.shape.identifier,
-    SOURCE_TEALFM_APP_PW: tealSourceDataSchema.shape.appPassword,
+    SOURCE_TEALFM_APP_PW: tealSourceDataSchema.shape.appPassword.optional(),
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, TealSourceConfig> = {
