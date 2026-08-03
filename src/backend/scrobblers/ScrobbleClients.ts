@@ -15,11 +15,11 @@ import clone from 'clone';
 import { stripIndents } from 'common-tags';
 import { normalizeStr, type StringNormalizationOptions } from '../utils/StringUtils.ts';
 import { prettifyError, ZodError } from 'zod';
-import { commonComponentEnvConfigToConfigPrimitives, generateCommonComponentEnvConfigSchema, transformPresetEnv, type CommonConfigPrimitives } from '../common/infrastructure/config/common.ts';
+import { commonComponentEnvConfigToConfigPrimitives, generateCommonComponentEnvConfigSchema, generateConfigLocation, transformPresetEnv, type CommonConfigPrimitives, type UnparsedConfig } from '../common/infrastructure/config/common.ts';
 import type { CommonClientConfig } from '../common/infrastructure/config/client/index.ts';
 import { getClientEnvSchema, validateClientAIOJson, validateClientJson, type ClientTypeConfigMap } from '../common/infrastructure/config/client/clientsMap.ts';
 
-type UnparsedConfig = {config: object, type: ClientType, source?: 'file' | 'aio' | 'env', pos: string};
+type UnparsedClientConfig = UnparsedConfig<ClientType>;
 
 type CommonParsedConfig = (CommonClientConfig & {source: string});
 
@@ -97,7 +97,7 @@ export default class ScrobbleClients {
     }
 
     buildClientsFromConfig = async () => {
-        const unparsedConfigs: UnparsedConfig[] = [];
+        const unparsedConfigs: UnparsedClientConfig[] = [];
 
         let configFile;
         try {
@@ -175,7 +175,7 @@ export default class ScrobbleClients {
                 } else if (rawClientConfigs === null) {
                     this.logger.warn(`${clientType}.json contained no data`);
                 } else if (typeof rawClientConfigs === 'object') {
-                    clientUnparsedConfigs.push({ config: rawClientConfigs, type: clientType, source: 'file', pos: `object` })
+                    clientUnparsedConfigs.push({ config: rawClientConfigs, type: clientType, source: 'file', pos: `1` })
                 } else {
                     this.logger.error(`All top level data from ${clientType}.json must be an object or an array of objects, will not parse configs from file`);
                 }
@@ -195,7 +195,6 @@ export default class ScrobbleClients {
             for (const entry of clientUnparsedConfigs) {
                 let parsedConfig: CommonParsedConfig;
                 try {
-                    const sourceStr = `${entry.source} ${entry.pos}`;
                     switch (entry.source) {
                         case 'env': {
                             const envSchema = await getClientEnvSchema(clientType);
@@ -209,7 +208,7 @@ export default class ScrobbleClients {
                                 name: `${clientType} - ${entry.source}${entry.pos !== '' ? ` - ${entry.pos}` : ''} `,
                                 ...primitives,
                                 data,
-                                source: sourceStr,
+                                source: generateConfigLocation('client', entry),
                                 options: {
                                     ...options,
                                     ...(transformOptions ?? {})
@@ -219,18 +218,18 @@ export default class ScrobbleClients {
                         case 'file':
                         case 'aio': {
                             if ('configureAs' in entry.config && entry.config.configureAs === 'source') {
-                                this.logger.debug(`Skipping ${clientType} Config ${entry.source} ${entry.pos} because it is configured as a Source`);
+                                this.logger.debug(`Skipping ${generateConfigLocation('client', entry)} because it is configured as a Source`);
                                 continue;
                             }
                             const parsed = entry.source === 'file' ? (await validateClientJson(entry.type, entry.config)) : (await validateClientAIOJson(entry.type, entry.config));
                             parsedConfig = {
                                 ...parsed,
-                                source: sourceStr
+                                source: generateConfigLocation('client', entry)
                             }
                         } break;
                     }
                 } catch (e) {
-                    const msg = `Failed to validate ${clientType} Config ${entry.source} ${entry.pos}`;
+                    const msg = `Failed to validate ${generateConfigLocation('client', entry)}`;
                     if (e instanceof ZodError) {
                         this.logger.error(`${msg}:\n${prettifyError(e)}`);
                     } else {
@@ -267,7 +266,7 @@ export default class ScrobbleClients {
                 newClient.logger.info(`Client added from ${s.source}`);
                 this.clients.push(newClient);
             } catch (e) {
-                this.logger.error(new Error(`Client from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
+                this.logger.error(new Error(`${s.source} was not added due to unrecoverable errors`, { cause: e }));
             }
         }
     }

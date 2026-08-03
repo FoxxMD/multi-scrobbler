@@ -14,11 +14,11 @@ import { nonEmptyStringOrDefault } from '../../core/StringUtils.ts';
 import type {CommonSourceConfig, CommonSourceOptions} from '../common/infrastructure/config/source/index.ts';
 import type {ExternalMetadataTerm, PlayTransformHooks} from '../../core/Transform.ts';
 import { prettifyError, ZodError } from 'zod';
-import { commonComponentEnvConfigToConfigPrimitives, generateCommonComponentEnvConfigSchema, type CommonConfigPrimitives } from '../common/infrastructure/config/common.ts';
+import { commonComponentEnvConfigToConfigPrimitives, generateCommonComponentEnvConfigSchema, generateConfigLocation, type CommonConfigPrimitives, type UnparsedConfig } from '../common/infrastructure/config/common.ts';
 import { getSourceEnvSchema, validateSourceAIOJson, validateSourceJson } from '../common/infrastructure/config/source/sourcesMap.ts';
 import type { SourceTypeConfigMap } from "../common/infrastructure/config/source/sourcesMap.ts";
 
-type UnparsedConfig = {config: object, type: SourceType, source?: 'file' | 'aio' | 'env', pos: string};
+type UnparsedSourceConfig = UnparsedConfig<SourceType>;
 
 type CommonParsedConfig = (CommonSourceConfig & {source: string});
 
@@ -115,7 +115,7 @@ export default class ScrobbleSources {
     }
 
     buildSourcesFromConfig = async () => {
-        const unparsedConfigs: UnparsedConfig[] = [];
+        const unparsedConfigs: UnparsedSourceConfig[] = [];
 
         let configFile;
         try {
@@ -195,7 +195,7 @@ export default class ScrobbleSources {
                 } else if (rawConfigs === null) {
                     this.logger.warn(`${configType}.json contained no data`);
                 } else if (typeof rawConfigs === 'object') {
-                    sourceUnparsedConfigs.push({ config: rawConfigs, type: configType, source: 'file', pos: `object` })
+                    sourceUnparsedConfigs.push({ config: rawConfigs, type: configType, source: 'file', pos: `1` })
                 } else {
                     this.logger.error(`All top level data from ${configType}.json must be an object or an array of objects, will not parse configs from file`);
                 }
@@ -215,7 +215,6 @@ export default class ScrobbleSources {
             for (const entry of sourceUnparsedConfigs) {
                 let parsedConfig: CommonParsedConfig;
                 try {
-                    const sourceStr = `${entry.source} ${entry.pos}`;
                     switch (entry.source) {
                         case 'env': {
                             const envSchema = await getSourceEnvSchema(configType);
@@ -229,7 +228,7 @@ export default class ScrobbleSources {
                                 name: `${configType} - ${entry.source}${entry.pos !== '' ? ` - ${entry.pos}` : ''} `,
                                 ...primitives,
                                 data,
-                                source: sourceStr,
+                                source: generateConfigLocation('source', entry),
                                 options: {
                                     ...options,
                                     ...(transformOptions ?? {})
@@ -241,18 +240,18 @@ export default class ScrobbleSources {
                             if (('configureAs' in entry.config && entry.config.configureAs === 'client')
                                 // @ts-expect-error could be a client type
                                 || (clientTypes.includes(entry.type) && entry.config.configureAs !== 'source')) {
-                                this.logger.debug(`Skipping ${configType} Config ${entry.source} ${entry.pos} because it is configured as a Client`);
+                                this.logger.debug(`Skipping ${generateConfigLocation('source', entry)} because it is configured as a Client`);
                                 continue;
                             }
                             const parsed = entry.source === 'file' ? (await validateSourceJson(entry.type, entry.config)) : (await validateSourceAIOJson(entry.type, entry.config));
                             parsedConfig = {
                                 ...parsed,
-                                source: sourceStr
+                                source: generateConfigLocation('source', entry)
                             }
                         } break;
                     }
                 } catch (e) {
-                    const msg = `Failed to validate ${configType} Config ${entry.source} ${entry.pos}`;
+                    const msg = `Failed to validate ${generateConfigLocation('source', entry)}`;
                     if (e instanceof ZodError) {
                         this.logger.error(`${msg}:\n${prettifyError(e)}`);
                     } else {
@@ -288,7 +287,7 @@ export default class ScrobbleSources {
                 newComponent.logger.info(`Source added from ${s.source}`);
                 this.sources.push(newComponent);
             } catch (e) {
-                this.logger.error(new Error(`Source from ${s.source} was not added due to unrecoverable errors`, { cause: e }));
+                this.logger.error(new Error(`${s.source} was not added due to unrecoverable errors`, { cause: e }));
             }
         }
     }
