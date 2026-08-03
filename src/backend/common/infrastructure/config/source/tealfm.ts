@@ -7,6 +7,7 @@ export const tealSourceDataSchema = z.object({
     ...tealDataSchema.shape,
     ...commonSourceDataSchema.shape,
     ...pollingOptionsSchema.shape,
+    appPassword: tealDataSchema.shape.appPassword.optional(),
     serviceAllow: z.array(z.string()).optional(),
     serviceDeny: z.array(z.string()).optional(),
 });
@@ -15,7 +16,7 @@ export type TealSourceData = z.infer<typeof tealSourceDataSchema>;
 
 const envDataSchema = z.object({
     SOURCE_TEALFM_IDENTIFIER: tealSourceDataSchema.shape.identifier,
-    SOURCE_TEALFM_APP_PW: tealSourceDataSchema.shape.appPassword.optional(),
+    SOURCE_TEALFM_APP_PW: tealSourceDataSchema.shape.appPassword,
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, TealSourceConfig> = {
