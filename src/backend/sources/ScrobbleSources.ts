@@ -17,6 +17,7 @@ import { prettifyError, ZodError } from 'zod';
 import { commonComponentEnvConfigToConfigPrimitives, generateCommonComponentEnvConfigSchema, generateConfigLocation, type CommonConfigPrimitives, type UnparsedConfig } from '../common/infrastructure/config/common.ts';
 import { getSourceEnvSchema, validateSourceAIOJson, validateSourceJson } from '../common/infrastructure/config/source/sourcesMap.ts';
 import type { SourceTypeConfigMap } from "../common/infrastructure/config/source/sourcesMap.ts";
+import { stripIndents } from 'common-tags';
 
 type UnparsedSourceConfig = UnparsedConfig<SourceType>;
 
@@ -211,7 +212,7 @@ export default class ScrobbleSources {
                 })
             }
 
-            const strongConfigs: CommonParsedConfig[] = [];
+            let strongConfigs: CommonParsedConfig[] = [];
             for (const entry of sourceUnparsedConfigs) {
                 let parsedConfig: CommonParsedConfig;
                 try {
@@ -260,11 +261,20 @@ export default class ScrobbleSources {
                     continue;
                 }
 
-                if (parsedConfig.enable === false) {
-                    this.logger.debug(`Not using Config ${parsedConfig.id}${parsedConfig.name !== undefined ? ` (${parsedConfig.name}) ` :''} because it was marked as not enabled.`);
-                } else {
-                    strongConfigs.push(parsedConfig);
+                const existingById = strongConfigs.find(x => x.id === parsedConfig.id);
+                if(undefined !== existingById) {
+                    this.logger.error(stripIndents`There are two ${configType} Sources that have the same ID:
+                        ${existingById.source}
+                        ${parsedConfig.source}
+                        BOTH of these Sources will be disabled to prevent tainting database history. Correct this issue by using a different ID for at least one of them.`);
+                        strongConfigs = strongConfigs.filter(x => x.id !== parsedConfig.id);
+                        continue;
                 }
+                if (parsedConfig.enable === false) {
+                    this.logger.debug(`Not using Config ${parsedConfig.source} because it was marked as not enabled.`);
+                    continue;
+                }
+                strongConfigs.push(parsedConfig);
             }
 
             if(strongConfigs.length > 0) {

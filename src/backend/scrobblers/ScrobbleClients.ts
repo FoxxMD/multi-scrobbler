@@ -191,7 +191,7 @@ export default class ScrobbleClients {
                 })
             }
 
-            const strongConfigs: CommonParsedConfig[] = [];
+            let strongConfigs: CommonParsedConfig[] = [];
             for (const entry of clientUnparsedConfigs) {
                 let parsedConfig: CommonParsedConfig;
                 try {
@@ -238,11 +238,20 @@ export default class ScrobbleClients {
                     continue;
                 }
 
-                if (parsedConfig.enable === false) {
-                    this.logger.debug(`Not using Config ${parsedConfig.id}${parsedConfig.name !== undefined ? ` (${parsedConfig.name}) ` :''} because it was marked as not enabled.`);
-                } else {
-                    strongConfigs.push(parsedConfig);
+                const existingById = strongConfigs.find(x => x.id === parsedConfig.id);
+                if(undefined !== existingById) {
+                    this.logger.error(stripIndents`There are two ${clientType} Sources that have the same ID:
+                        ${existingById.source}
+                        ${parsedConfig.source}
+                        BOTH of these Clients will be disabled to prevent tainting database history. Correct this issue by using a different ID for at least one of them.`);
+                        strongConfigs = strongConfigs.filter(x => x.id !== parsedConfig.id);
+                        continue;
                 }
+                if (parsedConfig.enable === false) {
+                    this.logger.debug(`Not using Config ${parsedConfig.source} because it was marked as not enabled.`);
+                    continue;
+                }
+                strongConfigs.push(parsedConfig);
             }
 
             if(strongConfigs.length > 0) {
