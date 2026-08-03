@@ -3,6 +3,8 @@ import * as z from "zod";
 import type { PlayTransformHooks, ExternalMetadataTerm } from "../../../../core/Transform.ts";
 import type { CommonClientOptions } from "./client/index.ts";
 import type { MarkRequired } from "ts-essentials";
+import type { ClientType, SourceType } from "../../../../core/Atomic.ts";
+import { capitalize } from "../../../../core/StringUtils.ts";
 
 export const commonConfigPrimitivesSchema = z.object({
     name: z.string().optional(),
@@ -24,7 +26,7 @@ export const commonConfigSchema = z.object({
      *
      * If no id is given the name of this component will be used.
      */
-    id: z.string().optional().meta({
+    id: z.string().meta({
         description: "A UNIQUE identifier for this Source/Client",
         examples: ["fooGlobalA"]
     }),
@@ -144,6 +146,18 @@ export const monitorOptionsSchema = z.object({
     })
 })
 export type MonitorOptions = z.infer<typeof monitorOptionsSchema>;
+
+export type UnparsedConfig<T extends (SourceType | ClientType)> = {config: object, type: T, source?: 'file' | 'aio' | 'env', pos: string};
+
+export const generateConfigLocation = (configType: string, config: UnparsedConfig<any>): string => {
+    if(config.source === 'file') {
+        return `${capitalize(configType)} #${config.pos} in ${config.type}.json`;
+    }
+    if(config.source === 'aio') {
+        return `${capitalize(configType)} ${config.type} #${config.pos} in config.json`;
+    }
+    return `${capitalize(configType)} ${config.type} from ENV`;
+}
 
 export const transformPresetEnv = <T extends CommonClientOptions = CommonClientOptions>(prefix: string, existing: T = undefined): undefined | T => {
 
