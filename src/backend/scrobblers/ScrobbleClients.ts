@@ -224,6 +224,7 @@ export default class ScrobbleClients {
                             const parsed = entry.source === 'file' ? (await validateClientJson(entry.type, entry.config)) : (await validateClientAIOJson(entry.type, entry.config));
                             parsedConfig = {
                                 ...parsed,
+                                name: parsed.name ?? parsed.id,
                                 source: generateConfigLocation('client', entry)
                             }
                         } break;
@@ -285,42 +286,42 @@ export default class ScrobbleClients {
                 case 'discord': {
                     const DiscordScrobbler = (await import('./DiscordScrobbler.ts')).default;
                     await this.instantiateClients('discord', strongConfigs, clientDefaults, DiscordScrobbler,
-                        (config, options) => [config.name, { ...config, options }, {}, this.emitter, this.logger]);
+                        (config, options) => [config.name ?? config.id, { ...config, options }, {}, this.emitter, this.logger]);
                 } break;
                 case 'koito': {
                     const KoitoScrobbler = (await import('./KoitoScrobbler.ts')).default;
                     await this.instantiateClients('koito', strongConfigs, clientDefaults, KoitoScrobbler,
-                        (config, options) => [config.name, { ...config, options: { ...options, configDir: this.internalConfig.configDir } }, {}, this.emitter, this.logger]);
+                        (config, options) => [config.name ?? config.id, { ...config, options: { ...options, configDir: this.internalConfig.configDir } }, {}, this.emitter, this.logger]);
                 } break;
                 case 'lastfm': {
                     const LastfmScrobbler = (await import('./LastfmScrobbler.ts')).default;
                     await this.instantiateClients('lastfm', strongConfigs, clientDefaults, LastfmScrobbler,
-                        (config, options) => [config.name, { ...config, options }, this.internalConfig, this.emitter, this.logger]);
+                        (config, options) => [config.name ?? config.id, { ...config, options }, this.internalConfig, this.emitter, this.logger]);
                 } break;
                 case 'librefm': {
                     const LibrefmScrobbler = (await import('./LibrefmScrobbler.ts')).default;
                     await this.instantiateClients('librefm', strongConfigs, clientDefaults, LibrefmScrobbler,
-                        (config, options) => [config.name, { ...config, options }, this.internalConfig, this.emitter, this.logger]);
+                        (config, options) => [config.name ?? config.id, { ...config, options }, this.internalConfig, this.emitter, this.logger]);
                 } break;
                 case 'listenbrainz': {
                     const ListenbrainzScrobbler = (await import('./ListenbrainzScrobbler.ts')).default;
                     await this.instantiateClients('listenbrainz', strongConfigs, clientDefaults, ListenbrainzScrobbler,
-                        (config, options) => [config.name, { ...config, options }, this.internalConfig, this.emitter, this.logger]);
+                        (config, options) => [config.name ?? config.id, { ...config, options }, this.internalConfig, this.emitter, this.logger]);
                 } break;
                 case 'maloja': {
                     const MalojaScrobbler = (await import('./MalojaScrobbler.ts')).default;
                     await this.instantiateClients('maloja', strongConfigs, clientDefaults, MalojaScrobbler,
-                        (config, options) => [config.name, { ...config, options }, this.emitter, this.logger]);
+                        (config, options) => [config.name ?? config.id, { ...config, options }, this.emitter, this.logger]);
                 } break;
                 case 'rocksky': {
                     const RockskyScrobbler = (await import('./RockskyScrobbler.ts')).default;
                     await this.instantiateClients('rocksky', strongConfigs, clientDefaults, RockskyScrobbler,
-                        (config, options) => [config.name, { ...config, options }, this.internalConfig, this.emitter, this.logger]);
+                        (config, options) => [config.name ?? config.id, { ...config, options }, this.internalConfig, this.emitter, this.logger]);
                 } break;
                 case 'tealfm': {
                     const TealScrobbler = (await import('./TealfmScrobbler.ts')).default;
                     await this.instantiateClients('tealfm', strongConfigs, clientDefaults, TealScrobbler,
-                        (config, options) => [config.name, { ...config, options }, this.internalConfig, this.emitter, this.logger]);
+                        (config, options) => [config.name ?? config.id, { ...config, options }, this.internalConfig, this.emitter, this.logger]);
                 } break;
             }
     }

@@ -247,6 +247,7 @@ export default class ScrobbleSources {
                             const parsed = entry.source === 'file' ? (await validateSourceJson(entry.type, entry.config)) : (await validateSourceAIOJson(entry.type, entry.config));
                             parsedConfig = {
                                 ...parsed,
+                                name: parsed.name ?? parsed.id,
                                 source: generateConfigLocation('source', entry)
                             }
                         } break;
@@ -293,7 +294,7 @@ export default class ScrobbleSources {
             try {
                 const config = await validateSourceJson(sourceType, s);
                 const compositeOptions = { ...defaults, ...config.options };
-                const newComponent = new Ctor(config.name, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
+                const newComponent = new Ctor(config.name ?? config.id, { ...config, options: compositeOptions }, this.internalConfig, this.emitter);
                 newComponent.logger.info(`Source added from ${s.source}`);
                 this.sources.push(newComponent);
             } catch (e) {
