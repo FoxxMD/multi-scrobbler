@@ -167,15 +167,6 @@ export type CommonClientOptions = z.infer<typeof commonClientOptionsSchema>;
 export const commonClientConfigSchema = z.object({
     ...commonConfigSchema.shape,
     /**
-     * Vanity name for this client
-     *
-     * @examples ["MyConfig"]
-     * */
-    name: z.string().meta({
-        description: "Vanity name for this client.",
-        examples: ["Foxx's Cool Client"]
-    }),
-    /**
      * Specific data required to configure this client
      * */
     data: commonClientDataSchema.optional().meta({

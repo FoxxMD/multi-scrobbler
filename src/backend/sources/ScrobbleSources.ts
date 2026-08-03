@@ -261,7 +261,7 @@ export default class ScrobbleSources {
                 }
 
                 if (parsedConfig.enable === false) {
-                    this.logger.debug(`Not using Config ${parsedConfig.id} (${parsedConfig.name}) because it was marked as not enabled.`);
+                    this.logger.debug(`Not using Config ${parsedConfig.id}${parsedConfig.name !== undefined ? ` (${parsedConfig.name}) ` :''} because it was marked as not enabled.`);
                 } else {
                     strongConfigs.push(parsedConfig);
                 }

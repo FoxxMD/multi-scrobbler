@@ -186,20 +186,13 @@ export type CommonSourceData = {};
 export const commonSourceConfigSchema = z.object({
     ...commonConfigSchema.shape,
     /**
-     * Vanity anme for this source.
-     * */
-    name: z.string().optional().meta({
-        description: "Vanity Name for this source.",
-        examples: ["Foxx's Cool Source"]
-    }),
-    /**
-     * Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.
+     * Restrict scrobbling tracks played from this source to Clients with IDs from this list. If list is empty is not present Source scrobbles to all configured Clients.
      *
      * @examples [["MyMalojaConfigName","MyLastFMConfigName"]]
      * */
     clients: z.array(z.string()).optional().meta({
-        description: "Restrict scrobbling tracks played from this source to Clients with names from this list.",
-        examples: [["MyMalojaConfigName","MyLastFMConfigName"]]
+        description: "Restrict scrobbling tracks played from this Source to Clients with IDs from this list.",
+        examples: [["MyMalojaConfigId","MyLastFMConfigId"]]
     }),
     data: commonSourceDataSchema.optional(),
     options: commonSourceOptionsSchema.optional(),

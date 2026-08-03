@@ -19,7 +19,15 @@ export const commonDataSchema = z.record(z.string(), z.any()); // keyOmit<{ [key
 export type CommonData = z.infer<typeof commonDataSchema>;
 
 export const commonConfigSchema = z.object({
-    name: z.string().optional(),
+    /**
+     * Vanity name for this Source/Client
+     *
+     * @examples ["My Cool Component"]
+     * */
+    name: z.string().optional().meta({
+        description: "Vanity name for this Source/Client",
+        examples: ["Foxx's Cool Client"]
+    }),
     /** A UNIQUE identifier for this Source/Client
      *
      * It should be unique for the given Source/Client type. No other Source/Client of the same type should have this ID. This ID will be used to register this Source/Client in the database so that it can be identified even if you change the name of the component.
@@ -150,13 +158,23 @@ export type MonitorOptions = z.infer<typeof monitorOptionsSchema>;
 export type UnparsedConfig<T extends (SourceType | ClientType)> = {config: object, type: T, source?: 'file' | 'aio' | 'env', pos: string};
 
 export const generateConfigLocation = (configType: string, config: UnparsedConfig<any>): string => {
+    const identifiers: string[] = [];
+    if(config.config !== undefined) {
+        if('id' in config.config) {
+            identifiers.push(`ID ${config.config.id}`);
+        }
+        if('name' in config.config) {
+            identifiers.push(`Name ${config.config.name}`);
+        }
+    }
+
     if(config.source === 'file') {
-        return `${capitalize(configType)} #${config.pos} in ${config.type}.json`;
+        return `${capitalize(configType)} #${config.pos}${identifiers.length > 0 ? ` (${identifiers.join(',')})` : ''} in ${config.type}.json`;
     }
     if(config.source === 'aio') {
-        return `${capitalize(configType)} ${config.type} #${config.pos} in config.json`;
+        return `${capitalize(configType)} ${config.type} #${config.pos}${identifiers.length > 0 ? ` (${identifiers.join(',')})` : ''} in config.json`;
     }
-    return `${capitalize(configType)} ${config.type} from ENV`;
+    return `${capitalize(configType)} ${config.type}${identifiers.length > 0 ? ` (${identifiers.join(',')})` : ''} from ENV`;
 }
 
 export const transformPresetEnv = <T extends CommonClientOptions = CommonClientOptions>(prefix: string, existing: T = undefined): undefined | T => {
