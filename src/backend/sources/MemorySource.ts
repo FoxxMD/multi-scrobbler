@@ -61,7 +61,7 @@ export default class MemorySource extends AbstractSource {
         // player cleanup on *schedule* is needed when the Source is non-polling (ingress)
         // because if the source stops sending updates then processRecentPlays() was never called so we never remove old players
         this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({ seconds: 15 }, new AsyncTask('Player Cleanup', (): Promise<any> => {
-            if (!this.canPoll) {
+            if (this.canPoll) {
                 return Promise.resolve();
             }
             return PromisePool
@@ -91,12 +91,6 @@ export default class MemorySource extends AbstractSource {
             this.scheduler.removeById(job.id);
         }
         this[Symbol.dispose]();
-    }
-
-    cleanupPlayers = () => {
-        for (const key of this.players.keys()) {
-            this.cleanupPlayer(key);
-        }
     }
 
     cleanupPlayer = async (key: string): Promise<PlayObject | undefined> => {
