@@ -13,6 +13,7 @@ const TEST_IP = '192.168.10.101';
 
 const createSource = (data: MusicCastData = { url: TEST_IP }): MusicCastSource => {
     const source = new MusicCastSource('Test', {
+        id: `test-${Date.now()}`,
         data,
         options: {}
     }, { localUrl: new URL('http://test'), configDir: 'test', logger: loggerTest, version: 'test' }, new EventEmitter());

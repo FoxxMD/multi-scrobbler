@@ -23,6 +23,7 @@ import { COMPONENT_STATE, type ComponentState } from "../../../core/Api.ts";
 
 chai.use(asPromised);
 
+const componentId = () => `test-${Date.now()}`; 
 class TestComponent extends AbstractComponent {
     public getRunningState(): ComponentState {
        return COMPONENT_STATE.RUNNING;
@@ -33,12 +34,12 @@ class TestComponent extends AbstractComponent {
     protected getIdentifier(): string {
         return 'test';
     }
-    constructor(config?: AbstractComponentConfig) {
-        super(config ?? {});
+    constructor(config?: Omit<AbstractComponentConfig, 'id'>) {
+        super({id: `test-${Date.now()}`, ...(config ?? {})});
     }
 }
 
-const createTestComponent = (config?: AbstractComponentConfig): TestComponent => {
+const createTestComponent = (config?: Omit<AbstractComponentConfig, 'id'>): TestComponent => {
     const component = new TestComponent(config);
     component.logger = childLogger(loggerTest, 'App');
     return component;
@@ -52,7 +53,9 @@ const memorycache = () => new Cacheable({primary: initMemoryCache()})
 describe('Play Transforms', function () {
 
     beforeEach(function () {
-        component.config = {};
+        component.config = {
+            id: componentId()
+        };
         component.transformRules = {};
     });
     describe('Transform Config Parsing', function () {
@@ -65,6 +68,7 @@ describe('Play Transforms', function () {
 
         it('Converts single object hook into hook array', function () {
             component.config = {
+                id: componentId(),
                 options: {
                     playTransform: {
                         preCompare: {
@@ -110,6 +114,7 @@ describe('Play Transforms', function () {
 
             it(`Allows user 'type'`, function () {
                 component.config = {
+                    id: componentId(),
                     options: {
                         playTransform: {
                             preCompare: {
@@ -130,6 +135,7 @@ describe('Play Transforms', function () {
 
             it('Accepts hook array', function () {
                 component.config = {
+                    id: componentId(),
                     options: {
                         playTransform: {
                             preCompare: [
@@ -156,6 +162,7 @@ describe('Play Transforms', function () {
 
             it('Converts transform config into real S&P data', function () {
                 component.config = {
+                    id: componentId(),
                     options: {
                         playTransform: {
                             preCompare: {
@@ -176,6 +183,7 @@ describe('Play Transforms', function () {
 
             it('Converts transform config into real S&P data with default being empty string', function () {
                 component.config = {
+                    id: componentId(),
                     options: {
                         playTransform: {
                             preCompare: {
@@ -199,6 +207,7 @@ describe('Play Transforms', function () {
 
             it('Respects transform config when it is already S&P data', function () {
                 component.config = {
+                    id: componentId(),
                     options: {
                         playTransform: {
                             preCompare: {
@@ -235,6 +244,7 @@ describe('Play Transforms', function () {
 
                     it(`Allows non-user Stage Type ${t}`, function () {
                         component.config = {
+                            id: componentId(),
                             options: {
                                 playTransform: {
                                     preCompare: {
@@ -271,6 +281,7 @@ describe('Play Transforms', function () {
             describe('User Play Transforming', function () {
                 it('Transforms when hook is present', async function () {
                     component.config = {
+                        id: componentId(),
                         options: {
                             playTransform: {
                                 preCompare: {
@@ -289,6 +300,7 @@ describe('Play Transforms', function () {
 
                 it('Transforms consecutively when hook is present with multiple values', async function () {
                     component.config = {
+                        id: componentId(),
                         options: {
                             playTransform: {
                                 preCompare: {
@@ -307,6 +319,7 @@ describe('Play Transforms', function () {
 
                 it('Transforms using parsed regex', async function () {
                     component.config = {
+                        id: componentId(),
                         options: {
                             playTransform: {
                                 preCompare: {
@@ -331,6 +344,7 @@ describe('Play Transforms', function () {
 
                 it('Transforms using parsed regex to get primary artist from delimited artist string', async function () {
                     component.config = {
+                        id: componentId(),
                         options: {
                             playTransform: {
                                 preCompare: {
@@ -355,6 +369,7 @@ describe('Play Transforms', function () {
 
                 it('Removes title when transform replaces with empty string', async function () {
                     component.config = {
+                        id: componentId(),
                         options: {
                             playTransform: {
                                 preCompare: {
@@ -373,6 +388,7 @@ describe('Play Transforms', function () {
 
                 it('Removes album when transform replaces with empty string', async function () {
                     component.config = {
+                        id: componentId(),
                         options: {
                             playTransform: {
                                 preCompare: {
@@ -391,6 +407,7 @@ describe('Play Transforms', function () {
 
                 it('Removes an artist when transform replaces with empty string', async function () {
                     component.config = {
+                        id: componentId(),
                         options: {
                             playTransform: {
                                 preCompare: {
@@ -469,6 +486,7 @@ describe('Play Transforms', function () {
         describe('On Hook', function () {
             it('Does not run hook if when conditions do not match', async function () {
                 component.config = {
+                    id: componentId(),
                     options: {
                         playTransform: {
                             preCompare: {
@@ -493,6 +511,7 @@ describe('Play Transforms', function () {
 
             it('Does run hook if when conditions matches', async function () {
                 component.config = {
+                    id: componentId(),
                     options: {
                         playTransform: {
                             preCompare: {
@@ -519,6 +538,7 @@ describe('Play Transforms', function () {
         describe('On Search-And-Replace', function () {
             it('Does not run hook if when conditions do not match', async function () {
                 component.config = {
+                    id: componentId(),
                     options: {
                         playTransform: {
                             preCompare: {
@@ -548,6 +568,7 @@ describe('Play Transforms', function () {
 
             it('Does run hook if when conditions matches', async function () {
                 component.config = {
+                    id: componentId(),
                     options: {
                         playTransform: {
                             preCompare: {
@@ -582,6 +603,7 @@ describe('Play Transforms', function () {
 
         it('Accumulates transforms within a single stage', async function () {
             component.config = {
+                id: componentId(),
                 options: {
                     playTransform: {
                         preCompare: [
@@ -616,6 +638,7 @@ describe('Play Transforms', function () {
 
         it('Accumulates transforms across multiple stages', async function () {
             component.config = {
+                id: componentId(),
                 options: {
                     playTransform: {
                         preCompare: [
@@ -651,6 +674,7 @@ describe('Play Transforms', function () {
 
         it('Re-uses steps without modifying other Play properties', async function () {
             component.config = {
+                id: componentId(),
                 options: {
                     playTransform: {
                         preCompare: [

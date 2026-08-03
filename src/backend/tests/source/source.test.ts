@@ -20,26 +20,27 @@ import { sleep } from "../../utils.ts";
 import DeezerInternalSource from "../../sources/DeezerInternalSource.ts";
 import type {DeezerInternalSourceOptions} from "../../common/infrastructure/config/source/deezer.ts";
 import { artistCreditsToNames } from "../../../core/StringUtils.ts";
+import type { MarkOptional } from "ts-essentials";
 
 chai.use(asPromised);
 
 
 const emitter = new EventEmitter();
 const generateSource = async () => {
-    const source = new TestSource('spotify', 'test-basic', {}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
+    const source = new TestSource('spotify', 'test-basic', {id: `test-${Date.now()}`}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
     await source.initialize();
     return source;
 }
-const generateMemorySource = async (config: SourceConfig = {}) => {
-    const s = new TestMemorySource('spotify', 'test-memory', config, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
+const generateMemorySource = async (config: MarkOptional<SourceConfig, 'id'> = {}) => {
+    const s = new TestMemorySource('spotify', 'test-memory', {id: `test-${Date.now()}`, ...config}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
     await s.initialize();
    // s.buildTransformRules();
     s.scheduler.stop();
     return s;
 }
 
-const generateMemoryPositionalSource = async (config: SourceConfig = {}) => {
-    const s = new TestMemoryPositionalSource('spotify', 'test-positional', config, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
+const generateMemoryPositionalSource = async (config: MarkOptional<SourceConfig, 'id'> = {}) => {
+    const s = new TestMemoryPositionalSource('spotify', 'test-positional', {id: `test-${Date.now()}`, ...config}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
     await s.initialize();
     //s.buildTransformRules();
     s.scheduler.stop();
@@ -201,7 +202,7 @@ describe('Player Cleanup', function () {
         setRtTick(1);
     });
 
-    const cleanedUpDuration = async (generateSource: (config: SourceConfig) => Promise<MemorySource>) => {
+    const cleanedUpDuration = async (generateSource: (config: MarkOptional<SourceConfig, 'id'>) => Promise<MemorySource>) => {
         await using source = await generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
         const initialDate = dayjs();
         const initialState = generatePlayerStateData({position: 0, playData: {duration: 50}, stateUpdatedAt: initialDate, status: REPORTED_PLAYER_STATUSES.playing});
@@ -244,7 +245,7 @@ describe('Player Cleanup', function () {
         await cleanedUpDuration(generateMemoryPositionalSource);
     });
 
-    const noScrobbleRediscoveryOnActive = async (generateSource: (config: SourceConfig) => Promise<MemorySource>) => {
+    const noScrobbleRediscoveryOnActive = async (generateSource: (config: MarkOptional<SourceConfig, 'id'>) => Promise<MemorySource>) => {
 
         await using source = await generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
         const initialDate = dayjs();
@@ -312,7 +313,7 @@ describe('Player Cleanup', function () {
         await noScrobbleRediscoveryOnActive(generateMemoryPositionalSource);
     });
 
-    const noScrobbleStale = async (generateSource: (config: SourceConfig) => Promise<MemorySource>) => {
+    const noScrobbleStale = async (generateSource: (config: MarkOptional<SourceConfig,'id'>) => Promise<MemorySource>) => {
 
         await using source = await generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
         const initialDate = dayjs();
@@ -357,7 +358,7 @@ describe('Player Cleanup', function () {
         await noScrobbleStale(generateMemoryPositionalSource);
     });
 
-    const scrobbleRediscoveryOnActive = async (generateSource: (config: SourceConfig) => Promise<MemorySource>) => {
+    const scrobbleRediscoveryOnActive = async (generateSource: (config: MarkOptional<SourceConfig, 'id'>) => Promise<MemorySource>) => {
 
         await using source = await generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
         const initialDate = dayjs();
@@ -440,7 +441,7 @@ class DeezerTestSource extends DeezerInternalSource {
 }
 
 const generateDeezerSource = async (options: DeezerInternalSourceOptions = {}) => {
-    const source = new DeezerTestSource('test', {data: {arl: 'test'}, options}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
+    const source = new DeezerTestSource('test', {id: `test-${Date.now()}`,data: {arl: 'test'}, options}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
     await source.initialize();
     return source;
 }

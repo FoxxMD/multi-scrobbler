@@ -48,6 +48,7 @@ const formatPlay = (...args: Parameters<typeof SubsonicSource.formatPlayObj>) =>
 
 const createSource = (detectStaleNowPlayingFromMinutesAgo?: boolean) => {
     const config: SubSonicSourceConfig = {
+        id: `test-${Date.now()}`,
         data: {
             url: 'https://example.com',
             user: 'user',

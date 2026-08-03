@@ -11,11 +11,12 @@ import type {YTMusicSourceConfig} from '../../common/infrastructure/config/sourc
 import { sleep } from '../../utils.ts';
 import dayjs from 'dayjs';
 import type {ApiResponse} from 'youtubei.js';
+import type { MarkOptional } from 'ts-essentials';
 
 chai.use(asPromised);
 
 const createYtSource = async (opts?: {
-    config?: YTMusicSourceConfig
+    config?: MarkOptional<YTMusicSourceConfig, 'id'>,
     emitter?: EventEmitter
 }) => {
     const {
@@ -26,7 +27,7 @@ const createYtSource = async (opts?: {
         },
         emitter = new EventEmitter
     } = opts || {};
-    const source = new YTMusicSource('test', config, { localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test' }, emitter);
+    const source = new YTMusicSource('test', {id: `test-${Date.now()}`, ...config}, { localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test' }, emitter);
     await source.buildDatabase();
     source.buildTransformRules();
     return source;
