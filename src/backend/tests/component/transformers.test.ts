@@ -700,14 +700,14 @@ describe('Play Transforms', function () {
 
             component.buildTransformRules();
             const play = generatePlay({ track: 'My cool something track', artists: artistNamesToCredits([str]), playDate: dayjs().subtract(10, 'm') });
-            const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare, 'all');
+            const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare, {log: 'all'});
             expect(transformed.data.track).equal('My cool bar track');
             expect(artistCreditsToNames(transformed.data.artists)).eql(primaries.concat(secondaries));
 
             const cachablePlay = clone(play);
             const laterDate = dayjs().subtract(5, 'm');
             cachablePlay.data.playDate = laterDate;
-            const cacheTransformed = await component.transformPlay(cachablePlay, TRANSFORM_HOOK.preCompare, 'all');
+            const cacheTransformed = await component.transformPlay(cachablePlay, TRANSFORM_HOOK.preCompare, {log: 'all'});
             expect(cacheTransformed.data.track).equal('My cool bar track');
             expect(artistCreditsToNames(cacheTransformed.data.artists)).eql(primaries.concat(secondaries));
             expect(cacheTransformed.data.playDate.isSame(cachablePlay.data.playDate));

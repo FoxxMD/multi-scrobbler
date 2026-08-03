@@ -33,7 +33,7 @@ import { getRetentionCompactAfterFromEnv, getRetentionDeleteAfterFromEnv, isComp
 import type {DbConcrete} from "./database/drizzle/drizzleUtils.ts";
 import type {ComponentSelect} from "./database/drizzle/drizzleTypes.ts";
 import { DrizzlePlayRepository } from "./database/drizzle/repositories/PlayRepository.ts";
-import type {ClientType, MonitoringStatus} from "../../core/Atomic.ts";
+import type {ClientType, MonitoringStatus, OptionalCacheUsage} from "../../core/Atomic.ts";
 import type {SourceType} from "../../core/Atomic.ts";
 import { DrizzleComponentRepository } from "./database/drizzle/repositories/ComponentRepository.ts";
 import dayjs, { type Dayjs } from "dayjs";
@@ -248,7 +248,12 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         return partArr.map(x => this.transformManager.parseTransformerConfig(x));
     }
 
-    public transformPlay = async (play: PlayObject, hookType: TransformHook, log?: boolean | 'all') => {
+    public transformPlay = async (play: PlayObject, hookType: TransformHook, transformOpts: {log?: boolean | 'all'} & OptionalCacheUsage = {}) => {
+
+        const {
+            log,
+            useCachedResult = true
+        } = transformOpts;
 
         let logger: Logger;
 
@@ -280,7 +285,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             const shouldLog = log ?? this.config.options?.playTransform?.log ?? isDebugMode();
 
             const transformHash = `playTransform-${hashObject(hook)}-${hashObject(playContentInvariantTransform(play))}`;
-            const cachedSteps = await this.cache.cacheTransform.get<LifecycleStep[]>(transformHash);
+            const cachedSteps = useCachedResult ?  await this.cache.cacheTransform.get<LifecycleStep[]>(transformHash) : undefined;
             if(cachedSteps !== undefined) {
                 logger.trace(`Cache hit for Steps => ${transformHash}`);
                 //return cachedTransformPlay;
@@ -294,7 +299,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
             const opts = {
                 logger,
-                asyncId
+                asyncId,
+                useCachedResult
             }
 
             if(cachedSteps !== undefined) {
@@ -415,17 +421,18 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
     }
 
-    protected generateStepFromStage = async (playTruth: PlayObject, hookItem: StageConfig, hookType: TransformHook, opts: { logger?: Logger, asyncId?: string } = {}): Promise<[LifecycleStep, PlayObject]> => {
+    protected generateStepFromStage = async (playTruth: PlayObject, hookItem: StageConfig, hookType: TransformHook, opts: { logger?: Logger, asyncId?: string } & OptionalCacheUsage = {}): Promise<[LifecycleStep, PlayObject]> => {
         const {
             onSuccess = 'continue',
             onFailure = 'stop',
             onSkip = 'continue',
-            failureReturnPartial = false
+            failureReturnPartial = false,
         } = hookItem;
 
         const {
             logger = loggerNoop,
-            asyncId = nanoid(6)
+            asyncId = nanoid(6),
+            useCachedResult
         } = opts;
 
         const {
@@ -446,7 +453,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             stageName: string = 'Unnamed',
             err: Error;
         try {
-            [newTransformedPlay, stageName] = await this.transformManager.handleStage(hookItem, playTruth, asyncId);
+            [newTransformedPlay, stageName] = await this.transformManager.handleStage(hookItem, playTruth, {asyncId, useCachedResult});
             newTransformedPlay = clone(newTransformedPlay);
         } catch (e) {
             err = e;

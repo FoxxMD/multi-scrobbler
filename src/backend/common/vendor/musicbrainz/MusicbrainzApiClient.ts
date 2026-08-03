@@ -1,5 +1,5 @@
 import type { Response } from 'superagent';
-import type {ArtistCredit, PlayObject, PlayObjectMinimal, URLData} from "../../../../core/Atomic.ts";
+import type {ArtistCredit, OptionalCacheUsage, PlayObject, PlayObjectMinimal, URLData} from "../../../../core/Atomic.ts";
 import { UpstreamError } from "../../errors/UpstreamError.ts";
 import { type AbstractApiOptions, type FormatPlayObjectOptions, MUSICBRAINZ_URL, type MusicbrainzApiConfigData } from "../../infrastructure/Atomic.ts";
 import AbstractApiClient from "../AbstractApiClient.ts";
@@ -114,17 +114,18 @@ export class MusicbrainzApiClient extends AbstractApiClient {
         return 'API';
     }
 
-    callApi = async <T = Response>(func: (mb: MusicBrainzApi) => Promise<any>, options?: { timeout?: number, cacheKey?: string }): Promise<T> => {
+    callApi = async <T = Response>(func: (mb: MusicBrainzApi) => Promise<any>, options?: { timeout?: number, cacheKey?: string } & OptionalCacheUsage): Promise<T> => {
 
         let apiConfig = this.rrApis.next().value;
 
         const {
             timeout = 30000,
-            cacheKey
+            cacheKey,
+            useCachedResult = true
         } = options || {};
 
         try {
-            const cachedTransform = await this.cache.get<T>(cacheKey);
+            const cachedTransform = useCachedResult ? await this.cache.get<T>(cacheKey) : undefined;
             if(cachedTransform !== undefined) {
                 const cacheUrl = await this.cache.get<string>(`${cacheKey}-url`);
                 const cacheQs = await this.cache.get<string>(`${cacheKey}-qs`);
@@ -218,13 +219,14 @@ export class MusicbrainzApiClient extends AbstractApiClient {
         }
     }
 
-    searchByRecording = async(play: PlayObject, options?: SearchOptions): Promise<IRecordingMSList | undefined> => {
+    searchByRecording = async(play: PlayObject, options?: SearchOptions & OptionalCacheUsage): Promise<IRecordingMSList | undefined> => {
 
         const {
             escapeCharacters = true,
             removeCharacters = false,
             using = ['album','artist','title'],
-            freetext
+            freetext,
+            useCachedResult
         } = options || {};
 
         const cacheKey = `mb-recSearch-${hashObject({...playContentInvariantTransform(play), using})}`;
@@ -347,7 +349,8 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                 query: q
             });
         }, {
-            cacheKey
+            cacheKey,
+            useCachedResult
         });
 
         if(res === undefined) {
