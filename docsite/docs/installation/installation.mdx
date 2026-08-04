@@ -125,7 +125,7 @@ services:
 
 </TabItem>
 <TabItem value="linuxHost" label="Linux Host">
-If you are running this container with **Docker** on a **Linux Host** you **should** specify `user:group` permissions of the user who owns the **configuration directory** on the host to avoid [docker file permission problems.](https://ikriv.com/blog/?p=4698) These can be specified using the [environmental variables **PUID** and **PGID**.](https://docs.linuxserver.io/general/understanding-puid-and-pgid)
+If you are running this container with **Docker** on a **Linux Host** you **should** specify `user:group` permissions of the user who owns the **configuration and data directories** on the host to avoid [docker file permission problems.](https://ikriv.com/blog/?p=4698) These can be specified using the [environmental variables **PUID** and **PGID**.](https://docs.linuxserver.io/general/understanding-puid-and-pgid)
 
 To get the UID and GID for the current user run these commands from a terminal:
 
@@ -150,7 +150,7 @@ services:
 
 </TabItem>
 <TabItem value="caching" label="Caching">
-**Optionally**, add a [Valkey](https://valkey.io/) service to your stack for [secondary caching](/configuration#secondary-caching) to take advantage of faster performance and reduced memory usage.
+**Optionally**, add a [Valkey](https://valkey.io/) service to your stack for [secondary caching](/configuration#secondary-caching) to take advantage of faster performance, reduced memory usage, and cached api calls to external services.
 
 ```yaml title="docker-compose.yml"
 services:
@@ -215,8 +215,7 @@ services:
       - PUID=1000
       - PGID=1000
       # uncomment along with valkey service/volume below for better caching
-      #- CACHE_METADATA=valkey
-      #- CACHE_METADATA_CONN=redis://valkey:6379
+      #- CACHE_VALKEY=redis://valkey:6379
     volumes:
       - ./config:/config
     ports:
