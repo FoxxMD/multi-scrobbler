@@ -816,6 +816,63 @@ export interface LastFMScrobbleRequestPayload extends LastFMScrobblePayload {
     method: string
 }
 
+export type LastFMPayloadkey = keyof LastFMScrobbleRequestPayload;
+const lfmPayloadKeysRequired: LastFMPayloadkey[] = ['track','artist'];
+//const lfmPayloadKeysOptional: LastFMPayloadkey[] = ['duration','album','albumArtist','mbid'];
+//const lfmPayloadKeys: LastFMPayloadkey[] = [...lfmPayloadKeysRequired, ...lfmPayloadKeysOptional];
+
+export const ingressPayloads = (obj: Record<LastFMPayloadkey, unknown>): LastFMScrobbleRequestPayload[] => {
+    const keys = Object.keys(obj);
+    let allObject = true;
+    for(const k of lfmPayloadKeysRequired) {
+        if(!keys.includes(k)) {
+            throw new Error(`Missing required key '${k}'`);
+        }
+        if(Array.isArray(obj[k])) {
+            allObject = false;
+        } else if(allObject === false) {
+            throw new Error('Payload is an unexpected mix of arrays and objects');
+        }
+    }
+    const payloads: LastFMScrobbleRequestPayload[] = [];
+
+    if(allObject) {
+        payloads.push(obj as LastFMScrobbleRequestPayload);
+    } else {
+        let index = 0;
+        for(const t of (obj.track as string[])) {
+            payloads.push({
+                track: t,
+                artist: obj.artist[index],
+                timestamp: obj.timestamp !== undefined ? obj.timestamp[index] : dayjs().unix(),
+                album: obj.album !== undefined ? obj.album[index] : undefined,
+                mbid: obj.mbid !== undefined ? obj.mbid[index] : undefined,
+                duration: obj.duration !== undefined ? obj.duration[index] : undefined,
+                albumArtist: obj.albumArtist !== undefined ? obj.albumArtist[index] : undefined,
+                method: obj.method as string
+            })
+            index++;
+        }
+    }
+
+    return payloads.map(x => {
+        const cleaned: LastFMScrobbleRequestPayload = x;
+        if(typeof cleaned.duration === 'string') {
+            cleaned.duration = Number.parseInt(cleaned.duration);
+        }
+        if(isNaN(cleaned.duration) || cleaned.duration <= 0) {
+            cleaned.duration = undefined;
+        }
+        if(typeof cleaned.timestamp === 'string') {
+            cleaned.timestamp = Number.parseInt(cleaned.timestamp);
+        }
+        if(isNaN(cleaned.timestamp)) {
+            cleaned.timestamp = dayjs().unix();
+        }
+        return cleaned;
+    })
+}
+
 export const playToScrobbleApiResponseJson = (play: PlayObject) => {
         const jsonPayload: LastFMTrackScrobbleResponse = {
             scrobbles: {
@@ -885,7 +942,7 @@ export const playToScrobbleApiResponseXml = (play: PlayObject) => {
         lfm: {
             $: { status: "ok" },
             scrobbles: {
-                $: {accepted: 2, ignored: 0},
+                $: {accepted: 1, ignored: 0},
                 scrobble: {
                     track: {
                         $: {corrected: 0},

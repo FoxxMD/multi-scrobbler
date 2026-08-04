@@ -11,7 +11,7 @@ import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type {PlayPlatformId} from '../../core/Atomic.ts';
 import MemorySource from "./MemorySource.ts";
 import type {LastFMEndpointSourceConfig} from "../common/infrastructure/config/source/endpointlfm.ts";
-import { type LastFMScrobbleRequestPayload, scrobblePayloadToPlay } from "../common/vendor/LastfmApiClient.ts";
+import { ingressPayloads, type LastFMPayloadkey, type LastFMScrobbleRequestPayload, scrobblePayloadToPlay } from "../common/vendor/LastfmApiClient.ts";
 import type {Logger} from "@foxxmd/logging";
 import type {PlayerStateOptions} from "./PlayerState/AbstractPlayerState.ts";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.ts";
@@ -64,20 +64,23 @@ export class EndpointLastfmSource extends MemorySource {
         return true;
     }
 
-    handle = async (stateData: PlayerStateData) => {
+    handle = async (stateData: PlayerStateData[]) => {
 
-        if(stateData.play.meta.nowPlaying === true) {
-            this.setStatus('Received Now Playing');
-        } else {
-            this.setStatus('Received Play');
-        }
-        await this.processRecentPlays([stateData]);
-
-        if (stateData.play.meta.nowPlaying === false && this.isValidScrobble(stateData.play)) {
-            const discovered = await this.discover([stateData.play]);
-            if (discovered.length > 0) {
-                await this.scrobble(discovered);
+        if(stateData.length === 1) {
+            if(stateData[0].play.meta.nowPlaying === true) {
+                this.setStatus('Received Now Playing');
+            } else {
+                this.setStatus('Received Play');
             }
+            await this.processRecentPlays(stateData);
+        } else {
+            this.setStatus(`Received ${stateData.length} batch Plays`);
+        }
+
+        const discoverable = stateData.filter(x => x.play.meta.nowPlaying === false);
+        const discovered = await this.discover(discoverable.map(x => x.play));
+        if (discovered.length > 0) {
+            await this.scrobble(discovered);
         }
         this.componentRepo.updateById(this.dbComponent.id, {lastActiveAt: dayjs()});
         this.setStatus('Waiting for Plays');
@@ -90,17 +93,16 @@ export class EndpointLastfmSource extends MemorySource {
     getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new NowPlayingPlayerState(logger,  id, opts);
 }
 
-export const playStateFromRequest = (obj: LastFMScrobbleRequestPayload): PlayerStateData => {
-
-    const play = scrobblePayloadToPlay(obj);
-    play.meta.sourceSOT = SOURCE_SOT.HISTORY;
-    return {
-        platformId: [play.meta.deviceId, NO_USER],
-        play,
-        status: obj.method === 'track.updateNowPlaying' ? REPORTED_PLAYER_STATUSES.playing : REPORTED_PLAYER_STATUSES.unknown,
-        stateUpdatedAt: dayjs()
-    }
-}
+export const playStateFromRequest = (obj: Record<LastFMPayloadkey, unknown>): PlayerStateData[] => ingressPayloads(obj).map(x => {
+        const play = scrobblePayloadToPlay(x);
+        play.meta.sourceSOT = SOURCE_SOT.HISTORY;
+        return {
+            platformId: [play.meta.deviceId, NO_USER],
+            play,
+            status: obj.method === 'track.updateNowPlaying' ? REPORTED_PLAYER_STATUSES.playing : REPORTED_PLAYER_STATUSES.unknown,
+            stateUpdatedAt: dayjs()
+        }
+    })
 
 export const parseSlugFromString = (path: string): string | false | undefined => {
     const noSlug = parseRegexSingle(noSlugMatch, path);

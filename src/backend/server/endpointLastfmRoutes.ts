@@ -101,6 +101,7 @@ export const setupLastfmEndpointRoutes = (app: Express, parentLogger: Logger, sc
                             subscriber: 0
                         }
                     };
+                    source.logger.info(`Authenticating with username ${resp.session.name}`);
                     if (wantsJson) {
                         return res.status(200).json(resp);
                     }
@@ -113,15 +114,15 @@ export const setupLastfmEndpointRoutes = (app: Express, parentLogger: Logger, sc
                     const playerState = playStateFromRequest(req.body);
                     if (method === 'track.scrobble') {
                         if (wantsJson) {
-                            res.status(200).json(playToScrobbleApiResponseJson(playerState.play))
+                            res.status(200).json(playToScrobbleApiResponseJson(playerState[0].play))
                         } else {
-                            res.status(200).setHeader('Content-Type', 'application/xml').send(playToScrobbleApiResponseXml(playerState.play));
+                            res.status(200).setHeader('Content-Type', 'application/xml').send(playToScrobbleApiResponseXml(playerState[0].play));
                         }
                     } else {
                         if (wantsJson) {
-                            res.status(200).json(playToNowPlayingApiResponseJson(playerState.play))
+                            res.status(200).json(playToNowPlayingApiResponseJson(playerState[0].play))
                         } else {
-                            res.status(200).setHeader('Content-Type', 'application/xml').send(playToNowPlayingApiResponseXml(playerState.play));
+                            res.status(200).setHeader('Content-Type', 'application/xml').send(playToNowPlayingApiResponseXml(playerState[0].play));
                         }
                     }
                     await source.handle(playerState)
