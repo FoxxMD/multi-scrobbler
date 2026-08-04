@@ -43,7 +43,7 @@ export const setupLastfmEndpointRoutes = (app: Express, parentLogger: Logger, sc
             if (validSources.length === 0) {
                 const [slug] = parseDisplayIdentifiersFromRequest(req);
                 logger.warn(`No Lastfm endpoint config matched => Slug: ${slug}`);
-                return res.status(409);
+                return res.sendStatus(409);
             }
 
             if(!('method' in req.body)) {
