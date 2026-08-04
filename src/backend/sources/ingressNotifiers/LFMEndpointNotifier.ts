@@ -34,15 +34,11 @@ export class LFMEndpointNotifier extends IngressNotifier {
 
     notifyByRequest(req: Request, isRaw: boolean): string | undefined {
         if(req.method !== 'POST') {
-            return `Expected POST request (track.scrobble payload) but received ${req.method}`;
+            return `Expected POST request but received ${req.method}`;
         }
         if(!isRaw) {
             if(!('method' in req.body)) {
                 return `Body is missing 'method' param`
-            }
-            const method = (req.body as LastFMScrobbleRequestPayload).method;
-            if(!['track.updateNowPlaying','track.scrobble'].includes(method)) {
-                return `Unexpected 'method' param value '${method}', expected either 'track.updateNowPlaying' or 'track.scrobble'`
             }
         }
         return;
