@@ -66,7 +66,7 @@ export class EndpointLastfmSource extends MemorySource {
 
     handle = async (stateData: PlayerStateData) => {
 
-        if(stateData[0].play.meta.nowPlaying === true) {
+        if(stateData.play.meta.nowPlaying === true) {
             this.setStatus('Received Now Playing');
         } else {
             this.setStatus('Received Play');

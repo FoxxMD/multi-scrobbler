@@ -51,6 +51,18 @@ export const setupLastfmEndpointRoutes = (app: Express, parentLogger: Logger, sc
             }
             const method = (req.body as LastFMScrobbleRequestPayload).method;
 
+            let wantsJson: boolean = false;
+            if(req.query.format === 'json') {
+                wantsJson = true;
+            } else {
+                // some players, like ArchiveTune, use the accept header to signal they want json
+                // rather than using the official format=json qs lastfm wants
+                const a = req.header('accept');
+                if(a !== undefined && a.includes('json')) {
+                    wantsJson = true;
+                }
+            }
+
             let source: EndpointLastfmSource;
             // try to find by username or api_key or sk
             if(req.body.api_key !== undefined) {
@@ -89,7 +101,7 @@ export const setupLastfmEndpointRoutes = (app: Express, parentLogger: Logger, sc
                             subscriber: 0
                         }
                     };
-                    if (req.query.format === 'json') {
+                    if (wantsJson) {
                         return res.status(200).json(resp);
                     }
                     const builder = new xml2js.Builder();
@@ -100,15 +112,17 @@ export const setupLastfmEndpointRoutes = (app: Express, parentLogger: Logger, sc
                 case 'track.scrobble': {
                     const playerState = playStateFromRequest(req.body);
                     if (method === 'track.scrobble') {
-                        if (req.query.format === 'json') {
+                        if (wantsJson) {
                             res.status(200).json(playToScrobbleApiResponseJson(playerState.play))
+                        } else {
+                            res.status(200).setHeader('Content-Type', 'application/xml').send(playToScrobbleApiResponseXml(playerState.play));
                         }
-                        res.status(200).setHeader('Content-Type', 'application/xml').send(playToScrobbleApiResponseXml(playerState.play));
                     } else {
-                        if (req.query.format === 'json') {
+                        if (wantsJson) {
                             res.status(200).json(playToNowPlayingApiResponseJson(playerState.play))
+                        } else {
+                            res.status(200).setHeader('Content-Type', 'application/xml').send(playToNowPlayingApiResponseXml(playerState.play));
                         }
-                        res.status(200).setHeader('Content-Type', 'application/xml').send(playToNowPlayingApiResponseXml(playerState.play));
                     }
                     await source.handle(playerState)
                 } break;
