@@ -1,6 +1,15 @@
 {
+  "debugMode": false,
+  "disableWeb": false,
   "sourceDefaults": {
-    "maxPollRetries": 0,
+    "logPayload": false,
+    "logFilterFailure": "warn",
+    "logPlayerState": false,
+    "scrobbleThresholds": {
+      "duration": 30,
+      "percent": 50
+    },
+    "maxPollRetries": 1,
     "maxRequestRetries": 1,
     "retryMultiplier": 1.5
   },
@@ -8,12 +17,13 @@
     "maxRequestRetries": 1,
     "retryMultiplier": 1.5
   },
-  "baseUrl": "http://localhost",
   "sources": [
     {
       "type": "spotify",
+      "enable": true,
       "clients": ["myConfig"],
-      "name": "mySpotifySource",
+      "name": "Cool Spotify Name",
+      "id": "mySpotifyId",
       "data": {
         "clientId": "a89cba1569901a0671d5a9875fed4be1",
         "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a",
@@ -24,7 +34,9 @@
   "clients": [
     {
       "type": "maloja",
-      "name": "myConfig",
+      "enable": true,
+      "name": "Foxx Maloja",
+      "id": "myMalojaId",
       "data": {
         "url": "http://localhost:42010",
         "apiKey": "myMalojaKey"
