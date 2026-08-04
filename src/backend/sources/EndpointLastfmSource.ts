@@ -18,7 +18,7 @@ import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 
 const noSlugMatch = new RegExp(/(?:\/api\/lastfm\/?)$|(?:\/1\/?|\/2.0\/?)$/i);
-const slugMatch = new RegExp(/\/api\/lastfm\/([^\/]+)$/i);
+const slugMatch = new RegExp(/\/api\/lastfm\/([^\/]+)\/?$/i);
 
 export const authHeaderRegex = new RegExp(/Token (.+)$/i);
 
@@ -114,7 +114,7 @@ export const parseSlugFromString = (path: string): string | false | undefined =>
     return false;
 }
 
-export const parseSlugFromRequest = (req: ExpressRequest): string | false | undefined => parseSlugFromString(req.baseUrl);
+export const parseSlugFromRequest = (req: ExpressRequest): string | false | undefined => parseSlugFromString(req.originalUrl);
 
 export const parseIdentifiersFromRequest = (req: ExpressRequest): [string | false | undefined] => {
     const slug = parseSlugFromRequest(req);
