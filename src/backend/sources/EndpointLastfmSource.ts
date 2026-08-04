@@ -17,8 +17,8 @@ import type {PlayerStateOptions} from "./PlayerState/AbstractPlayerState.ts";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 
-const noSlugMatch = new RegExp(/(?:\/api\/lastfm\/?)$|(?:\/1\/?|\/2.0\/?)$/i);
-const slugMatch = new RegExp(/\/api\/lastfm\/([^\/]+)\/?$/i);
+const noSlugMatch = new RegExp(/(?:\/api\/lastfm\/?)$|(?:^\/1\/?|^\/2.0\/?)$/i);
+const slugMatch = new RegExp(/\/api\/lastfm\/([^\/]+)(\/|\/2.0\/)?$/i);
 
 export const authHeaderRegex = new RegExp(/Token (.+)$/i);
 
