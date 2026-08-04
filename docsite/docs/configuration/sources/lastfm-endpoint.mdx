@@ -19,6 +19,14 @@ This Source enables multi-scrobbler to accept scrobbles from outside application
 
 :::
 
+<DetailsAdmo type="tip" summary="Recommended Alternative">
+
+This Source has the same data limitations as the [Last.fm (Source)](/configuration/sources/lastfm-source) and [Last.fm (Client)](/configuration/clients/lastfm) have: Last.fm does not support separating artists/album artists fields which means any multi-artist tracks will have all artists combined into one string. This makes scrobbling to other services, and using metadata corrections like [Musicbrainz](/configuration/transforms/musicbrainz), more difficult.
+
+If your application has the option to scrobble using Listenbrainz then use the [Listenbrainz (Endpoint)](/configuration/sources/listenbrainz-endpoint) Source instead.
+
+</DetailsAdmo>
+
 ## Setup
 
 ### URL
