@@ -19,23 +19,50 @@ This Source enables multi-scrobbler to accept scrobbles from outside application
 
 :::
 
+## Setup
+
 ### URL
 
-If a **slug** is **not** provided in configuration then multi-scrobbler will accept Last.fm scrobbles at
+When setting up your Last.fm client to communicate with Multi-Scrobbler replace the Last.fm domain with your Multi-Scrobbler domain:
+
+https://**last.fm** => https://**yourMSDomain**
+
+MS accepts Last.fm API calls with the same **url base** and structure as the [last.fm api](https://www.last.fm/api/intro), IE `http://yourMSDomain/2.0/`
+
+### Authentication
+
+If you are only setting up **one** Lastfm Endpoint Source then you do not need to configure any explicit username/apiKey/password for MS. If your Last.fm Client requires these credentials use any fake values you want.
+
+<DetailsAdmo type="important" summary="Supported Auth Types">
+
+Currently, Multi-Scrobbler only supports the [**Mobile Application**](https://www.last.fm/api/mobileauth) auth flow. If your client requires one of the other authentication flows please [open an issue](https://github.com/FoxxMD/multi-scrobbler/issues/new?template=02-feature-request.yml).
+
+**Note:** Your client does not **need** to implement any auth in order to use a Lastfm Endpoint Source. You can directly make [`track.scrobble`](https://www.last.fm/api/show/track.scrobble) or [`track.updateNowPlaying`](https://www.last.fm/api/show/track.updateNowPlaying) api calls to `http://yourMSDomain/2.0/` with any fake auth data you want.
+
+</DetailsAdmo>
+
+#### Multiple Sources
+
+If you have **more than one** Lastfm Endpoint Source then you should configure username/apiKey for MS, per Source. This enables MS to differentiate scrobbles for each Source.
+
+Use the same **username** and/or **API Key** you configure with MS when setting up your Last.fm Client. These values can be anything you want, as long as they match between MS and your client. Password can be anything and is not checked.
+
+<DetailsAdmo type="tip" summary="Different URL Base (Slug)">
+
+If you cannot use different username/apiKey per Source (or Last.fm Client) you can still differentiate Sources by using a different **url base (slug)** for Last.fm communication.
+
+Setting a **slug** in config will change the **url base** for MS like this:
 
 ```
-http://localhost:9078/2.0/
+slug: "mySlug"
+```
+```
+http://yourMsDomain/api/lastfm/mySlug
 ```
 
-which is the "standard" Last.fm server path for scrobbling
+The above url base is equivalent to making calls to `http://yourMSDomain/2.0/`
 
-Use a slug only if you need to setup multiple Last.fm Endpoint sources and cannot use different tokens.
-
-If a slug is used then the URL will be:
-
-```
-http://localhost:9078/api/lastfm/mySlug
-```
+</DetailsAdmo>
 
 ## Configuration
 

@@ -44,15 +44,12 @@ export class EndpointLastfmSource extends MemorySource {
     }
 
     matchRequest(req: ExpressRequest): boolean {
-        let matchesPath = false;
         const slug = parseSlugFromRequest(req);
         if (slug === false) {
             return false;
-        } else {
-            matchesPath = (this.config.data.slug === undefined && slug === undefined) || (slug !== undefined && this.config.data.slug !== undefined && this.config.data.slug.toLowerCase().trim() === slug.toLocaleLowerCase().trim());
         }
 
-        return matchesPath;
+        return (this.config.data.slug === undefined && slug === undefined) || (slug !== undefined && this.config.data.slug !== undefined && this.config.data.slug.toLowerCase().trim() === slug.toLocaleLowerCase().trim());
     }
 
     static formatPlayObj(obj: LastFMScrobbleRequestPayload, options: FormatPlayObjectOptions = {}): PlayObject {
