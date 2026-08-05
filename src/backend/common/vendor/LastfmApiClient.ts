@@ -20,6 +20,7 @@ import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
 import { ScrobbleSubmitError, SimpleError } from "../errors/MSErrors.ts";
 import { redactString } from "@foxxmd/redact-string";
 import dns from 'node:dns/promises';
+import xml2js from 'xml2js';
 
 const badErrors = [
     'api key suspended',
@@ -514,7 +515,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
                         } = {}
                     } = response;
                     if (ignoreCode > 0) {
-                        this.logger.warn({payload: rest}), `Service ignored this scrobble => (Code ${ignoreCode}) ${(ignoreMsg === '' ? '(No error message returned)' : ignoreMsg)} -- See https://www.last.fm/api/show/track.updateNowPlaying for more information`;
+                        this.logger.warn({payload: rest}, `Service ignored this scrobble => (Code ${ignoreCode}) ${(ignoreMsg === '' ? '(No error message returned)' : ignoreMsg)} -- See https://www.last.fm/api/show/track.updateNowPlaying for more information`);
                     }
                     return response;
                 } catch (e) {
@@ -813,4 +814,192 @@ export interface LastFMScrobblePayload  {
 
 export interface LastFMScrobbleRequestPayload extends LastFMScrobblePayload {
     method: string
+}
+
+export type LastFMPayloadkey = keyof LastFMScrobbleRequestPayload;
+const lfmPayloadKeysRequired: LastFMPayloadkey[] = ['track','artist'];
+//const lfmPayloadKeysOptional: LastFMPayloadkey[] = ['duration','album','albumArtist','mbid'];
+//const lfmPayloadKeys: LastFMPayloadkey[] = [...lfmPayloadKeysRequired, ...lfmPayloadKeysOptional];
+
+export const ingressPayloads = (obj: Record<LastFMPayloadkey, unknown>): LastFMScrobbleRequestPayload[] => {
+    const keys = Object.keys(obj);
+    let allObject = true;
+    for(const k of lfmPayloadKeysRequired) {
+        if(!keys.includes(k)) {
+            throw new Error(`Missing required key '${k}'`);
+        }
+        if(Array.isArray(obj[k])) {
+            allObject = false;
+        } else if(allObject === false) {
+            throw new Error('Payload is an unexpected mix of arrays and objects');
+        }
+    }
+    const payloads: LastFMScrobbleRequestPayload[] = [];
+
+    if(allObject) {
+        payloads.push(obj as LastFMScrobbleRequestPayload);
+    } else {
+        let index = 0;
+        for(const t of (obj.track as string[])) {
+            payloads.push({
+                track: t,
+                artist: obj.artist[index],
+                timestamp: obj.timestamp !== undefined ? obj.timestamp[index] : dayjs().unix(),
+                album: obj.album !== undefined ? obj.album[index] : undefined,
+                mbid: obj.mbid !== undefined ? obj.mbid[index] : undefined,
+                duration: obj.duration !== undefined ? obj.duration[index] : undefined,
+                albumArtist: obj.albumArtist !== undefined ? obj.albumArtist[index] : undefined,
+                method: obj.method as string
+            })
+            index++;
+        }
+    }
+
+    return payloads.map(x => {
+        const cleaned: LastFMScrobbleRequestPayload = x;
+        if(typeof cleaned.duration === 'string') {
+            cleaned.duration = Number.parseInt(cleaned.duration);
+        }
+        if(isNaN(cleaned.duration) || cleaned.duration <= 0) {
+            cleaned.duration = undefined;
+        }
+        if(typeof cleaned.timestamp === 'string') {
+            cleaned.timestamp = Number.parseInt(cleaned.timestamp);
+        }
+        if(isNaN(cleaned.timestamp)) {
+            cleaned.timestamp = dayjs().unix();
+        }
+        return cleaned;
+    })
+}
+
+export const playToScrobbleApiResponseJson = (play: PlayObject) => {
+        const jsonPayload: LastFMTrackScrobbleResponse = {
+            scrobbles: {
+                '@attr': {
+                    accepted: 1,
+                    ignored: 0
+                },
+                scrobble: {
+                    track: {
+                        corrected: 0,
+                        '#text': play.data.track
+                    },
+                    artist: {
+                        corrected: 0,
+                        '#text': play.data.artists?.join(',')
+                    },
+                    album: {
+                        corrected: 0,
+                        '#text': play.data.album
+                    },
+                    albumArtist: {
+                        corrected: 0,
+                        '#text': play.data.albumArtists?.join(',')
+                    },
+                    timestamp: dayjs().unix(),
+                    ignoredMessage: {
+                        code: 0,
+                        '#text': ''
+                    }
+                }
+            }
+        }
+        return jsonPayload;
+}
+
+export const playToNowPlayingApiResponseJson = (play: PlayObject) => {
+        const jsonPayload = {
+            nowplaying: {
+                    track: {
+                        corrected: 0,
+                        '#text': play.data.track
+                    },
+                    artist: {
+                        corrected: 0,
+                        '#text': play.data.artists?.join(',')
+                    },
+                    album: {
+                        corrected: 0,
+                        '#text': play.data.album
+                    },
+                    albumArtist: {
+                        corrected: 0,
+                        '#text': play.data.albumArtists?.join(',')
+                    },
+                    ignoredMessage: {
+                        code: 0,
+                        '#text': ''
+                    }
+                }
+        }
+        return jsonPayload;
+}
+
+export const playToScrobbleApiResponseXml = (play: PlayObject) => {
+    const builder = new xml2js.Builder();
+    const xml = builder.buildObject({
+        lfm: {
+            $: { status: "ok" },
+            scrobbles: {
+                $: {accepted: 1, ignored: 0},
+                scrobble: {
+                    track: {
+                        $: {corrected: 0},
+                        _: play.data.track
+                    },
+                    artist: {
+                        $: {corrected: 0},
+                        _: play.data.artists?.join(',')
+                    },
+                    album: {
+                        $: {corrected: 0},
+                        _: play.data.album
+                    },
+                    albumArtist: {
+                        $: {corrected: 0},
+                        _: play.data.albumArtists?.join(',')
+                    },
+                    timestamp: {
+                        _: dayjs().unix(),
+                    },
+                    ignoredMessage: {
+                        $: {code: 0}
+                    }
+                }
+            }
+        }
+    });
+    return xml;
+}
+
+export const playToNowPlayingApiResponseXml = (play: PlayObject) => {
+    const builder = new xml2js.Builder();
+    const xml = builder.buildObject({
+        lfm: {
+            $: { status: "ok" },
+            nowplaying: {
+                track: {
+                    $: { corrected: 0 },
+                    _: play.data.track
+                },
+                artist: {
+                    $: { corrected: 0 },
+                    _: play.data.artists?.join(',')
+                },
+                album: {
+                    $: { corrected: 0 },
+                    _: play.data.album
+                },
+                albumArtist: {
+                    $: { corrected: 0 },
+                    _: play.data.albumArtists?.join(',')
+                },
+                ignoredMessage: {
+                    $: { code: 0 }
+                }
+            }
+        }
+    });
+    return xml;
 }

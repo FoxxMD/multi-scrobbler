@@ -18,12 +18,20 @@ export const lastFmEndpointDataSchema = z.object({
     slug: z.string().optional().meta({
         description: "The URL ending that should be used to identify scrobbles for this source"
     }),
+    username: z.string().optional().meta({
+        description: 'A fake username to differentiate LFM Endpoint Sources'
+    }),
+    apiKey: z.string().optional().meta({
+        description: 'A fake api key to differentiate LFM Endpoint Sources'
+    }),
 });
 
 export type LastFMEndpointData = z.infer<typeof lastFmEndpointDataSchema>;
 
 const envDataSchema = z.object({
     LFM_SLUG: lastFmEndpointDataSchema.shape.slug,
+    LFM_USERNAME: lastFmEndpointDataSchema.shape.username,
+    LFM_API_KEY: lastFmEndpointDataSchema.shape.apiKey
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, LastFMEndpointSourceConfig> = {
@@ -31,7 +39,9 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, LastFMEndpointSou
     prefix: 'LFM',
     toConfig: (partial) => ({
             data: {
-                slug: partial.LFM_SLUG
+                slug: partial.LFM_SLUG,
+                username: partial.LFM_USERNAME,
+                apiKey: partial.LFM_API_KEY
             }
     })
 };
