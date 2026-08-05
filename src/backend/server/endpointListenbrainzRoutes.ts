@@ -92,10 +92,13 @@ export const setupLZEndpointRoutes = (app: Express, parentLogger: Logger, scrobb
 
         const sources = scrobbleSources.getByType('endpointlz') as EndpointListenbrainzSource[];
         if (sources.length === 0) {
-            logger.warn('Received Listenbrainz endpoint payload but no Listenbrainz endpoint sources are configured');
+            return res.status(409).json({error: `Received Listenbrainz endpoint payload but no Listenbrainz endpoint sources are configured`, code: 409});
         }
 
-        const matchedSource = sources.find(x => x.config.data?.username === user || x.name === user);
+        let matchedSource = sources.find(x => x.config.data?.username === user || x.name === user);
+        if(matchedSource === undefined) {
+            matchedSource = sources[0];
+        }
 
         const playObjs = scrobbleClients.getPlayingNow(matchedSource.name, matchedSource.clients);
         listens = playObjs.map(x => ({playing_now: true, track_metadata: playToListenPayload(x).track_metadata}));
