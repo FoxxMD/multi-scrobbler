@@ -13,7 +13,7 @@ import FileExample from "../../src/components/FileExample";
 import ScrobbleThreshold from "@site/src/components/snippets/_scrobble-threshold.mdx"
 
 import AIOConfig from '!!raw-loader!../../../config/config.json.example';
-import SpotifyConfig from '!!raw-loader!../../../config/spotify.json.example';
+import SingleConfig from '!!raw-loader!../../../config/jellyfin.json.example';
 
 :::tip
 
@@ -29,40 +29,35 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
 * client/source specific json config files
 * an all-in-one json config file
 
-**MS will parse configuration from all configuration types.** You can mix and match configurations but it is generally better to stick to one or the other.
+**MS will parse configuration from all configuration types.** You can mix and match configurations but it is generally better to stick to one type.
 
 <Tabs groupId="configType" queryString>
     <TabItem value="env" label="ENV">
-        MS will parse environmental variables present in the OS/container when it is run. **This method means MS does not require files to run.**
+        MS will parse environmental variables present in the OS/container when it is run.
+        
+        This method means MS **does not require config files** but it will still create and use data files in the [local](/installation/#config-and-data-directories) or [docker](/installation/?dockerSetting=storage#recommended-settings) data directory.
 
         <details>
           <summary>Use ENV-based configuration if...</summary>
 
-          * You are the only person for whom MS is scrobbling for
-          * You have a very simple setup for MS such as one scrobble [Client](/configuration/clients) and one [Source](/configuration/sources) IE Plex -> Maloja
+          * You are the only person for whom MS is scrobbling for or
+          * You have a very simple setup for MS such as one scrobble [Client](/configuration/clients) and one [Source](/configuration/sources) IE Jellyfin -> Koito, or
+          * You are not comfortable editing JSON files
 
         </details>
 
         <details>
           <summary>Config Example</summary>
 
-          For Docker container...
-
-          ```shell
-          docker run -e "SPOTIFY_CLIENT_ID=yourId" -e "SPOTIFY_CLIENT_SECRET=yourSecret" ...
-          ```
-
-          For Docker Compose
-
           ```yaml title="docker-compose.yml"
           services:
               multi-scrobbler:
                   image: foxxmd/multi-scrobbler
                   environment:
-                      - SPOTIFY_CLIENT_ID=yourId
-                      - SPOTIFY_CLIENT_SECRET=yourSecret
-                      - MALOJA_URL=http://domain.tld:42010
-                      - MALOJA_API_KEY=1234
+                      - JELLYFIN_URL=192.168.0.110:8096
+                      - JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56b
+                      - JELLYFIN_USER=MyUser
+                      - JELLYFIN_ID=myJellyin
                       # ...
                   # ...
           ```
@@ -77,76 +72,111 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
     <TabItem value="file" label="File">
         MS will parse configuration files located in the directory specified by the `CONFIG_DIR` environmental variable. This variable defaults to:
 
-        * Local installation -> `PROJECT_DIR/config`
-        * Docker -> `/config` (in the container) -- see the [install docs](../installation/installation.mdx#docker) for how to configure this correctly
+        * Local installation -> See [Config and Data Directories](/installation/#config-and-data-directories)
+        * Docker -> `/config` (in the container) -- see the [**Storage** tab in the Docker installation docs](/installation/?dockerSetting=storage#recommended-settings) for how to configure this correctly
 
         <details>
 
             <summary>Use File-based configuration if...</summary>
 
-            * You have many [Sources](/configuration/sources)
-            * You have many of each type of **Source** you want to scrobble from IE 2x Plex accounts, 3x Spotify accounts, 1x
-            Funkwhale...
-            * You have more than one scrobble **Client** you want to scrobble to IE multiple Maloja servers
-            * You want only to scrobble to specific **Clients**
+            * You are comfortable editing JSON files
+            * You have more than one of the same type of **Source/Client** you want to use EX 2x Last.fm accounts, 3x Jellyfin accounts
+            * You want activity from specific **Sources** to scrobble to specific **Clients**
             * You need to setup more advanced configuration for a Source/Client
-              * Most Source/Clients only support basic configuration through ENV, all configuration is possible using File/AIO
+              * Most Source/Clients only support basic configuration through ENV, more configuration is possible using File. AIO enables complete configuration.
 
         </details>
 
         :::tip
             * There are **example configurations** for all Source/Client types and AIO config located in the [`/config`](https://github.com/FoxxMD/multi-scrobbler/tree/master/config) directory of this project. These can be used as-is by renaming them to `.json`.
-            * For docker installations these examples are copied to your configuration directory on first-time use.
+              * These are the same examples you will find in the **Configuration** section of each Source/Client
             * There is also a [**kitchensink example**](/configuration/kitchensink) that provides examples of using all sources/clients in a complex configuration.
         :::
 
-        Each file is named by the **type** of the Client/Source found in below sections. Each file as an **array** of that type of Client/Source.
+        Each config file is named after the **type** of the Client/Source. Within each file, a JSON **array** defines all of the instances for that type of Client/Source.
 
         Example directory structure:
 
         ```
         /CONFIG_DIR
-            plex.json
-            spotify.json
-            maloja.json
+            jellyfin.json
+            lastfm.json
+            koito.json
         ```
 
         <details>
             <summary>Config Example</summary>
 
-            <CodeBlock title="CONFIG_DIR/spotify.json" language="json5">{SpotifyConfig}</CodeBlock>
+            ```yaml title="jellyfin.json"
+            [
+              {
+                "name": "Foxx JF Server",
+                "id": "foxxJf",
+                "data": {
+                  "url": "http://localhost:8096",
+                  "user": "FoxxMD",
+                  "apiKey": "c9fae8756fbf481ebd9c5bb56bd6540c"
+                }
+              }
+            ]
+            ```
+
+        </details>
+        <details>
+            <summary>Multiple of Same Config Example</summary>
+
+            ```yaml title="jellyfin.json"
+            [
+              {
+                "name": "Foxx JF Server",
+                "id": "foxxJf",
+                "data": {
+                  "url": "http://localhost:8096",
+                  "user": "FoxxMD",
+                  "apiKey": "c9fae8756fbf481ebd9c5bb56bd6540c"
+                }
+              },
+              // highlight-start
+              {
+                "name": "Foo's JF Server",
+                "id": "fooJf",
+                "data": {
+                  "url": "http://192.168.0.150:8096",
+                  "user": "foo",
+                  "apiKey": "9c5bb56bd6540c756fbf481ebd9c5c40"
+                }
+              }
+              // highlight-end
+            ]
+            ```
 
         </details>
     </TabItem>
     <TabItem value="aio" label="File AIO">
-        MS will parse an **all-in-one** configuration file located in the directory specified by the `CONFIG_DIR` environmental variable. This variable defaults to:
+        MS will parse an **all-in-one** configuration file (`config.json`) located in the directory specified by the `CONFIG_DIR` environmental variable. The file's location defaults to:
 
-        * Local installation -> `PROJECT_DIR/config/config.json`
-        * Docker -> `/config/config.json` (in the container) -- see the [install docs](../installation/installation.mdx#docker) for how to configure this correctly
+        * Local installation -> See [Config and Data Directories](/installation/#config-and-data-directories)
+        * Docker -> `/config/config.json` (in the container) -- see the [**Storage** tab in the Docker installation docs](/installation/?dockerSetting=storage#recommended-settings) for how to configure this correctly
 
         <details>
 
             <summary>Use AIO-based configuration if...</summary>
 
-            * You have many [Sources](/configuration/sources)
-            * You have many of each type of **Source** you want to scrobble from IE 2x Plex accounts, 3x Spotify accounts, 1x
-            Funkwhale...
-            * You have more than one scrobble **Client** you want to scrobble to IE multiple Maloja servers
-            * You want only to scrobble to specific **Clients**
-            * You need to setup [monitoring/webhooks](#monitoring)
-            * You want to setup defaults for all Sources/Clients
+            * ...All of the reasons listed in [File](./?configType=file#configuration-types)
+            * You want to setup [monitoring/webhooks](#monitoring), default settings for all Sources/Clients, or global config options
+            * You want to use [Transformers](/configuration/transforms) (other than what is provided for [Musicbrainz ENV](/configuration/transforms/musicbrainz/#env-configuration))
+            * You want complete control over all potential MS configuration
 
         </details>
 
-        **The AIO config also enables setting default options for sources/clients as well as global options for MS itself.**
-
         :::tip
-            * An example AIO config files can be found in the project directory at [`/config/config.json.example`](https://github.com/FoxxMD/multi-scrobbler/tree/master/config/config.json.example)
-            * For docker installations this example is copied to your configuration directory on first-time use.
-            * There is also a [**kitchensink example**](/configuration/kitchensink) that provides examples of using all sources/clients in a complex configuration.
+            * **AIO config is the "complete" way to configure MS.**
+              * All settings available in File/ENV are available in AIO and AIO has *more* exclusive settings.
+              * AIO enables configuring **default settings** for all Sources/Clients
+            * There is a [**kitchensink example**](/configuration/kitchensink) that provides examples of using all sources/clients in a complex configuration.
+            * Use the [**Config Playground**](/playground) to explore the entire config schema with an editable example
+              * The example used can also be found in the repo directory at [`/config/config.json.example`](https://github.com/FoxxMD/multi-scrobbler/tree/master/config/config.json.example) in the example below
         :::
-
-        [**Explore the schema for this configuration, along with an example generator and validator, here**](/playground)
 
         <details>
 
@@ -155,6 +185,30 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
             <CodeBlock title="CONFIG_DIR/config.json" language="json5">{AIOConfig}</CodeBlock>
 
         </details>
+
+        <DetailsAdmo type="important" summary="Source/Client AIO Configs require a 'type' property">
+
+        Compared to their [File](./?configType=file#configuration-types) equivalent, Sources/Clients configured using AIO require an additional `type` property.
+
+        ```yaml title="jellyfin.json"
+        [
+          {
+            "name": "Foxx JF Server",
+            // highlight-start
+            "type: "jellyfin",
+            // highlight-end
+            "id": "foxxJf",
+            "data": {
+              "url": "http://localhost:8096",
+              "user": "FoxxMD",
+              "apiKey": "c9fae8756fbf481ebd9c5bb56bd6540c"
+            }
+          }
+        ]
+        ```
+
+        You can find an example of the required `type` value by referring to the **AIO** tab in each Source/Client's Configuration section example.
+        </DetailsAdmo>
     </TabItem>
 </Tabs>
 
@@ -248,7 +302,7 @@ WARN : [App] [Sources] [spotify Secrets] Matched: None | Unmatched: SPOTIFY_SECR
 
 ## Base URL
 
-Defines the URL that is used to generate default redirect URLs for authentication on [spotify](/configuration/sources/spotify) and [lastfm](/configuration/clients/lastfm) -- as well as some logging hints.
+Defines the URL that is used to generate default redirect URLs for authentication for services like [spotify](/configuration/sources/spotify) and [lastfm](/configuration/clients/lastfm) -- as well as some logging hints.
 
 * Default => `http://localhost:9078`
 * Set with [ENV](./?configType=env#configuration-types) `BASE_URL` or `baseUrl` [all-in-one configuration](./?configType=aio#configuration-types)
@@ -279,7 +333,7 @@ Useful when running with [docker](../installation/installation.mdx#docker) so th
 
 ## Caching
 
-Multi-scrobbler implements caching to persist important data across restarts, reduce external API calls, and make some actions faster.
+Multi-scrobbler implements caching to reduce external API calls and make some actions faster.
 
 A default **in-memory** cache store is used so that you always benefit from some caching. An optional, [**secondary** store](#secondary-caching) can be configured for greater caching capabilities.
 
@@ -301,7 +355,7 @@ API Calls to external (metadata) services used to [Enhance Scrobbles](/configura
 
 <DetailsAdmo type="important" summary="Auth Cache Configuration">
 
-Auth caching defaults to a **file** that is stored in the `CONFIG_DIR` directory using the pre-defined file name `ms-auth.cache`.
+Auth caching defaults to a **file** that is stored in the `DATA_DIR` directory using the pre-defined file name `ms-auth.cache`.
 
 This provides automatic persistence across restarts for long-lived auth data/credentials if you have configured a [persisted volume/bind mount](/installation?dockerSetting=storage#recommended-settings) for configuration (`/config` is mounted in [docker compose](/quickstart#create-docker-compose-file)).
 
@@ -448,7 +502,7 @@ Multi-scrobbler depends on a SQLite database (`ms.db`) that is created on first 
 
 The database stores *all* Plays for your Sources/Clients as well as metadata and debugging information to help troubleshoot issues. Each Play is associated with a Source/Config in the database based on your configuration.
 
-You **should set IDs for each Source/Client** so that the database can identify these even when the configuration is changed.
+You **must set IDs for each Source/Client** so that the database can identify these even when the configuration is changed.
 
 ### Retention
 
