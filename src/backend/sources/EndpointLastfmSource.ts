@@ -29,7 +29,7 @@ export class EndpointLastfmSource extends MemorySource {
     constructor(name: any, config: LastFMEndpointSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('endpointlfm', name, config, internal, emitter);
         this.multiPlatform = false;
-        this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
+        this.playerSourceOfTruth = SOURCE_SOT.INGRESS;
 
         const {
             data = {},
@@ -95,7 +95,7 @@ export class EndpointLastfmSource extends MemorySource {
 
 export const playStateFromRequest = (obj: Record<LastFMPayloadkey, unknown>): PlayerStateData[] => ingressPayloads(obj).map(x => {
         const play = scrobblePayloadToPlay(x);
-        play.meta.sourceSOT = SOURCE_SOT.HISTORY;
+        play.meta.sourceSOT = SOURCE_SOT.INGRESS;
         return {
             platformId: [play.meta.deviceId, NO_USER],
             play,

@@ -34,7 +34,7 @@ export class WebScrobblerSource extends MemorySource {
     constructor(name: any, config: WebScrobblerSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('webscrobbler', name, config, internal, emitter);
         this.multiPlatform = true;
-        this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
+        this.playerSourceOfTruth = SOURCE_SOT.INGRESS;
         this.logger.info(`Note: The player for this source is an analogue for the 'Now Playing' status exposed by ${this.type} which is NOT used for scrobbling. Instead, the 'recently played' or 'history' information provided by this source is used for scrobbles.`)
 
         const {
@@ -88,7 +88,7 @@ export class WebScrobblerSource extends MemorySource {
         } = obj;
 
         const play = WebScrobblerSource.formatPlayObj(obj.data.song, {nowPlaying: eventName !== 'scrobble'});
-        play.meta.sourceSOT = SOURCE_SOT.HISTORY;
+        play.meta.sourceSOT = SOURCE_SOT.INGRESS;
         return {
             platformId: [play.meta.deviceId, NO_USER],
             play,

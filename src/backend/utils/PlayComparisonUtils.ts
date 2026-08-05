@@ -1,5 +1,5 @@
 import { getListDiff, type ListDiff } from "@donedeal0/superdiff";
-import { type PlayMatchResult, type PlayObject, type PlayObjectMinimal, SOURCE_SOT, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy, type TrackStringOptions } from "../../core/Atomic.ts";
+import { type PlayMatchResult, type PlayObject, type PlayObjectMinimal, SOURCE_SOT, type SOURCE_SOT_TYPES, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy, type TrackStringOptions } from "../../core/Atomic.ts";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
 import { comparingMultipleArtists, playObjDataMatch, setIntersection } from "../utils.ts";
 import { comparePlayTemporally, hasAcceptableTemporalAccuracy, temporalAccuracyToString, type TemporalPlayComparisonOptions, temporalPlayComparisonSummary } from "./TimeUtils.ts";
@@ -496,7 +496,7 @@ export const existingScrobble = async (playObjPre: PlayObject, existingScrobbles
             //
             // OR if play was generated from a source that uses History (endpoint sources, lfm or lz history sources)
             // then we can be reasonably sure that our candidate play has an accurate timestamp and wouldn't fuzzy match a previous scrobble
-            const looseTimeAccuracy = playObj.data.repeat || playObj.meta.sourceSOT === SOURCE_SOT.HISTORY ? [TA_DURING] : [TA_FUZZY, TA_DURING];
+            const looseTimeAccuracy = playObj.data.repeat || ([SOURCE_SOT.HISTORY, SOURCE_SOT.INGRESS] as SOURCE_SOT_TYPES[]).includes(playObj.meta.sourceSOT) ? [TA_DURING] : [TA_FUZZY, TA_DURING];
 
             
             existingScrobble = await findAsyncSequential(existingScrobbles, async (xPre) => {
