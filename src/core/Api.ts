@@ -209,3 +209,4 @@ export type CompareDateSingle<D extends DateLike = Dayjs> = {
     date: D;
 };
 
+export type CacheClearType = 'external-api' | 'transforms';

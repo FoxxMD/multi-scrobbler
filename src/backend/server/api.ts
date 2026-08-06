@@ -346,6 +346,23 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         return res.json(asSerializablePlaySelect(playRes));
     });
 
+    app.delete('/api/cache/:cacheType', async (req, res) => {
+        const cache = await getRoot().items.cache();
+        logger.verbose(`User request cache deletion for ${req.params.cacheType}`);
+        switch(req.params.cacheType) {
+            case 'external-api':
+                await cache.cacheApi.clear();
+                break;
+            case 'transforms':
+                await cache.cacheTransform.clear();
+                break;
+            default:
+                return res.sendStatus(404);
+        }
+        logger.verbose('Cache cleared!');
+        return res.sendStatus(204);
+    });
+
     /**
      * 
      * 
