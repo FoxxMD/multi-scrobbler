@@ -15,6 +15,7 @@ import { MSErrorBoundary } from './components/ErrorBoundary';
 import { ComponentDetailedRoutable } from './components/msComponent/MSComponentDetailed';
 import { MSComponentListFetchable } from './components/msComponent/MSComponentList';
 import { Provider } from './components/Provider';
+import { SettingsContainer } from './components/settings/settings';
 
 function NoMatch() {
     const location = useLocation();
@@ -70,13 +71,18 @@ const routesNested: RouteObject[] = [
     {
         path: "/next",
         Component: Layout,
-        children: [ {
+        children: [ 
+        {
             index: true,
             element: <MSErrorBoundary><MSComponentListFetchable/></MSErrorBoundary>,
         },
         {
             path: "components/:componentId",
             element: <Container boxSize="full" p="0" maxWidth="8xl"><MSErrorBoundary><ComponentDetailedRoutable/></MSErrorBoundary></Container>
+        },
+        {
+            path: "settings",
+            element: <Container p="0" boxSize="full" maxWidth="4xl"><MSErrorBoundary><SettingsContainer/></MSErrorBoundary></Container>
         },
         {
         path: "*",

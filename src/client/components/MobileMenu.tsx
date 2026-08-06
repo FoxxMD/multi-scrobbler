@@ -51,7 +51,7 @@ export const MobileSidebarNav = (props: { hideFrom?: BreakpointName | false } = 
                                 </IconButton>
                             </Drawer.CloseTrigger>
                             <Drawer.Body display="flex" flexDir="column" gap="6" py="5" flex="1">
-                                <SideNavItems items={NAV_LINKS} />
+                                <SideNavItems items={NAV_LINKS} currentUrl={location.pathname} />
                             </Drawer.Body>
                         </Drawer.Content>
                     </Drawer.Positioner>

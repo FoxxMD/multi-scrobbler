@@ -73,8 +73,8 @@ export const SideNav = (props: SideNavProps) => {
               </Link>
             ) : (
               <RouterLink
-                href={item.url!}
-                aria-current={item.url === currentUrl ? "page" : undefined}
+                to={{pathname: item.url!}}
+                aria-current={(currentUrl.length <= item.url.length ? currentUrl.startsWith(item.url) : currentUrl === item.url) ? "page" : undefined}
               >
                 {item.title}
                 {item.status && <StatusBadge>{item.status}</StatusBadge>}
@@ -134,6 +134,10 @@ export const NAV_LINKS: SideNavProps[] = [
             {
                 title: 'Dashboard',
                 url: '/next/'
+            },
+            {
+                title: 'Settings',
+                url: '/next/settings'
             }
         ]
     },
