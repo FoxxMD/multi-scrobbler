@@ -68,21 +68,7 @@ export default class MemorySource extends AbstractSource {
                 .withConcurrency(1)
                 .for(this.players.keys())
                 .process(async (key) => {
-
                     await this.cleanupPlayer(key);
-                    if(this.playerSourceOfTruth === SOURCE_SOT.INGRESS) {
-                        const player = this.players.get(key);
-                        if(![CALCULATED_PLAYER_STATUSES.stale, CALCULATED_PLAYER_STATUSES.orphaned].includes(player.calculatedStatus)) {
-                            // if player isn't stale and this is an ingress source then we want to keep pushing playerUpdates
-                            // so that any downstream Clients can update Now Playing in a timely manner
-                            this.emitEvent('playerUpdate', {
-                                ...player.getApiState(),
-                                options: {
-                                    scrobbleTo: this.clients
-                                }
-                            });
-                        }
-                    }
                 });
         })));
     }

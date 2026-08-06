@@ -15,7 +15,8 @@ import {
     type PlayOriginal,
     type PlayLifecycle,
     type SourcePlayerJson,
-    QUEUE_STATUS_COMPLETED
+    QUEUE_STATUS_COMPLETED,
+    SOURCE_SOT
 } from "../../core/Atomic.ts";
 import { artistNamesToCredits, buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
 import AbstractComponent from "../common/AbstractComponent.ts";
@@ -73,10 +74,17 @@ import assert from "node:assert";
 import { COMPONENT_STATE, type ComponentClientApiJson, type PlayApiCommonDetailed } from "../../core/Api.ts";
 import type {ComponentState} from "react";
 
-type PlatformMappedPlays = Map<string, {player: SourcePlayerObj, source: SourceIdentifier}>;
+type SourceMappedPlayer = {player: SourcePlayerObj, source: SourceIdentifier};
+type PlatformMappedPlays = Map<string, SourceMappedPlayer>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
 
 const platformTruncate = truncateStringToLength(10);
+
+const bufferNPUpdateReasonFragments: string[] = [
+    'previous update play data does not match current',
+    'player in valid update state',
+    'less than min threshold'
+];
 
 export default abstract class AbstractScrobbleClient extends AbstractComponent implements Authenticatable {
 
@@ -116,7 +124,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     nowPlayingIsRealtime: boolean = false;
     nowPlayingInit: boolean = false;
     nowPlayingEnabled: boolean;
-    nowPlayingFilter: (queue: NowPlayingQueue) => SourcePlayerObj | undefined;
+    nowPlayingFilter: (queue: NowPlayingQueue) => SourceMappedPlayer | undefined;
     nowPlayingMinThreshold: NowPlayingUpdateThreshold = (_) => 10;
     nowPlayingMaxThreshold: NowPlayingUpdateThreshold = (_) => 30;
     nowPlayingLastUpdated?: Dayjs;
@@ -542,7 +550,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 }
             }
 
-            this.nowPlayingFilter = (queue: NowPlayingQueue): SourcePlayerObj => {
+            this.nowPlayingFilter = (queue: NowPlayingQueue): SourceMappedPlayer => {
                 if (queue.size === 0) {
                     return undefined;
                 }
@@ -555,7 +563,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 // if only one player then return it
                 const plays = Array.from(platformPlays);
                 if (plays.length === 1) {
-                    return plays[0][1].player;
+                    return plays[0][1];
                 }
                 // else we need to sort players to determine which to report
 
@@ -568,7 +576,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                         if (platform === this.nowPlayingLastPlay.platformId
                             // only keep using sticky platform if it hasn't gone stale/orphaned
                             && (!(data.player.status?.stale ?? false) && !(data.player.status?.orphaned ?? false))) {
-                            return data.player;
+                            return data;
                         }
                     }
                 }
@@ -582,7 +590,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
                 // otherwise sort platform alphabetically and take first
                 preferredPlays.sort((a, b) => a[0].localeCompare(b[0]));
-                return preferredPlays[0][1].player;
+                return preferredPlays[0][1];
             }
         }
     }
@@ -1638,14 +1646,14 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 return;
             }
             // eslint-disable-next-line prefer-const
-            let [shouldUpdate, npUpdateTopReason] = this.shouldUpdatePlayingNow(sourcePlayerData);
+            let [shouldUpdate, npUpdateTopReason] = this.shouldUpdatePlayingNow(sourcePlayerData.player);
             let clientReason: string | undefined;
             if(!shouldUpdate) {
                 this.npLogger.trace(`Not updating, ${npUpdateTopReason}`);
             }
 
             if(shouldUpdate) {
-                const [clientUpdate, clientUpdateReason, level] = await this.shouldUpdatePlayingNowPlatformSpecific(sourcePlayerData);
+                const [clientUpdate, clientUpdateReason, level] = await this.shouldUpdatePlayingNowPlatformSpecific(sourcePlayerData.player);
                 clientReason = clientUpdateReason;
                 shouldUpdate = clientUpdate;
                 if(!clientUpdate) {
@@ -1653,29 +1661,45 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 }
             }
 
+            const cleanNowPlayingQueue = new Map();
+
             // finally, do the update
             if(shouldUpdate) {
                 this.npLogger.verbose(`Updating because ${npUpdateTopReason}${clientReason !== undefined ? ` --AND-- ${clientReason}` : ''}`);
-                const isClearing = this.nowPlayingIsRealtime && shouldClearNPStatus(sourcePlayerData);
+                const isClearing = this.nowPlayingIsRealtime && shouldClearNPStatus(sourcePlayerData.player);
                 try {
-                    await this.doPlayingNow(sourcePlayerData);
+                    await this.doPlayingNow(sourcePlayerData.player);
                     this.npLogger.trace(`Now Playing updated.`);
                     this.setStatus('Now Playing updated');
                     if(!isClearing) {
-                        this.nowPlayingExpirationDate = dayjs().add(nowPlayingExpirationDuration(sourcePlayerData));
+                        this.nowPlayingExpirationDate = dayjs().add(nowPlayingExpirationDuration(sourcePlayerData.player));
                         this.emitEvent('playerUpdate', {...sourcePlayerData, expiration: this.nowPlayingExpirationDate});
                     } else {
                         this.nowPlayingExpirationDate = undefined;
-                        this.emitEvent('playerDelete', {platformId: sourcePlayerData.platformId});
+                        this.emitEvent('playerDelete', {platformId: sourcePlayerData.player.platformId});
                     }
                     this.emitEvent('nowPlayingUpdated', sourcePlayerData);
                 } catch (e) {
                     this.npLogger.warn(new Error('Error occurred while trying to update upstream Client, will ignore', {cause: e}));
                 }
-                this.nowPlayingLastPlay = sourcePlayerData;
+                this.nowPlayingLastPlay = sourcePlayerData.player;
                 this.nowPlayingLastUpdated = dayjs();
+            } else {
+                if(sourcePlayerData.player.play?.meta?.sourceSOT === SOURCE_SOT.INGRESS && bufferNPUpdateReasonFragments.every((x) => npUpdateTopReason.includes(x))) {
+                    // update is for an ingress Source and is valid
+                    // but time since last update was less than client threshold interval
+                    // 
+                    // Ingress Sources may not send any additional updates to MS until a scrobble event
+                    // so, otherwise, NP would never be updated until that happens
+                    //
+                    // to prevent that we want client NP to update with this *valid* update after min threshold is met
+                    // so we will re-queue the update so that it gets used in a subsequent NP processing run
+                    this.npLogger.debug('Re-queuing valid NP update from ingress Source that did not meet min threshold');
+                    const sourceId = `${sourcePlayerData.source.name}-${sourcePlayerData.source.type}`;
+                    cleanNowPlayingQueue.set(sourceId, this.nowPlayingQueue.get(sourceId));
+                }
             }
-            this.nowPlayingQueue = new Map();
+            this.nowPlayingQueue = cleanNowPlayingQueue;
         }
     }
 
