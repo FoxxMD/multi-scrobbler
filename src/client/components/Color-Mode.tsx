@@ -6,8 +6,6 @@ import { ThemeProvider, useTheme } from "next-themes"
 import type { ThemeProviderProps } from "next-themes"
 import * as React from "react"
 import { LuMoon, LuSun } from "react-icons/lu"
-import { BsCircleHalf } from "react-icons/bs";
-import { Tooltip } from "./ChakraTooltip";
 
 export interface ColorModeProviderProps extends ThemeProviderProps {}
 
@@ -26,12 +24,27 @@ export interface UseColorModeReturn {
 export const useColorMode = (): UseColorModeReturn => {
   const { resolvedTheme, setTheme, forcedTheme, systemTheme, theme } = useTheme()
   const colorMode = forcedTheme || resolvedTheme
-  const toggleColorMode = (remove?: boolean) => {
-    if(remove) {
+  //console.log(`Use Color Mode -- system theme: ${systemTheme} | Used Theme ${theme} | Color mode ${colorMode}`);
+  const toggleColorMode = () => {
+    // https://lea.verou.me/blog/2026/dark-mode-toggles/#good-two-state-ux
+    // only change override (or remove) if *user* initiated
+    // dont do anything if system theme changes
+
+    const inverseTheme = resolvedTheme === 'dark' ? 'light' : 'dark';
+
+    // if user-initiated toggle
+    //
+    // and is going back to system theme
+    if(systemTheme === inverseTheme) {
+      // then remove override
       setTheme('system');
       localStorage.removeItem('theme');
+      console.debug('removed theme override');
     } else {
-      setTheme(resolvedTheme === "dark" ? "light" : "dark");
+      // otherwise, going to non-system theme
+      // add override
+      setTheme(inverseTheme);
+      console.debug(`setting theme override to ${inverseTheme}`);
     }
   }
   return {
@@ -59,8 +72,7 @@ export const ColorModeButton = React.forwardRef<
   HTMLButtonElement,
   ColorModeButtonProps
 >((props, ref) => {
-  const { toggleColorMode, systemTheme, colorMode, theme } = useColorMode();
-  //console.log(`System theme: ${systemTheme} | Theme ${theme} | Color mode ${colorMode}`);
+  const { toggleColorMode } = useColorMode();
   const toggleButton = (
   <IconButton
         onClick={() => toggleColorMode()}
@@ -80,31 +92,9 @@ export const ColorModeButton = React.forwardRef<
       </IconButton>
       );
 
-  const systemButton = (
-    <Tooltip content="Reset theme to system">
-    <IconButton
-        onClick={() => toggleColorMode(true)}
-        variant="ghost"
-        aria-label="Use system color mode"
-        size="sm"
-        ref={ref}
-        {...props}
-        css={{
-          _icon: {
-            width: "4",
-            height: "4",
-          },
-        }}
-      >
-        <BsCircleHalf />
-      </IconButton>
-      </Tooltip>
-  );
-
     return (
     <ButtonGroup variant="outline" attached>
           {toggleButton}
-          {theme !== 'system' ? systemButton : undefined}
         </ButtonGroup>
   )
 });
