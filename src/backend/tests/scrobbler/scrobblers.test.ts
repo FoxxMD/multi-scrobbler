@@ -865,7 +865,7 @@ describe('Now Playing', function() {
 
                 const toReport = npScrobbler.nowPlayingFilter(npScrobbler.nowPlayingQueue);
 
-                expect(toReport.play.meta.deviceId).eq(genGroupIdStr(firstPlatform));
+                expect(toReport.player.play.meta.deviceId).eq(genGroupIdStr(firstPlatform));
 
             });
 
@@ -886,7 +886,7 @@ describe('Now Playing', function() {
 
                 const toReport = npScrobbler.nowPlayingFilter(npScrobbler.nowPlayingQueue);
 
-                expect(toReport.play.meta.deviceId).eq(genGroupIdStr(firstPlatform));
+                expect(toReport.player.play.meta.deviceId).eq(genGroupIdStr(firstPlatform));
 
             });
 
@@ -910,7 +910,7 @@ describe('Now Playing', function() {
 
                 const toReport = npScrobbler.nowPlayingFilter(npScrobbler.nowPlayingQueue);
 
-                expect(toReport.play.meta.deviceId).eq(genGroupIdStr(secondPlatform));
+                expect(toReport.player.play.meta.deviceId).eq(genGroupIdStr(secondPlatform));
 
             });
 
@@ -927,7 +927,7 @@ describe('Now Playing', function() {
 
                 const toReport = npScrobbler.nowPlayingFilter(npScrobbler.nowPlayingQueue);
 
-                expect(toReport.play.meta.deviceId).eq(a.play.meta.deviceId);
+                expect(toReport.player.play.meta.deviceId).eq(a.play.meta.deviceId);
 
             });
 
@@ -944,7 +944,7 @@ describe('Now Playing', function() {
 
                 const toReport = npScrobbler.nowPlayingFilter(npScrobbler.nowPlayingQueue);
 
-                expect(toReport.play.meta.deviceId).eq(b.play.meta.deviceId);
+                expect(toReport.player.play.meta.deviceId).eq(b.play.meta.deviceId);
 
             });
 
