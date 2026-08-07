@@ -469,12 +469,13 @@ export interface TemporalPlayComparison {
     } | { type: 'none' }
 }
 
-export type SOURCE_SOT_TYPES = 'player' | 'history';
+export type SOURCE_SOT_TYPES = 'player' | 'history' | 'ingress';
 export const SOURCE_SOT = {
-    PLAYER : 'player' as SOURCE_SOT_TYPES,
-    HISTORY: 'history' as SOURCE_SOT_TYPES
-}
-export const sourceSotTypes: SOURCE_SOT_TYPES[] = ['player','history'];
+    PLAYER : 'player',
+    HISTORY: 'history',
+    INGRESS: 'ingress'
+} as const satisfies Record<string, SOURCE_SOT_TYPES>
+export const sourceSotTypes: SOURCE_SOT_TYPES[] = ['player','history','ingress'];
 
 export interface URLData {
     url: URL

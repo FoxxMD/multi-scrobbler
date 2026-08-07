@@ -32,7 +32,7 @@ export class EndpointListenbrainzSource extends MemorySource {
     constructor(name: any, config: ListenbrainzEndpointSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('endpointlz', name, config, internal, emitter);
         this.multiPlatform = false;
-        this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
+        this.playerSourceOfTruth = SOURCE_SOT.INGRESS;
 
         const {
             data = {},
@@ -127,7 +127,7 @@ export const playStateFromRequest = (obj: SubmitPayload): PlayerStateData[] => {
 
     const playStates: PlayerStateData[] = payload.map((x) => {
         const play = listenPayloadToPlay(x, listen_type === 'playing_now');
-        play.meta.sourceSOT = SOURCE_SOT.HISTORY;
+        play.meta.sourceSOT = SOURCE_SOT.INGRESS;
         return {
             platformId: [play.meta.deviceId, NO_USER],
             play,

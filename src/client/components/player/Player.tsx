@@ -83,7 +83,7 @@ art = {},
     return (
             <article className={["player", "mb-2"].join(' ')}>
                 <div className="player__wrapper">
-                    {sot === SOURCE_SOT.HISTORY ? <span className="player-tooltip"><Tooltip
+                    {sot !== SOURCE_SOT.PLAYER ? <span className="player-tooltip"><Tooltip
                     classNames={['justify-end', 'mr-4']}
                      message="This player is for DISPLAY ONLY and likely represents a 'Now Playing' status exposed by the Source. For scrobbling Multi Scrobbler uses the 'recently played' or 'history' information provided by this source.">
                         <FontAwesomeIcon width={9} color="black" icon={faQuestion}/>
