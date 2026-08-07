@@ -1673,7 +1673,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     this.setStatus('Now Playing updated');
                     if(!isClearing) {
                         this.nowPlayingExpirationDate = dayjs().add(nowPlayingExpirationDuration(sourcePlayerData.player));
-                        this.emitEvent('playerUpdate', {...sourcePlayerData, expiration: this.nowPlayingExpirationDate});
+                        this.emitEvent('playerUpdate', {...sourcePlayerData.player, expiration: this.nowPlayingExpirationDate});
                     } else {
                         this.nowPlayingExpirationDate = undefined;
                         this.emitEvent('playerDelete', {platformId: sourcePlayerData.player.platformId});
