@@ -151,6 +151,8 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
             ```
 
         </details>
+
+        You can find an example of the file name that should be used under the **File** Configuration for each Source/Client. Note: this is the same value that is used for `type` in AIO configs.
     </TabItem>
     <TabItem value="aio" label="File AIO">
         MS will parse an **all-in-one** configuration file (`config.json`) located in the directory specified by the `CONFIG_DIR` environmental variable. The file's location defaults to:
@@ -190,24 +192,26 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
 
         Compared to their [File](./?configType=file#configuration-types) equivalent, Sources/Clients configured using AIO require an additional `type` property.
 
-        ```yaml title="jellyfin.json"
-        [
-          {
-            "name": "Foxx JF Server",
-            // highlight-start
-            "type: "jellyfin",
-            // highlight-end
-            "id": "foxxJf",
-            "data": {
-              "url": "http://localhost:8096",
-              "user": "FoxxMD",
-              "apiKey": "c9fae8756fbf481ebd9c5bb56bd6540c"
+        ```yaml title="config.json"
+        {
+          "sources": [
+            {
+              "name": "Foxx JF Server",
+              // highlight-start
+              "type: "jellyfin",
+              // highlight-end
+              "id": "foxxJf",
+              "data": {
+                "url": "http://localhost:8096",
+                "user": "FoxxMD",
+                "apiKey": "c9fae8756fbf481ebd9c5bb56bd6540c"
+              }
             }
-          }
-        ]
+          ]
+        }
         ```
 
-        You can find an example of the required `type` value by referring to the **AIO** tab in each Source/Client's Configuration section example.
+        You can find an example of the required `type` value by referring to the **AIO** tab in each Source/Client's Configuration section example. This is the same value that is used as the name of individual [File](./?configType=file#configuration-types) config files.
         </DetailsAdmo>
     </TabItem>
 </Tabs>
