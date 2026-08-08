@@ -55,6 +55,7 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, LastfmClientConfi
     env: envDataSchema,
     prefix: 'LASTFM',
     toConfig: (partial) => ({
+            configureAs: 'client',
             data: {
                 apiKey: partial.LASTFM_API_KEY,
                 secret: partial.LASTFM_SECRET,

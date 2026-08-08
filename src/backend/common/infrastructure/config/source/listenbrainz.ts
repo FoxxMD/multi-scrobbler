@@ -21,6 +21,7 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, ListenBrainzSourc
     env: envDataSchema,
     prefix: 'SOURCE_LZ',
     toConfig: (partial) => ({
+            configureAs: 'source',
             data: {
                 url: partial.SOURCE_LZ_URL,
                 token: partial.SOURCE_LZ_TOKEN,

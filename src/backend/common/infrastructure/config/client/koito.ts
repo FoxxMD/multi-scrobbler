@@ -88,6 +88,7 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, KoitoClientConfig
     env: envDataSchema,
     prefix: 'KOITO',
     toConfig: (partial) => ({
+            configureAs: 'client',
             data: {
                 url: partial.KOITO_URL,
                 token: partial.KOITO_TOKEN,

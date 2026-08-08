@@ -74,6 +74,7 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, LibrefmClientConf
     env: envDataSchema,
     prefix: 'LIBREFM',
     toConfig: (partial) => ({
+            configureAs: 'client',
             data: {
                 apiKey: partial.LIBREFM_API_KEY,
                 secret: partial.LIBREFM_SECRET,

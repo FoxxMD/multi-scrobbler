@@ -29,6 +29,7 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, TealClientConfig>
     env: envDataSchema,
     prefix: 'TEALFM',
     toConfig: (partial) => ({
+            configureAs: 'client',
             data: {
                 identifier: partial.TEALFM_IDENTIFIER,
                 appPassword: partial.TEALFM_APP_PW

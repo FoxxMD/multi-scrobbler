@@ -20,6 +20,7 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, RockskySourceConf
     env: envDataSchema,
     prefix: 'SOURCE_ROCKSKY',
     toConfig: (partial) => ({
+            configureAs: 'source',
             data: {
                 key: partial.SOURCE_ROCKSKY_KEY,
                 handle: partial.SOURCE_ROCKSKY_HANDLE

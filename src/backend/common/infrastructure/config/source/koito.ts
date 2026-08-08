@@ -21,6 +21,7 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, KoitoSourceConfig
     env: envDataSchema,
     prefix: 'SOURCE_KOITO',
     toConfig: (partial) => ({
+            configureAs: 'source',
             data: {
                 url: partial.SOURCE_KOITO_URL,
                 token: partial.SOURCE_KOITO_TOKEN,

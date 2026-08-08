@@ -20,6 +20,7 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, MalojaSourceConfi
     env: envDataSchema,
     prefix: 'SOURCE_MALOJA',
     toConfig: (partial) => ({
+            configureAs: 'source',
             data: {
                 url: partial.SOURCE_MALOJA_URL,
                 apiKey: partial.SOURCE_MALOJA_API_KEY

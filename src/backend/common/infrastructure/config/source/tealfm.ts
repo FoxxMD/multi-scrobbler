@@ -23,6 +23,7 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, TealSourceConfig>
     env: envDataSchema,
     prefix: 'SOURCE_TEALFM',
     toConfig: (partial) => ({
+            configureAs: 'source',
             data: {
                 identifier: partial.SOURCE_TEALFM_IDENTIFIER,
                 appPassword: partial.SOURCE_TEALFM_APP_PW

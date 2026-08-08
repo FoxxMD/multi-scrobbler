@@ -22,6 +22,7 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, LastfmSourceConfi
     env: envDataSchema,
     prefix: 'SOURCE_LASTFM',
     toConfig: (partial) => ({
+            configureAs: 'source',
             data: {
                 apiKey: partial.SOURCE_LASTFM_API_KEY,
                 secret: partial.SOURCE_LASTFM_SECRET,

@@ -40,6 +40,7 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, MalojaClientConfi
     env: envDataSchema,
     prefix: 'MALOJA',
     toConfig: (partial) => ({
+            configureAs: 'client',
             data: {
                 url: partial.MALOJA_URL,
                 apiKey: partial.MALOJA_API_KEY

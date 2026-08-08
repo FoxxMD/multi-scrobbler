@@ -23,6 +23,7 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, LibrefmSourceConf
     env: envDataSchema,
     prefix: 'SOURCE_LIBREFM',
     toConfig: (partial) => ({
+            configureAs: 'source',
             data: {
                 apiKey: partial.SOURCE_LIBREFM_API_KEY,
                 secret: partial.SOURCE_LIBREFM_SECRET,

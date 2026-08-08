@@ -50,6 +50,7 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, RockSkyClientConf
     env: envDataSchema,
     prefix: 'ROCKSKY',
     toConfig: (partial) => ({
+            configureAs: 'client',
             data: {
                 key: partial.ROCKSKY_KEY,
                 token: partial.ROCKSKY_TOKEN,

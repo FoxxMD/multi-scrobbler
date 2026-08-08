@@ -46,6 +46,7 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, ListenBrainzClien
     env: envDataSchema,
     prefix: 'LZ',
     toConfig: (partial) => ({
+            configureAs: 'client',
             data: {
                 url: partial.LZ_URL,
                 token: partial.LZ_TOKEN,
