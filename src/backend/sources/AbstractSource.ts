@@ -325,7 +325,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         // only need to update if its already in memory,
         // and better to update in-memory than clear cache so we aren't refetching from db on every discover
         if(recentPlays !== undefined) {
-            recentPlays.push(play);
+            recentPlays.push({...play, id: playRow[0].id, uid: playRow[0].uid});
             recentPlays.sort(sortByOldestPlayDate);
             this.cache.cacheDb.set(this.recentDiscoveredCacheKey(), recentPlays, '2m');
         }
