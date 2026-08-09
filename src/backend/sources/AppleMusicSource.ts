@@ -159,7 +159,7 @@ export default class AppleMusicSource extends AbstractSource {
 
     private getTracks = async (limit: number): Promise<PlayObject[]> => {
         const clampedLimit = Math.max(1, Math.min(this.UPSTREAM_TRACK_LIMIT, Math.round(limit)));
-        const result = await this.musicKit.me.history.getRecentlyPlayedTracks({ limit: clampedLimit as MeHistoryRecentlyPlayedTracksProps["limit"], types: ["songs"] });
+        const result = await this.musicKit.me.history.getRecentlyPlayedTracks({ limit: clampedLimit as MeHistoryRecentlyPlayedTracksProps["limit"], types: ["songs", "library-songs"] });
         if (result.error) {
             throw new Error(result.error);
         }
