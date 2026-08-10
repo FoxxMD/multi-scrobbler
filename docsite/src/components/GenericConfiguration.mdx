@@ -37,10 +37,29 @@ import {useWindowSize} from '@docusaurus/theme-common';
                 * **text** mode lets you edit the JSON directly.
                 * **tree** mode gives you a guided point-and-click editing experience that always keeps the JSON *syntax* valid.
 
-                Both modes **validate** that the configuraion is correct. Any errors show up as squiggly lines.
+                Both modes **validate** that the configuration is correct. Any errors show up as squiggly lines.
+
+                <span style={{display: props.ambiguous === true ? 'inherit' : 'none'}}>
+                :::important
+
+                Only <strong children={props.client ? 'client' : 'source'}/> <span children={props.name}/> configs will validate correctly in the editor but *both* **source** and **client**  <span children={props.name}/> configs are allowed in the real <code>CONFIG/<span children={props.name}/>.json</code>
+
+                :::
+                </span>
 
                 After you finish editing, switch to **text** and then copy all text to get a completed config.
             </DetailsAdmo>
+            <DetailsAdmo type="important" summary="configureAs Required" render={props.configureAs === true}>
+                When configuring a <span children={props.name}/> **Source** in a **File** Config you **must** set
+                
+                ```
+                "configureAs": "source"
+                ```
+
+                Without this property, Multi-Scrobbler will assume the config is for a <span children={props.name}/> **Client** config.
+
+                This requirement does not apply to **AIO** <span children={props.name}/> configs.
+            </DetailsAdmo >
             </div>
             <div className="fileEditorMobile">
                 <DetailsAdmo type="warning" summary="Config Example Mobile Experience">

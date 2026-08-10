@@ -9,9 +9,14 @@ import AdmonitionIconImportant from './ImportantIcon';
 
 export interface DetailsAdmoProps extends DetailProps {
     type?: 'warning' | 'danger' | 'note' | 'tip' | 'important'
+    render?: boolean
 }
 
 const DetailsAdmo = (props: DetailsAdmoProps) => {
+
+    if(props.render === false) {
+        return null;
+    }
 
     let cn: string = '';
     let icon: ReactElement;
