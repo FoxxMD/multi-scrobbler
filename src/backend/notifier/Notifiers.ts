@@ -5,6 +5,7 @@ import type { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.ts";
 import { AppriseWebhookNotifier } from "./AppriseWebhookNotifier.ts";
 import { GotifyWebhookNotifier } from "./GotifyWebhookNotifier.ts";
 import { NtfyWebhookNotifier } from "./NtfyWebhookNotifier.ts";
+import type { MSBackendEventMap } from '../common/infrastructure/MSBackendEventMap.ts';
 
 export class Notifiers {
 
@@ -14,21 +15,21 @@ export class Notifiers {
 
     emitter: EventEmitter;
 
-    clientEmitter: EventEmitter;
-    sourceEmitter: EventEmitter;
+    clientEmitter: EventEmitter<MSBackendEventMap>;
+    sourceEmitter: EventEmitter<MSBackendEventMap>;
 
-    constructor(emitter: EventEmitter, clientEmitter: EventEmitter, sourceEmitter: EventEmitter, parentLogger: Logger) {
+    constructor(emitter: EventEmitter, clientEmitter: EventEmitter<MSBackendEventMap>, sourceEmitter: EventEmitter<MSBackendEventMap>, parentLogger: Logger) {
         this.emitter = emitter;
         this.clientEmitter = clientEmitter;
         this.sourceEmitter = sourceEmitter;
 
         this.logger = childLogger(parentLogger, 'Notifiers');
 
-        this.sourceEmitter.on('notify', async (payload: WebhookPayload) => {
-            await this.notify(payload);
+        this.sourceEmitter.on('notify', async (payload) => {
+            await this.notify(payload.data);
         })
-        this.clientEmitter.on('notify', async (payload: WebhookPayload) => {
-            await this.notify(payload);
+        this.clientEmitter.on('notify', async (payload) => {
+            await this.notify(payload.data);
         })
     }
 

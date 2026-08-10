@@ -1,6 +1,5 @@
  
 import { childLogger, type Logger } from '@foxxmd/logging';
-import type EventEmitter from "events";
 import type {InternalConfig, InternalConfigOptional} from "../common/infrastructure/Atomic.ts";
 import { clientTypes, isSourceType } from "../../core/Atomic.ts";
 import { sourceTypes } from "../../core/Atomic.ts";
@@ -18,6 +17,7 @@ import { commonComponentEnvConfigToConfigPrimitives, generateCommonComponentEnvC
 import { getSourceEnvSchema, validateSourceAIOJson, validateSourceJson } from '../common/infrastructure/config/source/sourcesMap.ts';
 import type { SourceTypeConfigMap } from "../common/infrastructure/config/source/sourcesMap.ts";
 import { stripIndents } from 'common-tags';
+import type { MSBackendEventMap } from '../common/infrastructure/MSBackendEventMap.ts';
 
 type UnparsedSourceConfig = UnparsedConfig<SourceType>;
 
@@ -29,9 +29,9 @@ export default class ScrobbleSources {
     logger: Logger;
     internalConfig: InternalConfig;
 
-    emitter: WildcardEmitter;
+    emitter: WildcardEmitter<MSBackendEventMap>;
 
-    constructor(emitter: EventEmitter, internal: InternalConfigOptional, parentLogger: Logger) {
+    constructor(emitter: WildcardEmitter<MSBackendEventMap>, internal: InternalConfigOptional, parentLogger: Logger) {
         this.emitter = emitter;
         this.logger = childLogger(parentLogger, 'Sources');
         this.internalConfig = {
@@ -309,7 +309,7 @@ export default class ScrobbleSources {
         sourceType: T,
         strongConfigs: CommonParsedConfig[],
         defaults: SourceDefaults,
-        Ctor: new (name: string, config: SourceTypeConfigMap[T][0], internalConfig: InternalConfig, emitter: WildcardEmitter) => AbstractSource,
+        Ctor: new (name: string, config: SourceTypeConfigMap[T][0], internalConfig: InternalConfig, emitter: WildcardEmitter<MSBackendEventMap>) => AbstractSource,
     ) => {
         for (const s of strongConfigs) {
             try {

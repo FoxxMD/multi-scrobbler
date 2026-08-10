@@ -32,6 +32,7 @@ import ScrobbleClients from '../../scrobblers/ScrobbleClients.ts';
 import { WildcardEmitter } from '../../common/WildcardEmitter.ts';
 import type { CommonClientConfig } from '../../common/infrastructure/config/client/index.ts';
 import { loggerNoop } from '../../common/MaybeLogger.ts';
+import type { MSBackendEventMap } from '../../common/infrastructure/MSBackendEventMap.ts';
 
 chai.use(asPromised);
 
@@ -1148,13 +1149,13 @@ describe('Scrobble Clients Behavior', function() {
 
     describe('Source filtering', function() {
 
-        let cEmitter: WildcardEmitter,
-        sEmitter: WildcardEmitter,
+        let cEmitter: WildcardEmitter<MSBackendEventMap>,
+        sEmitter: WildcardEmitter<MSBackendEventMap>,
         clients: ScrobbleClients;
 
         beforeEach(function() {
-            cEmitter = new WildcardEmitter();
-            sEmitter = new WildcardEmitter();
+            cEmitter = new WildcardEmitter<MSBackendEventMap>();
+            sEmitter = new WildcardEmitter<MSBackendEventMap>();
             clients = new ScrobbleClients(cEmitter, sEmitter, {
                 localUrl: new URL('http://example.com'),
                 configDir: process.cwd(),
@@ -1169,10 +1170,16 @@ describe('Scrobble Clients Behavior', function() {
             clients.clients.push(testClient);
 
             sEmitter.emit('discoveredToScrobble', {
-                data: [generatePlay()],
-                options: {
-                    scrobbleFrom: 'testSource',
-                    scrobbleTo: ['foo']
+                type: 'jellyfin',
+                from: 'source',
+                name: 'test',
+                data: {
+                    data: [generatePlay()],
+                    options: {
+                        scrobbleFrom: 'testSource',
+                        scrobbleTo: ['foo'],
+                        checkTime: dayjs()
+                    }
                 }
             });
             expect(clients.scrobbleToNamesWarnings).is.empty;
@@ -1190,10 +1197,16 @@ describe('Scrobble Clients Behavior', function() {
             clients.clients.push(testClient);
 
             sEmitter.emit('discoveredToScrobble', {
-                data: [generatePlay()],
-                options: {
-                    scrobbleFrom: 'testSource',
-                    scrobbleTo: ['test']
+                type: 'jellyfin',
+                from: 'source',
+                name: 'test',
+                data: {
+                    data: [generatePlay()],
+                    options: {
+                        scrobbleFrom: 'testSource',
+                        scrobbleTo: ['test'],
+                        checkTime: dayjs()
+                    }
                 }
             });
             expect(clients.scrobbleToNamesWarnings).length.greaterThan(0);
@@ -1211,10 +1224,16 @@ describe('Scrobble Clients Behavior', function() {
             clients.clients.push(testClient);
 
             sEmitter.emit('discoveredToScrobble', {
-                data: [generatePlay()],
-                options: {
-                    scrobbleFrom: 'testSource',
-                    scrobbleTo: ['test']
+                type: 'jellyfin',
+                from: 'source',
+                name: 'test',
+                data: {
+                    data: [generatePlay()],
+                    options: {
+                        scrobbleFrom: 'testSource',
+                        scrobbleTo: ['test'],
+                        checkTime: dayjs()
+                    }
                 }
             });
             expect(clients.scrobbleToNamesWarnings).is.empty;
@@ -1232,10 +1251,16 @@ describe('Scrobble Clients Behavior', function() {
             clients.clients.push(testClient);
 
             sEmitter.emit('discoveredToScrobble', {
-                data: [generatePlay()],
-                options: {
-                    scrobbleFrom: 'testSource',
-                    scrobbleTo: ['test foo']
+                type: 'jellyfin',
+                from: 'source',
+                name: 'test',
+                data: {
+                    data: [generatePlay()],
+                    options: {
+                        scrobbleFrom: 'testSource',
+                        scrobbleTo: ['test foo'],
+                        checkTime: dayjs()
+                    }
                 }
             });
             expect(clients.scrobbleToNamesWarnings).is.empty;
@@ -1253,10 +1278,16 @@ describe('Scrobble Clients Behavior', function() {
             clients.clients.push(testClient);
 
             sEmitter.emit('discoveredToScrobble', {
-                data: [generatePlay()],
-                options: {
-                    scrobbleFrom: 'testSource',
-                    scrobbleTo: []
+                type: 'jellyfin',
+                from: 'source',
+                name: 'test',
+                data: {
+                    data: [generatePlay()],
+                    options: {
+                        scrobbleFrom: 'testSource',
+                        scrobbleTo: [],
+                        checkTime: dayjs()
+                    }
                 }
             });
             expect(clients.scrobbleToNamesWarnings).is.empty;
@@ -1274,10 +1305,16 @@ describe('Scrobble Clients Behavior', function() {
             clients.clients.push(testClient);
 
             sEmitter.emit('discoveredToScrobble', {
-                data: [generatePlay()],
-                options: {
-                    scrobbleFrom: 'testSource',
-                    scrobbleTo: ['TesT foO']
+                type: 'jellyfin',
+                from: 'source',
+                name: 'test',
+                data: {
+                    data: [generatePlay()],
+                    options: {
+                        scrobbleFrom: 'testSource',
+                        scrobbleTo: ['TesT foO'],
+                        checkTime: dayjs()
+                    }
                 }
             });
             expect(clients.scrobbleToNamesWarnings).is.empty;

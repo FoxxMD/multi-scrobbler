@@ -159,7 +159,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         const isNextapi = nextQs === 'true';
 
         const session = await bsseDef.createSession(req, res);
-        scrobbleSources.emitter.on('*', (payload: any, eventName: string) => {
+        scrobbleSources.emitter.onAny((eventName: string, payload: any) => {
             if(payload.from !== undefined) {
                 if(isNextapi) {
                     session.push({event: eventName, ...payload}, eventName);
@@ -168,7 +168,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
                 }
             }
         });
-        scrobbleClients.emitter.on('*', (payload: any, eventName: string) => {
+        scrobbleClients.emitter.onAny((eventName: string, payload: any) => {
             if(payload.from !== undefined) {
                 if(isNextapi) {
                     session.push({event: eventName, ...payload}, eventName);

@@ -14,6 +14,7 @@ import prom from 'prom-client';
 import { CoverArtApiClient } from "./common/vendor/musicbrainz/CoverArtApiClient.ts";
 import { version } from "./version.ts";
 import type {DbConcrete} from "./common/database/drizzle/drizzleUtils.ts";
+import type { MSBackendEventMap } from "./common/infrastructure/MSBackendEventMap.ts";
 
 let root: ReturnType<typeof createRoot>;
 export interface RootOptions {
@@ -96,12 +97,14 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         dbFunc = async () => db;
     }
 
-    const cEmitter = new WildcardEmitter();
+    const cEmitter = new WildcardEmitter<MSBackendEventMap>();
     // do nothing, just catch
-    cEmitter.on('error', (e) => null);
-    const sEmitter = new WildcardEmitter();
+    cEmitter.on('error', (e) => {
+        logger.warn(new Error('Client emitter threw an error', {cause: e}));
+    });
+    const sEmitter = new WildcardEmitter<MSBackendEventMap>();
     sEmitter.on('error', (e) => {
-        const f = e;
+        logger.warn(new Error('Source emitter threw an error', {cause: e}));
     });
 
     const transformerManager = new TransformerManager(logger, maybeSingletonCache !== undefined ? maybeSingletonCache : cacheFunc());
