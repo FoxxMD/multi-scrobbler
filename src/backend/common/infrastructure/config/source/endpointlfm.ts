@@ -16,7 +16,7 @@ export const lastFmEndpointDataSchema = z.object({
      * If no slug is found from an extension's incoming webhook event the first Last.fm source without a slug will be used
      * */
     slug: z.string().optional().meta({
-        description: "The URL ending that should be used to identify scrobbles for this source"
+        description: "When using **multiple sources without apikey/user**, or **not** using the standard base URL, this is the URL base path that should be used to identify scrobbles for this source"
     }),
     username: z.string().optional().meta({
         description: 'A fake username to differentiate LFM Endpoint Sources'

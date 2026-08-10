@@ -29,7 +29,67 @@ If your application has the option to scrobble using Listenbrainz then use the [
 
 ## Setup
 
-### URL
+:::tip[Scenario Picker]
+
+Use **one** of the scenarios below based on how on your service(s) (things "scrobbling" to Multi-Scrobbler using this Source) will need to interact with MS.
+
+<Tabs groupId="scenario" queryString>
+    <TabItem value="single" label="One Service">
+      > You have **one** service, like Panoscrobbler, that will scrobble to Multi-Scrobbler.
+
+      Configure **one** Last.fm Endpoint Source. Use the [standard base URL](#standard-base-url) to configure your service and [apikey/user](#authentication), if necessary. Use the same apikey/user in MS as you do in your service.
+
+    </TabItem>
+    <TabItem value="multiple" label="Many Services, Same User">
+      > You may have **more than one** service that will scrobble to Multi-Scrobbler, like ArchiveTune and Panoscrobbler.
+      >
+      > All of these services will scrobble for the same user (you) and all of the scrobbles should go to the same [Clients](/configuration/clients).
+
+      Configure **one** Lastfm Endpoint Source. Use the [standard base URL](#standard-base-url) to configure your service and configure [apikey/user](#authentication) in MS, if necessary. Use the same apikey/user for all your services as you configure in MS.
+    </TabItem>
+    <TabItem value="multiple-tokens" label="Many Services, Many Users, Can use LFM Account">
+      > You have **more than one** service that will scrobble to Multi-Scrobbler, like ArchiveTune and Panoscrobbler.
+      >
+      > Some of these services should scrobble for different users, scrobble to different [Clients](/configuration/clients), or generally be treated differently (such as for transforms).
+      >
+      > **All** of these services can accept a [**apikey/user**](#authentication) to authenticate a Last.fm user/account.
+
+      Configure one Last.fm Endpoint Sources **per service that should be treated differently**. That is, if multiple services are all "the same user" then you only need one Source for that entire group of services.
+
+      For each Lastfm Endpoint Source, configure a different [apikey/user](#authentication). Use that same apikey/user when configuring Last.fm for the associated service.
+
+      All Last.fm Endpoint Sources should use the same [standard base URL](#standard-base-url).
+    </TabItem>
+    <TabItem value="multiple-slug" label="Many Services, Many Users, Cannot use LFM Account">
+      > You have **more than one** service that will scrobble to Multi-Scrobbler, like ArchiveTune and Panoscrobbler.
+      >
+      > Some of these services should scrobble for different users, scrobble to different [Clients](/configuration/clients), or generally be treated differently (such as for transforms).
+      >
+      > All, or some, of these services **cannot** accept an [apikey/user](#authentication) to authenticate a Last.fm user/account.
+
+      **This is not a common scenario** but if it fits your usecase then use these guidelines to differentiate your services:
+
+      Configure one Last.fm Endpoint Sources **per service that should be treated differently**. That is, if multiple services are all "the same user" then you only need one Source for that entire group of services.
+
+      * For any groups of services that **can use [apikey/user](#authentication)**, use the instructions for [Many Services, Many Users, Can use LFM Account](./?scenario=multiple-tokens#setup)
+      * For any groups of services that **cannot accept** an apikey/user...
+        * You can still configure a Source **without an [apikey/user](#authentication)**. Any services not using an account will use this "default" Source.
+        * If multiple groups cannot use an apikey/user, or the groups cannot use the [standard base URL](#standard-base-url), then use different [base url **Slugs**](#multiple-sources).
+    </TabItem>
+    <TabItem value="slug" label="Service cannot use standard URL">
+      > You have **one** service, like PanoScrobbler, that will scrobble to Multi-Scrobbler.
+      >
+      > You have already tried the [**One Service**](./?scenario=single#setup) scenario with the [standard base URL](#standard-base-url) but it is not working.
+
+      **This is not a common scenario.** Check the [**Troubleshooting URL**](#troubleshooting-url) section before trying this.
+
+      At this point, you can try to use a different [base url **Slug**](#multiple-sources). Your service must be able to set a "fully custom" URL for Last.fm IE it must allow you to set more than just a domain/host.
+    </TabItem>
+</Tabs>
+
+:::
+
+### Standard Base URL
 
 When setting up your Last.fm client to communicate with Multi-Scrobbler replace the Last.fm domain with your Multi-Scrobbler domain:
 
@@ -49,11 +109,13 @@ Currently, Multi-Scrobbler only supports the [**Mobile Application**](https://ww
 
 </DetailsAdmo>
 
-#### Multiple Sources
+### Multiple Sources
 
-If you have **more than one** Lastfm Endpoint Source then you should configure username/apiKey for MS, per Source. This enables MS to differentiate scrobbles for each Source.
+If you need configure **more than one** Lastfm Endpoint Source then you should configure username/apiKey for MS, per Source. This enables MS to differentiate scrobbles for each Source.
 
 Use the same **username** and/or **API Key** you configure with MS when setting up your Last.fm Client. These values can be anything you want, as long as they match between MS and your client. Password can be anything and is not checked.
+
+However, if you cannot configure username/apiKeys for your scenario you may also use a URL **Slug** to tell MS which Source belongs to a specific user. **This is not a common scenario** and should only be used if username/apiKey configuration is not sufficient or not possible.
 
 <DetailsAdmo type="tip" summary="Different URL Base (Slug)">
 
@@ -71,6 +133,30 @@ http://yourMsDomain/api/lastfm/mySlug
 The above url base is equivalent to making calls to `http://yourMSDomain/2.0/`
 
 </DetailsAdmo>
+
+## Troubleshooting URL
+
+If you think your service should be able to use the [standard base URL](#standard-base-url) but it is not working follow these steps before trying the [the base URL Slug](#multiple-sources).
+
+#### Verify URL Format
+
+Some service may require `http/https` in the URL format (`http://myMSDomainOrIp:9078`) while others may not (`myDomainOrIp:9078`). Check the docs for your service to see if they specify this or have an example. Try both versions, if possible, to see if one works.
+
+<DetailsAdmo type="note" summary="Some Services Require HTTPS">
+
+Some services that can scrobble to a custom Last.fm URL may require the URL to have a real domain (`example.com`) and/or use SSL (`https://`). In this case you should setup multi-scrobbler behind a reverse proxy to support this functionality.
+
+</DetailsAdmo>
+
+#### Is MS is Reachable?
+
+Verify that MS can be accessed by your service, or from the same host as the service is running. See the [**FAQ**](/FAQ/#ingress-connection) for guidance on troubleshooting ingress connection issues.
+
+#### Service Logging
+
+If you service has accessible logging, check to see if it outputs the URL it is trying to reach when authenticating the Last.fm apiKey/user, or trying to make a scrobble request.
+
+If you decide to report this issue, please include this logging in your issue.
 
 ## Configuration
 
