@@ -203,7 +203,7 @@ export default class ScrobbleSources {
             const envSchema = await getSourceEnvSchema(configType);
             const configTypeUpper = envSchema.prefix.toUpperCase();
 
-            const configKeys = envKeys.filter(x => x.includes(configTypeUpper));
+            const configKeys = envKeys.filter(x => x.startsWith(configTypeUpper));
             if (configKeys.length > 0) {
                 sourceUnparsedConfigs.push({
                     config: pick(process.env, ...configKeys),
