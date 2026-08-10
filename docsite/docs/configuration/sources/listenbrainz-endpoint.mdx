@@ -23,16 +23,76 @@ If your service/player has a "Scrobble to Listenbrainz" feature and there is an 
 
 ## Setup
 
-### URL
+:::tip[Scenario Picker]
 
-In general, you should use one of the following as the **base URL** when configuring your application to scrobble to multi-scrobbler:
+Use **one** of the scenarios below based on how on your service(s) (things "scrobbling" to Multi-Scrobbler using this Source) will need to interact with MS.
+
+<Tabs groupId="scenario" queryString>
+    <TabItem value="single" label="One Service">
+      > You have **one** service, like Navidrome, that will scrobble to Multi-Scrobbler.
+
+      Configure **one** Listenbrainz Endpoint Source. Use the [standard base URL](#standard-base-url) to configure your service and set a [Token](#token), if necessary. Use the same **Token** in MS as you do in your service.
+
+    </TabItem>
+    <TabItem value="multiple" label="Many Services, Same User">
+      > You may have **more than one** service that will scrobble to Multi-Scrobbler, like Navidrome and Panoscrobbler.
+      >
+      > All of these services will scrobble for the same user (you) and all of the scrobbles should go to the same [Clients](/configuration/clients).
+
+      Configure **one** Listenbrainz Endpoint Source. Use the [standard base URL](#standard-base-url) to configure your service and configure a [Token](#token) in MS, if necessary. Use the same token for all your services as you configure in MS.
+    </TabItem>
+    <TabItem value="multiple-tokens" label="Many Services, Many Users, Can use Tokens">
+      > You have **more than one** service that will scrobble to Multi-Scrobbler, like Navidrome and Panoscrobbler.
+      >
+      > Some of these services should scrobble for different users, scrobble to different [Clients](/configuration/clients), or generally be treated differently (such as for transforms).
+      >
+      > **All** of these services can accept a **Token** to authenticate a Listenbrainz user/account.
+
+      Configure one Listenbrainz Endpoint Sources **per service that should be treated differently**. That is, if multiple services are all "the same user" then you only need one Source for that entire group of services.
+
+      For each Listenbrainz Endpoint Source, configure a different [**Token**](#token). Use that same token when configuring Listenbrainz for the associated service.
+
+      All Listenbrainz Endpoint Sources should use the same [standard base URL](#standard-base-url).
+    </TabItem>
+    <TabItem value="multiple-slug" label="Many Services, Many Users, Cannot use Tokens">
+      > You have **more than one** service that will scrobble to Multi-Scrobbler, like Navidrome and Panoscrobbler.
+      >
+      > Some of these services should scrobble for different users, scrobble to different [Clients](/configuration/clients), or generally be treated differently (such as for transforms).
+      >
+      > All, or some, of these services **cannot** accept a **Token** to authenticate a Listenbrainz user/account.
+
+      **This is not a common scenario** but if it fits your usecase then use these guidelines to differentiate your services:
+
+      Configure one Listenbrainz Endpoint Sources **per service that should be treated differently**. That is, if multiple services are all "the same user" then you only need one Source for that entire group of services.
+
+      * For any groups of services that **can accept** a token, use the instructions for [Many Services, Many Users, Can use Tokens](./?scenario=multiple-tokens#setup)
+      * For any groups of services that **cannot accept** a token...
+        * You can still configure a Source **without a [Token](#token)**. Any services not using a token will use this "default" Source.
+        * If multiple groups cannot use a token, or the groups cannot use the [standard base URL](#standard-base-url), then use different [base url **Slugs**](#multiple-sources).
+    </TabItem>
+    <TabItem value="slug" label="Service cannot use standard URL">
+      > You have **one** service, like Navidrome, that will scrobble to Multi-Scrobbler.
+      >
+      > You have already tried the [**One Service**](./?scenario=single#setup) scenario with both [standard base URL](#standard-base-url) and neither is working.
+
+      **This is not a common scenario.** Check the [**Troubleshooting URL**](#troubleshooting-url) section before trying this.
+
+      At this point, you can try to use a different [base url **Slug**](#multiple-sources). Your service must be able to set a "fully custom" URL for Listenbrainz IE it must allow you to set more than just a domain/host.
+    </TabItem>
+</Tabs>
+
+:::
+
+### Standard Base URL
+
+In most scenarios you should use one of the following as the **base URL** when configuring your service to scrobble to multi-scrobbler:
 
 * `http://myMultiScrobblerIP:9078`
 * `http://myMultiScrobblerIP:9078/1/`
 
 <DetailsAdmo type="tip" summary="Default Scrobble Submit URL">
 
-If you are not using a [slug for multiple endpoints](#multiple-endpoints) then multi-scrobbler will accept Listenbrainz scrobbles at
+Multi-scrobbler will accept Listenbrainz scrobbles at
 
 ```
 http://myMultiScrobblerIP:9078/1/submit-listens
@@ -42,41 +102,34 @@ which is the **standard** Listenbrainz server path for scrobbling.
 
 </DetailsAdmo>
 
-<DetailsAdmo type="note" summary="Some Services Require HTTPS">
-
-Some services that can scrobble to a custom Listenbrainz URL may require the URL to have a real domain (`example.com`) and/or use SSL (`https://`). In this case you should setup multi-scrobbler behind a reverse proxy to support this functionality. It is out of the scope of this project to do this solely within multi-scrobbler.
-
-</DetailsAdmo>
-
 ### Token
 
-Most Listenbrainz clients require a token (Authentication Token) to be provided during setup. This value can be anything you want, just make sure to use the same value for `token` in your multi-scrobbler configuration for the endpoint.
+Most Listenbrainz clients require an Authentication Token to be provided during setup. This value can be anything you want but ensure you use the same value for `token` (ENV `LZE_TOKEN`) in your configuration for this Listenbrainz Endpoint Source.
 
-### Multiple Endpoints
+If your service does not require a token, or does not let you set one, then do not configure it for this Source either.
 
-If you are setting up multiple [Listenbrainz (Endpoint) Sources](/configuration/sources/listenbrainz-endpoint) MS can differentiate scrobbles based on [Token](#token) so that you can use the same endpoint for many users.
+### Multiple Sources
 
-However, if you cannot configure multiple tokens for your scenario you may also use a URL **Slug** to tell MS which Source belongs to a specific user.
+If you need configure **more than one** Listenbrainz Endpoint Source then MS can differentiate scrobbles based on [Token](#token) so that you can use the [**same, standard base URL**](#standard-base-url) for many users.
 
-<details>
+However, if you cannot configure multiple tokens for your scenario you may also use a URL **Slug** to tell MS which Source belongs to a specific user. **This is not a common scenario** and should only be used if **Token** configuration is not sufficient or not possible.
 
-<summary>Using a Slug</summary>
+<DetailsAdmo type="tip" summary="Different URL Base (Slug)">
 
-When a **slug** is defined in ENV/File config MS will listen for listenbrainz routes using the slug as a the route path. Example:
+When a **slug** is defined in ENV/File config MS will listen for listenbrainz `submit-listens` requests using the slug as the base route path. Example:
 
 ```
 LZE_SLUG=foobar
 ```
 
-MS will accept calls to 
+MS will accept requests for `submit-listens` (scrobble submissions and now playing) at 
 
 ```
 http://myMultiScrobblerIP:9078/api/listenbrainz/foobar
+http://myMultiScrobblerIP:9078/api/listenbrainz/foobar/submit-listens
 ```
 
-for scrobble submission.
-
-</details>
+</DetailsAdmo>
 
 ## Setup for Popular Apps
 
@@ -100,12 +153,36 @@ Set the [**ListenBrainz.BaseURL**](https://www.navidrome.org/docs/usage/configur
 * In the ListenBrainz Scrobbler configuration screen:
   * User Token is the [Token](#token) you configured
   * Toggle **Show advanced settings**
-    * Base URL is the [URL](#url) you can configured, or the equivalent of `http://myMultiScrobblerIP:9078` for your MS instance
+    * Base URL is the [URL](#standard-base-url) you can configured, or the equivalent of `http://myMultiScrobblerIP:9078` for your MS instance
 * Save the configuration and you are ready to scrobble
 
 To troubleshoot any errors, and assuming you are using Home Assistant, view the Logs in the Music Assistant Add-ons. Please include these logs in any reported issue.
 
 </details>
+
+## Troubleshooting URL
+
+If you think your service should be able to use the [standard base URL](#standard-base-url) but it is not working follow these steps before trying the [the base URL Slug](#multiple-sources).
+
+#### Verify URL Format
+
+Some service may require `http/https` in the URL format (`http://myMSDomainOrIp:9078`) while others may not (`myDomainOrIp:9078`). Check the docs for your service to see if they specify this or have an example. Try both versions, if possible, to see if one works.
+
+<DetailsAdmo type="note" summary="Some Services Require HTTPS">
+
+Some services that can scrobble to a custom Listenbrainz URL may require the URL to have a real domain (`example.com`) and/or use SSL (`https://`). In this case you should setup multi-scrobbler behind a reverse proxy to support this functionality.
+
+</DetailsAdmo>
+
+#### Is MS is Reachable?
+
+Verify that MS can be accessed by your service, or from the same host as the service is running. See the [**FAQ**](/FAQ/#ingress-connection) for guidance on troubleshooting ingress connection issues.
+
+#### Service Logging
+
+If you service has accessible logging, check to see if it outputs the URL it is trying to reach when authenticating the Listenbrainz account/user, or trying to make a scrobble request.
+
+If you decide to report this issue, please include this logging in your issue.
 
 ## Configuration
 
