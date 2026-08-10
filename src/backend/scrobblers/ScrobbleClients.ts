@@ -181,7 +181,10 @@ export default class ScrobbleClients {
                 }
             }
 
-            const clientKeys = envKeys.filter(x => x.includes(clientUpper));
+            const envSchema = await getClientEnvSchema(clientType);
+            const configTypeUpper = envSchema.prefix.toUpperCase();
+
+            const clientKeys = envKeys.filter(x => x.includes(configTypeUpper));
             if (clientKeys.length > 0) {
                 clientUnparsedConfigs.push({
                     config: pick(process.env, ...clientKeys),
@@ -198,12 +201,12 @@ export default class ScrobbleClients {
                     switch (entry.source) {
                         case 'env': {
                             const envSchema = await getClientEnvSchema(clientType);
-                            const primitiveSchema = generateCommonComponentEnvConfigSchema(envSchema.prefix.toUpperCase());
+                            const primitiveSchema = generateCommonComponentEnvConfigSchema(configTypeUpper);
                             const parsed = primitiveSchema.parse(entry.config);
-                            const primitives: CommonConfigPrimitives = commonComponentEnvConfigToConfigPrimitives(envSchema.prefix.toUpperCase(), parsed);
+                            const primitives: CommonConfigPrimitives = commonComponentEnvConfigToConfigPrimitives(configTypeUpper, parsed);
                             const parsedEnvConfigValues = envSchema.env.parse(entry.config);
                             const { data = {}, options = {}, ...rest } = envSchema.toConfig(parsedEnvConfigValues);
-                            const transformOptions = transformPresetEnv(envSchema.prefix.toUpperCase());
+                            const transformOptions = transformPresetEnv(configTypeUpper);
                             parsedConfig = {
                                 name: `${clientType} - ${entry.source}${entry.pos !== '' ? ` - ${entry.pos}` : ''} `,
                                 ...primitives,

@@ -178,8 +178,6 @@ export default class ScrobbleSources {
 
             let sourceUnparsedConfigs = unparsedConfigs.filter(x => x.type === configType);
 
-            const configTypeUpper = configType.toUpperCase();
-
             let rawConfigs;
             try {
                 rawConfigs = await readJson(`${this.internalConfig.configDir}/${configType}.json`, { throwOnNotFound: false, logger: childLogger(this.logger, `${configType} Secrets`) });
@@ -202,6 +200,9 @@ export default class ScrobbleSources {
                 }
             }
 
+            const envSchema = await getSourceEnvSchema(configType);
+            const configTypeUpper = envSchema.prefix.toUpperCase();
+
             const configKeys = envKeys.filter(x => x.includes(configTypeUpper));
             if (configKeys.length > 0) {
                 sourceUnparsedConfigs.push({
@@ -218,13 +219,12 @@ export default class ScrobbleSources {
                 try {
                     switch (entry.source) {
                         case 'env': {
-                            const envSchema = await getSourceEnvSchema(configType);
-                            const primitiveSchema = generateCommonComponentEnvConfigSchema(envSchema.prefix.toUpperCase());
+                            const primitiveSchema = generateCommonComponentEnvConfigSchema(configTypeUpper);
                             const parsed = primitiveSchema.parse(entry.config);
-                            const primitives: CommonConfigPrimitives = commonComponentEnvConfigToConfigPrimitives(envSchema.prefix.toUpperCase(), parsed);
+                            const primitives: CommonConfigPrimitives = commonComponentEnvConfigToConfigPrimitives(configTypeUpper, parsed);
                             const parsedEnvConfigValues = envSchema.env.parse(entry.config);
                             const { data = {}, options = {}, ...rest } = envSchema.toConfig(parsedEnvConfigValues);
-                            const transformOptions = transformPresetEnv(envSchema.prefix.toUpperCase());
+                            const transformOptions = transformPresetEnv(configTypeUpper);
                             parsedConfig = {
                                 name: `${configType} - ${entry.source}${entry.pos !== '' ? ` - ${entry.pos}` : ''} `,
                                 ...primitives,
