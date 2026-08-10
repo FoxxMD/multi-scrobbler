@@ -48,6 +48,8 @@ export type MalojaSourceConfig = z.infer<typeof malojaSourceConfigSchema>;
 
 export const malojaSourceAIOConfigSchema = z.object({
     ...malojaSourceConfigSchema.shape,
+    // can be optional since it always appears in a source array
+    configureAs: malojaSourceConfigSchema.shape.configureAs.optional(),
     type: z.literal('maloja'),
 }).meta({title: 'Maloja'});
 

@@ -50,6 +50,8 @@ export type ListenBrainzSourceConfig = z.infer<typeof listenBrainzSourceConfigSc
 
 export const listenBrainzSourceAIOConfigSchema = z.object({
     ...listenBrainzSourceConfigSchema.shape,
+    // can be optional since it always appears in a source array
+    configureAs: listenBrainzSourceConfigSchema.shape.configureAs.optional(),
     type: z.literal('listenbrainz'),
 }).meta({title: 'Listenbrainz'});
 

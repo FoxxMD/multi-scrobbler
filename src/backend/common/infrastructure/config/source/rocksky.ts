@@ -56,6 +56,8 @@ export type RockskySourceConfig = z.infer<typeof rockskySourceConfigSchema>;
 
 export const rockskySourceAIOConfigSchema = z.object({
     ...rockskySourceConfigSchema.shape,
+    // can be optional since it always appears in a source array
+    configureAs: rockskySourceConfigSchema.shape.configureAs.optional(),
     type: z.literal('rocksky'),
 }).meta({title: 'Rocksky'});
 

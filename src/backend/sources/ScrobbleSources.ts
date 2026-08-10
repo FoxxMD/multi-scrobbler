@@ -238,14 +238,34 @@ export default class ScrobbleSources {
                             };
                         } break;
                         case 'file':
-                        case 'aio': {
-                            if (('configureAs' in entry.config && entry.config.configureAs === 'client')
-                                // @ts-expect-error could be a client type
-                                || (clientTypes.includes(entry.type) && entry.config.configureAs !== 'source')) {
-                                this.logger.debug(`Skipping ${generateConfigLocation('source', entry)} because it is configured as a Client`);
-                                continue;
+                            {
+                            // only file config has a combined array of both source and client configs
+                            // 
+                            // for source configs, it is required that "configureAs": "source"
+                            //
+                            // if `configureAs` is missing OR its value is not `source` then we skip it
+                            //
+                            // @ts-expect-error could be a client type
+                            if(clientTypes.includes(entry.type)) {
+                                const confAs = 'configureAs' in entry.config ? entry.config.configureAs : undefined;
+                                if(confAs === undefined || confAs !== 'source') {
+                                    const reason = confAs === undefined ? `configureAs was not defined` : `configureAs was not set to 'source'`;
+                                    this.logger.debug(`Skipping ${generateConfigLocation('source', entry)} because it is configured as a Client (${reason})`);
+                                    continue;
+                                }
                             }
-                            const parsed = entry.source === 'file' ? (await validateSourceJson(entry.type, entry.config)) : (await validateSourceAIOJson(entry.type, entry.config));
+                            const parsed = await validateSourceJson(entry.type, entry.config);
+                            parsedConfig = {
+                                ...parsed,
+                                name: parsed.name ?? parsed.id,
+                                source: generateConfigLocation('source', entry)
+                            }
+                        } break;
+                        case 'aio': {
+                            // aio entries can also optionally have `configureAs` but it must always be `source`
+                            // and we are only including entries from the `sources` array at this point
+                            // so there's no need to manually check if `configureAs` is present
+                            const parsed = await validateSourceAIOJson(entry.type, entry.config)
                             parsedConfig = {
                                 ...parsed,
                                 name: parsed.name ?? parsed.id,

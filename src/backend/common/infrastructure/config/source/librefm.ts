@@ -54,6 +54,8 @@ export type LibrefmSourceConfig = z.infer<typeof librefmSourceConfigSchema>;
 
 export const librefmSouceAIOConfigSchema = z.object({
     ...librefmSourceConfigSchema.shape,
+    // can be optional since it always appears in a source array
+    configureAs: librefmSourceConfigSchema.shape.configureAs.optional(),
     type: z.literal('librefm'),
 }).meta({title: "Libre.fm"});
 

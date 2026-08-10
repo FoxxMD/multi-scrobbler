@@ -50,6 +50,8 @@ export type KoitoSourceConfig = z.infer<typeof koitoSourceConfigSchema>;
 
 export const koitoSourceAIOConfigSchema = z.object({
     ...koitoSourceConfigSchema.shape,
+    // can be optional since it always appears in a source array
+    configureAs: koitoSourceConfigSchema.shape.configureAs.optional(),
     type: z.literal('koito'),
 }).meta({title: "Koito"});
 

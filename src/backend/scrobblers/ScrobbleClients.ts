@@ -219,13 +219,28 @@ export default class ScrobbleClients {
                                 }
                             };
                         } break;
-                        case 'file':
-                        case 'aio': {
+                        case 'file': {
+                            // only file config has a combined array of both source and client configs
+                            // 
+                            // if configureAs is missing (optional) we assume it is a client
+                            // and only skip it if it is explicitly set as a source
+                            //
                             if ('configureAs' in entry.config && entry.config.configureAs === 'source') {
-                                this.logger.debug(`Skipping ${generateConfigLocation('client', entry)} because it is configured as a Source`);
+                                this.logger.debug(`Skipping ${generateConfigLocation('client', entry)} because it is configured as a Source (configureAs set to 'source')`);
                                 continue;
                             }
-                            const parsed = entry.source === 'file' ? (await validateClientJson(entry.type, entry.config)) : (await validateClientAIOJson(entry.type, entry.config));
+                            const parsed = await validateClientJson(entry.type, entry.config);
+                            parsedConfig = {
+                                ...parsed,
+                                name: parsed.name ?? parsed.id,
+                                source: generateConfigLocation('client', entry)
+                            }
+                        } break;
+                        case 'aio': {
+                            // aio entries can also optionally have `configureAs` but it must always be `client`
+                            // and we are only including entries from the `clients` array at this point
+                            // so there's no need to manually check if `configureAs` is present
+                            const parsed = await validateClientAIOJson(entry.type, entry.config)
                             parsedConfig = {
                                 ...parsed,
                                 name: parsed.name ?? parsed.id,
