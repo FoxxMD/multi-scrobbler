@@ -185,7 +185,8 @@ export const configToIPCConfig = (data: DiscordStrongData): DiscordIPCData => {
     const parsedPaths: (string | [number, string])[] = [];
     for(const p of ipcLocations) {
         if(Array.isArray(p)) {
-            parsedPaths.push(p)
+            if(typeof p[0] === 'number' && typeof p[1] === 'string')
+            parsedPaths.push([p[0],p[1]]);
         } else {
             const sp = p.split(':');
             if(sp.length > 1) {

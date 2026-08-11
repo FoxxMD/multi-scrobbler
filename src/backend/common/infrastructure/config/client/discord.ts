@@ -7,7 +7,24 @@ export const statusTypeSchema = z.union([z.literal("online"), z.literal("idle"),
 
 export type StatusType = z.infer<typeof statusTypeSchema>;
 
-const ipcLocationTupleSchema = z.custom<[number, string]>((val) => Array.isArray(val) && val.length === 2 && typeof val[0] === 'number' && typeof val[1] === 'string');
+const HOST_PORT_LOOSE_REGEX = new RegExp(/.+:\d+/i)
+
+const ipcTransform = z.transform((val: string, ctx) => {
+    const sp = val.split(':');
+    if(sp.length === 1) {
+        // assume its a path
+        return val;
+    }
+    if(!HOST_PORT_LOOSE_REGEX.test(val)) {
+        ctx.issues.push({
+            code: 'custom',
+            message: "Not shaped like host:port",
+            input: val
+        });
+        return z.NEVER;
+    }
+    return [parseInt(sp[1]), sp[0]]
+})
 
 export const discordDataSchema = z.object({
     token: z.string().optional(),
@@ -16,7 +33,7 @@ export const discordDataSchema = z.object({
     artworkDefaultUrl: z.string().optional(),
     statusOverrideAllow: z.array(statusTypeSchema).optional(),
     listeningActivityAllow: z.union([z.string(), z.array(z.string())]).optional(),
-    ipcLocations: z.union([z.string(), z.array(z.union([z.string(), ipcLocationTupleSchema]))]).optional()
+    ipcLocations: z.array(z.string().pipe(ipcTransform)).optional()
 });
 
 export type DiscordData = z.infer<typeof discordDataSchema>;
@@ -25,10 +42,10 @@ const envDataSchema = z.object({
     DISCORD_TOKEN: discordDataSchema.shape.token,
     DISCORD_ARTWORK: discordDataSchema.shape.artwork,
     DISCORD_APPLICATION_ID: discordDataSchema.shape.applicationId,
-    DISCORD_IPC_LOCATIONS: discordDataSchema.shape.ipcLocations,
+    DISCORD_IPC_LOCATIONS: z.string().optional().pipe(transformSplitMaybeString),
     DISCORD_ARTWORK_DEFAULT_URL: discordDataSchema.shape.artworkDefaultUrl,
     DISCORD_STATUS_OVERRIDE_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(discordDataSchema.shape.statusOverrideAllow.meta()),
-    DISCORD_LISTENING_ACTIVITY_ALLOW: discordDataSchema.shape.listeningActivityAllow,
+    DISCORD_LISTENING_ACTIVITY_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(discordDataSchema.shape.listeningActivityAllow.meta()),
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, DiscordClientConfig> = {
@@ -86,7 +103,7 @@ export const discordStrongDataSchema = discordDataSchema.extend({
     artwork: z.union([z.boolean(), z.array(z.string())]).optional(),
     statusOverrideAllow: z.array(statusTypeSchema).optional(),
     listeningActivityAllow: z.array(z.string()).optional(),
-    ipcLocations: z.array(z.union([z.string(), ipcLocationTupleSchema])).optional()
+    //ipcLocations: z.array(z.union([z.string(), z.tuple([z.number(),z.string()])])).optional()
 });
 
 export type DiscordStrongData = z.infer<typeof discordStrongDataSchema>;
@@ -102,7 +119,7 @@ export const discordIPCDataSchema = discordStrongDataSchema.extend({
     //ipcLocations: (string | [number, string])[]
 });
 
-export type DiscordIPCData = z.infer<typeof discordIPCDataSchema>;
+export type DiscordIPCData = Omit<z.infer<typeof discordIPCDataSchema>, 'ipcLocations'> & {ipcLocations: (string | [number, string])[]};
 
 export interface ActivityAssets {
     largeImage?: string

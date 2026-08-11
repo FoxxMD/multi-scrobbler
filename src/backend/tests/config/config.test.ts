@@ -19,7 +19,6 @@ import { prettifyError, ZodError } from 'zod';
 import { getClientEnvSchema, validateClientJson } from '../../common/infrastructure/config/client/clientsMap.ts';
 import type { MSBackendEventMap } from '../../common/infrastructure/MSBackendEventMap.ts';
 import { zocker } from "zocker";
-import pEvent from 'p-event';
 import { generateCommonComponentEnvConfigSchema } from '../../common/infrastructure/config/common.ts';
 import { serializeError } from 'serialize-error';
 
@@ -113,7 +112,7 @@ describe('Sample Configs', function () {
                 });
 
                 it(`Sample ${componentType} ENV parses and validates in ScrobbleSources`, async function () {
-                    this.timeout(500000);
+                    this.timeout(5000);
 
                     const emitter = new WildcardEmitter<MSBackendEventMap>();
                     
@@ -202,7 +201,7 @@ describe('Sample Configs', function () {
                 });
 
                 it(`Sample ${componentType}.json parses and validates in ScrobbleClients`, async function () {
-                    this.timeout(500000);
+                    this.timeout(5000);
 
                     const emitter = new WildcardEmitter<MSBackendEventMap>();
                     await copyFile(samplePath(componentType), `${componentType}.json`);
@@ -229,7 +228,8 @@ describe('Sample Configs', function () {
                             zocObj = zocObj.supply(envSchema.env.shape.ROCKSKY_TOKEN, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaWQ')
                             break;
                         case 'discord':
-                            zocObj = zocObj.supply(envSchema.env.shape.DISCORD_STATUS_OVERRIDE_ALLOW, 'online')
+                            zocObj = zocObj.supply(envSchema.env.shape.DISCORD_STATUS_OVERRIDE_ALLOW, 'online');
+                            zocObj = zocObj.supply(envSchema.env.shape.DISCORD_IPC_LOCATIONS, '/path/to/ipc,192.168.0.100:8999')
                     }
                     const componentMockData = zocObj.generate();
                     const primitives = generateCommonComponentEnvConfigSchema(envSchema.prefix.toLocaleUpperCase());

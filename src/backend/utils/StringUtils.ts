@@ -415,9 +415,9 @@ interface ArrParseOpts {
     lower?: boolean
 }
 
-export const parseArrayFromMaybeString = (value: string | string[] = '', opts: ArrParseOpts = {}) => {
+export const parseArrayFromMaybeString = (value: string | string[] = '', opts: ArrParseOpts = {}): string[] => {
     const {lower = false} = opts;
-    let arr: string[] = [];
+    let arr: string[];
     if (Array.isArray(value)) {
         arr = value;
     } else if (value.trim() === '') {
