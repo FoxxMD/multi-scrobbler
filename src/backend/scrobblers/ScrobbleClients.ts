@@ -102,6 +102,8 @@ export default class ScrobbleClients {
 
     buildClientsFromConfig = async () => {
         const unparsedConfigs: UnparsedClientConfig[] = [];
+        this.configErrors = [];
+        this.instantiateErrors = [];
 
         let configFile;
         try {
