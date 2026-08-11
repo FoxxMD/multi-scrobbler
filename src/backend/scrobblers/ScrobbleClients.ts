@@ -188,7 +188,7 @@ export default class ScrobbleClients {
             const envSchema = await getClientEnvSchema(clientType);
             const configTypeUpper = envSchema.prefix.toUpperCase();
 
-            const clientKeys = envKeys.filter(x => x.startsWith(configTypeUpper));
+            const clientKeys = envKeys.filter(x => x.startsWith(`${configTypeUpper}_`));
             if (clientKeys.length > 0) {
                 clientUnparsedConfigs.push({
                     config: pick(process.env, ...clientKeys),
