@@ -125,6 +125,13 @@ describe('Sample Configs', function () {
                         case 'rocksky':
                             zocObj = zocObj.supply(envSchema.env.shape.SOURCE_ROCKSKY_HANDLE, 'foxxmd.dev')
                             break;
+                        case 'applemusic':
+                            delete zocObj.schema.shape.APPLEMUSIC_KEY_ID;
+                            delete zocObj.schema.shape.APPLEMUSIC_TEAM_ID;
+                            delete zocObj.schema.shape.APPLEMUSIC_KEY_P8
+                            zocObj = zocObj.supply(envSchema.env.shape.APPLEMUSIC_MEDIA_USER_TOKEN, '1234')
+                            .supply(envSchema.env.shape.APPLEMUSIC_TOKEN, '5678')
+                            .supply(envSchema.env.shape.APPLEMUSIC_ORIGIN_HEADER, 'https://apple.music.com');
                     }
                     const componentMockData = zocObj.generate();
                     const primitives = generateCommonComponentEnvConfigSchema(envSchema.prefix.toLocaleUpperCase());
