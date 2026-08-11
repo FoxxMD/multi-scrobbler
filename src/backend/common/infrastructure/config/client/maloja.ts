@@ -2,6 +2,7 @@ import * as z from "zod";
 import {componentTypeSchema} from "../../../../../core/Atomic.ts";
 import {requestRetryOptionsSchema} from "../common.ts";
 import {commonClientConfigSchema, commonClientDataSchema, type EnvClientSchema} from "./index.ts";
+import { httpUrl } from "../../../../utils/ZodUtils.ts";
 
 export const malojaDataSchema = z.object({
     ...requestRetryOptionsSchema.shape,
@@ -10,9 +11,7 @@ export const malojaDataSchema = z.object({
      *
      * @examples ["http://localhost:42010"]
      * */
-    url: z.url({
-        protocol: /^https?$/,
-    }).meta({
+    url: httpUrl.meta({
         description: "URL for maloja server",
         examples: ["http://localhost:42010"]
     }),

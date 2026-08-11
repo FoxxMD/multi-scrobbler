@@ -1,5 +1,6 @@
 import * as z from "zod";
 import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
+import { wsUrl } from "../../../../utils/ZodUtils.ts";
 
 export const PLAYBACK_STATUS_PLAYING_MC = 'playing';
 export const PLAYBACK_STATUS_PAUSED_MC = 'paused';
@@ -96,9 +97,7 @@ export const musikcubeDataSchema = z.object({
      * @examples ["ws://localhost:7905"]
      * @default "ws://localhost:7905"
      * */
-    url: z.url({
-        protocol: /^wss?$/,
-    }).optional().meta({
+    url: wsUrl.optional().meta({
         description: "URL of the Musikcube Websocket (Metadata) server to connect to",
         default: "ws://localhost:7905",
         examples: ["ws://localhost:7905"]

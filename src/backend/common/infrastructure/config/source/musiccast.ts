@@ -2,6 +2,7 @@ import * as z from "zod";
 import { REPORTED_PLAYER_STATUSES } from '../../../../../core/Atomic.ts';
 import type {ReportedPlayerStatus} from '../../../../../core/Atomic.ts';
 import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
+import { httpUrl } from "../../../../utils/ZodUtils.ts";
 
 export type PlaybackStatus = 'play' | 'stop' | 'pause' | 'fast_reverse' | 'fast_forward'
 
@@ -79,9 +80,7 @@ export const musicCastDataSchema = z.object({
      * @examples [["192.168.0.101","http://192.168.0.101/YamahaExtendedControl"]]
      * */
     url: z.union([
-        z.url({
-            protocol: /^https?$/,
-        }),
+        httpUrl,
         z.ipv4()
     ]).meta({
         description: "The host or URL of the YamahaExtendedControl endpoint to use",

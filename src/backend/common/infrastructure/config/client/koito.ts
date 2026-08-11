@@ -3,6 +3,7 @@ import type {UnixTimestamp} from "../../../../../core/Atomic.ts";
 import {componentTypeSchema} from "../../../../../core/Atomic.ts";
 import {requestRetryOptionsSchema} from "../common.ts";
 import {commonClientConfigSchema, commonClientDataSchema, type EnvClientSchema} from "./index.ts";
+import { httpUrl } from "../../../../utils/ZodUtils.ts";
 
 export interface ListensResponse {
     items: ListenObjectResponse[]
@@ -54,9 +55,7 @@ export const koitoDataSchema = z.object({
      *
      * @examples ["http://192.168.0.100:4110"]
      * */
-    url: z.url({
-        protocol: /^https?$/,
-    }).meta({
+    url: httpUrl.meta({
         description: "URL for the Koito server",
         examples: ["http://192.168.0.100:4110"]
     }),

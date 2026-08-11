@@ -1,6 +1,7 @@
 import * as z from "zod";
 import {pollingOptionsSchema, requestRetryOptionsSchema} from "../common.ts";
 import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
+import { httpUrl } from "../../../../utils/ZodUtils.ts";
 
 export const jRiverDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -25,9 +26,7 @@ export const jRiverDataSchema = z.object({
      * @default "http://localhost:52199/MCWS/v1/"
      * */
     url: z.union([
-        z.url({
-            protocol: /^https?$/,
-        }),
+        httpUrl,
         z.ipv4()
         ]).meta({
         description: "URL of the JRiver HTTP server to connect to",

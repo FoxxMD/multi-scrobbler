@@ -228,7 +228,7 @@ describe('Sample Configs', function () {
                     const emitter = new WildcardEmitter<MSBackendEventMap>();
                     
                     const envSchema = await getClientEnvSchema(componentType);
-                                        let zocObj = zocker(envSchema.env);
+                    let zocObj = zocker(envSchema.env);
                     switch(componentType) {
                         case 'rocksky':
                             zocObj = zocObj.supply(envSchema.env.shape.ROCKSKY_HANDLE, 'foxxmd.dev')

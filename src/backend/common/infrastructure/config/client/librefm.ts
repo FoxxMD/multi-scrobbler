@@ -2,6 +2,7 @@ import * as z from "zod";
 import {requestRetryOptionsSchema} from "../common.ts";
 import {commonClientConfigSchema, commonClientDataSchema, type EnvClientSchema} from "./index.ts";
 import {lastfmClientOptionsSchema} from "./lastfm.ts";
+import { httpUrl } from "../../../../utils/ZodUtils.ts";
 
 export const librefmDataSchema = z.object({
     ...commonClientDataSchema.shape,
@@ -43,9 +44,7 @@ export const librefmDataSchema = z.object({
      *
      * @default 'https://libre.fm/2.0/'
     */
-    urlBase: z.url({
-        protocol: /^https?$/,
-    }).optional().meta({
+    urlBase: httpUrl.optional().meta({
         description: "(Optional) The host and path prefix for your Libre.fm instance",
         default: "https://libre.fm/2.0/"
     }),

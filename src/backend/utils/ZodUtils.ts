@@ -1,5 +1,6 @@
 import z from 'zod';
 import { commaSeparatedListReplace, parseArrayFromMaybeString, parseBoolOrArrayFromMaybeString } from './StringUtils.ts';
+import { normalizeWebAddress, normalizeWSAddress } from './NetworkUtils.ts';
 
 export interface TableColumn {
     title: string
@@ -103,3 +104,18 @@ export const envMetaNormalize = (meta: z.GlobalMeta): z.GlobalMeta => {
         }
     }
 }
+
+// export const normalizedUrl = (opts?: z.core.$ZodURLParams) => z.stringFormat('uri', (str) => {
+//     return true;
+//     //const res = normalizeWebAddress(str).url.toString()
+//     //return res;
+
+// }).pipe(z.transform((val: string) => normalizeWebAddress(val).url.toString())).pipe(z.url());
+
+export const normalizedUrl = (opts?: z.core.$ZodURLParams) => z.string().pipe(z.transform((val: string) => normalizeWebAddress(val).url.toString())).pipe(z.url(opts));
+
+export const normalizedWsUrl = (opts?: z.core.$ZodURLParams) => z.string().pipe(z.transform((val: string) => normalizeWSAddress(val).url.toString())).pipe(z.url(opts));
+
+export const httpUrl = normalizedUrl({protocol: /^https?$/});
+
+export const wsUrl = normalizedWsUrl({protocol: /^wss?|https?$/});

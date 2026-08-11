@@ -1,6 +1,7 @@
 import * as z from "zod";
 import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, manualListeningOptionsSchema, type EnvSourceSchema} from "./index.ts";
 import { parseBoolStrict } from "../../../../utils.ts";
+import { wsUrl } from "../../../../utils/ZodUtils.ts";
 
 export const azuraStationInfoResponseSchema = z.object({
     id: z.string(),
@@ -71,9 +72,7 @@ export const azuracastDataSchema = z.object({
      *
      * @examples ["https://radio.mydomain.tld", "http://localhost:80"]
      * */
-    url: z.url({
-        protocol: /^https?|wss?$/,
-    }).meta({
+    url: wsUrl.meta({
         description: "Base URL of the Azuracast instance",
         examples: ["https://radio.mydomain.tld", "http://localhost:80"]
     }),

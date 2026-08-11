@@ -2,6 +2,7 @@ import * as z from "zod";
 import {componentTypeSchema} from "../../../../../core/Atomic.ts";
 import {requestRetryOptionsSchema} from "../common.ts";
 import {commonClientConfigSchema, commonClientDataSchema, type EnvClientSchema} from "./index.ts";
+import { httpUrl } from "../../../../utils/ZodUtils.ts";
 
 export const listenBrainzDataSchema = z.object({
     ...requestRetryOptionsSchema.shape,
@@ -11,9 +12,7 @@ export const listenBrainzDataSchema = z.object({
      * @examples ["https://api.listenbrainz.org/"]
      * @default "https://api.listenbrainz.org/"
      * */
-    url: z.url({
-        protocol: /^https?$/,
-    }).optional().meta({
+    url: httpUrl.optional().meta({
         description: "URL for the ListenBrainz server, if not using the default",
         default: "https://api.listenbrainz.org/",
         examples: ["https://api.listenbrainz.org/"]
