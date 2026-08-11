@@ -5,4 +5,4 @@
 | `ROCKSKY_ENABLE`       | boolean | true                  | Should this component be used?                                                                                                                   |
 | `ROCKSKY_KEY`          | string  |                       | API Key generated from [API Applications](https://docs.rocksky.app/migrating-from-listenbrainz-to-rocksky-1040189m0) in Rocksky for your account |
 | `ROCKSKY_TOKEN`        | string  |                       | Access Token generated from https://rocksky.app/access-tokens in Rocksky for your account                                                        |
-| _**`ROCKSKY_HANDLE`**_ | string  |                       | The **fully-qualified** handle for your ATPRoto/Bluesky account, like:                                                                           |
+| _**`ROCKSKY_HANDLE`**_ | string  |                       | The **fully-qualified** handle for your ATPRoto/Bluesky account                                                                                  |

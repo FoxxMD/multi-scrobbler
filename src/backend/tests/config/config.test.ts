@@ -118,7 +118,16 @@ describe('Sample Configs', function () {
                     const emitter = new WildcardEmitter<MSBackendEventMap>();
                     
                     const envSchema = await getSourceEnvSchema(componentType);
-                    const componentMockData = zocker(envSchema.env).generate();
+                    let zocObj = zocker(envSchema.env);
+                    switch(componentType) {
+                        case 'azuracast':
+                            zocObj = zocObj.supply(envSchema.env.shape.AZURA_LISTENERS_NUM, true)
+                            break;
+                        case 'rocksky':
+                            zocObj = zocObj.supply(envSchema.env.shape.SOURCE_ROCKSKY_HANDLE, 'foxxmd.dev')
+                            break;
+                    }
+                    const componentMockData = zocObj.generate();
                     const primitives = generateCommonComponentEnvConfigSchema(envSchema.prefix.toLocaleUpperCase());
                     const primitiveMockData = zocker(primitives).generate();
                     primitiveMockData[`${envSchema.prefix.toLocaleUpperCase()}_ENABLE`] = true;
@@ -213,7 +222,16 @@ describe('Sample Configs', function () {
                     const emitter = new WildcardEmitter<MSBackendEventMap>();
                     
                     const envSchema = await getClientEnvSchema(componentType);
-                    const componentMockData = zocker(envSchema.env).generate();
+                                        let zocObj = zocker(envSchema.env);
+                    switch(componentType) {
+                        case 'rocksky':
+                            zocObj = zocObj.supply(envSchema.env.shape.ROCKSKY_HANDLE, 'foxxmd.dev')
+                            zocObj = zocObj.supply(envSchema.env.shape.ROCKSKY_TOKEN, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaWQ')
+                            break;
+                        case 'discord':
+                            zocObj = zocObj.supply(envSchema.env.shape.DISCORD_STATUS_OVERRIDE_ALLOW, 'online')
+                    }
+                    const componentMockData = zocObj.generate();
                     const primitives = generateCommonComponentEnvConfigSchema(envSchema.prefix.toLocaleUpperCase());
                     const primitiveMockData = zocker(primitives).generate();
                     primitiveMockData[`${envSchema.prefix.toLocaleUpperCase()}_ENABLE`] = true;

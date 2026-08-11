@@ -21,10 +21,14 @@ import {
 import assert from "node:assert";
 import { isPortReachableConnect, normalizeWebAddress } from "../../../utils/NetworkUtils.ts";
 import { isNodeNetworkException } from "../../errors/NodeErrors.ts";
+import * as z from 'zod';
 
 export const HANDLE_REGEX = new RegExp(/.+\..+/);
+export const HandleZodType = z.stringFormat('atproto-handle', HANDLE_REGEX)
 export const ATSIGN_REGEX = new RegExp(/^@(.+)/);
+export const AtSignZodType = z.stringFormat('atproto-atsign-handle', ATSIGN_REGEX);
 export const DID_REGEX = new RegExp(/did:(?:plc|web):.+/);
+export const DidZodType = z.stringFormat('did', DID_REGEX);
 
 export interface HandleOptions {
     logger?: Logger

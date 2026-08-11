@@ -8,5 +8,5 @@
 | `DISCORD_APPLICATION_ID`           | string                     |                       |                                         |
 | `DISCORD_IPC_LOCATIONS`            | string OR array            |                       |                                         |
 | `DISCORD_ARTWORK_DEFAULT_URL`      | string                     |                       |                                         |
-| `DISCORD_STATUS_OVERRIDE_ALLOW`    | string OR array            |                       |                                         |
+| `DISCORD_STATUS_OVERRIDE_ALLOW`    | string                     |                       |                                         |
 | `DISCORD_LISTENING_ACTIVITY_ALLOW` | string OR array            |                       |                                         |

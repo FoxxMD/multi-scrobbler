@@ -34,7 +34,7 @@ export const rockSkyDataSchema = z.object({
      *
      * */
     handle: z.string().meta({
-        description: "The **fully-qualified** handle for your ATPRoto/Bluesky account, like:"
+        description: "The **fully-qualified** handle for your ATPRoto/Bluesky account"
     }),
 });
 

@@ -1,6 +1,7 @@
 import * as z from "zod";
 import {commonClientConfigSchema, commonClientDataSchema, type EnvClientSchema} from "./index.ts";
 import {componentTypeSchema} from "../../../../../core/Atomic.ts";
+import { transformSplitMaybeString } from "../../../../utils/ZodUtils.ts";
 
 export const statusTypeSchema = z.union([z.literal("online"), z.literal("idle"), z.literal("dnd"), z.literal("invisible")]);
 
@@ -26,7 +27,7 @@ const envDataSchema = z.object({
     DISCORD_APPLICATION_ID: discordDataSchema.shape.applicationId,
     DISCORD_IPC_LOCATIONS: discordDataSchema.shape.ipcLocations,
     DISCORD_ARTWORK_DEFAULT_URL: discordDataSchema.shape.artworkDefaultUrl,
-    DISCORD_STATUS_OVERRIDE_ALLOW: statusTypeSchema.optional(),
+    DISCORD_STATUS_OVERRIDE_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(discordDataSchema.shape.statusOverrideAllow.meta()),
     DISCORD_LISTENING_ACTIVITY_ALLOW: discordDataSchema.shape.listeningActivityAllow,
 });
 
@@ -40,7 +41,7 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, DiscordClientConf
                 applicationId: partial.DISCORD_APPLICATION_ID,
                 ipcLocations: partial.DISCORD_IPC_LOCATIONS,
                 artworkDefaultUrl: partial.DISCORD_ARTWORK_DEFAULT_URL,
-                statusOverrideAllow: partial.DISCORD_STATUS_OVERRIDE_ALLOW,
+                statusOverrideAllow: partial.DISCORD_STATUS_OVERRIDE_ALLOW as StatusType[],
                 listeningActivityAllow: partial.DISCORD_LISTENING_ACTIVITY_ALLOW
             }
     })
