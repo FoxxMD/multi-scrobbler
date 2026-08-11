@@ -557,10 +557,12 @@ Remember, this URL need to be accessible on the public internet.
 ## Configuration
 
 <Config config="DiscordClientConfig" fileContent={JsonConfig} client name="discord">
-        | Environmental Variable        | Required? | Default | Description                                                                                                      |
-        | :---------------------------- | --------- | ------- | :--------------------------------------------------------------------------------------------------------------- |
-        | `DISCORD_APPLICATION_ID`      | Yes       |         | Application ID                                                                                                   |
-        | `DISCORD_IPC_LOCATIONS`       | No        |         | A commera-separated list of `host:port` network locations or file paths to unix socket for Discord               |
-        | `DISCORD_ARTWORK`             | No        |         | A boolean indicating if external artwork URLs should be used. Or a comma-separated list of allowed domains       |
-        | `DISCORD_ARTWORK_DEFAULT_URL` | No        |         | A URL of an image to use as a fallback if the album art URL cannot be used. Or `false` to use discord's default. |
+        | Environmental Variable         | Type              | Default               | Description                                                                                                      |
+        | :----------------------------- | ----------------- | --------------------- | :--------------------------------------------------------------------------------------------------------------- |
+        | _**`DISCORD_ID`**_             | string            |                       | A globally unique ID EX `myComponentId`                                                                          |
+        | `DISCORD_NAME`                 | string            | Value of `DISCORD_ID` | A vanity name EX `My Cool Component`                                                                             |
+        | _**`DISCORD_APPLICATION_ID`**_ | string            |                       | Application ID                                                                                                   |
+        | `DISCORD_IPC_LOCATIONS`        | string            |                       | A commera-separated list of `host:port` network locations or file paths to unix socket for Discord               |
+        | `DISCORD_ARTWORK`              | boolean           |                       | A boolean indicating if external artwork URLs should be used. Or a comma-separated list of allowed domains       |
+        | `DISCORD_ARTWORK_DEFAULT_URL`  | string or boolean |                       | A URL of an image to use as a fallback if the album art URL cannot be used. Or `false` to use discord's default. |
 </Config>

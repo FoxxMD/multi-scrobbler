@@ -323,12 +323,14 @@ The order in which multi-scrobbler determines what image to use is the same as t
 ## Configuration
 
 <Config config="DiscordClientConfig" fileContent={JsonConfig} client name="discord">
-        | Environmental Variable             | Required? | Default           | Description                                                                                                       |
-        | :--------------------------------- | --------- | ----------------- | :---------------------------------------------------------------------------------------------------------------- |
-        | `DISCORD_TOKEN`                    | Yes       |                   | User Token acquired from an active Discord sessions                                                               |
-        | `DISCORD_APPLICATION_ID`           | No        |                   | Application ID used to display album art                                                                          |
-        | `DISCORD_ARTWORK`                  | No        |                   | A boolean indicating if external artwork URLs should be used. Or a comma-separated list of allowed domains        |
-        | `DISCORD_ARTWORK_DEFAULT_URL`      | No        |                   | A URL of an image to use as a fallback if the album art URL cannot be used. Or `false` to use discord's default.  |
-        | `DISCORD_STATUS_OVERRIDE_ALLOW`    | No        | `online,idle,dnd` | A comma-separated list of statuses are allowed to have presence.                                                  |
-        | `DISCORD_LISTENING_ACTIVITY_ALLOW` | No        |                   | A commera-seperated list of listening activity names MS **is allowed** to broadcast presence at the same time as. |
+        | Environmental Variable             | Type              | Default               | Description                                                                                                       |
+        | :--------------------------------- | ----------------- | --------------------- | :---------------------------------------------------------------------------------------------------------------- |
+        | _**`DISCORD_ID`**_                 | string            |                       | A globally unique ID EX `myComponentId`                                                                           |
+        | `DISCORD_NAME`                     | string            | Value of `DISCORD_ID` | A vanity name EX `My Cool Component`                                                                              |
+        | _**`DISCORD_TOKEN`**_              | string            |                       | User Token acquired from an active Discord sessions                                                               |
+        | `DISCORD_APPLICATION_ID`           | string            |                       | Application ID used to display album art                                                                          |
+        | `DISCORD_ARTWORK`                  | boolean           |                       | A boolean indicating if external artwork URLs should be used. Or a comma-separated list of allowed domains        |
+        | `DISCORD_ARTWORK_DEFAULT_URL`      | string or boolean |                       | A URL of an image to use as a fallback if the album art URL cannot be used. Or `false` to use discord's default.  |
+        | `DISCORD_STATUS_OVERRIDE_ALLOW`    | string            | `online,idle,dnd`     | A comma-separated list of statuses are allowed to have presence.                                                  |
+        | `DISCORD_LISTENING_ACTIVITY_ALLOW` | string            |                       | A commera-seperated list of listening activity names MS **is allowed** to broadcast presence at the same time as. |
 </Config>
