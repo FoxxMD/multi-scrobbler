@@ -5,6 +5,7 @@ import { useColorMode } from '@docusaurus/theme-common';
 const STRINGIFY_JSON = (json: unknown) => JSON.stringify(json, null, "\t");
 import "../modern-json-react-styles.css";
 import { JSONSchema, Mode, ReactJsonEditor, createAjvValidator, type Content, type Validator } from 'modern-react-json-editor';
+import Ajv2020 from 'ajv/dist/2020';
 import f from "ajv-formats"
 import json5 from 'json5';
 
@@ -29,9 +30,10 @@ function SchemaEditorInner(props: SchemaEditorProps): JSX.Element {
                 allowUnionTypes: true,
             },
             onCreateAjv: (ajv) => {
-                ajv.addKeyword('deprecationMessage');
-                f.default(ajv);
-                return ajv;
+                const a = new Ajv2020();
+                a.addKeyword('deprecationMessage');
+                f.default(a);
+                return a;
             }
         });
     }, [props.schema]);

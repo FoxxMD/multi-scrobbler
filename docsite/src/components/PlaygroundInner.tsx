@@ -11,6 +11,7 @@ import "./json-schema-viewer-styles.css";
 import "./modern-json-react-styles.css";
 import { Mode, ReactJsonEditor, createAjvValidator, type Content  } from 'modern-react-json-editor';
 import f from "ajv-formats"
+import Ajv2020 from 'ajv/dist/2020';
 import DetailsAdmo from "./AdmonitionDetails";
 
 const validator = createAjvValidator({
@@ -21,9 +22,10 @@ const validator = createAjvValidator({
         allowUnionTypes: true,
      },
     onCreateAjv: (ajv) => {
-            ajv.addKeyword('deprecationMessage');
-            f.default(ajv);
-            return ajv;
+            const a = new Ajv2020();
+            a.addKeyword('deprecationMessage');
+            f.default(a);
+            return a;
     }
 });
 

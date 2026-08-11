@@ -26,7 +26,7 @@ const mdCols =  (cols: TableColumn[]): string[][] => cols.map((x) => {
 const generateSchema = (schema: z.ZodType, reused: z.core.ToJSONSchemaParams['reused'] = 'inline') => z.toJSONSchema(schema, { 
     io: "input",
     reused,
-    target: "draft-07",
+    target: "draft-2020-12",
     unrepresentable: "any",
     override: (ctx) => {
         if(ctx.jsonSchema.anyOf !== undefined && Array.isArray(ctx.jsonSchema.anyOf)) {
