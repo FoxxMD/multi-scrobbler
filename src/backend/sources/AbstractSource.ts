@@ -423,7 +423,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
         if(newDiscoveredPlays.length > 0) {
             newDiscoveredPlays.sort(sortByOldestPlayDate);
-            this.emitter.emit('discoveredToScrobble', {
+            this.emitEvent('discoveredToScrobble', {
                 data: await pMap(newDiscoveredPlays, this.staggerMappers.postCompare(async (x) =>  await this.transformPlay(x, TRANSFORM_HOOK.postCompare)), {concurrency: 3}),
                 options: {
                     ...options,

@@ -1,6 +1,6 @@
 import type { Dayjs } from "dayjs";
 import type { AdditionalTrackInfoResponse } from "./vendor/listenbrainz/interfaces.ts";
-import type { Merge, RequiredKeys, StrictOmit } from "ts-essentials";
+import type { MarkRequired, Merge, RequiredKeys, StrictOmit } from "ts-essentials";
 import type {ErrorObject} from "serialize-error";
 import type { FlowControlTerm, TransformHook } from "./Transform.ts";
 import type {Changeset} from "json-diff-ts";
@@ -807,3 +807,11 @@ export const NO_DEVICE = 'NoDevice';export const NO_USER = 'SingleUser';
 export const SINGLE_USER_PLATFORM_ID: PlayPlatformId = [NO_DEVICE, NO_USER];
 export const SINGLE_USER_PLATFORM_ID_STR = `${NO_DEVICE}-${NO_USER}`;
 
+export type EmittedMSEvent<T = Record<string, any>, K = Record<string, any>,Y = ClientType | SourceType> = {
+    type: Y
+    name: string
+    componentId?: number
+    from: ComponentType
+    data: T
+    options?: K
+}

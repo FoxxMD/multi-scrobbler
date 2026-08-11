@@ -18,6 +18,7 @@ import { prettifyError, ZodError } from 'zod';
 import { commonComponentEnvConfigToConfigPrimitives, generateCommonComponentEnvConfigSchema, generateConfigLocation, transformPresetEnv, type CommonConfigPrimitives, type UnparsedConfig } from '../common/infrastructure/config/common.ts';
 import type { CommonClientConfig } from '../common/infrastructure/config/client/index.ts';
 import { getClientEnvSchema, validateClientAIOJson, validateClientJson, type ClientTypeConfigMap } from '../common/infrastructure/config/client/clientsMap.ts';
+import type { MSBackendEventMap } from '../common/infrastructure/MSBackendEventMap.ts';
 
 type UnparsedClientConfig = UnparsedConfig<ClientType>;
 
@@ -37,13 +38,13 @@ export default class ScrobbleClients {
 
     internalConfig: InternalConfig;
 
-    emitter: WildcardEmitter;
+    emitter: WildcardEmitter<MSBackendEventMap>;
 
-    sourceEmitter: WildcardEmitter;
+    sourceEmitter: WildcardEmitter<MSBackendEventMap>;
 
     scrobbleToNamesWarnings: string[] = [];
 
-    constructor(emitter: WildcardEmitter, sourceEmitter: WildcardEmitter, internal: InternalConfigOptional, parentLogger: Logger) {
+    constructor(emitter: WildcardEmitter<MSBackendEventMap>, sourceEmitter: WildcardEmitter<MSBackendEventMap>, internal: InternalConfigOptional, parentLogger: Logger) {
         this.emitter = emitter;
         this.sourceEmitter = sourceEmitter;
         this.logger = childLogger(parentLogger, 'Scrobblers'); // winston.loggers.get('app').child({labels: ['Scrobblers']}, mergeArr);
@@ -52,14 +53,14 @@ export default class ScrobbleClients {
             logger: this.logger
         }
 
-        this.sourceEmitter.on('playerUpdate', async (payload: { data: SourcePlayerObj & { options: { scrobbleTo: string[] } }} & SourceIdentifier) => {
+        this.sourceEmitter.on('playerUpdate', async (payload) => {
             // agressively update Now Playing so scrobblers that display based on duration are mostly synced
             // but aggressively *stop* updating if state becomes stale/orphaned
             this.playingNow(payload.data, {...payload.data.options, scrobbleFrom: { type: payload.type, name: payload.name}});
         });
 
-        this.sourceEmitter.on('discoveredToScrobble', async (payload: { data: (PlayObject | PlayObject[]), options: { forceRefresh?: boolean, checkTime?: Dayjs, scrobbleTo?: string[], scrobbleFrom?: string } }) => {
-            await this.scrobble(payload.data, payload.options);
+        this.sourceEmitter.on('discoveredToScrobble', async (payload) => {
+            await this.scrobble(payload.data.data, payload.data.options);
         });
     }
 

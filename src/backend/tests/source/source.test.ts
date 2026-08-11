@@ -21,11 +21,13 @@ import DeezerInternalSource from "../../sources/DeezerInternalSource.ts";
 import type {DeezerInternalSourceOptions} from "../../common/infrastructure/config/source/deezer.ts";
 import { artistCreditsToNames } from "../../../core/StringUtils.ts";
 import type { MarkOptional } from "ts-essentials";
+import { WildcardEmitter } from "../../common/WildcardEmitter.ts";
+import type { MSBackendEventMap } from "../../common/infrastructure/MSBackendEventMap.ts";
 
 chai.use(asPromised);
 
 
-const emitter = new EventEmitter();
+const emitter = new WildcardEmitter<MSBackendEventMap>();
 const generateSource = async () => {
     const source = new TestSource('spotify', 'test-basic', {id: `test-${Date.now()}`}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
     await source.initialize();
@@ -96,11 +98,12 @@ describe('Sources use transform plays correctly', function () {
         expect(discovered.length).eq(1);
         expect(discovered[0].data.track).is.eq('my cool track');
 
-        const pAwaiter =  pEvent(source.emitter, 'discoveredToScrobble') as Promise<{data: [PlayObject] }>;
+        const pAwaiter =  pEvent(source.emitter, 'discoveredToScrobble') as Promise<MSBackendEventMap['discoveredToScrobble'][0]>;
         source.handle(discovered);
         const e = await pAwaiter;
-        expect(e.data.length).is.eq(1);
-        expect(e.data[0].data.track).is.eq('my fun track');
+        const res: PlayObject[] = !Array.isArray(e.data.data) ? [e.data.data] : e.data.data;
+        expect(res.length).is.eq(1);
+        expect(res[0].data.track).is.eq('my fun track');
     });
 
     it('Transforms play existing comparison', async function() {

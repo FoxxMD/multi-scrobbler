@@ -7,6 +7,7 @@ import path from "path";
 import ScrobbleClients from '../../scrobblers/ScrobbleClients.ts';
 import ScrobbleSources from '../../sources/ScrobbleSources.ts';
 import EventEmitter from "events";
+import { WildcardEmitter } from '../../common/WildcardEmitter.ts';
 import {loggerTest} from '@foxxmd/logging';
 import { clientTypes } from "../../../core/Atomic.ts";
 import { projectRootDir } from "../../common/infrastructure/Atomic.ts";
@@ -16,6 +17,7 @@ import { validateSourceJson } from '../../common/infrastructure/config/source/so
 import { readJson } from '../../utils/DataUtils.ts';
 import { prettifyError, ZodError } from 'zod';
 import { validateClientJson } from '../../common/infrastructure/config/client/clientsMap.ts';
+import type { MSBackendEventMap } from '../../common/infrastructure/MSBackendEventMap.ts';
 
 chai.use(asPromised);
 
@@ -61,7 +63,6 @@ describe('Sample Configs', function () {
                 it(`Sample ${componentType}.json parses and validates in isolation`, async function () {
                     this.timeout(5000);
 
-                    const emitter = new EventEmitter();
                     await copyFile(samplePath(componentType), `${componentType}.json`);
 
                     let fileContents = await readJson(`${componentType}.json`);
@@ -82,7 +83,7 @@ describe('Sample Configs', function () {
                 it(`Sample ${componentType}.json parses and validates in ScrobbleSources`, async function () {
                     this.timeout(5000);
 
-                    const emitter = new EventEmitter();
+                    const emitter = new WildcardEmitter<MSBackendEventMap>();
                     await copyFile(samplePath(componentType), `${componentType}.json`);
                     const sources = new ScrobbleSources(emitter, {
                         localUrl: new URL('http://example.com'),
@@ -136,9 +137,9 @@ describe('Sample Configs', function () {
                 it(`Sample ${componentType}.json parses and validates in ScrobbleClients`, async function () {
                     this.timeout(500000);
 
-                    const emitter = new EventEmitter();
+                    const emitter = new WildcardEmitter<MSBackendEventMap>();
                     await copyFile(samplePath(componentType), `${componentType}.json`);
-                    const clients = new ScrobbleClients(emitter, new EventEmitter, {
+                    const clients = new ScrobbleClients(emitter, new WildcardEmitter<MSBackendEventMap>, {
                         localUrl: new URL('http://example.com'),
                         configDir: process.cwd(),
                         version: 'test'
@@ -172,7 +173,7 @@ describe('Global ENVs with Config', function () {
         process.env.MPRIS_ID = 'test';
         process.env.MPRIS_ENABLE = 'true';
 
-        const emitter = new EventEmitter();
+        const emitter = new WildcardEmitter<MSBackendEventMap>();
         const sources = new ScrobbleSources(emitter, {
             localUrl: new URL('http://example.com'),
             configDir: process.cwd(),
@@ -189,7 +190,7 @@ describe('Global ENVs with Config', function () {
         process.env.MPRIS_ID = 'test';
         process.env.MPRIS_ENABLE = 'true';
 
-        const emitter = new EventEmitter();
+        const emitter = new WildcardEmitter<MSBackendEventMap>();
         const sources = new ScrobbleSources(emitter, {
             localUrl: new URL('http://example.com'),
             configDir: process.cwd(),
