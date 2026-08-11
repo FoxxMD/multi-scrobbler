@@ -17,4 +17,6 @@ export interface MSBackendEventMap extends Omit<MSCoreEvents, 'playerUpdate'> {
         }
     }>]
     playerUpdate: [EmittedMSEvent<SourcePlayerObj<Dayjs> & { options: { scrobbleTo: string[] } },{},SourceType>]
+    configError: [Error | string]
+    instantiateError: [Error]
 }

@@ -44,6 +44,9 @@ export default class ScrobbleClients {
 
     scrobbleToNamesWarnings: string[] = [];
 
+    configErrors: (string | Error)[] = [];
+    instantiateErrors: Error[] = [];
+
     constructor(emitter: WildcardEmitter<MSBackendEventMap>, sourceEmitter: WildcardEmitter<MSBackendEventMap>, internal: InternalConfigOptional, parentLogger: Logger) {
         this.emitter = emitter;
         this.sourceEmitter = sourceEmitter;
@@ -252,9 +255,15 @@ export default class ScrobbleClients {
                 } catch (e) {
                     const msg = `Failed to validate ${generateConfigLocation('client', entry)}`;
                     if (e instanceof ZodError) {
+                        const prettyError = `${msg}:\n${prettifyError(e)}`
                         this.logger.error(`${msg}:\n${prettifyError(e)}`);
+                        this.emitter.emit('configError', prettyError);
+                        this.configErrors.push(prettyError);
                     } else {
+                        const err = new Error(msg, { cause: e });
                         this.logger.error(new Error(msg, { cause: e }));
+                        this.emitter.emit('configError', err);
+                        this.configErrors.push(err);
                     }
                     continue;
                 }
@@ -296,7 +305,10 @@ export default class ScrobbleClients {
                 newClient.logger.info(`Client added from ${s.source}`);
                 this.clients.push(newClient);
             } catch (e) {
-                this.logger.error(new Error(`${s.source} was not added due to unrecoverable errors`, { cause: e }));
+                const err = new Error(`${s.source} was not added due to unrecoverable errors`, { cause: e });
+                this.logger.error(err);
+                this.emitter.emit('instantiateError', err);
+                this.instantiateErrors.push(err);
             }
         }
     }

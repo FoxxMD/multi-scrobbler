@@ -13,11 +13,15 @@ import { clientTypes } from "../../../core/Atomic.ts";
 import { projectRootDir } from "../../common/infrastructure/Atomic.ts";
 import { sourceTypes } from "../../../core/Atomic.ts";
 import { difference } from '../../utils.ts';
-import { validateSourceJson } from '../../common/infrastructure/config/source/sourcesMap.ts';
+import { getSourceEnvSchema, validateSourceJson } from '../../common/infrastructure/config/source/sourcesMap.ts';
 import { readJson } from '../../utils/DataUtils.ts';
 import { prettifyError, ZodError } from 'zod';
-import { validateClientJson } from '../../common/infrastructure/config/client/clientsMap.ts';
+import { getClientEnvSchema, validateClientJson } from '../../common/infrastructure/config/client/clientsMap.ts';
 import type { MSBackendEventMap } from '../../common/infrastructure/MSBackendEventMap.ts';
+import { zocker } from "zocker";
+import pEvent from 'p-event';
+import { generateCommonComponentEnvConfigSchema } from '../../common/infrastructure/config/common.ts';
+import { serializeError } from 'serialize-error';
 
 chai.use(asPromised);
 
@@ -47,6 +51,11 @@ describe('Sample Configs', function () {
 
         describe('Source Configs', function () {
             let reset: any;
+            let ogKeys: string[] = [];
+
+            before(function() {
+                ogKeys = Object.keys(process.env);
+            });
 
             beforeEach(async function() {
                 reset = await withLocalTmpDir({unsafeCleanup: true, postfix: 'sourceConfigParse'});
@@ -54,6 +63,11 @@ describe('Sample Configs', function () {
 
             afterEach(async function() {
                 await reset();
+                const envKeys = Object.keys(process.env);
+                const addedKeys = difference(envKeys, ogKeys);
+                for(const k of addedKeys) {
+                    delete process.env[k];
+                }
             });
 
 
@@ -97,11 +111,50 @@ describe('Sample Configs', function () {
                         await s.destroy();
                     }
                 });
+
+                it(`Sample ${componentType} ENV parses and validates in ScrobbleSources`, async function () {
+                    this.timeout(500000);
+
+                    const emitter = new WildcardEmitter<MSBackendEventMap>();
+                    
+                    const envSchema = await getSourceEnvSchema(componentType);
+                    const componentMockData = zocker(envSchema.env).generate();
+                    const primitives = generateCommonComponentEnvConfigSchema(envSchema.prefix.toLocaleUpperCase());
+                    const primitiveMockData = zocker(primitives).generate();
+                    primitiveMockData[`${envSchema.prefix.toLocaleUpperCase()}_ENABLE`] = true;
+
+                    const mockData = {
+                        ...componentMockData,
+                        ...primitiveMockData
+                    }
+
+                    for(const key of Object.keys(mockData)) {
+                        if(mockData[key] === undefined || mockData[key] === null) {
+                            continue;
+                        }
+                        process.env[key] = mockData[key].toString();
+                    }
+
+                    const sources = new ScrobbleSources(emitter, {
+                        localUrl: new URL('http://example.com'),
+                        configDir: process.cwd(),
+                        version: 'test'
+                    }, loggerTest);
+                    await sources.buildSourcesFromConfig()
+                    expect(sources.configErrors,`${sources.configErrors.map(x => typeof x === 'string' ? x : JSON.stringify(serializeError(x), undefined, 2)).join('\n')}`).is.empty;
+                    expect(sources.instantiateErrors, `${sources.instantiateErrors.map(x => JSON.stringify(serializeError(x), undefined, 2)).join('\n')}`).is.empty;
+                    expect(sources.sources).length(1);
+                    expect(sources.sources[0].type).eq(componentType);
+                    for(const s of sources.sources) {
+                        await s.destroy();
+                    }
+                });
             }
         });
 
         describe('Client Configs', function () {
             let reset: any;
+            let ogKeys: string[] = [];
 
             beforeEach(async function() {
                 reset = await withLocalTmpDir({unsafeCleanup: true, postfix: 'clientConfigParse'});
@@ -109,6 +162,11 @@ describe('Sample Configs', function () {
 
             afterEach(async function() {
                 await reset();
+                const envKeys = Object.keys(process.env);
+                const addedKeys = difference(envKeys, ogKeys);
+                for(const k of addedKeys) {
+                    delete process.env[k];
+                }
             });
 
             for(const componentType of clientTypes) {
@@ -147,6 +205,42 @@ describe('Sample Configs', function () {
                     loggerTest);
                     await clients.buildClientsFromConfig();
                     expect(clients.clients).length(1);
+                });
+
+                it(`Sample ${componentType} ENV parses and validates in ScrobbleClients`, async function () {
+                    this.timeout(5000);
+
+                    const emitter = new WildcardEmitter<MSBackendEventMap>();
+                    
+                    const envSchema = await getClientEnvSchema(componentType);
+                    const componentMockData = zocker(envSchema.env).generate();
+                    const primitives = generateCommonComponentEnvConfigSchema(envSchema.prefix.toLocaleUpperCase());
+                    const primitiveMockData = zocker(primitives).generate();
+                    primitiveMockData[`${envSchema.prefix.toLocaleUpperCase()}_ENABLE`] = true;
+
+                    const mockData = {
+                        ...componentMockData,
+                        ...primitiveMockData
+                    }
+
+                    for(const key of Object.keys(mockData)) {
+                        if(mockData[key] === undefined || mockData[key] === null) {
+                            continue;
+                        }
+                        process.env[key] = mockData[key].toString();
+                    }
+
+                    const clients = new ScrobbleClients(emitter, new WildcardEmitter<MSBackendEventMap>, {
+                        localUrl: new URL('http://example.com'),
+                        configDir: process.cwd(),
+                        version: 'test'
+                    },
+                    loggerTest);
+                    await clients.buildClientsFromConfig()
+                    expect(clients.configErrors,`${clients.configErrors.map(x => typeof x === 'string' ? x : JSON.stringify(serializeError(x), undefined, 2)).join('\n')}`).is.empty;
+                    expect(clients.instantiateErrors, `${clients.instantiateErrors.map(x => JSON.stringify(serializeError(x), undefined, 2)).join('\n')}`).is.empty;
+                    expect(clients.clients).length(1);
+                    expect(clients.clients[0].type).eq(componentType);
                 });
             }
         });

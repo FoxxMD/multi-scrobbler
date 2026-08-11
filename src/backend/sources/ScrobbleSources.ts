@@ -28,6 +28,8 @@ export default class ScrobbleSources {
     sources: AbstractSource[] = [];
     logger: Logger;
     internalConfig: InternalConfig;
+    configErrors: (string | Error)[] = [];
+    instantiateErrors: Error[] = [];
 
     emitter: WildcardEmitter<MSBackendEventMap>;
 
@@ -117,6 +119,8 @@ export default class ScrobbleSources {
 
     buildSourcesFromConfig = async () => {
         const unparsedConfigs: UnparsedSourceConfig[] = [];
+        this.configErrors = [];
+        this.instantiateErrors = [];
 
         let configFile;
         try {
@@ -276,9 +280,15 @@ export default class ScrobbleSources {
                 } catch (e) {
                     const msg = `Failed to validate ${generateConfigLocation('source', entry)}`;
                     if (e instanceof ZodError) {
-                        this.logger.error(`${msg}:\n${prettifyError(e)}`);
+                        const prettyError = `${msg}:\n${prettifyError(e)}`
+                        this.logger.error(prettyError);
+                        this.emitter.emit('configError', prettyError);
+                        this.configErrors.push(prettyError);
                     } else {
-                        this.logger.error(new Error(msg, { cause: e }));
+                        const err = new Error(msg, { cause: e });
+                        this.logger.error(err);
+                        this.emitter.emit('configError', err);
+                        this.configErrors.push(err);
                     }
                     continue;
                 }
@@ -319,7 +329,10 @@ export default class ScrobbleSources {
                 newComponent.logger.info(`Source added from ${s.source}`);
                 this.sources.push(newComponent);
             } catch (e) {
-                this.logger.error(new Error(`${s.source} was not added due to unrecoverable errors`, { cause: e }));
+                const err = new Error(`${s.source} was not added due to unrecoverable errors`, { cause: e })
+                this.logger.error(err);
+                this.emitter.emit('instantiateError', err);
+                this.instantiateErrors.push(err);
             }
         }
     }
