@@ -17,7 +17,7 @@ export const chromecastDeviceInfoSchema = z.object({
      *
      * @examples ["192.168.0.115"]
      * */
-    address: z.string().meta({
+    address: z.ipv4().meta({
         description: "The IP address of the device",
         examples: ["192.168.0.115"]
     }),

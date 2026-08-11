@@ -78,7 +78,12 @@ export const musicCastDataSchema = z.object({
      *
      * @examples [["192.168.0.101","http://192.168.0.101/YamahaExtendedControl"]]
      * */
-    url: z.string().meta({
+    url: z.union([
+        z.url({
+            protocol: /^https?$/,
+        }),
+        z.ipv4()
+    ]).meta({
         description: "The host or URL of the YamahaExtendedControl endpoint to use",
         examples: [["192.168.0.101", "http://192.168.0.101/YamahaExtendedControl"]]
     }),

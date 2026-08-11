@@ -43,7 +43,9 @@ export const librefmDataSchema = z.object({
      *
      * @default 'https://libre.fm/2.0/'
     */
-    urlBase: z.string().optional().meta({
+    urlBase: z.url({
+        protocol: /^https?$/,
+    }).optional().meta({
         description: "(Optional) The host and path prefix for your Libre.fm instance",
         default: "https://libre.fm/2.0/"
     }),

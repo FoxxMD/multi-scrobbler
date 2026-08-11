@@ -11,7 +11,9 @@ export const listenBrainzDataSchema = z.object({
      * @examples ["https://api.listenbrainz.org/"]
      * @default "https://api.listenbrainz.org/"
      * */
-    url: z.string().optional().meta({
+    url: z.url({
+        protocol: /^https?$/,
+    }).optional().meta({
         description: "URL for the ListenBrainz server, if not using the default",
         default: "https://api.listenbrainz.org/",
         examples: ["https://api.listenbrainz.org/"]

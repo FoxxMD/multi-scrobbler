@@ -11,7 +11,7 @@ export const sonosDataSchema = z.object({
      *
      * @examples ["192.168.0.170"]
      * */
-    host: z.string().meta({
+    host: z.ipv4().meta({
         description: "IP address of any connected Sonos speaker or device",
         examples: ["192.168.0.170"]
     }),

@@ -71,7 +71,9 @@ export const azuracastDataSchema = z.object({
      *
      * @examples ["https://radio.mydomain.tld", "http://localhost:80"]
      * */
-    url: z.string().meta({
+    url: z.url({
+        protocol: /^https?|wss?$/,
+    }).meta({
         description: "Base URL of the Azuracast instance",
         examples: ["https://radio.mydomain.tld", "http://localhost:80"]
     }),

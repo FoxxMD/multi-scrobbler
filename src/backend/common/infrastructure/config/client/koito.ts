@@ -54,7 +54,9 @@ export const koitoDataSchema = z.object({
      *
      * @examples ["http://192.168.0.100:4110"]
      * */
-    url: z.string().meta({
+    url: z.url({
+        protocol: /^https?$/,
+    }).meta({
         description: "URL for the Koito server",
         examples: ["http://192.168.0.100:4110"]
     }),

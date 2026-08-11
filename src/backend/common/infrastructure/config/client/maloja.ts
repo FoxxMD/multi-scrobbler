@@ -10,7 +10,9 @@ export const malojaDataSchema = z.object({
      *
      * @examples ["http://localhost:42010"]
      * */
-    url: z.string().meta({
+    url: z.url({
+        protocol: /^https?$/,
+    }).meta({
         description: "URL for maloja server",
         examples: ["http://localhost:42010"]
     }),

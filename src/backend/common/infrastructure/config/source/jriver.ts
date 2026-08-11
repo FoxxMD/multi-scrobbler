@@ -24,7 +24,12 @@ export const jRiverDataSchema = z.object({
      * @examples ["http://localhost:52199/MCWS/v1/"]
      * @default "http://localhost:52199/MCWS/v1/"
      * */
-    url: z.string().meta({
+    url: z.union([
+        z.url({
+            protocol: /^https?$/,
+        }),
+        z.ipv4()
+        ]).meta({
         description: "URL of the JRiver HTTP server to connect to",
         default: "http://localhost:52199/MCWS/v1/",
         examples: ["http://localhost:52199/MCWS/v1/"]

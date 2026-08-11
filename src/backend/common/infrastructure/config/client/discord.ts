@@ -13,7 +13,7 @@ export const discordDataSchema = z.object({
     applicationId: z.string().optional(),
     artwork: z.union([z.boolean(), z.string(), z.array(z.string())]).optional(),
     artworkDefaultUrl: z.string().optional(),
-    statusOverrideAllow: z.union([z.string(), z.array(statusTypeSchema)]).optional(),
+    statusOverrideAllow: z.array(statusTypeSchema).optional(),
     listeningActivityAllow: z.union([z.string(), z.array(z.string())]).optional(),
     ipcLocations: z.union([z.string(), z.array(z.union([z.string(), ipcLocationTupleSchema]))]).optional()
 });
@@ -26,7 +26,7 @@ const envDataSchema = z.object({
     DISCORD_APPLICATION_ID: discordDataSchema.shape.applicationId,
     DISCORD_IPC_LOCATIONS: discordDataSchema.shape.ipcLocations,
     DISCORD_ARTWORK_DEFAULT_URL: discordDataSchema.shape.artworkDefaultUrl,
-    DISCORD_STATUS_OVERRIDE_ALLOW: discordDataSchema.shape.statusOverrideAllow,
+    DISCORD_STATUS_OVERRIDE_ALLOW: statusTypeSchema.optional(),
     DISCORD_LISTENING_ACTIVITY_ALLOW: discordDataSchema.shape.listeningActivityAllow,
 });
 

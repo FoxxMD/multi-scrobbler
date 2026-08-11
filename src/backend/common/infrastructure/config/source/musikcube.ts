@@ -96,7 +96,9 @@ export const musikcubeDataSchema = z.object({
      * @examples ["ws://localhost:7905"]
      * @default "ws://localhost:7905"
      * */
-    url: z.string().optional().meta({
+    url: z.url({
+        protocol: /^wss?$/,
+    }).optional().meta({
         description: "URL of the Musikcube Websocket (Metadata) server to connect to",
         default: "ws://localhost:7905",
         examples: ["ws://localhost:7905"]

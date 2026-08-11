@@ -29,7 +29,9 @@ export const spotifySourceDataSchema = z.object({
      * @default "http://localhost:9078/callback"
      * @examples ["http://localhost:9078/callback"]
      * */
-    redirectUri: z.string().optional().meta({
+    redirectUri: z.url({
+        protocol: /^https?$/,
+    }).optional().meta({
         description: "spotify redirect URI -- required only if not the default shown here.",
         default: "http://localhost:9078/callback",
         examples: ["http://localhost:9078/callback"]
