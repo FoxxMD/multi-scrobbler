@@ -139,6 +139,10 @@ describe('URL Parsing', function () {
                     expect(normalizeWebAddress(`https://${domain}`).port).to.eq(443);
                 });
 
+                it('Should normalize a domain without TLD to http', function () {
+                    expect(normalizeWebAddress('myDomain').url.protocol).to.eq('http:');
+                });
+
             });
 
             describe('With Port', function () {
@@ -156,6 +160,12 @@ describe('URL Parsing', function () {
                 it('Should normalize an address with protocol and with port to specified port and protocol', function () {
                     expect(normalizeWebAddress(`https://${domain}:1055`).port).to.eq(1055);
                     expect(normalizeWebAddress(`https://${domain}:1055`).url.protocol).to.eq('https:');
+                });
+
+                it('Should normalize a domain without TLD but with port to that port', function () {
+                    const normal = normalizeWebAddress('myDomain:881');
+                    expect(normal.url.protocol).to.eq('http:');
+                    expect(normal.port).to.eq(881);
                 });
 
             });

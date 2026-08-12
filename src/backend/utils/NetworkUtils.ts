@@ -90,6 +90,8 @@ export const isPortReachableConnect = async (port: number, opts: PortReachableOp
 }
 
 const QUOTES_UNWRAP_REGEX: RegExp = new RegExp(/^"(.*)"$/);
+const DOMAIN_AND_PORT: RegExp = new RegExp(/^([^:]+):(\d+)$/);
+const commonProtocols = ['http','https','ws','wss'];
 
 export const normalizeWebAddress = (val: string, options: {defaultPath?: string, removeTrailingSlash?: boolean} = {}): URLData => {
     let cleanUserUrl = val.trim();
@@ -101,6 +103,18 @@ export const normalizeWebAddress = (val: string, options: {defaultPath?: string,
     const {defaultPath, removeTrailingSlash = true} = options;
 
     let normal = normalizeUrl(cleanUserUrl, {removeTrailingSlash});
+    if(normal === cleanUserUrl) {
+        // checking to see if input was DOMAIN:PORT
+        // in which case we also check DOMAIN isn't mistakenly a protocol
+        // and if it isn't then we force a protocol based on port
+        // so that we get a full URL out of this function
+        const res = parseRegexSingle(DOMAIN_AND_PORT, cleanUserUrl);
+        if(res !== undefined && !commonProtocols.includes(res.groups[0])) {
+            const protocol = Number.parseInt(res.groups[1]) === 443 ? 'https:' : 'http:';
+            cleanUserUrl = `${protocol}//${cleanUserUrl}`;
+            normal = normalizeUrl(cleanUserUrl, {removeTrailingSlash});
+        }
+    }
     const u = new URL(normal);
     let port: number;
 
