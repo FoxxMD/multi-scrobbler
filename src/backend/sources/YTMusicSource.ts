@@ -279,7 +279,11 @@ Redirect URI  : ${this.redirectUri}`);
     }
 
     reauthenticate = async () => {
-        await this.tryStopPolling();
+        try {
+            await this.tryStopPolling('Reauthenticating yt');
+        } catch (e) {
+            this.logger.warn(new Error('Failed to stop polling but will try to reauth anyway', {cause: e}));
+        }
         if(this.authed) {
             await this.clearCredentials();
             this.authed = false;

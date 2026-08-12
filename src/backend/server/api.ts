@@ -44,6 +44,7 @@ import type {ComponentClientApiJson, ComponentSourceApiJson} from "../../core/Ap
 import { asDayjsHydratedObject } from "../../core/DataUtils.ts";
 import type {Dayjs} from "dayjs";
 import { asSerializablePlaySelect } from "../../core/PlayMarshalUtils.ts";
+import { serializeError } from "serialize-error";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -313,6 +314,42 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
             component,
         } = req;
         return res.json(component.getApiData());
+    });
+
+    app.post('/api/components/:componentVal/state', componentAwareMiddle, bodyParser.json({ type: ['text/*', 'application/json'] }), async (req: ComponentAwareRequest, res, next) => {
+        const {
+            component,
+            body: {
+                state,
+                reason = 'invoked by api'
+            }
+        } = req;
+        switch (state) {
+            case 'stop':
+                try {
+                    await component.stop({ reason: new SimpleError(reason, {simple: true, shortStack: true}) })
+                } catch (e) {
+                    return res.status(500).json({ error: serializeError(e) });
+                }
+                break;
+            case 'start':
+                try {
+                    await component.start({ forceInit: true })
+                } catch (e) {
+                    return res.status(500).json({ error: serializeError(e) });
+                }
+                break;
+            case 'restart':
+                try {
+                    await component.restart({ forceInit: true, reason: new SimpleError(reason, {simple: true, shortStack: true}) })
+                } catch (e) {
+                    return res.status(500).json({ error: serializeError(e) });
+                }
+                break;
+            default:
+                return res.status(400).json({ error: { message: `'state' type ${state} is not valid` } });
+        }
+        return res.sendStatus(200);
     });
 
     app.get('/api/components/:componentVal/plays', componentAwareMiddle, async (req: ComponentAwareRequest, res, next) => {
