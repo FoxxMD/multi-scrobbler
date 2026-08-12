@@ -1,7 +1,7 @@
 import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
 import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
-import { envMetaNormalize, transformSplitMaybeString } from "../../../../utils/ZodUtils.ts";
+import { envMetaNormalize, httpUrl, transformSplitMaybeString } from "../../../../utils/ZodUtils.ts";
 
 export const plexApiDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -10,7 +10,7 @@ export const plexApiDataSchema = z.object({
     /**
      * http(s)://HOST:PORT of the Plex server to connect to
      * */
-    url: z.string().meta({
+    url: httpUrl.meta({
         description: "http(s)://HOST:PORT of the Plex server to connect to"
     }),
 

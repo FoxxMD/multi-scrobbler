@@ -1,12 +1,13 @@
 import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
 import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
+import { httpUrl } from "../../../../utils/ZodUtils.ts";
 
 export const yandexMusicBridgeDataSchema = z.object({
     ...commonSourceDataSchema.shape,
     ...pollingOptionsSchema.shape,
     /** URL of the local Python bridge, for example http://yandex-music-bridge:9980 */
-    url: z.string().meta({
+    url: httpUrl.meta({
         description: "URL of the local Python bridge, for example http://yandex-music-bridge:9980"
     }),
     /** Optional API key sent as X-API-Key to the bridge */

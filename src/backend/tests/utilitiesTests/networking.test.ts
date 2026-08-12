@@ -1,6 +1,7 @@
 import { assert, expect } from 'chai';
 import { describe, it } from 'mocha';
 import { generateBaseURL, joinedUrl, normalizeWebAddress } from "../../utils/NetworkUtils.ts";
+import { httpUrl, wsUrl } from '../../utils/ZodUtils.ts';
 
 
 describe('URL Parsing', function () {
@@ -172,6 +173,44 @@ describe('URL Parsing', function () {
 
         });
 
+    });
+
+    describe('Zod URL Validation', function () {
+        it('should not throw on normalizable http URLs', function () {
+            expect(() => httpUrl.parse('http://my.domain.local:90')).to.not.throw();
+            expect(() => httpUrl.parse('http://my.domain.local')).to.not.throw();
+            expect(() => httpUrl.parse('https://my.domain.local')).to.not.throw();
+            expect(() => httpUrl.parse('https://my.domain.local:91')).to.not.throw();
+            expect(() => httpUrl.parse('my.domain.local:80')).to.not.throw();
+            expect(() => httpUrl.parse('my.domain.local:81')).to.not.throw();
+            expect(() => httpUrl.parse('http://domain')).to.not.throw();
+            expect(() => httpUrl.parse('domain:81')).to.not.throw();
+            expect(() => httpUrl.parse('domain')).to.not.throw();
+        });
+
+        it('should throw on non-normalizable http URLs', function () {
+            expect(() => httpUrl.parse('http://')).to.throw();
+            expect(() => httpUrl.parse('domain:')).to.throw();
+            expect(() => httpUrl.parse('file://path.txt')).to.throw();
+            expect(() => httpUrl.parse('ws://mydomain')).to.throw();
+        });
+
+        it('should not throw on normalizable ws URLs', function () {
+            expect(() => wsUrl.parse('information:14585')).to.not.throw();
+            expect(() => wsUrl.parse('ws://my.domain.local')).to.not.throw();
+            expect(() => wsUrl.parse('wss://my.domain.local')).to.not.throw();
+            expect(() => wsUrl.parse('wss://my.domain.local:91')).to.not.throw();
+            expect(() => wsUrl.parse('my.domain.local:80')).to.not.throw();
+            expect(() => wsUrl.parse('my.domain.local:81')).to.not.throw();
+            expect(() => wsUrl.parse('domain:81')).to.not.throw();
+            expect(() => wsUrl.parse('domain')).to.not.throw();
+        });
+
+        it('should throw on non-normalizable ws URLs', function () {
+            expect(() => httpUrl.parse('ws://')).to.throw();
+            expect(() => httpUrl.parse('domain:')).to.throw();
+            expect(() => httpUrl.parse('file://path.txt')).to.throw();
+        });
     });
 
 });

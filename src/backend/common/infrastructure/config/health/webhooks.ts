@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { httpUrl } from "../../../../utils/ZodUtils.ts";
 
 export interface WebhookPayload {
     title?: string
@@ -96,7 +97,7 @@ export const ntfyConfigSchema = z.object({
      *
      * @examples ["http://192.168.0.100:8078"]
      * */
-    url: z.string().meta({
+    url: httpUrl.meta({
         description: "The URL of the Ntfy server",
         examples: ["http://192.168.0.100:8078"]
     }),
@@ -149,7 +150,7 @@ export const appriseConfigSchema = z.object({
      *
      * @examples ["http://192.168.0.100:8078"]
      * */
-    host: z.string().meta({
+    host: httpUrl.meta({
         description: "The URL of the apprise-api server",
         examples: ["http://192.168.0.100:8078"]
     }),

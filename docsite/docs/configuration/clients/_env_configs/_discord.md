@@ -6,7 +6,7 @@
 | `DISCORD_TOKEN`                    | string                     |                       |                                         |
 | `DISCORD_ARTWORK`                  | boolean OR string OR array |                       |                                         |
 | `DISCORD_APPLICATION_ID`           | string                     |                       |                                         |
-| `DISCORD_IPC_LOCATIONS`            | string OR array            |                       |                                         |
+| `DISCORD_IPC_LOCATIONS`            | string                     |                       |                                         |
 | `DISCORD_ARTWORK_DEFAULT_URL`      | string                     |                       |                                         |
 | `DISCORD_STATUS_OVERRIDE_ALLOW`    | string                     |                       |                                         |
-| `DISCORD_LISTENING_ACTIVITY_ALLOW` | string OR array            |                       |                                         |
+| `DISCORD_LISTENING_ACTIVITY_ALLOW` | string                     |                       |                                         |

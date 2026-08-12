@@ -139,7 +139,8 @@ export const normalizeWebAddress = (val: string, options: {defaultPath?: string,
     return {
         url: u,
         normal,
-        port
+        port,
+        input: val
     }
 }
 
@@ -152,7 +153,7 @@ export const  normalizeWSAddress = (val: string, options: {defaultPort?: number 
     if(!cleanUserUrl.match(/^(?:wss?|https?):/i)) {
         cleanUserUrl = `ws://${cleanUserUrl}`;
     }
-    const normal = normalizeUrl(val, {removeTrailingSlash: false})
+    const normal = normalizeUrl(cleanUserUrl, {removeTrailingSlash: false})
     const url = new URL(normal);
 
     // default WS
@@ -183,7 +184,8 @@ export const  normalizeWSAddress = (val: string, options: {defaultPort?: number 
     return {
         url,
         normal: url.toString(),
-        port
+        port,
+        input: val
     }
 }
 

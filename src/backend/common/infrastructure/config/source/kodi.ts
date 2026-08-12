@@ -1,6 +1,7 @@
 import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
 import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
+import { httpUrl } from "../../../../utils/ZodUtils.ts";
 
 export const kodiDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -23,7 +24,7 @@ export const kodiDataSchema = z.object({
      * @examples ["http://localhost:8080/jsonrpc"]
      * @default "http://localhost:8080/jsonrpc"
      * */
-    url: z.string().meta({
+    url: httpUrl.meta({
         description: "URL of the Kodi HTTP server to connect to",
         default: "http://localhost:8080/jsonrpc",
         examples: ["http://localhost:8080/jsonrpc"]

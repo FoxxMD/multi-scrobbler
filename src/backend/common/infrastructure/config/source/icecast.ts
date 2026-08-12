@@ -1,5 +1,6 @@
 import * as z from "zod";
 import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, manualListeningOptionsSchema, type EnvSourceSchema} from "./index.ts";
+import { httpUrl } from "../../../../utils/ZodUtils.ts";
 
 export interface IcecastMetadata {
     icy?: {
@@ -37,7 +38,7 @@ export const icecastDataSchema = z.object({
     /**
      * The Icecast stream URL
      * */
-    url: z.string().meta({
+    url: httpUrl.meta({
         description: "The Icecast stream URL"
     }),
 });

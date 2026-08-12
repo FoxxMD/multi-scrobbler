@@ -21,6 +21,8 @@ import type { MSBackendEventMap } from '../../common/infrastructure/MSBackendEve
 import { zocker } from "zocker";
 import { generateCommonComponentEnvConfigSchema } from '../../common/infrastructure/config/common.ts';
 import { serializeError } from 'serialize-error';
+import { httpUrl, wsUrl } from '../../utils/ZodUtils.ts';
+import { generateNormalHttpUrl, generateNormalWSUrl } from '../../../core/tests/utils/apiFixtures.ts';
 
 chai.use(asPromised);
 
@@ -117,7 +119,9 @@ describe('Sample Configs', function () {
                     const emitter = new WildcardEmitter<MSBackendEventMap>();
                     
                     const envSchema = await getSourceEnvSchema(componentType);
-                    let zocObj = zocker(envSchema.env);
+                    let zocObj = zocker(envSchema.env)
+                    .supply(httpUrl, () => generateNormalHttpUrl())
+                    .supply(wsUrl, () => generateNormalWSUrl())
                     switch(componentType) {
                         case 'azuracast':
                             zocObj = zocObj.supply(envSchema.env.shape.AZURA_LISTENERS_NUM, true)
@@ -228,7 +232,9 @@ describe('Sample Configs', function () {
                     const emitter = new WildcardEmitter<MSBackendEventMap>();
                     
                     const envSchema = await getClientEnvSchema(componentType);
-                    let zocObj = zocker(envSchema.env);
+                    let zocObj = zocker(envSchema.env)
+                    .supply(httpUrl, () => generateNormalHttpUrl())
+                    .supply(wsUrl, () => generateNormalWSUrl())
                     switch(componentType) {
                         case 'rocksky':
                             zocObj = zocObj.supply(envSchema.env.shape.ROCKSKY_HANDLE, 'foxxmd.dev')

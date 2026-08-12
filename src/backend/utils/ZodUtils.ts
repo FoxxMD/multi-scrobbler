@@ -105,16 +105,39 @@ export const envMetaNormalize = (meta: z.GlobalMeta): z.GlobalMeta => {
     }
 }
 
-// export const normalizedUrl = (opts?: z.core.$ZodURLParams) => z.stringFormat('uri', (str) => {
-//     return true;
-//     //const res = normalizeWebAddress(str).url.toString()
-//     //return res;
+//export const UrlDataSchema = z.custom<URLData>((val: URLData) => z.url().parse(val.url.toString()))
 
-// }).pipe(z.transform((val: string) => normalizeWebAddress(val).url.toString())).pipe(z.url());
+export const normalizedUrl = (opts: z.core.$ZodURLParams = {}) => z.string()
+.superRefine((val, ctx) =>  {
+    const normal = normalizeWebAddress(val);
+    const res = z.url(opts).safeParse(normal.url.toString());
+    if(!res.success) {
+        for(const i of res.error.issues) {
+            ctx.addIssue({
+                code: 'custom',
+                message: `${i.message} => Original: ${val} | Normalized: ${normal.url.toString()}`,
+                input: val
+            });
+        }
+    }
+})
+.meta({zockerId: 'normalUrl'});
 
-export const normalizedUrl = (opts?: z.core.$ZodURLParams) => z.string().pipe(z.transform((val: string) => normalizeWebAddress(val).url.toString())).pipe(z.url(opts));
-
-export const normalizedWsUrl = (opts?: z.core.$ZodURLParams) => z.string().pipe(z.transform((val: string) => normalizeWSAddress(val).url.toString())).pipe(z.url(opts));
+export const normalizedWsUrl = (opts: z.core.$ZodURLParams = {}) => z.string()
+.superRefine((val, ctx) =>  {
+    const normal = normalizeWSAddress(val);
+    const res = z.url(opts).safeParse(normal.url.toString());
+    if(!res.success) {
+        for(const i of res.error.issues) {
+            ctx.addIssue({
+                code: 'custom',
+                message: `${i.message} => Original: ${val} | Normalized: ${normal.url.toString()}`,
+                input: val
+            });
+        }
+    }
+})
+.meta({zockerId: 'normalWSUrl'});
 
 export const httpUrl = normalizedUrl({protocol: /^https?$/});
 

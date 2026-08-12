@@ -438,11 +438,32 @@ export function generateFakeError(depth: number = 0): Error {
         value: causeError,
         writable: true,
         enumerable: true,
-      });
+    })
     }
  
     return error;
   };
  
   return createErrorAtDepth(0);
+}
+
+export const generateNormalHttpUrl = () => {
+    const g = faker.helpers.arrayElement([
+        () => faker.internet.url(),
+        () => faker.internet.domainName(),
+        () => `${faker.word.noun({length :1})}:${faker.helpers.arrayElement([443,80,faker.internet.port()])}`
+    ]);
+    return g();
+}
+
+export const generateNormalWSUrl = () => {
+    const g = faker.helpers.arrayElement([
+        () => faker.internet.url({
+            // @ts-expect-error this should be able to take ws or wss its a real protocol
+            protocol: faker.helpers.arrayElement(['ws','wss', faker.internet.protocol()])
+        }),
+        () => faker.internet.domainName(),
+        () => `${faker.word.noun({length :1})}:${faker.helpers.arrayElement([443,80,faker.internet.port()])}`
+    ])
+    return g();
 }

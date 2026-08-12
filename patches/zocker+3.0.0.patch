@@ -1,0 +1,15 @@
+diff --git a/node_modules/zocker/dist/index.cjs b/node_modules/zocker/dist/index.cjs
+index 0745620..ab9cba8 100644
+--- a/node_modules/zocker/dist/index.cjs
++++ b/node_modules/zocker/dist/index.cjs
+@@ -51,7 +51,9 @@ function generate$1(schema, ctx) {
+ 	}
+ }
+ const generate_value$1 = (schema, generation_context) => {
+-	const reference_generator = generation_context.reference_generators.find((g) => g.schema === schema);
++	const reg = zod_v4.globalRegistry.get(schema);
++	const reference_generator = generation_context.reference_generators.find((g) => g.schema === schema
++	|| (reg?.zockerId !== undefined && zod_v4.globalRegistry.get(g.schema)?.zockerId === reg.zockerId));
+ 	if (reference_generator) return reference_generator.generator(schema, generation_context);
+ 	const instanceof_generator = generation_context.instanceof_generators.find((g) => schema instanceof g.schema);
+ 	if (instanceof_generator) return instanceof_generator.generator(schema, generation_context);

@@ -1,7 +1,7 @@
 import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
 import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
-import { transformSplitMaybeString } from "../../../../utils/ZodUtils.ts";
+import { transformSplitMaybeString, wsUrl } from "../../../../utils/ZodUtils.ts";
 
 export const mopidyDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -26,7 +26,7 @@ export const mopidyDataSchema = z.object({
      * @examples ["ws://localhost:6680/mopidy/ws/"]
      * @default "ws://localhost:6680/mopidy/ws/"
      * */
-    url: z.string().optional().meta({
+    url: wsUrl.optional().meta({
         description: "URL of the Mopidy HTTP server to connect to",
         default: "ws://localhost:6680/mopidy/ws/",
         examples: ["ws://localhost:6680/mopidy/ws/"]
