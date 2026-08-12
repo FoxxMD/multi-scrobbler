@@ -34,6 +34,12 @@ class TestComponent extends AbstractComponent {
     protected getIdentifier(): string {
         return 'test';
     }
+    public async start(opts?: { forceInit?: boolean; }): Promise<boolean> {
+        return true;
+    }
+    public async stop(opts?: { reason?: string | Error; }): Promise<void> {
+        return;
+    }
     constructor(config?: Omit<AbstractComponentConfig, 'id'>) {
         super({id: `test-${Date.now()}`, ...(config ?? {})});
     }

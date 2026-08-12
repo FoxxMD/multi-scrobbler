@@ -165,8 +165,8 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
     const {
         data,
         data: {
-            warning,
-            error
+            warnings = [],
+            errors = []
         } = {}
     } = props;
     const isSource = isComponentSourceApiJson(data)
@@ -207,8 +207,8 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
             <Flex justifyContent="flex-end" rowGap="6" flexDirection="row-reverse" wrap="wrap">
                 <Box marginEnd="auto"><MSComponentStats {...props}/></Box>
             </Flex>
-            {error !== undefined && error !== null ? <ErrorAlert error={error}/> : undefined}
-            {warning !== undefined && warning !== null ? <ErrorAlert error={warning} status="warning"/> : undefined}
+            {errors.length > 0 ? <>{errors.map(x => <ErrorAlert error={x}/>)}</> : undefined }
+            {warnings.length > 0 ? <>{warnings.map(x => <ErrorAlert error={x} status="warning"/>)}</> : undefined }
             <MSErrorBoundary>{props.live ? <PlayersContainerFetchable nowPlaying={isSource ? undefined : true} data={data}/> : <PlayersContainer nowPlaying={isSource ? undefined : true} data={data} live={props.live}/>}</MSErrorBoundary>
             <MSErrorBoundary><ListContainerFilterable render="virtDynamic" componentType={data.mode} componentId={data.id}/></MSErrorBoundary>
         </Flex>

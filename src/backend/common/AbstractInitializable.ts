@@ -19,8 +19,8 @@ export default abstract class AbstractInitializable {
     databaseOK?: boolean | null;
     connectionOK?: boolean | null;
     cacheOK?: boolean | null;
-    error?: Error;
-    warning?: Error;
+    errors?: Error[] = [];
+    warnings?: Error[] = [];
 
     protected initializedOnce: boolean = false;
     initializing: boolean = false;
@@ -88,15 +88,15 @@ export default abstract class AbstractInitializable {
                 } catch (e) {
                     throw new PostInitError('Error occurred during post-initialization hook', {cause: e});
                 }
-                this.error = undefined;
-                this.warning = undefined;
+                this.errors = [];
+                this.warnings = [];
                 return true;
             } catch(e) {
                 if(notify) {
                     await this.notify({identifier: this.getIdentifier(), title: notifyTitle, message: truncateStringToLength(500)(messageWithCausesTruncatedDefault(e)), priority: 'error'});
                 }
                 const initError = new Error('Initialization failed', {cause: e});
-                this.error = initError;
+                this.errors = [initError];
                 throw initError;
             } finally {
                 this.initializing = false;

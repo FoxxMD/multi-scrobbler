@@ -245,7 +245,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             this.setStatus('Retention cleanup finished');
         } catch (e) {
             const retentionErr = new Error('Failed to do retention cleanup', {cause: e});
-            this.warning = retentionErr;
+            this.warnings.push(retentionErr);
             this.logger.warn(retentionErr);
             this.setStatus('Retention cleanup failed');
         }
@@ -545,7 +545,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     public abstract getRunningState(): ComponentState
 
-    public getApiData(): Omit<ComponentCommonApiJson, 'type' | 'countLive' | 'players'> & Pick<ComponentCommonApi, 'state' | 'error' | 'warning'>  {
+    public getApiData(): Omit<ComponentCommonApiJson, 'type' | 'countLive' | 'players'> & Pick<ComponentCommonApi, 'state' | 'errors' | 'warnings'>  {
         let state: ComponentState;
         if(!this.initializedOnce || this.initializing) {
             state = COMPONENT_STATE.INITIALIZING;
@@ -565,8 +565,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             createdAt: this.dbComponent.createdAt?.toISOString(),
             lastReadyAt: this.lastReadyAt?.toISOString(),
             lastActiveAt: this.lastActiveAt?.toISOString(),
-            error: this.error !== undefined && this.error instanceof Error ? serializeError(this.error) : this.error,
-            warning: this.warning !== undefined && this.warning instanceof Error ? serializeError(this.warning) : this.warning,
+            errors: this.errors.map(x => x instanceof Error ? serializeError(x) : x),
+            warnings: this.warnings.map(x => x instanceof Error ? serializeError(x) : x),
             ...this.additionalApiData()
         }
     }
@@ -582,11 +582,19 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     }
 
     protected emitComponentUpdate = <T extends Partial<ReturnType<typeof this.getApiData>>>(payload: T) => {
-        if('error' in payload && payload.error instanceof Error) {
-            payload.error = serializeError(payload.error);
+        if('errors' in payload) {
+            if(payload.errors.length > 0) {
+                payload.errors = payload.errors.map(x => x instanceof Error ? serializeError(x) : x);
+            } else {
+                payload.errors = [];
+            }
         }
-        if('warning' in payload && payload.warning instanceof Error) {
-            payload.warning = serializeError(payload.warning);
+        if('warnings' in payload) {
+            if(payload.warnings.length > 0) {
+               payload.warnings = payload.warnings.map(x => x instanceof Error ? serializeError(x) : x); 
+            } else {
+                payload.warnings = [];
+            }
         }
         this.emitEvent('componentUpdate', payload);
     }

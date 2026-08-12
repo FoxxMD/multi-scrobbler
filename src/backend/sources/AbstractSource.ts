@@ -155,13 +155,13 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 'Heartbeat',
                 (): Promise<any> => {
                     return this.heartbeatTask().then(() => null).catch((err) => {
-                        this.error = err;
+                        this.errors.push(err);
                         this.logger.error(err);
                     });
                 },
                 (err: Error) => {
                     this.logger.error(err);
-                    this.error = err;
+                    this.errors.push(err);
                 }
             ), {id: 'heartbeat'}));
         } else {
@@ -556,8 +556,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 const err = new Error('Cannot start polling because Source is not ready', {cause: e});
                 this.logger.error(err);
                 this.setStatus('Polling Error');
-                this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({error: err});
-                this.error = err;
+                this.errors.push(err);
+                this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({errors: this.errors});
                 if(notify) {
                     await this.notify( {title: `Polling Error`, message: `Cannot start polling because Source is not ready: ${truncateStringToLength(500)(messageWithCausesTruncatedDefault(e))}`, priority: 'error'});
                 }
@@ -609,8 +609,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 const err = new Error('Polling stopped with error', { cause: e });
                 this.logger.warn(err);
                 componentUpdate.status = 'Polling stopped with error';
-                componentUpdate.warning = err;
-                this.warning = err;
+                this.warnings.push(err);
+                componentUpdate.warnings = this.warnings;
             }
             this.emitComponentUpdate<Partial<ComponentSourceApiJson>>(componentUpdate);
         }).finally(() => {

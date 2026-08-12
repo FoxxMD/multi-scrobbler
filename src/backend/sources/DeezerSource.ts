@@ -242,7 +242,7 @@ export default class DeezerSource extends AbstractSource {
             return true;
         } else {
             this.logger.warn('Callback contained an error! User may have denied access?')
-            this.error = error;
+            this.errors = error;
             this.logger.error(error);
             return error;
         }

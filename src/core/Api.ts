@@ -80,8 +80,8 @@ export type ComponentCommonApi = {
     /** More specific, live activity state like "sleeping", "hydrating historical scrobbles", "processing dead scrobbles", etc... */
     status?: string
     players: Record<string, SourcePlayerJson>
-    error?: ErrorIsh
-    warning?: ErrorIsh
+    errors?: ErrorIsh[]
+    warnings?: ErrorIsh[]
     monitoringStatus?: MonitoringStatus
 } & Omit<ComponentMinimalSelect, 'type'>
 
