@@ -249,12 +249,12 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 'Heartbeat',
                 (): Promise<any> => {
                     return this.heartbeatTask().then(() => null).catch((err) => {
-                        this.error = err;
+                        this.errors.push(err);
                         this.logger.error(err);
                     });
                 },
                 (err: Error) => {
-                    this.error = err;
+                    this.errors.push(err);
                     this.logger.error(err);
                 }
             ), {id: 'heartbeat'}));
@@ -278,14 +278,14 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     (): Promise<any> => {
                         if(this.isReady()) {
                             return this.processDeadLetterQueue().then(() => null).catch((e) => {
-                                this.warning = e;
+                                this.warnings = e;
                                 this.logger.error(e);
                             })
                         }
                         return new Promise((resolve, reject) => resolve);
                     },
                     (err: Error) => {
-                        this.warning = err;
+                        this.warnings.push(err);
                         this.logger.error(err);
                     }
                 ), {id: 'dead'}));
@@ -547,8 +547,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }, (err: Error) => {
                 const npErr = new Error('Unexpected error while processing Now Playing queue', {cause: err});
                 this.npLogger.error(npErr);
-                this.warning = npErr;
-                this.emitComponentUpdate<Partial<ComponentClientApiJson>>({warning: npErr});
+                this.warnings.push(npErr);
+                this.emitComponentUpdate<Partial<ComponentClientApiJson>>({warnings: this.warnings});
             });
 
             // even though we are processing every 5 seconds the interval that Now Playing is updated at, and that the queue is cleared on,
@@ -856,8 +856,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 }
             } catch (e) {
                 const preloadErr = new SimpleError('Could not preload scrobbles', {cause: e, shortStack: true});
-                this.warning = preloadErr;
-                this.emitComponentUpdate<Partial<ComponentClientApiJson>>({warning: preloadErr});
+                this.warnings.push(preloadErr);
+                this.emitComponentUpdate<Partial<ComponentClientApiJson>>({warnings: this.warnings});
                 this.logger.warn(preloadErr);
             }
         }
@@ -1044,7 +1044,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 const err = new Error('Scrobble processing stopped with error', { cause: e });
                 this.logger.warn(err);
                 componentUpdate.status = 'Processing stopped with error';
-                componentUpdate.warning = err;
+                this.warnings.push(err);
+                componentUpdate.warnings = this.warnings;
             }
             this.emitComponentUpdate<Partial<ComponentClientApiJson>>(componentUpdate);
         }).finally(() => {
@@ -1169,10 +1170,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 if(nextQueued !== undefined) {
                     while (nextQueued !== undefined) {
                         await this.processQueueCurrentScrobble(nextQueued, signal);
-                        if(this.error !== undefined) {
+                        if(this.errors.length > 0) {
                             // we made it through a scrobble without any issues so clear any issue we may have previously had
-                            this.error = undefined;
-                            this.emitComponentUpdate<Partial<ComponentClientApiJson>>({error: null});
+                            this.errors = [];
+                            this.emitComponentUpdate<Partial<ComponentClientApiJson>>({errors: []});
                         }
                         nextQueued = await this.playRepo.getQueueNext(CLIENT_INGRESS_QUEUE)
                     }
