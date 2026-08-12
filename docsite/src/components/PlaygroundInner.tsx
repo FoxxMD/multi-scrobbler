@@ -24,6 +24,7 @@ const validator = createAjvValidator({
     onCreateAjv: (ajv) => {
             const a = new Ajv2020();
             a.addKeyword('deprecationMessage');
+            a.addKeyword('zockerId');
             f.default(a);
             return a;
     }

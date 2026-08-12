@@ -32,6 +32,7 @@ function SchemaEditorInner(props: SchemaEditorProps): JSX.Element {
             onCreateAjv: (ajv) => {
                 const a = new Ajv2020();
                 a.addKeyword('deprecationMessage');
+                a.addKeyword('zockerId');
                 f.default(a);
                 return a;
             }
