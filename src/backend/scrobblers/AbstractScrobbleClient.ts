@@ -230,11 +230,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         for(const job of this.scheduler.getAllJobs()) {
             this.scheduler.removeById(job.id);
         }
-        
     }
     async [Symbol.asyncDispose]() {
-        this[Symbol.dispose]();
-        await this.tryStopScrobbling();
+        try {
+            await this.stop({ reason: 'Instance is being destroyed' });
+        } catch (e) {
+            this.logger.warn(e);
+        }
     }
 
     public initTasks(opts: {deadDelay?: number} = {}) {
@@ -257,7 +259,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 }
             ), {id: 'heartbeat'}));
         } else {
-            this.logger.warn('Heartbeat task is already added to scheduler.');
+            this.logger.verbose('Heartbeat task is already added to scheduler.');
         }
 
         this.initializeNowPlayingSchedule();
@@ -291,9 +293,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
         } else {
             if(this.initDeadTimeout !== undefined) {
-                this.logger.warn('Dead scrobble task timeout is already set');
+                this.logger.verbose('Dead scrobble task timeout is already set');
             } else {
-                this.logger.warn('Dead scrobble task is already added to the scheduler');
+                this.logger.verbose('Dead scrobble task is already added to the scheduler');
             }
         }
     }
@@ -315,15 +317,52 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 this.logger.warn({label: 'Heartbeat'}, 'Should be monitoring scrobbles but will not attempt to start because auth state is not good and cannot be correct unattended.');
                 return false;
             }
-
-            //await client.processDeadLetterQueue();
-            if(!this.scrobbling) {
-                this.logger.info({labels: 'Heartbeat'}, 'Should be processing scrobbles! Attempting to restart scrobbling...');
-                this.initScrobbleMonitoring().catch((e) => this.logger.error('Failed to initialize scrobbler monitoring during heartbeat'));
-                return true;
-            }
+        }
+        if(this.isReady() && !this.scrobbling) {
+            this.logger.info({labels: 'Heartbeat'}, 'Should be processing scrobbles! Attempting to restart scrobbling...');
+            this.initScrobbleMonitoring().catch((e) => this.logger.error('Failed to initialize scrobbler monitoring during heartbeat'));
+            return true;
         }
         return true;
+    }
+
+    public async start(opts: {forceInit?: boolean} = {}) {
+        if(opts.forceInit) {
+            if(!this.canAuthUnattended()) {
+                this.logger.warn({labels: 'Heartbeat'}, 'Client is not ready but will not try to initialize because auth state is not good and cannot be corrected unattended.')
+                return false;
+            }
+            try {
+                await this.initialize({force: true, notify: true, notifyTitle: 'Could not initialize automatically'});
+            } catch (e) {
+                this.logger.error(new Error('Could not initialize automatically', {cause: e}));
+                return false;
+            }
+
+            if(!this.canAuthUnattended()) {
+                this.logger.warn({label: 'Heartbeat'}, 'Should be monitoring scrobbles but will not attempt to start because auth state is not good and cannot be correct unattended.');
+                return false;
+            }
+        }
+        this.initTasks();
+        return true;
+    }
+
+    public async stop(opts: { reason?: string | Error } = {}) {
+        try {
+            this.scheduler.stop();
+            for (const job of this.scheduler.getAllJobs()) {
+                this.scheduler.removeById(job.id);
+            }
+            await this.tryStopScrobbling(opts.reason);
+            await this.tryStopDeadProcessing(opts.reason);
+            this.nowPlayingLastPlay = undefined;
+            this.nowPlayingLastUpdated = undefined;
+            this.setStatus('Stopped');
+            this.emitComponentUpdate<Partial<ComponentClientApiJson>>({state: COMPONENT_STATE.STOPPED});
+        } catch (e) {
+            throw new Error('Failed to stop Client', { cause: e });
+        }
     }
 
     protected async postCache(): Promise<void> {
@@ -412,7 +451,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
 
     public getRunningState(): ComponentState {
-        return this.scrobbling ? COMPONENT_STATE.RUNNING : COMPONENT_STATE.IDLE;
+        if(this.scrobbling) {
+            return COMPONENT_STATE.RUNNING;
+        }
+        if(this.scheduler.getAllJobs().length > 0) {
+            return COMPONENT_STATE.IDLE;
+        }
+        return COMPONENT_STATE.RUNNING;
     }
 
     protected getComponentApiData() {
@@ -510,6 +555,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             // is still set by shouldUpdatePlayingNow()
             // 5 seconds makes sure our granularity for updates is decently fast *when* we do need to actually update
             this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({milliseconds: this.nowPlayingTaskInterval}, t, {id: 'pn_task'}));
+        } else {
+            this.logger.verbose('Now Playing task already added to scheduler');
         }
     }
 
@@ -991,7 +1038,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             if (isAbortError(e)) {
                 const err = generateLoggableAbortReason('Scrobble processing stopped', this.scrobbleQueueAbortController.signal);
                 this.logger.info(err);
-                this.logger.trace(e);
+                //this.logger.trace(e);
                 componentUpdate.status = 'Processing cancelled';
             } else {
                 const err = new Error('Scrobble processing stopped with error', { cause: e });
@@ -1061,7 +1108,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     tryStopScrobbling = async (reason?: string | Error) => {
         if(this.scrobbling === false) {
-            this.logger.warn(`Polling is already stopped!`);
+            this.logger.verbose(`Polling is already stopped!`);
             return;
         }
         if(this.scrobbleQueueAbortController === undefined) {
@@ -1076,8 +1123,29 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             this.logger.verbose(`Waiting for scrobble processing stop signal to be acknowledged (waited ${timePasssed}ms)`);
         }
         if(this.scrobbling === true) {
-            this.logger.warn('Could not stop scrobble processing! Or signal was lost :(');
+            throw new Error('Could not stop scrobble processing! Or signal was lost');
+        }
+        return true;
+    }
+
+    tryStopDeadProcessing = async (reason?: string | Error) => {
+        if(this.deadQueueProcessing === false) {
+            this.logger.verbose(`Dead queue processing is already stopped`);
+            return;
+        }
+        if(this.deadQueueAbortController === undefined) {
+            this.logger.error('No abort controller found! Nothing to stop.');
             return false;
+        }
+        this.deadQueueAbortController.abort(reason)
+        let timePasssed = 0;
+        while(this.deadQueueProcessing === true && timePasssed < (this.scrobbleWaitStopInterval * 10)) {
+            await sleep(this.scrobbleWaitStopInterval);
+            timePasssed += this.scrobbleWaitStopInterval;
+            this.logger.verbose(`Waiting for dead queue processing stop signal to be acknowledged (waited ${timePasssed}ms)`);
+        }
+        if(this.deadQueueProcessing === true) {
+            throw new Error('Could not stop dead queue processing! Or signal was lost');
         }
         return true;
     }

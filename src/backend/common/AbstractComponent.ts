@@ -221,6 +221,18 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
     }
 
+    public abstract stop(opts?: {reason?: string | Error}):  Promise<void>
+    public abstract start(opts?: {forceInit?: boolean}):  Promise<boolean>
+
+    public async restart(opts: { reason?: string | Error, forceInit?: boolean } = {}): Promise<void> {
+        try {
+            await this.stop(opts);
+            await this.start(opts);
+        } catch (e) {
+            throw new Error('Failed to restart', { cause: e });
+        }
+    }
+
     public retentionCleanup = async () => {
         if(this.databaseOK !== true) {
             this.logger.warn(`Cannot run retention cleanup because ${this.componentType} database state is not OK`);

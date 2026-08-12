@@ -71,7 +71,11 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
                 this.authed = false;
                 this.connectionOK = false;
             }
-            await this.tryStopScrobbling();
+            try {
+                await this.tryStopScrobbling('API emitted stop event');
+            } catch (e) {
+                this.logger.warn(new Error('Failed to stop scrobbling loop after emitter stopped', {cause: e}));
+            }
         });
 
         if(typeof artwork === 'boolean') {

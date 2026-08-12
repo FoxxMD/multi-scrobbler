@@ -210,3 +210,7 @@ export type CompareDateSingle<D extends DateLike = Dayjs> = {
 };
 
 export type CacheClearType = 'external-api' | 'transforms';
+
+export interface ComponentStateBody {
+    state: 'stop' | 'start' | 'restart'
+}

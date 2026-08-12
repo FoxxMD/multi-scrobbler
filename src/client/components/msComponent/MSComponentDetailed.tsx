@@ -1,11 +1,12 @@
 import React, { type ComponentProps } from "react"
 import { Portal, Group, Span, Menu, Box, Heading, Skeleton, Wrap, HStack, Stack, Flex, Card, SkeletonText, type BadgeProps, type MenuItemProps } from '@chakra-ui/react';
-import { COMPONENT_STATE, type ComponentClientApiJson, type ComponentCommonApiJson, type ComponentState, isComponentClientApiJson, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
+import { COMPONENT_STATE, type ComponentClientApiJson, type ComponentCommonApiJson, type ComponentState, type ComponentStateBody, isComponentClientApiJson, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
 import { capitalize } from "../../../core/StringUtils.js";
-import { ChevronLeftButton, EllipsisButton, EyeButton, EyeClosedIcon, EyeIcon, IdleIcon, PowerButton, PowerIcon, PowerOffButton, PowerOffIcon, RetryIcon } from "../icons/ChakraIcons.js";
+import { ChevronLeftButton, EllipsisButton, EyeButton, EyeClosedIcon, EyeIcon, IdleIcon, PowerButton, PowerIcon, PowerOffButton, PowerOffIcon, RetryButton, RetryIcon } from "../icons/ChakraIcons.js";
 import { PlayersContainer, PlayersContainerFetchable } from "../chakraPlayer/Player.js";
 import { Tooltip } from "../ToggleTip.js";
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import ky from "ky";
 import { ErrorAlert } from "../ErrorAlert";
 import {
     useSSEContext,
@@ -98,30 +99,45 @@ export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof 
     let menuElm: React.JSX.Element | undefined;
     let menuItems: React.JSX.Element[] = [];
     const badgeProps: BadgeProps = {};
+
+    const {mutate, isPending, variables, isSuccess} = useMutation({
+        mutationKey: ['stateChange', componentId],
+        mutationFn: (action: ComponentStateBody['state']) => ky.post(`/api/components/${componentId}/state`,{
+            json: {state: action, reason: 'User initiated from UI'}
+        })
+    });
+
     switch(props.data.state) {
         case COMPONENT_STATE.RUNNING:
-            primaryAction = <PowerOffButton {...primaryActionProps}/>
+            primaryAction = <RetryButton onClick={() => mutate('restart')} disabled={isPending} {...primaryActionProps}/>
+            menuItems = [<MenuItemStop/>,<MenuItemMute/>];
+            break;
+        case COMPONENT_STATE.IDLE:
+            primaryAction = <PowerButton onClick={() => mutate('start')} disabled={isPending} {...primaryActionProps}/>
             menuItems = [<MenuItemStop/>,<MenuItemRestart/>,<MenuItemMute/>];
             break;
         case COMPONENT_STATE.MUTED:
-            primaryAction = <EyeButton {...primaryActionProps}/>;
+            primaryAction = <EyeButton  disabled={isPending} {...primaryActionProps}/>;
             menuItems = [<MenuItemStop/>,<MenuItemRestart/>,<MenuItemUnmute/>];
+            break;
+        case COMPONENT_STATE.STOPPED:
+            primaryAction = <PowerButton onClick={() => mutate('start')} disabled={isPending} {...primaryActionProps}/>
+            menuItems = [<MenuItemRestart/>];
             break;
         case COMPONENT_STATE.INITIALIZING:
             // no actions while init is occurring
             break;
         default:
             // otherwise generic start action for all non-running states
-            primaryAction = <PowerButton {...primaryActionProps}/>;
-            menuItems = [<MenuItemStart/>];
+            primaryAction = <RetryButton onClick={() => mutate('restart')}  disabled={isPending} {...primaryActionProps}/>;
     }
     if(menuItems.length > 0) {
         menuElm = (
-    <Menu.Root positioning={{ placement: "bottom-end" }}>
+    <Menu.Root positioning={{ placement: "bottom-end" }} onSelect={(select) => mutate(select.value as ComponentStateBody['state'])}>
       <Group attached>
         {primaryAction}
         <Menu.Trigger asChild>
-          <EllipsisButton {...primaryActionProps}/>
+          <EllipsisButton disabled={isPending} {...primaryActionProps}/>
         </Menu.Trigger>
       </Group>
       <Portal>
@@ -141,7 +157,7 @@ export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof 
         badgeProps.paddingRight = 0;
     }
 
-    return <ComponentStateBadge size="lg" maxWidth="fit-content" {...badgeProps} separator suffix={suffix} {...rest}/>;
+    return <ComponentStateBadge size="lg" maxWidth="fit-content" {...badgeProps} loading={isPending} separator suffix={suffix} {...rest}/>;
 }
 
 export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, live?: boolean}) => {
@@ -184,7 +200,7 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
                     <MSComponentType data={data}/>
                 </Box>
                 <Stack alignItems={isWrapped ? 'flex-start' : 'flex-end'}>
-                    <ComponentStateBadgeActionable size="lg" maxWidth="fit-content" data={data} />
+                    <ComponentStateBadgeActionable size="lg" maxWidth="fit-content" componentId={data.id} data={data} />
                     <HStack style={{whiteSpace: 'break-spaces'}}>{sleepingRender}{data.status}</HStack>
                 </Stack>
             </Wrap>

@@ -138,8 +138,10 @@ export default abstract class AbstractSource extends AbstractComponent implement
     }
 
     async [Symbol.asyncDispose]() {
-        if(this.canPoll) {
-            await this.tryStopPolling('Source is being disposed');
+        try {
+            await this.stop({ reason: 'Instance is being destroyed' });
+        } catch (e) {
+            this.logger.warn(e);
         }
     }
 
@@ -204,6 +206,45 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return true;
     }
 
+    public async start(opts: {forceInit?: boolean} = {}) {
+        if(opts.forceInit) {
+            if(!this.canAuthUnattended()) {
+                this.logger.warn({labels: 'Heartbeat'}, 'Source is not ready but will not try to initialize because auth state is not good and cannot be corrected unattended.')
+                return false;
+            }
+            try {
+                this.setStatus('Attempting to initialize...');
+                await this.initialize({force: true, notify: true, notifyTitle: 'Could not initialize automatically'});
+            } catch (e) {
+                this.logger.error(new Error('Could not initialize automatically', {cause: e}));
+                this.setStatus('Could not initialize automatically');
+                return false;
+            }
+
+            if('discoverDevices' in this && typeof this.discoverDevices === 'function') {
+                this.discoverDevices();
+            }
+        }
+        this.initTasks();
+        return true;
+    }
+
+    public async stop(opts: { reason?: string | Error } = {}) {
+        try {
+            if (this.canPoll) {
+                await this.tryStopPolling(opts.reason);
+            }
+            this.scheduler.stop();
+            for (const job of this.scheduler.getAllJobs()) {
+                this.scheduler.removeById(job.id);
+            }
+            this.setStatus('Stopped');
+            this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({state: COMPONENT_STATE.STOPPED});
+        } catch (e) {
+            throw new Error('Failed to stop Source', { cause: e });
+        }
+    }
+
     protected async postCache(): Promise<void> {
         await super.postCache();
         this.generateStaggerMappers();
@@ -266,6 +307,10 @@ export default abstract class AbstractSource extends AbstractComponent implement
     }
 
     public getRunningState(): ComponentState {
+        if(this.scheduler.getAllJobs().length === 0) {
+            return COMPONENT_STATE.STOPPED;
+        }
+
         const running = (this.canPoll && this.polling) || !this.canPoll;
 
         if(running && !this.isMonitoring()) {
@@ -558,7 +603,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             if (isAbortError(e)) {
                 const err = generateLoggableAbortReason('Polling stopped', this.abortController.signal);
                 this.logger.info(err);
-                this.logger.trace(e)
+                //this.logger.trace(e);
                 componentUpdate.status = 'Polling cancelled';
             } else {
                 const err = new Error('Polling stopped with error', { cause: e });

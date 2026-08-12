@@ -1,4 +1,4 @@
-import { Badge, HStack, Separator } from "@chakra-ui/react";
+import { Badge, HStack, Separator, Spinner } from "@chakra-ui/react";
 import { useSSEContext, useSSEEvent } from "@flamefrontend/sse-runtime-react";
 import React, { type ComponentProps, type PropsWithChildren, useCallback, useEffect, useState } from "react";
 import { useTimeout } from 'react-use-timeout';
@@ -78,10 +78,11 @@ export const ComponentStateBadge = (props: ComponentProps<typeof Badge> & {
     componentId?: number,
     live?: boolean,
     separator?: boolean | React.JSX.Element,
-    suffix?: React.JSX.Element
+    suffix?: React.JSX.Element,
+    loading?: boolean
 }) => {
 
-    const { data, suffix, separator, ...rest } = props;
+    const { data, suffix, separator, loading = false, ...rest } = props;
 
     const [componentState, setComponentState] = useState(data.state);
 
@@ -129,5 +130,7 @@ export const ComponentStateBadge = (props: ComponentProps<typeof Badge> & {
         }
     }
 
-    return <Badge variant="surface" colorPalette={badgeColor} {...rest}><HStack gap="0">{componentStateToFriendly(componentState)}{sep}{suffix}</HStack></Badge>
+    return (<Badge variant="surface" colorPalette={badgeColor} {...rest}>
+        <HStack gap="0">{loading ? <Spinner animationDuration="0.8s" /> : undefined}{componentStateToFriendly(componentState)}{sep}{suffix}</HStack></Badge>
+        );
 }
