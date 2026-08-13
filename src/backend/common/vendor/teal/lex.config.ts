@@ -20,7 +20,7 @@ export default defineLexiconConfig({
 				type: 'git',
 				remote: 'https://github.com/teal-fm/teal.git',
 				ref: 'main',
-				pattern: ['lexicons/fm.teal/feed/play.json', 'lexicons/fm.teal/feed/defs.json'],
+				pattern: ['lexicons/fm.teal/feed/*.json','lexicons/fm.teal/actor/*.json'],
 			},
 		],
 	},

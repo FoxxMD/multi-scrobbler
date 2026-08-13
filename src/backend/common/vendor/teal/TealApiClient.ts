@@ -8,7 +8,7 @@ import type {AbstractApiOptions, PagelessListensTimeRangeOptions, PagelessTimeRa
 import type {ListRecord, RecordOptions, TealClientData} from "../../infrastructure/config/client/tealfm.ts";
 import AbstractApiClient from "../AbstractApiClient.ts";
 import { ATProtoAppApiClient } from "../atproto/ATProtoAppApiClient.ts";
-import type { FmTealAlphaActorStatus, FmTealAlphaFeedPlay, FmTealFeedPlay } from "./lexicons/index.ts";
+import type { FmTealActorStatus, FmTealAlphaActorStatus, FmTealAlphaFeedPlay, FmTealFeedPlay } from "./lexicons/index.ts";
 import { ScrobbleSubmitError } from "../../errors/MSErrors.ts";
 import { getScrobbleTsSOCDateWithContext, usecToUnix } from "../../../utils/TimeUtils.ts";
 import { musicServiceToCononical } from "../listenbrainz/lzUtils.ts";
@@ -18,17 +18,18 @@ import type { ATProtoAuthenticatedApiClient } from "../atproto/ATProtoAuthentica
 import { UpstreamError } from "../../errors/UpstreamError.ts";
 import type { ComAtprotoRepoCreateRecord, ComAtprotoRepoPutRecord } from '@atcute/atproto';
 import { nowPlayingExpirationDuration } from "../../../scrobblers/AbstractScrobbleClient.ts";
-import { isrcNoHyphens } from "../../../../core/PlayUtils.ts";
+import { isrcNoHyphens, sortByNewestPlayDate } from "../../../../core/PlayUtils.ts";
+import { isGenericUri } from "@atcute/lexicons/syntax";
 
 type TealPlayRecord = FmTealAlphaFeedPlay.Main | FmTealFeedPlay.Main;
 
 const TEAL_PLAY_COLLECTIONS = ['fm.teal.feed.play', 'fm.teal.alpha.feed.play'] as const;
 
-const asMusicServiceUri = (musicService?: string): string | undefined => {
+const asMusicServiceUri = (musicService?: string): `${string}:${string}` | undefined => {
     if (musicService === undefined) {
         return undefined;
     }
-    return /^[a-z][a-z\d+.-]*:\/\//i.test(musicService) ? musicService : `https://${musicService}`;
+    return isGenericUri(musicService) ? musicService : `https://${musicService}`;
 };
 
 export class TealApiClient extends AbstractApiClient implements PagelessTimeRangeListens {
@@ -73,10 +74,10 @@ export class TealApiClient extends AbstractApiClient implements PagelessTimeRang
         }
     }
 
-    async updateStatusRecord(record: FmTealAlphaActorStatus.Main): Promise<ScrobbleActionResult> {
+    async updateStatusRecord(record: FmTealActorStatus.Main): Promise<ScrobbleActionResult> {
         const input: ComAtprotoRepoPutRecord.$input = {
             repo: this.client.userData.did,
-            collection: "fm.teal.alpha.actor.status",
+            collection: "fm.teal.actor.status",
             rkey: "self",
             record
         };
@@ -112,21 +113,21 @@ export class TealApiClient extends AbstractApiClient implements PagelessTimeRang
             }
         }))));
 
+        const fromTimestamps: number[] = [],
+              playSets: PlayObject[][] = [];
+
         for (const resp of responses) {
             if (!resp.ok) {
                 throw new UpstreamError('Fetching records from PDS failed', {cause: resp.data});
             }
+            if(resp.data.cursor !== undefined) {
+                fromTimestamps.push(usecToUnix(decodeTid(resp.data.cursor).timestampUs));
+            }
+            playSets.push((resp.data.records as ListRecord<TealPlayRecord>[]).map(x => listRecordToPlay(x)));
         }
 
-        const fromTimestamps = responses
-            .flatMap(resp => resp.data.cursor === undefined ? [] : [usecToUnix(decodeTid(resp.data.cursor).timestampUs)]);
-        const from = fromTimestamps.length > 0
-            ? fromTimestamps.reduce((earliest, current) => current < earliest ? current : earliest)
-            : undefined;
-        const plays = responses
-            .flatMap(resp => resp.data.records as unknown as ListRecord<TealPlayRecord>[])
-            .map(listRecordToPlay)
-            .sort((a, b) => (b.data.playDate?.valueOf() ?? 0) - (a.data.playDate?.valueOf() ?? 0));
+        const from = fromTimestamps.length > 0 ? fromTimestamps.reduce((earliest, current) => current < earliest ? current : earliest) : undefined;
+        const plays = playSets.flat().sort(sortByNewestPlayDate)
 
         return {data: plays, meta: {to, from, limit, more: false, order: 'desc'}};
     }
@@ -134,8 +135,18 @@ export class TealApiClient extends AbstractApiClient implements PagelessTimeRang
 
 export const recordToPlay = (record: TealPlayRecord, options: RecordOptions = {}): PlayObject => {
     const artists = record.artists ?? [];
-    const musicService = 'musicServiceUri' in record ? record.musicServiceUri : record.musicServiceBaseDomain;
-    const origin = 'originUri' in record ? record.originUri : record.originUrl;
+    let musicService: string;
+    if('musicServiceUri' in record) {
+        musicService = record.musicServiceUri
+    } else if(`musicServiceBaseDomain` in record) {
+        musicService = record.musicServiceBaseDomain;
+    }
+    let origin: string;
+    if('originUri' in record) {
+        origin = record.originUri;
+    } else if(`originUrl` in record) {
+        origin = record.originUrl;
+    }
 
     const play: PlayObjectMinimal = {
         data: {
@@ -172,7 +183,7 @@ export const recordToPlay = (record: TealPlayRecord, options: RecordOptions = {}
     return baseFormatPlayObj(record, play);
 }
 
-export const playToStatusRecord = (play: PlayObject, notPlaying: boolean, position?: number): FmTealAlphaActorStatus.Main => {
+export const playToStatusRecord = (play: PlayObject, notPlaying: boolean, position?: number): FmTealActorStatus.Main => {
     const item = notPlaying
         ? { trackName: "", artists: [] }
         : (() => {
@@ -200,7 +211,7 @@ export const playToStatusRecord = (play: PlayObject, notPlaying: boolean, positi
     }
 
     return {
-        $type: "fm.teal.alpha.actor.status",
+        $type: "fm.teal.actor.status",
         time: dayjs().toISOString(),
         expiry: expiry.toISOString(),
         item: {
@@ -231,7 +242,7 @@ export const playToRecord = (play: PlayObject): FmTealFeedPlay.Main => {
         releaseName: play.data.album,
         submissionClientAgent: `multi-scrobbler/${getRoot().items.version}`,
         musicServiceUri: asMusicServiceUri(musicService),
-        originUri: play.meta.url?.origin,
+        originUri: isGenericUri(play.meta.url?.origin) ? play.meta.url?.origin : undefined,
         isrc: play.data.isrc !== undefined ? isrcNoHyphens(play.data.isrc) : undefined,
         trackMbId: mbidUriOrUndefined(play.data.meta?.brainz?.track as MBID),
         recordingMbId: mbidUriOrUndefined(play.data.meta?.brainz?.recording as MBID),

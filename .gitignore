@@ -156,8 +156,6 @@ storybook-static
 *.db*
 
 **/lexicons/**/*.json
-!src/backend/common/vendor/teal/lexicons/fm.teal/feed/defs.json
-!src/backend/common/vendor/teal/lexicons/fm.teal/feed/play.json
 
 bun.lock
 .DS_Store

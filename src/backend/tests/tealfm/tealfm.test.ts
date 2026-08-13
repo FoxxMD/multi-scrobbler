@@ -65,12 +65,12 @@ describe('#tealfm Record to Play', function() {
         const [legacyRecord] = generateTealPlayRecord();
         const productionRecord = {
             ...legacyRecord,
-            uri: legacyRecord.uri.replace('fm.teal.alpha.feed.play', 'fm.teal.feed.play'),
+            uri: legacyRecord.uri.replace('fm.teal.feed.play', 'fm.teal.feed.play'),
             value: {
                 ...legacyRecord.value,
                 $type: 'fm.teal.feed.play' as const,
-                musicServiceUri: 'https://spotify.com',
-                originUri: 'https://example.com/track'
+                musicServiceUri: 'https://spotify.com' as `${string}:${string}`,
+                originUri: 'https://example.com/track' as `${string}:${string}`
             }
         };
 
