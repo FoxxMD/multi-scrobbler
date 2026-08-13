@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, type ComponentProps } from "react"
+import React, { useCallback, useMemo, type ComponentProps, useEffect } from "react"
 import { Portal, Group, Span, Menu, Box, Heading, Skeleton, Wrap, HStack, Stack, Flex, Text, Card, Button, CloseButton, SkeletonText, type BadgeProps, type MenuItemProps, createOverlay, Dialog, type MenuSelectionDetails } from '@chakra-ui/react';
 import { COMPONENT_STATE, type ComponentClientApiJson, type ComponentCommonApiJson, type ComponentsApiJson, type ComponentState, type ComponentStateBody, isComponentClientApiJson, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
 import { capitalize } from "../../../core/StringUtils.js";
@@ -76,13 +76,24 @@ export const MSComponentStats = (props: { data?: ComponentCommonApiJson, live?: 
 type AuthDialogProps = {data: Pick<ComponentsApiJson, 'id' | 'authType' | 'errors'>};
 
 const dialog = createOverlay<AuthDialogProps>((props) => {
-  const { data, ...rest } = props
+  const { data,  ...rest } = props
 
     const { isPending, isError, data: url, error } = useQuery({
         enabled: data.authType === COMPONENT_AUTH_TYPE.interactive,
         staleTime: Infinity,
         ...tanQueries.components.authUrl(data.id),
     });
+    const {mutate, isPending: mutateIsPending, isSuccess} = useMutation({
+        mutationKey: ['authChange', data.id],
+        mutationFn: () => ky.post(`/api/components/${data.id}/auth`)
+    });
+
+    useEffect(() => {
+        if(isSuccess) {
+            dialog.close('auth');
+        }
+    },[isSuccess, dialog])
+
     const authFailure = useMemo(() => {
         for(const e of data.errors) {
             const authState = findAnyAuthError(e);
@@ -139,7 +150,7 @@ const dialog = createOverlay<AuthDialogProps>((props) => {
                 <Button variant="outline">Cancel</Button>
             </Dialog.ActionTrigger>
             {COMPONENT_AUTH_TYPE.interactive === data.authType && <Button disabled={isPending || isError} asChild><a target="_self" href={url}>Authenticate <ExternalLinkIcon size="sm"/></a></Button>}
-            <Button>Test Auth</Button>
+            <Button loading={mutateIsPending} onClick={() => mutate()}>Test Auth</Button>
             </Dialog.Footer>
             <Dialog.CloseTrigger asChild>
             <CloseButton size="sm" />

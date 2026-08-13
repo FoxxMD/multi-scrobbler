@@ -581,7 +581,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         });
     }
 
-    protected emitComponentUpdate = <T extends Partial<ReturnType<typeof this.getApiData>>>(payload: T) => {
+    public emitComponentUpdate = <T extends Partial<ReturnType<typeof this.getApiData>>>(payload: T) => {
         if('errors' in payload) {
             if(payload.errors.length > 0) {
                 payload.errors = payload.errors.map(x => x instanceof Error ? serializeError(x) : x);
@@ -610,7 +610,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         this.setStatus(payload.title);
     }
 
-    protected setStatus = (status: string) => {
+    public setStatus = (status: string) => {
         this.status = status;
         this.emitComponentUpdate({status});
     }
