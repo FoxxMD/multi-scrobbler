@@ -33,8 +33,8 @@ export class ConnectionCheckError extends StageError {
 }
 addKnownErrorConstructor(ConnectionCheckError);
 
-export class AuthCheckError extends StageError {
-    override name = 'Authentication Check';
+export class AuthError extends NamedError {
+    override name = 'Authentication Error';
     unrecoverable: boolean = false;
 
     public constructor(msg?: string, opts: ErrorOptions & {unrecoverable?: boolean} = {}) {
@@ -42,7 +42,19 @@ export class AuthCheckError extends StageError {
         this.unrecoverable = opts.unrecoverable ?? false;
     }
 }
+addKnownErrorConstructor(AuthError);
+export const isAuthError = (e: Error): e is AuthError => e.name === 'Authentication Error' || e instanceof AuthError;
+export class AuthCheckError extends StageError {
+    override name = 'Authentication Check';
+    unrecoverable?: boolean;
+
+    public constructor(msg?: string, opts: ErrorOptions & {unrecoverable?: boolean} = {}) {
+        super(msg, opts);
+        this.unrecoverable = opts.unrecoverable;
+    }
+}
 addKnownErrorConstructor(AuthCheckError);
+export const isAuthCheckError = (e: Error): e is AuthCheckError => e.name === 'Authentication Check' || e instanceof AuthCheckError;
 
 export class PostInitError extends StageError {
     name = 'Post Initialization';
@@ -206,3 +218,33 @@ export class InvalidRegexError extends SimpleError {
     }
 }
 addKnownErrorConstructor(InvalidRegexError, () => new InvalidRegexError(new RegExp(/1/)));
+
+export type AuthErrorMap = {
+    root: AuthError
+    check: AuthCheckError
+    auth: AuthError | AuthCheckError
+    parent: Error
+}
+
+export const findAuthIssue = <T extends keyof AuthErrorMap = 'auth'>(err: Error, opts: { type?: T, unrecoverable?: boolean } = {}): AuthErrorMap[T] | undefined => {
+    const {
+        type = 'auth',
+        unrecoverable
+    } = opts;
+    const authError = findCauseByFunc(err, (e) => {
+        if (['check','auth'].includes(type) && isAuthCheckError(e)) {
+            return unrecoverable === undefined || e.unrecoverable === unrecoverable;
+        }
+        if (['root','auth'].includes(type) && isAuthError(e)) {
+            return unrecoverable === undefined || e.unrecoverable === unrecoverable;
+        }
+        return false;
+    });
+    if (authError !== undefined) {
+        if (type === 'parent') {
+            return err as AuthErrorMap[T];
+        }
+        return authError as AuthErrorMap[T];
+    }
+    return undefined;
+}
