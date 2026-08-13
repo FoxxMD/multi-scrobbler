@@ -35,7 +35,7 @@ import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.ts";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
 import prom from 'prom-client';
-import { SimpleError } from "../common/errors/MSErrors.ts";
+import { findAuthIssue, SimpleError } from "../common/errors/MSErrors.ts";
 import { DrizzlePlayRepository, type QueryPlaysOpts, type QueryPlaysOptsJson } from "../common/database/drizzle/repositories/PlayRepository.ts";
 import { playSelectToDeadScrobble } from "../common/database/drizzle/entityUtils.ts";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.ts";
@@ -350,6 +350,31 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
                 return res.status(400).json({ error: { message: `'state' type ${state} is not valid` } });
         }
         return res.sendStatus(200);
+    });
+
+    app.post('/api/components/:componentVal/auth', componentAwareMiddle, async (req: ComponentAwareRequest, res, next) => {
+        const {
+            component,
+        } = req;
+        let didAuth = false;
+        try {
+            logger.verbose('User requested auth test');
+            await component.testAuth(true);
+            component.errors = component.errors.filter(x => !findAuthIssue(x));
+            didAuth = true;
+            return res.sendStatus(200);
+        } catch (e) {
+            component.errors = component.errors.filter(x => !findAuthIssue(x));
+            component.errors.push(e);
+            return res.status(500).json({error: serializeError(e)});
+        } finally {
+            const data = component.getApiData();
+            component.emitComponentUpdate({
+                errors: data.errors,
+                state: data.state,
+                status: didAuth ? 'Authenticated successfully' : data.status
+            });
+        }
     });
 
     app.get('/api/components/:componentVal/plays', componentAwareMiddle, async (req: ComponentAwareRequest, res, next) => {
