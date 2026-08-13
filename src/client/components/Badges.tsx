@@ -2,7 +2,7 @@ import { Badge, HStack, Separator, Spinner } from "@chakra-ui/react";
 import { useSSEContext, useSSEEvent } from "@flamefrontend/sse-runtime-react";
 import React, { type ComponentProps, type PropsWithChildren, useCallback, useEffect, useState } from "react";
 import { useTimeout } from 'react-use-timeout';
-import { COMPONENT_STATE, type ComponentCommonApiJson, componentStateToFriendly, type MsSseEvent, type PlayApiCommon } from "../../core/Api";
+import { COMPONENT_STATE, type ComponentCommonApiJson, type ComponentsApiJson, componentStateToFriendly, type MsSseEvent, type PlayApiCommon } from "../../core/Api";
 import type {Second} from "../../core/Atomic";
 import { capitalizeWords } from "../../core/StringUtils";
 
@@ -74,7 +74,7 @@ export const EphemeralElement = (props: { expires?: Second | boolean, children: 
 }
 
 export const ComponentStateBadge = (props: ComponentProps<typeof Badge> & {
-    data: Pick<ComponentCommonApiJson, 'state'>,
+    data: Pick<ComponentsApiJson, 'state' | 'errors' | 'authType'>,
     componentId?: number,
     live?: boolean,
     separator?: boolean | React.JSX.Element,

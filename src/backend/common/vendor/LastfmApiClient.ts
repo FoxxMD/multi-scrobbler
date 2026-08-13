@@ -13,7 +13,7 @@ import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjec
 import type {LastfmData} from "../infrastructure/config/client/lastfm.ts";
 import AbstractApiClient from "./AbstractApiClient.ts";
 import { normalizeStr, parseArtistCredits } from "../../utils/StringUtils.ts";
-import { LastFMUser, LastFMAuth, LastFMTrack, type LastFMUserGetRecentTracksResponse, type LastFMBooleanNumber, type LastFMUpdateNowPlayingResponse, type LastFMUserGetInfoResponse, type LastFMUserGetRecentTracksParams } from 'lastfm-ts-api';
+import { LastFMUser, LastFMAuth, LastFMTrack, type LastFMUserGetRecentTracksResponse, type LastFMBooleanNumber, type LastFMUpdateNowPlayingResponse, type LastFMUserGetInfoResponse, type LastFMUserGetRecentTracksParams, LastFMResponseError } from 'lastfm-ts-api';
 import clone from 'clone';
 import type { IncomingMessage } from "http";
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
@@ -30,6 +30,12 @@ const badErrors = [
     'authentication failed',
     'invalid parameters'
 ];
+
+const unrecoverableAuthErrorCodes = [
+    10, // invalid api key
+    13, // invalid method signature
+    26, // api key suspended
+]
 
 const retryErrors = [
     'operation failed',
@@ -248,7 +254,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
         if (this.sessionKey === undefined) {
             this.logger.warn('No session key found. User interaction for authentication required.');
             this.logger.info(`Redirect URL that will be used on auth callback: '${this.redirectUri}'`);
-            throw new SimpleError('No session key found. User interaction for authentication required.');
+            throw new AuthError('No session key found. User interaction for authentication required.', {unrecoverable: false});
         }
         try {
             // existing lastfm clients are ok with getting user from getInfo
@@ -270,17 +276,31 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             this.logger.info(`Client authorized for user ${this.user}`)
             return true;
         } catch (e) {
+            if(e instanceof AuthError) {
+                throw e;
+            }
             this.logger.error('Testing auth failed');
             if(isNodeNetworkException(e)) {
                 this.logger.error(`Could not communicate with ${this.upstreamName} API`);
                 throw new AuthError('Testing auth failed', {cause: e, unrecoverable: false});
             }
             let unrecoverable: boolean;
-            const errorWithMessage = findCauseByFunc(e, (ee) => `response` in ee) as Error & {response: IncomingMessage} | undefined;
-            if(errorWithMessage !== undefined) {
-                unrecoverable = [401,403].includes(errorWithMessage.response.statusCode);
+            if(e instanceof LastFMResponseError) {
+                try {
+                    const errorContent = JSON.parse(e.content);
+                    if(`error` in errorContent) {
+                        unrecoverable = unrecoverableAuthErrorCodes.includes(errorContent.error);
+                    }
+                } catch (e) {
+                    // swallow
+                }
             }
-            // TODO maybe check if error has actual LFM response content with error code?
+            if(unrecoverable === undefined) {
+                const errorWithMessage = findCauseByFunc(e, (ee) => `response` in ee) as Error & {response: IncomingMessage} | undefined;
+                if(errorWithMessage !== undefined) {
+                    unrecoverable = [401,403].includes(errorWithMessage.response.statusCode);
+                }
+            }
             throw new AuthError('Testing auth failed', {cause: e, unrecoverable});
         }
     }

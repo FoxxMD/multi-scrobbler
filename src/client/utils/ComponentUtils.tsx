@@ -84,12 +84,41 @@ export const walkError = (err: ErrorIsh, errors: ErrorData[] = []): ErrorData[] 
     return errors;
 }
 
-export const findAuthError = (err: ErrorIsh): ErrorIsh | undefined => {
+export const findAuthCheckError = (err: ErrorIsh): ErrorIsh | undefined => {
     if(err.name === 'Authentication Check') {
         return err;
     }
     if(err.cause === undefined || !isErrorIsh(err.cause)) {
         return undefined;
     }
+    return findAuthCheckError(err.cause);
+}
+
+export const findAuthError = (err: ErrorIsh): ErrorIsh | undefined => {
+    if(err.name === 'Authentication Error') {
+        return err;
+    }
+    if(err.cause === undefined || !isErrorIsh(err.cause)) {
+        return undefined;
+    }
     return findAuthError(err.cause);
+}
+
+export const findAnyAuthError = (e: ErrorIsh): [ErrorIsh, boolean] => {
+    const aError = findAuthError(e);
+    const aCheckError = findAuthCheckError(e);
+    if(aError)
+    if(aError !== undefined && 'unrecoverable' in aError && aError.unrecoverable === true) {
+        return [aError, true];
+    }
+    if(aCheckError !== undefined && 'unrecoverable' in aCheckError && aCheckError.unrecoverable === true) {
+        return [aCheckError, true];
+    }
+    if(aError !== undefined) {
+        return [aError, false];
+    }
+    if(aCheckError !== undefined) {
+        return [aCheckError, false];
+    }
+    return [undefined, false];
 }

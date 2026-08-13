@@ -343,11 +343,14 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
     doAuthentication = async () => {
         try {
             if(undefined === this.spotifyApi.getAccessToken()) {
-                throw new Error('Cannot use API until an access token has been received from the authorization flow. See the dashboard.');
+                throw new AuthError('Cannot use API until an access token has been received from the authorization flow.', {unrecoverable: false});
             }
             await this.callApi<ReturnType<typeof this.spotifyApi.getMe>>(((api: any) => api.getMe()));
             return true;
         } catch (e) {
+            if(e instanceof AuthError) {
+                throw e;
+            }
             if(isNodeNetworkException(e)) {
                 this.logger.error('Could not communicate with Spotify API');
             }
