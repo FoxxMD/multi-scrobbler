@@ -16,7 +16,7 @@ import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 export default class DeezerSource extends AbstractSource {
     workingCredsPath;
 
-    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.interactive;
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
     requiresAuth = true;
     requiresAuthInteraction = true;
 

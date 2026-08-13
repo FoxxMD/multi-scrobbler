@@ -21,6 +21,10 @@ const components = createQueryKeys('components', {
     single: (componentId: number) => ({
         queryKey: ['components', componentId],
         queryFn: (ctx) => ky.get(`components/${componentId}`, { baseUrl }).json<ComponentsApiJson>()
+    }),
+    authUrl: (componentId: number) => ({
+      queryKey: ['components', componentId, 'auth'],
+      queryFn: (ctx) => ky.get(`components/${componentId}/auth`, { baseUrl }).text()
     })
 })
 

@@ -11,8 +11,30 @@ import type YTMusicSource from "../sources/YTMusicSource.ts";
 import type LibrefmScrobbler from "../scrobblers/LibrefmScrobbler.ts";
 import type LibrefmSource from "../sources/LibrefmSource.ts";
 import AbstractSource from "../sources/AbstractSource.ts";
+import { makeComponentMiddle, type ComponentAwareRequest } from './middleware.ts';
+import { findAuthIssue, SimpleError } from '../common/errors/MSErrors.ts';
 
 export const setupAuthRoutes = (app: Express, logger: Logger, sourceMiddle: ExpressHandler, clientMiddle: ExpressHandler, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
+    const componentAwareMiddle = makeComponentMiddle(scrobbleSources, scrobbleClients);
+
+    app.get('/api/components/:componentVal/auth', componentAwareMiddle, async (req: ComponentAwareRequest, res, next) => {
+        switch(req.component.type) {
+            case 'lastfm':
+            case 'librefm':
+                res.status(200).send((req.component as LastfmScrobbler | LastfmSource | LibrefmScrobbler | LibrefmSource ).api.getAuthUrl());
+                break;
+            case 'spotify': {
+                const source = req.component as SpotifySource;
+                if (source.spotifyApi === undefined) {
+                    res.status(400).send('Spotify configuration is not valid');
+                } else {
+                    logger.info('Redirecting to spotify authorization url');
+                    res.status(200).send(source.createAuthUrl());
+                }
+            } break;
+        }
+    });
+
     app.use('/api/client/auth', clientMiddle);
     app.get('/api/client/auth', async (req, res) => {
         const {
@@ -103,7 +125,7 @@ export const setupAuthRoutes = (app: Express, logger: Logger, sourceMiddle: Expr
                     throw error;
                 }
                 await entity.api.authenticate(token);
-                entity.authFailure = false;
+                entity.errors = entity.errors.filter(x => !findAuthIssue(x));
                 if(entity instanceof AbstractSource) {
                     entity.poll().catch((e) => logger.error(e));
                 } else {
@@ -113,10 +135,15 @@ export const setupAuthRoutes = (app: Express, logger: Logger, sourceMiddle: Expr
                         entity.initScrobbleMonitoring().catch((e) => logger.error(e));
                     })
                 }
-                return res.send('OK');
             } catch (e) {
-                return res.send(e.message);
+                if(entity !== undefined) {
+                    entity.errors.push(e);
+                    entity.logger.error(e);
+                } else {
+                    logger.error(e);
+                }
             }
+            return res.redirect('/next');
         } else if(req.url.includes('ytmusic')) {
             const entity: YTMusicSource | undefined = scrobbleSources.getByName(name) as (YTMusicSource | undefined);
             if(entity === undefined) {
@@ -137,15 +164,28 @@ export const setupAuthRoutes = (app: Express, logger: Logger, sourceMiddle: Expr
             // wish we could use state param to identify name/source but not all auth strategies and auth provides may provide access to that
             logger.info({label: 'Spotify'}, 'Received auth code callback from Spotify');
             const source = scrobbleSources.getByNameAndType(state as string, 'spotify', true) as SpotifySource;
-            const tokenResult = await source.handleAuthCodeCallback(req.query);
-            let responseContent = 'OK';
-            if (tokenResult === true) {
-                source.authFailure = false;
-                source.poll().catch((e) => logger.error(e));
-            } else {
-                responseContent = tokenResult;
+            try {
+                const tokenResult = await source.handleAuthCodeCallback(req.query);
+                if (tokenResult === true) {
+                    source.errors = source.errors.filter(x => !findAuthIssue(x));
+                    source.poll().catch((e) => logger.error(e));
+
+                } else {
+                    if (tokenResult instanceof Error) {
+                        source.errors.push(tokenResult);
+                        source.logger.error(tokenResult);
+                    } else if (typeof tokenResult === 'string') {
+                        const e = new SimpleError(`Token result was unexpected: ${tokenResult}`);
+                        source.errors.push(e);
+                        source.logger.error(e);
+                    }
+                }
+            } catch (e) {
+                const err = new SimpleError('Unexpected error while trying to authorize code, or save file', { cause: e });
+                source.errors.push(err);
+                source.logger.error(err);
             }
-            return res.send(responseContent);
+            return res.redirect('/next');
         }
     });
 }

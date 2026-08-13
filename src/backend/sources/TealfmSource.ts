@@ -13,7 +13,7 @@ import { parseArrayFromMaybeString } from "../utils/StringUtils.ts";
 export default class TealfmSource extends MemorySource {
 
     client: TealApiClient;
-    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.interactive;
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
     requiresAuth = true;
     requiresAuthInteraction = false;
 
