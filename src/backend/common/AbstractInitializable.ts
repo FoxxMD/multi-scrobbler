@@ -6,10 +6,13 @@ import type {WebhookPayload} from "./infrastructure/config/health/webhooks.ts";
 import { AuthCheckError, BuildDataError, ConnectionCheckError, ParseCacheError, PostInitError, StageError } from "./errors/MSErrors.ts";
 import { messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.ts";
 import { spawn } from 'abort-controller-x';
+import { COMPONENT_AUTH_TYPE, type ComponentAuthType } from "../../core/Atomic.ts";
+import { findCauseByFunc } from "../utils/ErrorUtils.ts";
 
 export default abstract class AbstractInitializable {
     requiresAuth: boolean = false;
     requiresAuthInteraction: boolean = false;
+    authType: ComponentAuthType = COMPONENT_AUTH_TYPE.none;
     authed: boolean = false;
     authFailure?: boolean;
 
@@ -283,17 +286,38 @@ export default abstract class AbstractInitializable {
         return;
     }
 
-    authGated = () => this.requiresAuth && !this.authed
+    authGated = () => this.authType !== COMPONENT_AUTH_TYPE.none && !this.authed
 
-    canTryAuth = () => this.isUsable() && this.authGated() && this.authFailure !== true
+    canTryAuth = () => this.isUsable() && this.authGated() && !this.hasUnrecoverableAuthFailure()
 
-    canAuthUnattended = () => !this.authGated || !this.requiresAuthInteraction || (this.requiresAuthInteraction && !this.authFailure);
+    findAuthFailure = () => this.errors.find(x => findCauseByFunc(x, (e) => e.name === 'Authentication Check' || e instanceof AuthCheckError));
+
+    hasAuthFailure = () => this.findAuthFailure !== undefined;
+
+    findUnrecoverableAuthFailure = (): AuthCheckError | undefined => {
+        const err = this.findAuthFailure();
+        if(err !== undefined) {
+            const authErr = findCauseByFunc(err, (e) => e.name === 'Authentication Check' || e instanceof AuthCheckError);
+            if(authErr === undefined) {
+                // this shouldn't happen?
+                return undefined;
+            }
+            if((authErr as AuthCheckError).unrecoverable) {
+                return authErr as AuthCheckError;
+            }
+        }
+        return undefined;
+    }
+
+    hasUnrecoverableAuthFailure = () => this.findUnrecoverableAuthFailure() !== undefined;
+
+    canAuthUnattended = () => !this.authGated() || this.authType === COMPONENT_AUTH_TYPE.unattended || (this.authType === COMPONENT_AUTH_TYPE.interactive && !this.hasUnrecoverableAuthFailure()) ;
 
     protected doAuthentication = async (): Promise<boolean> => this.authed
 
     // default init function, should be overridden if auth stage is required
     testAuth = async (force: boolean = false) => {
-        if(!this.requiresAuth) {
+        if(this.authType === COMPONENT_AUTH_TYPE.none) {
             return;
         }
         if(this.authed) {
@@ -303,24 +327,30 @@ export default abstract class AbstractInitializable {
             this.logger.debug('Auth OK but step was forced');
         }
 
-        if(this.authFailure) {
+        const unrecoverableAuth = this.findUnrecoverableAuthFailure();
+        if(unrecoverableAuth !== undefined) {
             if(!force) {
-                if(this.requiresAuthInteraction) {
-                    throw new AuthCheckError('Authentication failure: Will not retry auth because user interaction is required for authentication');
+                if(unrecoverableAuth.cause === undefined || !(unrecoverableAuth.cause instanceof AuthCheckError)) {
+                    if(this.requiresAuthInteraction) {
+                        throw new AuthCheckError('Authentication failure: Will not retry auth because user interaction is required for authentication', {cause: unrecoverableAuth, unrecoverable: true});
+                    }
+                    throw new AuthCheckError('Authentication failure: Will not retry auth because authentication previously failed and must be reauthenticated', {cause: unrecoverableAuth, unrecoverable: true});
+                } else {
+                    // this is one of the errors above and we retrying n+1 times so just keep throwing the same error
+                    throw unrecoverableAuth;
                 }
-                throw new AuthCheckError('Authentication failure: Will not retry auth because authentication previously failed and must be reauthenticated');
             }
             this.logger.debug('Auth previously failed for non upstream/network reasons but retry is being forced');
         }
 
         try {
-            this.authed = await this.doAuthentication();
-            this.authFailure = !this.authed;
+            await this.doAuthentication();
+            this.authed = true;
         } catch (e) {
             // only signal as auth failure if error was NOT either a node network error or a non-showstopping upstream error
-            this.authFailure = !(hasNodeNetworkException(e) || hasUpstreamError(e, false));
+            const unrecoverable = !(hasNodeNetworkException(e) || hasUpstreamError(e, false));
             this.authed = false;
-            throw new AuthCheckError(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e});
+            throw new AuthCheckError(`Authentication test failed!${unrecoverable === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e, unrecoverable});
         }
     }
 

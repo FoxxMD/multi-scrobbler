@@ -34,7 +34,13 @@ export class ConnectionCheckError extends StageError {
 addKnownErrorConstructor(ConnectionCheckError);
 
 export class AuthCheckError extends StageError {
-    name = 'Authentication Check';
+    override name = 'Authentication Check';
+    unrecoverable: boolean = false;
+
+    public constructor(msg?: string, opts: ErrorOptions & {unrecoverable?: boolean} = {}) {
+        super(msg, opts);
+        this.unrecoverable = opts.unrecoverable ?? false;
+    }
 }
 addKnownErrorConstructor(AuthCheckError);
 

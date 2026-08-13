@@ -4,6 +4,7 @@ import { isErrorIsh, type ErrorIsh } from '../../core/ErrorUtils';
 import { ChakraClip } from './ChakraClipboard';
 import { ChakraCodeBlock } from './CodeBlock';
 import { EllipsisButton, FatArrowRight } from './icons/ChakraIcons';
+import { walkError, type ErrorData } from '../utils/ComponentUtils';
 
 export interface ErrorAlertProps {
     error: ErrorIsh
@@ -86,25 +87,4 @@ export const ErrorAlert = (props: ErrorAlertProps) => {
             <ChakraClip value={props.error}/>
         </Alert.Root>
     )
-}
-
-interface ErrorData {
-    name?: string
-    code?: string
-    message?: string
-    stack?: string
-}
-
-const walkError = (err: ErrorIsh, errors: ErrorData[] = []): ErrorData[] => {
-    const thisErr: ErrorData = {
-        name: err.name,
-        code: 'code' in err ? err.code : undefined,
-        message: err.message,
-        stack: err.stack
-    };
-    errors.push(thisErr);
-    if(isErrorIsh(err.cause)) {
-        return walkError(err.cause, errors);
-    }
-    return errors;
 }

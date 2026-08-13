@@ -2,7 +2,7 @@ import dayjs, { type Dayjs } from "dayjs";
 import type EventEmitter from "events";
 import SpotifyWebApi from "spotify-web-api-node";
 import request from 'superagent';
-import { type BrainzMeta, type PlayObject, type PlayObjectMinimal, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, type ScrobbleTsSOC } from "../../core/Atomic.ts";
+import { type BrainzMeta, COMPONENT_AUTH_TYPE, type PlayObject, type PlayObjectMinimal, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, type ScrobbleTsSOC } from "../../core/Atomic.ts";
 import { artistNameToCredit, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.ts";
@@ -19,7 +19,7 @@ import {
 } from "../common/infrastructure/Atomic.ts";
 import { NO_USER } from '../../core/Atomic.ts';
 import { NO_DEVICE } from '../../core/Atomic.ts';
-import type {ReportedPlayerStatus} from '../../core/Atomic.ts';
+import type {ComponentAuthType, ReportedPlayerStatus} from '../../core/Atomic.ts';
 import type {SpotifySourceConfig} from "../common/infrastructure/config/source/spotify.ts";
 import {
     parseRetryAfterSecsFromObj,
@@ -52,6 +52,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
     spotifyApi: SpotifyWebApi;
     workingCredsPath: string;
 
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.interactive;
     requiresAuth = true;
     requiresAuthInteraction = true;
 
@@ -342,8 +343,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
     doAuthentication = async () => {
         try {
             if(undefined === this.spotifyApi.getAccessToken()) {
-                this.logger.warn('Cannot use API until an access token has been received from the authorization flow. See the dashboard.');
-                return false;
+                throw new Error('Cannot use API until an access token has been received from the authorization flow. See the dashboard.');
             }
             await this.callApi<ReturnType<typeof this.spotifyApi.getMe>>(((api: any) => api.getMe()));
             return true;
