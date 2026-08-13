@@ -9,3 +9,5 @@ export * as FmTealAlphaFeedDefs from "./types/fm/teal/alpha/feed/defs.ts";
 export * as FmTealAlphaFeedGetActorFeed from "./types/fm/teal/alpha/feed/getActorFeed.ts";
 export * as FmTealAlphaFeedGetPlay from "./types/fm/teal/alpha/feed/getPlay.ts";
 export * as FmTealAlphaFeedPlay from "./types/fm/teal/alpha/feed/play.ts";
+export * as FmTealFeedDefs from "./types/fm/teal/feed/defs.ts";
+export * as FmTealFeedPlay from "./types/fm/teal/feed/play.ts";

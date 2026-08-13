@@ -24,7 +24,7 @@ import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient
 import { fromStream } from '@atcute/repo';
 import { playToRepositoryCreatePlayHistoricalOpts, type RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
 import { isAbortError } from "abort-controller-x";
-import type { FmTealAlphaFeedPlay } from "../common/vendor/teal/lexicons/index.ts";
+import type { FmTealAlphaFeedPlay, FmTealFeedPlay } from "../common/vendor/teal/lexicons/index.ts";
 
 export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
 
@@ -209,11 +209,11 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         logger.info('Starting CAR conversion to historical plays...');
 
         for await (const entry of repo) {
-            if(entry.collection === 'fm.teal.alpha.feed.play') {
+            if(entry.collection === 'fm.teal.feed.play' || entry.collection === 'fm.teal.alpha.feed.play') {
                 let play: PlayObject;
                 try {
-                    play = recordToPlay(entry.record as FmTealAlphaFeedPlay.Main, {
-                        web: did !== undefined ? `at://did:plc:${did}/fm.teal.alpha.feed.play/${entry.rkey}` : undefined,
+                    play = recordToPlay(entry.record as FmTealAlphaFeedPlay.Main | FmTealFeedPlay.Main, {
+                        web: did !== undefined ? `at://did:plc:${did}/${entry.collection}/${entry.rkey}` : undefined,
                         playId: entry.rkey,
                         user: did
                     });
@@ -287,4 +287,3 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
     }
 
 }
-
