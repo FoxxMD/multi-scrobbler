@@ -1,5 +1,5 @@
 import dayjs, { type Dayjs, type ManipulateType } from "dayjs";
-import type {PlayObject, PlayObjectMinimal, BrainzMeta, MBID, ScrobbleActionResult, UnixTimestamp} from "../../../../core/Atomic.ts";
+import type {PlayObject, PlayObjectMinimal, BrainzMeta, MBID, ScrobbleActionResult} from "../../../../core/Atomic.ts";
 import { getRoot } from "../../../ioc.ts";
 import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.ts";
@@ -8,7 +8,7 @@ import type {AbstractApiOptions, PagelessListensTimeRangeOptions, PagelessTimeRa
 import type {ListRecord, RecordOptions, TealClientData} from "../../infrastructure/config/client/tealfm.ts";
 import AbstractApiClient from "../AbstractApiClient.ts";
 import { ATProtoAppApiClient } from "../atproto/ATProtoAppApiClient.ts";
-import type { FmTealAlphaActorStatus, FmTealAlphaFeedPlay } from "./lexicons/index.ts";
+import type { FmTealActorStatus, FmTealAlphaActorStatus, FmTealAlphaFeedPlay, FmTealFeedPlay } from "./lexicons/index.ts";
 import { ScrobbleSubmitError } from "../../errors/MSErrors.ts";
 import { getScrobbleTsSOCDateWithContext, usecToUnix } from "../../../utils/TimeUtils.ts";
 import { musicServiceToCononical } from "../listenbrainz/lzUtils.ts";
@@ -18,7 +18,19 @@ import type { ATProtoAuthenticatedApiClient } from "../atproto/ATProtoAuthentica
 import { UpstreamError } from "../../errors/UpstreamError.ts";
 import type { ComAtprotoRepoCreateRecord, ComAtprotoRepoPutRecord } from '@atcute/atproto';
 import { nowPlayingExpirationDuration } from "../../../scrobblers/AbstractScrobbleClient.ts";
-import { isrcNoHyphens } from "../../../../core/PlayUtils.ts";
+import { isrcNoHyphens, sortByNewestPlayDate } from "../../../../core/PlayUtils.ts";
+import { isGenericUri } from "@atcute/lexicons/syntax";
+
+type TealPlayRecord = FmTealAlphaFeedPlay.Main | FmTealFeedPlay.Main;
+
+const TEAL_PLAY_COLLECTIONS = ['fm.teal.feed.play', 'fm.teal.alpha.feed.play'] as const;
+
+const asMusicServiceUri = (musicService?: string): `${string}:${string}` | undefined => {
+    if (musicService === undefined) {
+        return undefined;
+    }
+    return isGenericUri(musicService) ? musicService : `https://${musicService}`;
+};
 
 export class TealApiClient extends AbstractApiClient implements PagelessTimeRangeListens {
 
@@ -43,10 +55,10 @@ export class TealApiClient extends AbstractApiClient implements PagelessTimeRang
     }
 
 
-    async createScrobbleRecord(record: FmTealAlphaFeedPlay.Main): Promise<ScrobbleActionResult> {
+    async createScrobbleRecord(record: FmTealFeedPlay.Main): Promise<ScrobbleActionResult> {
         const input: ComAtprotoRepoCreateRecord.$input = {
             repo: this.client.userData.did,
-            collection: 'fm.teal.alpha.feed.play',
+            collection: 'fm.teal.feed.play',
             record
         };
         try {
@@ -62,10 +74,10 @@ export class TealApiClient extends AbstractApiClient implements PagelessTimeRang
         }
     }
 
-    async updateStatusRecord(record: FmTealAlphaActorStatus.Main): Promise<ScrobbleActionResult> {
+    async updateStatusRecord(record: FmTealActorStatus.Main): Promise<ScrobbleActionResult> {
         const input: ComAtprotoRepoPutRecord.$input = {
             repo: this.client.userData.did,
-            collection: "fm.teal.alpha.actor.status",
+            collection: "fm.teal.actor.status",
             rkey: "self",
             record
         };
@@ -92,37 +104,54 @@ export class TealApiClient extends AbstractApiClient implements PagelessTimeRang
             cursor = generateTID(dayjs.unix(to).toISOString());
         }
 
-        const resp = await this.client.get((client) => client.get('com.atproto.repo.listRecords', {
+        const responses = await Promise.all(TEAL_PLAY_COLLECTIONS.map(collection => this.client.get((client) => client.get('com.atproto.repo.listRecords', {
             params: {
                 repo: this.client.userData.did,
-                collection: "fm.teal.alpha.feed.play",
+                collection,
                 limit,
                 cursor
             }
-        }));
+        }))));
 
-        if(!resp.ok) {
-            throw new UpstreamError('Fetching records from PDS failed', {cause: resp.data});
+        const fromTimestamps: number[] = [],
+              playSets: PlayObject[][] = [];
+
+        for (const resp of responses) {
+            if (!resp.ok) {
+                throw new UpstreamError('Fetching records from PDS failed', {cause: resp.data});
+            }
+            if(resp.data.cursor !== undefined) {
+                fromTimestamps.push(usecToUnix(decodeTid(resp.data.cursor).timestampUs));
+            }
+            playSets.push((resp.data.records as ListRecord<TealPlayRecord>[]).map(x => listRecordToPlay(x)));
         }
 
-        let fromTS: UnixTimestamp;
-        if(resp.data.cursor !== undefined) {
-            const { timestampUs } = decodeTid(resp.data.cursor);
-            fromTS = usecToUnix(timestampUs);
-        }
+        const from = fromTimestamps.length > 0 ? fromTimestamps.reduce((earliest, current) => current < earliest ? current : earliest) : undefined;
+        const plays = playSets.flat().sort(sortByNewestPlayDate)
 
-        const plays = (resp.data.records as unknown as ListRecord<FmTealAlphaFeedPlay.Main>[]).map(x => listRecordToPlay(x));
-
-        return {data: plays, meta: {to, from: fromTS, limit}};
+        return {data: plays, meta: {to, from, limit, more: false, order: 'desc'}};
     }
 }
 
-export const recordToPlay = (record: FmTealAlphaFeedPlay.Main, options: RecordOptions = {}): PlayObject => {
+export const recordToPlay = (record: TealPlayRecord, options: RecordOptions = {}): PlayObject => {
+    const artists = record.artists ?? [];
+    let musicService: string;
+    if('musicServiceUri' in record) {
+        musicService = record.musicServiceUri
+    } else if(`musicServiceBaseDomain` in record) {
+        musicService = record.musicServiceBaseDomain;
+    }
+    let origin: string;
+    if('originUri' in record) {
+        origin = record.originUri;
+    } else if(`originUrl` in record) {
+        origin = record.originUrl;
+    }
 
     const play: PlayObjectMinimal = {
         data: {
             track: record.trackName,
-            artists: record.artists.filter(x => x.artistName !== undefined).map(x => ({ name: x.artistName, mbid: x.artistMbId })),
+            artists: artists.filter(x => x.artistName !== undefined).map(x => ({ name: x.artistName, mbid: x.artistMbId })),
             duration: record.duration,
             playDate: dayjs(record.playedTime),
             album: record.releaseName,
@@ -131,10 +160,11 @@ export const recordToPlay = (record: FmTealAlphaFeedPlay.Main, options: RecordOp
         meta: {
             source: 'tealfm',
             parsedFrom: 'history',
-            musicService: record.musicServiceBaseDomain,
+            musicService,
             playId: options.playId,
             url: {
-                web: options.web
+                web: options.web,
+                origin
             },
             user: options.user
         }
@@ -143,7 +173,7 @@ export const recordToPlay = (record: FmTealAlphaFeedPlay.Main, options: RecordOp
     const brainz = removeUndefinedKeys<BrainzMeta>({
         recording: record.recordingMbId,
         album: record.releaseMbId,
-        artist: record.artists.filter(x => x.artistMbId !== undefined).length > 0 ? record.artists.filter(x => x.artistMbId !== undefined).map(x => x.artistMbId) : undefined
+        artist: artists.filter(x => x.artistMbId !== undefined).length > 0 ? artists.filter(x => x.artistMbId !== undefined).map(x => x.artistMbId) : undefined
     });
 
     if (brainz !== undefined) {
@@ -153,10 +183,24 @@ export const recordToPlay = (record: FmTealAlphaFeedPlay.Main, options: RecordOp
     return baseFormatPlayObj(record, play);
 }
 
-export const playToStatusRecord = (play: PlayObject, notPlaying: boolean, position?: number): FmTealAlphaActorStatus.Main => {
-    const { $type, ...item } = notPlaying
+export const playToStatusRecord = (play: PlayObject, notPlaying: boolean, position?: number): FmTealActorStatus.Main => {
+    const item = notPlaying
         ? { trackName: "", artists: [] }
-        : playToRecord(play);
+        : (() => {
+            const {
+                $type,
+                musicServiceUri,
+                originUri,
+                trackDiscriminant,
+                releaseDiscriminant,
+                ...record
+            } = playToRecord(play);
+            return {
+                ...record,
+                musicServiceBaseDomain: musicServiceUri,
+                originUrl: originUri
+            };
+        })();
 
     let expiry: Dayjs;
     if (notPlaying) {
@@ -167,7 +211,7 @@ export const playToStatusRecord = (play: PlayObject, notPlaying: boolean, positi
     }
 
     return {
-        $type: "fm.teal.alpha.actor.status",
+        $type: "fm.teal.actor.status",
         time: dayjs().toISOString(),
         expiry: expiry.toISOString(),
         item: {
@@ -186,17 +230,19 @@ export const mbidUriOrUndefined = (mbid?: MBID): undefined | MBIDURI => {
     return mbidToUri(mbid);
 };
 export type MBIDURI = `mbid:${MBID}`;
-export const playToRecord = (play: PlayObject): FmTealAlphaFeedPlay.Main => {
+export const playToRecord = (play: PlayObject): FmTealFeedPlay.Main => {
+    const musicService = musicServiceToCononical(play.meta.musicService) ?? play.meta.musicService;
 
-    const record: FmTealAlphaFeedPlay.Main = {
-        $type: "fm.teal.alpha.feed.play",
+    const record: FmTealFeedPlay.Main = {
+        $type: "fm.teal.feed.play",
         trackName: play.data.track,
-        artists: play.data.artists.map(x => removeUndefinedKeys({ artistName: x.name, artistMbId: mbidUriOrUndefined(x.mbid as MBID) })),
+        artists: (play.data.artists ?? []).map(x => removeUndefinedKeys({ artistName: x.name, artistMbId: mbidUriOrUndefined(x.mbid as MBID) })),
         duration: Math.round(play.data.duration),
         playedTime: getScrobbleTsSOCDateWithContext(play)[0].toISOString(),
         releaseName: play.data.album,
         submissionClientAgent: `multi-scrobbler/${getRoot().items.version}`,
-        musicServiceBaseDomain: musicServiceToCononical(play.meta.musicService) ?? play.meta.musicService,
+        musicServiceUri: asMusicServiceUri(musicService),
+        originUri: isGenericUri(play.meta.url?.origin) ? play.meta.url?.origin : undefined,
         isrc: play.data.isrc !== undefined ? isrcNoHyphens(play.data.isrc) : undefined,
         trackMbId: mbidUriOrUndefined(play.data.meta?.brainz?.track as MBID),
         recordingMbId: mbidUriOrUndefined(play.data.meta?.brainz?.recording as MBID),
@@ -205,7 +251,7 @@ export const playToRecord = (play: PlayObject): FmTealAlphaFeedPlay.Main => {
 
     return record;
 };
-export const listRecordToPlay = (listRecord: ListRecord<FmTealAlphaFeedPlay.Main>): PlayObject => {
+export const listRecordToPlay = (listRecord: ListRecord<TealPlayRecord>): PlayObject => {
     const opts: RecordOptions = {};
     const uriRes = parseRegexSingle(ATPROTO_URI_REGEX, listRecord.uri);
     if (uriRes !== undefined) {
@@ -215,5 +261,4 @@ export const listRecordToPlay = (listRecord: ListRecord<FmTealAlphaFeedPlay.Main
     }
     return recordToPlay(listRecord.value, opts);
 };
-export const ATPROTO_URI_REGEX = new RegExp(/at:\/\/(?<resource>(?<did>did.*?)\/fm.teal.alpha.feed.play\/(?<tid>.*))/);
-
+export const ATPROTO_URI_REGEX = new RegExp(/at:\/\/(?<resource>(?<did>did.*?)\/fm.teal(?:\.alpha)?\.feed.play\/(?<tid>.*))/);

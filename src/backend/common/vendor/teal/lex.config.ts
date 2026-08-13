@@ -11,6 +11,7 @@ export default defineLexiconConfig({
 		files: ['lexicons/**/*.json'],
 		outdir: 'lexicons/',
 		imports: ['@atcute/bluesky'],
+		modules: { importSuffix: '.ts' },
 	},
 	pull: {
 		outdir: path.resolve(__dirname, 'lexicons/'),
@@ -19,7 +20,7 @@ export default defineLexiconConfig({
 				type: 'git',
 				remote: 'https://github.com/teal-fm/teal.git',
 				ref: 'main',
-				pattern: ['lexicons/fm.teal.alpha/feed/*.json','lexicons/fm.teal.alpha/actor/*.json'],
+				pattern: ['lexicons/fm.teal/feed/*.json','lexicons/fm.teal/actor/*.json'],
 			},
 		],
 	},

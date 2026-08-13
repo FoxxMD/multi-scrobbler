@@ -22,7 +22,7 @@ import { nanoid } from 'nanoid';
 import type {LastFMTrackObject} from '../../../backend/common/vendor/LastfmApiClient.ts';
 import clone from 'clone';
 import { removeUndefinedKeys } from '../../DataUtils.ts';
-import type { FmTealAlphaFeedPlay } from '../../../backend/common/vendor/teal/lexicons/index.ts';
+import type { FmTealFeedPlay } from '../../../backend/common/vendor/teal/lexicons/index.ts';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -475,7 +475,7 @@ export const generateMbid = (): MBID => {
 export const generateTealPlayRecord = (opts: {
     withMbids?: boolean,
     withIsrc?: boolean
-} = {}): [ListRecord<FmTealAlphaFeedPlay.Main>, { did: string, tid: string }] => {
+} = {}): [ListRecord<FmTealFeedPlay.Main>, { did: string, tid: string }] => {
     const {
         withMbids = true,
         withIsrc = true,
@@ -487,11 +487,11 @@ export const generateTealPlayRecord = (opts: {
     const did = nanoid(12);
     const tid = nanoid(10);
 
-    const rec: ListRecord<FmTealAlphaFeedPlay.Main> = {
-        uri: `at://did:plc:${did}/fm.teal.alpha.feed.play/${tid}`,
+    const rec: ListRecord<FmTealFeedPlay.Main> = {
+        uri: `at://did:plc:${did}/fm.teal.feed.play/${tid}`,
         cid: nanoid(12),
         value: {
-            '$type': 'fm.teal.alpha.feed.play',
+            '$type': 'fm.teal.feed.play',
             artists: artists.map(x => withMbids ? { artistName: x, artistMbId: `mbid:${generateMbid()}` } : { artistName: x }),
             releaseName: faker.music.album(),
             trackName: faker.music.songName(),

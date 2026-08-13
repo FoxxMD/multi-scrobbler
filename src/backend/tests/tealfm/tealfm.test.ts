@@ -61,20 +61,42 @@ describe('#tealfm Record to Play', function() {
         expect(play.data.meta?.brainz.artist).to.be.undefined;
     });
 
+    it('Parses production namespace records', function() {
+        const [legacyRecord] = generateTealPlayRecord();
+        const productionRecord = {
+            ...legacyRecord,
+            uri: legacyRecord.uri.replace('fm.teal.feed.play', 'fm.teal.feed.play'),
+            value: {
+                ...legacyRecord.value,
+                $type: 'fm.teal.feed.play' as const,
+                musicServiceUri: 'https://spotify.com' as `${string}:${string}`,
+                originUri: 'https://example.com/track' as `${string}:${string}`
+            }
+        };
+
+        const play = listRecordToPlay(productionRecord);
+
+        expect(play.meta.musicService).eq('https://spotify.com');
+        expect(play.meta.url.origin).eq('https://example.com/track');
+    });
+
 });
 
 describe('#tealfm Play To Record', function () {
 
     it('Adds mbids with uri format', function () {
 
-        const play = withBrainz(generatePlay({artists: generateArtistCredits(2)}), {include: ['recording']});
+        const play = withBrainz(generatePlay({artists: generateArtistCredits(2)}, {musicService: 'Spotify'}), {include: ['recording']});
         const record = playToRecord(play);
 
+        expect(record.$type).to.eq('fm.teal.feed.play');
         expect(record.recordingMbId).to.eq(`mbid:${play.data.meta.brainz.recording}`);
         expect(record.releaseMbId).is.undefined;
         expect(record.artists).length(2);
         expect(record.artists[0].artistName).eq(play.data.artists[0].name);
         expect(record.artists[0].artistMbId).eq(`mbid:${play.data.artists[0].mbid}`);
+        expect(record.musicServiceUri).eq('https://spotify.com');
+        expect(record.originUri).eq(play.meta.url.origin);
     });
 
 });

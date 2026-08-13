@@ -1,3 +1,14 @@
+export * as FmTealActorDefs from "./types/fm/teal/actor/defs.ts";
+export * as FmTealActorGetProfile from "./types/fm/teal/actor/getProfile.ts";
+export * as FmTealActorGetProfiles from "./types/fm/teal/actor/getProfiles.ts";
+export * as FmTealActorProfile from "./types/fm/teal/actor/profile.ts";
+export * as FmTealActorProfileStatus from "./types/fm/teal/actor/profileStatus.ts";
+export * as FmTealActorSearchActors from "./types/fm/teal/actor/searchActors.ts";
+export * as FmTealActorStatus from "./types/fm/teal/actor/status.ts";
+export * as FmTealFeedDefs from "./types/fm/teal/feed/defs.ts";
+export * as FmTealFeedGetActorFeed from "./types/fm/teal/feed/getActorFeed.ts";
+export * as FmTealFeedGetPlay from "./types/fm/teal/feed/getPlay.ts";
+export * as FmTealFeedPlay from "./types/fm/teal/feed/play.ts";
 export * as FmTealAlphaActorDefs from "./types/fm/teal/alpha/actor/defs.ts";
 export * as FmTealAlphaActorGetProfile from "./types/fm/teal/alpha/actor/getProfile.ts";
 export * as FmTealAlphaActorGetProfiles from "./types/fm/teal/alpha/actor/getProfiles.ts";
