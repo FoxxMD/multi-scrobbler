@@ -1,5 +1,5 @@
 import type EventEmitter from "events";
-import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import type {FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic.ts";
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
@@ -13,6 +13,7 @@ import { parseArrayFromMaybeString } from "../utils/StringUtils.ts";
 export default class TealfmSource extends MemorySource {
 
     client: TealApiClient;
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.interactive;
     requiresAuth = true;
     requiresAuthInteraction = false;
 

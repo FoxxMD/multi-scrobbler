@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import type EventEmitter from "events";
 import type { Request } from 'superagent';
 import request from 'superagent';
-import { type PlayObject, type PlayObjectMinimal, SOURCE_SOT, TA_CLOSE, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy } from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type PlayObjectMinimal, SOURCE_SOT, TA_CLOSE, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy } from "../../core/Atomic.ts";
 import { DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.ts";
 import type {DeezerInternalSourceConfig, DeezerInternalTrackData} from "../common/infrastructure/config/source/deezer.ts";
 import { TRANSFORM_HOOK } from "../../core/Transform.ts";
@@ -63,6 +63,7 @@ interface DeezerAuthedUserData {
 }
 
 export default class DeezerInternalSource extends MemorySource {
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
     requiresAuth = true;
     requiresAuthInteraction = false;
     isSubAccount: boolean = false;

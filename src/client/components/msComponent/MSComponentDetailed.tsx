@@ -1,6 +1,6 @@
-import React, { type ComponentProps } from "react"
+import React, { useMemo, type ComponentProps } from "react"
 import { Portal, Group, Span, Menu, Box, Heading, Skeleton, Wrap, HStack, Stack, Flex, Card, SkeletonText, type BadgeProps, type MenuItemProps } from '@chakra-ui/react';
-import { COMPONENT_STATE, type ComponentClientApiJson, type ComponentCommonApiJson, type ComponentState, type ComponentStateBody, isComponentClientApiJson, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
+import { COMPONENT_STATE, type ComponentClientApiJson, type ComponentCommonApiJson, type ComponentDetailedApi, type ComponentsApiJson, type ComponentState, type ComponentStateBody, isComponentClientApiJson, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
 import { capitalize } from "../../../core/StringUtils.js";
 import { ChevronLeftButton, EllipsisButton, EyeButton, EyeClosedIcon, EyeIcon, IdleIcon, PowerButton, PowerIcon, PowerOffButton, PowerOffIcon, RetryButton, RetryIcon } from "../icons/ChakraIcons.js";
 import { PlayersContainer, PlayersContainerFetchable } from "../chakraPlayer/Player.js";
@@ -25,6 +25,7 @@ import { MSErrorBoundary } from "../ErrorBoundary.js";
 import type {IconType} from "react-icons/lib";
 import { useIsWrapped } from "../../utils/hooks/useIsWrapped.js";
 import { PlaybackReportingServer } from "../icons/PlaybackReporting.js";
+import { findAuthError } from "../../utils/ComponentUtils.js";
 
 export const ComponentBackButton = (props: ComponentProps<typeof ChevronLeftButton> = {}) => {
     return (
@@ -160,13 +161,15 @@ export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof 
     return <ComponentStateBadge size="lg" maxWidth="fit-content" {...badgeProps} loading={isPending} separator suffix={suffix} {...rest}/>;
 }
 
-export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, live?: boolean}) => {
+export const ComponentDetailedDesktop = (props: {data?: ComponentsApiJson, live?: boolean}) => {
     let sleepingRender: React.JSX.Element = null;
     const {
         data,
         data: {
             warnings = [],
-            errors = []
+            errors = [],
+            authed,
+            authType
         } = {}
     } = props;
     const isSource = isComponentSourceApiJson(data)
@@ -189,6 +192,17 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
             }
         }
     }
+    const authFailure = useMemo(() => {
+        if(authed) {
+            return false;
+        }
+        for(const e of errors) {
+            const aError = findAuthError(e);
+            if(aError !== undefined && 'unrecoverable' in aError && aError.unrecoverable === true) {
+                return true;
+            }
+        }
+    },[errors, authed]);
     const target = React.useRef(null);
     const isWrapped = useIsWrapped(target);
     return (

@@ -1,8 +1,8 @@
 import type EventEmitter from "events";
-import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import type {FormatPlayObjectOptions, InternalConfig, TimeRangeListensFetcher} from "../common/infrastructure/Atomic.ts";
-import type {PlayPlatformId} from '../../core/Atomic.ts';
+import type {ComponentAuthType, PlayPlatformId} from '../../core/Atomic.ts';
 import type {ListenBrainzSourceConfig} from "../common/infrastructure/config/source/listenbrainz.ts";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.ts";
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
@@ -17,6 +17,7 @@ import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.ts
 export default class ListenbrainzSource extends MemorySource {
 
     api: ListenbrainzApiClient;
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
     requiresAuth = true;
     requiresAuthInteraction = false;
     getScrobblesForTimeRange: TimeRangeListensFetcher

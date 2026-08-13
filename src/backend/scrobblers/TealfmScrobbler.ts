@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'path';
 
 import { Readable } from 'stream';
-import type {PlayObject, SourcePlayerObj} from "../../core/Atomic.ts";
+import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type SourcePlayerObj} from "../../core/Atomic.ts";
 import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import type {FormatPlayObjectOptions, InternalConfigOptional} from "../common/infrastructure/Atomic.ts";
@@ -28,6 +28,7 @@ import type { FmTealAlphaFeedPlay, FmTealFeedPlay } from "../common/vendor/teal/
 
 export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
 
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
     requiresAuth = true;
     requiresAuthInteraction = false;
     override nowPlayingIsRealtime: boolean = true;

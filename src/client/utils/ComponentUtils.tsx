@@ -2,6 +2,7 @@ import type { Card, IconProps, HTMLChakraProps} from '@chakra-ui/react';
 import { Span } from '@chakra-ui/react';
 import type {PlayApiCommonDetailed} from '../../core/Api';
 import { type LifecycleStep, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED } from '../../core/Atomic';
+import { isErrorIsh, type ErrorIsh } from '../../core/ErrorUtils';
 
 export const cardHeaderSeparator: Card.HeaderProps = {
     borderBottomWidth: "1px",
@@ -60,4 +61,35 @@ export const activityTimelineHasIssue = (activity: PlayApiCommonDetailed): 'warn
     }
 
     return undefined;
+}
+
+export interface ErrorData {
+    name?: string
+    code?: string
+    message?: string
+    stack?: string
+}
+
+export const walkError = (err: ErrorIsh, errors: ErrorData[] = []): ErrorData[] => {
+    const thisErr: ErrorData = {
+        name: err.name,
+        code: 'code' in err ? err.code : undefined,
+        message: err.message,
+        stack: err.stack
+    };
+    errors.push(thisErr);
+    if(isErrorIsh(err.cause)) {
+        return walkError(err.cause, errors);
+    }
+    return errors;
+}
+
+export const findAuthError = (err: ErrorIsh): ErrorIsh | undefined => {
+    if(err.name === 'Authentication Check') {
+        return err;
+    }
+    if(err.cause === undefined || !isErrorIsh(err.cause)) {
+        return undefined;
+    }
+    return findAuthError(err.cause);
 }

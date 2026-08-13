@@ -1,5 +1,5 @@
 import type EventEmitter from "events";
-import type {BrainzMeta, PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
+import type {BrainzMeta, ComponentAuthType, PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
 import { artistNamesToCredits, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
 import {
     asPlayerStateDataMaybePlay,
@@ -7,7 +7,7 @@ import {
     type InternalConfig,
     MBID_VARIOUS_ARTISTS,
     type PlayerStateDataMaybePlay} from "../common/infrastructure/Atomic.ts";
-import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
+import { COMPONENT_AUTH_TYPE, REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type {PlayPlatformId} from '../../core/Atomic.ts';
 import { getFirstNonEmptyString, isDebugMode, } from "../utils.ts";
 import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.ts";
@@ -40,6 +40,8 @@ const THUMB_REGEX = new RegExp(/\/library\/metadata\/(?<ratingkey>\d+)\/thumb\/\
 
 export default class PlexApiSource extends MemoryPositionalSource {
     users: string[] = [];
+
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
 
     plexApi: PlexAPI;
     plexUser: string;

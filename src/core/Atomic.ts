@@ -809,6 +809,11 @@ export const SINGLE_USER_PLATFORM_ID: PlayPlatformId = [NO_DEVICE, NO_USER];
 export const SINGLE_USER_PLATFORM_ID_STR = `${NO_DEVICE}-${NO_USER}`;
 
 export type ComponentAuthType = 'none' | 'interactive' | 'unattended';
+export const COMPONENT_AUTH_TYPE = {
+    none: 'none',
+    interactive: 'interactive',
+    unattended: 'unattended'
+} as const satisfies Record<string, ComponentAuthType>;
 
 export type EmittedMSEvent<T = Record<string, any>, K = Record<string, any>,Y = ClientType | SourceType> = {
     type: Y

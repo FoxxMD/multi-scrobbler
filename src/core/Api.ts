@@ -1,6 +1,6 @@
 import type { PickKeys } from "ts-essentials"
 import type { CompareOpKey, ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
-import type { ClientType, MonitoringStatus } from "./Atomic.ts"
+import type { ClientType, ComponentAuthType, MonitoringStatus } from "./Atomic.ts"
 import type { SourceType } from "./Atomic.ts"
 import type { ComponentType, DateLike, ErrorLike, JsonPlayObject, PlayState, QueueName, Replace, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.ts"
 import type { Dayjs } from "dayjs"
@@ -91,6 +91,7 @@ export type ComponentDetailedApi = ComponentCommonApi & {
     hasAuth: boolean;
     hasAuthInteraction: boolean;
     authed: boolean
+    authType: ComponentAuthType
     initialized: boolean
 }
 
@@ -103,7 +104,7 @@ export type ComponentCientApiBase = {
     players: Record<string, SourcePlayerJson & {expiration?: string}>
 }
 
-export type ComponentClientApi = ComponentCommonApi & ComponentCientApiBase;
+export type ComponentClientApi = ComponentDetailedApi & ComponentCientApiBase;
 export type ComponentClientApiJson = Replace<ComponentClientApi, PickKeys<ComponentClientApi, Dayjs>, string>;
 
 export type ComponentSourceApiBase = {
@@ -114,7 +115,7 @@ export type ComponentSourceApiBase = {
     sleeping: boolean
 }
 
-export type ComponentSourceApi = ComponentCommonApi & ComponentSourceApiBase;
+export type ComponentSourceApi = ComponentDetailedApi & ComponentSourceApiBase;
 export type ComponentSourceApiJson = Replace<ComponentSourceApi, PickKeys<ComponentSourceApi, Dayjs>, string>;
 
 export type SubsonicSourceApiJson = ComponentSourceApiJson & { playbackReporting?: boolean }

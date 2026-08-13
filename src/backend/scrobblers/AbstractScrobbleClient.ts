@@ -462,6 +462,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     protected getComponentApiData() {
         return {
+            authType: this.authType,
+            initialized: this.initializedOnce,
             hasAuth: this.requiresAuth,
             hasAuthInteraction: this.requiresAuthInteraction,
             authed: this.authed,
