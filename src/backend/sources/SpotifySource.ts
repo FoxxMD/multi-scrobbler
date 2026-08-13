@@ -40,7 +40,7 @@ import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.ts";
-import { SimpleError } from "../common/errors/MSErrors.ts";
+import { AuthError, SimpleError } from "../common/errors/MSErrors.ts";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
 const state = 'random';
@@ -351,7 +351,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             if(isNodeNetworkException(e)) {
                 this.logger.error('Could not communicate with Spotify API');
             }
-            throw e;
+            throw new AuthError('Failed to authenticate', {cause: e, unrecoverable: 'statusCode' in e && [401,403].includes(e.statusCode)})
         }
     }
 

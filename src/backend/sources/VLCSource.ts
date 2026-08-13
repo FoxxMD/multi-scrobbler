@@ -2,13 +2,13 @@ import { parseRegexSingle, parseToRegex } from "@foxxmd/regex-buddy-core";
 import type { EventEmitter } from "events";
 import * as VLC from "vlc-client"
 import type {VlcMeta, VlcStatus} from "vlc-client/dist/Types.js";
-import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
+import type {ComponentAuthType, PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
     type PlayerStateData,
 } from "../common/infrastructure/Atomic.ts";
-import { SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
+import { COMPONENT_AUTH_TYPE, SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type {ReportedPlayerStatus} from '../../core/Atomic.ts';
 import type {VlcAudioMeta, VLCSourceConfig, PlayerState} from "../common/infrastructure/config/source/vlc.ts";
@@ -19,6 +19,7 @@ import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import { isDebugMode } from "../utils.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import { artistNamesToCredits } from "../../core/StringUtils.ts";
+import { AuthError } from "../common/errors/MSErrors.ts";
 
 const CLIENT_PLAYER_STATE: Record<PlayerState, ReportedPlayerStatus> = {
     'playing': REPORTED_PLAYER_STATUSES.playing,
@@ -28,6 +29,7 @@ const CLIENT_PLAYER_STATE: Record<PlayerState, ReportedPlayerStatus> = {
 
 export class VLCSource extends MemoryPositionalSource {
     declare config: VLCSourceConfig;
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
 
     host?: string
     port?: number
@@ -117,7 +119,7 @@ export class VLCSource extends MemoryPositionalSource {
             return true;
         } catch (e) {
             let friendlyError: string | undefined;
-            throw new Error(`Could not connect to VLC server${friendlyError !== undefined ? ` (Hint: ${friendlyError})` : ''}`, {cause: e});
+            throw new AuthError(`Could not connect to VLC server${friendlyError !== undefined ? ` (Hint: ${friendlyError})` : ''}`, {cause: e});
         }
     }
 

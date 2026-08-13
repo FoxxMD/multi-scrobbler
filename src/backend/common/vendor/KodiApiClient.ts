@@ -9,6 +9,7 @@ import type {KodiData} from "../infrastructure/config/source/kodi.ts";
 import AbstractApiClient from "./AbstractApiClient.ts";
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
 import { artistNamesToCredits } from "../../../core/StringUtils.ts";
+import { AuthError } from "../errors/MSErrors.ts";
 
 interface KodiDuration {
     hours: number
@@ -150,7 +151,7 @@ export class KodiApiClient extends AbstractApiClient {
             if(this.config.username === undefined || this.config.password === undefined) {
                 msg = 'Authentication failed. No username/password was provided in config! Did you mean to do this?';
             }
-            throw new Error(msg, {cause: e});
+            throw new AuthError(msg, {cause: e});
         }
     }
 

@@ -1,6 +1,6 @@
 import EventEmitter from "events";
 import request from "superagent";
-import type {PlayObject} from "../../../core/Atomic.ts";
+import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject} from "../../../core/Atomic.ts";
 import AbstractScrobbleClient from "../../scrobblers/AbstractScrobbleClient.ts";
 import type {CommonClientConfig, CommonClientOptions, NowPlayingOptions} from "../../common/infrastructure/config/client/index.ts";
 import clone from "clone";
@@ -12,6 +12,8 @@ import type { DrizzleQueueRepository } from "../../common/database/drizzle/repos
 import type {PlaySelect} from "../../common/database/drizzle/drizzleTypes.ts";
 import dayjs from "dayjs";
 import type { MarkOptional, MarkRequired } from "ts-essentials";
+import { AuthError } from "../../common/errors/MSErrors.ts";
+import { isSuperAgentResponseError } from "../../common/errors/ErrorUtils.ts";
 
 export class TestScrobbler extends AbstractScrobbleClient {
 
@@ -60,8 +62,11 @@ export class TestScrobbler extends AbstractScrobbleClient {
 }
 
 export class TestAuthScrobbler extends TestScrobbler {
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
+
     constructor() {
         super();
+
         this.requiresAuth = true;
     }
     doAuthentication = async() => {
@@ -69,7 +74,7 @@ export class TestAuthScrobbler extends TestScrobbler {
             await request.get('http://example.com');
             return true;
         } catch (e) {
-            throw e;
+            throw new AuthError('Failed to auth', {cause: e, unrecoverable: isSuperAgentResponseError(e) && [401,403].includes(e.status)});
         }
     }
 }
