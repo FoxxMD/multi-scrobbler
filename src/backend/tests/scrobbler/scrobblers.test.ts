@@ -91,10 +91,10 @@ describe('Networking', function () {
                 async function() {
                     const authScrobbler = new TestAuthScrobbler();
                     try {
-                        await authScrobbler.testAuth();
+                        await authScrobbler.initialize();
                     } catch (e) { /* empty */ }
                     assert.isTrue(authScrobbler.authGated());
-                    assert.isFalse(authScrobbler.authFailure);
+                    assert.isFalse(authScrobbler.hasUnrecoverableAuthFailure());
                 }
             ));
 
@@ -109,10 +109,10 @@ describe('Networking', function () {
                 async function() {
                     const authScrobbler = new TestAuthScrobbler();
                     try {
-                        await authScrobbler.testAuth();
+                        await authScrobbler.initialize();
                     } catch (e) { /* empty */ }
                     assert.isTrue(authScrobbler.authGated());
-                    assert.isTrue(authScrobbler.authFailure);
+                    assert.isTrue(authScrobbler.hasUnrecoverableAuthFailure());
                 }
             ));
     });

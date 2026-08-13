@@ -25,6 +25,9 @@ import { fromStream } from '@atcute/repo';
 import { playToRepositoryCreatePlayHistoricalOpts, type RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
 import { isAbortError } from "abort-controller-x";
 import type { FmTealAlphaFeedPlay, FmTealFeedPlay } from "../common/vendor/teal/lexicons/index.ts";
+import { AuthError } from "../common/errors/MSErrors.ts";
+import { findCauseByReference } from "../utils/ErrorUtils.ts";
+import { ClientResponseError } from "@atcute/client";
 
 export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
 
@@ -98,10 +101,14 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
                 return res;
             }
         } catch (e) {
-            if(isNodeNetworkException(e)) {
+            const nodeNetError = isNodeNetworkException(e);
+            if(nodeNetError) {
                 this.logger.error('Could not communicate with ATProto API');
+                throw new AuthError(`Failed to validate session due to network issues`, {cause: e, unrecoverable: false});
             }
-            throw e;
+            const clientError = findCauseByReference(e, ClientResponseError);
+            const authIssue = clientError !== undefined && [401,403].includes(clientError.status);
+            throw new AuthError(`Failed to validate session${!authIssue ? ' due to network issues' : ''}`, {cause: e, unrecoverable: authIssue});
         }
     }
 

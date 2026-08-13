@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import type {ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi} from "../../Api.ts";
-import { CLIENT_INGRESS_QUEUE, type ComponentType, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes } from "../../Atomic.ts";
+import { CLIENT_INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ComponentType, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes } from "../../Atomic.ts";
 import { generatePlay, normalizePlays } from "./PlayTestUtils.ts";
 import { generatePlayInput, generatePlayWithLifecycle, playWithLifecycleScrobble, randomPlayState } from "./fixtures.ts";
 import { asJsonPlayObject } from "../../PlayMarshalUtils.ts";
@@ -172,7 +172,12 @@ export const generateSourceApiJson = (data: Partial<ComponentSourceApi> = {}): C
         supportsUpstreamRecentlyPlayed,
         tracksDiscovered,
         players,
-        sleeping
+        sleeping,
+        initialized: true,
+        authType: COMPONENT_AUTH_TYPE.unattended,
+        hasAuth: true,
+        hasAuthInteraction: true,
+        authed: true
     }
 }
 
@@ -200,7 +205,12 @@ export const generateClientApiJson = (data: Partial<ComponentClientApi> = {}): C
         deadLetterScrobbles,
         deadLetterScrobblesTotal,
         players,
-        supportsNowPlaying: Object.keys(players).length > 0
+        supportsNowPlaying: Object.keys(players).length > 0,
+        initialized: true,
+        authType: COMPONENT_AUTH_TYPE.unattended,
+        hasAuth: true,
+        hasAuthInteraction: true,
+        authed: true
     }
 }
 

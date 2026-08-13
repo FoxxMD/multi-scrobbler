@@ -16,8 +16,9 @@ import { getMalojaResponseError, isMalojaAPIErrorBody, type MalojaResponseV3Comm
 import { getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext } from '../../../utils/TimeUtils.ts';
 import { artistCreditsToNames, artistNamesToCredits, buildTrackString } from '../../../../core/StringUtils.ts';
 import { baseFormatPlayObj } from '../../../utils/PlayTransformUtils.ts';
-import { ScrobbleSubmitError } from '../../errors/MSErrors.ts';
+import { AuthError, ScrobbleSubmitError } from '../../errors/MSErrors.ts';
 import { NO_RETRY_HTTP_STATUS, tryApiCall } from '../../../utils/RequestUtils.ts';
+import { findCauseByFunc } from '../../../utils/ErrorUtils.ts';
 
 
 
@@ -175,10 +176,11 @@ export class MalojaApiClient extends AbstractApiClient implements PaginatedTimeR
                     body,
                     text: text.slice(0, 50)
                 },'Maloja API Response');
-                throw new Error('Server Response body was malformed -- should have returned "status: ok"...is the URL correct?', { cause: new Error(`Maloja API Response was ${status}: ${text.slice(0, 50)}`) })
+                throw new UpstreamError('Server Response body was malformed -- should have returned "status: ok"...is the URL correct?', { cause: new UpstreamError(`Maloja API Response was ${status}: ${text.slice(0, 50)}`) })
             }
         } catch (e) {
-            throw e;
+            const superagentError = findCauseByFunc<request.ResponseError>(e, (ee) => isSuperAgentResponseError(ee));
+            throw new AuthError('Failed to test Maloja API with apikey', {cause: e, unrecoverable: superagentError !== undefined && [401,403].includes(superagentError.status)});
         }
     }
 

@@ -17,10 +17,11 @@ import { LastFMUser, LastFMAuth, LastFMTrack, type LastFMUserGetRecentTracksResp
 import clone from 'clone';
 import type { IncomingMessage } from "http";
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
-import { ScrobbleSubmitError, SimpleError } from "../errors/MSErrors.ts";
+import { AuthError, ScrobbleSubmitError, SimpleError } from "../errors/MSErrors.ts";
 import { redactString } from "@foxxmd/redact-string";
 import dns from 'node:dns/promises';
 import xml2js from 'xml2js';
+import { findCauseByFunc } from "../../utils/ErrorUtils.ts";
 
 const badErrors = [
     'api key suspended',
@@ -272,8 +273,15 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             this.logger.error('Testing auth failed');
             if(isNodeNetworkException(e)) {
                 this.logger.error(`Could not communicate with ${this.upstreamName} API`);
+                throw new AuthError('Testing auth failed', {cause: e, unrecoverable: false});
             }
-            throw e;
+            let unrecoverable: boolean;
+            const errorWithMessage = findCauseByFunc(e, (ee) => `response` in ee) as Error & {response: IncomingMessage} | undefined;
+            if(errorWithMessage !== undefined) {
+                unrecoverable = [401,403].includes(errorWithMessage.response.statusCode);
+            }
+            // TODO maybe check if error has actual LFM response content with error code?
+            throw new AuthError('Testing auth failed', {cause: e, unrecoverable});
         }
     }
 

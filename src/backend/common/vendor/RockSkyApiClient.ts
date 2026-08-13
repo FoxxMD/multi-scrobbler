@@ -14,7 +14,7 @@ import type {RockskyScrobble} from './rocksky/interfaces.ts';
 import type {Handle} from "@atcute/lexicons";
 import { getATProtoIdentifier, identifierToAtProtoHandle } from './atproto/atUtils.ts';
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
-import { ScrobbleSubmitError } from "../errors/MSErrors.ts";
+import { AuthError, ScrobbleSubmitError } from "../errors/MSErrors.ts";
 import { tryApiCall } from "../../utils/RequestUtils.ts";
 import { type CreateScrobbleInput, RockskyClient } from "@rocksky/sdk";
 import { getRoot } from "../../ioc.ts";
@@ -23,6 +23,8 @@ import type {HandleData} from "../infrastructure/config/client/atproto.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { removeUndefinedKeys } from "../../../core/DataUtils.ts";
 import { isrcNoHyphens } from '../../../core/PlayUtils.ts';
+import { findCauseByFunc } from "../../utils/ErrorUtils.ts";
+import { isSuperAgentResponseError } from "../errors/ErrorUtils.ts";
 
 interface SubmitOptions {
     log?: boolean
@@ -166,7 +168,8 @@ export class RockSkyApiClient extends AbstractApiClient {
                 const resp = await this.callLZApi(() => request.get(`${joinedUrl(this.lzUrl.url,'1/validate-token')}`));
                 return true;
             } catch (e) {
-                throw e;
+                const cause = findCauseByFunc<request.ResponseError>(e, (ee) => isSuperAgentResponseError(ee));
+                throw new AuthError('Failed to validate token', {cause: e, unrecoverable: cause !== undefined && [401,403].includes(cause.status)});
             }
         } else {
             try {
@@ -174,7 +177,9 @@ export class RockSkyApiClient extends AbstractApiClient {
                 await req;
                 return true;
             } catch (e) {
-                throw new UpstreamError('Failed to get /profile with given token', {cause: e});
+                const upstreamErr = new UpstreamError('Failed to get /profile with given token', {cause: e});
+                const cause = findCauseByFunc<request.ResponseError>(e, (ee) => isSuperAgentResponseError(ee));
+                throw new AuthError('Failed to get /profile with given token', {cause: upstreamErr, unrecoverable: cause !== undefined && [401,403].includes(cause.status)});
             }
         }
     }
