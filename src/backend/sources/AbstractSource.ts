@@ -137,6 +137,13 @@ export default abstract class AbstractSource extends AbstractComponent implement
             
     }
 
+    [Symbol.dispose]() {
+        this.scheduler.stop();
+        for(const job of this.scheduler.getAllJobs()) {
+            job.stop();
+            this.scheduler.removeById(job.id);
+        }
+    }
     async [Symbol.asyncDispose]() {
         try {
             await this.stop({ reason: 'Instance is being destroyed' });
@@ -165,7 +172,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 }
             ), {id: 'heartbeat'}));
         } else {
-            this.logger.warn('Heartbeat task is already added to scheduler.');
+            this.logger.verbose('Heartbeat task is already added to scheduler, running immediately instead');
+            const j = this.scheduler.getById('heartbeat') as SimpleIntervalJob;
+            j.start();
         }
     }
 
@@ -236,6 +245,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             }
             this.scheduler.stop();
             for (const job of this.scheduler.getAllJobs()) {
+                job.stop();
                 this.scheduler.removeById(job.id);
             }
             this.setStatus('Stopped');

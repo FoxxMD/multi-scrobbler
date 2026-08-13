@@ -228,6 +228,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     [Symbol.dispose]() {
         this.scheduler.stop();
         for(const job of this.scheduler.getAllJobs()) {
+            job.stop();
             this.scheduler.removeById(job.id);
         }
     }
@@ -259,7 +260,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 }
             ), {id: 'heartbeat'}));
         } else {
-            this.logger.verbose('Heartbeat task is already added to scheduler.');
+            this.logger.verbose('Heartbeat task is already added to scheduler, running immediately instead');
+            const j = this.scheduler.getById('heartbeat') as SimpleIntervalJob;
+            j.start();
         }
 
         this.initializeNowPlayingSchedule();
@@ -352,6 +355,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         try {
             this.scheduler.stop();
             for (const job of this.scheduler.getAllJobs()) {
+                job.stop();
                 this.scheduler.removeById(job.id);
             }
             await this.tryStopScrobbling(opts.reason);
