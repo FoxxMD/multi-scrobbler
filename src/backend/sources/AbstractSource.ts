@@ -2,7 +2,7 @@ import { childLogger, type LogDataPretty, type LogLevel } from '@foxxmd/logging'
 import dayjs, { type Dayjs } from "dayjs";
 import type { EventEmitter } from "events";
 import type { FixedSizeList } from "fixed-size-list";
-import { type PlayMatchResult, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { INGRESS_QUEUE, PARSED_FROM, type PlayMatchResult, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
 import AbstractComponent from "../common/AbstractComponent.ts";
 import {
@@ -14,7 +14,7 @@ import {
     type InternalConfig,
     type ProgressAwarePlayObject,
 } from "../common/infrastructure/Atomic.ts";
-import type {PlayState, PlayUserId} from '../../core/Atomic.ts';
+import type {PARSED_FROM_TYPE, PlayState, PlayUserId} from '../../core/Atomic.ts';
 import type {DeviceId} from '../../core/Atomic.ts';
 import type {SourceConfig} from '../common/infrastructure/config/source/sources.ts';
 import type {SourceType} from "../../core/Atomic.ts";
@@ -22,6 +22,7 @@ import { TRANSFORM_HOOK } from "../../core/Transform.ts";
 import TupleMap from "../common/TupleMap.ts";
 import {
     difference,
+    isDebugMode,
     pollingBackoff,
     sleep,
     sortByOldestPlayDate,
@@ -35,18 +36,20 @@ import { componentFileLogger } from '../common/logging.ts';
 ;
 import { messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.ts";
 import { existingScrobble, type ExistingScrobbleOpts } from '../utils/PlayComparisonUtils.ts';
-import { staggerMapper } from '../utils/AsyncUtils.ts';
+import { consumeQueue, staggerMapper } from '../utils/AsyncUtils.ts';
 import pMap, {pMapIterable} from 'p-map';
-import type { Counter } from 'prom-client';
+import type { Counter, Gauge } from 'prom-client';
 import { normalizeStr } from '../utils/StringUtils.ts';
 import { spawn, isAbortError, delay, throwIfAborted } from 'abort-controller-x';
-import { generateLoggableAbortReason, StageChangeError } from '../common/errors/MSErrors.ts';
+import { generateLoggableAbortReason, SimpleError, StageChangeError } from '../common/errors/MSErrors.ts';
 import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, type QueryPlaysOpts, type RequestPlayQuery, type WithPlayRelation } from '../common/database/drizzle/repositories/PlayRepository.ts';
 import { asPlay } from '../../core/PlayMarshalUtils.ts';
 import { AsyncTask, SimpleIntervalJob, ToadScheduler } from 'toad-scheduler';
 import { COMPONENT_STATE, type ComponentSourceApiJson, type ComponentState, type PlayApiCommonDetailed } from '../../core/Api.ts';
 import type {PaginatedResponse} from "../../core/Api.ts";
-import type { PlayWith } from '../common/database/drizzle/drizzleTypes.ts';
+import type { PlaySelect, PlaySelectWithQueueStates, PlayWith, QueueStateNew } from '../common/database/drizzle/drizzleTypes.ts';
+import { DrizzleQueueRepository } from '../common/database/drizzle/repositories/QueueRepository.ts';
+import { nanoid } from 'nanoid';
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -73,12 +76,18 @@ export default abstract class AbstractSource extends AbstractComponent implement
     canPoll: boolean = false;
     polling: boolean = false;
     canBacklog: boolean = false;
+    protected discoverQueueAbortController: AbortController | undefined;
+    protected discoverQueuePromise: Promise<void> | undefined;
     protected abortController: AbortController | undefined;
     protected pollingPromise: Promise<void> | undefined;
     stopPollingWaitInterval: number = 200;
     pollRetries: number = 0;
     tracksDiscovered: number = 0;
     tracksDiscoveredTotal: number = 0;
+    queuedLength: number = 0;
+
+    queueIdleMs: number = 1000;
+    queueConcurrency: number = 3;
 
     protected isSleeping: boolean = false;
     protected wakeAt: Dayjs = dayjs();
@@ -105,6 +114,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
     declare protected componentType: 'source';
 
     protected playRepo!: DrizzlePlayRepository;
+    protected queueRepo!: DrizzleQueueRepository;
+
+    protected queuedGauge: Gauge;
 
     existingDiscoveredPlay: (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => Promise<PlayMatchResult>
 
@@ -125,7 +137,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.configDir = internal.configDir;
         this.emitter = emitter;
         
-        this.discoveredCounter = getRoot().items.sourceMetics.discovered;
+        const metrics = getRoot().items.sourceMetics;
+        this.discoveredCounter = metrics.discovered;
+        this.queuedGauge = metrics.queued;
 
         const existingScrobbleOpts: ExistingScrobbleOpts = {
             logger: this.logger,
@@ -198,6 +212,10 @@ export default abstract class AbstractSource extends AbstractComponent implement
             }
         }
         if(this.isReady()) {
+            if(this.discoverQueuePromise === undefined) {
+                this.setStatus('Starting discovery queue...');
+                await this.startDiscoveryQueue();
+            }
             if (this.canPoll && !this.polling) {
                 if(!this.canAuthUnattended()) {
                     this.logger.warn({labels: 'Heartbeat'}, 'Should be polling but will not attempt to start because auth state is not good and cannot be correct unattended.');
@@ -250,6 +268,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             if (this.canPoll) {
                 await this.tryStopPolling(opts.reason);
             }
+            await this.tryStopDiscoveryQueue(opts.reason);
             this.scheduler.stop();
             for (const job of this.scheduler.getAllJobs()) {
                 job.stop();
@@ -270,11 +289,20 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     protected async postDatabase(): Promise<void> {
         this.playRepo = new DrizzlePlayRepository(this.db, {logger: this.logger});
+        this.queueRepo = new DrizzleQueueRepository(this.db, {logger: this.logger});
         this.playRepo.componentId = this.dbComponent.id;
+        this.queueRepo.componentId = this.dbComponent.id;
         const counts = await this.playRepo.getComponentPlayCountByState();
         const discoveredCount = counts.find(x => x.state === 'discovered');
         if(discoveredCount !== undefined) {
             this.tracksDiscoveredTotal = discoveredCount['count(*)'];
+        }
+    }
+
+    protected async updateQueueStats(queueNames: string[]) {
+        if(queueNames.includes(INGRESS_QUEUE)) {
+            this.queuedLength = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE]);
+            this.queuedGauge.labels(this.getPrometheusLabels()).set(this.queuedLength);
         }
     }
 
@@ -377,6 +405,62 @@ export default abstract class AbstractSource extends AbstractComponent implement
     // this is useful for sources where the track doesn't have complete information like Subsonic
     // TODO make this more descriptive? or move it elsewhere
     recentlyPlayedTrackIsValid = (playObj: PlayObject) => true
+
+    queuePlay = async (data: PlayObject | PlayObject[]) => {
+        const monitoring = this.getMonitoringStatus();
+        const playDatas = (Array.isArray(data) ? data : [data]).map(x => ({...x, meta: {...x.meta, wasMonitored: monitoring.monitoring, seenAt: dayjs()}}));
+
+        const createdQueuedPlays: PlaySelect[] = [];
+
+        await pMap(playDatas, async (queueablePlay) => {
+            try {
+                // we should be adding Plays to the queue without any transforms
+                // so run on "raw" play input
+                const cheapInputExisting = await this.playRepo.checkExisting(queueablePlay, { inputHash: queueablePlay });
+                if (cheapInputExisting !== undefined) {
+                    if(isDebugMode()) {
+                        this.logger.trace(`Not adding ${buildTrackString(queueablePlay)} to queue because it already exists in db as Play ${cheapInputExisting.uid}`);
+                    }
+                    // if we have seen a play with close temporality with the exact input hash then skip it entirely
+                    //
+                    // this is usually the case for 'history' based plays where we are brute-force adding all plays from an api call
+                    // and we need to prune all these duplicates
+                    //
+                    // but lets log if this happens and *not* history or backlog...
+                    if(!([PARSED_FROM.history, PARSED_FROM.backlog] as PARSED_FROM_TYPE[]).includes(queueablePlay.meta.parsedFrom)) {
+                        this.logger.warn(`Play (${buildTrackString(queueablePlay)}) dropped pre-queue due to existing (${cheapInputExisting.uid}) was not from history/backlog...`);
+                    }
+                    return;
+                }
+            } catch (e) {
+                this.logger.warn(new SimpleError('Failed to check queued scrobble for existing before adding, will continue with adding anyway', { cause: e }));
+            }
+            
+            // not in queue or existing queued check failed for some reason and we don't want to lose Play
+            const {
+                data,
+                meta
+            } = queueablePlay
+            const createPlayData = playToRepositoryCreatePlayOpts({
+                play: {
+                    data,
+                    meta
+                },
+                componentId: this.dbComponent.id, 
+                state: 'queued',
+            });
+
+            const playRow = await this.playRepo.createPlays([createPlayData]);
+            const queueState = await this.queueRepo.create({componentId: this.dbComponent.id, playId: playRow[0].id, queueName: INGRESS_QUEUE});
+            createdQueuedPlays.push(playRow[0]);
+            this.logger.debug(`Added ${buildTrackString(queueablePlay)} to the queue`);
+            this.emitPlayInsert({...playRow[0], queueStates: [queueState]} as unknown as PlayApiCommonDetailed);
+            this.queuedLength += 1;
+            this.queuedGauge.labels(this.getPrometheusLabels()).inc();
+        });
+
+        return createdQueuedPlays;
+    }
 
     protected addPlayToDB = async (play: PlayObject): Promise<PlayWith<'input'>> => {
         const monitorStatus = this.getMonitoringStatus();
@@ -529,25 +613,27 @@ export default abstract class AbstractSource extends AbstractComponent implement
             }
             try {
                 this.logger.verbose(`Fetching the last ${backlogLimit}${backlogLimit === this.SCROBBLE_BACKLOG_COUNT ? ' (max) ' : ''} listens to check for backlogging...`);
-                backlogPlays = await this.getBackloggedPlays({limit: backlogLimit});
+                backlogPlays = (await this.getBackloggedPlays({limit: backlogLimit})).map((x) => ({...x, meta: {...x.meta, parsedFrom: PARSED_FROM.backlog}}));
                 signal.throwIfAborted();
             } catch (e) {
                 throw new Error('Error occurred while fetching backlogged plays', {cause: e});
             }
-            const discovered = await this.discover(backlogPlays, {discoverLocation: 'backlog', signal});
+            await this.queuePlay(backlogPlays);
+            this.logger.info('Backlog Plays added to discovery queue.');
+            //const discovered = await this.discover(backlogPlays, {discoverLocation: 'backlog', signal});
 
-            if (scrobbleBacklog) {
-                if (discovered.length > 0) {
-                    this.logger.info('Scrobbling backlogged tracks...');
-                    signal.throwIfAborted();
-                    await this.scrobble(discovered);
-                    this.logger.info('Backlog scrobbling complete.');
-                } else {
-                    this.logger.info('All tracks already discovered!');
-                }
-            } else {
-                this.logger.info('Backlog scrobbling is disabled by config, skipping...');
-            }
+            // if (scrobbleBacklog) {
+            //     if (discovered.length > 0) {
+            //         this.logger.info('Scrobbling backlogged tracks...');
+            //         signal.throwIfAborted();
+            //         await this.scrobble(discovered);
+            //         this.logger.info('Backlog scrobbling complete.');
+            //     } else {
+            //         this.logger.info('All tracks already discovered!');
+            //     }
+            // } else {
+            //     this.logger.info('Backlog scrobbling is disabled by config, skipping...');
+            // }
         }
         return;
     }
@@ -767,19 +853,21 @@ export default abstract class AbstractSource extends AbstractComponent implement
                         this.logger.info(`Potential plays were discovered close to polling interval! Delaying scrobble clients refresh by ${maxDelay} seconds so other clients have time to scrobble first`);
                         await sleep(maxDelay * 1000);
                     }
-                    newDiscovered = await this.discover(playObjs, {signal});
+                    await this.queuePlay(playObjs);
+                    //newDiscovered = await this.discover(playObjs, {signal});
                     signal.throwIfAborted();
-                    this.scrobble(newDiscovered,
-                        {
-                            forceRefresh: closeToInterval
-                        });
+                    // this.scrobble(newDiscovered,
+                    //     {
+                    //         forceRefresh: closeToInterval
+                    //     });
                 }
 
                 const activityMsgs: string[] = [];
 
-                if(newDiscovered.length > 0) {
+                if(playObjs.length > 0) {
+                    playObjs.sort(sortByNewestPlayDate);
                     // only update date if the play date is after the current activity date (in the case of backlogged plays)
-                    this.lastActivityAt = newDiscovered[0].data.playDate.isAfter(this.lastActivityAt) ? newDiscovered[0].data.playDate : this.lastActivityAt;
+                    this.lastActivityAt = playObjs[0].data.playDate.isAfter(this.lastActivityAt) ? newDiscovered[0].data.playDate : this.lastActivityAt;
                     checkCount = 0;
                     checksOverThreshold = 0;
                 }
@@ -838,6 +926,174 @@ export default abstract class AbstractSource extends AbstractComponent implement
         } finally {
             this.setIsSleeping(false);
             this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({sleeping: false});
+        }
+    }
+
+    startDiscoveryQueue = async () => {
+        this.setStatus('Starting discovery queue processing');
+        this.discoverQueueAbortController = new AbortController();
+        this.discoverQueuePromise = spawn(this.discoverQueueAbortController.signal, async (signal, { defer }) => {
+                await this.processDiscoveryQueue(signal);
+        }).catch((e) => {
+            const componentUpdate: Partial<ComponentSourceApiJson> = {
+            };
+            if (isAbortError(e)) {
+                const err = generateLoggableAbortReason('Discovery queue processing stopped', this.discoverQueueAbortController.signal);
+                this.logger.info(err);
+                //this.logger.trace(e);
+                componentUpdate.status = 'Discovery queue processing cancelled';
+            } else {
+                const err = new Error('Scrobble processing stopped with error', { cause: e });
+                this.logger.warn(err);
+                componentUpdate.status = 'Discovery queue stopped with error';
+                this.warnings.push(err);
+                componentUpdate.warnings = this.warnings;
+            }
+            this.emitComponentUpdate<Partial<ComponentSourceApiJson>>(componentUpdate);
+        }).finally(() => {
+            this.discoverQueueAbortController = undefined;
+            this.discoverQueuePromise = undefined;
+        });
+    }
+
+    tryStopDiscoveryQueue = async (reason?: string | Error) => {
+        if(this.discoverQueuePromise === undefined) {
+            this.logger.verbose(`Discovery is already stopped`);
+            return;
+        }
+        if(this.discoverQueueAbortController === undefined) {
+            this.logger.error('No abort controller found! Nothing to stop.');
+            return false;
+        }
+        this.discoverQueueAbortController.abort(reason)
+        let timePasssed = 0;
+        while(this.discoverQueuePromise !== undefined && timePasssed < (this.stopPollingWaitInterval * 10)) {
+            await sleep(this.stopPollingWaitInterval);
+            timePasssed += this.stopPollingWaitInterval;
+            this.logger.verbose(`Waiting for discovery processing stop signal to be acknowledged (waited ${timePasssed}ms)`);
+        }
+        if(this.discoverQueuePromise !== undefined) {
+            throw new Error('Could not stop discovery processing! Or signal was lost');
+        }
+        return true;
+    }
+
+    protected processDiscoveryQueue = async (signal: AbortSignal) => {
+        signal.throwIfAborted();
+
+        let taskFailures = 0;
+
+        const {
+            options: {
+                maxRequestRetries = 5,
+                retryMultiplier = DEFAULT_RETRY_MULTIPLIER,
+            } = {},
+        } = this.config;
+        const maxRetries = Math.max(0, maxRequestRetries);
+
+         try {
+             await consumeQueue(
+                 () => this.playRepo.getQueueNext(INGRESS_QUEUE),
+                 async (item) => {
+                     if (taskFailures > 0) {
+                         const delayFor = pollingBackoff(taskFailures + 1, retryMultiplier);
+                         this.logger.debug(`Delaying discovery of Play ${item.uid} task for ${delayFor}ms due to non-zero prior failures (${taskFailures})`);
+                         await sleep(delayFor, { signal });
+                     }
+                     return this.processQueueCurrentPlay(item, signal)
+                 },
+                 {
+                     concurrency: this.queueConcurrency,
+                     idleMs: this.queueIdleMs,
+                     signal,
+                     onSuccess: () => {
+                        taskFailures = Math.max(taskFailures - 1, 0);
+                     },
+                     onError: async (e: Error) => {
+                        taskFailures++;
+                        this.emitter.emit('discoveryQueueError', e);
+                        if(taskFailures < maxRetries) {
+                            this.logger.info(`Discovery queue retries (${taskFailures}) less than max processing retries (${maxRetries}), continuing with processing...`);
+                            await this.notify({title: `Processing Retry`, message: `Encountered error while polling but retries (${taskFailures}) are less than max poll retries (${maxRetries}) so will continue. Error: ${e.message}`, priority: 'warn'});
+                        } else {
+                            this.logger.warn(`Discovery queue retries (${taskFailures}) equal to max processing retries (${maxRetries}), stopping processing!`);
+                            await this.notify({title: `Processing Error`, message: `Encountered error while scrobble processing and retries (${taskFailures}) are equal to max processing retries (${maxRetries}), stopping processing!. | Error: ${e.message}`, priority: 'error'});
+                            throw e;
+                        }
+                     },
+                     onEmpty: () => {
+                        this.emitter.emit('queueEmptied');
+                     }
+                 },
+             );
+         } catch (e) {
+            throw e;
+         }
+
+    }
+
+    protected processQueueCurrentPlay = async (currQueuedPlay: PlaySelectWithQueueStates, signal?: AbortSignal) => {
+        signal?.throwIfAborted();
+        this.setStatus(`Processing Play ${currQueuedPlay.uid}`);
+
+        const queueState = currQueuedPlay.queueStates.find(x => x.queueName === INGRESS_QUEUE);
+        const updatedQueueState: Partial<QueueStateNew> = {};
+        let state: PlayState;
+        try {
+            const preCompared = await this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.preCompare);
+            let existing: PlayObject;
+            // cheap check for existing
+            const cheapExisting = await this.playRepo.checkExisting(preCompared, { notId: currQueuedPlay.id });
+            if(cheapExisting !== undefined) {
+                updatedQueueState.error = {message: `Matched hash on existing Play ${cheapExisting.uid} with close temporality`};
+                existing = {...cheapExisting.play, id: cheapExisting.id, uid: cheapExisting.uid};
+            } else {
+                existing = await this.existingDiscovered(preCompared);
+                if(existing !== undefined) {
+                    updatedQueueState.error = {message: `Matched with Play ${cheapExisting.uid}`};
+                }
+            }
+            currQueuedPlay.play = preCompared;
+            signal?.throwIfAborted();
+            if(existing === undefined) {
+                if(!preCompared.meta.wasMonitored) {
+                    this.logger.debug(`Not adding ${buildTrackString(preCompared)} as discovered because monitoring was disabled when Play was created.`);
+                    state = 'discarded';
+                    updatedQueueState.error = {message: 'Play was not added as discovered because monitoring was disabled when Play was created.'}
+                } else {
+                    state = 'discovered';
+                    this.tracksDiscovered++;
+                    this.tracksDiscoveredTotal++
+                    this.discoveredCounter.labels(this.getPrometheusLabels()).inc();
+                    this.emitEvent('discovered', {play: preCompared});
+                }
+            } else {
+                this.playRepo.updateById(existing.id, {updatedAt: dayjs()});
+                state = 'duped';
+                currQueuedPlay.parentId = existing.id;
+            }
+            this.playRepo.updateById(currQueuedPlay.id, {play: preCompared, state});
+            const recentPlays = await this.getRecentlyDiscoveredPlays(false);
+            // only need to update if its already in memory,
+            // and better to update in-memory than clear cache so we aren't refetching from db on every discover
+            if(recentPlays !== undefined) {
+                recentPlays.push({...preCompared, id: currQueuedPlay.id, uid: currQueuedPlay.uid});
+                recentPlays.sort(sortByOldestPlayDate);
+                this.cache.cacheDb.set(this.recentDiscoveredCacheKey(), recentPlays, '2m');
+            }
+            updatedQueueState.queueStatus = 'completed';
+
+            this.logger.info(`${capitalize(state)} => ${buildTrackString(preCompared)}`);
+        } catch (e) {
+            const err = new Error(`Error ocurred while trying to discover Play ${currQueuedPlay.uid}`, {cause: e});
+            updatedQueueState.error = err;
+            updatedQueueState.queueStatus = 'failed';
+        } finally {
+            this.queueRepo.updateById(queueState.id, updatedQueueState);
+        }
+
+        if(state === 'discovered') {
+            await this.scrobble([{...currQueuedPlay.play, id: currQueuedPlay.id, uid: currQueuedPlay.uid}]);
         }
     }
 

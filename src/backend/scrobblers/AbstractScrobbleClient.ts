@@ -1416,7 +1416,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
         }).catch((e) => {
             if (isAbortError(e)) {
-                const err = generateLoggableAbortReason('Dead scrrobble processing stopped', this.deadQueueAbortController.signal);
+                const err = generateLoggableAbortReason('Dead scrobble processing stopped', this.deadQueueAbortController.signal);
                 this.logger.info(err);
                 this.logger.trace(e)
             } else {

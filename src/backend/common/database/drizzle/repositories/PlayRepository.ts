@@ -613,12 +613,20 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return {data: res.map(x => ({...x, play: hydratePlaySelect(x, hydrate)})), meta: {limit, offset}};
     }
 
-    public checkExisting = async (play: PlayObject, opts: {queueName?: string, states?: PlaySelect['state'][], taAccuracy?: TemporalAccuracy[]} & ComponentConstrainedRepoOpts = {}): Promise<PlaySelectWithQueueStates | undefined> => {
+    public checkExisting = async (play: PlayObject, opts: {
+        queueName?: string,
+        states?: PlaySelect['state'][],
+        taAccuracy?: TemporalAccuracy[],
+        inputHash?: string | PlayObject,
+        notId?: number
+    } & ComponentConstrainedRepoOpts = {}): Promise<PlaySelectWithQueueStates | undefined> => {
         const {
             queueName,
             componentId = this.componentId,
             taAccuracy = TA_DEFAULT_ACCURACY,
-            states
+            states,
+            inputHash,
+            notId,
         } = opts;
         const hash = hashObject(playContentBasicInvariantTransform(play).data);
 
@@ -626,19 +634,25 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         // which we can then use with temporal comparison to make sure we are comparing the correct dates
         //
         // this isn't as fast as just comparing playDate directly but its still much faster/cheaper than paginating plays and doing everything in-memory
-        const dateGranularity = getTemporalAccuracyCloseVal(play.meta.source as SourceType);
-        let endRange: Dayjs;
-        if(play.data.playDateCompleted !== undefined) {
-            // this will be present if source reports it
-            // or we tracked it live with MemorySource
-            endRange = play.data.playDateCompleted.add(dateGranularity, 's');
-        } else {
-            endRange = play.data.playDate.add(dateGranularity, 's');
-        }
+        // const dateGranularity = getTemporalAccuracyCloseVal(play.meta.source as SourceType);
+        // let endRange: Dayjs;
+        // if(play.data.playDateCompleted !== undefined) {
+        //     // this will be present if source reports it
+        //     // or we tracked it live with MemorySource
+        //     endRange = play.data.playDateCompleted.add(dateGranularity, 's');
+        // } else {
+        //     endRange = play.data.playDate.add(dateGranularity, 's');
+        // }
         const where: FindWhere<'plays'> = {
             componentId,
             playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play)),
         };
+
+        if(notId !== undefined) {
+            where.NOT = {
+                id: notId
+            }
+        }
         
         if(queueName !== undefined) {
             where.queueStates = {
@@ -653,19 +667,20 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         }
 
         const mbidId = playMbidIdentifier(play);
-        if(mbidId !== undefined) {
-            where.AND = [
-                {
-                    OR: [
-                        {
-                            playHash: hash
-                        },
-                        {
-                            mbidIdentifier: mbidId
-                        }
-                    ]
-                }
-            ]
+        if (mbidId !== undefined || inputHash !== undefined) {
+            where.AND = [{
+                OR: [
+                    {
+                        playHash: hash
+                    }
+                ]
+            }];
+            if (mbidId !== undefined) {
+                where.AND[0].OR.push({ mbidIdentifier: mbidId });
+            }
+            if (inputHash !== undefined) {
+                where.AND[0].OR.push({ input: { playHash: typeof inputHash === 'string' ? inputHash : hashObject(playContentBasicInvariantTransform(inputHash).data) } });
+            }
         } else {
             where.playHash = hash;
         }
@@ -673,7 +688,8 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         const res = await this.db.query.plays.findMany({
             where,
             with: {
-                queueStates: true
+                queueStates: true,
+                input: true
             }
         });
         if(res.length === 0) {
