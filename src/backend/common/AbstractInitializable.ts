@@ -4,7 +4,7 @@ import { hasNodeNetworkException } from "./errors/NodeErrors.ts";
 import { hasUpstreamError } from "./errors/UpstreamError.ts";
 import type {WebhookPayload} from "./infrastructure/config/health/webhooks.ts";
 import { AuthCheckError, AuthError, BuildDataError, ConnectionCheckError, findAuthIssue, ParseCacheError, PostInitError, StageError, type AuthErrorMap } from "./errors/MSErrors.ts";
-import { messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.ts";
+import { generateErrorTruthyTest, messageWithCausesTruncatedDefault, type TruthyErrorsOpts } from "../../core/ErrorUtils.ts";
 import { spawn } from 'abort-controller-x';
 import { COMPONENT_AUTH_TYPE, type ComponentAuthType } from "../../core/Atomic.ts";
 export default abstract class AbstractInitializable {
@@ -385,5 +385,21 @@ export default abstract class AbstractInitializable {
 
     public additionalApiData(): Record<string, any> {
         return {};
+    }
+
+    public clearErrors(opts?: TruthyErrorsOpts) {
+        if (!opts) { this.errors = []; return; }
+        
+        const test = generateErrorTruthyTest(opts);
+        this.errors = this.errors.filter(x => !test(x));
+    }
+
+    public replaceErrors(e: Error, opts?: TruthyErrorsOpts) {
+        if(opts !== undefined) {
+            this.clearErrors(opts);
+        } else {
+            this.clearErrors({instance: e});
+        }
+        this.errors.push(e);
     }
 }
