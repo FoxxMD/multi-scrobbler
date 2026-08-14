@@ -94,6 +94,7 @@ export const playInputs = sqliteTable("play_inputs", {
   playId: integer().notNull().references(() => plays.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
   data: text({ mode: 'json' }).$type<object>(),
   play: PlayJson('play').notNull(),//text({ mode: 'json' }).notNull().$type<PlayObject>(),
+  playHash: text(),
   createdAt: DayjsTimestamp('createdAt').$defaultFn(() => dayjs())
 }, (table) => [
   uniqueIndex('play_input_id_idx').on(table.playId)
