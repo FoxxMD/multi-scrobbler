@@ -360,12 +360,11 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         try {
             logger.verbose('User requested auth test');
             await component.testAuth(true);
-            component.errors = component.errors.filter(x => !findAuthIssue(x));
+            component.clearErrors({predicate: x => findAuthIssue(x) !== undefined});
             didAuth = true;
             return res.sendStatus(200);
         } catch (e) {
-            component.errors = component.errors.filter(x => !findAuthIssue(x));
-            component.errors.push(e);
+            component.replaceErrors(e, {predicate: x => findAuthIssue(x) !== undefined});
             return res.status(500).json({error: serializeError(e)});
         } finally {
             const data = component.getApiData();

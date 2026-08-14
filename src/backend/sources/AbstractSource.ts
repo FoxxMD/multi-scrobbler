@@ -40,7 +40,7 @@ import pMap, {pMapIterable} from 'p-map';
 import type { Counter } from 'prom-client';
 import { normalizeStr } from '../utils/StringUtils.ts';
 import { spawn, isAbortError, delay, throwIfAborted } from 'abort-controller-x';
-import { generateLoggableAbortReason } from '../common/errors/MSErrors.ts';
+import { generateLoggableAbortReason, StageChangeError } from '../common/errors/MSErrors.ts';
 import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, type QueryPlaysOpts, type RequestPlayQuery, type WithPlayRelation } from '../common/database/drizzle/repositories/PlayRepository.ts';
 import { asPlay } from '../../core/PlayMarshalUtils.ts';
 import { AsyncTask, SimpleIntervalJob, ToadScheduler } from 'toad-scheduler';
@@ -216,26 +216,33 @@ export default abstract class AbstractSource extends AbstractComponent implement
     }
 
     public async start(opts: {forceInit?: boolean} = {}) {
-        if(opts.forceInit) {
-            if(!this.canAuthUnattended()) {
-                this.logger.warn({labels: 'Heartbeat'}, 'Source is not ready but will not try to initialize because auth state is not good and cannot be corrected unattended.')
-                return false;
-            }
-            try {
-                this.setStatus('Attempting to initialize...');
-                await this.initialize({force: true, notify: true, notifyTitle: 'Could not initialize automatically'});
-            } catch (e) {
-                this.logger.error(new Error('Could not initialize automatically', {cause: e}));
-                this.setStatus('Could not initialize automatically');
-                return false;
-            }
+        try {
+            if (opts.forceInit) {
+                if (!this.canAuthUnattended()) {
+                    this.logger.warn({ labels: 'Heartbeat' }, 'Source is not ready but will not try to initialize because auth state is not good and cannot be corrected unattended.')
+                    return false;
+                }
+                try {
+                    this.setStatus('Attempting to initialize...');
+                    await this.initialize({ force: true, notify: true, notifyTitle: 'Could not initialize automatically' });
+                } catch (e) {
+                    this.logger.error(new Error('Could not initialize automatically', { cause: e }));
+                    this.setStatus('Could not initialize automatically');
+                    return false;
+                }
 
-            if('discoverDevices' in this && typeof this.discoverDevices === 'function') {
-                this.discoverDevices();
+                if ('discoverDevices' in this && typeof this.discoverDevices === 'function') {
+                    this.discoverDevices();
+                }
             }
+            this.initTasks();
+
+            return true;
+        } catch (e) {
+            throw new StageChangeError('Failed to start', { cause: e });
+        } finally {
+            this.emitComponentUpdate({state: this.getRunningState()});
         }
-        this.initTasks();
-        return true;
     }
 
     public async stop(opts: { reason?: string | Error } = {}) {
@@ -251,7 +258,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
             this.setStatus('Stopped');
             this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({state: COMPONENT_STATE.STOPPED});
         } catch (e) {
-            throw new Error('Failed to stop Source', { cause: e });
+            this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({state: this.getRunningState()});
+            throw new StageChangeError('Failed to stop', { cause: e });
         }
     }
 
@@ -283,7 +291,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 const t = this.transformManager.getTransformerByStage({ type: hook.type, name: hook.name });
                 pcInits.push(t.staggerOpts?.initialInterval ?? 0);
                 pcMaxStagger.push(t.staggerOpts?.maxRandomStagger ?? 0)
-            }
+        }
             this.staggerMappers.preCompare = staggerMapper<PlayObject, PlayObject>({ initialInterval: Math.max(...pcInits), maxRandomStagger: Math.max(...pcMaxStagger), concurrency: 2 });
         }
 
@@ -568,7 +576,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 const err = new Error('Cannot start polling because Source is not ready', {cause: e});
                 this.logger.error(err);
                 this.setStatus('Polling Error');
-                this.errors.push(err);
+                this.replaceErrors(err, {predicate: (x) => x.message === err.message});
                 this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({errors: this.errors});
                 if(notify) {
                     await this.notify( {title: `Polling Error`, message: `Cannot start polling because Source is not ready: ${truncateStringToLength(500)(messageWithCausesTruncatedDefault(e))}`, priority: 'error'});

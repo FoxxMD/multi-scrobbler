@@ -61,7 +61,7 @@ import { existingScrobble, type ExistingScrobbleOpts } from "../utils/PlayCompar
 import { statefulInvariantTransform } from "../../core/PlayUtils.ts";
 import { normalizeStr } from "../utils/StringUtils.ts";
 import type { Counter, Gauge } from 'prom-client';
-import { generateLoggableAbortReason, ScrobbleSubmitError, SimpleError } from "../common/errors/MSErrors.ts";
+import { generateLoggableAbortReason, ScrobbleSubmitError, SimpleError, StageChangeError } from "../common/errors/MSErrors.ts";
 import {isErrorLike, serializeError} from 'serialize-error';
 import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetchUtils.ts";
 import { spawn, isAbortError, delay } from 'abort-controller-x';
@@ -330,25 +330,31 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
 
     public async start(opts: {forceInit?: boolean} = {}) {
-        if(opts.forceInit) {
-            if(!this.canAuthUnattended()) {
-                this.logger.warn({labels: 'Heartbeat'}, 'Client is not ready but will not try to initialize because auth state is not good and cannot be corrected unattended.')
-                return false;
-            }
-            try {
-                await this.initialize({force: true, notify: true, notifyTitle: 'Could not initialize automatically'});
-            } catch (e) {
-                this.logger.error(new Error('Could not initialize automatically', {cause: e}));
-                return false;
-            }
+        try {
+            if (opts.forceInit) {
+                if (!this.canAuthUnattended()) {
+                    this.logger.warn({ labels: 'Heartbeat' }, 'Client is not ready but will not try to initialize because auth state is not good and cannot be corrected unattended.')
+                    return false;
+                }
+                try {
+                    await this.initialize({ force: true, notify: true, notifyTitle: 'Could not initialize automatically' });
+                } catch (e) {
+                    this.logger.error(new Error('Could not initialize automatically', { cause: e }));
+                    return false;
+                }
 
-            if(!this.canAuthUnattended()) {
-                this.logger.warn({label: 'Heartbeat'}, 'Should be monitoring scrobbles but will not attempt to start because auth state is not good and cannot be correct unattended.');
-                return false;
+                if (!this.canAuthUnattended()) {
+                    this.logger.warn({ label: 'Heartbeat' }, 'Should be monitoring scrobbles but will not attempt to start because auth state is not good and cannot be correct unattended.');
+                    return false;
+                }
             }
+            this.initTasks();
+            return true;
+        } catch (e) {
+            throw new StageChangeError('Failed to start', { cause: e });
+        } finally {
+            this.emitComponentUpdate<Partial<ComponentClientApiJson>>({ state: this.getRunningState() });
         }
-        this.initTasks();
-        return true;
     }
 
     public async stop(opts: { reason?: string | Error } = {}) {
@@ -365,7 +371,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             this.setStatus('Stopped');
             this.emitComponentUpdate<Partial<ComponentClientApiJson>>({state: COMPONENT_STATE.STOPPED});
         } catch (e) {
-            throw new Error('Failed to stop Client', { cause: e });
+            this.emitComponentUpdate<Partial<ComponentClientApiJson>>({state: this.getRunningState()});
+            throw new StageChangeError('Failed to stop Client', { cause: e });
         }
     }
 

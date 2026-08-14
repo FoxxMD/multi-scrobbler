@@ -61,6 +61,10 @@ export class PostInitError extends StageError {
 }
 addKnownErrorConstructor(PostInitError);
 
+export class StageChangeError extends NamedError {
+    override name = 'Stage Change';
+}
+
 const STACK_AT_REGEX = new RegExp(/[\n\r]\s*at/);
 
 export class SimpleError extends Error implements HasSimpleError {

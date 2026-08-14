@@ -12,6 +12,7 @@ import { readJson } from '../utils/DataUtils.ts';
 import { joinedUrl } from "../utils/NetworkUtils.ts";
 import AbstractSource, { type RecentlyPlayedOptions } from "./AbstractSource.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
+import { SimpleError } from "../common/errors/MSErrors.ts";
 
 export default class DeezerSource extends AbstractSource {
     workingCredsPath;
@@ -243,7 +244,7 @@ export default class DeezerSource extends AbstractSource {
             return true;
         } else {
             this.logger.warn('Callback contained an error! User may have denied access?')
-            this.errors = error;
+            this.errors.push(error);
             this.logger.error(error);
             return error;
         }

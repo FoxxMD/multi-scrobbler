@@ -7,7 +7,7 @@ import {MONITORING_ORIGIN_SYSTEM, MONITORING_ORIGIN_USER, type ComponentType, ty
 import { buildTrackString } from "../../core/StringUtils.ts";
 import type {CommonClientConfig} from "./infrastructure/config/client/index.ts";
 import type {CommonSourceConfig} from "./infrastructure/config/source/index.ts";
-import { mergeSimpleError, SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError, TransformRulesError } from "./errors/MSErrors.ts";
+import { mergeSimpleError, SimpleError, SkipTransformStageError, StageChangeError, StagePrerequisiteError, StageTransformError, TransformRulesError } from "./errors/MSErrors.ts";
 import {
     FLOW_CONTROL_TERM,
     type PlayTransformRules,
@@ -229,7 +229,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             await this.stop(opts);
             await this.start(opts);
         } catch (e) {
-            throw new Error('Failed to restart', { cause: e });
+            const err = new StageChangeError('Failed to restart', { cause: e });
+            this.replaceErrors(err);
+            throw err;
         }
     }
 
