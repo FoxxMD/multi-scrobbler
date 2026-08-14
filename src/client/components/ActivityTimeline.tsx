@@ -8,7 +8,7 @@ import { HiMiniMagnifyingGlass } from "react-icons/hi2";
 import { IoMdCodeDownload } from "react-icons/io";
 import { TbDatabaseEdit } from "react-icons/tb";
 import type {PlayApiCommonDetailed, QueueStateApi} from "../../core/Api";
-import { CLIENT_DEAD_QUEUE, CLIENT_INGRESS_QUEUE, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, QUEUE_STATUS_QUEUED, type ComponentType, type JsonPlayObject, type LifecycleStep, type PlayMatchResult, type ScrobbleResult } from "../../core/Atomic";
+import { DEAD_QUEUE, INGRESS_QUEUE, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, QUEUE_STATUS_QUEUED, type ComponentType, type JsonPlayObject, type LifecycleStep, type PlayMatchResult, type ScrobbleResult } from "../../core/Atomic";
 import { sortByNewestDate } from "../../core/PlayUtils";
 import { capitalizeWords } from "../../core/StringUtils";
 import { shortTodayAwareFormat } from "../../core/TimeUtils";
@@ -309,7 +309,7 @@ const QueueTimelineItem = (props: {queueState: QueueStateApi, collapsibleOpen: b
                     </Timeline.Connector>
                     <Timeline.Content gap="4">
                         <Timeline.Title>
-                            <TimelineItemSummaryText>{queueState.queueName === CLIENT_DEAD_QUEUE ? 'Dead ' : ''}Queued <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}</TimelineItemSummaryText>
+                            <TimelineItemSummaryText>{queueState.queueName === DEAD_QUEUE ? 'Dead ' : ''}Queued <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}</TimelineItemSummaryText>
                         </Timeline.Title>
                     </Timeline.Content>
                 </Timeline.Item>
@@ -327,7 +327,7 @@ const QueueTimelineItem = (props: {queueState: QueueStateApi, collapsibleOpen: b
                     </Timeline.Connector>
                     <Timeline.Content gap="4">
                         <Timeline.Title>
-                            <TimelineItemSummaryText>{queueState.queueName === CLIENT_DEAD_QUEUE ? 'Dead ' : ''}Queue finished processing <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}</TimelineItemSummaryText>
+                            <TimelineItemSummaryText>{queueState.queueName === DEAD_QUEUE ? 'Dead ' : ''}Queue finished processing <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}</TimelineItemSummaryText>
                         </Timeline.Title>
                     </Timeline.Content>
                 </Timeline.Item>
@@ -337,12 +337,12 @@ const QueueTimelineItem = (props: {queueState: QueueStateApi, collapsibleOpen: b
     if(queueState.queueStatus === QUEUE_STATUS_FAILED) {
         let titleContent: React.JSX.Element;
         if(queueState.error === undefined) {
-            titleContent = <TimelineItemSummaryText>{queueState.queueName === CLIENT_DEAD_QUEUE ? 'Dead ' : ''}Queue failed <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}</TimelineItemSummaryText>;
+            titleContent = <TimelineItemSummaryText>{queueState.queueName === DEAD_QUEUE ? 'Dead ' : ''}Queue failed <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}</TimelineItemSummaryText>;
         } else {
             titleContent = (
                 <MSCollapsible 
                 triggerProps={timelineCollapsibleProps}
-                indicator={<TimelineItemSummaryText>{queueState.queueName === CLIENT_DEAD_QUEUE ? 'Dead ' : ''}Queue failed <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}</TimelineItemSummaryText>}
+                indicator={<TimelineItemSummaryText>{queueState.queueName === DEAD_QUEUE ? 'Dead ' : ''}Queue failed <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}</TimelineItemSummaryText>}
                                             defaultOpen={collapsibleOpen}
                                             disableUntil="md"
                                             timeline>
@@ -422,7 +422,7 @@ export const ActivityTimeline = (props: ActivityTimelineProps) => {
         timelineItems.push(d);
     }
 
-    const ingressQueue = queueStates.find(x => x.queueName === CLIENT_INGRESS_QUEUE);
+    const ingressQueue = queueStates.find(x => x.queueName === INGRESS_QUEUE);
     if(ingressQueue !== undefined) {
         if(ingressQueue.updatedAt === ingressQueue.createdAt) {
             // if queue was never updated but contains extra context then only show updated
@@ -436,7 +436,7 @@ export const ActivityTimeline = (props: ActivityTimelineProps) => {
             timelineItems.push({id: 'queue-updated-ingress', dt: dayjs(ingressQueue.updatedAt)});
         }
     }
-    const deadqueue = queueStates.find(x => x.queueName === CLIENT_DEAD_QUEUE);
+    const deadqueue = queueStates.find(x => x.queueName === DEAD_QUEUE);
     if(deadqueue !== undefined) {
         if(deadqueue.updatedAt === deadqueue.createdAt) {
             // if queue was never updated but contains extra context then only show updated

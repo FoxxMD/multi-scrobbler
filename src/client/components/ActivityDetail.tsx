@@ -5,7 +5,7 @@ import React, { Fragment, useEffect, useState } from "react";
 import { LuChevronRight } from "react-icons/lu";
 import type { MarkOptional } from "ts-essentials";
 import type { ComponentsApiJson, MsSseEvent, PaginatedResponse, PlayApiCommonDetailed, QueryPlaysOptsJson, SortPlaysByProps } from "../../core/Api";
-import { CLIENT_DEAD_QUEUE, type ComponentType, type Second } from "../../core/Atomic";
+import { DEAD_QUEUE, type ComponentType, type Second } from "../../core/Atomic";
 import { tanQueries, useQueryWatcher } from "../queries";
 import { activityTimelineHasIssue } from "../utils/ComponentUtils";
 import { ActivityTimeline } from "./ActivityTimeline";
@@ -316,7 +316,7 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed}) =
         suffix = <RetryButton size="xs" margin="1px" variant="subtle"/>;
         badgeProps.paddingRight = 0;
     }
-    const hasDeadQueue = queueStates.some(x => x.queueName === CLIENT_DEAD_QUEUE && x.queueStatus === 'queued');
+    const hasDeadQueue = queueStates.some(x => x.queueName === DEAD_QUEUE && x.queueStatus === 'queued');
     return (
         <Stack>
             <HStack>

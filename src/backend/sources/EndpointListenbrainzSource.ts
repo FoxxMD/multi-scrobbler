@@ -104,10 +104,11 @@ export class EndpointListenbrainzSource extends MemorySource {
         }
 
         const discoverable = stateData.filter(x => x.play.meta.nowPlaying === false && this.isValidScrobble(x.play));
-        const discovered = await this.discover(discoverable.map(x => x.play));
-        if (discovered.length > 0) {
-            await this.scrobble(discovered);
-        }
+        await this.queuePlay(discoverable.map(x => x.play))
+        // const discovered = await this.discover(discoverable.map(x => x.play));
+        // if (discovered.length > 0) {
+        //     await this.scrobble(discovered);
+        // }
         this.componentRepo.updateById(this.dbComponent.id, {lastActiveAt: dayjs()});
         this.setStatus('Waiting for Plays');
     }

@@ -201,9 +201,9 @@ export interface PlayMetaBase<D extends DateLike = Dayjs> {
     musicService?: string
 
     /**
-     * Specifies from what facet/data from the source this play was parsed from IE history, now playing, etc...
+     * Specifies from what facet/data from the source this play was parsed from IE player, backlog, now playing, etc...
      * */
-    parsedFrom?: string
+    parsedFrom?: PARSED_FROM_TYPE
     /**
      * Unique ID for this track, given by the Source
      * */
@@ -266,6 +266,9 @@ export interface PlayMetaBase<D extends DateLike = Dayjs> {
     scrobbleTsSOC?: ScrobbleTsSOC
 
     comment?: string
+
+    /** Was the component activitely monitoring when this Play was created? */
+    wasMonitored?: boolean
 
     //lifecycle: PlayLifecycle<D>
     lifecycleInputs?: LifecycleInput[]
@@ -476,6 +479,14 @@ export const SOURCE_SOT = {
     INGRESS: 'ingress'
 } as const satisfies Record<string, SOURCE_SOT_TYPES>
 export const sourceSotTypes: SOURCE_SOT_TYPES[] = ['player','history','ingress'];
+
+export type PARSED_FROM_TYPE = 'backlog' | 'now playing' | 'player' | 'history';
+export const PARSED_FROM = {
+    backlog : 'backlog',
+    nowPlaying: 'now playing',
+    player: 'player',
+    history: 'history'
+} as const satisfies Record<string, PARSED_FROM_TYPE>
 
 export interface URLData {
     url: URL

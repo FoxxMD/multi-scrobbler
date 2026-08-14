@@ -19,12 +19,11 @@ import { NO_DEVICE } from '../core/Atomic.ts';
 import type {PlayPlatformId} from '../core/Atomic.ts';
 import { genGroupIdStr } from '../core/PlayUtils.ts';
 import { durationToNormalizedTime } from '../core/TimeUtils.ts';
+import { setTimeout as delay } from 'node:timers/promises'
 
 dayjs.extend(utc);
 
-export function sleep(ms: any) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
+export const sleep = (ms: number, opts?: Parameters<typeof delay>[2]) => delay(ms, undefined, opts);
 
 /** sorts playObj formatted objects by playDate in ascending (oldest first) order */
 export const sortByOldestPlayDate = (a: PlayObject, b: PlayObject) => {

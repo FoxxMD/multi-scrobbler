@@ -143,7 +143,7 @@ export class WebScrobblerSource extends MemorySource {
             },
             meta: {
                 trackId: uniqueID,
-                parsedFrom: connectorLabel,
+                parsedFrom: P,
                 url: {
                     web: trackUrl,
                     origin: originUrl
@@ -166,8 +166,8 @@ export class WebScrobblerSource extends MemorySource {
             return false;
         }
 
-        if (playObj.meta.parsedFrom !== undefined) {
-            const lowerSource = playObj.meta.parsedFrom.toLowerCase();
+        if (playObj.meta.musicService !== undefined) {
+            const lowerSource = playObj.meta.musicService.toLowerCase();
             if (Array.isArray(this.config.data.blacklist) && this.config.data.blacklist.length > 0) {
                 if (this.config.data.blacklist.some(x => x === lowerSource)) {
                     this.logger.debug(`Will not scrobble play because it is from a blacklisted connector '${lowerSource}'`);
@@ -196,10 +196,11 @@ export class WebScrobblerSource extends MemorySource {
                 this.setStatus('Received Play');
             }
             if (stateData.play.meta.nowPlaying === false) {
-                const discovered = await this.discover([stateData.play]);
-                if (discovered.length > 0) {
-                    await this.scrobble(discovered);
-                }
+                await this.queuePlay([stateData.play]);
+                // const discovered = await this.discover([stateData.play]);
+                // if (discovered.length > 0) {
+                //     await this.scrobble(discovered);
+                // }
             }
         }
 
