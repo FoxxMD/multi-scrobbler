@@ -125,7 +125,7 @@ export const setupAuthRoutes = (app: Express, logger: Logger, sourceMiddle: Expr
                     throw error;
                 }
                 await entity.api.authenticate(token);
-                entity.errors = entity.errors.filter(x => !findAuthIssue(x));
+                entity.clearErrors({predicate: x => findAuthIssue(x) !== undefined});
                 if(entity instanceof AbstractSource) {
                     entity.poll().catch((e) => logger.error(e));
                 } else {
@@ -167,22 +167,21 @@ export const setupAuthRoutes = (app: Express, logger: Logger, sourceMiddle: Expr
             try {
                 const tokenResult = await source.handleAuthCodeCallback(req.query);
                 if (tokenResult === true) {
-                    source.errors = source.errors.filter(x => !findAuthIssue(x));
+                    source.clearErrors({predicate: x => findAuthIssue(x) !== undefined});
                     source.poll().catch((e) => logger.error(e));
-
                 } else {
                     if (tokenResult instanceof Error) {
-                        source.errors.push(tokenResult);
+                        source.replaceErrors(tokenResult, {predicate: (x) => x.message === tokenResult.message});
                         source.logger.error(tokenResult);
                     } else if (typeof tokenResult === 'string') {
                         const e = new SimpleError(`Token result was unexpected: ${tokenResult}`);
-                        source.errors.push(e);
+                        source.replaceErrors(e, {predicate: (x) => x.message === e.message});
                         source.logger.error(e);
                     }
                 }
             } catch (e) {
                 const err = new SimpleError('Unexpected error while trying to authorize code, or save file', { cause: e });
-                source.errors.push(err);
+                source.replaceErrors(err, {predicate: (x) => err.message === x.message});
                 source.logger.error(err);
             }
             return res.redirect('/next');
