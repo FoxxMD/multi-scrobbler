@@ -3,7 +3,7 @@ import { DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseReposit
 import type {DbConcrete} from "../drizzleUtils.ts";
 import type {QueueStateSelect} from "../drizzleTypes.ts";
 import { queueStates } from "../schema/schema.ts";
-import { CLIENT_DEAD_QUEUE } from "../../../../../core/Atomic.ts";
+import { DEAD_QUEUE } from "../../../../../core/Atomic.ts";
 export class DrizzleQueueRepository extends DrizzleBaseRepository<'queueStates'> {
 
     constructor(db: DbConcrete, opts: DrizzleRepositoryOpts = {}) {
@@ -17,7 +17,7 @@ export class DrizzleQueueRepository extends DrizzleBaseRepository<'queueStates'>
             eq(queueStates.componentId, componentId),
             lte(queueStates.retries, retries),
             eq(queueStates.queueStatus, 'failed'),
-            eq(queueStates.queueName, CLIENT_DEAD_QUEUE)
+            eq(queueStates.queueName, DEAD_QUEUE)
         ));
     }
 
@@ -27,7 +27,7 @@ export class DrizzleQueueRepository extends DrizzleBaseRepository<'queueStates'>
         }).where(and(
             eq(queueStates.componentId, componentId),
             eq(queueStates.queueStatus, 'queued'),
-            eq(queueStates.queueName, CLIENT_DEAD_QUEUE)
+            eq(queueStates.queueName, DEAD_QUEUE)
         ));
     }
 

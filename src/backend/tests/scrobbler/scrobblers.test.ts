@@ -6,7 +6,7 @@ import dayjs from "dayjs";
 import { after, describe, it } from 'mocha';
 import { http, HttpResponse } from 'msw';
 import pEvent from 'p-event';
-import { CLIENT_INGRESS_QUEUE, type PlayObject, SOURCE_SOT } from "../../../core/Atomic.ts";
+import { INGRESS_QUEUE, type PlayObject, SOURCE_SOT } from "../../../core/Atomic.ts";
 import { sleep, sortByOldestPlayDate } from "../../utils.ts";
 import { genGroupIdStr } from '../../../core/PlayUtils.ts';
 import mixedDuration from '../plays/mixedDuration.json' with { type: 'json' };
@@ -678,7 +678,7 @@ describe('Scrobble client uses transform plays correctly', function() {
             track: 'my cool track'
         });
         await testScrobbler.queueScrobble(newScrobble, 'test');
-        const queuedPlayedData = await testScrobbler.playRepoTest.getQueued(CLIENT_INGRESS_QUEUE);
+        const queuedPlayedData = await testScrobbler.playRepoTest.getQueued(INGRESS_QUEUE);
         expect(queuedPlayedData.data[0].play.data.track).is.eq('my cool track');
         testScrobbler.scrobbleSleep = 100;
         testScrobbler.initScrobbleMonitoring().catch(console.error);
@@ -1187,7 +1187,7 @@ describe('Scrobble Clients Behavior', function() {
                 pEvent(testClient.emitter, 'scrobbleQueued'),
                 sleep(10)
             ]);
-            const queued = await testClient.getQueued(CLIENT_INGRESS_QUEUE);
+            const queued = await testClient.getQueued(INGRESS_QUEUE);
             expect(queued.data).is.empty;
         });
 
@@ -1214,7 +1214,7 @@ describe('Scrobble Clients Behavior', function() {
                 pEvent(testClient.emitter, 'scrobbleQueued'),
                 sleep(100)
             ])
-            const queued = await testClient.getQueued(CLIENT_INGRESS_QUEUE);
+            const queued = await testClient.getQueued(INGRESS_QUEUE);
             expect(queued.data).is.not.empty;
         });
 
@@ -1241,7 +1241,7 @@ describe('Scrobble Clients Behavior', function() {
                 pEvent(testClient.emitter, 'scrobbleQueued'),
                 sleep(50)
             ])
-            const queued = await testClient.getQueued(CLIENT_INGRESS_QUEUE);
+            const queued = await testClient.getQueued(INGRESS_QUEUE);
             expect(queued.data).is.not.empty;
         });
 
@@ -1268,7 +1268,7 @@ describe('Scrobble Clients Behavior', function() {
                 pEvent(testClient.emitter, 'scrobbleQueued'),
                 sleep(50)
             ])
-            const queued = await testClient.getQueued(CLIENT_INGRESS_QUEUE);
+            const queued = await testClient.getQueued(INGRESS_QUEUE);
             expect(queued.data).is.not.empty;
         });
 
@@ -1295,7 +1295,7 @@ describe('Scrobble Clients Behavior', function() {
                 pEvent(testClient.emitter, 'scrobbleQueued'),
                 sleep(50)
             ])
-            const queued = await testClient.getQueued(CLIENT_INGRESS_QUEUE);
+            const queued = await testClient.getQueued(INGRESS_QUEUE);
             expect(queued.data).is.not.empty;
         });
 
@@ -1322,7 +1322,7 @@ describe('Scrobble Clients Behavior', function() {
                 pEvent(testClient.emitter, 'scrobbleQueued'),
                 sleep(50)
             ])
-            const queued = await testClient.getQueued(CLIENT_INGRESS_QUEUE);
+            const queued = await testClient.getQueued(INGRESS_QUEUE);
             expect(queued.data).is.not.empty;
         });
 

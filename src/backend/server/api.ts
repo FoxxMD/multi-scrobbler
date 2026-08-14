@@ -6,7 +6,7 @@ import { FixedSizeList } from 'fixed-size-list';
 import type { PassThrough } from "node:stream";
 import { Transform } from "stream";
 import {
-    CLIENT_DEAD_QUEUE,
+    DEAD_QUEUE,
     type ClientStatusData,
     type DeadLetterScrobble,
     type LogOutputConfig,
@@ -599,7 +599,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
             ...query as Partial<QueryPlaysOpts>,
             queues: [
                 {
-                    queueName: CLIENT_DEAD_QUEUE,
+                    queueName: DEAD_QUEUE,
                     queueStatus: ['queued','failed']
                 }
             ]

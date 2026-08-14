@@ -607,10 +607,10 @@ export const REGEX_ISO8601_LOOSE = new RegExp(/\d{4}-[01]\d-[0-3]\dT/);
  */
 export const REGEX_ISO8601_WELLKNOWN = new RegExp(/dayjs-(\d{4}-[01]\d-[0-3]\dT.*)/);
 
-export const CLIENT_INGRESS_QUEUE: QueueName = 'ingress';
-export const CLIENT_DEAD_QUEUE: QueueName = 'dead';
+export const INGRESS_QUEUE: QueueName = 'ingress';
+export const DEAD_QUEUE: QueueName = 'dead';
 export type QueueName = 'ingress' | 'dead';
-export const QUEUE_NAMES = [CLIENT_INGRESS_QUEUE, CLIENT_DEAD_QUEUE];
+export const QUEUE_NAMES = [INGRESS_QUEUE, DEAD_QUEUE];
 
 /**
  * Useful TS type-only utility for testing type equality
