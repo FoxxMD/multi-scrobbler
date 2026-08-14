@@ -212,15 +212,15 @@ export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof 
     switch(props.data.state) {
         case COMPONENT_STATE.RUNNING:
             primaryAction = <RetryButton onClick={() => mutate('restart')} disabled={isPending} {...primaryActionProps}/>
-            menuItems = [<MenuItemStop/>,<MenuItemMute/>];
+            menuItems = [<MenuItemStop/>,<MenuItemMute disabled/>];
             break;
         case COMPONENT_STATE.IDLE:
             primaryAction = <PowerButton onClick={() => mutate('start')} disabled={isPending} {...primaryActionProps}/>
-            menuItems = [<MenuItemStop/>,<MenuItemRestart/>,<MenuItemMute/>];
+            menuItems = [<MenuItemStop/>,<MenuItemRestart/>,<MenuItemMute disabled/>];
             break;
         case COMPONENT_STATE.MUTED:
             primaryAction = <EyeButton  disabled={isPending} {...primaryActionProps}/>;
-            menuItems = [<MenuItemStop/>,<MenuItemRestart/>,<MenuItemUnmute/>];
+            menuItems = [<MenuItemStop/>,<MenuItemRestart/>,<MenuItemUnmute disabled/>];
             break;
         case COMPONENT_STATE.STOPPED:
             primaryAction = <PowerButton onClick={() => mutate('start')} disabled={isPending} {...primaryActionProps}/>
