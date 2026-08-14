@@ -85,7 +85,10 @@ export const playSelectToDeadScrobble = (select: PlaySelectWithQueueStates, seri
 }
 
 export const generateInputEntity = (data: PlayInputNew): PlayInputNew => {
-    return data;
+    const {
+        playHash = hashObject(playContentBasicInvariantTransform(data.play).data)
+    } = data;
+    return {...data, playHash};
 }
 
 export const generateQueueStateEntity = (data: QueueStateNew): QueueStateNew => {

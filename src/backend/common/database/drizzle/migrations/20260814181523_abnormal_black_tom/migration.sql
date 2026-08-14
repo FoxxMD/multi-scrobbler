@@ -1,0 +1,1 @@
+ALTER TABLE `play_inputs` ADD `playHash` text;
