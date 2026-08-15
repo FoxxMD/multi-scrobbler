@@ -1,5 +1,5 @@
 import type EventEmitter from "events";
-import { COMPONENT_AUTH_TYPE, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, PARSED_FROM, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import type {FormatPlayObjectOptions, InternalConfig, TimeRangeListensFetcher} from "../common/infrastructure/Atomic.ts";
 import type {ComponentAuthType, PlayPlatformId} from '../../core/Atomic.ts';
 import type {SourceType} from "../../core/Atomic.ts";
@@ -102,7 +102,7 @@ export default class LastfmSource extends MemorySource {
     getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
         try {
             const [history, now] = await this.getLastfmRecentTrack(options);
-            return history;
+            return history.map((x) => ({...x, meta: {...x.meta, parsedFrom: PARSED_FROM.history}}));
         } catch (e) {
             throw e;
         }

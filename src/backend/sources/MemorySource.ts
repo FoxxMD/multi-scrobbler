@@ -2,7 +2,7 @@ import type {Logger} from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
 import type { EventEmitter } from "events";
 import { AsyncTask, SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
-import { type PlayObject, SOURCE_SOT, type SOURCE_SOT_TYPES, type SourcePlayerJson, type SourcePlayerObj } from "../../core/Atomic.ts";
+import { PARSED_FROM, type PlayObject, SOURCE_SOT, type SOURCE_SOT_TYPES, type SourcePlayerJson, type SourcePlayerObj } from "../../core/Atomic.ts";
 import { buildTrackString } from "../../core/StringUtils.ts";
 import {
     asPlayerStateDataMaybePlay,
@@ -350,7 +350,7 @@ export default class MemorySource extends AbstractSource {
             }
         }
 
-        return newStatefulPlays;
+        return newStatefulPlays.map((x) => ({...x, meta: {...x.meta, parsedFrom: PARSED_FROM.player}}));
     }
 
     protected isListenedPlayDiscoverable = async (candidate: PlayObject): Promise<[boolean, string]> => {
