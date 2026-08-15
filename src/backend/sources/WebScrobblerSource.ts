@@ -1,6 +1,6 @@
 import dayjs, { type Dayjs } from "dayjs";
 import type EventEmitter from "events";
-import { type PlayObjectMinimal, SOURCE_SOT } from "../../core/Atomic.ts";
+import { PARSED_FROM, type PlayObjectMinimal, SOURCE_SOT } from "../../core/Atomic.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
@@ -143,7 +143,7 @@ export class WebScrobblerSource extends MemorySource {
             },
             meta: {
                 trackId: uniqueID,
-                parsedFrom: P,
+                parsedFrom: PARSED_FROM.nowPlaying,
                 url: {
                     web: trackUrl,
                     origin: originUrl
