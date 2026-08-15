@@ -12,6 +12,7 @@ import { sleep } from '../../utils.ts';
 import dayjs from 'dayjs';
 import type {ApiResponse} from 'youtubei.js';
 import type { MarkOptional } from 'ts-essentials';
+import pEvent from 'p-event';
 
 chai.use(asPromised);
 
@@ -168,7 +169,8 @@ describe('Handles interim tracks', function () {
 
     it(`Does not add skipped plays`, async function () {
 
-        const source = await createYtSource();
+        await using source = await createYtSource();
+        await source.startDiscoveryQueue();
 
         const plays = [...generatePlays(10, {playDate: dayjs().subtract(20, 'seconds')}, { comment: 'Today' }), ...generatePlays(10, {playDate: dayjs().subtract(20, 'seconds')}, { comment: 'Yesterday' })];
 
@@ -176,7 +178,9 @@ describe('Handles interim tracks', function () {
         expect(source.parseRecentAgainstResponse(plays).plays).length(20);
 
         source.polling = true;
-        await source.discover(plays);
+        await source.queuePlay(plays);
+        await Promise.race([pEvent(source.emitter, 'queueEmptied'), pEvent(source.emitter, 'discoveryQueueError')]);
+        //await source.discover(plays);
 
         // first true poll emulating no new tracks played (should not add new tracks from base truth)
         expect(source.parseRecentAgainstResponse(plays).plays).length(0);
@@ -195,7 +199,8 @@ describe('Handles interim tracks', function () {
 
     it(`Adds interim plays when discover time is plausible`, async function () {
 
-        const source = await createYtSource();
+        await using source = await createYtSource();
+        await source.startDiscoveryQueue();
 
         const plays = [...generatePlays(10, {playDate: dayjs().subtract(2, 'minutes')}, { comment: 'Today' }), ...generatePlays(10, {playDate: dayjs().subtract(2, 'minutes')}, { comment: 'Yesterday' })];
 
@@ -203,7 +208,9 @@ describe('Handles interim tracks', function () {
         expect(source.parseRecentAgainstResponse(plays).plays).length(20);
 
         source.polling = true;
-        await source.discover(plays);
+        await source.queuePlay(plays);
+        await Promise.race([pEvent(source.emitter, 'queueEmptied'), pEvent(source.emitter, 'discoveryQueueError')]);
+        //await source.discover(plays);
 
         // first true poll emulating no new tracks played (should not add new tracks from base truth)
         expect(source.parseRecentAgainstResponse(plays).plays).length(0);

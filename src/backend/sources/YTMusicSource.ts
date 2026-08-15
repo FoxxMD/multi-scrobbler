@@ -695,8 +695,7 @@ ${humanDiff}`;
             if(this.transientDiscovered.data.length === 0) {
                 // and add to discovered since its empty
                 for(const refPlay of reversedPlays) {
-                    //this.transientDiscovered.add(refPlay);
-                    await this.addPlayToDB(refPlay);
+                    this.transientDiscovered.add(refPlay);
                 }
             }
         }

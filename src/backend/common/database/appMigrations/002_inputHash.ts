@@ -50,9 +50,9 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
         const playsRows = await ctx.db.select().from(drizzlePlays).limit(100).offset(offset);
         for (const row of playsRows) {
             try {
-                await ctx.db.update(playInputs).set({
+                await ctx.db.update(drizzlePlays).set({
                     playHash: hashObject(playContentBasicInvariantTransform(row.play).data)
-                }).where(eq(playInputs.id, row.id));
+                }).where(eq(drizzlePlays.id, row.id));
                 updated++;
                 processed++;
             } catch (e) {

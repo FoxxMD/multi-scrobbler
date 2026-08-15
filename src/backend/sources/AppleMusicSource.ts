@@ -356,13 +356,7 @@ export default class AppleMusicSource extends AbstractSource {
     onPollPostAuthCheck = async () => {
         if(!this.polling) {
             this.logger.verbose('Hydrating initial recently played tracks for reference.');
-            const referencePlays = await this.getRecentlyPlayed();
-            const reversedPlays = [...referencePlays];
-            reversedPlays.reverse();
-
-            for(const refPlay of reversedPlays) {
-                await this.addPlayToDB(refPlay);
-            }
+            await this.getRecentlyPlayed();
         }
         return true;
     }
