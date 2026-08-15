@@ -36,8 +36,8 @@ import { componentFileLogger } from '../common/logging.ts';
 ;
 import { messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.ts";
 import { existingScrobble, type ExistingScrobbleOpts } from '../utils/PlayComparisonUtils.ts';
-import { consumeQueue, staggerMapper } from '../utils/AsyncUtils.ts';
-import pMap, {pMapIterable} from 'p-map';
+import { consumeQueue } from '../utils/AsyncUtils.ts';
+import pMap from 'p-map';
 import type { Counter, Gauge } from 'prom-client';
 import { normalizeStr } from '../utils/StringUtils.ts';
 import { spawn, isAbortError, delay, throwIfAborted } from 'abort-controller-x';
@@ -47,9 +47,8 @@ import { asPlay } from '../../core/PlayMarshalUtils.ts';
 import { AsyncTask, SimpleIntervalJob, ToadScheduler } from 'toad-scheduler';
 import { COMPONENT_STATE, type ComponentSourceApiJson, type ComponentState, type PlayApiCommonDetailed } from '../../core/Api.ts';
 import type {PaginatedResponse} from "../../core/Api.ts";
-import type { PlaySelect, PlaySelectWithQueueStates, PlayWith, QueueStateNew } from '../common/database/drizzle/drizzleTypes.ts';
+import type { PlaySelect, PlaySelectWithQueueStates, QueueStateNew } from '../common/database/drizzle/drizzleTypes.ts';
 import { DrizzleQueueRepository } from '../common/database/drizzle/repositories/QueueRepository.ts';
-import { nanoid } from 'nanoid';
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -105,11 +104,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
     protected loggerLabel: string;
 
     protected discoveredCounter: Counter;
-
-    protected staggerMappers = {
-        preCompare: staggerMapper<PlayObject, PlayObject>({concurrency: 2}),
-        postCompare: staggerMapper<PlayObject, PlayObject>({concurrency: 2})
-    }
 
     declare protected componentType: 'source';
 
@@ -284,7 +278,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     protected async postCache(): Promise<void> {
         await super.postCache();
-        this.generateStaggerMappers();
     }
 
     protected async postDatabase(): Promise<void> {
@@ -303,35 +296,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
         if(queueNames.includes(INGRESS_QUEUE)) {
             this.queuedLength = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE]);
             this.queuedGauge.labels(this.getPrometheusLabels()).set(this.queuedLength);
-        }
-    }
-
-    protected generateStaggerMappers() {
-        const {
-            preCompare = [],
-            postCompare = [],
-        } = this.transformRules;
-
-        if (preCompare.length > 0) {
-            const pcInits: number[] = [0],
-                pcMaxStagger: number[] = [0];
-            for (const hook of this.transformRules.preCompare) {
-                const t = this.transformManager.getTransformerByStage({ type: hook.type, name: hook.name });
-                pcInits.push(t.staggerOpts?.initialInterval ?? 0);
-                pcMaxStagger.push(t.staggerOpts?.maxRandomStagger ?? 0)
-        }
-            this.staggerMappers.preCompare = staggerMapper<PlayObject, PlayObject>({ initialInterval: Math.max(...pcInits), maxRandomStagger: Math.max(...pcMaxStagger), concurrency: 2 });
-        }
-
-        if (postCompare.length > 0) {
-            const postInits: number[] = [0],
-                postMaxStagger: number[] = [0];
-            for (const hook of this.transformRules.postCompare) {
-                const t = this.transformManager.getTransformerByStage({ type: hook.type, name: hook.name });
-                postInits.push(t.staggerOpts?.initialInterval ?? 0);
-                postMaxStagger.push(t.staggerOpts?.maxRandomStagger ?? 0)
-            }
-            this.staggerMappers.postCompare = staggerMapper<PlayObject, PlayObject>({ initialInterval: Math.max(...postInits), maxRandomStagger: Math.max(...postMaxStagger), concurrency: 2 });
         }
     }
 
@@ -462,35 +426,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return createdQueuedPlays;
     }
 
-    protected addPlayToDB = async (play: PlayObject): Promise<PlayWith<'input'>> => {
-        const monitorStatus = this.getMonitoringStatus();
-        let state: PlayState = 'discovered';
-        if(!monitorStatus.monitoring) {
-            this.logger.debug(`Not adding ${buildTrackString(play)} as discovered because monitoring is disabled by ${capitalize(monitorStatus.origin)}`);
-            state = 'discarded';
-        }
-        const playRow = await this.playRepo.createPlays([(playToRepositoryCreatePlayOpts({play, state}))]);
-        const recentPlays = await this.getRecentlyDiscoveredPlays(false);
-        // only need to update if its already in memory,
-        // and better to update in-memory than clear cache so we aren't refetching from db on every discover
-        if(recentPlays !== undefined) {
-            recentPlays.push({...play, id: playRow[0].id, uid: playRow[0].uid});
-            recentPlays.sort(sortByOldestPlayDate);
-            this.cache.cacheDb.set(this.recentDiscoveredCacheKey(), recentPlays, '2m');
-        }
-        if(state === 'discovered') {
-            this.tracksDiscovered++;
-            this.tracksDiscoveredTotal++
-            this.discoveredCounter.labels(this.getPrometheusLabels()).inc();
-        }
-        this.logger.info(`${capitalize(state)} => ${buildTrackString(play)}`);
-        this.emitEvent('discovered', {play});
-        this.emitPlayInsert({...playRow[0], queueStates: []} as unknown as PlayApiCommonDetailed);
-        playRow[0].play.id = playRow[0].id;
-        playRow[0].play.uid = playRow[0].uid;
-        return playRow[0];
-    }
-
     getFlatRecentlyDiscoveredPlays = async (): Promise<PlayObject[]> => {
         const list: PlayObject[] = await this.getRecentlyDiscoveredPlays();
         return list.sort(sortByNewestPlayDate);
@@ -535,45 +470,12 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return undefined;
     }
 
-    discover = async (plays: PlayObject[], options: { checkAll?: boolean, signal?: AbortSignal, discoverLocation?: string, [key: string]: any } = {}): Promise<PlayObject[]> => {
-        const newDiscoveredPlays: PlayObject[] = [];
-
-        this.setStatus(`Discovering new Plays${options.discoverLocation !== undefined ? ` from ${options.discoverLocation} ` : ''}`);
-        for await(const play of pMapIterable(plays, this.staggerMappers.preCompare(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 3})) {
-            options.signal?.throwIfAborted();
-            const existing = await this.existingDiscovered(play);
-            if(existing === undefined) {
-                options.signal?.throwIfAborted()
-                const hydratedPlay = await this.addPlayToDB(play);
-                if(hydratedPlay.state === 'discovered') {
-                    newDiscoveredPlays.push(hydratedPlay.play);
-                }
-            } else {
-                this.playRepo.updateById(existing.id, {updatedAt: dayjs()});
-            }
-        }
-        if(newDiscoveredPlays.length > 0) {
-            this.setStatus(`Discovered ${newDiscoveredPlays.length} new Plays${options.discoverLocation !== undefined ? ` from ${options.discoverLocation} ` : ''}`);
-            try {
-                await this.componentRepo.updateById(this.dbComponent.id, {countLive: this.dbComponent.countLive + newDiscoveredPlays.length});
-            } catch (e) {
-                this.logger.warn(new Error('Unable to update discovered count', {cause: e}));
-            }
-        } else {
-            this.setStatus(`No new Plays discovered${options.discoverLocation !== undefined ? ` from ${options.discoverLocation} ` : ''}`);
-        }
-        newDiscoveredPlays.sort(sortByOldestPlayDate);
-
-        return newDiscoveredPlays;
-    }
-
-
     protected scrobble = async (newDiscoveredPlays: PlayObject[], options: { forceRefresh?: boolean, [key: string]: any, discoverLocation?: 'backlog' | [key: string] } = {}) => {
 
         if(newDiscoveredPlays.length > 0) {
             newDiscoveredPlays.sort(sortByOldestPlayDate);
             this.emitEvent('discoveredToScrobble', {
-                data: await pMap(newDiscoveredPlays, this.staggerMappers.postCompare(async (x) =>  await this.transformPlay(x, TRANSFORM_HOOK.postCompare)), {concurrency: 3}),
+                data: await pMap(newDiscoveredPlays, async (x) =>  await this.transformPlay(x, TRANSFORM_HOOK.postCompare), {concurrency: 3}),
                 options: {
                     ...options,
                     checkTime: newDiscoveredPlays[newDiscoveredPlays.length-1].data.playDate.add(2, 'second'),
@@ -620,20 +522,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
             }
             await this.queuePlay(backlogPlays);
             this.logger.info('Backlog Plays added to discovery queue.');
-            //const discovered = await this.discover(backlogPlays, {discoverLocation: 'backlog', signal});
-
-            // if (scrobbleBacklog) {
-            //     if (discovered.length > 0) {
-            //         this.logger.info('Scrobbling backlogged tracks...');
-            //         signal.throwIfAborted();
-            //         await this.scrobble(discovered);
-            //         this.logger.info('Backlog scrobbling complete.');
-            //     } else {
-            //         this.logger.info('All tracks already discovered!');
-            //     }
-            // } else {
-            //     this.logger.info('Backlog scrobbling is disabled by config, skipping...');
-            // }
         }
         return;
     }
@@ -838,8 +726,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 const maxBackoff = this.getMaxBackoff();
                 let sleepTime = interval;
 
-                let newDiscovered: PlayObject[] = [];
-
                 if(playObjs.length > 0) {
                     const now = dayjs().unix();
                     const closeToInterval = playObjs.some(x => now - x.data.playDate.unix() < 5);
@@ -867,8 +753,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 if(playObjs.length > 0) {
                     playObjs.sort(sortByNewestPlayDate);
                     // only update date if the play date is after the current activity date (in the case of backlogged plays)
-                    this.lastActivityAt = playObjs[0].data.playDate.isAfter(this.lastActivityAt) ? newDiscovered[0].data.playDate : this.lastActivityAt;
-                    checkCount = 0;
+                    if(playObjs[0].data.playDate.isAfter(this.lastActivityAt)) {
+                        this.lastActivityAt = playObjs[0].data.playDate;
+                    }
                     checksOverThreshold = 0;
                 }
 

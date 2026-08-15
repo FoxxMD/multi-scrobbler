@@ -482,7 +482,7 @@ describe('Deezer Internal Source', function() {
             const fuzzyPlay = clone(targetPlay);
             fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
 
-            const source = await generateDeezerSource();
+            await using source = await generateDeezerSource();
             const queued = await source.queuePlay([...normalizedPlays, interimPlay]);
             expect(queued).length(normalizedPlays.length + 1);
             await Promise.race([pEvent(source.emitter, 'queueEmptied'), pEvent(source.emitter, 'discoveryQueueError')]);
@@ -516,11 +516,12 @@ describe('Deezer Internal Source', function() {
             fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
 
             await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: true});
-            await source.discover(normalizedPlays);
+            const queued = await source.queuePlay(normalizedPlays);
+            expect(queued).length(normalizedPlays.length);
 
-            const discovered = await source.discover([fuzzyPlay]);
-
-            expect(discovered.length).to.eq(1);
+            await source.queuePlay([fuzzyPlay]);
+            await Promise.race([pEvent(source.emitter, 'queueEmptied'), pEvent(source.emitter, 'discoveryQueueError')]);
+            expect(await source.getRecentlyDiscoveredPlays()).length(normalizedPlays.length + 1);
         });
 
         it('discovers fuzzy play when it is played consecutively', async function() {
@@ -529,10 +530,11 @@ describe('Deezer Internal Source', function() {
             fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
             const morePlays = normalizePlays([...normalizedPlays, fuzzyPlay, ...generatePlays(2)], {initialDate: firstPlayDate});
 
-            await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: true});
-            const discovered = await source.discover(morePlays);
-
-            expect(discovered.length).to.eq(morePlays.length);
+            await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: false});
+            const queued = await source.queuePlay(morePlays);
+            expect(queued).length(morePlays.length);
+            await Promise.race([pEvent(source.emitter, 'queueEmptied'), pEvent(source.emitter, 'discoveryQueueError')]);
+            expect(await source.getRecentlyDiscoveredPlays()).length(morePlays.length);
         });
     });
 
@@ -545,11 +547,14 @@ describe('Deezer Internal Source', function() {
                 fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
 
                 await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
-                await source.discover([...normalizedPlays, interimPlay]);
+                const queued = await source.queuePlay([...normalizedPlays, interimPlay]);
+                expect(queued).length(normalizedPlays.length + 1);
+                await Promise.race([pEvent(source.emitter, 'queueEmptied'), pEvent(source.emitter, 'discoveryQueueError')]);
 
-                const discovered = await source.discover([fuzzyPlay]);
+                await source.queuePlay([fuzzyPlay]);
+                await Promise.race([pEvent(source.emitter, 'queueEmptied'), pEvent(source.emitter, 'discoveryQueueError')]);
 
-                expect(discovered.length).to.eq(0);
+                expect(await source.getRecentlyDiscoveredPlays()).length(normalizedPlays.length + 1);
             });
 
             it('does not discover play found during duration of previous', async function() {
@@ -559,11 +564,13 @@ describe('Deezer Internal Source', function() {
                 duringPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration * 0.5, 's');
 
                 await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
-                await source.discover([...normalizedPlays, interimPlay]);
+                //await source.discover([...normalizedPlays, interimPlay]);
+                await source.queuePlay([...normalizedPlays, interimPlay]);
+                await Promise.race([pEvent(source.emitter, 'queueEmptied'), pEvent(source.emitter, 'discoveryQueueError')]);
+                await source.queuePlay([duringPlay]);
+                await Promise.race([pEvent(source.emitter, 'queueEmptied'), pEvent(source.emitter, 'discoveryQueueError')]);
 
-                const discovered = await source.discover([duringPlay]);
-
-                expect(discovered.length).to.eq(0);
+                expect(await source.getRecentlyDiscoveredPlays()).length(normalizedPlays.length + 1)
             });
 
             it('does not discover fuzzy play with delay of up to 40 seconds', async function() {
@@ -573,11 +580,12 @@ describe('Deezer Internal Source', function() {
                 fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration + 39, 's');
 
                 await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
-                await source.discover([...normalizedPlays, interimPlay]);
+                await source.queuePlay([...normalizedPlays, interimPlay]);
+                await Promise.race([pEvent(source.emitter, 'queueEmptied'), pEvent(source.emitter, 'discoveryQueueError')]);
+                await source.queuePlay([fuzzyPlay]);
+                await Promise.race([pEvent(source.emitter, 'queueEmptied'), pEvent(source.emitter, 'discoveryQueueError')]);
 
-                const discovered = await source.discover([fuzzyPlay]);
-
-                expect(discovered.length).to.eq(0);
+                expect(await source.getRecentlyDiscoveredPlays()).length(normalizedPlays.length + 1)
             });
 
             it('it does not discover fuzzy play when it is the last play ', async function() {
@@ -586,11 +594,11 @@ describe('Deezer Internal Source', function() {
                 fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
 
                 await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
-                await source.discover(normalizedPlays);
-
-                const discovered = await source.discover([fuzzyPlay]);
-
-                expect(discovered.length).to.eq(0);
+                await source.queuePlay(normalizedPlays);
+                await Promise.race([pEvent(source.emitter, 'queueEmptied'), pEvent(source.emitter, 'discoveryQueueError')]);
+                await source.queuePlay([fuzzyPlay]);
+                await Promise.race([pEvent(source.emitter, 'queueEmptied'), pEvent(source.emitter, 'discoveryQueueError')]);
+                expect(await source.getRecentlyDiscoveredPlays()).length(normalizedPlays.length);
             });
 
             it('does not discover fuzzy play when it is played consecutively', async function() {
@@ -600,9 +608,9 @@ describe('Deezer Internal Source', function() {
                 const morePlays = normalizePlays([...normalizedPlays, fuzzyPlay, ...generatePlays(2)], {initialDate: firstPlayDate});
 
                 await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
-                const discovered = await source.discover(morePlays);
-
-                expect(discovered.length).to.eq(morePlays.length - 1);
+                await source.queuePlay(morePlays);
+                await Promise.race([pEvent(source.emitter, 'queueEmptied'), pEvent(source.emitter, 'discoveryQueueError')]);
+                expect(await source.getRecentlyDiscoveredPlays()).length(morePlays.length - 1);
             });
 
         });
