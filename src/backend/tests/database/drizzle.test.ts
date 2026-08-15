@@ -125,7 +125,7 @@ describe('Migrations', function () {
             try {
                 await fs.cp(path.resolve(projectRootDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
                 const mf = path.resolve('./migrations');
-                const [db, _] = await getMigratedDb(dbPath, {migrationsFolder: mf});
+                const [db, _] = await getMigratedDb(dbPath, {migrationsFolder: mf, migrationsAppFolder: process.cwd()});
                 await migrateDb(db, { migrationsFolder: mf });
                 const res = await x('drizzle-kit', [
                     'generate',
@@ -144,7 +144,7 @@ describe('Migrations', function () {
                 const newMigrationFolder = (await fs.readdir(path.resolve('./migrations/'))).find(x => x.includes('newMigration'));
                 await fs.appendFile(path.resolve('./migrations/',newMigrationFolder, 'migration.sql'),`\nselect count(*) from plays;`);
 
-                await getMigratedDb(dbPath, {migrationsFolder: mf});
+                await getMigratedDb(dbPath, {migrationsFolder: mf, migrationsAppFolder: process.cwd()});
                 const contents = await fs.readdir(path.resolve('./'));
                 const bakPattern = new RegExp(/ms\.db\.\d+\.bak/);
                 expect(contents.some(x => bakPattern.test(x))).is.true;
