@@ -240,7 +240,7 @@
     "sass": "^1.99.0",
     "shiki": "^4.0.2",
     "sinon": "^21.0.2",
-    "storybook": "^10.4.3",
+    "storybook": "^10.5.6",
     "storybook-addon-remix-react-router": "^6.1.0",
     "tailwindcss": "^4.2.2",
     "tinyexec": "^1.1.1",
@@ -248,7 +248,7 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.3",
     "usehooks-ts": "^3.1.1",
-    "vite": "^8.0.12",
+    "vite": "^8.2.0",
     "with-local-tmp-dir": "^7.0.1",
     "zocker": "^3.0.0",
     "zod": "^4.4.3"
