@@ -333,7 +333,7 @@ export default class DeezerInternalSource extends MemorySource {
     protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) => await this.getRecentlyPlayed({formatted: true, ...options})
 
 
-    existingDiscovered = async (play: PlayObject, opts: {checkAll?: boolean} = {}): Promise<PlayObject | undefined> => {
+    async existingDiscovered(play: PlayObject): Promise<PlayObject | undefined> {
         const list: PlayObject[] = await this.getRecentlyDiscoveredPlays();
         const candidate = await this.transformPlay(play, TRANSFORM_HOOK.candidate);
         const existing = await findAsync(list, async x => {
