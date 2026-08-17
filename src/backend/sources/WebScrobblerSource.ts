@@ -143,7 +143,7 @@ export class WebScrobblerSource extends MemorySource {
             },
             meta: {
                 trackId: uniqueID,
-                parsedFrom: PARSED_FROM.nowPlaying,
+                parsedFrom: PARSED_FROM.ingress,
                 url: {
                     web: trackUrl,
                     origin: originUrl
