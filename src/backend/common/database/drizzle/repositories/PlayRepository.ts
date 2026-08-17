@@ -752,24 +752,40 @@ group by componentId,compacted;`);
     }
 }
 
-export const getTemporallyCloseDateCompareOp = (play: PlayObject, opts: {bufferTime?: number, useCompleted?: boolean} = {}): CompareDateOp => {
+export const getTemporallyCloseDateCompareOp = (play: PlayObject, opts: {bufferTime?: number, useCompleted?: boolean, useDuration?: boolean} = {}): CompareDateOp => {
     const {
         // use either provided arg or default to using source granularity
         bufferTime = getTemporalAccuracyCloseVal(play.meta.source as SourceType),
-        useCompleted = true
+        useCompleted,
+        useDuration,
     } = opts;
         // we get all plays with a play date between playdate - (buffer) AND (playDateCompleted or playDate) + (buffer)
-        let endRange: Dayjs;
-        if(play.data.playDateCompleted !== undefined && useCompleted) {
+        let startRange: Dayjs,
+        endRange: Dayjs;
+
+        // make sure we use the 
+        const [sotPlayDate, SOT] = getScrobbleTsSOCDateWithContext(play);
+
+        if(useDuration && play.data.duration !== undefined) {
+            if(SOT === SCROBBLE_TS_SOC_END) {
+                endRange = play.data.playDate.add(bufferTime, 's');
+                startRange = play.data.playDate.subtract(play.data.duration + bufferTime,'s')
+            } else {
+                endRange = play.data.playDate.add(play.data.duration + bufferTime, 's');
+                startRange = play.data.playDate.subtract(bufferTime,'s')
+            }
+        } else if(play.data.playDateCompleted !== undefined && useCompleted) {
+            startRange = play.data.playDate.subtract(bufferTime, 's');
             // this will be present if source reports it
             // or we tracked it live with MemorySource
             endRange = play.data.playDateCompleted.add(bufferTime, 's');
         } else {
-            endRange = play.data.playDate.add(bufferTime, 's');
+            startRange = sotPlayDate.subtract(bufferTime, 's');
+            endRange = sotPlayDate.add(bufferTime, 's');
         }
         return {
             type: 'between',
-            range: [play.data.playDate.subtract(bufferTime, 's'), endRange]
+            range: [startRange, endRange]
         }
 }
 
