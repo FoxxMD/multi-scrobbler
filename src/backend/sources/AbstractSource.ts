@@ -902,10 +902,17 @@ export default abstract class AbstractSource extends AbstractComponent implement
             } = {},
         } = this.config;
         const maxRetries = Math.max(0, maxRequestRetries);
+        const consumedIds = new Map<string, number>();
 
          try {
              await consumeQueue(
-                 () => this.playRepo.getQueueNext(INGRESS_QUEUE),
+                 async (queueId) => {
+                    const next = await this.playRepo.getQueueNext(INGRESS_QUEUE, {notIds: consumedIds.size === 0 ? undefined : consumedIds.values().toArray()});
+                    if(next !== undefined) {
+                        consumedIds.set(queueId, next.id);
+                    }
+                    return next;
+                 },
                  async (item) => {
                      if (taskFailures > 0) {
                          const delayFor = pollingBackoff(taskFailures + 1, retryMultiplier);
@@ -918,10 +925,12 @@ export default abstract class AbstractSource extends AbstractComponent implement
                      concurrency: this.queueConcurrency,
                      idleMs: this.queueIdleMs,
                      signal,
-                     onSuccess: () => {
+                     onSuccess: (item, queueId) => {
+                        consumedIds.delete(queueId);
                         taskFailures = Math.max(taskFailures - 1, 0);
                      },
-                     onError: async (e: Error) => {
+                     onError: async (e: Error, queueId) => {
+                        consumedIds.delete(queueId);
                         taskFailures++;
                         this.emitter.emit('discoveryQueueError', e);
                         if(taskFailures < maxRetries) {
@@ -1015,6 +1024,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         if(state === 'discovered') {
             await this.scrobble([{...currQueuedPlay.play, id: currQueuedPlay.id, uid: currQueuedPlay.uid}]);
         }
+        return currQueuedPlay;
     }
 
     protected setIsSleeping(sleeping: boolean) {

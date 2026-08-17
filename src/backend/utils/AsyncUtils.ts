@@ -1,5 +1,6 @@
 import type {Mapper} from "p-map";
 import { sleep } from "../utils.ts";
+import { nanoid } from "nanoid";
 
 /** https://stackoverflow.com/a/63795192/1469797 */
 export async function findAsyncSequential<T>(
@@ -105,18 +106,18 @@ export const consumeQueueOnce = async <T>(next: () => Promise<T | undefined>, pr
 };
 
 export const consumeQueue = async <T>(
-  next: () => Promise<T | undefined>,
-  process: (item: T) => Promise<void>,
+  next: (queueId: string) => Promise<T | undefined>,
+  process: (item: T, queueId: string) => Promise<T>,
   opts: { 
     concurrency: number;
     idleMs: number;
     signal: AbortSignal;
-    onError?: (e: Error) => Promise<void>,
-    onSuccess?: () => void,
+    onError?: (e: Error, queueId: string) => Promise<void>,
+    onSuccess?: (item: T, queueId: string) => void,
     onEmpty?: () => void
   },
 ): Promise<never> => {
-  const { concurrency, idleMs, signal, onError, onEmpty } = opts;
+  const { concurrency, idleMs, signal, onError, onEmpty, onSuccess } = opts;
   while (true) {
     signal.throwIfAborted();
     const inFlight = new Set<Promise<void>>();
@@ -127,13 +128,15 @@ export const consumeQueue = async <T>(
           await Promise.race(inFlight);
           continue;
         }
-        const item = await next();
+        const qId = nanoid();
+        const item = await next(qId);
         if (item === undefined) break;
         const task = (async () => {
           try {
-            await process(item);
+            await process(item, qId);
+            onSuccess?.(item, qId);
           } catch (err) {
-            await onError?.(err); // swallow so one bad item doesn't kill the loop
+            await onError?.(err, qId); // swallow so one bad item doesn't kill the loop
           }
         })();
         inFlight.add(task);
