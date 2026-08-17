@@ -937,7 +937,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             } else {
                 existing = await this.existingDiscovered(preCompared);
                 if(existing !== undefined) {
-                    updatedQueueState.error = {message: `Matched with Play ${cheapExisting.uid}`};
+                    updatedQueueState.error = {message: `Matched with Play ${existing.uid ?? existing.id}`};
                 }
             }
             currQueuedPlay.play = preCompared;
