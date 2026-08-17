@@ -480,10 +480,11 @@ export const SOURCE_SOT = {
 } as const satisfies Record<string, SOURCE_SOT_TYPES>
 export const sourceSotTypes: SOURCE_SOT_TYPES[] = ['player','history','ingress'];
 
-export type PARSED_FROM_TYPE = 'backlog' | 'now playing' | 'player' | 'history';
+export type PARSED_FROM_TYPE = 'backlog' | 'now playing' | 'player' | 'history' | 'ingress';
 export const PARSED_FROM = {
     backlog : 'backlog',
     nowPlaying: 'now playing',
+    ingress: 'ingress',
     player: 'player',
     history: 'history'
 } as const satisfies Record<string, PARSED_FROM_TYPE>

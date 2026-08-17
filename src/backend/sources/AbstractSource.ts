@@ -378,23 +378,28 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
         await pMap(playDatas, async (queueablePlay) => {
             try {
-                // we should be adding Plays to the queue without any transforms
-                // so run on "raw" play input
-                const cheapInputExisting = await this.playRepo.checkExisting(queueablePlay, { inputHash: queueablePlay });
-                if (cheapInputExisting !== undefined) {
-                    if(isDebugMode()) {
-                        this.logger.trace(`Not adding ${buildTrackString(queueablePlay)} to queue because it already exists in db as Play ${cheapInputExisting.uid}`);
-                    }
+                // for backlog and history plays we intentionally queue up plays that may have been processed before...
+                // ...for backlog we do this to catch any plays that may have been missed during network outage or MS offline or just the source reporting new things
+                // ...for history this is entirely how we "discover" new plays: we use MS's existing check logic to see find "new" plays on the same list (of history) that evolves over time
+                //
+                // for these two cases, for the majority of scenarios, we want to prune already processed plays from hitting the database
+                // otherwise we are causing a lot of noise for duped plays IE history polls every minute and we don't want all 100+ already seen plays being persisted as duped every minute.
+                if (([PARSED_FROM.history, PARSED_FROM.backlog] as PARSED_FROM_TYPE[]).includes(queueablePlay.meta.parsedFrom)) {
+                    // we should be adding Plays to the queue without any transforms
+                    // so run on "raw" play input
                     // if we have seen a play with close temporality with the exact input hash then skip it entirely
-                    //
-                    // this is usually the case for 'history' based plays where we are brute-force adding all plays from an api call
-                    // and we need to prune all these duplicates
-                    //
-                    // but lets log if this happens and *not* history or backlog...
-                    if(!([PARSED_FROM.history, PARSED_FROM.backlog] as PARSED_FROM_TYPE[]).includes(queueablePlay.meta.parsedFrom)) {
-                        this.logger.warn(`Play (${buildTrackString(queueablePlay)}) dropped pre-queue due to existing (${cheapInputExisting.uid}) was not from history/backlog...`);
+                    const cheapInputExisting = await this.playRepo.checkExisting(queueablePlay, { inputHash: queueablePlay });
+                    if (cheapInputExisting !== undefined) {
+                        if (isDebugMode() || PARSED_FROM.backlog === queueablePlay.meta.parsedFrom) {
+                            // log to trace for backlog for some visibility into what was pruned
+                            // this is fine noise-wise since this only happens when a component it (re)started
+                            //
+                            // for history we only want to do this if debugmode is enabled
+                            // TODO implement debugmode per component so global debug doesn't cause noise if this isn't the component that is being debugged
+                            this.logger.trace(`Not adding ${buildTrackString(queueablePlay)} to queue because it already exists in db as Play ${cheapInputExisting.uid}`);
+                        }
+                        return;
                     }
-                    return;
                 }
             } catch (e) {
                 this.logger.warn(new SimpleError('Failed to check queued scrobble for existing before adding, will continue with adding anyway', { cause: e }));
