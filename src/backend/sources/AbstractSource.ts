@@ -442,11 +442,32 @@ export default abstract class AbstractSource extends AbstractComponent implement
     }
 
     protected recentDiscoveredCacheKey = () => {
+        return `recentDiscovered-${this.dbComponent.id}`;
+    }
+
+    protected recentCacheKey = () => {
         return `recent-${this.dbComponent.id}`;
     }
 
+
     getRecentlyDiscoveredPlays = async (hydrate: boolean = true): Promise<PlayObject[]> => {
         const cacheKey = this.recentDiscoveredCacheKey();
+        let list = await this.cache.cacheDb.get<PlayObject[]>(cacheKey);
+        if(list === undefined && hydrate) {
+            list = (await this.playRepo.findPlays({
+                state: ['discovered'],
+                order: 'desc',
+                sort: 'playedAt',
+                limit: 200
+            })).map(x => ({...asPlay(x.play), id: x.id, uid: x.uid}))
+            list.sort(sortByOldestPlayDate);
+            await this.cache.cacheDb.set<PlayObject[]>(cacheKey, list, '2m');
+        }
+        return list;
+    }
+
+    getRecentPlays = async (hydrate: boolean = true): Promise<PlayObject[]> => {
+        const cacheKey = this.recentCacheKey();
         let list = await this.cache.cacheDb.get<PlayObject[]>(cacheKey);
         if(list === undefined && hydrate) {
             list = (await this.playRepo.findPlays({
@@ -461,8 +482,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return list;
     }
 
-    existingDiscovered = async (play: PlayObject): Promise<PlayObject | undefined> => {
-        const list: PlayObject[] = await this.getRecentlyDiscoveredPlays(true);
+    async existingDiscovered(play: PlayObject): Promise<PlayObject | undefined> {
+        const list: PlayObject[] = await this.getRecentPlays(true);
         const matchResults = await this.existingDiscoveredPlay(play, list);
         if(matchResults.match) {
             return matchResults.closestMatchedPlay;
@@ -695,7 +716,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
         await this.notify({title: `Polling Started`, message: 'Polling Started', priority: 'info'});
         this.setStatus('Polling Started');
         this.lastActivityAt = dayjs();
-        let checkCount = 0;
         let checksOverThreshold = 0;
         const checkActiveFor = 120;
         let maxInterval = DEFAULT_POLLING_MAX_INTERVAL;
@@ -960,13 +980,21 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 currQueuedPlay.parentId = existing.id;
             }
             this.playRepo.updateById(currQueuedPlay.id, {play: preCompared, state});
-            const recentPlays = await this.getRecentlyDiscoveredPlays(false);
+            const recentPlays = await this.getRecentPlays(false);
             // only need to update if its already in memory,
             // and better to update in-memory than clear cache so we aren't refetching from db on every discover
             if(recentPlays !== undefined) {
                 recentPlays.push({...preCompared, id: currQueuedPlay.id, uid: currQueuedPlay.uid});
                 recentPlays.sort(sortByOldestPlayDate);
-                this.cache.cacheDb.set(this.recentDiscoveredCacheKey(), recentPlays, '2m');
+                this.cache.cacheDb.set(this.recentCacheKey(), recentPlays, '2m');
+            }
+            if(state === 'discovered') {
+                const recentDiscoveredPlays = await this.getRecentlyDiscoveredPlays(false);
+                if(recentDiscoveredPlays !== undefined) {
+                    recentDiscoveredPlays.push({...preCompared, id: currQueuedPlay.id, uid: currQueuedPlay.uid});
+                    recentDiscoveredPlays.sort(sortByOldestPlayDate);
+                    this.cache.cacheDb.set(this.recentDiscoveredCacheKey(), recentDiscoveredPlays, '2m');
+                }
             }
             updatedQueueState.queueStatus = 'completed';
 
