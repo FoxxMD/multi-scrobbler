@@ -2,7 +2,7 @@ import { childLogger, type LogDataPretty, type LogLevel } from '@foxxmd/logging'
 import dayjs, { type Dayjs } from "dayjs";
 import type { EventEmitter } from "events";
 import type { FixedSizeList } from "fixed-size-list";
-import { type PlayMatchResult, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { INGRESS_QUEUE, PARSED_FROM, type PlayMatchResult, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
 import AbstractComponent from "../common/AbstractComponent.ts";
 import {
@@ -14,7 +14,7 @@ import {
     type InternalConfig,
     type ProgressAwarePlayObject,
 } from "../common/infrastructure/Atomic.ts";
-import type {PlayState, PlayUserId} from '../../core/Atomic.ts';
+import type {PARSED_FROM_TYPE, PlayState, PlayUserId} from '../../core/Atomic.ts';
 import type {DeviceId} from '../../core/Atomic.ts';
 import type {SourceConfig} from '../common/infrastructure/config/source/sources.ts';
 import type {SourceType} from "../../core/Atomic.ts";
@@ -22,6 +22,7 @@ import { TRANSFORM_HOOK } from "../../core/Transform.ts";
 import TupleMap from "../common/TupleMap.ts";
 import {
     difference,
+    isDebugMode,
     pollingBackoff,
     sleep,
     sortByOldestPlayDate,
@@ -35,18 +36,19 @@ import { componentFileLogger } from '../common/logging.ts';
 ;
 import { messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.ts";
 import { existingScrobble, type ExistingScrobbleOpts } from '../utils/PlayComparisonUtils.ts';
-import { staggerMapper } from '../utils/AsyncUtils.ts';
-import pMap, {pMapIterable} from 'p-map';
-import type { Counter } from 'prom-client';
+import { consumeQueue } from '../utils/AsyncUtils.ts';
+import pMap from 'p-map';
+import type { Counter, Gauge } from 'prom-client';
 import { normalizeStr } from '../utils/StringUtils.ts';
 import { spawn, isAbortError, delay, throwIfAborted } from 'abort-controller-x';
-import { generateLoggableAbortReason, StageChangeError } from '../common/errors/MSErrors.ts';
+import { generateLoggableAbortReason, SimpleError, StageChangeError } from '../common/errors/MSErrors.ts';
 import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, type QueryPlaysOpts, type RequestPlayQuery, type WithPlayRelation } from '../common/database/drizzle/repositories/PlayRepository.ts';
 import { asPlay } from '../../core/PlayMarshalUtils.ts';
 import { AsyncTask, SimpleIntervalJob, ToadScheduler } from 'toad-scheduler';
 import { COMPONENT_STATE, type ComponentSourceApiJson, type ComponentState, type PlayApiCommonDetailed } from '../../core/Api.ts';
 import type {PaginatedResponse} from "../../core/Api.ts";
-import type { PlayWith } from '../common/database/drizzle/drizzleTypes.ts';
+import type { PlaySelect, PlaySelectWithQueueStates, QueueStateNew } from '../common/database/drizzle/drizzleTypes.ts';
+import { DrizzleQueueRepository } from '../common/database/drizzle/repositories/QueueRepository.ts';
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -73,12 +75,18 @@ export default abstract class AbstractSource extends AbstractComponent implement
     canPoll: boolean = false;
     polling: boolean = false;
     canBacklog: boolean = false;
+    protected discoverQueueAbortController: AbortController | undefined;
+    protected discoverQueuePromise: Promise<void> | undefined;
     protected abortController: AbortController | undefined;
     protected pollingPromise: Promise<void> | undefined;
     stopPollingWaitInterval: number = 200;
     pollRetries: number = 0;
     tracksDiscovered: number = 0;
     tracksDiscoveredTotal: number = 0;
+    queuedLength: number = 0;
+
+    queueIdleMs: number = 1000;
+    queueConcurrency: number = 3;
 
     protected isSleeping: boolean = false;
     protected wakeAt: Dayjs = dayjs();
@@ -97,14 +105,12 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     protected discoveredCounter: Counter;
 
-    protected staggerMappers = {
-        preCompare: staggerMapper<PlayObject, PlayObject>({concurrency: 2}),
-        postCompare: staggerMapper<PlayObject, PlayObject>({concurrency: 2})
-    }
-
     declare protected componentType: 'source';
 
     protected playRepo!: DrizzlePlayRepository;
+    protected queueRepo!: DrizzleQueueRepository;
+
+    protected queuedGauge: Gauge;
 
     existingDiscoveredPlay: (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => Promise<PlayMatchResult>
 
@@ -125,7 +131,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.configDir = internal.configDir;
         this.emitter = emitter;
         
-        this.discoveredCounter = getRoot().items.sourceMetics.discovered;
+        const metrics = getRoot().items.sourceMetics;
+        this.discoveredCounter = metrics.discovered;
+        this.queuedGauge = metrics.queued;
 
         const existingScrobbleOpts: ExistingScrobbleOpts = {
             logger: this.logger,
@@ -198,6 +206,10 @@ export default abstract class AbstractSource extends AbstractComponent implement
             }
         }
         if(this.isReady()) {
+            if(this.discoverQueuePromise === undefined) {
+                this.setStatus('Starting discovery queue...');
+                await this.startDiscoveryQueue();
+            }
             if (this.canPoll && !this.polling) {
                 if(!this.canAuthUnattended()) {
                     this.logger.warn({labels: 'Heartbeat'}, 'Should be polling but will not attempt to start because auth state is not good and cannot be correct unattended.');
@@ -250,6 +262,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             if (this.canPoll) {
                 await this.tryStopPolling(opts.reason);
             }
+            await this.tryStopDiscoveryQueue(opts.reason);
             this.scheduler.stop();
             for (const job of this.scheduler.getAllJobs()) {
                 job.stop();
@@ -265,12 +278,13 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     protected async postCache(): Promise<void> {
         await super.postCache();
-        this.generateStaggerMappers();
     }
 
     protected async postDatabase(): Promise<void> {
         this.playRepo = new DrizzlePlayRepository(this.db, {logger: this.logger});
+        this.queueRepo = new DrizzleQueueRepository(this.db, {logger: this.logger});
         this.playRepo.componentId = this.dbComponent.id;
+        this.queueRepo.componentId = this.dbComponent.id;
         const counts = await this.playRepo.getComponentPlayCountByState();
         const discoveredCount = counts.find(x => x.state === 'discovered');
         if(discoveredCount !== undefined) {
@@ -278,32 +292,10 @@ export default abstract class AbstractSource extends AbstractComponent implement
         }
     }
 
-    protected generateStaggerMappers() {
-        const {
-            preCompare = [],
-            postCompare = [],
-        } = this.transformRules;
-
-        if (preCompare.length > 0) {
-            const pcInits: number[] = [0],
-                pcMaxStagger: number[] = [0];
-            for (const hook of this.transformRules.preCompare) {
-                const t = this.transformManager.getTransformerByStage({ type: hook.type, name: hook.name });
-                pcInits.push(t.staggerOpts?.initialInterval ?? 0);
-                pcMaxStagger.push(t.staggerOpts?.maxRandomStagger ?? 0)
-        }
-            this.staggerMappers.preCompare = staggerMapper<PlayObject, PlayObject>({ initialInterval: Math.max(...pcInits), maxRandomStagger: Math.max(...pcMaxStagger), concurrency: 2 });
-        }
-
-        if (postCompare.length > 0) {
-            const postInits: number[] = [0],
-                postMaxStagger: number[] = [0];
-            for (const hook of this.transformRules.postCompare) {
-                const t = this.transformManager.getTransformerByStage({ type: hook.type, name: hook.name });
-                postInits.push(t.staggerOpts?.initialInterval ?? 0);
-                postMaxStagger.push(t.staggerOpts?.maxRandomStagger ?? 0)
-            }
-            this.staggerMappers.postCompare = staggerMapper<PlayObject, PlayObject>({ initialInterval: Math.max(...postInits), maxRandomStagger: Math.max(...postMaxStagger), concurrency: 2 });
+    protected async updateQueueStats(queueNames: string[]) {
+        if(queueNames.includes(INGRESS_QUEUE)) {
+            this.queuedLength = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE]);
+            this.queuedGauge.labels(this.getPrometheusLabels()).set(this.queuedLength);
         }
     }
 
@@ -378,33 +370,65 @@ export default abstract class AbstractSource extends AbstractComponent implement
     // TODO make this more descriptive? or move it elsewhere
     recentlyPlayedTrackIsValid = (playObj: PlayObject) => true
 
-    protected addPlayToDB = async (play: PlayObject): Promise<PlayWith<'input'>> => {
-        const monitorStatus = this.getMonitoringStatus();
-        let state: PlayState = 'discovered';
-        if(!monitorStatus.monitoring) {
-            this.logger.debug(`Not adding ${buildTrackString(play)} as discovered because monitoring is disabled by ${capitalize(monitorStatus.origin)}`);
-            state = 'discarded';
-        }
-        const playRow = await this.playRepo.createPlays([(playToRepositoryCreatePlayOpts({play, state}))]);
-        const recentPlays = await this.getRecentlyDiscoveredPlays(false);
-        // only need to update if its already in memory,
-        // and better to update in-memory than clear cache so we aren't refetching from db on every discover
-        if(recentPlays !== undefined) {
-            recentPlays.push({...play, id: playRow[0].id, uid: playRow[0].uid});
-            recentPlays.sort(sortByOldestPlayDate);
-            this.cache.cacheDb.set(this.recentDiscoveredCacheKey(), recentPlays, '2m');
-        }
-        if(state === 'discovered') {
-            this.tracksDiscovered++;
-            this.tracksDiscoveredTotal++
-            this.discoveredCounter.labels(this.getPrometheusLabels()).inc();
-        }
-        this.logger.info(`${capitalize(state)} => ${buildTrackString(play)}`);
-        this.emitEvent('discovered', {play});
-        this.emitPlayInsert({...playRow[0], queueStates: []} as unknown as PlayApiCommonDetailed);
-        playRow[0].play.id = playRow[0].id;
-        playRow[0].play.uid = playRow[0].uid;
-        return playRow[0];
+    queuePlay = async (data: PlayObject | PlayObject[]) => {
+        const monitoring = this.getMonitoringStatus();
+        const playDatas = (Array.isArray(data) ? data : [data]).map(x => ({...x, meta: {...x.meta, wasMonitored: monitoring.monitoring, seenAt: dayjs()}}));
+
+        const createdQueuedPlays: PlaySelect[] = [];
+
+        await pMap(playDatas, async (queueablePlay) => {
+            try {
+                // for backlog and history plays we intentionally queue up plays that may have been processed before...
+                // ...for backlog we do this to catch any plays that may have been missed during network outage or MS offline or just the source reporting new things
+                // ...for history this is entirely how we "discover" new plays: we use MS's existing check logic to see find "new" plays on the same list (of history) that evolves over time
+                //
+                // for these two cases, for the majority of scenarios, we want to prune already processed plays from hitting the database
+                // otherwise we are causing a lot of noise for duped plays IE history polls every minute and we don't want all 100+ already seen plays being persisted as duped every minute.
+                if (([PARSED_FROM.history, PARSED_FROM.backlog] as PARSED_FROM_TYPE[]).includes(queueablePlay.meta.parsedFrom)) {
+                    // we should be adding Plays to the queue without any transforms
+                    // so run on "raw" play input
+                    // if we have seen a play with close temporality with the exact input hash then skip it entirely
+                    const cheapInputExisting = await this.playRepo.checkExisting(queueablePlay, { inputHash: queueablePlay });
+                    if (cheapInputExisting !== undefined) {
+                        if (isDebugMode() || PARSED_FROM.backlog === queueablePlay.meta.parsedFrom) {
+                            // log to trace for backlog for some visibility into what was pruned
+                            // this is fine noise-wise since this only happens when a component it (re)started
+                            //
+                            // for history we only want to do this if debugmode is enabled
+                            // TODO implement debugmode per component so global debug doesn't cause noise if this isn't the component that is being debugged
+                            this.logger.trace(`Not adding ${buildTrackString(queueablePlay)} to queue because it already exists in db as Play ${cheapInputExisting.uid}`);
+                        }
+                        return;
+                    }
+                }
+            } catch (e) {
+                this.logger.warn(new SimpleError('Failed to check queued scrobble for existing before adding, will continue with adding anyway', { cause: e }));
+            }
+            
+            // not in queue or existing queued check failed for some reason and we don't want to lose Play
+            const {
+                data,
+                meta
+            } = queueablePlay
+            const createPlayData = playToRepositoryCreatePlayOpts({
+                play: {
+                    data,
+                    meta
+                },
+                componentId: this.dbComponent.id, 
+                state: 'queued',
+            });
+
+            const playRow = await this.playRepo.createPlays([createPlayData]);
+            const queueState = await this.queueRepo.create({componentId: this.dbComponent.id, playId: playRow[0].id, queueName: INGRESS_QUEUE});
+            createdQueuedPlays.push(playRow[0]);
+            this.logger.debug(`Added ${buildTrackString(queueablePlay)} to the queue`);
+            this.emitPlayInsert({...playRow[0], queueStates: [queueState]} as unknown as PlayApiCommonDetailed);
+            this.queuedLength += 1;
+            this.queuedGauge.labels(this.getPrometheusLabels()).inc();
+        });
+
+        return createdQueuedPlays;
     }
 
     getFlatRecentlyDiscoveredPlays = async (): Promise<PlayObject[]> => {
@@ -423,11 +447,32 @@ export default abstract class AbstractSource extends AbstractComponent implement
     }
 
     protected recentDiscoveredCacheKey = () => {
+        return `recentDiscovered-${this.dbComponent.id}`;
+    }
+
+    protected recentCacheKey = () => {
         return `recent-${this.dbComponent.id}`;
     }
 
+
     getRecentlyDiscoveredPlays = async (hydrate: boolean = true): Promise<PlayObject[]> => {
         const cacheKey = this.recentDiscoveredCacheKey();
+        let list = await this.cache.cacheDb.get<PlayObject[]>(cacheKey);
+        if(list === undefined && hydrate) {
+            list = (await this.playRepo.findPlays({
+                state: ['discovered'],
+                order: 'desc',
+                sort: 'playedAt',
+                limit: 200
+            })).map(x => ({...asPlay(x.play), id: x.id, uid: x.uid}))
+            list.sort(sortByOldestPlayDate);
+            await this.cache.cacheDb.set<PlayObject[]>(cacheKey, list, '2m');
+        }
+        return list;
+    }
+
+    getRecentPlays = async (hydrate: boolean = true): Promise<PlayObject[]> => {
+        const cacheKey = this.recentCacheKey();
         let list = await this.cache.cacheDb.get<PlayObject[]>(cacheKey);
         if(list === undefined && hydrate) {
             list = (await this.playRepo.findPlays({
@@ -442,8 +487,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return list;
     }
 
-    existingDiscovered = async (play: PlayObject): Promise<PlayObject | undefined> => {
-        const list: PlayObject[] = await this.getRecentlyDiscoveredPlays(true);
+    async existingDiscovered(play: PlayObject): Promise<PlayObject | undefined> {
+        const list: PlayObject[] = await this.getRecentPlays(true);
         const matchResults = await this.existingDiscoveredPlay(play, list);
         if(matchResults.match) {
             return matchResults.closestMatchedPlay;
@@ -451,45 +496,12 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return undefined;
     }
 
-    discover = async (plays: PlayObject[], options: { checkAll?: boolean, signal?: AbortSignal, discoverLocation?: string, [key: string]: any } = {}): Promise<PlayObject[]> => {
-        const newDiscoveredPlays: PlayObject[] = [];
-
-        this.setStatus(`Discovering new Plays${options.discoverLocation !== undefined ? ` from ${options.discoverLocation} ` : ''}`);
-        for await(const play of pMapIterable(plays, this.staggerMappers.preCompare(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 3})) {
-            options.signal?.throwIfAborted();
-            const existing = await this.existingDiscovered(play);
-            if(existing === undefined) {
-                options.signal?.throwIfAborted()
-                const hydratedPlay = await this.addPlayToDB(play);
-                if(hydratedPlay.state === 'discovered') {
-                    newDiscoveredPlays.push(hydratedPlay.play);
-                }
-            } else {
-                this.playRepo.updateById(existing.id, {updatedAt: dayjs()});
-            }
-        }
-        if(newDiscoveredPlays.length > 0) {
-            this.setStatus(`Discovered ${newDiscoveredPlays.length} new Plays${options.discoverLocation !== undefined ? ` from ${options.discoverLocation} ` : ''}`);
-            try {
-                await this.componentRepo.updateById(this.dbComponent.id, {countLive: this.dbComponent.countLive + newDiscoveredPlays.length});
-            } catch (e) {
-                this.logger.warn(new Error('Unable to update discovered count', {cause: e}));
-            }
-        } else {
-            this.setStatus(`No new Plays discovered${options.discoverLocation !== undefined ? ` from ${options.discoverLocation} ` : ''}`);
-        }
-        newDiscoveredPlays.sort(sortByOldestPlayDate);
-
-        return newDiscoveredPlays;
-    }
-
-
     protected scrobble = async (newDiscoveredPlays: PlayObject[], options: { forceRefresh?: boolean, [key: string]: any, discoverLocation?: 'backlog' | [key: string] } = {}) => {
 
         if(newDiscoveredPlays.length > 0) {
             newDiscoveredPlays.sort(sortByOldestPlayDate);
             this.emitEvent('discoveredToScrobble', {
-                data: await pMap(newDiscoveredPlays, this.staggerMappers.postCompare(async (x) =>  await this.transformPlay(x, TRANSFORM_HOOK.postCompare)), {concurrency: 3}),
+                data: await pMap(newDiscoveredPlays, async (x) =>  await this.transformPlay(x, TRANSFORM_HOOK.postCompare), {concurrency: 3}),
                 options: {
                     ...options,
                     checkTime: newDiscoveredPlays[newDiscoveredPlays.length-1].data.playDate.add(2, 'second'),
@@ -529,25 +541,13 @@ export default abstract class AbstractSource extends AbstractComponent implement
             }
             try {
                 this.logger.verbose(`Fetching the last ${backlogLimit}${backlogLimit === this.SCROBBLE_BACKLOG_COUNT ? ' (max) ' : ''} listens to check for backlogging...`);
-                backlogPlays = await this.getBackloggedPlays({limit: backlogLimit});
+                backlogPlays = (await this.getBackloggedPlays({limit: backlogLimit})).map((x) => ({...x, meta: {...x.meta, parsedFrom: PARSED_FROM.backlog}}));
                 signal.throwIfAborted();
             } catch (e) {
                 throw new Error('Error occurred while fetching backlogged plays', {cause: e});
             }
-            const discovered = await this.discover(backlogPlays, {discoverLocation: 'backlog', signal});
-
-            if (scrobbleBacklog) {
-                if (discovered.length > 0) {
-                    this.logger.info('Scrobbling backlogged tracks...');
-                    signal.throwIfAborted();
-                    await this.scrobble(discovered);
-                    this.logger.info('Backlog scrobbling complete.');
-                } else {
-                    this.logger.info('All tracks already discovered!');
-                }
-            } else {
-                this.logger.info('Backlog scrobbling is disabled by config, skipping...');
-            }
+            await this.queuePlay(backlogPlays);
+            this.logger.info('Backlog Plays added to discovery queue.');
         }
         return;
     }
@@ -721,7 +721,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
         await this.notify({title: `Polling Started`, message: 'Polling Started', priority: 'info'});
         this.setStatus('Polling Started');
         this.lastActivityAt = dayjs();
-        let checkCount = 0;
         let checksOverThreshold = 0;
         const checkActiveFor = 120;
         let maxInterval = DEFAULT_POLLING_MAX_INTERVAL;
@@ -752,8 +751,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 const maxBackoff = this.getMaxBackoff();
                 let sleepTime = interval;
 
-                let newDiscovered: PlayObject[] = [];
-
                 if(playObjs.length > 0) {
                     const now = dayjs().unix();
                     const closeToInterval = playObjs.some(x => now - x.data.playDate.unix() < 5);
@@ -767,20 +764,23 @@ export default abstract class AbstractSource extends AbstractComponent implement
                         this.logger.info(`Potential plays were discovered close to polling interval! Delaying scrobble clients refresh by ${maxDelay} seconds so other clients have time to scrobble first`);
                         await sleep(maxDelay * 1000);
                     }
-                    newDiscovered = await this.discover(playObjs, {signal});
+                    await this.queuePlay(playObjs);
+                    //newDiscovered = await this.discover(playObjs, {signal});
                     signal.throwIfAborted();
-                    this.scrobble(newDiscovered,
-                        {
-                            forceRefresh: closeToInterval
-                        });
+                    // this.scrobble(newDiscovered,
+                    //     {
+                    //         forceRefresh: closeToInterval
+                    //     });
                 }
 
                 const activityMsgs: string[] = [];
 
-                if(newDiscovered.length > 0) {
+                if(playObjs.length > 0) {
+                    playObjs.sort(sortByNewestPlayDate);
                     // only update date if the play date is after the current activity date (in the case of backlogged plays)
-                    this.lastActivityAt = newDiscovered[0].data.playDate.isAfter(this.lastActivityAt) ? newDiscovered[0].data.playDate : this.lastActivityAt;
-                    checkCount = 0;
+                    if(playObjs[0].data.playDate.isAfter(this.lastActivityAt)) {
+                        this.lastActivityAt = playObjs[0].data.playDate;
+                    }
                     checksOverThreshold = 0;
                 }
 
@@ -839,6 +839,192 @@ export default abstract class AbstractSource extends AbstractComponent implement
             this.setIsSleeping(false);
             this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({sleeping: false});
         }
+    }
+
+    startDiscoveryQueue = async () => {
+        this.setStatus('Starting discovery queue processing');
+        this.discoverQueueAbortController = new AbortController();
+        this.discoverQueuePromise = spawn(this.discoverQueueAbortController.signal, async (signal, { defer }) => {
+                await this.processDiscoveryQueue(signal);
+        }).catch((e) => {
+            const componentUpdate: Partial<ComponentSourceApiJson> = {
+            };
+            if (isAbortError(e)) {
+                const err = generateLoggableAbortReason('Discovery queue processing stopped', this.discoverQueueAbortController.signal);
+                this.logger.info(err);
+                //this.logger.trace(e);
+                componentUpdate.status = 'Discovery queue processing cancelled';
+            } else {
+                const err = new Error('Scrobble processing stopped with error', { cause: e });
+                this.logger.warn(err);
+                componentUpdate.status = 'Discovery queue stopped with error';
+                this.warnings.push(err);
+                componentUpdate.warnings = this.warnings;
+            }
+            this.emitComponentUpdate<Partial<ComponentSourceApiJson>>(componentUpdate);
+        }).finally(() => {
+            this.discoverQueueAbortController = undefined;
+            this.discoverQueuePromise = undefined;
+        });
+    }
+
+    tryStopDiscoveryQueue = async (reason?: string | Error) => {
+        if(this.discoverQueuePromise === undefined) {
+            this.logger.verbose(`Discovery is already stopped`);
+            return;
+        }
+        if(this.discoverQueueAbortController === undefined) {
+            this.logger.error('No abort controller found! Nothing to stop.');
+            return false;
+        }
+        this.discoverQueueAbortController.abort(reason)
+        let timePasssed = 0;
+        while(this.discoverQueuePromise !== undefined && timePasssed < (this.stopPollingWaitInterval * 10)) {
+            await sleep(this.stopPollingWaitInterval);
+            timePasssed += this.stopPollingWaitInterval;
+            this.logger.verbose(`Waiting for discovery processing stop signal to be acknowledged (waited ${timePasssed}ms)`);
+        }
+        if(this.discoverQueuePromise !== undefined) {
+            throw new Error('Could not stop discovery processing! Or signal was lost');
+        }
+        return true;
+    }
+
+    protected processDiscoveryQueue = async (signal: AbortSignal) => {
+        signal.throwIfAborted();
+
+        let taskFailures = 0;
+
+        const {
+            options: {
+                maxRequestRetries = 5,
+                retryMultiplier = DEFAULT_RETRY_MULTIPLIER,
+            } = {},
+        } = this.config;
+        const maxRetries = Math.max(0, maxRequestRetries);
+        const consumedIds = new Map<string, number>();
+
+         try {
+             await consumeQueue(
+                 async (queueId) => {
+                    const next = await this.playRepo.getQueueNext(INGRESS_QUEUE, {notIds: consumedIds.size === 0 ? undefined : consumedIds.values().toArray()});
+                    if(next !== undefined) {
+                        consumedIds.set(queueId, next.id);
+                    }
+                    return next;
+                 },
+                 async (item) => {
+                     if (taskFailures > 0) {
+                         const delayFor = pollingBackoff(taskFailures + 1, retryMultiplier);
+                         this.logger.debug(`Delaying discovery of Play ${item.uid} task for ${delayFor}ms due to non-zero prior failures (${taskFailures})`);
+                         await sleep(delayFor, { signal });
+                     }
+                     return this.processQueueCurrentPlay(item, signal)
+                 },
+                 {
+                     concurrency: this.queueConcurrency,
+                     idleMs: this.queueIdleMs,
+                     signal,
+                     onSuccess: (item, queueId) => {
+                        consumedIds.delete(queueId);
+                        taskFailures = Math.max(taskFailures - 1, 0);
+                     },
+                     onError: async (e: Error, queueId) => {
+                        consumedIds.delete(queueId);
+                        taskFailures++;
+                        this.emitter.emit('discoveryQueueError', e);
+                        if(taskFailures < maxRetries) {
+                            this.logger.info(`Discovery queue retries (${taskFailures}) less than max processing retries (${maxRetries}), continuing with processing...`);
+                            await this.notify({title: `Processing Retry`, message: `Encountered error while polling but retries (${taskFailures}) are less than max poll retries (${maxRetries}) so will continue. Error: ${e.message}`, priority: 'warn'});
+                        } else {
+                            this.logger.warn(`Discovery queue retries (${taskFailures}) equal to max processing retries (${maxRetries}), stopping processing!`);
+                            await this.notify({title: `Processing Error`, message: `Encountered error while scrobble processing and retries (${taskFailures}) are equal to max processing retries (${maxRetries}), stopping processing!. | Error: ${e.message}`, priority: 'error'});
+                            throw e;
+                        }
+                     },
+                     onEmpty: () => {
+                        this.emitter.emit('queueEmptied');
+                     }
+                 },
+             );
+         } catch (e) {
+            throw e;
+         }
+
+    }
+
+    protected processQueueCurrentPlay = async (currQueuedPlay: PlaySelectWithQueueStates, signal?: AbortSignal) => {
+        signal?.throwIfAborted();
+        this.setStatus(`Processing Play ${currQueuedPlay.uid}`);
+
+        const queueState = currQueuedPlay.queueStates.find(x => x.queueName === INGRESS_QUEUE);
+        const updatedQueueState: Partial<QueueStateNew> = {};
+        let state: PlayState;
+        try {
+            const preCompared = await this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.preCompare);
+            let existing: PlayObject;
+            // cheap check for existing
+            const cheapExisting = await this.playRepo.checkExisting(preCompared, { notId: currQueuedPlay.id });
+            if(cheapExisting !== undefined) {
+                updatedQueueState.error = {message: `Matched hash on existing Play ${cheapExisting.uid} with close temporality`};
+                existing = {...cheapExisting.play, id: cheapExisting.id, uid: cheapExisting.uid};
+            } else {
+                existing = await this.existingDiscovered(preCompared);
+                if(existing !== undefined) {
+                    updatedQueueState.error = {message: `Matched with Play ${existing.uid ?? existing.id}`};
+                }
+            }
+            currQueuedPlay.play = preCompared;
+            signal?.throwIfAborted();
+            if(existing === undefined) {
+                if(!preCompared.meta.wasMonitored) {
+                    this.logger.debug(`Not adding ${buildTrackString(preCompared)} as discovered because monitoring was disabled when Play was created.`);
+                    state = 'discarded';
+                    updatedQueueState.error = {message: 'Play was not added as discovered because monitoring was disabled when Play was created.'}
+                } else {
+                    state = 'discovered';
+                    this.tracksDiscovered++;
+                    this.tracksDiscoveredTotal++
+                    this.discoveredCounter.labels(this.getPrometheusLabels()).inc();
+                    this.emitEvent('discovered', {play: preCompared});
+                }
+            } else {
+                this.playRepo.updateById(existing.id, {updatedAt: dayjs()});
+                state = 'duped';
+                currQueuedPlay.parentId = existing.id;
+            }
+            this.playRepo.updateById(currQueuedPlay.id, {play: preCompared, state});
+            const recentPlays = await this.getRecentPlays(false);
+            // only need to update if its already in memory,
+            // and better to update in-memory than clear cache so we aren't refetching from db on every discover
+            if(recentPlays !== undefined) {
+                recentPlays.push({...preCompared, id: currQueuedPlay.id, uid: currQueuedPlay.uid});
+                recentPlays.sort(sortByOldestPlayDate);
+                this.cache.cacheDb.set(this.recentCacheKey(), recentPlays, '2m');
+            }
+            if(state === 'discovered') {
+                const recentDiscoveredPlays = await this.getRecentlyDiscoveredPlays(false);
+                if(recentDiscoveredPlays !== undefined) {
+                    recentDiscoveredPlays.push({...preCompared, id: currQueuedPlay.id, uid: currQueuedPlay.uid});
+                    recentDiscoveredPlays.sort(sortByOldestPlayDate);
+                    this.cache.cacheDb.set(this.recentDiscoveredCacheKey(), recentDiscoveredPlays, '2m');
+                }
+            }
+            updatedQueueState.queueStatus = 'completed';
+
+            this.logger.info(`${capitalize(state)} => ${buildTrackString(preCompared)}`);
+        } catch (e) {
+            const err = new Error(`Error ocurred while trying to discover Play ${currQueuedPlay.uid}`, {cause: e});
+            updatedQueueState.error = err;
+            updatedQueueState.queueStatus = 'failed';
+        } finally {
+            this.queueRepo.updateById(queueState.id, updatedQueueState);
+        }
+
+        if(state === 'discovered') {
+            await this.scrobble([{...currQueuedPlay.play, id: currQueuedPlay.id, uid: currQueuedPlay.uid}]);
+        }
+        return currQueuedPlay;
     }
 
     protected setIsSleeping(sleeping: boolean) {

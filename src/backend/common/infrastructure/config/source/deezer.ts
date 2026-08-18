@@ -81,6 +81,14 @@ export type DeezerInternalData = z.infer<typeof deezerInternalDataSchema>;
 
 export const deezerInternalSourceOptionsSchema = z.object({
     ...commonSourceOptionsSchema.shape,
+    /**
+     * Set the heuristic level of duplicate/repeated track pruning from listening history.
+     * 
+     * Some third party integrations (Sonos) cause Deezer to report the same track many times in listening history
+     * 
+     * * `true` => detect plays with play times at exact, close to, or fuzzy (beginning/end of predicated play time + duration)
+     * * `aggressive` => above AND check for plays during previous play times that occurred during the track (50% +/- duration plus playedAt date)
+     */
     fuzzyDiscoveryIgnore: z.union([z.boolean(), z.literal('aggressive')]).optional(),
 });
 

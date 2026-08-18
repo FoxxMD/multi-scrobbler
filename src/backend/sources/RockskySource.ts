@@ -1,5 +1,5 @@
 import type EventEmitter from "events";
-import { COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, type ComponentAuthType, PARSED_FROM, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import type {FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic.ts";
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
@@ -71,7 +71,7 @@ export default class RockskySource extends MemorySource {
     getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}) => {
         const {limit = 20} = options;
         this.setStatus('Checking for new Plays');
-        return await this.api.getRecentlyPlayed(limit);
+        return (await this.api.getRecentlyPlayed(limit)).map((x) => ({...x, meta: {...x.meta, parsedFrom: PARSED_FROM.history}}));
     }
 
     getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {

@@ -1,5 +1,5 @@
 import type EventEmitter from "events";
-import { COMPONENT_AUTH_TYPE, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, PARSED_FROM, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import type {FormatPlayObjectOptions, InternalConfig, TimeRangeListensFetcher} from "../common/infrastructure/Atomic.ts";
 import type {ComponentAuthType, PlayPlatformId} from '../../core/Atomic.ts';
@@ -86,7 +86,7 @@ export default class ListenbrainzSource extends MemorySource {
         const {limit = 20} = options;
         const now = await this.api.getPlayingNow();
         await this.processRecentPlays(now.listens.map(x => ListenbrainzSource.formatPlayObj(x)));
-        return await this.getScrobblesForTimeRange({limit});
+        return (await this.getScrobblesForTimeRange({limit})).map((x) => ({...x, meta: {...x.meta, parsedFrom: PARSED_FROM.history}}));
     }
 
     getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {

@@ -9,7 +9,7 @@ import type {LastfmSourceConfig} from "../common/infrastructure/config/source/la
 
 export default class LibrefmSource extends LastfmSource {
 
-    // @ts-expect-error
+    // @ts-expect-error its fine
     declare config: LibrefmSourceConfig;
 
     constructor(name: any, config: LibrefmSourceConfig, internal: InternalConfig, emitter: EventEmitter) {

@@ -201,9 +201,9 @@ export interface PlayMetaBase<D extends DateLike = Dayjs> {
     musicService?: string
 
     /**
-     * Specifies from what facet/data from the source this play was parsed from IE history, now playing, etc...
+     * Specifies from what facet/data from the source this play was parsed from IE player, backlog, now playing, etc...
      * */
-    parsedFrom?: string
+    parsedFrom?: PARSED_FROM_TYPE
     /**
      * Unique ID for this track, given by the Source
      * */
@@ -266,6 +266,9 @@ export interface PlayMetaBase<D extends DateLike = Dayjs> {
     scrobbleTsSOC?: ScrobbleTsSOC
 
     comment?: string
+
+    /** Was the component activitely monitoring when this Play was created? */
+    wasMonitored?: boolean
 
     //lifecycle: PlayLifecycle<D>
     lifecycleInputs?: LifecycleInput[]
@@ -477,6 +480,15 @@ export const SOURCE_SOT = {
 } as const satisfies Record<string, SOURCE_SOT_TYPES>
 export const sourceSotTypes: SOURCE_SOT_TYPES[] = ['player','history','ingress'];
 
+export type PARSED_FROM_TYPE = 'backlog' | 'now playing' | 'player' | 'history' | 'ingress';
+export const PARSED_FROM = {
+    backlog : 'backlog',
+    nowPlaying: 'now playing',
+    ingress: 'ingress',
+    player: 'player',
+    history: 'history'
+} as const satisfies Record<string, PARSED_FROM_TYPE>
+
 export interface URLData {
     url: URL
     normal: string
@@ -607,10 +619,10 @@ export const REGEX_ISO8601_LOOSE = new RegExp(/\d{4}-[01]\d-[0-3]\dT/);
  */
 export const REGEX_ISO8601_WELLKNOWN = new RegExp(/dayjs-(\d{4}-[01]\d-[0-3]\dT.*)/);
 
-export const CLIENT_INGRESS_QUEUE: QueueName = 'ingress';
-export const CLIENT_DEAD_QUEUE: QueueName = 'dead';
+export const INGRESS_QUEUE: QueueName = 'ingress';
+export const DEAD_QUEUE: QueueName = 'dead';
 export type QueueName = 'ingress' | 'dead';
-export const QUEUE_NAMES = [CLIENT_INGRESS_QUEUE, CLIENT_DEAD_QUEUE];
+export const QUEUE_NAMES = [INGRESS_QUEUE, DEAD_QUEUE];
 
 /**
  * Useful TS type-only utility for testing type equality

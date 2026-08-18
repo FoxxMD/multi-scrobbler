@@ -4,7 +4,7 @@ import type {PlayInputNew} from "./drizzleTypes.ts";
 import type {QueueStateNew} from "./drizzleTypes.ts";
 import type {ComponentNew} from "./drizzleTypes.ts";
 import type { MarkOptional } from "ts-essentials";
-import { CLIENT_DEAD_QUEUE, type DeadLetterScrobble, type ErrorLike, type PlayObject } from "../../../../core/Atomic.ts";
+import { DEAD_QUEUE, type DeadLetterScrobble, type ErrorLike, type PlayObject } from "../../../../core/Atomic.ts";
 import dayjs from "dayjs";
 import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../utils/PlayComparisonUtils.ts";
 import { hashObject } from "../../../utils/StringUtils.ts";
@@ -72,7 +72,7 @@ export const hydratePlaySelect = <T extends PlaySelect | PlayHistoricalSelect>(s
 }
 
 export const playSelectToDeadScrobble = (select: PlaySelectWithQueueStates, serializedError: boolean = false): DeadLetterScrobble<PlayObject> => {
-    const deadQueue = select.queueStates.find(x => x.queueName === CLIENT_DEAD_QUEUE);
+    const deadQueue = select.queueStates.find(x => x.queueName === DEAD_QUEUE);
     return {
         play: select.play,
         id: select.uid,
@@ -85,7 +85,10 @@ export const playSelectToDeadScrobble = (select: PlaySelectWithQueueStates, seri
 }
 
 export const generateInputEntity = (data: PlayInputNew): PlayInputNew => {
-    return data;
+    const {
+        playHash = hashObject(playContentBasicInvariantTransform(data.play).data)
+    } = data;
+    return {...data, playHash};
 }
 
 export const generateQueueStateEntity = (data: QueueStateNew): QueueStateNew => {

@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import type {ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi} from "../../Api.ts";
-import { CLIENT_INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ComponentType, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes } from "../../Atomic.ts";
+import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ComponentType, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes } from "../../Atomic.ts";
 import { generatePlay, normalizePlays } from "./PlayTestUtils.ts";
 import { generatePlayInput, generatePlayWithLifecycle, playWithLifecycleScrobble, randomPlayState } from "./fixtures.ts";
 import { asJsonPlayObject } from "../../PlayMarshalUtils.ts";
@@ -73,7 +73,7 @@ export const generateQueueStateApi = (data: Partial<QueueStateApi>): QueueStateA
     const cAt = faker.date.recent().toISOString();
     return {
         id: faker.number.int({min: 1, max: 100}),
-        queueName: CLIENT_INGRESS_QUEUE,
+        queueName: INGRESS_QUEUE,
         queueStatus: faker.helpers.arrayElement(QUEUE_STATUSES),
         updatedAt: cAt,
         retries: 0,
