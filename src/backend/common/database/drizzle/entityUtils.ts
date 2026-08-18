@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import type {PlayHistoricalNew, PlayHistoricalSelect, PlayNew, PlaySelect, PlaySelectWithQueueStates} from "./drizzleTypes.ts";
+import type {PlayHistoricalNew, PlayHistoricalSelect, PlayNew, PlaySelect, PlaySelectWithQueueStates, QueueStateSelect} from "./drizzleTypes.ts";
 import type {PlayInputNew} from "./drizzleTypes.ts";
 import type {QueueStateNew} from "./drizzleTypes.ts";
 import type {ComponentNew} from "./drizzleTypes.ts";
@@ -9,6 +9,7 @@ import dayjs from "dayjs";
 import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../utils/PlayComparisonUtils.ts";
 import { hashObject } from "../../../utils/StringUtils.ts";
 import { serializeError } from "serialize-error";
+import type { PlayEventQueueStateChange, PlayEventQueueStateChangeData } from "../../../../core/PlayEvent.ts";
 
 export const generateComponentEntity = (data: MarkOptional<ComponentNew, 'uid'>): ComponentNew => {
     assert(data.name !== undefined, 'Must provide name');
@@ -93,4 +94,19 @@ export const generateInputEntity = (data: PlayInputNew): PlayInputNew => {
 
 export const generateQueueStateEntity = (data: QueueStateNew): QueueStateNew => {
     return data;
+}
+
+export const queueStateToEventData = (qs: QueueStateSelect): PlayEventQueueStateChangeData => {
+    const {
+        queueName,
+        queueStatus,
+        error,
+        retries
+    } = qs;
+    return {
+        queueName,
+        queueStatus,
+        error,
+        retries
+    }
 }

@@ -1,14 +1,13 @@
 import type { Collapsible } from '@chakra-ui/react';
 import { Card, Icon, SkeletonCircle, SkeletonText, Span, Tabs, Timeline} from '@chakra-ui/react';
-import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import React from "react";
 import { BiWrench } from "react-icons/bi";
 import { HiMiniMagnifyingGlass } from "react-icons/hi2";
 import { IoMdCodeDownload } from "react-icons/io";
 import { TbDatabaseEdit } from "react-icons/tb";
-import type {PlayApiCommonDetailed, QueueStateApi} from "../../core/Api";
-import { DEAD_QUEUE, INGRESS_QUEUE, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, QUEUE_STATUS_QUEUED, type ComponentType, type JsonPlayObject, type LifecycleStep, type PlayMatchResult, type ScrobbleResult } from "../../core/Atomic";
+import type {PlayApiCommonDetailed} from "../../core/Api";
+import { DEAD_QUEUE, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, QUEUE_STATUS_QUEUED, type ComponentType, type JsonPlayObject, type LifecycleStep, type PlayMatchResult, type ScrobbleResult } from "../../core/Atomic";
 import { sortByNewestDate } from "../../core/PlayUtils";
 import { capitalizeWords } from "../../core/StringUtils";
 import { shortTodayAwareFormat } from "../../core/TimeUtils";
@@ -24,6 +23,7 @@ import { ScrobbleMatchResult } from "./ScrobbleMatchResult";
 import { TimelineErrorIcon } from "./timeline/TimelineIcon";
 import { diffElements, TransformSteps } from "./TransformSteps";
 import { Muted } from "./Typography";
+import type { PlayEventQueueStateChange } from '../../core/PlayEvent';
 
 
 interface ActivityTimelineProps {
@@ -55,22 +55,6 @@ const TimelineLoading = () => (
             </Timeline.Item>
         </Timeline.Root>
     )
-
-const QueuedCreatedItem = (props: { dead?: boolean, datetime: string }) => (
-    <Timeline.Item>
-        <Timeline.Connector>
-            <Timeline.Separator />
-            <Timeline.Indicator>
-                <TimelineIndicatorIconQueued {...timelineIconProps} />
-            </Timeline.Indicator>
-        </Timeline.Connector>
-        <Timeline.Content>
-            <Timeline.Title>
-                <TimelineItemSummaryText>{props.dead ? 'Dead ' : ''}Queued <Muted>at</Muted> {shortTodayAwareFormat(dayjs(props.datetime))}</TimelineItemSummaryText>
-            </Timeline.Title>
-        </Timeline.Content>
-    </Timeline.Item>
-)
 
 const NewItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpen' | 'activity' | 'componentType'>) => {
     const {
@@ -166,6 +150,7 @@ const TransformsItem = (props: Pick<ActivityTimelineProps, 'activity' | 'collaps
                 <MSCollapsible
                     triggerProps={timelineCollapsibleProps}
                     indicator={<TimelineItemSummaryText>{transformVerb} <Muted>using configured Rules</Muted> <Muted>for</Muted> {steps[0].hook} {transformResult}</TimelineItemSummaryText>}
+                    unmountOnExit
                     defaultOpen={collapsibleOpen}
                     timeline>
                     <Card.Root bgColor="bg.muted" size="sm">
@@ -221,6 +206,7 @@ const ScrobbleMatchItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpen'>
                         indicator={<TimelineItemSummaryText><Muted>Found </Muted>{match.match ? <Span color="orange.solid"> a duplicate Scrobble</Span> : 'no duplicate Scrobbles'}</TimelineItemSummaryText>}
                         defaultOpen={collapsibleOpen}
                         disableUntil="md"
+                        unmountOnExit
                         timeline>
                         <Card.Root bgColor="bg.muted" size="sm">
                             <Card.Body textStyle="sm">
@@ -280,6 +266,7 @@ const ScrobbleResponseItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpe
                         indicator={scrobbleSummary}
                         defaultOpen={collapsibleOpen}
                         timeline
+                        unmountOnExit
                         disableUntil="md">
                         <Card.Root bgColor="bg.muted" size="sm">
                             <Card.Body textStyle="sm">
@@ -293,84 +280,70 @@ const ScrobbleResponseItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpe
     )
 }
 
-const QueueTimelineItem = (props: {queueState: QueueStateApi, collapsibleOpen: boolean}) => {
+const QueueTimelineItem = (props: {queueState: PlayEventQueueStateChange<string>, collapsibleOpen: boolean}) => {
     const {
-        queueState,
+        queueState: {
+            data: {
+                queueStatus,
+                queueName,
+                error,
+                retries
+            },
+            createdAt,
+        } = {},
         collapsibleOpen,
     } = props;
-    if(queueState.queueStatus === QUEUE_STATUS_QUEUED) {
-        return (
-            <Timeline.Item>
-                    <Timeline.Connector>
-                        <Timeline.Separator />
-                        <Timeline.Indicator>
-                            <TimelineIndicatorIconQueued {...timelineIconProps}/>
-                        </Timeline.Indicator>
-                    </Timeline.Connector>
-                    <Timeline.Content gap="4">
-                        <Timeline.Title>
-                            <TimelineItemSummaryText>{queueState.queueName === DEAD_QUEUE ? 'Dead ' : ''}Queued <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}</TimelineItemSummaryText>
-                        </Timeline.Title>
-                    </Timeline.Content>
-                </Timeline.Item>
-        );
+
+    let indicator: React.JSX.Element,
+    text: React.JSX.Element,
+    title: React.JSX.Element;
+
+    switch(queueStatus) {
+        case QUEUE_STATUS_QUEUED:
+            indicator = <TimelineIndicatorIconQueued {...timelineIconProps} />;
+            text = <TimelineItemSummaryText>{queueName === DEAD_QUEUE ? 'Dead ' : ''}Queued <Muted>at</Muted> {shortTodayAwareFormat(dayjs(createdAt))}</TimelineItemSummaryText>;
+            break;
+        case QUEUE_STATUS_COMPLETED:
+            indicator = <CheckIcon color="green.focusRing" {...timelineIconProps}/>;
+            text = <TimelineItemSummaryText>{queueName === DEAD_QUEUE ? 'Dead ' : ''}Queue finished processing <Muted>at</Muted> {shortTodayAwareFormat(dayjs(createdAt))}</TimelineItemSummaryText>;
+            break;
+        case QUEUE_STATUS_FAILED:
+            indicator = <ExclamationTriangleIcon color="orange.focusRing" {...timelineIconProps}/>;
+            text = <TimelineItemSummaryText>{queueName === DEAD_QUEUE ? 'Dead ' : ''}Queue failed <Muted>at</Muted> {shortTodayAwareFormat(dayjs(createdAt))}</TimelineItemSummaryText>;
     }
 
-    if(queueState.queueStatus === QUEUE_STATUS_COMPLETED) {
-        return (
-            <Timeline.Item>
-                    <Timeline.Connector>
-                        <Timeline.Separator />
-                        <Timeline.Indicator>
-                            <CheckIcon color="green.focusRing" {...timelineIconProps}/>
-                        </Timeline.Indicator>
-                    </Timeline.Connector>
-                    <Timeline.Content gap="4">
-                        <Timeline.Title>
-                            <TimelineItemSummaryText>{queueState.queueName === DEAD_QUEUE ? 'Dead ' : ''}Queue finished processing <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}</TimelineItemSummaryText>
-                        </Timeline.Title>
-                    </Timeline.Content>
-                </Timeline.Item>
-        );
-    }
-
-    if(queueState.queueStatus === QUEUE_STATUS_FAILED) {
-        let titleContent: React.JSX.Element;
-        if(queueState.error === undefined) {
-            titleContent = <TimelineItemSummaryText>{queueState.queueName === DEAD_QUEUE ? 'Dead ' : ''}Queue failed <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}</TimelineItemSummaryText>;
-        } else {
-            titleContent = (
-                <MSCollapsible 
+    if(error !== undefined && error !== null) {
+        title = (
+            <MSCollapsible 
                 triggerProps={timelineCollapsibleProps}
-                indicator={<TimelineItemSummaryText>{queueState.queueName === DEAD_QUEUE ? 'Dead ' : ''}Queue failed <Muted>at</Muted> {shortTodayAwareFormat(dayjs(queueState.updatedAt))}</TimelineItemSummaryText>}
-                                            defaultOpen={collapsibleOpen}
-                                            disableUntil="md"
-                                            timeline>
-                                            <ErrorAlert error={queueState.error} />
-                                        </MSCollapsible>
-            )
-        }
-        return (
-            <Timeline.Item>
-                    <Timeline.Connector>
-                        <Timeline.Separator />
-                        <Timeline.Indicator>
-                            <ExclamationTriangleIcon color="orange.focusRing" {...timelineIconProps}/>
-                        </Timeline.Indicator>
-                    </Timeline.Connector>
-                    <Timeline.Content >
-                        <Timeline.Title>
-                            {titleContent}
-                        </Timeline.Title>
-                    </Timeline.Content>
-                </Timeline.Item>
-        );
+                indicator={text}
+                defaultOpen={collapsibleOpen}
+                disableUntil="md"
+                timeline
+                unmountOnExit>
+                <ErrorAlert error={error} />
+            </MSCollapsible>
+        )
+    } else {
+        title = text;
     }
-}
 
-type TransformStepsTimelineData = {id: 'transform-steps', dt: Dayjs, steps: LifecycleStep[], original?: JsonPlayObject};
-type TimelineDataTypes = 'new' | 'queue-created-ingress' | 'queue-created-dead' | 'queue-updated-ingress' | 'queue-updated-dead' | 'scrobble-match' | 'scrobble-response' | 'transform-steps';
-type TimelineData = {id: TimelineDataTypes, dt: Dayjs};
+    return (
+        <Timeline.Item>
+                <Timeline.Connector>
+                    <Timeline.Separator />
+                    <Timeline.Indicator>
+                        {indicator}
+                    </Timeline.Indicator>
+                </Timeline.Connector>
+                <Timeline.Content gap="4">
+                    <Timeline.Title>
+                        {title}
+                    </Timeline.Title>
+                </Timeline.Content>
+            </Timeline.Item>
+    );
+}
 
 export const ActivityTimeline = (props: ActivityTimelineProps) => {
 
@@ -380,173 +353,42 @@ export const ActivityTimeline = (props: ActivityTimelineProps) => {
 
     const {
         activity:{
-            play,
             input,
-            seenAt,
-            queueStates,
+            events = [],
         } = {},
         collapsibleOpen,
         componentType,
         componentName
     } = props;
     const {
-        lifecycle: steps = [],
-        scrobble: {
-            match,
-            payload,
-            createdAt: scrobbleResultCreatedAt
-        } = {},
-        scrobble,
-    } = play;
-    const {
         play: original,
     } = input || {};
 
-    const timelineItems: (TimelineData|TransformStepsTimelineData)[] = [
-        {id: 'new', dt: dayjs(seenAt)},
+    events.sort((a, b) => sortByNewestDate(b.createdAt, a.createdAt));
+
+    const timelineElements: React.JSX.Element[] = [
+        <NewItem key="newPlay" activity={props.activity} collapsibleOpen={collapsibleOpen} componentType={componentType}/>
     ];
 
-        // group transforms by hook
-    const transformGroups: Record<string, LifecycleStep[]> = steps.length === 0  ? {} : steps.reduce((acc, curr) => {
-        if(acc[curr.hook] === undefined) {
-            acc[curr.hook] = [];
-        }
-        return {...acc, [curr.hook]: [...acc[curr.hook], curr]};
-    }, {});
-
     let lastTransformedPlay = original;
-    for(const [_,v] of Object.entries(transformGroups)) {
-        const d: TransformStepsTimelineData = {id: 'transform-steps', dt: dayjs(v[0].createdAt), steps: v, original: lastTransformedPlay};
-        const [__, finalPlay] = diffElements(lastTransformedPlay, v);
-        lastTransformedPlay = finalPlay;
-        timelineItems.push(d);
-    }
-
-    const ingressQueue = queueStates.find(x => x.queueName === INGRESS_QUEUE);
-    if(ingressQueue !== undefined) {
-        if(ingressQueue.updatedAt === ingressQueue.createdAt) {
-            // if queue was never updated but contains extra context then only show updated
-            if(ingressQueue.error !== undefined || ingressQueue.queueStatus === QUEUE_STATUS_FAILED) {
-                timelineItems.push({id: 'queue-updated-ingress', dt: dayjs(ingressQueue.updatedAt)});
-            } else {
-                timelineItems.push({id: 'queue-created-ingress', dt: dayjs(ingressQueue.createdAt)});
-            }
-        } else {
-            timelineItems.push({id: 'queue-created-ingress', dt: dayjs(ingressQueue.createdAt)});
-            timelineItems.push({id: 'queue-updated-ingress', dt: dayjs(ingressQueue.updatedAt)});
+    for(const event of events) {
+        switch(event.eventName) {
+            case 'transform': {
+                //const d: TransformStepsTimelineData = {id: 'transform-steps', dt: dayjs(event.data[0].createdAt), steps: event.data, original: lastTransformedPlay};
+                timelineElements.push(<TransformsItem key={event.id} steps={event.data} original={lastTransformedPlay}/>);
+                const [__, finalPlay] = diffElements(lastTransformedPlay, event.data);
+                lastTransformedPlay = finalPlay;
+            } break;
+            case 'queueStateChange': {
+                timelineElements.push(<QueueTimelineItem key={event.id} queueState={event} collapsibleOpen={collapsibleOpen}/>);
+            } break;
+            case 'dupeCheck': {
+                timelineElements.push(<ScrobbleMatchItem key={event.id} match={event.data} collapsibleOpen={collapsibleOpen}/>);
+            } break;
+            case 'scrobbleResult':
+                timelineElements.push(<ScrobbleResponseItem key={event.id} scrobble={event.data} componentName={componentName} collapsibleOpen={collapsibleOpen}/>);
         }
     }
-    const deadqueue = queueStates.find(x => x.queueName === DEAD_QUEUE);
-    if(deadqueue !== undefined) {
-        if(deadqueue.updatedAt === deadqueue.createdAt) {
-            // if queue was never updated but contains extra context then only show updated
-            if(deadqueue.error !== undefined || deadqueue.queueStatus === QUEUE_STATUS_FAILED) {
-                timelineItems.push({id: 'queue-updated-dead', dt: dayjs(deadqueue.updatedAt)});
-            } else {
-                timelineItems.push({id: 'queue-created-dead', dt: dayjs(deadqueue.createdAt)});
-            }
-        } else {
-            timelineItems.push({id: 'queue-created-dead', dt: dayjs(deadqueue.createdAt)});
-            timelineItems.push({id: 'queue-updated-dead', dt: dayjs(deadqueue.updatedAt)});
-        };
-    }
-
-    if(match !== undefined) {
-        timelineItems.push({id: 'scrobble-match', dt: dayjs(match.createdAt)});
-    }
-
-    // since scrobbleResultCreatedAt has just been implemented older play data will not have it
-    // and if match was never run, due to error earlier in lifecycle, we need to fallback to oldest event + 1s
-    timelineItems.sort((a, b) => sortByNewestDate(b.dt, a.dt));
-    if(payload !== undefined) {
-        timelineItems.push({id: 'scrobble-response', dt: dayjs(scrobbleResultCreatedAt ?? match?.createdAt ?? timelineItems[timelineItems.length - 1].dt)});
-    }
-
-    // now we sort by date as well as logical order
-    timelineItems.sort((a, b) => {
-        // new is always sorted to first in order regardless of timestamp
-        if(b.id === 'new') {
-            return 1;
-        }
-        if(a.id === 'new') {
-            return -1;
-        }
-       
-        if(!a.dt.isSame(b.dt)) {
-            return a.dt.isBefore(b.dt) ? -1 : 1;
-        }
-        // if they are the same timestamp then we need to determine the likely logical order
-
-        // queue created always occurs before other actions as the play is queued first, then processed
-        if(b.id.includes('queue-created')) {
-            return 1;
-        }
-        if(a.id.includes('queue-created')) {
-            return -1;
-        }
-        
-        // transform steps always occur before scrobble actions
-        if(a.id.includes('scrobble') && b.id === 'transform-steps') {
-            return 1;
-        }
-        if(b.id.includes('scrobble') && a.id === 'transform-steps') {
-            return -1;
-        }
-
-        // dupe matching always occurs before scrobbling
-        if(b.id === 'scrobble-match' && a.id === 'scrobble-response') {
-            return 1;
-        }
-        if(a.id === 'scrobble-match' && b.id === 'scrobble-response') {
-            return -1;
-        }
-
-        // queue updated (finished) always occurs last
-        if(a.id.includes('queue-updated')) {
-            return 1;
-        }
-        if(b.id.includes('queue-updated')) {
-            return -1;
-        }
-
-        // nothing else matched, keep order
-        return 0;
-    });
-
-    const f = timelineItems;
-    console.log(f);
-
-
-    const timelineElements: React.JSX.Element[] = timelineItems.flatMap((x) => {
-        const timelineKey = `${x.id}-${x.dt.unix()}`;
-        switch(x.id) {
-            case 'new':
-                {
-                    const newElm = <NewItem key={timelineKey} activity={props.activity} collapsibleOpen={collapsibleOpen} componentType={componentType}/>;
-                    if(steps.length === 0) {
-                        return [newElm, <NoTransformsItem key={`${timelineKey}-notransform`}/>];
-                    }
-                    return newElm;
-                }
-            case 'queue-created-ingress':
-            case 'queue-created-dead':
-                return <QueuedCreatedItem key={timelineKey} dead={x.id.includes('dead')} datetime={x.dt.toISOString()}/>;
-            case 'queue-updated-ingress':
-                return <QueueTimelineItem key={timelineKey} queueState={ingressQueue} collapsibleOpen={collapsibleOpen}/>;
-            case 'queue-updated-dead':
-                return <QueueTimelineItem key={timelineKey} queueState={deadqueue} collapsibleOpen={collapsibleOpen}/>;
-            case 'scrobble-match':
-                return <ScrobbleMatchItem key={timelineKey} match={match} collapsibleOpen={collapsibleOpen}/>;
-            case 'scrobble-response':
-                return <ScrobbleResponseItem key={timelineKey} scrobble={scrobble} componentName={componentName} collapsibleOpen={collapsibleOpen}/>;
-            case 'transform-steps':
-                {
-                    const val = x as TransformStepsTimelineData;
-                    return <TransformsItem key={timelineKey} steps={val.steps} original={val.original}/>
-                }
-        }
-        return undefined;
-    });
 
     return (
         <MSErrorBoundary>

@@ -32,7 +32,7 @@ import {
     type TimeRangeListensFetcher,
 } from "../common/infrastructure/Atomic.ts";
 import { CALCULATED_PLAYER_STATUSES } from '../../core/Atomic.ts';
-import type {ReportedPlayerStatus} from '../../core/Atomic.ts';
+import type {ReportedPlayerStatus, ScrobbleResult} from '../../core/Atomic.ts';
 import type {ClientType} from "../../core/Atomic.ts";
 import type {CommonClientConfig, NowPlayingOptions, UpstreamRefreshOptions} from "../common/infrastructure/config/client/index.ts";
 import { TRANSFORM_HOOK } from "../../core/Transform.ts";
@@ -73,6 +73,9 @@ import { GenericRepository } from "../common/database/drizzle/repositories/BaseR
 import assert from "node:assert";
 import { COMPONENT_STATE, type ComponentClientApiJson, type PlayApiCommonDetailed } from "../../core/Api.ts";
 import type {ComponentState} from "react";
+import { DrizzlePlayEventsRepository } from "../common/database/drizzle/repositories/PlayEventsRepository.ts";
+import { PLAY_EVENT_TYPE, type PlayEvent } from "../../core/PlayEvent.ts";
+import { queueStateToEventData } from "../common/database/drizzle/entityUtils.ts";
 
 type SourceMappedPlayer = {player: SourcePlayerObj, source: SourceIdentifier};
 type PlatformMappedPlays = Map<string, SourceMappedPlayer>;
@@ -157,6 +160,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     protected playRepo!: DrizzlePlayRepository;
     protected queueRepo!: DrizzleQueueRepository;
+    protected playEventsRepo!: DrizzlePlayEventsRepository;
     protected migrationRepo!: GenericRepository<'componentMigrations'>;
 
     constructor(type: any, name: any, config: CommonClientConfig, emitter: EventEmitter, logger: Logger) {
@@ -389,6 +393,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     protected async postDatabase(): Promise<void> {
         this.playRepo = new DrizzlePlayRepository(this.db, {logger: this.logger});
         this.queueRepo = new DrizzleQueueRepository(this.db, {logger: this.logger});
+        this.playEventsRepo = new DrizzlePlayEventsRepository(this.db, {logger: this.logger});
         this.migrationRepo = new GenericRepository<'componentMigrations'>(this.db, 'componentMigrations', 'Component Migrations', {logger: this.logger});
         this.playRepo.componentId = this.dbComponent.id;
         this.queueRepo.componentId = this.dbComponent.id;
@@ -1232,6 +1237,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         let successState: PlaySelect['state'];
         let deadQueueEntity: QueueStateSelect;
 
+        const events: Omit<PlayEvent, 'playId'>[] = [];
+
         try {
 
             // want to fail scrobbles that are being *ingested* by component
@@ -1262,35 +1269,43 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }
             if (historicalError === undefined) {
                 const { summary, ...matchResult } = await this.existingScrobble(currQueuedPlay.play, historicalPlays);
-                currQueuedPlay.play.scrobble = {
-                    ...(currQueuedPlay.play.scrobble ?? {}),
-                    match: matchResult,
-                    createdAt: dayjs()
-                }
+                events.push({eventName: PLAY_EVENT_TYPE.dupeCheck, data: {summary, ...matchResult}, createdAt: dayjs()});
+                // currQueuedPlay.play.scrobble = {
+                //     ...(currQueuedPlay.play.scrobble ?? {}),
+                //     match: matchResult,
+                //     createdAt: dayjs()
+                // }
                 signal.throwIfAborted();
                 if (!matchResult.match) {
                     const transformedScrobble = await this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.postCompare);
+                    const { lifecycle = [] } = transformedScrobble;
+                    const psLifecycle = lifecycle.filter(x => x.hook === TRANSFORM_HOOK.postCompare);
+                    if(psLifecycle.length > 0) {
+                        events.push({eventName: PLAY_EVENT_TYPE.transform, createdAt: dayjs(psLifecycle[0].createdAt), data: psLifecycle});
+                    }
                     signal.throwIfAborted();
                     try {
                         const scrobbledPlay = await this.scrobble(transformedScrobble, {signal});
-                        currQueuedPlay.play = scrobbledPlay;
+                        const {scrobble} = scrobbledPlay;
+                        events.push({eventName: PLAY_EVENT_TYPE.scrobbleResult, createdAt: scrobble.createdAt, data: scrobble});
+                        //currQueuedPlay.play = scrobbledPlay;
                         await this.addScrobbledTrack(scrobbledPlay);
                         //handledShiftedPlay = true;
                     } catch (e) {
-                        currQueuedPlay.play.scrobble = {
+                        const scrobbleRes: ScrobbleResult = {
                             createdAt: dayjs()
-                        };
+                        }
 
                         const submitError = findCauseByReference(e, ScrobbleSubmitError);
                         if (submitError !== undefined) {
-                            currQueuedPlay.play.scrobble.payload = submitError.payload;
-                            currQueuedPlay.play.scrobble.response = submitError.responseBody;
-                            currQueuedPlay.play.scrobble.error = serializeError(submitError);
+                            scrobbleRes.payload = submitError.payload;
+                            scrobbleRes.response = submitError.responseBody;
+                            scrobbleRes.error = serializeError(submitError);
                         } else {
-                            currQueuedPlay.play.scrobble.payload = this.playToClientPayload(transformedScrobble);
-                            currQueuedPlay.play.scrobble.error = serializeError(e);
+                            scrobbleRes.payload = this.playToClientPayload(transformedScrobble);
+                            scrobbleRes.error = serializeError(e);
                         }
-
+                        events.push({eventName: PLAY_EVENT_TYPE.scrobbleResult, createdAt: scrobbleRes.createdAt, data: scrobbleRes});
                         queueError = e;
                         deadQueueEntity = await this.addDeadLetterScrobble(currQueuedPlay, e);
                         //handledShiftedPlay = true;
@@ -1335,14 +1350,19 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 queueState.queueStatus = 'failed';
                 queueState.error = queueError;
                 await this.playRepo.updateById(currQueuedPlay.id, {state: 'failed', error: queueError, play: currQueuedPlay.play});
+                events.push({eventName: PLAY_EVENT_TYPE.playStateChange, data: {state: 'failed'}, createdAt: dayjs()});
+                events.push({eventName: PLAY_EVENT_TYPE.queueStateChange, data: queueStateToEventData(queueState), createdAt: dayjs()});
                 currQueuedPlay.state = 'failed';
                 //currQueuedPlay.error = queueError;
             } else {
                 await this.queueRepo.updateById(queueState.id, {queueStatus: 'completed'});
                 await this.playRepo.updateById(currQueuedPlay.id, {state: successState ?? 'scrobbled', play: currQueuedPlay.play});
+                events.push({eventName: PLAY_EVENT_TYPE.playStateChange, data: {state: successState ?? 'scrobbled'}, createdAt: dayjs()});
                 currQueuedPlay.state = successState ?? 'scrobbled';
                 queueState.queueStatus = 'completed';
+                events.push({eventName: PLAY_EVENT_TYPE.queueStateChange, data: queueStateToEventData(queueState), createdAt: dayjs()});
             }
+            this.playEventsRepo.createMany(events.map(x => ({...x, playId: currQueuedPlay.id})));
             this.emitPlayUpdate({...currQueuedPlay, queueStates: [queueState]} as unknown as PlayApiCommonDetailed);
             this.emitEvent('scrobbleDequeued', { queuedScrobble: currQueuedPlay })
             this.queuedGauge.labels(this.getPrometheusLabels()).dec();
@@ -1443,97 +1463,124 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         if(deadScrobble === undefined) {
             throw new Error(`Play ${uid} does not exist for ${this.name}`);
         }
-        if(deadScrobble.state === 'scrobbled') {
-            throw new Error(`Play ${uid} is already scrobbled.`);
-        }
-        const deadQueueState: QueueStateSelect = deadScrobble.queueStates.find(x => x.queueName === DEAD_QUEUE);
-        if(deadQueueState === undefined) {
-            throw new Error(`Play ${uid} is not currently queued in dead letter.`);
-        }
-        this.setStatus(`Processing Dead Play ${uid}`);
-        //const deadScrobble = await this.playRepo.getQueueNext(this.dbComponent.id, CLIENT_INGRESS_QUEUE);
-        const deadLabel = {labels: deadScrobble.uid};
-        //const deadScrobble = this.deadLetterScrobbles[deadScrobbleIndex];
-        this.deadLogger.trace(deadLabel, `Processing dead scrobble => ${buildTrackString(deadScrobble.play)}`);
-
-        await this.handleQueuedScrobbleRanges();
-        signal?.throwIfAborted();
-
-        if (!(await this.isReady())) {
-            this.deadLogger.warn(deadLabel, 'Cannot process dead letter scrobble because client is not ready.');
-            return [false, deadScrobble];
-        }
-        let historicalPlays: PlayObject[] = [];
-        if(this.upstreamRefresh.refreshEnabled) {
-            try {
-                historicalPlays = await this.getSOTScrobblesForPlay(deadScrobble.play);
-            } catch (e) {
-                if(e.message === 'Cannot get historical plays due to cached error') {
-                    this.deadLogger.warn(deadLabel, `Previous error while getting historical scrobbles means this scrobble cannot be compared`);
-                    this.deadLogger.trace(e);
-                } else {
-                    this.deadLogger.warn(new SimpleError(`${deadScrobble.uid} - ${buildTrackString(deadScrobble.play)} from Source '${deadScrobble.play.meta.source}' => cannot get historical scrobbles`, {cause: e, shortStack: true}));
-                }
-
-                this.queueRepo.updateById(deadQueueState.id, {retries: deadQueueState.retries + 1, error: e, updatedAt: dayjs(), queueStatus: 'failed'});
-                //this.playRepo.updateById(deadScrobble.id, {error: e});
-                // deadScrobble.retries++;
-                // deadScrobble.error = messageWithCauses(e);
-                // deadScrobble.lastRetry = dayjs();
-                // this.deadLetterScrobbles[deadScrobbleIndex] = deadScrobble;
-                this.emitEvent('updateDeadLetter', {dead: deadScrobble});
-                return [false, deadScrobble];
+        const events: Omit<PlayEvent, 'playId'>[] = [];
+        let deadQueueState: QueueStateSelect;
+        try {
+            if (deadScrobble.state === 'scrobbled') {
+                throw new Error(`Play ${uid} is already scrobbled.`);
             }
-        }
-        signal?.throwIfAborted();
-        const {summary, ...matchResult} = await this.existingScrobble(deadScrobble.play, historicalPlays);
-        deadScrobble.play.scrobble = {
-            ...(deadScrobble.play.scrobble ?? {}),
-            match: matchResult,
-            createdAt: dayjs()
-        }
-        if(!matchResult.match) {
-            const transformedScrobble = await this.transformPlay(deadScrobble.play, TRANSFORM_HOOK.postCompare);
+            deadQueueState = deadScrobble.queueStates.find(x => x.queueName === DEAD_QUEUE);
+            if (deadQueueState === undefined) {
+                throw new Error(`Play ${uid} is not currently queued in dead letter.`);
+            }
+            this.setStatus(`Processing Dead Play ${uid}`);
+            //const deadScrobble = await this.playRepo.getQueueNext(this.dbComponent.id, CLIENT_INGRESS_QUEUE);
+            const deadLabel = { labels: deadScrobble.uid };
+            //const deadScrobble = this.deadLetterScrobbles[deadScrobbleIndex];
+            this.deadLogger.trace(deadLabel, `Processing dead scrobble => ${buildTrackString(deadScrobble.play)}`);
+
+            await this.handleQueuedScrobbleRanges();
             signal?.throwIfAborted();
-            try {
-                const scrobbledPlay = await this.scrobble(transformedScrobble);
-                deadScrobble.play = scrobbledPlay;
-                await this.addScrobbledTrack(scrobbledPlay);
-                this.playRepo.updateById(deadScrobble.id, {play: deadScrobble.play});
-                this.queueRepo.updateById(deadQueueState.id, {error: null, updatedAt: dayjs(), queueStatus: QUEUE_STATUS_COMPLETED});
-                this.removeDeadLetterScrobble(deadScrobble, 'scrobbled', true);
-            } catch (e) {
-                deadScrobble.play.scrobble = {
-                    ...(deadScrobble.play.scrobble ?? {}),
-                    //createdAt: dayjs()
-                }
-                const submitError = findCauseByReference(e, ScrobbleSubmitError);
-                if(submitError !== undefined) {
-                    deadScrobble.play.scrobble.payload = submitError.payload;
-                    deadScrobble.play.scrobble.response = submitError.responseBody;
-                    deadScrobble.play.scrobble.error = serializeError(submitError);
-                } else {
-                    deadScrobble.play.scrobble.payload = this.playToClientPayload(transformedScrobble);
-                    deadScrobble.play.scrobble.error = serializeError(e);
-                }
 
-                this.queueRepo.updateById(deadQueueState.id, {retries: deadQueueState.retries + 1, error: e, updatedAt: dayjs(), queueStatus: 'failed'});
-                this.playRepo.updateById(deadScrobble.id, {play: deadScrobble.play});
-                // deadScrobble.retries++;
-                // deadScrobble.error = messageWithCauses(e);
-                // deadScrobble.lastRetry = dayjs();
-                this.deadLogger.error(new Error(`${deadScrobble.uid} - Could not scrobble ${buildTrackString(transformedScrobble)} from Source '${deadScrobble.play.meta.source}' due to error`, {cause: e}));
-                //this.deadLetterScrobbles[deadScrobbleIndex] = deadScrobble;
-                this.emitEvent('updateDeadLetter', {dead: deadScrobble});
+            if (!(await this.isReady())) {
+                this.deadLogger.warn(deadLabel, 'Cannot process dead letter scrobble because client is not ready.');
                 return [false, deadScrobble];
             }
-        } else {
-            this.playRepo.updateById(deadScrobble.id, {play: deadScrobble.play});
-            this.deadLogger.verbose(`Looks like ${buildTrackString(deadScrobble.play)} was already scrobbled!\n${summary}`);
-            this.removeDeadLetterScrobble(deadScrobble, 'duped', true);
-        }
+            let historicalPlays: PlayObject[] = [];
+            if (this.upstreamRefresh.refreshEnabled) {
+                try {
+                    historicalPlays = await this.getSOTScrobblesForPlay(deadScrobble.play);
+                } catch (e) {
+                    if (e.message === 'Cannot get historical plays due to cached error') {
+                        this.deadLogger.warn(deadLabel, `Previous error while getting historical scrobbles means this scrobble cannot be compared`);
+                        this.deadLogger.trace(e);
+                    } else {
+                        this.deadLogger.warn(new SimpleError(`${deadScrobble.uid} - ${buildTrackString(deadScrobble.play)} from Source '${deadScrobble.play.meta.source}' => cannot get historical scrobbles`, { cause: e, shortStack: true }));
+                    }
 
-        return [true, deadScrobble];
+                    events.push({eventName: PLAY_EVENT_TYPE.queueStateChange, data: queueStateToEventData({...deadQueueState, queueStatus: 'failed', error: e}), createdAt: dayjs()});
+                    this.queueRepo.updateById(deadQueueState.id, { retries: deadQueueState.retries + 1, error: e, updatedAt: dayjs(), queueStatus: 'failed' });
+                    //this.playRepo.updateById(deadScrobble.id, {error: e});
+                    // deadScrobble.retries++;
+                    // deadScrobble.error = messageWithCauses(e);
+                    // deadScrobble.lastRetry = dayjs();
+                    // this.deadLetterScrobbles[deadScrobbleIndex] = deadScrobble;
+                    this.emitEvent('updateDeadLetter', { dead: deadScrobble });
+                    return [false, deadScrobble];
+                }
+            }
+            signal?.throwIfAborted();
+            const { summary, ...matchResult } = await this.existingScrobble(deadScrobble.play, historicalPlays);
+            events.push({eventName: PLAY_EVENT_TYPE.dupeCheck, data: {summary, ...matchResult}, createdAt: dayjs()});
+            // deadScrobble.play.scrobble = {
+            //     ...(deadScrobble.play.scrobble ?? {}),
+            //     match: matchResult,
+            //     createdAt: dayjs()
+            // }
+            if (!matchResult.match) {
+                const transformedScrobble = await this.transformPlay(deadScrobble.play, TRANSFORM_HOOK.postCompare);
+                const { lifecycle = [] } = transformedScrobble;
+                const psLifecycle = lifecycle.filter(x => x.hook === TRANSFORM_HOOK.postCompare);
+                if(psLifecycle.length > 0) {
+                    events.push({eventName: PLAY_EVENT_TYPE.transform, createdAt: dayjs(psLifecycle[0].createdAt), data: psLifecycle});
+                }
+                signal?.throwIfAborted();
+                try {
+                    const scrobbledPlay = await this.scrobble(transformedScrobble);
+                    const {scrobble} = scrobbledPlay;
+                    events.push({eventName: PLAY_EVENT_TYPE.scrobbleResult, createdAt: scrobble.createdAt, data: scrobble});
+                    deadScrobble.play = scrobbledPlay;
+                    await this.addScrobbledTrack(scrobbledPlay);
+                    this.playRepo.updateById(deadScrobble.id, { play: deadScrobble.play, state: 'scrobbled' });
+                    this.queueRepo.updateById(deadQueueState.id, { error: null, updatedAt: dayjs(), queueStatus: QUEUE_STATUS_COMPLETED });
+                    events.push({eventName: PLAY_EVENT_TYPE.queueStateChange, data: {queueName: DEAD_QUEUE, queueStatus: QUEUE_STATUS_COMPLETED}, createdAt: dayjs()});
+                    events.push({eventName: PLAY_EVENT_TYPE.playStateChange, data: {state: 'scrobbled'}, createdAt: dayjs()});
+                    this.removeDeadLetterScrobble(deadScrobble, 'scrobbled', true);
+                } catch (e) {
+                    const scrobbleRes: ScrobbleResult = {
+                        createdAt: dayjs()
+                    }
+                    // deadScrobble.play.scrobble = {
+                    //     ...(deadScrobble.play.scrobble ?? {}),
+                    //     //createdAt: dayjs()
+                    // }
+                    const submitError = findCauseByReference(e, ScrobbleSubmitError);
+                    if (submitError !== undefined) {
+                        scrobbleRes.payload = submitError.payload;
+                        scrobbleRes.response = submitError.responseBody;
+                        scrobbleRes.error = serializeError(submitError);
+                    } else {
+                        scrobbleRes.payload = this.playToClientPayload(transformedScrobble);
+                        scrobbleRes.error = serializeError(e);
+                    }
+                    events.push({eventName: PLAY_EVENT_TYPE.scrobbleResult, createdAt: scrobbleRes.createdAt, data: scrobbleRes});
+                    this.queueRepo.updateById(deadQueueState.id, { retries: deadQueueState.retries + 1, error: e, updatedAt: dayjs(), queueStatus: 'failed' });
+                    events.push({eventName: PLAY_EVENT_TYPE.queueStateChange, data: queueStateToEventData({...deadQueueState, queueStatus: 'failed', error: e}), createdAt: dayjs()});
+                    //this.playRepo.updateById(deadScrobble.id, { play: deadScrobble.play });
+                    // deadScrobble.retries++;
+                    // deadScrobble.error = messageWithCauses(e);
+                    // deadScrobble.lastRetry = dayjs();
+                    this.deadLogger.error(new Error(`${deadScrobble.uid} - Could not scrobble ${buildTrackString(transformedScrobble)} from Source '${deadScrobble.play.meta.source}' due to error`, { cause: e }));
+                    //this.deadLetterScrobbles[deadScrobbleIndex] = deadScrobble;
+                    this.emitEvent('updateDeadLetter', { dead: deadScrobble });
+                    return [false, deadScrobble];
+                }
+            } else {
+                this.playRepo.updateById(deadScrobble.id, { play: deadScrobble.play });
+                this.deadLogger.verbose(`Looks like ${buildTrackString(deadScrobble.play)} was already scrobbled!\n${summary}`);
+                this.removeDeadLetterScrobble(deadScrobble, 'duped', true);
+                events.push({eventName: PLAY_EVENT_TYPE.queueStateChange, data: {queueName: DEAD_QUEUE, queueStatus: QUEUE_STATUS_COMPLETED}, createdAt: dayjs()});
+                events.push({eventName: PLAY_EVENT_TYPE.playStateChange, data: {state: 'duped', reason: 'Looks like it was already scrobbled downstream'}, createdAt: dayjs()});
+            }
+
+            return [true, deadScrobble];
+        } catch (e) {
+            if(deadQueueState !== undefined) {
+                events.push({eventName: PLAY_EVENT_TYPE.queueStateChange, data: queueStateToEventData({...deadQueueState, queueStatus: 'failed', error: e}), createdAt: dayjs()});
+            }
+        } finally {
+            this.playEventsRepo.createMany(events.map(x => ({...x, playId: deadScrobble.id})));
+        }
     }
 
     removeDeadLetterScrobble = async (dead: (PlaySelect & {queueStates: QueueStateSelect[]}) | string, state: PlaySelect['state'], success: boolean) => {
@@ -1569,6 +1616,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             queueUpdate.error = null;
         }
         await this.queueRepo.updateById(deadQueueState.id, queueUpdate);
+
         await this.playRepo.updateById(deadScrobble.id, removeUndefinedKeys({state, error: success ? null : undefined}));
         this.deadLogger.info({labels: deadScrobble.uid}, `Scrobble ${buildTrackString(deadScrobble.play)} marked as completed`);
         this.deadLetterLength -= 1;
@@ -1602,6 +1650,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         const createdQueuedPlays: PlaySelect[] = [];
 
         for await(const play of pMapIterable(playDatas, this.staggerMappers.preCompare(async x => transformFunc !== undefined ? await transformFunc(x) : await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 3})) {
+            const events: Omit<PlayEvent, 'playId'>[] = [];
             try {
                 // cheap check, looks for play data (non-meta) hash, playdate, and optionally mbid recording
                 const cheapExisting = await this.playRepo.checkExisting(play, { queueName: INGRESS_QUEUE });
@@ -1650,7 +1699,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             });
 
             const playRow = await this.playRepo.createPlays([createPlayData]);
-            const queueState = await this.queueRepo.create({componentId: this.dbComponent.id, playId: playRow[0].id, queueName: INGRESS_QUEUE});
+            const queueState = await this.queueRepo.create({componentId: this.dbComponent.id, playId: playRow[0].id, queueName: INGRESS_QUEUE}) as QueueStateSelect;
+            await this.playEventsRepo.createMany([
+                {playId: playRow[0].id, eventName: PLAY_EVENT_TYPE.playStateChange, data: {state: 'queued'}, createdAt: playRow[0].seenAt.add(1,'ms')},
+                {playId: playRow[0].id, eventName: PLAY_EVENT_TYPE.queueStateChange, data: queueStateToEventData(queueState), createdAt: queueState.createdAt}
+            ]);
             createdQueuedPlays.push(playRow[0]);
             this.logger.debug(`Added ${buildTrackString(play)} to the queue`);
             this.setStatus(`Added Play from parent ${play.uid} to queue`);
@@ -1684,6 +1737,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             playId: data.id,
             queueName: DEAD_QUEUE
         }) as QueueStateSelect;
+        await this.playEventsRepo.createMany([
+            {playId: data.id, eventName: PLAY_EVENT_TYPE.queueStateChange, data: queueStateToEventData(newQueue), createdAt: newQueue.createdAt}
+        ]);
         const deadData = {id: nanoid(), retries: 0, error: e, play: data.play};
         //this.deadLetterScrobbles.push(deadData);
         //this.deadLetterScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
@@ -1939,7 +1995,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     public async getPlayApiResponse(uid: string, opts: {with?: WithPlayRelation[]} = {}): Promise<PlayApiCommonDetailed> {
         const {
-            with: withQuery = ['input','parent-input','queues'],
+            with: withQuery = ['input','parent-input','queues','events'],
         } = opts;
         return await this.playRepo.findByUid(uid, { with: withQuery as WithPlayRelation[] }) as unknown as PlayApiCommonDetailed;
     }

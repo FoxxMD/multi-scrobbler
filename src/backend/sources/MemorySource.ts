@@ -366,11 +366,11 @@ export default class MemorySource extends AbstractSource {
 
         if (thresholdResults.passes) {
             const matchingRecent = await this.existingDiscovered(candidate); //sRecentlyPlayed.find(x => playObjDataMatch(x, candidate));
-            if (matchingRecent === undefined) {
+            if (matchingRecent.match === false) {
                 return [true,`${stPrefix} added after ${thresholdResultSummary(thresholdResults)} and not matching any prior plays`];
             } else {
                 const {data: {playDate, duration}} = candidate;
-                const {data: {playDate: rplayDate}} = matchingRecent;
+                const {closestMatchedPlay: {data: {playDate: rplayDate}} = {}} = matchingRecent;
                 if (!playDate.isSame(rplayDate)) {
                     if (duration !== undefined) {
                         if (playDate.isAfter(rplayDate.add(duration, 's'))) {
@@ -386,7 +386,7 @@ export default class MemorySource extends AbstractSource {
                         return [false, `${stPrefix} not added because it matched the last discovered play and could not determine time frame of play`];
                     }
                 } else {
-                    return [false, `${stPrefix} ${EXPECTED_NON_DISCOVERED_REASON}`]
+                    return [false, `${stPrefix} ${EXPECTED_NON_DISCOVERED_REASON}`];
                 }
             }
         }
