@@ -14,11 +14,11 @@ import type {SourceType} from "../../../../../core/Atomic.ts";
 import type {FindMany, FindWhere, FindWith, PlayInputNew, PlayNew, PlaySelect, PlaySelectWithQueueStates, PlayWith, QueueStateSelect, WhereClause} from "../drizzleTypes.ts";
 import { type DbConcrete, runTransaction } from "../drizzleUtils.ts";
 import { generateInputEntity, generatePlayEntity, hydratePlaySelect, type PlayEntityOpts, type PlayHydateOptions } from "../entityUtils.ts";
-import { playInputs, plays, relations } from "../schema/schema.ts";
+import { playEvents, playInputs, plays, relations } from "../schema/schema.ts";
 import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
 import type {PaginatedResponse} from "../../../../../core/Api.ts";
 import type {PaginatedQueryResponse} from "../../../../../core/Api.ts";
-;
+import type { PlayEventTransform } from "../../../../../core/PlayEvent.ts";
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 
@@ -38,7 +38,7 @@ export interface PlayWhereOpts<D extends DateLike = Dayjs> {
     text?: string[]
 }
 
-export type WithPlayRelation = 'input' | 'parent' | 'parent-input' | 'queues';
+export type WithPlayRelation = 'input' | 'parent' | 'parent-input' | 'queues' | 'events';
 export interface QueryPlaysOpts<D extends DateLike = Dayjs> extends PlayWhereOpts<D> {
     sort?: 'seenAt' | 'playedAt'
     order?: 'asc' | 'desc'
@@ -103,11 +103,14 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
             const entitiesData = entitiesOpts.map((data) => {
                 const {
-                    play,
+                    play: {
+                        lifecycle,
+                        ...playRest
+                    },
                     input,
                     ...rest
                 } = data;
-                return generatePlayEntity(play, { componentId: this.componentId, ...rest });
+                return generatePlayEntity(playRest, { componentId: this.componentId, ...rest });
             });
 
             const nakedPlays = await this.db.insert(plays).values(entitiesData).returning();
@@ -126,6 +129,29 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             });
 
             const inputRow = await this.db.insert(playInputs).values(inputDatas);
+
+            const eventData = nakedPlays.map((x, index) => {
+                const {
+                    play: {
+                        lifecycle = [],
+                    } = {}
+                } = entitiesOpts[index];
+
+                if(lifecycle.length > 0) {
+                    const transformEvent: PlayEventTransform = {
+                        playId: x.id,
+                        eventName: 'transform',
+                        createdAt: dayjs(lifecycle[0].createdAt),
+                        data: lifecycle
+                    }
+                    return transformEvent;
+                }
+                return undefined;
+            }).filter(x => x !== undefined);
+            if(eventData.length > 0) {
+                await this.db.insert(playEvents).values(eventData);
+            }
+
             playRows = nakedPlays.map((x, index) => ({...x, play: hydratePlaySelect(x, hydrate), input: inputRow[index]}));
         });
 
@@ -181,6 +207,9 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                         break;
                     case 'queues':
                         query.with.queueStates = true;
+                        break;
+                    case 'events':
+                        query.with.events = true;
                         break;
                     default:
                         throw new Error(`Unknown relation ${w}`);
@@ -812,6 +841,9 @@ export const buildPlayWith = (args: WithPlayRelation[] | undefined): FindWith<'p
                 break;
             case 'queues':
                 qWith.queueStates = true;
+                break;
+            case 'events':
+                qWith.events = true;
                 break;
             default:
                 throw new Error(`Unknown relation ${w}`);

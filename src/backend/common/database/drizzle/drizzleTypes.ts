@@ -1,5 +1,5 @@
 import type {DBQueryConfig, DBQueryConfigWith, KnownKeysOnly, RelationFieldsFilterInternals, BuildQueryResult, RelationsFilter} from "drizzle-orm";
-import type { components, componentMigrations, playInputs, plays, queueStates, relations, playsHistorical } from "./schema/schema.ts";
+import type { components, componentMigrations, playInputs, plays, queueStates, relations, playsHistorical, playEvents } from "./schema/schema.ts";
 import type {TSchema, TableName} from "./schema/schema.ts";
 
 
@@ -23,6 +23,9 @@ export type PlayNew = typeof plays.$inferInsert;
 
 export type PlayHistoricalSelect = typeof playsHistorical.$inferSelect;
 export type PlayHistoricalNew = typeof playsHistorical.$inferInsert;
+
+export type PlayEventSelect = typeof playEvents.$inferSelect;
+export type PlayEventNew = typeof playEvents.$inferInsert;
 
 // useful references for building types
 // https://github.com/drizzle-team/drizzle-orm/discussions/2596
