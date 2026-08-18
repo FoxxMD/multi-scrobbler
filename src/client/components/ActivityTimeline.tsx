@@ -1,5 +1,5 @@
 import type { Collapsible } from '@chakra-ui/react';
-import { Card, Icon, SkeletonCircle, SkeletonText, Span, Tabs, Timeline} from '@chakra-ui/react';
+import { Card, Text, Icon, SkeletonCircle, SkeletonText, Span, Tabs, Timeline} from '@chakra-ui/react';
 import dayjs from "dayjs";
 import React from "react";
 import { BiWrench } from "react-icons/bi";
@@ -23,7 +23,8 @@ import { ScrobbleMatchResult } from "./ScrobbleMatchResult";
 import { TimelineErrorIcon } from "./timeline/TimelineIcon";
 import { diffElements, TransformSteps } from "./TransformSteps";
 import { Muted } from "./Typography";
-import type { PlayEventQueueStateChange } from '../../core/PlayEvent';
+import type { PlayEventPlayStateChange, PlayEventQueueStateChange } from '../../core/PlayEvent';
+import { FaInfo } from "react-icons/fa6";
 
 
 interface ActivityTimelineProps {
@@ -164,24 +165,6 @@ const TransformsItem = (props: Pick<ActivityTimelineProps, 'activity' | 'collaps
     </Timeline.Item>
     )
 }
-
-const NoTransformsItem = () => (
-    <Timeline.Item>
-        <Timeline.Connector>
-            <Timeline.Separator />
-            <Timeline.Indicator>
-                <Icon {...timelineIconProps}>
-                    <BiWrench />
-                </Icon>
-            </Timeline.Indicator>
-        </Timeline.Connector>
-        <Timeline.Content>
-            <Timeline.Title >
-                <TimelineItemSummaryText>Play <Muted>was</Muted> not transformed <Muted>because no</Muted> Transform Rules <Muted> were used/configured.</Muted></TimelineItemSummaryText>
-            </Timeline.Title>
-        </Timeline.Content>
-    </Timeline.Item>
-)
 
 const ScrobbleMatchItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpen'> & { match: PlayMatchResult<string> }) => {
     const {
@@ -345,6 +328,80 @@ const QueueTimelineItem = (props: {queueState: PlayEventQueueStateChange<string>
     );
 }
 
+const StateChangeItem = (props: {event: PlayEventPlayStateChange<string>, collapsibleOpen: boolean}) => {
+        const {
+        event: {
+            data: {
+                state,
+                error,
+                reason
+            },
+            createdAt,
+        } = {},
+        collapsibleOpen,
+    } = props;
+
+    let color: string;
+    switch (state) {
+        case 'discarded':
+        case 'duped':
+            color = 'orange';
+            break;
+        case 'discovered':
+        case 'scrobbled':
+            color = 'green';
+            break;
+        case 'failed':
+            color = 'red';
+            break;
+        case 'queued':
+            color = 'gray';
+            break;
+    }
+
+    const text = <TimelineItemSummaryText>State <Muted>was changed to</Muted> <Span color={`${color}.solid`}>{capitalizeWords(state)}</Span> <Muted>at</Muted> {shortTodayAwareFormat(dayjs(createdAt))}</TimelineItemSummaryText>;
+
+    let content: React.JSX.Element;
+    if(error !== null && error !== undefined) {
+        content = (
+            <Timeline.Title>
+            <MSCollapsible 
+                triggerProps={timelineCollapsibleProps}
+                indicator={text}
+                defaultOpen={collapsibleOpen}
+                disableUntil="md"
+                timeline
+                unmountOnExit>
+                {reason !== undefined && reason !== null ? <Text my={2}>{reason}</Text> : null}
+                <ErrorAlert error={error} />
+            </MSCollapsible>
+            </Timeline.Title>
+        )
+    } else {
+        content = (<>
+        <Timeline.Title>
+            {text}
+        </Timeline.Title>
+        {reason !== undefined && reason !== null ? <Text my={2}>{reason}</Text> : null}
+        </>);
+    }
+
+    return (
+        <Timeline.Item>
+                <Timeline.Connector>
+                    <Timeline.Separator />
+                    <Timeline.Indicator>
+                        <FaInfo color="blue.focusRing"/>
+                    </Timeline.Indicator>
+                </Timeline.Connector>
+                <Timeline.Content gap="4">
+                    {content}
+                </Timeline.Content>
+            </Timeline.Item>
+    );
+
+}
+
 export const ActivityTimeline = (props: ActivityTimelineProps) => {
 
     if(props.activity === undefined) {
@@ -387,6 +444,9 @@ export const ActivityTimeline = (props: ActivityTimelineProps) => {
             } break;
             case 'scrobbleResult':
                 timelineElements.push(<ScrobbleResponseItem key={event.id} scrobble={event.data} componentName={componentName} collapsibleOpen={collapsibleOpen}/>);
+                break;
+            case 'playStateChange':
+                timelineElements.push(<StateChangeItem key={event.id} event={event} collapsibleOpen={collapsibleOpen}/>)
         }
     }
 
