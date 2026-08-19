@@ -515,7 +515,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 const {lifecycle = []} = p;
                 const psLifecycle = lifecycle.filter(x => x.hook === TRANSFORM_HOOK.postCompare);
                 if(psLifecycle.length > 0) {
-                    events.push({...transformToPlayEvent(psLifecycle), playId: p.id});
+                    events.push({...transformToPlayEvent(psLifecycle), playId: p.id, createdAt: dayjs()});
                 }
             }
             this.emitEvent('discoveredToScrobble', {
@@ -982,7 +982,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         try {
             const {lifecycle = [], ...preCompared} = await this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.preCompare);
             if(lifecycle.length > 0) {
-                events.push(transformToPlayEvent(lifecycle));
+                events.push({...transformToPlayEvent(lifecycle), createdAt: dayjs()});
             }
             let existing: PlayObject;
             // cheap check for existing

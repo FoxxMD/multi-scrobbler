@@ -1281,7 +1281,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     const { lifecycle = [] } = transformedScrobble;
                     const psLifecycle = lifecycle.filter(x => x.hook === TRANSFORM_HOOK.postCompare);
                     if(psLifecycle.length > 0) {
-                        events.push(transformToPlayEvent(psLifecycle));
+                        events.push({...transformToPlayEvent(psLifecycle), createdAt: dayjs()});
                     }
                     signal.throwIfAborted();
                     try {
@@ -1522,7 +1522,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 const { lifecycle = [] } = transformedScrobble;
                 const psLifecycle = lifecycle.filter(x => x.hook === TRANSFORM_HOOK.postCompare);
                 if(psLifecycle.length > 0) {
-                    events.push(transformToPlayEvent(psLifecycle));
+                    events.push({...transformToPlayEvent(psLifecycle), createdAt: dayjs()});
                 }
                 signal?.throwIfAborted();
                 try {
