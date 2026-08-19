@@ -437,28 +437,28 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                     summaryDelStates.push(`No '${retentionType}' Plays older than ${shortTodayAwareFormat(date)}`);
                 } else {
                     for(const id of ids) {
-                        let compactedPlay: PlayObject;
                         if(compactTypes.includes('input')) {
                             await this.db.update(playInputs).set({
                                 data: {removedReason: 'Removed by compaction'}
                             }).where(eq(playInputs.playId, id));
                         }
                         if(compactTypes.includes('transform')) {
-                            const playRow = await this.db.query.plays.findFirst({where: {id: id}});
-                            if(playRow === undefined) {
-                                // uhh shouldn't be
-                                loggerCom.warn(`No Play found with ID ${id}, but it should have been...`);
-                                continue;
-                            }
-
-                            compactedPlay = playRow.play;
-                            if(compactedPlay.lifecycle !== undefined) {
-                                compactedPlay.lifecycle = compactedPlay.lifecycle.map(x => {
-                                    if(x.inputs == undefined) {
+                            const events = await this.db.query.playEvents.findMany({where: {playId: id}});
+                            for(const ev of events) {
+                                if(ev.eventName === 'transform') {
+                                    const transformEvent = ev as PlayEventTransform;
+                                    let compactedInput = false;
+                                    transformEvent.data = transformEvent.data.map(x => {
+                                        if(x.inputs !== undefined && x.inputs.length > 0) {
+                                            compactedInput = true;
+                                            return {...x, inputs: x.inputs.map((y) => ({type: y.type, input: 'Removed by compaction'}))};
+                                        }
                                         return x;
+                                    });
+                                    if(compactedInput) {
+                                        await this.db.update(playEvents).set({data: transformEvent.data}).where(eq(playEvents.id, transformEvent.id));
                                     }
-                                    return {...x, inputs: x.inputs.map(y => ({type: y.type, input: 'Removed by compaction'}))};
-                                });
+                                }
                             }
                         }
 
@@ -466,9 +466,6 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                         const vals: Parameters<typeof updater.set>[0] = {
                             compacted: compactedFlags.join('-')
                         };
-                        if(compactedPlay !== undefined) {
-                            vals.play = compactedPlay;
-                        }
                         await this.db.update(plays).set(vals).where(eq(plays.id, id));
                     }
                     loggerCom.trace(`Compacted ${ids.length} '${retentionType}' plays`);

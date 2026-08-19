@@ -1362,7 +1362,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 queueState.queueStatus = 'completed';
                 events.push({eventName: PLAY_EVENT_TYPE.queueStateChange, data: queueStateToEventData(queueState), createdAt: dayjs()});
             }
-            this.playEventsRepo.createMany(events.map(x => ({...x, playId: currQueuedPlay.id})));
+            await this.playEventsRepo.createMany(events.map(x => ({...x, playId: currQueuedPlay.id})));
             this.emitPlayUpdate({...currQueuedPlay, queueStates: [queueState]} as unknown as PlayApiCommonDetailed);
             this.emitEvent('scrobbleDequeued', { queuedScrobble: currQueuedPlay })
             this.queuedGauge.labels(this.getPrometheusLabels()).dec();
@@ -1579,7 +1579,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 events.push({eventName: PLAY_EVENT_TYPE.queueStateChange, data: queueStateToEventData({...deadQueueState, queueStatus: 'failed', error: e}), createdAt: dayjs()});
             }
         } finally {
-            this.playEventsRepo.createMany(events.map(x => ({...x, playId: deadScrobble.id})));
+            await this.playEventsRepo.createMany(events.map(x => ({...x, playId: deadScrobble.id})));
         }
     }
 
