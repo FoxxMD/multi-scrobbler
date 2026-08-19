@@ -74,7 +74,7 @@ import assert from "node:assert";
 import { COMPONENT_STATE, type ComponentClientApiJson, type PlayApiCommonDetailed } from "../../core/Api.ts";
 import type {ComponentState} from "react";
 import { DrizzlePlayEventsRepository } from "../common/database/drizzle/repositories/PlayEventsRepository.ts";
-import { type PlayEvent } from "../../core/PlayEvent.ts";
+import { PLAY_EVENT_TYPE, type PlayEvent } from "../../core/PlayEvent.ts";
 import { dupeCheckToPlayEvent, queueStateToPlayEvent, scrobbleToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from "../common/database/drizzle/entityUtils.ts";
 
 type SourceMappedPlayer = {player: SourcePlayerObj, source: SourceIdentifier};
@@ -1241,14 +1241,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
         try {
 
-            // want to fail scrobbles that are being *ingested* by component
-            // but not those that have already failed but will be dead queue processed
-            // since dead queued scrobbles are likely from a different time period that had monitoring
-            const monitoringStatus = this.getMonitoringStatus();
-            if(!monitoringStatus.monitoring) {
-                throw new SimpleError(`Monitoring is disabled by ${capitalize(monitoringStatus.origin)}`);
+            if(!currQueuedPlay.play.meta.wasMonitored) {
+                successState = 'discarded';
+                this.logger.debug(`Not processing ${buildTrackString(currQueuedPlay.play)} because monitoring was disabled when Play was queued.`);
+                events.push(stateChangeToPlayEvent({state: 'discarded', reason: 'Monitoring was disabled when Play was queued'}));
+                return;
             }
-            
+        
             if (this.upstreamRefresh.refreshEnabled) {
                 try {
                     historicalPlays = await this.getSOTScrobblesForPlay(currQueuedPlay.play);
@@ -1358,7 +1357,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             } else {
                 await this.queueRepo.updateById(queueState.id, {queueStatus: 'completed'});
                 await this.playRepo.updateById(currQueuedPlay.id, {state: successState ?? 'scrobbled', play: currQueuedPlay.play});
-                events.push(stateChangeToPlayEvent({state: successState ?? 'scrobbled'}));
+                if(!events.some(x => x.eventName === PLAY_EVENT_TYPE.playStateChange)) {
+                    events.push(stateChangeToPlayEvent({state: successState ?? 'scrobbled'}));
+                }
                 currQueuedPlay.state = successState ?? 'scrobbled';
                 queueState.queueStatus = 'completed';
                 events.push(queueStateToPlayEvent(queueState));
@@ -1646,7 +1647,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
 
     queueScrobble = async (data: PlayObject | PlayObject[], source: string, transformFunc?: (x: PlayObject) => Promise<PlayObject>) => {
-        const playDatas = (Array.isArray(data) ? data : [data]).map(x => ({...x, meta: {...x.meta, seenAt: dayjs()}}));
+        const monitoring = this.getMonitoringStatus();
+        const playDatas = (Array.isArray(data) ? data : [data]).map(x => ({...x, meta: {...x.meta, wasMonitored: monitoring.monitoring, seenAt: dayjs()}}));
 
         const createdQueuedPlays: PlaySelect[] = [];
 
