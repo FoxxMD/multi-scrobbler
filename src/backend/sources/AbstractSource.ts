@@ -50,7 +50,7 @@ import type {PaginatedResponse} from "../../core/Api.ts";
 import type { PlaySelect, PlaySelectWithQueueStates, QueueStateNew, QueueStateSelect } from '../common/database/drizzle/drizzleTypes.ts';
 import { DrizzleQueueRepository } from '../common/database/drizzle/repositories/QueueRepository.ts';
 import { DrizzlePlayEventsRepository } from '../common/database/drizzle/repositories/PlayEventsRepository.ts';
-import { type PlayEvent } from '../../core/PlayEvent.ts';
+import { PLAY_EVENT_TYPE, type PlayEvent } from '../../core/PlayEvent.ts';
 import { dupeCheckToPlayEvent, queueStateToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from '../common/database/drizzle/entityUtils.ts';
 
 export interface RecentlyPlayedOptions {
@@ -980,8 +980,16 @@ export default abstract class AbstractSource extends AbstractComponent implement
         const queueState = currQueuedPlay.queueStates.find(x => x.queueName === INGRESS_QUEUE);
         const updatedQueueState: Partial<QueueStateNew> = {};
         let state: PlayState;
-        const events: Omit<PlayEvent, 'playId'>[] = [];
+        let events: Omit<PlayEvent, 'playId'>[] = [];
         try {
+
+            if(!currQueuedPlay.play.meta.wasMonitored) {
+                this.logger.debug(`Not processing ${buildTrackString(currQueuedPlay.play)} because monitoring was disabled when Play was queued.`);
+                state = 'discarded';
+                events.push(stateChangeToPlayEvent({state, reason: 'Not processing because monitoring was disabled when Play was queued'}));
+                return;
+            } 
+
             const {lifecycle = [], ...preCompared} = await this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.preCompare);
             if(lifecycle.length > 0) {
                 events.push({...transformToPlayEvent(lifecycle), createdAt: dayjs()});
@@ -1004,26 +1012,19 @@ export default abstract class AbstractSource extends AbstractComponent implement
             currQueuedPlay.play = preCompared;
             signal?.throwIfAborted();
             if(existing === undefined) {
-                if(!preCompared.meta.wasMonitored) {
-                    this.logger.debug(`Not adding ${buildTrackString(preCompared)} as discovered because monitoring was disabled when Play was created.`);
-                    state = 'discarded';
-                    updatedQueueState.error = {message: 'Play was not added as discovered because monitoring was disabled when Play was created.'};
-                    events.push(stateChangeToPlayEvent({state, reason: 'Not added as discovered because monitoring was disabled when Play was created'}));
-                } else {
-                    state = 'discovered';
-                    events.push(stateChangeToPlayEvent({state}));
-                    this.tracksDiscovered++;
-                    this.tracksDiscoveredTotal++
-                    this.discoveredCounter.labels(this.getPrometheusLabels()).inc();
-                    this.emitEvent('discovered', {play: preCompared});
-                }
+                state = 'discovered';
+                events.push(stateChangeToPlayEvent({state}));
+                this.tracksDiscovered++;
+                this.tracksDiscoveredTotal++
+                this.discoveredCounter.labels(this.getPrometheusLabels()).inc();
+                this.emitEvent('discovered', {play: preCompared});
             } else {
                 this.playRepo.updateById(existing.id, {updatedAt: dayjs()});
                 state = 'duped';
                 events.push(stateChangeToPlayEvent({state}));
                 currQueuedPlay.parentId = existing.id;
             }
-            this.playRepo.updateById(currQueuedPlay.id, {play: preCompared, state});
+
             const recentPlays = await this.getRecentPlays(false);
             // only need to update if its already in memory,
             // and better to update in-memory than clear cache so we aren't refetching from db on every discover
@@ -1043,12 +1044,16 @@ export default abstract class AbstractSource extends AbstractComponent implement
             updatedQueueState.queueStatus = 'completed';
             events.push(queueStateToPlayEvent({...queueState, ...updatedQueueState}));
 
+            this.playRepo.updateById(currQueuedPlay.id, {play: preCompared, state});
             this.logger.info(`${capitalize(state)} => ${buildTrackString(preCompared)}`);
         } catch (e) {
             const err = new Error(`Error ocurred while trying to discover Play ${currQueuedPlay.uid}`, {cause: e});
             updatedQueueState.error = err;
             updatedQueueState.queueStatus = 'failed';
+            events = events.filter(x => x.eventName !== PLAY_EVENT_TYPE.playStateChange);
+            events.push(stateChangeToPlayEvent({state: 'failed'}));
             events.push(queueStateToPlayEvent({...queueState, ...updatedQueueState}));
+            this.playRepo.updateById(currQueuedPlay.id, {state: 'failed', error: err});
         } finally {
             await this.queueRepo.updateById(queueState.id, updatedQueueState);
             const createdEvents = await this.playEventsRepo.createMany(events.map(x => ({...x, playId: currQueuedPlay.id})));
