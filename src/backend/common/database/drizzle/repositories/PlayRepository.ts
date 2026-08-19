@@ -10,15 +10,15 @@ import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../..
 import { hashObject } from "../../../../utils/StringUtils.ts";
 import { comparePlayTemporally, getScrobbleTsSOCDateWithContext, getTemporalAccuracyCloseVal, hasAcceptableTemporalAccuracy } from "../../../../utils/TimeUtils.ts";
 import { type CompactableProperty, type RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.ts";
-import type {SourceType} from "../../../../../core/Atomic.ts";
+import type {ErrorLike, SourceType} from "../../../../../core/Atomic.ts";
 import type {FindMany, FindWhere, FindWith, PlayInputNew, PlayNew, PlaySelect, PlaySelectWithQueueStates, PlayWith, QueueStateSelect, WhereClause} from "../drizzleTypes.ts";
 import { type DbConcrete, runTransaction } from "../drizzleUtils.ts";
-import { generateInputEntity, generatePlayEntity, hydratePlaySelect, type PlayEntityOpts, type PlayHydateOptions } from "../entityUtils.ts";
+import { generateInputEntity, generatePlayEntity, hydratePlaySelect, stateChangeToPlayEvent, transformToPlayEvent, type PlayEntityOpts, type PlayHydateOptions } from "../entityUtils.ts";
 import { playEvents, playInputs, plays, relations } from "../schema/schema.ts";
 import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
 import type {PaginatedResponse} from "../../../../../core/Api.ts";
 import type {PaginatedQueryResponse} from "../../../../../core/Api.ts";
-import type { PlayEventTransform } from "../../../../../core/PlayEvent.ts";
+import { type PlayEventTransform } from "../../../../../core/PlayEvent.ts";
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 
@@ -138,13 +138,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                 } = entitiesOpts[index];
 
                 if(lifecycle.length > 0) {
-                    const transformEvent: PlayEventTransform = {
-                        playId: x.id,
-                        eventName: 'transform',
-                        createdAt: dayjs(lifecycle[0].createdAt),
-                        data: lifecycle
-                    }
-                    return transformEvent;
+                    return {...transformToPlayEvent(lifecycle), playId: x.id}
                 }
                 return undefined;
             }).filter(x => x !== undefined);
@@ -775,6 +769,20 @@ group by state,componentId;`);
         const res = await this.db.all(sql`select componentId,compacted,count(*) from plays p
 where compacted IS NOT NULL
 group by componentId,compacted;`);
+        return res;
+    }
+
+    async updateById(id: number, data: Partial<PlayNew> & {event?: boolean, reason?: string, error?: ErrorLike}): Promise<typeof this.table.$inferSelect> {
+        const res = await super.updateById(id, data) as PlaySelect;
+        if(data.event === true) {
+            if(data.state !== undefined) {
+                try {
+                    await this.db.insert(playEvents).values({...stateChangeToPlayEvent(removeUndefinedKeys({state: data.state, reason: data.reason, error: data.error})), playId: id});
+                } catch (e) {
+                    this.logger.warn(new Error(`Failed to create Play Event for state change ${data.state} on Play ${id}`));
+                }
+            }
+        }
         return res;
     }
 }

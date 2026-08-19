@@ -50,8 +50,8 @@ import type {PaginatedResponse} from "../../core/Api.ts";
 import type { PlaySelect, PlaySelectWithQueueStates, QueueStateNew, QueueStateSelect } from '../common/database/drizzle/drizzleTypes.ts';
 import { DrizzleQueueRepository } from '../common/database/drizzle/repositories/QueueRepository.ts';
 import { DrizzlePlayEventsRepository } from '../common/database/drizzle/repositories/PlayEventsRepository.ts';
-import { PLAY_EVENT_TYPE, type PlayEvent } from '../../core/PlayEvent.ts';
-import { queueStateToEventData } from '../common/database/drizzle/entityUtils.ts';
+import { type PlayEvent } from '../../core/PlayEvent.ts';
+import { dupeCheckToPlayEvent, queueStateToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from '../common/database/drizzle/entityUtils.ts';
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -427,8 +427,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
             const playRow = await this.playRepo.createPlays([createPlayData]);
             const queueState = await this.queueRepo.create({componentId: this.dbComponent.id, playId: playRow[0].id, queueName: INGRESS_QUEUE}) as QueueStateSelect;
             await this.playEventsRepo.createMany([
-                {playId: playRow[0].id, eventName: PLAY_EVENT_TYPE.playStateChange, data: {state: 'queued'}, createdAt: playRow[0].seenAt.add(1,'ms')},
-                {playId: playRow[0].id, eventName: PLAY_EVENT_TYPE.queueStateChange, data: queueStateToEventData(queueState), createdAt: queueState.createdAt}
+                {playId: playRow[0].id, ...stateChangeToPlayEvent({state: 'queued'}), createdAt: playRow[0].seenAt.add(1,'ms')},
+                {playId: playRow[0].id, ...queueStateToPlayEvent(queueState), createdAt: queueState.createdAt}
             ]);
             createdQueuedPlays.push(playRow[0]);
             this.logger.debug(`Added ${buildTrackString(queueablePlay)} to the queue`);
@@ -515,7 +515,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 const {lifecycle = []} = p;
                 const psLifecycle = lifecycle.filter(x => x.hook === TRANSFORM_HOOK.postCompare);
                 if(psLifecycle.length > 0) {
-                    events.push({playId: p.id, eventName: PLAY_EVENT_TYPE.transform, createdAt: dayjs(psLifecycle[0].createdAt), data: psLifecycle});
+                    events.push({...transformToPlayEvent(psLifecycle), playId: p.id});
                 }
             }
             this.emitEvent('discoveredToScrobble', {
@@ -982,18 +982,18 @@ export default abstract class AbstractSource extends AbstractComponent implement
         try {
             const {lifecycle = [], ...preCompared} = await this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.preCompare);
             if(lifecycle.length > 0) {
-                events.push({eventName: PLAY_EVENT_TYPE.transform, createdAt: dayjs(lifecycle[0].createdAt), data: lifecycle});
+                events.push(transformToPlayEvent(lifecycle));
             }
             let existing: PlayObject;
             // cheap check for existing
             const cheapExisting = await this.playRepo.checkExisting(preCompared, { notId: currQueuedPlay.id });
             if(cheapExisting !== undefined) {
-                events.push({eventName: PLAY_EVENT_TYPE.dupeCheck, data: {match: true, closestMatchedPlay: cheapExisting.play, score: 1, breakdowns: [], createdAt: dayjs().toISOString(), reason: `Matched hash on existing Play ${cheapExisting.uid} with close temporality`}, createdAt: dayjs()});
+                events.push(dupeCheckToPlayEvent({match: true, reason: `Matched hash on existing Play ${cheapExisting.uid} with close temporality`}));
                 updatedQueueState.error = {message: `Matched hash on existing Play ${cheapExisting.uid} with close temporality`};
                 existing = {...cheapExisting.play, id: cheapExisting.id, uid: cheapExisting.uid};
             } else {
                 const matchRes = await this.existingDiscovered(preCompared);
-                events.push({eventName: PLAY_EVENT_TYPE.dupeCheck, data: matchRes, createdAt: dayjs()});
+                events.push(dupeCheckToPlayEvent(matchRes));
                 if(matchRes.match) {
                     existing = matchRes.closestMatchedPlay;
                     updatedQueueState.error = {message: `Matched with Play ${existing.uid ?? existing.id}`};
@@ -1005,11 +1005,11 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 if(!preCompared.meta.wasMonitored) {
                     this.logger.debug(`Not adding ${buildTrackString(preCompared)} as discovered because monitoring was disabled when Play was created.`);
                     state = 'discarded';
-                    updatedQueueState.error = {message: 'Play was not added as discovered because monitoring was disabled when Play was created.'}
-                    events.push({eventName: PLAY_EVENT_TYPE.playStateChange, data: {state, reason: 'Not added as discovered because monitoring was disabled when Play was created'}, createdAt: dayjs()});
+                    updatedQueueState.error = {message: 'Play was not added as discovered because monitoring was disabled when Play was created.'};
+                    events.push(stateChangeToPlayEvent({state, reason: 'Not added as discovered because monitoring was disabled when Play was created'}));
                 } else {
                     state = 'discovered';
-                    events.push({eventName: PLAY_EVENT_TYPE.playStateChange, data: {state}, createdAt: dayjs()});
+                    events.push(stateChangeToPlayEvent({state}));
                     this.tracksDiscovered++;
                     this.tracksDiscoveredTotal++
                     this.discoveredCounter.labels(this.getPrometheusLabels()).inc();
@@ -1018,7 +1018,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             } else {
                 this.playRepo.updateById(existing.id, {updatedAt: dayjs()});
                 state = 'duped';
-                events.push({eventName: PLAY_EVENT_TYPE.playStateChange, data: {state}, createdAt: dayjs()});
+                events.push(stateChangeToPlayEvent({state}));
                 currQueuedPlay.parentId = existing.id;
             }
             this.playRepo.updateById(currQueuedPlay.id, {play: preCompared, state});
@@ -1039,14 +1039,14 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 }
             }
             updatedQueueState.queueStatus = 'completed';
-            events.push({eventName: PLAY_EVENT_TYPE.queueStateChange, data: queueStateToEventData({...queueState, ...updatedQueueState}), createdAt: dayjs()});
+            events.push(queueStateToPlayEvent({...queueState, ...updatedQueueState}));
 
             this.logger.info(`${capitalize(state)} => ${buildTrackString(preCompared)}`);
         } catch (e) {
             const err = new Error(`Error ocurred while trying to discover Play ${currQueuedPlay.uid}`, {cause: e});
             updatedQueueState.error = err;
             updatedQueueState.queueStatus = 'failed';
-            events.push({eventName: PLAY_EVENT_TYPE.queueStateChange, data: queueStateToEventData({...queueState, ...updatedQueueState}), createdAt: dayjs()});
+            events.push(queueStateToPlayEvent({...queueState, ...updatedQueueState}));
         } finally {
             await this.queueRepo.updateById(queueState.id, updatedQueueState);
             await this.playEventsRepo.createMany(events.map(x => ({...x, playId: currQueuedPlay.id})));
