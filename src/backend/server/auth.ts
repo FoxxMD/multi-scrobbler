@@ -1,7 +1,6 @@
 import type {Express} from 'express';
 import type {Logger} from "@foxxmd/logging";
 import passport from "passport";
-import type {ExpressHandler} from "../common/infrastructure/Atomic.ts";
 import type LastfmScrobbler from "../scrobblers/LastfmScrobbler.ts";
 import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
 import type LastfmSource from "../sources/LastfmSource.ts";
@@ -11,13 +10,15 @@ import type YTMusicSource from "../sources/YTMusicSource.ts";
 import type LibrefmScrobbler from "../scrobblers/LibrefmScrobbler.ts";
 import type LibrefmSource from "../sources/LibrefmSource.ts";
 import AbstractSource from "../sources/AbstractSource.ts";
-import { makeComponentMiddle, type ComponentAwareRequest } from './middleware.ts';
+import { makeComponentMiddle, type ClientCheckedMiddleTypedMiddleware, type SourceCheckMiddleTypedMiddleware } from './middleware.ts';
 import { findAuthIssue, SimpleError } from '../common/errors/MSErrors.ts';
+import type { createTypedRouter } from '@minisylar/express-typed-router';
+import * as z from 'zod';
 
-export const setupAuthRoutes = (app: Express, logger: Logger, sourceMiddle: ExpressHandler, clientMiddle: ExpressHandler, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
+export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTypedRouter>, logger: Logger, sourceMiddle: SourceCheckMiddleTypedMiddleware, clientMiddle: ClientCheckedMiddleTypedMiddleware, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
     const componentAwareMiddle = makeComponentMiddle(scrobbleSources, scrobbleClients);
 
-    app.get('/api/components/:componentVal/auth', componentAwareMiddle, async (req: ComponentAwareRequest, res, next) => {
+    router.get('/components/:componentVal/auth', {middleware: [componentAwareMiddle]}, async (req, res, next) => {
         switch(req.component.type) {
             case 'lastfm':
             case 'librefm':
@@ -35,8 +36,7 @@ export const setupAuthRoutes = (app: Express, logger: Logger, sourceMiddle: Expr
         }
     });
 
-    app.use('/api/client/auth', clientMiddle);
-    app.get('/api/client/auth', async (req, res) => {
+    router.get('/api/client/auth', {middleware: [clientMiddle]}, async (req, res) => {
         const {
             scrobbleClient,
         } = req as any;
@@ -47,35 +47,31 @@ export const setupAuthRoutes = (app: Express, logger: Logger, sourceMiddle: Expr
                 res.redirect(scrobbleClient.api.getAuthUrl());
                 break;
             case 'tealfm':
-                const url = await scrobbleClient.getAuthorizeUrl();
-                res.redirect(url);
+                res.redirect(await scrobbleClient.getAuthorizeUrl());
                 break;
             default:
                 return res.status(400).send(`Specified client does not have auth implemented (${scrobbleClient.type})`);
         }
     });
 
-    app.use('/api/source/auth', sourceMiddle);
-    app.get('/api/source/auth', async (req, res, next) => {
+    router.get('/api/source/auth', {middleware: [sourceMiddle]}, async (req, res, next) => {
         const {
-            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleSource: source,
-            // @ts-expect-error TS(2339): Property 'sourceName' does not exist on type 'Requ... Remove this comment to see the full error message
             sourceName: name,
         } = req;
 
         switch (source.type) {
             case 'spotify':
-                if (source.spotifyApi === undefined) {
+                if ((source as SpotifySource).spotifyApi === undefined) {
                     res.status(400).send('Spotify configuration is not valid');
                 } else {
                     logger.info('Redirecting to spotify authorization url');
-                    res.redirect(source.createAuthUrl());
+                    res.redirect((source as SpotifySource).createAuthUrl());
                 }
                 break;
             case 'lastfm':
             case 'librefm':
-                res.redirect(source.api.getAuthUrl());
+                res.redirect((source as LastfmSource).api.getAuthUrl());
                 break;
             case 'deezer':
                 // @ts-expect-error TS(2339): Property 'deezerSource' does not exist on type 'Se... Remove this comment to see the full error message
@@ -90,7 +86,7 @@ export const setupAuthRoutes = (app: Express, logger: Logger, sourceMiddle: Expr
         }
     });
 
-    app.get(/.*callback$/, async (req, res, next) => {
+    router.get('/.*callback$/', {querySchema: z.any()}, async (req, res) => {
         if(req.url.indexOf('/api') !== 0) {
             return res.redirect(307, `/api${req.url}`);
         }
@@ -143,7 +139,8 @@ export const setupAuthRoutes = (app: Express, logger: Logger, sourceMiddle: Expr
                     logger.error(e);
                 }
             }
-            return res.redirect('/next');
+            res.redirect('/next');
+            return;
         } else if(req.url.includes('ytmusic')) {
             const entity: YTMusicSource | undefined = scrobbleSources.getByName(name) as (YTMusicSource | undefined);
             if(entity === undefined) {
@@ -157,7 +154,8 @@ export const setupAuthRoutes = (app: Express, logger: Logger, sourceMiddle: Expr
             } else {
                 responseContent = result;
             }
-            return res.send(responseContent);
+            res.send(responseContent);
+            return;
         } else {
             // TODO right now all sources requiring source interaction are covered by logic branches (deezer above and spotify here)
             // but eventually should update all source callbacks to url specific URLS to avoid ambiguity...
@@ -184,7 +182,8 @@ export const setupAuthRoutes = (app: Express, logger: Logger, sourceMiddle: Expr
                 source.replaceErrors(err, {predicate: (x) => err.message === x.message});
                 source.logger.error(err);
             }
-            return res.redirect('/next');
+            res.redirect('/next');
+            return;
         }
     });
 }

@@ -6,6 +6,7 @@ import type { ComponentType, DateLike, ErrorLike, JsonPlayObject, PlayState, Que
 import type { Dayjs } from "dayjs"
 import type { ErrorIsh } from "./ErrorUtils.ts"
 import type { PlayEvent } from "./PlayEvent.ts"
+import * as z from "zod"
 
 export interface PlayApiCommon {
     uid: string
@@ -214,6 +215,9 @@ export type CompareDateSingle<D extends DateLike = Dayjs> = {
 
 export type CacheClearType = 'external-api' | 'transforms';
 
-export interface ComponentStateBody {
-    state: 'stop' | 'start' | 'restart'
-}
+export const componentStateBodySchema = z.object({
+    state: z.enum(["stop","start","restart","mute","unmute"]),
+    reason: z.string().optional()
+});
+
+export type ComponentStateBody = z.infer<typeof componentStateBodySchema>;
