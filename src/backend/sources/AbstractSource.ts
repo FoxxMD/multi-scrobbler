@@ -413,12 +413,14 @@ export default abstract class AbstractSource extends AbstractComponent implement
             // not in queue or existing queued check failed for some reason and we don't want to lose Play
             const {
                 data,
-                meta
+                meta,
+                original
             } = queueablePlay
             const createPlayData = playToRepositoryCreatePlayOpts({
                 play: {
                     data,
-                    meta
+                    meta,
+                    original
                 },
                 componentId: this.dbComponent.id, 
                 state: 'queued',
