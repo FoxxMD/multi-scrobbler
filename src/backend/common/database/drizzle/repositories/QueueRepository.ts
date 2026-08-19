@@ -40,9 +40,9 @@ export class DrizzleQueueRepository extends DrizzleBaseRepository<'queueStates'>
         ));
     }
 
-    async create(data: typeof this.table.$inferInsert & {playId?: PlaySelect['id']}): Promise<typeof this.table.$inferSelect> {
+    async create(data: typeof this.table.$inferInsert & {playId?: PlaySelect['id'], event?: boolean}): Promise<typeof this.table.$inferSelect> {
         const res = await super.create(data) as QueueStateSelect;
-        if(data.playId !== undefined) {
+        if(data.event === true && data.playId !== undefined) {
             try {
                 await this.db.insert(playEvents).values({...queueStateToPlayEvent(res), playId: data.playId});
             } catch (e) {
@@ -52,9 +52,9 @@ export class DrizzleQueueRepository extends DrizzleBaseRepository<'queueStates'>
         return res;
     }
 
-    async updateById(id: number, data: Partial<typeof this.table.$inferInsert> & {playId?: PlaySelect['id']}): Promise<typeof this.table.$inferSelect> {
+    async updateById(id: number, data: Partial<typeof this.table.$inferInsert> & {playId?: PlaySelect['id'], event?: boolean}): Promise<typeof this.table.$inferSelect> {
         const res = await super.updateById(id, data) as QueueStateSelect;
-        if(data.playId !== undefined) {
+        if(data.event === true && data.playId !== undefined) {
             try {
                 await this.db.insert(playEvents).values({...queueStateToPlayEvent(res), playId: data.playId});
             } catch (e) {
