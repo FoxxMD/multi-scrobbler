@@ -1048,8 +1048,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
             updatedQueueState.queueStatus = 'failed';
             events.push({eventName: PLAY_EVENT_TYPE.queueStateChange, data: queueStateToEventData({...queueState, ...updatedQueueState}), createdAt: dayjs()});
         } finally {
-            this.queueRepo.updateById(queueState.id, updatedQueueState);
-            this.playEventsRepo.createMany(events.map(x => ({...x, playId: currQueuedPlay.id})));
+            await this.queueRepo.updateById(queueState.id, updatedQueueState);
+            await this.playEventsRepo.createMany(events.map(x => ({...x, playId: currQueuedPlay.id})));
         }
 
         if(state === 'discovered') {
