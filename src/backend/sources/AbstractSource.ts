@@ -1051,7 +1051,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
             events.push(queueStateToPlayEvent({...queueState, ...updatedQueueState}));
         } finally {
             await this.queueRepo.updateById(queueState.id, updatedQueueState);
-            await this.playEventsRepo.createMany(events.map(x => ({...x, playId: currQueuedPlay.id})));
+            const createdEvents = await this.playEventsRepo.createMany(events.map(x => ({...x, playId: currQueuedPlay.id})));
+            this.emitPlayUpdate({...currQueuedPlay, events: createdEvents, queueStates: [{...queueState, ...updatedQueueState}]} as unknown as PlayApiCommonDetailed);
         }
 
         if(state === 'discovered') {

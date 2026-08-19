@@ -1278,7 +1278,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 signal.throwIfAborted();
                 if (!matchResult.match) {
                     const transformedScrobble = await this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.postCompare);
-                    const { lifecycle = [] } = transformedScrobble;
+                    const { lifecycle = [], ...restPlay } = transformedScrobble;
+                    currQueuedPlay.play = restPlay;
                     const psLifecycle = lifecycle.filter(x => x.hook === TRANSFORM_HOOK.postCompare);
                     if(psLifecycle.length > 0) {
                         events.push({...transformToPlayEvent(psLifecycle), createdAt: dayjs()});
@@ -1362,8 +1363,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 queueState.queueStatus = 'completed';
                 events.push(queueStateToPlayEvent(queueState));
             }
-            await this.playEventsRepo.createMany(events.map(x => ({...x, playId: currQueuedPlay.id})));
-            this.emitPlayUpdate({...currQueuedPlay, queueStates: [queueState]} as unknown as PlayApiCommonDetailed);
+            const createdEvents = await this.playEventsRepo.createMany(events.map(x => ({...x, playId: currQueuedPlay.id})));
+            this.emitPlayUpdate({...currQueuedPlay, events: createdEvents, queueStates: [queueState]} as unknown as PlayApiCommonDetailed);
             this.emitEvent('scrobbleDequeued', { queuedScrobble: currQueuedPlay })
             this.queuedGauge.labels(this.getPrometheusLabels()).dec();
             this.queuedLength -= 1;
