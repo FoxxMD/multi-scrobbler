@@ -1,7 +1,6 @@
 import { loggerTest } from "@foxxmd/logging";
 import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
-import EventEmitter from "events";
 import { describe, it } from 'mocha';
 import pEvent from "p-event";
 import clone from 'clone';
@@ -464,8 +463,9 @@ const generateDeezerSource = async (options: DeezerInternalSourceOptions = {}) =
     const source = new DeezerTestSource('test', {id: `test-${Date.now()}`,data: {arl: 'test'}, options}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
     source.queueIdleMs = 2;
     source.queueConcurrency = 1;
+    source.stopPollingWaitInterval = 10;
     await source.initialize();
-    await source.initTasks();
+    await source.startDiscoveryQueue();
     return source;
 }
 const firstPlayDate = dayjs().subtract(1, 'hour');

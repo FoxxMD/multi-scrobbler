@@ -5,6 +5,7 @@ import type { SourceType } from "./Atomic.ts"
 import type { ComponentType, DateLike, ErrorLike, JsonPlayObject, PlayState, QueueName, Replace, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.ts"
 import type { Dayjs } from "dayjs"
 import type { ErrorIsh } from "./ErrorUtils.ts"
+import type { PlayEvent } from "./PlayEvent.ts"
 
 export interface PlayApiCommon {
     uid: string
@@ -40,6 +41,7 @@ export interface PlayApiCommonDetailed extends PlayApiCommon {
     error?: ErrorIsh
     input?: PlayInputApi
     queueStates: QueueStateApi[]
+    events: PlayEvent<string>[]
 }
 
 export type ComponentState = 1 | 2 | 3 | 4 | 5 | 6 | 7;

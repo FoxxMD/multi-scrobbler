@@ -10,15 +10,15 @@ import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../..
 import { hashObject } from "../../../../utils/StringUtils.ts";
 import { comparePlayTemporally, getScrobbleTsSOCDateWithContext, getTemporalAccuracyCloseVal, hasAcceptableTemporalAccuracy } from "../../../../utils/TimeUtils.ts";
 import { type CompactableProperty, type RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.ts";
-import type {SourceType} from "../../../../../core/Atomic.ts";
+import type {ErrorLike, SourceType} from "../../../../../core/Atomic.ts";
 import type {FindMany, FindWhere, FindWith, PlayInputNew, PlayNew, PlaySelect, PlaySelectWithQueueStates, PlayWith, QueueStateSelect, WhereClause} from "../drizzleTypes.ts";
 import { type DbConcrete, runTransaction } from "../drizzleUtils.ts";
-import { generateInputEntity, generatePlayEntity, hydratePlaySelect, type PlayEntityOpts, type PlayHydateOptions } from "../entityUtils.ts";
-import { playInputs, plays, relations } from "../schema/schema.ts";
+import { generateInputEntity, generatePlayEntity, hydratePlaySelect, stateChangeToPlayEvent, transformToPlayEvent, type PlayEntityOpts, type PlayHydateOptions } from "../entityUtils.ts";
+import { playEvents, playInputs, plays, relations } from "../schema/schema.ts";
 import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
 import type {PaginatedResponse} from "../../../../../core/Api.ts";
 import type {PaginatedQueryResponse} from "../../../../../core/Api.ts";
-;
+import { type PlayEventTransform } from "../../../../../core/PlayEvent.ts";
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 
@@ -38,7 +38,7 @@ export interface PlayWhereOpts<D extends DateLike = Dayjs> {
     text?: string[]
 }
 
-export type WithPlayRelation = 'input' | 'parent' | 'parent-input' | 'queues';
+export type WithPlayRelation = 'input' | 'parent' | 'parent-input' | 'queues' | 'events';
 export interface QueryPlaysOpts<D extends DateLike = Dayjs> extends PlayWhereOpts<D> {
     sort?: 'seenAt' | 'playedAt'
     order?: 'asc' | 'desc'
@@ -103,11 +103,14 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
             const entitiesData = entitiesOpts.map((data) => {
                 const {
-                    play,
+                    play: {
+                        lifecycle,
+                        ...playRest
+                    },
                     input,
                     ...rest
                 } = data;
-                return generatePlayEntity(play, { componentId: this.componentId, ...rest });
+                return generatePlayEntity(playRest, { componentId: this.componentId, ...rest });
             });
 
             const nakedPlays = await this.db.insert(plays).values(entitiesData).returning();
@@ -126,6 +129,23 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             });
 
             const inputRow = await this.db.insert(playInputs).values(inputDatas);
+
+            const eventData = nakedPlays.map((x, index) => {
+                const {
+                    play: {
+                        lifecycle = [],
+                    } = {}
+                } = entitiesOpts[index];
+
+                if(lifecycle.length > 0) {
+                    return {...transformToPlayEvent(lifecycle), playId: x.id}
+                }
+                return undefined;
+            }).filter(x => x !== undefined);
+            if(eventData.length > 0) {
+                await this.db.insert(playEvents).values(eventData);
+            }
+
             playRows = nakedPlays.map((x, index) => ({...x, play: hydratePlaySelect(x, hydrate), input: inputRow[index]}));
         });
 
@@ -181,6 +201,9 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                         break;
                     case 'queues':
                         query.with.queueStates = true;
+                        break;
+                    case 'events':
+                        query.with.events = true;
                         break;
                     default:
                         throw new Error(`Unknown relation ${w}`);
@@ -408,28 +431,28 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                     summaryDelStates.push(`No '${retentionType}' Plays older than ${shortTodayAwareFormat(date)}`);
                 } else {
                     for(const id of ids) {
-                        let compactedPlay: PlayObject;
                         if(compactTypes.includes('input')) {
                             await this.db.update(playInputs).set({
                                 data: {removedReason: 'Removed by compaction'}
                             }).where(eq(playInputs.playId, id));
                         }
                         if(compactTypes.includes('transform')) {
-                            const playRow = await this.db.query.plays.findFirst({where: {id: id}});
-                            if(playRow === undefined) {
-                                // uhh shouldn't be
-                                loggerCom.warn(`No Play found with ID ${id}, but it should have been...`);
-                                continue;
-                            }
-
-                            compactedPlay = playRow.play;
-                            if(compactedPlay.lifecycle !== undefined) {
-                                compactedPlay.lifecycle = compactedPlay.lifecycle.map(x => {
-                                    if(x.inputs == undefined) {
+                            const events = await this.db.query.playEvents.findMany({where: {playId: id}});
+                            for(const ev of events) {
+                                if(ev.eventName === 'transform') {
+                                    const transformEvent = ev as PlayEventTransform;
+                                    let compactedInput = false;
+                                    transformEvent.data = transformEvent.data.map(x => {
+                                        if(x.inputs !== undefined && x.inputs.length > 0) {
+                                            compactedInput = true;
+                                            return {...x, inputs: x.inputs.map((y) => ({type: y.type, input: 'Removed by compaction'}))};
+                                        }
                                         return x;
+                                    });
+                                    if(compactedInput) {
+                                        await this.db.update(playEvents).set({data: transformEvent.data}).where(eq(playEvents.id, transformEvent.id));
                                     }
-                                    return {...x, inputs: x.inputs.map(y => ({type: y.type, input: 'Removed by compaction'}))};
-                                });
+                                }
                             }
                         }
 
@@ -437,9 +460,6 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                         const vals: Parameters<typeof updater.set>[0] = {
                             compacted: compactedFlags.join('-')
                         };
-                        if(compactedPlay !== undefined) {
-                            vals.play = compactedPlay;
-                        }
                         await this.db.update(plays).set(vals).where(eq(plays.id, id));
                     }
                     loggerCom.trace(`Compacted ${ids.length} '${retentionType}' plays`);
@@ -751,6 +771,20 @@ where compacted IS NOT NULL
 group by componentId,compacted;`);
         return res;
     }
+
+    async updateById(id: number, data: Partial<PlayNew> & {event?: boolean, reason?: string, error?: ErrorLike}): Promise<typeof this.table.$inferSelect> {
+        const res = await super.updateById(id, data) as PlaySelect;
+        if(data.event === true) {
+            if(data.state !== undefined) {
+                try {
+                    await this.db.insert(playEvents).values({...stateChangeToPlayEvent(removeUndefinedKeys({state: data.state, reason: data.reason, error: data.error})), playId: id});
+                } catch (e) {
+                    this.logger.warn(new Error(`Failed to create Play Event for state change ${data.state} on Play ${id}`));
+                }
+            }
+        }
+        return res;
+    }
 }
 
 export const getTemporallyCloseDateCompareOp = (play: PlayObject, opts: {bufferTime?: number, useCompleted?: boolean, useDuration?: boolean} = {}): CompareDateOp => {
@@ -812,6 +846,9 @@ export const buildPlayWith = (args: WithPlayRelation[] | undefined): FindWith<'p
                 break;
             case 'queues':
                 qWith.queueStates = true;
+                break;
+            case 'events':
+                qWith.events = true;
                 break;
             default:
                 throw new Error(`Unknown relation ${w}`);

@@ -212,7 +212,18 @@ export const jobs = sqliteTable("jobs", {
   completedAt: DayjsTimestamp('completedAt')
 });
 
-const playRelations = defineRelations({ plays, queueStates, playInputs, components, jobs, componentMigrations,playsHistorical }, (r) => ({
+export const playEvents = sqliteTable("play_events", {
+  id: integer({ mode: 'number' }).primaryKey(),
+  playId: integer().notNull().references(() => plays.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
+  eventName: text({length: 50}).notNull(),
+  data: text({ mode: 'json' }),
+  error: ErrorLikeJson('error'),
+  createdAt: DayjsTimestamp('createdAt').notNull().$defaultFn(() => dayjs()),
+}, (table) => [
+  index('play_event_id_idx').on(table.playId)
+]);
+
+const playRelations = defineRelations({ plays, queueStates, playEvents, playInputs, components, jobs, componentMigrations,playsHistorical }, (r) => ({
   plays: {
     queueStates: r.many.queueStates(),
     input: r.one.playInputs({
@@ -234,7 +245,8 @@ const playRelations = defineRelations({ plays, queueStates, playInputs, componen
       from: r.plays.jobId,
       to: r.jobs.id,
       optional: true
-    })
+    }),
+    events: r.many.playEvents(),
   },
   playsHistorical: {
     component: r.one.components({
@@ -266,7 +278,13 @@ const playRelations = defineRelations({ plays, queueStates, playInputs, componen
   },
   jobs: {
     plays: r.many.plays()
-  }
+  },
+  playEvents: {
+    play: r.one.plays({
+      from: r.playEvents.playId,
+      to: r.plays.id
+    }),
+  },
 }));
 
 export const relations = playRelations;
@@ -281,6 +299,8 @@ export const getConfigByTableName = <T extends TableName>(name: T) => {
       return components;
     case 'playInputs':
       return playInputs;
+    case 'playEvents':
+      return playEvents;
     case 'queueStates':
       return queueStates;
     case 'componentMigrations':
@@ -290,7 +310,7 @@ export const getConfigByTableName = <T extends TableName>(name: T) => {
   }
 }
 
-export const schema = {playInputs, plays, components, componentMigrations, queueStates, jobs};
+export const schema = {playInputs, plays, playEvents, components, componentMigrations, queueStates, jobs};
 
 export type TSchema = typeof relations;
 export type Schema = typeof schema;
