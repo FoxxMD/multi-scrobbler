@@ -16,9 +16,13 @@ import type ScrobbleSources from '../sources/ScrobbleSources.ts';
 import type ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
 import { qsOptions } from '../../core/Atomic.ts';
 import { projectRootDir } from "../common/infrastructure/Atomic.ts";
+import { createTypedRouter } from "@minisylar/express-typed-router";
 
 const app = express();
-const router = Router();
+
+const router = createTypedRouter();
+
+//const router = Router();
 app.set('query parser', (str: string) => qs.parse(str, qsOptions));
 
 export const initServer = async (parentLogger: Logger, appLoggerStream: PassThrough, initialOutput: LogDataPretty[] = [], sources: ScrobbleSources, clients: ScrobbleClients) => {
@@ -26,7 +30,7 @@ export const initServer = async (parentLogger: Logger, appLoggerStream: PassThro
     const logger = childLogger(parentLogger, 'API'); // parentLogger.child({labels: ['API']}, mergeArr);
 
     try {
-        app.use(router);
+        app.use('/api', router.getRouter());
         app.use(bodyParser.json());
         app.use(
             bodyParser.urlencoded({
@@ -52,7 +56,7 @@ export const initServer = async (parentLogger: Logger, appLoggerStream: PassThro
         const local = root.get('localUrl');
         const localDefined = root.get('hasDefinedBaseUrl');
 
-        setupApi(app, logger, appLoggerStream, initialOutput, sources, clients);
+        setupApi(app, router, logger, appLoggerStream, initialOutput, sources, clients);
 
         const addy = getAddress();
         const addresses: string[] = [];

@@ -1,0 +1,58 @@
+diff --git a/node_modules/@minisylar/express-typed-router/dist/schema-router.d.cts b/node_modules/@minisylar/express-typed-router/dist/schema-router.d.cts
+index 87de99b..228c288 100644
+--- a/node_modules/@minisylar/express-typed-router/dist/schema-router.d.cts
++++ b/node_modules/@minisylar/express-typed-router/dist/schema-router.d.cts
+@@ -319,13 +319,17 @@ declare class TypedRouter<Req extends Record<string, any> = AdditionalReqProps,
+    */
+   docs(options?: DocsOptions): express.Router & express.RequestHandler;
+   get<Path extends string>(path: Path, handler: SchemaRouteHandler<Path, unknown, unknown, Req, Locals>): TypedRouter<Req, Locals>;
+-  get<Path extends string, BodySchema extends AnyStandardSchema | unknown, QuerySchema extends AnyStandardSchema | unknown>(path: Path, options: RouteOptions<BodySchema, QuerySchema>, handler: SchemaRouteHandler<Path, BodySchema, QuerySchema, Req, Locals>): TypedRouter<Req, Locals>;
+-  get<Path extends string, Middleware extends readonly TypedMiddleware<any, any>[]>(path: Path, options: {
+-    middleware: Middleware;
+-  }, handler: SchemaRouteHandler<Path, unknown, unknown, Req & InferMiddlewareProps<Middleware>, Locals & InferMiddlewareLocals<Middleware>>): TypedRouter<Req, Locals>;
+-  get<Path extends string, BodySchema extends AnyStandardSchema | unknown, QuerySchema extends AnyStandardSchema | unknown, M extends TypedMiddleware<any, any>[]>(path: Path, options: RouteOptions<BodySchema, QuerySchema> & {
+-    middleware: [...M];
+-  }, // Using tuple spread pattern
++  get<Path extends string, BodySchema extends AnyStandardSchema | unknown = unknown, QuerySchema extends AnyStandardSchema | unknown = unknown, M extends TypedMiddleware<any, any>[] = []>(path: Path, options: {
++    bodySchema?: BodySchema;
++    querySchema?: QuerySchema;
++    middleware?: [...M];
++    tags?: string[];
++    description?: string;
++    summary?: string;
++    deprecated?: boolean;
++    responseSchema?: AnyStandardSchema;
++    hidden?: boolean;
++  }, // Using tuple spread pattern; kept as a flat object (not intersected with a generic RouteOptions<B,Q>) so TS can infer the M tuple and BodySchema/QuerySchema from the same object literal
+   handler: SchemaRouteHandler<Path, BodySchema, QuerySchema, Req & InferMiddlewareProps<readonly [...M]>, // Make it readonly for type inference
+   // Make it readonly for type inference
+   Locals & InferMiddlewareLocals<readonly [...M]>>): TypedRouter<Req, Locals>;
+diff --git a/node_modules/@minisylar/express-typed-router/dist/schema-router.d.mts b/node_modules/@minisylar/express-typed-router/dist/schema-router.d.mts
+index 87de99b..228c288 100644
+--- a/node_modules/@minisylar/express-typed-router/dist/schema-router.d.mts
++++ b/node_modules/@minisylar/express-typed-router/dist/schema-router.d.mts
+@@ -319,13 +319,17 @@ declare class TypedRouter<Req extends Record<string, any> = AdditionalReqProps,
+    */
+   docs(options?: DocsOptions): express.Router & express.RequestHandler;
+   get<Path extends string>(path: Path, handler: SchemaRouteHandler<Path, unknown, unknown, Req, Locals>): TypedRouter<Req, Locals>;
+-  get<Path extends string, BodySchema extends AnyStandardSchema | unknown, QuerySchema extends AnyStandardSchema | unknown>(path: Path, options: RouteOptions<BodySchema, QuerySchema>, handler: SchemaRouteHandler<Path, BodySchema, QuerySchema, Req, Locals>): TypedRouter<Req, Locals>;
+-  get<Path extends string, Middleware extends readonly TypedMiddleware<any, any>[]>(path: Path, options: {
+-    middleware: Middleware;
+-  }, handler: SchemaRouteHandler<Path, unknown, unknown, Req & InferMiddlewareProps<Middleware>, Locals & InferMiddlewareLocals<Middleware>>): TypedRouter<Req, Locals>;
+-  get<Path extends string, BodySchema extends AnyStandardSchema | unknown, QuerySchema extends AnyStandardSchema | unknown, M extends TypedMiddleware<any, any>[]>(path: Path, options: RouteOptions<BodySchema, QuerySchema> & {
+-    middleware: [...M];
+-  }, // Using tuple spread pattern
++  get<Path extends string, BodySchema extends AnyStandardSchema | unknown = unknown, QuerySchema extends AnyStandardSchema | unknown = unknown, M extends TypedMiddleware<any, any>[] = []>(path: Path, options: {
++    bodySchema?: BodySchema;
++    querySchema?: QuerySchema;
++    middleware?: [...M];
++    tags?: string[];
++    description?: string;
++    summary?: string;
++    deprecated?: boolean;
++    responseSchema?: AnyStandardSchema;
++    hidden?: boolean;
++  }, // Using tuple spread pattern; kept as a flat object (not intersected with a generic RouteOptions<B,Q>) so TS can infer the M tuple and BodySchema/QuerySchema from the same object literal
+   handler: SchemaRouteHandler<Path, BodySchema, QuerySchema, Req & InferMiddlewareProps<readonly [...M]>, // Make it readonly for type inference
+   // Make it readonly for type inference
+   Locals & InferMiddlewareLocals<readonly [...M]>>): TypedRouter<Req, Locals>;
