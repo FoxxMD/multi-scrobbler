@@ -101,7 +101,8 @@ export const generatePlayApiCommonDetailed = (opts: {
         ...playCommon,
         input: inputRes,
         queueStates: [queueRes],
-        error
+        error,
+        events: []
     }
 }
 
