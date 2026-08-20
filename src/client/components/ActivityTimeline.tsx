@@ -382,7 +382,7 @@ const StateChangeItem = (props: {event: PlayEventPlayStateChange<string>, collap
         <Timeline.Title>
             {text}
         </Timeline.Title>
-        {reason !== undefined && reason !== null ? <Text my={2}>{reason}</Text> : null}
+        {reason !== undefined && reason !== null ? <Timeline.Description>{reason}</Timeline.Description> : null}
         </>);
     }
 

@@ -48,7 +48,7 @@ export interface PlayApiCommonDetailed extends PlayApiCommon {
 export type ComponentState = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export const COMPONENT_STATE = {
     RUNNING: 1,
-    MUTED: 2,
+    IGNORED: 2,
     IDLE: 3,
     STOPPED: 4,
     INITIALIZING: 5,
@@ -216,7 +216,7 @@ export type CompareDateSingle<D extends DateLike = Dayjs> = {
 export type CacheClearType = 'external-api' | 'transforms';
 
 export const componentStateBodySchema = z.object({
-    state: z.enum(["stop","start","restart","mute","unmute"]),
+    state: z.enum(["stop","start","restart","ignore","monitor"]),
     reason: z.string().optional()
 });
 

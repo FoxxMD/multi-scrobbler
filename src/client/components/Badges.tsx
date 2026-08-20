@@ -28,10 +28,8 @@ export const PlayStateBadge = (props: PropsWithChildren<ComponentProps<typeof Ba
         badgeText = 'Dead Queued';
       }
       break;
-    case 'discarded':
-      badgeColor = 'grey';
-      break;
     case 'duped':
+    case 'discarded':
       badgeColor = 'orange';
       break;
   }
@@ -114,10 +112,10 @@ export const ComponentStateBadge = (props: ComponentProps<typeof Badge> & {
             badgeColor = 'red';
             break;
         case COMPONENT_STATE.IDLE:
-            badgeColor = 'orange';
+            badgeColor = 'yellow';
             break;
-        case COMPONENT_STATE.MUTED:
-            badgeColor = 'yellow';  
+        case COMPONENT_STATE.IGNORED:
+            badgeColor = 'orange';  
             break;
     }
 

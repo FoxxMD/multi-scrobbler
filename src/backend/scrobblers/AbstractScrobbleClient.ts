@@ -467,11 +467,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
 
     public getRunningState(): ComponentState {
-        if(this.scrobbling) {
-            return COMPONENT_STATE.RUNNING;
-        }
-        if(this.scheduler.getAllJobs().length > 0) {
+        if(this.scrobbleQueuePromise === undefined) {
             return COMPONENT_STATE.IDLE;
+        }
+        if(this.scrobbling && !this.isMonitoring()) {
+            return COMPONENT_STATE.IGNORED;
         }
         return COMPONENT_STATE.RUNNING;
     }

@@ -2,7 +2,7 @@ import { childLogger, type LogDataPretty, type LogLevel } from '@foxxmd/logging'
 import dayjs, { type Dayjs } from "dayjs";
 import type { EventEmitter } from "events";
 import type { FixedSizeList } from "fixed-size-list";
-import { INGRESS_QUEUE, PARSED_FROM, type PlayMatchResult, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { INGRESS_QUEUE, PARSED_FROM, type PlayMatchResult, type PlayObject, QUEUE_STATUS_COMPLETED, SOURCE_SOT } from "../../core/Atomic.ts";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
 import AbstractComponent from "../common/AbstractComponent.ts";
 import {
@@ -329,7 +329,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         const running = (this.canPoll && this.polling) || !this.canPoll;
 
         if(running && !this.isMonitoring()) {
-            return COMPONENT_STATE.MUTED;
+            return COMPONENT_STATE.IGNORED;
         }
         return running ? COMPONENT_STATE.RUNNING : COMPONENT_STATE.IDLE;
     }
@@ -987,6 +987,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 this.logger.debug(`Not processing ${buildTrackString(currQueuedPlay.play)} because monitoring was disabled when Play was queued.`);
                 state = 'discarded';
                 events.push(stateChangeToPlayEvent({state, reason: 'Not processing because monitoring was disabled when Play was queued'}));
+                updatedQueueState.queueStatus = QUEUE_STATUS_COMPLETED;
+                events.push(queueStateToPlayEvent({...queueState, ...updatedQueueState}));
+                this.playRepo.updateById(currQueuedPlay.id, {state});
                 return;
             } 
 
