@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { EmptyState, DataList, HStack, Tabs, Box, Flex, Stack, Text, Separator, IconButton, Container, Float, Icon, Link, Span, Show } from "@chakra-ui/react"
+import React, { useCallback, useState, type ComponentProps } from 'react';
+import { EmptyState, DataList, HStack, Tabs, Box, Flex, Stack, Text, Separator, IconButton, Container, Float, Icon, Link, Span, Show, Menu, Group, Portal, type MenuItemProps, type MenuSelectionDetails } from "@chakra-ui/react"
 import { LuCode, LuText, LuCheck, LuX } from "react-icons/lu"
-import type {JsonPlayObject, PlayObjectMinimal} from '../../core/Atomic.js';
+import type { JsonPlayObject, PlayObjectMinimal } from '../../core/Atomic.js';
 import { shortTodayAwareFormat, timeToHumanTimestamp } from '../../core/TimeUtils.js';
 import dayjs from 'dayjs';
 import { ChakraCodeBlock } from './CodeBlock.js';
@@ -10,6 +10,10 @@ import { formatNumber } from '../../core/DataUtils.js';
 import { Muted } from './Typography.js';
 import { ArtistCreditTags } from './ArtistCreditDisplay.js';
 import { MSErrorBoundary } from './ErrorBoundary.js';
+import { EllipsisButton, EyeClosedIcon, EyeIcon, getMusicServiceIconElement } from './icons/ChakraIcons.js';
+import { MusicbrainzInfoIcon } from './musicServices/Musicbrainz.js';
+import type { IconType } from 'react-icons/lib';
+import { capitalize } from '../../core/StringUtils.js';
 
 const EmptyPlayData = () => {
     return (
@@ -35,6 +39,17 @@ export interface PlayInfoProps {
     dates?: false | 'all' | 'played' | 'seen'
 }
 
+const primaryActionProps: ComponentProps<typeof EllipsisButton> = {
+    //margin: "1px",
+    variant: "outline",
+    size: 'xs'
+}
+
+const menuItem = (Icon: IconType, value: string, name?: string) => (props: Pick<MenuItemProps, 'disabled'> = {}) => (<Menu.Item key={value} value={value} {...props}><Icon /><Box flex="1">{name ?? capitalize(value)}</Box></Menu.Item>)
+
+const MenuMbidShow = menuItem(EyeIcon, 'mbidShow', 'Show MBIDs');
+const MenuMbidHide = menuItem(EyeClosedIcon, 'mbidHide', 'Hide MBIDs');
+
 export const PlayData = (props?: PlayInfoProps) => {
     const {
         play,
@@ -47,56 +62,90 @@ export const PlayData = (props?: PlayInfoProps) => {
 
 
     const [codeMode, setCodeMode] = useState(false);
+    const [showMbid, setShowMBid] = useState(false);
 
-    let code: React.JSX.Element | null = null;
-
-    const comparable = showCompare && final !== undefined;
+    const menuCb = useCallback((select: MenuSelectionDetails) => {
+        if (select.value === 'mbidShow') {
+            setShowMBid(true);
+        } else if (select.value === 'mbidHide') {
+            setShowMBid(false);
+        }
+    }, [setShowMBid])
 
     if (play === undefined) {
         return <EmptyPlayData />
     }
+    let code: React.JSX.Element | null = null;
+
+    const comparable = showCompare && final !== undefined;
+
+    const menuItems: React.JSX.Element[] = [
+        showMbid ? <MenuMbidHide /> : <MenuMbidShow />
+    ];
 
     if (showCodeToggle) {
         code = (
-            <IconButton variant="outline" size="xs" onClick={() => setCodeMode(!codeMode)}>
+            <IconButton hideBelow="sm" variant="outline" size="xs" {...primaryActionProps} onClick={() => setCodeMode(!codeMode)}>
                 {codeMode ? <LuText /> : <LuCode />}
             </IconButton>
         );
     }
 
+    let content: React.JSX.Element;
+
     if (!comparable) {
-        return (<Box position="relative">
-            <Float placement="top-end" offsetX="4" offsetY="2" hideBelow="sm" zIndex={100}>{code}</Float>
-            {codeMode ? <ChakraCodeBlock code={play} /> : <PlayDataDataList play={play} dates={dates} />}
-        </Box>);
+        content = codeMode ? <ChakraCodeBlock code={play} /> : <PlayDataDataList play={play} dates={dates} showMbid={showMbid} />;
+    } else {
+        content = (
+            <Tabs.Root size="sm" variant="outline" defaultValue={compareDefault}>
+                <Tabs.List>
+                    <Tabs.Trigger value="Initial">Initial</Tabs.Trigger>
+                    <Tabs.Trigger value="Final">Final</Tabs.Trigger>
+                </Tabs.List>
+                <Tabs.Content value="Initial">
+                    {codeMode ? <ChakraCodeBlock code={play} /> : <PlayDataDataList play={play} dates={dates} showMbid={showMbid} />}
+                </Tabs.Content>
+                <Tabs.Content value="Final">
+                    {codeMode ? <ChakraCodeBlock code={final} /> : <PlayDataDataList play={final} dates={dates} showMbid={showMbid} />}
+                </Tabs.Content>
+            </Tabs.Root>
+        )
     }
 
     return (
         <Box position="relative">
             <MSErrorBoundary>
-                <Float placement="top-end" offsetX="4" offsetY="2" hideBelow="sm" zIndex={100}>{code}</Float>
-                <Tabs.Root size="sm" variant="outline" defaultValue={compareDefault}>
-                    <Tabs.List>
-                        <Tabs.Trigger value="Initial">Initial</Tabs.Trigger>
-                        <Tabs.Trigger value="Final">Final</Tabs.Trigger>
-                    </Tabs.List>
-                    <Tabs.Content value="Initial">
-                        {codeMode ? <ChakraCodeBlock code={play} /> : <PlayDataDataList play={play} dates={dates} />}
-                    </Tabs.Content>
-                    <Tabs.Content value="Final">
-                        {codeMode ? <ChakraCodeBlock code={final} /> : <PlayDataDataList play={final} dates={dates} />}
-                    </Tabs.Content>
-                </Tabs.Root>
+                <Float placement="top-end" offsetX="6" offsetY="2" zIndex={100}>
+                    <HStack>
+                        <Menu.Root positioning={{ placement: "bottom-end" }} onSelect={menuCb}>
+                            <Group attached>
+                                {code}
+                                <Menu.Trigger asChild>
+                                    <EllipsisButton {...primaryActionProps} />
+                                </Menu.Trigger>
+                            </Group>
+                            <Portal>
+                                <Menu.Positioner>
+                                    <Menu.Content>
+                                        {menuItems}
+                                    </Menu.Content>
+                                </Menu.Positioner>
+                            </Portal>
+                        </Menu.Root>
+                    </HStack>
+                </Float>
+                {content}
             </MSErrorBoundary>
         </Box>
     );
 }
 
-export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDates }) => {
+export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDates, showMbid?: boolean }) => {
 
     const {
         play,
-        dates
+        dates,
+        showMbid = false
     } = props;
 
 
@@ -128,16 +177,23 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
             url: {
                 web: webUrl,
                 origin: originUrl
-            } = {}
+            } = {},
+            musicService
         } = {}
     } = play;
 
-    let titleElm: React.JSX.Element;
-    if(webUrl !== undefined || originUrl !== undefined) {
-        titleElm = <Link variant="underline" target="_blank" href={webUrl ?? originUrl}>{track}</Link>
-    } else {
-        titleElm = <Span>{track}</Span>;
+    const titleLinks: React.JSX.Element[] = [];
+    if (webUrl !== undefined || originUrl !== undefined) {
+        titleLinks.push(<Link key="weblink" variant="underline" target="_blank" href={webUrl ?? originUrl}><Icon size="sm">{getMusicServiceIconElement(musicService)}</Icon></Link>);
     }
+    if (brainz.track !== undefined) {
+        titleLinks.push(<MusicbrainzInfoIcon type="track" mbid={brainz.track} tooltip link showMbid={showMbid} />)
+    }
+    if (brainz.recording !== undefined) {
+        titleLinks.push(<MusicbrainzInfoIcon type="recording" mbid={brainz.recording} tooltip link showMbid={showMbid} />)
+    }
+
+    const titleElm = <HStack><Span>{track}</Span>{titleLinks}</HStack>
 
     return (
         <Flex flexDirection="column" gap="4">
@@ -150,13 +206,20 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
                     <DataList.ItemLabel>Artists</DataList.ItemLabel>
                     <DataList.ItemValue>
                         {artists.length === 0 ? <Text color="fg.muted">(No Artists)</Text> :
-                            <ArtistCreditTags data={play.data.artists} />}
+                            <ArtistCreditTags data={play.data.artists} showMbid={showMbid} />}
                     </DataList.ItemValue>
                 </DataList.Item>
                 {albumArtistElm}
                 <DataList.Item flexGrow="1">
                     <DataList.ItemLabel>Album</DataList.ItemLabel>
-                    <DataList.ItemValue>{play.data.album}</DataList.ItemValue>
+                    <DataList.ItemValue>
+                        <HStack>
+                            {play.data.album}
+                            <Show when={brainz.album !== undefined}>
+                                <MusicbrainzInfoIcon type="release" mbid={brainz.album} link tooltip showMbid={showMbid} />
+                            </Show>
+                        </HStack>
+                    </DataList.ItemValue>
                 </DataList.Item>
             </DataList.Root>
             <DataList.Root flexWrap="wrap" flexDirection="row">
@@ -172,22 +235,8 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
                 </DataList.Item>
                 <DataList.Item flexGrow="1" hideBelow="sm">
                     <DataList.ItemLabel>Repeat?</DataList.ItemLabel>
-                    <DataList.ItemValue><Icon>{repeat ? <LuCheck/> : <LuX/>}</Icon></DataList.ItemValue>
+                    <DataList.ItemValue><Icon>{repeat ? <LuCheck /> : <LuX />}</Icon></DataList.ItemValue>
                 </DataList.Item>
-            </DataList.Root>
-            <DataList.Root flexWrap="wrap" flexDirection="row" hideBelow="sm">
-                <Show when={Object.keys(brainz).length > 0}>
-                    <DataList.Item flexGrow="1">
-                        <DataList.ItemLabel>MBIDs</DataList.ItemLabel>
-                        <DataList.ItemValue>
-                            <Stack gap="1">
-                                <Show when={brainz.track !== undefined}><Text textStyle="xs"><Muted>Track:</Muted> {brainz.track}</Text></Show>
-                                <Show when={brainz.recording !== undefined}><Text textStyle="xs"><Muted>Recording</Muted>: {brainz.recording}</Text></Show>
-                                <Show when={brainz.album !== undefined}><Text textStyle="xs"><Muted>Album</Muted>: {brainz.album}</Text></Show>
-                            </Stack>
-                        </DataList.ItemValue>
-                    </DataList.Item>
-                </Show>
             </DataList.Root>
         </Flex>
     )

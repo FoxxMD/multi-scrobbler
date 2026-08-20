@@ -255,7 +255,7 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
                 </Accordion.ItemTrigger>
                 <Accordion.ItemContent>
                     <Accordion.ItemBody>
-                        <PlayData play={original ?? activity.play} final={activity.play} />
+                        <PlayData compareDefault='Final' play={original ?? activity.play} final={activity.play} />
                     </Accordion.ItemBody>
                 </Accordion.ItemContent>
             </Accordion.Item>

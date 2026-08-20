@@ -3,6 +3,7 @@ import babel from '@rolldown/plugin-babel';
 import normalizeUrl from "normalize-url";
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite'
+import svgr from "vite-plugin-svgr";
 import { dirname, resolve } from 'node:path'
 
 const QUOTES_UNWRAP_REGEX: RegExp = new RegExp(/^"(.*)"$/);
@@ -50,6 +51,7 @@ export default defineConfig(() => {
                 presets: [reactCompilerPreset()]
     }),
             tailwindcss(),
+            svgr()
         ],
         build: {
             sourcemap: true,
