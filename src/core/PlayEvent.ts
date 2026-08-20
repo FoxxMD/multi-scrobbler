@@ -1,5 +1,5 @@
 import type { Dayjs } from "dayjs";
-import type { DateLike, ErrorLike, LifecycleStep, PlayMatchResult, PlayState, QueueStatus, ScrobbleResult } from "./Atomic.ts";
+import type { DateLike, ErrorLike, LifecycleStep, PlayMatchResult, PlayState, QueueContext, QueueStatus, ScrobbleResult } from "./Atomic.ts";
 
 export type PlayEventType = 'transform' | 'queueStateChange' | 'playStateChange' | 'dupeCheck' | 'scrobbleResult';
 export const PLAY_EVENT_TYPE = {
@@ -25,6 +25,7 @@ export type PlayEventTransform<D extends DateLike = Dayjs> = BasePlayEvent<'tran
 export interface PlayEventQueueStateChangeData {
     queueName: string
     queueStatus: QueueStatus
+    context?: QueueContext
     retries?: number
     error?: ErrorLike
 }

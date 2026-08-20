@@ -659,6 +659,7 @@ export interface QueueContext {
     transform?: boolean
     dupeCheck?: boolean
     useCache?: boolean
+    isRetry?: boolean
 }
 
 /**
