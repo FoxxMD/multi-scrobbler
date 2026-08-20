@@ -16,6 +16,7 @@ import { ExpandCollapse } from "./ExpandCollapse";
 import { DebugCopy, ExclamationCircleIcon, ExclamationTriangleIcon, InsertedIcon, RetryButton, UpdatedIcon } from "./icons/ChakraIcons";
 import { PlayData } from "./PlayData";
 import { TextMuted } from "./TextMuted";
+import { capitalize } from '../../core/StringUtils';
 
 type UseActivityQueryOptions = {
     msQuery?: QueryPlaysOptsJson
@@ -128,6 +129,7 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
             <HStack gap="1">
                 <ShortDateDisplay date={sortBy === 'played' ? play.data.playDate : play.meta?.seenAt} prefix={sortBy === 'played' ? 'Played' : 'Seen'} /><Separator orientation="vertical" height="4" />
                 <TextMuted>{play.meta?.source}</TextMuted>
+                {play.meta?.parsedFrom !== undefined && <><Separator orientation="vertical" height="4" /><TextMuted>{capitalize(play.meta?.parsedFrom)}</TextMuted></>}
             </HStack>
         </Flex>
     );
