@@ -453,7 +453,7 @@ export default class ScrobbleClients {
                 }
             }
             for (const playObj of playObjs) {
-                await client.queueScrobble(clone(playObj), scrobbleFrom);
+                await client.queueScrobble(clone(playObj));
             }
         }
         if(excluded.length > 0) {

@@ -399,6 +399,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                     (playSelect as unknown as PlayWith<'events'>).events = events;
                 }
                 this.emitPlayUpdate({ ...playSelect } as unknown as PlayApiCommonDetailed);
+                createdQueuedPlays.push(playSelect);
             }
         } else if (dataArray.every(x => isPlayObject(x))) {
             const monitoring = this.getMonitoringStatus();
