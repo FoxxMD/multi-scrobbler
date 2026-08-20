@@ -655,6 +655,12 @@ export const QUEUE_STATUS_COMPLETED: QueueStatus = 'completed';
 export const QUEUE_STATUS_FAILED: QueueStatus = 'failed';
 export const QUEUE_STATUSES: QueueStatus[] = [QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, QUEUE_STATUS_QUEUED];
 
+export interface QueueContext {
+    transform?: boolean
+    dupeCheck?: boolean
+    useCache?: boolean
+}
+
 /**
  * @see https://github.com/ts-essentials/ts-essentials/issues/339#issuecomment-4681920369 */
 export type Replace<Type, Keys extends keyof Type, TReplace> = StrictOmit<Type, Keys> & Record<Keys, TReplace>
