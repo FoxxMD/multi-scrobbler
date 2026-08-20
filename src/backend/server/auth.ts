@@ -36,7 +36,7 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
         }
     });
 
-    router.get('/api/client/auth', {middleware: [clientMiddle]}, async (req, res) => {
+    router.get('/client/auth', {middleware: [clientMiddle]}, async (req, res) => {
         const {
             scrobbleClient,
         } = req as any;
@@ -54,7 +54,7 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
         }
     });
 
-    router.get('/api/source/auth', {middleware: [sourceMiddle]}, async (req, res, next) => {
+    router.get('/source/auth', {middleware: [sourceMiddle]}, async (req, res, next) => {
         const {
             scrobbleSource: source,
             sourceName: name,
@@ -86,7 +86,7 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
         }
     });
 
-    router.get('/.*callback$/', {querySchema: z.any()}, async (req, res) => {
+    app.get(/.*callback$/, async (req, res) => {
         if(req.url.indexOf('/api') !== 0) {
             return res.redirect(307, `/api${req.url}`);
         }
