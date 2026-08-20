@@ -1,0 +1,1 @@
+ALTER TABLE `play_queue_states` ADD `context` text;
