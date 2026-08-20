@@ -115,6 +115,7 @@ export default class MemorySource extends AbstractSource {
                 this.emitEvent('playerUpdate', {
                     ...state,
                     options: {
+                        wasMonitored: this.isMonitoring(),
                         scrobbleTo: this.clients
                     }
                 });
@@ -331,6 +332,7 @@ export default class MemorySource extends AbstractSource {
                 this.emitEvent('playerUpdate', {
                     ...apiState,
                     options: {
+                        wasMonitored: this.isMonitoring(),
                         scrobbleTo: this.clients
                     }
                 });

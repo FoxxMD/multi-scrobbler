@@ -1754,7 +1754,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     queuePlayingNow = async (data: SourcePlayerObj, source: SourceIdentifier) => {
         if(!this.isReady()) {
-            this.logger.debug('Not queueing play because scrobbler is not ready');
+            this.logger.debug('Not queueing now playing because scrobbler is not ready');
+            return;
+        }
+        if(!this.isMonitoring()) {
+            this.logger.debug('Not queueing now playing because scrobbler is not currently monitoring');
             return;
         }
         const sourceId = `${source.name}-${source.type}`;
