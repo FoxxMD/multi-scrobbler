@@ -1003,12 +1003,18 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.setStatus(`Processing Play ${currQueuedPlay.uid}`);
 
         const queueState = currQueuedPlay.queueStates.find(x => x.queueName === INGRESS_QUEUE);
+        const {
+            useCache = true,
+            isRetry = false,
+            transform = true,
+            dupeCheck = true,
+        } = queueState.context || {};
         const updatedQueueState: Partial<QueueStateNew> = {};
         let state: PlayState;
         let events: Omit<PlayEvent, 'playId'>[] = [];
         try {
 
-            if(queueState.context?.isRetry !== true && !currQueuedPlay.play.meta.wasMonitored) {
+            if(isRetry !== true && !currQueuedPlay.play.meta.wasMonitored) {
                 this.logger.debug(`Not processing ${buildTrackString(currQueuedPlay.play)} because monitoring was disabled when Play was queued.`);
                 state = 'discarded';
                 events.push(stateChangeToPlayEvent({state, reason: 'Not processing because monitoring was disabled when Play was queued'}));
@@ -1017,24 +1023,29 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 this.playRepo.updateById(currQueuedPlay.id, {state});
                 return;
             } 
-
-            const {lifecycle = [], ...preCompared} = await this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.preCompare);
-            if(lifecycle.length > 0) {
-                events.push({...transformToPlayEvent(lifecycle), createdAt: dayjs()});
+            let preCompared = currQueuedPlay.play;
+            if(transform) {
+                const {lifecycle = [], ...rest} = await this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.preCompare, {useCachedResult: useCache});
+                preCompared = rest;
+                if(lifecycle.length > 0) {
+                    events.push({...transformToPlayEvent(lifecycle), createdAt: dayjs()});
+                }
             }
             let existing: PlayObject;
-            // cheap check for existing
-            const cheapExisting = await this.playRepo.checkExisting(preCompared, { notId: currQueuedPlay.id });
-            if(cheapExisting !== undefined) {
-                events.push(dupeCheckToPlayEvent({match: true, reason: `Matched hash on existing Play ${cheapExisting.uid} with close temporality`}));
-                updatedQueueState.error = {message: `Matched hash on existing Play ${cheapExisting.uid} with close temporality`};
-                existing = {...cheapExisting.play, id: cheapExisting.id, uid: cheapExisting.uid};
-            } else {
-                const matchRes = await this.existingDiscovered(preCompared);
-                events.push(dupeCheckToPlayEvent(matchRes));
-                if(matchRes.match) {
-                    existing = matchRes.closestMatchedPlay;
-                    updatedQueueState.error = {message: `Matched with Play ${existing.uid ?? existing.id}`};
+            if (dupeCheck) {
+                // cheap check for existing
+                const cheapExisting = await this.playRepo.checkExisting(preCompared, { notId: currQueuedPlay.id });
+                if (cheapExisting !== undefined) {
+                    events.push(dupeCheckToPlayEvent({ match: true, reason: `Matched hash on existing Play ${cheapExisting.uid} with close temporality` }));
+                    updatedQueueState.error = { message: `Matched hash on existing Play ${cheapExisting.uid} with close temporality` };
+                    existing = { ...cheapExisting.play, id: cheapExisting.id, uid: cheapExisting.uid };
+                } else {
+                    const matchRes = await this.existingDiscovered(preCompared);
+                    events.push(dupeCheckToPlayEvent(matchRes));
+                    if (matchRes.match) {
+                        existing = matchRes.closestMatchedPlay;
+                        updatedQueueState.error = { message: `Matched with Play ${existing.uid ?? existing.id}` };
+                    }
                 }
             }
             currQueuedPlay.play = preCompared;
