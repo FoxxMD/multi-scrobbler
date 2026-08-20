@@ -150,3 +150,6 @@ export const scrobbleToPlayEvent = (data: PlayEventScrobbleResultData): Omit<Pla
     createdAt: data.createdAt ?? dayjs(),
     data
 });
+
+export const entityIsPlayEntity = (obj: object): obj is PlaySelectWithQueueStates => `play` in obj && typeof obj.play === 'object'
+    && `componentId` in obj && typeof obj.componentId === 'number'
