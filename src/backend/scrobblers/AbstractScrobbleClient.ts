@@ -32,7 +32,7 @@ import {
     type TimeRangeListensFetcher,
 } from "../common/infrastructure/Atomic.ts";
 import { CALCULATED_PLAYER_STATUSES } from '../../core/Atomic.ts';
-import type {ReportedPlayerStatus, ScrobbleResult} from '../../core/Atomic.ts';
+import type {QueueContext, ReportedPlayerStatus, ScrobbleResult} from '../../core/Atomic.ts';
 import type {ClientType} from "../../core/Atomic.ts";
 import type {CommonClientConfig, NowPlayingOptions, UpstreamRefreshOptions} from "../common/infrastructure/config/client/index.ts";
 import { TRANSFORM_HOOK } from "../../core/Transform.ts";
@@ -82,6 +82,8 @@ type PlatformMappedPlays = Map<string, SourceMappedPlayer>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
 
 const platformTruncate = truncateStringToLength(10);
+
+const noopTransform = async (x) => x;
 
 const bufferNPUpdateReasonFragments: string[] = [
     'previous update play data does not match current',
@@ -722,7 +724,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                                 }
                             }
                             // return play object without going through transform since it was (presumably) already transformed before being cached
-                            const res = await this.queueScrobble(updatedPlay, updatedPlay.meta.source, async (x) => x);
+                            const res = await this.queueScrobble(updatedPlay, {transform: false});
                             if(res.length === 1) {
                                 logger.verbose(`Migrated Play ${res[0].uid} => ${buildTrackString(play)}`);
                             }
@@ -1646,13 +1648,16 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         await this.updateQueueStats([DEAD_QUEUE]);
     }
 
-    queueScrobble = async (data: PlayObject | PlayObject[], source: string, transformFunc?: (x: PlayObject) => Promise<PlayObject>) => {
+    queueScrobble = async (data: PlayObject | PlayObject[], context?: QueueContext) => {
         const monitoring = this.getMonitoringStatus();
+        const {
+            transform = true,
+        } = context || {};
         const playDatas = (Array.isArray(data) ? data : [data]).map(x => ({...x, meta: {...x.meta, wasMonitored: monitoring.monitoring, seenAt: dayjs()}}));
 
         const createdQueuedPlays: PlaySelect[] = [];
 
-        for await(const play of pMapIterable(playDatas, this.staggerMappers.preCompare(async x => transformFunc !== undefined ? await transformFunc(x) : await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 3})) {
+        for await(const play of pMapIterable(playDatas, this.staggerMappers.preCompare(async x => transform === false ? await noopTransform(x) : await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 3})) {
             const events: Omit<PlayEvent, 'playId'>[] = [];
             try {
                 // cheap check, looks for play data (non-meta) hash, playdate, and optionally mbid recording
@@ -1711,7 +1716,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             this.logger.debug(`Added ${buildTrackString(play)} to the queue`);
             this.setStatus(`Added Play from parent ${play.uid} to queue`);
 
-            const queuedPlay = {id: nanoid(), source, play: play}
+            const queuedPlay = {id: nanoid(), source: play.meta.source, play: play}
             //await this.playRepo.updateById(play.meta.dbId, {play});
             this.emitEvent('scrobbleQueued', {queuedPlay: queuedPlay});
             this.emitPlayInsert({...playRow[0], queueStates: [queueState]} as unknown as PlayApiCommonDetailed);

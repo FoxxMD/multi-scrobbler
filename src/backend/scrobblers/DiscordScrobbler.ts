@@ -124,7 +124,7 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    queueScrobble = async (data: PlayObject | PlayObject[], source: string) => {
+    queueScrobble = async (data: PlayObject | PlayObject[]) => {
         // discord does not handle scrobbles, only Now Playing
         // so don't bother queueing any scrobbles as we don't want to cache them
         // or give the user the impression they are used (in UI as a number of queued scrobbles)

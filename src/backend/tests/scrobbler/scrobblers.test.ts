@@ -528,7 +528,7 @@ describe('Upstream Scrobbles', function() {
         const sp = spy(scrobbler, 'getScrobblesForTimeRange');
 
         const play = generatePlay({playDate: dayjs().subtract(60, 's')});
-        await scrobbler.queueScrobble(play, 'test');
+        await scrobbler.queueScrobble(play);
         const emptied = pEvent(scrobbler.emitter, 'queueEmptied');
         scrobbler.startScrobbling(new AbortController().signal).then(() => null);
         await emptied;
@@ -548,7 +548,7 @@ describe('Upstream Scrobbles', function() {
 
         const play1 = generatePlay({playDate: dayjs().subtract(3, 'm')});
         const play2 = generatePlay({playDate: dayjs().subtract(1, 'm')});
-        await scrobbler.queueScrobble([play1, play2], 'test');
+        await scrobbler.queueScrobble([play1, play2]);
         const emptied = pEvent(scrobbler.emitter, 'queueEmptied');
         scrobbler.startScrobbling(new AbortController().signal).then(() => null);
         await emptied;
@@ -569,7 +569,7 @@ describe('Upstream Scrobbles', function() {
         const play1 = generatePlay({playDate: dayjs().subtract(3, 'm')});
         const play2 = generatePlay({playDate: dayjs().subtract(1, 'm')});
         const play3 = generatePlay({playDate: dayjs().subtract(DEFAULT_CONSOLIDATE_DURATION.add(4, 'm'))});
-        await scrobbler.queueScrobble([play1, play2, play3], 'test');
+        await scrobbler.queueScrobble([play1, play2, play3]);
         const emptied = pEvent(scrobbler.emitter, 'queueEmptied');
         scrobbler.startScrobbling(new AbortController().signal).then(() => null);
         await emptied;
@@ -589,7 +589,7 @@ describe('Upstream Scrobbles', function() {
 
         const play1 = generatePlay({playDate: dayjs().subtract(3, 'm')});
         const play2 = generatePlay({playDate: dayjs().subtract(1, 'm')});
-        await scrobbler.queueScrobble([play1], 'test');
+        await scrobbler.queueScrobble([play1]);
         const emptied = pEvent(scrobbler.emitter, 'queueEmptied');
         scrobbler.startScrobbling(new AbortController().signal).then(() => null);
         await emptied;
@@ -597,7 +597,7 @@ describe('Upstream Scrobbles', function() {
 
         MockDate.set(dayjs().add(REFRESH_STALE_DEFAULT + 1, 's').toDate());
         const emptied2 = pEvent(scrobbler.emitter, 'queueEmptied');
-        await scrobbler.queueScrobble([play2], 'test');
+        await scrobbler.queueScrobble([play2]);
         await emptied2;
         scrobbler.tryStopScrobbling().then(() => null);
         expect(sp.calledTwice).is.true;
@@ -677,7 +677,7 @@ describe('Scrobble client uses transform plays correctly', function() {
         const newScrobble = generatePlay({
             track: 'my cool track'
         });
-        await testScrobbler.queueScrobble(newScrobble, 'test');
+        await testScrobbler.queueScrobble(newScrobble);
         const queuedPlayedData = await testScrobbler.playRepoTest.getQueued(INGRESS_QUEUE);
         expect(queuedPlayedData.data[0].play.data.track).is.eq('my cool track');
         testScrobbler.scrobbleSleep = 100;
@@ -763,7 +763,7 @@ describe('Manages scrobble queue', function() {
         const newScrobble = generatePlay({
             playDate: normalizedWithMixedDur[normalizedWithMixedDur.length - 3].data.playDate.add(3, 'seconds')
         });
-        await testScrobbler.queueScrobble(newScrobble, 'test');
+        await testScrobbler.queueScrobble(newScrobble);
         const res = await Promise.race([pEvent(testScrobbler.emitter, 'scrobble'), sleep(3000)]);
 
         assert.isDefined(res);
@@ -780,13 +780,13 @@ describe('Manages scrobble queue', function() {
         const dupScrobble = clone(newScrobble);
         dupScrobble.data.playDate = newScrobble.data.playDate.add(2, 'seconds');
 
-        await testScrobbler.queueScrobble(newScrobble, 'test');
+        await testScrobbler.queueScrobble(newScrobble);
         const res = await Promise.race([pEvent(testScrobbler.emitter, 'scrobble'), sleep(1500)]);
 
         assert.isDefined(res);
         assert.isDefined(res.data);
 
-        await testScrobbler.queueScrobble(dupScrobble, 'test');
+        await testScrobbler.queueScrobble(dupScrobble);
         const resDup = await Promise.race([pEvent(testScrobbler.emitter, 'scrobble'), sleep(1100)]);
 
         assert.isUndefined(resDup);
@@ -802,8 +802,8 @@ describe('Manages scrobble queue', function() {
         const dupScrobble = clone(newScrobble);
         dupScrobble.data.playDate = newScrobble.data.playDate.add(2, 'seconds');
 
-        await testScrobbler.queueScrobble(newScrobble, 'test');
-        await testScrobbler.queueScrobble(dupScrobble, 'test');
+        await testScrobbler.queueScrobble(newScrobble);
+        await testScrobbler.queueScrobble(dupScrobble);
         const res = await Promise.race([pEvent(testScrobbler.emitter, 'scrobble'), sleep(1500)]);
 
         assert.isDefined(res);
@@ -830,7 +830,7 @@ describe('Manages scrobble queue', function() {
 
         testScrobbler.scrobbleDelay = 600;
 
-        await testScrobbler.queueScrobble([newScrobble1, newScrobble2, newScrobble3], 'test');
+        await testScrobbler.queueScrobble([newScrobble1, newScrobble2, newScrobble3]);
         await pEvent(testScrobbler.emitter, 'scrobble');
         const initial = dayjs();
         await pEvent(testScrobbler.emitter, 'scrobble');
