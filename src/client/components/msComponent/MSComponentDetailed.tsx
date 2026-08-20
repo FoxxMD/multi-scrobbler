@@ -162,16 +162,16 @@ const dialog = createOverlay<AuthDialogProps>((props) => {
   )
 })
 
-const stateIsStarted = (state: ComponentState): boolean => state <= COMPONENT_STATE.MUTED;
+const stateIsStarted = (state: ComponentState): boolean => state <= COMPONENT_STATE.IGNORED;
 
 const componentStateMenuItem = (Icon: IconType, value: string, name?: string) => (props: Pick<MenuItemProps, 'disabled'> = {}) => {
     return (<Menu.Item key={value} value={value} {...props}><Icon/><Box flex="1">{name ?? capitalize(value)}</Box></Menu.Item>);
 }
-const MenuItemRestart = componentStateMenuItem(RetryIcon, 'restart');
-const MenuItemStop = componentStateMenuItem(PowerOffIcon, 'stop');
-const MenuItemStart = componentStateMenuItem(PowerIcon, 'start');
-const MenuItemMute = componentStateMenuItem(EyeClosedIcon, 'mute', 'Ignore')
-const MenuItemUnmute = componentStateMenuItem(EyeIcon, 'unmute', 'Monitor');
+const MenuItemRestart = componentStateMenuItem(RetryIcon, 'Restart');
+const MenuItemStop = componentStateMenuItem(PowerOffIcon, 'Stop');
+const MenuItemStart = componentStateMenuItem(PowerIcon, 'Start');
+const MenuItemIgnore = componentStateMenuItem(EyeClosedIcon, 'ignore', 'Ignore')
+const MenuItemMonitor = componentStateMenuItem(EyeIcon, 'monitor', 'Monitor');
 const MenuItemAuth = componentStateMenuItem(UnlockIconRaw, 'auth', 'Auth');
 
 const primaryActionProps: ComponentProps<typeof PowerOffButton> = {
@@ -212,15 +212,15 @@ export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof 
     switch(props.data.state) {
         case COMPONENT_STATE.RUNNING:
             primaryAction = <RetryButton onClick={() => mutate('restart')} disabled={isPending} {...primaryActionProps}/>
-            menuItems = [<MenuItemStop/>,<MenuItemMute disabled/>];
+            menuItems = [<MenuItemStop/>,<MenuItemIgnore/>];
             break;
         case COMPONENT_STATE.IDLE:
             primaryAction = <PowerButton onClick={() => mutate('start')} disabled={isPending} {...primaryActionProps}/>
-            menuItems = [<MenuItemStop/>,<MenuItemRestart/>,<MenuItemMute disabled/>];
+            menuItems = [<MenuItemStop/>,<MenuItemRestart/>,<MenuItemIgnore/>];
             break;
-        case COMPONENT_STATE.MUTED:
-            primaryAction = <EyeButton  disabled={isPending} {...primaryActionProps}/>;
-            menuItems = [<MenuItemStop/>,<MenuItemRestart/>,<MenuItemUnmute disabled/>];
+        case COMPONENT_STATE.IGNORED:
+            primaryAction = <EyeButton onClick={() => mutate('monitor')} disabled={isPending} {...primaryActionProps}/>;
+            menuItems = [<MenuItemStop/>,<MenuItemRestart/>,<MenuItemMonitor/>];
             break;
         case COMPONENT_STATE.STOPPED:
             primaryAction = <PowerButton onClick={() => mutate('start')} disabled={isPending} {...primaryActionProps}/>

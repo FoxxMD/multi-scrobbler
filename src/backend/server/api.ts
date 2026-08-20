@@ -354,8 +354,16 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
                     return res.status(500).json({ error: serializeError(e) });
                 }
                 break;
+            case 'ignore':
+                component.monitoringActivity = component.getSystemMonitoring() === false ? undefined : false;
+                component.emitComponentUpdate({state: component.getRunningState()});
+                break;
+            case 'monitor':
+                component.monitoringActivity = component.getSystemMonitoring() === true ? undefined : true;
+                component.emitComponentUpdate({state: component.getRunningState()});
+                break;
             default:
-                return res.status(400).json({ error: { message: `'state' type ${state} is not valid` } });
+                return res.status(400).json({ error: { message: `'state' type ${state} was not handled` } });
         }
         return res.sendStatus(200);
     });
