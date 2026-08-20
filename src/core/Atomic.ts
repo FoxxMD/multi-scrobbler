@@ -842,3 +842,6 @@ export type EmittedMSEvent<T = Record<string, any>, K = Record<string, any>,Y = 
     data: T
     options?: K
 }
+export interface OptionalCacheUsage {
+    useCachedResult?: boolean
+}
