@@ -655,11 +655,14 @@ export const QUEUE_STATUS_COMPLETED: QueueStatus = 'completed';
 export const QUEUE_STATUS_FAILED: QueueStatus = 'failed';
 export const QUEUE_STATUSES: QueueStatus[] = [QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, QUEUE_STATUS_QUEUED];
 
+export const DEAD_LETTER_RETRIES_DEFAULT = 3;
+
 export interface QueueContext {
     transform?: boolean
     dupeCheck?: boolean
     useCache?: boolean
     isRetry?: boolean
+    reason?: string
 }
 
 /**

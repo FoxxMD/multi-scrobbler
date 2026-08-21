@@ -40,13 +40,14 @@ import { DrizzlePlayRepository, type QueryPlaysOpts, type QueryPlaysOptsJson } f
 import { playSelectToDeadScrobble } from "../common/database/drizzle/entityUtils.ts";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.ts";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
-import {componentStateBodySchema, type ComponentClientApiJson, type ComponentSourceApiJson} from "../../core/Api.ts";
+import {componentStateBodySchema, type ComponentClientApiJson, type ComponentSourceApiJson, type PlayApiCommonDetailed} from "../../core/Api.ts";
 import { asDayjsHydratedObject } from "../../core/DataUtils.ts";
 import type {Dayjs} from "dayjs";
 import { asSerializablePlaySelect } from "../../core/PlayMarshalUtils.ts";
 import { serializeError } from "serialize-error";
 import { z } from 'zod';
 import type { createTypedRouter } from "@minisylar/express-typed-router";
+import pEvent from "p-event";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -645,14 +646,24 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
 
         const deadId = id as string;
 
-        (client as AbstractScrobbleClient).logger.verbose(`User requested processing of dead letter scrobble ${deadId} via API call`)
+        (client as AbstractScrobbleClient).logger.verbose(`User requested processing of dead letter scrobble ${deadId} via API call`);
 
         try {
-            const [scrobbled, dead] = await (client as AbstractScrobbleClient).processDeadLetterScrobble(deadId);
-            if(scrobbled) {
-                return res.status(200).send();
+            const playEntity = await client.playRepo.findByUid(id);
+            if(playEntity === undefined) {
+                return res.status(404).json({message: `Play ${deadId} does not exist`});
             }
-            return res.json(playSelectToDeadScrobble(dead, true));
+            client.queueScrobble(playEntity, {reason: 'user requested processing via API call'}).then(() => null);
+            const event = await pEvent(client.emitter, 'playUpdate', {
+                timeout: 10000,
+                filter: (val: PlayApiCommonDetailed) => val.uid === id
+            }) as PlayApiCommonDetailed;
+            if(event.state === 'scrobbled') {
+                return res.status(200).send();
+            } else {
+                // @ts-expect-error should be fine
+                return res.json(playSelectToDeadScrobble(event, true));
+            }
         } catch (e) {
             if(e.message.includes(`Play ${deadId} does not exist`)) {
                 logger.warn(e);
@@ -670,7 +681,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
 
         (client as AbstractScrobbleClient).logger.verbose('User requested deletion of all dead letter scrobbles via API');
 
-        (client as AbstractScrobbleClient).removeDeadLetterScrobbles(['queued', 'failed'], 'failed', false).then(() => null).catch((e) => logger.error(e));
+        (client as AbstractScrobbleClient).removeDeadLetterScrobbles().then(() => null).catch((e) => logger.error(e));
 
         return res.sendStatus(200);
     });
@@ -687,14 +698,15 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
 
         (client as AbstractScrobbleClient).logger.verbose(`User requested removal of dead letter scrobble ${deadId} via API call`)
 
+        const playEntity = await client.playRepo.findByUid(id);
+        if(playEntity === undefined) {
+            return res.status(404).json({message: `Play ${deadId} does not exist`});
+        }
+
         try {
-            await (client as AbstractScrobbleClient).removeDeadLetterScrobble(deadId,'failed', false);
+            await (client as AbstractScrobbleClient).removeDeadLetterScrobble(playEntity);
             return res.status(200).send();
         } catch (e) {
-            if(e.message.includes(`Play ${deadId} does not exist`)) {
-                logger.warn(e);
-                return res.status(404).json({error: e});
-            }
             logger.error(e);
             return res.status(500).json({error: e});
         }

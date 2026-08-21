@@ -451,7 +451,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 });
 
                 const playRow = await this.playRepo.createPlays([createPlayData]);
-                const queueState = await this.queueRepo.create({ componentId: this.dbComponent.id, playId: playRow[0].id, queueName: INGRESS_QUEUE }) as QueueStateSelect;
+                const queueState = await this.queueRepo.create({ componentId: this.dbComponent.id, playId: playRow[0].id, queueName: INGRESS_QUEUE, context }) as QueueStateSelect;
                 await this.playEventsRepo.createMany([
                     { playId: playRow[0].id, ...stateChangeToPlayEvent({ state: 'queued' }), createdAt: playRow[0].seenAt.add(1, 'ms') },
                     { playId: playRow[0].id, ...queueStateToPlayEvent(queueState), createdAt: queueState.createdAt }

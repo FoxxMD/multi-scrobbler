@@ -1,9 +1,9 @@
-import { eq, and, lte, inArray } from "drizzle-orm";
+import { eq, and, gte, lte, inArray } from "drizzle-orm";
 import { DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
 import type {DbConcrete} from "../drizzleUtils.ts";
 import type {PlaySelect, QueueStateSelect} from "../drizzleTypes.ts";
 import { playEvents, queueStates } from "../schema/schema.ts";
-import { DEAD_QUEUE } from "../../../../../core/Atomic.ts";
+import { DEAD_QUEUE, INGRESS_QUEUE } from "../../../../../core/Atomic.ts";
 import { queueStateToPlayEvent } from "../entityUtils.ts";
 export class DrizzleQueueRepository extends DrizzleBaseRepository<'queueStates'> {
 
@@ -18,7 +18,7 @@ export class DrizzleQueueRepository extends DrizzleBaseRepository<'queueStates'>
             eq(queueStates.componentId, componentId),
             lte(queueStates.retries, retries),
             eq(queueStates.queueStatus, 'failed'),
-            eq(queueStates.queueName, DEAD_QUEUE)
+            eq(queueStates.queueName, INGRESS_QUEUE)
         ));
     }
 
@@ -32,12 +32,29 @@ export class DrizzleQueueRepository extends DrizzleBaseRepository<'queueStates'>
         ));
     }
 
-    public getQueueCount = async (componentId: number, queueNames: string[], queueStatus: QueueStateSelect['queueStatus'][] = ['queued']): Promise<number> => {
+    public getQueueCount = async (componentId: number, queueNames: string[], opts: {
+        queueStatus?: QueueStateSelect['queueStatus'][],
+        retries?: number
+        retryEq?: 'lte' | 'gte'
+    } = {}): Promise<number> => {
+        const {
+            queueStatus = ['queued'],
+            retries,
+            retryEq = 'lte'
+        } = opts
+        if(retries === undefined) {
+            return await this.db.$count(queueStates, and(
+                eq(queueStates.componentId, componentId),
+                inArray(queueStates.queueName, queueNames),
+                inArray(queueStates.queueStatus, queueStatus)
+            ));
+        }
         return await this.db.$count(queueStates, and(
             eq(queueStates.componentId, componentId),
             inArray(queueStates.queueName, queueNames),
-            inArray(queueStates.queueStatus, queueStatus)
-        ));
+            inArray(queueStates.queueStatus, queueStatus),
+            retryEq === 'lte' ? lte(queueStates.retries, retries) : gte(queueStates.retries, retries)
+        )); 
     }
 
     async create(data: typeof this.table.$inferInsert & {playId?: PlaySelect['id'], event?: boolean}): Promise<typeof this.table.$inferSelect> {

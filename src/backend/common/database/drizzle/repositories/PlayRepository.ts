@@ -1,9 +1,9 @@
 import { childLogger } from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
-import { eq, inArray, relationsFilterToSQL, sql } from "drizzle-orm";
+import { eq, inArray, relationsFilterToSQL, sql, lte } from "drizzle-orm";
 import assert from "node:assert";
 import type { MarkOptional } from "ts-essentials";
-import { type DateLike, type DeepReplaceValue, type PlayObject, type PlayState, type QueueName, SCROBBLE_TS_SOC_END, TA_DEFAULT_ACCURACY, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
+import { type DateLike, type DeepReplaceValue, type PlayObject, type PlayState, QUEUE_STATUS_QUEUED, type QueueName, SCROBBLE_TS_SOC_END, TA_DEFAULT_ACCURACY, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
 import { removeUndefinedKeys } from '../../../../../core/DataUtils.ts';
 import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.ts";
 import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../../utils/PlayComparisonUtils.ts";
@@ -14,7 +14,7 @@ import type {ErrorLike, SourceType} from "../../../../../core/Atomic.ts";
 import type {FindMany, FindWhere, FindWith, PlayInputNew, PlayNew, PlaySelect, PlaySelectWithQueueStates, PlayWith, QueueStateSelect, WhereClause} from "../drizzleTypes.ts";
 import { type DbConcrete, runTransaction } from "../drizzleUtils.ts";
 import { generateInputEntity, generatePlayEntity, hydratePlaySelect, stateChangeToPlayEvent, transformToPlayEvent, type PlayEntityOpts, type PlayHydateOptions } from "../entityUtils.ts";
-import { playEvents, playInputs, plays, relations } from "../schema/schema.ts";
+import { playEvents, playInputs, plays, relations, type TSchema } from "../schema/schema.ts";
 import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
 import type {PaginatedResponse} from "../../../../../core/Api.ts";
 import type {PaginatedQueryResponse} from "../../../../../core/Api.ts";
@@ -25,6 +25,7 @@ import { type PlayEventTransform } from "../../../../../core/PlayEvent.ts";
 export interface QueueCriteria {
     queueName: QueueName
     queueStatus: QueueStateSelect['queueStatus'][] | QueueStateSelect['queueStatus']
+    retries?: number
 }
 
 export interface PlayWhereOpts<D extends DateLike = Dayjs> {
@@ -90,6 +91,16 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         }
         res.play = hydratePlaySelect(res, opts.hydrate);
         return res as PlaySelectWithQueueStates;
+    }
+
+    findByIdWith = async <K extends keyof TSchema['plays']["relations"]>(id: number, args: WithPlayRelation[]): Promise<PlayWith<K> | undefined> => {
+        const res = await this.db.query.plays.findFirst({
+            where: {
+                id
+            },
+            with: buildPlayWith(args)
+        });
+        return res as unknown as PlayWith<K> | undefined;
     }
 
     createPlays = async (entitiesOpts: RepositoryCreatePlayOpts[], opts: HydrateOpts = {}): Promise<PlayWith<'input'>[]> => {
@@ -480,25 +491,30 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             componentId: sql.placeholder('componentId'),
             queueStates: {
                 queueName: sql.placeholder('queueName'),
-                queueStatus: 'queued',
+                queueStatus: sql.placeholder('status'),
                 retries: {
                     lte: sql.placeholder('retries')
                 }
             },
         },
         with: {
-            queueStates: true
+            queueStates: {
+                orderBy: {
+                    updatedAt: 'asc'
+                }
+            }
         },
-        orderBy: {
-            seenAt: 'asc'
-        },
+        // orderBy: {
+        //     seenAt: 'asc'
+        // },
     }).prepare()
 
-    public getQueueNext = async (queueName: string, opts: {order?: 'asc' | 'desc', retries?: number, notIds?: number[]} & ComponentConstrainedRepoOpts = {}): Promise<PlaySelectWithQueueStates | undefined> => {
+    public getQueueNext = async (queueName: string, opts: {order?: 'asc' | 'desc', retries?: number, notIds?: number[], status?: QueueStateSelect['queueStatus']} & ComponentConstrainedRepoOpts = {}): Promise<PlaySelectWithQueueStates | undefined> => {
         const {
-            retries = 0,
+            retries = 1000,
             notIds,
             order = 'asc',
+            status = QUEUE_STATUS_QUEUED,
             componentId = this.componentId
         } = opts;
 
@@ -509,7 +525,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                 this.getQueueNextPrepared = this.prepareGetQueueNext();
             }
 
-            res = await this.getQueueNextPrepared.execute({ queueName, retries, componentId });
+            res = await this.getQueueNextPrepared.execute({ queueName, retries, componentId, status });
         } else {
             // cannot bind arrays in sqlite so this has to be non-prepared
             res = await this.db.query.plays.findFirst({
@@ -520,18 +536,22 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                     componentId: componentId,
                     queueStates: {
                         queueName: queueName,
-                        queueStatus: 'queued',
+                        queueStatus: status,
                         retries: {
                             lte: retries
                         }
                     },
                 },
                 with: {
-                    queueStates: true
+                    queueStates: {
+                        orderBy: {
+                            updatedAt: 'asc'
+                        }
+                    }
                 },
-                orderBy: {
-                    seenAt: 'asc'
-                },
+                // orderBy: {
+                //     seenAt: 'asc'
+                // },
             });
         }
  
@@ -899,14 +919,26 @@ export const buildPlayWhere = (args: PlayWhereOpts): WhereClause<'plays'> => {
         // or else assigning an array to OR using only `typeof where.queueStates` causes a type error
         const queueWhere: typeof where.queueStates.OR[0][] = [];
         for(const q of queues) {
-            queueWhere.push(
-                {
-                    queueName: q.queueName,
-                    queueStatus: typeof q.queueStatus === 'string' ? q.queueStatus : {
-                        in: q.queueStatus
-                    }
+            const qWhereCriteria: typeof where.queueStates.OR[0] =  {
+                queueName: q.queueName,
+                queueStatus: typeof q.queueStatus === 'string' ? q.queueStatus : {
+                    in: q.queueStatus
                 }
-            )
+            };
+            if(q.retries !== undefined) {
+                qWhereCriteria.retries = {
+                    lte: q.retries
+                }
+            }
+            queueWhere.push(qWhereCriteria);
+            // queueWhere.push(
+            //     {
+            //         queueName: q.queueName,
+            //         queueStatus: typeof q.queueStatus === 'string' ? q.queueStatus : {
+            //             in: q.queueStatus
+            //         }
+            //     }
+            // )
         }
         if(queueWhere.length === 1) {
             where.queueStates = queueWhere[0];
