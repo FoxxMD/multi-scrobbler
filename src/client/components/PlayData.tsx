@@ -178,13 +178,14 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
                 web: webUrl,
                 origin: originUrl
             } = {},
+            source,
             musicService
         } = {}
     } = play;
 
     const titleLinks: React.JSX.Element[] = [];
     if (webUrl !== undefined || originUrl !== undefined) {
-        titleLinks.push(<Link key="weblink" variant="underline" target="_blank" href={webUrl ?? originUrl}><Icon size="sm">{getMusicServiceIconElement(musicService)}</Icon></Link>);
+        titleLinks.push(<Link key="weblink" variant="underline" target="_blank" href={webUrl ?? originUrl}><Icon size="sm">{getMusicServiceIconElement(musicService ?? source)}</Icon></Link>);
     }
     if (brainz.track !== undefined) {
         titleLinks.push(<MusicbrainzInfoIcon type="track" mbid={brainz.track} tooltip link showMbid={showMbid} />)
