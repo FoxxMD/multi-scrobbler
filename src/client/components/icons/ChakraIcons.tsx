@@ -207,7 +207,7 @@ export const ExclamationCircleIcon = makeChakraIcon(LuCircleAlert);
 
 export const ExclamationTriangleIcon = makeChakraIcon(LuTriangleAlert);
 
-export const TimelineIndicatorIconQueued = makeChakraIcon(LuClock);
+export const TimelineIndicatorIconQueued = makeChakraIcon(LuClock);s
 
 export const SparkleIcon = makeChakraIcon(LuSparkles);
 
@@ -216,7 +216,7 @@ export const UnlockIcon = makeChakraIcon(LuLockOpen);
 export const UnlockButton = makeIconButton(LuLockOpen);
 
 export const getMusicServiceIcon = (service: string): IconType => {
-    const lower = service.toLocaleLowerCase();
+    const lower = service === undefined ? undefined : service.toLocaleLowerCase();
     switch(lower) {
         case 'spotify':
             return SiSpotify;
