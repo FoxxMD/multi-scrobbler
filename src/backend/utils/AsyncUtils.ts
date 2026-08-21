@@ -107,7 +107,7 @@ export const consumeQueueOnce = async <T>(next: () => Promise<T | undefined>, pr
 
 export const consumeQueue = async <T>(
   next: (queueId: string) => Promise<T | undefined>,
-  process: (item: T, queueId: string) => Promise<T>,
+  process: (item: T, queueId: string) => Promise<T | void>,
   opts: { 
     concurrency: number;
     idleMs: number;
