@@ -334,7 +334,7 @@ export default class DeezerInternalSource extends MemorySource {
 
 
     async existingDiscovered(play: PlayObject): Promise<PlayMatchResult | undefined> {
-        const list: PlayObject[] = await this.getRecentlyDiscoveredPlays();
+        const list: PlayObject[] = await this.getRecentPlays();
         const candidate = await this.transformPlay(play, TRANSFORM_HOOK.candidate);
         const existing = await findAsync(list, async x => {
             const e = await this.transformPlay(x, TRANSFORM_HOOK.existing);
@@ -386,7 +386,7 @@ export default class DeezerInternalSource extends MemorySource {
                         score: 0.5,
                         breakdowns: [],
                         reason: 'Has matching data for previous play but assuming its on repeat',
-                        closestMatchedPlay: existing,
+                        closestMatchedPlay: list[fuzzyIndex],
                         createdAt: dayjs().toISOString()
                     }
                 }
@@ -397,7 +397,7 @@ export default class DeezerInternalSource extends MemorySource {
                         score: 1,
                         breakdowns: [],
                         reason: 'Has matching data and looks like a misreported play',
-                        closestMatchedPlay: existing,
+                        closestMatchedPlay: list[fuzzyIndex],
                         createdAt: dayjs().toISOString()
                     }
             }
