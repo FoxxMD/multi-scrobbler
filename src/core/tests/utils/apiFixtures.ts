@@ -117,6 +117,9 @@ export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApi>
         state = faker.number.int({min: 1, max: 7}) as ComponentState,
         monitoringStatus = { monitoring: faker.datatype.boolean({probability: 0.1}), origin: 'system' },
         players = {},
+        queued = faker.number.int({min: 1, max: 2000}),
+        deadLetterPlays = faker.number.int({min: 1, max: 2000}),
+        deadLetterPlaysTotal = faker.number.int({min: deadLetterPlays, max: 2000}),
         ...rest
     } = data;
 
@@ -145,6 +148,9 @@ export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApi>
         players,
         status: faker.helpers.arrayElement(statusSamples),
         monitoringStatus,
+        queued,
+        deadLetterPlays,
+        deadLetterPlaysTotal,
         ...rest
     }
 }
@@ -194,17 +200,11 @@ export const generateClientApiJson = (data: Partial<ComponentClientApi> = {}): C
         ...rest
     });
     const {
-        queued = faker.number.int({min: 1, max: 2000}),
-        deadLetterScrobbles = faker.number.int({min: 1, max: 2000}),
-        deadLetterScrobblesTotal = faker.number.int({min: deadLetterScrobbles, max: 2000}),
         players = (data.players ?? {}),
     } = data;
     return {
         ...common,
-        queued,
         tracksScrobbled: common.countLive,
-        deadLetterScrobbles,
-        deadLetterScrobblesTotal,
         players,
         supportsNowPlaying: Object.keys(players).length > 0,
         initialized: true,

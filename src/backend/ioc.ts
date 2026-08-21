@@ -35,6 +35,11 @@ const discovered = new prom.Counter({
             help: 'Number of discovered plays for a Source',
             labelNames: ['name', 'type']
 });
+const sourceDead = new prom.Gauge({
+            name: 'multiscrobbler_source_dead',
+            help: 'Number of dead letter plays for a Source',
+            labelNames: ['name', 'type']
+});
 const queuedGauge = new prom.Gauge({
             name: 'multiscrobbler_client_queued',
             help: 'Number of queued plays for a Client',
@@ -160,6 +165,7 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         sourceMetics: {
             discovered: discovered,
             queued: queuedSourceGauge,
+            deadLetter: sourceDead
             //issues: sourceIssues
         },
         clientMetrics: {

@@ -62,12 +62,11 @@ export const MSComponentStats = (props: { data?: ComponentCommonApiJson, live?: 
             </Box>
         )
     }
-    const isClient = isComponentClientApiJson(props.data);
     return (
         <Wrap gap="6" rowGap="5" justify="flex-start" flexGrow="0">
             <CountLiveIndicator data={props.data} streamable={props.live} flexGrow="0"/>
-            {isClient ? <QueuedIndicator data={props.data as ComponentClientApiJson} streamable={props.live} flexGrow="0"/> : null}
-            {isClient ? <DeadLetterIndicator data={props.data as ComponentClientApiJson} streamable={props.live} flexGrow="0"/> : null}
+            <QueuedIndicator data={props.data} streamable={props.live} flexGrow="0"/>
+            <DeadLetterIndicator data={props.data} streamable={props.live} flexGrow="0"/>
             <DateIndicator data={props.data} streamable={props.live} flexGrow="0"/>
         </Wrap>
     )

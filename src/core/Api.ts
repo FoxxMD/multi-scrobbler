@@ -86,6 +86,9 @@ export type ComponentCommonApi = {
     errors?: ErrorIsh[]
     warnings?: ErrorIsh[]
     monitoringStatus?: MonitoringStatus
+    deadLetterPlays: number
+    deadLetterPlaysTotal: number
+    queued: number
 } & Omit<ComponentMinimalSelect, 'type'>
 
 export type ComponentCommonApiJson = Replace<ComponentCommonApi, PickKeys<ComponentCommonApi, Dayjs>, string>;
@@ -99,10 +102,7 @@ export type ComponentDetailedApi = ComponentCommonApi & {
 }
 
 export type ComponentCientApiBase = {
-    queued: number
     tracksScrobbled: number
-    deadLetterScrobbles: number
-    deadLetterScrobblesTotal: number
     supportsNowPlaying: boolean
     players: Record<string, SourcePlayerJson & {expiration?: string}>
 }
