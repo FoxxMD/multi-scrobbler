@@ -1399,7 +1399,35 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         await this.updateQueueStats([DEAD_QUEUE]);
     }
 
-    queueScrobble = async (data: (PlayObject | PlayObject[]) | (PlaySelectWithQueueStates | PlaySelectWithQueueStates[]), context?: QueueContext) => {
+    public cancelQueuedPlay = async (playEntity: PlaySelectWithQueueStates) => {
+        const queueState = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE);
+        if(queueState === undefined) {
+            throw new SimpleError('Play does not have an associated queued');
+        }
+        if(queueState.queueStatus !== 'queued') {
+            throw new SimpleError('Play is not queued');
+        }
+
+        queueState.queueStatus = QUEUE_STATUS_FAILED;
+        playEntity.state = 'failed';
+        const createdEvents = await this.playEventsRepo.createMany([
+            {playId: playEntity.id, ...stateChangeToPlayEvent({state: playEntity.state})},
+            {playId: playEntity.id, ...queueStateToPlayEvent({...queueState, context: {reason: 'Cancelled by user'}})}
+        ]) as PlayEventSelect[];
+        await this.queueRepo.updateById(queueState.id, {queueStatus: QUEUE_STATUS_FAILED});
+        await this.playRepo.updateById(playEntity.id, {state: 'failed'});
+        this.emitPlayUpdate({
+            ...playEntity, 
+            events: ((playEntity as unknown as PlayWith<'events'>).events ?? []).concat(createdEvents),
+        } as unknown as PlayApiCommonDetailed);
+        if(queueState.retries === 0) {
+            this.emitEvent('playDequeued', { queuedScrobble: playEntity });
+        } else {
+            this.emitEvent('deadLetterDequeued', { queuedScrobble: playEntity });
+        }
+    }
+
+    queueScrobble = async (data: (PlayObject | PlayObject[]) | (PlaySelectWithQueueStates | PlaySelectWithQueueStates[]), context?: QueueContext & {isRetry?: boolean}) => {
         const createdQueuedPlays: PlaySelect[] = [];
 
         const dataArray = Array.isArray(data) ? data : [data];

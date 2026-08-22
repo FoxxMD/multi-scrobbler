@@ -657,13 +657,14 @@ export const QUEUE_STATUSES: QueueStatus[] = [QUEUE_STATUS_COMPLETED, QUEUE_STAT
 
 export const DEAD_LETTER_RETRIES_DEFAULT = 3;
 
-export interface QueueContext {
-    transform?: boolean
-    dupeCheck?: boolean
-    useCache?: boolean
-    isRetry?: boolean
-    reason?: string
-}
+export const queueContextSchema = z.object({
+    transform: z.boolean().optional(),
+    dupeCheck: z.boolean().optional(),
+    useCache: z.boolean().optional(),
+    reason: z.string().optional()
+});
+
+export type QueueContext = z.infer<typeof queueContextSchema>;
 
 /**
  * @see https://github.com/ts-essentials/ts-essentials/issues/339#issuecomment-4681920369 */
