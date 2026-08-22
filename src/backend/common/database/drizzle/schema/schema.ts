@@ -144,7 +144,7 @@ export const queueStates = sqliteTable("play_queue_states", {
   queueStatus: text({enum: ['queued','completed','failed']}).notNull().default('queued'),
   retries: integer().notNull().default(0),
   error: ErrorLikeJson('error'),
-  context: text({mode: 'json'}).$type<QueueContext>(),
+  context: text({mode: 'json'}).$type<QueueContext & {isRetry?: boolean}>(),
   createdAt: DayjsTimestamp('createdAt').notNull().$defaultFn(() => dayjs()),
   updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs()).$onUpdate(() => dayjs())
 }, (table) => [

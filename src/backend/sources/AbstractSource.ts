@@ -119,7 +119,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     declare protected componentType: 'source';
 
-    protected playRepo!: DrizzlePlayRepository;
+    public playRepo!: DrizzlePlayRepository;
     protected queueRepo!: DrizzleQueueRepository;
     protected playEventsRepo!: DrizzlePlayEventsRepository;
 
@@ -421,7 +421,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     // TODO make this more descriptive? or move it elsewhere
     recentlyPlayedTrackIsValid = (playObj: PlayObject) => true
 
-    queuePlay = async (data: (PlayObject | PlayObject[]) | (PlaySelectWithQueueStates | PlaySelectWithQueueStates[]), context?: QueueContext) => {
+    queuePlay = async (data: (PlayObject | PlayObject[]) | (PlaySelectWithQueueStates | PlaySelectWithQueueStates[]), context?: QueueContext & {isRetry?: boolean}) => {
         const createdQueuedPlays: PlaySelect[] = [];
 
         const dataArray = Array.isArray(data) ? data : [data];
@@ -1045,6 +1045,34 @@ export default abstract class AbstractSource extends AbstractComponent implement
             throw e;
          }
 
+    }
+
+    public cancelQueuedPlay = async (playEntity: PlaySelectWithQueueStates) => {
+        const queueState = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE);
+        if(queueState === undefined) {
+            throw new SimpleError('Play does not have an associated queued');
+        }
+        if(queueState.queueStatus !== 'queued') {
+            throw new SimpleError('Play is not queued');
+        }
+
+        queueState.queueStatus = QUEUE_STATUS_FAILED;
+        playEntity.state = 'failed';
+        const createdEvents = await this.playEventsRepo.createMany([
+            {playId: playEntity.id, ...stateChangeToPlayEvent({state: playEntity.state})},
+            {playId: playEntity.id, ...queueStateToPlayEvent({...queueState, context: {reason: 'Cancelled by user'}})}
+        ]) as PlayEventSelect[];
+        await this.queueRepo.updateById(queueState.id, {queueStatus: QUEUE_STATUS_FAILED});
+        await this.playRepo.updateById(playEntity.id, {state: 'failed'});
+        this.emitPlayUpdate({
+            ...playEntity, 
+            events: ((playEntity as unknown as PlayWith<'events'>).events ?? []).concat(createdEvents),
+        } as unknown as PlayApiCommonDetailed);
+        if(queueState.retries === 0) {
+            this.emitEvent('playDequeued', { queuedScrobble: playEntity });
+        } else {
+            this.emitEvent('deadLetterDequeued', { queuedScrobble: playEntity });
+        }
     }
 
     protected handlePlayProcessing = async (playEntity: PlaySelectWithQueueStates, signal?: AbortSignal) => {

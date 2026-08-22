@@ -17,12 +17,13 @@ import {
     type SOURCE_SOT_TYPES,
     type SourcePlayerJson,
     type SourceStatusData,
+    queueContextSchema,
 } from "../../core/Atomic.ts";
 import { capitalize } from "../../core/StringUtils.ts";
 import type {ExpressHandler, LeveledLogData} from "../common/infrastructure/Atomic.ts";
 import { getRoot } from "../ioc.ts";
 import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts";
-import type AbstractSource from "../sources/AbstractSource.ts";
+import AbstractSource from "../sources/AbstractSource.ts";
 import MemorySource from "../sources/MemorySource.ts";
 import { parseBool } from "../utils.ts";
 import { sortByNewestPlayDate } from '../../core/PlayUtils.ts';
@@ -412,7 +413,6 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
     router.get('/components/:componentVal/plays/:playUid', {middleware: [componentAwareMiddle]}, async (req, res, next) => {
         const {
             component,
-            query,
             params: {
                 playUid
             }
@@ -422,6 +422,62 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         //PlayApiCommonDetailed
         // plus paginatioon
         return res.json(asSerializablePlaySelect(playRes));
+    });
+
+    router.post('/components/:componentVal/plays/:playUid/queue', {middleware: [componentAwareMiddle], bodySchema: queueContextSchema.optional()}, async (req, res, next) => {
+        const {
+            component,
+            params: {
+                playUid
+            }, 
+            body = {}
+        } = req;
+
+        const play = await component.playRepo.findByUid(playUid);
+        if(play === undefined) {
+            return res.sendStatus(404);
+        }
+
+        if(component instanceof AbstractSource) {
+            await component.queuePlay([play], {...body, isRetry: true});
+        } else {
+            await component.queueScrobble([play], {...body, isRetry: true});
+        }
+        return res.sendStatus(200);
+    });
+
+    router.delete('/components/:componentVal/plays/:playUid/queue', {middleware: [componentAwareMiddle]}, async (req, res, next) => {
+        const {
+            component,
+            params: {
+                playUid
+            }
+        } = req;
+
+        const play = await component.playRepo.findByUid(playUid);
+        if(play === undefined) {
+            return res.sendStatus(404);
+        }
+
+        await component.cancelQueuedPlay(play);
+        return res.sendStatus(200);
+    });
+
+    router.delete('/components/:componentVal/plays/:playUid/dead', {middleware: [componentAwareMiddle]}, async (req, res, next) => {
+        const {
+            component,
+            params: {
+                playUid
+            }
+        } = req;
+
+        const play = await component.playRepo.findByUid(playUid);
+        if(play === undefined) {
+            return res.sendStatus(404);
+        }
+
+        await component.removeDeadLetterScrobble(play);
+        return res.sendStatus(200);
     });
 
     router.delete('/cache/:cacheType', async (req, res) => {
