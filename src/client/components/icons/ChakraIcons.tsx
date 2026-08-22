@@ -29,6 +29,8 @@ import {
     LuLockOpen
 } from "react-icons/lu"
 import { VscDebugRestart } from 'react-icons/vsc';
+import { HiMiniStop } from "react-icons/hi2";
+import { FaTrashCan, FaFlagCheckered } from "react-icons/fa6";
 import { MdOutlineFiberNew } from "react-icons/md";
 import { RiZzzFill } from "react-icons/ri";
 import { SiGoogledocs } from "react-icons/si";
@@ -244,3 +246,15 @@ export const getMusicServiceChakraIcon = (service: string) => {
     const ServiceIcon = getMusicServiceIcon(service);
     return (props: IconProps = {}) => <Icon {...props}><ServiceIcon/></Icon>;
 }
+
+export const StopIconRaw = HiMiniStop;
+export const StopIcon = makeChakraIcon(StopIconRaw);
+export const StopButton = makeIconButton(StopIconRaw);
+
+export const TrashIconRaw = FaTrashCan;
+export const TrashIcon = makeChakraIcon(TrashIconRaw);
+export const TrashIconButton = makeIconButton(TrashIconRaw);
+
+export const FinishIconRaw = FaFlagCheckered;
+export const FinishIcon = makeChakraIcon(FinishIconRaw);
+export const FinishButton = makeIconButton(FinishIconRaw);
