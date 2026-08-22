@@ -554,7 +554,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     public abstract getRunningState(): ComponentState
 
-    public getApiData(): Omit<ComponentCommonApiJson, 'type' | 'countLive' | 'players'> & Pick<ComponentCommonApi, 'state' | 'errors' | 'warnings'>  {
+    public getApiData(): Omit<ComponentCommonApiJson, 'type' | 'countLive' | 'players' | 'deadLetterPlays' | 'deadLetterPlaysTotal' | 'queued'> & Pick<ComponentCommonApi, 'state' | 'errors' | 'warnings'>  {
         let state: ComponentState;
         if(!this.initializedOnce || this.initializing) {
             state = COMPONENT_STATE.INITIALIZING;

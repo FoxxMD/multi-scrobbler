@@ -655,12 +655,16 @@ export const QUEUE_STATUS_COMPLETED: QueueStatus = 'completed';
 export const QUEUE_STATUS_FAILED: QueueStatus = 'failed';
 export const QUEUE_STATUSES: QueueStatus[] = [QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, QUEUE_STATUS_QUEUED];
 
-export interface QueueContext {
-    transform?: boolean
-    dupeCheck?: boolean
-    useCache?: boolean
-    isRetry?: boolean
-}
+export const DEAD_LETTER_RETRIES_DEFAULT = 3;
+
+export const queueContextSchema = z.object({
+    transform: z.boolean().optional(),
+    dupeCheck: z.boolean().optional(),
+    useCache: z.boolean().optional(),
+    reason: z.string().optional()
+});
+
+export type QueueContext = z.infer<typeof queueContextSchema>;
 
 /**
  * @see https://github.com/ts-essentials/ts-essentials/issues/339#issuecomment-4681920369 */

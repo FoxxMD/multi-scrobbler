@@ -6,7 +6,7 @@ import dayjs from "dayjs";
 import { after, describe, it } from 'mocha';
 import { http, HttpResponse } from 'msw';
 import pEvent from 'p-event';
-import { INGRESS_QUEUE, type PlayObject, SOURCE_SOT } from "../../../core/Atomic.ts";
+import { INGRESS_QUEUE, type PlayObject, QUEUE_STATUS_FAILED, SOURCE_SOT } from "../../../core/Atomic.ts";
 import { sleep, sortByOldestPlayDate } from "../../utils.ts";
 import { genGroupIdStr } from '../../../core/PlayUtils.ts';
 import mixedDuration from '../plays/mixedDuration.json' with { type: 'json' };
@@ -613,16 +613,16 @@ describe('Dead Scrobbles', function() {
         await testScrobbler.initialize();
         testScrobbler.testRecentScrobbles = [];
 
-        const queuedPlayed = await testScrobbler.playRepoTest.createPlays(generateArray<RepositoryCreatePlayOpts>(3, () => ({ ...fixtureCreatePlay(), state: 'queued', input: {} })))
+        const queuedPlays = await testScrobbler.playRepoTest.createPlays(generateArray<RepositoryCreatePlayOpts>(3, () => ({ ...fixtureCreatePlay(), state: 'failed', input: {} })));
 
-        for(const dead of queuedPlayed) {
-            await testScrobbler.addDeadLetterScrobble(dead);
+        await testScrobbler.queueRepoTest.createMany(queuedPlays.map(x => ({queueName: INGRESS_QUEUE, queueStatus: QUEUE_STATUS_FAILED, retries: 1, playId: x.id, componentId: testScrobbler.componentId})));
+
+        await testScrobbler.processDeadLetterQueue(undefined, undefined, true);
+
+        const updatedPlays = await testScrobbler.playRepoTest.findPlays({uid: queuedPlays.map(x => x.uid)});
+        for(const p of updatedPlays) {
+            expect(p.state === 'scrobbled');
         }
-
-        await testScrobbler.processDeadLetterQueue();
-        await pEvent(testScrobbler.emitter, 'queueState');
-
-        expect(testScrobbler.deadLetterQueued).eq(0);
     });
 
 });
