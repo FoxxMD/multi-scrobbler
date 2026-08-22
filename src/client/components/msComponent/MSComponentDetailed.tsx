@@ -1,11 +1,12 @@
-import React, { type ComponentProps } from "react"
-import { Portal, Group, Span, Menu, Box, Heading, Skeleton, Wrap, HStack, Stack, Flex, Card, SkeletonText, type BadgeProps, type MenuItemProps } from '@chakra-ui/react';
-import { COMPONENT_STATE, type ComponentClientApiJson, type ComponentCommonApiJson, type ComponentState, isComponentClientApiJson, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
+import React, { useCallback, useMemo, type ComponentProps, useEffect } from "react"
+import { Portal, Group, Span, Menu, Box, Heading, Skeleton, Wrap, HStack, Stack, Flex, Text, Card, Button, CloseButton, SkeletonText, type BadgeProps, type MenuItemProps, createOverlay, Dialog, type MenuSelectionDetails } from '@chakra-ui/react';
+import { COMPONENT_STATE, type ComponentClientApiJson, type ComponentCommonApiJson, type ComponentsApiJson, type ComponentState, type ComponentStateBody, isComponentClientApiJson, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
 import { capitalize } from "../../../core/StringUtils.js";
-import { ChevronLeftButton, EllipsisButton, EyeButton, EyeClosedIcon, EyeIcon, IdleIcon, PowerButton, PowerIcon, PowerOffButton, PowerOffIcon, RetryIcon } from "../icons/ChakraIcons.js";
+import { ChevronLeftButton, EllipsisButton, ExternalLinkIcon, EyeButton, EyeClosedIcon, EyeIcon, IdleIcon, PowerButton, PowerIcon, type PowerOffButton, PowerOffIcon, RetryButton, RetryIcon, UnlockButton, UnlockIconRaw } from "../icons/ChakraIcons.js";
 import { PlayersContainer, PlayersContainerFetchable } from "../chakraPlayer/Player.js";
 import { Tooltip } from "../ToggleTip.js";
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import ky from "ky";
 import { ErrorAlert } from "../ErrorAlert";
 import {
     useSSEContext,
@@ -24,6 +25,8 @@ import { MSErrorBoundary } from "../ErrorBoundary.js";
 import type {IconType} from "react-icons/lib";
 import { useIsWrapped } from "../../utils/hooks/useIsWrapped.js";
 import { PlaybackReportingServer } from "../icons/PlaybackReporting.js";
+import { findAnyAuthError, findAuthError } from "../../utils/ComponentUtils.js";
+import { COMPONENT_AUTH_TYPE } from "../../../core/Atomic.js";
 
 export const ComponentBackButton = (props: ComponentProps<typeof ChevronLeftButton> = {}) => {
     return (
@@ -59,27 +62,116 @@ export const MSComponentStats = (props: { data?: ComponentCommonApiJson, live?: 
             </Box>
         )
     }
-    const isClient = isComponentClientApiJson(props.data);
     return (
         <Wrap gap="6" rowGap="5" justify="flex-start" flexGrow="0">
             <CountLiveIndicator data={props.data} streamable={props.live} flexGrow="0"/>
-            {isClient ? <QueuedIndicator data={props.data as ComponentClientApiJson} streamable={props.live} flexGrow="0"/> : null}
-            {isClient ? <DeadLetterIndicator data={props.data as ComponentClientApiJson} streamable={props.live} flexGrow="0"/> : null}
+            <QueuedIndicator data={props.data} streamable={props.live} flexGrow="0"/>
+            <DeadLetterIndicator data={props.data} streamable={props.live} flexGrow="0"/>
             <DateIndicator data={props.data} streamable={props.live} flexGrow="0"/>
         </Wrap>
     )
 }
 
-const stateIsStarted = (state: ComponentState): boolean => state <= COMPONENT_STATE.MUTED;
+type AuthDialogProps = {data: Pick<ComponentsApiJson, 'id' | 'authType' | 'errors'>};
+
+const dialog = createOverlay<AuthDialogProps>((props) => {
+  const { data,  ...rest } = props
+
+    const { isPending, isError, data: url, error } = useQuery({
+        enabled: data.authType === COMPONENT_AUTH_TYPE.interactive,
+        staleTime: Infinity,
+        ...tanQueries.components.authUrl(data.id),
+    });
+    const {mutate, isPending: mutateIsPending, isSuccess} = useMutation({
+        mutationKey: ['authChange', data.id],
+        mutationFn: () => ky.post(`/api/components/${data.id}/auth`)
+    });
+
+    useEffect(() => {
+        if(isSuccess) {
+            dialog.close('auth');
+        }
+    },[isSuccess, dialog])
+
+    const authFailure = useMemo(() => {
+        for(const e of data.errors) {
+            const authState = findAnyAuthError(e);
+            if(authState !== undefined) {
+                return authState;
+            }
+        }
+        return [undefined, false];
+    },[data.errors]);
+
+    let content: React.JSX.Element;
+    if (authFailure[0] !== undefined && authFailure[1] === true) {
+        content = (
+            <>
+                <Text>Auth failed and the error indicated that this component <strong>cannot</strong> be recovered from this state.</Text>
+                <Text>Likely this means that something is wrong with the data in your configuration which requires you to update it and restart Multi-Scrobbler.</Text>
+                <Text>You can still try to <strong>Test Auth</strong> but this will probably change nothing.</Text>
+            </>
+        );
+    } else if(data.authType !== COMPONENT_AUTH_TYPE.interactive && authFailure[0] !== undefined && authFailure[1] === false) {
+        content = (
+            <>
+                <Text>Auth failed and the error indicated that this component <strong>can</strong> be recovered from this state.</Text>
+                <Text>This is likely due to a temporary network issue or something you can fix upstream (file permission issues, user permissions, etc...) without needing to restart Multi-Scrobbler.</Text>
+                <Text>Try to <strong>Test Auth</strong> after you have made upstream changes or the network issue has been resolved.</Text>
+            </>
+        ); 
+    } else if(data.authType === COMPONENT_AUTH_TYPE.interactive && authFailure[0] !== undefined && authFailure[1] === false) {
+        content = (
+            <>
+                <Text>Auth failed and the error indicated that this component <strong>can</strong> be recovered from this state.</Text>
+                <Text>If you have just setup this component, or the error indicates auth data is now invalid, try to <strong>Authenticate</strong>.</Text>
+                <Text><strong>Authenticate</strong> will redirect you to the upstream service's site where you must login and/or allow Multi-Scrobbler access to your account. After auth is complete you will be redirected back here.</Text>
+                <Text>If you have previously successfully Authenticated and the error indicates it is networking-related, try to <strong>Test Auth</strong> after the networking issue is resolved.</Text>
+            </>
+        ); 
+    }
+
+  return (
+    <Dialog.Root {...rest}>
+      <Portal>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.Header>
+                <Dialog.Title>Authentication</Dialog.Title>
+              </Dialog.Header>
+            <Dialog.Body spaceY="4">
+              {content}
+              {isError && <ErrorAlert error={error}/>}
+            </Dialog.Body>
+            <Dialog.Footer>
+            <Dialog.ActionTrigger asChild>
+                <Button variant="outline">Cancel</Button>
+            </Dialog.ActionTrigger>
+            {COMPONENT_AUTH_TYPE.interactive === data.authType && <Button disabled={isPending || isError} asChild><a target="_self" href={url}>Authenticate <ExternalLinkIcon size="sm"/></a></Button>}
+            <Button loading={mutateIsPending} onClick={() => mutate()}>Test Auth</Button>
+            </Dialog.Footer>
+            <Dialog.CloseTrigger asChild>
+            <CloseButton size="sm" />
+            </Dialog.CloseTrigger>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Portal>
+    </Dialog.Root>
+  )
+})
+
+const stateIsStarted = (state: ComponentState): boolean => state <= COMPONENT_STATE.IGNORED;
 
 const componentStateMenuItem = (Icon: IconType, value: string, name?: string) => (props: Pick<MenuItemProps, 'disabled'> = {}) => {
     return (<Menu.Item key={value} value={value} {...props}><Icon/><Box flex="1">{name ?? capitalize(value)}</Box></Menu.Item>);
 }
-const MenuItemRestart = componentStateMenuItem(RetryIcon, 'restart');
-const MenuItemStop = componentStateMenuItem(PowerOffIcon, 'stop');
-const MenuItemStart = componentStateMenuItem(PowerIcon, 'start');
-const MenuItemMute = componentStateMenuItem(EyeClosedIcon, 'mute', 'Ignore')
-const MenuItemUnmute = componentStateMenuItem(EyeIcon, 'unmute', 'Monitor');
+const MenuItemRestart = componentStateMenuItem(RetryIcon, 'Restart');
+const MenuItemStop = componentStateMenuItem(PowerOffIcon, 'Stop');
+const MenuItemStart = componentStateMenuItem(PowerIcon, 'Start');
+const MenuItemIgnore = componentStateMenuItem(EyeClosedIcon, 'ignore', 'Ignore')
+const MenuItemMonitor = componentStateMenuItem(EyeIcon, 'monitor', 'Monitor');
+const MenuItemAuth = componentStateMenuItem(UnlockIconRaw, 'auth', 'Auth');
 
 const primaryActionProps: ComponentProps<typeof PowerOffButton> = {
     margin: "1px",
@@ -98,30 +190,79 @@ export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof 
     let menuElm: React.JSX.Element | undefined;
     let menuItems: React.JSX.Element[] = [];
     const badgeProps: BadgeProps = {};
+
+    const {mutate, isPending, variables, isSuccess} = useMutation({
+        mutationKey: ['stateChange', componentId],
+        mutationFn: (action: ComponentStateBody['state']) => ky.post(`/api/components/${componentId}/state`,{
+            json: {state: action, reason: 'User initiated from UI'}
+        })
+    });
+
+    const authFailure = useMemo(() => {
+        for(const e of props.data.errors) {
+            const authState = findAnyAuthError(e);
+            if(authState !== undefined) {
+                return authState;
+            }
+        }
+        return [undefined, false];
+    },[props.data.errors]);
+
     switch(props.data.state) {
         case COMPONENT_STATE.RUNNING:
-            primaryAction = <PowerOffButton {...primaryActionProps}/>
-            menuItems = [<MenuItemStop/>,<MenuItemRestart/>,<MenuItemMute/>];
+            primaryAction = <RetryButton onClick={() => mutate('restart')} disabled={isPending} {...primaryActionProps}/>
+            menuItems = [<MenuItemStop/>,<MenuItemIgnore/>];
             break;
-        case COMPONENT_STATE.MUTED:
-            primaryAction = <EyeButton {...primaryActionProps}/>;
-            menuItems = [<MenuItemStop/>,<MenuItemRestart/>,<MenuItemUnmute/>];
+        case COMPONENT_STATE.IDLE:
+            primaryAction = <PowerButton onClick={() => mutate('start')} disabled={isPending} {...primaryActionProps}/>
+            menuItems = [<MenuItemStop/>,<MenuItemRestart/>,<MenuItemIgnore/>];
+            break;
+        case COMPONENT_STATE.IGNORED:
+            primaryAction = <EyeButton onClick={() => mutate('monitor')} disabled={isPending} {...primaryActionProps}/>;
+            menuItems = [<MenuItemStop/>,<MenuItemRestart/>,<MenuItemMonitor/>];
+            break;
+        case COMPONENT_STATE.STOPPED:
+            primaryAction = <PowerButton onClick={() => mutate('start')} disabled={isPending} {...primaryActionProps}/>
+            menuItems = [<MenuItemRestart/>];
             break;
         case COMPONENT_STATE.INITIALIZING:
             // no actions while init is occurring
             break;
+        case COMPONENT_STATE.NOT_READY:
+        case COMPONENT_STATE.ERROR:
+            if(authFailure[0] !== undefined) {
+                primaryAction = <UnlockButton onClick={() => dialog.open('auth', {data: {id: componentId, errors: props.data.errors, authType: props.data.authType}})}  disabled={isPending} {...primaryActionProps}/>;
+                menuItems = [<MenuItemRestart/>];
+            } else {
+                primaryAction = <RetryButton onClick={() => mutate('restart')}  disabled={isPending} {...primaryActionProps}/>;
+            }
+            // no actions while init is occurring
+            break;
         default:
             // otherwise generic start action for all non-running states
-            primaryAction = <PowerButton {...primaryActionProps}/>;
-            menuItems = [<MenuItemStart/>];
+            primaryAction = <RetryButton onClick={() => mutate('restart')}  disabled={isPending} {...primaryActionProps}/>;
     }
+
+    if(authFailure[0] !== undefined && !([COMPONENT_STATE.NOT_READY,COMPONENT_STATE.ERROR] as ComponentState[]).includes(props.data.state)) {
+        menuItems.push(<MenuItemAuth/>)
+    }
+
+    const menuCb = useCallback((select: MenuSelectionDetails) => {
+        if(select.value !== 'auth') {
+            mutate(select.value as ComponentStateBody['state']);
+        } else {
+            dialog.open('auth', {data: {id: componentId, errors: props.data.errors, authType: props.data.authType}});
+        }
+    },[mutate, props.data.errors, componentId, props.data.authType]);
+
+
     if(menuItems.length > 0) {
         menuElm = (
-    <Menu.Root positioning={{ placement: "bottom-end" }}>
+    <Menu.Root positioning={{ placement: "bottom-end" }} onSelect={menuCb}>
       <Group attached>
         {primaryAction}
         <Menu.Trigger asChild>
-          <EllipsisButton {...primaryActionProps}/>
+          <EllipsisButton disabled={isPending} {...primaryActionProps}/>
         </Menu.Trigger>
       </Group>
       <Portal>
@@ -141,16 +282,18 @@ export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof 
         badgeProps.paddingRight = 0;
     }
 
-    return <ComponentStateBadge size="lg" maxWidth="fit-content" {...badgeProps} separator suffix={suffix} {...rest}/>;
+    return <ComponentStateBadge size="lg" maxWidth="fit-content" {...badgeProps} loading={isPending} separator suffix={suffix} {...rest}/>;
 }
 
-export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, live?: boolean}) => {
+export const ComponentDetailedDesktop = (props: {data?: ComponentsApiJson, live?: boolean}) => {
     let sleepingRender: React.JSX.Element = null;
     const {
         data,
         data: {
-            warning,
-            error
+            warnings = [],
+            errors = [],
+            authed,
+            authType
         } = {}
     } = props;
     const isSource = isComponentSourceApiJson(data)
@@ -173,10 +316,22 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
             }
         }
     }
+    const authFailure = useMemo(() => {
+        if(authed) {
+            return false;
+        }
+        for(const e of errors) {
+            const aError = findAuthError(e);
+            if(aError !== undefined && 'unrecoverable' in aError && aError.unrecoverable === true) {
+                return true;
+            }
+        }
+    },[errors, authed]);
     const target = React.useRef(null);
     const isWrapped = useIsWrapped(target);
     return (
         <MSErrorBoundary>
+        <dialog.Viewport />
         <Flex direction="row" wrap="wrap" style={{whiteSpace: 'break-spaces'}} truncate rowGap="4">
             <Wrap width="100%" ref={target}>
                 <Box marginEnd="auto" truncate>
@@ -184,15 +339,15 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentCommonApiJson, 
                     <MSComponentType data={data}/>
                 </Box>
                 <Stack alignItems={isWrapped ? 'flex-start' : 'flex-end'}>
-                    <ComponentStateBadgeActionable size="lg" maxWidth="fit-content" data={data} />
+                    <ComponentStateBadgeActionable size="lg" maxWidth="fit-content" componentId={data.id} data={data} />
                     <HStack style={{whiteSpace: 'break-spaces'}}>{sleepingRender}{data.status}</HStack>
                 </Stack>
             </Wrap>
             <Flex justifyContent="flex-end" rowGap="6" flexDirection="row-reverse" wrap="wrap">
                 <Box marginEnd="auto"><MSComponentStats {...props}/></Box>
             </Flex>
-            {error !== undefined && error !== null ? <ErrorAlert error={error}/> : undefined}
-            {warning !== undefined && warning !== null ? <ErrorAlert error={warning} status="warning"/> : undefined}
+            {errors.length > 0 ? <>{errors.map(x => <ErrorAlert error={x}/>)}</> : undefined }
+            {warnings.length > 0 ? <>{warnings.map(x => <ErrorAlert error={x} status="warning"/>)}</> : undefined }
             <MSErrorBoundary>{props.live ? <PlayersContainerFetchable nowPlaying={isSource ? undefined : true} data={data}/> : <PlayersContainer nowPlaying={isSource ? undefined : true} data={data} live={props.live}/>}</MSErrorBoundary>
             <MSErrorBoundary><ListContainerFilterable render="virtDynamic" componentType={data.mode} componentId={data.id}/></MSErrorBoundary>
         </Flex>

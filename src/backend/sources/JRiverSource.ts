@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import type { EventEmitter } from "events";
 import normalizeUrl from 'normalize-url';
 import { URL } from "url";
-import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
+import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type PlayObjectMinimal} from "../../core/Atomic.ts";
 import type {FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic.ts";
 import type {JRiverSourceConfig} from "../common/infrastructure/config/source/jriver.ts";
 import { type Info, JRiverApiClient, PLAYER_STATE } from "../common/vendor/JRiverApiClient.ts";
@@ -18,6 +18,7 @@ export class JRiverSource extends MemoryPositionalSource {
 
     client: JRiverApiClient;
     clientReady: boolean = false;
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
 
     constructor(name: any, config: JRiverSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         const {

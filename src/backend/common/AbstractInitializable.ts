@@ -3,13 +3,14 @@ import {truncateStringToLength } from "../../core/StringUtils.ts";
 import { hasNodeNetworkException } from "./errors/NodeErrors.ts";
 import { hasUpstreamError } from "./errors/UpstreamError.ts";
 import type {WebhookPayload} from "./infrastructure/config/health/webhooks.ts";
-import { AuthCheckError, BuildDataError, ConnectionCheckError, ParseCacheError, PostInitError, StageError } from "./errors/MSErrors.ts";
-import { messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.ts";
+import { AuthCheckError, AuthError, BuildDataError, ConnectionCheckError, findAuthIssue, ParseCacheError, PostInitError, StageError, type AuthErrorMap } from "./errors/MSErrors.ts";
+import { generateErrorTruthyTest, messageWithCausesTruncatedDefault, type TruthyErrorsOpts } from "../../core/ErrorUtils.ts";
 import { spawn } from 'abort-controller-x';
-
+import { COMPONENT_AUTH_TYPE, type ComponentAuthType } from "../../core/Atomic.ts";
 export default abstract class AbstractInitializable {
     requiresAuth: boolean = false;
     requiresAuthInteraction: boolean = false;
+    authType: ComponentAuthType = COMPONENT_AUTH_TYPE.none;
     authed: boolean = false;
     authFailure?: boolean;
 
@@ -19,8 +20,8 @@ export default abstract class AbstractInitializable {
     databaseOK?: boolean | null;
     connectionOK?: boolean | null;
     cacheOK?: boolean | null;
-    error?: Error;
-    warning?: Error;
+    errors?: Error[] = [];
+    warnings?: Error[] = [];
 
     protected initializedOnce: boolean = false;
     initializing: boolean = false;
@@ -88,15 +89,15 @@ export default abstract class AbstractInitializable {
                 } catch (e) {
                     throw new PostInitError('Error occurred during post-initialization hook', {cause: e});
                 }
-                this.error = undefined;
-                this.warning = undefined;
+                this.errors = [];
+                this.warnings = [];
                 return true;
             } catch(e) {
                 if(notify) {
                     await this.notify({identifier: this.getIdentifier(), title: notifyTitle, message: truncateStringToLength(500)(messageWithCausesTruncatedDefault(e)), priority: 'error'});
                 }
                 const initError = new Error('Initialization failed', {cause: e});
-                this.error = initError;
+                this.errors = [initError];
                 throw initError;
             } finally {
                 this.initializing = false;
@@ -283,17 +284,31 @@ export default abstract class AbstractInitializable {
         return;
     }
 
-    authGated = () => this.requiresAuth && !this.authed
+    authGated = () => this.authType !== COMPONENT_AUTH_TYPE.none && !this.authed
 
-    canTryAuth = () => this.isUsable() && this.authGated() && this.authFailure !== true
+    canTryAuth = () => this.isUsable() && this.authGated() && !this.hasUnrecoverableAuthFailure()
 
-    canAuthUnattended = () => !this.authGated || !this.requiresAuthInteraction || (this.requiresAuthInteraction && !this.authFailure);
+    findAuthIssue = <T extends keyof AuthErrorMap = 'auth'>(opts: Parameters<typeof findAuthIssue<T>>[1] = {}): AuthErrorMap[T] | undefined => {
+        for(const err of this.errors) {
+            const authError = findAuthIssue(err, opts);
+            if(authError !== undefined) {
+                return authError;
+            }
+        }
+        return undefined;
+    }
+
+    hasAuthIssue = () => this.findAuthIssue() !== undefined;
+
+    hasUnrecoverableAuthFailure = () => this.findAuthIssue({unrecoverable: true}) !== undefined;
+
+    canAuthUnattended = () => !this.authGated() || this.authType === COMPONENT_AUTH_TYPE.unattended || (this.authType === COMPONENT_AUTH_TYPE.interactive && !this.hasUnrecoverableAuthFailure()) ;
 
     protected doAuthentication = async (): Promise<boolean> => this.authed
 
     // default init function, should be overridden if auth stage is required
     testAuth = async (force: boolean = false) => {
-        if(!this.requiresAuth) {
+        if(this.authType === COMPONENT_AUTH_TYPE.none) {
             return;
         }
         if(this.authed) {
@@ -303,24 +318,46 @@ export default abstract class AbstractInitializable {
             this.logger.debug('Auth OK but step was forced');
         }
 
-        if(this.authFailure) {
+        // only throw *before* testing if we have previously tested and the error was unrecoverable
+        // there is no reason to constantly retry auth when we already know it won't succeed
+        //
+        // test retries should be forced by api calls and auth callback flows *after* we have made changes to component credentials
+        const unrecoverableAuth = this.findAuthIssue({unrecoverable: true});
+        if(unrecoverableAuth !== undefined) {
+            let unrecoverable: boolean | undefined,
+            cause: Error;
             if(!force) {
-                if(this.requiresAuthInteraction) {
-                    throw new AuthCheckError('Authentication failure: Will not retry auth because user interaction is required for authentication');
+                if(unrecoverableAuth instanceof AuthCheckError) {
+                    // we threw a fallback AuthCheckError
+                    unrecoverable = true;
+                    cause = unrecoverableAuth.cause as Error;
+                } else {
+                    cause = unrecoverableAuth;
                 }
-                throw new AuthCheckError('Authentication failure: Will not retry auth because authentication previously failed and must be reauthenticated');
+                if(this.authType === COMPONENT_AUTH_TYPE.interactive) {
+                    throw new AuthCheckError('Authentication failure: Will not retry auth because user interaction is required for authentication', {cause, unrecoverable});
+                }
+                throw new AuthCheckError('Authentication failure: Will not retry auth because authentication previously failed and must be reauthenticated', {cause, unrecoverable});
             }
             this.logger.debug('Auth previously failed for non upstream/network reasons but retry is being forced');
         }
 
         try {
-            this.authed = await this.doAuthentication();
-            this.authFailure = !this.authed;
+            await this.doAuthentication();
+            this.authed = true;
         } catch (e) {
-            // only signal as auth failure if error was NOT either a node network error or a non-showstopping upstream error
-            this.authFailure = !(hasNodeNetworkException(e) || hasUpstreamError(e, false));
+            let unrecoverableMsg: boolean,
+            unrecoverable: boolean | undefined;
+            if(e instanceof AuthError) {
+                unrecoverableMsg = e.unrecoverable;
+            } else {
+                // if component auth test didn't throw AuthError (it should have!)
+                // then fallback teo determining by these conditions
+                unrecoverable = !(hasNodeNetworkException(e) || hasUpstreamError(e, false));
+                unrecoverableMsg = unrecoverable;
+            }
             this.authed = false;
-            throw new AuthCheckError(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e});
+            throw new AuthCheckError(`Authentication test failed!${unrecoverableMsg === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e, unrecoverable});
         }
     }
 
@@ -348,5 +385,21 @@ export default abstract class AbstractInitializable {
 
     public additionalApiData(): Record<string, any> {
         return {};
+    }
+
+    public clearErrors(opts?: TruthyErrorsOpts) {
+        if (!opts) { this.errors = []; return; }
+        
+        const test = generateErrorTruthyTest(opts);
+        this.errors = this.errors.filter(x => !test(x));
+    }
+
+    public replaceErrors(e: Error, opts?: TruthyErrorsOpts) {
+        if(opts !== undefined) {
+            this.clearErrors(opts);
+        } else {
+            this.clearErrors({instance: e});
+        }
+        this.errors.push(e);
     }
 }

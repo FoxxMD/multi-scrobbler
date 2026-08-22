@@ -4,11 +4,11 @@ import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
 import type EventEmitter from "events";
 import type { Request } from 'superagent';
 import request from 'superagent';
-import { REPORTED_PLAYER_STATUSES, type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, REPORTED_PLAYER_STATUSES, type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import { UpstreamError } from "../common/errors/UpstreamError.ts";
 import { DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type InternalConfig, type PlayerStateDataMaybePlay } from "../common/infrastructure/Atomic.ts";
-import type {PlayPlatformId} from '../../core/Atomic.ts';
+import type {ComponentAuthType, PlayPlatformId} from '../../core/Atomic.ts';
 import type {SubSonicSourceConfig} from "../common/infrastructure/config/source/subsonic.ts";
 import { getSubsonicResponse, type EntryData, type OpenSubsonicExtensionsResponse, type SubsonicNowPlayingResponse, type SubsonicResponse, type SubsonicResponseCommon } from "../common/vendor/subsonic/interfaces.ts";
 import { removeDuplicates } from "../utils.ts";
@@ -22,7 +22,9 @@ import { baseFormatPlayObj } from '../utils/PlayTransformUtils.ts';
 import { noRetryOnUpstreamError, tryApiCall } from '../utils/RequestUtils.ts';
 import { artistNameToCredit } from '../../core/StringUtils.ts';
 import { timeToHumanTimestamp, todayAwareFormat } from '../../core/TimeUtils.ts';
-import type { ComponentSourceApiJson, SubsonicSourceApiJson } from '../../core/Api.ts';
+import type { SubsonicSourceApiJson } from '../../core/Api.ts';
+import { isSuperAgentResponseError } from '../common/errors/ErrorUtils.ts';
+import { AuthError } from '../common/errors/MSErrors.ts';
 
 dayjs.extend(isSameOrAfter);
 
@@ -39,6 +41,7 @@ interface SourceIdentifierData {
 export class SubsonicSource extends MemoryPositionalSource {
 
     requiresAuth = true;
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
 
     multiPlatform: boolean = true;
 
@@ -341,7 +344,8 @@ export class SubsonicSource extends MemoryPositionalSource {
             this.logger.info('Subsonic API Status: ok');
             return true;
         } catch (e) {
-            throw e;
+            const superagentError = findCauseByFunc<request.ResponseError>(e, (ee) => isSuperAgentResponseError(ee));
+            throw new AuthError('Failed to authenticate', {cause: e, unrecoverable: superagentError !== undefined && [403,401].includes(superagentError.status)})
         }
     }
 

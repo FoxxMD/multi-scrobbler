@@ -2,13 +2,13 @@ import dayjs from "dayjs";
 import type { EventEmitter } from "events";
 import path from 'path';
 import {MPC, type Status, type Song, type PlaylistItem} from 'mpc-js';
-import type {BrainzMeta, PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
+import type {BrainzMeta, ComponentAuthType, PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
     type PlayerStateData,
 } from "../common/infrastructure/Atomic.ts";
-import { SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
+import { COMPONENT_AUTH_TYPE, SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type {ReportedPlayerStatus} from '../../core/Atomic.ts';
 import type {MPDSourceConfig, PlayerState} from "../common/infrastructure/config/source/mpd.ts";
@@ -18,6 +18,7 @@ import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import { isDebugMode, sleep } from "../utils.ts";
 import { artistNamesToCredits } from "../../core/StringUtils.ts";
+import { AuthError } from "../common/errors/MSErrors.ts";
 
 const CLIENT_PLAYER_STATE: Record<PlayerState, ReportedPlayerStatus> = {
     'play': REPORTED_PLAYER_STATUSES.playing,
@@ -35,6 +36,8 @@ export class MPDSource extends MemoryPositionalSource {
 
     protected currentPlayPath: string;
     protected currentPlaySong?: Song;
+
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
 
     constructor(name: any, config: MPDSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         const {
@@ -139,7 +142,7 @@ export class MPDSource extends MemoryPositionalSource {
             //             break;
             //     }
             // }
-            throw new Error(`Could not connect to MPD server${friendlyError !== undefined ? ` (Hint: ${friendlyError})` : ''}`, {cause: e});
+            throw new AuthError(`Could not connect to MPD server${friendlyError !== undefined ? ` (Hint: ${friendlyError})` : ''}`, {cause: e, unrecoverable: false});
         }
     }
 

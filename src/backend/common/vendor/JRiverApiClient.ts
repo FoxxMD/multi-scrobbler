@@ -4,6 +4,7 @@ import xml2js from 'xml2js';
 import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER } from "../infrastructure/Atomic.ts";
 import type {JRiverData} from "../infrastructure/config/source/jriver.ts";
 import AbstractApiClient from "./AbstractApiClient.ts";
+import { AuthError } from '../errors/MSErrors.ts';
 
 const parser = new xml2js.Parser({'async': true});
 
@@ -155,7 +156,7 @@ export class JRiverApiClient extends AbstractApiClient {
             if(this.config.username === undefined || this.config.password === undefined) {
                 msg = 'Authentication failed. No username/password was provided in config! Did you mean to do this?';
             }
-            throw new Error(msg, {cause: e});
+            throw new AuthError(msg, {cause: e});
         }
     }
 

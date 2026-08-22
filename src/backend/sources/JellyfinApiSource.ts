@@ -37,11 +37,11 @@ import {
 import dayjs from "dayjs";
 import type EventEmitter from "events";
 import { FixedSizeList } from "fixed-size-list";
-import type {ArtistCredit, BrainzMeta, PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
+import type {ArtistCredit, BrainzMeta, ComponentAuthType, PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
 import { genGroupIdStr } from '../../core/PlayUtils.ts';
 import { artistNameToCredit, buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
 import type {FormatPlayObjectOptions, InternalConfig, PlayerStateDataMaybePlay} from "../common/infrastructure/Atomic.ts";
-import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
+import { COMPONENT_AUTH_TYPE, REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type {JellyApiSourceConfig} from "../common/infrastructure/config/source/jellyfin.ts";
 import { getPlatformIdFromData, isDebugMode } from "../utils.ts";
 import { noCasePropObj } from "../utils/DataUtils.ts";
@@ -49,6 +49,8 @@ import { joinedUrl } from "../utils/NetworkUtils.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import { hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.ts";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
+import * as axios from 'axios';
+import { AuthError } from "../common/errors/MSErrors.ts";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -81,6 +83,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
     libraries: {name: string, paths: string[], collectionType: CollectionType}[] = [];
 
     declare config: JellyApiSourceConfig;
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
 
     constructor(name: any, config: JellyApiSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('jellyfin', name, config, internal, emitter);
@@ -251,7 +254,8 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
             }
             return true;
         } catch (e) {
-            throw e;
+            const unrecoverable = axios.isAxiosError(e) && [401,403].includes(e.status);
+            throw new AuthError('API Key failed to authenticate', {cause: e, unrecoverable});
         }
     }
 

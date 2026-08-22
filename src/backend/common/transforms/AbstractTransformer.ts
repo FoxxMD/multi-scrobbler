@@ -1,5 +1,5 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
-import type { PlayObject, TransformerCommon, TransformerCommonConfig } from "../../../core/Atomic.ts";
+import type { OptionalCacheUsage, PlayObject, TransformerCommon, TransformerCommonConfig } from "../../../core/Atomic.ts";
 import { isStageTyped, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
 import AbstractInitializable from "../AbstractInitializable.ts";
 import type { StageConfig } from "../../../core/Transform.ts";
@@ -61,13 +61,16 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
 
     protected abstract doParseConfig(data: StageConfig): Y;
 
-    public async handle(data: Y, play: PlayObject): Promise<PlayObject> {
+    public async handle(data: Y, play: PlayObject, opts?: OptionalCacheUsage): Promise<PlayObject> {
+        const {
+            useCachedResult = true,
+        } = (opts ?? {});
         const cacheKey = `transformResult-${this.configHash}-${hashObject(data)}-${hashObject(playContentInvariantTransform(play))}`
         try {
-            const cachedTransformData = await this.cache.get<T>(cacheKey);
+            const cachedTransformData = useCachedResult ? await this.cache.get<T>(cacheKey) : undefined;
             if(cachedTransformData !== undefined) {
                 this.logger.debug('Transform cache hit');
-                const transformed = await this.doHandle(data, play, cachedTransformData);
+                const transformed = await this.doHandle(data, play, cachedTransformData, opts);
                 return transformed;
             }
         } catch (e) {
@@ -82,7 +85,7 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
         }
 
         try {
-            await this.handlePreFetch(play, data);
+            await this.handlePreFetch(play, data, opts);
         } catch (e) {
             if(e instanceof SkipTransformStageError) {
                 await this.cache.set(cacheKey, play, this.config.options?.ttl ?? '15s');
@@ -93,13 +96,13 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
         let transformData: T;
         let fetchedTransformData: any;
         try {
-            fetchedTransformData = await this.getTransformerData(play, data);
+            fetchedTransformData = await this.getTransformerData(play, data, opts);
         } catch (e) {
             throw new Error(`Could not fetch transformer data`, { cause: e });
         }
 
         try {
-            transformData = await this.handlePostFetch(play, fetchedTransformData, data);
+            transformData = await this.handlePostFetch(play, fetchedTransformData, data, opts);
         } catch (e) {
             if(e instanceof StagePrerequisiteError) {
                 await this.cache.set(cacheKey, play, this.config.options?.ttl ?? '15s');
@@ -107,22 +110,22 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
             throw new Error('postFetch did not pass', { cause: e });
         }
 
-        const transformed = await this.doHandle(data, play, transformData);
+        const transformed = await this.doHandle(data, play, transformData, opts);
         await this.cache.set(cacheKey, transformData, this.config.options?.ttl ?? '15s');
         return transformed;
     }
 
-    protected abstract doHandle(data: StageConfig, play: PlayObject, transformData: T): Promise<PlayObject>;
+    protected abstract doHandle(data: StageConfig, play: PlayObject, transformData: T, opts?: OptionalCacheUsage): Promise<PlayObject>;
 
-    public async getTransformerData(play: PlayObject, stageConfig: Y): Promise<any> {
+    public async getTransformerData(play: PlayObject, stageConfig: Y, opts?: OptionalCacheUsage): Promise<any> {
         return undefined;
     }
 
-    public async handlePostFetch(play: PlayObject, transformData: any, stageConfig: Y): Promise<T> {
+    public async handlePostFetch(play: PlayObject, transformData: any, stageConfig: Y, opts?: OptionalCacheUsage): Promise<T> {
         return transformData;
     }
 
-    public async handlePreFetch(play: PlayObject, stageConfig: Y): Promise<void> {
+    public async handlePreFetch(play: PlayObject, stageConfig: Y, opts?: OptionalCacheUsage): Promise<void> {
         return
     }
 }

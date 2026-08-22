@@ -7,7 +7,7 @@ import {MONITORING_ORIGIN_SYSTEM, MONITORING_ORIGIN_USER, type ComponentType, ty
 import { buildTrackString } from "../../core/StringUtils.ts";
 import type {CommonClientConfig} from "./infrastructure/config/client/index.ts";
 import type {CommonSourceConfig} from "./infrastructure/config/source/index.ts";
-import { mergeSimpleError, SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError, TransformRulesError } from "./errors/MSErrors.ts";
+import { mergeSimpleError, SimpleError, SkipTransformStageError, StageChangeError, StagePrerequisiteError, StageTransformError, TransformRulesError } from "./errors/MSErrors.ts";
 import {
     FLOW_CONTROL_TERM,
     type PlayTransformRules,
@@ -33,7 +33,7 @@ import { getRetentionCompactAfterFromEnv, getRetentionDeleteAfterFromEnv, isComp
 import type {DbConcrete} from "./database/drizzle/drizzleUtils.ts";
 import type {ComponentSelect} from "./database/drizzle/drizzleTypes.ts";
 import { DrizzlePlayRepository } from "./database/drizzle/repositories/PlayRepository.ts";
-import type {ClientType, MonitoringStatus} from "../../core/Atomic.ts";
+import type {ClientType, MonitoringStatus, OptionalCacheUsage} from "../../core/Atomic.ts";
 import type {SourceType} from "../../core/Atomic.ts";
 import { DrizzleComponentRepository } from "./database/drizzle/repositories/ComponentRepository.ts";
 import dayjs, { type Dayjs } from "dayjs";
@@ -221,6 +221,20 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
     }
 
+    public abstract stop(opts?: {reason?: string | Error}):  Promise<void>
+    public abstract start(opts?: {forceInit?: boolean}):  Promise<boolean>
+
+    public async restart(opts: { reason?: string | Error, forceInit?: boolean } = {}): Promise<void> {
+        try {
+            await this.stop(opts);
+            await this.start(opts);
+        } catch (e) {
+            const err = new StageChangeError('Failed to restart', { cause: e });
+            this.replaceErrors(err);
+            throw err;
+        }
+    }
+
     public retentionCleanup = async () => {
         if(this.databaseOK !== true) {
             this.logger.warn(`Cannot run retention cleanup because ${this.componentType} database state is not OK`);
@@ -233,7 +247,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             this.setStatus('Retention cleanup finished');
         } catch (e) {
             const retentionErr = new Error('Failed to do retention cleanup', {cause: e});
-            this.warning = retentionErr;
+            this.warnings.push(retentionErr);
             this.logger.warn(retentionErr);
             this.setStatus('Retention cleanup failed');
         }
@@ -248,7 +262,12 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         return partArr.map(x => this.transformManager.parseTransformerConfig(x));
     }
 
-    public transformPlay = async (play: PlayObject, hookType: TransformHook, log?: boolean | 'all') => {
+    public transformPlay = async (play: PlayObject, hookType: TransformHook, transformOpts: {log?: boolean | 'all'} & OptionalCacheUsage = {}) => {
+
+        const {
+            log,
+            useCachedResult = true
+        } = transformOpts;
 
         let logger: Logger;
 
@@ -280,7 +299,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             const shouldLog = log ?? this.config.options?.playTransform?.log ?? isDebugMode();
 
             const transformHash = `playTransform-${hashObject(hook)}-${hashObject(playContentInvariantTransform(play))}`;
-            const cachedSteps = await this.cache.cacheTransform.get<LifecycleStep[]>(transformHash);
+            const cachedSteps = useCachedResult ?  await this.cache.cacheTransform.get<LifecycleStep[]>(transformHash) : undefined;
             if(cachedSteps !== undefined) {
                 logger.trace(`Cache hit for Steps => ${transformHash}`);
                 //return cachedTransformPlay;
@@ -294,7 +313,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
             const opts = {
                 logger,
-                asyncId
+                asyncId,
+                useCachedResult
             }
 
             if(cachedSteps !== undefined) {
@@ -415,17 +435,18 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
     }
 
-    protected generateStepFromStage = async (playTruth: PlayObject, hookItem: StageConfig, hookType: TransformHook, opts: { logger?: Logger, asyncId?: string } = {}): Promise<[LifecycleStep, PlayObject]> => {
+    protected generateStepFromStage = async (playTruth: PlayObject, hookItem: StageConfig, hookType: TransformHook, opts: { logger?: Logger, asyncId?: string } & OptionalCacheUsage = {}): Promise<[LifecycleStep, PlayObject]> => {
         const {
             onSuccess = 'continue',
             onFailure = 'stop',
             onSkip = 'continue',
-            failureReturnPartial = false
+            failureReturnPartial = false,
         } = hookItem;
 
         const {
             logger = loggerNoop,
-            asyncId = nanoid(6)
+            asyncId = nanoid(6),
+            useCachedResult
         } = opts;
 
         const {
@@ -446,7 +467,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             stageName: string = 'Unnamed',
             err: Error;
         try {
-            [newTransformedPlay, stageName] = await this.transformManager.handleStage(hookItem, playTruth, asyncId);
+            [newTransformedPlay, stageName] = await this.transformManager.handleStage(hookItem, playTruth, {asyncId, useCachedResult});
             newTransformedPlay = clone(newTransformedPlay);
         } catch (e) {
             err = e;
@@ -533,7 +554,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     public abstract getRunningState(): ComponentState
 
-    public getApiData(): Omit<ComponentCommonApiJson, 'type' | 'countLive' | 'players'> & Pick<ComponentCommonApi, 'state' | 'error' | 'warning'>  {
+    public getApiData(): Omit<ComponentCommonApiJson, 'type' | 'countLive' | 'players' | 'deadLetterPlays' | 'deadLetterPlaysTotal' | 'queued'> & Pick<ComponentCommonApi, 'state' | 'errors' | 'warnings'>  {
         let state: ComponentState;
         if(!this.initializedOnce || this.initializing) {
             state = COMPONENT_STATE.INITIALIZING;
@@ -553,8 +574,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             createdAt: this.dbComponent.createdAt?.toISOString(),
             lastReadyAt: this.lastReadyAt?.toISOString(),
             lastActiveAt: this.lastActiveAt?.toISOString(),
-            error: this.error !== undefined && this.error instanceof Error ? serializeError(this.error) : this.error,
-            warning: this.warning !== undefined && this.warning instanceof Error ? serializeError(this.warning) : this.warning,
+            errors: this.errors.map(x => x instanceof Error ? serializeError(x) : x),
+            warnings: this.warnings.map(x => x instanceof Error ? serializeError(x) : x),
             ...this.additionalApiData()
         }
     }
@@ -569,12 +590,20 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         });
     }
 
-    protected emitComponentUpdate = <T extends Partial<ReturnType<typeof this.getApiData>>>(payload: T) => {
-        if('error' in payload && payload.error instanceof Error) {
-            payload.error = serializeError(payload.error);
+    public emitComponentUpdate = <T extends Partial<ReturnType<typeof this.getApiData>>>(payload: T) => {
+        if('errors' in payload) {
+            if(payload.errors.length > 0) {
+                payload.errors = payload.errors.map(x => x instanceof Error ? serializeError(x) : x);
+            } else {
+                payload.errors = [];
+            }
         }
-        if('warning' in payload && payload.warning instanceof Error) {
-            payload.warning = serializeError(payload.warning);
+        if('warnings' in payload) {
+            if(payload.warnings.length > 0) {
+               payload.warnings = payload.warnings.map(x => x instanceof Error ? serializeError(x) : x); 
+            } else {
+                payload.warnings = [];
+            }
         }
         this.emitEvent('componentUpdate', payload);
     }
@@ -590,7 +619,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         this.setStatus(payload.title);
     }
 
-    protected setStatus = (status: string) => {
+    public setStatus = (status: string) => {
         this.status = status;
         this.emitComponentUpdate({status});
     }

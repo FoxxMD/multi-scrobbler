@@ -1,6 +1,6 @@
 import type {Logger} from "@foxxmd/logging";
 import type EventEmitter from "events";
-import type {PlayObject, SourcePlayerObj} from "../../core/Atomic.ts";
+import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type SourcePlayerObj} from "../../core/Atomic.ts";
 import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import type {FormatPlayObjectOptions, TimeRangeListensFetcher} from "../common/infrastructure/Atomic.ts";
@@ -16,6 +16,7 @@ import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.ts
 export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
 
     api: ListenbrainzApiClient;
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
     requiresAuth = true;
     requiresAuthInteraction = false;
     getScrobblesForTimeRange: TimeRangeListensFetcher

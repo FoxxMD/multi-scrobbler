@@ -27,9 +27,7 @@ export const setupDeezerRoutes = (app: Express, logger: Logger, scrobbleSources:
         // @ts-expect-error TS(2339): Property 'deezerSource' does not exist on type 'Se... Remove this comment to see the full error message
         const entity = scrobbleSources.getByName(req.session.deezerSource as string) as DeezerSource;
         for(let i = 0; i < 3; i++) {
-            if(entity.error !== undefined) {
-                return res.send('Error with deezer credentials storage');
-            } else if(entity.config.data.accessToken !== undefined) {
+            if(entity.config.data.accessToken !== undefined) {
                 // start polling
                 await entity.doAuthentication();
                 entity.poll()

@@ -57,9 +57,11 @@ export default class ScrobbleClients {
         }
 
         this.sourceEmitter.on('playerUpdate', async (payload) => {
-            // agressively update Now Playing so scrobblers that display based on duration are mostly synced
-            // but aggressively *stop* updating if state becomes stale/orphaned
-            this.playingNow(payload.data, {...payload.data.options, scrobbleFrom: { type: payload.type, name: payload.name}});
+            if(payload.data.options.wasMonitored) {
+                // agressively update Now Playing so scrobblers that display based on duration are mostly synced
+                // but aggressively *stop* updating if state becomes stale/orphaned
+                this.playingNow(payload.data, {...payload.data.options, scrobbleFrom: { type: payload.type, name: payload.name}});
+            }
         });
 
         this.sourceEmitter.on('discoveredToScrobble', async (payload) => {
@@ -451,7 +453,7 @@ export default class ScrobbleClients {
                 }
             }
             for (const playObj of playObjs) {
-                await client.queueScrobble(clone(playObj), scrobbleFrom);
+                await client.queueScrobble(clone(playObj));
             }
         }
         if(excluded.length > 0) {

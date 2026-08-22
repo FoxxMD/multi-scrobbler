@@ -112,9 +112,9 @@ export const QueuedIndicator = (props: {
         const client = useSSEContext<MsSseEvent>();
         useSSEAnyEvent(client, (payload) => {
             if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === props.data.id) {
+                recentTimeout.stop();
                 switch (payload.type) {
-                    case 'scrobbleQueued':
-                        recentTimeout.stop();
+                    case 'playQueued':
                         setCurrent(current + 1);
                         if (recentDirection === 'down') {
                             setRecent(1);
@@ -122,10 +122,8 @@ export const QueuedIndicator = (props: {
                             setRecent(recent + 1);
                         }
                         setRecentDirection('up');
-                        recentTimeout.start();
                         break;
-                    case 'scrobbleDequeued':
-                        recentTimeout.stop();
+                    case 'playDequeued':
                         setCurrent(current - 1);
                         if (recentDirection === 'up') {
                             setRecent(1);
@@ -133,9 +131,9 @@ export const QueuedIndicator = (props: {
                             setRecent(recent + 1);
                         }
                         setRecentDirection('down');
-                        recentTimeout.start();
                         break;
                 }
+                recentTimeout.start();
             }
         });
     }
@@ -180,8 +178,8 @@ export const DeadLetterIndicator = (props: {
         ...rest
     } = props;
 
-    const [current, setCurrent] = useState(props.data.deadLetterScrobbles);
-    const [total, setTotal] = useState(props.data.deadLetterScrobblesTotal);
+    const [current, setCurrent] = useState(props.data.deadLetterPlays);
+    const [total, setTotal] = useState(props.data.deadLetterPlaysTotal);
     const [recent, setRecent] = useState(recentProp);
     const [recentDirection, setRecentDirection] = useState<'up' | 'down'>('up');
     const resetRecent = useCallback(() => {
@@ -194,6 +192,7 @@ export const DeadLetterIndicator = (props: {
         const client = useSSEContext<MsSseEvent>();
         useSSEAnyEvent(client, (payload) => {
             if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === props.data.id) {
+                recentTimeout.stop();
                 switch (payload.type) {
                     case 'deadLetter':
                         recentTimeout.stop();
@@ -205,9 +204,37 @@ export const DeadLetterIndicator = (props: {
                             setRecent(recent + 1);
                         }
                         setRecentDirection('up');
-                        recentTimeout.start();
                         break;
+                    case 'deadLetterRemoved':
+                        setCurrent(current - 1);
+                        setTotal(total - 1);
+                        if (recentDirection === 'down') {
+                            setRecent(recent + 1);
+                        } else {
+                            setRecent(1);
+                        }
+                        setRecentDirection('down');
+                        break;
+                    case 'deadLetterDequeued':
+                        setCurrent(current - 1);
+                        if (recentDirection === 'down') {
+                            setRecent(recent + 1);
+                        } else {
+                            setRecent(1);
+                        }
+                        setRecentDirection('down');
+                        break;
+                    case 'deadQueued':
+                        setCurrent(current + 1);
+                        if (recentDirection === 'down') {
+                            setRecent(1);
+                        } else {
+                            setRecent(recent + 1);
+                        }
+                        setRecentDirection('up');
+                        break;   
                 }
+                recentTimeout.start();
             }
         });
     }

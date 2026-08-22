@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import type EventEmitter from "events";
-import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { PARSED_FROM, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import {
     type ExpressRequest,
     type FormatPlayObjectOptions,
@@ -78,10 +78,11 @@ export class EndpointLastfmSource extends MemorySource {
         }
 
         const discoverable = stateData.filter(x => x.play.meta.nowPlaying === false);
-        const discovered = await this.discover(discoverable.map(x => x.play));
-        if (discovered.length > 0) {
-            await this.scrobble(discovered);
-        }
+        await this.queuePlay(discoverable.map(x => ({...x.play, meta: {...x.play.meta, parsedFrom: PARSED_FROM.ingress}})));
+        // const discovered = await this.discover(discoverable.map(x => x.play));
+        // if (discovered.length > 0) {
+        //     await this.scrobble(discovered);
+        // }
         this.componentRepo.updateById(this.dbComponent.id, {lastActiveAt: dayjs()});
         this.setStatus('Waiting for Plays');
     }

@@ -1,10 +1,12 @@
 import type { PickKeys } from "ts-essentials"
 import type { CompareOpKey, ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
-import type { ClientType, MonitoringStatus } from "./Atomic.ts"
+import type { ClientType, ComponentAuthType, MonitoringStatus } from "./Atomic.ts"
 import type { SourceType } from "./Atomic.ts"
 import type { ComponentType, DateLike, ErrorLike, JsonPlayObject, PlayState, QueueName, Replace, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.ts"
 import type { Dayjs } from "dayjs"
 import type { ErrorIsh } from "./ErrorUtils.ts"
+import type { PlayEvent } from "./PlayEvent.ts"
+import * as z from "zod"
 
 export interface PlayApiCommon {
     uid: string
@@ -40,12 +42,13 @@ export interface PlayApiCommonDetailed extends PlayApiCommon {
     error?: ErrorIsh
     input?: PlayInputApi
     queueStates: QueueStateApi[]
+    events: PlayEvent<string>[]
 }
 
 export type ComponentState = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export const COMPONENT_STATE = {
     RUNNING: 1,
-    MUTED: 2,
+    IGNORED: 2,
     IDLE: 3,
     STOPPED: 4,
     INITIALIZING: 5,
@@ -80,9 +83,12 @@ export type ComponentCommonApi = {
     /** More specific, live activity state like "sleeping", "hydrating historical scrobbles", "processing dead scrobbles", etc... */
     status?: string
     players: Record<string, SourcePlayerJson>
-    error?: ErrorIsh
-    warning?: ErrorIsh
+    errors?: ErrorIsh[]
+    warnings?: ErrorIsh[]
     monitoringStatus?: MonitoringStatus
+    deadLetterPlays: number
+    deadLetterPlaysTotal: number
+    queued: number
 } & Omit<ComponentMinimalSelect, 'type'>
 
 export type ComponentCommonApiJson = Replace<ComponentCommonApi, PickKeys<ComponentCommonApi, Dayjs>, string>;
@@ -91,19 +97,17 @@ export type ComponentDetailedApi = ComponentCommonApi & {
     hasAuth: boolean;
     hasAuthInteraction: boolean;
     authed: boolean
+    authType: ComponentAuthType
     initialized: boolean
 }
 
 export type ComponentCientApiBase = {
-    queued: number
     tracksScrobbled: number
-    deadLetterScrobbles: number
-    deadLetterScrobblesTotal: number
     supportsNowPlaying: boolean
     players: Record<string, SourcePlayerJson & {expiration?: string}>
 }
 
-export type ComponentClientApi = ComponentCommonApi & ComponentCientApiBase;
+export type ComponentClientApi = ComponentDetailedApi & ComponentCientApiBase;
 export type ComponentClientApiJson = Replace<ComponentClientApi, PickKeys<ComponentClientApi, Dayjs>, string>;
 
 export type ComponentSourceApiBase = {
@@ -114,7 +118,7 @@ export type ComponentSourceApiBase = {
     sleeping: boolean
 }
 
-export type ComponentSourceApi = ComponentCommonApi & ComponentSourceApiBase;
+export type ComponentSourceApi = ComponentDetailedApi & ComponentSourceApiBase;
 export type ComponentSourceApiJson = Replace<ComponentSourceApi, PickKeys<ComponentSourceApi, Dayjs>, string>;
 
 export type SubsonicSourceApiJson = ComponentSourceApiJson & { playbackReporting?: boolean }
@@ -210,3 +214,10 @@ export type CompareDateSingle<D extends DateLike = Dayjs> = {
 };
 
 export type CacheClearType = 'external-api' | 'transforms';
+
+export const componentStateBodySchema = z.object({
+    state: z.enum(["stop","start","restart","ignore","monitor"]),
+    reason: z.string().optional()
+});
+
+export type ComponentStateBody = z.infer<typeof componentStateBodySchema>;

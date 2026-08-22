@@ -6,7 +6,7 @@ import { FixedSizeList } from 'fixed-size-list';
 import type { PassThrough } from "node:stream";
 import { Transform } from "stream";
 import {
-    CLIENT_DEAD_QUEUE,
+    DEAD_QUEUE,
     type ClientStatusData,
     type DeadLetterScrobble,
     type LogOutputConfig,
@@ -17,12 +17,13 @@ import {
     type SOURCE_SOT_TYPES,
     type SourcePlayerJson,
     type SourceStatusData,
+    queueContextSchema,
 } from "../../core/Atomic.ts";
 import { capitalize } from "../../core/StringUtils.ts";
 import type {ExpressHandler, LeveledLogData} from "../common/infrastructure/Atomic.ts";
 import { getRoot } from "../ioc.ts";
 import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts";
-import type AbstractSource from "../sources/AbstractSource.ts";
+import AbstractSource from "../sources/AbstractSource.ts";
 import MemorySource from "../sources/MemorySource.ts";
 import { parseBool } from "../utils.ts";
 import { sortByNewestPlayDate } from '../../core/PlayUtils.ts';
@@ -30,23 +31,29 @@ import { setupAuthRoutes } from "./auth.ts";
 import { setupDeezerRoutes } from "./deezerRoutes.ts";
 import {setupLZEndpointRoutes} from "./endpointListenbrainzRoutes.ts";
 import {setupLastfmEndpointRoutes} from "./endpointLastfmRoutes.ts";
-import { type ComponentAwareRequest, makeClientCheckMiddle, makeClientNextMiddle, makeComponentMiddle, makeSourceCheckMiddle, makeSourceNextMiddle, type SourceAwareRequest } from "./middleware.ts";
+import { makeClientCheckMiddle, makeClientNextMiddle, makeComponentMiddle, makeSourceCheckMiddle, makeSourceNextMiddle } from "./middleware.ts";
 import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.ts";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
 import prom from 'prom-client';
-import { SimpleError } from "../common/errors/MSErrors.ts";
+import { findAuthIssue, SimpleError } from "../common/errors/MSErrors.ts";
 import { DrizzlePlayRepository, type QueryPlaysOpts, type QueryPlaysOptsJson } from "../common/database/drizzle/repositories/PlayRepository.ts";
 import { playSelectToDeadScrobble } from "../common/database/drizzle/entityUtils.ts";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.ts";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
-import type {ComponentClientApiJson, ComponentSourceApiJson} from "../../core/Api.ts";
+import {componentStateBodySchema, type ComponentClientApiJson, type ComponentSourceApiJson, type PlayApiCommonDetailed} from "../../core/Api.ts";
 import { asDayjsHydratedObject } from "../../core/DataUtils.ts";
 import type {Dayjs} from "dayjs";
 import { asSerializablePlaySelect } from "../../core/PlayMarshalUtils.ts";
+import { serializeError } from "serialize-error";
+import { z } from 'zod';
+import type { createTypedRouter } from "@minisylar/express-typed-router";
+import pEvent from "p-event";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
+
+const jsonParser = bodyParser.json({type: ['text/*', 'application/json']});
 
 const createAddToLogBuffer = (levelMap:  {[p: number]: string}) => (log: LogDataPretty) => {
     output[log.level].add({...log, levelLabel: levelMap[log.level]});
@@ -65,7 +72,7 @@ const getLogs = (minLevel: number, limit: number = maxBufferSize, sort: 'asc' | 
     return allLogs.flat(1).sort((a, b) => a.time - b.time).slice(0, limit);
 }
 
-export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThrough, initialLogOutput: LogDataPretty[] = [], scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
+export const setupApi = (app: Express, router: ReturnType<typeof createTypedRouter>, logger: Logger, appLoggerStream: PassThrough, initialLogOutput: LogDataPretty[] = [], scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
     for(const level of Object.keys(logger.levels.labels)) {
         output[level] = new FixedSizeList<LeveledLogData>(maxBufferSize);
     }
@@ -149,7 +156,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         return res.json({data: slicedLog, settings: logConfig});
     });
 
-    app.get('/api/events', async (req, res) => {
+    router.get('/events', async (req, res) => {
         const {
             query: {
                 next: nextQs
@@ -160,7 +167,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
 
         const session = await bsseDef.createSession(req, res);
         scrobbleSources.emitter.onAny((eventName: string, payload: any) => {
-            if(payload.from !== undefined) {
+            if(payload !== undefined && payload.from !== undefined) {
                 if(isNextapi) {
                     session.push({event: eventName, ...payload}, eventName);
                 } else {
@@ -169,7 +176,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
             }
         });
         scrobbleClients.emitter.onAny((eventName: string, payload: any) => {
-            if(payload.from !== undefined) {
+            if(payload !== undefined && payload.from !== undefined) {
                 if(isNextapi) {
                     session.push({event: eventName, ...payload}, eventName);
                 } else {
@@ -183,19 +190,19 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
     setupWebscrobblerRoutes(app, logger, scrobbleSources);
     setupLZEndpointRoutes(app, logger, scrobbleSources, scrobbleClients);
     setupLastfmEndpointRoutes(app, logger, scrobbleSources);
-    setupAuthRoutes(app, logger, sourceRequiredMiddle, clientRequiredMiddle, scrobbleSources, scrobbleClients);
+    setupAuthRoutes(app, router, logger, sourceRequiredMiddle, clientRequiredMiddle, scrobbleSources, scrobbleClients);
 
-    app.put('/api/webscrobbler', bodyParser.json({type: ['text/*', 'application/json']}), async (req, res) => {
+    router.put('webscrobbler', {middleware: [jsonParser]}, async (req, res) => {
         logger.info(req.body);
         res.sendStatus(200);
     });
 
-    app.get('/api/webscrobbler', bodyParser.json({type: ['text/*', 'application/json']}), async (req, res) => {
+    router.get('webscrobbler', {middleware: [jsonParser]}, async (req, res) => {
         logger.info(req.body);
         res.sendStatus(200);
     });
 
-    app.get('/api/components', async (req, res, next) => {
+    router.get('/components', async (req, res, next) => {
 
         const sourceData = scrobbleSources.sources.filter(x => x.databaseOK).map((x) => {
             const {
@@ -255,13 +262,13 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         return res.json([...sourceData, ...clientData]);
     });
 
-    app.get('/api/sources/:componentVal/players', sourceAwareMiddle, async (req: SourceAwareRequest, res, next) => {
+    router.get('/sources/:componentVal/players', {middleware: [sourceAwareMiddle] }, async (req, res, next) => {
         if(req.component instanceof MemorySource) {
             return res.json(req.component.playersToObject());
         }
         return res.json({});
     });
-    app.get('/api/components/:componentVal/players', componentAwareMiddle, async (req: ComponentAwareRequest, res, next) => {
+    router.get('/components/:componentVal/players', {middleware: [componentAwareMiddle]}, async (req, res, next) => {
         if(req.component instanceof MemorySource) {
             return res.json(req.component.playersToObject());
         } else if(req.component instanceof AbstractScrobbleClient && req.component.nowPlayingEnabled) {
@@ -270,7 +277,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         return res.json({});
     });
 
-    app.get('/api/sources/:componentVal/players/:platformId', sourceAwareMiddle, async (req: SourceAwareRequest, res, next) => {
+    router.get('/sources/:componentVal/players/:platformId', {middleware: [sourceAwareMiddle]}, async (req, res, next) => {
         if(req.component instanceof MemorySource) {
             const {
                 params: {
@@ -285,7 +292,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         }
         return res.json({});
     });
-    app.get('/api/components/:componentVal/players/:platformId', componentAwareMiddle, async (req: ComponentAwareRequest, res, next) => {
+    router.get('/components/:componentVal/players/:platformId', {middleware: [componentAwareMiddle]}, async (req, res, next) => {
         const {
             params: {
                 platformId
@@ -308,14 +315,86 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         return res.status(400).json({error: `Component does not support players`});
     });
 
-    app.get('/api/components/:componentVal', componentAwareMiddle, async (req: ComponentAwareRequest, res, next) => {
+    router.get('/components/:componentVal', {middleware: [componentAwareMiddle]}, async (req, res) => {
         const {
             component,
         } = req;
         return res.json(component.getApiData());
     });
+    //type TA = TypedMiddleware<{component: ComponentAwareRequest['component']}>;
+// componentAwareMiddle, bodyParser.json({ type: ['text/*', 'application/json'] })
+    router.post('/components/:componentVal/state',
+   // {bodySchema: componentStateBodySchema},
+   {middleware: [componentAwareMiddle, bodyParser.json({ type: ['text/*', 'application/json'] })], bodySchema: componentStateBodySchema},
+     async (req, res) => {
+        const {
+            component,
+            body: {
+                state,
+                reason = 'invoked by api'
+            }
+        } = req;
+        switch (state) {
+            case 'stop':
+                try {
+                    await component.stop({ reason: new SimpleError(reason, {simple: true, shortStack: true}) })
+                } catch (e) {
+                    return res.status(500).json({ error: serializeError(e) });
+                }
+                break;
+            case 'start':
+                try {
+                    await component.start({ forceInit: true })
+                } catch (e) {
+                    return res.status(500).json({ error: serializeError(e) });
+                }
+                break;
+            case 'restart':
+                try {
+                    await component.restart({ forceInit: true, reason: new SimpleError(reason, {simple: true, shortStack: true}) })
+                } catch (e) {
+                    return res.status(500).json({ error: serializeError(e) });
+                }
+                break;
+            case 'ignore':
+                component.monitoringActivity = component.getSystemMonitoring() === false ? undefined : false;
+                component.emitComponentUpdate({state: component.getRunningState()});
+                break;
+            case 'monitor':
+                component.monitoringActivity = component.getSystemMonitoring() === true ? undefined : true;
+                component.emitComponentUpdate({state: component.getRunningState()});
+                break;
+            default:
+                return res.status(400).json({ error: { message: `'state' type ${state} was not handled` } });
+        }
+        return res.sendStatus(200);
+    });
 
-    app.get('/api/components/:componentVal/plays', componentAwareMiddle, async (req: ComponentAwareRequest, res, next) => {
+    router.post('/components/:componentVal/auth', {middleware: [componentAwareMiddle]}, async (req, res, next) => {
+        const {
+            component,
+        } = req;
+        let didAuth = false;
+        try {
+            logger.verbose('User requested auth test');
+            await component.testAuth(true);
+            component.clearErrors({predicate: x => findAuthIssue(x) !== undefined});
+            didAuth = true;
+            return res.sendStatus(200);
+        } catch (e) {
+            component.replaceErrors(e, {predicate: x => findAuthIssue(x) !== undefined});
+            return res.status(500).json({error: serializeError(e)});
+        } finally {
+            const data = component.getApiData();
+            component.emitComponentUpdate({
+                errors: data.errors,
+                state: data.state,
+                status: didAuth ? 'Authenticated successfully' : data.status
+            });
+        }
+    });
+
+    router.get('/components/:componentVal/plays', {middleware: [componentAwareMiddle]}, async (req, res, next) => {
         const {
             component,
             query
@@ -324,17 +403,16 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         const hydratedQuery = asDayjsHydratedObject<QueryPlaysOptsJson, QueryPlaysOpts<Dayjs>>(query);
         const playRes = await component.getPlaysPaginated(hydratedQuery);
 
-        // @ts-expect-error
+        // @ts-expect-error its fine
         playRes.data = playRes.data.map(x => asSerializablePlaySelect(x))
         //PlayApiCommonDetailed
         // plus paginatioon
         return res.json(playRes);
     });
 
-    app.get('/api/components/:componentVal/plays/:playUid', componentAwareMiddle, async (req: ComponentAwareRequest, res, next) => {
+    router.get('/components/:componentVal/plays/:playUid', {middleware: [componentAwareMiddle]}, async (req, res, next) => {
         const {
             component,
-            query,
             params: {
                 playUid
             }
@@ -346,7 +424,63 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         return res.json(asSerializablePlaySelect(playRes));
     });
 
-    app.delete('/api/cache/:cacheType', async (req, res) => {
+    router.post('/components/:componentVal/plays/:playUid/queue', {middleware: [componentAwareMiddle], bodySchema: queueContextSchema.optional()}, async (req, res, next) => {
+        const {
+            component,
+            params: {
+                playUid
+            }, 
+            body = {}
+        } = req;
+
+        const play = await component.playRepo.findByUid(playUid);
+        if(play === undefined) {
+            return res.sendStatus(404);
+        }
+
+        if(component instanceof AbstractSource) {
+            await component.queuePlay([play], {...body, isRetry: true});
+        } else {
+            await component.queueScrobble([play], {...body, isRetry: true});
+        }
+        return res.sendStatus(200);
+    });
+
+    router.delete('/components/:componentVal/plays/:playUid/queue', {middleware: [componentAwareMiddle]}, async (req, res, next) => {
+        const {
+            component,
+            params: {
+                playUid
+            }
+        } = req;
+
+        const play = await component.playRepo.findByUid(playUid);
+        if(play === undefined) {
+            return res.sendStatus(404);
+        }
+
+        await component.cancelQueuedPlay(play);
+        return res.sendStatus(200);
+    });
+
+    router.delete('/components/:componentVal/plays/:playUid/dead', {middleware: [componentAwareMiddle]}, async (req, res, next) => {
+        const {
+            component,
+            params: {
+                playUid
+            }
+        } = req;
+
+        const play = await component.playRepo.findByUid(playUid);
+        if(play === undefined) {
+            return res.sendStatus(404);
+        }
+
+        await component.removeDeadLetterScrobble(play);
+        return res.sendStatus(200);
+    });
+
+    router.delete('/cache/:cacheType', async (req, res) => {
         const cache = await getRoot().items.cache();
         logger.verbose(`User request cache deletion for ${req.params.cacheType}`);
         switch(req.params.cacheType) {
@@ -371,7 +505,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
      * 
      *  */
 
-    app.get('/api/status', async (req, res, next) => {
+    router.get('/status', async (req, res, next) => {
 
         const sourceData = scrobbleSources.sources.map((x) => {
             const {
@@ -465,9 +599,8 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         return res.json({sources: sourceData, clients: clientData});
     });
 
-    app.get('/api/recent', sourceMiddleFunc(false), async (req, res, next) => {
+    router.get('/recent', {middleware: [sourceMiddleFunc(false)], querySchema: z.any()}, async (req, res, next) => {
         const {
-            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleSource: source,
             query: {
                 upstream = 'false',
@@ -499,9 +632,8 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         return res.json(result);
     });
 
-    app.get('/api/source/art', sourceMiddleFunc(false), async (req, res, next) => {
+    router.get('/source/art', {middleware: [sourceMiddleFunc(false)]}, async (req, res, next) => {
         const {
-            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleSource,
             query: {
                 data
@@ -527,9 +659,8 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         }
     });
 
-    app.get('/api/dead', clientMiddleFunc(true), async (req, res, next) => {
+    router.get('/dead', {middleware: [clientMiddleFunc(true)]}, async (req, res, next) => {
         const {
-            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleClient: client,
             query = {}
         } = req;
@@ -538,21 +669,19 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
             ...query as Partial<QueryPlaysOpts>,
             queues: [
                 {
-                    queueName: CLIENT_DEAD_QUEUE,
+                    queueName: DEAD_QUEUE,
                     queueStatus: ['queued','failed']
                 }
             ]
         }
 
-        // @ts-ignore
         const result: DeadLetterScrobble<PlayObject>[] = (await (client as AbstractScrobbleClient).getPlaysPaginated(deadQuery)).data.map(x => playSelectToDeadScrobble(x, true));
 
         return res.json(result);
     });
 
-    app.put('/api/dead', clientMiddleFunc(true), async (req, res, next) => {
+    router.put('/dead', {middleware: [clientMiddleFunc(true)]}, async (req, res, next) => {
         const {
-            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleClient: client,
         } = req;
 
@@ -563,9 +692,8 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         await ((client as AbstractScrobbleClient).processDeadLetterQueue(1000));
     });
 
-    app.put('/api/dead/:id', clientMiddleFunc(true), async (req, res, next) => {
+    router.put('/dead/:id', {middleware: [clientMiddleFunc(true)]}, async (req, res, next) => {
         const {
-            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleClient: client,
             params: {
                 id
@@ -574,14 +702,24 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
 
         const deadId = id as string;
 
-        (client as AbstractScrobbleClient).logger.verbose(`User requested processing of dead letter scrobble ${deadId} via API call`)
+        (client as AbstractScrobbleClient).logger.verbose(`User requested processing of dead letter scrobble ${deadId} via API call`);
 
         try {
-            const [scrobbled, dead] = await (client as AbstractScrobbleClient).processDeadLetterScrobble(deadId);
-            if(scrobbled) {
-                return res.status(200).send();
+            const playEntity = await client.playRepo.findByUid(id);
+            if(playEntity === undefined) {
+                return res.status(404).json({message: `Play ${deadId} does not exist`});
             }
-            return res.json(playSelectToDeadScrobble(dead, true));
+            client.queueScrobble(playEntity, {reason: 'user requested processing via API call'}).then(() => null);
+            const event = await pEvent(client.emitter, 'playUpdate', {
+                timeout: 10000,
+                filter: (val: PlayApiCommonDetailed) => val.uid === id
+            }) as PlayApiCommonDetailed;
+            if(event.state === 'scrobbled') {
+                return res.status(200).send();
+            } else {
+                // @ts-expect-error should be fine
+                return res.json(playSelectToDeadScrobble(event, true));
+            }
         } catch (e) {
             if(e.message.includes(`Play ${deadId} does not exist`)) {
                 logger.warn(e);
@@ -592,22 +730,20 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         }
     });
 
-    app.delete('/api/dead', clientMiddleFunc(true), async (req, res, next) => {
+    router.delete('/dead', {middleware: [clientMiddleFunc(true)]}, async (req, res, next) => {
         const {
-            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleClient: client,
         } = req;
 
         (client as AbstractScrobbleClient).logger.verbose('User requested deletion of all dead letter scrobbles via API');
 
-        (client as AbstractScrobbleClient).removeDeadLetterScrobbles(['queued', 'failed'], 'failed', false).then(() => null).catch((e) => logger.error(e));
+        (client as AbstractScrobbleClient).removeDeadLetterScrobbles().then(() => null).catch((e) => logger.error(e));
 
         return res.sendStatus(200);
     });
 
-    app.delete('/api/dead/:id', clientMiddleFunc(true), async (req, res, next) => {
+    router.delete('/dead/:id', {middleware: [clientMiddleFunc(true)]}, async (req, res, next) => {
         const {
-            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleClient: client,
             params: {
                 id
@@ -618,22 +754,22 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
 
         (client as AbstractScrobbleClient).logger.verbose(`User requested removal of dead letter scrobble ${deadId} via API call`)
 
+        const playEntity = await client.playRepo.findByUid(id);
+        if(playEntity === undefined) {
+            return res.status(404).json({message: `Play ${deadId} does not exist`});
+        }
+
         try {
-            await (client as AbstractScrobbleClient).removeDeadLetterScrobble(deadId,'failed', false);
+            await (client as AbstractScrobbleClient).removeDeadLetterScrobble(playEntity);
             return res.status(200).send();
         } catch (e) {
-            if(e.message.includes(`Play ${deadId} does not exist`)) {
-                logger.warn(e);
-                return res.status(404).json({error: e});
-            }
             logger.error(e);
             return res.status(500).json({error: e});
         }
     });
 
-    app.get('/api/scrobbled', clientMiddleFunc(false), async (req, res, next) => {
+    router.get('/scrobbled', {middleware: [clientMiddleFunc(true)]}, async (req, res, next) => {
         const {
-            // @ts-expect-error scrobbleClient not part of req
             scrobbleClient: client,
             query
         } = req;
@@ -650,9 +786,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         return res.json(result);
     });
 
-    app.use('/api/source/init', sourceRequiredMiddle);
-    app.post('/api/source/init', async (req, res) => {
-        // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+    router.post('/source/init', {middleware: [sourceRequiredMiddle]}, async (req, res) => {
         const source = req.scrobbleSource as AbstractSource;
 
         const {
@@ -678,9 +812,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         }
     });
 
-    app.use('/api/source/listen', sourceRequiredMiddle);
-    app.post('/api/source/listen', async (req, res) => {
-        // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+    router.post('/source/listen', {middleware: [sourceRequiredMiddle]}, async (req, res) => {
         const source = req.scrobbleSource as AbstractSource;
 
         const {
@@ -700,9 +832,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         res.status(200).json({listening});
     });
 
-    app.use('/api/client/listen', clientRequiredMiddle);
-    app.post('/api/client/listen', async (req, res) => {
-        // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+    router.post('/client/listen', {middleware: [clientRequiredMiddle]}, async (req, res) => {
         const client = req.scrobbleClient as AbstractScrobbleClient;
 
         const {
@@ -722,9 +852,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         res.status(200).json({listening});
     });
 
-    app.use('/api/client/init', clientRequiredMiddle);
-    app.post('/api/client/init', async (req, res) => {
-        // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+    router.post('/client/init', {middleware: [clientRequiredMiddle]}, async (req, res) => {
         const client = req.scrobbleClient as AbstractScrobbleClient;
 
         const {
@@ -747,8 +875,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         res.status(200).send('OK');
     });
 
-    app.post('/api/client/historical', clientRequiredMiddle, async (req, res) => {
-        // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+    router.post('/client/historical', {middleware: [clientRequiredMiddle]}, async (req, res) => {
         const client = req.scrobbleClient as AbstractScrobbleClient;
         if(client instanceof AbstractHistoricalScrobbleClient) {
             client.logger.info('User requested historical play hydration');
@@ -761,7 +888,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
     });
 
     app.get('/health', async (req, res) => res.redirect(307, `/api/${req.url.slice(1)}`));
-    app.get('/api/health', async (req, res) => {
+    router.get('/health', async (req, res) => {
         const {
             type,
             name

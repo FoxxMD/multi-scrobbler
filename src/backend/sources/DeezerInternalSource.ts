@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import type EventEmitter from "events";
 import type { Request } from 'superagent';
 import request from 'superagent';
-import { type PlayObject, type PlayObjectMinimal, SOURCE_SOT, TA_CLOSE, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy } from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayMatchResult, type PlayObject, type PlayObjectMinimal, SOURCE_SOT, TA_CLOSE, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy } from "../../core/Atomic.ts";
 import { DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.ts";
 import type {DeezerInternalSourceConfig, DeezerInternalTrackData} from "../common/infrastructure/config/source/deezer.ts";
 import { TRANSFORM_HOOK } from "../../core/Transform.ts";
@@ -63,6 +63,7 @@ interface DeezerAuthedUserData {
 }
 
 export default class DeezerInternalSource extends MemorySource {
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
     requiresAuth = true;
     requiresAuthInteraction = false;
     isSubAccount: boolean = false;
@@ -332,15 +333,22 @@ export default class DeezerInternalSource extends MemorySource {
     protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) => await this.getRecentlyPlayed({formatted: true, ...options})
 
 
-    existingDiscovered = async (play: PlayObject, opts: {checkAll?: boolean} = {}): Promise<PlayObject | undefined> => {
-        const list: PlayObject[] = await this.getRecentlyDiscoveredPlays();
+    async existingDiscovered(play: PlayObject): Promise<PlayMatchResult | undefined> {
+        const list: PlayObject[] = await this.getRecentPlays();
         const candidate = await this.transformPlay(play, TRANSFORM_HOOK.candidate);
         const existing = await findAsync(list, async x => {
             const e = await this.transformPlay(x, TRANSFORM_HOOK.existing);
             return genericSourcePlayMatch(e, candidate);
         });
         if(existing) {
-            return existing;
+            return {
+                match: true,
+                score: 1,
+                breakdowns: [],
+                reason: 'Has matching data with very close timestamps',
+                closestMatchedPlay: existing,
+                createdAt: dayjs().toISOString()
+            }
         }
         if(this.config.options?.fuzzyDiscoveryIgnore === true || this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {
             const fuzzyIndex = await findIndexAsync(list, async x => {
@@ -361,19 +369,45 @@ export default class DeezerInternalSource extends MemorySource {
                 if(this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {
                     // always return fuzzy match as existing
                     // likely will make MS miss scrobbles for repeated plays
-                    return list[fuzzyIndex];
+                    return {
+                        match: true,
+                        score: 1,
+                        breakdowns: [],
+                        reason: 'Has matching data and timestamp is during the duration of a previous play',
+                        closestMatchedPlay: list[fuzzyIndex],
+                        createdAt: dayjs().toISOString()
+                    }
                 }
                 if(fuzzyIndex + 1 === list.length || playObjDataMatch(list[fuzzyIndex], list[fuzzyIndex + 1])) {
                     // last discovered play was this one, or next played play was also this one
                     // so we'll assume this means the play is on repeat, don't count as existing
-                    return undefined;
+                    return {
+                        match: false,
+                        score: 0.5,
+                        breakdowns: [],
+                        reason: 'Has matching data for previous play but assuming its on repeat',
+                        closestMatchedPlay: list[fuzzyIndex],
+                        createdAt: dayjs().toISOString()
+                    }
                 }
                 // next played play was *not* this one (Deezer reports play between candidate TS and fuzzy match)
                 // so this is likely a duplicate deezer should not have reported
-                return list[fuzzyIndex];
+                    return {
+                        match: true,
+                        score: 1,
+                        breakdowns: [],
+                        reason: 'Has matching data and looks like a misreported play',
+                        closestMatchedPlay: list[fuzzyIndex],
+                        createdAt: dayjs().toISOString()
+                    }
             }
         }
-        return undefined;
+        return {
+            match: false,
+            score: 0,
+            breakdowns: [],
+            createdAt: dayjs().toISOString()
+        }
     }
 }
 

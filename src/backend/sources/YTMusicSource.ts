@@ -1,6 +1,6 @@
 import dayjs, { type Dayjs } from "dayjs";
 import type EventEmitter from "events";
-import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
+import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type PlayObjectMinimal} from "../../core/Atomic.ts";
 import type {FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic.ts";
 import type {YTMusicSourceConfig} from "../common/infrastructure/config/source/ytmusic.ts";
 import { Innertube, UniversalCache, Parser, YTNodes, type ApiResponse, type IBrowseResponse, Log, type SessionOptions } from 'youtubei.js';
@@ -113,6 +113,7 @@ const getGoogleOauthOpts = (): GenerateAuthUrlOpts => {
 
 export default class YTMusicSource extends AbstractSource {
 
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
     requiresAuth = true;
     requiresAuthInteraction = true;
 
@@ -279,7 +280,11 @@ Redirect URI  : ${this.redirectUri}`);
     }
 
     reauthenticate = async () => {
-        await this.tryStopPolling();
+        try {
+            await this.tryStopPolling('Reauthenticating yt');
+        } catch (e) {
+            this.logger.warn(new Error('Failed to stop polling but will try to reauth anyway', {cause: e}));
+        }
         if(this.authed) {
             await this.clearCredentials();
             this.authed = false;
@@ -690,8 +695,7 @@ ${humanDiff}`;
             if(this.transientDiscovered.data.length === 0) {
                 // and add to discovered since its empty
                 for(const refPlay of reversedPlays) {
-                    //this.transientDiscovered.add(refPlay);
-                    await this.addPlayToDB(refPlay);
+                    this.transientDiscovered.add(refPlay);
                 }
             }
         }

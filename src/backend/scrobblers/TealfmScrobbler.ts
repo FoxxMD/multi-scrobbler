@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'path';
 
 import { Readable } from 'stream';
-import type {PlayObject, SourcePlayerObj} from "../../core/Atomic.ts";
+import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type SourcePlayerObj} from "../../core/Atomic.ts";
 import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import type {FormatPlayObjectOptions, InternalConfigOptional} from "../common/infrastructure/Atomic.ts";
@@ -25,9 +25,13 @@ import { fromStream } from '@atcute/repo';
 import { playToRepositoryCreatePlayHistoricalOpts, type RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
 import { isAbortError } from "abort-controller-x";
 import type { FmTealAlphaFeedPlay, FmTealFeedPlay } from "../common/vendor/teal/lexicons/index.ts";
+import { AuthError } from "../common/errors/MSErrors.ts";
+import { findCauseByReference } from "../utils/ErrorUtils.ts";
+import { ClientResponseError } from "@atcute/client";
 
 export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
 
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
     requiresAuth = true;
     requiresAuthInteraction = false;
     override nowPlayingIsRealtime: boolean = true;
@@ -97,10 +101,14 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
                 return res;
             }
         } catch (e) {
-            if(isNodeNetworkException(e)) {
+            const nodeNetError = isNodeNetworkException(e);
+            if(nodeNetError) {
                 this.logger.error('Could not communicate with ATProto API');
+                throw new AuthError(`Failed to validate session due to network issues`, {cause: e, unrecoverable: false});
             }
-            throw e;
+            const clientError = findCauseByReference(e, ClientResponseError);
+            const authIssue = clientError !== undefined && [401,403].includes(clientError.status);
+            throw new AuthError(`Failed to validate session${!authIssue ? ' due to network issues' : ''}`, {cause: e, unrecoverable: authIssue});
         }
     }
 

@@ -1,5 +1,5 @@
 import dayjs, { type Dayjs, type ManipulateType } from "dayjs";
-import type {PlayObject, PlayObjectMinimal, BrainzMeta, MBID, ScrobbleActionResult} from "../../../../core/Atomic.ts";
+import {type PlayObject, type PlayObjectMinimal, type BrainzMeta, type MBID, type ScrobbleActionResult, PARSED_FROM} from "../../../../core/Atomic.ts";
 import { getRoot } from "../../../ioc.ts";
 import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.ts";
@@ -159,7 +159,7 @@ export const recordToPlay = (record: TealPlayRecord, options: RecordOptions = {}
         },
         meta: {
             source: 'tealfm',
-            parsedFrom: 'history',
+            parsedFrom: PARSED_FROM.history,
             musicService,
             playId: options.playId,
             url: {

@@ -11,10 +11,12 @@ import { playToListenPayload } from '../listenbrainz/lzUtils.ts';
 import type {SubmitPayload} from '../../../../core/vendor/listenbrainz/interfaces.ts';
 import type {ListenType} from '../../../../core/vendor/listenbrainz/interfaces.ts';
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.ts";
-import { ScrobbleSubmitError } from "../../errors/MSErrors.ts";
+import { AuthError, ScrobbleSubmitError } from "../../errors/MSErrors.ts";
 import { tryApiCall } from "../../../utils/RequestUtils.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { artistNamesToCredits } from "../../../../core/StringUtils.ts";
+import { findCauseByFunc } from "../../../utils/ErrorUtils.ts";
+import { isSuperAgentResponseError } from "../../errors/ErrorUtils.ts";
 
 interface SubmitOptions {
     log?: boolean
@@ -133,7 +135,8 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
             const resp = await this.callApi(() => request.get(`${joinedUrl(this.url.url, '/apis/listenbrainz/1/validate-token')}`));
             return true;
         } catch (e) {
-            throw new Error('Could not validate Koito API Key', { cause: e });
+            const superagentError = findCauseByFunc<request.ResponseError>(e, (ee) => isSuperAgentResponseError(ee));
+            throw new AuthError('Could not validate Koito API Key', { cause: e, unrecoverable: superagentError !== undefined && [401,403].includes(superagentError.status)});
         }
     }
 

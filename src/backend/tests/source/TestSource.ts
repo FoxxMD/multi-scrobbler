@@ -4,6 +4,8 @@ import { MemoryPositionalSource } from "../../sources/MemoryPositionalSource.ts"
 import MemorySource from "../../sources/MemorySource.ts";
 
 export class TestSource extends AbstractSource {
+    override queueIdleMs: number = 1;
+    override queueConcurrency: number = 1;
     handle(plays: PlayObject[]) {
         this.scrobble(plays);
     }
