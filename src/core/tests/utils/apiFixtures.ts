@@ -146,6 +146,7 @@ export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApi>
         countNonLive: 0,
         state,
         players,
+        errors: [],
         status: faker.helpers.arrayElement(statusSamples),
         monitoringStatus,
         queued,

@@ -1,11 +1,11 @@
-import { Accordion, Alert, Box, Code, Collapsible, Flex, HStack, Separator, Skeleton, SkeletonText, Span, Stack, useAccordionItemContext, type BadgeProps } from '@chakra-ui/react';
+import { Accordion, Alert, Box, Group, Portal, Code, Collapsible, Flex, HStack, Separator, Menu, Skeleton, SkeletonText, Span, Stack, useAccordionItemContext, type BadgeProps, type MenuItemProps, type MenuSelectionDetails, useClipboard } from '@chakra-ui/react';
 import { useSSEContext, useSSEEvent } from "@flamefrontend/sse-runtime-react";
-import { useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
-import React, { Fragment, useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
+import React, { Fragment, useCallback, useEffect, useState, type ComponentProps } from "react";
 import { LuChevronRight } from "react-icons/lu";
 import type { MarkOptional } from "ts-essentials";
 import type { ComponentsApiJson, MsSseEvent, PaginatedResponse, PlayApiCommonDetailed, QueryPlaysOptsJson, SortPlaysByProps } from "../../core/Api";
-import { DEAD_QUEUE, type ComponentType, type Second } from "../../core/Atomic";
+import { INGRESS_QUEUE, type ComponentType, type Second } from "../../core/Atomic";
 import { tanQueries, useQueryWatcher } from "../queries";
 import { activityTimelineHasIssue } from "../utils/ComponentUtils";
 import { ActivityTimeline } from "./ActivityTimeline";
@@ -13,10 +13,13 @@ import { EphemeralElement, PlayStateBadge } from "./Badges";
 import { ShortDateDisplay } from "./DateDisplay";
 import { ErrorAlert } from "./ErrorAlert";
 import { ExpandCollapse } from "./ExpandCollapse";
-import { DebugCopy, ExclamationCircleIcon, ExclamationTriangleIcon, InsertedIcon, RetryButton, UpdatedIcon } from "./icons/ChakraIcons";
+import { DebugIcon, EllipsisButton, ExclamationCircleIcon, ExclamationTriangleIcon, FinishIconRaw, InsertedIcon, type PowerOffButton, RetryButton, RetryIcon, StopButton, StopIconRaw, TrashIconRaw, UpdatedIcon } from "./icons/ChakraIcons";
 import { PlayData } from "./PlayData";
 import { TextMuted } from "./TextMuted";
 import { capitalize } from '../../core/StringUtils';
+import ky from 'ky';
+import type { IconType } from 'react-icons/lib';
+import { toaster } from "./Toaster"
 
 type UseActivityQueryOptions = {
     msQuery?: QueryPlaysOptsJson
@@ -306,26 +309,104 @@ export const ActivityDetailFetchable = (props: ActivityDetailFetchableProps) => 
     return <ActivityDetails componentType={props.componentType} componentName={data?.type} key={props.uid} activity={activity}/>
 }
 
+const playStateMenuItem = (Icon: IconType, value: string, name?: string) => (props: Pick<MenuItemProps, 'disabled'> = {}) => {
+    return (<Menu.Item key={value} value={value} {...props}><Box flex="1">{name ?? capitalize(value)}</Box><Icon/></Menu.Item>);
+}
+
+const MenuItemRetry = playStateMenuItem(RetryIcon, 'retry');
+const MenuItemRetryWith = playStateMenuItem(RetryIcon, 'retry', 'Retry With...');
+const MenuItemCancel = playStateMenuItem(StopIconRaw, 'cancel');
+const MenuItemTrash = playStateMenuItem(TrashIconRaw, 'delete');
+const MenuItemDebug = playStateMenuItem(DebugIcon, 'debug');
+const MenuItemFinish = playStateMenuItem(FinishIconRaw, 'finish', 'Mark Completed');
+
+const primaryActionProps: ComponentProps<typeof PowerOffButton> = {
+    margin: "1px",
+    variant: "subtle",
+    size: 'xs'
+}
+
 export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed}) => {
-    let suffix: React.JSX.Element | null;
+    let suffix: React.JSX.Element | undefined;
+    let primaryAction: React.JSX.Element | undefined;
+    let menuElm: React.JSX.Element | undefined;
+    let menuItems: React.JSX.Element[] = [];
     const badgeProps: BadgeProps = {};
+
+    const clipboard = useClipboard({value: JSON.stringify(props.activity)});
+
+    const {mutate, isPending, variables, isSuccess} = useMutation({
+        mutationKey: ['playAction', props.activity.uid],
+        mutationFn: () => ky.post(`/api/components/${props.activity.componentId}/state`,{
+            json: {reason: 'User initiated from UI'}
+        })
+    });
+
+    const menuCb = useCallback((select: MenuSelectionDetails) => {
+        if(select.value === 'debug') {
+            clipboard.copy();
+            toaster.create({
+                title: 'Copied debug data to clipboard',
+                type: 'success'
+            });
+        }
+        //mutate();
+    },[mutate, props.activity]);
+
     const {
         activity: {
             queueStates = []
         } = {}
     } = props;
-    if(props.activity.state === 'failed') {
-        suffix = <RetryButton size="xs" margin="1px" variant="subtle"/>;
-        badgeProps.paddingRight = 0;
+    const hasDeadQueue = queueStates.some(x => x.queueName === INGRESS_QUEUE && x.retries > 0);
+    //badgeProps.paddingRight = 0;
+    switch(props.activity.state) {
+        case 'queued':
+            primaryAction = <StopButton size={{base: '2xs', smTo2xl: 'xs'}} color="red.400" margin="1px" variant="subtle"/>;
+            menuItems = [<MenuItemTrash disabled={isPending}/>,<MenuItemDebug/>];
+            break;
+        case 'failed':
+            primaryAction = <RetryButton size={{base: '2xs', smTo2xl: 'xs'}} margin="1px" variant="subtle"/>;
+            menuItems = [<MenuItemRetryWith disabled />, <MenuItemTrash disabled={isPending}/>,<MenuItemDebug/>];
+            if(!hasDeadQueue) {
+                menuItems.unshift(<MenuItemFinish disabled={isPending}/>)
+            }
+            break
+        default:
+            primaryAction = <RetryButton size={{base: '2xs', smTo2xl: 'xs'}} margin="1px" variant="subtle"/>;
+            menuItems = [<MenuItemRetryWith disabled />, <MenuItemTrash disabled={isPending}/>,<MenuItemDebug/>];
+            break
+
     }
-    const hasDeadQueue = queueStates.some(x => x.queueName === DEAD_QUEUE && x.queueStatus === 'queued');
+    if(menuItems.length > 0) {
+            menuElm = (
+        <Menu.Root positioning={{ placement: "bottom-end" }} onSelect={menuCb}>
+            <Group attached>
+            {primaryAction}
+            <Menu.Trigger asChild>
+                <EllipsisButton hideBelow="sm" disabled={isPending} {...primaryActionProps}/>
+            </Menu.Trigger>
+            </Group>
+            <Portal>
+            <Menu.Positioner>
+                <Menu.Content>
+                {menuItems}
+                </Menu.Content>
+            </Menu.Positioner>
+            </Portal>
+        </Menu.Root>
+            );
+            suffix = menuElm;
+        } else if(primaryAction !== undefined) {
+            suffix = primaryAction;
+        }
+        if(suffix !== undefined || primaryAction !== undefined) {
+            badgeProps.paddingRight = 0;
+        }
     return (
         <Stack>
             <HStack>
-                <PlayStateBadge {...badgeProps} minH="32px" alignItems="anchor-center" size="lg" hasDeadQueue={hasDeadQueue} state={props.activity.state} suffix={suffix} />
-            </HStack>
-            <HStack justifyContent="flex-end">
-                <DebugCopy variant="ghost" value={JSON.stringify(props.activity)}/>
+                <PlayStateBadge {...badgeProps} minH="32px" alignItems="anchor-center" size={{base: 'xs', sm: 'lg', mdTo2xl: 'lg'}} hasDeadQueue={hasDeadQueue} state={props.activity.state} suffix={suffix} />
             </HStack>
         </Stack>
     )
