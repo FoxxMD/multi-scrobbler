@@ -87,7 +87,7 @@ const config: Config = {
               permalink: string;
               locale: string;
             }) => {
-              return `${path.join('https://github.com/FoxxMD/multi-scrobbler/blob/master/docsite', params.versionDocsDirPath, params.docPath)}?plain=1`;
+              return `https://github.com/FoxxMD/multi-scrobbler/blob/master${path.join('/docsite', params.versionDocsDirPath, params.docPath)}?plain=1`;
             }
         },
         // blog: {
