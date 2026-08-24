@@ -209,7 +209,7 @@ export const ExclamationCircleIcon = makeChakraIcon(LuCircleAlert);
 
 export const ExclamationTriangleIcon = makeChakraIcon(LuTriangleAlert);
 
-export const TimelineIndicatorIconQueued = makeChakraIcon(LuClock);s
+export const TimelineIndicatorIconQueued = makeChakraIcon(LuClock);
 
 export const SparkleIcon = makeChakraIcon(LuSparkles);
 
