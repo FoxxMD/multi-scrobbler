@@ -9,10 +9,8 @@ import { difference, sleep } from "../../../utils.ts";
 import {SequentialRoundRobin} from 'round-robin-js';
 import type { Cacheable } from "cacheable";
 import { getRoot } from "../../../ioc.ts";
-import { version } from "../../../version.ts";
 import { hashObject } from "../../../utils/StringUtils.ts";
 import { playContentInvariantTransform } from "../../../utils/PlayComparisonUtils.ts";
-;
 import { AsyncLocalStorage } from "async_hooks";
 import { nanoid } from "nanoid";
 import { stripIndents } from "common-tags";
@@ -79,7 +77,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
             if(mb === undefined) {
                 const api = new MusicBrainzApi({
                     appName: 'multi-scrobbler',
-                    appVersion: version,
+                    appVersion: getRoot().items.version,
                     appContactInfo: mbConfig.contact,
                     baseUrl: u.url.toString(),
                     preRequest: (method, url, headers) => {
