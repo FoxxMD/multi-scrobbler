@@ -88,7 +88,6 @@ export const setupLZEndpointRoutes = (app: Express, parentLogger: Logger, scrobb
         // but for now just stub out empty response so panoscrobbler doesn't complain
 
         const user = req.params.username;
-        let listens: PlayingNowPayload[];
 
         const sources = scrobbleSources.getByType('endpointlz') as EndpointListenbrainzSource[];
         if (sources.length === 0) {
@@ -101,7 +100,7 @@ export const setupLZEndpointRoutes = (app: Express, parentLogger: Logger, scrobb
         }
 
         const playObjs = scrobbleClients.getPlayingNow(matchedSource.name, matchedSource.clients);
-        listens = playObjs.map(x => ({playing_now: true, track_metadata: playToListenPayload(x).track_metadata}));
+        const listens: PlayingNowPayload[] = playObjs.map(x => ({playing_now: true, track_metadata: playToListenPayload(x).track_metadata}));
 
         return res.status(200).json({
             payload: {

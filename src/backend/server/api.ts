@@ -156,7 +156,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         return res.json({data: slicedLog, settings: logConfig});
     });
 
-    router.get('/events', async (req, res) => {
+    router.get('/events', {querySchema: z.object({next: z.string()}).optional()}, async (req, res) => {
         const {
             query: {
                 next: nextQs
@@ -632,7 +632,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         return res.json(result);
     });
 
-    router.get('/source/art', {middleware: [sourceMiddleFunc(false)]}, async (req, res, next) => {
+    router.get('/source/art', {middleware: [sourceMiddleFunc(false)], querySchema: z.object({data: z.number()}).optional()}, async (req, res, next) => {
         const {
             scrobbleSource,
             query: {
@@ -786,7 +786,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         return res.json(result);
     });
 
-    router.post('/source/init', {middleware: [sourceRequiredMiddle]}, async (req, res) => {
+    router.post('/source/init', {middleware: [sourceRequiredMiddle], querySchema: z.object({force: z.boolean()}).optional()}, async (req, res) => {
         const source = req.scrobbleSource as AbstractSource;
 
         const {
@@ -812,7 +812,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         }
     });
 
-    router.post('/source/listen', {middleware: [sourceRequiredMiddle]}, async (req, res) => {
+    router.post('/source/listen', {middleware: [sourceRequiredMiddle], querySchema: z.object({listening: z.boolean()}).optional()}, async (req, res) => {
         const source = req.scrobbleSource as AbstractSource;
 
         const {
@@ -832,7 +832,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         res.status(200).json({listening});
     });
 
-    router.post('/client/listen', {middleware: [clientRequiredMiddle]}, async (req, res) => {
+    router.post('/client/listen', {middleware: [clientRequiredMiddle], querySchema: z.object({listening: z.boolean()}).optional()}, async (req, res) => {
         const client = req.scrobbleClient as AbstractScrobbleClient;
 
         const {
@@ -852,7 +852,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         res.status(200).json({listening});
     });
 
-    router.post('/client/init', {middleware: [clientRequiredMiddle]}, async (req, res) => {
+    router.post('/client/init', {middleware: [clientRequiredMiddle], querySchema: z.object({force: z.boolean()}).optional()}, async (req, res) => {
         const client = req.scrobbleClient as AbstractScrobbleClient;
 
         const {
@@ -888,7 +888,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
     });
 
     app.get('/health', async (req, res) => res.redirect(307, `/api/${req.url.slice(1)}`));
-    router.get('/health', async (req, res) => {
+    router.get('/health', {querySchema: z.object({type: z.string(), name: z.string()}).optional()}, async (req, res) => {
         const {
             type,
             name
