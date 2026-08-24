@@ -54,7 +54,12 @@ const dead = (props: PropsFromRedux) => {
 
     const retryDead = useCallback((id: string) => retryDeadFetch({name: searchParams.get('name'), type: searchParams.get('type'), id}), [retryDeadFetch, searchParams]);
     const removeDead = useCallback((id: string) => removeDeadFetch({name: searchParams.get('name'), type: searchParams.get('type'), id}), [removeDeadFetch, searchParams]);
-    const removeAllDead = useCallback(() => removeAllDeadFetch({name: searchParams.get('name'), type: searchParams.get('type')}), [removeAllDeadFetch, searchParams]);
+    // this deletes everything, no undo, so double check with the user first
+    const removeAllDead = useCallback(() => {
+        if (window.confirm('Remove all failed scrobbles? This cannot be undone.')) {
+            removeAllDeadFetch({name: searchParams.get('name'), type: searchParams.get('type')});
+        }
+    }, [removeAllDeadFetch, searchParams]);
     const retryAllDead = useCallback(() => retryAllDeadFetch({name: searchParams.get('name'), type: searchParams.get('type')}), [retryAllDeadFetch, searchParams]);
 
     return (
