@@ -15,7 +15,8 @@ import {
     SOURCE_SOT,
     QUEUE_STATUS_FAILED,
     isPlayObject,
-    DEAD_LETTER_RETRIES_DEFAULT
+    DEAD_LETTER_RETRIES_DEFAULT,
+    PARSED_FROM
 } from "../../core/Atomic.ts";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
 import AbstractComponent from "../common/AbstractComponent.ts";
@@ -721,7 +722,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             this.scrobbleSOTRanges = groupPlaysToTimeRanges(queued.concat(dead), this.scrobbleSOTRanges, {staleNowBuffer: this.config.options?.refreshStaleAfter});
     }
 
-    async getSOTScrobblesForPlay(play: PlayObject): Promise<PlayObject[]> {
+    async getSOTScrobblesForPlay(play: PlayObject, opts: {useCache?: boolean} = {}): Promise<PlayObject[]> {
+        const {useCache = true} = opts;
         let range: PaginatedTimeRangeOptions = this.scrobbleSOTRanges.find(x => x.from <= play.data.playDate.unix() && x.to > Math.min(dayjs().subtract(this.config.options?.refreshStaleAfter ?? REFRESH_STALE_DEFAULT, 's').unix(), play.data.playDate.unix()));
         if(range === undefined) {
             this.logger.warn(`No Scrobble SOT range found! Should have been handled before this. Creating a new one for ${buildTrackString(play)}`);
@@ -738,7 +740,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             range.from = range.from - DEFAULT_NEW_PADDING.asSeconds();
             range.to = Math.min(dayjs().unix(), range.to + 30) // 30 seconds after "to", or now
         }
-        const cachedPlaysRes = await this.cache.cacheClientScrobbles.get<PlayObject[] | Error>(this.getScrobbleCacheKey(range.from, range.to));
+        const cachedPlaysRes = useCache ? await this.cache.cacheClientScrobbles.get<PlayObject[] | Error>(this.getScrobbleCacheKey(range.from, range.to)) : undefined;
         if(cachedPlaysRes instanceof Error) {
             throw new SimpleError('Cannot get historical plays due to cached error', {cause: cachedPlaysRes, shortStack: true});
         }
@@ -746,7 +748,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             return cachedPlaysRes;
         }
         try {
-            const plays = await this.getScrobblesForTimeRange(range);
+            const plays = (await this.getScrobblesForTimeRange(range)).map(x => ({...x, meta: {...x.meta, parsedFrom: PARSED_FROM.history}}));
             plays.sort(sortByOldestPlayDate);
             await this.cache.cacheClientScrobbles.set<PlayObject[] | Error>(this.getScrobbleCacheKey(range.from, range.to), plays, (this.config.options?.refreshStaleAfter ?? REFRESH_STALE_DEFAULT) * 1000);
             return plays;
@@ -786,14 +788,14 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
         if(this.transformRules.compare?.existing === undefined) {
             // if no existing transform then we can run cheap db match
-            const cheapExisting = await this.playRepo.checkExisting(playObj, {states: ['scrobbled']});
+            const cheapExisting = await this.playRepo.checkExisting(playObj, {states: ['scrobbled'], notId: playObjPre.id});
             if(cheapExisting !== undefined) {
                 const s: ScrobbledPlayObject = {play: cheapExisting.play, scrobble: cheapExisting.play.scrobble?.mergedScrobble};
                 return [s, [s]];
             }
         }
 
-        const closeTemporalPlays = await this.playRepo.getTemporallyClosePlays(playObj, {states: ['scrobbled']});
+        const closeTemporalPlays = await this.playRepo.getTemporallyClosePlays(playObj, {states: ['scrobbled'], notId: playObjPre.id});
 
         const dtInvariantMatches = (await pMap(closeTemporalPlays.map(x => x.play), this.staggerMappers.existing(async x => (await this.transformPlay(x, TRANSFORM_HOOK.existing))), {concurrency: 3}))
             .filter(x => playObjDataMatch(playObj, x));
@@ -1223,7 +1225,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             if (dupeCheck && this.upstreamRefresh.refreshEnabled) {
                 await this.handleQueuedScrobbleRanges();
                 try {
-                    historicalPlays = await this.getSOTScrobblesForPlay(playEntity.play);
+                    historicalPlays = await this.getSOTScrobblesForPlay(playEntity.play, {useCache: !(isRetry || !useCache)});
                 } catch (e) {
 
                     if (e.message === 'Cannot get historical plays due to cached error') {
@@ -1247,7 +1249,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
             let isDupe = false;
             if(dupeCheck) {
-                const { summary, ...matchResult } = await this.existingScrobble(playEntity.play, historicalPlays);
+                const { summary, ...matchResult } = await this.existingScrobble({...playEntity.play, id: playEntity.id, uid: playEntity.uid}, historicalPlays);
                 events.push(dupeCheckToPlayEvent({ summary, ...matchResult }));
                 isDupe = matchResult.match;
             }
@@ -1785,6 +1787,19 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             with: withQuery = ['input','parent-input','queues','events'],
         } = opts;
         return await this.playRepo.findByUid(uid, { with: withQuery as WithPlayRelation[] }) as unknown as PlayApiCommonDetailed;
+    }
+
+    public async deletePlay(play: PlayWith<'children'>, children?: boolean): Promise<void> {
+        if(children) {
+            await this.playRepo.deleteByIds([play.id, ...(play.children ??  []).map(x => x.id)]);
+            this.emitEvent('playDelete', {uid: play.uid});
+            for(const p of play.children) {
+                this.emitEvent('playDelete', {uid: p.uid, componentId: p.componentId});
+            }
+        } else {
+            await this.playRepo.deleteById(play.id);
+            this.emitEvent('playDelete', {uid: play.uid, componentId: play.componentId});
+        }
     }
 
     public emitEvent = (eventName: string, payload: object) => {

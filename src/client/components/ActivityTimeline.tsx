@@ -166,11 +166,22 @@ const TransformsItem = (props: Pick<ActivityTimelineProps, 'activity' | 'collaps
     )
 }
 
-const ScrobbleMatchItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpen'> & { match: PlayMatchResult<string> }) => {
+const ScrobbleMatchItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpen'> & { match: PlayMatchResult<string>, componentName?: string }) => {
     const {
         match,
+        match: {
+            closestMatchedPlay: {
+                meta
+            } = {}
+        } = {},
+        componentName = 'service',
         collapsibleOpen
     } = props;
+
+    let fromSource: React.JSX.Element | undefined;
+    if(match.match && meta !== undefined) {
+        fromSource = <span> <Muted>from</Muted> {meta.parsedFrom === 'history' ? capitalizeWords(componentName) : 'MS Database'}</span>
+    }
 
     return (
         <Timeline.Item>
@@ -186,7 +197,7 @@ const ScrobbleMatchItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpen'>
                 <Timeline.Title>
                     <MSCollapsible
                         triggerProps={timelineCollapsibleProps}
-                        indicator={<TimelineItemSummaryText><Muted>Found </Muted>{match.match ? <Span color="orange.solid"> a duplicate Scrobble</Span> : 'no duplicate Scrobbles'}</TimelineItemSummaryText>}
+                        indicator={<TimelineItemSummaryText><Muted>Found </Muted>{match.match ? <Span color="orange.solid"> a duplicate Scrobble</Span> : 'no duplicate Scrobbles'}{fromSource}</TimelineItemSummaryText>}
                         defaultOpen={collapsibleOpen}
                         disableUntil="md"
                         unmountOnExit
@@ -440,7 +451,7 @@ export const ActivityTimeline = (props: ActivityTimelineProps) => {
                 timelineElements.push(<QueueTimelineItem key={event.id} queueState={event} collapsibleOpen={collapsibleOpen}/>);
             } break;
             case 'dupeCheck': {
-                timelineElements.push(<ScrobbleMatchItem key={event.id} match={event.data} collapsibleOpen={collapsibleOpen}/>);
+                timelineElements.push(<ScrobbleMatchItem key={event.id} match={event.data} collapsibleOpen={collapsibleOpen} componentName={componentName}/>);
             } break;
             case 'scrobbleResult':
                 timelineElements.push(<ScrobbleResponseItem key={event.id} scrobble={event.data} componentName={componentName} collapsibleOpen={collapsibleOpen}/>);

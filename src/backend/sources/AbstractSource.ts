@@ -54,6 +54,7 @@ import { PLAY_EVENT_TYPE, type PlayEvent } from '../../core/PlayEvent.ts';
 import { dupeCheckToPlayEvent, entityIsPlayEntity, queueStateToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from '../common/database/drizzle/entityUtils.ts';
 import type { PlayProcessingResult } from '../common/infrastructure/PlayProcessing.ts';
 import { PlayProcessingError } from '../common/errors/PlayProcessingError.ts';
+import { runTransaction } from '../common/database/drizzle/drizzleUtils.ts';
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -573,7 +574,11 @@ export default abstract class AbstractSource extends AbstractComponent implement
     }
 
     async existingDiscovered(play: PlayObject): Promise<PlayMatchResult> {
-        const list: PlayObject[] = await this.getRecentPlays(true);
+        let list: PlayObject[] = await this.getRecentPlays(true);
+        if(play.id !== undefined) {
+            // don't want to return the same play (by id) when checking by source
+            list = list.filter(x => x.id === undefined || (x.id !== play.id));
+        }
         return await this.existingDiscoveredPlay(play, list);
         // if(matchResults.match) {
         //     return matchResults.closestMatchedPlay;
@@ -1190,7 +1195,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                     events.push(dupeCheckToPlayEvent({ match: true, reason: `Matched hash on existing Play ${cheapExisting.uid} with close temporality` }));
                     existing = { ...cheapExisting.play, id: cheapExisting.id, uid: cheapExisting.uid };
                 } else {
-                    const matchRes = await this.existingDiscovered(preCompared);
+                    const matchRes = await this.existingDiscovered({...preCompared, id: playEntity.id, uid: playEntity.uid});
                     events.push(dupeCheckToPlayEvent(matchRes));
                     if (matchRes.match) {
                         existing = matchRes.closestMatchedPlay;
@@ -1415,6 +1420,19 @@ export default abstract class AbstractSource extends AbstractComponent implement
             with: withQuery = ['input','parent-input','queues','events'],
         } = opts;
         return await this.playRepo.findByUid(uid, { with: withQuery as WithPlayRelation[] }) as unknown as PlayApiCommonDetailed;
+    }
+
+    public async deletePlay(play: PlayWith<'children'>, children?: boolean): Promise<void> {
+        if(children) {
+            await this.playRepo.deleteByIds([play.id, ...(play.children ??  []).map(x => x.id)]);
+            this.emitEvent('playDelete', {uid: play.uid});
+            for(const p of play.children) {
+                this.emitEvent('playDelete', {uid: p.uid, componentId: p.componentId});
+            }
+        } else {
+            await this.playRepo.deleteById(play.id);
+            this.emitEvent('playDelete', {uid: play.uid, componentId: play.componentId});
+        }
     }
 
     public emitEvent = (eventName: string, payload: object = {}) => {

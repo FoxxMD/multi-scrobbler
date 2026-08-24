@@ -14,7 +14,7 @@ import type {ErrorLike, SourceType} from "../../../../../core/Atomic.ts";
 import type {FindMany, FindWhere, FindWith, PlayInputNew, PlayNew, PlaySelect, PlaySelectWithQueueStates, PlayWith, QueueStateSelect, WhereClause} from "../drizzleTypes.ts";
 import { type DbConcrete, runTransaction } from "../drizzleUtils.ts";
 import { generateInputEntity, generatePlayEntity, hydratePlaySelect, stateChangeToPlayEvent, transformToPlayEvent, type PlayEntityOpts, type PlayHydateOptions } from "../entityUtils.ts";
-import { playEvents, playInputs, plays, relations, type TSchema } from "../schema/schema.ts";
+import { playEvents, playInputs, plays, queueStates, relations, type TSchema } from "../schema/schema.ts";
 import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
 import type {PaginatedResponse} from "../../../../../core/Api.ts";
 import type {PaginatedQueryResponse} from "../../../../../core/Api.ts";
@@ -39,7 +39,7 @@ export interface PlayWhereOpts<D extends DateLike = Dayjs> {
     text?: string[]
 }
 
-export type WithPlayRelation = 'input' | 'parent' | 'parent-input' | 'queues' | 'events';
+export type WithPlayRelation = 'input' | 'parent' | 'parent-input' | 'queues' | 'events' | 'children';
 export interface QueryPlaysOpts<D extends DateLike = Dayjs> extends PlayWhereOpts<D> {
     sort?: 'seenAt' | 'playedAt'
     order?: 'asc' | 'desc'
@@ -97,6 +97,16 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         const res = await this.db.query.plays.findFirst({
             where: {
                 id
+            },
+            with: buildPlayWith(args)
+        });
+        return res as unknown as PlayWith<K> | undefined;
+    }
+
+    findByUidWith = async <K extends keyof TSchema['plays']["relations"]>(uid: string, args: WithPlayRelation[]): Promise<PlayWith<K> | undefined> => {
+        const res = await this.db.query.plays.findFirst({
+            where: {
+                uid
             },
             with: buildPlayWith(args)
         });
@@ -742,12 +752,13 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         })
     }
 
-    public getTemporallyClosePlays = async (play: PlayObject, opts: {states?: PlaySelect['state'][], bufferTime?: number} & { with?: WithPlayRelation[] } & ComponentConstrainedRepoOpts = {}): Promise<PlayWith<'queueStates'>[]> => {
+    public getTemporallyClosePlays = async (play: PlayObject, opts: {states?: PlaySelect['state'][], bufferTime?: number} & { with?: WithPlayRelation[], notId?: number } & ComponentConstrainedRepoOpts = {}): Promise<PlayWith<'queueStates'>[]> => {
         const {
             componentId = this.componentId,
             bufferTime,
             states,
-            with: qWith
+            with: qWith,
+            notId
         } = opts;
 
         const query: FindMany<'plays'> = {};
@@ -759,6 +770,11 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         if(states !== undefined) {
             where.state = {
                 in: states
+            }
+        }
+        if(notId !== undefined) {
+            where.id = {
+                NOT: notId
             }
         }
         query.where = where;
@@ -804,6 +820,25 @@ group by componentId,compacted;`);
             }
         }
         return res;
+    }
+
+    async deleteById(id: number): Promise<void> {
+        await runTransaction(this.db, async () => {
+            await this.db.delete(playInputs).where(eq(playInputs.playId, id));
+            await this.db.delete(playEvents).where(eq(playEvents.playId, id));
+            await this.db.delete(queueStates).where(eq(queueStates.playId, id));
+            await this.db.update(plays).set({parentId: null}).where(eq(plays.parentId, id));
+            await this.db.delete(plays).where(eq(plays.id, id));
+        });
+    }
+    async deleteByIds(ids: number[]): Promise<void> {
+        await runTransaction(this.db, async () => {
+            await this.db.delete(playInputs).where(inArray(playInputs.playId, ids));
+            await this.db.delete(playEvents).where(inArray(playEvents.playId, ids));
+            await this.db.delete(queueStates).where(inArray(queueStates.playId, ids));
+            await this.db.update(plays).set({parentId: null}).where(inArray(plays.parentId, ids));
+            await this.db.delete(plays).where(inArray(plays.id, ids));
+        });
     }
 }
 
@@ -869,6 +904,9 @@ export const buildPlayWith = (args: WithPlayRelation[] | undefined): FindWith<'p
                 break;
             case 'events':
                 qWith.events = true;
+                break;
+            case 'children':
+                qWith.children = true;
                 break;
             default:
                 throw new Error(`Unknown relation ${w}`);

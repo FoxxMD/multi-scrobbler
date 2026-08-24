@@ -126,7 +126,31 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
                       return insertInfinitePlay(componentData.data, old);
                   });
                 } 
-              }
+              } break;
+              case 'playDelete':
+                {
+                    queryClient.setQueryData(tanQueries.activities.list(componentId, query).queryKey, (old: InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown>) => {
+                      const componentData = payload.data as MsSseEventPayload<Pick<PlayApiCommonDetailed, 'uid'>>;
+                      // playDelete events don't happen outside of ui the except for retention cleanup
+                      // and its unlikely the user would have fetched data during a retention cleanup event
+                      //
+                      // so its likey this data will actually be updated so we optimistically build the new data even though we don't know
+                      // for sure that any page actually has our uid
+                      const newQueryData: InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown> = {
+                        pages: [],
+                        pageParams: { ...old.pageParams }
+                      };
+                      for(const p of old.pages) {
+                        const newPageData = p.data.filter(x => x.uid !== componentData.data.uid);
+                        if(newPageData.length !== p.data.length) {
+                          newQueryData.pages.push({...p, data: newPageData});
+                        } else {
+                          newQueryData.pages.push(p);
+                        }
+                      }
+                      return newQueryData;
+                  });
+                }
             }
         }
     });

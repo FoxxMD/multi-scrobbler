@@ -1,11 +1,11 @@
-import { Accordion, Alert, Dialog, Box, Text, Group, Portal, Code, Collapsible, Flex, HStack, Separator, Menu, Skeleton, SkeletonText, Span, Stack, useAccordionItemContext, type BadgeProps, type MenuItemProps, type MenuSelectionDetails, useClipboard, CloseButton, Button } from '@chakra-ui/react';
+import { Accordion, Alert, Dialog, Checkbox, Box, Text, Group, Portal, Code, Collapsible, Flex, HStack, Separator, Menu, Skeleton, SkeletonText, Span, Stack, useAccordionItemContext, type BadgeProps, type MenuItemProps, type MenuSelectionDetails, useClipboard, CloseButton, Button } from '@chakra-ui/react';
 import { useSSEContext, useSSEEvent } from "@flamefrontend/sse-runtime-react";
 import { useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import React, { Fragment, useCallback, useEffect, useState, type ComponentProps } from "react";
 import { LuChevronRight } from "react-icons/lu";
 import type { MarkOptional } from "ts-essentials";
 import type { ComponentsApiJson, MsSseEvent, PaginatedResponse, PlayApiCommonDetailed, QueryPlaysOptsJson, SortPlaysByProps } from "../../core/Api";
-import { INGRESS_QUEUE, type ComponentType, type QueueContext, type Second } from "../../core/Atomic";
+import { INGRESS_QUEUE, queueContextSchema, type ComponentType, type QueueContext, type Second } from "../../core/Atomic";
 import { tanQueries, useQueryWatcher } from "../queries";
 import { activityTimelineHasIssue } from "../utils/ComponentUtils";
 import { ActivityTimeline } from "./ActivityTimeline";
@@ -20,6 +20,8 @@ import { capitalize } from '../../core/StringUtils';
 import ky from 'ky';
 import type { IconType } from 'react-icons/lib';
 import { toaster } from "./Toaster"
+import { useForm, formOptions} from '@tanstack/react-form'
+import { FormCheckbox } from './form/formComponents';
 
 type UseActivityQueryOptions = {
     msQuery?: QueryPlaysOptsJson
@@ -305,41 +307,136 @@ export const ActivityDetailFetchable = (props: ActivityDetailFetchableProps) => 
     return <ActivityDetails componentType={props.componentType} componentName={data?.type} key={props.uid} activity={activity}/>
 }
 
-const RetryWithDialog = (props: {open: boolean, setOpen: (open: boolean) => void}) => 
-    (<Dialog.Root
+const opts = formOptions.strictSchema(queueContextSchema, {
+        defaultValues: {
+            transform: true,
+            dupeCheck: true,
+            useCache: true
+        },
+        validators: [{
+            run: queueContextSchema,
+            triggers: [],
+        }],
+});
+
+const RetryWithDialog = (props: { open: boolean, setOpen: (open: boolean) => void, onSubmit: (vals: QueueContext) => void }) => {
+    const form = useForm({
+        ...opts,
+        onSubmit: ({ schemaOutputs }) => {
+            console.log(schemaOutputs[0]);
+            props.onSubmit(schemaOutputs[0]);
+            props.setOpen(false);
+        }
+    });
+    return (<Dialog.Root
         role="alertdialog"
+        closeOnInteractOutside
+        unmountOnExit
         open={props.open}
         size="sm"
         onOpenChange={(e) => props.setOpen(e.open)}
-      >
+    >
         <Portal>
-          <Dialog.Backdrop />
-          <Dialog.Positioner>
-            <Dialog.Content>
-              <Dialog.CloseTrigger asChild>
-                <CloseButton />
-              </Dialog.CloseTrigger>
-              <Dialog.Header>
-                <Dialog.Title>Retry With Options...</Dialog.Title>
-              </Dialog.Header>
-              <Dialog.Body>
-                <Text>
-                  Retry the Play using the options below:
-                </Text>
-              </Dialog.Body>
-              <Dialog.Footer>
-                <Button variant="outline" onClick={() => props.setOpen(false)}>
-                  Cancel
-                </Button>
-                <Button colorPalette="blue">Retry</Button>
-              </Dialog.Footer>
-            </Dialog.Content>
-          </Dialog.Positioner>
+            <Dialog.Backdrop />
+            <Dialog.Positioner>
+                <Dialog.Content>
+                    <Dialog.CloseTrigger asChild>
+                        <CloseButton />
+                    </Dialog.CloseTrigger>
+                    <Dialog.Header>
+                        <Dialog.Title>Retry With...</Dialog.Title>
+                    </Dialog.Header>
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            form.handleSubmit()
+                        }}>
+                        <Dialog.Body>
+                            <Stack>
+                            <Text>
+                                Retry the Play using the options below:
+                            </Text>
+                                <form.Field
+                                    name="transform"
+                                    // @ts-expect-error need compiler strict: true
+                                    children={(field) => (<FormCheckbox field={field} label="Transform?"/>)}
+                                />
+                                <form.Field
+                                    name="dupeCheck"
+                                    // @ts-expect-error need compiler strict: true
+                                    children={(field) => (<FormCheckbox field={field} label="Check for Duplicate?"/>)}
+                                />
+                                <form.Field
+                                    name="useCache"
+                                    // @ts-expect-error need compiler strict: true
+                                    children={(field) => (<FormCheckbox field={field} label="Use Cache?"/>)}
+                                />
+                            </Stack>
+                        </Dialog.Body>
+                        <Dialog.Footer>
+                            <Button variant="outline" onClick={() => props.setOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button colorPalette="blue" type="submit">Retry</Button>
+                        </Dialog.Footer>
+                    </form>
+                </Dialog.Content>
+            </Dialog.Positioner>
         </Portal>
-      </Dialog.Root>
-      )
+    </Dialog.Root>
+    )
+}
 
-const playStateMenuItem = (Icon: IconType, value: string, name?: string) => (props: Pick<MenuItemProps, 'disabled'> = {}) => (
+const DeleteDialog = (props: { open: boolean, setOpen: (open: boolean) => void, onSubmit: (withChildren?: boolean) => void, source?: boolean }) => {
+    const [children, setChildren] = useState(false);
+    return (<Dialog.Root
+        role="alertdialog"
+        closeOnInteractOutside
+        unmountOnExit
+        open={props.open}
+        size="sm"
+        onOpenChange={(e) => props.setOpen(e.open)}
+    >
+        <Portal>
+            <Dialog.Backdrop />
+            <Dialog.Positioner>
+                <Dialog.Content>
+                    <Dialog.CloseTrigger asChild>
+                        <CloseButton />
+                    </Dialog.CloseTrigger>
+                    <Dialog.Header>
+                        <Dialog.Title>Confirm Deletion</Dialog.Title>
+                    </Dialog.Header>
+                        <Dialog.Body>
+                            <Stack>
+                            <Text>
+                                Are you sure you want to delete this Play?
+                            </Text>
+                             {props.source === true && <Checkbox.Root checked={children} onCheckedChange={(val) => setChildren(!!val.checked)}>
+                                <Checkbox.HiddenInput />
+                                <Checkbox.Control />
+                                <Checkbox.Label>and delete Play in Clients</Checkbox.Label>
+                            </Checkbox.Root>}
+                            </Stack>
+                        </Dialog.Body>
+                        <Dialog.Footer>
+                            <Button variant="outline" onClick={() => props.setOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button colorPalette="red" onClick={() => {
+                                props.onSubmit(children);
+                                props.setOpen(false);
+                            }}>Delete</Button>
+                        </Dialog.Footer>
+                </Dialog.Content>
+            </Dialog.Positioner>
+        </Portal>
+    </Dialog.Root>
+    )
+}
+
+const playStateMenuItem = (Icon: IconType, value: string, name?: string) => (props: Omit<MenuItemProps, 'value'> = {}) => (
     <Menu.Item key={value} value={value} {...props}><Box flex="1">{name ?? capitalize(value)}</Box><Icon /></Menu.Item>
 )
 
@@ -356,14 +453,15 @@ const primaryActionProps: ComponentProps<typeof PowerOffButton> = {
     size: 'xs'
 }
 
-export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed}) => {
+export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed, componentType: ComponentType}) => {
     let suffix: React.JSX.Element | undefined;
     let primaryAction: React.JSX.Element | undefined;
     let menuElm: React.JSX.Element | undefined;
-    let menuItems: React.JSX.Element[] = [];
+    let menuItems: React.JSX.Element[];
     const badgeProps: BadgeProps = {};
 
     const [retryOpen, setRetryOpen] = useState(false);
+    const [deleteOpen, setDeleteOpen] = useState(false);
 
     const clipboard = useClipboard({value: JSON.stringify(props.activity)});
 
@@ -371,9 +469,12 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed}) =
         mutationKey: ['playAction', props.activity.uid],
         mutationFn: (data: {action: string, context?: QueueContext}) => {
             if(data.action === 'queue') {
-                return ky.post(`/api/components/${props.activity.componentId}/plays/${props.activity.uid}/state`,{
+                return ky.post(`/api/components/${props.activity.componentId}/plays/${props.activity.uid}/queue`,{
                     json: data.context ?? {}
                 });
+            }
+            if(data.action === 'delete') {
+                return ky.delete(`/api/components/${props.activity.componentId}/plays/${props.activity.uid}`);
             }
             const realAction = data.action === 'cancel' ? 'queue' : data.action;
             return ky.delete(`/api/components/${props.activity.componentId}/plays/${props.activity.uid}/${realAction}`);
@@ -401,8 +502,11 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed}) =
             case 'finish':
                 mutate({action: 'dead'});
                 break;
+            case 'delete':
+                setDeleteOpen(true);
+                break;
         }
-    },[mutate,clipboard, setRetryOpen]);
+    },[mutate,clipboard, setRetryOpen, setDeleteOpen]);
 
     const {
         activity: {
@@ -413,18 +517,18 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed}) =
     switch(props.activity.state) {
         case 'queued':
             primaryAction = <StopButton size={{base: '2xs', smTo2xl: 'xs'}} color="red.400" margin="1px" variant="subtle" onClick={() => mutate({action: 'cancel'})}/>;
-            menuItems = [<MenuItemTrash disabled={isPending}/>,<MenuItemDebug/>];
+            menuItems = [<MenuItemDebug/>,<MenuItemTrash disabled={isPending} color="fg.error" _hover={{ bg: "bg.error", color: "fg.error" }}/>];
             break;
         case 'failed':
             primaryAction = <RetryButton size={{base: '2xs', smTo2xl: 'xs'}} margin="1px" variant="subtle" onClick={() => mutate({action: 'queue'})}/>;
-            menuItems = [<MenuItemRetryWith disabled={isPending} />, <MenuItemTrash disabled={isPending}/>,<MenuItemDebug/>];
+            menuItems = [<MenuItemRetryWith disabled={isPending} />,<MenuItemDebug/>,<MenuItemTrash disabled={isPending}  color="fg.error" _hover={{ bg: "bg.error", color: "fg.error" }}/>];
             if(!hasDeadQueue) {
                 menuItems.unshift(<MenuItemFinish disabled={isPending}/>)
             }
             break
         default:
             primaryAction = <RetryButton size={{base: '2xs', smTo2xl: 'xs'}} margin="1px" variant="subtle" onClick={() => mutate({action: 'queue'})}/>;
-            menuItems = [<MenuItemRetryWith disabled />, <MenuItemTrash disabled={isPending}/>,<MenuItemDebug/>];
+            menuItems = [<MenuItemRetryWith disabled={isPending} />,<MenuItemDebug/>,<MenuItemTrash disabled={isPending}  color="fg.error" _hover={{ bg: "bg.error", color: "fg.error" }}/>];
             break
 
     }
@@ -455,7 +559,8 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed}) =
         }
     return (
         <Stack>
-            <RetryWithDialog open={retryOpen} setOpen={setRetryOpen}/>
+            <RetryWithDialog open={retryOpen} setOpen={setRetryOpen} onSubmit={(vals) => mutate({action: 'queue', context: vals})}/>
+            <DeleteDialog open={deleteOpen} setOpen={setDeleteOpen} onSubmit={() => mutate({action: 'delete'})} source={props.componentType === 'source'}/>
             <HStack>
                 <PlayStateBadge {...badgeProps} minH="32px" alignItems="anchor-center" size={{base: 'xs', sm: 'lg', mdTo2xl: 'lg'}} hasDeadQueue={hasDeadQueue} state={props.activity.state} suffix={suffix} />
             </HStack>
@@ -467,7 +572,7 @@ export const ActivityStateActionsFetchable = (props: ActivityDetailFetchableProp
     const {isError, error, isPending, activity} = useActivityQuery(props.componentId, props.uid, {activity: props.activity});
 
     if(!isPending && !isError) {
-        return <ActivityStateActions activity={activity}/>;
+        return <ActivityStateActions activity={activity} componentType={props.componentType}/>;
     }
 }
 

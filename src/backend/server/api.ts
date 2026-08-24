@@ -424,6 +424,27 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         return res.json(asSerializablePlaySelect(playRes));
     });
 
+    router.delete('/components/:componentVal/plays/:playUid', {middleware: [componentAwareMiddle], querySchema: z.object({children: z.stringbool().optional()})}, async (req, res, next) => {
+        const {
+            component,
+            query: {
+                children
+            },
+            params: {
+                playUid
+            }
+        } = req;
+
+        const play = await component.playRepo.findByUidWith<'children'>(playUid, ['children']);
+        if(play === undefined) {
+            return res.sendStatus(404);
+        }
+
+        await component.deletePlay(play);
+
+        return res.sendStatus(200);
+    });
+
     router.post('/components/:componentVal/plays/:playUid/queue', {middleware: [componentAwareMiddle], bodySchema: queueContextSchema.optional()}, async (req, res, next) => {
         const {
             component,
