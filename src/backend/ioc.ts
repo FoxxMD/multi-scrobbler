@@ -12,7 +12,7 @@ import TransformerManager from "./common/transforms/TransformerManager.ts";
 import type {TransformerCommonConfig} from "../core/Atomic.ts";
 import prom from 'prom-client';
 import { CoverArtApiClient } from "./common/vendor/musicbrainz/CoverArtApiClient.ts";
-import { version } from "./version.ts";
+import { version, stable } from "./version.ts";
 import type {DbConcrete} from "./common/database/drizzle/drizzleUtils.ts";
 import type { MSBackendEventMap } from "./common/infrastructure/MSBackendEventMap.ts";
 
@@ -130,8 +130,18 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
 
     const portVal: number | string = process.env.PORT ?? port;
 
+    const versionParts: string[] = [];
+    if(stable === version) {
+        versionParts.push(stable);
+    } else {
+        if(stable !== 'unknown') {
+            versionParts.push(stable);
+        }
+        versionParts.push(version);
+    }
+
     return createContainer().add({
-        version,
+        version: versionParts.join('-'),
         configDir: getConfigDir(),
         isProd: process.env.NODE_ENV !== undefined && (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'prod'),
         // @ts-ignore

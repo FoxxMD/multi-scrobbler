@@ -29,6 +29,7 @@ import { findCauseByFunc } from '../../utils/ErrorUtils.ts';
 import { isSuperAgentResponseError } from '../errors/ErrorUtils.ts';
 import { playToSubmitPayload } from './listenbrainz/lzUtils.ts';
 import { isrcNoHyphens } from '../../../core/PlayUtils.ts';
+import { getRoot } from '../../ioc.ts';
 
 
 export interface SubmitOptions {
@@ -59,6 +60,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
 
     declare config: ListenBrainzClientData;
     url: URLData;
+    userAgent: string
 
     constructor(name: any, config: ListenBrainzClientData, options: AbstractApiOptions) {
         super('ListenBrainz', name, config, options);
@@ -66,6 +68,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
             url = 'https://api.listenbrainz.org/'
         } = config;
         let cleanUrl = url;
+        this.userAgent = `multi-scrobbler/${getRoot().items.version}`
         const pathedUrl = normalizeListenbrainzUrl(cleanUrl);
         if(pathedUrl !== undefined) {
             this.logger.verbose(`LZ Server URL contained /1/, removing this because MS adds it automatically`);
@@ -84,6 +87,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
 
         try {
             req.set('Authorization', `Token ${this.config.token}`);
+            req.set('User-Agent', this.userAgent);
             return await req as T;
         } catch (e) {
             const {
