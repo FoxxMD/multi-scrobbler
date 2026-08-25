@@ -47,7 +47,7 @@ export class EndpointLastfmSource extends MemorySource {
         };
     }
 
-    matchRequest(req: Pick<ExpressRequest, 'baseUrl' | 'header'>): boolean {
+    matchRequest(req: Pick<ExpressRequest, 'baseUrl' | 'originalUrl' | 'header'>): boolean {
         const slug = parseSlugFromRequest(req, requestMatchers);
         if (slug === false) {
             return false;

@@ -53,7 +53,7 @@ export class EndpointListenbrainzSource extends MemorySource {
         };
     }
 
-    matchRequest(req: Pick<ExpressRequest, 'baseUrl' | 'header'>): boolean {
+    matchRequest(req: Pick<ExpressRequest, 'baseUrl' | 'originalUrl' | 'header'>): boolean {
         let matchesToken = this.config.data.token === undefined;
         const reqToken = parseTokenFromRequest(req, requestMatchers);
         if (reqToken === false) {
