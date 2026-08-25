@@ -81,7 +81,7 @@ export class WebScrobblerSource extends MemorySource {
         }
     }
 
-    static playStateFromRequest(obj: WebScrobblerPayload,): PlayerStateData {
+    static playStateFromRequest(obj: WebScrobblerPayload): PlayerStateData {
         const {
             eventName,
             time = dayjs().unix(),
