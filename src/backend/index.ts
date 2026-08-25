@@ -26,6 +26,7 @@ import { createRetentionCleanupTask } from './tasks/retentionCleanup.ts';
 import { parseUserConfig } from './common/Cache.ts';
 import { nonEmptyStringOrDefault } from '../core/StringUtils.ts';
 import { createDir, fileExists } from './utils/FSUtils.ts';
+console.log('imports loaded');
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -34,26 +35,32 @@ dayjs.extend(duration);
 dayjs.extend(timezone);
 dayjs.extend(isToday);
 dayjs.extend(week);
+console.log('dayjs extended');
 
 // eslint-disable-next-line prefer-arrow-functions/prefer-arrow-functions
 (async function () {
 
+console.log('inside async func');
 const scheduler = new ToadScheduler()
+console.log('scheduler init');
 
 let output: LogDataPretty[] = []
 
+console.log('init logger init');
 const [parentInitLogger, initLoggerStream] = getInitLogger();
 const initLogger = childLogger(parentInitLogger, 'Init');
 initLoggerStream.on('data', (log: LogDataPretty) => {
 output.unshift(log);
 output = output.slice(0, 301);
 });
+console.log('init logger created');
 
 let logger: FoxLogger;
 
 let db: DbConcrete;
 const dbConnectionsClosed = false;
 
+console.log('process execption/signal catching');
 process.on('uncaughtExceptionMonitor', (err, origin) => {
     const appError = new Error(`Uncaught exception is crashing the app! :( Type: ${origin}`, {cause: err});
     if(logger !== undefined) {
@@ -87,9 +94,11 @@ process.on('SIGINT', async () => {
 })
 
 
+console.log('getting config dir');
 const configDir = getConfigDir();
+console.log('getting data dir');
 const dataDir = getDataDir();
-
+console.log('app start');
     try {
         initLogger.info(`Config Dir ENV : ${process.env.CONFIG_DIR} -> Resolved: ${configDir}`);
         try {
@@ -289,4 +298,4 @@ const dataDir = getDataDir();
         process.exit(1);
     }
 }());
-
+console.log('should not make it past async iife until container stop or app crash');
