@@ -161,29 +161,35 @@ describe('Webscrobbler Endpoint', function() {
         clients = new ScrobbleClients(new WildcardEmitter(), new WildcardEmitter(), internalConfig, loggerTest);
     });
 
-    it('accepts request to /api/webscrobbler', async function() {
+    it('accepts request to /api/webscrobbler', async function () {
         const sources = generateSources();
         await sources.addSource('webscrobbler', [defaultWebscrobblerConfig]);
         const source = sources.sources[0];
         source.queueIdleMs = 2;
         await source.initialize();
-        const [app] = await initServer({sources, clients}, {testMode: true});
+        const [app] = await initServer({ sources, clients }, { testMode: true });
 
         const payload = zocker(webScrobblePayloadSchema)
-        .override(z.ZodString, faker.word.words({count: {min: 1, max: 5}}))
-        .supply(webScrobblePayloadSchema.shape.data.shape.currentlyPlaying, true)
-        .supply(webScrobblePayloadSchema.shape.time, dayjs().unix())
-        .supply(webScrobblePayloadSchema.shape.data.shape.song.shape.processed.shape.duration, faker.number.int({min: 30, max: 400}))
-        .supply(webScrobblePayloadSchema.shape.data.shape.song.shape.parsed.shape.duration, faker.number.int({min: 30, max: 400}))
-        .supply(webScrobblePayloadSchema.shape.eventName, 'scrobble').generate()
+            .override(z.ZodString,() => faker.word.words({ count: { min: 1, max: 5 } }))
+            .supply(webScrobblePayloadSchema.shape.data.shape.currentlyPlaying, true)
+            .supply(webScrobblePayloadSchema.shape.time, dayjs().unix())
+            .supply(webScrobblePayloadSchema.shape.data.shape.song.shape.processed.shape.duration, faker.number.int({ min: 30, max: 400 }))
+            .supply(webScrobblePayloadSchema.shape.data.shape.song.shape.parsed.shape.duration, faker.number.int({ min: 30, max: 400 }))
+            .supply(webScrobblePayloadSchema.shape.data.shape.song.shape.parsed.shape.isScrobblingAllowed, true)
+            .supply(webScrobblePayloadSchema.shape.eventName, 'scrobble').generate()
 
-        const [response, _] = await Promise.all([
-            request(app).post('/api/webscrobbler')
-                .set('Content-Type', 'application/json')
-                .send(JSON.stringify(payload)),
-            pEvent(source.emitter, 'playInsert', {timeout: 1000})
-        ]);
-        expect(response.status).eq(200);
-        expect(source.getApiData().queued, JSON.stringify(payload)).eq(1);
+        try {
+            const [response, _] = await Promise.all([
+                request(app).post('/api/webscrobbler')
+                    .set('Content-Type', 'application/json')
+                    .send(JSON.stringify(payload)),
+                pEvent(source.emitter, 'playInsert', { timeout: 1000 })
+            ]);
+            expect(response.status).eq(200);
+            expect(source.getApiData().queued, JSON.stringify(payload)).eq(1);
+        } catch (e) {
+            console.log(JSON.stringify(payload));
+            throw e;
+        }
     });
 });
