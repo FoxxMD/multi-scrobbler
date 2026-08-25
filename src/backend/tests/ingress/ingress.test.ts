@@ -14,6 +14,10 @@ import type { WebScrobblerSourceConfig } from '../../common/infrastructure/confi
 import { sleep } from '../../utils.ts';
 import { playToSubmitPayload } from '../../common/vendor/listenbrainz/lzUtils.ts';
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
+import dayjs from 'dayjs';
+import { faker } from '@faker-js/faker';
+import * as z from 'zod';
+import pEvent from 'p-event';
 
 chai.use(asPromised);
 
@@ -46,7 +50,6 @@ describe('Listenbrainz Endpoint', function() {
             const sources = generateSources();
             await sources.addSource('endpointlz', [defaultLzConfig]);
             const [app] = await initServer({sources, clients}, {testMode: true});
-            //const source = sources.sources[0] as EndpointListenbrainzSource;
             const response = await request(app).get('/1/validate-token')
             
             expect(response.status).eq(200);
@@ -58,9 +61,6 @@ describe('Listenbrainz Endpoint', function() {
             await sources.addSource('endpointlz', [defaultLzConfig]);
             await sources.addSource('endpointlz', [{...defaultLzConfig, data: {token: 'foo'}, id: 'tokenTest'}]);
             const [app] = await initServer({sources, clients}, {testMode: true});
-            //const source = sources.sources[1] as EndpointListenbrainzSource;
-            //source.queueIdleMs = 2;
-            //await source.initialize();
             const response = await request(app)
             .get('/1/validate-token')
             .set('Authorization', 'Token foo');
@@ -77,12 +77,14 @@ describe('Listenbrainz Endpoint', function() {
             source.queueIdleMs = 2;
             await source.initialize();
 
-            const response = await request(app).post('/1/submit-listens')
-            .set('Content-Type', 'application/json')
-            .send(JSON.stringify(playToSubmitPayload(generatePlay())));
+            const [response, _] = await Promise.all([
+                request(app).post('/1/submit-listens')
+                    .set('Content-Type', 'application/json')
+                    .send(JSON.stringify(playToSubmitPayload(generatePlay()))),
+                pEvent(source.emitter, 'playInsert', {timeout: 1000})
+            ]);
             
             expect(response.status).eq(200);
-            await sleep(4);
             expect( source.getApiData().queued).eq(1);
         });
 
@@ -94,10 +96,12 @@ describe('Listenbrainz Endpoint', function() {
             source.queueIdleMs = 2;
             await source.initialize();
 
-            await request(app).post('/1/submit-listens')
-            .set('Content-Type', 'application/json')
-            .send(JSON.stringify({...playToSubmitPayload(generatePlay()), listen_type: 'playing_now'}));
-            await sleep(4);
+            const [_, __] = await Promise.all([
+                request(app).post('/1/submit-listens')
+                    .set('Content-Type', 'application/json')
+                    .send(JSON.stringify({...playToSubmitPayload(generatePlay()), listen_type: 'playing_now'})),
+                //pEvent(source.emitter, 'playInsert', {timeout: 1000})
+            ]);
 
             const response = await request(app).get('/1/user/test/playing-now');
             expect(response.body.payload.listens).to.exist;
@@ -115,12 +119,14 @@ describe('Listenbrainz Endpoint', function() {
             source.queueIdleMs = 2;
             await source.initialize();
 
-            const response = await request(app).post('/api/listenbrainz')
-            .set('Content-Type', 'application/json')
-            .send(JSON.stringify(playToSubmitPayload(generatePlay())));
+            const [response, _] = await Promise.all([
+                request(app).post('/api/listenbrainz')
+                    .set('Content-Type', 'application/json')
+                    .send(JSON.stringify(playToSubmitPayload(generatePlay()))),
+                pEvent(source.emitter, 'playInsert', {timeout: 1000})
+            ]);
             
             expect(response.status).eq(200);
-            await sleep(4);
             expect( source.getApiData().queued).eq(1);
         });
 
@@ -133,12 +139,14 @@ describe('Listenbrainz Endpoint', function() {
             source.queueIdleMs = 2;
             await source.initialize();
 
-            const response = await request(app).post('/api/listenbrainz/foobar')
-            .set('Content-Type', 'application/json')
-            .send(JSON.stringify(playToSubmitPayload(generatePlay())));
+            const [response, _] = await Promise.all([
+                request(app).post('/api/listenbrainz/foobar')
+                    .set('Content-Type', 'application/json')
+                    .send(JSON.stringify(playToSubmitPayload(generatePlay()))),
+                pEvent(source.emitter, 'playInsert', {timeout: 1000})
+            ])
             
             expect(response.status).eq(200);
-            await sleep(4);
             expect( source.getApiData().queued).eq(1);
         });
 
@@ -162,15 +170,20 @@ describe('Webscrobbler Endpoint', function() {
         const [app] = await initServer({sources, clients}, {testMode: true});
 
         const payload = zocker(webScrobblePayloadSchema)
+        .override(z.ZodString, faker.word.words({count: {min: 1, max: 5}}))
         .supply(webScrobblePayloadSchema.shape.data.shape.currentlyPlaying, true)
+        .supply(webScrobblePayloadSchema.shape.time, dayjs().unix())
+        .supply(webScrobblePayloadSchema.shape.data.shape.song.shape.processed.shape.duration, faker.number.int({min: 30, max: 400}))
+        .supply(webScrobblePayloadSchema.shape.data.shape.song.shape.parsed.shape.duration, faker.number.int({min: 30, max: 400}))
         .supply(webScrobblePayloadSchema.shape.eventName, 'scrobble').generate()
 
-        const response = await request(app).post('/api/webscrobbler')
-        .set('Content-Type', 'application/json')
-        .send(JSON.stringify(payload));
-        
+        const [response, _] = await Promise.all([
+            request(app).post('/api/webscrobbler')
+                .set('Content-Type', 'application/json')
+                .send(JSON.stringify(payload)),
+            pEvent(source.emitter, 'playInsert', {timeout: 1000})
+        ]);
         expect(response.status).eq(200);
-        await sleep(4);
-        expect( source.getApiData().queued).eq(1);
+        expect(source.getApiData().queued, JSON.stringify(payload)).eq(1);
     });
 });
