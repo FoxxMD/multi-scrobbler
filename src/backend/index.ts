@@ -173,7 +173,7 @@ const dataDir = getDataDir();
 
         await root.items.cache().init(true);
 
-        initServer(logger, appLoggerStream, output, scrobbleSources, scrobbleClients);
+        initServer({sources: scrobbleSources, clients: scrobbleClients},{logger, appLoggerStream, initialOutput: output});
 
         if(process.env.IS_LOCAL === 'true') {
             logger.info('multi-scrobbler can be run as a background service! See: https://docs.multi-scrobbler.app/installation/service');

@@ -1,17 +1,15 @@
-import type {LogDataPretty, Logger, LogLevel} from "@foxxmd/logging";
+import {loggerTest, type LogDataPretty, type Logger, type LogLevel} from "@foxxmd/logging";
 import type {Express} from 'express';
 import bsseDef from 'better-sse';
 import bodyParser from "body-parser";
 import { FixedSizeList } from 'fixed-size-list';
-import type { PassThrough } from "node:stream";
+import { PassThrough } from "node:stream";
 import { Transform } from "stream";
 import {
     DEAD_QUEUE,
     type ClientStatusData,
     type DeadLetterScrobble,
     type LogOutputConfig,
-    PLAY_CLIENT_STATE,
-    PLAY_SOURCE_STATE,
     type PlayObject,
     SOURCE_SOT,
     type SOURCE_SOT_TYPES,
@@ -49,6 +47,7 @@ import { serializeError } from "serialize-error";
 import { z } from 'zod';
 import type { createTypedRouter } from "@minisylar/express-typed-router";
 import pEvent from "p-event";
+import { hasMetricRepositories, registerMetrics, setMetricRepositories } from "./promMetrics.ts";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -72,7 +71,34 @@ const getLogs = (minLevel: number, limit: number = maxBufferSize, sort: 'asc' | 
     return allLogs.flat(1).sort((a, b) => a.time - b.time).slice(0, limit);
 }
 
-export const setupApi = (app: Express, router: ReturnType<typeof createTypedRouter>, logger: Logger, appLoggerStream: PassThrough, initialLogOutput: LogDataPretty[] = [], scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
+export interface ApiArgs {
+    app: Express
+    router: ReturnType<typeof createTypedRouter>
+    scrobbleSources: ScrobbleSources
+    scrobbleClients: ScrobbleClients
+}
+
+export interface ApiOptions {
+    logger?: Logger
+    appLoggerStream?: PassThrough
+    initialLogOutput?: LogDataPretty[]
+    testMode?: boolean
+}
+
+export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
+    const {
+        app,
+        router,
+        scrobbleSources,
+        scrobbleClients
+    } = args;
+    const {
+        logger = loggerTest,
+        appLoggerStream = new PassThrough(),
+        initialLogOutput = [],
+        testMode
+    } = opts;
+    
     for(const level of Object.keys(logger.levels.labels)) {
         output[level] = new FixedSizeList<LeveledLogData>(maxBufferSize);
     }
@@ -949,134 +975,18 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         return res.status((clientsReady && sourcesReady) ? 200 : 500).json({messages: sourceMessages.concat(clientMessages)});
     });
 
-    const issuesClientGauge = new prom.Gauge({
-                name: 'multiscrobbler_client_issues',
-                help: 'Number of errors/issues with Client',
-                labelNames: ['name', 'type'],
-                async collect() {
-                    for(const client of scrobbleClients.clients) {
-                        let issues = 0;
-                        if(!(await client.isReady())) {
-                            issues++;
-                        }
-                        this.labels({name: client.getSafeExternalName(), type: client.type}).set(issues);
-                    }
-                }
-    });
-
-    const sourceIssues = new prom.Gauge({
-                name: 'multiscrobbler_source_issues',
-                help: 'Number of errors/issues with Source',
-                labelNames: ['name', 'type'],
-                async collect() {
-                    for(const source of scrobbleSources.sources) {
-                        let issues = 0;
-                        if(source.requiresAuth && !source.authed) {
-                            issues++;
-                        }
-                        if(source.canPoll && !source.polling) {
-                            issues++;
-                        }
-                        this.labels({name: source.getSafeExternalName(), type: source.type}).set(issues);
-                    }
-                }
-    });
-
-
-    let playRepo: DrizzlePlayRepository,
-    playHistoricalRepo: DrizzlePlayHistoricalRepository;
-
-    const sourcePlays = new prom.Gauge({
-                name: 'multiscrobbler_source_plays',
-                help: 'Count of stored plays by state for Sources',
-                labelNames: ['name', 'type', 'state'],
-                async collect() {
-                    const res = await playRepo.getPlayCountByState();
-                    for(const source of scrobbleSources.sources) {
-                        const relevant = res.filter(x => x['componentId'] === source.componentId);
-                        for(const s of PLAY_SOURCE_STATE) {
-                            const rel = relevant.find(x => x['state'] === s);
-                            const count = rel === undefined ? 0 : rel['count(*)'];
-                            this.labels({name: source.getSafeExternalName(), type: source.type, state: s}).set(count);
-                        }
-                    }
-                }
-    });
-    const sourceRetention = new prom.Gauge({
-                name: 'multiscrobbler_source_plays_compacted',
-                help: 'Count of compacted, stored plays by compaction type for Sources',
-                labelNames: ['name', 'type', 'compactionType'],
-                async collect() {
-                    const res = await playRepo.getCompactedPlayCountByComponent();
-                    for(const source of scrobbleSources.sources) {
-                        const relevant = res.filter(x => x['componentId'] === source.componentId);
-                        for(const s of ['input','transform','input-transform']) {
-                            const rel = relevant.find(x => x['compacted'] === s);
-                            const count = rel === undefined ? 0 : rel['count(*)'];
-                            this.labels({name: source.getSafeExternalName(), type: source.type, compactionType: s}).set(count);
-                        }
-                    }
-                }
-    });
-    const clientPlays = new prom.Gauge({
-                name: 'multiscrobbler_client_plays',
-                help: 'Count of stored plays by state for Clients',
-                labelNames: ['name', 'type', 'state'],
-                async collect() {
-                    const res = await playRepo.getPlayCountByState();
-                    for(const client of scrobbleClients.clients) {
-                        const relevant = res.filter(x => x['componentId'] === client.componentId);
-                        for(const s of PLAY_CLIENT_STATE) {
-                            const rel = relevant.find(x => x['state'] === s);
-                            const count = rel === undefined ? 0 : rel['count(*)'];
-                            this.labels({name: client.getSafeExternalName(), type: client.type, state: s}).set(count);
-                        }
-                    }
-                }
-    });
-    const clientRetention = new prom.Gauge({
-                name: 'multiscrobbler_client_plays_compacted',
-                help: 'Count of compacted, stored plays by compaction type for Clients',
-                labelNames: ['name', 'type', 'compactionType'],
-                async collect() {
-                    const res = await playRepo.getCompactedPlayCountByComponent();
-                    for(const client of scrobbleClients.clients) {
-                        const relevant = res.filter(x => x['componentId'] === client.componentId);
-                        for(const s of ['input','transform','input-transform']) {
-                            const rel = relevant.find(x => x['compacted'] === s);
-                            const count = rel === undefined ? 0 : rel['count(*)'];
-                            this.labels({name: client.getSafeExternalName(), type: client.type, compactionType: s}).set(count);
-                        }
-                    }
-                }
-    });
-    const clientHistoricalPlays = new prom.Gauge({
-                name: 'multiscrobbler_client_historical_plays',
-                help: 'Count of stored historical plays for Clients',
-                labelNames: ['name', 'type'],
-                async collect() {
-                    const res = await playHistoricalRepo.getPlayCountByComponent();
-                    for(const client of scrobbleClients.clients) {
-                        if(client instanceof AbstractHistoricalScrobbleClient) {
-                            const relevant = res.filter(x => x['componentId'] === client.componentId);
-                            for(const rel of relevant) {
-                                this.labels({name: client.getSafeExternalName(), type: client.type}).set(rel['count(*)']);
-                            }
-                        }
-                    }
-                }
-    });
-
-    if(process.env.PROMETHEUS_FULL === 'true') {
-        prom.collectDefaultMetrics();
+    if(testMode !== true) {
+        registerMetrics(scrobbleSources, scrobbleClients);
+        if(process.env.PROMETHEUS_FULL === 'true') {
+            prom.collectDefaultMetrics();
+        }
     }
 
     router.get('/api/metrics', {tags: ['App Meta']}, async (req, res) => {
 
-        if(playRepo === undefined) {
+        if(!hasMetricRepositories()) {
             const db = await getRoot().items.db();
-            playRepo = new DrizzlePlayRepository(db);
-            playHistoricalRepo = new DrizzlePlayHistoricalRepository(db);
+            setMetricRepositories(new DrizzlePlayRepository(db),new DrizzlePlayHistoricalRepository(db))
         }
 
         const metricsString = await prom.register.metrics();

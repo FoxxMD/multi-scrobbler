@@ -1,5 +1,6 @@
-import express, { Router } from 'express';
-import { childLogger, type LogDataPretty, type Logger } from "@foxxmd/logging";
+import express from 'express';
+import type { Express } from 'express';
+import { childLogger, loggerTest, type LogDataPretty, type Logger } from "@foxxmd/logging";
 import bodyParser from 'body-parser';
 import { stripIndents } from "common-tags";
 import session from 'express-session';
@@ -18,16 +19,34 @@ import { qsOptions } from '../../core/Atomic.ts';
 import { projectRootDir } from "../common/infrastructure/Atomic.ts";
 import { createTypedRouter } from "@minisylar/express-typed-router";
 
-const app = express();
+export interface ServerArgs {
+    sources: ScrobbleSources
+    clients: ScrobbleClients
+}
+export interface ServerOptions {
+    logger?: Logger
+    appLoggerStream?: PassThrough
+    initialOutput?: LogDataPretty[]
+    testMode?: boolean
+}
 
-const router = createTypedRouter();
+export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Promise<[Express, ReturnType<typeof createTypedRouter>]> => {
 
-//const router = Router();
-app.set('query parser', (str: string) => qs.parse(str, qsOptions));
+    const app = express();
 
-export const initServer = async (parentLogger: Logger, appLoggerStream: PassThrough, initialOutput: LogDataPretty[] = [], sources: ScrobbleSources, clients: ScrobbleClients) => {
+    const router = createTypedRouter();
 
-    const logger = childLogger(parentLogger, 'API'); // parentLogger.child({labels: ['API']}, mergeArr);
+    app.set('query parser', (str: string) => qs.parse(str, qsOptions));
+
+    const {
+        sources,
+        clients
+    } = args;
+    const {
+        logger: parentLogger = loggerTest,
+    } = opts;
+
+    const logger = childLogger(parentLogger, 'API');
 
     try {
         app.use(router.getRouter());
@@ -51,12 +70,16 @@ export const initServer = async (parentLogger: Logger, appLoggerStream: PassThro
             return;
         }
 
+        setupApi({app, router, scrobbleSources: sources, scrobbleClients: clients}, {...opts, logger});
+
+        if(opts.testMode === true) {
+            return [app, router];
+        }
+
         const isProd = root.get('isProd');
         const port = root.get('port');
         const local = root.get('localUrl');
         const localDefined = root.get('hasDefinedBaseUrl');
-
-        setupApi(app, router, logger, appLoggerStream, initialOutput, sources, clients);
 
         const addy = getAddress();
         const addresses: string[] = [];
@@ -123,6 +146,7 @@ export const initServer = async (parentLogger: Logger, appLoggerStream: PassThro
             }).on('error', (err) => {
                 throw new Error('Server encountered unrecoverable error', {cause: err});
             });
+            return [app, router];
         } catch (e) {
             throw new Error('Server encountered unrecoverable error', {cause: e});
         }

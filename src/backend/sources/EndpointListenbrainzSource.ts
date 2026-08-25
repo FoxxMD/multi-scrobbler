@@ -20,7 +20,7 @@ import type {Logger} from "@foxxmd/logging";
 import type {PlayerStateOptions} from "./PlayerState/AbstractPlayerState.ts";
 import { AUTH_HEADER_DEFAULT_REGEX, parseSlugFromRequest, parseTokenFromRequest, type RequestIdentifierRegexes } from "../utils/RequestUtils.ts";
 
-const noSlugMatch = new RegExp(/(?:\/api\/listenbrainz\/?)$|(?:\/1\/?|\/1\/submit-listens\/?\/1\/validate-token\/|)$/i);
+const noSlugMatch = new RegExp(/\/api\/listenbrainz\/?$|(\/1\/?|\/1\/.+)$/i);
 const slugMatch = new RegExp(/\/api\/listenbrainz\/([^\/]+)$/i);
 
 export const requestMatchers: RequestIdentifierRegexes = {

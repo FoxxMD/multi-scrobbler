@@ -84,7 +84,7 @@ export abstract class AbstractPlayerState {
     currentListenRange?: ListenRange
     listenRanges: ListenRange[] = [];
     createdAt: Dayjs = dayjs();
-    stateLastUpdatedAt: Dayjs = dayjs(0);
+    stateLastUpdatedAt: Dayjs = dayjs(1);
 
     lastPlay?: PlayObject
     lastPlayUpdatedAt?: Dayjs
@@ -173,6 +173,9 @@ export abstract class AbstractPlayerState {
 
     update(state: PlayerStateDataMaybePlay, reportedTS?: Dayjs) {
         this.stateLastUpdatedAt = state.stateUpdatedAt ?? dayjs();
+        if(!this.stateLastUpdatedAt.isValid()) {
+            this.stateLastUpdatedAt = dayjs();
+        }
 
         const {play, status} = state;
 

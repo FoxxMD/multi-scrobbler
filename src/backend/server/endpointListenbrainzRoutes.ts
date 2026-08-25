@@ -82,7 +82,7 @@ export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof cr
         res.status(200).json({status: "ok"});
     }
 
-    router.post('/api/listenbrainz/*path', {
+    router.post('/api/listenbrainz{*splat}', {
         middleware: [rawIngress,lzJsonParser,nonEmptyCheck],
         bodySchema: z.looseObject({}),
         tags: ['Listenbrainz Ingress'],

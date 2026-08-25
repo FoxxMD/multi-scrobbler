@@ -241,9 +241,9 @@ export const parseSlugFromString = (path: string, expData: Pick<RequestIdentifie
     return false;
 }
 
-export const parseSlugFromRequest = (req: Pick<ExpressRequest, 'baseUrl' | 'header'>, expData: Pick<RequestIdentifierRegexes, 'slug' | 'noSlug'>): string | false | undefined => parseSlugFromString(req.baseUrl, expData);
+export const parseSlugFromRequest = (req: Pick<ExpressRequest, 'baseUrl' | 'originalUrl' | 'header'>, expData: Pick<RequestIdentifierRegexes, 'slug' | 'noSlug'>): string | false | undefined => parseSlugFromString(req.originalUrl, expData);
 
-export const parseIdentifiersFromRequest = (req: Pick<ExpressRequest, 'baseUrl' | 'header'>, matchers: MarkOptional<RequestIdentifierRegexes, 'token'>): [string | false | undefined, false | string | undefined] => {
+export const parseIdentifiersFromRequest = (req: Pick<ExpressRequest, 'baseUrl' | 'originalUrl' | 'header'>, matchers: MarkOptional<RequestIdentifierRegexes, 'token'>): [string | false | undefined, false | string | undefined] => {
     const slug = parseSlugFromRequest(req, matchers);
     let token: string | false | undefined;
     if(matchers.token !== undefined) {
@@ -253,7 +253,7 @@ export const parseIdentifiersFromRequest = (req: Pick<ExpressRequest, 'baseUrl' 
     return [slug, token];
 }
 
-export const parseDisplayIdentifiersFromRequest = (req: Pick<ExpressRequest, 'baseUrl' | 'header'>, matchers: MarkOptional<RequestIdentifierRegexes, 'token'>): [string, string] => {
+export const parseDisplayIdentifiersFromRequest = (req: Pick<ExpressRequest, 'baseUrl' | 'originalUrl' | 'header'>, matchers: MarkOptional<RequestIdentifierRegexes, 'token'>): [string, string] => {
     const [slug, token] = parseIdentifiersFromRequest(req, matchers);
     let slugStr = '(no slug)';
     if (slug === false) {

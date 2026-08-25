@@ -9,7 +9,7 @@ const processedSongDataSchema = z.object({
     album: z.string().nullish(),
     albumArtist: z.string().nullish(),
     track: z.string().nullish(),
-    duration: z.number().nullish(),
+    duration: z.number().positive().nullish(),
 });
 export type ProcessedSongData = z.output<typeof processedSongDataSchema>;
 
@@ -44,7 +44,7 @@ export type Flags = z.infer<typeof flagsSchema>;
 
 export const metadataSchema = z.looseObject({
         label: z.string(),
-        startTimestamp: z.number(),
+        startTimestamp: z.int().positive(),
         albumMbId: z.string().optional(),
         albumUrl: z.string().optional(),
         artistUrl: z.string().optional(),
@@ -77,7 +77,7 @@ export type WebScrobblerSong = z.infer<typeof webScrobblerSongSchema>;
 
 export const webScrobblePayloadSchema = z.object({
     eventName: webScrobblerHookEventSchema,
-    time: z.number().optional(),
+    time: z.int().positive().optional(),
     data: z.object({
         song: webScrobblerSongSchema,
         songs: z.array(webScrobblerSongSchema).optional(),

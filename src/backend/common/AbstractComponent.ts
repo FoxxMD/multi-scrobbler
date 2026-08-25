@@ -67,7 +67,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     type: ClientType | SourceType;
     name: string;
 
-    lastActiveAt?: Dayjs
+    lastActiveAt?: Dayjs;
     lastReadyAt?: Dayjs;
     protected lastUpdatedComponentDatesAt?: Dayjs
 
@@ -116,8 +116,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             name: this.config?.name ?? this.name
         });
         this.componentId = this.dbComponent.id;
-        this.lastActiveAt = this.dbComponent.lastActiveAt;
-        this.lastReadyAt = this.dbComponent.lastReadyAt;
+        this.lastActiveAt = this.dbComponent.lastActiveAt ?? undefined;
+        this.lastReadyAt = this.dbComponent.lastReadyAt ?? undefined;
         return true;
     }
 
@@ -572,8 +572,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             monitoringStatus: this.getMonitoringStatus(),
             countNonLive: this.dbComponent.countNonLive,
             createdAt: this.dbComponent.createdAt?.toISOString(),
-            lastReadyAt: this.lastReadyAt?.toISOString(),
-            lastActiveAt: this.lastActiveAt?.toISOString(),
+            lastReadyAt: this.lastActiveAt !== undefined ? this.lastReadyAt.toISOString() : undefined,
+            lastActiveAt: this.lastActiveAt !== undefined ? this.lastActiveAt?.toISOString() : undefined,
             errors: this.errors.map(x => x instanceof Error ? serializeError(x) : x),
             warnings: this.warnings.map(x => x instanceof Error ? serializeError(x) : x),
             ...this.additionalApiData()
