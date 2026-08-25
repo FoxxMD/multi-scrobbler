@@ -70,7 +70,7 @@
     "@kenyip/backoff-strategies": "^1.0.4",
     "@keyv/valkey": "^1.0.8",
     "@lukehagar/plexjs": "^0.39.0",
-    "@minisylar/express-typed-router": "^1.9.4",
+    "@minisylar/express-typed-router": "^1.9.5",
     "@pierre/diffs": "^1.2.4",
     "@rocksky/sdk": "^0.3.0",
     "@supercharge/promise-pool": "^3.0.0",

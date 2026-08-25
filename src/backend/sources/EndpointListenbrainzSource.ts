@@ -18,10 +18,16 @@ import MemorySource from "./MemorySource.ts";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.ts";
 import type {Logger} from "@foxxmd/logging";
 import type {PlayerStateOptions} from "./PlayerState/AbstractPlayerState.ts";
-import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
+import { AUTH_HEADER_DEFAULT_REGEX, parseSlugFromRequest, parseTokenFromRequest, type RequestIdentifierRegexes } from "../utils/RequestUtils.ts";
 
 const noSlugMatch = new RegExp(/(?:\/api\/listenbrainz\/?)$|(?:\/1\/?|\/1\/submit-listens\/?\/1\/validate-token\/|)$/i);
 const slugMatch = new RegExp(/\/api\/listenbrainz\/([^\/]+)$/i);
+
+export const requestMatchers: RequestIdentifierRegexes = {
+    slug: slugMatch,
+    noSlug: noSlugMatch,
+    token: AUTH_HEADER_DEFAULT_REGEX
+}
 
 export const authHeaderRegex = new RegExp(/Token (.+)$/i);
 
@@ -47,9 +53,9 @@ export class EndpointListenbrainzSource extends MemorySource {
         };
     }
 
-    matchRequest(req: ExpressRequest): boolean {
+    matchRequest(req: Pick<ExpressRequest, 'baseUrl' | 'header'>): boolean {
         let matchesToken = this.config.data.token === undefined;
-        const reqToken = parseTokenFromRequest(req);
+        const reqToken = parseTokenFromRequest(req, requestMatchers);
         if (reqToken === false) {
             return false;
         }
@@ -62,7 +68,7 @@ export class EndpointListenbrainzSource extends MemorySource {
         }
 
         let matchesPath = false;
-        const slug = parseSlugFromRequest(req);
+        const slug = parseSlugFromRequest(req, requestMatchers);
         if (slug === false) {
             return false;
         } else {
@@ -147,63 +153,4 @@ export const listenTypeAsPlayerStatus = (event: string): ReportedPlayerStatus =>
         default:
             return REPORTED_PLAYER_STATUSES.unknown;
     }
-}
-
-export const parseTokenFromString = (str: string): string | undefined => {
-    const tokenMatch = parseRegexSingle(authHeaderRegex, str);
-    if(tokenMatch !== undefined) {
-        return tokenMatch.groups[0];
-    }
-    return undefined;
-}
-
-export const parseTokenFromRequest = (req: ExpressRequest): string | false | undefined => {
-    const auth = req.header('Authorization');
-    if(typeof auth === 'string' && auth !== '') {
-        const matchedToken = parseTokenFromString(auth);
-        if(matchedToken === undefined) {
-            return false;
-        }
-        return matchedToken;
-    }
-    return undefined;
-}
-
-export const parseSlugFromString = (path: string): string | false | undefined => {
-    const noSlug = parseRegexSingle(noSlugMatch, path);
-    if (noSlug !== undefined) {
-        return undefined;
-    }
-    const slugResult = parseRegexSingle(slugMatch, path);
-    if (slugResult !== undefined) {
-        return slugResult.groups[0];
-    }
-    return false;
-}
-
-export const parseSlugFromRequest = (req: ExpressRequest): string | false | undefined => parseSlugFromString(req.baseUrl);
-
-export const parseIdentifiersFromRequest = (req: ExpressRequest): [string | false | undefined, false | string | undefined] => {
-    const slug = parseSlugFromRequest(req);
-    const token = parseTokenFromRequest(req);
-
-    return [slug, token];
-}
-
-export const parseDisplayIdentifiersFromRequest = (req: ExpressRequest): [string, string] => {
-    const [slug, token] = parseIdentifiersFromRequest(req);
-    let slugStr = '(no slug)';
-    if (slug === false) {
-        slugStr = '(invalid slug)';
-    } else if (slug !== undefined) {
-        slugStr = slug;
-    }
-
-    let tokenStr = '(no token)';
-    if (token === false) {
-        tokenStr = '(invalid token)';
-    } else if (token !== undefined) {
-        tokenStr = `${token.substring(0,3)}****`
-    }
-    return [slugStr, tokenStr];
 }

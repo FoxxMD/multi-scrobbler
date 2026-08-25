@@ -6,7 +6,7 @@ import type {Logger} from "@foxxmd/logging";
 import type { Response } from 'superagent';
 import type request from 'superagent';
 import pRetry, { type RetryContext, type Options } from 'p-retry';
-import { DEFAULT_RETRY_MULTIPLIER } from "../common/infrastructure/Atomic.ts";
+import { DEFAULT_RETRY_MULTIPLIER, type ExpressRequest } from "../common/infrastructure/Atomic.ts";
 import { SimpleError } from "../common/errors/MSErrors.ts";
 import { loggerNoop } from '../common/MaybeLogger.ts';
 import { findCauseByFunc } from "./ErrorUtils.ts";
@@ -14,6 +14,8 @@ import { isSuperAgentResponseError } from "../common/errors/ErrorUtils.ts";
 import { isNodeNetworkException, type NodeNetworkException } from "../common/errors/NodeErrors.ts";
 import { formatNumber } from '../../core/DataUtils.ts';
 import { UpstreamError } from "../common/errors/UpstreamError.ts";
+import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
+import type { MarkOptional } from "ts-essentials";
 
 // typings from Formidable are all nuts.
 // VolatileFile is missing buffer and also does not extend File even though it should
@@ -197,4 +199,74 @@ export const noRetryOnUpstreamError = (context: RetryContext): boolean | undefin
         return true;
     }
     return undefined;
+}
+
+export const AUTH_HEADER_DEFAULT_REGEX = new RegExp(/Token (.+)$/i);
+
+export interface RequestIdentifierRegexes {
+    token: RegExp,
+    noSlug: RegExp,
+    slug: RegExp
+}
+
+export const parseTokenFromString = (str: string, matchers: Pick<RequestIdentifierRegexes, 'token'>): string | undefined => {
+    const tokenMatch = parseRegexSingle(matchers.token, str);
+    if(tokenMatch !== undefined) {
+        return tokenMatch.groups[0];
+    }
+    return undefined;
+}
+
+export const parseTokenFromRequest = (req: Pick<ExpressRequest, 'baseUrl' | 'header'>, matchers: Pick<RequestIdentifierRegexes, 'token'>): string | false | undefined => {
+    const auth = req.header('Authorization');
+    if(typeof auth === 'string' && auth !== '') {
+        const matchedToken = parseTokenFromString(auth, matchers);
+        if(matchedToken === undefined) {
+            return false;
+        }
+        return matchedToken;
+    }
+    return undefined;
+}
+
+export const parseSlugFromString = (path: string, expData: Pick<RequestIdentifierRegexes, 'slug' | 'noSlug'>): string | false | undefined => {
+    const noSlug = parseRegexSingle(expData.noSlug, path);
+    if (noSlug !== undefined) {
+        return undefined;
+    }
+    const slugResult = parseRegexSingle(expData.slug, path);
+    if (slugResult !== undefined) {
+        return slugResult.groups[0];
+    }
+    return false;
+}
+
+export const parseSlugFromRequest = (req: Pick<ExpressRequest, 'baseUrl' | 'header'>, expData: Pick<RequestIdentifierRegexes, 'slug' | 'noSlug'>): string | false | undefined => parseSlugFromString(req.baseUrl, expData);
+
+export const parseIdentifiersFromRequest = (req: Pick<ExpressRequest, 'baseUrl' | 'header'>, matchers: MarkOptional<RequestIdentifierRegexes, 'token'>): [string | false | undefined, false | string | undefined] => {
+    const slug = parseSlugFromRequest(req, matchers);
+    let token: string | false | undefined;
+    if(matchers.token !== undefined) {
+        token = parseTokenFromRequest(req, matchers as RequestIdentifierRegexes);
+    }
+
+    return [slug, token];
+}
+
+export const parseDisplayIdentifiersFromRequest = (req: Pick<ExpressRequest, 'baseUrl' | 'header'>, matchers: MarkOptional<RequestIdentifierRegexes, 'token'>): [string, string] => {
+    const [slug, token] = parseIdentifiersFromRequest(req, matchers);
+    let slugStr = '(no slug)';
+    if (slug === false) {
+        slugStr = '(invalid slug)';
+    } else if (slug !== undefined) {
+        slugStr = slug;
+    }
+
+    let tokenStr = '(no token)';
+    if (token === false) {
+        tokenStr = '(invalid token)';
+    } else if (token !== undefined) {
+        tokenStr = `${token.substring(0,3)}****`
+    }
+    return [slugStr, tokenStr];
 }

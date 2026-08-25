@@ -1,4 +1,4 @@
-import type {Express} from 'express';
+import type {Express, Request} from 'express';
 import { childLogger, type Logger } from "@foxxmd/logging";
 import bodyParser from "body-parser";
 import cors from 'cors';
@@ -7,12 +7,14 @@ import { WebhookNotifier } from "../sources/ingressNotifiers/WebhookNotifier.ts"
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import { WebScrobblerSource } from "../sources/WebScrobblerSource.ts";
 import { nonEmptyBody } from "./middleware.ts";
+import type { createTypedRouter, TypedMiddleware } from "@minisylar/express-typed-router";
+import { webScrobblePayloadSchema, type WebScrobblerPayload } from '../common/vendor/webscrobbler/interfaces.ts';
 
 const corsOpts: cors.CorsOptions = {
     methods: ['POST']
 }
 
-export const setupWebscrobblerRoutes = (app: Express, parentLogger: Logger, scrobbleSources: ScrobbleSources) => {
+export const setupWebscrobblerRoutes = (app: Express, router: ReturnType<typeof createTypedRouter>, parentLogger: Logger, scrobbleSources: ScrobbleSources) => {
 
     const logger = childLogger(parentLogger, ['Ingress', 'WebScrobbler']);
 
@@ -25,20 +27,25 @@ export const setupWebscrobblerRoutes = (app: Express, parentLogger: Logger, scro
         // }
     });
     const webhookIngress = new WebhookNotifier(logger);
+    const rawIngress: TypedMiddleware = (req, res, next) => {
+        webhookIngress.trackIngress(req, true);
+        next();
+    };
     app.options('/api/webscrobbler*path', async (req, res, next) => {
         webhookIngress.trackIngress(req, true);
         next();
     },
-        cors(corsOpts));
+    cors(corsOpts));
 
-    app.post(/api\/webscrobbler\/?.*/,
-        async (req, res, next) => {
-            webhookIngress.trackIngress(req, true);
-            next();
+    router.post('/api/webscrobbler{*splat}',
+        {
+            middleware: [rawIngress,cors(corsOpts) as TypedMiddleware,webScrobblerJsonParser,nonEmptyBody(logger, 'WebScrobbler Extension')],
+            bodySchema: webScrobblePayloadSchema,
+            tags: ['WebScrobbler Ingress'],
+            summary: 'Accept a Webscrobbler native scrobble'
         },
-        cors(corsOpts),
-        webScrobblerJsonParser, nonEmptyBody(logger, 'WebScrobbler Extension'), async (req, res) => {
-            webhookIngress.trackIngress(req, false);
+        async (req, res) => {
+            webhookIngress.trackIngress(req as Request, false);
 
             res.sendStatus(200);
 
@@ -52,7 +59,7 @@ export const setupWebscrobblerRoutes = (app: Express, parentLogger: Logger, scro
             // const splitPath = cleanPath.split('/');
             // const slug = splitPath[splitPath.length - 1];
 
-            const playerState = WebScrobblerSource.playStateFromRequest(req.body);
+            const playerState = WebScrobblerSource.playStateFromRequest(req.body as unknown as WebScrobblerPayload);
 
             const sources = scrobbleSources.getByType('webscrobbler') as WebScrobblerSource[];
             if (sources.length === 0) {

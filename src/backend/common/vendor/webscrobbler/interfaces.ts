@@ -1,13 +1,7 @@
+import * as z from 'zod';
+
 export type WebScrobblerHookEvent = 'scrobble' | 'paused' | 'resumedplaying' | 'nowplaying' | string;
-export interface WebScrobblerPayload {
-    eventName: WebScrobblerHookEvent
-    time?: number
-    data: {
-        song: WebScrobblerSong
-        songs?: WebScrobblerSong[]
-        currentlyPlaying?: boolean
-    }
-}
+const webScrobblerHookEventSchema = z.union([z.enum(['scrobble','paused','resumedplaying','nowplaying']), z.string()]);
 
 interface ProcessedSongData {
     artist?: string | null;
@@ -76,3 +70,32 @@ export interface WebScrobblerSong {
     metadata: Metadata;
     connectorLabel: string;
 }
+export const webScrobblerSongSchema = z.object({
+    controllerTabId: z.union([z.string(),z.number()]),
+    connector: z.looseObject({}),
+    parsed: z.looseObject({}),
+    processed: z.looseObject({}),
+    noRegex: z.looseObject({}),
+    flags: z.looseObject({}),
+    metadata: z.looseObject({}),
+    connectorLabel: z.looseObject({})
+})
+
+export interface WebScrobblerPayload {
+    eventName: WebScrobblerHookEvent
+    time?: number
+    data: {
+        song: WebScrobblerSong
+        songs?: WebScrobblerSong[]
+        currentlyPlaying?: boolean
+    }
+}
+export const webScrobblePayloadSchema = z.object({
+    eventName: webScrobblerHookEventSchema,
+    time: z.number().optional(),
+    data: z.object({
+        song: webScrobblerSongSchema,
+        songs: z.array(webScrobblerSongSchema).optional(),
+        currentlyPlaying: z.boolean().optional()
+    })
+})

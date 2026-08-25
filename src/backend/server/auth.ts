@@ -18,7 +18,7 @@ import * as z from 'zod';
 export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTypedRouter>, logger: Logger, sourceMiddle: SourceCheckMiddleTypedMiddleware, clientMiddle: ClientCheckedMiddleTypedMiddleware, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
     const componentAwareMiddle = makeComponentMiddle(scrobbleSources, scrobbleClients);
 
-    router.get('/components/:componentVal/auth', {middleware: [componentAwareMiddle]}, async (req, res, next) => {
+    router.get('/api/components/:componentVal/auth', {middleware: [componentAwareMiddle], tags: ['components']}, async (req, res, next) => {
         switch(req.component.type) {
             case 'lastfm':
             case 'librefm':
@@ -36,7 +36,7 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
         }
     });
 
-    router.get('/client/auth', {middleware: [clientMiddle]}, async (req, res) => {
+    router.get('/api/client/auth', {middleware: [clientMiddle], hidden: true}, async (req, res) => {
         const {
             scrobbleClient,
         } = req as any;
@@ -54,7 +54,7 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
         }
     });
 
-    router.get('/source/auth', {middleware: [sourceMiddle]}, async (req, res, next) => {
+    router.get('/api/source/auth', {middleware: [sourceMiddle], hidden: true}, async (req, res, next) => {
         const {
             scrobbleSource: source,
             sourceName: name,

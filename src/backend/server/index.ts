@@ -30,7 +30,7 @@ export const initServer = async (parentLogger: Logger, appLoggerStream: PassThro
     const logger = childLogger(parentLogger, 'API'); // parentLogger.child({labels: ['API']}, mergeArr);
 
     try {
-        app.use('/api', router.getRouter());
+        app.use(router.getRouter());
         app.use(bodyParser.json());
         app.use(
             bodyParser.urlencoded({

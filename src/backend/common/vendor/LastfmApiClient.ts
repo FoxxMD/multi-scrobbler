@@ -22,6 +22,7 @@ import { redactString } from "@foxxmd/redact-string";
 import dns from 'node:dns/promises';
 import xml2js from 'xml2js';
 import { findCauseByFunc } from "../../utils/ErrorUtils.ts";
+import * as z from 'zod';
 
 const badErrors = [
     'api key suspended',
@@ -839,6 +840,34 @@ export interface LastFMScrobblePayload  {
         /** MusicBrainz track ID */
         mbid?: string
 }
+
+export const lastfmScrobblePayloadSchema = z.object({
+    artist: z.string(),
+    track: z.string(),
+    timestmap: z.number(),
+    duration: z.number().optional(),
+    album: z.string().optional(),
+    albumArtist: z.string().optional(),
+    mbid: z.string().optional()
+});
+
+export const lastfmRequestPayloadSchema = z.looseObject({
+    //method: z.union([z.enum(['track.updateNowPlaying','track.scrobble']), z.string()]),
+    sk: z.string().optional(),
+    api_key: z.string()
+});
+
+export const lastfmAuthRequestPayloadSchema = z.object({
+    method: z.union([z.literal('auth.getMobileSession'), z.string()]),
+    username: z.string().optional(),
+    api_key: z.string(),
+});
+
+export const lastfmScrobbleRequestSchema = z.object({
+    method: z.union([z.enum(['track.updateNowPlaying','track.scrobble']), z.string()]),
+    ...lastfmScrobblePayloadSchema.shape,
+    ...lastfmRequestPayloadSchema.shape
+})
 
 export interface LastFMScrobbleRequestPayload extends LastFMScrobblePayload {
     method: string

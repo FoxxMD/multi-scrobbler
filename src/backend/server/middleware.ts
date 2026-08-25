@@ -57,7 +57,7 @@ export const makeClientCheckMiddle = (clients: any) => (required: boolean): Clie
     next();
 }
 
-export const nonEmptyBody = (logger: Logger, origin: string = 'Origin'): ExpressHandler => async (req, res, next) => {
+export const nonEmptyBody = (logger: Logger, origin: string = 'Origin'): TypedMiddleware => async (req, res, next) => {
     const bodyEmpty = req.body === undefined || req.body === null || (typeof req.body === 'object' && Object.keys(req.body).length === 0);
     if (bodyEmpty) {
         const length = req.header('content-length') !== undefined ? Number.parseInt(req.header('content-length')) : undefined;

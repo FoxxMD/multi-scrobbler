@@ -1,21 +1,25 @@
 /* eslint-disable prefer-arrow-functions/prefer-arrow-functions */
-import type {Express} from 'express';
+import type {Express, Request, Response} from 'express';
 import { childLogger, type Logger } from "@foxxmd/logging";
 import bodyParser from "body-parser";
 import type { EndpointListenbrainzSource} from "../sources/EndpointListenbrainzSource.ts";
-import { playStateFromRequest, parseDisplayIdentifiersFromRequest } from "../sources/EndpointListenbrainzSource.ts";
+import { playStateFromRequest, requestMatchers } from "../sources/EndpointListenbrainzSource.ts";
 import { LZEndpointNotifier } from "../sources/ingressNotifiers/LZEndpointNotifier.ts";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import { nonEmptyBody } from "./middleware.ts";
-import type {PlayingNowPayload} from '../../core/vendor/listenbrainz/interfaces.ts';
+import type {PlayingNowPayload, SubmitPayload} from '../../core/vendor/listenbrainz/interfaces.ts';
 import type ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
 import { stringToDeterministicNumber } from '../utils/StringUtils.ts';
 import { messageWithCauses } from '../../core/ErrorUtils.ts';
+import type { createTypedRouter, SchemaRequest, TypedMiddleware } from "@minisylar/express-typed-router";
+import * as z from 'zod';
+import { stripIndents } from 'common-tags';
+import { parseDisplayIdentifiersFromRequest } from '../utils/RequestUtils.ts';
 
 const TEXT_WILDCARD_REGEX = new RegExp(/text\/.+/);
 
-export const setupLZEndpointRoutes = (app: Express, parentLogger: Logger, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
+export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof createTypedRouter>, parentLogger: Logger, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
 
     const logger = childLogger(parentLogger, ['Ingress', 'Listenbrainz']);
 
@@ -35,52 +39,70 @@ export const setupLZEndpointRoutes = (app: Express, parentLogger: Logger, scrobb
     const nonEmptyCheck = nonEmptyBody(logger, 'LZ Endpoint');
 
     const webhookIngress = new LZEndpointNotifier(logger);
-    app.use(/(\/api\/listenbrainz.*)|(\/1\/submit-listens\/?$)/,
-        async function (req, res, next) {
-            // track request before parsing body to ensure we at least log that something is happening
-            // (in the event body parsing does not work or request is not POST/PATCH)
-            webhookIngress.trackIngress(req, true);
-            if (req.method !== 'POST') {
-                logger.warn(`Expected request to this endpoint to be POST but got ${req.method} instead. URL: ${req.originalUrl}\nMake sure base URL path to MS endpoint is correct.`);
-                return res.sendStatus(405);
+
+    const rawIngress: TypedMiddleware = (req, res, next) => {
+        webhookIngress.trackIngress(req, true);
+        next();
+    };
+
+    const submitRoute = async (req: SchemaRequest<string, z.ZodObject<{}, z.core.$loose>, undefined, Record<string, any>, undefined>, res: Response) => {
+        webhookIngress.trackIngress(req as Request, false);
+
+        logger.trace({body: req.body}, "Recieved request Body");
+
+        const playerStates = playStateFromRequest(req.body as unknown as SubmitPayload);
+
+        const sources = scrobbleSources.getByType('endpointlz') as EndpointListenbrainzSource[];
+        if (sources.length === 0) {
+            logger.warn('Received Listenbrainz endpoint payload but no Listenbrainz endpoint sources are configured');
+            res.status(409).json({error: `Received Listenbrainz endpoint payload but no Listenbrainz endpoint sources are configured`, code: 409});
+            return;
+        }
+
+        const validSources = sources.filter(x => x.matchRequest(req));
+        if (validSources.length === 0) {
+            const [slug, token] = parseDisplayIdentifiersFromRequest(req, requestMatchers);
+            logger.warn(`No Listenbrainz endpoint config matched => Slug: ${slug} | Token: ${token}`);
+            res.status(409).json({error: `No Listenbrainz endpoint config matched => Slug: ${slug} | Token: ${token}`, code: 409});
+            return;
+        }
+
+        try {
+            for (const source of validSources) {
+                await source.handle(playerStates);
             }
-            next();
-        },
-        lzJsonParser, nonEmptyCheck, async function (req, res) {
-            webhookIngress.trackIngress(req, false);
+        } catch (e) {
+            const submitListenError = new Error('Unexpected error occurred while processing submit-listens request', {cause: e});
+            const errMsg = messageWithCauses(submitListenError);
+            logger.error(submitListenError);
+            res.status(500).json({error: errMsg, code: 500});
+            return;
+        }
 
-            logger.trace({body: req.body}, "Recieved request Body");
+        res.status(200).json({status: "ok"});
+    }
 
-            const playerStates = playStateFromRequest(req.body);
+    router.post('/api/listenbrainz/*path', {
+        middleware: [rawIngress,lzJsonParser,nonEmptyCheck],
+        bodySchema: z.looseObject({}),
+        tags: ['Listenbrainz Ingress'],
+        summary: 'Accept a Listenbrainz Scrobble (Slug)',
+        description: 'Accepts the standard Listenbrainz `submit-listens` payload at this endpoint.'
+    }, submitRoute);
+    router.post('/1/submit-listens', {
+        middleware: [rawIngress,lzJsonParser,nonEmptyCheck],
+        bodySchema: z.looseObject({}),
+        tags: ['Listenbrainz Ingress'],
+        summary: 'Accept a Listenbrainz Scrobble (Standard)',
+        description: 'Accepts the standard Listenbrainz `submit-listens` payload at this endpoint.'
+    }, submitRoute);
 
-            const sources = scrobbleSources.getByType('endpointlz') as EndpointListenbrainzSource[];
-            if (sources.length === 0) {
-                logger.warn('Received Listenbrainz endpoint payload but no Listenbrainz endpoint sources are configured');
-                return res.status(409).json({error: `Received Listenbrainz endpoint payload but no Listenbrainz endpoint sources are configured`, code: 409});
-            }
-
-            const validSources = sources.filter(x => x.matchRequest(req));
-            if (validSources.length === 0) {
-                const [slug, token] = parseDisplayIdentifiersFromRequest(req);
-                logger.warn(`No Listenbrainz endpoint config matched => Slug: ${slug} | Token: ${token}`);
-                return res.status(409).json({error: `No Listenbrainz endpoint config matched => Slug: ${slug} | Token: ${token}`, code: 409});
-            }
-
-            try {
-                for (const source of validSources) {
-                    await source.handle(playerStates);
-                }
-            } catch (e) {
-                const submitListenError = new Error('Unexpected error occurred while processing submit-listens request', {cause: e});
-                const errMsg = messageWithCauses(submitListenError);
-                logger.error(submitListenError);
-                return res.status(500).json({error: errMsg, code: 500});
-            }
-
-            return res.status(200).json({status: "ok"});
-        });
-
-    app.get('/1/user/:username/playing-now', async function (req, res) {
+    router.get('/1/user/:username/playing-now',{
+        tags: ['Listenbrainz Ingress'],
+        summary: 'Get Playing Now',
+        description: stripIndents`Tries to match username with the username set in the config of an LZ Endpoint Source.
+        If no match then returns Playing Now for the first LZ Endpoint configured.`
+    }, async function (req, res) {
         // TODO need to implement user names for endpoint configs
         // so we can identify playing now calls by user
         // and then determine actual playing now by clients that are able to be scrobbled to from this source
@@ -112,7 +134,10 @@ export const setupLZEndpointRoutes = (app: Express, parentLogger: Logger, scrobb
         });
     });  
 
-    app.get('/1/validate-token', async function (req, res) {
+    router.get('/1/validate-token', {
+        tags: ['Listenbrainz Ingress'],
+        summary: 'Validate Token',
+    }, async function (req, res) {
         //https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-validate-token
 
         const sources = scrobbleSources.getByType('endpointlz') as EndpointListenbrainzSource[];
@@ -121,7 +146,7 @@ export const setupLZEndpointRoutes = (app: Express, parentLogger: Logger, scrobb
         }
         const validSources = sources.filter(x => x.matchRequest(req));
         if (validSources.length === 0) {
-            const [slug, token] = parseDisplayIdentifiersFromRequest(req);
+            const [slug, token] = parseDisplayIdentifiersFromRequest(req, requestMatchers);
             logger.warn(`No Listenbrainz endpoint config matched => Token: ${token}`);
         }
 

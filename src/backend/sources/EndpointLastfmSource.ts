@@ -16,12 +16,16 @@ import type {Logger} from "@foxxmd/logging";
 import type {PlayerStateOptions} from "./PlayerState/AbstractPlayerState.ts";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
+import { AUTH_HEADER_DEFAULT_REGEX, parseSlugFromRequest, type RequestIdentifierRegexes } from "../utils/RequestUtils.ts";
 
 const noSlugMatch = new RegExp(/(?:\/api\/lastfm\/?)$|(?:^\/1\/?|^\/2.0\/?)$/i);
 const slugMatch = new RegExp(/\/api\/lastfm\/([^\/]+)(\/|\/2.0\/)?$/i);
 
-export const authHeaderRegex = new RegExp(/Token (.+)$/i);
-
+export const requestMatchers: RequestIdentifierRegexes = {
+    slug: slugMatch,
+    noSlug: noSlugMatch,
+    token: AUTH_HEADER_DEFAULT_REGEX
+}
 export class EndpointLastfmSource extends MemorySource {
 
     declare config: LastFMEndpointSourceConfig;
@@ -43,8 +47,8 @@ export class EndpointLastfmSource extends MemorySource {
         };
     }
 
-    matchRequest(req: ExpressRequest): boolean {
-        const slug = parseSlugFromRequest(req);
+    matchRequest(req: Pick<ExpressRequest, 'baseUrl' | 'header'>): boolean {
+        const slug = parseSlugFromRequest(req, requestMatchers);
         if (slug === false) {
             return false;
         }
@@ -115,23 +119,4 @@ export const parseSlugFromString = (path: string): string | false | undefined =>
         return slugResult.groups[0];
     }
     return false;
-}
-
-export const parseSlugFromRequest = (req: ExpressRequest): string | false | undefined => parseSlugFromString(req.originalUrl);
-
-export const parseIdentifiersFromRequest = (req: ExpressRequest): [string | false | undefined] => {
-    const slug = parseSlugFromRequest(req);
-
-    return [slug];
-}
-
-export const parseDisplayIdentifiersFromRequest = (req: ExpressRequest): [string] => {
-    const [slug] = parseIdentifiersFromRequest(req);
-    let slugStr = '(no slug)';
-    if (slug === false) {
-        slugStr = '(invalid slug)';
-    } else if (slug !== undefined) {
-        slugStr = slug;
-    }
-    return [slugStr];
 }

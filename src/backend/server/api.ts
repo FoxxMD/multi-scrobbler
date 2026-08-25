@@ -156,7 +156,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         return res.json({data: slicedLog, settings: logConfig});
     });
 
-    router.get('/events', {querySchema: z.object({next: z.string()}).optional()}, async (req, res) => {
+    router.get('/api/events', {querySchema: z.object({next: z.string()}).optional()}, async (req, res) => {
         const {
             query: {
                 next: nextQs
@@ -187,22 +187,22 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
     });
 
     setupDeezerRoutes(app, logger, scrobbleSources);
-    setupWebscrobblerRoutes(app, logger, scrobbleSources);
-    setupLZEndpointRoutes(app, logger, scrobbleSources, scrobbleClients);
-    setupLastfmEndpointRoutes(app, logger, scrobbleSources);
+    setupWebscrobblerRoutes(app, router, logger, scrobbleSources);
+    setupLZEndpointRoutes(app, router, logger, scrobbleSources, scrobbleClients);
+    setupLastfmEndpointRoutes(app, router, logger, scrobbleSources);
     setupAuthRoutes(app, router, logger, sourceRequiredMiddle, clientRequiredMiddle, scrobbleSources, scrobbleClients);
 
-    router.put('webscrobbler', {middleware: [jsonParser]}, async (req, res) => {
+    router.put('/api/webscrobbler', {middleware: [jsonParser]}, async (req, res) => {
         logger.info(req.body);
         res.sendStatus(200);
     });
 
-    router.get('webscrobbler', {middleware: [jsonParser]}, async (req, res) => {
+    router.get('/api/webscrobbler', {middleware: [jsonParser]}, async (req, res) => {
         logger.info(req.body);
         res.sendStatus(200);
     });
 
-    router.get('/components', async (req, res, next) => {
+    router.get('/api/components', {tags: ['components']}, async (req, res, next) => {
 
         const sourceData = scrobbleSources.sources.filter(x => x.databaseOK).map((x) => {
             const {
@@ -262,13 +262,13 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         return res.json([...sourceData, ...clientData]);
     });
 
-    router.get('/sources/:componentVal/players', {middleware: [sourceAwareMiddle] }, async (req, res, next) => {
+    router.get('/api/sources/:componentVal/players', {middleware: [sourceAwareMiddle], hidden: true}, async (req, res, next) => {
         if(req.component instanceof MemorySource) {
             return res.json(req.component.playersToObject());
         }
         return res.json({});
     });
-    router.get('/components/:componentVal/players', {middleware: [componentAwareMiddle]}, async (req, res, next) => {
+    router.get('/api/components/:componentVal/players', {middleware: [componentAwareMiddle], tags: ['components']}, async (req, res, next) => {
         if(req.component instanceof MemorySource) {
             return res.json(req.component.playersToObject());
         } else if(req.component instanceof AbstractScrobbleClient && req.component.nowPlayingEnabled) {
@@ -277,7 +277,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         return res.json({});
     });
 
-    router.get('/sources/:componentVal/players/:platformId', {middleware: [sourceAwareMiddle]}, async (req, res, next) => {
+    router.get('/api/sources/:componentVal/players/:platformId', {middleware: [sourceAwareMiddle], hidden: true}, async (req, res, next) => {
         if(req.component instanceof MemorySource) {
             const {
                 params: {
@@ -292,7 +292,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         }
         return res.json({});
     });
-    router.get('/components/:componentVal/players/:platformId', {middleware: [componentAwareMiddle]}, async (req, res, next) => {
+    router.get('/api/components/:componentVal/players/:platformId', {middleware: [componentAwareMiddle], tags: ['components']}, async (req, res, next) => {
         const {
             params: {
                 platformId
@@ -315,7 +315,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         return res.status(400).json({error: `Component does not support players`});
     });
 
-    router.get('/components/:componentVal', {middleware: [componentAwareMiddle]}, async (req, res) => {
+    router.get('/api/components/:componentVal', {middleware: [componentAwareMiddle], tags: ['components']}, async (req, res) => {
         const {
             component,
         } = req;
@@ -323,9 +323,13 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
     });
     //type TA = TypedMiddleware<{component: ComponentAwareRequest['component']}>;
 // componentAwareMiddle, bodyParser.json({ type: ['text/*', 'application/json'] })
-    router.post('/components/:componentVal/state',
+    router.post('/api/components/:componentVal/state',
    // {bodySchema: componentStateBodySchema},
-   {middleware: [componentAwareMiddle, bodyParser.json({ type: ['text/*', 'application/json'] })], bodySchema: componentStateBodySchema},
+   {
+    middleware: [componentAwareMiddle, bodyParser.json({ type: ['text/*', 'application/json'] })],
+    bodySchema: componentStateBodySchema,
+    tags: ['components']
+},
      async (req, res) => {
         const {
             component,
@@ -370,7 +374,10 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         return res.sendStatus(200);
     });
 
-    router.post('/components/:componentVal/auth', {middleware: [componentAwareMiddle]}, async (req, res, next) => {
+    router.post('/api/components/:componentVal/auth', {
+        middleware: [componentAwareMiddle],
+        tags: ['components']
+    }, async (req, res, next) => {
         const {
             component,
         } = req;
@@ -394,7 +401,10 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         }
     });
 
-    router.get('/components/:componentVal/plays', {middleware: [componentAwareMiddle]}, async (req, res, next) => {
+    router.get('/api/components/:componentVal/plays', {
+        middleware: [componentAwareMiddle],
+        tags: ['components']
+    }, async (req, res, next) => {
         const {
             component,
             query
@@ -410,7 +420,10 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         return res.json(playRes);
     });
 
-    router.get('/components/:componentVal/plays/:playUid', {middleware: [componentAwareMiddle]}, async (req, res, next) => {
+    router.get('/api/components/:componentVal/plays/:playUid', {
+        middleware: [componentAwareMiddle],
+        tags: ['components']
+    }, async (req, res, next) => {
         const {
             component,
             params: {
@@ -424,7 +437,11 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         return res.json(asSerializablePlaySelect(playRes));
     });
 
-    router.delete('/components/:componentVal/plays/:playUid', {middleware: [componentAwareMiddle], querySchema: z.object({children: z.stringbool().optional()})}, async (req, res, next) => {
+    router.delete('/api/components/:componentVal/plays/:playUid', {
+        middleware: [componentAwareMiddle],
+        querySchema: z.object({children: z.stringbool().optional()}),
+        tags: ['components']
+    }, async (req, res, next) => {
         const {
             component,
             query: {
@@ -445,7 +462,11 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         return res.sendStatus(200);
     });
 
-    router.post('/components/:componentVal/plays/:playUid/queue', {middleware: [componentAwareMiddle], bodySchema: queueContextSchema.optional()}, async (req, res, next) => {
+    router.post('/api/components/:componentVal/plays/:playUid/queue', {
+        middleware: [componentAwareMiddle],
+        bodySchema: queueContextSchema.optional(),
+        tags: ['components']
+    }, async (req, res, next) => {
         const {
             component,
             params: {
@@ -467,7 +488,10 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         return res.sendStatus(200);
     });
 
-    router.delete('/components/:componentVal/plays/:playUid/queue', {middleware: [componentAwareMiddle]}, async (req, res, next) => {
+    router.delete('/api/components/:componentVal/plays/:playUid/queue', {
+        middleware: [componentAwareMiddle],
+        tags: ['components']
+    }, async (req, res, next) => {
         const {
             component,
             params: {
@@ -484,7 +508,10 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         return res.sendStatus(200);
     });
 
-    router.delete('/components/:componentVal/plays/:playUid/dead', {middleware: [componentAwareMiddle]}, async (req, res, next) => {
+    router.delete('/api/components/:componentVal/plays/:playUid/dead', {
+        middleware: [componentAwareMiddle],
+        tags: ['components']
+    }, async (req, res, next) => {
         const {
             component,
             params: {
@@ -501,7 +528,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         return res.sendStatus(200);
     });
 
-    router.delete('/cache/:cacheType', async (req, res) => {
+    router.delete('/api/cache/:cacheType', {tags: ['cache']}, async (req, res) => {
         const cache = await getRoot().items.cache();
         logger.verbose(`User request cache deletion for ${req.params.cacheType}`);
         switch(req.params.cacheType) {
@@ -526,7 +553,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
      * 
      *  */
 
-    router.get('/status', async (req, res, next) => {
+    router.get('/api/status', {hidden: true}, async (req, res, next) => {
 
         const sourceData = scrobbleSources.sources.map((x) => {
             const {
@@ -620,7 +647,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         return res.json({sources: sourceData, clients: clientData});
     });
 
-    router.get('/recent', {middleware: [sourceMiddleFunc(false)], querySchema: z.any()}, async (req, res, next) => {
+    router.get('/api/recent', {middleware: [sourceMiddleFunc(false)], querySchema: z.any(), hidden: true}, async (req, res, next) => {
         const {
             scrobbleSource: source,
             query: {
@@ -653,7 +680,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         return res.json(result);
     });
 
-    router.get('/source/art', {middleware: [sourceMiddleFunc(false)], querySchema: z.object({data: z.number()}).optional()}, async (req, res, next) => {
+    router.get('/api/source/art', {middleware: [sourceMiddleFunc(false)], querySchema: z.object({data: z.number()}).optional(), hidden: true}, async (req, res, next) => {
         const {
             scrobbleSource,
             query: {
@@ -680,7 +707,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         }
     });
 
-    router.get('/dead', {middleware: [clientMiddleFunc(true)]}, async (req, res, next) => {
+    router.get('/api/dead', {middleware: [clientMiddleFunc(true)], hidden: true}, async (req, res, next) => {
         const {
             scrobbleClient: client,
             query = {}
@@ -701,7 +728,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         return res.json(result);
     });
 
-    router.put('/dead', {middleware: [clientMiddleFunc(true)]}, async (req, res, next) => {
+    router.put('/api/dead', {middleware: [clientMiddleFunc(true)], hidden: true}, async (req, res, next) => {
         const {
             scrobbleClient: client,
         } = req;
@@ -713,7 +740,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         await ((client as AbstractScrobbleClient).processDeadLetterQueue(1000));
     });
 
-    router.put('/dead/:id', {middleware: [clientMiddleFunc(true)]}, async (req, res, next) => {
+    router.put('/api/dead/:id', {middleware: [clientMiddleFunc(true)], hidden: true}, async (req, res, next) => {
         const {
             scrobbleClient: client,
             params: {
@@ -751,7 +778,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         }
     });
 
-    router.delete('/dead', {middleware: [clientMiddleFunc(true)]}, async (req, res, next) => {
+    router.delete('/api/dead', {middleware: [clientMiddleFunc(true)], hidden: true}, async (req, res, next) => {
         const {
             scrobbleClient: client,
         } = req;
@@ -763,7 +790,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         return res.sendStatus(200);
     });
 
-    router.delete('/dead/:id', {middleware: [clientMiddleFunc(true)]}, async (req, res, next) => {
+    router.delete('/api/dead/:id', {middleware: [clientMiddleFunc(true)], hidden: true}, async (req, res, next) => {
         const {
             scrobbleClient: client,
             params: {
@@ -789,7 +816,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         }
     });
 
-    router.get('/scrobbled', {middleware: [clientMiddleFunc(true)]}, async (req, res, next) => {
+    router.get('/api/scrobbled', {middleware: [clientMiddleFunc(true)], hidden: true}, async (req, res, next) => {
         const {
             scrobbleClient: client,
             query
@@ -807,7 +834,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         return res.json(result);
     });
 
-    router.post('/source/init', {middleware: [sourceRequiredMiddle], querySchema: z.object({force: z.boolean()}).optional()}, async (req, res) => {
+    router.post('/api/source/init', {middleware: [sourceRequiredMiddle], querySchema: z.object({force: z.boolean()}).optional(), hidden: true}, async (req, res) => {
         const source = req.scrobbleSource as AbstractSource;
 
         const {
@@ -833,7 +860,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         }
     });
 
-    router.post('/source/listen', {middleware: [sourceRequiredMiddle], querySchema: z.object({listening: z.boolean()}).optional()}, async (req, res) => {
+    router.post('/api/source/listen', {middleware: [sourceRequiredMiddle], querySchema: z.object({listening: z.boolean()}).optional(), hidden: true}, async (req, res) => {
         const source = req.scrobbleSource as AbstractSource;
 
         const {
@@ -853,7 +880,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         res.status(200).json({listening});
     });
 
-    router.post('/client/listen', {middleware: [clientRequiredMiddle], querySchema: z.object({listening: z.boolean()}).optional()}, async (req, res) => {
+    router.post('/api/client/listen', {middleware: [clientRequiredMiddle], querySchema: z.object({listening: z.boolean()}).optional(), hidden: true}, async (req, res) => {
         const client = req.scrobbleClient as AbstractScrobbleClient;
 
         const {
@@ -873,7 +900,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         res.status(200).json({listening});
     });
 
-    router.post('/client/init', {middleware: [clientRequiredMiddle], querySchema: z.object({force: z.boolean()}).optional()}, async (req, res) => {
+    router.post('/api/client/init', {middleware: [clientRequiredMiddle], querySchema: z.object({force: z.boolean()}).optional(), hidden: true}, async (req, res) => {
         const client = req.scrobbleClient as AbstractScrobbleClient;
 
         const {
@@ -896,7 +923,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         res.status(200).send('OK');
     });
 
-    router.post('/client/historical', {middleware: [clientRequiredMiddle]}, async (req, res) => {
+    router.post('/api/client/historical', {middleware: [clientRequiredMiddle], hidden: true}, async (req, res) => {
         const client = req.scrobbleClient as AbstractScrobbleClient;
         if(client instanceof AbstractHistoricalScrobbleClient) {
             client.logger.info('User requested historical play hydration');
@@ -908,8 +935,8 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         }
     });
 
-    app.get('/health', async (req, res) => res.redirect(307, `/api/${req.url.slice(1)}`));
-    router.get('/health', {querySchema: z.object({type: z.string(), name: z.string()}).optional()}, async (req, res) => {
+    router.get('/health', {hidden: true}, async (req, res) => res.redirect(307, `/api/${req.url.slice(1)}`));
+    router.get('/api/health', {querySchema: z.object({type: z.string(), name: z.string()}).optional(), tags: ['App Meta']}, async (req, res) => {
         const {
             type,
             name
@@ -1044,7 +1071,7 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
         prom.collectDefaultMetrics();
     }
 
-    app.get('/api/metrics', async (req, res) => {
+    router.get('/api/metrics', {tags: ['App Meta']}, async (req, res) => {
 
         if(playRepo === undefined) {
             const db = await getRoot().items.db();
@@ -1060,11 +1087,17 @@ export const setupApi = (app: Express, router: ReturnType<typeof createTypedRout
 
     });
 
-    app.get('/api/version', async (req, res) => {
+    router.get('/api/version', {tags: ['App Meta']}, async (req, res) => {
        return res.json({version: root.get('version')});
     });
 
-    app.use('/api/*path', async (req, res) => {
+    router.use('/api/docs', router.docs({
+        title: "Multi-Scrobbler API",
+        version: "0.1.0",
+        description: "Public API docs",
+    }))
+
+    router.all('/api/*path', {hidden: true}, async (req, res) => {
         const remote = req.connection.remoteAddress;
         const proxyRemote = req.headers["x-forwarded-for"];
         const ua = req.headers["user-agent"];
