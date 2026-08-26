@@ -8,13 +8,12 @@ import { playStateFromRequest, requestMatchers } from "../sources/EndpointListen
 import { LZEndpointNotifier } from "../sources/ingressNotifiers/LZEndpointNotifier.ts";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import { nonEmptyBody } from "./middleware.ts";
-import type {PlayingNowPayload, SubmitPayload} from '../../core/vendor/listenbrainz/interfaces.ts';
+import {submitPayloadSchema, type PlayingNowPayload, type SubmitPayload} from '../../core/vendor/listenbrainz/interfaces.ts';
 import type ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
 import { stringToDeterministicNumber } from '../utils/StringUtils.ts';
 import { messageWithCauses } from '../../core/ErrorUtils.ts';
 import type { createTypedRouter, TypedMiddleware, InferSchemaHandler } from "@minisylar/express-typed-router";
-import * as z from 'zod';
 import { stripIndents } from 'common-tags';
 import { parseDisplayIdentifiersFromRequest } from '../utils/RequestUtils.ts';
 
@@ -46,11 +45,10 @@ export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof cr
         next();
     };
 
-    const lzBodySchema = z.looseObject({});
     const middleware = [rawIngress,lzJsonParser,nonEmptyCheck] as const;
 
     type SubmitHandler = InferSchemaHandler<{
-        bodySchema: typeof lzBodySchema,
+        bodySchema: typeof submitPayloadSchema,
         middleware: typeof middleware,
     }>;
 
@@ -59,6 +57,7 @@ export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof cr
 
         logger.trace({body: req.body}, "Recieved request Body");
 
+        //req.body.payload[0].track_metadata.additional_info.recording_mbid
         const playerStates = playStateFromRequest(req.body as unknown as SubmitPayload);
 
         const sources = scrobbleSources.getByType('endpointlz') as EndpointListenbrainzSource[];
@@ -92,15 +91,15 @@ export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof cr
     }
 
     router.post('/api/listenbrainz{*splat}', {
-        bodySchema: lzBodySchema,
+        bodySchema: submitPayloadSchema,
         middleware: middleware as Writable<typeof middleware>,
         tags: ['Listenbrainz Ingress'],
         summary: 'Accept a Listenbrainz Scrobble (Slug)',
-        description: 'Accepts the standard Listenbrainz `submit-listens` payload at this endpoint.'
+        description: 'Accepts the standard Listenbrainz `submit-listens` payload at this endpoint.',
     }, submitRoute);
     router.post('/1/submit-listens', {
         middleware: middleware as Writable<typeof middleware>,
-        bodySchema: z.looseObject({}),
+        bodySchema: submitPayloadSchema,
         tags: ['Listenbrainz Ingress'],
         summary: 'Accept a Listenbrainz Scrobble (Standard)',
         description: 'Accepts the standard Listenbrainz `submit-listens` payload at this endpoint.'
@@ -110,6 +109,7 @@ export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof cr
         tags: ['Listenbrainz Ingress'],
         summary: 'Get Playing Now',
         description: stripIndents`Tries to match username with the username set in the config of an LZ Endpoint Source.
+        
         If no match then returns Playing Now for the first LZ Endpoint configured.`
     }, async function (req, res) {
         // TODO need to implement user names for endpoint configs
@@ -146,12 +146,17 @@ export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof cr
     router.get('/1/validate-token', {
         tags: ['Listenbrainz Ingress'],
         summary: 'Validate Token',
+        description: stripIndents`Always returns valid as long as any endpointlz source is configured.
+        
+        For \`username\` in the response it will return the Source \`config.data.username\` or fallback to the Source's \`name\` or fallback to \`Multi-Scrobbler\` if no valid Sources.`
     }, async function (req, res) {
         //https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-validate-token
 
         const sources = scrobbleSources.getByType('endpointlz') as EndpointListenbrainzSource[];
         if (sources.length === 0) {
             logger.warn('Received Listenbrainz endpoint payload but no Listenbrainz endpoint sources are configured');
+            res.sendStatus(404);
+            return;
         }
         const validSources = sources.filter(x => x.matchRequest(req));
         if (validSources.length === 0) {
