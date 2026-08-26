@@ -1,5 +1,4 @@
 import type {Logger} from "@foxxmd/logging";
-import type {ExpressHandler} from "../common/infrastructure/Atomic.ts";
 import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import type {Request, Response, NextFunction} from "express";

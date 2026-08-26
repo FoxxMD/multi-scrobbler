@@ -8,7 +8,7 @@ import { nonEmptyBody } from "./middleware.ts";
 import { LFMEndpointNotifier } from "../sources/ingressNotifiers/LFMEndpointNotifier.ts";
 import type { EndpointLastfmSource} from "../sources/EndpointLastfmSource.ts";
 import { playStateFromRequest, requestMatchers } from "../sources/EndpointLastfmSource.ts";
-import {lastfmAuthRequestPayloadSchema, lastfmScrobbleRequestSchema, playToNowPlayingApiResponseJson, playToNowPlayingApiResponseXml, playToScrobbleApiResponseJson, playToScrobbleApiResponseXml} from "../common/vendor/LastfmApiClient.ts";
+import {lastfmRequestSchema, playToNowPlayingApiResponseJson, playToNowPlayingApiResponseXml, playToScrobbleApiResponseJson, playToScrobbleApiResponseXml} from "../common/vendor/LastfmApiClient.ts";
 import xml2js from 'xml2js';
 import crypto from 'node:crypto';
 import type { createTypedRouter, TypedMiddleware, InferSchemaHandler } from "@minisylar/express-typed-router";
@@ -17,7 +17,7 @@ import * as z from 'zod';
 
 const unmatchIdentifierWarn: string[] = [];
 
-const looseFmBody = z.union([lastfmScrobbleRequestSchema, lastfmAuthRequestPayloadSchema]);
+const looseFmBody = lastfmRequestSchema;
 type LooseFmBody = typeof looseFmBody;
 const looseQuery = z.looseObject({format: z.string().optional()});
 type LooseQuery = typeof looseQuery;
@@ -66,7 +66,6 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
             if(!('method' in req.body)) {
                 return res.status(400).json({error: `Missing 'method' param`});
             }
-            const method = req.body.method; // (req.body as unknown as LastFMScrobbleRequestPayload).method;
 
             let wantsJson: boolean = false;
             if(req.query.format === 'json') {
@@ -89,21 +88,25 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
                     logger[level](`No LFM Endpoint Source has the apiKey '${req.body.api_key}' configured so will use the first Endpoint Source listed instead.`);
                     unmatchIdentifierWarn.push(req.body.api_key);
                 }
-            } else if(`username` in req.body && req.body.username !== undefined) {
-                // @ts-expect-error need TS to narrow this more intelligently
-                source = validSources.find(x => x.config.data?.username === req.body.username);
-                if(source === undefined) {
-                    const level = unmatchIdentifierWarn.includes(req.body.username) ? 'trace' : 'warn';
-                    logger[level](`No LFM Endpoint Source has the username '${req.body.username}' configured so will use the first Endpoint Source listed instead.`);
-                    unmatchIdentifierWarn.push(req.body.username);
-                }
-            } else if(`sk` in req.body && req.body.sk !== undefined) {
-                // @ts-expect-error need TS to narrow this more intelligently
-                source = validSources.find(x => crypto.createHash('md5').update(x.getUid()).digest('hex') === req.body.sk);
-                if(source === undefined) {
-                    const level = unmatchIdentifierWarn.includes(req.body.sk) ? 'trace' : 'warn';
-                    logger[level](`No LFM Endpoint Source has an ID md5 that matches the provided session key (sk) '${req.body.sk}' configured so will use the first Endpoint Source listed instead.`);
-                    unmatchIdentifierWarn.push(req.body.sk);
+            } else {
+                if (req.body.method === 'auth.getMobileSession') {
+                    if (`username` in req.body && req.body.username !== undefined) {
+                        const u = req.body.username;
+                        source = validSources.find(x => x.config.data?.username === u);
+                        if (source === undefined) {
+                            const level = unmatchIdentifierWarn.includes(req.body.username) ? 'trace' : 'warn';
+                            logger[level](`No LFM Endpoint Source has the username '${req.body.username}' configured so will use the first Endpoint Source listed instead.`);
+                            unmatchIdentifierWarn.push(req.body.username);
+                        }
+                    }
+                } else if(source === undefined && `sk` in req.body && req.body.sk !== undefined) {
+                    const sk = req.body.sk;
+                    source = validSources.find(x => crypto.createHash('md5').update(x.getUid()).digest('hex') === sk);
+                    if(source === undefined) {
+                        const level = unmatchIdentifierWarn.includes(req.body.sk) ? 'trace' : 'warn';
+                        logger[level](`No LFM Endpoint Source has an ID md5 that matches the provided session key (sk) '${req.body.sk}' configured so will use the first Endpoint Source listed instead.`);
+                        unmatchIdentifierWarn.push(req.body.sk);
+                    }
                 }
             }
 
@@ -111,19 +114,20 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
                 source = validSources[0];
             }
 
-            switch (method) {
+            switch (req.body.method) {
                 case 'auth.getMobileSession': {
                     const resp = {
                         session: {
                             // @ts-expect-error idk sometimes they send this
-                            name: req.body.name ?? source.getUid(),
+                            name: req.body.name ?? req.body.username ?? source.getUid(),
                             key: crypto.createHash('md5').update(source.getUid()).digest('hex'),
                             subscriber: 0
                         }
                     };
                     source.logger.info(`Authenticating with username ${resp.session.name}`);
                     if (wantsJson) {
-                        return res.status(200).json(resp);
+                        res.status(200).json(resp);
+                        return;
                     }
                     const builder = new xml2js.Builder();
                     const xml = builder.buildObject({ lfm: { $: { status: "ok" }, ...resp } });
@@ -131,9 +135,8 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
                 }
                 case 'track.updateNowPlaying':
                 case 'track.scrobble': {
-                    // @ts-expect-error need TS to narrow this more intelligently
                     const playerState = playStateFromRequest(req.body);
-                    if (method === 'track.scrobble') {
+                    if (req.body.method === 'track.scrobble') {
                         if (wantsJson) {
                             res.status(200).json(playToScrobbleApiResponseJson(playerState[0].play))
                         } else {
@@ -148,13 +151,13 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
                     }
                     await source.handle(playerState)
                 } break;
-                default:
-                    return res.status(400).json({ error: `Unexpected 'method' param value '${method}', expected one of: track.updateNowPlaying | track.scrobble | auth.getMobileSession` });
+                // default:
+                //     return res.status(400).json({ error: `Unexpected 'method' param value '${req.body.method}', expected one of: track.updateNowPlaying | track.scrobble | auth.getMobileSession` });
 
             }
     }
 
-    router.post('/api/lastfm/*path', {
+    router.post('/api/lastfm{*splat}', {
         middleware: middleware as Writable<typeof middleware>,
         bodySchema: looseFmBody,
         querySchema: looseQuery,
@@ -170,7 +173,7 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
         tags: ['Lastfm Ingress'],
         summary: 'Accept a Last.fm Scrobble (Standard)',
         description: 'Accepts the standard Last.fm `track.scrobble` payload at this endpoint.'
-    }, async function (req, res) {});
+    }, submitRoute);
 
     app.use(/(\/api\/lastfm(?!\/callback))|(\/2.0\/?)$/,
         async function (req, res) {

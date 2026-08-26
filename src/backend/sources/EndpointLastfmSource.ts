@@ -11,7 +11,7 @@ import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type {PlayPlatformId} from '../../core/Atomic.ts';
 import MemorySource from "./MemorySource.ts";
 import type {LastFMEndpointSourceConfig} from "../common/infrastructure/config/source/endpointlfm.ts";
-import { ingressPayloads, type LastFMPayloadkey, type LastFMScrobbleRequestPayload, scrobblePayloadToPlay } from "../common/vendor/LastfmApiClient.ts";
+import { ingressPayloads, type LastFmSingleSubmitPayload, type LastFmSubmitPayload, scrobblePayloadToPlay } from "../common/vendor/LastfmApiClient.ts";
 import type {Logger} from "@foxxmd/logging";
 import type {PlayerStateOptions} from "./PlayerState/AbstractPlayerState.ts";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.ts";
@@ -56,7 +56,7 @@ export class EndpointLastfmSource extends MemorySource {
         return (this.config.data.slug === undefined && slug === undefined) || (slug !== undefined && this.config.data.slug !== undefined && this.config.data.slug.toLowerCase().trim() === slug.toLocaleLowerCase().trim());
     }
 
-    static formatPlayObj(obj: LastFMScrobbleRequestPayload, options: FormatPlayObjectOptions = {}): PlayObject {
+    static formatPlayObj(obj: LastFmSingleSubmitPayload, options: FormatPlayObjectOptions = {}): PlayObject {
         return scrobblePayloadToPlay(obj);
     }
 
@@ -98,7 +98,14 @@ export class EndpointLastfmSource extends MemorySource {
     getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new NowPlayingPlayerState(logger,  id, opts);
 }
 
-export const playStateFromRequest = (obj: Record<LastFMPayloadkey, unknown>): PlayerStateData[] => ingressPayloads(obj).map(x => {
+export const playStateFromRequest = (obj: LastFmSubmitPayload): PlayerStateData[] => {
+    let payloads: LastFmSingleSubmitPayload[];
+    if(obj.method === 'track.updateNowPlaying') {
+        payloads = [obj];
+    } else {
+        payloads = ingressPayloads(obj);
+    }
+    return payloads.map(x => {
         const play = scrobblePayloadToPlay(x);
         play.meta.sourceSOT = SOURCE_SOT.INGRESS;
         return {
@@ -107,7 +114,8 @@ export const playStateFromRequest = (obj: Record<LastFMPayloadkey, unknown>): Pl
             status: obj.method === 'track.updateNowPlaying' ? REPORTED_PLAYER_STATUSES.playing : REPORTED_PLAYER_STATUSES.unknown,
             stateUpdatedAt: dayjs()
         }
-    })
+    });
+}
 
 export const parseSlugFromString = (path: string): string | false | undefined => {
     const noSlug = parseRegexSingle(noSlugMatch, path);

@@ -570,7 +570,7 @@ export class LastFMIgnoredScrobble extends UpstreamError {
 
 }
 
-export const scrobblePayloadToPlay = (obj: LastFMScrobbleRequestPayload): PlayObject => {
+export const scrobblePayloadToPlay = (obj: LastFmSingleSubmitPayload): PlayObject => {
     const {
         artist,
         track,
@@ -841,33 +841,67 @@ export interface LastFMScrobblePayload  {
         mbid?: string
 }
 
-export const lastfmScrobblePayloadSchema = z.object({
+export const lastfmSubmitPayloadSchema = z.object({
     artist: z.string(),
     track: z.string(),
-    timestmap: z.number(),
-    duration: z.number().optional(),
     album: z.string().optional(),
     albumArtist: z.string().optional(),
-    mbid: z.string().optional()
+    mbid: z.string().optional(),
+    duration: z.int().positive().optional(),
+    sk: z.string().optional(),
+    api_key: z.string().optional()
 });
 
-export const lastfmRequestPayloadSchema = z.looseObject({
-    //method: z.union([z.enum(['track.updateNowPlaying','track.scrobble']), z.string()]),
+export const lastfmSubmitMultiPayloadSchema = z.object({
+    artist: z.array(z.string()),
+    track: z.array(z.string()),
+    album: z.array(z.string()).optional(),
+    albumArtist: z.array(z.string()).optional(),
+    mbid: z.array(z.string()).optional(),
+    duration: z.array(z.int().positive()).optional(),
     sk: z.string().optional(),
-    api_key: z.string()
+    api_key: z.string().optional()
 });
+
+export const lastfmScrobblePayloadSchema = z.object({
+    method: z.literal('track.scrobble'),
+    ...lastfmSubmitPayloadSchema.shape,
+    timestamp: z.int().positive(),
+});
+export type LastfmScrobblePayload = z.infer<typeof lastfmScrobblePayloadSchema>;
+export const lastfmScrobbleMultiPayloadSchema = z.object({
+    method: z.literal('track.scrobble'),
+    ...lastfmSubmitMultiPayloadSchema.shape,
+    timestamp: z.array(z.int().positive()),
+});
+export const lastfmScrobbleXorPayloadSchema = z.union([lastfmScrobblePayloadSchema,lastfmScrobbleMultiPayloadSchema]);
+export type LastfmScrobbleMaybeMultiPayload = z.infer<typeof lastfmScrobbleXorPayloadSchema>;
+
+export type LastFmScrobblePayload = z.infer<typeof lastfmScrobblePayloadSchema>;
+
+export const lastfmNowPlayingPayloadSchema = z.object({
+    method: z.literal('track.updateNowPlaying'),
+    ...lastfmSubmitPayloadSchema.shape,
+});
+export type LastFmNowPlayingPayload = z.infer<typeof lastfmNowPlayingPayloadSchema>;
+
+export type LastFmSubmitPayload = LastfmScrobbleMaybeMultiPayload | LastFmNowPlayingPayload;
+export type LastFmSingleSubmitPayload = LastfmScrobblePayload | LastFmNowPlayingPayload;
 
 export const lastfmAuthRequestPayloadSchema = z.object({
-    method: z.union([z.literal('auth.getMobileSession'), z.string()]),
+    method: z.literal('auth.getMobileSession'),
     username: z.string().optional(),
-    api_key: z.string(),
+    password: z.string().optional(),
+    api_key: z.string().optional(),
 });
 
-export const lastfmScrobbleRequestSchema = z.object({
-    method: z.union([z.enum(['track.updateNowPlaying','track.scrobble']), z.string()]),
-    ...lastfmScrobblePayloadSchema.shape,
-    ...lastfmRequestPayloadSchema.shape
-})
+export const lastfmRequestSchema = z.union([
+    lastfmScrobbleXorPayloadSchema,
+    z.discriminatedUnion("method", [
+        lastfmNowPlayingPayloadSchema,
+        lastfmAuthRequestPayloadSchema
+    ])
+]);
 
 export interface LastFMScrobbleRequestPayload extends LastFMScrobblePayload {
     method: string
@@ -878,7 +912,7 @@ const lfmPayloadKeysRequired: LastFMPayloadkey[] = ['track','artist'];
 //const lfmPayloadKeysOptional: LastFMPayloadkey[] = ['duration','album','albumArtist','mbid'];
 //const lfmPayloadKeys: LastFMPayloadkey[] = [...lfmPayloadKeysRequired, ...lfmPayloadKeysOptional];
 
-export const ingressPayloads = (obj: Record<LastFMPayloadkey, unknown>): LastFMScrobbleRequestPayload[] => {
+export const ingressPayloads = (obj: LastfmScrobbleMaybeMultiPayload): LastfmScrobblePayload[] => {
     const keys = Object.keys(obj);
     let allObject = true;
     for(const k of lfmPayloadKeysRequired) {
@@ -891,10 +925,10 @@ export const ingressPayloads = (obj: Record<LastFMPayloadkey, unknown>): LastFMS
             throw new Error('Payload is an unexpected mix of arrays and objects');
         }
     }
-    const payloads: LastFMScrobbleRequestPayload[] = [];
+    const payloads: LastfmScrobblePayload[] = [];
 
     if(allObject) {
-        payloads.push(obj as LastFMScrobbleRequestPayload);
+        payloads.push(obj as LastfmScrobblePayload);
     } else {
         let index = 0;
         for(const t of (obj.track as string[])) {
@@ -906,14 +940,14 @@ export const ingressPayloads = (obj: Record<LastFMPayloadkey, unknown>): LastFMS
                 mbid: obj.mbid !== undefined ? obj.mbid[index] : undefined,
                 duration: obj.duration !== undefined ? obj.duration[index] : undefined,
                 albumArtist: obj.albumArtist !== undefined ? obj.albumArtist[index] : undefined,
-                method: obj.method as string
+                method: obj.method
             })
             index++;
         }
     }
 
     return payloads.map(x => {
-        const cleaned: LastFMScrobbleRequestPayload = x;
+        const cleaned: LastfmScrobblePayload = x;
         if(typeof cleaned.duration === 'string') {
             cleaned.duration = Number.parseInt(cleaned.duration);
         }
