@@ -1,6 +1,7 @@
 import type {DBQueryConfig, DBQueryConfigWith, KnownKeysOnly, RelationFieldsFilterInternals, BuildQueryResult, RelationsFilter} from "drizzle-orm";
 import type { components, componentMigrations, playInputs, plays, queueStates, relations, playsHistorical, playEvents } from "./schema/schema.ts";
 import type {TSchema, TableName} from "./schema/schema.ts";
+import type { honkerLiveQueue } from "./schema/honker.ts";
 
 
 export type ComponentNew = typeof components.$inferInsert;
@@ -26,6 +27,8 @@ export type PlayHistoricalNew = typeof playsHistorical.$inferInsert;
 
 export type PlayEventSelect = typeof playEvents.$inferSelect;
 export type PlayEventNew = typeof playEvents.$inferInsert;
+
+export type JobSelect = typeof honkerLiveQueue.$inferSelect;
 
 // useful references for building types
 // https://github.com/drizzle-team/drizzle-orm/discussions/2596

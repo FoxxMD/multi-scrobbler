@@ -513,7 +513,7 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed, co
             queueStates = []
         } = {}
     } = props;
-    const hasDeadQueue = queueStates.some(x => x.queueName === INGRESS_QUEUE && x.retries > 0);
+    const hasDeadQueue = queueStates.some(x => x.queueName === INGRESS_QUEUE && (x.retries > 0 || x.job?.attempts > 0));
     switch(props.activity.state) {
         case 'queued':
             primaryAction = <StopButton size={{base: '2xs', smTo2xl: 'xs'}} color="red.400" margin="1px" variant="subtle" onClick={() => mutate({action: 'cancel'})}/>;

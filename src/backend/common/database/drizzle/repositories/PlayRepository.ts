@@ -900,7 +900,11 @@ export const buildPlayWith = (args: WithPlayRelation[] | undefined): FindWith<'p
                 };
                 break;
             case 'queues':
-                qWith.queueStates = true;
+                qWith.queueStates = {
+                    with: {
+                        job: true
+                    }
+                }
                 break;
             case 'events':
                 qWith.events = true;

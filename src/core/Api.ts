@@ -1,5 +1,5 @@
 import type { PickKeys } from "ts-essentials"
-import type { CompareOpKey, ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
+import type { CompareOpKey, ComponentMinimalSelect, JobSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
 import type { ClientType, ComponentAuthType, MonitoringStatus } from "./Atomic.ts"
 import type { SourceType } from "./Atomic.ts"
 import type { ComponentType, DateLike, ErrorLike, JsonPlayObject, PlayState, QueueName, Replace, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.ts"
@@ -36,6 +36,7 @@ export interface QueueStateApi {
     error?: ErrorLike
     updatedAt: string
     createdAt: string
+    job?: JobSelect
 }
 
 export interface PlayApiCommonDetailed extends PlayApiCommon {
