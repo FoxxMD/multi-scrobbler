@@ -79,7 +79,7 @@ export const getDb = (dbVal: string, opts: { logger?: Logger, backupPath?: strin
     logger = loggerNoop,
   } = opts;
   const db = drizzle({relations: relations, logger: createDrizzleLogger(logger), connection: {path: dbVal, allowExtension: true}});
-  if(dbVal !== ':memory:') {
+  if(dbVal !== MEMORY_DB_NAME) {
     logger.debug('Loading honker extension');
     db.$client.loadExtension(extensionPath());
     db.run('SELECT honker_bootstrap()');
