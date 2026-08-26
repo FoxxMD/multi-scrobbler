@@ -59,6 +59,7 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
 
         //app.use(express.static(buildDir));
 
+        router.use(session({secret: 'keyboard cat', resave: false, saveUninitialized: false}));
         app.use(session({secret: 'keyboard cat', resave: false, saveUninitialized: false}));
         app.use(passport.initialize());
         app.use(passport.session());

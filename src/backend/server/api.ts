@@ -16,9 +16,10 @@ import {
     type SourcePlayerJson,
     type SourceStatusData,
     queueContextSchema,
+    logLevelStandaloneSchema,
 } from "../../core/Atomic.ts";
 import { capitalize } from "../../core/StringUtils.ts";
-import type {ExpressHandler, LeveledLogData} from "../common/infrastructure/Atomic.ts";
+import type {LeveledLogData} from "../common/infrastructure/Atomic.ts";
 import { getRoot } from "../ioc.ts";
 import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts";
 import AbstractSource from "../sources/AbstractSource.ts";
@@ -45,14 +46,12 @@ import type {Dayjs} from "dayjs";
 import { asSerializablePlaySelect } from "../../core/PlayMarshalUtils.ts";
 import { serializeError } from "serialize-error";
 import { z } from 'zod';
-import type { createTypedRouter } from "@minisylar/express-typed-router";
+import type { createTypedRouter, TypedMiddleware } from "@minisylar/express-typed-router";
 import pEvent from "p-event";
 import { hasMetricRepositories, registerMetrics, setMetricRepositories } from "./promMetrics.ts";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
-
-const jsonParser = bodyParser.json({type: ['text/*', 'application/json']});
 
 const createAddToLogBuffer = (levelMap:  {[p: number]: string}) => (log: LogDataPretty) => {
     output[log.level].add({...log, levelLabel: levelMap[log.level]});
@@ -147,7 +146,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     const sourceAwareMiddle = makeSourceNextMiddle(scrobbleSources);
     const clientAwareMiddle = makeClientNextMiddle(scrobbleClients);
 
-    const setLogWebSettings: ExpressHandler = async (req, res, next) => {
+    const setLogWebSettings: TypedMiddleware = async (req, res, next) => {
         // @ts-expect-error logLevel not part of session
         const sessionLevel: LogLevel | undefined = req.session.logLevel as LogLevel | undefined;
         if(sessionLevel !== undefined && logConfig.level !== sessionLevel) {
@@ -161,17 +160,21 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         next();
     }
 
-    app.get('/api/logs/stream', setLogWebSettings, async (req, res) => {
+    router.get('/api/logs/stream', {middleware: [setLogWebSettings], tags: ['Events'], summary: 'SSE Logs'}, async (req, res) => {
         const session = await bsseDef.createSession(req, res);
         await session.stream(logObjectStream);
     });
 
-    app.get('/api/logs', setLogWebSettings, async (req, res) => {
+    router.get('/api/logs', {middleware: [setLogWebSettings], tags: ['Events'], summary: 'Get Logs'}, async (req, res) => {
         const slicedLog = getLogs(logger.levels.values[logConfig.level], logConfig.limit + 1, logConfig.sort === 'ascending' ? 'asc' : 'desc');
         return res.json({data: slicedLog, settings: logConfig});
     });
 
-    app.put('/api/logs', async (req, res) => {
+    router.put('/api/logs', {
+        bodySchema: z.object({level: logLevelStandaloneSchema, limit: z.int().positive().max(500)}),
+        tags: ['Events'],
+        summary: 'Update Log Settings'
+    }, async (req, res) => {
         logConfig.level = req.body.level as LogLevel | undefined ?? logConfig.level;
         logConfig.limit = req.body.limit ?? logConfig.limit;
         const slicedLog = getLogs(logger.levels.values[logConfig.level], logConfig.limit + 1, logConfig.sort === 'ascending' ? 'asc' : 'desc');
@@ -182,7 +185,9 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.json({data: slicedLog, settings: logConfig});
     });
 
-    router.get('/api/events', {querySchema: z.object({next: z.string()}).optional()}, async (req, res) => {
+    router.get('/api/events', {querySchema: z.object({
+        next: z.literal('true').optional().meta({description: 'When used events are sent in new ui format'})
+    }), tags: ['Events'], summary: 'SSE Events'}, async (req, res) => {
         const {
             query: {
                 next: nextQs
@@ -218,17 +223,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     setupLastfmEndpointRoutes(app, router, logger, scrobbleSources);
     setupAuthRoutes(app, router, logger, sourceRequiredMiddle, clientRequiredMiddle, scrobbleSources, scrobbleClients);
 
-    router.put('/api/webscrobbler', {middleware: [jsonParser]}, async (req, res) => {
-        logger.info(req.body);
-        res.sendStatus(200);
-    });
-
-    router.get('/api/webscrobbler', {middleware: [jsonParser]}, async (req, res) => {
-        logger.info(req.body);
-        res.sendStatus(200);
-    });
-
-    router.get('/api/components', {tags: ['components']}, async (req, res, next) => {
+    router.get('/api/components', {tags: ['Source/Client'], summary: 'Get All Sources/Clients'}, async (req, res, next) => {
 
         const sourceData = scrobbleSources.sources.filter(x => x.databaseOK).map((x) => {
             const {
@@ -288,13 +283,13 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.json([...sourceData, ...clientData]);
     });
 
-    router.get('/api/sources/:componentVal/players', {middleware: [sourceAwareMiddle], hidden: true}, async (req, res, next) => {
+    router.get('/api/sources/:id/players', {middleware: [sourceAwareMiddle], hidden: true}, async (req, res, next) => {
         if(req.component instanceof MemorySource) {
             return res.json(req.component.playersToObject());
         }
         return res.json({});
     });
-    router.get('/api/components/:componentVal/players', {middleware: [componentAwareMiddle], tags: ['components']}, async (req, res, next) => {
+    router.get('/api/components/:id/players', {middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Source/Client Players'}, async (req, res, next) => {
         if(req.component instanceof MemorySource) {
             return res.json(req.component.playersToObject());
         } else if(req.component instanceof AbstractScrobbleClient && req.component.nowPlayingEnabled) {
@@ -303,7 +298,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.json({});
     });
 
-    router.get('/api/sources/:componentVal/players/:platformId', {middleware: [sourceAwareMiddle], hidden: true}, async (req, res, next) => {
+    router.get('/api/sources/:id/players/:platformId', {middleware: [sourceAwareMiddle], hidden: true}, async (req, res, next) => {
         if(req.component instanceof MemorySource) {
             const {
                 params: {
@@ -318,7 +313,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         }
         return res.json({});
     });
-    router.get('/api/components/:componentVal/players/:platformId', {middleware: [componentAwareMiddle], tags: ['components']}, async (req, res, next) => {
+    router.get('/api/components/:id/players/:platformId', {middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Specific Source/Client Player'}, async (req, res, next) => {
         const {
             params: {
                 platformId
@@ -341,20 +336,19 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.status(400).json({error: `Component does not support players`});
     });
 
-    router.get('/api/components/:componentVal', {middleware: [componentAwareMiddle], tags: ['components']}, async (req, res) => {
+    router.get('/api/components/:id', {middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Source/Client'}, async (req, res) => {
         const {
             component,
         } = req;
         return res.json(component.getApiData());
     });
-    //type TA = TypedMiddleware<{component: ComponentAwareRequest['component']}>;
-// componentAwareMiddle, bodyParser.json({ type: ['text/*', 'application/json'] })
-    router.post('/api/components/:componentVal/state',
-   // {bodySchema: componentStateBodySchema},
+    
+    router.post('/api/components/:id/state',
    {
     middleware: [componentAwareMiddle, bodyParser.json({ type: ['text/*', 'application/json'] })],
     bodySchema: componentStateBodySchema,
-    tags: ['components']
+    tags: ['Source/Client'],
+    summary: 'Update Source/Client State'
 },
      async (req, res) => {
         const {
@@ -400,9 +394,10 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.sendStatus(200);
     });
 
-    router.post('/api/components/:componentVal/auth', {
+    router.post('/api/components/:id/auth', {
         middleware: [componentAwareMiddle],
-        tags: ['components']
+        tags: ['Source/Client'],
+        summary: 'Test Source/Client Authentication'
     }, async (req, res, next) => {
         const {
             component,
@@ -427,9 +422,10 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         }
     });
 
-    router.get('/api/components/:componentVal/plays', {
+    router.get('/api/components/:id/plays', {
         middleware: [componentAwareMiddle],
-        tags: ['components']
+        tags: ['Plays'],
+        summary: 'Get Paginated Plays'
     }, async (req, res, next) => {
         const {
             component,
@@ -446,14 +442,15 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.json(playRes);
     });
 
-    router.get('/api/components/:componentVal/plays/:playUid', {
+    router.get('/api/components/:id/plays/:uid', {
         middleware: [componentAwareMiddle],
-        tags: ['components']
+        tags: ['Plays'],
+        summary: 'Get Play'
     }, async (req, res, next) => {
         const {
             component,
             params: {
-                playUid
+                uid: playUid
             }
         } = req;
 
@@ -463,10 +460,11 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.json(asSerializablePlaySelect(playRes));
     });
 
-    router.delete('/api/components/:componentVal/plays/:playUid', {
+    router.delete('/api/components/:id/plays/:uid', {
         middleware: [componentAwareMiddle],
         querySchema: z.object({children: z.stringbool().optional()}),
-        tags: ['components']
+        tags: ['Plays'],
+        summary: 'Delete Play'
     }, async (req, res, next) => {
         const {
             component,
@@ -474,7 +472,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
                 children
             },
             params: {
-                playUid
+                uid: playUid
             }
         } = req;
 
@@ -488,15 +486,16 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.sendStatus(200);
     });
 
-    router.post('/api/components/:componentVal/plays/:playUid/queue', {
+    router.post('/api/components/:id/plays/:uid/queue', {
         middleware: [componentAwareMiddle],
         bodySchema: queueContextSchema.optional(),
-        tags: ['components']
+        tags: ['Plays'],
+        summary: 'Requeue a Play'
     }, async (req, res, next) => {
         const {
             component,
             params: {
-                playUid
+                uid: playUid
             }, 
             body = {}
         } = req;
@@ -514,14 +513,15 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.sendStatus(200);
     });
 
-    router.delete('/api/components/:componentVal/plays/:playUid/queue', {
+    router.delete('/api/components/:id/plays/:uid/queue', {
         middleware: [componentAwareMiddle],
-        tags: ['components']
+        tags: ['Plays'],
+        summary: 'Dequeue a Play'
     }, async (req, res, next) => {
         const {
             component,
             params: {
-                playUid
+                uid: playUid
             }
         } = req;
 
@@ -534,14 +534,15 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.sendStatus(200);
     });
 
-    router.delete('/api/components/:componentVal/plays/:playUid/dead', {
+    router.delete('/api/components/:id/plays/:uid/dead', {
         middleware: [componentAwareMiddle],
-        tags: ['components']
+        tags: ['Plays'],
+        summary: 'Mark Dead Play as Completed'
     }, async (req, res, next) => {
         const {
             component,
             params: {
-                playUid
+                uid: playUid
             }
         } = req;
 
@@ -554,7 +555,10 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.sendStatus(200);
     });
 
-    router.delete('/api/cache/:cacheType', {tags: ['cache']}, async (req, res) => {
+    router.delete('/api/cache/:cacheType', {
+        tags: ['Cache'],
+        summary: 'Delete Cache By Type'
+    }, async (req, res) => {
         const cache = await getRoot().items.cache();
         logger.verbose(`User request cache deletion for ${req.params.cacheType}`);
         switch(req.params.cacheType) {

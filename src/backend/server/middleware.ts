@@ -82,11 +82,11 @@ export interface ComponentAwareRequest extends Request {
 export const makeComponentMiddle = (sources: ScrobbleSources, clients: ScrobbleClients): TypedMiddleware<{component: ComponentAwareRequest['component']}> => (req, res, next) => {
     const {
         params: {
-            componentVal
+            id
         }
     } = req;
 
-    const componentId = Number.parseInt(componentVal as string);
+    const componentId = Number.parseInt(id as string);
     if (isNaN(componentId)) {
         res.status(400).json({ error: 'Component id must be a number' });
         return;
@@ -118,11 +118,11 @@ export interface ClientAwareRequest extends Request {
 export const makeSourceNextMiddle = (sources: ScrobbleSources): TypedMiddleware<{component: AbstractSource}> => async (req: Request, res: Response, next: NextFunction) => {
     const {
         params: {
-            componentVal
+            id
         }
     } = req;
 
-    const componentId = Number.parseInt(componentVal as string);
+    const componentId = Number.parseInt(id as string);
     if (isNaN(componentId)) {
        res.status(400).json({ error: 'Source Id must be a number' });
        return;
@@ -142,11 +142,11 @@ export const makeSourceNextMiddle = (sources: ScrobbleSources): TypedMiddleware<
 export const makeClientNextMiddle = (clients: ScrobbleClients): TypedMiddleware<{component: AbstractScrobbleClient}> => async (req: Request, res: Response, next: NextFunction) => {
     const {
         params: {
-            componentVal
+            id
         }
     } = req;
 
-    const componentId = Number.parseInt(componentVal as string);
+    const componentId = Number.parseInt(id as string);
     if (isNaN(componentId)) {
         res.status(400).json({ error: 'Source Id must be a number' });
         return;

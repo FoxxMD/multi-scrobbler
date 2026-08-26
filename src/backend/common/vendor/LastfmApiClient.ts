@@ -870,14 +870,14 @@ export const lastfmScrobblePayloadSchema = z.object({
     method: z.literal('track.scrobble'),
     ...lastfmSubmitPayloadSchema.shape,
     timestamp: lastfmNumericStringSchema,
-});
+}).meta({title: 'Single Scrobble'});
 export type LastfmScrobblePayload = z.infer<typeof lastfmScrobblePayloadSchema>;
 export const lastfmScrobbleMultiPayloadSchema = z.object({
     method: z.literal('track.scrobble'),
     ...lastfmSubmitMultiPayloadSchema.shape,
     timestamp: z.array(lastfmNumericStringSchema),
-});
-export const lastfmScrobbleMaybeMultiPayloadSchema = z.union([lastfmScrobblePayloadSchema,lastfmScrobbleMultiPayloadSchema]);
+}).meta({title: 'Bulk Scrobbles'});
+export const lastfmScrobbleMaybeMultiPayloadSchema = z.union([lastfmScrobblePayloadSchema,lastfmScrobbleMultiPayloadSchema]).meta({title: 'Single or Bulk Scrobble'});
 export type LastfmScrobbleMaybeMultiPayload = z.infer<typeof lastfmScrobbleMaybeMultiPayloadSchema>;
 
 export type LastFmScrobblePayload = z.infer<typeof lastfmScrobblePayloadSchema>;
@@ -885,7 +885,7 @@ export type LastFmScrobblePayload = z.infer<typeof lastfmScrobblePayloadSchema>;
 export const lastfmNowPlayingPayloadSchema = z.object({
     method: z.literal('track.updateNowPlaying'),
     ...lastfmSubmitPayloadSchema.shape,
-});
+}).meta({title: 'Update Now Playing'});
 export type LastFmNowPlayingPayload = z.infer<typeof lastfmNowPlayingPayloadSchema>;
 
 export type LastFmSubmitPayload = LastfmScrobbleMaybeMultiPayload | LastFmNowPlayingPayload;
@@ -896,14 +896,14 @@ export const lastfmAuthRequestPayloadSchema = z.object({
     username: z.string().optional(),
     password: z.string().optional(),
     api_key: z.string().optional(),
-});
+}).meta({title: 'Get Mobile Auth Session'});
 
 export const lastfmRequestSchema = z.union([
     lastfmScrobbleMaybeMultiPayloadSchema,
     z.discriminatedUnion("method", [
         lastfmNowPlayingPayloadSchema,
         lastfmAuthRequestPayloadSchema
-    ])
+    ]).meta({title: 'Update Now Playing or Mobile Auth Session'})
 ]);
 export type LastFmRequest = z.infer<typeof lastfmRequestSchema>;
 

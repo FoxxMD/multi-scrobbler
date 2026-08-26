@@ -380,7 +380,8 @@ export interface ObjectPlayData extends PlayData {
     playDateCompleted?: Dayjs
 }
 
-export type LogLevelStandalone = 'debug' | 'error' | 'verbose' | 'info' | 'silly' | 'silent' | 'log' | 'trace' | 'warn' | 'fatal';
+export const logLevelStandaloneSchema = z.enum(['debug','error','verbose','info','silly','silent','log','trace','warn','fatal'])
+export type LogLevelStandalone = z.infer<typeof logLevelStandaloneSchema>;
 
 export interface LogOutputConfig {
     level: LogLevelStandalone,
