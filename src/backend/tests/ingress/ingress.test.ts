@@ -11,7 +11,6 @@ import ScrobbleClients from '../../scrobblers/ScrobbleClients.ts';
 import { zocker } from "zocker";
 import { webScrobblePayloadSchema } from '../../common/vendor/webscrobbler/interfaces.ts';
 import type { WebScrobblerSourceConfig } from '../../common/infrastructure/config/source/webscrobbler.ts';
-import { sleep } from '../../utils.ts';
 import { playToSubmitPayload } from '../../common/vendor/listenbrainz/lzUtils.ts';
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
 import dayjs from 'dayjs';
@@ -96,7 +95,7 @@ describe('Listenbrainz Endpoint', function() {
             source.queueIdleMs = 2;
             await source.initialize();
 
-            const [_, __] = await Promise.all([
+            await Promise.all([
                 request(app).post('/1/submit-listens')
                     .set('Content-Type', 'application/json')
                     .send(JSON.stringify({...playToSubmitPayload(generatePlay()), listen_type: 'playing_now'})),

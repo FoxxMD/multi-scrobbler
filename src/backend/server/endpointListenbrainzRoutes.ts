@@ -1,6 +1,7 @@
 /* eslint-disable prefer-arrow-functions/prefer-arrow-functions */
-import type {Express, Request, Response} from 'express';
+import type {Express, Request} from 'express';
 import { childLogger, type Logger } from "@foxxmd/logging";
+import type {Writable} from 'ts-essentials';
 import bodyParser from "body-parser";
 import type { EndpointListenbrainzSource} from "../sources/EndpointListenbrainzSource.ts";
 import { playStateFromRequest, requestMatchers } from "../sources/EndpointListenbrainzSource.ts";
@@ -12,7 +13,7 @@ import type ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
 import { stringToDeterministicNumber } from '../utils/StringUtils.ts';
 import { messageWithCauses } from '../../core/ErrorUtils.ts';
-import type { createTypedRouter, SchemaRequest, TypedMiddleware } from "@minisylar/express-typed-router";
+import type { createTypedRouter, TypedMiddleware, InferSchemaHandler } from "@minisylar/express-typed-router";
 import * as z from 'zod';
 import { stripIndents } from 'common-tags';
 import { parseDisplayIdentifiersFromRequest } from '../utils/RequestUtils.ts';
@@ -45,7 +46,15 @@ export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof cr
         next();
     };
 
-    const submitRoute = async (req: SchemaRequest<string, z.ZodObject<{}, z.core.$loose>, undefined, Record<string, any>, undefined>, res: Response) => {
+    const lzBodySchema = z.looseObject({});
+    const middleware = [rawIngress,lzJsonParser,nonEmptyCheck] as const;
+
+    type SubmitHandler = InferSchemaHandler<{
+        bodySchema: typeof lzBodySchema,
+        middleware: typeof middleware,
+    }>;
+
+    const submitRoute: SubmitHandler = async (req, res) => {
         webhookIngress.trackIngress(req as Request, false);
 
         logger.trace({body: req.body}, "Recieved request Body");
@@ -83,14 +92,14 @@ export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof cr
     }
 
     router.post('/api/listenbrainz{*splat}', {
-        middleware: [rawIngress,lzJsonParser,nonEmptyCheck],
-        bodySchema: z.looseObject({}),
+        bodySchema: lzBodySchema,
+        middleware: middleware as Writable<typeof middleware>,
         tags: ['Listenbrainz Ingress'],
         summary: 'Accept a Listenbrainz Scrobble (Slug)',
         description: 'Accepts the standard Listenbrainz `submit-listens` payload at this endpoint.'
     }, submitRoute);
     router.post('/1/submit-listens', {
-        middleware: [rawIngress,lzJsonParser,nonEmptyCheck],
+        middleware: middleware as Writable<typeof middleware>,
         bodySchema: z.looseObject({}),
         tags: ['Listenbrainz Ingress'],
         summary: 'Accept a Listenbrainz Scrobble (Standard)',

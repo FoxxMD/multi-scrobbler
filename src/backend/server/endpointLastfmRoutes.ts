@@ -1,22 +1,23 @@
 /* eslint-disable prefer-arrow-functions/prefer-arrow-functions */
-import type {Express, Request, Response} from 'express';
+import type {Express, Request} from 'express';
 import { childLogger, type Logger } from "@foxxmd/logging";
+import type {Writable} from 'ts-essentials'
 import bodyParser from "body-parser";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import { nonEmptyBody } from "./middleware.ts";
 import { LFMEndpointNotifier } from "../sources/ingressNotifiers/LFMEndpointNotifier.ts";
 import type { EndpointLastfmSource} from "../sources/EndpointLastfmSource.ts";
 import { playStateFromRequest, requestMatchers } from "../sources/EndpointLastfmSource.ts";
-import {lastfmAuthRequestPayloadSchema, lastfmScrobbleRequestSchema, playToNowPlayingApiResponseJson, playToNowPlayingApiResponseXml, playToScrobbleApiResponseJson, playToScrobbleApiResponseXml, type LastFMPayloadkey, type LastFMScrobbleRequestPayload} from "../common/vendor/LastfmApiClient.ts";
+import {lastfmAuthRequestPayloadSchema, lastfmScrobbleRequestSchema, playToNowPlayingApiResponseJson, playToNowPlayingApiResponseXml, playToScrobbleApiResponseJson, playToScrobbleApiResponseXml} from "../common/vendor/LastfmApiClient.ts";
 import xml2js from 'xml2js';
 import crypto from 'node:crypto';
-import type { createTypedRouter, SchemaRequest, TypedMiddleware } from "@minisylar/express-typed-router";
+import type { createTypedRouter, TypedMiddleware, InferSchemaHandler } from "@minisylar/express-typed-router";
 import { parseDisplayIdentifiersFromRequest } from '../utils/RequestUtils.ts';
 import * as z from 'zod';
 
 const unmatchIdentifierWarn: string[] = [];
 
-const looseFmBody = z.xor([lastfmScrobbleRequestSchema, lastfmAuthRequestPayloadSchema]);
+const looseFmBody = z.union([lastfmScrobbleRequestSchema, lastfmAuthRequestPayloadSchema]);
 type LooseFmBody = typeof looseFmBody;
 const looseQuery = z.looseObject({format: z.string().optional()});
 type LooseQuery = typeof looseQuery;
@@ -38,7 +39,15 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
         next();
     };
 
-    const submitRoute = async (req: SchemaRequest<"/api/lastfm/*path"|'/2.0/', LooseFmBody, LooseQuery>, res: Response) => {
+    const middleware = [rawIngress,bodyParser.urlencoded({ extended: true }),nonEmptyCheck] as const;
+
+    type SubmitHandler = InferSchemaHandler<{
+        bodySchema: LooseFmBody,
+        querySchema: LooseQuery
+        middleware: typeof middleware,
+    }>;
+
+    const submitRoute: SubmitHandler = async (req, res) => {
             webhookIngress.trackIngress(req as Request, false);
 
             const sources = scrobbleSources.getByType('endpointlfm') as EndpointLastfmSource[];
@@ -146,18 +155,18 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
     }
 
     router.post('/api/lastfm/*path', {
-        middleware: [rawIngress,bodyParser.urlencoded({ extended: true }),nonEmptyCheck],
-        bodySchema: z.union([lastfmScrobbleRequestSchema, lastfmAuthRequestPayloadSchema]),
-        querySchema: z.looseObject({format: z.string().optional()}),
+        middleware: middleware as Writable<typeof middleware>,
+        bodySchema: looseFmBody,
+        querySchema: looseQuery,
         tags: ['Lastfm Ingress'],
         summary: 'Accept a Last.fm Scrobble (Slug)',
         description: 'Accepts the standard Last.fm `track.scrobble` payload at this endpoint.'
     }, submitRoute);
 
     router.post('/2.0/', {
-        middleware: [rawIngress,bodyParser.urlencoded({ extended: true }),nonEmptyCheck],
-        bodySchema: z.union([lastfmScrobbleRequestSchema, lastfmAuthRequestPayloadSchema]),
-        querySchema: z.looseObject({format: z.string().optional()}),
+        middleware: middleware as Writable<typeof middleware>,
+        bodySchema: looseFmBody,
+        querySchema: looseQuery,
         tags: ['Lastfm Ingress'],
         summary: 'Accept a Last.fm Scrobble (Standard)',
         description: 'Accepts the standard Last.fm `track.scrobble` payload at this endpoint.'
