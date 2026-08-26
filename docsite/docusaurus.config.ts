@@ -32,7 +32,7 @@ const config: Config = {
     v4: {
       removeLegacyPostBuildHeadAttribute: true, // required
     },
-    experimental_faster: {
+    faster: {
       ssgWorkerThreads: true,
       rspackBundler: true, // required flag
       rspackPersistentCache: true, // new flag
