@@ -23,8 +23,6 @@ describe('Expected behavior for queues', function () {
 
         const honkerQueue = hdb.queue('source-discovery-1');
 
-        honkerQueue.sweepExpired
-
         const waker = honkerQueue.claimWaker();
         while (true) {
             const job = await waker.next('worker-1') as unknown as HonkerJob<PlayJob>;
@@ -37,5 +35,25 @@ describe('Expected behavior for queues', function () {
                 job.retry(60, String(err));
             }
         }
+    });
+
+    it('job in retry is accessible', async function () {
+        const db = await transientDb();
+        const a = db.$client.location()
+        const hdb = honker.open(a);
+        type PlayJob = { context: QueueContext, play: JsonPlayObject };
+        const queue = new Queue<PlayJob>(db, 'source-discovery-1');
+        const p = generateJsonPlay();
+        queue.enqueue({ context: {}, play: p });
+
+        const honkerQueue = hdb.queue('source-discovery-1');
+
+        const waker = honkerQueue.claimWaker();
+        const job = await waker.next('worker-1') as unknown as HonkerJob<PlayJob>;
+        job.retry(60, String('test'));
+
+        // @ts-expect-error missing typing
+        const j = honkerQueue.getJob(job.id);
+        expect(j.attempts).eq(1);
     });
 });
