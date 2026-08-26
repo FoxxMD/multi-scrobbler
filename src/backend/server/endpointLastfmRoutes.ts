@@ -17,8 +17,6 @@ import * as z from 'zod';
 
 const unmatchIdentifierWarn: string[] = [];
 
-const looseFmBody = lastfmRequestSchema;
-type LooseFmBody = typeof looseFmBody;
 const looseQuery = z.looseObject({format: z.string().optional()});
 type LooseQuery = typeof looseQuery;
 
@@ -42,7 +40,7 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
     const middleware = [rawIngress,bodyParser.urlencoded({ extended: true }),nonEmptyCheck] as const;
 
     type SubmitHandler = InferSchemaHandler<{
-        bodySchema: LooseFmBody,
+        bodySchema: typeof lastfmRequestSchema,
         querySchema: LooseQuery
         middleware: typeof middleware,
     }>;
@@ -159,7 +157,7 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
 
     router.post('/api/lastfm{*splat}', {
         middleware: middleware as Writable<typeof middleware>,
-        bodySchema: looseFmBody,
+        bodySchema: lastfmRequestSchema,
         querySchema: looseQuery,
         tags: ['Lastfm Ingress'],
         summary: 'Accept a Last.fm Scrobble (Slug)',
@@ -168,7 +166,7 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
 
     router.post('/2.0/', {
         middleware: middleware as Writable<typeof middleware>,
-        bodySchema: looseFmBody,
+        bodySchema: lastfmRequestSchema,
         querySchema: looseQuery,
         tags: ['Lastfm Ingress'],
         summary: 'Accept a Last.fm Scrobble (Standard)',

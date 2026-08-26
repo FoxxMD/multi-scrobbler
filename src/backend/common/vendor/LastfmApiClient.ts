@@ -841,13 +841,16 @@ export interface LastFMScrobblePayload  {
         mbid?: string
 }
 
+// bodies arrive as urlencoded form data, so numeric fields are always strings (or string[] for batch keys) on the wire
+const lastfmNumericStringSchema = z.coerce.number().int().positive();
+
 export const lastfmSubmitPayloadSchema = z.object({
     artist: z.string(),
     track: z.string(),
     album: z.string().optional(),
     albumArtist: z.string().optional(),
     mbid: z.string().optional(),
-    duration: z.int().positive().optional(),
+    duration: lastfmNumericStringSchema.optional(),
     sk: z.string().optional(),
     api_key: z.string().optional()
 });
@@ -858,7 +861,7 @@ export const lastfmSubmitMultiPayloadSchema = z.object({
     album: z.array(z.string()).optional(),
     albumArtist: z.array(z.string()).optional(),
     mbid: z.array(z.string()).optional(),
-    duration: z.array(z.int().positive()).optional(),
+    duration: z.array(lastfmNumericStringSchema).optional(),
     sk: z.string().optional(),
     api_key: z.string().optional()
 });
@@ -866,16 +869,16 @@ export const lastfmSubmitMultiPayloadSchema = z.object({
 export const lastfmScrobblePayloadSchema = z.object({
     method: z.literal('track.scrobble'),
     ...lastfmSubmitPayloadSchema.shape,
-    timestamp: z.int().positive(),
+    timestamp: lastfmNumericStringSchema,
 });
 export type LastfmScrobblePayload = z.infer<typeof lastfmScrobblePayloadSchema>;
 export const lastfmScrobbleMultiPayloadSchema = z.object({
     method: z.literal('track.scrobble'),
     ...lastfmSubmitMultiPayloadSchema.shape,
-    timestamp: z.array(z.int().positive()),
+    timestamp: z.array(lastfmNumericStringSchema),
 });
-export const lastfmScrobbleXorPayloadSchema = z.union([lastfmScrobblePayloadSchema,lastfmScrobbleMultiPayloadSchema]);
-export type LastfmScrobbleMaybeMultiPayload = z.infer<typeof lastfmScrobbleXorPayloadSchema>;
+export const lastfmScrobbleMaybeMultiPayloadSchema = z.union([lastfmScrobblePayloadSchema,lastfmScrobbleMultiPayloadSchema]);
+export type LastfmScrobbleMaybeMultiPayload = z.infer<typeof lastfmScrobbleMaybeMultiPayloadSchema>;
 
 export type LastFmScrobblePayload = z.infer<typeof lastfmScrobblePayloadSchema>;
 
@@ -896,12 +899,13 @@ export const lastfmAuthRequestPayloadSchema = z.object({
 });
 
 export const lastfmRequestSchema = z.union([
-    lastfmScrobbleXorPayloadSchema,
+    lastfmScrobbleMaybeMultiPayloadSchema,
     z.discriminatedUnion("method", [
         lastfmNowPlayingPayloadSchema,
         lastfmAuthRequestPayloadSchema
     ])
 ]);
+export type LastFmRequest = z.infer<typeof lastfmRequestSchema>;
 
 export interface LastFMScrobbleRequestPayload extends LastFMScrobblePayload {
     method: string
