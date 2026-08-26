@@ -1,29 +1,14 @@
 import { integer, sqliteTable, text, index, uniqueIndex, customType, type AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import { defineRelations } from 'drizzle-orm';
-import dayjs, { type Dayjs } from "dayjs";
+import dayjs from "dayjs";
 import { COMPONENT_TYPE_CLIENT, COMPONENT_TYPE_SOURCE, type ErrorLike, type PlayObject, type QueueContext } from "../../../../../core/Atomic.ts";
 import { asPlayCheap } from "../../../../../core/PlayMarshalUtils.ts";
 import type {ExternalMetadataTerm, PlayTransformPartsConfig, SearchAndReplaceTerm} from "../../../../../core/Transform.ts";
 import type {JobRangeCount, JobRangeTime} from "../../../infrastructure/Job.ts";
 import { serializeError, deserializeError } from "serialize-error";
 import { generatePlayUid } from "../../../../../core/StringUtils.ts";
-
-const DayjsTimestamp = customType<
-  {
-    data: Dayjs;
-    driverData: number;
-  }
->({
-  dataType() {
-    return 'number'
-  },
-  toDriver(value: Dayjs): number {
-    return value.valueOf();
-  },
-  fromDriver(value: number): Dayjs {
-    return dayjs(value);
-  },
-});
+import { honkerLiveQueue } from "./honker.ts";
+import { DayjsTimestamp } from "../customTypes.ts";
 
 const PlayJson = customType<
   {
@@ -140,6 +125,7 @@ export const queueStates = sqliteTable("play_queue_states", {
   id: integer({ mode: 'number' }).primaryKey(),
   playId: integer().notNull().references(() => plays.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
   componentId: integer().notNull().references(() => components.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
+  jobId: integer().references(() => honkerLiveQueue.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
   queueName: text({length: 50}).notNull(),
   queueStatus: text({enum: ['queued','completed','failed']}).notNull().default('queued'),
   retries: integer().notNull().default(0),
@@ -224,7 +210,7 @@ export const playEvents = sqliteTable("play_events", {
   index('play_event_id_idx').on(table.playId)
 ]);
 
-const playRelations = defineRelations({ plays, queueStates, playEvents, playInputs, components, jobs, componentMigrations,playsHistorical }, (r) => ({
+const playRelations = defineRelations({ plays, queueStates, playEvents, playInputs, components, jobs, componentMigrations,playsHistorical, honkerLiveQueue }, (r) => ({
   plays: {
     queueStates: r.many.queueStates(),
     input: r.one.playInputs({
@@ -259,6 +245,10 @@ const playRelations = defineRelations({ plays, queueStates, playEvents, playInpu
     play: r.one.plays({
       from: r.queueStates.playId,
       to: r.plays.id
+    }),
+    job: r.one.honkerLiveQueue({
+      from: r.queueStates.jobId,
+      to: r.honkerLiveQueue.id
     }),
     component: r.one.components({
       from: r.queueStates.componentId,

@@ -1,0 +1,1 @@
+ALTER TABLE `play_queue_states` ADD `jobId` integer REFERENCES _honker_live(id) ON UPDATE CASCADE ON DELETE CASCADE;

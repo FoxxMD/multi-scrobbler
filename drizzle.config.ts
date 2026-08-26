@@ -5,10 +5,11 @@ import * as path from 'path';
 import { projectRootDir } from "./src/backend/common/infrastructure/Atomic.ts";
 
 export default defineConfig({
-  schema: path.resolve(projectRootDir, 'src/backend/common/database/drizzle/schema'),
+  schema: path.resolve(projectRootDir, 'src/backend/common/database/drizzle/schema/schema.ts'),
   out: path.resolve(projectRootDir, 'src/backend/common/database/drizzle/migrations'),
   dialect: 'sqlite',
   dbCredentials: {
     url: path.resolve(getDataDir(), 'ms.db'),
   },
+
 });
