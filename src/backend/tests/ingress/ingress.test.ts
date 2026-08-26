@@ -18,7 +18,7 @@ import { faker } from '@faker-js/faker';
 import * as z from 'zod';
 import pEvent from 'p-event';
 import type { LastFMEndpointSourceConfig } from '../../common/infrastructure/config/source/endpointlfm.ts';
-import { lastfmScrobblePayloadSchema } from '../../common/vendor/LastfmApiClient.ts';
+import { lastfmNowPlayingPayloadSchema, lastfmScrobblePayloadSchema } from '../../common/vendor/LastfmApiClient.ts';
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
 
 chai.use(asPromised);
@@ -224,15 +224,12 @@ describe('Last.fm Endpoint', function () {
                 .supply(lastfmScrobblePayloadSchema.shape.duration, faker.number.int({ min: 30, max: 400 }))
                 .supply(lastfmScrobblePayloadSchema.shape.timestamp, dayjs(faker.date.recent()).unix())
                 .generate());
-            //payload.method = 'track.scrobble';
 
             try {
                 const [response] = await Promise.all([
                     request(app).post('/api/lastfm')
-                        //.set('Content-Type', 'x-www-form-urlencoded')
                         // @ts-expect-error its fine
                         .send(new URLSearchParams(payload).toString()),
-                    //pEvent(source.emitter, 'playInsert', { timeout: 10000 })
                 ]);
                 expect(response.status).eq(200);
                 expect(source.getApiData().queued, JSON.stringify(payload)).eq(1);
@@ -243,7 +240,7 @@ describe('Last.fm Endpoint', function () {
         });
     });
 
-    it('accepts request to /2.0/ for auth.getMobileSession', async function () {
+    it('accepts request to /2.0 for auth.getMobileSession', async function () {
         const sources = generateSources();
         await sources.addSource('endpointlfm', [defaultLfmConfig]);
         const source = sources.sources[0];
@@ -251,10 +248,66 @@ describe('Last.fm Endpoint', function () {
         await source.initialize();
         const [app] = await initServer({ sources, clients }, { testMode: true });
 
-            const response = await request(app).post('/api/lastfm')
+            const response = await request(app).post('/2.0')
                 .set('Accept', 'application/json')
                 .send(new URLSearchParams({username: 'atest', password: 'anything', api_key: '1234', api_sig: '5678', method: 'auth.getMobileSession'}).toString());
             expect(response.status).eq(200);
             expect(response.body.session.key).exist;
+    });
+
+    it('accepts request to /2.0 for track.scrobble', async function () {
+        const sources = generateSources();
+        await sources.addSource('endpointlfm', [defaultLfmConfig]);
+        const source = sources.sources[0];
+        source.queueIdleMs = 2;
+        await source.initialize();
+        const [app] = await initServer({ sources, clients }, { testMode: true });
+
+        const payload = removeUndefinedKeys(zocker(lastfmScrobblePayloadSchema)
+            .override(z.ZodString, () => faker.word.words({ count: { min: 1, max: 5 } }))
+            .supply(lastfmScrobblePayloadSchema.shape.duration, faker.number.int({ min: 30, max: 400 }))
+            .supply(lastfmScrobblePayloadSchema.shape.timestamp, dayjs(faker.date.recent()).unix())
+            .generate());
+
+        try {
+            const [response] = await Promise.all([
+                request(app).post('/api/lastfm')
+                    // @ts-expect-error its fine
+                    .send(new URLSearchParams(payload).toString()),
+            ]);
+            expect(response.status).eq(200);
+            expect(source.getApiData().queued, JSON.stringify(payload)).eq(1);
+        } catch (e) {
+            console.log(JSON.stringify(payload));
+            throw e;
+        }
+    });
+
+    it('accepts request to /2.0 for track.updateNowPlaying', async function () {
+        const sources = generateSources();
+        await sources.addSource('endpointlfm', [defaultLfmConfig]);
+        const source = sources.sources[0];
+        source.queueIdleMs = 2;
+        await source.initialize();
+        const [app] = await initServer({ sources, clients }, { testMode: true });
+
+        const payload = removeUndefinedKeys(zocker(lastfmNowPlayingPayloadSchema)
+            .override(z.ZodString, () => faker.word.words({ count: { min: 1, max: 5 } }))
+            .supply(lastfmScrobblePayloadSchema.shape.duration, faker.number.int({ min: 30, max: 400 }))
+            .supply(lastfmScrobblePayloadSchema.shape.timestamp, dayjs(faker.date.recent()).unix())
+            .generate());
+
+        try {
+            const [response] = await Promise.all([
+                request(app).post('/api/lastfm')
+                    // @ts-expect-error its fine
+                    .send(new URLSearchParams(payload).toString()),
+            ]);
+            // TODO more accurate verification this is updating now playing
+            expect(response.status).eq(200);
+        } catch (e) {
+            console.log(JSON.stringify(payload));
+            throw e;
+        }
     });
 });
