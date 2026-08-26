@@ -1041,19 +1041,19 @@ export const playToScrobbleApiResponseXml = (play: PlayObject) => {
                 scrobble: {
                     track: {
                         $: {corrected: 0},
-                        _: play.data.track
+                        _: play.data.track ?? ''
                     },
                     artist: {
                         $: {corrected: 0},
-                        _: play.data.artists?.join(',')
+                        _: play.data.artists?.join(',') ?? ''
                     },
                     album: {
                         $: {corrected: 0},
-                        _: play.data.album
+                        _: play.data.album ?? ''
                     },
                     albumArtist: {
                         $: {corrected: 0},
-                        _: play.data.albumArtists?.join(',')
+                        _: play.data.albumArtists?.join(',') ?? ''
                     },
                     timestamp: {
                         _: dayjs().unix(),
@@ -1076,19 +1076,19 @@ export const playToNowPlayingApiResponseXml = (play: PlayObject) => {
             nowplaying: {
                 track: {
                     $: { corrected: 0 },
-                    _: play.data.track
+                    _: play.data.track ?? ''
                 },
                 artist: {
                     $: { corrected: 0 },
-                    _: play.data.artists?.join(',')
+                    _: play.data.artists?.join(',') ?? ''
                 },
                 album: {
                     $: { corrected: 0 },
-                    _: play.data.album
+                    _: play.data.album ?? ''
                 },
                 albumArtist: {
                     $: { corrected: 0 },
-                    _: play.data.albumArtists?.join(',')
+                    _: play.data.albumArtists?.join(',') ?? ''
                 },
                 ignoredMessage: {
                     $: { code: 0 }
