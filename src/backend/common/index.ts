@@ -25,4 +25,6 @@ export const getDataDir = (): string => {
     return path.resolve(dataDirVal);
 }
 
+export const getTempDir = (): string => osPaths.temp;
+
 export const getPathFromCWD = (...relativePaths: string[]) => path.resolve(process.cwd(), ...relativePaths);

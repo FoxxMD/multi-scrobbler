@@ -13,6 +13,7 @@ import { addToContext, executeQuery } from './logContext.ts';
 import { migrateApp, getAppMigrationStatus } from '../appMigrator.ts';
 import type {MigrationStatus} from '../../infrastructure/Atomic.ts';
 import { projectRootDir } from "../../infrastructure/Atomic.ts";
+import { extensionPath } from '@russellthehippo/honker-node/extension';
 
 export async function getDbMigrationStatus(dbVal: string | DbConcrete, opts: {logger?: Logger, migrationsFolder?: string} = {}): Promise<MigrationStatus> {
   const {
@@ -77,7 +78,13 @@ export const getDb = (dbVal: string, opts: { logger?: Logger, backupPath?: strin
   const {
     logger = loggerNoop,
   } = opts;
-  return drizzle(dbVal, {relations: relations, logger: createDrizzleLogger(logger)});
+  const db = drizzle({relations: relations, logger: createDrizzleLogger(logger), connection: {path: dbVal, allowExtension: true}});
+  if(dbVal !== ':memory:') {
+    logger.debug('Loading honker extension');
+    db.$client.loadExtension(extensionPath());
+    db.run('SELECT honker_bootstrap()');
+  }
+  return db;
 }
 
 export type DbConcrete = ReturnType<typeof getDb>;
