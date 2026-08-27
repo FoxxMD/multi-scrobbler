@@ -210,6 +210,7 @@ export default class DeezerInternalSource extends MemorySource {
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
 
         this.setStatus('Checking for new Plays');
+        let resp: DeezerHistoryResponse;
         try {
             const req = this.agent.post('https://www.deezer.com/ajax/gw-light.php')
                 .query({
@@ -221,7 +222,7 @@ export default class DeezerInternalSource extends MemorySource {
                     start: 0
                 });
             // returns listening history in descending order (newest to oldest)
-            const resp = (await this.callApi(req)) as DeezerHistoryResponse;
+            resp = (await this.callApi(req)) as DeezerHistoryResponse;
             let errList: string[] = [];
             if('error' in resp.results) {
                 errList = resp.results.error;
@@ -243,6 +244,9 @@ export default class DeezerInternalSource extends MemorySource {
             }
             return resp.results.data.filter(x => x.__TYPE__ === 'song').map(x => DeezerInternalSource.formatPlayObj(x)).sort(sortByOldestPlayDate);
         } catch (e) {
+            if(resp !== undefined) {
+                this.logger.debug({body: resp},'Deezer raw body response');
+            }
             throw new Error('Failed to get recently played tracks', {cause: e});
         }
     }
@@ -311,6 +315,12 @@ export default class DeezerInternalSource extends MemorySource {
             if (error !== undefined && error.length > 0) {
                 const err = new Error((error as string[]).join(' | '));
                 throw  err;
+            }
+            if(resp.statusCode !== 200) {
+                this.logger.debug(`Non 200 status code returned: ${resp.statusCode}`);
+            }
+            if(!resp.header['Content-Type']?.includes('json')) {
+                this.logger.debug(`Non json content-type returned: ${resp.header['Content-Type']}`);
             }
             return resp.body;
         } catch (e) {
