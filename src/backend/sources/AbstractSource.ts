@@ -435,7 +435,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 }
                 const events = await this.playEventsRepo.createMany([
                     { playId: playSelect.id, ...stateChangeToPlayEvent({ state: 'queued' }) },
-                    { playId: playSelect.id, ...queueStateToPlayEvent({ ...queue, queueStatus: 'queued', context: context ?? queue.context }) }
+                    { playId: playSelect.id, ...queueStateToPlayEvent({ ...queue, queueStatus: 'queued', error: undefined, context: context ?? queue.context }) }
                 ]) as PlayEventSelect[];
                 playSelect.state = 'queued';
                 await this.playRepo.updateById(playSelect.id, {state: 'queued'});
