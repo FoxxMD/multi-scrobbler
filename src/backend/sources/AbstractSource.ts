@@ -1126,6 +1126,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                     this.deadLetterGauge.labels(this.getPrometheusLabels()).dec();
                     this.deadLetterLength -= 1;
                     this.deadLetterQueued -= 1;
+                    this.emitEvent('removeDeadLetter', { dead: { id: res.playEntity.uid } });
                 }
                 queueStates = res.playEntity.queueStates.filter(x => x.queueName !== res.queue.queueName);
             }
@@ -1144,7 +1145,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 events: ((res.playEntity as unknown as PlayWith<'events'>).events ?? []).concat(createdEvents),
                 queueStates
             } as unknown as PlayApiCommonDetailed);
-            this.emitEvent('playDequeued', { queuedScrobble: playEntity });
         }
     }
 
