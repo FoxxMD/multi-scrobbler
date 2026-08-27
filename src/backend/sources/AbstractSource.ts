@@ -51,7 +51,7 @@ import type { PlayEventNew, PlayEventSelect, PlaySelect, PlaySelectWithQueueStat
 import { DrizzleQueueRepository } from '../common/database/drizzle/repositories/QueueRepository.ts';
 import { DrizzlePlayEventsRepository } from '../common/database/drizzle/repositories/PlayEventsRepository.ts';
 import { PLAY_EVENT_TYPE, type PlayEvent } from '../../core/PlayEvent.ts';
-import { dupeCheckToPlayEvent, entityIsPlayEntity, queueStateToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from '../common/database/drizzle/entityUtils.ts';
+import { dupeCheckToPlayEvent, entityIsPlayEntity, queueCompletionStateToPlayEvent, queueStateToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from '../common/database/drizzle/entityUtils.ts';
 import type { PlayProcessingResult } from '../common/infrastructure/PlayProcessing.ts';
 import { PlayProcessingError } from '../common/errors/PlayProcessingError.ts';
 
@@ -431,7 +431,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 if (queue === undefined) {
                     queue = await this.queueRepo.create({ componentId: this.dbComponent.id, playId: playSelect.id, queueName: INGRESS_QUEUE, context }) as QueueStateSelect;
                 } else {
-                    this.queueRepo.updateById(queue.id, { queueStatus: 'queued', context });
+                    this.queueRepo.updateById(queue.id, { queueStatus: 'queued', context, error: undefined });
                 }
                 const events = await this.playEventsRepo.createMany([
                     { playId: playSelect.id, ...stateChangeToPlayEvent({ state: 'queued' }) },
@@ -1157,6 +1157,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.setStatus(`Processing Play ${playEntity.uid}`);
 
         const queueState = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE);
+        queueState.error = undefined;
         const {
             context,
         } = queueState
@@ -1178,7 +1179,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 logger.debug(`Not processing ${buildTrackString(playEntity.play)} because monitoring was disabled when Play was queued.`);
                 playEntity.state = 'discarded';
                 events.push(stateChangeToPlayEvent({state: playEntity.state, reason: 'Not processing because monitoring was disabled when Play was queued'}));
-                events.push(queueStateToPlayEvent({...queueState, context: undefined, queueStatus: QUEUE_STATUS_COMPLETED}));
+                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED}));
                 return {playEntity, queue: queueState, events};
             } 
             let preCompared = playEntity.play;
@@ -1238,7 +1239,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                     this.cache.cacheDb.set(this.recentDiscoveredCacheKey(), recentDiscoveredPlays, '2m');
                 }
             }
-            events.push(queueStateToPlayEvent({...queueState, context: undefined, queueStatus: QUEUE_STATUS_COMPLETED}));
+            events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED}));
             logger.info(`${capitalize(playEntity.state)} => ${buildTrackString(preCompared)}`);
             return {playEntity, events, queue: queueState};
         } catch (e) {
@@ -1247,7 +1248,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             }
             if(isAbortError(e)) {
                 events.push(stateChangeToPlayEvent({state: 'failed'}));
-                events.push(queueStateToPlayEvent({...queueState, context: undefined, queueStatus: QUEUE_STATUS_FAILED, error: generateLoggableAbortReason('Interrupted by abort signal', this.discoverQueueAbortController.signal)}));
+                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: generateLoggableAbortReason('Interrupted by abort signal', this.discoverQueueAbortController.signal)}));
                 throw e;
             }
             if(!events.some(x => x.eventName === PLAY_EVENT_TYPE.playStateChange)) {
@@ -1255,7 +1256,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 playEntity.state = 'failed';
             }
             if(!events.some(x => x.eventName === PLAY_EVENT_TYPE.queueStateChange)) {
-                events.push(queueStateToPlayEvent({...queueState, context: undefined, queueStatus: QUEUE_STATUS_FAILED, error: e}));
+                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: e}));
             }
             throw new PlayProcessingError(e, {playEntity, queue: queueState, events, showStopping: true});
         } 
@@ -1276,7 +1277,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.setStatus(`Marking Dead Play ${dead.uid} as completed`);
 
         const events: PlayEventNew[] = [
-            { playId: dead.id, ...queueStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED, context: {reason: 'Dead Play marked as completed by user'}}) }
+            { playId: dead.id, ...queueStateToPlayEvent({...queueState, error: undefined, queueStatus: QUEUE_STATUS_COMPLETED, context: {reason: 'Dead Play marked as completed by user'}}) }
         ];
         await this.queueRepo.deleteByIds([queueState.id]);
         

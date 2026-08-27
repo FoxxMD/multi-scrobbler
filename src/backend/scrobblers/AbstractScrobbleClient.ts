@@ -74,7 +74,7 @@ import { COMPONENT_STATE, type ComponentClientApiJson, type PlayApiCommonDetaile
 import type {ComponentState} from "react";
 import { DrizzlePlayEventsRepository } from "../common/database/drizzle/repositories/PlayEventsRepository.ts";
 import { PLAY_EVENT_TYPE, type PlayEvent } from "../../core/PlayEvent.ts";
-import { dupeCheckToPlayEvent, entityIsPlayEntity, queueStateToPlayEvent, scrobbleToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from "../common/database/drizzle/entityUtils.ts";
+import { dupeCheckToPlayEvent, entityIsPlayEntity, queueCompletionStateToPlayEvent, queueStateToPlayEvent, scrobbleToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from "../common/database/drizzle/entityUtils.ts";
 import type { PlayProcessingResult } from "../common/infrastructure/PlayProcessing.ts";
 import { PlayProcessingError } from "../common/errors/PlayProcessingError.ts";
 
@@ -1195,6 +1195,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         signal?.throwIfAborted();
 
         const queueState = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE);
+        queueState.error = undefined;
         const {
             context,
         } = queueState
@@ -1217,7 +1218,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             if (!isRetry && !playEntity.play.meta.wasMonitored) {
                 this.logger.debug(`Not processing ${buildTrackString(playEntity.play)} because monitoring was disabled when Play was queued.`);
                 events.push(stateChangeToPlayEvent({ state: 'discarded', reason: 'Monitoring was disabled when Play was queued' }));
-                events.push(queueStateToPlayEvent({...queueState, context: undefined, queueStatus: 'completed'}));
+                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: 'completed'}));
                 playEntity.state = 'discarded';
                 return {playEntity, queue: queueState, events};
             }
@@ -1242,7 +1243,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     events.push(stateChangeToPlayEvent({state: 'failed'}));
                     queueState.queueStatus = QUEUE_STATUS_FAILED;
                     queueState.error = processError;
-                    events.push(queueStateToPlayEvent({...queueState, context: undefined,}));
+                    events.push(queueCompletionStateToPlayEvent({...queueState}));
                     throw new PlayProcessingError(processError, {playEntity, events, queue: queueState, showStopping: false});
                     //deadQueueEntity = await this.addDeadLetterScrobble(playEntity, e);
                 }
@@ -1273,7 +1274,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     //currQueuedPlay.play = scrobbledPlay;
                     await this.addScrobbledTrack(scrobbledPlay);
                     events.push(stateChangeToPlayEvent({state: 'scrobbled'}));
-                    events.push(queueStateToPlayEvent({...queueState, context: undefined, queueStatus: QUEUE_STATUS_COMPLETED}));
+                    events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED}));
                     this.scrobbleRetries = 0;
                     playEntity.state = 'scrobbled';
                     playEntity.error = undefined;
@@ -1299,7 +1300,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     if (hasUpstreamError(e, false)) {
                         //handledShiftedPlay = true;
                         const nonShowStoppingError = new Error(`Could not scrobble but error was not show stopping. May be retried automatically in Dead Queue`, { cause: e });
-                        events.push(queueStateToPlayEvent({...queueState, context: undefined, queueStatus: QUEUE_STATUS_FAILED, error: nonShowStoppingError}));
+                        events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: nonShowStoppingError}));
                         queueState.error = nonShowStoppingError;
                         logger.warn(nonShowStoppingError);
                         processError = nonShowStoppingError;
@@ -1308,7 +1309,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                         //this.queuedScrobbles.unshift(currQueuedPlay);
                         //handledShiftedPlay = true;
                         const showStoppingError = new Error('Error occurred while trying to scrobble', { cause: e });
-                        events.push(queueStateToPlayEvent({...queueState, context: undefined, queueStatus: QUEUE_STATUS_FAILED, error: showStoppingError}));
+                        events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: showStoppingError}));
                         queueState.error = showStoppingError;
                         processError = showStoppingError;
                         throw new PlayProcessingError(showStoppingError, {playEntity, queue: queueState, events, showStopping: true});
@@ -1319,7 +1320,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 this.scrobbleRetries =  0;
                 playEntity.state = 'duped';
                 events.push(stateChangeToPlayEvent({state: 'duped'}));
-                events.push(queueStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED}));
+                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED}));
                 return {playEntity, events, queue: queueState};
             }
         } catch (e) {
@@ -1328,7 +1329,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }
             if(isAbortError(e)) {
                 events.push(stateChangeToPlayEvent({state: 'failed'}));
-                events.push(queueStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: generateLoggableAbortReason('Interrupted by abort signal', this.scrobbleQueueAbortController.signal)}));
+                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: generateLoggableAbortReason('Interrupted by abort signal', this.scrobbleQueueAbortController.signal)}));
                 throw e;
             }
             if(!events.some(x => x.eventName === PLAY_EVENT_TYPE.playStateChange)) {
@@ -1336,7 +1337,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 playEntity.state = 'failed';
             }
             if(!events.some(x => x.eventName === PLAY_EVENT_TYPE.queueStateChange)) {
-                events.push(queueStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: e}));
+                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: e}));
             }
             throw new PlayProcessingError(e, {playEntity, queue: queueState, events, showStopping: true});
         }
@@ -1357,7 +1358,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.setStatus(`Marking Dead Play ${dead.uid} as completed`);
 
         const events: PlayEventNew[] = [
-            { playId: dead.id, ...queueStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED, context: {reason: 'Dead Play marked as completed by user'}}) }
+            { playId: dead.id, ...queueCompletionStateToPlayEvent({...queueState, error: undefined, queueStatus: QUEUE_STATUS_COMPLETED, context: {reason: 'Dead Play marked as completed by user'}}) }
         ];
         await this.queueRepo.deleteByIds([queueState.id]);
         
@@ -1442,7 +1443,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 if (queue === undefined) {
                     queue = await this.queueRepo.create({ componentId: this.dbComponent.id, playId: playSelect.id, queueName: INGRESS_QUEUE, context }) as QueueStateSelect;
                 } else {
-                    this.queueRepo.updateById(queue.id, { queueStatus: 'queued', context });
+                    this.queueRepo.updateById(queue.id, { queueStatus: 'queued', context, error: undefined });
                 }
                 const events = await this.playEventsRepo.createMany([
                     { playId: playSelect.id, ...stateChangeToPlayEvent({ state: 'queued' }) },

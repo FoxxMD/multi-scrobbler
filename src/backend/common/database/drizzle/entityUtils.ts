@@ -128,6 +128,18 @@ export const queueStateToPlayEvent = (partial: MarkOptional<QueueStateSelect, 'c
     createdAt: dayjs(),
     data: partial
 });
+export const queueCompletionStateToPlayEvent = (partial: MarkOptional<QueueStateSelect, 'context' | 'retries'>): Omit<PlayEventQueueStateChange, 'playId'> => {
+    const {
+        context,
+        retries,
+        ...rest
+    } = partial;
+    return {
+        eventName: PLAY_EVENT_TYPE.queueStateChange,
+        createdAt: dayjs(),
+        data: rest
+    }
+}
 
 export const dupeCheckToPlayEvent = (partial: MarkRequired<Partial<PlayEventDupeCheckData>, 'match'>): Omit<PlayEventDupeCheck, 'playId'> => {
     const {match, ...rest} = partial;
