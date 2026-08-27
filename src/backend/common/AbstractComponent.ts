@@ -343,7 +343,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             const historyToDiff: {name: string, data?: PlayData}[] = [
                 {name: 'Pre Transform', data: play.data}
             ];
-            let isNew = false;
+            let isNew = false,
+            diffFailure = false;
             if(steps.length > 0 && transformedPlay.lifecycle === undefined) {
                 transformedPlay.lifecycle = steps;
                 isNew = true;
@@ -352,6 +353,10 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 lifecycle = []
             } = transformedPlay;
             steps.forEach((s, index) => {
+                if(diffFailure) {
+                    return;
+                }
+                try {
                 if(!isNew) {
                     const existingStepIndex = lifecycle.findIndex(x => x.stageName === s.stageName && x.stageType === s.stageType && x.hook === s.hook && x.source === this.getIdentifier());
                     if(existingStepIndex !== -1) {
@@ -369,6 +374,13 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                         historyToDiff.push({name: `${s.source}-${s.hook}-${s.stageType}-${s.stageName} ${s.cached ? ' (Cached)' : ''}`, data: patched});
                     }
                 }
+                } catch (e) {
+                    if(`patch` in s) {
+                        this.logger.debug({patch: s.patch, playData: historyToDiff[historyToDiff.length - 1].data}, 'Patch and Play data');
+                    }
+                    this.logger.warn(new SimpleError('Error occurred while trying to generate diffed Plays for console logging but will continue', {cause: e}));
+                    diffFailure = true;
+                }
             });
             if(shouldLog !== false) {
                 if(steps.filter(x => x.patch !== undefined).length === 0) {
@@ -376,6 +388,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 } else {
                     const diffs: string[] = [];
 
+                    try {
                     historyToDiff.forEach((curr, index) => {
                         if(index === 0) {
                             return;
@@ -384,17 +397,33 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                         if(curr.data === undefined) {
                             diffs.push(`${last.name} => ${curr.name} -- No Change`);
                         } else {
-                            const formattedDiff = diffObjectsConsoleOutput(last.data, curr.data);
-                            diffs.push(`${last.name} => ${curr.name}\n${formattedDiff}`);
+                            try {
+                                const formattedDiff = diffObjectsConsoleOutput(last.data, curr.data);
+                                diffs.push(`${last.name} => ${curr.name}\n${formattedDiff}`);
+                            } catch(e) {
+                                this.logger.debug({pre: last.data, post: curr.data}, 'Compared Pre and Post play data');
+                                throw e;
+                            }
                         }
                     });
+                    } catch (e) {
+                         this.logger.warn(new SimpleError('Error occurred while trying to generate Play diffs for console but will continue', {cause: e}));
+                         diffFailure = true;
+                    }
 
                     if(shouldLog === true || steps.filter(x => x.patch !== undefined).length > 2) {
                         const finalData = transformedPlay.data;
-                        const formattedDiff = diffObjectsConsoleOutput(play.data, finalData, true);
-                        diffs.push(`Original => Final\n${formattedDiff}`);
+                        try {
+                            const formattedDiff = diffObjectsConsoleOutput(play.data, finalData, true);
+                            diffs.push(`Original => Final\n${formattedDiff}`);
+                        } catch (e) {
+                            this.logger.warn(new SimpleError('Error occurred while trying to generate Play diffs for console but will continue', {cause: e}));
+                            diffFailure = true;
+                        }
                     }
-
+                    if(diffFailure) {
+                        diffs.push('A failure during diff generation occurred but the transform was successful.');
+                    }
                     logger.debug(`Transform Diff\n${diffs.join('\n')}`);
                 }
             }
