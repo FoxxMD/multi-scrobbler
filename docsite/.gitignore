@@ -21,3 +21,4 @@ yarn-error.log*
 lib
 
 docs/api/
+static/openapi.json
