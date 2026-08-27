@@ -19,7 +19,7 @@
     "build:parallel": "concurrently --kill-others-on-fail --names backend,frontend,docs \"npm run -s build:backend\" \"npm run -s build:frontend\" \"npm run docs:build\"",
     "docs:install": "cd docsite && npm install --no-audit",
     "docs:start": "cd docsite && npm start",
-    "docs:build": "npm run -s schema:docs && cd docsite && npm run build",
+    "docs:build": "npm run -s schema:docs && npm run -s openapi:docs && cd docsite && npm run -s openapi:generate && npm run -s build",
     "docs:netlify": "npm run -s docs:install && npm run -s docs:build",
     "postinstall": "patch-package",
     "install:parallel": "concurrently --kill-others-on-fail --names app,docs \"npm ci --no-audit\" \"npm run docs:install\"",
