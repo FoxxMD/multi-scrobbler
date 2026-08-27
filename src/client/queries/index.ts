@@ -41,14 +41,12 @@ const activities = createQueryKeys('activities', {
             if(state !== undefined) {
               derived.state = state.filter(x => isPlayState(x));
 
-              // remove 'dead queued' derived play state and replace with filter for queue = 'dead' & state = 'queued'
-              if(state.includes('dead queued') && !rest.queues?.some(x => x.queueName === DEAD_QUEUE)) {
-                derived.queues = [...(rest.queues ?? []), {queueName: DEAD_QUEUE, queueStatus: 'queued'}];
-              }
-              // remove 'queued' play state and replace with filter for queue = 'ingress' & state = 'queued'
-              if(state.includes('queued') && !rest.queues?.some(x => x.queueName === INGRESS_QUEUE)) {
-                derived.queues = [...(derived.queues ?? []), {queueName: INGRESS_QUEUE, queueStatus: 'queued'}];
-                derived.state = derived.state.filter(x => x !== 'queued');
+              if(state.includes('dead queued') && state.includes('queued')) {
+                derived.queues = [{queueName: INGRESS_QUEUE, queueStatus: 'queued'}];
+                derived.state = Array.from(new Set([...derived.state, 'failed', 'queued']));
+              } else if(state.includes('dead queued')) {
+                  derived.queues = [{queueName: INGRESS_QUEUE, queueStatus: 'queued'}];
+                  derived.state = Array.from(new Set([...derived.state, 'failed']));
               }
           }
             return ky.get(`components/${componentId}/plays`, {
