@@ -14,7 +14,7 @@
     "typecheck": "tsc",
     "postinstall": "patch-package",
     "previews:build-renderer": "tsc --project tsconfig.client.json || exit 0",
-    "prebuild": "npm run -s previews:build-renderer",
+    "prebuild": "npm run -s previews:build-renderer && npm run -s openapi:generate",
     "openapi:generate": "docusaurus clean-api-docs ms && docusaurus gen-api-docs ms"
   },
   "dependencies": {
