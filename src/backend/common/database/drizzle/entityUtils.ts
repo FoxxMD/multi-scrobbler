@@ -123,7 +123,7 @@ export const stateChangeToPlayEvent = (partial: PlayEventPlayStateChangeData): O
     data: partial
 })
 
-export const queueStateToPlayEvent = (partial: QueueStateSelect): Omit<PlayEventQueueStateChange, 'playId'> => ({
+export const queueStateToPlayEvent = (partial: MarkOptional<QueueStateSelect, 'context'>): Omit<PlayEventQueueStateChange, 'playId'> => ({
     eventName: PLAY_EVENT_TYPE.queueStateChange,
     createdAt: dayjs(),
     data: partial

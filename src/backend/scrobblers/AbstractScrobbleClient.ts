@@ -1195,13 +1195,15 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         signal?.throwIfAborted();
 
         const queueState = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE);
-
+        const {
+            context,
+        } = queueState
         const {
             useCache = true,
             isRetry = false,
             transform = true,
             dupeCheck = true,
-        } = queueState.context || {};
+        } = context || {};
 
         const isDead = queueState.retries > 0 || isRetry;
 
@@ -1215,7 +1217,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             if (!isRetry && !playEntity.play.meta.wasMonitored) {
                 this.logger.debug(`Not processing ${buildTrackString(playEntity.play)} because monitoring was disabled when Play was queued.`);
                 events.push(stateChangeToPlayEvent({ state: 'discarded', reason: 'Monitoring was disabled when Play was queued' }));
-                events.push(queueStateToPlayEvent({...queueState, queueStatus: 'completed'}));
+                events.push(queueStateToPlayEvent({...queueState, context: undefined, queueStatus: 'completed'}));
                 playEntity.state = 'discarded';
                 return {playEntity, queue: queueState, events};
             }
@@ -1240,7 +1242,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     events.push(stateChangeToPlayEvent({state: 'failed'}));
                     queueState.queueStatus = QUEUE_STATUS_FAILED;
                     queueState.error = processError;
-                    events.push(queueStateToPlayEvent(queueState));
+                    events.push(queueStateToPlayEvent({...queueState, context: undefined,}));
                     throw new PlayProcessingError(processError, {playEntity, events, queue: queueState, showStopping: false});
                     //deadQueueEntity = await this.addDeadLetterScrobble(playEntity, e);
                 }
@@ -1250,7 +1252,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             let isDupe = false;
             if(dupeCheck) {
                 const { summary, ...matchResult } = await this.existingScrobble({...playEntity.play, id: playEntity.id, uid: playEntity.uid}, historicalPlays);
-                events.push(dupeCheckToPlayEvent({ summary, ...matchResult }));
+                events.push(dupeCheckToPlayEvent({ summary, ...matchResult, createdAt: dayjs().toISOString() }));
                 isDupe = matchResult.match;
             }
 
@@ -1271,7 +1273,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     //currQueuedPlay.play = scrobbledPlay;
                     await this.addScrobbledTrack(scrobbledPlay);
                     events.push(stateChangeToPlayEvent({state: 'scrobbled'}));
-                    events.push(queueStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED}));
+                    events.push(queueStateToPlayEvent({...queueState, context: undefined, queueStatus: QUEUE_STATUS_COMPLETED}));
                     this.scrobbleRetries = 0;
                     playEntity.state = 'scrobbled';
                     playEntity.error = undefined;
@@ -1297,7 +1299,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     if (hasUpstreamError(e, false)) {
                         //handledShiftedPlay = true;
                         const nonShowStoppingError = new Error(`Could not scrobble but error was not show stopping. May be retried automatically in Dead Queue`, { cause: e });
-                        events.push(queueStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: nonShowStoppingError}));
+                        events.push(queueStateToPlayEvent({...queueState, context: undefined, queueStatus: QUEUE_STATUS_FAILED, error: nonShowStoppingError}));
                         queueState.error = nonShowStoppingError;
                         logger.warn(nonShowStoppingError);
                         processError = nonShowStoppingError;
@@ -1306,7 +1308,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                         //this.queuedScrobbles.unshift(currQueuedPlay);
                         //handledShiftedPlay = true;
                         const showStoppingError = new Error('Error occurred while trying to scrobble', { cause: e });
-                        events.push(queueStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: showStoppingError}));
+                        events.push(queueStateToPlayEvent({...queueState, context: undefined, queueStatus: QUEUE_STATUS_FAILED, error: showStoppingError}));
                         queueState.error = showStoppingError;
                         processError = showStoppingError;
                         throw new PlayProcessingError(showStoppingError, {playEntity, queue: queueState, events, showStopping: true});

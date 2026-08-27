@@ -1158,11 +1158,14 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
         const queueState = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE);
         const {
+            context,
+        } = queueState
+        const {
             useCache = true,
             isRetry = false,
             transform = true,
             dupeCheck = true,
-        } = queueState.context || {};
+        } = context || {};
 
         const isDead = queueState.retries > 0 || isRetry;
         const logger = isDead ? childLogger(this.logger, ['Dead', `Play ${playEntity.uid}`]) : childLogger(this.logger, [`Play ${playEntity.uid}`]);
@@ -1175,7 +1178,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 logger.debug(`Not processing ${buildTrackString(playEntity.play)} because monitoring was disabled when Play was queued.`);
                 playEntity.state = 'discarded';
                 events.push(stateChangeToPlayEvent({state: playEntity.state, reason: 'Not processing because monitoring was disabled when Play was queued'}));
-                events.push(queueStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED}));
+                events.push(queueStateToPlayEvent({...queueState, context: undefined, queueStatus: QUEUE_STATUS_COMPLETED}));
                 return {playEntity, queue: queueState, events};
             } 
             let preCompared = playEntity.play;
@@ -1195,7 +1198,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                     existing = { ...cheapExisting.play, id: cheapExisting.id, uid: cheapExisting.uid };
                 } else {
                     const matchRes = await this.existingDiscovered({...preCompared, id: playEntity.id, uid: playEntity.uid});
-                    events.push(dupeCheckToPlayEvent(matchRes));
+                    events.push(dupeCheckToPlayEvent({...matchRes, createdAt: dayjs().toISOString()}));
                     if (matchRes.match) {
                         existing = matchRes.closestMatchedPlay;
                     }
@@ -1235,7 +1238,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                     this.cache.cacheDb.set(this.recentDiscoveredCacheKey(), recentDiscoveredPlays, '2m');
                 }
             }
-            events.push(queueStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED}));
+            events.push(queueStateToPlayEvent({...queueState, context: undefined, queueStatus: QUEUE_STATUS_COMPLETED}));
             logger.info(`${capitalize(playEntity.state)} => ${buildTrackString(preCompared)}`);
             return {playEntity, events, queue: queueState};
         } catch (e) {
@@ -1244,7 +1247,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             }
             if(isAbortError(e)) {
                 events.push(stateChangeToPlayEvent({state: 'failed'}));
-                events.push(queueStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: generateLoggableAbortReason('Interrupted by abort signal', this.discoverQueueAbortController.signal)}));
+                events.push(queueStateToPlayEvent({...queueState, context: undefined, queueStatus: QUEUE_STATUS_FAILED, error: generateLoggableAbortReason('Interrupted by abort signal', this.discoverQueueAbortController.signal)}));
                 throw e;
             }
             if(!events.some(x => x.eventName === PLAY_EVENT_TYPE.playStateChange)) {
@@ -1252,7 +1255,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 playEntity.state = 'failed';
             }
             if(!events.some(x => x.eventName === PLAY_EVENT_TYPE.queueStateChange)) {
-                events.push(queueStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: e}));
+                events.push(queueStateToPlayEvent({...queueState, context: undefined, queueStatus: QUEUE_STATUS_FAILED, error: e}));
             }
             throw new PlayProcessingError(e, {playEntity, queue: queueState, events, showStopping: true});
         } 

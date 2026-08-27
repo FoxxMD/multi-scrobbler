@@ -506,9 +506,9 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         }
 
         if(component instanceof AbstractSource) {
-            await component.queuePlay([play], {...body, isRetry: true});
+            await component.queuePlay([play], {...body, isRetry: true, reason: 'User requested reprocessing'});
         } else {
-            await component.queueScrobble([play], {...body, isRetry: true});
+            await component.queueScrobble([play], {...body, isRetry: true, reason: 'User requested reprocessing'});
         }
         return res.sendStatus(200);
     });

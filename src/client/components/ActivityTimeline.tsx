@@ -297,17 +297,19 @@ const QueueTimelineItem = (props: {queueState: PlayEventQueueStateChange<string>
                 queueName,
                 error,
                 retries,
-                context: {
-                    dupeCheck,
-                    transform,
-                    useCache,
-                    reason
-                } = {}
+                context,
             },
             createdAt,
         } = {},
         collapsibleOpen,
     } = props;
+
+    const {
+        dupeCheck,
+        transform,
+        useCache,
+        reason
+    } = context ?? {};
 
     let indicator: React.JSX.Element,
     text: React.JSX.Element,
