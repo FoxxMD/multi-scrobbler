@@ -5,7 +5,7 @@ import ky from 'ky';
 import qs from 'qs';
 import { baseUrl } from "../utils";
 import type {ComponentsApiJson, PaginatedResponse, PlayApiCommonDetailed, PlayStateUI, QueryPlaysOptsJson} from "../../core/Api";
-import { DEAD_QUEUE, INGRESS_QUEUE, isPlayState, type SourcePlayerJson } from "../../core/Atomic";
+import { INGRESS_QUEUE, isPlayState, type SourcePlayerJson } from "../../core/Atomic";
 
 export type QueryPlaysOptsJsonRefreshable = Omit<QueryPlaysOptsJson, 'state'> & {nonce?: string, state?: PlayStateUI[]};
 
@@ -42,10 +42,10 @@ const activities = createQueryKeys('activities', {
               derived.state = state.filter(x => isPlayState(x));
 
               if(state.includes('dead queued') && state.includes('queued')) {
-                derived.queues = [{queueName: INGRESS_QUEUE, queueStatus: 'queued'}];
+                derived.queues = [{queueName: INGRESS_QUEUE, queueStatus: 'queued'},{queueName: INGRESS_QUEUE, queueStatus: 'failed'}];
                 derived.state = Array.from(new Set([...derived.state, 'failed', 'queued']));
               } else if(state.includes('dead queued')) {
-                  derived.queues = [{queueName: INGRESS_QUEUE, queueStatus: 'queued'}];
+                  derived.queues = [{queueName: INGRESS_QUEUE, queueStatus: 'failed'}];
                   derived.state = Array.from(new Set([...derived.state, 'failed']));
               }
           }
