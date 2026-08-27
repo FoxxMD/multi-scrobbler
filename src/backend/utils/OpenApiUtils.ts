@@ -16,8 +16,19 @@ you have configured.
 
 Additionally, the **Ingress** category endpoints document the body/query shape required to make a successful api call for [Ingress-based Sources.](/configuration/sources/?sourceComm=ingress#by-communication-method)
 
-**Note:** If you not using Ingress-based Sources or trying to write an application to use the MS API, you do not
+:::tip
+
+If you not using Ingress-based Sources or trying to write an application to use the MS API, you do not
 not need to use this docs section.
+
+:::
+
+:::important
+
+The endpoints documented here, other than those in Ingress categories, are **subject to change until a release declares them stable.**
+
+:::
+
 `
 
 export const getOpenApiDoc = async () => {
