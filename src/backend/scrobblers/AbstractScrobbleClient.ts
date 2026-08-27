@@ -1089,7 +1089,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 if(res.queue.retries > 0) {
                     this.deadLetterGauge.labels(this.getPrometheusLabels()).dec();
                     this.deadLetterLength -= 1;
-                    this.deadLetterQueued -= 1;
                     this.emitEvent('removeDeadLetter', { dead: { id: res.playEntity.uid } });
                 }
                 queueStates = res.playEntity.queueStates.filter(x => x.queueName !== res.queue.queueName)
@@ -1378,6 +1377,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
         this.deadLetterLength -= 1;
         if(queueState.queueStatus === 'queued') {
+            this.emitEvent('deadLetterDequeued', { dead: { id: dead.uid } });
             this.deadLetterQueued -= 1;
         }
         this.deadLetterGauge.labels(this.getPrometheusLabels()).dec();

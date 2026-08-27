@@ -168,7 +168,7 @@ export const DeadLetterIndicatorStreamable = (props: { data: Pick<ComponentClien
                     break;
                 case 'deadLetterRemoved':
                 case 'removeDeadLetter':
-                    setStatsData({current: statsData.current - 1, total: statsData.total - 1});
+                    setStatsData({current: statsData.current, total: statsData.total - 1});
                     break;
                 case 'deadLetterDequeued':
                     setStatsData({current: statsData.current - 1, total: statsData.total});
