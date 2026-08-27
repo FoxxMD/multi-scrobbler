@@ -1,5 +1,5 @@
 import type { SidebarsConfig } from '@docusaurus/plugin-content-docs';
-
+import msSidebar from "./docs/api/sidebar.js";
 /**
  * Creating a sidebar enables you to:
  - create an ordered group of docs
@@ -19,21 +19,13 @@ const sidebars: SidebarsConfig = {
       type: "link",
       label: "Config Playground",
       href: "/playground"
-    }
-  ],
-
-  // But you can create a sidebar manually
-  /*
-  tutorialSidebar: [
-    'intro',
-    'hello',
-    {
-      type: 'category',
-      label: 'Tutorial',
-      items: ['tutorial-basics/create-a-document'],
+    },
+        {
+      type: "category",
+      label: "Api",
+      items: msSidebar,
     },
   ],
-   */
 };
 
 export default sidebars;
