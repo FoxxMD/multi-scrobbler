@@ -85,7 +85,7 @@ export const Indicator = (props: {
 
     return (
         <TextMuted textStyle="sm">{current}  {total !== undefined && <>({total})</>} {recent !== 0 ? <Badge size="sm" colorPalette={recentDirection === 'up' ? directionColors[0] : directionColors[1]} gap="0">
-            {recentDirection === 'up' ? <UpArrowIcon color={directionColors[0]} /> : <DownArrowIcon color={directionColors[0]} />}
+            {recentDirection === 'up' ? <UpArrowIcon color={directionColors[0]} /> : <DownArrowIcon color={directionColors[1]} />}
             {recent}
         </Badge> : null} {currentText}</TextMuted>
     );
@@ -167,6 +167,7 @@ export const DeadLetterIndicatorStreamable = (props: { data: Pick<ComponentClien
                     setStatsData({current: statsData.current + 1, total: statsData.total + 1});
                     break;
                 case 'deadLetterRemoved':
+                case 'removeDeadLetter':
                     setStatsData({current: statsData.current - 1, total: statsData.total - 1});
                     break;
                 case 'deadLetterDequeued':
