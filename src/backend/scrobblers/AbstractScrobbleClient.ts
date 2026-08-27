@@ -287,7 +287,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     'Dead',
                     (): Promise<any> => {
                         if(this.isReady()) {
-                            return this.processDeadLetterQueue().then(() => null).catch((e) => {
+                            return this.processDeadLetterQueue(undefined, 'Reprocessing bulk dead Plays by system').then(() => null).catch((e) => {
                                 this.warnings = e;
                                 this.logger.error(e);
                             })

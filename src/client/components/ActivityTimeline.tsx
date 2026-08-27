@@ -1,5 +1,6 @@
 import type { Collapsible } from '@chakra-ui/react';
-import { Card, Text, Icon, SkeletonCircle, SkeletonText, Span, Tabs, Timeline} from '@chakra-ui/react';
+import { Card, Text, Icon, SkeletonCircle, SkeletonText, Span, Tabs, Timeline, Tag, HStack, Stack, Separator} from '@chakra-ui/react';
+import { HiCheck } from "react-icons/hi"
 import dayjs from "dayjs";
 import React from "react";
 import { BiWrench } from "react-icons/bi";
@@ -15,7 +16,7 @@ import { activityTransformHasIssue, timelineIconProps, TimelineItemSummaryText }
 import { ChakraCodeBlockShort } from "./CodeBlock";
 import { ErrorAlert } from "./ErrorAlert";
 import { MSErrorBoundary } from "./ErrorBoundary";
-import { CheckIcon, ExclamationTriangleIcon, TimelineIndicatorIconQueued } from "./icons/ChakraIcons";
+import { CheckIcon, ExclamationTriangleIcon, TimelineIndicatorIconQueued, XIcon } from "./icons/ChakraIcons";
 import { MSCollapsible } from "./MSCollapsible";
 import { PlayData } from "./PlayData";
 import { ScrobbleActionResult } from "./ScrobbleActionResult";
@@ -274,6 +275,20 @@ const ScrobbleResponseItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpe
     )
 }
 
+const RetryChip = (props: { count: number }) => (<Tag.Root>
+    <Tag.Label>Attempt: {props.count}</Tag.Label>
+</Tag.Root>)
+
+const BoolChip = (props: { text: string, check: boolean }) => (<Tag.Root>
+    <Tag.Label>{props.text}</Tag.Label>
+    <Tag.EndElement>
+        {props.check ? <HiCheck /> : <XIcon />}
+    </Tag.EndElement>
+</Tag.Root>)
+const DupeChip = (props: { check: boolean }) => <BoolChip {...props} text="Duplicate Check" />;
+const TransformChip = (props: { check: boolean }) => <BoolChip {...props} text="Transform" />
+const CacheChip = (props: { check: boolean }) => <BoolChip {...props} text="Use Cache" />
+
 const QueueTimelineItem = (props: {queueState: PlayEventQueueStateChange<string>, collapsibleOpen: boolean}) => {
     const {
         queueState: {
@@ -281,7 +296,13 @@ const QueueTimelineItem = (props: {queueState: PlayEventQueueStateChange<string>
                 queueStatus,
                 queueName,
                 error,
-                retries
+                retries,
+                context: {
+                    dupeCheck,
+                    transform,
+                    useCache,
+                    reason
+                } = {}
             },
             createdAt,
         } = {},
@@ -291,6 +312,28 @@ const QueueTimelineItem = (props: {queueState: PlayEventQueueStateChange<string>
     let indicator: React.JSX.Element,
     text: React.JSX.Element,
     title: React.JSX.Element;
+
+    const contextHints: React.JSX.Element[] = [];
+    const tags: React.JSX.Element[] = [];
+
+    if(retries !== undefined && retries > 0) {
+        tags.push(<RetryChip key="retry" count={retries}/>);
+    }
+    if(dupeCheck !== undefined) {
+        tags.push(<DupeChip key="dupe" check={dupeCheck}/>)
+    }
+    if(transform !== undefined) {
+        tags.push(<TransformChip key="transform" check={transform}/>)
+    }
+    if(useCache !== undefined) {
+        tags.push(<CacheChip key="cache" check={useCache}/>)
+    }
+    if(tags.length > 0) {
+        contextHints.push(<HStack key="tags">{tags}</HStack>)
+    }
+    if(reason !== undefined) {
+        contextHints.push(<span key="reason">Reason - {reason}</span>);
+    }
 
     switch(queueStatus) {
         case QUEUE_STATUS_QUEUED:
@@ -315,7 +358,9 @@ const QueueTimelineItem = (props: {queueState: PlayEventQueueStateChange<string>
                 disableUntil="md"
                 timeline
                 unmountOnExit>
+                <Stack>
                 <ErrorAlert error={error} />
+                </Stack>
             </MSCollapsible>
         )
     } else {
@@ -334,6 +379,7 @@ const QueueTimelineItem = (props: {queueState: PlayEventQueueStateChange<string>
                     <Timeline.Title>
                         {title}
                     </Timeline.Title>
+                    {contextHints.length > 0 ? <Timeline.Description><HStack separator={<Separator orientation="vertical" height="5"/>}>{contextHints}</HStack></Timeline.Description> : undefined}
                 </Timeline.Content>
             </Timeline.Item>
     );

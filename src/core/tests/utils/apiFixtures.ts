@@ -14,6 +14,7 @@ import { CALCULATED_PLAYER_STATUSES } from '../../Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../Atomic.ts';
 import { generateArray } from "../../DataUtils.ts";
 import type {ErrorIsh} from "../../ErrorUtils.ts";
+import { serializeError } from "serialize-error";
 
 export const generatePlayApiCommon = (commonData: Partial<PlayApiCommon> & {play?: JsonPlayObject | PlayObject } = {}, ...playOpts: Parameters<typeof generatePlay>): PlayApiCommon => {
     let play: JsonPlayObject | PlayObject;
@@ -102,7 +103,13 @@ export const generatePlayApiCommonDetailed = (opts: {
         input: inputRes,
         queueStates: [queueRes],
         error,
-        events: []
+        events: [
+            {eventName: 'queueStateChange', playId: 1, data: {queueName: 'ingress', queueStatus: 'queued', retries: 2,
+                error: serializeError(generateFakeError()),
+                 context: {reason: 'Bulk scrobble for dead Plays by system', dupeCheck: false, transform: true}}},
+            {eventName: 'playStateChange', playId: 1, data: {state: 'discarded', reason: 'Monitoring was off'}},
+            {eventName: 'queueStateChange', playId: 1, data: {queueName: 'ingress', retries: 1, queueStatus: 'failed', error: serializeError(generateFakeError())}},
+        ]
     }
 }
 

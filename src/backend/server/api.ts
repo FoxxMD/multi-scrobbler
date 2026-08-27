@@ -767,7 +767,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
 
         res.status(200).send('OK');
 
-        await ((client as AbstractScrobbleClient).processDeadLetterQueue(1000));
+        await ((client as AbstractScrobbleClient).processDeadLetterQueue(1000, 'Reprocessing bulk dead Plays initiated by user'));
     });
 
     router.put('/api/dead/:id', {middleware: [clientMiddleFunc(true)], hidden: true}, async (req, res, next) => {

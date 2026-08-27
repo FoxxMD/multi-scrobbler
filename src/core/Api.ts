@@ -1,6 +1,6 @@
 import type { PickKeys } from "ts-essentials"
 import type { CompareOpKey, ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
-import type { ClientType, ComponentAuthType, MonitoringStatus } from "./Atomic.ts"
+import type { ClientType, ComponentAuthType, MonitoringStatus, QueueContext } from "./Atomic.ts"
 import type { SourceType } from "./Atomic.ts"
 import type { ComponentType, DateLike, ErrorLike, JsonPlayObject, PlayState, QueueName, Replace, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.ts"
 import type { Dayjs } from "dayjs"
@@ -36,6 +36,7 @@ export interface QueueStateApi {
     error?: ErrorLike
     updatedAt: string
     createdAt: string
+    context?: QueueContext
 }
 
 export interface PlayApiCommonDetailed extends PlayApiCommon {
