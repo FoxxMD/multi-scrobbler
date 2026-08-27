@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, type ComponentProps, useEffect } from "react"
 import { Portal, Group, Span, Menu, Box, Heading, Skeleton, Wrap, HStack, Stack, Flex, Text, Card, Button, CloseButton, SkeletonText, type BadgeProps, type MenuItemProps, createOverlay, Dialog, type MenuSelectionDetails } from '@chakra-ui/react';
-import { COMPONENT_STATE, type ComponentClientApiJson, type ComponentCommonApiJson, type ComponentsApiJson, type ComponentState, type ComponentStateBody, isComponentClientApiJson, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
+import { COMPONENT_STATE, type ComponentCommonApiJson, type ComponentsApiJson, type ComponentState, type ComponentStateBody, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
 import { capitalize } from "../../../core/StringUtils.js";
 import { ChevronLeftButton, EllipsisButton, ExternalLinkIcon, EyeButton, EyeClosedIcon, EyeIcon, IdleIcon, PowerButton, PowerIcon, type PowerOffButton, PowerOffIcon, RetryButton, RetryIcon, UnlockButton, UnlockIconRaw } from "../icons/ChakraIcons.js";
 import { PlayersContainer, PlayersContainerFetchable } from "../chakraPlayer/Player.js";
@@ -13,7 +13,7 @@ import {
     useSSEAnyEvent
 } from "@flamefrontend/sse-runtime-react";
 import { Link } from "react-router";
-import { CountLiveIndicator, DateIndicator, DeadLetterIndicator, QueuedIndicator } from "./Stats.js";
+import { CountIndicatorStreamable, DateIndicatorStreamable, DeadLetterIndicatorStreamable, QueuedIndicatorStreamable } from "./Stats.js";
 import { ListContainerFilterable } from "../playActivity/ActivityList.js";
 import { useParams } from "react-router-dom";
 import { ComponentStateBadge } from "../Badges.js";
@@ -64,10 +64,10 @@ export const MSComponentStats = (props: { data?: ComponentCommonApiJson, live?: 
     }
     return (
         <Wrap gap="6" rowGap="5" justify="flex-start" flexGrow="0">
-            <CountLiveIndicator data={props.data} streamable={props.live} flexGrow="0"/>
-            <QueuedIndicator data={props.data} streamable={props.live} flexGrow="0"/>
-            <DeadLetterIndicator data={props.data} streamable={props.live} flexGrow="0"/>
-            <DateIndicator data={props.data} streamable={props.live} flexGrow="0"/>
+            <CountIndicatorStreamable data={props.data} flexGrow="0"/>
+            <QueuedIndicatorStreamable data={props.data} flexGrow="0"/>
+            <DeadLetterIndicatorStreamable data={props.data} flexGrow="0"/>
+            <DateIndicatorStreamable data={props.data} flexGrow="0"/>
         </Wrap>
     )
 }
