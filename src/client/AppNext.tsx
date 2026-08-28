@@ -17,6 +17,7 @@ import { MSComponentListFetchable } from './components/msComponent/MSComponentLi
 import { Provider } from './components/Provider';
 import { SettingsContainer } from './components/settings/settings';
 import { Toaster } from './components/Toaster';
+import { WelcomeToast } from './components/WelcomeToast';
 
 function NoMatch() {
     const location = useLocation();
@@ -117,6 +118,7 @@ function App() {
   return (
       <Provider>
             <Toaster/>
+            <WelcomeToast/>
         {/* <Box px="4" py="2" pb="4"><AppHeader fetchable/></Box> */}
             <SSEProvider<MsSseEvent> options={sseProviderOptions}>
             <RouterProvider router={router}/>
