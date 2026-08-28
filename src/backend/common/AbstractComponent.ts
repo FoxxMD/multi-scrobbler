@@ -39,7 +39,7 @@ import { DrizzleComponentRepository } from "./database/drizzle/repositories/Comp
 import dayjs, { type Dayjs } from "dayjs";
 import { COMPONENT_STATE, type ComponentCommonApi, type ComponentCommonApiJson, type ComponentState, type PlayApiCommonDetailed } from "../../core/Api.ts";
 import type {WebhookPayload} from "./infrastructure/config/health/webhooks.ts";
-import type { MarkRequired } from "ts-essentials";
+import type { ElementOf, MarkRequired } from "ts-essentials";
 import { serializeError } from "serialize-error";
 
 export type AbstractComponentConfig = (CommonClientConfig | CommonSourceConfig) & { transformManager?: TransformerManager };
@@ -343,7 +343,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             const historyToDiff: {name: string, data?: PlayData}[] = [
                 {name: 'Pre Transform', data: play.data}
             ];
-            let isNew = false;
+            let isNew = false,
+            diffFailure = false;
             if(steps.length > 0 && transformedPlay.lifecycle === undefined) {
                 transformedPlay.lifecycle = steps;
                 isNew = true;
@@ -352,6 +353,11 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 lifecycle = []
             } = transformedPlay;
             steps.forEach((s, index) => {
+                if(diffFailure) {
+                    return;
+                }
+                const stepIdHint = `${s.source}-${s.hook}-${s.stageType}-${s.stageName}`;
+                try {
                 if(!isNew) {
                     const existingStepIndex = lifecycle.findIndex(x => x.stageName === s.stageName && x.stageType === s.stageType && x.hook === s.hook && x.source === this.getIdentifier());
                     if(existingStepIndex !== -1) {
@@ -363,11 +369,23 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
                 if(shouldLog === 'all') {
                     if(s.patch === undefined) {
-                        historyToDiff.push({name: `${s.source}-${s.hook}-${s.stageType}-${s.stageName}`});
+                        historyToDiff.push({name: `${stepIdHint}`});
                     } else {
-                        const patched = patchObject(historyToDiff[historyToDiff.length - 1].data, s.patch);
-                        historyToDiff.push({name: `${s.source}-${s.hook}-${s.stageType}-${s.stageName} ${s.cached ? ' (Cached)' : ''}`, data: patched});
+                        const lastTransformedData = historyToDiff[historyToDiff.findLastIndex(x => x.data !== undefined)].data;
+                        const patched = patchObject(lastTransformedData, s.patch);
+                        historyToDiff.push({name: `${stepIdHint} ${s.cached ? ' (Cached)' : ''}`, data: patched});
                     }
+                }
+                } catch (e) {
+                    if(`patch` in s) {
+                        this.logger.debug({
+                            patch: s.patch,
+                            playData: historyToDiff[historyToDiff.findLastIndex(x => x.data !== undefined)].data,
+                            cached: s.cached
+                        }, 'Patch and Play data context');
+                    }
+                    this.logger.warn(new SimpleError(`Error occurred while trying to generate diffed Plays for console logging on step ${stepIdHint} but will continue`, {cause: e}));
+                    diffFailure = true;
                 }
             });
             if(shouldLog !== false) {
@@ -376,25 +394,45 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 } else {
                     const diffs: string[] = [];
 
+                    try {
+                    let lastTransformed: ElementOf<typeof historyToDiff>;
                     historyToDiff.forEach((curr, index) => {
                         if(index === 0) {
+                            lastTransformed = curr;
                             return;
                         }
                         const last = historyToDiff[index - 1];
                         if(curr.data === undefined) {
                             diffs.push(`${last.name} => ${curr.name} -- No Change`);
                         } else {
-                            const formattedDiff = diffObjectsConsoleOutput(last.data, curr.data);
-                            diffs.push(`${last.name} => ${curr.name}\n${formattedDiff}`);
+                            try {
+                                const formattedDiff = diffObjectsConsoleOutput(lastTransformed.data, curr.data);
+                                diffs.push(`${last.name} => ${curr.name}\n${formattedDiff}`);
+                                lastTransformed = curr;
+                            } catch(e) {
+                                this.logger.debug({pre: lastTransformed.data, post: curr.data}, 'Compared Pre and Post play data');
+                                throw e;
+                            }
                         }
                     });
+                    } catch (e) {
+                         this.logger.warn(new SimpleError('Error occurred while trying to generate Play diffs for console but will continue', {cause: e}));
+                         diffFailure = true;
+                    }
 
                     if(shouldLog === true || steps.filter(x => x.patch !== undefined).length > 2) {
                         const finalData = transformedPlay.data;
-                        const formattedDiff = diffObjectsConsoleOutput(play.data, finalData, true);
-                        diffs.push(`Original => Final\n${formattedDiff}`);
+                        try {
+                            const formattedDiff = diffObjectsConsoleOutput(play.data, finalData, true);
+                            diffs.push(`Original => Final\n${formattedDiff}`);
+                        } catch (e) {
+                            this.logger.warn(new SimpleError('Error occurred while trying to generate Play diffs for console but will continue', {cause: e}));
+                            diffFailure = true;
+                        }
                     }
-
+                    if(diffFailure) {
+                        diffs.push('A failure during diff generation occurred but the transform was successful.');
+                    }
                     logger.debug(`Transform Diff\n${diffs.join('\n')}`);
                 }
             }
