@@ -1,0 +1,16 @@
+diff --git a/node_modules/spotify-web-api-node/src/http-manager.js b/node_modules/spotify-web-api-node/src/http-manager.js
+index 6c3991f..89e7a99 100644
+--- a/node_modules/spotify-web-api-node/src/http-manager.js
++++ b/node_modules/spotify-web-api-node/src/http-manager.js
+@@ -63,6 +63,11 @@ HttpManager._makeRequest = function(method, options, uri, callback) {
+     req.send(options.data);
+   }
+ 
++  req.timeout({
++    response: 5000,  // Wait 5 seconds for the server to start sending,
++    deadline: 9000, // but allow 9 seconds for entire response to complete
++  });
++
+   req.end(function(err, response) {
+     if (err) {
+       if (err.timeout) {
