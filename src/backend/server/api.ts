@@ -49,6 +49,8 @@ import { z } from 'zod';
 import type { createTypedRouter, TypedMiddleware } from "@minisylar/express-typed-router";
 import pEvent from "p-event";
 import { hasMetricRepositories, registerMetrics, setMetricRepositories } from "./promMetrics.ts";
+import pMap from "p-map";
+import type { PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -484,6 +486,39 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         await component.deletePlay(play);
 
         return res.sendStatus(200);
+    });
+
+    router.post('/api/components/:id/plays/queue', {
+        middleware: [componentAwareMiddle,bodyParser.json({ type: ['text/*', 'application/json'] })],
+        bodySchema: z.object({
+            context: queueContextSchema.optional(),
+            filters: z.looseObject({})
+        }),
+        tags: ['Plays'],
+        summary: 'Requeue Bulk Plays'
+    }, async (req, res, next) => {
+        const {
+            component,
+            body
+        } = req;
+
+        const hydratedQuery = asDayjsHydratedObject<QueryPlaysOptsJson, QueryPlaysOpts<Dayjs>>(body.filters);
+        res.sendStatus(200);
+
+        const queueFunc = component instanceof AbstractSource ? 
+        async (p: PlayWith<'queueStates'>) => await component.queuePlay([p], {...body.context, isRetry: true, reason: 'User requested reprocessing'})
+        : async (p: PlayWith<'queueStates'>) => await component.queueScrobble([p], {...body.context, isRetry: true, reason: 'User requested reprocessing'});
+
+        const currentFilters = hydratedQuery;
+        let more = true;
+        while(more) {
+            const res = await component.getPlaysPaginatedInternal(currentFilters);
+            pMap(res.data, async (x) => await queueFunc(x), {concurrency: 5});
+            more = res.data.length === res.meta.limit;
+            if(more) {
+                currentFilters.offset += res.meta.limit
+            }
+        }
     });
 
     router.post('/api/components/:id/plays/:uid/queue', {

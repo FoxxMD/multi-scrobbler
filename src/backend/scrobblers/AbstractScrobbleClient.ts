@@ -1785,6 +1785,18 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return this.playRepo.findPlaysPaginated({limit: parsedLimit, offset: parsedOffset, with: withQuery, ...rest});
     }
 
+    public async getPlaysPaginatedInternal(args: QueryPlaysOpts) {
+        const {
+            limit,
+            offset,
+            with: withQuery = ['input','parent-input','queues'],
+            ...rest
+        } = args;
+        const parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
+        const parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
+        return this.playRepo.findPlaysPaginated({limit: parsedLimit, offset: parsedOffset, with: withQuery, ...rest});
+    }
+
     public async getPlayApiResponse(uid: string, opts: {with?: WithPlayRelation[]} = {}): Promise<PlayApiCommonDetailed> {
         const {
             with: withQuery = ['input','parent-input','queues','events'],

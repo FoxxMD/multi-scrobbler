@@ -53,9 +53,9 @@ export const GroupHeader = (props: { data: GroupInfo } & ComponentProps<typeof B
 
         <Text fontWeight="semibold">{headerText} ({data.count} Plays)</Text>
 
-        <IconButton variant="ghost" size="xs" maxWidth="fit-content">
+        {/* <IconButton variant="ghost" size="xs" maxWidth="fit-content">
           <VscDebugRestart />
-        </IconButton>
+        </IconButton> */}
       </Flex>
       <Separator orientation="horizontal" height="4" />
     </Box>
@@ -63,24 +63,6 @@ export const GroupHeader = (props: { data: GroupInfo } & ComponentProps<typeof B
 }
 
 export const isGroupInfo = (val: any): val is GroupInfo => val.date !== undefined;
-
-export const generateGroupInfo = (data: PlayApiCommon[]): GroupInfo[] => {
-
-  const groupsReduced = data.reduce((acc: { groups: GroupInfo[], active?: GroupInfo }, curr, index) => {
-    const date = dayjs(curr.play.data.playDate);
-    if (acc.active === undefined) {
-      return { ...acc, active: { count: 1, date } };
-    }
-    if (acc.active.date.dayOfYear() !== date.dayOfYear()) {
-      return { groups: [...acc.groups, acc.active], active: { count: 1, date } }
-    }
-
-    return { groups: acc.groups, active: { ...acc.active, count: acc.active.count + 1 } };
-  }, { groups: [] });
-
-  return groupsReduced.groups.concat(groupsReduced.active);
-}
-
 
 export const generateGroupPlays = (data: PlayApiCommon[]): GroupData[] => {
 

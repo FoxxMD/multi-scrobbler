@@ -1,12 +1,12 @@
-import { Accordion, Container, Stack, Heading } from '@chakra-ui/react';
+import { Accordion, Container, Stack, Heading, type MenuSelectionDetails, HStack, Dialog, Portal, CloseButton, Button, Text, RadioGroup } from '@chakra-ui/react';
 import { useSSEAnyEvent, useSSEContext } from '@flamefrontend/sse-runtime-react';
-import { type InfiniteData, useInfiniteQuery, type UseInfiniteQueryResult, useQueryClient } from '@tanstack/react-query';
+import { type InfiniteData, useInfiniteQuery, type UseInfiniteQueryResult, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import doy from 'dayjs/plugin/dayOfYear.js';
-import { type ComponentProps, Fragment, useMemo, useState } from "react";
+import { type ComponentProps, Fragment, useCallback, useMemo, useState } from "react";
 import type {MsSseEvent, MsSseEventPayload, PaginatedResponse, PlayApiCommonDetailed, QueryPlaysOptsJson} from '../../../core/Api.js';
-import type {ComponentType} from '../../../core/Atomic.js';
-import { type QueryPlaysOptsJsonRefreshable, tanQueries } from '../../queries/index.js';
+import {actionContextSchema, queueContextSchema, type ComponentType, type QueueContext} from '../../../core/Atomic.js';
+import { type QueryPlaysOptsJsonRefreshable, tanQueries, useQueryWatcher } from '../../queries/index.js';
 import { ActivityDetailFetchable, ActivityDetails, ActivitySummary, ActivitySummaryFetchable, ActivitySummarySkeleton } from '../ActivityDetail.js';
 import { ErrorAlert } from '../ErrorAlert.js';
 import { ListFilters, ListRefereshButton, todayRange } from './ListFilters.js';
@@ -14,6 +14,13 @@ import { type ActivityLogProps, generateGroupPlays, GroupHeader } from './ListPa
 import { NoPlayResults, VirtualizedListDynamic } from './VirtualListDynamic.js';
 import { VirtualizedListExp } from './VirtualListExperimental.js';
 import { VirtualizedListNormal } from './VirtualListNormal.js';
+import { menuItem, type MenuItemRender } from '../buttonMenus/menuItemUtils.js';
+import { RetryIcon } from '../icons/ChakraIcons.js';
+import { PrimaryButtonMenu } from '../buttonMenus/PrimaryButtonMenu.js';
+import ky from 'ky';
+import { formOptions, useForm } from '@tanstack/react-form';
+import z from 'zod';
+import { FormCheckbox, FormRadio, type RadioFormItem } from '../form/formComponents.js';
 
 dayjs.extend(doy);
 
@@ -234,31 +241,6 @@ const insertInfinitePlay = (data: PlayApiCommonDetailed, queryData: InfiniteData
   return newQueryData;
 }
 
-// const updateInfinitePlay = (data: PlayApiCommonDetailed, queryData: InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown>): InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown> => {
-//   const newQueryData: InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown> = {
-//     pages: [],
-//     pageParams: {...queryData.pageParams}
-//   };
-
-//   for(const p of queryData.pages) {
-//     const afterIndex = p.data.findIndex(x => x.uid === data.uid);
-//     if(afterIndex === -1) {
-//       newQueryData.pages.push(p);
-//     } else {
-//       const {
-//         data: playData,
-//         meta
-//       } = p;
-//       newQueryData.pages.push({
-//         meta,
-//         data: [...playData.slice(0, afterIndex), {...p.data[afterIndex], ...data}, ...playData.slice(afterIndex)]
-//       });
-//     }
-//   }
-
-//   return newQueryData;
-// }
-
 const playInWindow = (data: PlayApiCommonDetailed, query: QueryPlaysOptsJson): boolean => {
   if (query.state !== undefined && !query.state.includes(data.state)) {
     console.debug(`[Insert Check ${data.uid}] Play is in state ${data.state} not included in current filters of ${query.state.join(',')}`);
@@ -295,9 +277,107 @@ const playInWindow = (data: PlayApiCommonDetailed, query: QueryPlaysOptsJson): b
   return true;
 }
 
-export const ListContainerFilterable = (props: { componentId: number, componentType: ComponentType } & Pick<ComponentProps<typeof ActivityList>, 'render'>) => {
-  const {componentType} = props;
-  const [filters, setFilter] = useState<QueryPlaysOptsJsonRefreshable>({
+const opts = formOptions.strictSchema(actionContextSchema, {
+        defaultValues: {
+            transform: true,
+            dupeCheck: true,
+            useCache: true,
+            action: 'failures'
+        },
+        validators: [{
+            run: actionContextSchema,
+            triggers: [],
+        }],
+});
+
+const playTypeRadioItems: RadioFormItem[] = [
+  {value: 'all', label: 'All Plays'},
+  {value: 'failures', label: 'Only Unsuccessful Plays'}
+];
+
+const RetryWithDialog = (props: { open: boolean, setOpen: (open: boolean) => void, onSubmit: (vals: QueueContext & {action: 'all' | 'failures'}) => void }) => {
+    const form = useForm({
+        ...opts,
+        onSubmit: ({ schemaOutputs }) => {
+            console.log(schemaOutputs[0]);
+            props.onSubmit(schemaOutputs[0]);
+            props.setOpen(false);
+        }
+    });
+    return (<Dialog.Root
+        role="alertdialog"
+        closeOnInteractOutside
+        unmountOnExit
+        open={props.open}
+        size="sm"
+        onOpenChange={(e) => props.setOpen(e.open)}
+    >
+        <Portal>
+            <Dialog.Backdrop />
+            <Dialog.Positioner>
+                <Dialog.Content>
+                    <Dialog.CloseTrigger asChild>
+                        <CloseButton />
+                    </Dialog.CloseTrigger>
+                    <Dialog.Header>
+                        <Dialog.Title>Retry With...</Dialog.Title>
+                    </Dialog.Header>
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            form.handleSubmit()
+                        }}>
+                        <Dialog.Body>
+                            <Stack gap="3">
+                            <Text mb="3">
+                                Retry <strong>all Plays shown</strong> using the options below:
+                            </Text>
+                                <form.Field
+                                    name="action"
+                                    // @ts-expect-error don't know how to fix this yet
+                                    children={(field) => (<FormRadio field={field} label="Plays to Retry" items={playTypeRadioItems}/>)}
+                                />
+                                <form.Field
+                                    name="transform"
+                                    children={(field) => (<FormCheckbox field={field} label="Transform?"/>)}
+                                />
+                                <form.Field
+                                    name="dupeCheck"
+                                    children={(field) => (<FormCheckbox field={field} label="Check for Duplicate?"/>)}
+                                />
+                                <form.Field
+                                    name="useCache"
+                                    children={(field) => (<FormCheckbox field={field} label="Use Cache?"/>)}
+                                />
+                            </Stack>
+                        </Dialog.Body>
+                        <Dialog.Footer>
+                            <Button variant="outline" onClick={() => props.setOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button colorPalette="blue" type="submit">Retry</Button>
+                        </Dialog.Footer>
+                    </form>
+                </Dialog.Content>
+            </Dialog.Positioner>
+        </Portal>
+    </Dialog.Root>
+    )
+}
+
+
+const MenuRetryFailures = menuItem(RetryIcon, 'failures', 'Retry All Unsuccessful');
+const MenuRetryAll = menuItem(RetryIcon, 'all', 'Retry All');
+const MenuRetryWith = menuItem(RetryIcon, 'allWith', 'Retry All With...');
+const menuItems: MenuItemRender[] = [
+  (extra) => <MenuRetryFailures {...extra}/>,
+  (extra) => <MenuRetryAll color="fg.error" _hover={{ bg: "bg.error", color: "fg.error" }} {...extra}/>,
+  (extra) => <MenuRetryWith {...extra}/>
+];
+
+// instanced so that todayRange is updated on component mount
+const defaultFilter = (): QueryPlaysOptsJsonRefreshable => ({
     playedAt: {
       type: 'between',
       range: todayRange,
@@ -305,11 +385,55 @@ export const ListContainerFilterable = (props: { componentId: number, componentT
     },
     order: 'desc',
     sort: 'playedAt'
+});
+
+export const ListContainerFilterable = (props: { componentId: number, componentType: ComponentType } & Pick<ComponentProps<typeof ActivityList>, 'render'>) => {
+  const { componentType } = props;
+  const [filters, setFilter] = useState<QueryPlaysOptsJsonRefreshable>(defaultFilter());
+  const primaryRefresh = <ListRefereshButton size="md" componentId={props.componentId} filters={filters} variant="subtle" />;
+  const { isFetching: isListFetching } = useQueryWatcher(tanQueries.activities.list(props.componentId, filters).queryKey)
+  const [retryOpen, setRetryOpen] = useState(false);
+
+  const { mutate, isPending, variables, isSuccess } = useMutation({
+    mutationKey: ['retryBulk', props.componentId, filters],
+    // eslint-disable-next-line arrow-body-style
+    mutationFn: (data: { action: string, context?: QueueContext }) => {
+      return ky.post<{ filters: QueryPlaysOptsJsonRefreshable, context?: QueueContext }>(`/api/components/${props.componentId}/plays/queue`, {
+        json: {
+          filters: {
+            ...filters,
+            state: data.action === 'failures' ? ['failed'] : filters.state
+          },
+          context: data.context
+        }
+      });
+    }
   });
+
+  const menuCb = useCallback((value: MenuSelectionDetails) => { 
+    switch(value.value) {
+      case 'failures':
+        mutate({action: 'failures'});
+        break;
+      case 'all':
+        mutate({action: 'all'});
+        break;
+      case 'allWith':
+        setRetryOpen(true);
+        break;
+    }
+  }, [mutate]);
+
   return (
     <Stack width="100%" gap="4">
-      <Heading size="3xl" width="100%">{componentType === 'source' ? 'Plays' : 'Scrobbles'}<ListRefereshButton size="md" componentId={props.componentId} filters={filters}/></Heading>
-      <ListFilters componentType={componentType} filters={filters} onChange={setFilter}/>
+      <RetryWithDialog open={retryOpen} setOpen={setRetryOpen} onSubmit={(vals) => mutate({action: vals.action, context: vals})}/>
+      <Heading size="3xl" width="100%">
+        <HStack>
+          {componentType === 'source' ? 'Plays' : 'Scrobbles'}
+          <PrimaryButtonMenu primary={primaryRefresh} menuItems={menuItems} menuCallback={menuCb} menuButtonProps={{ size: 'md' }} disabled={isListFetching || isPending} />
+        </HStack>
+      </Heading>
+      <ListFilters componentType={componentType} filters={filters} onChange={setFilter} />
       <ListContainerFetchable {...props} filters={filters} />
     </Stack>
   )
