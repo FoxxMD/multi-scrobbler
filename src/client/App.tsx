@@ -132,6 +132,12 @@ function App() {
                   </a>
                   <Version/>
                   <span className="space-x-3" style={{marginLeft: 'auto'}}>
+                    <span className="p-3 rounded-xl border-solid border-2 font-bold">✨ 
+                    <a  href="/next">
+                          Try the New UI
+                      </a>
+                       ✨
+                      </span>
                         <a target="_blank" href="https://status.multi-scrobbler.app">
                           Services Monitor
                       </a>
