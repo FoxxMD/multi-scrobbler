@@ -3,7 +3,7 @@ import type EventEmitter from "events";
 import passport from "passport";
 import { Strategy as DeezerStrategy } from 'passport-deezer';
 import request from 'superagent';
-import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
+import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type PlayObjectMinimal} from "../../core/Atomic.ts";
 import { DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.ts";
 import type {DeezerSourceConfig} from "../common/infrastructure/config/source/deezer.ts";
 import { parseRetryAfterSecsFromObj, sleep, sortByOldestPlayDate, } from "../utils.ts";
@@ -12,10 +12,12 @@ import { readJson } from '../utils/DataUtils.ts';
 import { joinedUrl } from "../utils/NetworkUtils.ts";
 import AbstractSource, { type RecentlyPlayedOptions } from "./AbstractSource.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
+import { SimpleError } from "../common/errors/MSErrors.ts";
 
 export default class DeezerSource extends AbstractSource {
     workingCredsPath;
 
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
     requiresAuth = true;
     requiresAuthInteraction = true;
 
@@ -242,7 +244,7 @@ export default class DeezerSource extends AbstractSource {
             return true;
         } else {
             this.logger.warn('Callback contained an error! User may have denied access?')
-            this.error = error;
+            this.errors.push(error);
             this.logger.error(error);
             return error;
         }

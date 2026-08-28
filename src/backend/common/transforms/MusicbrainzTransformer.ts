@@ -1,4 +1,4 @@
-import { type ArtistCredit, asMBReleasePrimaryGroupType, asMBReleaseSecondaryGroupType, asMBReleaseStatus, DEFAULT_MISSING_TYPES, type LifecycleInput, type MBReleaseGroupPrimaryType, type MBReleaseGroupSecondaryType, type MBReleaseStatus, type MissingMbidType, type PlayObject, type TrackMeta, type TransformerCommon, type TransformOptions } from "../../../core/Atomic.ts";
+import { type ArtistCredit, asMBReleasePrimaryGroupType, asMBReleaseSecondaryGroupType, asMBReleaseStatus, DEFAULT_MISSING_TYPES, type LifecycleInput, type MBReleaseGroupPrimaryType, type MBReleaseGroupSecondaryType, type MBReleaseStatus, type MissingMbidType, type OptionalCacheUsage, type PlayObject, type TrackMeta, type TransformerCommon, type TransformOptions } from "../../../core/Atomic.ts";
 import { isWhenCondition, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";
 import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../core/Transform.ts";
@@ -429,7 +429,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         }
     }
 
-    public async getTransformerData(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
+    public async getTransformerData(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts?: OptionalCacheUsage): Promise<IRecordingMSList> {
         
         const {
             // preserve order of search from before searchOrder
@@ -443,25 +443,25 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             try {
                 switch(searchType) {
                     case 'isrc':
-                        results = await this.searchByIsrc(play, stageConfig);
+                        results = await this.searchByIsrc(play, stageConfig, opts);
                         break;
                     case 'album':
-                        results = await this.searchByAlbum(play, stageConfig);
+                        results = await this.searchByAlbum(play, stageConfig, opts);
                         break;
                     case 'artist':
-                        results = await this.searchByArtist(play, stageConfig);
+                        results = await this.searchByArtist(play, stageConfig, opts);
                         break;
                     case 'basic':
-                        results = await this.searchByBasicFields(play, stageConfig);
+                        results = await this.searchByBasicFields(play, stageConfig, opts);
                         break;
                     case 'freetext':
-                        results = await this.searchByFreeText(play, stageConfig);
+                        results = await this.searchByFreeText(play, stageConfig, opts);
                         break;
                     case 'basicorids':
-                        results = await this.searchByBasicFieldsOrMBIDs(play, stageConfig);
+                        results = await this.searchByBasicFieldsOrMBIDs(play, stageConfig, opts);
                         break;
                     case 'mbidrecording':
-                        results = await this.searchByRecordingMbid(play, stageConfig);
+                        results = await this.searchByRecordingMbid(play, stageConfig, opts);
                         break;
                 }
                 queries.push({type: `mbQuery-${searchType}${results.recordings.length === 0 ? '-empty' : ''}`, input: results.requestQuery});
@@ -486,12 +486,12 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         return {...results, requestQueries: queries};
     }
 
-    public async searchByBasicFields(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
+    public async searchByBasicFields(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList> {
         this.logger.debug({labels: ['Basic Search']}, 'Searching by artist/album/track');
-        return await this.api.searchByRecording(play);
+        return await this.api.searchByRecording(play, opts);
     }
 
-    public async searchByBasicFieldsOrMBIDs(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
+    public async searchByBasicFieldsOrMBIDs(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList> {
         const using: UsingTypes[] = [];
         const {
             data: {
@@ -512,31 +512,31 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         using.push((brainz.artist ?? []).length > 0 ? 'mbidartist' : 'artist');
 
         this.logger.debug({labels: ['Basic Or MBID Search']}, `Searching using ${using.join(', ')}}`);
-        return await this.api.searchByRecording(play, {using});
+        return await this.api.searchByRecording(play, {using, ...opts});
     }
 
-    public async searchByIsrc(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
+    public async searchByIsrc(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList> {
         if(play.data.isrc !== undefined) {
             this.logger.debug({labels: ['ISRC Search']},'Searching with ISRC');
-            return await this.api.searchByRecording(play, {using: ['isrc']});
+            return await this.api.searchByRecording(play, {using: ['isrc'], ...opts});
         }
         throw new SearchPrerequisiteError('Play does not have ISRC');
     }
 
-    public async searchByRecordingMbid(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
+    public async searchByRecordingMbid(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList> {
         if(play.data.meta?.brainz?.recording !== undefined) {
             this.logger.debug({labels: ['MBID Search']},'Searching with Recording MBID');
-            return await this.api.searchByRecording(play, {using: ['mbidrecording']});
+            return await this.api.searchByRecording(play, {using: ['mbidrecording'], ...opts});
         }
         throw new SearchPrerequisiteError('Play does not have recording MBID');
     }
 
-    public async searchByAlbum(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
+    public async searchByAlbum(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList> {
         // possibly the artist is incorrect (may be combined as one string)
         // if we have an album we can likely still get a decent hit w/o using artist
         if(play.data.album !== undefined && play.data.artists !== undefined && play.data.artists.length > 0) {
             this.logger.debug({labels: ['Album Search']},'Searching with only track+album');
-            return await this.api.searchByRecording(play, {using: ['title','album']});
+            return await this.api.searchByRecording(play, {using: ['title','album'], ...opts});
         }
         if(play.data.album === undefined) {
             throw new SearchPrerequisiteError('Play does not have an album');
@@ -549,7 +549,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         }
     }
 
-    public async searchByArtist(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
+    public async searchByArtist(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList> {
         const {
             searchArtistMethod = this.defaults.searchArtistMethod,
         } = stageConfig;
@@ -582,7 +582,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
                     // so we split out all artists by all found delimiters
                     const nativePlay = nativeParse(play, {titleClean: true, delimiters: DELIMITERS});
                     this.logger.debug({labels: ['Parsed Artist Search']},'Searching with aggressive native parsing');
-                    return await this.api.searchByRecording(nativePlay, {using: ['title','artist']});
+                    return await this.api.searchByRecording(nativePlay, {using: ['title','artist'], ...opts});
                 }
             }
 
@@ -594,9 +594,9 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             }
     }
 
-    public async searchByFreeText(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
+    public async searchByFreeText(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList> {
         this.logger.debug({labels: ['Freetext Search']},'Trying freetext search');
-        const results = await this.api.searchByRecording(play, {freetext: true}) as IRecordingMSList;
+        const results = await this.api.searchByRecording(play, {freetext: true, ...opts}) as IRecordingMSList;
         results.freeText = true;
         return results;
     }

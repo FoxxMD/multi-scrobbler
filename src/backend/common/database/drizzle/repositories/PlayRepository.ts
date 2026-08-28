@@ -3,28 +3,29 @@ import dayjs, { type Dayjs } from "dayjs";
 import { eq, inArray, relationsFilterToSQL, sql } from "drizzle-orm";
 import assert from "node:assert";
 import type { MarkOptional } from "ts-essentials";
-import { type DateLike, type DeepReplaceValue, type PlayObject, type PlayState, type QueueName, TA_DEFAULT_ACCURACY, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
+import { type DateLike, type DeepReplaceValue, type PlayObject, type PlayState, QUEUE_STATUS_QUEUED, type QueueName, SCROBBLE_TS_SOC_END, TA_DEFAULT_ACCURACY, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
 import { removeUndefinedKeys } from '../../../../../core/DataUtils.ts';
 import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.ts";
 import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../../utils/PlayComparisonUtils.ts";
 import { hashObject } from "../../../../utils/StringUtils.ts";
-import { comparePlayTemporally, getTemporalAccuracyCloseVal, hasAcceptableTemporalAccuracy } from "../../../../utils/TimeUtils.ts";
+import { comparePlayTemporally, getScrobbleTsSOCDateWithContext, getTemporalAccuracyCloseVal, hasAcceptableTemporalAccuracy } from "../../../../utils/TimeUtils.ts";
 import { type CompactableProperty, type RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.ts";
-import type {SourceType} from "../../../../../core/Atomic.ts";
+import type {ErrorLike, SourceType} from "../../../../../core/Atomic.ts";
 import type {FindMany, FindWhere, FindWith, PlayInputNew, PlayNew, PlaySelect, PlaySelectWithQueueStates, PlayWith, QueueStateSelect, WhereClause} from "../drizzleTypes.ts";
 import { type DbConcrete, runTransaction } from "../drizzleUtils.ts";
-import { generateInputEntity, generatePlayEntity, hydratePlaySelect, type PlayEntityOpts, type PlayHydateOptions } from "../entityUtils.ts";
-import { playInputs, plays, relations } from "../schema/schema.ts";
+import { generateInputEntity, generatePlayEntity, hydratePlaySelect, stateChangeToPlayEvent, transformToPlayEvent, type PlayEntityOpts, type PlayHydateOptions } from "../entityUtils.ts";
+import { playEvents, playInputs, plays, queueStates, relations, type TSchema } from "../schema/schema.ts";
 import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
 import type {PaginatedResponse} from "../../../../../core/Api.ts";
 import type {PaginatedQueryResponse} from "../../../../../core/Api.ts";
-;
+import { type PlayEventTransform } from "../../../../../core/PlayEvent.ts";
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 
 export interface QueueCriteria {
     queueName: QueueName
     queueStatus: QueueStateSelect['queueStatus'][] | QueueStateSelect['queueStatus']
+    retries?: number
 }
 
 export interface PlayWhereOpts<D extends DateLike = Dayjs> {
@@ -38,7 +39,7 @@ export interface PlayWhereOpts<D extends DateLike = Dayjs> {
     text?: string[]
 }
 
-export type WithPlayRelation = 'input' | 'parent' | 'parent-input' | 'queues';
+export type WithPlayRelation = 'input' | 'parent' | 'parent-input' | 'queues' | 'events' | 'children';
 export interface QueryPlaysOpts<D extends DateLike = Dayjs> extends PlayWhereOpts<D> {
     sort?: 'seenAt' | 'playedAt'
     order?: 'asc' | 'desc'
@@ -92,6 +93,26 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return res as PlaySelectWithQueueStates;
     }
 
+    findByIdWith = async <K extends keyof TSchema['plays']["relations"]>(id: number, args: WithPlayRelation[]): Promise<PlayWith<K> | undefined> => {
+        const res = await this.db.query.plays.findFirst({
+            where: {
+                id
+            },
+            with: buildPlayWith(args)
+        });
+        return res as unknown as PlayWith<K> | undefined;
+    }
+
+    findByUidWith = async <K extends keyof TSchema['plays']["relations"]>(uid: string, args: WithPlayRelation[]): Promise<PlayWith<K> | undefined> => {
+        const res = await this.db.query.plays.findFirst({
+            where: {
+                uid
+            },
+            with: buildPlayWith(args)
+        });
+        return res as unknown as PlayWith<K> | undefined;
+    }
+
     createPlays = async (entitiesOpts: RepositoryCreatePlayOpts[], opts: HydrateOpts = {}): Promise<PlayWith<'input'>[]> => {
 
         const {
@@ -103,11 +124,14 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
             const entitiesData = entitiesOpts.map((data) => {
                 const {
-                    play,
+                    play: {
+                        lifecycle,
+                        ...playRest
+                    },
                     input,
                     ...rest
                 } = data;
-                return generatePlayEntity(play, { componentId: this.componentId, ...rest });
+                return generatePlayEntity(playRest, { componentId: this.componentId, ...rest });
             });
 
             const nakedPlays = await this.db.insert(plays).values(entitiesData).returning();
@@ -126,6 +150,23 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             });
 
             const inputRow = await this.db.insert(playInputs).values(inputDatas);
+
+            const eventData = nakedPlays.map((x, index) => {
+                const {
+                    play: {
+                        lifecycle = [],
+                    } = {}
+                } = entitiesOpts[index];
+
+                if(lifecycle.length > 0) {
+                    return {...transformToPlayEvent(lifecycle), playId: x.id}
+                }
+                return undefined;
+            }).filter(x => x !== undefined);
+            if(eventData.length > 0) {
+                await this.db.insert(playEvents).values(eventData);
+            }
+
             playRows = nakedPlays.map((x, index) => ({...x, play: hydratePlaySelect(x, hydrate), input: inputRow[index]}));
         });
 
@@ -181,6 +222,9 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                         break;
                     case 'queues':
                         query.with.queueStates = true;
+                        break;
+                    case 'events':
+                        query.with.events = true;
                         break;
                     default:
                         throw new Error(`Unknown relation ${w}`);
@@ -408,28 +452,28 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                     summaryDelStates.push(`No '${retentionType}' Plays older than ${shortTodayAwareFormat(date)}`);
                 } else {
                     for(const id of ids) {
-                        let compactedPlay: PlayObject;
                         if(compactTypes.includes('input')) {
                             await this.db.update(playInputs).set({
                                 data: {removedReason: 'Removed by compaction'}
                             }).where(eq(playInputs.playId, id));
                         }
                         if(compactTypes.includes('transform')) {
-                            const playRow = await this.db.query.plays.findFirst({where: {id: id}});
-                            if(playRow === undefined) {
-                                // uhh shouldn't be
-                                loggerCom.warn(`No Play found with ID ${id}, but it should have been...`);
-                                continue;
-                            }
-
-                            compactedPlay = playRow.play;
-                            if(compactedPlay.lifecycle !== undefined) {
-                                compactedPlay.lifecycle = compactedPlay.lifecycle.map(x => {
-                                    if(x.inputs == undefined) {
+                            const events = await this.db.query.playEvents.findMany({where: {playId: id}});
+                            for(const ev of events) {
+                                if(ev.eventName === 'transform') {
+                                    const transformEvent = ev as PlayEventTransform;
+                                    let compactedInput = false;
+                                    transformEvent.data = transformEvent.data.map(x => {
+                                        if(x.inputs !== undefined && x.inputs.length > 0) {
+                                            compactedInput = true;
+                                            return {...x, inputs: x.inputs.map((y) => ({type: y.type, input: 'Removed by compaction'}))};
+                                        }
                                         return x;
+                                    });
+                                    if(compactedInput) {
+                                        await this.db.update(playEvents).set({data: transformEvent.data}).where(eq(playEvents.id, transformEvent.id));
                                     }
-                                    return {...x, inputs: x.inputs.map(y => ({type: y.type, input: 'Removed by compaction'}))};
-                                });
+                                }
                             }
                         }
 
@@ -437,9 +481,6 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                         const vals: Parameters<typeof updater.set>[0] = {
                             compacted: compactedFlags.join('-')
                         };
-                        if(compactedPlay !== undefined) {
-                            vals.play = compactedPlay;
-                        }
                         await this.db.update(plays).set(vals).where(eq(plays.id, id));
                     }
                     loggerCom.trace(`Compacted ${ids.length} '${retentionType}' plays`);
@@ -454,65 +495,75 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
     }
 
     protected prepareGetQueueNext = () => this.db.query.plays.findFirst({
+        // https://stackoverflow.com/a/78551796
+        // cannot bind arrays in sqlite
         where: {
             componentId: sql.placeholder('componentId'),
             queueStates: {
                 queueName: sql.placeholder('queueName'),
-                queueStatus: 'queued',
+                queueStatus: sql.placeholder('status'),
                 retries: {
                     lte: sql.placeholder('retries')
                 }
             },
         },
         with: {
-            queueStates: true
+            queueStates: {
+                orderBy: {
+                    updatedAt: 'asc'
+                }
+            }
         },
-        orderBy: {
-            seenAt: 'asc'
-        },
+        // orderBy: {
+        //     seenAt: 'asc'
+        // },
     }).prepare()
 
-    public getQueueNext = async (queueName: string, opts: {order?: 'asc' | 'desc', retries?: number} & ComponentConstrainedRepoOpts = {}): Promise<PlaySelectWithQueueStates | undefined> => {
+    public getQueueNext = async (queueName: string, opts: {order?: 'asc' | 'desc', retries?: number, notIds?: number[], status?: QueueStateSelect['queueStatus']} & ComponentConstrainedRepoOpts = {}): Promise<PlaySelectWithQueueStates | undefined> => {
         const {
-            retries = 0,
+            retries = 1000,
+            notIds,
             order = 'asc',
+            status = QUEUE_STATUS_QUEUED,
             componentId = this.componentId
         } = opts;
 
-        // let where: FindWhere<'plays'> = {
-        //     componentId
-        // }
+        let res: PlaySelectWithQueueStates | undefined;
 
-        // if(retries !== undefined) {
-        //     where.queueStates = {
-        //         queueName,
-        //         queueStatus: 'queued',
-        //         retries: {
-        //             lte: retries
-        //         }
-        //     }
-        // } else {
-        //     where.queueStates = {
-        //         queueName,
-        //         queueStatus: 'queued'
-        //     }
-        // }
+        if (notIds === undefined) {
+            if (this.getQueueNextPrepared === undefined) {
+                this.getQueueNextPrepared = this.prepareGetQueueNext();
+            }
 
-        // const res = await this.db.query.plays.findFirst({
-        //         where: where,
-        //         orderBy: {
-        //             seenAt: order
-        //         },
-        //         with: {
-        //             queueStates: true
-        //         }
-        // });
-
-        if(this.getQueueNextPrepared === undefined) {
-            this.getQueueNextPrepared = this.prepareGetQueueNext();
+            res = await this.getQueueNextPrepared.execute({ queueName, retries, componentId, status });
+        } else {
+            // cannot bind arrays in sqlite so this has to be non-prepared
+            res = await this.db.query.plays.findFirst({
+                where: {
+                    id: {
+                        notIn: notIds
+                    },
+                    componentId: componentId,
+                    queueStates: {
+                        queueName: queueName,
+                        queueStatus: status,
+                        retries: {
+                            lte: retries
+                        }
+                    },
+                },
+                with: {
+                    queueStates: {
+                        orderBy: {
+                            updatedAt: 'asc'
+                        }
+                    }
+                },
+                // orderBy: {
+                //     seenAt: 'asc'
+                // },
+            });
         }
-
-        const res = await this.getQueueNextPrepared.execute({queueName, retries, componentId});
  
         if(res === undefined) {
             return undefined;
@@ -613,12 +664,20 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return {data: res.map(x => ({...x, play: hydratePlaySelect(x, hydrate)})), meta: {limit, offset}};
     }
 
-    public checkExisting = async (play: PlayObject, opts: {queueName?: string, states?: PlaySelect['state'][], taAccuracy?: TemporalAccuracy[]} & ComponentConstrainedRepoOpts = {}): Promise<PlaySelectWithQueueStates | undefined> => {
+    public checkExisting = async (play: PlayObject, opts: {
+        queueName?: string,
+        states?: PlaySelect['state'][],
+        taAccuracy?: TemporalAccuracy[],
+        inputHash?: string | PlayObject,
+        notId?: number
+    } & ComponentConstrainedRepoOpts = {}): Promise<PlaySelectWithQueueStates | undefined> => {
         const {
             queueName,
             componentId = this.componentId,
             taAccuracy = TA_DEFAULT_ACCURACY,
-            states
+            states,
+            inputHash,
+            notId,
         } = opts;
         const hash = hashObject(playContentBasicInvariantTransform(play).data);
 
@@ -626,19 +685,25 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         // which we can then use with temporal comparison to make sure we are comparing the correct dates
         //
         // this isn't as fast as just comparing playDate directly but its still much faster/cheaper than paginating plays and doing everything in-memory
-        const dateGranularity = getTemporalAccuracyCloseVal(play.meta.source as SourceType);
-        let endRange: Dayjs;
-        if(play.data.playDateCompleted !== undefined) {
-            // this will be present if source reports it
-            // or we tracked it live with MemorySource
-            endRange = play.data.playDateCompleted.add(dateGranularity, 's');
-        } else {
-            endRange = play.data.playDate.add(dateGranularity, 's');
-        }
+        // const dateGranularity = getTemporalAccuracyCloseVal(play.meta.source as SourceType);
+        // let endRange: Dayjs;
+        // if(play.data.playDateCompleted !== undefined) {
+        //     // this will be present if source reports it
+        //     // or we tracked it live with MemorySource
+        //     endRange = play.data.playDateCompleted.add(dateGranularity, 's');
+        // } else {
+        //     endRange = play.data.playDate.add(dateGranularity, 's');
+        // }
         const where: FindWhere<'plays'> = {
             componentId,
-            playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play)),
+            playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play, {useDuration: true})),
         };
+
+        if(notId !== undefined) {
+            where.NOT = {
+                id: notId
+            }
+        }
         
         if(queueName !== undefined) {
             where.queueStates = {
@@ -653,19 +718,20 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         }
 
         const mbidId = playMbidIdentifier(play);
-        if(mbidId !== undefined) {
-            where.AND = [
-                {
-                    OR: [
-                        {
-                            playHash: hash
-                        },
-                        {
-                            mbidIdentifier: mbidId
-                        }
-                    ]
-                }
-            ]
+        if (mbidId !== undefined || inputHash !== undefined) {
+            where.AND = [{
+                OR: [
+                    {
+                        playHash: hash
+                    }
+                ]
+            }];
+            if (mbidId !== undefined) {
+                where.AND[0].OR.push({ mbidIdentifier: mbidId });
+            }
+            if (inputHash !== undefined) {
+                where.AND[0].OR.push({ input: { playHash: typeof inputHash === 'string' ? inputHash : hashObject(playContentBasicInvariantTransform(inputHash).data) } });
+            }
         } else {
             where.playHash = hash;
         }
@@ -673,7 +739,8 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         const res = await this.db.query.plays.findMany({
             where,
             with: {
-                queueStates: true
+                queueStates: true,
+                input: true
             }
         });
         if(res.length === 0) {
@@ -685,12 +752,13 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         })
     }
 
-    public getTemporallyClosePlays = async (play: PlayObject, opts: {states?: PlaySelect['state'][], bufferTime?: number} & { with?: WithPlayRelation[] } & ComponentConstrainedRepoOpts = {}): Promise<PlayWith<'queueStates'>[]> => {
+    public getTemporallyClosePlays = async (play: PlayObject, opts: {states?: PlaySelect['state'][], bufferTime?: number} & { with?: WithPlayRelation[], notId?: number } & ComponentConstrainedRepoOpts = {}): Promise<PlayWith<'queueStates'>[]> => {
         const {
             componentId = this.componentId,
             bufferTime,
             states,
-            with: qWith
+            with: qWith,
+            notId
         } = opts;
 
         const query: FindMany<'plays'> = {};
@@ -702,6 +770,11 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         if(states !== undefined) {
             where.state = {
                 in: states
+            }
+        }
+        if(notId !== undefined) {
+            where.id = {
+                NOT: notId
             }
         }
         query.where = where;
@@ -734,26 +807,75 @@ where compacted IS NOT NULL
 group by componentId,compacted;`);
         return res;
     }
+
+    async updateById(id: number, data: Partial<PlayNew> & {event?: boolean, reason?: string, error?: ErrorLike}): Promise<typeof this.table.$inferSelect> {
+        const res = await super.updateById(id, data) as PlaySelect;
+        if(data.event === true) {
+            if(data.state !== undefined) {
+                try {
+                    await this.db.insert(playEvents).values({...stateChangeToPlayEvent(removeUndefinedKeys({state: data.state, reason: data.reason, error: data.error})), playId: id});
+                } catch (e) {
+                    this.logger.warn(new Error(`Failed to create Play Event for state change ${data.state} on Play ${id}`));
+                }
+            }
+        }
+        return res;
+    }
+
+    async deleteById(id: number): Promise<void> {
+        await runTransaction(this.db, async () => {
+            await this.db.delete(playInputs).where(eq(playInputs.playId, id));
+            await this.db.delete(playEvents).where(eq(playEvents.playId, id));
+            await this.db.delete(queueStates).where(eq(queueStates.playId, id));
+            await this.db.update(plays).set({parentId: null}).where(eq(plays.parentId, id));
+            await this.db.delete(plays).where(eq(plays.id, id));
+        });
+    }
+    async deleteByIds(ids: number[]): Promise<void> {
+        await runTransaction(this.db, async () => {
+            await this.db.delete(playInputs).where(inArray(playInputs.playId, ids));
+            await this.db.delete(playEvents).where(inArray(playEvents.playId, ids));
+            await this.db.delete(queueStates).where(inArray(queueStates.playId, ids));
+            await this.db.update(plays).set({parentId: null}).where(inArray(plays.parentId, ids));
+            await this.db.delete(plays).where(inArray(plays.id, ids));
+        });
+    }
 }
 
-export const getTemporallyCloseDateCompareOp = (play: PlayObject, opts: {bufferTime?: number, useCompleted?: boolean} = {}): CompareDateOp => {
+export const getTemporallyCloseDateCompareOp = (play: PlayObject, opts: {bufferTime?: number, useCompleted?: boolean, useDuration?: boolean} = {}): CompareDateOp => {
     const {
         // use either provided arg or default to using source granularity
         bufferTime = getTemporalAccuracyCloseVal(play.meta.source as SourceType),
-        useCompleted = true
+        useCompleted,
+        useDuration,
     } = opts;
         // we get all plays with a play date between playdate - (buffer) AND (playDateCompleted or playDate) + (buffer)
-        let endRange: Dayjs;
-        if(play.data.playDateCompleted !== undefined && useCompleted) {
+        let startRange: Dayjs,
+        endRange: Dayjs;
+
+        // make sure we use the 
+        const [sotPlayDate, SOT] = getScrobbleTsSOCDateWithContext(play);
+
+        if(useDuration && play.data.duration !== undefined) {
+            if(SOT === SCROBBLE_TS_SOC_END) {
+                endRange = play.data.playDate.add(bufferTime, 's');
+                startRange = play.data.playDate.subtract(play.data.duration + bufferTime,'s')
+            } else {
+                endRange = play.data.playDate.add(play.data.duration + bufferTime, 's');
+                startRange = play.data.playDate.subtract(bufferTime,'s')
+            }
+        } else if(play.data.playDateCompleted !== undefined && useCompleted) {
+            startRange = play.data.playDate.subtract(bufferTime, 's');
             // this will be present if source reports it
             // or we tracked it live with MemorySource
             endRange = play.data.playDateCompleted.add(bufferTime, 's');
         } else {
-            endRange = play.data.playDate.add(bufferTime, 's');
+            startRange = sotPlayDate.subtract(bufferTime, 's');
+            endRange = sotPlayDate.add(bufferTime, 's');
         }
         return {
             type: 'between',
-            range: [play.data.playDate.subtract(bufferTime, 's'), endRange]
+            range: [startRange, endRange]
         }
 }
 
@@ -779,6 +901,12 @@ export const buildPlayWith = (args: WithPlayRelation[] | undefined): FindWith<'p
                 break;
             case 'queues':
                 qWith.queueStates = true;
+                break;
+            case 'events':
+                qWith.events = true;
+                break;
+            case 'children':
+                qWith.children = true;
                 break;
             default:
                 throw new Error(`Unknown relation ${w}`);
@@ -829,14 +957,26 @@ export const buildPlayWhere = (args: PlayWhereOpts): WhereClause<'plays'> => {
         // or else assigning an array to OR using only `typeof where.queueStates` causes a type error
         const queueWhere: typeof where.queueStates.OR[0][] = [];
         for(const q of queues) {
-            queueWhere.push(
-                {
-                    queueName: q.queueName,
-                    queueStatus: typeof q.queueStatus === 'string' ? q.queueStatus : {
-                        in: q.queueStatus
-                    }
+            const qWhereCriteria: typeof where.queueStates.OR[0] =  {
+                queueName: q.queueName,
+                queueStatus: typeof q.queueStatus === 'string' ? q.queueStatus : {
+                    in: q.queueStatus
                 }
-            )
+            };
+            if(q.retries !== undefined) {
+                qWhereCriteria.retries = {
+                    lte: q.retries
+                }
+            }
+            queueWhere.push(qWhereCriteria);
+            // queueWhere.push(
+            //     {
+            //         queueName: q.queueName,
+            //         queueStatus: typeof q.queueStatus === 'string' ? q.queueStatus : {
+            //             in: q.queueStatus
+            //         }
+            //     }
+            // )
         }
         if(queueWhere.length === 1) {
             where.queueStates = queueWhere[0];

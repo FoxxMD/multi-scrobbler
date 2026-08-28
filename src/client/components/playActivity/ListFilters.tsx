@@ -324,6 +324,7 @@ export const ListRefereshButton = (props: ComponentProps<typeof RefreshButton> &
     }, [componentId, filters]);
 
     const { isFetching } = useQueryWatcher(tanQueries.activities.list(componentId, filters).queryKey)
+    const { isFetching: isRetryFetching } = useQueryWatcher(['retryBulk', componentId, filters])
 
-    return <RefreshButton variant="ghost" size="sm" {...rest} loading={isFetching} onClick={(e) => onRefresh()}/>
+    return <RefreshButton variant="ghost" size="sm" {...rest} loading={isFetching || isRetryFetching} onClick={(e) => onRefresh()}/>
 }

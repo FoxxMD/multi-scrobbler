@@ -1,7 +1,7 @@
 import type EventEmitter from "events";
-import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, PARSED_FROM, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import type {FormatPlayObjectOptions, InternalConfig, TimeRangeListensFetcher} from "../common/infrastructure/Atomic.ts";
-import type {PlayPlatformId} from '../../core/Atomic.ts';
+import type {ComponentAuthType, PlayPlatformId} from '../../core/Atomic.ts';
 import type {SourceType} from "../../core/Atomic.ts";
 import type {LastfmSourceConfig} from "../common/infrastructure/config/source/lastfm.ts";
 import LastfmApiClient, { formatPlayObj } from "../common/vendor/LastfmApiClient.ts";
@@ -16,6 +16,7 @@ import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.ts
 export default class LastfmSource extends MemorySource {
 
     api: LastfmApiClient;
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.interactive;
     requiresAuth = true;
     requiresAuthInteraction = true;
     upstreamType: string = 'Last.fm';
@@ -101,7 +102,7 @@ export default class LastfmSource extends MemorySource {
     getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
         try {
             const [history, now] = await this.getLastfmRecentTrack(options);
-            return history;
+            return history.map((x) => ({...x, meta: {...x.meta, parsedFrom: PARSED_FROM.history}}));
         } catch (e) {
             throw e;
         }

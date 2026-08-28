@@ -1,5 +1,5 @@
 import type EventEmitter from "events";
-import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, type ComponentAuthType, PARSED_FROM, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import type {FormatPlayObjectOptions, InternalConfig, TimeRangeListensFetcher} from "../common/infrastructure/Atomic.ts";
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
@@ -11,6 +11,7 @@ import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.ts
 export default class KoitoSource extends MemorySource {
 
     api: KoitoApiClient;
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
     requiresAuth = true;
     requiresAuthInteraction = false;
     getScrobblesForTimeRange: TimeRangeListensFetcher
@@ -63,7 +64,7 @@ export default class KoitoSource extends MemorySource {
         this.setStatus('Checking for new Plays');
         await this.processRecentPlays([]);
         const resp = await this.getScrobblesForTimeRange({limit, cursor: 0 });
-        return resp;
+        return resp.map((x) => ({...x, meta: {...x.meta, parsedFrom: PARSED_FROM.history}}));
     }
 
     getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {

@@ -12,7 +12,7 @@ import {
   useSSEContext,
   useSSEAnyEvent
 } from "@flamefrontend/sse-runtime-react";
-import { CountLiveIndicator, DeadLetterIndicator, QueuedIndicator } from "./Stats.js";
+import { CountIndicatorStreamable, DeadLetterIndicatorStreamable, QueuedIndicatorStreamable } from "./Stats.js";
 import { ComponentStateBadge } from "../Badges.js";
 import { MSErrorBoundary } from "../ErrorBoundary.js";
 
@@ -28,7 +28,6 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
     } = props;
     let sleepingRender: React.JSX.Element = null;
 
-    let body = <Card.Footer/>;
     const cardHeaderProps: Card.HeaderProps = {};
     const isClient = isComponentClientApiJson(data);
     if(isComponentSourceApiJson(data)) {
@@ -39,7 +38,7 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
            sleepingRender = <IdleIcon animated/>;
         }
     }
-    body = (<Card.Body px="3" py="2" paddingTop="3">
+    const body = (<Card.Body px="3" py="2" paddingTop="3">
         {fetchable ? <PlayersContainerFetchable data={data} nowPlaying={isClient} stack={presentPlayersContainerProps}/> : <PlayersContainer data={data} nowPlaying={isClient} live={fetchable} stack={presentPlayersContainerProps}/>}
     </Card.Body>);
 
@@ -76,43 +75,19 @@ export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetcha
 //colorPalette={data.mode === 'client' ? 'purple' : 'pink'}
 // color={data.mode === 'client' ? 'purple' : 'pink'}
 
-const QuickStatsSource = (props: { data: ComponentCommonApiJson, streamable?: boolean }) => {
-    if (isComponentSourceApiJson(props.data)) {
-        const {
-            tracksDiscovered,
-            countLive
-        } = props.data;
-        return (
+const QuickStatsSource = (props: { data: ComponentCommonApiJson, streamable?: boolean }) => (
             <Fragment>
                 <HStack gap="2">
-                {/* <TextMuted textStyle="sm">{tracksDiscovered} Discovered</TextMuted> */}
-                <CountLiveIndicator data={props.data} streamable={props.streamable} as="text"/>
-                </HStack>
-            </Fragment>
-        )
-    } else if (isComponentClientApiJson(props.data)) {
-        const {
-            queued,
-            deadLetterScrobbles,
-            deadLetterScrobblesTotal,
-            countLive,
-        } = props.data;
-
-        return (
-            <Fragment>
-                <HStack gap="2">
-                <QueuedIndicator data={props.data} streamable={props.streamable} as="text"/>
+                <QueuedIndicatorStreamable data={props.data} as="text"/>
                 <Separator orientation="vertical" height="4" />
-                <DeadLetterIndicator data={props.data} streamable={props.streamable} as="text"/>
+                <DeadLetterIndicatorStreamable data={props.data} as="text"/>
                 <HStack gap="2" hideBelow="sm">
                 <Separator orientation="vertical" height="4" />
-                <CountLiveIndicator data={props.data} streamable={props.streamable} as="text"/>
+                <CountIndicatorStreamable data={props.data} as="text"/>
                 </HStack>
                 </HStack>
             </Fragment>
         )
-    }
-}
 
 export const MSComponentSummaryFetchable = (props: {componentId: number, data: ComponentCommonApiJson}) => {
     const {

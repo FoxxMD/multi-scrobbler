@@ -201,9 +201,9 @@ export interface PlayMetaBase<D extends DateLike = Dayjs> {
     musicService?: string
 
     /**
-     * Specifies from what facet/data from the source this play was parsed from IE history, now playing, etc...
+     * Specifies from what facet/data from the source this play was parsed from IE player, backlog, now playing, etc...
      * */
-    parsedFrom?: string
+    parsedFrom?: PARSED_FROM_TYPE
     /**
      * Unique ID for this track, given by the Source
      * */
@@ -266,6 +266,9 @@ export interface PlayMetaBase<D extends DateLike = Dayjs> {
     scrobbleTsSOC?: ScrobbleTsSOC
 
     comment?: string
+
+    /** Was the component activitely monitoring when this Play was created? */
+    wasMonitored?: boolean
 
     //lifecycle: PlayLifecycle<D>
     lifecycleInputs?: LifecycleInput[]
@@ -377,7 +380,8 @@ export interface ObjectPlayData extends PlayData {
     playDateCompleted?: Dayjs
 }
 
-export type LogLevelStandalone = 'debug' | 'error' | 'verbose' | 'info' | 'silly' | 'silent' | 'log' | 'trace' | 'warn' | 'fatal';
+export const logLevelStandaloneSchema = z.enum(['debug','error','verbose','info','silly','silent','log','trace','warn','fatal'])
+export type LogLevelStandalone = z.infer<typeof logLevelStandaloneSchema>;
 
 export interface LogOutputConfig {
     level: LogLevelStandalone,
@@ -476,6 +480,15 @@ export const SOURCE_SOT = {
     INGRESS: 'ingress'
 } as const satisfies Record<string, SOURCE_SOT_TYPES>
 export const sourceSotTypes: SOURCE_SOT_TYPES[] = ['player','history','ingress'];
+
+export type PARSED_FROM_TYPE = 'backlog' | 'now playing' | 'player' | 'history' | 'ingress';
+export const PARSED_FROM = {
+    backlog : 'backlog',
+    nowPlaying: 'now playing',
+    ingress: 'ingress',
+    player: 'player',
+    history: 'history'
+} as const satisfies Record<string, PARSED_FROM_TYPE>
 
 export interface URLData {
     url: URL
@@ -607,10 +620,10 @@ export const REGEX_ISO8601_LOOSE = new RegExp(/\d{4}-[01]\d-[0-3]\dT/);
  */
 export const REGEX_ISO8601_WELLKNOWN = new RegExp(/dayjs-(\d{4}-[01]\d-[0-3]\dT.*)/);
 
-export const CLIENT_INGRESS_QUEUE: QueueName = 'ingress';
-export const CLIENT_DEAD_QUEUE: QueueName = 'dead';
+export const INGRESS_QUEUE: QueueName = 'ingress';
+export const DEAD_QUEUE: QueueName = 'dead';
 export type QueueName = 'ingress' | 'dead';
-export const QUEUE_NAMES = [CLIENT_INGRESS_QUEUE, CLIENT_DEAD_QUEUE];
+export const QUEUE_NAMES = [INGRESS_QUEUE, DEAD_QUEUE];
 
 /**
  * Useful TS type-only utility for testing type equality
@@ -642,6 +655,19 @@ export const QUEUE_STATUS_QUEUED: QueueStatus = 'queued';
 export const QUEUE_STATUS_COMPLETED: QueueStatus = 'completed';
 export const QUEUE_STATUS_FAILED: QueueStatus = 'failed';
 export const QUEUE_STATUSES: QueueStatus[] = [QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, QUEUE_STATUS_QUEUED];
+
+export const DEAD_LETTER_RETRIES_DEFAULT = 3;
+
+export const queueContextSchema = z.object({
+    transform: z.boolean().optional(),
+    dupeCheck: z.boolean().optional(),
+    useCache: z.boolean().optional(),
+    reason: z.string().optional()
+});
+
+export type QueueContext = z.infer<typeof queueContextSchema>;
+
+export const actionContextSchema = queueContextSchema.extend({action: z.enum(['all','failures'])});
 
 /**
  * @see https://github.com/ts-essentials/ts-essentials/issues/339#issuecomment-4681920369 */
@@ -808,6 +834,13 @@ export const NO_DEVICE = 'NoDevice';export const NO_USER = 'SingleUser';
 export const SINGLE_USER_PLATFORM_ID: PlayPlatformId = [NO_DEVICE, NO_USER];
 export const SINGLE_USER_PLATFORM_ID_STR = `${NO_DEVICE}-${NO_USER}`;
 
+export type ComponentAuthType = 'none' | 'interactive' | 'unattended';
+export const COMPONENT_AUTH_TYPE = {
+    none: 'none',
+    interactive: 'interactive',
+    unattended: 'unattended'
+} as const satisfies Record<string, ComponentAuthType>;
+
 export type EmittedMSEvent<T = Record<string, any>, K = Record<string, any>,Y = ClientType | SourceType> = {
     type: Y
     name: string
@@ -815,4 +848,7 @@ export type EmittedMSEvent<T = Record<string, any>, K = Record<string, any>,Y = 
     from: ComponentType
     data: T
     options?: K
+}
+export interface OptionalCacheUsage {
+    useCachedResult?: boolean
 }

@@ -1,5 +1,6 @@
-import express, { Router } from 'express';
-import { childLogger, type LogDataPretty, type Logger } from "@foxxmd/logging";
+import express from 'express';
+import type { Express } from 'express';
+import { childLogger, loggerTest, type LogDataPretty, type Logger } from "@foxxmd/logging";
 import bodyParser from 'body-parser';
 import { stripIndents } from "common-tags";
 import session from 'express-session';
@@ -16,17 +17,39 @@ import type ScrobbleSources from '../sources/ScrobbleSources.ts';
 import type ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
 import { qsOptions } from '../../core/Atomic.ts';
 import { projectRootDir } from "../common/infrastructure/Atomic.ts";
+import { createTypedRouter } from "@minisylar/express-typed-router";
 
-const app = express();
-const router = Router();
-app.set('query parser', (str: string) => qs.parse(str, qsOptions));
+export interface ServerArgs {
+    sources: ScrobbleSources
+    clients: ScrobbleClients
+}
+export interface ServerOptions {
+    logger?: Logger
+    appLoggerStream?: PassThrough
+    initialOutput?: LogDataPretty[]
+    testMode?: boolean
+}
 
-export const initServer = async (parentLogger: Logger, appLoggerStream: PassThrough, initialOutput: LogDataPretty[] = [], sources: ScrobbleSources, clients: ScrobbleClients) => {
+export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Promise<[Express, ReturnType<typeof createTypedRouter>]> => {
 
-    const logger = childLogger(parentLogger, 'API'); // parentLogger.child({labels: ['API']}, mergeArr);
+    const app = express();
+
+    const router = createTypedRouter();
+
+    app.set('query parser', (str: string) => qs.parse(str, qsOptions));
+
+    const {
+        sources,
+        clients
+    } = args;
+    const {
+        logger: parentLogger = loggerTest,
+    } = opts;
+
+    const logger = childLogger(parentLogger, 'API');
 
     try {
-        app.use(router);
+        app.use(router.getRouter());
         app.use(bodyParser.json());
         app.use(
             bodyParser.urlencoded({
@@ -36,6 +59,7 @@ export const initServer = async (parentLogger: Logger, appLoggerStream: PassThro
 
         //app.use(express.static(buildDir));
 
+        router.use(session({secret: 'keyboard cat', resave: false, saveUninitialized: false}));
         app.use(session({secret: 'keyboard cat', resave: false, saveUninitialized: false}));
         app.use(passport.initialize());
         app.use(passport.session());
@@ -47,12 +71,16 @@ export const initServer = async (parentLogger: Logger, appLoggerStream: PassThro
             return;
         }
 
+        setupApi({app, router, scrobbleSources: sources, scrobbleClients: clients}, {...opts, logger});
+
+        if(opts.testMode === true) {
+            return [app, router];
+        }
+
         const isProd = root.get('isProd');
         const port = root.get('port');
         const local = root.get('localUrl');
         const localDefined = root.get('hasDefinedBaseUrl');
-
-        setupApi(app, logger, appLoggerStream, initialOutput, sources, clients);
 
         const addy = getAddress();
         const addresses: string[] = [];
@@ -119,6 +147,7 @@ export const initServer = async (parentLogger: Logger, appLoggerStream: PassThro
             }).on('error', (err) => {
                 throw new Error('Server encountered unrecoverable error', {cause: err});
             });
+            return [app, router];
         } catch (e) {
             throw new Error('Server encountered unrecoverable error', {cause: e});
         }

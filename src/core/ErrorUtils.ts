@@ -80,3 +80,39 @@ export const getErrorCause = (err: Error |
     }
 };
 
+/** A generic shape for a function (Class) that has a constructor.
+ * Can be used to determine if the passed function is a (non-instanced) Class */
+type ClassCtor = abstract new (...args: any[]) => unknown;
+
+export type TruthyErrorsOpts =
+    | { type: ClassCtor }
+    | { instance: object }
+    | { predicate: (e: Error) => boolean };
+
+/**
+ * Generate a function that detects if a given Error...
+ * 
+ * * passes a truthy function test (predicate)
+ * * is an instance of a Class (type)
+ * * is an instance of the Class of a passed instance (instance)
+ * 
+ * EX, same order as above
+ * 
+ * generateErrorTruthyTest({ predicate: (e) => e.message === 'x' })
+ * generateErrorTruthyTest({ type: MyError) })
+ * generateErrorTruthyTest({ instance: new MyError('oops') })
+ * 
+ * @returns 
+ */
+export const generateErrorTruthyTest = (opts: TruthyErrorsOpts) => {
+
+    if ('predicate' in opts) {
+        return (e: Error) => opts.predicate(e);
+    }
+
+    const ctor = 'type' in opts
+        ? opts.type
+        : opts.instance.constructor as ClassCtor;
+
+    return (e: Error) => e instanceof ctor;
+}

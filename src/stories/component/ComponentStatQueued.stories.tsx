@@ -3,7 +3,7 @@ import React from 'react';
 import { sse } from 'msw';
 
 import { Container } from '@chakra-ui/react';
-import { QueuedIndicator } from "../../client/components/msComponent/Stats.js";
+import { QueuedIndicatorStreamable } from "../../client/components/msComponent/Stats.js";
 import { sseProviderOptions } from "../../client/AppNext.js";
 import {Provider} from "../../client/components/Provider.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
@@ -13,7 +13,7 @@ import { faker } from "@faker-js/faker";
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
   title: 'Component/Details/Stat Queued',
-  component: QueuedIndicator,
+  component: QueuedIndicatorStreamable,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
@@ -31,7 +31,7 @@ const meta = preview.meta({
   //    streamable: false,
   // },
   render: function Render(args) {
-     return (<QueuedIndicator {...args} />) 
+     return (<QueuedIndicatorStreamable {...args} />) 
     },
 decorators: [
     (Story) => (<Provider><Container maxW="xl"><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Container></Provider>),
@@ -39,16 +39,14 @@ decorators: [
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });
 
-const randomQueue = () => faker.helpers.arrayElement(['scrobbleQueued', 'scrobbleDequeued']);
+const randomQueue = () => faker.helpers.arrayElement(['playQueued', 'playDequeued']);
 
 export const StatsQueued = meta.story({
   args: {
     data: {
       queued: 3,
-      mode: 'client',
       id: 1,
     },
-    streamable: true
   },
   parameters: {
       msw: {

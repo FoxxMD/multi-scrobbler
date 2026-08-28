@@ -8,7 +8,7 @@ import {
   Badge
 } from "@chakra-ui/react"
 import { Link as RouterLink } from "react-router";
-import { ExternalLinkIcon } from "./icons/ChakraIcons"
+import { ExternalLinkIconRaw } from "./icons/ChakraIcons"
 
 interface SideNavItem {
   title: React.ReactNode
@@ -68,7 +68,7 @@ export const SideNav = (props: SideNavProps) => {
                 aria-current={item.url === currentUrl ? "page" : undefined}
               >
                 {item.title}
-                <ExternalLinkIcon />
+                <ExternalLinkIconRaw />
                 {item.status && <StatusBadge>{item.status}</StatusBadge>}
               </Link>
             ) : (

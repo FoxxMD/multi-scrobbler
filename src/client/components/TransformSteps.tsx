@@ -148,6 +148,7 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                                 indicator={<Span {...timelineTextFormatting}><Span color="fg.muted">Stage </Span>{stageType}-{stageName}<Span color="fg.muted"> in Hook </Span>{hook} <Span color="fg.muted">from</Span> {source} {summary}</Span>}
                                 defaultOpen={collapsibleOpen}
                                 disableUntil="md"
+                                unmountOnExit
                                 timeline>
                                 {error !== undefined && error !== null ? <ErrorAlert status={alertStatus} error={error}/> : null}
                             <Stack gap="2">

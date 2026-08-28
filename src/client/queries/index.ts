@@ -5,7 +5,7 @@ import ky from 'ky';
 import qs from 'qs';
 import { baseUrl } from "../utils";
 import type {ComponentsApiJson, PaginatedResponse, PlayApiCommonDetailed, PlayStateUI, QueryPlaysOptsJson} from "../../core/Api";
-import { CLIENT_DEAD_QUEUE, CLIENT_INGRESS_QUEUE, isPlayState, type SourcePlayerJson } from "../../core/Atomic";
+import { INGRESS_QUEUE, isPlayState, type SourcePlayerJson } from "../../core/Atomic";
 
 export type QueryPlaysOptsJsonRefreshable = Omit<QueryPlaysOptsJson, 'state'> & {nonce?: string, state?: PlayStateUI[]};
 
@@ -21,6 +21,10 @@ const components = createQueryKeys('components', {
     single: (componentId: number) => ({
         queryKey: ['components', componentId],
         queryFn: (ctx) => ky.get(`components/${componentId}`, { baseUrl }).json<ComponentsApiJson>()
+    }),
+    authUrl: (componentId: number) => ({
+      queryKey: ['components', componentId, 'auth'],
+      queryFn: (ctx) => ky.get(`components/${componentId}/auth`, { baseUrl }).text()
     })
 })
 
@@ -37,14 +41,12 @@ const activities = createQueryKeys('activities', {
             if(state !== undefined) {
               derived.state = state.filter(x => isPlayState(x));
 
-              // remove 'dead queued' derived play state and replace with filter for queue = 'dead' & state = 'queued'
-              if(state.includes('dead queued') && !rest.queues?.some(x => x.queueName === CLIENT_DEAD_QUEUE)) {
-                derived.queues = [...(rest.queues ?? []), {queueName: CLIENT_DEAD_QUEUE, queueStatus: 'queued'}];
-              }
-              // remove 'queued' play state and replace with filter for queue = 'ingress' & state = 'queued'
-              if(state.includes('queued') && !rest.queues?.some(x => x.queueName === CLIENT_INGRESS_QUEUE)) {
-                derived.queues = [...(derived.queues ?? []), {queueName: CLIENT_INGRESS_QUEUE, queueStatus: 'queued'}];
-                derived.state = derived.state.filter(x => x !== 'queued');
+              if(state.includes('dead queued') && state.includes('queued')) {
+                derived.queues = [{queueName: INGRESS_QUEUE, queueStatus: 'queued'},{queueName: INGRESS_QUEUE, queueStatus: 'failed'}];
+                derived.state = Array.from(new Set([...derived.state, 'failed', 'queued']));
+              } else if(state.includes('dead queued')) {
+                  derived.queues = [{queueName: INGRESS_QUEUE, queueStatus: 'failed'}];
+                  derived.state = Array.from(new Set([...derived.state, 'failed']));
               }
           }
             return ky.get(`components/${componentId}/plays`, {

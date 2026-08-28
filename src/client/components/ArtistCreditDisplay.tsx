@@ -1,18 +1,18 @@
 import { Fragment } from 'react';
-import type {ArtistCredit as AC} from '../../core/Atomic';
+import type { ArtistCredit as AC } from '../../core/Atomic';
 
 import { HStack, Tag } from "@chakra-ui/react";
-import { SiMusicbrainz } from "react-icons/si";
-import { Tooltip } from './ChakraTooltip';
+import { MusicbrainzInfoIcon } from './musicServices/Musicbrainz';
 
-export const ArtistCredit = (props: { data: AC, showIdLink?: boolean }) => {
+export const ArtistCredit = (props: { data: AC, showLinks?: boolean, showMbid?: boolean }) => {
 
     const {
         data,
-        showIdLink = true
+        showLinks = true,
+        showMbid
     } = props;
 
-    if (!showIdLink || Object.keys(data).length === 1) {
+    if (!showLinks) {
         return data.name;
     }
 
@@ -20,19 +20,19 @@ export const ArtistCredit = (props: { data: AC, showIdLink?: boolean }) => {
         <HStack>
             {data.name}
             <HStack style={{ userSelect: 'none' }}>
-                {data.mbid !== undefined ? <Tooltip content={`MBID ${data.mbid}`} interactive><a target='__blank' href={`https://musicbrainz.org/artist/${data.mbid}`}><SiMusicbrainz /></a></Tooltip> : null}
+                {data.mbid !== undefined ? <MusicbrainzInfoIcon type="artist" mbid={data.mbid} showMbid={showMbid} link tooltip /> : null}
             </HStack>
         </HStack>
     </Fragment>
 
 }
 
-export const ArtistCreditTags = (props: { data: AC[], showIdLink?: boolean }) => {
-    return <HStack>{props.data.map((x, index) => {
-        return (
+export const ArtistCreditTags = (props: { data: AC[], showLinks?: boolean, showMbid?: boolean }) => (
+    <HStack>
+        {props.data.map((x, index) => (
             <Tag.Root key={index}>
-                <Tag.Label userSelect="all"><ArtistCredit data={x} showIdLink={props.showIdLink} /></Tag.Label>
+                <Tag.Label userSelect="all"><ArtistCredit data={x} showLinks={props.showLinks} showMbid={props.showMbid} /></Tag.Label>
             </Tag.Root>
-        );
-    })}</HStack>
-}
+        ))}
+    </HStack>
+)

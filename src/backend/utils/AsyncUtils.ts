@@ -1,5 +1,6 @@
 import type {Mapper} from "p-map";
 import { sleep } from "../utils.ts";
+import { nanoid } from "nanoid";
 
 /** https://stackoverflow.com/a/63795192/1469797 */
 export async function findAsyncSequential<T>(
@@ -69,5 +70,82 @@ export function staggerMapper<Element, NewElement>(options: StaggerOptions) {
       await sleep(s);
     }
     return await mapper(x, index);
+  }
+}
+
+export const consumeQueueOnce = async <T>(next: () => Promise<T | undefined>, process: (item: T) => Promise<void>, opts: {
+  concurrency: number;
+  signal: AbortSignal;
+  onError?: (e: Error) => Promise<void>, onSuccess?: () => void
+}): Promise<void> => {
+  const { concurrency, signal, onError } = opts;
+  signal.throwIfAborted();
+  const inFlight = new Set<Promise<void>>();
+  try {
+    while (true) {
+      signal.throwIfAborted();
+      if (inFlight.size >= concurrency) {
+        await Promise.race(inFlight);
+        continue;
+      }
+      const item = await next();
+      if (item === undefined) break;
+      const task = (async () => {
+        try {
+          await process(item);
+        } catch (err) {
+          await onError?.(err); // swallow so one bad item doesn't kill the loop
+        }
+      })();
+      inFlight.add(task);
+      void task.then(() => inFlight.delete(task));
+    }
+  } finally {
+    await Promise.allSettled(inFlight); // drain before sleeping or rethrowing
+  }
+};
+
+export const consumeQueue = async <T>(
+  next: (queueId: string) => Promise<T | undefined>,
+  process: (item: T, queueId: string) => Promise<T | void>,
+  opts: { 
+    concurrency: number;
+    idleMs: number;
+    signal: AbortSignal;
+    onError?: (e: Error, queueId: string) => Promise<void>,
+    onSuccess?: (item: T, queueId: string) => void,
+    onEmpty?: () => void
+  },
+): Promise<never> => {
+  const { concurrency, idleMs, signal, onError, onEmpty, onSuccess } = opts;
+  while (true) {
+    signal.throwIfAborted();
+    const inFlight = new Set<Promise<void>>();
+    try {
+      while (true) {
+        signal.throwIfAborted();
+        if (inFlight.size >= concurrency) {
+          await Promise.race(inFlight);
+          continue;
+        }
+        const qId = nanoid();
+        const item = await next(qId);
+        if (item === undefined) break;
+        const task = (async () => {
+          try {
+            await process(item, qId);
+            onSuccess?.(item, qId);
+          } catch (err) {
+            await onError?.(err, qId); // swallow so one bad item doesn't kill the loop
+          }
+        })();
+        inFlight.add(task);
+        void task.then(() => inFlight.delete(task));
+      }
+    } finally {
+      await Promise.allSettled(inFlight); // drain before sleeping or rethrowing
+    }
+    onEmpty?.();
+    await sleep(idleMs, { signal });
   }
 }

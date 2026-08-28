@@ -1,6 +1,6 @@
 import type {Logger} from "@foxxmd/logging";
 import type EventEmitter from "events";
-import type {PlayObject, SourcePlayerObj} from "../../core/Atomic.ts";
+import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type SourcePlayerObj} from "../../core/Atomic.ts";
 import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import type {FormatPlayObjectOptions, InternalConfigOptional, TimeRangeListensFetcher} from "../common/infrastructure/Atomic.ts";
@@ -13,6 +13,7 @@ import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.ts
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
     api: LastfmApiClient;
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.interactive;
     requiresAuth = true;
     requiresAuthInteraction = true;
     upstreamType: string = 'Last.fm';

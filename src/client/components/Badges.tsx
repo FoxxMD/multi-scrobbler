@@ -1,8 +1,8 @@
-import { Badge, HStack, Separator } from "@chakra-ui/react";
+import { Badge, HStack, Separator, Spinner } from "@chakra-ui/react";
 import { useSSEContext, useSSEEvent } from "@flamefrontend/sse-runtime-react";
 import React, { type ComponentProps, type PropsWithChildren, useCallback, useEffect, useState } from "react";
 import { useTimeout } from 'react-use-timeout';
-import { COMPONENT_STATE, type ComponentCommonApiJson, componentStateToFriendly, type MsSseEvent, type PlayApiCommon } from "../../core/Api";
+import { COMPONENT_STATE, type ComponentCommonApiJson, type ComponentsApiJson, componentStateToFriendly, type MsSseEvent, type PlayApiCommon } from "../../core/Api";
 import type {Second} from "../../core/Atomic";
 import { capitalizeWords } from "../../core/StringUtils";
 
@@ -28,10 +28,8 @@ export const PlayStateBadge = (props: PropsWithChildren<ComponentProps<typeof Ba
         badgeText = 'Dead Queued';
       }
       break;
-    case 'discarded':
-      badgeColor = 'grey';
-      break;
     case 'duped':
+    case 'discarded':
       badgeColor = 'orange';
       break;
   }
@@ -74,14 +72,15 @@ export const EphemeralElement = (props: { expires?: Second | boolean, children: 
 }
 
 export const ComponentStateBadge = (props: ComponentProps<typeof Badge> & {
-    data: Pick<ComponentCommonApiJson, 'state'>,
+    data: Pick<ComponentsApiJson, 'state' | 'errors' | 'authType'>,
     componentId?: number,
     live?: boolean,
     separator?: boolean | React.JSX.Element,
-    suffix?: React.JSX.Element
+    suffix?: React.JSX.Element,
+    loading?: boolean
 }) => {
 
-    const { data, suffix, separator, ...rest } = props;
+    const { data, suffix, separator, loading = false, ...rest } = props;
 
     const [componentState, setComponentState] = useState(data.state);
 
@@ -113,10 +112,10 @@ export const ComponentStateBadge = (props: ComponentProps<typeof Badge> & {
             badgeColor = 'red';
             break;
         case COMPONENT_STATE.IDLE:
-            badgeColor = 'orange';
+            badgeColor = 'yellow';
             break;
-        case COMPONENT_STATE.MUTED:
-            badgeColor = 'yellow';  
+        case COMPONENT_STATE.IGNORED:
+            badgeColor = 'orange';  
             break;
     }
 
@@ -129,5 +128,7 @@ export const ComponentStateBadge = (props: ComponentProps<typeof Badge> & {
         }
     }
 
-    return <Badge variant="surface" colorPalette={badgeColor} {...rest}><HStack gap="0">{componentStateToFriendly(componentState)}{sep}{suffix}</HStack></Badge>
+    return (<Badge variant="surface" colorPalette={badgeColor} {...rest}>
+        <HStack gap="0">{loading ? <Spinner animationDuration="0.8s" /> : undefined}{componentStateToFriendly(componentState)}{sep}{suffix}</HStack></Badge>
+        );
 }

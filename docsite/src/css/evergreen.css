@@ -1,0 +1,323 @@
+/**
+ * Evergreen theme for docusaurus-openapi-docs demo.
+ *
+ * A modern riff on the classic Docusaurus green. Keeps the signature
+ * #2e8555 primary family, adds Plus Jakarta Sans, a richer dark mode,
+ * and cleaner shadows — what the default template could look like with
+ * a bit more design polish.
+ *
+ * Load alongside custom.css in docusaurus.config.ts:
+ *
+ *   customCss: ["./src/css/custom.css", "./src/css/themes/evergreen.css"]
+ */
+
+/* ============================================================
+ * Fonts — Plus Jakarta Sans (body) + Fira Code (code)
+ * ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&display=swap");
+
+/* ============================================================
+ * Light mode
+ * ============================================================ */
+
+:root {
+  /* Primary — the classic Docusaurus green, slightly enriched */
+  /* --ifm-color-primary: #2e8555;
+  --ifm-color-primary-dark: #29784c;
+  --ifm-color-primary-darker: #277148;
+  --ifm-color-primary-darkest: #205d3b;
+  --ifm-color-primary-light: #33925d;
+  --ifm-color-primary-lighter: #359962;
+  --ifm-color-primary-lightest: #3cad6e; */
+
+  /* Content */
+  /* --ifm-color-content: #1c1e21;
+  --ifm-heading-color: #1c1e21;
+  --ifm-color-content-secondary: #525860; */
+
+  /* Semantic */
+  /* --ifm-color-success: #2e8555;
+  --ifm-color-warning: #d97706;
+  --ifm-color-danger: #dc2626;
+  --ifm-color-info: #0284c7; */
+
+  /* Typography */
+  /* --ifm-font-size-base: 95%;
+  --ifm-code-font-size: 85%;
+  --ifm-font-family-base:
+    "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --ifm-heading-font-family:
+    "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --ifm-font-family-monospace:
+    "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Courier New", monospace;
+  --font-mono:
+    "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Courier New", monospace;
+  --ifm-font-weight-base: 400;
+  --ifm-font-weight-semibold: 600;
+  --ifm-heading-font-weight: 700; */
+
+  /* Heading scale */
+  /* --ifm-h1-font-size: 2rem;
+  --ifm-h2-font-size: 1.6rem;
+  --ifm-h3-font-size: 1.3rem;
+  --ifm-h4-font-size: 1.1rem;
+  --ifm-h5-font-size: 1rem;
+  --ifm-h6-font-size: 0.9rem; */
+
+  /* Theme hooks for custom.css */
+  --theme-primary-rgb: 46, 133, 85;
+  --site-primary-hue-saturation: 148 49%;
+  --theme-border-radius-sm: 4px;
+  --theme-border-radius-md: 8px;
+  --theme-border-radius-lg: 12px;
+  --theme-border-radius-xl: 16px;
+  --theme-border-radius-2xl: 24px;
+
+  /* Shadow scale — neutral, not green-tinted */
+  --theme-shadow-sm:
+    0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
+  --theme-shadow-md:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+  --theme-shadow-lg:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.06);
+
+  /* --ifm-hr-background-color: var(--ifm-color-emphasis-200);
+  --docusaurus-highlighted-code-line-bg: rgba(46, 133, 85, 0.1); */
+
+  /* Explorer — unified font size for code tabs and request body */
+  --openapi-explorer-font-size-code: 13px;
+}
+
+/* ============================================================
+ * Dark mode — richer than the Docusaurus default
+ * ============================================================ */
+
+[data-theme="dark"] {
+  /* Lighter green — readable on dark surfaces */
+  /* --ifm-color-primary: #3cad6e;
+  --ifm-color-primary-dark: #359962;
+  --ifm-color-primary-darker: #33925d;
+  --ifm-color-primary-darkest: #2e8555;
+  --ifm-color-primary-light: #4db87c;
+  --ifm-color-primary-lighter: #5ec389;
+  --ifm-color-primary-lightest: #85d4a8; */
+
+  /* --ifm-color-content: #dadde1;
+  --ifm-color-content-secondary: #9ba1aa;
+  --ifm-heading-color: #f5f6f7; */
+
+  /* Richer dark background vs. the flat Docusaurus default */
+  /* --ifm-background-color: #18191a !important;
+  --ifm-navbar-background-color: #18191a; */
+
+  /* Warm-neutral dark gray scale */
+  /* --ifm-color-emphasis-100: #242526;
+  --ifm-color-emphasis-200: #3a3b3c;
+  --ifm-color-emphasis-300: #4e4f50;
+  --ifm-color-emphasis-400: #6b6c6d;
+  --ifm-color-emphasis-500: #8d8f91;
+  --ifm-color-emphasis-600: #b0b3b8;
+  --ifm-color-emphasis-700: #dadde1;
+  --ifm-color-emphasis-800: #e4e6eb;
+  --ifm-color-emphasis-900: #f0f2f5; */
+
+  /* --ifm-link-color: #3cad6e;
+  --ifm-link-hover-color: #5ec389; */
+
+  --docusaurus-highlighted-code-line-bg: rgba(60, 173, 110, 0.12);
+  /* --theme-primary-rgb: 60, 173, 110; */
+}
+
+/* ============================================================
+ * Method badge colors — sidebar pills
+ * ============================================================ */
+
+.get > .menu__link::before {
+  background-color: rgba(46, 133, 85, 0.12);
+  color: #29784c;
+}
+.get > .menu__link--active::before {
+  background-color: #2e8555;
+  color: #ffffff;
+}
+
+.post > .menu__link::before {
+  background-color: rgba(2, 132, 199, 0.12);
+  color: #0369a1;
+}
+.post > .menu__link--active::before {
+  background-color: #0284c7;
+  color: #ffffff;
+}
+
+.delete > .menu__link::before {
+  background-color: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
+}
+.delete > .menu__link--active::before {
+  background-color: #dc2626;
+  color: #ffffff;
+}
+
+.put > .menu__link::before {
+  background-color: rgba(217, 119, 6, 0.15);
+  color: #b45309;
+}
+.put > .menu__link--active::before {
+  background-color: #d97706;
+  color: #ffffff;
+}
+
+.patch > .menu__link::before {
+  background-color: rgba(217, 119, 6, 0.15);
+  color: #b45309;
+}
+.patch > .menu__link--active::before {
+  background-color: #d97706;
+  color: #ffffff;
+}
+
+/* Dark mode */
+[data-theme="dark"] .get > .menu__link::before {
+  background-color: rgba(60, 173, 110, 0.15);
+  color: #3cad6e;
+}
+[data-theme="dark"] .get > .menu__link--active::before {
+  background-color: #3cad6e;
+  color: #18191a;
+}
+
+[data-theme="dark"] .post > .menu__link::before {
+  background-color: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+}
+[data-theme="dark"] .post > .menu__link--active::before {
+  background-color: #0ea5e9;
+  color: #18191a;
+}
+
+[data-theme="dark"] .delete > .menu__link::before {
+  background-color: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+}
+[data-theme="dark"] .delete > .menu__link--active::before {
+  background-color: #ef4444;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .put > .menu__link::before {
+  background-color: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+}
+[data-theme="dark"] .put > .menu__link--active::before {
+  background-color: #f59e0b;
+  color: #18191a;
+}
+
+[data-theme="dark"] .patch > .menu__link::before {
+  background-color: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+}
+[data-theme="dark"] .patch > .menu__link--active::before {
+  background-color: #f59e0b;
+  color: #18191a;
+}
+
+/* ============================================================
+ * API page method badges (.badge--*)
+ * ============================================================ */
+
+.badge--primary {
+  /* GET */
+  background-color: #2e8555;
+  color: #ffffff;
+  --ifm-badge-border-color: transparent;
+}
+
+.badge--success {
+  /* POST */
+  background-color: #0284c7;
+  color: #ffffff;
+  --ifm-badge-border-color: transparent;
+}
+
+.badge--danger {
+  /* DELETE */
+  background-color: #dc2626;
+  color: #ffffff;
+  --ifm-badge-border-color: transparent;
+}
+
+.badge--info {
+  /* PUT */
+  background-color: #d97706;
+  color: #ffffff;
+  --ifm-badge-border-color: transparent;
+}
+
+.badge--warning {
+  /* PATCH */
+  background-color: #d97706;
+  color: #ffffff;
+  --ifm-badge-border-color: transparent;
+}
+
+[data-theme="dark"] .badge--primary {
+  /* GET */
+  background-color: #3cad6e;
+  color: #18191a;
+}
+[data-theme="dark"] .badge--success {
+  /* POST */
+  background-color: #0ea5e9;
+  color: #18191a;
+}
+[data-theme="dark"] .badge--danger {
+  /* DELETE */
+  background-color: #ef4444;
+  color: #ffffff;
+}
+[data-theme="dark"] .badge--info {
+  /* PUT */
+  background-color: #f59e0b;
+  color: #18191a;
+}
+[data-theme="dark"] .badge--warning {
+  /* PATCH */
+  background-color: #f59e0b;
+  color: #18191a;
+}
+
+/* ============================================================
+ * API Explorer — request body editor font size
+ *
+ * react-simple-code-editor renders an inner textarea + pre that
+ * can slip past the outer !important font shorthand. Target them
+ * directly so the body editor matches the code snippet tabs.
+ * ============================================================ */
+
+.openapi-explorer__playground-editor,
+.openapi-explorer__playground-editor textarea,
+.openapi-explorer__playground-editor pre {
+  font-size: var(--openapi-explorer-font-size-code) !important;
+}
+
+/* ============================================================
+ * API Explorer — Send button dark mode
+ * ============================================================ */
+
+[data-theme="dark"] .openapi-explorer__request-btn {
+  background-color: #2e8555;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .openapi-explorer__request-btn:hover {
+  background-color: #3cad6e;
+}
+

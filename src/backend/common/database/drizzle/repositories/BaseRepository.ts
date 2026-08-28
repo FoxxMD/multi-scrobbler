@@ -45,9 +45,9 @@ export abstract class DrizzleBaseRepository<T extends TableName> {
         await this.db.delete(this.table).where(inArray(this.table.id, ids));
     }
 
-    async updateById(id: number, data: Partial<typeof this.table.$inferInsert>): Promise<void> {
+    async updateById(id: number, data: Partial<typeof this.table.$inferInsert>): Promise<typeof this.table.$inferSelect> {
         assert(id !== null && id !== undefined, `${id === null ? 'null' : 'undefined'} given for entity id`);
-        await this.db.update(this.table).set(data).where(eq(this.table.id, id));
+        return (await this.db.update(this.table).set(data).where(eq(this.table.id, id)).returning())[0];
     }
 
     async create(data: typeof this.table.$inferInsert): Promise<typeof this.table.$inferSelect> {

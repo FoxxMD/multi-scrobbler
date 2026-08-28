@@ -5,6 +5,7 @@ import type { EmittedMSEvent, JsonPlayObject, SourcePlayerObj } from "./Atomic.t
 export interface MSCoreEvents {
     playInsert: [EmittedMSEvent<PlayApiCommonDetailed>]
     playUpdate: [EmittedMSEvent<MarkRequired<Partial<PlayApiCommonDetailed>, 'uid'>>]
+    playDelete: [EmittedMSEvent<Pick<PlayApiCommonDetailed, 'uid' | 'componentId'>>]
     playerUpdate: [EmittedMSEvent<SourcePlayerObj<string>>]
     playerDelete: [EmittedMSEvent<{platformId: string},{options: {scrobbleTo: string[]}}>]
     scrobble: [EmittedMSEvent<{play: JsonPlayObject}>]

@@ -1,6 +1,6 @@
 import { Box, Button, Menu, Portal } from "@chakra-ui/react"
 import type {ComponentProps} from "react";
-import { ExternalLinkIcon } from "./icons/ChakraIcons"
+import { ExternalLinkIconRaw } from "./icons/ChakraIcons"
 import { EXTERNAL_LINKS } from "./SideNav"
 
 
@@ -18,7 +18,7 @@ export const ExternaLinksMenu = (props: ComponentProps<typeof Box> = {}) => (
             {EXTERNAL_LINKS.items.map((link) => (
               <Menu.Item key={link.url} asChild value={link.title} cursor="pointer">
                 <a href={link.url} target="_blank" rel="noreferrer">
-                  {link.title} <ExternalLinkIcon />
+                  {link.title} <ExternalLinkIconRaw />
                 </a>
               </Menu.Item>
             ))}

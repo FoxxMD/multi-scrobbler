@@ -25,16 +25,30 @@ import {
     LuRefreshCw,
     LuCopy,
     LuClock,
-    LuSparkles
+    LuSparkles,
+    LuLockOpen
 } from "react-icons/lu"
 import { VscDebugRestart } from 'react-icons/vsc';
+import { HiMiniStop } from "react-icons/hi2";
+import { FaTrashCan, FaFlagCheckered } from "react-icons/fa6";
 import { MdOutlineFiberNew } from "react-icons/md";
 import { RiZzzFill } from "react-icons/ri";
 import { SiGoogledocs } from "react-icons/si";
-import type { Clipboard} from "@chakra-ui/react";
+import type { Clipboard, IconProps} from "@chakra-ui/react";
 import { IconButton, useClipboard, Spinner, Icon } from "@chakra-ui/react"
-import type {ComponentProps, PropsWithChildren} from 'react';
+import type {ComponentProps, PropsWithChildren, ReactNode} from 'react';
 import type {IconBaseProps, IconType} from "react-icons/lib";
+
+// below are from https://selfh.st/icons/
+import LZ from "./custom/listenbrainz.svg?react";
+import Musicbrainz from "./custom/musicbrainz.svg?react";
+
+import { 
+    SiSpotify,
+    SiYoutube,
+    SiJellyfin,
+    SiPlex
+ } from "react-icons/si";
 
 export const makeIconButton = (Icon: IconType) => (props: PropsWithChildren<ComponentProps<typeof IconButton>> & { iconProps?: IconBaseProps, loading?: boolean }) => {
     const { 
@@ -119,8 +133,9 @@ export const XButton = makeIconButton(XIcon);
 export const CheckIcon = makeChakraIcon(LuCheck);
 export const CheckButton = makeIconButton(LuCheck);
 
-export const ExternalLinkIcon = LuExternalLink;
-export const ExternalLinkButton = makeIconButton(ExternalLinkIcon);
+export const ExternalLinkIconRaw = LuExternalLink;
+export const ExternalLinkIcon = makeChakraIcon(LuExternalLink);
+export const ExternalLinkButton = makeIconButton(ExternalLinkIconRaw);
 
 export const UpArrowIcon = LuArrowUp;
 export const DownArrowIcon = LuArrowDown;
@@ -197,3 +212,49 @@ export const ExclamationTriangleIcon = makeChakraIcon(LuTriangleAlert);
 export const TimelineIndicatorIconQueued = makeChakraIcon(LuClock);
 
 export const SparkleIcon = makeChakraIcon(LuSparkles);
+
+export const UnlockIconRaw = LuLockOpen;
+export const UnlockIcon = makeChakraIcon(LuLockOpen);
+export const UnlockButton = makeIconButton(LuLockOpen);
+
+export const getMusicServiceIcon = (service: string): IconType => {
+    const lower = service === undefined ? undefined : service.toLocaleLowerCase();
+    switch(lower) {
+        case 'spotify':
+            return SiSpotify;
+        case 'musicbrainz':
+            return Musicbrainz as unknown as IconType;
+        case 'youtube':
+            return SiYoutube;
+        case 'jellyfin':
+            return SiJellyfin;
+        case 'plex':
+            return SiPlex;
+        case 'listenbrainz':
+            return LZ as unknown as IconType;
+        default:
+            return LuExternalLink;
+    }
+}
+
+export const getMusicServiceIconElement = (service: string): ReactNode => {
+    const ServiceIcon = getMusicServiceIcon(service);
+    return <ServiceIcon/>;
+}
+
+export const getMusicServiceChakraIcon = (service: string) => {
+    const ServiceIcon = getMusicServiceIcon(service);
+    return (props: IconProps = {}) => <Icon {...props}><ServiceIcon/></Icon>;
+}
+
+export const StopIconRaw = HiMiniStop;
+export const StopIcon = makeChakraIcon(StopIconRaw);
+export const StopButton = makeIconButton(StopIconRaw);
+
+export const TrashIconRaw = FaTrashCan;
+export const TrashIcon = makeChakraIcon(TrashIconRaw);
+export const TrashIconButton = makeIconButton(TrashIconRaw);
+
+export const FinishIconRaw = FaFlagCheckered;
+export const FinishIcon = makeChakraIcon(FinishIconRaw);
+export const FinishButton = makeIconButton(FinishIconRaw);

@@ -23,7 +23,7 @@ import { unique } from '../../utils.ts';
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
 import type {ListenPayload, ListenResponse, ListenType, SubmitPayload} from '../../../core/vendor/listenbrainz/interfaces.ts';
 import { baseFormatPlayObj } from '../../utils/PlayTransformUtils.ts';
-import { ScrobbleSubmitError, SimpleError } from '../errors/MSErrors.ts';
+import { AuthError, ScrobbleSubmitError, SimpleError } from '../errors/MSErrors.ts';
 import pRetry from 'p-retry';
 import { findCauseByFunc } from '../../utils/ErrorUtils.ts';
 import { isSuperAgentResponseError } from '../errors/ErrorUtils.ts';
@@ -187,8 +187,12 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
         try {
             const resp = await this.callApi(() => request.get(`${joinedUrl(this.url.url,'1/validate-token')}`));
             return true;
-        } catch (e) {
-            throw e;
+        } catch (err) {
+            const cause = findCauseByFunc<request.ResponseError>(err, (e) => isSuperAgentResponseError(e));
+            if(cause !== undefined && [401,403,400].includes(cause.status)) {
+                throw new AuthError('Failed to validate token', {cause: err, unrecoverable: true});
+            }
+            throw new AuthError('Failed to validate token due to non-auth error', {cause: err, unrecoverable: false});
         }
     }
 

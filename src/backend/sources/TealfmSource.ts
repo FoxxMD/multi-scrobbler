@@ -1,5 +1,5 @@
 import type EventEmitter from "events";
-import { type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, type ComponentAuthType, PARSED_FROM, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import type {FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic.ts";
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
@@ -13,6 +13,7 @@ import { parseArrayFromMaybeString } from "../utils/StringUtils.ts";
 export default class TealfmSource extends MemorySource {
 
     client: TealApiClient;
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
     requiresAuth = true;
     requiresAuthInteraction = false;
 
@@ -119,7 +120,7 @@ export default class TealfmSource extends MemorySource {
                 || (x.meta.musicService === undefined && !this.serviceAllow.includes('unknown'))
             );
         }
-        return plays;
+        return plays.map((x) => ({...x, meta: {...x.meta, parsedFrom: PARSED_FROM.history}}));
     }
 
     getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {

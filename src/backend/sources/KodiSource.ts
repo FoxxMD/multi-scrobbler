@@ -1,5 +1,5 @@
 import type { EventEmitter } from "events";
-import type {PlayObject} from "../../core/Atomic.ts";
+import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject} from "../../core/Atomic.ts";
 import type {FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic.ts";
 import type {KodiSourceConfig} from "../common/infrastructure/config/source/kodi.ts";
 import { KodiApiClient } from "../common/vendor/KodiApiClient.ts";
@@ -11,6 +11,7 @@ export class KodiSource extends MemoryPositionalSource {
 
     client: KodiApiClient;
     clientReady: boolean = false;
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
 
     constructor(name: any, config: KodiSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         const {

@@ -1,6 +1,6 @@
 import dayjs, { type Dayjs } from "dayjs";
 import type EventEmitter from "events";
-import { type PlayObjectMinimal, SOURCE_SOT } from "../../core/Atomic.ts";
+import { PARSED_FROM, type PlayObjectMinimal, SOURCE_SOT } from "../../core/Atomic.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
@@ -81,7 +81,7 @@ export class WebScrobblerSource extends MemorySource {
         }
     }
 
-    static playStateFromRequest(obj: WebScrobblerPayload,): PlayerStateData {
+    static playStateFromRequest(obj: WebScrobblerPayload): PlayerStateData {
         const {
             eventName,
             time = dayjs().unix(),
@@ -121,18 +121,18 @@ export class WebScrobblerSource extends MemorySource {
             }
         } = obj;
 
-        const track = processed.track ?? parsed.track;
-        const artist = processed.artist ?? parsed.artist;
-        const album = processed.album ?? parsed.album;
-        const albumArtist = processed.albumArtist ?? parsed.albumArtist;
-        const duration = parsed.duration ?? processed.duration;
+        const track = processed.track ?? parsed.track ?? undefined;
+        const artist = processed.artist ?? parsed.artist ?? undefined;
+        const album = processed.album ?? parsed.album ?? undefined;
+        const albumArtist = processed.albumArtist ?? parsed.albumArtist ?? undefined;
+        const duration = parsed.duration ?? processed.duration ?? undefined;
 
         const play: PlayObjectMinimal<Dayjs, WebScrobbleMeta> = {
             data: {
                 track,
-                artists: [artistNameToCredit(artist)],
+                artists: artist !== undefined ? [artistNameToCredit(artist)] : [],
                 album: album === null ? undefined : album,
-                albumArtists: albumArtist === null ? undefined : [artistNameToCredit(albumArtist)],
+                albumArtists: albumArtist === null ? undefined : albumArtist === undefined ? undefined : [artistNameToCredit(albumArtist)],
                 playDate: dayjs.unix(startTimestamp),
                 duration: duration === null ? undefined : duration,
                 meta: {
@@ -143,7 +143,7 @@ export class WebScrobblerSource extends MemorySource {
             },
             meta: {
                 trackId: uniqueID,
-                parsedFrom: connectorLabel,
+                parsedFrom: PARSED_FROM.ingress,
                 url: {
                     web: trackUrl,
                     origin: originUrl
@@ -166,8 +166,8 @@ export class WebScrobblerSource extends MemorySource {
             return false;
         }
 
-        if (playObj.meta.parsedFrom !== undefined) {
-            const lowerSource = playObj.meta.parsedFrom.toLowerCase();
+        if (playObj.meta.musicService !== undefined) {
+            const lowerSource = playObj.meta.musicService.toLowerCase();
             if (Array.isArray(this.config.data.blacklist) && this.config.data.blacklist.length > 0) {
                 if (this.config.data.blacklist.some(x => x === lowerSource)) {
                     this.logger.debug(`Will not scrobble play because it is from a blacklisted connector '${lowerSource}'`);
@@ -196,10 +196,11 @@ export class WebScrobblerSource extends MemorySource {
                 this.setStatus('Received Play');
             }
             if (stateData.play.meta.nowPlaying === false) {
-                const discovered = await this.discover([stateData.play]);
-                if (discovered.length > 0) {
-                    await this.scrobble(discovered);
-                }
+                await this.queuePlay([stateData.play]);
+                // const discovered = await this.discover([stateData.play]);
+                // if (discovered.length > 0) {
+                //     await this.scrobble(discovered);
+                // }
             }
         }
 

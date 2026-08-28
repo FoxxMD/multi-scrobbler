@@ -173,7 +173,7 @@ const dataDir = getDataDir();
 
         await root.items.cache().init(true);
 
-        initServer(logger, appLoggerStream, output, scrobbleSources, scrobbleClients);
+        initServer({sources: scrobbleSources, clients: scrobbleClients},{logger, appLoggerStream, initialOutput: output});
 
         if(process.env.IS_LOCAL === 'true') {
             logger.info('multi-scrobbler can be run as a background service! See: https://docs.multi-scrobbler.app/installation/service');
@@ -209,9 +209,9 @@ const dataDir = getDataDir();
         if(nameColl.length > 0) {
             logger.warn(`Last.FM source and clients have same names [${nameColl.map(x => x.name).join(',')}] -- this may cause issues`);
         }
-        const clientInitOptions = {deadDelay: nonEmptyStringOrDefault(process.env.DEBUG_DEAD_DELAY, undefined) !== undefined ? Number.parseInt(process.env.DEBUG_DEAD_DELAY) : undefined};
+        const initOptions = {deadDelay: nonEmptyStringOrDefault(process.env.DEBUG_DEAD_DELAY, undefined) !== undefined ? Number.parseInt(process.env.DEBUG_DEAD_DELAY) : undefined};
         for(const c of scrobbleClients.clients) {
-            c.initTasks(clientInitOptions);
+            c.initTasks(initOptions);
             const res = await Promise.race([
                 sleep(2200),
                 (async () => {
@@ -227,7 +227,7 @@ const dataDir = getDataDir();
         }
 
         for(const c of scrobbleSources.sources) {
-            c.initTasks();
+            c.initTasks(initOptions);
             const res = await Promise.race([
                 sleep(2200),
                 (async () => {

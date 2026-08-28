@@ -1,7 +1,7 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import type EventEmitter from "events";
 import normalizeUrl from "normalize-url";
-import type {PlayObject} from "../../core/Atomic.ts";
+import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject} from "../../core/Atomic.ts";
 import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import type {FormatPlayObjectOptions, TimeRangeListensFetcher} from "../common/infrastructure/Atomic.ts";
@@ -15,6 +15,7 @@ const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "
 
 export default class MalojaScrobbler extends AbstractScrobbleClient {
 
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
     requiresAuth = true;
     serverVersion: any;
     webUrl: string;

@@ -1,7 +1,7 @@
 import dayjs, { type Dayjs } from "dayjs";
 import type EventEmitter from "events";
 import { MusicKit, type MeHistoryRecentlyPlayedTracksProps, type Song } from "node-musickit-api";
-import type { PlayObject, PlayObjectMinimal } from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
 import type { InternalConfig } from "../common/infrastructure/Atomic.ts";
 import type { AppleMusicSourceConfig } from "../common/infrastructure/config/source/applemusic.ts";
 import AbstractSource, { type RecentlyPlayedOptions } from "./AbstractSource.ts";
@@ -33,6 +33,7 @@ export default class AppleMusicSource extends AbstractSource {
     private readonly POLL_TRACK_LIMIT = 20;
     private readonly UPSTREAM_TRACK_LIMIT = 30;
 
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
     requiresAuth = true;
     requiresAuthInteraction = false;
 
@@ -355,13 +356,7 @@ export default class AppleMusicSource extends AbstractSource {
     onPollPostAuthCheck = async () => {
         if(!this.polling) {
             this.logger.verbose('Hydrating initial recently played tracks for reference.');
-            const referencePlays = await this.getRecentlyPlayed();
-            const reversedPlays = [...referencePlays];
-            reversedPlays.reverse();
-
-            for(const refPlay of reversedPlays) {
-                await this.addPlayToDB(refPlay);
-            }
+            await this.getRecentlyPlayed();
         }
         return true;
     }

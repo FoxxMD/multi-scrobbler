@@ -1,12 +1,14 @@
 import type {Logger} from "@foxxmd/logging";
-import type {ExpressHandler} from "../common/infrastructure/Atomic.ts";
 import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import type {Request, Response, NextFunction} from "express";
 import type AbstractSource from "../sources/AbstractSource.ts";
 import type AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts";
+import type { TypedMiddleware } from "@minisylar/express-typed-router";
 
-export const makeSourceCheckMiddle = (sources: any) => (required: boolean): ExpressHandler => (req: any, res: any, next: any) => {
+export type SourceCheckMiddleTypedMiddleware = TypedMiddleware<{sourceName: string, scrobbleSource: AbstractSource}>;
+
+export const makeSourceCheckMiddle = (sources: any) => (required: boolean): SourceCheckMiddleTypedMiddleware => (req: any, res: any, next: any) => {
     const {
         query: {
             name,
@@ -30,7 +32,9 @@ export const makeSourceCheckMiddle = (sources: any) => (required: boolean): Expr
     next();
 }
 
-export const makeClientCheckMiddle = (clients: any) => (required: boolean): ExpressHandler => (req: any, res: any, next: any) => {
+export type ClientCheckedMiddleTypedMiddleware = TypedMiddleware<{scrobbleClient: AbstractScrobbleClient}>;
+
+export const makeClientCheckMiddle = (clients: any) => (required: boolean): ClientCheckedMiddleTypedMiddleware => (req: any, res: any, next: any) => {
     const {
         query: {
             name
@@ -52,7 +56,7 @@ export const makeClientCheckMiddle = (clients: any) => (required: boolean): Expr
     next();
 }
 
-export const nonEmptyBody = (logger: Logger, origin: string = 'Origin'): ExpressHandler => async (req, res, next) => {
+export const nonEmptyBody = (logger: Logger, origin: string = 'Origin'): TypedMiddleware => async (req, res, next) => {
     const bodyEmpty = req.body === undefined || req.body === null || (typeof req.body === 'object' && Object.keys(req.body).length === 0);
     if (bodyEmpty) {
         const length = req.header('content-length') !== undefined ? Number.parseInt(req.header('content-length')) : undefined;
@@ -75,16 +79,17 @@ export interface ComponentAwareRequest extends Request {
     component: AbstractSource | AbstractScrobbleClient
 }
 
-export const makeComponentMiddle = (sources: ScrobbleSources, clients: ScrobbleClients): ExpressHandler => async (req: Request, res: Response, next: NextFunction) => {
+export const makeComponentMiddle = (sources: ScrobbleSources, clients: ScrobbleClients): TypedMiddleware<{component: ComponentAwareRequest['component']}> => (req, res, next) => {
     const {
         params: {
-            componentVal
+            id
         }
     } = req;
 
-    const componentId = Number.parseInt(componentVal as string);
+    const componentId = Number.parseInt(id as string);
     if (isNaN(componentId)) {
-        return res.status(400).json({ error: 'Component id must be a number' });
+        res.status(400).json({ error: 'Component id must be a number' });
+        return;
     }
 
     let component: AbstractSource | AbstractScrobbleClient;
@@ -94,7 +99,8 @@ export const makeComponentMiddle = (sources: ScrobbleSources, clients: ScrobbleC
     }
 
     if(component === undefined) {
-        return res.status(404).json({error: `No Component with the Id ${componentId} exists`});
+        res.status(404).json({error: `No Component with the Id ${componentId} exists`});
+        return;
     }
 
     (req as ComponentAwareRequest).component = component;
@@ -109,22 +115,23 @@ export interface ClientAwareRequest extends Request {
     component: AbstractScrobbleClient
 }
 
-export const makeSourceNextMiddle = (sources: ScrobbleSources): ExpressHandler => async (req: Request, res: Response, next: NextFunction) => {
+export const makeSourceNextMiddle = (sources: ScrobbleSources): TypedMiddleware<{component: AbstractSource}> => async (req: Request, res: Response, next: NextFunction) => {
     const {
         params: {
-            componentVal
+            id
         }
     } = req;
 
-    const componentId = Number.parseInt(componentVal as string);
+    const componentId = Number.parseInt(id as string);
     if (isNaN(componentId)) {
-        return res.status(400).json({ error: 'Source Id must be a number' });
+       res.status(400).json({ error: 'Source Id must be a number' });
+       return;
     }
 
-    let component: AbstractSource;
-    component = sources.sources.find(x => x.componentId === componentId);
+    const component: AbstractSource = sources.sources.find(x => x.componentId === componentId);
     if(component === undefined) {
-        return res.status(404).json({error: `No Source with the Id ${componentId} exists`});
+        res.status(404).json({error: `No Source with the Id ${componentId} exists`});
+        return;
     }
 
     (req as SourceAwareRequest).component = component;
@@ -132,22 +139,23 @@ export const makeSourceNextMiddle = (sources: ScrobbleSources): ExpressHandler =
     next();
 }
 
-export const makeClientNextMiddle = (clients: ScrobbleClients): ExpressHandler => async (req: Request, res: Response, next: NextFunction) => {
+export const makeClientNextMiddle = (clients: ScrobbleClients): TypedMiddleware<{component: AbstractScrobbleClient}> => async (req: Request, res: Response, next: NextFunction) => {
     const {
         params: {
-            componentVal
+            id
         }
     } = req;
 
-    const componentId = Number.parseInt(componentVal as string);
+    const componentId = Number.parseInt(id as string);
     if (isNaN(componentId)) {
-        return res.status(400).json({ error: 'Source Id must be a number' });
+        res.status(400).json({ error: 'Source Id must be a number' });
+        return;
     }
 
-    let component: AbstractScrobbleClient;
-    component = clients.clients.find(x => x.componentId === componentId);
+    const component: AbstractScrobbleClient = clients.clients.find(x => x.componentId === componentId);
     if(component === undefined) {
-        return res.status(404).json({error: `No Client with the Id ${componentId} exists`});
+        res.status(404).json({error: `No Client with the Id ${componentId} exists`});
+        return;
     }
 
     (req as ClientAwareRequest).component = component;

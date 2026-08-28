@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import type {ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi} from "../../Api.ts";
-import { CLIENT_INGRESS_QUEUE, type ComponentType, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes } from "../../Atomic.ts";
+import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ComponentType, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes } from "../../Atomic.ts";
 import { generatePlay, normalizePlays } from "./PlayTestUtils.ts";
 import { generatePlayInput, generatePlayWithLifecycle, playWithLifecycleScrobble, randomPlayState } from "./fixtures.ts";
 import { asJsonPlayObject } from "../../PlayMarshalUtils.ts";
@@ -14,6 +14,7 @@ import { CALCULATED_PLAYER_STATUSES } from '../../Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../Atomic.ts';
 import { generateArray } from "../../DataUtils.ts";
 import type {ErrorIsh} from "../../ErrorUtils.ts";
+import { serializeError } from "serialize-error";
 
 export const generatePlayApiCommon = (commonData: Partial<PlayApiCommon> & {play?: JsonPlayObject | PlayObject } = {}, ...playOpts: Parameters<typeof generatePlay>): PlayApiCommon => {
     let play: JsonPlayObject | PlayObject;
@@ -73,7 +74,7 @@ export const generateQueueStateApi = (data: Partial<QueueStateApi>): QueueStateA
     const cAt = faker.date.recent().toISOString();
     return {
         id: faker.number.int({min: 1, max: 100}),
-        queueName: CLIENT_INGRESS_QUEUE,
+        queueName: INGRESS_QUEUE,
         queueStatus: faker.helpers.arrayElement(QUEUE_STATUSES),
         updatedAt: cAt,
         retries: 0,
@@ -101,7 +102,14 @@ export const generatePlayApiCommonDetailed = (opts: {
         ...playCommon,
         input: inputRes,
         queueStates: [queueRes],
-        error
+        error,
+        events: [
+            {eventName: 'queueStateChange', playId: 1, data: {queueName: 'ingress', queueStatus: 'queued', retries: 2,
+                error: serializeError(generateFakeError()),
+                 context: {reason: 'Bulk scrobble for dead Plays by system', dupeCheck: false, transform: true}}},
+            {eventName: 'playStateChange', playId: 1, data: {state: 'discarded', reason: 'Monitoring was off'}},
+            {eventName: 'queueStateChange', playId: 1, data: {queueName: 'ingress', retries: 1, queueStatus: 'failed', error: serializeError(generateFakeError())}},
+        ]
     }
 }
 
@@ -116,6 +124,9 @@ export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApi>
         state = faker.number.int({min: 1, max: 7}) as ComponentState,
         monitoringStatus = { monitoring: faker.datatype.boolean({probability: 0.1}), origin: 'system' },
         players = {},
+        queued = faker.number.int({min: 1, max: 2000}),
+        deadLetterPlays = faker.number.int({min: 1, max: 2000}),
+        deadLetterPlaysTotal = faker.number.int({min: deadLetterPlays, max: 2000}),
         ...rest
     } = data;
 
@@ -142,8 +153,12 @@ export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApi>
         countNonLive: 0,
         state,
         players,
+        errors: [],
         status: faker.helpers.arrayElement(statusSamples),
         monitoringStatus,
+        queued,
+        deadLetterPlays,
+        deadLetterPlaysTotal,
         ...rest
     }
 }
@@ -172,7 +187,12 @@ export const generateSourceApiJson = (data: Partial<ComponentSourceApi> = {}): C
         supportsUpstreamRecentlyPlayed,
         tracksDiscovered,
         players,
-        sleeping
+        sleeping,
+        initialized: true,
+        authType: COMPONENT_AUTH_TYPE.unattended,
+        hasAuth: true,
+        hasAuthInteraction: true,
+        authed: true
     }
 }
 
@@ -188,19 +208,18 @@ export const generateClientApiJson = (data: Partial<ComponentClientApi> = {}): C
         ...rest
     });
     const {
-        queued = faker.number.int({min: 1, max: 2000}),
-        deadLetterScrobbles = faker.number.int({min: 1, max: 2000}),
-        deadLetterScrobblesTotal = faker.number.int({min: deadLetterScrobbles, max: 2000}),
         players = (data.players ?? {}),
     } = data;
     return {
         ...common,
-        queued,
         tracksScrobbled: common.countLive,
-        deadLetterScrobbles,
-        deadLetterScrobblesTotal,
         players,
-        supportsNowPlaying: Object.keys(players).length > 0
+        supportsNowPlaying: Object.keys(players).length > 0,
+        initialized: true,
+        authType: COMPONENT_AUTH_TYPE.unattended,
+        hasAuth: true,
+        hasAuthInteraction: true,
+        authed: true
     }
 }
 

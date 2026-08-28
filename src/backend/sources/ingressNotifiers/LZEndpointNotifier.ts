@@ -1,7 +1,8 @@
 import type {Logger} from "@foxxmd/logging";
 import type {Request} from "express";
-import { parseIdentifiersFromRequest } from "../EndpointListenbrainzSource.ts";
 import { IngressNotifier } from "./IngressNotifier.ts";
+import { parseIdentifiersFromRequest } from "../../utils/RequestUtils.ts";
+import { requestMatchers } from "../EndpointListenbrainzSource.ts";
 
 export class LZEndpointNotifier extends IngressNotifier {
 
@@ -14,7 +15,7 @@ export class LZEndpointNotifier extends IngressNotifier {
 
         if(!isRaw) {
 
-            const [slug, token] = parseIdentifiersFromRequest(req);
+            const [slug, token] = parseIdentifiersFromRequest(req, requestMatchers);
             if(slug === false) {
                 return [false, `Request URL was not valid: ${req.baseUrl}`];
             }

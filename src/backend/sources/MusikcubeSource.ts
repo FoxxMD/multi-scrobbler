@@ -4,14 +4,14 @@ import type { CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket';
 import { WS } from 'iso-websocket'
 import { randomUUID } from "node:crypto";
 import pEvent from 'p-event';
-import type {PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
+import type {ComponentAuthType, PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
 import { UpstreamError } from "../common/errors/UpstreamError.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
     type PlayerStateData,
 } from "../common/infrastructure/Atomic.ts";
-import { SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
+import { COMPONENT_AUTH_TYPE, SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
 import type {MCAuthenticateRequest, MCAuthenticateResponse, MCPlaybackOverviewRequest, MCPlaybackOverviewResponse, MusikcubeSourceConfig} from "../common/infrastructure/config/source/musikcube.ts";
 import { sleep } from "../utils.ts";
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
@@ -19,6 +19,7 @@ import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import { normalizeWSAddress } from "../utils/NetworkUtils.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import { artistNamesToCredits } from "../../core/StringUtils.ts";
+import { AuthError } from "../common/errors/MSErrors.ts";
 
 const CLIENT_STATE = {
     0: 'connecting',
@@ -29,6 +30,7 @@ const CLIENT_STATE = {
 
 export class MusikcubeSource extends MemoryPositionalSource {
     declare config: MusikcubeSourceConfig;
+    override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
 
     url: URLData;
 
@@ -149,9 +151,9 @@ export class MusikcubeSource extends MemoryPositionalSource {
             if(authE === undefined) {
                 throw new Error('Musikcube did not respond to auth message after 2000 ms');
             } else if(isCloseEvent(authE)) {
-                throw new Error(`Password is not correct: ${authE.code} => ${authE.reason}`);
+                throw new AuthError(`Password is not correct: ${authE.code} => ${authE.reason}`, {unrecoverable: true});
             } else if(isErrorEvent(authE)) {
-                throw new Error(`Unexpected error occurred while authenticating: ${authE.message}`, {cause: authE.error});
+                throw new AuthError(`Unexpected error occurred while authenticating: ${authE.message}`, {cause: authE.error, unrecoverable: false});
             }
 
             return true;

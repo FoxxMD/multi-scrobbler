@@ -1,6 +1,6 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import type AbstractTransformer from "./AbstractTransformer.ts";
-import type {TransformerCommonConfig} from "../../../core/Atomic.ts";
+import type {OptionalCacheUsage, TransformerCommonConfig} from "../../../core/Atomic.ts";
 import UserTransformer from "./UserTransformer.ts";
 import type {StageConfig} from "../../../core/Transform.ts";
 import type {PlayObject} from "../../../core/Atomic.ts";
@@ -146,10 +146,10 @@ export default class TransformerManager {
         return config;
     }
 
-    public async handleStage(data: StageConfig, play: PlayObject, asyncId: string = nanoid(6)): Promise<[PlayObject, string]> {
+    public async handleStage(data: StageConfig, play: PlayObject, opts: {asyncId?: string} & OptionalCacheUsage): Promise<[PlayObject, string]> {
         const t: AbstractTransformer = this.getTransformerByStage(data);
         try {
-            const transformedPlay = await this.asyncStore.run(asyncId, async () => {
+            const transformedPlay = await this.asyncStore.run(opts.asyncId ?? nanoid(6), async () => {
                 return await t.handle(data, play);
             });
             return [transformedPlay, t.name];

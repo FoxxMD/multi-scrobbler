@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {playTransformOptionsSchema} from "../../../../../core/Transform.ts";
-import {commonConfigSchema, requestRetryOptionsSchema, monitorOptionsSchema, type CommonComponentEnvShape} from "../common.ts";
+import {commonConfigSchema, requestRetryOptionsSchema, monitorOptionsSchema, type CommonComponentEnvShape, deadLetterOptionsSchema} from "../common.ts";
 import {retentionConfigDurationValueSchema} from "../database.ts";
 import type { PipeUnwrapDirection } from "../../../../utils/ZodUtils.ts";
 
@@ -124,6 +124,7 @@ export const commonClientOptionsSchema = z.object({
     ...monitorOptionsSchema.shape,
     ...requestRetryOptionsSchema.shape,
     ...upstreamRefreshOptionsSchema.shape,
+    ...deadLetterOptionsSchema.shape,
 
     /**
      * Check client for an existing scrobble at the same recorded time as the "new" track to be scrobbled. If an existing scrobble is found this track is not track scrobbled.
@@ -142,17 +143,6 @@ export const commonClientOptionsSchema = z.object({
         match: matchLoggingOptionsSchema.optional()
     }).optional().meta({
         description: "Options used for increasing verbosity of logging in MS (used for debugging)"
-    }),
-    /**
-     * Number of times MS should automatically retry scrobbles in dead letter queue
-     *
-     * @default 3
-     * @examples [3]
-     * */
-    deadLetterRetries: z.number().optional().meta({
-        description: "Number of times MS should automatically retry scrobbles in dead letter queue",
-        default: 3,
-        examples: [3]
     }),
 
     /** Enhance/correct Play data by applying a transform pipeline */

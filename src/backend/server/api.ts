@@ -1,28 +1,28 @@
-import type {LogDataPretty, Logger, LogLevel} from "@foxxmd/logging";
+import {loggerTest, type LogDataPretty, type Logger, type LogLevel} from "@foxxmd/logging";
 import type {Express} from 'express';
 import bsseDef from 'better-sse';
 import bodyParser from "body-parser";
 import { FixedSizeList } from 'fixed-size-list';
-import type { PassThrough } from "node:stream";
+import { PassThrough } from "node:stream";
 import { Transform } from "stream";
 import {
-    CLIENT_DEAD_QUEUE,
+    DEAD_QUEUE,
     type ClientStatusData,
     type DeadLetterScrobble,
     type LogOutputConfig,
-    PLAY_CLIENT_STATE,
-    PLAY_SOURCE_STATE,
     type PlayObject,
     SOURCE_SOT,
     type SOURCE_SOT_TYPES,
     type SourcePlayerJson,
     type SourceStatusData,
+    queueContextSchema,
+    logLevelStandaloneSchema,
 } from "../../core/Atomic.ts";
 import { capitalize } from "../../core/StringUtils.ts";
-import type {ExpressHandler, LeveledLogData} from "../common/infrastructure/Atomic.ts";
+import type {LeveledLogData} from "../common/infrastructure/Atomic.ts";
 import { getRoot } from "../ioc.ts";
 import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts";
-import type AbstractSource from "../sources/AbstractSource.ts";
+import AbstractSource from "../sources/AbstractSource.ts";
 import MemorySource from "../sources/MemorySource.ts";
 import { parseBool } from "../utils.ts";
 import { sortByNewestPlayDate } from '../../core/PlayUtils.ts';
@@ -30,20 +30,27 @@ import { setupAuthRoutes } from "./auth.ts";
 import { setupDeezerRoutes } from "./deezerRoutes.ts";
 import {setupLZEndpointRoutes} from "./endpointListenbrainzRoutes.ts";
 import {setupLastfmEndpointRoutes} from "./endpointLastfmRoutes.ts";
-import { type ComponentAwareRequest, makeClientCheckMiddle, makeClientNextMiddle, makeComponentMiddle, makeSourceCheckMiddle, makeSourceNextMiddle, type SourceAwareRequest } from "./middleware.ts";
+import { makeClientCheckMiddle, makeClientNextMiddle, makeComponentMiddle, makeSourceCheckMiddle, makeSourceNextMiddle } from "./middleware.ts";
 import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.ts";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
 import prom from 'prom-client';
-import { SimpleError } from "../common/errors/MSErrors.ts";
+import { findAuthIssue, SimpleError } from "../common/errors/MSErrors.ts";
 import { DrizzlePlayRepository, type QueryPlaysOpts, type QueryPlaysOptsJson } from "../common/database/drizzle/repositories/PlayRepository.ts";
 import { playSelectToDeadScrobble } from "../common/database/drizzle/entityUtils.ts";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.ts";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
-import type {ComponentClientApiJson, ComponentSourceApiJson} from "../../core/Api.ts";
+import {componentStateBodySchema, type ComponentClientApiJson, type ComponentSourceApiJson, type PlayApiCommonDetailed} from "../../core/Api.ts";
 import { asDayjsHydratedObject } from "../../core/DataUtils.ts";
 import type {Dayjs} from "dayjs";
 import { asSerializablePlaySelect } from "../../core/PlayMarshalUtils.ts";
+import { serializeError } from "serialize-error";
+import { z } from 'zod';
+import type { createTypedRouter, TypedMiddleware } from "@minisylar/express-typed-router";
+import pEvent from "p-event";
+import { hasMetricRepositories, registerMetrics, setMetricRepositories } from "./promMetrics.ts";
+import pMap from "p-map";
+import type { PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -65,7 +72,34 @@ const getLogs = (minLevel: number, limit: number = maxBufferSize, sort: 'asc' | 
     return allLogs.flat(1).sort((a, b) => a.time - b.time).slice(0, limit);
 }
 
-export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThrough, initialLogOutput: LogDataPretty[] = [], scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
+export interface ApiArgs {
+    app: Express
+    router: ReturnType<typeof createTypedRouter>
+    scrobbleSources: ScrobbleSources
+    scrobbleClients: ScrobbleClients
+}
+
+export interface ApiOptions {
+    logger?: Logger
+    appLoggerStream?: PassThrough
+    initialLogOutput?: LogDataPretty[]
+    testMode?: boolean
+}
+
+export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
+    const {
+        app,
+        router,
+        scrobbleSources,
+        scrobbleClients
+    } = args;
+    const {
+        logger = loggerTest,
+        appLoggerStream = new PassThrough(),
+        initialLogOutput = [],
+        testMode
+    } = opts;
+    
     for(const level of Object.keys(logger.levels.labels)) {
         output[level] = new FixedSizeList<LeveledLogData>(maxBufferSize);
     }
@@ -114,7 +148,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
     const sourceAwareMiddle = makeSourceNextMiddle(scrobbleSources);
     const clientAwareMiddle = makeClientNextMiddle(scrobbleClients);
 
-    const setLogWebSettings: ExpressHandler = async (req, res, next) => {
+    const setLogWebSettings: TypedMiddleware = async (req, res, next) => {
         // @ts-expect-error logLevel not part of session
         const sessionLevel: LogLevel | undefined = req.session.logLevel as LogLevel | undefined;
         if(sessionLevel !== undefined && logConfig.level !== sessionLevel) {
@@ -128,17 +162,21 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         next();
     }
 
-    app.get('/api/logs/stream', setLogWebSettings, async (req, res) => {
+    router.get('/api/logs/stream', {middleware: [setLogWebSettings], tags: ['Events'], summary: 'SSE Logs'}, async (req, res) => {
         const session = await bsseDef.createSession(req, res);
         await session.stream(logObjectStream);
     });
 
-    app.get('/api/logs', setLogWebSettings, async (req, res) => {
+    router.get('/api/logs', {middleware: [setLogWebSettings], tags: ['Events'], summary: 'Get Logs'}, async (req, res) => {
         const slicedLog = getLogs(logger.levels.values[logConfig.level], logConfig.limit + 1, logConfig.sort === 'ascending' ? 'asc' : 'desc');
         return res.json({data: slicedLog, settings: logConfig});
     });
 
-    app.put('/api/logs', async (req, res) => {
+    router.put('/api/logs', {
+        bodySchema: z.object({level: logLevelStandaloneSchema, limit: z.int().positive().max(500)}),
+        tags: ['Events'],
+        summary: 'Update Log Settings'
+    }, async (req, res) => {
         logConfig.level = req.body.level as LogLevel | undefined ?? logConfig.level;
         logConfig.limit = req.body.limit ?? logConfig.limit;
         const slicedLog = getLogs(logger.levels.values[logConfig.level], logConfig.limit + 1, logConfig.sort === 'ascending' ? 'asc' : 'desc');
@@ -149,7 +187,9 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         return res.json({data: slicedLog, settings: logConfig});
     });
 
-    app.get('/api/events', async (req, res) => {
+    router.get('/api/events', {querySchema: z.object({
+        next: z.literal('true').optional().meta({description: 'When used events are sent in new ui format'})
+    }), tags: ['Events'], summary: 'SSE Events'}, async (req, res) => {
         const {
             query: {
                 next: nextQs
@@ -160,7 +200,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
 
         const session = await bsseDef.createSession(req, res);
         scrobbleSources.emitter.onAny((eventName: string, payload: any) => {
-            if(payload.from !== undefined) {
+            if(payload !== undefined && payload.from !== undefined) {
                 if(isNextapi) {
                     session.push({event: eventName, ...payload}, eventName);
                 } else {
@@ -169,7 +209,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
             }
         });
         scrobbleClients.emitter.onAny((eventName: string, payload: any) => {
-            if(payload.from !== undefined) {
+            if(payload !== undefined && payload.from !== undefined) {
                 if(isNextapi) {
                     session.push({event: eventName, ...payload}, eventName);
                 } else {
@@ -180,22 +220,12 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
     });
 
     setupDeezerRoutes(app, logger, scrobbleSources);
-    setupWebscrobblerRoutes(app, logger, scrobbleSources);
-    setupLZEndpointRoutes(app, logger, scrobbleSources, scrobbleClients);
-    setupLastfmEndpointRoutes(app, logger, scrobbleSources);
-    setupAuthRoutes(app, logger, sourceRequiredMiddle, clientRequiredMiddle, scrobbleSources, scrobbleClients);
+    setupWebscrobblerRoutes(app, router, logger, scrobbleSources);
+    setupLZEndpointRoutes(app, router, logger, scrobbleSources, scrobbleClients);
+    setupLastfmEndpointRoutes(app, router, logger, scrobbleSources);
+    setupAuthRoutes(app, router, logger, sourceRequiredMiddle, clientRequiredMiddle, scrobbleSources, scrobbleClients);
 
-    app.put('/api/webscrobbler', bodyParser.json({type: ['text/*', 'application/json']}), async (req, res) => {
-        logger.info(req.body);
-        res.sendStatus(200);
-    });
-
-    app.get('/api/webscrobbler', bodyParser.json({type: ['text/*', 'application/json']}), async (req, res) => {
-        logger.info(req.body);
-        res.sendStatus(200);
-    });
-
-    app.get('/api/components', async (req, res, next) => {
+    router.get('/api/components', {tags: ['Source/Client'], summary: 'Get All Sources/Clients'}, async (req, res, next) => {
 
         const sourceData = scrobbleSources.sources.filter(x => x.databaseOK).map((x) => {
             const {
@@ -255,13 +285,13 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         return res.json([...sourceData, ...clientData]);
     });
 
-    app.get('/api/sources/:componentVal/players', sourceAwareMiddle, async (req: SourceAwareRequest, res, next) => {
+    router.get('/api/sources/:id/players', {middleware: [sourceAwareMiddle], hidden: true}, async (req, res, next) => {
         if(req.component instanceof MemorySource) {
             return res.json(req.component.playersToObject());
         }
         return res.json({});
     });
-    app.get('/api/components/:componentVal/players', componentAwareMiddle, async (req: ComponentAwareRequest, res, next) => {
+    router.get('/api/components/:id/players', {middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Source/Client Players'}, async (req, res, next) => {
         if(req.component instanceof MemorySource) {
             return res.json(req.component.playersToObject());
         } else if(req.component instanceof AbstractScrobbleClient && req.component.nowPlayingEnabled) {
@@ -270,7 +300,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         return res.json({});
     });
 
-    app.get('/api/sources/:componentVal/players/:platformId', sourceAwareMiddle, async (req: SourceAwareRequest, res, next) => {
+    router.get('/api/sources/:id/players/:platformId', {middleware: [sourceAwareMiddle], hidden: true}, async (req, res, next) => {
         if(req.component instanceof MemorySource) {
             const {
                 params: {
@@ -285,7 +315,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         }
         return res.json({});
     });
-    app.get('/api/components/:componentVal/players/:platformId', componentAwareMiddle, async (req: ComponentAwareRequest, res, next) => {
+    router.get('/api/components/:id/players/:platformId', {middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Specific Source/Client Player'}, async (req, res, next) => {
         const {
             params: {
                 platformId
@@ -308,14 +338,97 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         return res.status(400).json({error: `Component does not support players`});
     });
 
-    app.get('/api/components/:componentVal', componentAwareMiddle, async (req: ComponentAwareRequest, res, next) => {
+    router.get('/api/components/:id', {middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Source/Client'}, async (req, res) => {
         const {
             component,
         } = req;
         return res.json(component.getApiData());
     });
+    
+    router.post('/api/components/:id/state',
+   {
+    middleware: [componentAwareMiddle, bodyParser.json({ type: ['text/*', 'application/json'] })],
+    bodySchema: componentStateBodySchema,
+    tags: ['Source/Client'],
+    summary: 'Update Source/Client State'
+},
+     async (req, res) => {
+        const {
+            component,
+            body: {
+                state,
+                reason = 'invoked by api'
+            }
+        } = req;
+        switch (state) {
+            case 'stop':
+                try {
+                    await component.stop({ reason: new SimpleError(reason, {simple: true, shortStack: true}) })
+                } catch (e) {
+                    return res.status(500).json({ error: serializeError(e) });
+                }
+                break;
+            case 'start':
+                try {
+                    await component.start({ forceInit: true })
+                } catch (e) {
+                    return res.status(500).json({ error: serializeError(e) });
+                }
+                break;
+            case 'restart':
+                try {
+                    await component.restart({ forceInit: true, reason: new SimpleError(reason, {simple: true, shortStack: true}) })
+                } catch (e) {
+                    return res.status(500).json({ error: serializeError(e) });
+                }
+                break;
+            case 'ignore':
+                component.monitoringActivity = component.getSystemMonitoring() === false ? undefined : false;
+                component.emitComponentUpdate({state: component.getRunningState()});
+                break;
+            case 'monitor':
+                component.monitoringActivity = component.getSystemMonitoring() === true ? undefined : true;
+                component.emitComponentUpdate({state: component.getRunningState()});
+                break;
+            default:
+                return res.status(400).json({ error: { message: `'state' type ${state} was not handled` } });
+        }
+        return res.sendStatus(200);
+    });
 
-    app.get('/api/components/:componentVal/plays', componentAwareMiddle, async (req: ComponentAwareRequest, res, next) => {
+    router.post('/api/components/:id/auth', {
+        middleware: [componentAwareMiddle],
+        tags: ['Source/Client'],
+        summary: 'Test Source/Client Authentication'
+    }, async (req, res, next) => {
+        const {
+            component,
+        } = req;
+        let didAuth = false;
+        try {
+            logger.verbose('User requested auth test');
+            await component.testAuth(true);
+            component.clearErrors({predicate: x => findAuthIssue(x) !== undefined});
+            didAuth = true;
+            return res.sendStatus(200);
+        } catch (e) {
+            component.replaceErrors(e, {predicate: x => findAuthIssue(x) !== undefined});
+            return res.status(500).json({error: serializeError(e)});
+        } finally {
+            const data = component.getApiData();
+            component.emitComponentUpdate({
+                errors: data.errors,
+                state: data.state,
+                status: didAuth ? 'Authenticated successfully' : data.status
+            });
+        }
+    });
+
+    router.get('/api/components/:id/plays', {
+        middleware: [componentAwareMiddle],
+        tags: ['Plays'],
+        summary: 'Get Paginated Plays'
+    }, async (req, res, next) => {
         const {
             component,
             query
@@ -324,19 +437,22 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         const hydratedQuery = asDayjsHydratedObject<QueryPlaysOptsJson, QueryPlaysOpts<Dayjs>>(query);
         const playRes = await component.getPlaysPaginated(hydratedQuery);
 
-        // @ts-expect-error
+        // @ts-expect-error its fine
         playRes.data = playRes.data.map(x => asSerializablePlaySelect(x))
         //PlayApiCommonDetailed
         // plus paginatioon
         return res.json(playRes);
     });
 
-    app.get('/api/components/:componentVal/plays/:playUid', componentAwareMiddle, async (req: ComponentAwareRequest, res, next) => {
+    router.get('/api/components/:id/plays/:uid', {
+        middleware: [componentAwareMiddle],
+        tags: ['Plays'],
+        summary: 'Get Play'
+    }, async (req, res, next) => {
         const {
             component,
-            query,
             params: {
-                playUid
+                uid: playUid
             }
         } = req;
 
@@ -346,7 +462,138 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         return res.json(asSerializablePlaySelect(playRes));
     });
 
-    app.delete('/api/cache/:cacheType', async (req, res) => {
+    router.delete('/api/components/:id/plays/:uid', {
+        middleware: [componentAwareMiddle],
+        querySchema: z.object({children: z.stringbool().optional()}),
+        tags: ['Plays'],
+        summary: 'Delete Play'
+    }, async (req, res, next) => {
+        const {
+            component,
+            query: {
+                children
+            },
+            params: {
+                uid: playUid
+            }
+        } = req;
+
+        const play = await component.playRepo.findByUidWith<'children'>(playUid, ['children']);
+        if(play === undefined) {
+            return res.sendStatus(404);
+        }
+
+        await component.deletePlay(play);
+
+        return res.sendStatus(200);
+    });
+
+    router.post('/api/components/:id/plays/queue', {
+        middleware: [componentAwareMiddle,bodyParser.json({ type: ['text/*', 'application/json'] })],
+        bodySchema: z.object({
+            context: queueContextSchema.optional(),
+            filters: z.looseObject({})
+        }),
+        tags: ['Plays'],
+        summary: 'Requeue Bulk Plays'
+    }, async (req, res, next) => {
+        const {
+            component,
+            body
+        } = req;
+
+        const hydratedQuery = asDayjsHydratedObject<QueryPlaysOptsJson, QueryPlaysOpts<Dayjs>>(body.filters);
+        res.sendStatus(200);
+
+        const queueFunc = component instanceof AbstractSource ? 
+        async (p: PlayWith<'queueStates'>) => await component.queuePlay([p], {...body.context, isRetry: true, reason: 'User requested reprocessing'})
+        : async (p: PlayWith<'queueStates'>) => await component.queueScrobble([p], {...body.context, isRetry: true, reason: 'User requested reprocessing'});
+
+        const currentFilters = hydratedQuery;
+        let more = true;
+        while(more) {
+            const res = await component.getPlaysPaginatedInternal(currentFilters);
+            pMap(res.data, async (x) => await queueFunc(x), {concurrency: 5});
+            more = res.data.length === res.meta.limit;
+            if(more) {
+                currentFilters.offset += res.meta.limit
+            }
+        }
+    });
+
+    router.post('/api/components/:id/plays/:uid/queue', {
+        middleware: [componentAwareMiddle],
+        bodySchema: queueContextSchema.optional(),
+        tags: ['Plays'],
+        summary: 'Requeue a Play'
+    }, async (req, res, next) => {
+        const {
+            component,
+            params: {
+                uid: playUid
+            }, 
+            body = {}
+        } = req;
+
+        const play = await component.playRepo.findByUid(playUid);
+        if(play === undefined) {
+            return res.sendStatus(404);
+        }
+
+        if(component instanceof AbstractSource) {
+            await component.queuePlay([play], {...body, isRetry: true, reason: 'User requested reprocessing'});
+        } else {
+            await component.queueScrobble([play], {...body, isRetry: true, reason: 'User requested reprocessing'});
+        }
+        return res.sendStatus(200);
+    });
+
+    router.delete('/api/components/:id/plays/:uid/queue', {
+        middleware: [componentAwareMiddle],
+        tags: ['Plays'],
+        summary: 'Dequeue a Play'
+    }, async (req, res, next) => {
+        const {
+            component,
+            params: {
+                uid: playUid
+            }
+        } = req;
+
+        const play = await component.playRepo.findByUid(playUid);
+        if(play === undefined) {
+            return res.sendStatus(404);
+        }
+
+        await component.cancelQueuedPlay(play);
+        return res.sendStatus(200);
+    });
+
+    router.delete('/api/components/:id/plays/:uid/dead', {
+        middleware: [componentAwareMiddle],
+        tags: ['Plays'],
+        summary: 'Mark Dead Play as Completed'
+    }, async (req, res, next) => {
+        const {
+            component,
+            params: {
+                uid: playUid
+            }
+        } = req;
+
+        const play = await component.playRepo.findByUid(playUid);
+        if(play === undefined) {
+            return res.sendStatus(404);
+        }
+
+        await component.removeDeadLetterScrobble(play);
+        return res.sendStatus(200);
+    });
+
+    router.delete('/api/cache/:cacheType', {
+        tags: ['Cache'],
+        summary: 'Delete Cache By Type'
+    }, async (req, res) => {
         const cache = await getRoot().items.cache();
         logger.verbose(`User request cache deletion for ${req.params.cacheType}`);
         switch(req.params.cacheType) {
@@ -371,7 +618,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
      * 
      *  */
 
-    app.get('/api/status', async (req, res, next) => {
+    router.get('/api/status', {hidden: true}, async (req, res, next) => {
 
         const sourceData = scrobbleSources.sources.map((x) => {
             const {
@@ -465,9 +712,8 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         return res.json({sources: sourceData, clients: clientData});
     });
 
-    app.get('/api/recent', sourceMiddleFunc(false), async (req, res, next) => {
+    router.get('/api/recent', {middleware: [sourceMiddleFunc(false)], querySchema: z.any(), hidden: true}, async (req, res, next) => {
         const {
-            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleSource: source,
             query: {
                 upstream = 'false',
@@ -499,9 +745,8 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         return res.json(result);
     });
 
-    app.get('/api/source/art', sourceMiddleFunc(false), async (req, res, next) => {
+    router.get('/api/source/art', {middleware: [sourceMiddleFunc(false)], querySchema: z.object({data: z.number()}).optional(), hidden: true}, async (req, res, next) => {
         const {
-            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleSource,
             query: {
                 data
@@ -527,9 +772,8 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         }
     });
 
-    app.get('/api/dead', clientMiddleFunc(true), async (req, res, next) => {
+    router.get('/api/dead', {middleware: [clientMiddleFunc(true)], hidden: true}, async (req, res, next) => {
         const {
-            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleClient: client,
             query = {}
         } = req;
@@ -538,21 +782,19 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
             ...query as Partial<QueryPlaysOpts>,
             queues: [
                 {
-                    queueName: CLIENT_DEAD_QUEUE,
+                    queueName: DEAD_QUEUE,
                     queueStatus: ['queued','failed']
                 }
             ]
         }
 
-        // @ts-ignore
         const result: DeadLetterScrobble<PlayObject>[] = (await (client as AbstractScrobbleClient).getPlaysPaginated(deadQuery)).data.map(x => playSelectToDeadScrobble(x, true));
 
         return res.json(result);
     });
 
-    app.put('/api/dead', clientMiddleFunc(true), async (req, res, next) => {
+    router.put('/api/dead', {middleware: [clientMiddleFunc(true)], hidden: true}, async (req, res, next) => {
         const {
-            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleClient: client,
         } = req;
 
@@ -560,12 +802,11 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
 
         res.status(200).send('OK');
 
-        await ((client as AbstractScrobbleClient).processDeadLetterQueue(1000));
+        await ((client as AbstractScrobbleClient).processDeadLetterQueue(1000, 'Reprocessing bulk dead Plays initiated by user'));
     });
 
-    app.put('/api/dead/:id', clientMiddleFunc(true), async (req, res, next) => {
+    router.put('/api/dead/:id', {middleware: [clientMiddleFunc(true)], hidden: true}, async (req, res, next) => {
         const {
-            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleClient: client,
             params: {
                 id
@@ -574,14 +815,24 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
 
         const deadId = id as string;
 
-        (client as AbstractScrobbleClient).logger.verbose(`User requested processing of dead letter scrobble ${deadId} via API call`)
+        (client as AbstractScrobbleClient).logger.verbose(`User requested processing of dead letter scrobble ${deadId} via API call`);
 
         try {
-            const [scrobbled, dead] = await (client as AbstractScrobbleClient).processDeadLetterScrobble(deadId);
-            if(scrobbled) {
-                return res.status(200).send();
+            const playEntity = await client.playRepo.findByUid(id);
+            if(playEntity === undefined) {
+                return res.status(404).json({message: `Play ${deadId} does not exist`});
             }
-            return res.json(playSelectToDeadScrobble(dead, true));
+            client.queueScrobble(playEntity, {reason: 'user requested processing via API call'}).then(() => null);
+            const event = await pEvent(client.emitter, 'playUpdate', {
+                timeout: 10000,
+                filter: (val: PlayApiCommonDetailed) => val.uid === id
+            }) as PlayApiCommonDetailed;
+            if(event.state === 'scrobbled') {
+                return res.status(200).send();
+            } else {
+                // @ts-expect-error should be fine
+                return res.json(playSelectToDeadScrobble(event, true));
+            }
         } catch (e) {
             if(e.message.includes(`Play ${deadId} does not exist`)) {
                 logger.warn(e);
@@ -592,22 +843,20 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         }
     });
 
-    app.delete('/api/dead', clientMiddleFunc(true), async (req, res, next) => {
+    router.delete('/api/dead', {middleware: [clientMiddleFunc(true)], hidden: true}, async (req, res, next) => {
         const {
-            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleClient: client,
         } = req;
 
         (client as AbstractScrobbleClient).logger.verbose('User requested deletion of all dead letter scrobbles via API');
 
-        (client as AbstractScrobbleClient).removeDeadLetterScrobbles(['queued', 'failed'], 'failed', false).then(() => null).catch((e) => logger.error(e));
+        (client as AbstractScrobbleClient).removeDeadLetterScrobbles().then(() => null).catch((e) => logger.error(e));
 
         return res.sendStatus(200);
     });
 
-    app.delete('/api/dead/:id', clientMiddleFunc(true), async (req, res, next) => {
+    router.delete('/api/dead/:id', {middleware: [clientMiddleFunc(true)], hidden: true}, async (req, res, next) => {
         const {
-            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleClient: client,
             params: {
                 id
@@ -618,22 +867,22 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
 
         (client as AbstractScrobbleClient).logger.verbose(`User requested removal of dead letter scrobble ${deadId} via API call`)
 
+        const playEntity = await client.playRepo.findByUid(id);
+        if(playEntity === undefined) {
+            return res.status(404).json({message: `Play ${deadId} does not exist`});
+        }
+
         try {
-            await (client as AbstractScrobbleClient).removeDeadLetterScrobble(deadId,'failed', false);
+            await (client as AbstractScrobbleClient).removeDeadLetterScrobble(playEntity);
             return res.status(200).send();
         } catch (e) {
-            if(e.message.includes(`Play ${deadId} does not exist`)) {
-                logger.warn(e);
-                return res.status(404).json({error: e});
-            }
             logger.error(e);
             return res.status(500).json({error: e});
         }
     });
 
-    app.get('/api/scrobbled', clientMiddleFunc(false), async (req, res, next) => {
+    router.get('/api/scrobbled', {middleware: [clientMiddleFunc(true)], hidden: true}, async (req, res, next) => {
         const {
-            // @ts-expect-error scrobbleClient not part of req
             scrobbleClient: client,
             query
         } = req;
@@ -650,9 +899,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         return res.json(result);
     });
 
-    app.use('/api/source/init', sourceRequiredMiddle);
-    app.post('/api/source/init', async (req, res) => {
-        // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+    router.post('/api/source/init', {middleware: [sourceRequiredMiddle], querySchema: z.object({force: z.boolean()}).optional(), hidden: true}, async (req, res) => {
         const source = req.scrobbleSource as AbstractSource;
 
         const {
@@ -678,9 +925,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         }
     });
 
-    app.use('/api/source/listen', sourceRequiredMiddle);
-    app.post('/api/source/listen', async (req, res) => {
-        // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+    router.post('/api/source/listen', {middleware: [sourceRequiredMiddle], querySchema: z.object({listening: z.boolean()}).optional(), hidden: true}, async (req, res) => {
         const source = req.scrobbleSource as AbstractSource;
 
         const {
@@ -700,9 +945,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         res.status(200).json({listening});
     });
 
-    app.use('/api/client/listen', clientRequiredMiddle);
-    app.post('/api/client/listen', async (req, res) => {
-        // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+    router.post('/api/client/listen', {middleware: [clientRequiredMiddle], querySchema: z.object({listening: z.boolean()}).optional(), hidden: true}, async (req, res) => {
         const client = req.scrobbleClient as AbstractScrobbleClient;
 
         const {
@@ -722,9 +965,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         res.status(200).json({listening});
     });
 
-    app.use('/api/client/init', clientRequiredMiddle);
-    app.post('/api/client/init', async (req, res) => {
-        // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+    router.post('/api/client/init', {middleware: [clientRequiredMiddle], querySchema: z.object({force: z.boolean()}).optional(), hidden: true}, async (req, res) => {
         const client = req.scrobbleClient as AbstractScrobbleClient;
 
         const {
@@ -747,8 +988,7 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         res.status(200).send('OK');
     });
 
-    app.post('/api/client/historical', clientRequiredMiddle, async (req, res) => {
-        // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+    router.post('/api/client/historical', {middleware: [clientRequiredMiddle], hidden: true}, async (req, res) => {
         const client = req.scrobbleClient as AbstractScrobbleClient;
         if(client instanceof AbstractHistoricalScrobbleClient) {
             client.logger.info('User requested historical play hydration');
@@ -760,8 +1000,8 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         }
     });
 
-    app.get('/health', async (req, res) => res.redirect(307, `/api/${req.url.slice(1)}`));
-    app.get('/api/health', async (req, res) => {
+    router.get('/health', {hidden: true}, async (req, res) => res.redirect(307, `/api/${req.url.slice(1)}`));
+    router.get('/api/health', {querySchema: z.object({type: z.string(), name: z.string()}).optional(), tags: ['App Meta']}, async (req, res) => {
         const {
             type,
             name
@@ -774,134 +1014,18 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
         return res.status((clientsReady && sourcesReady) ? 200 : 500).json({messages: sourceMessages.concat(clientMessages)});
     });
 
-    const issuesClientGauge = new prom.Gauge({
-                name: 'multiscrobbler_client_issues',
-                help: 'Number of errors/issues with Client',
-                labelNames: ['name', 'type'],
-                async collect() {
-                    for(const client of scrobbleClients.clients) {
-                        let issues = 0;
-                        if(!(await client.isReady())) {
-                            issues++;
-                        }
-                        this.labels({name: client.getSafeExternalName(), type: client.type}).set(issues);
-                    }
-                }
-    });
-
-    const sourceIssues = new prom.Gauge({
-                name: 'multiscrobbler_source_issues',
-                help: 'Number of errors/issues with Source',
-                labelNames: ['name', 'type'],
-                async collect() {
-                    for(const source of scrobbleSources.sources) {
-                        let issues = 0;
-                        if(source.requiresAuth && !source.authed) {
-                            issues++;
-                        }
-                        if(source.canPoll && !source.polling) {
-                            issues++;
-                        }
-                        this.labels({name: source.getSafeExternalName(), type: source.type}).set(issues);
-                    }
-                }
-    });
-
-
-    let playRepo: DrizzlePlayRepository,
-    playHistoricalRepo: DrizzlePlayHistoricalRepository;
-
-    const sourcePlays = new prom.Gauge({
-                name: 'multiscrobbler_source_plays',
-                help: 'Count of stored plays by state for Sources',
-                labelNames: ['name', 'type', 'state'],
-                async collect() {
-                    const res = await playRepo.getPlayCountByState();
-                    for(const source of scrobbleSources.sources) {
-                        const relevant = res.filter(x => x['componentId'] === source.componentId);
-                        for(const s of PLAY_SOURCE_STATE) {
-                            const rel = relevant.find(x => x['state'] === s);
-                            const count = rel === undefined ? 0 : rel['count(*)'];
-                            this.labels({name: source.getSafeExternalName(), type: source.type, state: s}).set(count);
-                        }
-                    }
-                }
-    });
-    const sourceRetention = new prom.Gauge({
-                name: 'multiscrobbler_source_plays_compacted',
-                help: 'Count of compacted, stored plays by compaction type for Sources',
-                labelNames: ['name', 'type', 'compactionType'],
-                async collect() {
-                    const res = await playRepo.getCompactedPlayCountByComponent();
-                    for(const source of scrobbleSources.sources) {
-                        const relevant = res.filter(x => x['componentId'] === source.componentId);
-                        for(const s of ['input','transform','input-transform']) {
-                            const rel = relevant.find(x => x['compacted'] === s);
-                            const count = rel === undefined ? 0 : rel['count(*)'];
-                            this.labels({name: source.getSafeExternalName(), type: source.type, compactionType: s}).set(count);
-                        }
-                    }
-                }
-    });
-    const clientPlays = new prom.Gauge({
-                name: 'multiscrobbler_client_plays',
-                help: 'Count of stored plays by state for Clients',
-                labelNames: ['name', 'type', 'state'],
-                async collect() {
-                    const res = await playRepo.getPlayCountByState();
-                    for(const client of scrobbleClients.clients) {
-                        const relevant = res.filter(x => x['componentId'] === client.componentId);
-                        for(const s of PLAY_CLIENT_STATE) {
-                            const rel = relevant.find(x => x['state'] === s);
-                            const count = rel === undefined ? 0 : rel['count(*)'];
-                            this.labels({name: client.getSafeExternalName(), type: client.type, state: s}).set(count);
-                        }
-                    }
-                }
-    });
-    const clientRetention = new prom.Gauge({
-                name: 'multiscrobbler_client_plays_compacted',
-                help: 'Count of compacted, stored plays by compaction type for Clients',
-                labelNames: ['name', 'type', 'compactionType'],
-                async collect() {
-                    const res = await playRepo.getCompactedPlayCountByComponent();
-                    for(const client of scrobbleClients.clients) {
-                        const relevant = res.filter(x => x['componentId'] === client.componentId);
-                        for(const s of ['input','transform','input-transform']) {
-                            const rel = relevant.find(x => x['compacted'] === s);
-                            const count = rel === undefined ? 0 : rel['count(*)'];
-                            this.labels({name: client.getSafeExternalName(), type: client.type, compactionType: s}).set(count);
-                        }
-                    }
-                }
-    });
-    const clientHistoricalPlays = new prom.Gauge({
-                name: 'multiscrobbler_client_historical_plays',
-                help: 'Count of stored historical plays for Clients',
-                labelNames: ['name', 'type'],
-                async collect() {
-                    const res = await playHistoricalRepo.getPlayCountByComponent();
-                    for(const client of scrobbleClients.clients) {
-                        if(client instanceof AbstractHistoricalScrobbleClient) {
-                            const relevant = res.filter(x => x['componentId'] === client.componentId);
-                            for(const rel of relevant) {
-                                this.labels({name: client.getSafeExternalName(), type: client.type}).set(rel['count(*)']);
-                            }
-                        }
-                    }
-                }
-    });
-
-    if(process.env.PROMETHEUS_FULL === 'true') {
-        prom.collectDefaultMetrics();
+    if(testMode !== true) {
+        registerMetrics(scrobbleSources, scrobbleClients);
+        if(process.env.PROMETHEUS_FULL === 'true') {
+            prom.collectDefaultMetrics();
+        }
     }
 
-    app.get('/api/metrics', async (req, res) => {
+    router.get('/api/metrics', {tags: ['App Meta']}, async (req, res) => {
 
-        if(playRepo === undefined) {
+        if(!hasMetricRepositories()) {
             const db = await getRoot().items.db();
-            playRepo = new DrizzlePlayRepository(db);
-            playHistoricalRepo = new DrizzlePlayHistoricalRepository(db);
+            setMetricRepositories(new DrizzlePlayRepository(db),new DrizzlePlayHistoricalRepository(db))
         }
 
         const metricsString = await prom.register.metrics();
@@ -912,11 +1036,17 @@ export const setupApi = (app: Express, logger: Logger, appLoggerStream: PassThro
 
     });
 
-    app.get('/api/version', async (req, res) => {
+    router.get('/api/version', {tags: ['App Meta']}, async (req, res) => {
        return res.json({version: root.get('version')});
     });
 
-    app.use('/api/*path', async (req, res) => {
+    router.use('/api/docs', router.docs({
+        title: "Multi-Scrobbler API",
+        version: "0.1.0",
+        description: "Public API docs",
+    }))
+
+    router.all('/api/*path', {hidden: true}, async (req, res) => {
         const remote = req.connection.remoteAddress;
         const proxyRemote = req.headers["x-forwarded-for"];
         const ua = req.headers["user-agent"];

@@ -155,6 +155,21 @@ export const monitorOptionsSchema = z.object({
 })
 export type MonitorOptions = z.infer<typeof monitorOptionsSchema>;
 
+export const deadLetterOptionsSchema = z.object({
+    /**
+     * Number of times MS should automatically retry Plays in dead letter queue
+     *
+     * @default 3
+     * @examples [3]
+     * */
+    deadLetterRetries: z.number().optional().meta({
+        description: "Number of times MS should automatically retry Plays in dead letter queue",
+        default: 3,
+        examples: [3]
+    })
+})
+export type DeadLetterOptions = z.infer<typeof deadLetterOptionsSchema>;
+
 export type UnparsedConfig<T extends (SourceType | ClientType)> = {config: object, type: T, source?: 'file' | 'aio' | 'env', pos: string};
 
 export const generateConfigLocation = (configType: string, config: UnparsedConfig<any>): string => {

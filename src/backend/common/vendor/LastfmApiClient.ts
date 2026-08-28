@@ -13,14 +13,16 @@ import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjec
 import type {LastfmData} from "../infrastructure/config/client/lastfm.ts";
 import AbstractApiClient from "./AbstractApiClient.ts";
 import { normalizeStr, parseArtistCredits } from "../../utils/StringUtils.ts";
-import { LastFMUser, LastFMAuth, LastFMTrack, type LastFMUserGetRecentTracksResponse, type LastFMBooleanNumber, type LastFMUpdateNowPlayingResponse, type LastFMUserGetInfoResponse, type LastFMUserGetRecentTracksParams } from 'lastfm-ts-api';
+import { LastFMUser, LastFMAuth, LastFMTrack, type LastFMUserGetRecentTracksResponse, type LastFMBooleanNumber, type LastFMUpdateNowPlayingResponse, type LastFMUserGetInfoResponse, type LastFMUserGetRecentTracksParams, LastFMResponseError } from 'lastfm-ts-api';
 import clone from 'clone';
 import type { IncomingMessage } from "http";
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
-import { ScrobbleSubmitError, SimpleError } from "../errors/MSErrors.ts";
+import { AuthError, ScrobbleSubmitError, SimpleError } from "../errors/MSErrors.ts";
 import { redactString } from "@foxxmd/redact-string";
 import dns from 'node:dns/promises';
 import xml2js from 'xml2js';
+import { findCauseByFunc } from "../../utils/ErrorUtils.ts";
+import * as z from 'zod';
 
 const badErrors = [
     'api key suspended',
@@ -29,6 +31,12 @@ const badErrors = [
     'authentication failed',
     'invalid parameters'
 ];
+
+const unrecoverableAuthErrorCodes = [
+    10, // invalid api key
+    13, // invalid method signature
+    26, // api key suspended
+]
 
 const retryErrors = [
     'operation failed',
@@ -247,7 +255,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
         if (this.sessionKey === undefined) {
             this.logger.warn('No session key found. User interaction for authentication required.');
             this.logger.info(`Redirect URL that will be used on auth callback: '${this.redirectUri}'`);
-            throw new SimpleError('No session key found. User interaction for authentication required.');
+            throw new AuthError('No session key found. User interaction for authentication required.', {unrecoverable: false});
         }
         try {
             // existing lastfm clients are ok with getting user from getInfo
@@ -269,11 +277,32 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             this.logger.info(`Client authorized for user ${this.user}`)
             return true;
         } catch (e) {
+            if(e instanceof AuthError) {
+                throw e;
+            }
             this.logger.error('Testing auth failed');
             if(isNodeNetworkException(e)) {
                 this.logger.error(`Could not communicate with ${this.upstreamName} API`);
+                throw new AuthError('Testing auth failed', {cause: e, unrecoverable: false});
             }
-            throw e;
+            let unrecoverable: boolean;
+            if(e instanceof LastFMResponseError) {
+                try {
+                    const errorContent = JSON.parse(e.content);
+                    if(`error` in errorContent) {
+                        unrecoverable = unrecoverableAuthErrorCodes.includes(errorContent.error);
+                    }
+                } catch (e) {
+                    // swallow
+                }
+            }
+            if(unrecoverable === undefined) {
+                const errorWithMessage = findCauseByFunc(e, (ee) => `response` in ee) as Error & {response: IncomingMessage} | undefined;
+                if(errorWithMessage !== undefined) {
+                    unrecoverable = [401,403].includes(errorWithMessage.response.statusCode);
+                }
+            }
+            throw new AuthError('Testing auth failed', {cause: e, unrecoverable});
         }
     }
 
@@ -541,7 +570,7 @@ export class LastFMIgnoredScrobble extends UpstreamError {
 
 }
 
-export const scrobblePayloadToPlay = (obj: LastFMScrobbleRequestPayload): PlayObject => {
+export const scrobblePayloadToPlay = (obj: LastFmSingleSubmitPayload): PlayObject => {
     const {
         artist,
         track,
@@ -812,6 +841,72 @@ export interface LastFMScrobblePayload  {
         mbid?: string
 }
 
+// bodies arrive as urlencoded form data, so numeric fields are always strings (or string[] for batch keys) on the wire
+const lastfmNumericStringSchema = z.coerce.number().int().positive();
+
+export const lastfmSubmitPayloadSchema = z.object({
+    artist: z.string(),
+    track: z.string(),
+    album: z.string().optional(),
+    albumArtist: z.string().optional(),
+    mbid: z.string().optional(),
+    duration: lastfmNumericStringSchema.optional(),
+    sk: z.string().optional(),
+    api_key: z.string().optional()
+});
+
+export const lastfmSubmitMultiPayloadSchema = z.object({
+    artist: z.array(z.string()),
+    track: z.array(z.string()),
+    album: z.array(z.string()).optional(),
+    albumArtist: z.array(z.string()).optional(),
+    mbid: z.array(z.string()).optional(),
+    duration: z.array(lastfmNumericStringSchema).optional(),
+    sk: z.string().optional(),
+    api_key: z.string().optional()
+});
+
+export const lastfmScrobblePayloadSchema = z.object({
+    method: z.literal('track.scrobble'),
+    ...lastfmSubmitPayloadSchema.shape,
+    timestamp: lastfmNumericStringSchema,
+}).meta({title: 'Single Scrobble'});
+export type LastfmScrobblePayload = z.infer<typeof lastfmScrobblePayloadSchema>;
+export const lastfmScrobbleMultiPayloadSchema = z.object({
+    method: z.literal('track.scrobble'),
+    ...lastfmSubmitMultiPayloadSchema.shape,
+    timestamp: z.array(lastfmNumericStringSchema),
+}).meta({title: 'Bulk Scrobbles'});
+export const lastfmScrobbleMaybeMultiPayloadSchema = z.union([lastfmScrobblePayloadSchema,lastfmScrobbleMultiPayloadSchema]).meta({title: 'Single or Bulk Scrobble'});
+export type LastfmScrobbleMaybeMultiPayload = z.infer<typeof lastfmScrobbleMaybeMultiPayloadSchema>;
+
+export type LastFmScrobblePayload = z.infer<typeof lastfmScrobblePayloadSchema>;
+
+export const lastfmNowPlayingPayloadSchema = z.object({
+    method: z.literal('track.updateNowPlaying'),
+    ...lastfmSubmitPayloadSchema.shape,
+}).meta({title: 'Update Now Playing'});
+export type LastFmNowPlayingPayload = z.infer<typeof lastfmNowPlayingPayloadSchema>;
+
+export type LastFmSubmitPayload = LastfmScrobbleMaybeMultiPayload | LastFmNowPlayingPayload;
+export type LastFmSingleSubmitPayload = LastfmScrobblePayload | LastFmNowPlayingPayload;
+
+export const lastfmAuthRequestPayloadSchema = z.object({
+    method: z.literal('auth.getMobileSession'),
+    username: z.string().optional(),
+    password: z.string().optional(),
+    api_key: z.string().optional(),
+}).meta({title: 'Get Mobile Auth Session'});
+
+export const lastfmRequestSchema = z.union([
+    lastfmScrobbleMaybeMultiPayloadSchema,
+    z.discriminatedUnion("method", [
+        lastfmNowPlayingPayloadSchema,
+        lastfmAuthRequestPayloadSchema
+    ]).meta({title: 'Update Now Playing or Mobile Auth Session'})
+]);
+export type LastFmRequest = z.infer<typeof lastfmRequestSchema>;
+
 export interface LastFMScrobbleRequestPayload extends LastFMScrobblePayload {
     method: string
 }
@@ -821,7 +916,7 @@ const lfmPayloadKeysRequired: LastFMPayloadkey[] = ['track','artist'];
 //const lfmPayloadKeysOptional: LastFMPayloadkey[] = ['duration','album','albumArtist','mbid'];
 //const lfmPayloadKeys: LastFMPayloadkey[] = [...lfmPayloadKeysRequired, ...lfmPayloadKeysOptional];
 
-export const ingressPayloads = (obj: Record<LastFMPayloadkey, unknown>): LastFMScrobbleRequestPayload[] => {
+export const ingressPayloads = (obj: LastfmScrobbleMaybeMultiPayload): LastfmScrobblePayload[] => {
     const keys = Object.keys(obj);
     let allObject = true;
     for(const k of lfmPayloadKeysRequired) {
@@ -834,10 +929,10 @@ export const ingressPayloads = (obj: Record<LastFMPayloadkey, unknown>): LastFMS
             throw new Error('Payload is an unexpected mix of arrays and objects');
         }
     }
-    const payloads: LastFMScrobbleRequestPayload[] = [];
+    const payloads: LastfmScrobblePayload[] = [];
 
     if(allObject) {
-        payloads.push(obj as LastFMScrobbleRequestPayload);
+        payloads.push(obj as LastfmScrobblePayload);
     } else {
         let index = 0;
         for(const t of (obj.track as string[])) {
@@ -849,14 +944,14 @@ export const ingressPayloads = (obj: Record<LastFMPayloadkey, unknown>): LastFMS
                 mbid: obj.mbid !== undefined ? obj.mbid[index] : undefined,
                 duration: obj.duration !== undefined ? obj.duration[index] : undefined,
                 albumArtist: obj.albumArtist !== undefined ? obj.albumArtist[index] : undefined,
-                method: obj.method as string
+                method: obj.method
             })
             index++;
         }
     }
 
     return payloads.map(x => {
-        const cleaned: LastFMScrobbleRequestPayload = x;
+        const cleaned: LastfmScrobblePayload = x;
         if(typeof cleaned.duration === 'string') {
             cleaned.duration = Number.parseInt(cleaned.duration);
         }
@@ -946,19 +1041,19 @@ export const playToScrobbleApiResponseXml = (play: PlayObject) => {
                 scrobble: {
                     track: {
                         $: {corrected: 0},
-                        _: play.data.track
+                        _: play.data.track ?? ''
                     },
                     artist: {
                         $: {corrected: 0},
-                        _: play.data.artists?.join(',')
+                        _: play.data.artists?.join(',') ?? ''
                     },
                     album: {
                         $: {corrected: 0},
-                        _: play.data.album
+                        _: play.data.album ?? ''
                     },
                     albumArtist: {
                         $: {corrected: 0},
-                        _: play.data.albumArtists?.join(',')
+                        _: play.data.albumArtists?.join(',') ?? ''
                     },
                     timestamp: {
                         _: dayjs().unix(),
@@ -981,19 +1076,19 @@ export const playToNowPlayingApiResponseXml = (play: PlayObject) => {
             nowplaying: {
                 track: {
                     $: { corrected: 0 },
-                    _: play.data.track
+                    _: play.data.track ?? ''
                 },
                 artist: {
                     $: { corrected: 0 },
-                    _: play.data.artists?.join(',')
+                    _: play.data.artists?.join(',') ?? ''
                 },
                 album: {
                     $: { corrected: 0 },
-                    _: play.data.album
+                    _: play.data.album ?? ''
                 },
                 albumArtist: {
                     $: { corrected: 0 },
-                    _: play.data.albumArtists?.join(',')
+                    _: play.data.albumArtists?.join(',') ?? ''
                 },
                 ignoredMessage: {
                     $: { code: 0 }

@@ -1,8 +1,10 @@
+import * as z from "zod";
 
 /*
  * https://musicbrainz.org/doc/MusicBrainz_Database/Schema#Overview
 */
 
+export const releaseMbidSchema = z.string();
 /** A unique product a Recording is issued on.
  *
  * This is like an album (release group) but is specific to the type, year, catalog, etc... for this release
@@ -14,7 +16,9 @@
  * Referred to in MB api response as release_mbid
  *
 */
-export type ReleaseMbid = string;/** The "abstract", non-unique album/single/EP the Recording belongs to
+export type ReleaseMbid = z.infer<typeof releaseMbidSchema>;
+export const releaseGroupMbidSchema = z.string();
+/** The "abstract", non-unique album/single/EP the Recording belongs to
  *
  * This is what people normally think of as an album (release group)
  *
@@ -25,7 +29,8 @@ export type ReleaseMbid = string;/** The "abstract", non-unique album/single/EP 
  * Referred to in MB api response as release_group -> mbid
  *
 */
-export type ReleaseGroupMbid = string;
+export type ReleaseGroupMbid = z.infer<typeof releaseGroupMbidSchema>;
+export const recordingMbidSchema = z.string();
 /** A unique mix/edit/master of a Work
  *
  * This is like a song but is unique to the master/edit of the song
@@ -38,7 +43,9 @@ export type ReleaseGroupMbid = string;
  *
  * Referred to in MB api response as recording_mbid
  */
-export type RecordingMbid = string;
+export type RecordingMbid = z.infer<typeof recordingMbidSchema>;
+
+export const workMbidSchema = z.string();
 /** The "abstract", non-unique Song produced by an Artist
  *
  * All Recordings "belong" to a single Work
@@ -47,7 +54,9 @@ export type RecordingMbid = string;
  *
  *  @see Song "Into the Blue" by "Moby"
  */
-export type WorkMbid = string;
+export type WorkMbid = z.infer<typeof workMbidSchema>;
+
+export const artistMbidSchema = z.string();
 /** A musician or group or musicians that release music
  *
  * @see https://musicbrainz.org/doc/Artist
@@ -56,51 +65,54 @@ export type WorkMbid = string;
  * All artists/album artists are included in mbid_mappings artists
  *
 */
-export type ArtistMbid = string;
+export type ArtistMbid = z.infer<typeof artistMbidSchema>;
 /** A unique, random identifier used for each scrobble. Not the same as recording_mbid */
 export type RecordingMsid = string;
-export interface ArtistMBIDMapping {
-    artist_credit_name: string;
-    artist_mbid: ArtistMbid;
-    join_phrase: string;
-}
-export interface MinimumTrack {
-    artist_name: string;
-    track_name: string;
-    release_name?: string;
-}
-export interface AdditionalTrackInfo {
-    artist_mbids?: ArtistMbid[];
-    release_mbid?: ReleaseMbid;
-    release_group_mbid?: ReleaseGroupMbid;
-    recording_mbid?: RecordingMbid;
-    submission_client?: string;
-    submission_client_version?: string;
-    spotify_id?: string;
-    isrc?: string
-    media_player?: string;
-    media_player_version?: string;
+export const artistMBIDMappingSchema = z.object({
+    artist_credit_name: z.string(),
+    artist_mbid: artistMbidSchema,
+    join_phrase: z.string(),
+});
+export type ArtistMBIDMapping = z.infer<typeof artistMBIDMappingSchema>;
+export const minimumTrackSchema = z.object({
+    artist_name: z.string(),
+    track_name: z.string(),
+    release_name: z.string().optional(),
+});
+export type MinimumTrack = z.infer<typeof minimumTrackSchema>;
+export const additionalTrackInfoSchema = z.object({
+    artist_mbids: z.array(artistMbidSchema).optional(),
+    release_mbid: releaseMbidSchema.optional(),
+    release_group_mbid: releaseGroupMbidSchema.optional(),
+    recording_mbid: recordingMbidSchema.optional(),
+    submission_client: z.string().optional(),
+    submission_client_version: z.string().optional(),
+    spotify_id: z.string().optional(),
+    isrc: z.string().optional(),
+    media_player: z.string().optional(),
+    media_player_version: z.string().optional(),
 
-    music_service?: string;
-    music_service_name?: string;
-    origin_url?: string;
-    tags?: string[];
-    duration?: number;
+    music_service: z.string().optional(),
+    music_service_name: z.string().optional(),
+    origin_url: z.string().optional(),
+    tags: z.array(z.string()).optional(),
+    duration: z.number().optional(),
 
-    duration_ms?: number;
-    track_mbid?: string;
-    work_mbids?: WorkMbid[];
+    duration_ms: z.number().optional(),
+    track_mbid: z.string().optional(),
+    work_mbids: z.array(workMbidSchema).optional(),
 
-    release_artist_name?: string;
-    release_artist_names?: string[];
-    spotify_album_id?: string;
-    spotify_album_artist_ids?: string[];
-    spotify_artist_ids?: string[];
-    artist_names?: string[];
-    albumartist?: string;
+    release_artist_name: z.string().optional(),
+    release_artist_names: z.array(z.string()).optional(),
+    spotify_album_id: z.string().optional(),
+    spotify_album_artist_ids: z.array(z.string()).optional(),
+    spotify_artist_ids: z.array(z.string()).optional(),
+    artist_names: z.array(z.string()).optional(),
+    albumartist: z.string().optional(),
 
-    tracknumber?: number
-}
+    tracknumber: z.number().optional(),
+});
+export type AdditionalTrackInfo = z.infer<typeof additionalTrackInfoSchema>;
 export interface Track {
     artist_name: string;
     track_name: string;
@@ -115,17 +127,19 @@ export interface Track {
     duration?: number;
 }
 
-export type ListenType = 'single' | 'playing_now';
-export interface MbidMapping {
-    recording_name?: string;
-    artist_mbids?: ArtistMbid[];
-    artists?: ArtistMBIDMapping[];
-    caa_id?: number;
+export const listenTypeSchema = z.enum(['single', 'playing_now']);
+export type ListenType = z.infer<typeof listenTypeSchema>;
+export const mbidMappingSchema = z.object({
+    recording_name: z.string().optional(),
+    artist_mbids: z.array(artistMbidSchema).optional(),
+    artists: z.array(artistMBIDMappingSchema).optional(),
+    caa_id: z.number().optional(),
     /** cover album archive mbid, not related to anything else I think */
-    caa_release_mbid?: string;
-    recording_mbid?: RecordingMbid;
-    release_mbid?: ReleaseMbid;
-}
+    caa_release_mbid: z.string().optional(),
+    recording_mbid: recordingMbidSchema.optional(),
+    release_mbid: releaseMbidSchema.optional(),
+});
+export type MbidMapping = z.infer<typeof mbidMappingSchema>;
 
 // using submit-listens example from openapi https://rain0r.github.io/listenbrainz-openapi/index.html#/lbCore/submitListens
 // which is documented in official docs https://listenbrainz.readthedocs.io/en/latest/users/api/index.html#openapi-specification
@@ -134,17 +148,19 @@ export interface MbidMapping {
 //
 // data structures for submitting a listen
 //
-export interface SubmitListenAdditionalTrackInfo extends AdditionalTrackInfo {
-
-}
-export interface TrackPayload extends MinimumTrack {
-    additional_info?: SubmitListenAdditionalTrackInfo;
-    mbid_mapping?: MbidMapping
-}
-export interface ListenPayload {
-    listened_at?: Date | number;
-    track_metadata: TrackPayload;
-}
+export const submitListenAdditionalTrackInfoSchema = additionalTrackInfoSchema;
+export type SubmitListenAdditionalTrackInfo = z.infer<typeof submitListenAdditionalTrackInfoSchema>;
+export const trackPayloadSchema = z.object({
+    ...minimumTrackSchema.shape,
+    additional_info: submitListenAdditionalTrackInfoSchema.optional(),
+    mbid_mapping: mbidMappingSchema.optional(),
+});
+export type TrackPayload = z.infer<typeof trackPayloadSchema>;
+export const listenPayloadSchema = z.object({
+    listened_at: z.number().optional(),//z.union([z.date(), z.number()]).optional(),
+    track_metadata: trackPayloadSchema,
+});
+export type ListenPayload = z.infer<typeof listenPayloadSchema>;
 
 export interface PlayingNowPayload {
     playing_now: true
@@ -153,10 +169,11 @@ export interface PlayingNowPayload {
 
 
 // this is what is sent to submit-listens
-export interface SubmitPayload {
-    listen_type: ListenType;
-    payload: [ListenPayload];
-}
+export const submitPayloadSchema = z.object({
+    listen_type: listenTypeSchema,
+    payload: z.array(listenPayloadSchema),
+});
+export type SubmitPayload = z.infer<typeof submitPayloadSchema>;
 
 //
 // data structures returned from listens
