@@ -502,7 +502,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
             body
         } = req;
 
-        const hydratedQuery = asDayjsHydratedObject<QueryPlaysOptsJson, QueryPlaysOpts<Dayjs>>(body.filters);
+        const hydratedQuery = asDayjsHydratedObject<QueryPlaysOptsJson, QueryPlaysOpts<Dayjs>>({...body.filters, with: ['queues']});
         res.sendStatus(200);
 
         const queueFunc = component instanceof AbstractSource ? 
