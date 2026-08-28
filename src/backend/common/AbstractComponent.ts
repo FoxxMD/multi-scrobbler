@@ -356,6 +356,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 if(diffFailure) {
                     return;
                 }
+                const stepIdHint = `${s.source}-${s.hook}-${s.stageType}-${s.stageName}`;
                 try {
                 if(!isNew) {
                     const existingStepIndex = lifecycle.findIndex(x => x.stageName === s.stageName && x.stageType === s.stageType && x.hook === s.hook && x.source === this.getIdentifier());
@@ -368,17 +369,22 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
                 if(shouldLog === 'all') {
                     if(s.patch === undefined) {
-                        historyToDiff.push({name: `${s.source}-${s.hook}-${s.stageType}-${s.stageName}`});
+                        historyToDiff.push({name: `${stepIdHint}`});
                     } else {
-                        const patched = patchObject(historyToDiff[historyToDiff.length - 1].data, s.patch);
-                        historyToDiff.push({name: `${s.source}-${s.hook}-${s.stageType}-${s.stageName} ${s.cached ? ' (Cached)' : ''}`, data: patched});
+                        const lastTransformedData = historyToDiff[historyToDiff.findLastIndex(x => x.data !== undefined)].data;
+                        const patched = patchObject(lastTransformedData, s.patch);
+                        historyToDiff.push({name: `${stepIdHint} ${s.cached ? ' (Cached)' : ''}`, data: patched});
                     }
                 }
                 } catch (e) {
                     if(`patch` in s) {
-                        this.logger.debug({patch: s.patch, playData: historyToDiff[historyToDiff.length - 1].data}, 'Patch and Play data');
+                        this.logger.debug({
+                            patch: s.patch,
+                            playData: historyToDiff[historyToDiff.findLastIndex(x => x.data !== undefined)].data,
+                            cached: s.cached
+                        }, 'Patch and Play data context');
                     }
-                    this.logger.warn(new SimpleError('Error occurred while trying to generate diffed Plays for console logging but will continue', {cause: e}));
+                    this.logger.warn(new SimpleError(`Error occurred while trying to generate diffed Plays for console logging on step ${stepIdHint} but will continue`, {cause: e}));
                     diffFailure = true;
                 }
             });
