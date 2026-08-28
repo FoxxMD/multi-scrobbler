@@ -39,7 +39,7 @@ import { DrizzleComponentRepository } from "./database/drizzle/repositories/Comp
 import dayjs, { type Dayjs } from "dayjs";
 import { COMPONENT_STATE, type ComponentCommonApi, type ComponentCommonApiJson, type ComponentState, type PlayApiCommonDetailed } from "../../core/Api.ts";
 import type {WebhookPayload} from "./infrastructure/config/health/webhooks.ts";
-import type { MarkRequired } from "ts-essentials";
+import type { ElementOf, MarkRequired } from "ts-essentials";
 import { serializeError } from "serialize-error";
 
 export type AbstractComponentConfig = (CommonClientConfig | CommonSourceConfig) & { transformManager?: TransformerManager };
@@ -395,8 +395,10 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                     const diffs: string[] = [];
 
                     try {
+                    let lastTransformed: ElementOf<typeof historyToDiff>;
                     historyToDiff.forEach((curr, index) => {
                         if(index === 0) {
+                            lastTransformed = curr;
                             return;
                         }
                         const last = historyToDiff[index - 1];
@@ -404,10 +406,11 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                             diffs.push(`${last.name} => ${curr.name} -- No Change`);
                         } else {
                             try {
-                                const formattedDiff = diffObjectsConsoleOutput(last.data, curr.data);
+                                const formattedDiff = diffObjectsConsoleOutput(lastTransformed.data, curr.data);
                                 diffs.push(`${last.name} => ${curr.name}\n${formattedDiff}`);
+                                lastTransformed = curr;
                             } catch(e) {
-                                this.logger.debug({pre: last.data, post: curr.data}, 'Compared Pre and Post play data');
+                                this.logger.debug({pre: lastTransformed.data, post: curr.data}, 'Compared Pre and Post play data');
                                 throw e;
                             }
                         }
