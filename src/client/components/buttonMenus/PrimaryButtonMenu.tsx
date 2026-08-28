@@ -24,7 +24,7 @@ export const PrimaryButtonMenu = (props: PrimaryButtonMenuProps) => {
                 <Group attached>
                     {props.primary}
                     <Menu.Trigger asChild>
-                        <EllipsisButton hideBelow="sm" disabled={props.disabled} {...primaryActionProps} {...props.menuButtonProps} />
+                        <EllipsisButton disabled={props.disabled} {...primaryActionProps} {...props.menuButtonProps} />
                     </Menu.Trigger>
                 </Group>
                 <Portal>
