@@ -166,9 +166,9 @@ const stateIsStarted = (state: ComponentState): boolean => state <= COMPONENT_ST
 const componentStateMenuItem = (Icon: IconType, value: string, name?: string) => (props: Pick<MenuItemProps, 'disabled'> = {}) => {
     return (<Menu.Item key={value} value={value} {...props}><Icon/><Box flex="1">{name ?? capitalize(value)}</Box></Menu.Item>);
 }
-const MenuItemRestart = componentStateMenuItem(RetryIcon, 'Restart');
-const MenuItemStop = componentStateMenuItem(PowerOffIcon, 'Stop');
-const MenuItemStart = componentStateMenuItem(PowerIcon, 'Start');
+const MenuItemRestart = componentStateMenuItem(RetryIcon, 'restart', 'Restart');
+const MenuItemStop = componentStateMenuItem(PowerOffIcon, 'stop', 'Stop');
+const MenuItemStart = componentStateMenuItem(PowerIcon, 'start', 'Start');
 const MenuItemIgnore = componentStateMenuItem(EyeClosedIcon, 'ignore', 'Ignore')
 const MenuItemMonitor = componentStateMenuItem(EyeIcon, 'monitor', 'Monitor');
 const MenuItemAuth = componentStateMenuItem(UnlockIconRaw, 'auth', 'Auth');
