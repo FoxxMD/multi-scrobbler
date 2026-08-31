@@ -28,6 +28,7 @@ import type { FmTealAlphaFeedPlay, FmTealFeedPlay } from "../common/vendor/teal/
 import { AuthError } from "../common/errors/MSErrors.ts";
 import { findCauseByReference } from "../utils/ErrorUtils.ts";
 import { ClientResponseError } from "@atcute/client";
+import type { CidLink } from "@atcute/lexicons";
 
 export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
 
@@ -209,6 +210,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         const did = this.client.client.userData.did;
 
         let batch: RepositoryCreatePlayHistoricalOpts[] = [];
+        let batchRefs: Record<string, CidLink> = {};
         let allGood = true;
         let count = 0;
         let persisted = 0;
@@ -247,7 +249,13 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
 
                 const existing = await this.playsHistoricalRepo.hasByUid(entry.rkey);
                 if(!existing) {
-                    batch.push(playToRepositoryCreatePlayHistoricalOpts({play}));
+                    const batchDupe = batch.find(x => x.uid === entry.rkey);
+                    if(batchDupe !== undefined) {
+                        logger.debug(`Not persisting Record with CID ${entry.cid.$link} (rkey ${entry.rkey}) from ${entry.collection} because a record with an identical rkey (CID ${batchRefs[entry.rkey].$link}) is already batched.`);
+                    } else {
+                        batchRefs[entry.rkey] = entry.cid;
+                        batch.push(playToRepositoryCreatePlayHistoricalOpts({play}));
+                    }
                 }
                 if(batch.length >= batchSize) {
                     try {
@@ -260,6 +268,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
                         throw e;
                     }
                     batch = [];
+                    batchRefs = {};
                 }
             }
         }

@@ -30,6 +30,8 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
 
     cache: MSCache;
 
+    resetMissing: boolean = false;
+
     constructor(name: any, config: ATProtoUserIdentifierData & {handleData?: HandleData}, options: AbstractApiOptions) {
         super('atproto', name, config, options);
         this.cache = getRoot().items.cache();
@@ -76,7 +78,6 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
             throw new UpstreamError(`Failed to fetch repo CAR file. Response was ${resp.status} with response ${text}`, {responseBody: text});
         }
 
-        resp.headers
         return await streamBodyProgress(resp.data, {
             logger: this.logger,
             chunkDefaultSize: 1024 * 1024 * 5, // report progress every 5 MB
@@ -128,8 +129,12 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
         }
         try {
             const info = parseRateLimitHeaders(headers);
-            const secUntilReset = dayjs(info.reset).diff(dayjs(), 's');
+            if(info === null && this.resetMissing === false) {
+                this.logger.warn({headers}, 'PDS does not implement rate limiting or is using some non-standard rate limit headers. Rate limiting will be ignored. Expected headers: ratelimit-limit, ratelimit-remaining, ratelimit-reset');
+                this.resetMissing = true;
+            }
             if (info !== null) {
+                const secUntilReset = dayjs(info.reset).diff(dayjs(), 's');
                 await this.cache.cacheAuth.set<RateLimitInfo>(`${this.getAuthCacheKey()}-rateLimitInfo`, { limit: info.limit, remaining: info.remaining, reset: info.reset.valueOf() }, Math.min(secUntilReset, 3600));
             }
         } catch (e) {
