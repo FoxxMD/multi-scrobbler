@@ -1,60 +1,98 @@
-@import 'tailwindcss';
-
-@utility container {  
-   padding-inline: 1rem;
+@keyframes dashed-player {
+ 0% {
+  opacity: 1;
+ }
+ 60% {
+  opacity: 0;
+ }
+ 100% {
+  opacity: 1;
+ }
 }
 
-@theme {
-    --breakpoint-md: 1024px;
+@keyframes icon-fade {
+ 0% {
+  opacity: 1;
+ }
+ 60% {
+  opacity: 0;
+ }
+ 100% {
+  opacity: 1;
+ }
 }
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@keyframes icon-fade-half {
+ 0% {
+  opacity: 1;
+ }
+ 60% {
+  opacity: 0.5;
+ }
+ 100% {
+  opacity: 1;
+ }
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+.chakra-stack .MuiLinearProgress-dashed {
+      /* animation: dashed-player 3s infinite linear !important;
+      background-image: radial-gradient(var(--chakra-colors-color-palette-solid) 0%, var(--chakra-colors-color-palette-solid) 16%, transparent 42%);
+      background-position: 0 -1px !important; */
+      animation: unset !important;
+      background-image: unset !important;
+      background-position: unset !important;
+      background-color: var(--chakra-colors-color-palette-muted) 
+}
+.playerContainer .chakra-stack .MuiLinearProgress-dashed {
+      background-color: var(--chakra-colors-color-palette-emphasized) 
+}
+.chakra-stack .MuiLinearProgress-bar1 {
+      background-color: var(--chakra-colors-color-palette-solid) !important;
+}
+.chakra-stack .MuiLinearProgress-bar2 {
+      background-color: var(--chakra-colors-color-palette-500) !important;
 }
 
-a {
-  text-decoration: underline;
+/** high animation **/
+
+/* .chakra-stack .MuiLinearProgress-indeterminate {
+      background-color: var(--chakra-colors-color-palette-500) !important;
+} */
+
+
+/** low animation **/
+
+@keyframes slide { to { background-position: 26px 0; } }
+.chakra-stack .MuiLinearProgress-indeterminate {
+      background-color: var(--chakra-colors-color-palette-500) !important;
+      background: linear-gradient(45deg,
+      #fff 25%,
+      #71717a 25%,
+      #71717a 50%,
+      #fff 50%,
+      #fff 75%,
+      #71717a 75%);
+      background: linear-gradient(45deg, 
+      var(--chakra-colors-color-palette-700) 25%,
+      var(--chakra-colors-color-palette-400) 25%,
+      var(--chakra-colors-color-palette-400) 50%,
+      var(--chakra-colors-color-palette-700) 50%,
+      var(--chakra-colors-color-palette-700) 75%,
+      var(--chakra-colors-color-palette-400) 75%);
+      background-size: 25px 26px;
+      animation: slide 3s linear infinite;
 }
-.loading {
-  height: 35px;
-  fill: black;
-  display: none;
+.chakra-stack .MuiLinearProgress-indeterminate .MuiLinearProgress-bar1,.chakra-stack .MuiLinearProgress-indeterminate .MuiLinearProgress-bar2  {
+      display: none;
 }
-.connected .loading {
-  display: inline;
+.chakra-stack .MuiLinearProgress-root {
+      height: 8px;
 }
-.dark .loading {
-  fill: white;
-}
-.blue,.ansi-blue-fg {
-  color: rgb(97, 175, 239)
-}
-.red,.ansi-red-fg {
-  color: rgb(255 123 133);
-}
-.green,.ansi-green-fg {
-  color: rgb(170 255 109);
-}
-.purple,.ansi-magenta-fg {
-  color: rgb(224 124 253);
-}
-.yellow,.ansi-yellow-fg {
-  color: rgb(253 198 94);
-}
+
 .ansi-cyan-fg {
-  color: rgb(255, 255, 255)
+      color: var(--chakra-colors-color-palette-solid)
 }
 
-.ansi-bright-black-fg {
-  color: rgb(169, 169, 169)
+.logline code span:first-child {
+      color: var(--chakra-colors-gray-500);
 }
