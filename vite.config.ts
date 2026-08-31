@@ -2,7 +2,6 @@ import react,{ reactCompilerPreset } from '@vitejs/plugin-react';
 import babel from '@rolldown/plugin-babel';
 import normalizeUrl from "normalize-url";
 import { defineConfig } from 'vite';
-import tailwindcss from '@tailwindcss/vite'
 import svgr from "vite-plugin-svgr";
 import { dirname, resolve } from 'node:path'
 
@@ -50,7 +49,6 @@ export default defineConfig(() => {
                 babel({
                 presets: [reactCompilerPreset()]
     }),
-            tailwindcss(),
             svgr()
         ],
         build: {
@@ -59,7 +57,7 @@ export default defineConfig(() => {
             rolldownOptions: {
                 input: {
                     main: resolve(import.meta.dirname, 'index.html'),
-                    next: resolve(import.meta.dirname, 'next/index.html'),
+                    // next: resolve(import.meta.dirname, 'next/index.html'),
                 },
                 keepNames: true,
                 sourcemap: true

@@ -8,7 +8,7 @@ import { generateArray } from "../../core/DataUtils.js";
 import { faker } from "@faker-js/faker";
 import type {MsSseEvent} from "../../core/Api.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
-import { sseProviderOptions } from "../../client/AppNext.js";
+import { sseProviderOptions } from "../../client/App.js";
 import { withRouter, reactRouterParameters } from 'storybook-addon-remix-react-router';
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export

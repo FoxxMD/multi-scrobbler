@@ -16,7 +16,7 @@ import { generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList } from
 import type { PaginatedResponse, QueryPlaysOptsJson} from "../../core/Api.js";
 import type {MsSseEvent, PlayApiCommonDetailed} from "../../core/Api.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
-import { sseProviderOptions } from '../../client/AppNext.js';
+import { sseProviderOptions } from '../../client/App.js';
 import { faker } from '@faker-js/faker';
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
