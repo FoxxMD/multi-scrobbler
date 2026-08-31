@@ -62,12 +62,13 @@ export class TealApiClient extends AbstractApiClient implements PagelessTimeRang
             record
         };
         try {
-            const res =  await this.client.post((client) => {
-                return client.post('com.atproto.repo.createRecord', {
+            const res =  await this.client.post((client) => client.post('com.atproto.repo.createRecord', {
                 input,
                 params: {}
-                });
-            });
+                }));
+            if(!res.ok) {
+                throw new ScrobbleSubmitError(`Failed to create record for scrobble`, { payload: input, responseBody: {status: res.status, body: res.data } });
+            }
             return {payload: input, response: res.data, createdAt: dayjs().toISOString()};
         } catch (e) {
             throw new ScrobbleSubmitError(`Failed to create record for scrobble`, { cause: e, payload: input, response: 'response' in e ? e.response : undefined });
@@ -86,9 +87,12 @@ export class TealApiClient extends AbstractApiClient implements PagelessTimeRang
                 input,
                 params: {}
             }));
+            if(!res.ok) {
+                throw new ScrobbleSubmitError(`Failed to update status record`, { payload: input, responseBody: {status: res.status, body: res.data } });
+            }
             return {payload: input, response: res.data, createdAt: dayjs().toISOString()};
         } catch (e) {
-            throw new ScrobbleSubmitError(`Failed to update status record for scrobble`, { cause: e, payload: input, response: 'response' in e ? e.response : undefined });
+            throw new ScrobbleSubmitError(`Failed to update status record`, { cause: e, payload: input, response: 'response' in e ? e.response : undefined });
         }
     }
 
