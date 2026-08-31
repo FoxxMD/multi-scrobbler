@@ -119,6 +119,7 @@ const Global = (props: PropsFromRedux) => {
 
 const ConnectedGlobal = connector(Global);
 
+// eslint-disable-next-line prefer-arrow-functions/prefer-arrow-functions
 function App() {
   return (
       <Provider store={store}>
@@ -132,11 +133,13 @@ function App() {
                   </a>
                   <Version/>
                   <span className="space-x-3" style={{marginLeft: 'auto'}}>
-                    <span className="p-3 rounded-xl border-solid border-2 font-bold">✨ 
-                    <a  href="/next">
+                    <span className="p-2">
+                    <span className="font-bold">✨ 
+                    <a href="/next">
                           Try the New UI
                       </a>
                        ✨
+                      </span>
                       </span>
                         <a target="_blank" href="https://status.multi-scrobbler.app">
                           Services Monitor
