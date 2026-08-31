@@ -94,7 +94,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
             await this.playsHistoricalRepo.createPlays(batch);
             return [true, batch.length];
         } catch (e) {
-            logger.warn(`Failed to persist batch of ${batch} plays, trying individually...`);
+            logger.warn(`Failed to persist batch of ${batch.length} plays, trying individually...`);
         }
         signal?.throwIfAborted();
 
