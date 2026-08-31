@@ -6,48 +6,35 @@ import { FixedSizeList } from 'fixed-size-list';
 import { PassThrough } from "node:stream";
 import { Transform } from "stream";
 import {
-    DEAD_QUEUE,
-    type ClientStatusData,
-    type DeadLetterScrobble,
     type LogOutputConfig,
-    type PlayObject,
-    SOURCE_SOT,
-    type SOURCE_SOT_TYPES,
-    type SourcePlayerJson,
-    type SourceStatusData,
     queueContextSchema,
     logLevelStandaloneSchema,
 } from "../../core/Atomic.ts";
-import { capitalize } from "../../core/StringUtils.ts";
 import type {LeveledLogData} from "../common/infrastructure/Atomic.ts";
 import { getRoot } from "../ioc.ts";
 import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts";
 import AbstractSource from "../sources/AbstractSource.ts";
 import MemorySource from "../sources/MemorySource.ts";
-import { parseBool } from "../utils.ts";
-import { sortByNewestPlayDate } from '../../core/PlayUtils.ts';
 import { setupAuthRoutes } from "./auth.ts";
 import { setupDeezerRoutes } from "./deezerRoutes.ts";
 import {setupLZEndpointRoutes} from "./endpointListenbrainzRoutes.ts";
 import {setupLastfmEndpointRoutes} from "./endpointLastfmRoutes.ts";
-import { makeClientCheckMiddle, makeClientNextMiddle, makeComponentMiddle, makeSourceCheckMiddle, makeSourceNextMiddle } from "./middleware.ts";
+import { makeComponentMiddle } from "./middleware.ts";
 import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.ts";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
 import prom from 'prom-client';
 import { findAuthIssue, SimpleError } from "../common/errors/MSErrors.ts";
 import { DrizzlePlayRepository, type QueryPlaysOpts, type QueryPlaysOptsJson } from "../common/database/drizzle/repositories/PlayRepository.ts";
-import { playSelectToDeadScrobble } from "../common/database/drizzle/entityUtils.ts";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.ts";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
-import {componentStateBodySchema, type ComponentClientApiJson, type ComponentSourceApiJson, type PlayApiCommonDetailed} from "../../core/Api.ts";
+import {componentStateBodySchema, type ComponentClientApiJson, type ComponentSourceApiJson} from "../../core/Api.ts";
 import { asDayjsHydratedObject } from "../../core/DataUtils.ts";
 import type {Dayjs} from "dayjs";
 import { asSerializablePlaySelect } from "../../core/PlayMarshalUtils.ts";
 import { serializeError } from "serialize-error";
 import { z } from 'zod';
 import type { createTypedRouter, TypedMiddleware } from "@minisylar/express-typed-router";
-import pEvent from "p-event";
 import { hasMetricRepositories, registerMetrics, setMetricRepositories } from "./promMetrics.ts";
 import pMap from "p-map";
 import type { PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
@@ -138,15 +125,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         }
     });
 
-    const clientMiddleFunc = makeClientCheckMiddle(scrobbleClients);
-    const sourceMiddleFunc = makeSourceCheckMiddle(scrobbleSources);
-
-    const clientRequiredMiddle = clientMiddleFunc(true);
-    const sourceRequiredMiddle = sourceMiddleFunc(true);
-
     const componentAwareMiddle = makeComponentMiddle(scrobbleSources, scrobbleClients);
-    const sourceAwareMiddle = makeSourceNextMiddle(scrobbleSources);
-    const clientAwareMiddle = makeClientNextMiddle(scrobbleClients);
 
     const setLogWebSettings: TypedMiddleware = async (req, res, next) => {
         // @ts-expect-error logLevel not part of session
@@ -223,7 +202,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     setupWebscrobblerRoutes(app, router, logger, scrobbleSources);
     setupLZEndpointRoutes(app, router, logger, scrobbleSources, scrobbleClients);
     setupLastfmEndpointRoutes(app, router, logger, scrobbleSources);
-    setupAuthRoutes(app, router, logger, sourceRequiredMiddle, clientRequiredMiddle, scrobbleSources, scrobbleClients);
+    setupAuthRoutes(app, router, logger, scrobbleSources, scrobbleClients);
 
     router.get('/api/components', {tags: ['Source/Client'], summary: 'Get All Sources/Clients'}, async (req, res, next) => {
 
@@ -285,12 +264,6 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.json([...sourceData, ...clientData]);
     });
 
-    router.get('/api/sources/:id/players', {middleware: [sourceAwareMiddle], hidden: true}, async (req, res, next) => {
-        if(req.component instanceof MemorySource) {
-            return res.json(req.component.playersToObject());
-        }
-        return res.json({});
-    });
     router.get('/api/components/:id/players', {middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Source/Client Players'}, async (req, res, next) => {
         if(req.component instanceof MemorySource) {
             return res.json(req.component.playersToObject());
@@ -300,21 +273,6 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.json({});
     });
 
-    router.get('/api/sources/:id/players/:platformId', {middleware: [sourceAwareMiddle], hidden: true}, async (req, res, next) => {
-        if(req.component instanceof MemorySource) {
-            const {
-                params: {
-                    platformId
-                }
-            } = req;
-            const player = req.component.players.get(platformId as string);
-            if(player === undefined) {
-                return res.status(400).json({error: `No player with platform id ${platformId} exists`});
-            }
-            return res.json(player);
-        }
-        return res.json({});
-    });
     router.get('/api/components/:id/players/:platformId', {middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Specific Source/Client Player'}, async (req, res, next) => {
         const {
             params: {
@@ -610,393 +568,23 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.sendStatus(204);
     });
 
-    /**
-     * 
-     * 
-     *  new apis above
-     * 
-     * 
-     *  */
-
-    router.get('/api/status', {hidden: true}, async (req, res, next) => {
-
-        const sourceData = scrobbleSources.sources.map((x) => {
-            const {
-                type,
-                tracksDiscovered = 0,
-                name,
-                canPoll = false,
-                polling = false,
-                requiresAuth = false,
-                requiresAuthInteraction = false,
-                authed = false,
-            } = x;
-            const base: SourceStatusData = {
-                status: '',
-                type,
-                display: capitalize(type),
-                tracksDiscovered,
-                name,
-                canPoll,
-                hasAuth: requiresAuth,
-                hasAuthInteraction: requiresAuthInteraction,
-                authed,
-                players: 'players' in x ? (x as MemorySource).playersToObject() as unknown as Record<string,SourcePlayerJson> : {},
-                sot: ('playerSourceOfTruth' in x) ? x.playerSourceOfTruth as SOURCE_SOT_TYPES : SOURCE_SOT.HISTORY,
-                supportsUpstreamRecentlyPlayed: x.supportsUpstreamRecentlyPlayed,
-                manualListening: x.monitoringActivity,
-                systemListeningBehavior: x.getSystemMonitoring(),
-                ...x.additionalApiData()
-            };
-            if(!x.isReady()) {
-                if(x.buildOK === false) {
-                    base.status = 'Initializing Data Failed';
-                } else if(x.connectionOK === false) {
-                    base.status = 'Communication Failed';
-                } else if (requiresAuth && !authed) {
-                    base.status = requiresAuthInteraction ? 'Auth Interaction Required' : 'Authentication Failed Or Not Attempted'
-                } else {
-                    base.status = 'Not Ready';
-                }
-            } else {
-                if (canPoll) {
-                    base.status = polling ? 'Polling' : 'Idle';
-                } else {
-                    base.status = !x.instantiatedAt.isSame(x.lastActivityAt) ? 'Received Data' : 'Awaiting Data';
-                }
-            }
-            return base;
-        });
-
-        const clientData = scrobbleClients.clients.map((x) => {
-            const {
-                type,
-                tracksScrobbled = 0,
-                name,
-                requiresAuth = false,
-                requiresAuthInteraction = false,
-                authed = false,
-                scrobbling = false,
-            } = x;
-            const base: ClientStatusData = {
-                status: '',
-                type,
-                display: capitalize(type),
-                scrobbled: tracksScrobbled,
-                name,
-                hasAuth: requiresAuth,
-                hasAuthInteraction: requiresAuthInteraction,
-                authed,
-                initialized: x.isReady(),
-                deadLetterScrobbles: x.deadLetterQueued, // x.deadLetterScrobbles.length,
-                deadLetterScrobblesTotal: x.deadLetterLength,
-                queued: x.queuedLength, // x.queuedScrobbles.length
-                manualListening: x.monitoringActivity,
-                systemListeningBehavior: x.getSystemMonitoring(),
-            };
-            if (!base.initialized) {
-                if(x.buildOK === false) {
-                    base.status = 'Initializing Data Failed';
-                } else if(x.connectionOK === false) {
-                    base.status = 'Communication Failed';
-                } else if (requiresAuth && !authed) {
-                    base.status = requiresAuthInteraction ? 'Auth Interaction Required' : 'Authentication Failed Or Not Attempted'
-                } else {
-                    base.status = 'Not Ready';
-                }
-            } else {
-                base.status = scrobbling ? 'Running' : 'Idle';
-            }
-            return base;
-        });
-        return res.json({sources: sourceData, clients: clientData});
-    });
-
-    router.get('/api/recent', {middleware: [sourceMiddleFunc(false)], querySchema: z.any(), hidden: true}, async (req, res, next) => {
+    router.post('/api/components/:id/plays/historical', {
+        middleware: [componentAwareMiddle],
+        tags: ['Plays'],
+        summary: 'Hydrate Historical Plays',
+        description: 'If the Source/Client supports Historical Play capabilities, this route requests a manual hydration of all historical Plays'
+    }, async (req, res, next) => {
         const {
-            scrobbleSource: source,
-            query: {
-                upstream = 'false',
-                next: queryNext = 'false',
-                ...rest
-            }
+            component,
         } = req;
 
-        let result: PlayObject[] = [];
-        if (source !== undefined) {
-            if (upstream === 'true' || upstream === '1') {
-                if (!(source as AbstractSource).supportsUpstreamRecentlyPlayed) {
-                    return res.status(409).json({message: 'Fetching upstream recently played is not supported for this source'});
-                }
-                try {
-                    result = await (source as AbstractSource).getUpstreamRecentlyPlayed();
-                } catch (e) {
-                    return res.status(500).json({message: e.message});
-                }
-            } else {
-                if(queryNext === 'true') {
-                    return res.json(await (source as AbstractSource).getRecentPlaysApi(rest));
-                }
-                result = await (source as AbstractSource).getFlatRecentlyDiscoveredPlays();
-                
-            }
-        }
-
-        return res.json(result);
-    });
-
-    router.get('/api/source/art', {middleware: [sourceMiddleFunc(false)], querySchema: z.object({data: z.number()}).optional(), hidden: true}, async (req, res, next) => {
-        const {
-            scrobbleSource,
-            query: {
-                data
-            }
-        } = req;
-
-        const source = scrobbleSource as AbstractSource;
-        if(!(source instanceof MemorySource)) {
-            return res.status(500).json({message: 'Source does not support players'});
-        }
-
-        if('getSourceArt' in source && typeof source.getSourceArt === 'function') {
-            const [stream, contentType] = await source.getSourceArt(data);
-            res.writeHead(200, {'Content-Type': contentType});
-            try {
-                return stream.pipe(res);
-            } catch (e) {
-                logger.error(new Error(`Error occurred while trying to stream art for ${source.name} (${source.type}) | Data ${data}`, {cause: e}));
-                return res.status(500).json({message: 'Error during art retrieval'});
-            }
-        } else {
-            return res.status(500).json({message: `Source ${source.name} (${source.type} does not support art retrieval`});
-        }
-    });
-
-    router.get('/api/dead', {middleware: [clientMiddleFunc(true)], hidden: true}, async (req, res, next) => {
-        const {
-            scrobbleClient: client,
-            query = {}
-        } = req;
-
-        const deadQuery: QueryPlaysOpts = {
-            ...query as Partial<QueryPlaysOpts>,
-            queues: [
-                {
-                    queueName: DEAD_QUEUE,
-                    queueStatus: ['queued','failed']
-                }
-            ]
-        }
-
-        const result: DeadLetterScrobble<PlayObject>[] = (await (client as AbstractScrobbleClient).getPlaysPaginated(deadQuery)).data.map(x => playSelectToDeadScrobble(x, true));
-
-        return res.json(result);
-    });
-
-    router.put('/api/dead', {middleware: [clientMiddleFunc(true)], hidden: true}, async (req, res, next) => {
-        const {
-            scrobbleClient: client,
-        } = req;
-
-        (client as AbstractScrobbleClient).logger.verbose('User requested processing of all dead letter scrobbles via API');
-
-        res.status(200).send('OK');
-
-        await ((client as AbstractScrobbleClient).processDeadLetterQueue(1000, 'Reprocessing bulk dead Plays initiated by user'));
-    });
-
-    router.put('/api/dead/:id', {middleware: [clientMiddleFunc(true)], hidden: true}, async (req, res, next) => {
-        const {
-            scrobbleClient: client,
-            params: {
-                id
-            } = {}
-        } = req;
-
-        const deadId = id as string;
-
-        (client as AbstractScrobbleClient).logger.verbose(`User requested processing of dead letter scrobble ${deadId} via API call`);
-
-        try {
-            const playEntity = await client.playRepo.findByUid(id);
-            if(playEntity === undefined) {
-                return res.status(404).json({message: `Play ${deadId} does not exist`});
-            }
-            client.queueScrobble(playEntity, {reason: 'user requested processing via API call'}).then(() => null);
-            const event = await pEvent(client.emitter, 'playUpdate', {
-                timeout: 10000,
-                filter: (val: PlayApiCommonDetailed) => val.uid === id
-            }) as PlayApiCommonDetailed;
-            if(event.state === 'scrobbled') {
-                return res.status(200).send();
-            } else {
-                // @ts-expect-error should be fine
-                return res.json(playSelectToDeadScrobble(event, true));
-            }
-        } catch (e) {
-            if(e.message.includes(`Play ${deadId} does not exist`)) {
-                logger.warn(e);
-                return res.status(404).json({error: e});
-            }
-            logger.error(e);
-            return res.status(500).json({error: e});
-        }
-    });
-
-    router.delete('/api/dead', {middleware: [clientMiddleFunc(true)], hidden: true}, async (req, res, next) => {
-        const {
-            scrobbleClient: client,
-        } = req;
-
-        (client as AbstractScrobbleClient).logger.verbose('User requested deletion of all dead letter scrobbles via API');
-
-        (client as AbstractScrobbleClient).removeDeadLetterScrobbles().then(() => null).catch((e) => logger.error(e));
-
-        return res.sendStatus(200);
-    });
-
-    router.delete('/api/dead/:id', {middleware: [clientMiddleFunc(true)], hidden: true}, async (req, res, next) => {
-        const {
-            scrobbleClient: client,
-            params: {
-                id
-            } = {}
-        } = req;
-
-        const deadId = id as string;
-
-        (client as AbstractScrobbleClient).logger.verbose(`User requested removal of dead letter scrobble ${deadId} via API call`)
-
-        const playEntity = await client.playRepo.findByUid(id);
-        if(playEntity === undefined) {
-            return res.status(404).json({message: `Play ${deadId} does not exist`});
-        }
-
-        try {
-            await (client as AbstractScrobbleClient).removeDeadLetterScrobble(playEntity);
-            return res.status(200).send();
-        } catch (e) {
-            logger.error(e);
-            return res.status(500).json({error: e});
-        }
-    });
-
-    router.get('/api/scrobbled', {middleware: [clientMiddleFunc(true)], hidden: true}, async (req, res, next) => {
-        const {
-            scrobbleClient: client,
-            query
-        } = req;
-
-        let result: PlayObject[] = [];
-        if (client !== undefined) {
-            const q: Partial<QueryPlaysOpts> = {
-                ...query as Partial<QueryPlaysOpts>,
-                state: ['scrobbled']
-            }
-            result = [...(await (client as AbstractScrobbleClient).getPlaysPaginated(q)).data.map(x => x.play)].sort(sortByNewestPlayDate);
-        }
-
-        return res.json(result);
-    });
-
-    router.post('/api/source/init', {middleware: [sourceRequiredMiddle], querySchema: z.object({force: z.boolean()}).optional(), hidden: true}, async (req, res) => {
-        const source = req.scrobbleSource as AbstractSource;
-
-        const {
-            query: {
-                force: forceQ = false
-            }
-        } = req;
-
-        const force = parseBool(forceQ, false);
-
-        source.logger.verbose(`User requested${force ? ' a FORCED' :''} (re)init via API call`);
-
-        res.status(200).send('OK');
-
-        if(source.polling) {
-            source.logger.info('Source is already polling! Restarting polling...');
-            const stopRes = await source.tryStopPolling(new SimpleError('user initiated', {simple: true, shortStack: true}));
-            if(stopRes === true) {
-                source.poll({force, notify: false}).catch(e => source.logger.error(e));
-            }
-        } else {
-            source.poll({force, notify: false}).catch(e => source.logger.error(e));
-        }
-    });
-
-    router.post('/api/source/listen', {middleware: [sourceRequiredMiddle], querySchema: z.object({listening: z.boolean()}).optional(), hidden: true}, async (req, res) => {
-        const source = req.scrobbleSource as AbstractSource;
-
-        const {
-            query: {
-                listening: listeningQ
-            }
-        } = req;
-
-        let listening: boolean | undefined;
-        if(listeningQ !== undefined) {
-            listening = parseBool(listeningQ)
-        }
-        source.logger.verbose(`User requested Monitoring status ${listening === undefined ? 'system' : listening}`);
-
-        source.monitoringActivity = listening;
-
-        res.status(200).json({listening});
-    });
-
-    router.post('/api/client/listen', {middleware: [clientRequiredMiddle], querySchema: z.object({listening: z.boolean()}).optional(), hidden: true}, async (req, res) => {
-        const client = req.scrobbleClient as AbstractScrobbleClient;
-
-        const {
-            query: {
-                listening: listeningQ
-            }
-        } = req;
-
-        let listening: boolean | undefined;
-        if(listeningQ !== undefined) {
-            listening = parseBool(listeningQ)
-        }
-        client.logger.verbose(`User requested Monitoring status ${listening === undefined ? 'system' : listening}`);
-
-        client.monitoringActivity = listening;
-
-        res.status(200).json({listening});
-    });
-
-    router.post('/api/client/init', {middleware: [clientRequiredMiddle], querySchema: z.object({force: z.boolean()}).optional(), hidden: true}, async (req, res) => {
-        const client = req.scrobbleClient as AbstractScrobbleClient;
-
-        const {
-            query: {
-                force: forceQ = false
-            }
-        } = req;
-
-        const force = parseBool(forceQ, false);
-
-        client.logger.verbose(`User requested${force ? ' a FORCED' :''} (re)init via API call`);
-
-        client.logger.info('Checking (and trying) to stop scrobbler if already running...');
-        if(false === (await client.tryStopScrobbling(new SimpleError('user initiated', {simple: true, shortStack: true})))) {
-            return res.status(500).send();
-        }
-
-        client.logger.info('Trying to start scrobbler...');
-        client.initScrobbleMonitoring({force, notify: false}).catch(e => client.logger.error(e));
-        res.status(200).send('OK');
-    });
-
-    router.post('/api/client/historical', {middleware: [clientRequiredMiddle], hidden: true}, async (req, res) => {
-        const client = req.scrobbleClient as AbstractScrobbleClient;
-        if(client instanceof AbstractHistoricalScrobbleClient) {
-            client.logger.info('User requested historical play hydration');
-            client.hydrateHistoricalScrobbles();
+        if(component instanceof AbstractHistoricalScrobbleClient) {
+            component.logger.info('User requested historical play hydration');
+            component.hydrateHistoricalScrobbles();
             res.status(200).send('OK');
         } else {
-            client.logger.warn('This client does not have historical play capabilities');
-            return res.status(400).json({error: 'This client does not have historical play capabilities'});
+            component.logger.warn('This client does not have historical play capabilities');
+            return res.status(409).json({error: 'This client does not have historical play capabilities'});
         }
     });
 
