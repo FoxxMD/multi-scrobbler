@@ -1,0 +1,203 @@
+---
+sidebar_position: 6
+title: Security
+description: Securing your instance
+toc_max_heading_level: 4
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::important
+
+**Multi-scrobbler is not designed to accessible from the public internet.**
+
+It is designed for self-hosting on a **secure, private network** or in something like a tailscale mesh network. If you are considering exposing your instance publicly with no security, **DO NOT.**
+
+:::
+
+## Why Not Expose It?
+
+Currently, there are no *destructive* actions that can be taken in multi-scrobbler *but that will likely change in the near future.* Even without destructive actions, an actor can trigger bulk scrobble/retries that exhaust rate limits for things like tealfm or cause you to be blocked for excessive activity for services like listenbrainz/musicbrainz.
+
+Additionally, exposing MS without security can potentially leak **personally identifable information.** Consider:
+
+* some Services, like Spotify, have descriptive device names that can be seen in MS like `bobs-android-auto` or `marys-apartment-roku`
+  * these can potentially tell a bad actor *where you are* or what you are currently *not* doing (at home? in the car?)
+  * if the device name is named after a location it's even worse, like an airbnb: `123-fun-street-samsung-tv`
+* general listening activity can be a sign of your daily routine
+  * EX listening usually stops at 11:45pm -> you go to sleep before midnight
+  * EX high listening activity between 7:30 - 8:30am -> you are commuting
+
+## Securing Multi-Scrobbler
+
+If you absolutely need to host Multi-Scrobbler on a machine that is also accessible from the public internet then use one of the mitigating solutions below to harden your instance.
+
+### Without Ingress
+
+If you do not need 
+
+* any [Ingress-based Sources](/configuration/sources/?sourceComm=ingress#by-communication-method) like Webscrobbler, Listenbrainz Endpoint, or Last.fm Endpoint
+* and do not need authentication callbacks for [Spotify](/configuration/sources/spotify) or [Last.fm](/configuration/clients/lastfm)/[Libre.fm](/configuration/clients/librefm)
+
+then use of these methods:
+
+#### Restrict Docker Port
+
+If running MS in a [Docker container](/installation#docker]), you can run MS **headless** by removing the exposed port from the compose file. Note: this will also remove your ability to access the dashboard.
+
+```yaml
+services:
+  multi-scrobbler:
+  # ...
+  // highlight-start
+  # comment out ports section
+  #
+  # ports:
+  #  - 9078:9078
+  // highlight-end
+```
+
+Alternatively, lock the exposed port to a specific IP address:
+
+```yaml
+services:
+  multi-scrobbler:
+  # ...
+  // highlight-start
+   ports:
+    # only accessible from private ip or tailscale ip
+    - 192.168.0.101:9078:9078
+  // highlight-end
+```
+
+#### Disable Web
+
+Alternatively, use the [Disable Web](/configuration#disable-web) option to completely disable the web server. This is useful if you are not using the docker image or cannot control port exposure in your environment. Note: this will also remove your ability to access the dashboard.
+
+### With Ingress or Remote Instance
+
+If you:
+
+* need to use an [Ingress-based Source](/configuration/sources/?sourceComm=ingress#by-communication-method)
+* need authentication callbacks for [Spotify](/configuration/sources/spotify) or [Last.fm](/configuration/clients/lastfm)/[Libre.fm](/configuration/clients/librefm)
+* or your instance is on a machine outside your private network and you cannot/do not want to run it [headlessly](#restrict-docker-port)
+
+then do one of these:
+
+<DetailsAdmo type="tip" summary="Alternative for Listenbrainz Endpoint">
+
+For Subsonic-based music services (like Navidrome) you can use a [Subsonic Source](/configuration/sources/subsonic) instead of a [Listenbrainz Endpoint](/configuration/sources/listenbrainz-endpoint) to avoid needing ingress.
+
+</DetailsAdmo>
+
+#### VPN
+
+Use something like [Tailscale](https://tailscale.com/) or [Netbird](https://netbird.io/) to create a private VPN-like mesh for your machines/devices to communicate over. **This is the most secure option since it does not require MS to be publicly exposed at all.**
+
+MS only needs to be on a mesh network with the devices that are sending it Ingress scrobbles, or with the devices that will be viewing the dashboard. It does not need to be in the same mesh as any other services it is monitoring.
+
+#### Reverse Proxy with Authentication
+
+Use a reverse proxy with some kind of authentication gate. Optionally, restrict the gate to protect all routes that are *not* related to ingress.
+
+The simplest (and least secure) version of this would be using [basic auth](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Authentication#basic_authentication_scheme).
+
+* Traefik [basic auth](https://doc.traefik.io/traefik/reference/routing-configuration/http/middlewares/basicauth/)
+* NPM [auth gatway](https://nginxproxymanager.com/third-party/npm-auth-gateway.html#npm-auth-gateway) or [nginx basic auth](https://docs.nginx.com/nginx-instance-manager/admin-guide/authentication/basic-auth/set-up-basic-authentication/)
+* Caddy [basic auth](https://caddyserver.com/docs/caddyfile/directives/basic_auth)
+
+:::note
+
+Optimally, you should be using a *more robust* authentication implementation IE tinyauth, authentik, keycloak, etc... that integrates into your reverse proxy.
+
+:::
+
+<DetailsAdmo type="tip" summary="List of Unprotected Routes">
+
+Routes that need to be unprotected in order for devices to communicate with MS:
+
+* `/1/*` - standard route for [Listenbrainz Endpoint](/configuration/sources/listenbrainz-endpoint)
+* `/api/listenbrainz*` - custom Listenbrainz Endpoint with slug
+* `/2.0/` - standard route for [Last.fm Endpoint](/configuration/sources/lastfm-endpoint)
+* `/api/lastfm*` - custom Last.fm Endpoint with slug
+* `/api/webscrobbler*` - standard/custom route for [Webscrobbler](/configuration/sources/webscrobbler)
+* `/*callback*` - wildcard route, used for completing authentication flows for [Spotify](/configuration/sources/spotify), [Last.fm](/configuration/client/lastfm), and [Libre.fm](/configuration/clients/librefm)
+
+In the examples below you can remove any of the above routes for Sources/Clients you are not using.
+
+</DetailsAdmo>
+
+
+Below are examples of protecting all non-ingress and callback routes with basic auth for the above reverse proxies.
+
+<Tabs groupId="rpExample">
+    <TabItem value="traefik" label="Traefik">
+    Using a [file provider](https://doc.traefik.io/traefik/reference/install-configuration/providers/others/file/):
+
+    ```yaml
+    http:
+      routers:
+        ms-route:
+          entryPoints:
+            - "websecure"
+
+          # can remove any set in the parenthesis group that is unused. Order:
+          # LZ endpoint, webscrobbler, LFM endpoint, callback for last.fm/spotify
+          # 
+          # if not using any then leave only -> Host(`...`)
+          rule: >
+            Host(`ms.mydomain.com`) && (
+
+            !PathPrefix(`/1/`)
+            && !PathPrefix(`/api/listenbrainz`)
+
+            && !PathPrefix(`/api/webscrobbler`)
+
+            && !PathPrefix(`/2.0/`)
+            && !PathPrefix(`/api/lastfm`)
+
+            && !PathRegexp(`/.*callback.*/`)
+
+            )
+
+        middlewares:
+            - ms-auth
+        service: ms-service
+      services:
+        ms-service:
+          loadBalancer:
+            servers:
+            # can use container/docker service name if
+            # traefik and MS are on the same docker network
+            # 
+            # otherwise replace domain with the host IP
+            - url: "http://multi-scrobbler:9078"
+      middlewares:
+        ms-auth:
+          basicAuth:
+            users:
+            # use htpasswd cli to generate password
+            #
+            # or self-hosted https://github.com/sharevb/it-tools/tree/v2026.7.11
+            # has an htpasswd generator tool
+            - "testUsername:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"
+    ```
+
+    The above could also be done using [docker provider labels](https://doc.traefik.io/traefik/reference/install-configuration/providers/docker/).
+    </TabItem>
+    <TabItem value="caddy" label="Caddy">
+    ```Caddyfile
+    multi-scrobbler.domain.tld {
+      @if-not-scrobble {
+        not path /1/* /api/listenbrainz* /api/webscrobbler* /2.0/* /api/lastfm* *callback*
+      }
+      # if the request is to ANY route not listed above, force client to pass basic auth
+      basic_auth @if-not-scrobble { 
+        basicAuthUser hashedPassword
+      }
+      # requests will be proxied only if they are to a scrobble endpoint or basic auth has been passed.
+      reverse_proxy multi-scrobbler:9078
+    }
+    ```
+    </TabItem>
+</Tabs>
