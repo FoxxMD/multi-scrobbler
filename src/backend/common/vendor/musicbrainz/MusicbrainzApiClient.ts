@@ -21,7 +21,7 @@ import type {IRecordingMSList} from '../../transforms/MusicbrainzTransformer.ts'
 import dayjs, { type Dayjs } from 'dayjs';
 import { artistCreditsToNames } from '../../../../core/StringUtils.ts';
 import { isrcNoHyphens } from '../../../../core/PlayUtils.ts';
-
+import { RateLimiterMemory, RateLimiterQueue } from 'rate-limiter-flexible';
 export interface SubmitResponse {
     payload?: {
         ignored_listens: number
@@ -33,8 +33,7 @@ export interface SubmitResponse {
 export interface MusicbrainzApiConfig extends MusicbrainzApiConfigData {
     api: MusicBrainzApi,
     hostname: string
-    minRequestIntervalDuration: number
-    lastRequest: Dayjs
+    reqQueue: RateLimiterQueue
 }
 
 export interface MusicbrainzApiClientConfig {
@@ -58,7 +57,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
     cache: Cacheable;
     protected asyncStore: AsyncLocalStorage<string>;
 
-    constructor(name: any, config: MusicbrainzApiClientConfig, options: AbstractApiOptions & {cache?: Cacheable, logUrl?: boolean}) {
+    constructor(name: any, config: MusicbrainzApiClientConfig, options: AbstractApiOptions & {cache?: Cacheable, logUrl?: boolean, reqQueueDuration?: number}) {
         super('Musicbrainz', name, config, options);
 
         this.asyncStore = new AsyncLocalStorage();
@@ -71,8 +70,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
             const mbApiConfig: Omit<MusicbrainzApiConfig, 'api'> = {
                 ...mbConfig, 
                 hostname: u.url.hostname, 
-                minRequestIntervalDuration: 1000, 
-                lastRequest: dayjs().subtract(1000 + 1000, 'ms')
+                reqQueue: new RateLimiterQueue(new RateLimiterMemory({points: 1, duration: options?.reqQueueDuration ?? 1}), {maxQueueSize: 20})
             }
             if(mb === undefined) {
                 const api = new MusicBrainzApi({
@@ -117,7 +115,6 @@ export class MusicbrainzApiClient extends AbstractApiClient {
         let apiConfig = this.rrApis.next().value;
 
         const {
-            timeout = 30000,
             cacheKey,
             useCachedResult = true
         } = options || {};
@@ -140,15 +137,8 @@ export class MusicbrainzApiClient extends AbstractApiClient {
         const triedHosts: string[] = [];
         while(!triedHosts.includes(apiConfig.hostname)) {
 
-            // keep track of last request init at and wait until at least 1 second since that
-            // to help prevent rate limiting
-            const sinceLast = dayjs().diff(apiConfig.lastRequest, 'ms');
-            const waitTime = Math.max(0, apiConfig.minRequestIntervalDuration - sinceLast);
-            apiConfig.lastRequest = dayjs().add(waitTime, 'ms');
-            //this.logger.trace(`Waiting ${waitTime}ms to call ${apiConfig.hostname} request at ${apiConfig.lastRequest.toISOString()}`)
-            if(waitTime > 0) {
-                await sleep(waitTime);
-            }
+            // rate limit at 1req/s
+            const res = await apiConfig.reqQueue.removeTokens(1);
 
             try {
                 const res = await this.callApiEndpoint(apiConfig.api, func, options);
@@ -183,7 +173,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
         }
     }
 
-    protected callApiEndpoint = async<T = Response>(mbApi: MusicBrainzApi, func: (mb: MusicBrainzApi) => Promise<any>, options?: { timeout?: number, cacheKey?: string }): Promise<T> => {
+    protected async callApiEndpoint<T = Response>(mbApi: MusicBrainzApi, func: (mb: MusicBrainzApi) => Promise<any>, options?: { timeout?: number, cacheKey?: string }): Promise<T> {
         const {
             timeout = 30000,
             cacheKey

@@ -13,10 +13,13 @@ import type {MusicbrainzApiConfigData} from '../../common/infrastructure/Atomic.
 import { MockNetworkError, withRequestInterception } from '../utils/networking.ts';
 import { http, HttpResponse, delay } from "msw";
 import { generatePlay, withBrainz } from '../../../core/tests/utils/PlayTestUtils.ts';
-import { intersect, missingMbidTypes } from '../../utils.ts';
+import { intersect, missingMbidTypes, sleep } from '../../utils.ts';
 import { CoverArtApiClient, type CoverArtApiConfig } from '../../common/vendor/musicbrainz/CoverArtApiClient.ts';
 import { artistNamesToCredits, artistNameToCredit } from '../../../core/StringUtils.ts';
 import dayjs from 'dayjs';
+import { MusicbrainzApiClient } from '../../common/vendor/musicbrainz/MusicbrainzApiClient.ts';
+import {spy} from 'sinon';
+import type { MusicBrainzApi } from 'musicbrainz-api';
 
 chai.use(asPromised);
 
@@ -46,6 +49,12 @@ const mbTransformer = createMbTransformer();
 
 const createCoverArtApi = (config: CoverArtApiConfig = {}) => {
     return new CoverArtApiClient('test', config, {logger: loggerTest});
+}
+
+class MusicbrainzApiTestClient extends MusicbrainzApiClient {
+    callApiEndpoint = async<T = Response>(mbApi: MusicBrainzApi, func: (mb: MusicBrainzApi) => Promise<any>, options?: { timeout?: number, cacheKey?: string }): Promise<T> => {
+        return super.callApiEndpoint(mbApi, func,options);
+    }
 }
 
 describe('Musicbrainz API', function () {
@@ -565,6 +574,28 @@ describe('Musicbrainz API', function () {
 
             })();
         });
+    });
+
+    it('rate limits to 1req per duration', async function () {
+        await withRequestInterception([
+            http.get(/mbtest\.local\/?\/ws/, async () => {
+                return HttpResponse.json([], {status: 200});
+            })
+        ], async function () {
+
+            const apiClient = new MusicbrainzApiTestClient('test', {apis: [{url: 'https://mbtest.local', contact: 'test@email.com'}]}, {
+                logger: loggerTest,
+                cache: memorycache(),
+                reqQueueDuration: 0.01
+            });
+            const sp = spy(apiClient, 'callApiEndpoint');
+
+            for(let i = 0; i < 5; i++) {
+                apiClient.callApi((mb) => mb.search('recording', {})).then(() => null)
+            }
+            await sleep(30);
+            expect(sp.callCount).to.eq(3);
+        })();
     });
 
 });
