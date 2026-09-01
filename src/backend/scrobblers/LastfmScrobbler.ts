@@ -3,7 +3,7 @@ import type EventEmitter from "events";
 import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type SourcePlayerObj} from "../../core/Atomic.ts";
 import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
-import type {FormatPlayObjectOptions, InternalConfigOptional, TimeRangeListensFetcher} from "../common/infrastructure/Atomic.ts";
+import type {AbstractApiOptions, FormatPlayObjectOptions, InternalConfigOptional, TimeRangeListensFetcher} from "../common/infrastructure/Atomic.ts";
 import type {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.ts";
 import LastfmApiClient, { LastFMIgnoredScrobble, playToClientPayload, formatPlayObj } from "../common/vendor/LastfmApiClient.ts";
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.ts";
@@ -18,23 +18,25 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     requiresAuthInteraction = true;
     upstreamType: string = 'Last.fm';
     getScrobblesForTimeRange: TimeRangeListensFetcher
+    protected internalOptions: InternalConfigOptional & AbstractApiOptions;
 
     declare config: LastfmClientConfig;
 
-    constructor(name: any, config: LastfmClientConfig, options: InternalConfigOptional & {[key: string]: any}, emitter: EventEmitter, logger: Logger, type = 'lastfm') {
+    constructor(name: any, config: LastfmClientConfig, options: InternalConfigOptional & AbstractApiOptions, emitter: EventEmitter, logger: Logger, type = 'lastfm') {
         super(type, name, config, emitter, logger);
-        this.api = new LastfmApiClient(name, config.data, {...options, logger});
+        this.internalOptions = options;
         // https://www.last.fm/api/show/user.getRecentTracks
         this.MAX_INITIAL_SCROBBLES_FETCH = 100;
         this.supportsNowPlaying = true;
         // last.fm shows Now Playing for the same time as the duration of the track being submitted
         this.nowPlayingMaxThreshold = nowPlayingUpdateByPlayDuration;
-        this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this.api, this.api.logger);
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => formatPlayObj(obj, options);
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
+        this.api = new LastfmApiClient(this.name, this.config.data, {...this.internalOptions, type: 'lastfm', logger: this.logger});
+        this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this.api, this.api.logger);
         await this.api.initialize();
         return true;
     }

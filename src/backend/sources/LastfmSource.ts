@@ -21,6 +21,7 @@ export default class LastfmSource extends MemorySource {
     requiresAuthInteraction = true;
     upstreamType: string = 'Last.fm';
     getScrobblesForTimeRange: TimeRangeListensFetcher
+    protected internalOptions: InternalConfig;
 
     declare config: LastfmSourceConfig;
 
@@ -37,12 +38,10 @@ export default class LastfmSource extends MemorySource {
         this.canBacklog = true;
         this.supportsUpstreamRecentlyPlayed = true;
         this.supportsUpstreamNowPlaying = true;
-        this.api = new LastfmApiClient(name, config.data, {logger: this.logger, type, ...internal});
         this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
         // https://www.last.fm/api/show/user.getRecentTracks
         this.SCROBBLE_BACKLOG_COUNT = 200;
         this.logger.info(`Note: The player for this source is an analogue for the 'Now Playing' status exposed by ${this.type} which is NOT used for scrobbling. Instead, the 'recently played' or 'history' information provided by this source is used for scrobbles.`);
-        this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this.api, this.api.logger);
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -50,6 +49,8 @@ export default class LastfmSource extends MemorySource {
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
+        this.api = new LastfmApiClient(this.name, this.config.data, {logger: this.logger, type: 'lastfm', ...this.internalOptions});
+        this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this.api, this.api.logger);
         return await this.api.initialize();
     }
 

@@ -17,12 +17,13 @@ import { LastFMUser, LastFMAuth, LastFMTrack, type LastFMUserGetRecentTracksResp
 import clone from 'clone';
 import type { IncomingMessage } from "http";
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
-import { AuthError, ScrobbleSubmitError, SimpleError } from "../errors/MSErrors.ts";
+import { AuthError, ScrobbleSubmitError } from "../errors/MSErrors.ts";
 import { redactString } from "@foxxmd/redact-string";
 import dns from 'node:dns/promises';
 import xml2js from 'xml2js';
 import { findCauseByFunc } from "../../utils/ErrorUtils.ts";
 import * as z from 'zod';
+import { RateLimiterMemory, RateLimiterQueue, type IRateLimiterOptions } from "rate-limiter-flexible";
 
 const badErrors = [
     'api key suspended',
@@ -65,7 +66,9 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
     userApi!: LastFMUser;
     trackApi!: LastFMTrack;
 
-    constructor(name: any, config: Partial<LastfmData> & {urlBase?: string}, options: AbstractApiOptions & InternalConfigOptional & {type?: string}) {
+    reqQueue?: RateLimiterQueue;
+
+    constructor(name: any, config: Partial<LastfmData> & {urlBase?: string, rateLimit?: Pick<IRateLimiterOptions, 'points' | 'duration'>}, options: AbstractApiOptions & InternalConfigOptional & {type?: string}) {
         const {type = 'lastfm', configDir, localUrl} = options ?? {};
         super(type, name, config, options);
         const {
@@ -95,6 +98,11 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             }
         }
 
+        if(config.rateLimit !== undefined) {
+            this.logger.verbose(`Rate limiting requests => ${config.rateLimit.points}req/${config.rateLimit.duration}s`);
+            this.reqQueue = new RateLimiterQueue(new RateLimiterMemory({points: config.rateLimit.points, duration: config.rateLimit.duration}), {maxQueueSize: 20});
+        }
+
         this.redirectUri = `${redirectUri ?? joinedUrl(localUrl, `${cbPrefix}/callback`).href}?state=${normalizeStr(this.name, {keepSingleWhitespace: false})}`;
 
         this.logger.info(`Using ${this.url.normal} for API calls`);
@@ -107,6 +115,10 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             maxRequestRetries = 2,
             retryMultiplier = DEFAULT_RETRY_MULTIPLIER
         } = this.config;
+
+        if(this.reqQueue !== undefined) {
+            await this.reqQueue.removeTokens(1);
+        }
 
         try {
             return await func() as T;
@@ -247,6 +259,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
         } catch (e) {
             const hint = e.error?.cause?.message ?? undefined;
              
+            // eslint-disable-next-line preserve-caught-error
             throw new Error(`Could not connect to ${this.upstreamName} API server${hint !== undefined ? ` (${hint})` : ''}`, { cause: e.error ?? e });
         }
     }
