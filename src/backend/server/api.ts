@@ -173,7 +173,11 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     });
 
     router.put('/api/logs', {
-        bodySchema: z.object({level: logLevelStandaloneSchema, limit: z.int().positive().max(500)}),
+        middleware: [bodyParser.json({ type: ['text/*', 'application/json'] })],
+        bodySchema: z.object({
+            level: logLevelStandaloneSchema.optional(),
+            limit: z.int().positive().max(500).optional()
+        }),
         tags: ['Events'],
         summary: 'Update Log Settings'
     }, async (req, res) => {
