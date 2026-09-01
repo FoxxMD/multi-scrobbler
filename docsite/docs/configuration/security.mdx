@@ -43,7 +43,7 @@ then use of these methods:
 
 #### Restrict Docker Port
 
-If running MS in a [Docker container](/installation#docker]), you can run MS **headless** by removing the exposed port from the compose file. Note: this will also remove your ability to access the dashboard.
+If running MS in a [Docker container](/installation#docker), you can run MS **headless** by removing the exposed port from the compose file. Note: this will also remove your ability to access the dashboard.
 
 ```yaml
 services:
@@ -121,7 +121,7 @@ Routes that need to be unprotected in order for devices to communicate with MS:
 * `/2.0/` - standard route for [Last.fm Endpoint](/configuration/sources/lastfm-endpoint)
 * `/api/lastfm*` - custom Last.fm Endpoint with slug
 * `/api/webscrobbler*` - standard/custom route for [Webscrobbler](/configuration/sources/webscrobbler)
-* `/*callback*` - wildcard route, used for completing authentication flows for [Spotify](/configuration/sources/spotify), [Last.fm](/configuration/client/lastfm), and [Libre.fm](/configuration/clients/librefm)
+* `/*callback*` - wildcard route, used for completing authentication flows for [Spotify](/configuration/sources/spotify), [Last.fm](/configuration/clients/lastfm), and [Libre.fm](/configuration/clients/librefm)
 
 In the examples below you can remove any of the above routes for Sources/Clients you are not using.
 
