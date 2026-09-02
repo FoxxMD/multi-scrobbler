@@ -27,7 +27,7 @@ export default class LibrefmScrobbler extends LastfmScrobbler {
         }
 
         protected async doBuildInitData(): Promise<true | string | undefined> {
-            this.api = new LastfmApiClient(this.name, {...this.config.data, rateLimit: {points: 1, duration: 1}}, {...this.internalOptions, logger: this.logger});
+            this.api = new LastfmApiClient(this.name, {...this.config.data, rateLimit: {points: 1, duration: 1.5}}, {...this.internalOptions, logger: this.logger});
             this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this.api, this.api.logger);
             await this.api.initialize();
             return true;
