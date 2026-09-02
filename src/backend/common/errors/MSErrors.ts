@@ -171,6 +171,7 @@ export const mergeSimpleError = (err: Error): Error => {
             // @ts-expect-error this is used by serialize error with out custom errors
             mergedErr.toJSON = () => serializeError(mergedErr);
         }
+        return mergedErr;
     }
     return err;
 }
