@@ -37,7 +37,6 @@ If you absolutely need to host Multi-Scrobbler on a machine that is also accessi
 If you do not need 
 
 * any [Ingress-based Sources](/configuration/sources/?sourceComm=ingress#by-communication-method) like Webscrobbler, Listenbrainz Endpoint, or Last.fm Endpoint
-* and do not need authentication callbacks for [Spotify](/configuration/sources/spotify) or [Last.fm](/configuration/clients/lastfm)/[Libre.fm](/configuration/clients/librefm)
 
 then use of these methods:
 
@@ -74,12 +73,11 @@ services:
 
 Alternatively, use the [Disable Web](/configuration#disable-web) option to completely disable the web server. This is useful if you are not using the docker image or cannot control port exposure in your environment. Note: this will also remove your ability to access the dashboard.
 
-### With Ingress or Remote Instance
+### With Ingress or Remote Instance Dashboard
 
 If you:
 
 * need to use an [Ingress-based Source](/configuration/sources/?sourceComm=ingress#by-communication-method)
-* need authentication callbacks for [Spotify](/configuration/sources/spotify) or [Last.fm](/configuration/clients/lastfm)/[Libre.fm](/configuration/clients/librefm)
 * or your instance is on a machine outside your private network and you cannot/do not want to run it [headlessly](#restrict-docker-port)
 
 then do one of these:
@@ -121,7 +119,6 @@ Routes that need to be unprotected in order for devices to communicate with MS:
 * `/2.0/` - standard route for [Last.fm Endpoint](/configuration/sources/lastfm-endpoint)
 * `/api/lastfm*` - custom Last.fm Endpoint with slug
 * `/api/webscrobbler*` - standard/custom route for [Webscrobbler](/configuration/sources/webscrobbler)
-* `/*callback*` - wildcard route, used for completing authentication flows for [Spotify](/configuration/sources/spotify), [Last.fm](/configuration/clients/lastfm), and [Libre.fm](/configuration/clients/librefm)
 
 In the examples below you can remove any of the above routes for Sources/Clients you are not using.
 
@@ -142,7 +139,7 @@ Below are examples of protecting all non-ingress and callback routes with basic 
             - "websecure"
 
           # can remove any set in the parenthesis group that is unused. Order:
-          # LZ endpoint, webscrobbler, LFM endpoint, callback for last.fm/spotify
+          # LZ endpoint, webscrobbler, LFM endpoint
           # 
           # if not using any then leave only -> Host(`...`)
           rule: >
@@ -155,8 +152,6 @@ Below are examples of protecting all non-ingress and callback routes with basic 
 
             && !PathPrefix(`/2.0/`)
             && !PathPrefix(`/api/lastfm`)
-
-            && !PathRegexp(`/.*callback.*/`)
 
             )
 
@@ -189,7 +184,7 @@ Below are examples of protecting all non-ingress and callback routes with basic 
     ```Caddyfile
     multi-scrobbler.domain.tld {
       @if-not-scrobble {
-        not path /1/* /api/listenbrainz* /api/webscrobbler* /2.0/* /api/lastfm* *callback*
+        not path /1/* /api/listenbrainz* /api/webscrobbler* /2.0/* /api/lastfm*
       }
       # if the request is to ANY route not listed above, force client to pass basic auth
       basic_auth @if-not-scrobble { 
