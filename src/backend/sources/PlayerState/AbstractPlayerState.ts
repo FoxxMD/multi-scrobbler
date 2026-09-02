@@ -223,10 +223,16 @@ export abstract class AbstractPlayerState {
                 this.calculatedStatus = this.reportedStatus;
             } else if (this.isSessionRepeat(state.position, reportedTS)) {
                 // if we detect the track has been restarted end listen session and treat as a new play
+                const sessionless = this.currentListenRange === undefined;
                 this.currentListenSessionEnd();
                 const played = this.getPlayedObject(true);
                 play.data.playDate = dayjs();
                 this.isRepeatPlay = true;
+                if(sessionless) {
+                    // if repeat occurred due to previous closed session
+                    // then we need to force a new session or else we'll miss a listening interval
+                    this.currentListenSessionContinue(state.position, reportedTS);
+                }
                 this.logger.debug('New Play is a repeat');
                 this.setCurrentPlay(state, {reportedTS});
                 return [this.getPlayedObject(), played];
@@ -340,17 +346,16 @@ export abstract class AbstractPlayerState {
     /** Check if new Player Position was seeked to a Position that indicates user is repeating the track
      * 
      * True if:
-     *   * New position is close to start of Play and...
+     *   * New position was/is seeked and is now close to start of Play and...
      *     * Listened duraton is more than 2 minutes/50% of Play OR...
      *     * Previous Position was close to end of Play
      */
     protected isSessionRepeat(position?: number, reportedTS?: Dayjs): boolean {
-        if(this.currentListenRange === undefined) {
-            return false;
-        }
-        const [isSeeked, seekPos] = this.currentListenRange.seeked(position, reportedTS);
-        if (isSeeked === false || seekPos > 0) {
-            return false;
+        if(this.currentListenRange !== undefined) {
+            const [isSeeked, seekPos] = this.currentListenRange.seeked(position, reportedTS);
+            if (isSeeked === false || seekPos > 0) {
+                return false;
+            }
         }
 
         const hints: string[] = [];
@@ -367,18 +372,42 @@ export abstract class AbstractPlayerState {
             const [repeatDurationOk, repeatDurationHint] = repeatDurationPlayed(this.currentPlay, playerDur, {hintPrefix: false});
 
             // user has played at least 2 minutes or 50% of track
-            if (repeatDurationOk) {
+            // and the current (new) listen range was close to the start
+            // and current range was seeked
+            if (this.currentListenRange !== undefined && repeatDurationOk) {
                 this.logger.verbose(`${repeatHint} ${[closeStartHint, repeatDurationHint].join(' and ')}`);
                 return true;
             }
 
-            const lastPos = this.currentListenRange.getPosition();
-            if (trackDur !== undefined && lastPos !== undefined) {
-                const [nearEnd, nearEndHint] = closeToPlayEnd(this.currentPlay, lastPos, {hintPrefix: false});
-                // last position is close to end of Play
-                if(nearEnd) {
-                    this.logger.verbose(`${repeatHint} ${[closeStartHint, nearEndHint].join(' and ')}`);
-                    return true;
+            // if duration was not satisfied *or* we don't have a current listen range
+            // then we check last position with proximity to end of the track
+            const lastPosCandidate: {pos: number, context: string}[] = [];
+            const lastPos = this.currentListenRange?.getPosition();
+            if(lastPos !== undefined) {
+                // current listen range was seeked, but not closed (yet), check last end position
+                lastPosCandidate.push({pos: lastPos, context: 'current listen session'});
+            }
+            if(lastPos === undefined && this.listenRanges.length > 0) {
+                // may have just started a new listen session, or no listen session yet,
+                // after being paused/~stopped (session was closed) at the end of a playlist/repeat
+                //
+                // if we have a previous range then try the last end position
+                const last = this.listenRanges[this.listenRanges.length - 1].getPosition();
+                if(last !== undefined) {
+                    // no seek since session does not exist
+                    // but we have closed ranges so try latest end position
+                    lastPosCandidate.push({pos: last, context: 'last listen session'});
+                }
+                
+            }
+            if (trackDur !== undefined && lastPosCandidate.length > 0) {
+                for(const posData of lastPosCandidate) {
+                    const [nearEnd, nearEndHint] = closeToPlayEnd(this.currentPlay, posData.pos, {hintPrefix: false});
+                    // last position is close to end of Play
+                    if(nearEnd) {
+                        this.logger.verbose(`${repeatHint} ${[closeStartHint, `${posData.context} (${posData.pos}s) ${nearEndHint}`].join(' and ')}`);
+                        return true;
+                    }
                 }
             }
         }
