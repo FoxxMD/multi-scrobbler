@@ -137,8 +137,6 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
             retryMultiplier = DEFAULT_RETRY_MULTIPLIER
         } = this.config;
 
-        const thisInstance = this;
-
         const {
             retries = maxRequestRetries,
             logFailure = true
@@ -150,9 +148,9 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
                 factor: retryMultiplier,
                 minTimeout: 1000,
                 maxRetryTime: 30000,
-                onFailedAttempt(context) {
+                onFailedAttempt: (context) => {
                     if(logFailure) {
-                        thisInstance.logger.warn(new SimpleError(`Request attempt ${context.attemptNumber} failed. ${context.retriesLeft} retries left`, {cause: context.error, shortStack: true}));                
+                        this.logger.warn(new SimpleError(`Request attempt ${context.attemptNumber} failed. ${context.retriesLeft} retries left`, {cause: context.error, shortStack: true}));                
                     }
                    },
                 shouldRetry(context) {

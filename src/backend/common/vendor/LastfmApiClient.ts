@@ -1,6 +1,6 @@
 import dayjs, { type Dayjs, type ManipulateType } from "dayjs";
 import type {BrainzMeta, PlayObject, PlayObjectMinimal, ScrobbleActionResult, UnixTimestamp, URLData, Writeable} from "../../../core/Atomic.ts";
-import { artistNamesToCredits, artistNameToCredit, nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.ts";
+import { artistNamesToCredits, artistNameToCredit, nonEmptyStringOrDefault, splitByFirstFound, truncateStringToLength } from "../../../core/StringUtils.ts";
 import { sleep } from "../../utils.ts";
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
 import { writeFile } from '../../utils/FSUtils.ts';
@@ -17,12 +17,14 @@ import { LastFMUser, LastFMAuth, LastFMTrack, type LastFMUserGetRecentTracksResp
 import clone from 'clone';
 import type { IncomingMessage } from "http";
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
-import { AuthError, ScrobbleSubmitError, SimpleError } from "../errors/MSErrors.ts";
+import { AuthError, mergeSimpleError, ScrobbleSubmitError, SimpleError } from "../errors/MSErrors.ts";
 import { redactString } from "@foxxmd/redact-string";
 import dns from 'node:dns/promises';
 import xml2js from 'xml2js';
 import { findCauseByFunc } from "../../utils/ErrorUtils.ts";
 import * as z from 'zod';
+import { RateLimiterMemory, RateLimiterQueue, type IRateLimiterOptions } from "rate-limiter-flexible";
+import pRetry from 'p-retry';
 
 const badErrors = [
     'api key suspended',
@@ -50,6 +52,11 @@ export const LIBREFM_PATH = '/2.0/';
 export const LASTFM_HOST = 'ws.audioscrobbler.com';
 export const LASTFM_PATH = '/2.0';
 
+export interface LastfmApiData {
+    urlBase?: string, 
+    rateLimit?: Pick<IRateLimiterOptions, 'points' | 'duration'>
+}
+
 export default class LastfmApiClient extends AbstractApiClient implements PaginatedTimeRangeListens<number> {
 
     user?: string;
@@ -65,7 +72,9 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
     userApi!: LastFMUser;
     trackApi!: LastFMTrack;
 
-    constructor(name: any, config: Partial<LastfmData> & {urlBase?: string}, options: AbstractApiOptions & InternalConfigOptional & {type?: string}) {
+    reqQueue?: RateLimiterQueue;
+
+    constructor(name: any, config: Partial<LastfmData> & LastfmApiData, options: AbstractApiOptions & InternalConfigOptional & {type?: string}) {
         const {type = 'lastfm', configDir, localUrl} = options ?? {};
         super(type, name, config, options);
         const {
@@ -75,6 +84,8 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             session, 
             urlBase = `https://${LASTFM_HOST}${LASTFM_PATH}`
         } = config;
+
+        this.sessionKey = session;
 
         this.url = normalizeWebAddress(urlBase, {removeTrailingSlash: false});
         let cbPrefix: string;
@@ -95,6 +106,11 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             }
         }
 
+        if(config.rateLimit !== undefined) {
+            this.logger.verbose(`Rate limiting requests => ${config.rateLimit.points}req/${config.rateLimit.duration}s`);
+            this.reqQueue = new RateLimiterQueue(new RateLimiterMemory({points: config.rateLimit.points, duration: config.rateLimit.duration}), {maxQueueSize: 20});
+        }
+
         this.redirectUri = `${redirectUri ?? joinedUrl(localUrl, `${cbPrefix}/callback`).href}?state=${normalizeStr(this.name, {keepSingleWhitespace: false})}`;
 
         this.logger.info(`Using ${this.url.normal} for API calls`);
@@ -108,46 +124,83 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             retryMultiplier = DEFAULT_RETRY_MULTIPLIER
         } = this.config;
 
-        try {
+        const limitedCallFunc = async () => {
+            if (this.reqQueue !== undefined) {
+                this.logger.info('pre limiter');
+                await this.reqQueue.removeTokens(1);
+                this.logger.info('post limiter');
+            }
+            this.logger.info('making api call');
             return await func() as T;
-        } catch (e) {
-            const {
-                message,
-            } = e;
-            if('content' in e) {
-                let msg = 'Raw Response';
-                if('response' in e) {
-                    msg = `(${(e.response as IncomingMessage).statusCode}) ${msg}`;
-                }
-                this.logger.error(`${msg}:\n${e.content}`);
-            }
-            // for now check for exceptional errors by matching error code text
-            const retryError = retryErrors.find(x => message.toLocaleLowerCase().includes(x));
-            let networkError =  undefined;
-            if(retryError === undefined) {
-                const nError = getNodeNetworkException(e);
-                if(nError !== undefined) {
-                    networkError = nError.message;
-                } else if(message.includes('ETIMEDOUT')) {
-                    networkError = 'request timed out after 3 seconds'
-                }
-            }
-            if (undefined !== retryError || networkError !== undefined) {
-                if (retries < maxRequestRetries) {
-                    const delay = (retries + 1) * retryMultiplier;
-                    if(networkError !== undefined) {
-                        this.logger.warn(`API call failed due to network issue (${networkError}), retrying in ${delay} seconds...`);
-                    } else {
-                        this.logger.warn(`API call was not good but recoverable (${retryError}), retrying in ${delay} seconds...`);
-                    }
-                    await sleep(delay * 1000);
-                    return this.callApi(func, retries + 1);
-                } else {
-                    throw new UpstreamError(`API call failed due -> ${retryError ?? 'API call timed out'} <- after max retries hit ${maxRequestRetries}`, {cause: e})
-                }
-            }
+        }
 
-            throw e;
+        try {
+            return await pRetry(() => limitedCallFunc(), {
+                retries: maxRequestRetries,
+                factor: retryMultiplier,
+                minTimeout: 300,
+                maxRetryTime: 30000,
+                onFailedAttempt: (context) => {
+                    const { error, attemptNumber, retriesLeft } = context;
+                    const parts: string[] = [];
+                    let shouldThrow = false;
+
+                    if (error instanceof LastFMResponseError) {
+                        const status = error.response.statusCode;
+                        parts.push(`HTTP ${status}`);
+                        parts.push(error.message);
+                        if (status === 429) {
+                            parts.push('Api call failed due to too many requests');
+                        } else if (error.message.includes('Expected JSON response')) {
+                            parts.push('Api call failed due unexpected non-json response');
+                            if (error.content !== undefined) {
+                                // add some truncated response content
+                                parts.push(`Contents (truncated): ${truncateStringToLength(150)(error.content)}`);
+                            }
+                        } else {
+                            const retryError = retryErrors.find(x => error.message.toLocaleLowerCase().includes(x));
+                            let networkError = undefined;
+                            if (retryError === undefined) {
+                                const nError = getNodeNetworkException(error);
+                                if (nError !== undefined) {
+                                    networkError = nError.message;
+                                } else if (error.message.includes('ETIMEDOUT')) {
+                                    networkError = 'request timed out after 3 seconds'
+                                }
+                                if(networkError !== undefined) {
+                                    parts.push(`Api call failed due to a network issue: ${retryError}`);
+                                } else {
+                                    parts.push(`Api call failed for a non-retryable reason`);
+                                    shouldThrow = true;
+                                }
+                            } else {
+                                parts.push(`Api call failed due to a retryable error: ${retryError}`);
+                            }
+                        }
+                        if(shouldThrow) {
+                            throw new SimpleError(`Request attempt ${attemptNumber} failed with non-retryable reason: ${parts.join(' | ')}`, {cause: error, shortStack: false});
+                        }
+                        this.logger.warn(new SimpleError(`Request attempt ${attemptNumber} failed. ${retriesLeft} retries left: ${parts.join(' | ')}`, {cause: error, shortStack: true}));
+                    } else {
+                        let networkError: string;
+                        const nError = getNodeNetworkException(error);
+                        if(nError !== undefined) {
+                            networkError = nError.message;
+                        } else if(error.message.includes('ETIMEDOUT')) {
+                            networkError = 'request timed out after 3 seconds'
+                        }
+                        if(networkError === undefined) {
+                            throw new SimpleError(`Request attempt ${attemptNumber} failed with non-retryable reason`, {cause: error, shortStack: true});
+                        }
+                        this.logger.warn(mergeSimpleError(new SimpleError(`Request attempt ${attemptNumber} failed due to network error: ${networkError}`, {cause: error, shortStack: true})));
+                    }
+                }
+            });
+        } catch (e) {
+            if(e instanceof SimpleError) {
+                throw e;
+            }
+            throw new Error('API call failed unexpectedly', {cause: e});
         }
     }
 
@@ -212,14 +265,14 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
         });
     }
 
-    initialize = async (): Promise<true> => {
+    initialize = async (opts: {sessionKey?: string, name?: string} = {}): Promise<true> => {
 
         try {
             this.logger.debug(`Trying to load credentials from file path: ${this.workingCredsPath}`);
             const creds = await readJson(this.workingCredsPath, {throwOnNotFound: false, interpolateEnvs: false});
             const {sessionKey, name, lastRefreshed} = creds || {};
-            this.sessionKey = sessionKey;
-            this.user = name;
+            this.sessionKey = sessionKey ?? opts.sessionKey;
+            this.user = name ?? opts.name;
             if(lastRefreshed !== undefined) {
                 this.lastRefreshed = lastRefreshed;
             }
@@ -247,6 +300,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
         } catch (e) {
             const hint = e.error?.cause?.message ?? undefined;
              
+            // eslint-disable-next-line preserve-caught-error
             throw new Error(`Could not connect to ${this.upstreamName} API server${hint !== undefined ? ` (${hint})` : ''}`, { cause: e.error ?? e });
         }
     }
@@ -299,7 +353,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             if(unrecoverable === undefined) {
                 const errorWithMessage = findCauseByFunc(e, (ee) => `response` in ee) as Error & {response: IncomingMessage} | undefined;
                 if(errorWithMessage !== undefined) {
-                    unrecoverable = [401,403].includes(errorWithMessage.response.statusCode);
+                    unrecoverable = [401,403].includes(errorWithMessage.response?.statusCode);
                 }
             }
             throw new AuthError('Testing auth failed', {cause: e, unrecoverable});

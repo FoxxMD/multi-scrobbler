@@ -3,8 +3,16 @@ import asPromised from 'chai-as-promised';
 import { describe, it } from 'mocha';
 import { generateLastfmTrackObject, generateMbid, generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
 
-import { playToClientPayload, formatPlayObj } from '../../common/vendor/LastfmApiClient.ts';
+import LastfmApiClient, { playToClientPayload, formatPlayObj } from '../../common/vendor/LastfmApiClient.ts';
 import { artistNamesToCredits } from '../../../core/StringUtils.ts';
+import { withRequestInterception } from '../utils/networking.ts';
+import { http, HttpResponse } from "msw";
+import { loggerDebug, loggerTest } from '@foxxmd/logging';
+import { findCauseByReference } from '../../utils/ErrorUtils.ts';
+import { LastFMResponseError } from 'lastfm-ts-api';
+import { SimpleError } from '../../common/errors/MSErrors.ts';
+import {spy} from 'sinon';
+import { sleep } from '../../utils.ts';
 
 chai.use(asPromised);
 
@@ -66,26 +74,103 @@ describe('#LFM Track to Play', function() {
 
 });
 
-// it('should catch error and log contents on api failure', async function () {
-//     this.timeout(50000);
-//     await withRequestInterception([
-//         http.post('ws.audioscrobbler.com/2.0', async () => {
-//             return HttpResponse.html('<html>This is a test</html>', {status: 200});
-//         })
-//     ], async function () {
+describe('#LFM Error Response Handling', function () {
 
-//         const lfm = new LastfmApiClient('mylfm-client-test', {
-//             apiKey: '',
-//             secret: ''
-//         }, {
-//             logger: loggerDebug,
-//             localUrl: new URL('http://localhost:9078'),
-//             configDir: configDir,
-//             version: 'test'
-//         });
+    it('should catch error and include unexpected json message', async function () {
+        await withRequestInterception([
+            http.all('https://lfmtest.local/2.0', async () => {
+                return HttpResponse.html('<html>You have made too many retries</html>', { status: 429 });
+            })
+        ], async function () {
 
-//         await lfm.initialize();
+            const lfm = new LastfmApiClient('mylfm-client-test', {
+                apiKey: '',
+                secret: '',
+                session: '',
+                urlBase: 'https://lfmtest.local/2.0'
+            }, {
+                logger: loggerTest,
+                localUrl: new URL('http://localhost:9078'),
+                configDir: '.',
+                version: 'test'
+            });
 
-//         await lfm.testAuth();
-//     })();
-// });
+            await lfm.initialize({ name: 'test', sessionKey: 'test' });
+
+            try {
+                await lfm.testAuth();
+            } catch (e) {
+                const cause = findCauseByReference(e, LastFMResponseError);
+                expect(cause).is.not.undefined;
+                expect(cause.message).includes('Expected JSON response');
+            }
+        })();
+    });
+
+    it('should catch non-retryable error', async function () {
+        await withRequestInterception([
+            http.all('https://lfmtest.local/2.0', async () => {
+                return HttpResponse.json({ error: { '#text': 'unspecified resource', code: 7 } }, { status: 200 });
+            })
+        ], async function () {
+
+            const lfm = new LastfmApiClient('mylfm-client-test', {
+                apiKey: '',
+                secret: '',
+                session: '',
+                urlBase: 'https://lfmtest.local/2.0'
+            }, {
+                logger: loggerTest,
+                localUrl: new URL('http://localhost:9078'),
+                configDir: '.',
+                version: 'test'
+            });
+
+            await lfm.initialize({ name: 'test', sessionKey: 'test' });
+
+            try {
+                await lfm.testAuth();
+            } catch (e) {
+                const cause = findCauseByReference(e, SimpleError);
+                expect(cause).is.not.undefined;
+                expect(cause.message).includes('Request attempt 1 failed');
+            }
+        })();
+    });
+});
+
+describe('#LFM Rate Limiting', function () {
+
+    it('should limit calls based on rate', async function () {
+        let callCount = 0;
+        await withRequestInterception([
+            http.all('https://lfmtest.local/2.0', async () => {
+                callCount++;
+                return HttpResponse.json({ user: {name: 'test'} }, { status: 200 });
+            })
+        ], async function () {
+
+            const lfm = new LastfmApiClient('mylfm-client-test', {
+                apiKey: '',
+                secret: '',
+                session: '',
+                urlBase: 'https://lfmtest.local/2.0',
+                rateLimit: {points: 1, duration: 0.01}
+            }, {
+                logger: loggerTest,
+                localUrl: new URL('http://localhost:9078'),
+                configDir: '.',
+                version: 'test'
+            });
+
+            await lfm.initialize({ name: 'test', sessionKey: 'test' });
+
+            //const sp = spy(lfm, 'callApi');
+            for(let i = 0; i < 5; i++) {
+                lfm.testAuth().then(() => null).catch((e) => {throw e;});
+            }
+            await sleep(31);
+            expect(callCount).to.eq(3);
+        })();
+    });
+});
