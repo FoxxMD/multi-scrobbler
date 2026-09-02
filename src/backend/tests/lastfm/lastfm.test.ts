@@ -155,7 +155,7 @@ describe('#LFM Rate Limiting', function () {
                 secret: '',
                 session: '',
                 urlBase: 'https://lfmtest.local/2.0',
-                rateLimit: {points: 1, duration: 0.01}
+                rateLimit: {points: 1, duration: 0.03}
             }, {
                 logger: loggerTest,
                 localUrl: new URL('http://localhost:9078'),
@@ -169,7 +169,7 @@ describe('#LFM Rate Limiting', function () {
             for(let i = 0; i < 5; i++) {
                 lfm.testAuth().then(() => null).catch((e) => {throw e;});
             }
-            await sleep(31);
+            await sleep(90);
             expect(callCount).to.eq(3);
         })();
     });
