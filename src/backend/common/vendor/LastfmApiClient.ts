@@ -17,7 +17,7 @@ import { LastFMUser, LastFMAuth, LastFMTrack, type LastFMUserGetRecentTracksResp
 import clone from 'clone';
 import type { IncomingMessage } from "http";
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
-import { AuthError, ScrobbleSubmitError, SimpleError } from "../errors/MSErrors.ts";
+import { AuthError, mergeSimpleError, ScrobbleSubmitError, SimpleError } from "../errors/MSErrors.ts";
 import { redactString } from "@foxxmd/redact-string";
 import dns from 'node:dns/promises';
 import xml2js from 'xml2js';
@@ -144,6 +144,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
                     const { error, attemptNumber, retriesLeft } = context;
                     const parts: string[] = [];
                     let shouldThrow = false;
+
                     if (error instanceof LastFMResponseError) {
                         const status = error.response.statusCode;
                         parts.push(`HTTP ${status}`);
@@ -154,7 +155,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
                             parts.push('Api call failed due unexpected non-json response');
                             if (error.content !== undefined) {
                                 // add some truncated response content
-                                parts.push(`Contents (truncated): ${truncateStringToLength(100, error.content)}`);
+                                parts.push(`Contents (truncated): ${truncateStringToLength(150)(error.content)}`);
                             }
                         } else {
                             const retryError = retryErrors.find(x => error.message.toLocaleLowerCase().includes(x));
@@ -176,12 +177,10 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
                                 parts.push(`Api call failed due to a retryable error: ${retryError}`);
                             }
                         }
-
-                        const reasonError = new SimpleError(parts.join(' | '), {cause: error});
                         if(shouldThrow) {
-                            throw new SimpleError(`Request attempt ${attemptNumber} failed with non-retryable reason`, {cause: reasonError, shortStack: true});
+                            throw new SimpleError(`Request attempt ${attemptNumber} failed with non-retryable reason: ${parts.join(' | ')}`, {cause: error, shortStack: false});
                         }
-                        this.logger.warn(new SimpleError(`Request attempt ${attemptNumber} failed. ${retriesLeft} retries left`, {cause: reasonError, shortStack: true}));
+                        this.logger.warn(new SimpleError(`Request attempt ${attemptNumber} failed. ${retriesLeft} retries left: ${parts.join(' | ')}`, {cause: error, shortStack: true}));
                     } else {
                         let networkError: string;
                         const nError = getNodeNetworkException(error);
@@ -193,15 +192,13 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
                         if(networkError === undefined) {
                             throw new SimpleError(`Request attempt ${attemptNumber} failed with non-retryable reason`, {cause: error, shortStack: true});
                         }
-                        const reasonError = new SimpleError(networkError, {cause: error});
-                        this.logger.warn(new SimpleError(`Request attempt ${attemptNumber} failed. ${retriesLeft} retries left`, {cause: reasonError, shortStack: true}));
+                        this.logger.warn(mergeSimpleError(new SimpleError(`Request attempt ${attemptNumber} failed due to network error: ${networkError}`, {cause: error, shortStack: true})));
                     }
                 }
             });
         } catch (e) {
-            if('cause' in e) {
-                // likely this is a caught error from above meaning its from the api and not an MS code error
-                throw new UpstreamError('API call failed', {cause: e});
+            if(e instanceof SimpleError) {
+                throw e;
             }
             throw new Error('API call failed unexpectedly', {cause: e});
         }
@@ -356,7 +353,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             if(unrecoverable === undefined) {
                 const errorWithMessage = findCauseByFunc(e, (ee) => `response` in ee) as Error & {response: IncomingMessage} | undefined;
                 if(errorWithMessage !== undefined) {
-                    unrecoverable = [401,403].includes(errorWithMessage.response.statusCode);
+                    unrecoverable = [401,403].includes(errorWithMessage.response?.statusCode);
                 }
             }
             throw new AuthError('Testing auth failed', {cause: e, unrecoverable});
