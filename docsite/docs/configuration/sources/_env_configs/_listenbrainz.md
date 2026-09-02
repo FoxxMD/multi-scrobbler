@@ -1,8 +1,9 @@
-| Environmental Variable  | Type    | Default                       | Description                                               |
-| ----------------------- | ------- | ----------------------------- | --------------------------------------------------------- |
-| _**`SOURCE_LZ_ID`**_    | string  |                               | A globally unique ID EX `myComponentId`                   |
-| `SOURCE_LZ_NAME`        | string  | Value of `SOURCE_LZ_ID`       | A vanity name EX `My Cool Component`                      |
-| `SOURCE_LZ_ENABLE`      | boolean | true                          | Should this component be used?                            |
-| `SOURCE_LZ_URL`         | string  | https://api.listenbrainz.org/ | URL for the ListenBrainz server, if not using the default |
-| _**`SOURCE_LZ_TOKEN`**_ | string  |                               | User token for the user to scrobble for                   |
-| _**`SOURCE_LZ_USER`**_  | string  |                               | Username of the user to scrobble for                      |
+| Environmental Variable  | Type    | Default                       | Description                                                                                                                   |
+| ----------------------- | ------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| _**`SOURCE_LZ_ID`**_    | string  |                               | A globally unique ID EX `myComponentId`                                                                                       |
+| `SOURCE_LZ_NAME`        | string  | Value of `SOURCE_LZ_ID`       | A vanity name EX `My Cool Component`                                                                                          |
+| `SOURCE_LZ_ENABLE`      | boolean | true                          | Should this component be used?                                                                                                |
+| `SOURCE_LZ_URL`         | string  | https://api.listenbrainz.org/ | URL for the ListenBrainz server, if not using the default                                                                     |
+| _**`SOURCE_LZ_TOKEN`**_ | string  |                               | User token for the user to scrobble for                                                                                       |
+| _**`SOURCE_LZ_USER`**_  | string  |                               | Username of the user to scrobble for                                                                                          |
+| `SOURCE_LZ_CONTACT`     | string  |                               | A website or email Listenbrainz can contact you at in case of issues. **This will become a required property in the future.** |

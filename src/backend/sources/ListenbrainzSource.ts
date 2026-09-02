@@ -50,6 +50,22 @@ export default class ListenbrainzSource extends MemorySource {
          return play;
     }
 
+    protected async doBuildInitData(): Promise<true | string | undefined> {
+        const {
+            data: {
+                token,
+                contact,
+            } = {}
+        } = this.config;
+        if (token === undefined) {
+            throw new Error('Must provide a User Token');
+        }
+        if(contact === undefined) {
+            this.logger.warn(`The 'contact' property is missing from your configuration! This is a STRONGLY recommended field that will become mandatory in the future. Listenbrainz is more likely to block your traffic when no contact is provided.`);
+        }
+        return true;
+    }
+
     protected async doCheckConnection(): Promise<true | string | undefined> {
         try {
             await isPortReachableConnect(this.api.url.port, {host: this.api.url.url.hostname});

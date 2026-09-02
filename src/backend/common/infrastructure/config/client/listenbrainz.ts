@@ -33,6 +33,14 @@ export const listenBrainzDataSchema = z.object({
     username: z.string().meta({
         description: "Username of the user to scrobble for"
     }),
+
+    /** A website or email Listenbrainz can contact a user at in case of issues. 
+     * 
+    */
+    contact: z.string().optional().meta({
+        description: 'A website or email Listenbrainz can contact you at in case of issues. **This will become a required property in the future.**',
+        examples: ['contact@mydomain.com']
+    })
 });
 
 export type ListenBrainzData = z.infer<typeof listenBrainzDataSchema>;
@@ -41,6 +49,7 @@ const envDataSchema = z.object({
     LZ_URL: listenBrainzDataSchema.shape.url,
     LZ_TOKEN: listenBrainzDataSchema.shape.token,
     LZ_USER: listenBrainzDataSchema.shape.username,
+    LZ_CONTACT: listenBrainzDataSchema.shape.contact
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, ListenBrainzClientConfig> = {
@@ -51,7 +60,8 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, ListenBrainzClien
             data: {
                 url: partial.LZ_URL,
                 token: partial.LZ_TOKEN,
-                username: partial.LZ_USER
+                username: partial.LZ_USER,
+                contact: partial.LZ_CONTACT
             }
     })
 };

@@ -15,6 +15,7 @@ const envDataSchema = z.object({
     SOURCE_LZ_URL: listenBrainzSourceDataSchema.shape.url,
     SOURCE_LZ_TOKEN: listenBrainzSourceDataSchema.shape.token,
     SOURCE_LZ_USER: listenBrainzSourceDataSchema.shape.username,
+    SOURCE_LZ_CONTACT: listenBrainzSourceDataSchema.shape.contact
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, ListenBrainzSourceConfig> = {
@@ -25,7 +26,8 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, ListenBrainzSourc
             data: {
                 url: partial.SOURCE_LZ_URL,
                 token: partial.SOURCE_LZ_TOKEN,
-                username: partial.SOURCE_LZ_USER
+                username: partial.SOURCE_LZ_USER,
+                contact: partial.SOURCE_LZ_CONTACT
             }
     })
 };
