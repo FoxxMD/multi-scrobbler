@@ -24,6 +24,8 @@ jobs:
         run: npm ci
       - name: Generate schema files
         run: npm run schema
+      - name: Generate openapi docs
+        run: npm run openapi:docs
 
       - name: Install docusaurus dependencies
         run: npm ci
