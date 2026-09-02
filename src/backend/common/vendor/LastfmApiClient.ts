@@ -126,11 +126,9 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
 
         const limitedCallFunc = async () => {
             if (this.reqQueue !== undefined) {
-                this.logger.info('pre limiter');
                 await this.reqQueue.removeTokens(1);
-                this.logger.info('post limiter');
+                this.logger.trace('Post-limiter api call start');
             }
-            this.logger.info('making api call');
             return await func() as T;
         }
 
