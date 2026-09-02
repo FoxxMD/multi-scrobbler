@@ -183,14 +183,20 @@ Below are examples of protecting all non-ingress and callback routes with basic 
     <TabItem value="caddy" label="Caddy">
     ```Caddyfile
     multi-scrobbler.domain.tld {
+      # remove any paths you are NOT using from `not path` line.
+      # Order: LZ, LZ, WebScrobbler, LFM, LFM
       @if-not-scrobble {
         not path /1/* /api/listenbrainz* /api/webscrobbler* /2.0/* /api/lastfm*
       }
-      # if the request is to ANY route not listed above, force client to pass basic auth
+      # if request is to any route not listed above, force client to basic auth
+      # you must hash your password using `caddy hash-password`
+      # https://caddyserver.com/docs/command-line#caddy-hash-password
       basic_auth @if-not-scrobble { 
-        basicAuthUser hashedPassword
+        msUser $2a$14$.UWNn4Zn.cQHY6Z1mkXXrOhO7mg4BC2wiC.4Tb8dNBMidjSRHAw3e
       }
-      # requests will be proxied only if they are to a scrobble endpoint or basic auth has been passed.
+      # requests will be proxied they are to a scrobble endpoint or basic auth has been passed.
+      # can use container/service name if Caddy & MS are on the same docker network.
+      # otherwise, replace `multi-scrobbler` with host IP
       reverse_proxy multi-scrobbler:9078
     }
     ```
