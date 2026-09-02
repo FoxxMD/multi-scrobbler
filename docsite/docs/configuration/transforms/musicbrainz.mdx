@@ -109,6 +109,48 @@ Example of multiple servers:
 
 </details>
 
+<DetailsAdmo type="tip" summary="BrainzMash Musicbrainz Server">
+
+[**BrainzMash**](https://brainzmash.cc) can be used as a supplementary Musicbrainz Server (see **Additional Musicbrainz Servers** above).
+
+BrainzMash is a community-run pool of read-only hybrid Musicbrainz/[Lidarr](https://lidarr.audio/) metadata servers. Requests are made to one endpoint that load-balances traffic out to all participating servers. This service is **publicly available** and can be treated like a normal Musicbrainz server from Multi-Scrobbler's perspective.
+
+There are pros and cons to using this service. Read these carefully before using BrainzMash:
+
+* **Pros**
+  * Higher rate limit than official Musicbrainz server -- Multi-scrobbler can make requests more often and faster
+  * Potentially less downtime due to distributed nature
+* **Cons**
+  * There is implicit trust in how BrainzMash handles your traffic:
+    * you do not know which community server is getting your traffic and what the operator *may* be logging/collecting in terms of metrics
+    * the load balancer endpoint collects minimal metrics: it retains anonymized recent searches and network data for presenting aggregate stats on BrainzMash public dashboard
+  * Musicbrainz DB data is updated on a weekly basis so new entries and recent edits will lag behind the official server
+
+If these trade-offs are acceptable to you, add BrainzMash to your Musicbrainz config like this:
+
+```json5
+{
+  "contact": "anything@notused.com",
+  "url": "https://api.brainzmash.cc"
+}
+```
+
+The public dashboard can be found here: [https://dash.brainzmash.cc](https://dash.brainzmash.cc)
+
+Learn more about BrainzMash:
+
+* [Main website](https://brainzmash.cc/)
+* Join the [Discord server](https://discord.gg/MSTteNvANt) for updates, support, and lidarr instructions
+* Contribute your server to the community pool by deploying [brainzmash-hearring-aid](https://github.com/statichum/brainzmash-hearring-aid)
+
+:::important[Support and Bugs]
+
+If you have issues with the Musicbrainz Transformer and API communication then [**create an issue for Multi-Scrobbler first**](https://github.com/FoxxMD/multi-scrobbler/issues), do not use BrainzMash discord for general help.
+
+:::
+
+</DetailsAdmo>
+
 ### Stage Configuration
 
 All of the properties found in [**Matching with Musicbrainz**](#matching-with-musicbrainz) section are configured in [Stage Configuration](/configuration/transforms#configuring-stages) as `defaults`.
