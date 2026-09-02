@@ -122,7 +122,7 @@ There are pros and cons to using this service. Read these carefully before using
   * Potentially less downtime due to distributed nature
 * **Cons**
   * There is implicit trust in how BrainzMash handles your traffic:
-    * you do not know which community server is getting your traffic and what the operator *may* be logging/collecting in terms of metrics
+    * you cannot decide which community server will process your traffic but your request is anonymized by the load balancer so your traffic cannot be tracked by any community server
     * the load balancer endpoint collects minimal metrics: it retains anonymized recent searches and network data for presenting aggregate stats on BrainzMash public dashboard
   * Musicbrainz DB data is synchronized with a slight delay so new entries and recent edits will lag behind the official server by at most 3 hours
 
