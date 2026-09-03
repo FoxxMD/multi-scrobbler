@@ -36,6 +36,7 @@ export default class LastfmSource extends MemorySource {
         super(type, name, {...config, data: {interval, maxInterval, ...restData}}, internal, emitter);
         this.canPoll = true;
         this.canBacklog = true;
+        this.internalOptions = internal;
         this.supportsUpstreamRecentlyPlayed = true;
         this.supportsUpstreamNowPlaying = true;
         this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
