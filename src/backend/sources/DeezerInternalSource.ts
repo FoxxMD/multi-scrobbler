@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import type EventEmitter from "events";
 import type { Request } from 'superagent';
 import request from 'superagent';
-import { COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayMatchResult, type PlayObject, type PlayObjectMinimal, SOURCE_SOT, TA_CLOSE, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy } from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, type ComponentAuthType, PARSED_FROM, type PlayMatchResult, type PlayObject, type PlayObjectMinimal, SOURCE_SOT, TA_CLOSE, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy } from "../../core/Atomic.ts";
 import { DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.ts";
 import type {DeezerInternalSourceConfig, DeezerInternalTrackData} from "../common/infrastructure/config/source/deezer.ts";
 import { TRANSFORM_HOOK } from "../../core/Transform.ts";
@@ -242,7 +242,11 @@ export default class DeezerInternalSource extends MemorySource {
                 }
                 this.logger.debug(`Ignoring ${nonSong.length} entries in history with types of ${nonSongTypes.join(',')}`);
             }
-            return resp.results.data.filter(x => x.__TYPE__ === 'song').map(x => DeezerInternalSource.formatPlayObj(x)).sort(sortByOldestPlayDate);
+            return resp.results.data.filter(x => x.__TYPE__ === 'song').map(x => {
+                const play = DeezerInternalSource.formatPlayObj(x);
+                play.meta.parsedFrom = PARSED_FROM.history;
+                return play;
+            }).sort(sortByOldestPlayDate);
         } catch (e) {
             throw new Error('Failed to get recently played tracks', {cause: e});
         }
