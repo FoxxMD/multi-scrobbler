@@ -466,7 +466,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                         // if we have seen a play with close temporality with the exact input hash then skip it entirely
                         const cheapInputExisting = await this.playRepo.checkExisting(queueablePlay, { inputHash: queueablePlay });
                         if (cheapInputExisting !== undefined) {
-                            if (isDebugMode() || PARSED_FROM.backlog === queueablePlay.meta.parsedFrom) {
+                            if (isDebugMode()) {
                                 // log to trace for backlog for some visibility into what was pruned
                                 // this is fine noise-wise since this only happens when a component it (re)started
                                 //
