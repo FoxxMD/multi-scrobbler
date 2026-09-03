@@ -90,6 +90,13 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
         if(req.url.indexOf('/api') !== 0) {
             return res.redirect(307, `/api${req.url}`);
         }
+        return res.sendStatus(404);
+    });
+
+    router.get(/.*callback$/, {
+        querySchema: z.looseObject({}).optional(),
+        paramsSchema: z.looseObject({}).optional(),
+    }, async (req, res) => {
         const {
             query: {
                 state,
