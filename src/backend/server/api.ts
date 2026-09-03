@@ -749,7 +749,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.json(result);
     });
 
-    router.get('/api/source/art', {middleware: [sourceMiddleFunc(false)], querySchema: z.object({data: z.number()}).optional(), hidden: true}, async (req, res, next) => {
+    router.get('/api/source/art', {middleware: [sourceMiddleFunc(false)], querySchema: z.object({data: z.string().optional()}).loose(), hidden: true}, async (req, res, next) => {
         const {
             scrobbleSource,
             query: {
@@ -903,7 +903,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.json(result);
     });
 
-    router.post('/api/source/init', {middleware: [sourceRequiredMiddle], querySchema: z.object({force: z.boolean()}).optional(), hidden: true}, async (req, res) => {
+    router.post('/api/source/init', {middleware: [sourceRequiredMiddle], querySchema: z.object({force: z.string().optional()}).loose(), hidden: true}, async (req, res) => {
         const source = req.scrobbleSource as AbstractSource;
 
         const {
@@ -929,7 +929,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         }
     });
 
-    router.post('/api/source/listen', {middleware: [sourceRequiredMiddle], querySchema: z.object({listening: z.boolean()}).optional(), hidden: true}, async (req, res) => {
+    router.post('/api/source/listen', {middleware: [sourceRequiredMiddle], querySchema: z.object({listening: z.string().optional()}).loose(), hidden: true}, async (req, res) => {
         const source = req.scrobbleSource as AbstractSource;
 
         const {
@@ -949,7 +949,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         res.status(200).json({listening});
     });
 
-    router.post('/api/client/listen', {middleware: [clientRequiredMiddle], querySchema: z.object({listening: z.boolean()}).optional(), hidden: true}, async (req, res) => {
+    router.post('/api/client/listen', {middleware: [clientRequiredMiddle], querySchema: z.object({listening: z.string().optional()}).loose(), hidden: true}, async (req, res) => {
         const client = req.scrobbleClient as AbstractScrobbleClient;
 
         const {
@@ -969,7 +969,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         res.status(200).json({listening});
     });
 
-    router.post('/api/client/init', {middleware: [clientRequiredMiddle], querySchema: z.object({force: z.boolean()}).optional(), hidden: true}, async (req, res) => {
+    router.post('/api/client/init', {middleware: [clientRequiredMiddle], querySchema: z.object({force: z.string().optional()}).loose(), hidden: true}, async (req, res) => {
         const client = req.scrobbleClient as AbstractScrobbleClient;
 
         const {
@@ -1005,14 +1005,17 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     });
 
     router.get('/health', {hidden: true}, async (req, res) => res.redirect(307, `/api/${req.url.slice(1)}`));
-    router.get('/api/health', {querySchema: z.object({type: z.string(), name: z.string()}).optional(), tags: ['App Meta']}, async (req, res) => {
+    router.get('/api/health', {querySchema: z.object({
+        type: z.string().optional().meta({description: 'Only report status for components of this type'}),
+        name: z.string().optional().meta({description: 'Only report status for the component with this name'})
+    }), tags: ['App Meta']}, async (req, res) => {
         const {
             type,
             name
         } = req.query;
 
-        const [sourcesReady, sourceMessages] = await scrobbleSources.getStatusSummary(type as string|undefined, name as string|undefined);
-        const [clientsReady, clientMessages] = await scrobbleClients.getStatusSummary(type as string|undefined, name as string|undefined);
+        const [sourcesReady, sourceMessages] = await scrobbleSources.getStatusSummary(type, name);
+        const [clientsReady, clientMessages] = await scrobbleClients.getStatusSummary(type, name);
 
 
         return res.status((clientsReady && sourcesReady) ? 200 : 500).json({messages: sourceMessages.concat(clientMessages)});
