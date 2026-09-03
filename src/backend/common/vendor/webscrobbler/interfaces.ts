@@ -51,7 +51,7 @@ export const metadataSchema = z.looseObject({
         notificationId: z.string().optional(),
         trackArtUrl: z.string().optional(),
         trackUrl: z.string().optional(),
-        userPlayCount: z.int().positive().optional(),
+        userPlayCount: z.int().optional(),
         userloved: z.boolean().optional(),
 });
 export type Metadata = z.infer<typeof metadataSchema>;
@@ -71,7 +71,7 @@ export const webScrobblerSongSchema = z.object({
     noRegex: processedSongDataSchema,
     flags: flagsSchema,
     metadata: metadataSchema,
-    connectorLabel: z.string()
+    connectorLabel: z.string().optional()
 });
 export type WebScrobblerSong = z.infer<typeof webScrobblerSongSchema>;
 
