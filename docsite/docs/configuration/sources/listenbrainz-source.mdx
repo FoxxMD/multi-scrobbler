@@ -24,19 +24,6 @@ You will need to run your own Listenbrainz server or have an account [on the off
 
 On your [profile page](https://listenbrainz.org/profile/) find your **User Token** to use in the configuration.
 
-:::important[Contact]
-
-It is **strongly recommended** to include `contact` (File/AIO) or `SOURCE_LZ_CONTACT` (ENV) property in your configuration.
-
-This is a [new requirement from Listenbrainz](https://listenbrainz.readthedocs.io/en/latest/users/api/index.html#id5) to help with bot/spam prevention.
-
-**Your traffic to Listenbrainz is more likely to be blocked if this point of contact is not included!**
-
-It is currently optional due to backwards compatibility but will likely become mandatory for Multi-Scrobbler config in the future.
-
-:::
-
-
 ## Configuration
 
 <Config config="ListenBrainzSourceConfig" fileContent={ListenbrainzConfig} configureAs ambiguous name="listenbrainz">

@@ -38,7 +38,7 @@ export const listenBrainzDataSchema = z.object({
      * 
     */
     contact: z.string().optional().meta({
-        description: 'A website or email Listenbrainz can contact you at in case of issues. **This will become a required property in the future.**',
+        description: '(If running a forked version of multi-scrobbler) A website or email Listenbrainz can contact you at in case of issues',
         examples: ['contact@mydomain.com']
     })
 });

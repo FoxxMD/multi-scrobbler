@@ -40,14 +40,10 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         const {
             data: {
                 token,
-                contact,
             } = {}
         } = this.config;
         if (token === undefined) {
             throw new Error('Must provide a User Token');
-        }
-        if(contact === undefined) {
-            this.logger.warn(`The 'contact' property is missing from your configuration! This is a STRONGLY recommended field that will become mandatory in the future. Listenbrainz is more likely to block your traffic when no contact is provided.`);
         }
         return true;
     }

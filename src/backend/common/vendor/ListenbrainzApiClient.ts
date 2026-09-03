@@ -68,7 +68,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
             url = 'https://api.listenbrainz.org/'
         } = config;
         let cleanUrl = url;
-        this.userAgent = `multi-scrobbler/${getRoot().items.version}${config.contact !== undefined ? ` (${config.contact})` : ''}`
+        this.userAgent = `multi-scrobbler/${getRoot().items.version} (${config.contact ?? 'contact@multi-scrobbler.app'})`
         const pathedUrl = normalizeListenbrainzUrl(cleanUrl);
         if(pathedUrl !== undefined) {
             this.logger.verbose(`LZ Server URL contained /1/, removing this because MS adds it automatically`);
