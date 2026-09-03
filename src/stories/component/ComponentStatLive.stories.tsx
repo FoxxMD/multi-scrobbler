@@ -4,7 +4,7 @@ import { sse } from 'msw';
 
 import { Container } from '@chakra-ui/react';
 import { CountIndicatorStreamable } from "../../client/components/msComponent/Stats.js";
-import { sseProviderOptions } from "../../client/AppNext.js";
+import { sseProviderOptions } from "../../client/App.js";
 import {Provider} from "../../client/components/Provider.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
 import type {MsSseEvent} from "../../core/Api.js";

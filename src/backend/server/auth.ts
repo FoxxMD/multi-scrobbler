@@ -1,6 +1,5 @@
 import type {Express} from 'express';
 import type {Logger} from "@foxxmd/logging";
-import passport from "passport";
 import type LastfmScrobbler from "../scrobblers/LastfmScrobbler.ts";
 import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
 import type LastfmSource from "../sources/LastfmSource.ts";
@@ -10,12 +9,11 @@ import type YTMusicSource from "../sources/YTMusicSource.ts";
 import type LibrefmScrobbler from "../scrobblers/LibrefmScrobbler.ts";
 import type LibrefmSource from "../sources/LibrefmSource.ts";
 import AbstractSource from "../sources/AbstractSource.ts";
-import { makeComponentMiddle, type ClientCheckedMiddleTypedMiddleware, type SourceCheckMiddleTypedMiddleware } from './middleware.ts';
+import { makeComponentMiddle } from './middleware.ts';
 import { findAuthIssue, SimpleError } from '../common/errors/MSErrors.ts';
 import type { createTypedRouter } from '@minisylar/express-typed-router';
-import * as z from 'zod';
 
-export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTypedRouter>, logger: Logger, sourceMiddle: SourceCheckMiddleTypedMiddleware, clientMiddle: ClientCheckedMiddleTypedMiddleware, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
+export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTypedRouter>, logger: Logger, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
     const componentAwareMiddle = makeComponentMiddle(scrobbleSources, scrobbleClients);
 
     router.get('/api/components/:componentVal/auth', {middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Source/Client Auth URL'}, async (req, res, next) => {
@@ -33,56 +31,6 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
                     res.status(200).send(source.createAuthUrl());
                 }
             } break;
-        }
-    });
-
-    router.get('/api/client/auth', {middleware: [clientMiddle], hidden: true}, async (req, res) => {
-        const {
-            scrobbleClient,
-        } = req as any;
-
-        switch (scrobbleClient.type) {
-            case 'lastfm':
-            case 'librefm':
-                res.redirect(scrobbleClient.api.getAuthUrl());
-                break;
-            case 'tealfm':
-                res.redirect(await scrobbleClient.getAuthorizeUrl());
-                break;
-            default:
-                return res.status(400).send(`Specified client does not have auth implemented (${scrobbleClient.type})`);
-        }
-    });
-
-    router.get('/api/source/auth', {middleware: [sourceMiddle], hidden: true}, async (req, res, next) => {
-        const {
-            scrobbleSource: source,
-            sourceName: name,
-        } = req;
-
-        switch (source.type) {
-            case 'spotify':
-                if ((source as SpotifySource).spotifyApi === undefined) {
-                    res.status(400).send('Spotify configuration is not valid');
-                } else {
-                    logger.info('Redirecting to spotify authorization url');
-                    res.redirect((source as SpotifySource).createAuthUrl());
-                }
-                break;
-            case 'lastfm':
-            case 'librefm':
-                res.redirect((source as LastfmSource).api.getAuthUrl());
-                break;
-            case 'deezer':
-                // @ts-expect-error TS(2339): Property 'deezerSource' does not exist on type 'Se... Remove this comment to see the full error message
-                req.session.deezerSource = name;
-                return passport.authenticate(`deezer-${source.name}`)(req,res,next);
-            case 'ytmusic':
-                await (source as YTMusicSource).reauthenticate();
-                res.redirect((source as YTMusicSource).verificationUrl);
-                break;
-            default:
-                return res.status(400).send(`Specified source does not have auth implemented (${source.type})`);
         }
     });
 

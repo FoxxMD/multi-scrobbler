@@ -8,7 +8,7 @@ import {Provider} from "../../client/components/Provider.js";
 import { generateClientApiJson, generateSourceApiJson, generateSourcePlayerJson } from "../../core/tests/utils/apiFixtures.js";
 import type {MsSseEvent} from "../../core/Api.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
-import { sseProviderOptions } from "../../client/AppNext.js";
+import { sseProviderOptions } from "../../client/App.js";
 import { faker } from "@faker-js/faker";
 import { withRouter } from 'storybook-addon-remix-react-router';
 import dayjs from "dayjs";

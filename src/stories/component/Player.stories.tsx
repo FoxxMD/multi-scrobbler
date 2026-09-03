@@ -8,7 +8,7 @@ import {Provider} from "../../client/components/Provider.js";
 import { generateSourcePlayerJson } from "../../core/tests/utils/apiFixtures.js";
 import type {MsSseEvent} from "../../core/Api.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
-import { sseProviderOptions } from "../../client/AppNext.js";
+import { sseProviderOptions } from "../../client/App.js";
 import dayjs from "dayjs";
 import { asJsonPlayObject } from "../../core/PlayMarshalUtils.js";
 import { generatePlay } from "../../core/tests/utils/PlayTestUtils.js";

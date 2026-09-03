@@ -30,7 +30,7 @@ import { COMPONENT_AUTH_TYPE } from "../../../core/Atomic.js";
 
 export const ComponentBackButton = (props: ComponentProps<typeof ChevronLeftButton> = {}) => {
     return (
-            <Link to={`/next`}>
+            <Link to={`/`}>
                 <ChevronLeftButton variant="ghost" iconProps={{style: {width: 'unset', height:  'unset', fontSize: "2em"}}} {...props} />
             </Link>
     );

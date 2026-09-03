@@ -1,4 +1,4 @@
-import { Box, Flex, Heading, HStack, IconButton, Image, LinkBox, LinkOverlay, Stack, Status, Switch, Text } from '@chakra-ui/react';;
+import { Box, Flex, Heading, HStack, IconButton, Image, LinkBox, LinkOverlay, Stack, Status, Switch, Text } from '@chakra-ui/react';
 import React, { type ComponentProps, type PropsWithChildren } from "react";
 import { Link as RouterLink } from 'react-router';
 import { VersionNext } from "../Version";

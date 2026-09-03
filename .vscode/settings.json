@@ -6,13 +6,8 @@
         "**/build": true,
         "**/schema": true
     },
-    "tailwindCSS.files.exclude": [
-        "docsite/**"
-    ],
     "files.associations": {
-        "*.css": "tailwindcss",
         "**/config/*.json": "jsonc"
-    },
-    "tailwindCSS.experimental.configFile": "src/client/index.css",
+    }
     
 }
