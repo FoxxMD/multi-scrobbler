@@ -159,13 +159,9 @@ Multi-scrobbler can use [Musicbrainz](https://musicbrainz.org/) to match activit
 
 :::
 
-You must provide a way for Musicbrainz to [contact you.](https://wiki.musicbrainz.org/MusicBrainz_API/Rate_Limiting#How_can_I_be_a_good_citizen_and_be_smart_about_using_the_Web_Service?)
-
 Add these value to the `environment` section in the [`docker-compose.yml` you created.](#create-docker-compose-file)
 
 ```yaml title="~/msData/docker-compose.yml"
-# an email or personal website musicbrainz can use to contact you
-- MB_CONTACT=myCoolName@emailProvider.com 
 # how musicbrainz searches and selects matches
 # isrc => then tries basic text fields => then tries extracted artists
 - MB_PRESETS=default,sensible,native

@@ -92,8 +92,6 @@ To configure MS to use Musicbrainz with your Plex metadata use one of the method
     <TabItem value="env" label="ENV">
     Add to your multi-scrobbler docker compose file `environment` section for [Musicbrainz ENV Configuration](/configuration/transforms/musicbrainz#env-configuration):
     ```yaml
-    # a real email that Musicbrainz can use to contact you in case of issues
-    - MB_CONTACT=myEmail@myEmailProvider.com
     - MB_PRESETS=id,default
     - PLEX_TRANSFORMS=musicbrainz
     ```
@@ -112,8 +110,7 @@ To configure MS to use Musicbrainz with your Plex metadata use one of the method
           "data": {
             "apis": [
               {
-                // a real email that Musicbrainz can use to contact you in case of issues
-                "contact": "myEmail@myEmailProvider.com"
+                "enable": true
               }
             ]
           }
@@ -158,7 +155,7 @@ To configure MS to use Musicbrainz with your Plex metadata use one of the method
             "apis": [
               {
                 // a real email that Musicbrainz can use to contact you in case of issues
-                "contact": "myEmail@myEmailProvider.com"
+                "enable": true
               }
             ]
           }

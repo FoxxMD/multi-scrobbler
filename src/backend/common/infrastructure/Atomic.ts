@@ -278,12 +278,36 @@ export const cacheConfigUserSchema = z.object({
 
 export type CacheConfigUser = z.infer<typeof cacheConfigUserSchema>;
 
-export interface MusicbrainzApiConfigData {
-    url?: string
-    contact: string,
-    apiKey?: string
-    requestTimeout?: number
-}
+const musicbrainzApiConfigDataSchema = z.object({
+    /**
+     * Use this api configuration?
+     * 
+     * @default true
+     */
+    enable: z.boolean().optional().meta({description: 'Use this api configuration? Default is `true`.'}),
+    /**
+     * Base URL of a custom Musicbrainz server. Leave unset to use the official Musicbrainz instance.
+     * 
+     */
+    url: z.string().optional().meta({
+        description: 'Base URL of a custom Musicbrainz server. Leave unset to use the official Musicbrainz instance.'
+    }),
+    /**
+     * milliseconds to wait until throwing a timeout error when waiting for a response.
+     * 
+     * @default 6000
+     */
+    requestTimeout: z.int().optional().meta({
+        description: 'milliseconds to wait until throwing a timeout error when waiting for a response. Default is `6000`ms.'
+    }),
+    contact: z.string().optional().meta({
+        description: '(If running a forked version of multi-scrobbler) A website or email Musicbrainz can contact you at in case of issues'
+    })
+    // future use
+    //apiKey: z.string()
+});
+
+export type MusicbrainzApiConfigData = z.infer<typeof musicbrainzApiConfigDataSchema>;
 
 export const MUSICBRAINZ_URL = 'https://musicbrainz.org';
 export const MBID_VARIOUS_ARTISTS = "89ad4ac3-39f7-470e-963a-56509c546377";
@@ -438,3 +462,4 @@ export type MigrationStatus = {
     log?: string,
     error?: ErrorLike
 };
+export const DEVELOPER_CONTACT = process.env.DEVELOPER_CONTACT ?? 'contact@multi-scrobbler.app';

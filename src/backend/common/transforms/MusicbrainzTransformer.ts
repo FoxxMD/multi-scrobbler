@@ -1009,19 +1009,15 @@ const PRESETS: Record<string, MusicbrainzTransformerData> = {
 
 export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
     const mbEnv = process.env.MB_PRESETS;
-    const mbContact = process.env.MB_CONTACT;
     let mbConfig: MusicbrainzTransformerConfig;
     if (mbEnv !== undefined && mbEnv.trim() !== '') {
-        if (mbContact === undefined || mbContact.trim() === '') {
-            throw new SimpleError('Must provide a contact url/email for musicbrainz ENV present!');
-        }
         mbConfig = {
             type: 'musicbrainz',
             name: 'MSDefault',
         data: {
                 apis: [
                     {
-                        contact: mbEnv
+                        enable: true
                     }
                 ]
             },

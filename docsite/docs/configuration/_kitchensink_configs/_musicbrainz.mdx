@@ -14,8 +14,6 @@ services:
     environment:
       - TZ=Etc/GMT # Specify timezone from TZ Database name found here https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 
-      # required setup for musicbrainz
-      - MB_CONTACT=contact@mydomain.com # a real email
        # searches with sensible release sorting with the searchOrder
        # isrc => basic => artist (native mode)
       - MB_PRESETS=default,sensible,native
@@ -61,7 +59,7 @@ For non-ENV config, [Musicbrainz Transformer](/configuration/transforms/musicbra
       "data": {
         "apis": [
           {
-            "contact": "contact@mydomain.com"
+            "enable": true
           }
         ]
       },
@@ -155,7 +153,7 @@ This configuration uses the [sensible defaults](/configuration/transforms/musicb
       "data": {
         "apis": [
           {
-            "contact": "contact@mydomain.com"
+            "enable": true
           }
         ]
       },

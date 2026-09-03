@@ -1,5 +1,6 @@
 import type { Response } from 'superagent';
-import type {ArtistCredit, OptionalCacheUsage, PlayObject, PlayObjectMinimal, URLData} from "../../../../core/Atomic.ts";
+import {type ArtistCredit, type OptionalCacheUsage, type PlayObject, type PlayObjectMinimal, type URLData} from "../../../../core/Atomic.ts";
+import { DEVELOPER_CONTACT } from "../../infrastructure/Atomic.ts";
 import { UpstreamError } from "../../errors/UpstreamError.ts";
 import { type AbstractApiOptions, type FormatPlayObjectOptions, MUSICBRAINZ_URL, type MusicbrainzApiConfigData } from "../../infrastructure/Atomic.ts";
 import AbstractApiClient from "../AbstractApiClient.ts";
@@ -18,7 +19,6 @@ import { hasNodeNetworkException } from '../../errors/NodeErrors.ts';
 import { SimpleError } from '../../errors/MSErrors.ts';
 import { baseFormatPlayObj } from '../../../utils/PlayTransformUtils.ts';
 import type {IRecordingMSList} from '../../transforms/MusicbrainzTransformer.ts';
-import dayjs, { type Dayjs } from 'dayjs';
 import { artistCreditsToNames } from '../../../../core/StringUtils.ts';
 import { isrcNoHyphens } from '../../../../core/PlayUtils.ts';
 import { RateLimiterMemory, RateLimiterQueue } from 'rate-limiter-flexible';
@@ -65,25 +65,31 @@ export class MusicbrainzApiClient extends AbstractApiClient {
         const mbMap = getRoot().items.mbMap();
         const mbApis: Record<string, MusicbrainzApiConfig> = {};
         for(const mbConfig of this.config.apis) {
+            if((mbConfig.enable ?? true) === false) {
+                this.logger.verbose(`Not using config for ${mbConfig.url ?? MUSICBRAINZ_URL} because it is disabled`);
+                continue;
+            }
             const u = normalizeWebAddress(mbConfig.url ?? MUSICBRAINZ_URL);
             const mb = mbMap.get(u.url.hostname);
+            const maxReqs = 1;
+            const reqRefill = options?.reqQueueDuration ?? 1;
             const mbApiConfig: Omit<MusicbrainzApiConfig, 'api'> = {
                 ...mbConfig, 
                 hostname: u.url.hostname, 
-                reqQueue: new RateLimiterQueue(new RateLimiterMemory({points: 1, duration: options?.reqQueueDuration ?? 1}), {maxQueueSize: 20})
+                reqQueue: new RateLimiterQueue(new RateLimiterMemory({points: maxReqs, duration: reqRefill}), {maxQueueSize: 20})
             }
             if(mb === undefined) {
                 const api = new MusicBrainzApi({
                     appName: 'multi-scrobbler',
                     appVersion: getRoot().items.version,
-                    appContactInfo: mbConfig.contact,
+                    appContactInfo: mbConfig.contact ?? DEVELOPER_CONTACT,
                     baseUrl: u.url.toString(),
                     preRequest: (method, url, headers) => {
                         const cacheKey = this.asyncStore.getStore() ?? nanoid();
                         this.cache.set(`${cacheKey}-url`, `${method} - ${url}`);
-                        if(mbConfig.apiKey !== undefined) {
-                            headers.set('X-Api_key', mbConfig.apiKey);
-                        }
+                        // if(mbConfig.apiKey !== undefined) {
+                        //     headers.set('X-Api-key', mbConfig.apiKey);
+                        // }
                         return [method, url, headers];
                     },
                     requestTimeout: mbConfig.requestTimeout ?? 6000,
@@ -94,6 +100,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                     api, 
                 };
                 mbMap.set(u.url.hostname, api);
+                this.logger.verbose(`Created Musicbrainz API for ${mbApiConfig.hostname} with Rate Limit ${maxReqs}req/${reqRefill}s`);
             } else if(mbApis[u.url.hostname] === undefined) {
                 mbApis[u.url.hostname] = {
                     ...mbApiConfig,

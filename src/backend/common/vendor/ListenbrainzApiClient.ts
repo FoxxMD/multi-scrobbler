@@ -16,6 +16,7 @@ import { findDelimiters } from "../../../core/StringUtils.ts";
 import { UpstreamError } from "../errors/UpstreamError.ts";
 import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type PagelessListensTimeRangeOptions, type PagelessTimeRangeListens, type PagelessTimeRangeListensResult } from "../infrastructure/Atomic.ts";
 import { DELIMITERS } from '../../../core/Atomic.ts';
+import { DEVELOPER_CONTACT } from "../infrastructure/Atomic.ts";
 import { type ListenBrainzClientData, MAX_ITEMS_PER_GET_LZ } from "../infrastructure/config/client/listenbrainz.ts";
 import AbstractApiClient from "./AbstractApiClient.ts";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.ts';
@@ -68,7 +69,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
             url = 'https://api.listenbrainz.org/'
         } = config;
         let cleanUrl = url;
-        this.userAgent = `multi-scrobbler/${getRoot().items.version} ( ${config.contact ?? 'contact@multi-scrobbler.app'} )`
+        this.userAgent = `multi-scrobbler/${getRoot().items.version} (${config.contact ?? DEVELOPER_CONTACT})`
         const pathedUrl = normalizeListenbrainzUrl(cleanUrl);
         if(pathedUrl !== undefined) {
             this.logger.verbose(`LZ Server URL contained /1/, removing this because MS adds it automatically`);

@@ -51,7 +51,7 @@ Set up [Valkey Caching](/configuration?cachedThings=metadata#caching) to cache M
 
 ### API Setup
 
-To avoid rate limiting, MusicBrainz requires API users to identify themself using a [User-Agent that contains an email or URL.](https://wiki.musicbrainz.org/MusicBrainz_API/Rate_Limiting#How_can_I_be_a_good_citizen_and_be_smart_about_using_the_Web_Service?) You must set this in the `data` for your [stage configuration](/configuration/transforms/#configuring-stages) in your [AIO Config](/configuration?configType=aio#configuration-types):
+Create an empty Musicbrainz API config in the `data` for your [stage configuration](/configuration/transforms/#configuring-stages) in your [AIO Config](/configuration?configType=aio#configuration-types):
 
 ```json5 title="config.json"
 {
@@ -63,7 +63,8 @@ To avoid rate limiting, MusicBrainz requires API users to identify themself usin
       "data": {
         "apis": [
           {
-            "contact": "contact@mydomain.com"
+            // uses default Musicbrainz server https://musicbrainz.org
+            "enable": true
           }
         ]
       },
@@ -92,12 +93,12 @@ Example of multiple servers:
       "data": {
         "apis": [
           {
-            "contact": "contact@mydomain.com"
+            "enable": true
             // uses default Musicbrainz server https://musicbrainz.org
           },
           // additional server
           {
-            "contact": "contact@mydomain.com",
+            "enable": true,
             "url": "https://my.mb.mirror.domain.com"
           }
         ]
@@ -130,7 +131,7 @@ If these trade-offs are acceptable to you, add BrainzMash to your Musicbrainz co
 
 ```json5
 {
-  "contact": "anything@notused.com",
+  "enable": true,
   "url": "https://api.brainzmash.cc"
 }
 ```
@@ -167,7 +168,7 @@ Example:
       "data": {
         "apis": [
           {
-            "contact": "contact@mydomain.com"
+            "enable": true
           }
         ],
         "defaults": {
@@ -275,12 +276,6 @@ The `defaults` you set in [Stage Configuration](#stage-configuration) [can be ov
 
 The general configuration shown above can also be configured from a selection of *presets* using [ENV Config](/configuration?configType=env#configuration-types) for individual Sources/Clients.
 
-You must **always** include the `MB_CONTACT` ENV to [identify your application](#api-setup):
-
-```ini
-MB_CONTACT=contact@mydomain.com
-```
-
 To configure [stage defaults](#stage-configuration) use `MB_PRESETS` with a comma-delimited list of presets you wish to apply. More than one preset can be applied, in which case they combine. You must choose at least one of the presets below:
 
 * `default` - Adds the default [`searchOrder`](#search-methods) `isrc`+`basic` (same as using no presets that affect `searchOrder`)
@@ -310,7 +305,6 @@ services:
     container_name: multi-scrobbler
     environment:
       // highlight-start
-      - MB_CONTACT=contact@mydomain.com
        # searches with sensible release sorting with the searchOrder
        # isrc => basic => artist (native mode)
       - MB_PRESETS=default,sensible,native
@@ -1012,7 +1006,7 @@ Your [AIO Config](/configuration?configType=aio#configuration-types):
       "data": {
         "apis": [
           {
-            "contact": "contact@mydomain.com"
+            "enable": true
           }
         ]
       },
@@ -1063,7 +1057,7 @@ Your [AIO Config](/configuration?configType=aio#configuration-types):
       "data": {
         "apis": [
           {
-            "contact": "contact@mydomain.com"
+            "enable": true
           }
         ]
       },
@@ -1121,7 +1115,7 @@ Your [AIO Config](/configuration?configType=aio#configuration-types):
       "data": {
         "apis": [
           {
-            "contact": "contact@mydomain.com"
+            "enable": true
           }
         ]
       },
@@ -1184,7 +1178,7 @@ Your [AIO Config](/configuration?configType=aio#configuration-types):
       "data": {
         "apis": [
           {
-            "contact": "contact@mydomain.com"
+            "enable": true
           }
         ]
       },
@@ -1254,7 +1248,7 @@ Stage Configuration
       "data": {
         "apis": [
           {
-            "contact": "contact@mydomain.com"
+            "enable": true
           }
         ],
         "defaults": {} // maybe use sensible?
@@ -1328,7 +1322,6 @@ The [Discord](/configuration/clients/discord) Client can fetch album art images 
     Using the [ENV Configuration](#env-configuration) from above, add these fields to your docker compose `environment:`
 
     ```yaml
-    - MB_CONTACT=contact@mydomain.com
     - MB_PRESETS=id,native,sensible
     - DISCORD_TRANSFORMS=musicbrainz
     ```
@@ -1346,7 +1339,7 @@ The [Discord](/configuration/clients/discord) Client can fetch album art images 
           "data": {
             "apis": [
               {
-                "contact": "contact@mydomain.com"
+                "enable": true
               }
             ]
           },
@@ -1396,7 +1389,7 @@ The [Discord](/configuration/clients/discord) Client can fetch album art images 
           "data": {
             "apis": [
               {
-                "contact": "contact@mydomain.com"
+                "enable": true
               }
             ]
           },
