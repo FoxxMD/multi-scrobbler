@@ -34,8 +34,6 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
 
     const app = express();
 
-    const router = createTypedRouter();
-
     app.set('query parser', (str: string) => qs.parse(str, qsOptions));
 
     const {
@@ -47,6 +45,12 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
     } = opts;
 
     const logger = childLogger(parentLogger, 'API');
+
+
+    const router = createTypedRouter().onValidationFailure((info) => {
+        const {req, ...rest} = info;
+        logger.warn(rest, 'Request failed validation');
+    });
 
     try {
         app.use(router.getRouter());
