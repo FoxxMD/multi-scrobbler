@@ -26,7 +26,7 @@ export default class ListenbrainzSource extends MemorySource {
     constructor(name: any, config: ListenBrainzSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         const {
             data: {
-                interval = 15,
+                interval = 30,
                 maxInterval = 60,
                 ...restData
             } = {}

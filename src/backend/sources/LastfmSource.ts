@@ -28,7 +28,7 @@ export default class LastfmSource extends MemorySource {
     constructor(name: any, config: LastfmSourceConfig, internal: InternalConfig, emitter: EventEmitter, type: SourceType = 'lastfm') {
         const {
             data: {
-                interval = 15,
+                interval = 30,
                 maxInterval = 60,
                 ...restData
             } = {}
