@@ -492,9 +492,40 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
 
         const {body: {item}} = playingRes;
         if(item !== undefined && item !== null) {
-           return SpotifySource.formatPlayObj(playingRes.body, {newFromSource: true});
+           const play = SpotifySource.formatPlayObj(playingRes.body, {newFromSource: true});
+           return await this.enrichIsrc(play, item.id);
         }
         return undefined;
+    }
+
+    /**
+     * The `currently-playing` and `playback-state` endpoints MS polls for real-time tracking do not return
+     * `external_ids.isrc` on the track object, unlike `tracks/{id}` and `recently-played`. When the primary
+     * response is missing an ISRC this makes one extra call to `tracks/{id}` to backfill it, caching the
+     * result so a still-playing track isn't re-fetched on every poll.
+     */
+    protected enrichIsrc = async (play: PlayObject, trackId: string | undefined): Promise<PlayObject> => {
+        if (this.config.data.enrichIsrc === false || play.data.isrc !== undefined || trackId === undefined) {
+            return play;
+        }
+
+        const cacheKey = `spotify-isrc-${trackId}`;
+        try {
+            let isrc = await this.cache.cacheApi.get<string | null>(cacheKey);
+            if (isrc === undefined) {
+                // called directly, bypassing callApi's retry logic -- this is a best-effort enrichment
+                // and should never delay or block scrobbling of the primary play data
+                const res = await this.spotifyApi.getTrack(trackId);
+                isrc = res.body.external_ids?.isrc ?? null;
+                await this.cache.cacheApi.set(cacheKey, isrc, '1hr');
+            }
+            if (isrc !== null) {
+                play.data.isrc = isrc;
+            }
+        } catch (e) {
+            this.logger.debug(new Error(`Failed to backfill ISRC for track ${trackId} from Spotify tracks endpoint`, {cause: e}));
+        }
+        return play;
     }
 
     getCurrentPlaybackState = async (logError = true): Promise<{device?: SpotifyApi.UserDevice, playerState?: PlayerStateData}> => {
@@ -517,12 +548,17 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
                 } else if(item !== null && item !== undefined) {
                     status = 'paused';
                 }
+                let play: PlayObject | undefined;
+                if(item !== null && item !== undefined) {
+                    play = SpotifySource.formatPlayObj(res.body, {newFromSource: true});
+                    play = await this.enrichIsrc(play, item.id);
+                }
                 return {
                     device,
                     playerState: {
                         platformId: [combinePartsToString([shortDeviceId(device.id), device.name]), NO_USER],
                         status,
-                        play: item !== null && item !== undefined ? SpotifySource.formatPlayObj(res.body, {newFromSource: true}) : undefined,
+                        play,
                         stateUpdatedAt: dayjs(),
                         position: progress_ms !== null && progress_ms !== undefined ? progress_ms / 1000 : undefined,
                     }
