@@ -110,7 +110,7 @@ export const additionalTrackInfoSchema = z.object({
     artist_names: z.array(z.string()).optional(),
     albumartist: z.string().optional(),
 
-    tracknumber: z.number().optional(),
+    tracknumber: z.coerce.number<string | number>().optional(),
 });
 export type AdditionalTrackInfo = z.infer<typeof additionalTrackInfoSchema>;
 export interface Track {
