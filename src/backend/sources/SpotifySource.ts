@@ -514,7 +514,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
                 // and should never delay or block scrobbling of the primary play data
                 const res = await this.spotifyApi.getTrack(trackId);
                 isrc = res.body.external_ids?.isrc ?? null;
-                await this.cache.cacheApi.set(cacheKey, isrc, '1hr');
+                await this.cache.cacheApi.set(cacheKey, isrc, '10m');
             }
             if (isrc !== null) {
                 play.data.isrc = isrc;
@@ -523,7 +523,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             this.logger.debug(new Error(`Failed to backfill ISRC for track ${trackId} from Spotify tracks endpoint`, {cause: e}));
             // on enrich call failure, or in the event something in the above code block causes an exception unrelated to api
             // set to null on failure so we don't make consecutive calls that result in failure on every poll attempt
-            await this.cache.cacheApi.set(cacheKey, null, '1hr');
+            await this.cache.cacheApi.set(cacheKey, null, '10m');
         }
         return play;
     }
