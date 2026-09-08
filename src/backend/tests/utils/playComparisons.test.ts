@@ -5,7 +5,7 @@ import { describe, it } from 'mocha';
 import { existingScrobble, genericSourcePlayMatch, playsAreAddedOnly, playsAreBumpedOnly, playsAreSortConsistent } from "../../utils/PlayComparisonUtils.ts";
 import { generatePlay, generatePlays } from "../../../core/tests/utils/PlayTestUtils.ts";
 import { artistNamesToCredits } from "../../../core/StringUtils.ts";
-import type {PlayObject} from "../../../core/Atomic.ts";
+import { SCROBBLE_TS_SOC_END, type PlayObject } from "../../../core/Atomic.ts";
 
 const newPlay = generatePlay();
 
@@ -295,8 +295,14 @@ describe('Compare lists by order', function () {
                 artists: artistNamesToCredits(['CHVRCHES']),
                 duration: trackDuration,
                 playDate: start,
+                // finalized live plays are normalized to scrobbleTsSOC END with playDateCompleted set --
+                // the fix must anchor on playDate directly rather than the SOC-adjusted date, which
+                // would otherwise resolve to playDateCompleted (roughly the end, not the start) here
+                playDateCompleted: start.add(trackDuration, 's'),
                 listenedFor,
                 listenRanges: [{ start: { timestamp: clone(start) }, end: { timestamp: start.add(listenedFor, 's') } }]
+            }, {
+                scrobbleTsSOC: SCROBBLE_TS_SOC_END
             });
 
             const backlogCandidate: PlayObject = generatePlay({
@@ -321,6 +327,42 @@ describe('Compare lists by order', function () {
 
                 const res = await existingScrobble(liveCandidate, [existingLiveTrackedPlay]);
                 assert.isFalse(res.match, 'a confirmed-live candidate should not gain the loosened duration/listenedFor match');
+            });
+
+            // real observed duplicate: the live-tracked play was paused mid-listen (a gap in
+            // listenRanges), so it took longer in wall-clock time to finish (playDateCompleted)
+            // than its nominal duration -- the backlog candidate's timestamp falls after
+            // playDate + duration but still within playDate -> playDateCompleted
+            it('matches a backlog candidate landing in a paused play\'s real completion window, past its nominal duration', async function() {
+                const pausedStart = dayjs('2026-09-08T04:01:16.977Z');
+                const pausedDuration = 194;
+                const pausedCompleted = dayjs('2026-09-08T04:06:01.217Z'); // 4:44 wall-clock, longer than the 3:14 track
+                const pausedBacklogTimestamp = dayjs('2026-09-08T04:05:50.420Z'); // after playDate + duration (04:04:30), still before playDateCompleted
+
+                const pausedLiveTrackedPlay: PlayObject = generatePlay({
+                    track: "weren't for the wind",
+                    artists: artistNamesToCredits(['Ella Langley']),
+                    duration: pausedDuration,
+                    playDate: pausedStart,
+                    playDateCompleted: pausedCompleted,
+                    listenedFor: 181.25,
+                    listenRanges: [
+                        { start: { timestamp: dayjs('2026-09-08T04:01:16.989Z') }, end: { timestamp: dayjs('2026-09-08T04:02:17.330Z') } },
+                        { start: { timestamp: dayjs('2026-09-08T04:03:17.558Z') }, end: { timestamp: dayjs('2026-09-08T04:05:18.431Z') } }
+                    ]
+                }, {
+                    scrobbleTsSOC: SCROBBLE_TS_SOC_END
+                });
+
+                const pausedBacklogCandidate: PlayObject = generatePlay({
+                    track: "weren't for the wind",
+                    artists: artistNamesToCredits(['Ella Langley']),
+                    duration: pausedDuration,
+                    playDate: pausedBacklogTimestamp
+                });
+
+                const res = await existingScrobble(pausedBacklogCandidate, [pausedLiveTrackedPlay]);
+                assert.isTrue(res.match, 'a backlog candidate inside the real (paused) completion window should match even past nominal duration');
             });
         });
 
