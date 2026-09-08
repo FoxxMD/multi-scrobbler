@@ -57,10 +57,9 @@ export const spotifySourceDataSchema = z.object({
         examples: [10]
     }),
     /**
-     * Backfill ISRC (International Standard Recording Code) data by making an additional API call when the primary polling endpoints omit it
+     * Backfill ISRC data if it missing
      *
-     * The Spotify endpoints MS polls for real-time tracking (`currently-playing`/`playback-state`) do not return `external_ids.isrc` on the track,
-     * unlike the `tracks/{id}` and `recently-played` endpoints. When enabled MS will make one extra API call per newly seen track to fetch its ISRC.
+     * If this is enabled and real-time data does not include ISRC then an additional API call is made to get this data.
      *
      * @default true
      * @examples [true]
