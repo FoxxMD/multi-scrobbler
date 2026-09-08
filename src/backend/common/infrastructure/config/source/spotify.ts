@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
 
 export const spotifySourceDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -58,6 +58,24 @@ export const spotifySourceDataSchema = z.object({
     }),
 });
 
+export const spotifyOptionsSchema = z.object({
+    /**
+     * Backfill ISRC data if it missing
+     *
+     * If this is enabled and real-time data does not include ISRC then an additional API call is made to get this data.
+     *
+     * @default true
+     * @examples [true]
+     * */
+    enrichIsrc: z.boolean().optional().meta({
+        description: "Backfill ISRC data with an additional API call when the real-time polling endpoints omit it",
+        default: true,
+        examples: [true]
+    }),
+});
+
+export type SpotifySourceOptions = z.infer<typeof spotifyOptionsSchema>;
+
 export type SpotifySourceData = z.infer<typeof spotifySourceDataSchema>;
 
 const envDataSchema = z.object({
@@ -81,6 +99,10 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, SpotifySourceConf
 export const spotifySourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,
     data: spotifySourceDataSchema,
+    options: z.object({
+        ...commonSourceOptionsSchema.shape,
+        ...spotifyOptionsSchema.shape
+    }).optional()
 });
 
 export type SpotifySourceConfig = z.infer<typeof spotifySourceConfigSchema>;

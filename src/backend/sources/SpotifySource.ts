@@ -492,9 +492,44 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
 
         const {body: {item}} = playingRes;
         if(item !== undefined && item !== null) {
-           return SpotifySource.formatPlayObj(playingRes.body, {newFromSource: true});
+           const play = SpotifySource.formatPlayObj(playingRes.body, {newFromSource: true});
+           return await this.enrichIsrc(play, item.id);
         }
         return undefined;
+    }
+
+    /**
+     * Backfill ISRC if it is not present in Play
+     * 
+     * The `currently-playing` and `playback-state` endpoints MS polls for real-time data *may* not return
+     * `external_ids.isrc` on the track object. When the primary response is missing an ISRC
+     * this makes one extra call to `tracks/{id}` to backfill and cache it
+     */
+    protected enrichIsrc = async (play: PlayObject, trackId: string | undefined): Promise<PlayObject> => {
+        if (this.config.options?.enrichIsrc === false || play.data.isrc !== undefined || trackId === undefined) {
+            return play;
+        }
+
+        const cacheKey = `spotify-isrc-${trackId}`;
+        try {
+            let isrc = await this.cache.cacheApi.get<string | null>(cacheKey);
+            if (isrc === undefined) {
+                // called directly, bypassing callApi's retry logic -- this is a best-effort enrichment
+                // and should never delay or block scrobbling of the primary play data
+                const res = await this.spotifyApi.getTrack(trackId);
+                isrc = res.body.external_ids?.isrc ?? null;
+                await this.cache.cacheApi.set(cacheKey, isrc, '10m');
+            }
+            if (isrc !== null) {
+                play.data.isrc = isrc;
+            }
+        } catch (e) {
+            this.logger.debug(new Error(`Failed to backfill ISRC for track ${trackId} from Spotify tracks endpoint`, {cause: e}));
+            // on enrich call failure, or in the event something in the above code block causes an exception unrelated to api
+            // set to null on failure so we don't make consecutive calls that result in failure on every poll attempt
+            await this.cache.cacheApi.set(cacheKey, null, '10m');
+        }
+        return play;
     }
 
     getCurrentPlaybackState = async (logError = true): Promise<{device?: SpotifyApi.UserDevice, playerState?: PlayerStateData}> => {
@@ -517,12 +552,17 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
                 } else if(item !== null && item !== undefined) {
                     status = 'paused';
                 }
+                let play: PlayObject | undefined;
+                if(item !== null && item !== undefined) {
+                    play = SpotifySource.formatPlayObj(res.body, {newFromSource: true});
+                    play = await this.enrichIsrc(play, item.id);
+                }
                 return {
                     device,
                     playerState: {
                         platformId: [combinePartsToString([shortDeviceId(device.id), device.name]), NO_USER],
                         status,
-                        play: item !== null && item !== undefined ? SpotifySource.formatPlayObj(res.body, {newFromSource: true}) : undefined,
+                        play,
                         stateUpdatedAt: dayjs(),
                         position: progress_ms !== null && progress_ms !== undefined ? progress_ms / 1000 : undefined,
                     }

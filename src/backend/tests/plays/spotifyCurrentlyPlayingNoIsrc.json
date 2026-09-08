@@ -1,0 +1,91 @@
+{
+    "timestamp": 1734358194901,
+    "context": {
+        "external_urls": {
+            "spotify": "https://open.spotify.com/album/4r9HEszOAbfhRfT1n1QPLF"
+        },
+        "href": "https://api.spotify.com/v1/albums/4r9HEszOAbfhRfT1n1QPLF",
+        "type": "album",
+        "uri": "spotify:album:4r9HEszOAbfhRfT1n1QPLF"
+    },
+    "progress_ms": 78823,
+    "item": {
+        "album": {
+            "album_type": "album",
+            "artists": [
+                {
+                    "external_urls": {
+                        "spotify": "https://open.spotify.com/artist/4D2G48IdJKhcdZ5c1dqp5Z"
+                    },
+                    "href": "https://api.spotify.com/v1/artists/4D2G48IdJKhcdZ5c1dqp5Z",
+                    "id": "4D2G48IdJKhcdZ5c1dqp5Z",
+                    "name": "Dubmood",
+                    "type": "artist",
+                    "uri": "spotify:artist:4D2G48IdJKhcdZ5c1dqp5Z"
+                }
+            ],
+            "external_urls": {
+                "spotify": "https://open.spotify.com/album/4r9HEszOAbfhRfT1n1QPLF"
+            },
+            "href": "https://api.spotify.com/v1/albums/4r9HEszOAbfhRfT1n1QPLF",
+            "id": "4r9HEszOAbfhRfT1n1QPLF",
+            "images": [
+                {
+                    "height": 640,
+                    "url": "https://i.scdn.co/image/ab67616d0000b273ba89e34c27a792ffe9c8dcb2",
+                    "width": 640
+                }
+            ],
+            "name": "Bloodbags And Downtube Shifters",
+            "release_date": "2020-08-28",
+            "release_date_precision": "day",
+            "total_tracks": 13,
+            "type": "album",
+            "uri": "spotify:album:4r9HEszOAbfhRfT1n1QPLF"
+        },
+        "artists": [
+            {
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/artist/4D2G48IdJKhcdZ5c1dqp5Z"
+                },
+                "href": "https://api.spotify.com/v1/artists/4D2G48IdJKhcdZ5c1dqp5Z",
+                "id": "4D2G48IdJKhcdZ5c1dqp5Z",
+                "name": "Dubmood",
+                "type": "artist",
+                "uri": "spotify:artist:4D2G48IdJKhcdZ5c1dqp5Z"
+            },
+            {
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/artist/77s5NAGQbxu8oLstaqSwHE"
+                },
+                "href": "https://api.spotify.com/v1/artists/77s5NAGQbxu8oLstaqSwHE",
+                "id": "77s5NAGQbxu8oLstaqSwHE",
+                "name": "MASTER BOOT RECORD",
+                "type": "artist",
+                "uri": "spotify:artist:77s5NAGQbxu8oLstaqSwHE"
+            }
+        ],
+        "disc_number": 1,
+        "duration_ms": 213539,
+        "explicit": false,
+        "external_urls": {
+            "spotify": "https://open.spotify.com/track/0dYovyBKizxbMla12ofzBr"
+        },
+        "href": "https://api.spotify.com/v1/tracks/0dYovyBKizxbMla12ofzBr",
+        "id": "0dYovyBKizxbMla12ofzBr",
+        "is_local": false,
+        "name": "The Sandpits Of Zonhoven",
+        "popularity": 15,
+        "preview_url": null,
+        "track_number": 5,
+        "type": "track",
+        "uri": "spotify:track:0dYovyBKizxbMla12ofzBr"
+    },
+    "currently_playing_type": "track",
+    "actions": {
+        "disallows": {
+            "resuming": true
+        }
+    },
+    "is_playing": true
+}

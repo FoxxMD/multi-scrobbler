@@ -109,6 +109,14 @@ Use **one** of the following methods to specify a valid Redirect URI and complet
 
 6. Start multi-scrobbler, then visit the Web Dashboard and click **(Re)authenticate** on the Spotify card to start the auth process
 
+#### ISRC Enrichment
+
+The Spotify endpoints multi-scrobbler polls for real-time tracking (`currently-playing` and `playback-state`) do not return a track's ISRC (International Standard Recording Code), even though other Spotify endpoints (`tracks/{id}`, `recently-played`) do return it for the same track. Since MS uses ISRC to match tracks against other services (MusicBrainz, scrobble clients, etc.) a play discovered from real-time tracking can be missing this data.
+
+To work around this, multi-scrobbler makes one extra call to the `tracks/{id}` endpoint to fetch the ISRC whenever a real-time response is missing it. The result is cached for as long as the track keeps playing so the extra call is not repeated on every poll.
+
+If you would rather not make this extra API call set `enrichIsrc` to `false` in your Spotify source config.
+
 ## Configuration
 
 <Config config="SpotifySourceConfig" fileContent={SpotifyConfig} name="spotify">
