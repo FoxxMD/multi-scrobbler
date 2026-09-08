@@ -7,6 +7,7 @@ import clone from 'clone';
 import SpotifySource from "../../sources/SpotifySource.ts";
 import type { SpotifySourceConfig } from "../../common/infrastructure/config/source/spotify.ts";
 import currentlyPlayingNoIsrcPayload from '../plays/spotifyCurrentlyPlayingNoIsrc.json' with { type: "json" };
+import playbackState from '../plays/spotifyCurrentPlaybackState.json' with { type: "json" };
 
 const createSpotifySource = (enrichIsrc?: boolean): SpotifySource => {
     const config = {
@@ -78,6 +79,23 @@ describe('Spotify - ISRC Enrichment', function () {
         const play = await source.getNowPlaying();
 
         expect(play?.data.isrc).to.be.undefined;
+        expect(getTrackStub.called).to.be.false;
+    });
+
+    it('Does not call tracks endpoint when ISRC is already present', async function () {
+        const payload = clone(playbackState);
+        payload.item.id = 'playbackTest';
+
+        const source = createSpotifySource();
+        const getTrackStub = sinon.stub().resolves({ body: { external_ids: { isrc: 'USRC17607839' } } });
+        (source as any).spotifyApi = {
+            getMyCurrentPlayingTrack: sinon.stub().resolves({ body: payload }),
+            getTrack: getTrackStub,
+        };
+
+        const play = await source.getNowPlaying();
+
+        expect(play?.data.isrc).to.equal('FR9W12915571');
         expect(getTrackStub.called).to.be.false;
     });
 
