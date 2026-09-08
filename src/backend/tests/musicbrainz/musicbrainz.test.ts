@@ -17,9 +17,8 @@ import { intersect, missingMbidTypes, sleep } from '../../utils.ts';
 import { CoverArtApiClient, type CoverArtApiConfig } from '../../common/vendor/musicbrainz/CoverArtApiClient.ts';
 import { artistNamesToCredits, artistNameToCredit } from '../../../core/StringUtils.ts';
 import dayjs from 'dayjs';
-import { MusicbrainzApiClient } from '../../common/vendor/musicbrainz/MusicbrainzApiClient.ts';
-import {spy} from 'sinon';
-import type { MusicBrainzApi } from 'musicbrainz-api';
+import { MusicbrainzApiWrapped } from '../../common/vendor/musicbrainz/MusicbrainzApi.ts';
+import { AsyncLocalStorage } from 'async_hooks';
 
 chai.use(asPromised);
 
@@ -49,12 +48,6 @@ const mbTransformer = createMbTransformer();
 
 const createCoverArtApi = (config: CoverArtApiConfig = {}) => {
     return new CoverArtApiClient('test', config, {logger: loggerTest});
-}
-
-class MusicbrainzApiTestClient extends MusicbrainzApiClient {
-    callApiEndpoint = async<T = Response>(mbApi: MusicBrainzApi, func: (mb: MusicBrainzApi) => Promise<any>, options?: { timeout?: number, cacheKey?: string }): Promise<T> => {
-        return super.callApiEndpoint(mbApi, func,options);
-    }
 }
 
 describe('Musicbrainz API', function () {
@@ -583,18 +576,22 @@ describe('Musicbrainz API', function () {
             })
         ], async function () {
 
-            const apiClient = new MusicbrainzApiTestClient('test', {apis: [{url: 'https://mbtest.local', contact: 'test@email.com'}]}, {
-                logger: loggerTest,
-                cache: memorycache(),
-                reqQueueDuration: 0.01
+            const client = new MusicbrainzApiWrapped({
+                baseUrl: 'https://mbtest.local',
+                hostname: 'mbtest.local',
+                asyncStore: new AsyncLocalStorage(),
+                rate: {
+                    duration: 0.01
+                }
             });
-            const sp = spy(apiClient, 'callApiEndpoint');
+
+            let called = 0;
 
             for(let i = 0; i < 5; i++) {
-                apiClient.callApi((mb) => mb.search('recording', {})).then(() => null)
+                client.callApi(async () => {called++;return;}).then(() => null)
             }
             await sleep(30);
-            expect(sp.callCount).to.eq(3);
+            expect(called).to.eq(3);
         })();
     });
 

@@ -6,7 +6,8 @@ import { WildcardEmitter } from "./common/WildcardEmitter.ts";
 
 import { generateBaseURL } from "./utils/NetworkUtils.ts";
 import type { PassThrough } from "stream";
-import type {CacheConfigOptions, MusicBrainzSingletonMap} from "./common/infrastructure/Atomic.ts";
+import type {CacheConfigOptions} from "./common/infrastructure/Atomic.ts";
+import type { MusicBrainzSingletonMap } from './common/vendor/musicbrainz/MusicbrainzTypes.ts';
 import { MSCache } from "./common/Cache.ts";
 import TransformerManager from "./common/transforms/TransformerManager.ts";
 import type {TransformerCommonConfig} from "../core/Atomic.ts";

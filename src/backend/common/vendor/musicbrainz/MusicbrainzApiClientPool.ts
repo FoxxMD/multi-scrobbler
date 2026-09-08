@@ -1,13 +1,11 @@
 import type { Response } from 'superagent';
 import {type ArtistCredit, type OptionalCacheUsage, type PlayObject, type PlayObjectMinimal, type URLData} from "../../../../core/Atomic.ts";
 import { DEVELOPER_CONTACT } from "../../infrastructure/Atomic.ts";
-import { UpstreamError } from "../../errors/UpstreamError.ts";
 import { type AbstractApiOptions, type FormatPlayObjectOptions, MUSICBRAINZ_URL, type MusicbrainzApiConfigData } from "../../infrastructure/Atomic.ts";
 import AbstractApiClient from "../AbstractApiClient.ts";
 import { isPortReachableConnect, normalizeWebAddress } from '../../../utils/NetworkUtils.ts';
-import { MusicBrainzApi, type IRecording, type IRecordingList, type IRelease } from 'musicbrainz-api';
-import { difference, sleep } from "../../../utils.ts";
-import {SequentialRoundRobin} from 'round-robin-js';
+import type { MusicBrainzApi, IRecording, IRecordingList, IRelease } from 'musicbrainz-api';
+import { difference } from "../../../utils.ts";
 import type { Cacheable } from "cacheable";
 import { getRoot } from "../../../ioc.ts";
 import { hashObject } from "../../../utils/StringUtils.ts";
@@ -15,25 +13,20 @@ import { playContentInvariantTransform } from "../../../utils/PlayComparisonUtil
 import { AsyncLocalStorage } from "async_hooks";
 import { nanoid } from "nanoid";
 import { stripIndents } from "common-tags";
-import { hasNodeNetworkException } from '../../errors/NodeErrors.ts';
 import { SimpleError } from '../../errors/MSErrors.ts';
 import { baseFormatPlayObj } from '../../../utils/PlayTransformUtils.ts';
 import type {IRecordingMSList} from '../../transforms/MusicbrainzTransformer.ts';
 import { artistCreditsToNames } from '../../../../core/StringUtils.ts';
 import { isrcNoHyphens } from '../../../../core/PlayUtils.ts';
-import { RateLimiterMemory, RateLimiterQueue } from 'rate-limiter-flexible';
+import {ProxyWithCircuitBreaker, type CircuitBreakerProxy} from '@foxxmd/load-balancer-proxy';
+import {ConsecutiveBreaker} from 'cockatiel';
+import { MusicbrainzApiWrapped } from './MusicbrainzApi.ts';
 export interface SubmitResponse {
     payload?: {
         ignored_listens: number
         submitted_listens: number
     },
     status: string
-}
-
-export interface MusicbrainzApiConfig extends MusicbrainzApiConfigData {
-    api: MusicBrainzApi,
-    hostname: string
-    reqQueue: RateLimiterQueue
 }
 
 export interface MusicbrainzApiClientConfig {
@@ -49,10 +42,10 @@ export interface SearchOptions {
     freetext?: boolean
 }
 
-export class MusicbrainzApiClient extends AbstractApiClient {
+export class MusicbrainzApiClientPool extends AbstractApiClient {
 
     declare config: MusicbrainzApiClientConfig;
-    protected rrApis: SequentialRoundRobin<MusicbrainzApiConfig>;
+    protected rrProxy: CircuitBreakerProxy<MusicbrainzApiWrapped>
     protected url: URLData;
     cache: Cacheable;
     protected asyncStore: AsyncLocalStorage<string>;
@@ -63,7 +56,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
         this.asyncStore = new AsyncLocalStorage();
         this.cache = options.cache ?? getRoot().items.cache().cacheApi;
         const mbMap = getRoot().items.mbMap();
-        const mbApis: Record<string, MusicbrainzApiConfig> = {};
+        const apis: MusicbrainzApiWrapped[] = [];
         for(const mbConfig of this.config.apis) {
             if((mbConfig.enable ?? true) === false) {
                 this.logger.verbose(`Not using config for ${mbConfig.url ?? MUSICBRAINZ_URL} because it is disabled`);
@@ -71,15 +64,13 @@ export class MusicbrainzApiClient extends AbstractApiClient {
             }
             const u = normalizeWebAddress(mbConfig.url ?? MUSICBRAINZ_URL);
             const mb = mbMap.get(u.url.hostname);
-            const maxReqs = 1;
+            let maxReqs = 1;
             const reqRefill = options?.reqQueueDuration ?? 1;
-            const mbApiConfig: Omit<MusicbrainzApiConfig, 'api'> = {
-                ...mbConfig, 
-                hostname: u.url.hostname, 
-                reqQueue: new RateLimiterQueue(new RateLimiterMemory({points: maxReqs, duration: reqRefill}), {maxQueueSize: 20})
-            }
             if(mb === undefined) {
-                const api = new MusicBrainzApi({
+                if(u.url.hostname.includes('brainzmash.cc')) {
+                    maxReqs = 3;
+                }
+                const api = new MusicbrainzApiWrapped({
                     appName: 'multi-scrobbler',
                     appVersion: getRoot().items.version,
                     appContactInfo: mbConfig.contact ?? DEVELOPER_CONTACT,
@@ -92,34 +83,38 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                         // }
                         return [method, url, headers];
                     },
+                    rate: {points: maxReqs, duration: reqRefill},
+                    hostname: u.url.hostname,
+                    asyncStore: this.asyncStore,
                     requestTimeout: mbConfig.requestTimeout ?? 6000,
-                    retryLimit: 2
+                    retryLimit: 2,
+                    logger: this.logger,
                 });
-                mbApis[u.url.hostname] = {
-                    ...mbApiConfig,
-                    api, 
-                };
                 mbMap.set(u.url.hostname, api);
-                this.logger.verbose(`Created Musicbrainz API for ${mbApiConfig.hostname} with Rate Limit ${maxReqs}req/${reqRefill}s`);
-            } else if(mbApis[u.url.hostname] === undefined) {
-                mbApis[u.url.hostname] = {
-                    ...mbApiConfig,
-                    api: mb,
-                };
+                apis.push(api);
+                this.logger.verbose(`Created Musicbrainz API for ${api.hostname} with Rate Limit ${maxReqs}req/${reqRefill}s`);
+            } else {
+                apis.push(mb);
             }
         }
 
-        this.rrApis = new SequentialRoundRobin(Object.values(mbApis));
-        this.logger.debug(`Round Robin API calls using hosts: ${config.apis.map(x => x.url ?? MUSICBRAINZ_URL).join(' | ')}`);
+        this.rrProxy = ProxyWithCircuitBreaker.create<MusicbrainzApiWrapped>(apis,() => ({
+            halfOpenAfter: 30000,
+            breaker: new ConsecutiveBreaker(3),
+            onFailure: ({reason, duration}) => {
+                this.logger.warn(new SimpleError(`Error occurred after ${duration}ms, will try next host`, {cause: reason, shortStack: true}));
+            }
+        }), {
+            comparer: async (a, b) => await b.rateLimiterQueue.getTokensRemaining() - await a.rateLimiterQueue.getTokensRemaining()
+        })
+        this.logger.debug(`Rate limit prioritized API calls using hosts: ${apis.map(x => x.hostname).join(' | ')}`);
     }
 
     protected getIdentifier(): string {
         return 'API';
     }
 
-    callApi = async <T = Response>(func: (mb: MusicBrainzApi) => Promise<any>, options?: { timeout?: number, cacheKey?: string } & OptionalCacheUsage): Promise<T> => {
-
-        let apiConfig = this.rrApis.next().value;
+    callApiPool = async <T = Response>(func: (mb: MusicBrainzApi) => Promise<any>, options?: { timeout?: number, cacheKey?: string } & OptionalCacheUsage): Promise<T> => {
 
         const {
             cacheKey,
@@ -128,7 +123,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
 
         try {
             const cachedTransform = useCachedResult ? await this.cache.get<T>(cacheKey) : undefined;
-            if(cachedTransform !== undefined) {
+            if (cachedTransform !== undefined) {
                 const cacheUrl = await this.cache.get<string>(`${cacheKey}-url`);
                 const cacheQs = await this.cache.get<string>(`${cacheKey}-qs`);
                 this.logger.debug(stripIndents`Cache hit =>
@@ -138,79 +133,26 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                 return cachedTransform;
             }
         } catch (e) {
-            this.logger.warn(new Error('Could not fetch cache keys', {cause: e}));
+            this.logger.warn(new Error('Could not fetch cache keys', { cause: e }));
         }
-
-        const triedHosts: string[] = [];
-        while(!triedHosts.includes(apiConfig.hostname)) {
-
-            // rate limit at 1req/s
-            const res = await apiConfig.reqQueue.removeTokens(1);
-
-            try {
-                const res = await this.callApiEndpoint(apiConfig.api, func, options);
-                if(cacheKey !== undefined) {
-                    await this.cache.set(cacheKey, res);
-                }
-                return res as T;
-            } catch (e) {
-                if(this.rrApis.count() > 1) {
-                    this.logger.warn(`Error occurred for ${apiConfig.hostname}, will try next host`);
-                    this.logger.warn(e);
-                } else {
-                    throw e;
-                }
-            } finally {
-                const cacheUrl = await this.cache.get<string>(`${cacheKey}-url`);
-                const debugUrlData = [];
-                if(cacheUrl !== undefined) {
-                    debugUrlData.push(`URL: ${cacheUrl}`);
-                }
-                if(debugUrlData.length > 0) {
-                    this.logger.trace({labels: ['Call Info']}, `\n${debugUrlData.join('\n')}`);
-                }
-            }
-
-            triedHosts.push(apiConfig.hostname);
-            apiConfig = this.rrApis.next().value;
-        }
-
-        if(triedHosts.length > 1) {
-            throw new Error('All hosts failed to return a response');
-        }
-    }
-
-    protected async callApiEndpoint<T = Response>(mbApi: MusicBrainzApi, func: (mb: MusicBrainzApi) => Promise<any>, options?: { timeout?: number, cacheKey?: string }): Promise<T> {
-        const {
-            timeout = 30000,
-            cacheKey
-        } = options || {};
 
         try {
-            const res = await this.asyncStore.run(cacheKey, async () => {
-                return await Promise.race([
-                    func(mbApi),
-                    sleep(timeout)
-                ]);
-            });
-            if (res === undefined) {
-                throw new SimpleError('Timeout occurred while waiting for Musicbrainz API rate limit');
-            }
-            if(`error` in res) {
-                throw new Error(res.error);
+            const res = await this.rrProxy.callApi(func, options);
+            if (cacheKey !== undefined) {
+                await this.cache.set(cacheKey, res);
             }
             return res as T;
         } catch (e) {
-            if(e instanceof SimpleError) {
-                throw e;
+            throw e;
+        } finally {
+            const cacheUrl = await this.cache.get<string>(`${cacheKey}-url`);
+            const debugUrlData = [];
+            if (cacheUrl !== undefined) {
+                debugUrlData.push(`URL: ${cacheUrl}`);
             }
-            if(e.name === 'TimeoutError') {
-                throw new UpstreamError('Network error: timeout triggered while waiting for response from API',{cause: e, showStopper: true});
+            if (debugUrlData.length > 0) {
+                this.logger.trace({ labels: ['Call Info'] }, `\n${debugUrlData.join('\n')}`);
             }
-            if(hasNodeNetworkException(e)) {
-                throw new UpstreamError('Network error occurred', {cause: e, showStopper: true})
-            }
-            throw new UpstreamError('Error occurred in Musicbrainz API', { cause: e, showStopper: false });
         }
     }
 
@@ -231,7 +173,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
         // https://github.com/Borewit/musicbrainz-api?tab=readme-ov-file#search-function
         // https://wiki.musicbrainz.org/MusicBrainz_API/Search#Recording
         // https://beta.musicbrainz.org/doc/MusicBrainz_API/Search
-        const res = await this.callApi<IRecordingList>((mb) => {
+        const res = await this.callApiPool<IRecordingList>((mb) => {
             const query: {
                 recording_mbid?: string
                 track_mbid?: string

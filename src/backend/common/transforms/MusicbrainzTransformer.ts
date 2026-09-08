@@ -8,7 +8,7 @@ import { ARTIST_WEIGHT, type MusicbrainzApiConfigData, TITLE_WEIGHT } from "../i
 import { DELIMITERS } from '../../../core/Atomic.ts';
 import { MaybeLogger } from '../MaybeLogger.ts';
 import { childLogger } from "@foxxmd/logging";
-import { MusicbrainzApiClient, recordingToPlay, type UsingTypes } from "../vendor/musicbrainz/MusicbrainzApiClient.ts";
+import { MusicbrainzApiClientPool, recordingToPlay, type UsingTypes } from "../vendor/musicbrainz/MusicbrainzApiClientPool.ts";
 import type {IRecordingList, IRecordingMatch} from "musicbrainz-api";
 import { intersect, missingMbidTypes } from "../../utils.ts";
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
@@ -348,7 +348,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
     protected defaults: MusicbrainzTransformerDataStrong;
 
-    protected api: MusicbrainzApiClient;
+    protected api: MusicbrainzApiClientPool;
     protected clientCache?: Cacheable;
 
     public constructor(config: MusicbrainzTransformerConfig, options: TransformerOptions & {clientCache?: Cacheable}) {
@@ -363,7 +363,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
     protected async doBuildInitData(): Promise<true | string | undefined> {
         this.defaults = parseStageConfig(this.config.defaults, childLogger(this.logger, 'Defaults'));
 
-        this.api = new MusicbrainzApiClient(this.config.name, {apis: this.config.data.apis}, {
+        this.api = new MusicbrainzApiClientPool(this.config.name, {apis: this.config.data.apis}, {
             logger: this.logger,
             cache: this.clientCache,
             logUrl: this.config.options?.logUrl

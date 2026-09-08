@@ -6,7 +6,6 @@ import type { FixedSizeList } from 'fixed-size-list';
 import { isPlayObject } from "../../../core/Atomic.ts";
 import type {DeviceId, ErrorLike, PlayMeta, PlayObject, PlayObjectMinimal, PlayPlatformId, PlayUserId, UnixTimestamp} from "../../../core/Atomic.ts";
 import type TupleMap from "../TupleMap.ts";
-import type { MusicBrainzApi } from 'musicbrainz-api';
 import type { ReportedPlayerStatus, SourceType } from "../../../core/Atomic.ts";
 import type { ClientType } from "../../../core/Atomic.ts";
 import assert from 'assert';
@@ -311,10 +310,6 @@ export type MusicbrainzApiConfigData = z.infer<typeof musicbrainzApiConfigDataSc
 
 export const MUSICBRAINZ_URL = 'https://musicbrainz.org';
 export const MBID_VARIOUS_ARTISTS = "89ad4ac3-39f7-470e-963a-56509c546377";
-
-export type MusicBrainzSingletonMap = Map<string,MusicBrainzApi>;
-
-
 
 /* https://websocket.org/reference/close-codes/ */
 export const WEBSOCKET_CLOSE_CODE_REASONS = {
