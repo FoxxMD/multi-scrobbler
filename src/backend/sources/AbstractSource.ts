@@ -464,7 +464,14 @@ export default abstract class AbstractSource extends AbstractComponent implement
                         // we should be adding Plays to the queue without any transforms
                         // so run on "raw" play input
                         // if we have seen a play with close temporality with the exact input hash then skip it entirely
-                        const cheapInputExisting = await this.playRepo.checkExisting(queueablePlay, { inputHash: queueablePlay });
+                        const cheapInputExisting = await this.playRepo.checkExisting(queueablePlay, {
+                             inputHash: queueablePlay,
+                             // existing should have been created *before* this play
+                             seenAt: {
+                                type: 'lt',
+                                date: dayjs()
+                             }
+                            });
                         if (cheapInputExisting !== undefined) {
                             if (isDebugMode()) {
                                 // log to trace for backlog for some visibility into what was pruned
@@ -1192,7 +1199,17 @@ export default abstract class AbstractSource extends AbstractComponent implement
             let existing: PlayObject;
             if (dupeCheck) {
                 // cheap check for existing
-                const cheapExisting = await this.playRepo.checkExisting(preCompared, { notId: playEntity.id });
+                const cheapExisting = await this.playRepo.checkExisting(preCompared, {
+                     notId: playEntity.id,
+                     // should only be a dupe if there are play entities that match that were created *before* this entity
+                     // that way we don't accidentally mark the "original" of some N number of duplicate inputs as a dupe as well
+                     //
+                     // IE the "oldest" play of a set of duplicates should not itself be marked as a dupe of the "newer" duplicates
+                     seenAt: {
+                        type: 'lt',
+                        date: playEntity.seenAt
+                     }
+                    });
                 if (cheapExisting !== undefined) {
                     events.push(dupeCheckToPlayEvent({ match: true, reason: `Matched hash on existing Play ${cheapExisting.uid} with close temporality` }));
                     existing = { ...cheapExisting.play, id: cheapExisting.id, uid: cheapExisting.uid };
