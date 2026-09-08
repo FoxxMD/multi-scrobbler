@@ -496,10 +496,11 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
     }
 
     /**
-     * The `currently-playing` and `playback-state` endpoints MS polls for real-time tracking do not return
-     * `external_ids.isrc` on the track object, unlike `tracks/{id}` and `recently-played`. When the primary
-     * response is missing an ISRC this makes one extra call to `tracks/{id}` to backfill it, caching the
-     * result so a still-playing track isn't re-fetched on every poll.
+     * Backfill ISRC if it is not present in Play
+     * 
+     * The `currently-playing` and `playback-state` endpoints MS polls for real-time data *may* not return
+     * `external_ids.isrc` on the track object. When the primary response is missing an ISRC
+     * this makes one extra call to `tracks/{id}` to backfill and cache it
      */
     protected enrichIsrc = async (play: PlayObject, trackId: string | undefined): Promise<PlayObject> => {
         if (this.config.data.enrichIsrc === false || play.data.isrc !== undefined || trackId === undefined) {
