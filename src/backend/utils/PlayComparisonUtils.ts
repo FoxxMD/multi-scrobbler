@@ -1,5 +1,5 @@
 import { getListDiff, type ListDiff } from "@donedeal0/superdiff";
-import { type PlayMatchResult, type PlayObject, type PlayObjectMinimal, SOURCE_SOT, type SOURCE_SOT_TYPES, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy, type TrackStringOptions } from "../../core/Atomic.ts";
+import { type AcceptableTemporalDuringReference, type PlayMatchResult, type PlayObject, type PlayObjectMinimal, SOURCE_SOT, type SOURCE_SOT_TYPES, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy, type TrackStringOptions } from "../../core/Atomic.ts";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
 import { comparingMultipleArtists, playObjDataMatch, setIntersection } from "../utils.ts";
 import { comparePlayTemporally, hasAcceptableTemporalAccuracy, temporalAccuracyToString, type TemporalPlayComparisonOptions, temporalPlayComparisonSummary } from "./TimeUtils.ts";
@@ -505,8 +505,19 @@ export const existingScrobble = async (playObjPre: PlayObject, existingScrobbles
 
                 //const referenceMatch = referenceApiScrobbleResponse !== undefined && playObjDataMatch(x, referenceApiScrobbleResponse);
 
+                // a backlog/history play only carries a single reported timestamp, often marking
+                // roughly when the track finished rather than when it started -- if the existing play
+                // was actually live-tracked (has real listenRanges) then also accept a candidate whose
+                // timestamp simply falls within that play's own start-to-duration window, since that gap
+                // can't exceed the track's own length for a genuine duplicate of the same listen
+                const candidateConfirmedLive = playObj.meta.newFromSource === true
+                    || (playObj.data.listenRanges !== undefined && playObj.data.listenRanges.length > 0);
+                const existingIsLiveTracked = x.data.listenRanges !== undefined && x.data.listenRanges.length > 0;
+                const duringReferences: AcceptableTemporalDuringReference | undefined = !candidateConfirmedLive && existingIsLiveTracked
+                    ? ['range', 'listenedFor', 'duration']
+                    : undefined;
 
-                const temporalComparison = comparePlayTemporally(x, playObj, {logger});
+                const temporalComparison = comparePlayTemporally(x, playObj, {logger, duringReferences});
                 let timeMatch = 0;
                 if(hasAcceptableTemporalAccuracy(temporalComparison.match)) {
                     timeMatch = 1;

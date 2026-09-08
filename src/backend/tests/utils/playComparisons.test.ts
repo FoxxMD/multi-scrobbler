@@ -1,8 +1,10 @@
 import { assert, expect } from 'chai';
 import clone from "clone";
+import dayjs from "dayjs";
 import { describe, it } from 'mocha';
-import { genericSourcePlayMatch, playsAreAddedOnly, playsAreBumpedOnly, playsAreSortConsistent } from "../../utils/PlayComparisonUtils.ts";
+import { existingScrobble, genericSourcePlayMatch, playsAreAddedOnly, playsAreBumpedOnly, playsAreSortConsistent } from "../../utils/PlayComparisonUtils.ts";
 import { generatePlay, generatePlays } from "../../../core/tests/utils/PlayTestUtils.ts";
+import { artistNamesToCredits } from "../../../core/StringUtils.ts";
 import type {PlayObject} from "../../../core/Atomic.ts";
 
 const newPlay = generatePlay();
@@ -275,6 +277,50 @@ describe('Compare lists by order', function () {
                 const diffPlay = generatePlay();
                 diffPlay.data.playDate = newPlay.data.playDate.add(3, 's');
                 expect(genericSourcePlayMatch(newPlay, diffPlay)).to.be.false;
+            });
+        });
+
+        describe('Backlog vs live-tracked duplicate detection', function() {
+
+            // mirrors a real observed duplicate: Spotify backlog reports a single
+            // timestamp near the END of a track, while live "Player" tracking
+            // records the actual start-to-finish window
+            const trackDuration = 244; // 4:04
+            const listenedFor = 182; // 3:02 -- tracker stopped short of full duration
+            const start = dayjs('2024-01-01T13:18:38.000Z');
+            const backlogTimestamp = start.add(223, 's'); // 13:22:21 -- inside duration window, outside listenedFor window, and not within 10s of matching duration exactly (diff from duration is 21s)
+
+            const existingLiveTrackedPlay: PlayObject = generatePlay({
+                track: 'Empty Threat',
+                artists: artistNamesToCredits(['CHVRCHES']),
+                duration: trackDuration,
+                playDate: start,
+                listenedFor,
+                listenRanges: [{ start: { timestamp: clone(start) }, end: { timestamp: start.add(listenedFor, 's') } }]
+            });
+
+            const backlogCandidate: PlayObject = generatePlay({
+                track: 'Empty Threat',
+                artists: artistNamesToCredits(['CHVRCHES']),
+                duration: trackDuration,
+                playDate: backlogTimestamp
+            });
+            // backlog candidate: no newFromSource, no listenRanges of its own -- matches how Spotify's
+            // history-endpoint plays are actually built (SpotifySource.ts backlog path)
+
+            it('matches a backlog candidate whose timestamp falls within the live-tracked duration window', async function() {
+                const res = await existingScrobble(backlogCandidate, [existingLiveTrackedPlay]);
+                assert.isTrue(res.match, 'a backlog candidate landing inside the live play\'s duration window should match');
+            });
+
+            it('does NOT match the same window when the candidate is itself confirmed live', async function() {
+                // guards against swallowing a genuine back-to-back repeat: only a
+                // backlog-sourced candidate should get the loosened duration/listenedFor check
+                const liveCandidate = clone(backlogCandidate);
+                liveCandidate.meta.newFromSource = true;
+
+                const res = await existingScrobble(liveCandidate, [existingLiveTrackedPlay]);
+                assert.isFalse(res.match, 'a confirmed-live candidate should not gain the loosened duration/listenedFor match');
             });
         });
 
