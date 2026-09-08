@@ -179,23 +179,32 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
             logger.warn(new Error('Failed to compare plays based on range but will continue', {cause: e}));
         }
 
+        // NOTE: these two checks intentionally anchor on existingPlay.data.playDate directly,
+        // NOT existingTsSOCDate -- existingTsSOCDate can resolve to playDateCompleted instead of
+        // playDate depending on the play's scrobbleTsSOC, which would put the window in the wrong
+        // place entirely (starting from roughly when the track ended, not when it started)
         if(duringReferences.includes('listenedFor') && existingPlay.data.listenedFor !== undefined) {
-            if (candidateTsSOCDate.isBetween(existingTsSOCDate, existingTsSOCDate.add(existingPlay.data.listenedFor, 's'))) {
+            const listenedForEnd = existingPlay.data.playDate.add(existingPlay.data.listenedFor, 's');
+            if (candidateTsSOCDate.isBetween(existingPlay.data.playDate, listenedForEnd)) {
                 result.match = TA_DURING;
                 result.range = {
                         type: 'listenedFor',
-                        timestamps: [existingTsSOCDate, existingTsSOCDate.add(existingPlay.data.listenedFor, 's')]
+                        timestamps: [existingPlay.data.playDate, listenedForEnd]
                 }
                 return result;
             }
         }
 
         if(duringReferences.includes('duration') && existingPlay.data.duration !== undefined) {
-            if (candidateTsSOCDate.isBetween(existingTsSOCDate, existingTsSOCDate.add(existingPlay.data.duration, 's'))) {
+            // prefer the play's actual observed completion time over the nominal duration --
+            // a real listen can take longer than the track's length if it was paused partway through,
+            // and playDateCompleted reflects that real wall-clock span while playDate + duration doesn't
+            const durationEnd = existingPlay.data.playDateCompleted ?? existingPlay.data.playDate.add(existingPlay.data.duration, 's');
+            if (candidateTsSOCDate.isBetween(existingPlay.data.playDate, durationEnd)) {
                 result.match = TA_DURING;
                 result.range = {
                         type: 'duration',
-                        timestamps: [existingTsSOCDate, existingTsSOCDate.add(existingPlay.data.duration, 's')]
+                        timestamps: [existingPlay.data.playDate, durationEnd]
                 }
                 return result;
             }
