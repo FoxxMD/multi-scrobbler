@@ -15,9 +15,10 @@ const createSpotifySource = (enrichIsrc?: boolean): SpotifySource => {
         data: {
             clientId: 'test-client',
             clientSecret: 'test-secret',
-            enrichIsrc,
         },
-        options: {}
+        options: {
+            enrichIsrc
+        }
     } as unknown as SpotifySourceConfig;
 
     return new SpotifySource('test', config, { localUrl: new URL('http://test'), configDir: 'test', logger: loggerTest, version: 'test' }, new EventEmitter());

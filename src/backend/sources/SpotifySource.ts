@@ -503,7 +503,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
      * this makes one extra call to `tracks/{id}` to backfill and cache it
      */
     protected enrichIsrc = async (play: PlayObject, trackId: string | undefined): Promise<PlayObject> => {
-        if (this.config.data.enrichIsrc === false || play.data.isrc !== undefined || trackId === undefined) {
+        if (this.config.options?.enrichIsrc === false || play.data.isrc !== undefined || trackId === undefined) {
             return play;
         }
 

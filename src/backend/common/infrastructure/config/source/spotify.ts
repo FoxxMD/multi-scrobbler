@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
-import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
 
 export const spotifySourceDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -56,6 +56,9 @@ export const spotifySourceDataSchema = z.object({
         default: 10,
         examples: [10]
     }),
+});
+
+export const spotifyOptionsSchema = z.object({
     /**
      * Backfill ISRC data if it missing
      *
@@ -70,6 +73,8 @@ export const spotifySourceDataSchema = z.object({
         examples: [true]
     }),
 });
+
+export type SpotifySourceOptions = z.infer<typeof spotifyOptionsSchema>;
 
 export type SpotifySourceData = z.infer<typeof spotifySourceDataSchema>;
 
@@ -94,6 +99,10 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, SpotifySourceConf
 export const spotifySourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,
     data: spotifySourceDataSchema,
+    options: z.object({
+        ...commonSourceOptionsSchema.shape,
+        ...spotifyOptionsSchema.shape
+    }).optional()
 });
 
 export type SpotifySourceConfig = z.infer<typeof spotifySourceConfigSchema>;
