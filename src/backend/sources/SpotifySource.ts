@@ -521,6 +521,9 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             }
         } catch (e) {
             this.logger.debug(new Error(`Failed to backfill ISRC for track ${trackId} from Spotify tracks endpoint`, {cause: e}));
+            // on enrich call failure, or in the event something in the above code block causes an exception unrelated to api
+            // set to null on failure so we don't make consecutive calls that result in failure on every poll attempt
+            await this.cache.cacheApi.set(cacheKey, null, '1hr');
         }
         return play;
     }
