@@ -90,15 +90,17 @@ In most scenarios you should use one of the following as the **base URL** when c
 * `http://myMultiScrobblerIP:9078`
 * `http://myMultiScrobblerIP:9078/1/`
 
-<DetailsAdmo type="tip" summary="Default Scrobble Submit URL">
+<DetailsAdmo type="tip" summary="Standard Endpoints">
 
-Multi-scrobbler will accept Listenbrainz scrobbles at
+Multi-scrobbler emulates some [Listenbrainz API](https://listenbrainz.readthedocs.io/en/latest/users/api/index.html) endpoints to ensure client compatibility.
+
+Most importantly, the scrobble endpoint is:
 
 ```
 http://myMultiScrobblerIP:9078/1/submit-listens
 ```
 
-which is the **standard** Listenbrainz server path for scrobbling.
+All available endpoints are found in the API documentation section [**Listenbrainz Ingress**](/api/accept-a-listenbrainz-scrobble-standard/).
 
 </DetailsAdmo>
 
@@ -129,6 +131,8 @@ http://myMultiScrobblerIP:9078/api/listenbrainz/foobar
 http://myMultiScrobblerIP:9078/api/listenbrainz/foobar/submit-listens
 ```
 
+[**See API documentation for the slug endpoint for more information.**](/api/accept-a-listenbrainz-scrobble-slug/)
+
 </DetailsAdmo>
 
 ## Setup for Popular Apps
@@ -142,6 +146,8 @@ Set the [**ListenBrainz.BaseURL**](https://www.navidrome.org/docs/usage/configur
 </details>
 
 ### Music Assistant
+
+[Music Assistant](https://www.music-assistant.io) is an open source audio library manager that is commonly integrated into [Home Assistant](https://www.home-assistant.io/).
 
 <details>
 
