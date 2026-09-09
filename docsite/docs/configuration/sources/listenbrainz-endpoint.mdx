@@ -160,6 +160,70 @@ To troubleshoot any errors, and assuming you are using Home Assistant, view the 
 
 </details>
 
+### TIDAL Hi-Fi
+
+[TIDAL Hi-Fi](https://github.com/Mastermindzh/tidal-hifi) is a web version of [TIDAL](https://tidal.com/) packaged as a desktop application. The desktop implementation enables [additional features](https://github.com/Mastermindzh/tidal-hifi#features) not available in the web-only player, including activity tracking and scrobbling.
+
+<details>
+
+Hi-Fi has its own [documentation](https://github.com/Mastermindzh/tidal-hifi/blob/master/docs/custom-scrobbler.md) on how to setup Multi-Scrobbler. The instructions below are based off their docs.
+
+Hi-Fi recommends using the [non-standard URL scenario](./?scenario=slug#setup).
+
+Create a Listenbrainz Endpoint Source config that includes both a [Token](#token) and a [Slug](#multiple-sources).
+
+<Tabs groupId="configType" queryString>
+    <TabItem value="env" label="ENV">
+    ```yaml title="compose.yaml"
+    services:
+      multi-scrobbler:
+        # ...
+        environment:
+          # ...
+          - LZE_TOKEN=tidal-hifi-scrobbles-2025
+          - LZE_SLUG=tidal
+    ```
+    </TabItem>
+    <TabItem value="file" label="File">
+    ```json title="endpointlz.json"
+    [
+      {
+        "name": "tidal-hifi-endpoint",
+        "data": {
+          "token": "tidal-hifi-scrobbles-2025",
+          "slug": "tidal"
+        }
+      }
+    ]
+    ```
+    </TabItem>
+    <TabItem value="aio" label="AIO">
+    ```json title="endpointlz.json"
+    {
+      "sources": [
+        {
+          "name": "tidal-hifi-endpoint",
+          "type": "endpointlz",
+          "data": {
+            "token": "tidal-hifi-scrobbles-2025",
+            "slug": "tidal"
+          }
+        }
+      ]
+    }
+    ```
+    </TabItem>
+</Tabs>
+
+Then, follow the steps to enable and configure Listenbrainz in TIDAL Hi-Fi Settings [outlined in the Hi-Fi docs.](https://github.com/Mastermindzh/tidal-hifi/blob/master/docs/custom-scrobbler.md#step-3-configure-tidal-hi-fi)
+
+In those settings, ensure that:
+
+* the ending of the **API URL** you set matches the `slug` you configured above EX `slug=tidal` => `http://localhost:9078/api/listenbrainz/tidal`
+* the token you configured above matches the **User Token** you set in Hi-Fi
+
+</details>
+
 ## Troubleshooting URL
 
 If you think your service should be able to use the [standard base URL](#standard-base-url) but it is not working follow these steps before trying the [the base URL Slug](#multiple-sources).
