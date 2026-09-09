@@ -42,7 +42,9 @@ export const setupWebscrobblerRoutes = (app: Express, router: ReturnType<typeof 
             middleware: [rawIngress,cors(corsOpts) as TypedMiddleware,webScrobblerJsonParser,nonEmptyBody(logger, 'WebScrobbler Extension')],
             bodySchema: webScrobblePayloadSchema,
             tags: ['WebScrobbler Ingress'],
-            summary: 'Accept a Webscrobbler native scrobble'
+            pathExample: '/api/webscrobbler',
+            summary: 'Accepts a Webscrobbler native scrobble',
+            description: 'Use the default path `/api/webscrobbler` for standard configs or append a suffix if using a slug EX `/api/webscrobbler/mySlug`'
         },
         async (req, res) => {
             webhookIngress.trackIngress(req as Request, false);

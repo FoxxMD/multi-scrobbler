@@ -94,8 +94,11 @@ export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof cr
         bodySchema: submitPayloadSchema,
         middleware: middleware as Writable<typeof middleware>,
         tags: ['Listenbrainz Ingress'],
+        pathExample: '/api/listenbrainz',
         summary: 'Accept a Listenbrainz Scrobble (Slug)',
-        description: 'Accepts the standard Listenbrainz `submit-listens` payload at this endpoint.',
+        description: stripIndents`Accepts the standard Listenbrainz \`submit-listens\` payload using a custom\`slug\`
+        
+        EX \`slug=myCoolSlug\` => \`submit-listens\` payload to \`/api/listenbrainz/myCoolSlug\``,
     }, submitRoute);
     router.post('/1/submit-listens', {
         middleware: middleware as Writable<typeof middleware>,

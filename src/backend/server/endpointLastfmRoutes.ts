@@ -14,6 +14,7 @@ import crypto from 'node:crypto';
 import type { createTypedRouter, TypedMiddleware, InferSchemaHandler } from "@minisylar/express-typed-router";
 import { parseDisplayIdentifiersFromRequest } from '../utils/RequestUtils.ts';
 import * as z from 'zod';
+import { stripIndent } from 'common-tags';
 
 const unmatchIdentifierWarn: string[] = [];
 
@@ -160,8 +161,11 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
         bodySchema: lastfmRequestSchema,
         querySchema: looseQuery,
         tags: ['Lastfm Ingress'],
+        pathExample: '/api/lastfm',
         summary: 'Accept a Last.fm Scrobble (Slug)',
-        description: 'Accepts the standard Last.fm `track.scrobble` payload at this endpoint.'
+        description: stripIndent`Accepts a standard Last.fm \`track.scrobble\` payload using a custom \`slug\`
+        
+        EX \`slug=myCoolSlug\` => \`track.scrobble\` to \`/api/lastfm/myCoolSlug\``
     }, submitRoute);
 
     router.post('/2.0/', {
