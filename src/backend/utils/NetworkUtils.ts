@@ -360,4 +360,23 @@ export const streamBodyProgress = async (stream: ReadableStream<Uint8Array<Array
     }
 
     return body;
+}
+
+/**
+ * Converts a rate limit expressed as "N requests per M seconds" into
+ * an equivalent maximum requests-per-1-second value, as a float.
+ *
+ * @param maxRequests - Maximum number of requests allowed in the window
+ * @param seconds - Length of the window, in seconds
+ * @returns Maximum number of requests allowed per 1 second (float)
+ */
+export const maxRequestsPerSecond = (maxRequests: number, seconds: number): number => {
+  if (!Number.isFinite(maxRequests) || maxRequests < 0) {
+    throw new Error(`maxRequests must be a non-negative finite number, got ${maxRequests}`);
   }
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    throw new Error(`seconds must be a positive finite number, got ${seconds}`);
+  }
+
+  return maxRequests / seconds;
+}

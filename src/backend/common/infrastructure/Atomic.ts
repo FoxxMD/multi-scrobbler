@@ -301,7 +301,17 @@ const musicbrainzApiConfigDataSchema = z.object({
     }),
     contact: z.string().optional().meta({
         description: '(If running a forked version of multi-scrobbler) A website or email Musicbrainz can contact you at in case of issues'
-    })
+    }),
+    rate: z.object({
+        requests: z.number().positive().optional().meta({
+            description: 'max number of requests allowed during perTime unit of time',
+            default: 1
+        }),
+        perTime: z.number().positive().optional().meta({
+            description: 'A span of time (in seconds) during which requests made me made, resets after perTime',
+            default: 1
+        })
+    }).optional()
     // future use
     //apiKey: z.string()
 });

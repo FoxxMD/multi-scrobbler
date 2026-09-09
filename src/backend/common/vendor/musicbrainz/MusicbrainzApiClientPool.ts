@@ -3,7 +3,7 @@ import {type ArtistCredit, type OptionalCacheUsage, type PlayObject, type PlayOb
 import { DEVELOPER_CONTACT } from "../../infrastructure/Atomic.ts";
 import { type AbstractApiOptions, type FormatPlayObjectOptions, MUSICBRAINZ_URL, type MusicbrainzApiConfigData } from "../../infrastructure/Atomic.ts";
 import AbstractApiClient from "../AbstractApiClient.ts";
-import { isPortReachableConnect, normalizeWebAddress } from '../../../utils/NetworkUtils.ts';
+import { isPortReachableConnect, maxRequestsPerSecond, normalizeWebAddress } from '../../../utils/NetworkUtils.ts';
 import type { MusicBrainzApi, IRecording, IRecordingList, IRelease } from 'musicbrainz-api';
 import { difference } from "../../../utils.ts";
 import type { Cacheable } from "cacheable";
@@ -21,6 +21,7 @@ import { isrcNoHyphens } from '../../../../core/PlayUtils.ts';
 import {ProxyWithCircuitBreaker, type CircuitBreakerProxy} from '@foxxmd/load-balancer-proxy';
 import {ConsecutiveBreaker} from 'cockatiel';
 import { MusicbrainzApiWrapped } from './MusicbrainzApi.ts';
+import { formatNumber } from '../../../../core/DataUtils.ts';
 export interface SubmitResponse {
     payload?: {
         ignored_listens: number
@@ -62,13 +63,40 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
                 this.logger.verbose(`Not using config for ${mbConfig.url ?? MUSICBRAINZ_URL} because it is disabled`);
                 continue;
             }
-            const u = normalizeWebAddress(mbConfig.url ?? MUSICBRAINZ_URL);
+            const {
+                rate = {},
+                url
+            } = mbConfig;
+            const u = normalizeWebAddress((url ?? MUSICBRAINZ_URL).toLocaleLowerCase());
             const mb = mbMap.get(u.url.hostname);
-            let maxReqs = 1;
-            const reqRefill = options?.reqQueueDuration ?? 1;
+            let points: number,
+            duration: number;
             if(mb === undefined) {
-                if(u.url.hostname.includes('brainzmash.cc')) {
-                    maxReqs = 3;
+                switch (u.url.hostname) {
+                    case 'musicbrainz.org': {
+                        points = rate.requests ?? 1;
+                        duration = rate.perTime ?? 1;
+                        const reqRate = maxRequestsPerSecond(points, duration);
+                        if (reqRate > 1) {
+                            this.logger.warn(`Cannot use a rate greater than 1req/s for musicbrainz.org. Reverting to 1req/s | Given: ${formatNumber(reqRate)}req/s`);
+                            points = 1;
+                            duration = 1;
+                        }
+                    } break;
+                    case 'api.brainzmash.cc': {
+                        points = rate.requests ?? 3;
+                        duration = rate.perTime ?? 1;
+                        const reqRate = maxRequestsPerSecond(points, duration);
+                        if (reqRate > 4) {
+                            this.logger.warn(`Cannot use a rate greater than 4req/s for brainzmash.cc. Reverting to 4req/s | Given: ${formatNumber(reqRate)}req/s`);
+                            points = 4;
+                            duration = 1;
+                        }
+                    } break;
+                    default:
+                        points = rate.requests ?? 1;
+                        duration = rate.perTime ?? 1;
+                        break;
                 }
                 const api = new MusicbrainzApiWrapped({
                     appName: 'multi-scrobbler',
@@ -83,7 +111,7 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
                         // }
                         return [method, url, headers];
                     },
-                    rate: {points: maxReqs, duration: reqRefill},
+                    rate: {points, duration},
                     hostname: u.url.hostname,
                     asyncStore: this.asyncStore,
                     requestTimeout: mbConfig.requestTimeout ?? 6000,
@@ -92,7 +120,7 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
                 });
                 mbMap.set(u.url.hostname, api);
                 apis.push(api);
-                this.logger.verbose(`Created Musicbrainz API for ${api.hostname} with Rate Limit ${maxReqs}req/${reqRefill}s`);
+                this.logger.verbose(`Created Musicbrainz API for ${api.hostname} with Rate Limit ${points}req/${duration}s`);
             } else {
                 apis.push(mb);
             }
@@ -103,7 +131,7 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
             breaker: new ConsecutiveBreaker(3),
             onFailure: ({reason, duration}) => {
                 this.logger.warn(new SimpleError(`Error occurred after ${duration}ms, will try next host`, {cause: reason, shortStack: true}));
-            }
+            },
         }), {
             comparer: async (a, b) => await b.rateLimiterQueue.getTokensRemaining() - await a.rateLimiterQueue.getTokensRemaining()
         })
