@@ -235,7 +235,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
 
     existingPlay(playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean): Promise<PlayMatchResult> {
-        return existingScrobble(playObjPre, existingScrobbles,  this.this.existingPlayOpts, log);
+        return existingScrobble(playObjPre, existingScrobbles,  this.existingPlayOpts, log);
     }
 
     [Symbol.dispose]() {
