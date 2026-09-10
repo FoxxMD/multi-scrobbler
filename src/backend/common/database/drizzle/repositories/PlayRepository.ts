@@ -670,6 +670,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         taAccuracy?: TemporalAccuracy[],
         inputHash?: string | PlayObject,
         notId?: number
+        seenAt?: PlayWhereOpts['seenAt']
     } & ComponentConstrainedRepoOpts = {}): Promise<PlaySelectWithQueueStates | undefined> => {
         const {
             queueName,
@@ -678,6 +679,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             states,
             inputHash,
             notId,
+            seenAt
         } = opts;
         const hash = hashObject(playContentBasicInvariantTransform(play).data);
 
@@ -703,6 +705,10 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             where.NOT = {
                 id: notId
             }
+        }
+
+        if(seenAt !== undefined) {
+            where.seenAt = buildDateCompare(seenAt)
         }
         
         if(queueName !== undefined) {
