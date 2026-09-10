@@ -1,8 +1,8 @@
 import { childLogger } from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
-import { eq, inArray, relationsFilterToSQL, sql } from "drizzle-orm";
+import { eq, inArray, relationsFilterToSQL, sql, isNull } from "drizzle-orm";
 import assert from "node:assert";
-import type { MarkOptional } from "ts-essentials";
+import type { MarkOptional, ElementOf } from "ts-essentials";
 import { type DateLike, type DeepReplaceValue, type PlayObject, type PlayState, QUEUE_STATUS_QUEUED, type QueueName, SCROBBLE_TS_SOC_END, TA_DEFAULT_ACCURACY, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
 import { removeUndefinedKeys } from '../../../../../core/DataUtils.ts';
 import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.ts";
@@ -671,6 +671,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         inputHash?: string | PlayObject,
         notId?: number
         seenAt?: PlayWhereOpts['seenAt']
+        parentId?: number
     } & ComponentConstrainedRepoOpts = {}): Promise<PlaySelectWithQueueStates | undefined> => {
         const {
             queueName,
@@ -679,7 +680,8 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             states,
             inputHash,
             notId,
-            seenAt
+            seenAt,
+            parentId,
         } = opts;
         const hash = hashObject(playContentBasicInvariantTransform(play).data);
 
@@ -723,24 +725,42 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             }
         }
 
+        const playHashOr: ElementOf<typeof where.AND> = {
+            OR: [
+                {
+                    playHash: hash
+                }
+            ]
+        };
+
         const mbidId = playMbidIdentifier(play);
         if (mbidId !== undefined || inputHash !== undefined) {
-            where.AND = [{
-                OR: [
-                    {
-                        playHash: hash
-                    }
-                ]
-            }];
+            // }];
             if (mbidId !== undefined) {
-                where.AND[0].OR.push({ mbidIdentifier: mbidId });
+                playHashOr.OR.push({ mbidIdentifier: mbidId });
             }
             if (inputHash !== undefined) {
-                where.AND[0].OR.push({ input: { playHash: typeof inputHash === 'string' ? inputHash : hashObject(playContentBasicInvariantTransform(inputHash).data) } });
+                playHashOr.OR.push({ input: { playHash: typeof inputHash === 'string' ? inputHash : hashObject(playContentBasicInvariantTransform(inputHash).data) } });
             }
-        } else {
-            where.playHash = hash;
         }
+
+        // if a parent id is provided we are likely trying to find
+        // a parent *source* play that is now being queued for a *client*
+        //
+        // we can check if a parent final play hash (frozen after preCompare)
+        // matches the incoming play hash which lets us determine if any existing client plays
+        // match against a (potentially) duped source play without needing to worry about transformed
+        // precompare plays from the client since the source hash is frozen
+        if (parentId !== undefined) {
+            playHashOr.OR.push({
+                parent: {
+                    id: parentId,
+                    playHash: hash
+                }
+            });
+        }
+        
+        where.AND = [playHashOr];
 
         const res = await this.db.query.plays.findMany({
             where,
