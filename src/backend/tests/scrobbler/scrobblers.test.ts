@@ -287,7 +287,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
                 newPlay.data.playDate = dayjs();
                 newPlay.meta.sourceSOT = SOURCE_SOT.HISTORY;
 
-                const res = await testScrobbler.existingScrobble(newPlay, [play]);
+                const res = await testScrobbler.existingPlay(newPlay, [play]);
                 expect(res.match).is.false;
             });
         });

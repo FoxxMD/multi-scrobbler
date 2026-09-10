@@ -33,7 +33,6 @@ import { timeToHumanTimestamp } from "../../core/TimeUtils.ts";
 import { todayAwareFormat } from "../../core/TimeUtils.ts";
 import { getRoot } from '../ioc.ts';
 import { componentFileLogger } from '../common/logging.ts';
-;
 import { messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.ts";
 import { existingScrobble, type ExistingScrobbleOpts } from '../utils/PlayComparisonUtils.ts';
 import { consumeQueue } from '../utils/AsyncUtils.ts';
@@ -119,11 +118,13 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     declare protected componentType: 'source';
 
-    public playRepo!: DrizzlePlayRepository;
-    protected queueRepo!: DrizzleQueueRepository;
-    protected playEventsRepo!: DrizzlePlayEventsRepository;
+    // public playRepo!: DrizzlePlayRepository;
+    // protected queueRepo!: DrizzleQueueRepository;
+    // protected playEventsRepo!: DrizzlePlayEventsRepository;
 
-    existingDiscoveredPlay: (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => Promise<PlayMatchResult>
+    //existingPlay: (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => Promise<PlayMatchResult>
+
+    protected existingPlayOpts!: ExistingScrobbleOpts;
 
     constructor(type: SourceType, name: string, config: SourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super(config);
@@ -147,14 +148,18 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.queuedGauge = metrics.queued;
         this.deadLetterGauge = metrics.deadLetter;
 
-        const existingScrobbleOpts: ExistingScrobbleOpts = {
+        this.existingPlayOpts = {
             logger: this.logger,
             transformRules: this.transformRules,
             transformPlay: this.transformPlay,
             existingSubmitted: async (_) => [undefined, undefined]
         }
-        this.existingDiscoveredPlay = (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => existingScrobble(playObjPre, existingScrobbles, existingScrobbleOpts, log);
+        //this.existingPlay = (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => existingScrobble(playObjPre, existingScrobbles, existingScrobbleOpts, log);
             
+    }
+
+    existingPlay(playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean): Promise<PlayMatchResult> {
+        return existingScrobble(playObjPre, existingScrobbles,  this.existingPlayOpts, log);
     }
 
     [Symbol.dispose]() {
@@ -280,7 +285,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 if (!this.canAuthUnattended()) {
                     this.logger.warn({ labels: 'Heartbeat' }, 'Source is not ready but will not try to initialize because auth state is not good and cannot be corrected unattended.')
                     return false;
-                }
+                }const noopTransform = async (x) => x;
                 try {
                     this.setStatus('Attempting to initialize...');
                     await this.initialize({ force: true, notify: true, notifyTitle: 'Could not initialize automatically' });
@@ -328,11 +333,11 @@ export default abstract class AbstractSource extends AbstractComponent implement
     }
 
     protected async postDatabase(): Promise<void> {
-        this.playRepo = new DrizzlePlayRepository(this.db, {logger: this.logger});
-        this.queueRepo = new DrizzleQueueRepository(this.db, {logger: this.logger});
-        this.playEventsRepo = new DrizzlePlayEventsRepository(this.db, {logger: this.logger});
-        this.playRepo.componentId = this.dbComponent.id;
-        this.queueRepo.componentId = this.dbComponent.id;
+        // this.playRepo = new DrizzlePlayRepository(this.db, {logger: this.logger});
+        // this.queueRepo = new DrizzleQueueRepository(this.db, {logger: this.logger});
+        // this.playEventsRepo = new DrizzlePlayEventsRepository(this.db, {logger: this.logger});
+        // this.playRepo.componentId = this.dbComponent.id;
+        // this.queueRepo.componentId = this.dbComponent.id;
         const counts = await this.playRepo.getComponentPlayCountByState();
         const discoveredCount = counts.find(x => x.state === 'discovered');
         if(discoveredCount !== undefined) {
@@ -585,7 +590,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             // don't want to return the same play (by id) when checking by source
             list = list.filter(x => x.id === undefined || (x.id !== play.id));
         }
-        return await this.existingDiscoveredPlay(play, list);
+        return await this.existingPlay(play, list);
         // if(matchResults.match) {
         //     return matchResults.closestMatchedPlay;
         // }

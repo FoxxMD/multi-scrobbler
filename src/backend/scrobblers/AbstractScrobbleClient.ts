@@ -142,7 +142,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     dupeLogger: Logger;
     deadLogger: Logger;
 
-    existingScrobble: (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => Promise<PlayMatchResult>
+    //existingPlay: (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => Promise<PlayMatchResult>
 
     declare config: CommonClientConfig;
 
@@ -161,10 +161,12 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     declare protected componentType: 'client';
 
-    public playRepo!: DrizzlePlayRepository;
-    protected queueRepo!: DrizzleQueueRepository;
-    protected playEventsRepo!: DrizzlePlayEventsRepository;
+    // public playRepo!: DrizzlePlayRepository;
+    // protected queueRepo!: DrizzleQueueRepository;
+    // protected playEventsRepo!: DrizzlePlayEventsRepository;
     protected migrationRepo!: GenericRepository<'componentMigrations'>;
+
+    protected existingPlayOpts!: ExistingScrobbleOpts;
 
     constructor(type: any, name: any, config: CommonClientConfig, emitter: EventEmitter, logger: Logger) {
         super(config);
@@ -223,13 +225,17 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.queuedGauge = clientMetrics.queued;
         this.deadLetterGauge = clientMetrics.deadLetter;
         this.scrobbledCounter = clientMetrics.scrobbled;
-        const existingScrobbleOpts: ExistingScrobbleOpts = {
+        this.existingPlayOpts = {
             logger: this.dupeLogger,
             transformRules: this.transformRules,
             transformPlay: this.transformPlay,
             existingSubmitted: this.findExistingSubmittedPlayObj
         }
-        this.existingScrobble = (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => existingScrobble(playObjPre, existingScrobbles, existingScrobbleOpts, log);
+        //this.existingPlay = (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => existingScrobble(playObjPre, existingScrobbles, existingScrobbleOpts, log);
+    }
+
+    existingPlay(playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean): Promise<PlayMatchResult> {
+        return existingScrobble(playObjPre, existingScrobbles,  this.this.existingPlayOpts, log);
     }
 
     [Symbol.dispose]() {
@@ -389,12 +395,12 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
 
     protected async postDatabase(): Promise<void> {
-        this.playRepo = new DrizzlePlayRepository(this.db, {logger: this.logger});
-        this.queueRepo = new DrizzleQueueRepository(this.db, {logger: this.logger});
-        this.playEventsRepo = new DrizzlePlayEventsRepository(this.db, {logger: this.logger});
+        // this.playRepo = new DrizzlePlayRepository(this.db, {logger: this.logger});
+        // this.queueRepo = new DrizzleQueueRepository(this.db, {logger: this.logger});
+        // this.playEventsRepo = new DrizzlePlayEventsRepository(this.db, {logger: this.logger});
         this.migrationRepo = new GenericRepository<'componentMigrations'>(this.db, 'componentMigrations', 'Component Migrations', {logger: this.logger});
-        this.playRepo.componentId = this.dbComponent.id;
-        this.queueRepo.componentId = this.dbComponent.id;
+        // this.playRepo.componentId = this.dbComponent.id;
+        // this.queueRepo.componentId = this.dbComponent.id;
         const counts = await this.playRepo.getComponentPlayCountByState();
         const scrobbledCount = counts.find(x => x.state === 'scrobbled');
         if(scrobbledCount !== undefined) {
@@ -759,7 +765,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
     
     public async alreadyScrobbled(playObj: PlayObject, log?: boolean): Promise<[boolean, PlayMatchResult]> {
-        const result = await this.existingScrobble(playObj, await this.getSOTScrobblesForPlay(playObj));
+        const result = await this.existingPlay(playObj, await this.getSOTScrobblesForPlay(playObj));
         return [result.match, result];
     }
 
@@ -1251,7 +1257,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
             let isDupe = false;
             if(dupeCheck) {
-                const { summary, ...matchResult } = await this.existingScrobble({...playEntity.play, id: playEntity.id, uid: playEntity.uid}, historicalPlays);
+                const { summary, ...matchResult } = await this.existingPlay({...playEntity.play, id: playEntity.id, uid: playEntity.uid}, historicalPlays);
                 events.push(dupeCheckToPlayEvent({ summary, ...matchResult, createdAt: dayjs().toISOString() }));
                 isDupe = matchResult.match;
             }
@@ -1481,7 +1487,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     let inQueue = false;
                     while (true) {
                         const { data, meta } = await this.playRepo.getQueued(INGRESS_QUEUE, { offset, retries: 0 });
-                        const existingQueued = await this.existingScrobble(play, data.map(x => asPlay(x.play)), false);
+                        const existingQueued = await this.existingPlay(play, data.map(x => asPlay(x.play)), false);
                         // want to be very confident of this
                         if (existingQueued.match && existingQueued.score > 0.99) {
                             this.logger.trace(`Not adding to queue because it is already in the queue\n${existingQueued.summary}`);

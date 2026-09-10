@@ -3,7 +3,7 @@ import {
     cacheFunctions,
 } from "@foxxmd/regex-buddy-core";
 import type EventEmitter from "events";
-import {MONITORING_ORIGIN_SYSTEM, MONITORING_ORIGIN_USER, type ComponentType, type LifecycleInput, type LifecycleStep, type PlayData, type PlayObject} from "../../core/Atomic.ts";
+import {INGRESS_QUEUE, isPlayObject, MONITORING_ORIGIN_SYSTEM, MONITORING_ORIGIN_USER, type ComponentType, type LifecycleInput, type LifecycleStep, type PlayData, type PlayObject} from "../../core/Atomic.ts";
 import { buildTrackString } from "../../core/StringUtils.ts";
 import type {CommonClientConfig} from "./infrastructure/config/client/index.ts";
 import type {CommonSourceConfig} from "./infrastructure/config/source/index.ts";
@@ -31,9 +31,9 @@ import { objectsEqual } from "../utils/DataUtils.ts";
 import type {RetentionOptions} from "./infrastructure/config/database.ts";
 import { getRetentionCompactAfterFromEnv, getRetentionDeleteAfterFromEnv, isCompactableProperty, parseRetentionOptions, parseRetentionOptionsDurations } from "./database/Database.ts";
 import type {DbConcrete} from "./database/drizzle/drizzleUtils.ts";
-import type {ComponentSelect} from "./database/drizzle/drizzleTypes.ts";
-import { DrizzlePlayRepository } from "./database/drizzle/repositories/PlayRepository.ts";
-import type {ClientType, MonitoringStatus, OptionalCacheUsage} from "../../core/Atomic.ts";
+import type {ComponentSelect, PlayEventSelect, PlaySelect, PlaySelectWithQueueStates, PlayWith, QueueStateSelect} from "./database/drizzle/drizzleTypes.ts";
+import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts } from "./database/drizzle/repositories/PlayRepository.ts";
+import type {ClientType, MonitoringStatus, OptionalCacheUsage, PlayMatchResult, QueueContext} from "../../core/Atomic.ts";
 import type {SourceType} from "../../core/Atomic.ts";
 import { DrizzleComponentRepository } from "./database/drizzle/repositories/ComponentRepository.ts";
 import dayjs, { type Dayjs } from "dayjs";
@@ -41,8 +41,14 @@ import { COMPONENT_STATE, type ComponentCommonApi, type ComponentCommonApiJson, 
 import type {WebhookPayload} from "./infrastructure/config/health/webhooks.ts";
 import type { ElementOf, MarkRequired } from "ts-essentials";
 import { serializeError } from "serialize-error";
+import { DrizzleQueueRepository } from "./database/drizzle/repositories/QueueRepository.ts";
+import { DrizzlePlayEventsRepository } from "./database/drizzle/repositories/PlayEventsRepository.ts";
+import { entityIsPlayEntity, queueStateToPlayEvent, stateChangeToPlayEvent } from "./database/drizzle/entityUtils.ts";
+import pMap from "p-map";
 
 export type AbstractComponentConfig = (CommonClientConfig | CommonSourceConfig) & { transformManager?: TransformerManager };
+
+const noopTransform = async (x) => x;
 
 export default abstract class AbstractComponent extends AbstractInitializable {
 
@@ -55,6 +61,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     protected db: DbConcrete;
     protected componentRepo!: DrizzleComponentRepository;
     protected dbComponent!: ComponentSelect;
+    public playRepo!: DrizzlePlayRepository;
+    protected queueRepo!: DrizzleQueueRepository;
+    protected playEventsRepo!: DrizzlePlayEventsRepository;
     componentId!: number;
     protected retentionOpts: RetentionOptions;
     status: string = 'Waiting to initialize...';
@@ -70,6 +79,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     lastActiveAt?: Dayjs;
     lastReadyAt?: Dayjs;
     protected lastUpdatedComponentDatesAt?: Dayjs
+
+    abstract existingPlay(playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean): Promise<PlayMatchResult>
 
     protected constructor(config: AbstractComponentConfig) {
         super(config);
@@ -116,6 +127,11 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             name: this.config?.name ?? this.name
         });
         this.componentId = this.dbComponent.id;
+        this.playRepo = new DrizzlePlayRepository(this.db, {logger: this.logger});
+        this.queueRepo = new DrizzleQueueRepository(this.db, {logger: this.logger});
+        this.playEventsRepo = new DrizzlePlayEventsRepository(this.db, {logger: this.logger});
+        this.playRepo.componentId = this.dbComponent.id;
+        this.queueRepo.componentId = this.dbComponent.id;
         this.lastActiveAt = this.dbComponent.lastActiveAt ?? undefined;
         this.lastReadyAt = this.dbComponent.lastReadyAt ?? undefined;
         return true;
