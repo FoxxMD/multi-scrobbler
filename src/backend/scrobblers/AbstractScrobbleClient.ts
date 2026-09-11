@@ -1132,6 +1132,14 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 return {playEntity, queue: queueState, events};
             }
 
+            if(transform) {
+                const {lifecycle = [], ...rest} = await this.transformPlay(playEntity.play, TRANSFORM_HOOK.preCompare, {useCachedResult: useCache});
+                if(lifecycle.length > 0) {
+                    events.push({...transformToPlayEvent(lifecycle), createdAt: dayjs()});
+                }
+                playEntity.play = rest;
+            }
+
             let historicalPlays: PlayObject[] = [];
 
             if (dupeCheck && this.upstreamRefresh.refreshEnabled) {
