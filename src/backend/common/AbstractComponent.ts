@@ -837,8 +837,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 if(this.componentType === COMPONENT_TYPE_CLIENT) {
                     this.setStatus(`Added Play from parent ${queueablePlay.uid} to queue`);
                 }
-                // TODO fully remove legacy event
-                //this.emitEvent('playQueued', {queuedPlay: queueablePlay});
+                this.emitEvent('playQueued', {queuedPlay: queueablePlay});
                 this.emitPlayInsert({ ...playRow[0], queueStates: [queueState], events: createdEvents } as unknown as PlayApiCommonDetailed);
                 this.queuedLength += 1;
                 this.queuedGauge.labels(this.getPrometheusLabels()).inc();
