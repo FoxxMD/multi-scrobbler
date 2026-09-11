@@ -509,9 +509,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         const hydratedQuery = asDayjsHydratedObject<QueryPlaysOptsJson, QueryPlaysOpts<Dayjs>>({...body.filters, with: ['queues']});
         res.sendStatus(200);
 
-        const queueFunc = component instanceof AbstractSource ? 
-        async (p: PlayWith<'queueStates'>) => await component.queuePlay([p], {...body.context, isRetry: true, reason: 'User requested reprocessing'})
-        : async (p: PlayWith<'queueStates'>) => await component.queueScrobble([p], {...body.context, isRetry: true, reason: 'User requested reprocessing'});
+        const queueFunc = async (p: PlayWith<'queueStates'>) => await component.queuePlay([p], {...body.context, isRetry: true, reason: 'User requested reprocessing'});
 
         const currentFilters = hydratedQuery;
         let more = true;
@@ -544,11 +542,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
             return res.sendStatus(404);
         }
 
-        if(component instanceof AbstractSource) {
-            await component.queuePlay([play], {...body, isRetry: true, reason: 'User requested reprocessing'});
-        } else {
-            await component.queueScrobble([play], {...body, isRetry: true, reason: 'User requested reprocessing'});
-        }
+        await component.queuePlay([play], {...body, isRetry: true, reason: 'User requested reprocessing'});
         return res.sendStatus(200);
     });
 
@@ -826,7 +820,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
             if(playEntity === undefined) {
                 return res.status(404).json({message: `Play ${deadId} does not exist`});
             }
-            client.queueScrobble(playEntity, {reason: 'user requested processing via API call'}).then(() => null);
+            client.queuePlay(playEntity, {reason: 'user requested processing via API call'}).then(() => null);
             const event = await pEvent(client.emitter, 'playUpdate', {
                 timeout: 10000,
                 filter: (val: PlayApiCommonDetailed) => val.uid === id

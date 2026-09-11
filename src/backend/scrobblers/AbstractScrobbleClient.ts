@@ -2,7 +2,6 @@ import { childLogger, type Logger, type LogLevel } from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
 import type {Duration} from "dayjs/plugin/duration.js";
 import type EventEmitter from "events";
-import { nanoid } from "nanoid";
 import type { MarkOptional } from "ts-essentials";
 import {
     type NowPlayingUpdateThreshold,
@@ -14,11 +13,10 @@ import {
     QUEUE_STATUS_COMPLETED,
     SOURCE_SOT,
     QUEUE_STATUS_FAILED,
-    isPlayObject,
     DEAD_LETTER_RETRIES_DEFAULT,
     PARSED_FROM
 } from "../../core/Atomic.ts";
-import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
+import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.ts";
 import AbstractComponent from "../common/AbstractComponent.ts";
 import { hasUpstreamError } from "../common/errors/UpstreamError.ts";
 import {
@@ -55,26 +53,23 @@ import { todayAwareFormat } from "../../core/TimeUtils.ts";
 import { AsyncTask, SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
 import { getRoot } from "../ioc.ts";
 import { staggerMapper, type StaggerOptions } from "../utils/AsyncUtils.ts";
-import pMap, { pMapIterable } from "p-map";
+import pMap from "p-map";
 import { existingScrobble, type ExistingScrobbleOpts } from "../utils/PlayComparisonUtils.ts";
 import { statefulInvariantTransform } from "../../core/PlayUtils.ts";
-import { normalizeStr } from "../utils/StringUtils.ts";
 import type { Counter, Gauge } from 'prom-client';
 import { generateLoggableAbortReason, ScrobbleSubmitError, SimpleError, StageChangeError } from "../common/errors/MSErrors.ts";
 import { serializeError} from 'serialize-error';
 import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetchUtils.ts";
 import { spawn, isAbortError, delay, waitForEvent } from 'abort-controller-x';
-import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, type QueryPlaysOpts, type WithPlayRelation } from "../common/database/drizzle/repositories/PlayRepository.ts";
-import type {PlayEventNew, PlayEventSelect, PlaySelect, PlaySelectWithQueueStates, PlayWith, QueueStateSelect} from "../common/database/drizzle/drizzleTypes.ts";
+import { type QueryPlaysOpts, type WithPlayRelation } from "../common/database/drizzle/repositories/PlayRepository.ts";
+import type {PlayEventNew, PlayEventSelect, PlaySelectWithQueueStates, PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
 import { asPlay } from "../../core/PlayMarshalUtils.ts";
-import { DrizzleQueueRepository } from "../common/database/drizzle/repositories/QueueRepository.ts";
 import { GenericRepository } from "../common/database/drizzle/repositories/BaseRepository.ts";
 import assert from "node:assert";
 import { COMPONENT_STATE, type ComponentClientApiJson, type PlayApiCommonDetailed, type QueueStateApi } from "../../core/Api.ts";
 import type {ComponentState} from "react";
-import { DrizzlePlayEventsRepository } from "../common/database/drizzle/repositories/PlayEventsRepository.ts";
 import { PLAY_EVENT_TYPE, type PlayEvent } from "../../core/PlayEvent.ts";
-import { dupeCheckToPlayEvent, entityIsPlayEntity, queueCompletionStateToPlayEvent, queueStateToPlayEvent, scrobbleToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from "../common/database/drizzle/entityUtils.ts";
+import { dupeCheckToPlayEvent, queueCompletionStateToPlayEvent, queueStateToPlayEvent, scrobbleToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from "../common/database/drizzle/entityUtils.ts";
 import type { PlayProcessingResult } from "../common/infrastructure/PlayProcessing.ts";
 import { PlayProcessingError } from "../common/errors/PlayProcessingError.ts";
 
@@ -115,14 +110,12 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     scrobbleDelay: number = 1000;
     scrobbleSleep: number = 2000;
     scrobbleWaitStopInterval: number = 2000;
-    protected scrobbleQueueAbortController: AbortController | undefined;
-    protected scrobbleQueuePromise: Promise<void> | undefined;
     protected deadQueueAbortController: AbortController | undefined;
     protected deadQueuePromise: Promise<void> | undefined;
     scrobbleRetries: number =  0;
     scrobbling: boolean = false;
     deadQueueProcessing: boolean = false;
-    queuedLength: number = 0;
+    //queuedLength: number = 0;
     deadLetterLength: number = 0;
     deadLetterQueued: number  = 0;
 
@@ -142,15 +135,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     dupeLogger: Logger;
     deadLogger: Logger;
 
-    existingScrobble: (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => Promise<PlayMatchResult>
-
     declare config: CommonClientConfig;
 
     notifier: Notifiers;
 
     protected scrobbledCounter: Counter;
-    protected queuedGauge: Gauge;
-    protected deadLetterGauge: Gauge;
     protected problemGauge: Gauge;
 
     protected staggerOpts: Partial<StaggerOptions>;
@@ -161,10 +150,12 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     declare protected componentType: 'client';
 
-    public playRepo!: DrizzlePlayRepository;
-    protected queueRepo!: DrizzleQueueRepository;
-    protected playEventsRepo!: DrizzlePlayEventsRepository;
+    // public playRepo!: DrizzlePlayRepository;
+    // protected queueRepo!: DrizzleQueueRepository;
+    // protected playEventsRepo!: DrizzlePlayEventsRepository;
     protected migrationRepo!: GenericRepository<'componentMigrations'>;
+
+    protected existingPlayOpts!: ExistingScrobbleOpts;
 
     constructor(type: any, name: any, config: CommonClientConfig, emitter: EventEmitter, logger: Logger) {
         super(config);
@@ -223,13 +214,17 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.queuedGauge = clientMetrics.queued;
         this.deadLetterGauge = clientMetrics.deadLetter;
         this.scrobbledCounter = clientMetrics.scrobbled;
-        const existingScrobbleOpts: ExistingScrobbleOpts = {
+        this.existingPlayOpts = {
             logger: this.dupeLogger,
             transformRules: this.transformRules,
             transformPlay: this.transformPlay,
             existingSubmitted: this.findExistingSubmittedPlayObj
         }
-        this.existingScrobble = (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => existingScrobble(playObjPre, existingScrobbles, existingScrobbleOpts, log);
+        //this.existingPlay = (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => existingScrobble(playObjPre, existingScrobbles, existingScrobbleOpts, log);
+    }
+
+    existingPlay(playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean): Promise<PlayMatchResult> {
+        return existingScrobble(playObjPre, existingScrobbles,  this.existingPlayOpts, log);
     }
 
     [Symbol.dispose]() {
@@ -389,12 +384,12 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
 
     protected async postDatabase(): Promise<void> {
-        this.playRepo = new DrizzlePlayRepository(this.db, {logger: this.logger});
-        this.queueRepo = new DrizzleQueueRepository(this.db, {logger: this.logger});
-        this.playEventsRepo = new DrizzlePlayEventsRepository(this.db, {logger: this.logger});
+        // this.playRepo = new DrizzlePlayRepository(this.db, {logger: this.logger});
+        // this.queueRepo = new DrizzleQueueRepository(this.db, {logger: this.logger});
+        // this.playEventsRepo = new DrizzlePlayEventsRepository(this.db, {logger: this.logger});
         this.migrationRepo = new GenericRepository<'componentMigrations'>(this.db, 'componentMigrations', 'Component Migrations', {logger: this.logger});
-        this.playRepo.componentId = this.dbComponent.id;
-        this.queueRepo.componentId = this.dbComponent.id;
+        // this.playRepo.componentId = this.dbComponent.id;
+        // this.queueRepo.componentId = this.dbComponent.id;
         const counts = await this.playRepo.getComponentPlayCountByState();
         const scrobbledCount = counts.find(x => x.state === 'scrobbled');
         if(scrobbledCount !== undefined) {
@@ -447,25 +442,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
     }
 
-    protected getIdentifier() {
-        return `${capitalize(this.type)} - ${this.name}`
-    }
-    protected getMachineId() {
-        return `${this.type}-${this.name}`;
-    }
-    public getSafeExternalName() {
-        return normalizeStr(this.name, {keepSingleWhitespace: false});
-    }
-    public getSafeExternalId() {
-        return `${this.type}-${normalizeStr(this.name, {keepSingleWhitespace: false})}`;
-    }
-
-    protected getPrometheusLabels() {
-        return {name: this.getSafeExternalName(), type: this.type};
-    }
-
     public getRunningState(): ComponentState {
-        if(this.scrobbleQueuePromise === undefined) {
+        if(this.ingressQueuePromise === undefined) {
             return COMPONENT_STATE.IDLE;
         }
         if(this.scrobbling && !this.isMonitoring()) {
@@ -759,7 +737,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
     
     public async alreadyScrobbled(playObj: PlayObject, log?: boolean): Promise<[boolean, PlayMatchResult]> {
-        const result = await this.existingScrobble(playObj, await this.getSOTScrobblesForPlay(playObj));
+        const result = await this.existingPlay(playObj, await this.getSOTScrobblesForPlay(playObj));
         return [result.match, result];
     }
 
@@ -869,8 +847,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }
         }
         this.setStatus('Starting scrobbling processing');
-        this.scrobbleQueueAbortController = new AbortController();
-        this.scrobbleQueuePromise = spawn(this.scrobbleQueueAbortController.signal, async (signal, { defer, fork }) => {
+        this.ingressQueueAbortController = new AbortController();
+        this.ingressQueuePromise = spawn(this.ingressQueueAbortController.signal, async (signal, { defer, fork }) => {
 
             defer(async () => {
                 this.scrobbling = false;
@@ -884,7 +862,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 state: COMPONENT_STATE.IDLE
             };
             if (isAbortError(e)) {
-                const err = generateLoggableAbortReason('Scrobble processing stopped', this.scrobbleQueueAbortController.signal);
+                const err = generateLoggableAbortReason('Scrobble processing stopped', this.ingressQueueAbortController.signal);
                 this.logger.info(err);
                 //this.logger.trace(e);
                 componentUpdate.status = 'Processing cancelled';
@@ -897,8 +875,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }
             this.emitComponentUpdate<Partial<ComponentClientApiJson>>(componentUpdate);
         }).finally(() => {
-            this.scrobbleQueueAbortController = undefined;
-            this.scrobbleQueuePromise = undefined;
+            this.ingressQueueAbortController = undefined;
+            this.ingressQueuePromise = undefined;
         });
     }
 
@@ -960,11 +938,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             this.logger.verbose(`Polling is already stopped!`);
             return;
         }
-        if(this.scrobbleQueueAbortController === undefined) {
+        if(this.ingressQueueAbortController === undefined) {
             this.logger.error('No abort controller found! Nothing to stop.');
             return false;
         }
-        this.scrobbleQueueAbortController.abort(reason)
+        this.ingressQueueAbortController.abort(reason)
         let timePasssed = 0;
         while(this.scrobbling === true && timePasssed < (this.scrobbleWaitStopInterval * 10)) {
             await sleep(this.scrobbleWaitStopInterval);
@@ -1043,74 +1021,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
     }
 
-    protected handlePlayProcessing = async (playEntity: PlaySelectWithQueueStates, signal?: AbortSignal) => {
-        let res: PlayProcessingResult,
-        err: Error;
-        try {
-            res = await this.processPlay(playEntity, signal);
-        } catch (e: unknown | Error | PlayProcessingError) {
-            if(isAbortError(e)) {
-                err = generateLoggableAbortReason('Interrupted by abort signal', this.scrobbleQueueAbortController.signal);
-                throw e;
-            }
-            if(e instanceof PlayProcessingError) {
-                err = e.cause as Error;
-                res = e.result;
-                if(e.showStopping) {
-                    throw e.cause;
-                }
-            } else {
-                const unhandledError = new Error('Unhandled error type while processing Play', {cause: e});
-                if(e instanceof Error) {
-                    err = e;
-                } else {
-                    err = unhandledError;
-                }
-                throw e;
-            }
-        } finally {
-            let queueStates: QueueStateSelect[];
-            const initialRetries = res.queue.retries ?? 0;
-            if(err !== undefined) {
-                res.queue.retries = (initialRetries + 1);
-                res.queue.updatedAt = dayjs();
-                await this.queueRepo.updateById(res.queue.id, {
-                    ...res.queue,
-                });
-                if(initialRetries === 0) {
-                    this.deadLetterGauge.labels(this.getPrometheusLabels()).inc();
-                    this.deadLetterLength += 1;
-                    this.deadLetterQueued += 1;
-                    this.emitEvent('deadLetter', res.playEntity);
-                }
-                queueStates = res.playEntity.queueStates.filter(x => x.queueName !== res.queue.queueName).concat([res.queue]);
-            } else {
-                await this.queueRepo.deleteByIds([res.queue.id]);
-                if(res.queue.retries > 0) {
-                    this.deadLetterGauge.labels(this.getPrometheusLabels()).dec();
-                    this.deadLetterLength -= 1;
-                    this.emitEvent('removeDeadLetter', { dead: { id: res.playEntity.uid } });
-                }
-                queueStates = res.playEntity.queueStates.filter(x => x.queueName !== res.queue.queueName)
-            }
-            if(initialRetries === 0) {
-                this.queuedGauge.labels(this.getPrometheusLabels()).dec();
-                this.queuedLength -= 1;
-                this.emitEvent('playDequeued', { queuedScrobble: playEntity });
-            } else {
-                this.emitEvent('deadLetterDequeued', res.playEntity);
-                this.deadLetterQueued -= 1;
-            }
-            this.playRepo.updateById(playEntity.id, {play: res.playEntity.play, state: res.playEntity.state, error: res.playEntity.error});
-            const createdEvents = await this.playEventsRepo.createMany(res.events.map(x => ({...x, playId: playEntity.id}))) as PlayEventSelect[];
-            this.emitPlayUpdate({
-                ...res.playEntity, 
-                events: ((res.playEntity as unknown as PlayWith<'events'>).events ?? []).concat(createdEvents),
-                queueStates
-            } as unknown as PlayApiCommonDetailed);
-        }
-    }
-
     protected getDefaultDeadLetterRetries() {
         return this.config.options?.deadLetterRetries ?? DEAD_LETTER_RETRIES_DEFAULT;
     }
@@ -1161,7 +1071,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             let more = true;
             let offset = 0;
             while(more) {
-                await this.queueScrobble(processable.data, {reason});
+                await this.queuePlay(processable.data, {reason});
                 more = processable.data.length === processable.meta.limit;
                 if(more) {
                     offset += processable.meta.limit;
@@ -1190,7 +1100,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         });
     }
 
-    processPlay = async (playEntity: PlaySelectWithQueueStates, signal?: AbortSignal): Promise<PlayProcessingResult> => {
+    async processPlay(playEntity: PlaySelectWithQueueStates, signal?: AbortSignal): Promise<PlayProcessingResult> {
         signal?.throwIfAborted();
 
         const queueState = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE);
@@ -1222,6 +1132,14 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 return {playEntity, queue: queueState, events};
             }
 
+            if(transform) {
+                const {lifecycle = [], ...rest} = await this.transformPlay(playEntity.play, TRANSFORM_HOOK.preCompare, {useCachedResult: useCache});
+                if(lifecycle.length > 0) {
+                    events.push({...transformToPlayEvent(lifecycle), createdAt: dayjs()});
+                }
+                playEntity.play = rest;
+            }
+
             let historicalPlays: PlayObject[] = [];
 
             if (dupeCheck && this.upstreamRefresh.refreshEnabled) {
@@ -1251,7 +1169,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
             let isDupe = false;
             if(dupeCheck) {
-                const { summary, ...matchResult } = await this.existingScrobble({...playEntity.play, id: playEntity.id, uid: playEntity.uid}, historicalPlays);
+                const { summary, ...matchResult } = await this.existingPlay({...playEntity.play, id: playEntity.id, uid: playEntity.uid}, historicalPlays);
                 events.push(dupeCheckToPlayEvent({ summary, ...matchResult, createdAt: dayjs().toISOString() }));
                 isDupe = matchResult.match;
             }
@@ -1328,7 +1246,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }
             if(isAbortError(e)) {
                 events.push(stateChangeToPlayEvent({state: 'failed'}));
-                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: generateLoggableAbortReason('Interrupted by abort signal', this.scrobbleQueueAbortController.signal)}));
+                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: generateLoggableAbortReason('Interrupted by abort signal', this.ingressQueueAbortController.signal)}));
                 throw e;
             }
             if(!events.some(x => x.eventName === PLAY_EVENT_TYPE.playStateChange)) {
@@ -1432,109 +1350,57 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
     }
 
-    queueScrobble = async (data: (PlayObject | PlayObject[]) | (PlaySelectWithQueueStates | PlaySelectWithQueueStates[]), context?: QueueContext & {isRetry?: boolean}) => {
-        const createdQueuedPlays: PlaySelect[] = [];
+    async findPreQueueExistingPlay(queueablePlay: PlayObject, context?: QueueContext & {isRetry?: boolean}) {
+        /**
+        * WHEN RUN IN A CLIENT COMPONENT
+        * 
+        * we *always* do checkExisting because by the time we are queueing plays
+        * * they should have already passed this check in a Source
+        * * or user has manually/forced a Play to be discovered on a Source
+        * * or we are running a migration job (future functionality)
+        * 
+        * and clients will never have the same level of noise/repeat polling as a source so its more useful to store and log all dupes
+        */
 
-        const dataArray = Array.isArray(data) ? data : [data];
-
-        if (dataArray.every(x => entityIsPlayEntity(x))) {
-            for (const playSelect of dataArray) {
-                let queue = playSelect.queueStates.find(x => x.queueName === INGRESS_QUEUE);
-                if (queue === undefined) {
-                    queue = await this.queueRepo.create({ componentId: this.dbComponent.id, playId: playSelect.id, queueName: INGRESS_QUEUE, context }) as QueueStateSelect;
-                } else {
-                    this.queueRepo.updateById(queue.id, { queueStatus: 'queued', context, error: undefined });
-                }
-                const events = await this.playEventsRepo.createMany([
-                    { playId: playSelect.id, ...stateChangeToPlayEvent({ state: 'queued' }) },
-                    { playId: playSelect.id, ...queueStateToPlayEvent({ ...queue, queueStatus: 'queued', error: undefined, context: context ?? queue.context }) }
-                ]) as PlayEventSelect[];
-                playSelect.state = 'queued';
-                await this.playRepo.updateById(playSelect.id, {state: 'queued'});
-                if (`events` in playSelect) {
-                    (playSelect as PlayWith<'events'>).events = (playSelect as PlayWith<'events'>).events.concat(events);
-                } else {
-                    (playSelect as unknown as PlayWith<'events'>).events = events;
-                }
-                this.emitPlayUpdate({ ...playSelect } as unknown as PlayApiCommonDetailed);
-                this.emitEvent(queue.retries > 0 ? 'deadQueued' : 'playQueued', {queuedPlay: playSelect});
-                createdQueuedPlays.push(playSelect);
-            }
-        } else if (dataArray.every(x => isPlayObject(x))) {
-            const monitoring = this.getMonitoringStatus();
-            const {
-                transform = true,
-            } = context || {};
-            const playDatas = dataArray.map(x => ({...x, meta: {...x.meta, wasMonitored: monitoring.monitoring, seenAt: dayjs()}}));
-
-            for await(const play of pMapIterable(playDatas, this.staggerMappers.preCompare(async x => transform === false ? await noopTransform(x) : await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 3})) {
-                try {
-                    // cheap check, looks for play data (non-meta) hash, playdate, and optionally mbid recording
-                    const cheapExisting = await this.playRepo.checkExisting(play, { queueName: INGRESS_QUEUE });
-                    if (cheapExisting !== undefined) {
-                        const qs = cheapExisting.queueStates.find(x => x.queueName === INGRESS_QUEUE);
-                        this.logger.trace(`Not adding to queue because it is already in the queue, discovered via hash/mbid, last queued at ${todayAwareFormat(qs.createdAt)}`);
-                        continue;
-                    }
-                    // then chunked queued plays
-                    let offset = 0;
-                    let inQueue = false;
-                    while (true) {
-                        const { data, meta } = await this.playRepo.getQueued(INGRESS_QUEUE, { offset, retries: 0 });
-                        const existingQueued = await this.existingScrobble(play, data.map(x => asPlay(x.play)), false);
-                        // want to be very confident of this
-                        if (existingQueued.match && existingQueued.score > 0.99) {
-                            this.logger.trace(`Not adding to queue because it is already in the queue\n${existingQueued.summary}`);
-                            inQueue = true;
-                            break;
-                        }
-                        if (data.length < meta.limit) {
-                            break;
-                        }
-                        offset += meta.limit;
-                    }
-
-                    if (inQueue) {
-                        continue;
-                    }
-                } catch (e) {
-                    this.logger.warn(new SimpleError('Failed to check queued scrobble for existing before adding, will continue with adding anyway', { cause: e }));
-                }
-                // not in queue or existing queued check failed for some reason and we don't want to lose scrobble
-                const {
-                    data,
-                    meta
-                } = play
-                const createPlayData = playToRepositoryCreatePlayOpts({
-                    play: {
-                        data,
-                        meta
-                    },
-                    componentId: this.dbComponent.id, 
-                    state: 'queued',
-                    parentId: play.id
-                });
-
-                const playRow = await this.playRepo.createPlays([createPlayData]);
-                const queueState = await this.queueRepo.create({componentId: this.dbComponent.id, playId: playRow[0].id, queueName: INGRESS_QUEUE, context}) as QueueStateSelect;
-                const createdEvents = await this.playEventsRepo.createMany([
-                    {playId: playRow[0].id, ...stateChangeToPlayEvent({state: 'queued'}), createdAt: playRow[0].seenAt.add(1,'ms')},
-                    {playId: playRow[0].id, ...queueStateToPlayEvent(queueState), createdAt: queueState.createdAt}
-                ]);
-                createdQueuedPlays.push(playRow[0]);
-                this.logger.debug(`Added ${buildTrackString(play)} to the queue`);
-                this.setStatus(`Added Play from parent ${play.uid} to queue`);
-
-                const queuedPlay = {id: nanoid(), source: meta.source, play: play}
-                this.emitEvent('playQueued', {queuedPlay: queuedPlay});
-                this.emitPlayInsert({...playRow[0], queueStates: [queueState], events: createdEvents} as unknown as PlayApiCommonDetailed);
-                this.queuedLength += 1;
-                this.queuedGauge.labels(this.getPrometheusLabels()).inc();
-            }
-        } else {
-            throw new Error('Data passed to queuePlay must be either all be PlayObject or all PlaySelect objects');
+        // we should be adding Plays to the queue without any transforms
+        // so run on "raw" play input
+        // if we have seen a play with close temporality with the exact input hash then skip it entirely
+        const cheapInputExisting = await this.playRepo.checkExisting(queueablePlay, {
+                inputHash: queueablePlay,
+                // existing should have been created *before* this play
+                seenAt: {
+                    type: 'lt',
+                    date: dayjs(),
+                },
+                // if this play is passed by a source
+                // then the playobject has the id of the source (parent) play
+                // and we can additionally check for frozen source play hash to bypass differences
+                // caused by lifecycle transforms
+                parentId: queueablePlay.id,
+            });
+        if (cheapInputExisting !== undefined) {
+            this.logger.trace(`Not adding ${buildTrackString(queueablePlay)} to queue because it already exists in db as Play ${cheapInputExisting.uid}`);
+            return cheapInputExisting;
         }
-        return createdQueuedPlays;
+
+        // may not be needed but if not existing cheap then
+        // we run a second check against only queued plays
+        // with the more comprehensive scoring dupe check
+        let offset = 0;
+        while (true) {
+            const { data, meta } = await this.playRepo.getQueued(INGRESS_QUEUE, { offset, retries: 0 });
+            const existingQueued = await this.existingPlay(queueablePlay, data.map(x => asPlay(x.play)), false);
+            // want to be very confident of this
+            if (existingQueued.match && existingQueued.score > 0.99) {
+                this.logger.trace(`Not adding to queue because it is already in the queue\n${existingQueued.summary}`);
+                return await this.playRepo.findByIdWith<'queueStates' | 'parent'>(existingQueued.closestMatchedPlay.id, ['queues','parent']);
+            }
+            if (data.length < meta.limit) {
+                break;
+            }
+            offset += meta.limit;
+        }
+        return;
     }
 
     queuePlayingNow = async (data: SourcePlayerObj, source: SourceIdentifier) => {

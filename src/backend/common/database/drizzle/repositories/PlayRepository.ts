@@ -2,7 +2,7 @@ import { childLogger } from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
 import { eq, inArray, relationsFilterToSQL, sql } from "drizzle-orm";
 import assert from "node:assert";
-import type { MarkOptional } from "ts-essentials";
+import type { MarkOptional, ElementOf } from "ts-essentials";
 import { type DateLike, type DeepReplaceValue, type PlayObject, type PlayState, QUEUE_STATUS_QUEUED, type QueueName, SCROBBLE_TS_SOC_END, TA_DEFAULT_ACCURACY, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
 import { removeUndefinedKeys } from '../../../../../core/DataUtils.ts';
 import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.ts";
@@ -671,7 +671,8 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         inputHash?: string | PlayObject,
         notId?: number
         seenAt?: PlayWhereOpts['seenAt']
-    } & ComponentConstrainedRepoOpts = {}): Promise<PlaySelectWithQueueStates | undefined> => {
+        parentId?: number
+    } & ComponentConstrainedRepoOpts = {}): Promise<PlayWith<'queueStates' | 'parent'> | undefined> => {
         const {
             queueName,
             componentId = this.componentId,
@@ -679,7 +680,8 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             states,
             inputHash,
             notId,
-            seenAt
+            seenAt,
+            parentId,
         } = opts;
         const hash = hashObject(playContentBasicInvariantTransform(play).data);
 
@@ -723,35 +725,93 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             }
         }
 
+        /**
+        * this is the crux of checkExisting
+        *
+        * we store hashed play `data` as a column for all plays that (should) always be updated
+        * so we can effectively compare if a play's essential data (for scrobbling) is the same against any row's play
+        * without needing to compare/deserialize the play json column
+        *
+        * all where condition before this are just narrowing down the context/component for the play
+        * and everything below is how we actually match the play
+        *
+        * `playHashOr` is a giant OR that is AND'd to the above where conditions
+        * we *must* have at least one of the play hash values match from existing rows
+        * against our candidate play hash. if one matches then we know we have an exact match (dupe)
+        *
+        * this is a "cheaper" version of the full dupe match we do in queue processing
+        * since this is "all-or-nothing" (matching by hash rather than score)
+        * but its a good first line of defense against dupes that are obviousl copies
+        * 
+        * it's also how we ignore exact plays from history-polling sources
+        * since those plays are always the same
+        */
+        const playHashOr: ElementOf<typeof where.AND> = {
+            OR: [
+                {
+                    playHash: hash
+                }
+            ]
+        };
+
         const mbidId = playMbidIdentifier(play);
         if (mbidId !== undefined || inputHash !== undefined) {
-            where.AND = [{
-                OR: [
-                    {
-                        playHash: hash
-                    }
-                ]
-            }];
+            // }];
             if (mbidId !== undefined) {
-                where.AND[0].OR.push({ mbidIdentifier: mbidId });
+                playHashOr.OR.push({ mbidIdentifier: mbidId });
             }
             if (inputHash !== undefined) {
-                where.AND[0].OR.push({ input: { playHash: typeof inputHash === 'string' ? inputHash : hashObject(playContentBasicInvariantTransform(inputHash).data) } });
+                playHashOr.OR.push({ input: { playHash: typeof inputHash === 'string' ? inputHash : hashObject(playContentBasicInvariantTransform(inputHash).data) } });
             }
-        } else {
-            where.playHash = hash;
         }
+
+        /**
+        * if a parent id is provided we are likely trying to find
+        * a parent *source* play that is now being queued for a *client*
+        *
+        * we can check if a parent final play hash (frozen after preCompare)
+        * matches the incoming play hash which lets us determine if any existing client plays
+        * match against a (potentially) duped source play without needing to worry about transformed
+        * precompare plays from the client since the source hash is frozen
+        * 
+        * IT IS IMPORTANT to be aware that play data matching is not exhaustive when determining
+        * if a play returned from checkExisting matches a candidate, due to this condition,
+        * because the returned play may have been transformed later in its lifecycle but we matched
+        * on the frozen source play SO if using this in the context of a client we must either:
+        * 
+        * * do not data checking and assume returned play is a match or
+        * * do data checking only if there is no parent or
+        * * do data checking and include parent in data checking context
+        */
+
+        if (parentId !== undefined) {
+            playHashOr.OR.push({
+                parent: {
+                    id: parentId,
+                    playHash: hash
+                }
+            });
+        }
+        
+        where.AND = [playHashOr];
 
         const res = await this.db.query.plays.findMany({
             where,
             with: {
                 queueStates: true,
-                input: true
+                input: true,
+                parent: true
             }
         });
         if(res.length === 0) {
             return undefined;
         }
+        /**
+         * This is the only acceptable data matching we can do
+         * because main play may have been transformed and we matched on frozen parent
+         * 
+         * but the *playedAt* date will still be the same since that is something we don't ever transform
+         */
         return res.map(x => ({...x, play: hydratePlaySelect(x)})).find(x => {
             const temporalComparison = comparePlayTemporally(x.play, play, {logger: this.logger});
             return hasAcceptableTemporalAccuracy(temporalComparison.match, taAccuracy)
@@ -815,6 +875,10 @@ group by componentId,compacted;`);
     }
 
     async updateById(id: number, data: Partial<PlayNew> & {event?: boolean, reason?: string, error?: ErrorLike}): Promise<typeof this.table.$inferSelect> {
+        if(data.play !== undefined) {
+            data.playHash = hashObject(playContentBasicInvariantTransform(data.play).data);
+            data.mbidIdentifier = playMbidIdentifier(data.play);
+        }
         const res = await super.updateById(id, data) as PlaySelect;
         if(data.event === true) {
             if(data.state !== undefined) {
