@@ -875,6 +875,10 @@ group by componentId,compacted;`);
     }
 
     async updateById(id: number, data: Partial<PlayNew> & {event?: boolean, reason?: string, error?: ErrorLike}): Promise<typeof this.table.$inferSelect> {
+        if(data.play !== undefined) {
+            data.playHash = hashObject(playContentBasicInvariantTransform(data.play).data);
+            data.mbidIdentifier = playMbidIdentifier(data.play);
+        }
         const res = await super.updateById(id, data) as PlaySelect;
         if(data.event === true) {
             if(data.state !== undefined) {
