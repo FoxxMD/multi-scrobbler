@@ -1,6 +1,6 @@
 import { childLogger } from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
-import { eq, inArray, relationsFilterToSQL, sql, isNull } from "drizzle-orm";
+import { eq, inArray, relationsFilterToSQL, sql } from "drizzle-orm";
 import assert from "node:assert";
 import type { MarkOptional, ElementOf } from "ts-essentials";
 import { type DateLike, type DeepReplaceValue, type PlayObject, type PlayState, QUEUE_STATUS_QUEUED, type QueueName, SCROBBLE_TS_SOC_END, TA_DEFAULT_ACCURACY, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
@@ -672,7 +672,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         notId?: number
         seenAt?: PlayWhereOpts['seenAt']
         parentId?: number
-    } & ComponentConstrainedRepoOpts = {}): Promise<PlaySelectWithQueueStates | undefined> => {
+    } & ComponentConstrainedRepoOpts = {}): Promise<PlayWith<'queueStates' | 'parent'> | undefined> => {
         const {
             queueName,
             componentId = this.componentId,
@@ -799,7 +799,8 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             where,
             with: {
                 queueStates: true,
-                input: true
+                input: true,
+                parent: true
             }
         });
         if(res.length === 0) {
