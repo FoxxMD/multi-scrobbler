@@ -725,6 +725,27 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             }
         }
 
+        /**
+        * this is the crux of checkExisting
+        *
+        * we store hashed play `data` as a column for all plays that (should) always be updated
+        * so we can effectively compare if a play's essential data (for scrobbling) is the same against any row's play
+        * without needing to compare/deserialize the play json column
+        *
+        * all where condition before this are just narrowing down the context/component for the play
+        * and everything below is how we actually match the play
+        *
+        * `playHashOr` is a giant OR that is AND'd to the above where conditions
+        * we *must* have at least one of the play hash values match from existing rows
+        * against our candidate play hash. if one matches then we know we have an exact match (dupe)
+        *
+        * this is a "cheaper" version of the full dupe match we do in queue processing
+        * since this is "all-or-nothing" (matching by hash rather than score)
+        * but its a good first line of defense against dupes that are obviousl copies
+        * 
+        * it's also how we ignore exact plays from history-polling sources
+        * since those plays are always the same
+        */
         const playHashOr: ElementOf<typeof where.AND> = {
             OR: [
                 {
@@ -744,13 +765,25 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             }
         }
 
-        // if a parent id is provided we are likely trying to find
-        // a parent *source* play that is now being queued for a *client*
-        //
-        // we can check if a parent final play hash (frozen after preCompare)
-        // matches the incoming play hash which lets us determine if any existing client plays
-        // match against a (potentially) duped source play without needing to worry about transformed
-        // precompare plays from the client since the source hash is frozen
+        /**
+        * if a parent id is provided we are likely trying to find
+        * a parent *source* play that is now being queued for a *client*
+        *
+        * we can check if a parent final play hash (frozen after preCompare)
+        * matches the incoming play hash which lets us determine if any existing client plays
+        * match against a (potentially) duped source play without needing to worry about transformed
+        * precompare plays from the client since the source hash is frozen
+        * 
+        * IT IS IMPORTANT to be aware that play data matching is not exhaustive when determining
+        * if a play returned from checkExisting matches a candidate, due to this condition,
+        * because the returned play may have been transformed later in its lifecycle but we matched
+        * on the frozen source play SO if using this in the context of a client we must either:
+        * 
+        * * do not data checking and assume returned play is a match or
+        * * do data checking only if there is no parent or
+        * * do data checking and include parent in data checking context
+        */
+
         if (parentId !== undefined) {
             playHashOr.OR.push({
                 parent: {
@@ -772,6 +805,12 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         if(res.length === 0) {
             return undefined;
         }
+        /**
+         * This is the only acceptable data matching we can do
+         * because main play may have been transformed and we matched on frozen parent
+         * 
+         * but the *playedAt* date will still be the same since that is something we don't ever transform
+         */
         return res.map(x => ({...x, play: hydratePlaySelect(x)})).find(x => {
             const temporalComparison = comparePlayTemporally(x.play, play, {logger: this.logger});
             return hasAcceptableTemporalAccuracy(temporalComparison.match, taAccuracy)
