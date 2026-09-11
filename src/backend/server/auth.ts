@@ -12,6 +12,7 @@ import AbstractSource from "../sources/AbstractSource.ts";
 import { makeComponentMiddle } from './middleware.ts';
 import { findAuthIssue, SimpleError } from '../common/errors/MSErrors.ts';
 import type { createTypedRouter } from '@minisylar/express-typed-router';
+import * as z from 'zod';
 
 export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTypedRouter>, logger: Logger, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
     const componentAwareMiddle = makeComponentMiddle(scrobbleSources, scrobbleClients);
