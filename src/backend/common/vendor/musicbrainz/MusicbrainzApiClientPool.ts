@@ -84,7 +84,7 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
                         }
                     } break;
                     case 'api.brainzmash.cc': {
-                        points = rate.requests ?? 3;
+                        points = rate.requests ?? 4;
                         duration = rate.perTime ?? 1;
                         const reqRate = maxRequestsPerSecond(points, duration);
                         if (reqRate > 4) {
