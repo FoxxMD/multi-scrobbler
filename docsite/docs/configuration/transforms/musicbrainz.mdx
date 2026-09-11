@@ -75,9 +75,9 @@ Create an empty Musicbrainz API config in the `data` for your [stage configurati
 
 <details>
 
-<summary>Additional Musicbrainz Servers</summary>
+<summary>Additional Musicbrainz Servers and Rate Limiting</summary>
 
-Other, or additional, Musicbrainz Servers/Mirrors can be added to the API configuration. If more than one server is defined then multi-scrobbler will round-robin load balance API calls.
+Other, or _additional_, Musicbrainz Servers/Mirrors can be added to the API configuration. **If more than one server is defined then multi-scrobbler will load balance requests based on available rate capacity.**
 
 Use `url` to define the base URL of the Musicbrainz server to use. If `url` is not defined multi-scrobbler assumes it is the primary Musicbrainz server, `https://musicbrainz.org`.
 
@@ -108,6 +108,51 @@ Example of multiple servers:
 }
 ```
 
+<h3>Rate Limiting</h3>
+
+Additional Musicbrainz servers can optionally be configured with rate limiting.
+
+Rate limiting is defined by **max number of requests** within **timespan of N seconds.**
+
+These constraints apply:
+
+* Official Musicbrainz server (`https://musicbrainz.org` or when no `url` is defined) is hard-limited to `1 req/s`
+* Brainzmash is hard-limited to `3 req/s`
+* No limits for other, custom servers but a default `1 req/s` limit is applied when none is configured
+
+Example of configuring rate limit:
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "musicbrainz",
+      "name": "MyMB",
+      "data": {
+        "apis": [
+          {
+            "enable": true
+            // uses default Musicbrainz server https://musicbrainz.org
+            // hard-limited to 1req/s
+          },
+          // additional server
+          {
+            "enable": true,
+            "url": "https://my.mb.mirror.domain.com",
+            "rate": {
+              // IE 6 req/s
+              "requests": 6, // maximum of 6 requests
+              "perTime": 1 // can be made within 1 second
+            }
+          }
+        ]
+      },
+    }
+  ]
+}
+```
+
 </details>
 
 <DetailsAdmo type="tip" summary="BrainzMash Musicbrainz Server">
@@ -119,7 +164,7 @@ BrainzMash is a community-run pool of read-only hybrid Musicbrainz/[Lidarr](http
 There are pros and cons to using this service. Read these carefully before using BrainzMash:
 
 * **Pros**
-  * Higher rate limit than official Musicbrainz server -- Multi-scrobbler can make requests more often and faster
+  * Higher rate limit than official Musicbrainz server (6req/s vs 1req/s)
   * Potentially less downtime due to distributed nature
 * **Cons**
   * There is implicit trust in how BrainzMash handles your traffic:
