@@ -37,7 +37,7 @@ import { messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.ts";
 import { existingScrobble, type ExistingScrobbleOpts } from '../utils/PlayComparisonUtils.ts';
 import { consumeQueue } from '../utils/AsyncUtils.ts';
 import pMap from 'p-map';
-import type { Counter, Gauge } from 'prom-client';
+import type { Counter } from 'prom-client';
 import { spawn, isAbortError, delay, throwIfAborted, waitForEvent } from 'abort-controller-x';
 import { generateLoggableAbortReason, SimpleError, StageChangeError } from '../common/errors/MSErrors.ts';
 import { type QueryPlaysOpts, type RequestPlayQuery, type WithPlayRelation } from '../common/database/drizzle/repositories/PlayRepository.ts';
@@ -45,7 +45,7 @@ import { asPlay } from '../../core/PlayMarshalUtils.ts';
 import { AsyncTask, SimpleIntervalJob, ToadScheduler } from 'toad-scheduler';
 import { COMPONENT_STATE, type ComponentSourceApiJson, type ComponentState, type PlayApiCommonDetailed } from '../../core/Api.ts';
 import type {PaginatedResponse, QueueStateApi} from "../../core/Api.ts";
-import type { PlayEventNew, PlayEventSelect, PlaySelectWithQueueStates, PlayWith, QueueStateSelect } from '../common/database/drizzle/drizzleTypes.ts';
+import type { PlayEventNew, PlayEventSelect, PlaySelectWithQueueStates, PlayWith } from '../common/database/drizzle/drizzleTypes.ts';
 import { PLAY_EVENT_TYPE, type PlayEvent } from '../../core/PlayEvent.ts';
 import { dupeCheckToPlayEvent, queueCompletionStateToPlayEvent, queueStateToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from '../common/database/drizzle/entityUtils.ts';
 import type { PlayProcessingResult } from '../common/infrastructure/PlayProcessing.ts';
@@ -76,8 +76,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
     canPoll: boolean = false;
     polling: boolean = false;
     canBacklog: boolean = false;
-    protected discoverQueueAbortController: AbortController | undefined;
-    protected discoverQueuePromise: Promise<void> | undefined;
     protected deadQueueAbortController: AbortController | undefined;
     protected deadQueuePromise: Promise<void> | undefined;
     protected abortController: AbortController | undefined;
@@ -86,7 +84,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
     pollRetries: number = 0;
     tracksDiscovered: number = 0;
     tracksDiscoveredTotal: number = 0;
-    //queuedLength: number = 0;
     deadLetterLength: number = 0;
     deadLetterQueued: number  = 0;
 
@@ -110,16 +107,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
     protected loggerLabel: string;
 
     protected discoveredCounter: Counter;
-    //protected queuedGauge: Gauge;
-    protected deadLetterGauge: Gauge;
 
     declare protected componentType: 'source';
-
-    // public playRepo!: DrizzlePlayRepository;
-    // protected queueRepo!: DrizzleQueueRepository;
-    // protected playEventsRepo!: DrizzlePlayEventsRepository;
-
-    //existingPlay: (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => Promise<PlayMatchResult>
 
     protected existingPlayOpts!: ExistingScrobbleOpts;
 
@@ -255,7 +244,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             }
         }
         if(this.isReady()) {
-            if(this.discoverQueuePromise === undefined) {
+            if(this.ingressQueuePromise === undefined) {
                 this.setStatus('Starting discovery queue...');
                 await this.startDiscoveryQueue();
             }
@@ -871,14 +860,14 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     startDiscoveryQueue = async () => {
         this.setStatus('Starting discovery queue processing');
-        this.discoverQueueAbortController = new AbortController();
-        this.discoverQueuePromise = spawn(this.discoverQueueAbortController.signal, async (signal, { defer }) => {
+        this.ingressQueueAbortController = new AbortController();
+        this.ingressQueuePromise = spawn(this.ingressQueueAbortController.signal, async (signal, { defer }) => {
                 await this.processDiscoveryQueue(signal);
         }).catch((e) => {
             const componentUpdate: Partial<ComponentSourceApiJson> = {
             };
             if (isAbortError(e)) {
-                const err = generateLoggableAbortReason('Discovery queue processing stopped', this.discoverQueueAbortController.signal);
+                const err = generateLoggableAbortReason('Discovery queue processing stopped', this.ingressQueueAbortController.signal);
                 this.logger.info(err);
                 //this.logger.trace(e);
                 componentUpdate.status = 'Discovery queue processing cancelled';
@@ -891,28 +880,28 @@ export default abstract class AbstractSource extends AbstractComponent implement
             }
             this.emitComponentUpdate<Partial<ComponentSourceApiJson>>(componentUpdate);
         }).finally(() => {
-            this.discoverQueueAbortController = undefined;
-            this.discoverQueuePromise = undefined;
+            this.ingressQueueAbortController = undefined;
+            this.ingressQueuePromise = undefined;
         });
     }
 
     tryStopDiscoveryQueue = async (reason?: string | Error) => {
-        if(this.discoverQueuePromise === undefined) {
+        if(this.ingressQueuePromise === undefined) {
             this.logger.verbose(`Discovery is already stopped`);
             return;
         }
-        if(this.discoverQueueAbortController === undefined) {
+        if(this.ingressQueueAbortController === undefined) {
             this.logger.error('No abort controller found! Nothing to stop.');
             return false;
         }
-        this.discoverQueueAbortController.abort(reason)
+        this.ingressQueueAbortController.abort(reason)
         let timePasssed = 0;
-        while(this.discoverQueuePromise !== undefined && timePasssed < (this.stopPollingWaitInterval * 10)) {
+        while(this.ingressQueuePromise !== undefined && timePasssed < (this.stopPollingWaitInterval * 10)) {
             await sleep(this.stopPollingWaitInterval);
             timePasssed += this.stopPollingWaitInterval;
             this.logger.verbose(`Waiting for discovery processing stop signal to be acknowledged (waited ${timePasssed}ms)`);
         }
-        if(this.discoverQueuePromise !== undefined) {
+        if(this.ingressQueuePromise !== undefined) {
             throw new Error('Could not stop discovery processing! Or signal was lost');
         }
         return true;
@@ -1009,79 +998,12 @@ export default abstract class AbstractSource extends AbstractComponent implement
         }
     }
 
-    protected handlePlayProcessing = async (playEntity: PlaySelectWithQueueStates, signal?: AbortSignal) => {
-        let res: PlayProcessingResult,
-        err: Error;
-        try {
-            res = await this.processQueueCurrentPlay(playEntity, signal);
-        } catch (e: unknown | Error | PlayProcessingError) {
-            if(isAbortError(e)) {
-                err = generateLoggableAbortReason('Interrupted by abort signal', this.discoverQueueAbortController.signal);
-                throw e;
-            }
-            if(e instanceof PlayProcessingError) {
-                err = e.cause as Error;
-                res = e.result;
-                if(e.showStopping) {
-                    throw e.cause;
-                }
-            } else {
-                const unhandledError = new Error('Unhandled error type while processing Play', {cause: e});
-                if(e instanceof Error) {
-                    err = e;
-                } else {
-                    err = unhandledError;
-                }
-                throw e;
-            }
-        } finally {
-            let queueStates: QueueStateSelect[];
-            const initialRetries = res.queue.retries ?? 0;
-            if(err !== undefined) {
-                res.queue.retries = (initialRetries + 1);
-                res.queue.updatedAt = dayjs();
-                await this.queueRepo.updateById(res.queue.id, {
-                    ...res.queue,
-                });
-                if(initialRetries === 0) {
-                    this.deadLetterGauge.labels(this.getPrometheusLabels()).inc();
-                    this.deadLetterLength += 1;
-                    this.deadLetterQueued += 1;
-                    this.emitEvent('deadLetter', res.playEntity);
-                }
-                queueStates = res.playEntity.queueStates.filter(x => x.queueName !== res.queue.queueName).concat([res.queue]);
-            } else {
-                await this.queueRepo.deleteByIds([res.queue.id]);
-                if(res.queue.retries > 0) {
-                    this.deadLetterGauge.labels(this.getPrometheusLabels()).dec();
-                    this.deadLetterLength -= 1;
-                    this.emitEvent('removeDeadLetter', { dead: { id: res.playEntity.uid } });
-                }
-                queueStates = res.playEntity.queueStates.filter(x => x.queueName !== res.queue.queueName);
-            }
-            if(initialRetries === 0) {
-                this.queuedGauge.labels(this.getPrometheusLabels()).dec();
-                this.queuedLength -= 1;
-                this.emitEvent('playDequeued', { queuedScrobble: playEntity });
-            } else {
-                this.emitEvent('deadLetterDequeued', res.playEntity);
-                this.deadLetterQueued -= 1;
-            }
-            this.playRepo.updateById(playEntity.id, {play: res.playEntity.play, state: res.playEntity.state, error: res.playEntity.error});
-            const createdEvents = await this.playEventsRepo.createMany(res.events.map(x => ({...x, playId: playEntity.id}))) as PlayEventSelect[];
-            this.emitPlayUpdate({
-                ...res.playEntity, 
-                events: ((res.playEntity as unknown as PlayWith<'events'>).events ?? []).concat(createdEvents),
-                queueStates
-            } as unknown as PlayApiCommonDetailed);
-        }
-    }
-
     protected getDefaultDeadLetterRetries() {
         return this.config.options?.deadLetterRetries ?? DEAD_LETTER_RETRIES_DEFAULT;
     }
 
-    protected processQueueCurrentPlay = async (playEntity: PlaySelectWithQueueStates, signal?: AbortSignal): Promise<PlayProcessingResult> => {
+    //processQueueCurrentPlay
+    async processPlay(playEntity: PlaySelectWithQueueStates, signal?: AbortSignal): Promise<PlayProcessingResult> {
         signal?.throwIfAborted();
         this.setStatus(`Processing Play ${playEntity.uid}`);
 
@@ -1187,7 +1109,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             }
             if(isAbortError(e)) {
                 events.push(stateChangeToPlayEvent({state: 'failed'}));
-                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: generateLoggableAbortReason('Interrupted by abort signal', this.discoverQueueAbortController.signal)}));
+                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: generateLoggableAbortReason('Interrupted by abort signal', this.ingressQueueAbortController.signal)}));
                 throw e;
             }
             if(!events.some(x => x.eventName === PLAY_EVENT_TYPE.playStateChange)) {

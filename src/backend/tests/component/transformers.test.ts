@@ -13,18 +13,29 @@ import { findCauseByMessage } from "../../utils/ErrorUtils.ts";
 import NativeTransformer from "../../common/transforms/NativeTransformer.ts";
 import { initMemoryCache } from "../../common/Cache.ts";
 import { Cacheable } from "cacheable";
-import type {TransformerCommonConfig} from "../../../core/Atomic.ts";
+import type {PlayMatchResult, PlayObject, QueueContext, TransformerCommonConfig} from "../../../core/Atomic.ts";
 import TransformerManager from "../../common/transforms/TransformerManager.ts";
 import { transientCache } from "../utils/TransientTestUtils.ts";
 import dayjs from "dayjs";
 import clone from "clone";
 import { artistCreditsToNames, artistNamesToCredits } from "../../../core/StringUtils.ts";
 import { COMPONENT_STATE, type ComponentState } from "../../../core/Api.ts";
+import type { PlayWith, PlaySelectWithQueueStates } from "../../common/database/drizzle/drizzleTypes.ts";
+import type { PlayProcessingResult } from "../../common/infrastructure/PlayProcessing.ts";
 
 chai.use(asPromised);
 
 const componentId = () => `test-${Date.now()}`; 
 class TestComponent extends AbstractComponent {
+    existingPlay(playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean): Promise<PlayMatchResult> {
+        throw new Error("Method not implemented.");
+    }
+    findPreQueueExistingPlay(queueablePlay: PlayObject, context?: QueueContext & { isRetry?: boolean; }): Promise<PlayWith<"parent" | "queueStates">> {
+        throw new Error("Method not implemented.");
+    }
+    processPlay(playEntity: PlaySelectWithQueueStates, signal?: AbortSignal): Promise<PlayProcessingResult> {
+        throw new Error("Method not implemented.");
+    }
     public getRunningState(): ComponentState {
        return COMPONENT_STATE.RUNNING;
     }

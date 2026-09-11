@@ -7,7 +7,7 @@ import {COMPONENT_TYPE_CLIENT, INGRESS_QUEUE, isPlayObject, MONITORING_ORIGIN_SY
 import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
 import type {CommonClientConfig} from "./infrastructure/config/client/index.ts";
 import type {CommonSourceConfig} from "./infrastructure/config/source/index.ts";
-import { mergeSimpleError, SimpleError, SkipTransformStageError, StageChangeError, StagePrerequisiteError, StageTransformError, TransformRulesError } from "./errors/MSErrors.ts";
+import { generateLoggableAbortReason, mergeSimpleError, SimpleError, SkipTransformStageError, StageChangeError, StagePrerequisiteError, StageTransformError, TransformRulesError } from "./errors/MSErrors.ts";
 import {
     FLOW_CONTROL_TERM,
     type PlayTransformRules,
@@ -46,6 +46,9 @@ import { DrizzlePlayEventsRepository } from "./database/drizzle/repositories/Pla
 import { entityIsPlayEntity, queueStateToPlayEvent, stateChangeToPlayEvent } from "./database/drizzle/entityUtils.ts";
 import pMap from "p-map";
 import type { Gauge } from 'prom-client';
+import type { PlayProcessingResult } from "./infrastructure/PlayProcessing.ts";
+import { isAbortError } from "abort-controller-x";
+import { PlayProcessingError } from "./errors/PlayProcessingError.ts";
 
 export type AbstractComponentConfig = (CommonClientConfig | CommonSourceConfig) & { transformManager?: TransformerManager };
 
@@ -70,6 +73,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     status: string = 'Waiting to initialize...';
     emitter: EventEmitter;
 
+    protected ingressQueueAbortController: AbortController | undefined;
+    protected ingressQueuePromise: Promise<void> | undefined;
+
     monitoringActivity?: boolean | undefined;
     monitoringActivityDefault: boolean = true;
 
@@ -82,8 +88,11 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     protected lastUpdatedComponentDatesAt?: Dayjs
 
     queuedLength: number = 0;
+    deadLetterLength: number = 0;
+    deadLetterQueued: number  = 0;
 
     protected queuedGauge!: Gauge;
+    protected deadLetterGauge!: Gauge;
 
     abstract existingPlay(playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean): Promise<PlayMatchResult>
 
@@ -841,4 +850,74 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     }
 
     abstract findPreQueueExistingPlay(queueablePlay: PlayObject, context?: QueueContext & {isRetry?: boolean}): Promise<PlayWith<'parent' | 'queueStates'>>
+
+    protected handlePlayProcessing = async (playEntity: PlaySelectWithQueueStates, signal?: AbortSignal) => {
+        let res: PlayProcessingResult,
+        err: Error;
+        try {
+            res = await this.processPlay(playEntity, signal);
+        } catch (e: unknown | Error | PlayProcessingError) {
+            if(isAbortError(e)) {
+                err = generateLoggableAbortReason('Interrupted by abort signal', this.ingressQueueAbortController.signal);
+                throw e;
+            }
+            if(e instanceof PlayProcessingError) {
+                err = e.cause as Error;
+                res = e.result;
+                if(e.showStopping) {
+                    throw e.cause;
+                }
+            } else {
+                const unhandledError = new Error('Unhandled error type while processing Play', {cause: e});
+                if(e instanceof Error) {
+                    err = e;
+                } else {
+                    err = unhandledError;
+                }
+                throw e;
+            }
+        } finally {
+            let queueStates: QueueStateSelect[];
+            const initialRetries = res.queue.retries ?? 0;
+            if(err !== undefined) {
+                res.queue.retries = (initialRetries + 1);
+                res.queue.updatedAt = dayjs();
+                await this.queueRepo.updateById(res.queue.id, {
+                    ...res.queue,
+                });
+                if(initialRetries === 0) {
+                    this.deadLetterGauge.labels(this.getPrometheusLabels()).inc();
+                    this.deadLetterLength += 1;
+                    this.deadLetterQueued += 1;
+                    this.emitEvent('deadLetter', res.playEntity);
+                }
+                queueStates = res.playEntity.queueStates.filter(x => x.queueName !== res.queue.queueName).concat([res.queue]);
+            } else {
+                await this.queueRepo.deleteByIds([res.queue.id]);
+                if(res.queue.retries > 0) {
+                    this.deadLetterGauge.labels(this.getPrometheusLabels()).dec();
+                    this.deadLetterLength -= 1;
+                    this.emitEvent('removeDeadLetter', { dead: { id: res.playEntity.uid } });
+                }
+                queueStates = res.playEntity.queueStates.filter(x => x.queueName !== res.queue.queueName)
+            }
+            if(initialRetries === 0) {
+                this.queuedGauge.labels(this.getPrometheusLabels()).dec();
+                this.queuedLength -= 1;
+                this.emitEvent('playDequeued', { queuedScrobble: playEntity });
+            } else {
+                this.emitEvent('deadLetterDequeued', res.playEntity);
+                this.deadLetterQueued -= 1;
+            }
+            this.playRepo.updateById(playEntity.id, {play: res.playEntity.play, state: res.playEntity.state, error: res.playEntity.error});
+            const createdEvents = await this.playEventsRepo.createMany(res.events.map(x => ({...x, playId: playEntity.id}))) as PlayEventSelect[];
+            this.emitPlayUpdate({
+                ...res.playEntity, 
+                events: ((res.playEntity as unknown as PlayWith<'events'>).events ?? []).concat(createdEvents),
+                queueStates
+            } as unknown as PlayApiCommonDetailed);
+        }
+    }
+
+    abstract processPlay(playEntity: PlaySelectWithQueueStates, signal?: AbortSignal): Promise<PlayProcessingResult>
 }

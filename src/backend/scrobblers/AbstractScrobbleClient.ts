@@ -62,7 +62,7 @@ import { serializeError} from 'serialize-error';
 import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetchUtils.ts";
 import { spawn, isAbortError, delay, waitForEvent } from 'abort-controller-x';
 import { type QueryPlaysOpts, type WithPlayRelation } from "../common/database/drizzle/repositories/PlayRepository.ts";
-import type {PlayEventNew, PlayEventSelect, PlaySelectWithQueueStates, PlayWith, QueueStateSelect} from "../common/database/drizzle/drizzleTypes.ts";
+import type {PlayEventNew, PlayEventSelect, PlaySelectWithQueueStates, PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
 import { asPlay } from "../../core/PlayMarshalUtils.ts";
 import { GenericRepository } from "../common/database/drizzle/repositories/BaseRepository.ts";
 import assert from "node:assert";
@@ -110,8 +110,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     scrobbleDelay: number = 1000;
     scrobbleSleep: number = 2000;
     scrobbleWaitStopInterval: number = 2000;
-    protected scrobbleQueueAbortController: AbortController | undefined;
-    protected scrobbleQueuePromise: Promise<void> | undefined;
     protected deadQueueAbortController: AbortController | undefined;
     protected deadQueuePromise: Promise<void> | undefined;
     scrobbleRetries: number =  0;
@@ -137,15 +135,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     dupeLogger: Logger;
     deadLogger: Logger;
 
-    //existingPlay: (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => Promise<PlayMatchResult>
-
     declare config: CommonClientConfig;
 
     notifier: Notifiers;
 
     protected scrobbledCounter: Counter;
-    //protected queuedGauge: Gauge;
-    protected deadLetterGauge: Gauge;
     protected problemGauge: Gauge;
 
     protected staggerOpts: Partial<StaggerOptions>;
@@ -449,7 +443,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
 
     public getRunningState(): ComponentState {
-        if(this.scrobbleQueuePromise === undefined) {
+        if(this.ingressQueuePromise === undefined) {
             return COMPONENT_STATE.IDLE;
         }
         if(this.scrobbling && !this.isMonitoring()) {
@@ -853,8 +847,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }
         }
         this.setStatus('Starting scrobbling processing');
-        this.scrobbleQueueAbortController = new AbortController();
-        this.scrobbleQueuePromise = spawn(this.scrobbleQueueAbortController.signal, async (signal, { defer, fork }) => {
+        this.ingressQueueAbortController = new AbortController();
+        this.ingressQueuePromise = spawn(this.ingressQueueAbortController.signal, async (signal, { defer, fork }) => {
 
             defer(async () => {
                 this.scrobbling = false;
@@ -868,7 +862,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 state: COMPONENT_STATE.IDLE
             };
             if (isAbortError(e)) {
-                const err = generateLoggableAbortReason('Scrobble processing stopped', this.scrobbleQueueAbortController.signal);
+                const err = generateLoggableAbortReason('Scrobble processing stopped', this.ingressQueueAbortController.signal);
                 this.logger.info(err);
                 //this.logger.trace(e);
                 componentUpdate.status = 'Processing cancelled';
@@ -881,8 +875,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }
             this.emitComponentUpdate<Partial<ComponentClientApiJson>>(componentUpdate);
         }).finally(() => {
-            this.scrobbleQueueAbortController = undefined;
-            this.scrobbleQueuePromise = undefined;
+            this.ingressQueueAbortController = undefined;
+            this.ingressQueuePromise = undefined;
         });
     }
 
@@ -944,11 +938,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             this.logger.verbose(`Polling is already stopped!`);
             return;
         }
-        if(this.scrobbleQueueAbortController === undefined) {
+        if(this.ingressQueueAbortController === undefined) {
             this.logger.error('No abort controller found! Nothing to stop.');
             return false;
         }
-        this.scrobbleQueueAbortController.abort(reason)
+        this.ingressQueueAbortController.abort(reason)
         let timePasssed = 0;
         while(this.scrobbling === true && timePasssed < (this.scrobbleWaitStopInterval * 10)) {
             await sleep(this.scrobbleWaitStopInterval);
@@ -1024,74 +1018,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             this.emitComponentUpdate<Partial<ComponentClientApiJson>>({state: COMPONENT_STATE.IDLE});
             this.scrobbling = false;
             throw e;
-        }
-    }
-
-    protected handlePlayProcessing = async (playEntity: PlaySelectWithQueueStates, signal?: AbortSignal) => {
-        let res: PlayProcessingResult,
-        err: Error;
-        try {
-            res = await this.processPlay(playEntity, signal);
-        } catch (e: unknown | Error | PlayProcessingError) {
-            if(isAbortError(e)) {
-                err = generateLoggableAbortReason('Interrupted by abort signal', this.scrobbleQueueAbortController.signal);
-                throw e;
-            }
-            if(e instanceof PlayProcessingError) {
-                err = e.cause as Error;
-                res = e.result;
-                if(e.showStopping) {
-                    throw e.cause;
-                }
-            } else {
-                const unhandledError = new Error('Unhandled error type while processing Play', {cause: e});
-                if(e instanceof Error) {
-                    err = e;
-                } else {
-                    err = unhandledError;
-                }
-                throw e;
-            }
-        } finally {
-            let queueStates: QueueStateSelect[];
-            const initialRetries = res.queue.retries ?? 0;
-            if(err !== undefined) {
-                res.queue.retries = (initialRetries + 1);
-                res.queue.updatedAt = dayjs();
-                await this.queueRepo.updateById(res.queue.id, {
-                    ...res.queue,
-                });
-                if(initialRetries === 0) {
-                    this.deadLetterGauge.labels(this.getPrometheusLabels()).inc();
-                    this.deadLetterLength += 1;
-                    this.deadLetterQueued += 1;
-                    this.emitEvent('deadLetter', res.playEntity);
-                }
-                queueStates = res.playEntity.queueStates.filter(x => x.queueName !== res.queue.queueName).concat([res.queue]);
-            } else {
-                await this.queueRepo.deleteByIds([res.queue.id]);
-                if(res.queue.retries > 0) {
-                    this.deadLetterGauge.labels(this.getPrometheusLabels()).dec();
-                    this.deadLetterLength -= 1;
-                    this.emitEvent('removeDeadLetter', { dead: { id: res.playEntity.uid } });
-                }
-                queueStates = res.playEntity.queueStates.filter(x => x.queueName !== res.queue.queueName)
-            }
-            if(initialRetries === 0) {
-                this.queuedGauge.labels(this.getPrometheusLabels()).dec();
-                this.queuedLength -= 1;
-                this.emitEvent('playDequeued', { queuedScrobble: playEntity });
-            } else {
-                this.emitEvent('deadLetterDequeued', res.playEntity);
-                this.deadLetterQueued -= 1;
-            }
-            this.playRepo.updateById(playEntity.id, {play: res.playEntity.play, state: res.playEntity.state, error: res.playEntity.error});
-            const createdEvents = await this.playEventsRepo.createMany(res.events.map(x => ({...x, playId: playEntity.id}))) as PlayEventSelect[];
-            this.emitPlayUpdate({
-                ...res.playEntity, 
-                events: ((res.playEntity as unknown as PlayWith<'events'>).events ?? []).concat(createdEvents),
-                queueStates
-            } as unknown as PlayApiCommonDetailed);
         }
     }
 
@@ -1174,7 +1100,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         });
     }
 
-    processPlay = async (playEntity: PlaySelectWithQueueStates, signal?: AbortSignal): Promise<PlayProcessingResult> => {
+    async processPlay(playEntity: PlaySelectWithQueueStates, signal?: AbortSignal): Promise<PlayProcessingResult> {
         signal?.throwIfAborted();
 
         const queueState = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE);
@@ -1312,7 +1238,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }
             if(isAbortError(e)) {
                 events.push(stateChangeToPlayEvent({state: 'failed'}));
-                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: generateLoggableAbortReason('Interrupted by abort signal', this.scrobbleQueueAbortController.signal)}));
+                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: generateLoggableAbortReason('Interrupted by abort signal', this.ingressQueueAbortController.signal)}));
                 throw e;
             }
             if(!events.some(x => x.eventName === PLAY_EVENT_TYPE.playStateChange)) {
