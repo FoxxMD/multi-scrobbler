@@ -1,21 +1,21 @@
-import React from 'react';
+import { Box, Container } from '@chakra-ui/react';
+import { SSEProvider } from "@flamefrontend/sse-runtime-react";
 import {
     createBrowserRouter,
-    createHashRouter, type RouteObject,
-    RouterProvider, useLocation,
+    createHashRouter,
+    Outlet,
+    type RouteObject,
+    RouterProvider, useLocation
 } from "react-router-dom";
-import {connect, type ConnectedProps, Provider} from 'react-redux'
-import './App.css';
-import CopyToClipboard from "./components/CopyToClipboard";
-import ExternalLink from "./components/ExternalLink";
-import {store} from './store';
-import Dashboard from "./dashboard/dashboard";
-import RecentPage from "./recent/RecentPage";
-import ScrobbledPage from "./scrobbled/ScrobbledPage";
-import DeadPage from "./deadLetter/DeadPage";
-import {clientUpdate, sourceUpdate} from "./status/ducks";
-import {useEventSource, useEventSourceListener} from "@react-nano/use-event-source";
-import Version from "./Version";
+import type {MsSseEvent} from '../core/Api';
+import { AppHeader } from './components/AppHeader';
+import { MSErrorBoundary } from './components/ErrorBoundary';
+import { ComponentDetailedRoutable } from './components/msComponent/MSComponentDetailed';
+import { MSComponentListFetchable } from './components/msComponent/MSComponentList';
+import { Provider } from './components/Provider';
+import { SettingsContainer } from './components/settings/settings';
+import { Toaster } from './components/Toaster';
+import { WelcomeToast } from './components/WelcomeToast';
 
 function NoMatch() {
     const location = useLocation();
@@ -47,28 +47,48 @@ function MissingDocs() {
                         </span>
                     </span>
 
-                <CopyToClipboard text="npm run docs:install && npm run docs:build"/>
+<pre>npm run docs:install && npm run docs:build</pre>
             </code>
         </div>
     );
 }
 
-const routes: RouteObject[] = [
+const Layout = () => {
+    //const [logsEnabled, setLogsEnabled] = useState(true);
+    const location = useLocation();
+    return (<>
+    <Box px="4" py="2" mb="4" pb="4" position="sticky" top="0" zIndex="1" bg="bg" borderBottomWidth="1px">
+        <AppHeader fetchable/>
+    </Box>
+    <Container display="flex">
+        <Box hideBelow="md" display="flex" flexDir="column" pr="2" gap="6" flexShrink="1"></Box>
+        <Outlet/>
+    </Container>
+    </>);
+}
+
+const routesNested: RouteObject[] = [
     {
         path: "/",
-        element: <Dashboard/>,
-    },
-    {
-        path: "/recent",
-        element: <RecentPage/>,
-    },
-    {
-        path: "/scrobbled",
-        element: <ScrobbledPage/>,
-    },
-    {
-        path: "/dead",
-        element: <DeadPage/>,
+        Component: Layout,
+        children: [ 
+        {
+            index: true,
+            element: <MSErrorBoundary><MSComponentListFetchable/></MSErrorBoundary>,
+        },
+        {
+            path: "components/:componentId",
+            element: <Container boxSize="full" p="0" maxWidth="8xl"><MSErrorBoundary><ComponentDetailedRoutable/></MSErrorBoundary></Container>
+        },
+        {
+            path: "settings",
+            element: <Container p="0" boxSize="full" maxWidth="4xl"><MSErrorBoundary><SettingsContainer/></MSErrorBoundary></Container>
+        },
+        {
+        path: "*",
+        element: <NoMatch/>
+        }
+        ],
     },
     {
         path: "/docs",
@@ -82,83 +102,25 @@ const routes: RouteObject[] = [
 
 const genRouter = () => {
     const useHashRouter = __USE_HASH_ROUTER__ === 'true';
-    return useHashRouter ? createHashRouter(routes) : createBrowserRouter(routes);
+    return useHashRouter ? createHashRouter(routesNested) : createBrowserRouter(routesNested);
 }
 
 const router = genRouter();
 
-const mapDispatchToProps = (dispatch) => {
-    return {
-        updateSource: (payload) => dispatch(sourceUpdate(payload)),
-        updateClient: (payload) => dispatch(clientUpdate(payload))
-    }
+export const sseProviderOptions = {
+    key: ['events'],
+    url: '/api/events?next=true'
 }
 
-const connector = connect(null, mapDispatchToProps);
-
-type PropsFromRedux = ConnectedProps<typeof connector>;
-
-const Global = (props: PropsFromRedux) => {
-    const {
-        updateSource,
-        updateClient
-    } = props;
-
-    const [sourceEventSource, eventSourceStatus] = useEventSource("api/events", false);
-    useEventSourceListener(sourceEventSource, ['source', 'client'], evt => {
-        const data = JSON.parse(evt.data);
-        if(data.from === 'source') {
-            updateSource(data);
-        } else if(data.from === 'client') {
-            updateClient(data);
-        }
-    }, [updateSource, updateClient]);
-
-    return <span/>;
-}
-
-const ConnectedGlobal = connector(Global);
-
-// eslint-disable-next-line prefer-arrow-functions/prefer-arrow-functions
 function App() {
   return (
-      <Provider store={store}>
-      <div className="min-w-screen min-h-screen bg-gray-800 font-sans text-white">
-        <div className="space-x-4 p-6 md:px-10 md:py-6 leading-6 font-semibold bg-gray-800 text-white">
-          <div className="container mx-auto">
-              <div className="flex items-center justify-between">
-                  <a href="/" className="flex items-center no-underline pr-4">
-                      <img src="/icon.svg" style={{maxWidth: '30px'}}/>
-                      <span className="ml-2">Multi Scrobbler</span>
-                  </a>
-                  <Version/>
-                  <span className="space-x-3" style={{marginLeft: 'auto'}}>
-                    <span className="p-2">
-                    <span className="font-bold">✨ 
-                    <a href="/next">
-                          Try the New UI
-                      </a>
-                       ✨
-                      </span>
-                      </span>
-                        <a target="_blank" href="https://status.multi-scrobbler.app">
-                          Services Monitor
-                      </a>
-                       <a href="/docs">
-                          Docs
-                      </a>
-                      <a target="_blank" href="https://github.com/FoxxMD/multi-scrobbler">
-                          Github <ExternalLink/>
-                      </a>
-                  </span>
-              </div>
-          </div>
-        </div>
-          <div className="container mx-auto">
-              <ConnectedGlobal/>
-              <RouterProvider router={router}/>
-          </div>
-      </div>
+      <Provider>
+            <Toaster/>
+            <WelcomeToast/>
+        {/* <Box px="4" py="2" pb="4"><AppHeader fetchable/></Box> */}
+            <SSEProvider<MsSseEvent> options={sseProviderOptions}>
+            <RouterProvider router={router}/>
+            </SSEProvider>
       </Provider>
   );
 }

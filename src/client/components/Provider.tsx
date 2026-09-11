@@ -6,7 +6,7 @@ import {
   QueryClient,
   QueryClientProvider
 } from '@tanstack/react-query'
-import '../index-next.css'
+import '../index.css'
 import {
   ColorModeProvider,
   type ColorModeProviderProps,

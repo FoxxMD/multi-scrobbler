@@ -133,11 +133,11 @@ export const NAV_LINKS: SideNavProps[] = [
         items: [
             {
                 title: 'Dashboard',
-                url: '/next/'
+                url: '/'
             },
             {
                 title: 'Settings',
-                url: '/next/settings'
+                url: '/settings'
             }
         ]
     },

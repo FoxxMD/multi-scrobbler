@@ -6,56 +6,6 @@ import type AbstractSource from "../sources/AbstractSource.ts";
 import type AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts";
 import type { TypedMiddleware } from "@minisylar/express-typed-router";
 
-export type SourceCheckMiddleTypedMiddleware = TypedMiddleware<{sourceName: string, scrobbleSource: AbstractSource}>;
-
-export const makeSourceCheckMiddle = (sources: any) => (required: boolean): SourceCheckMiddleTypedMiddleware => (req: any, res: any, next: any) => {
-    const {
-        query: {
-            name,
-            type
-        } = {}
-    } = req;
-
-    if (required && name === undefined) {
-        return res.status(404).send('Source name must be defined');
-    } else if (name !== undefined) {
-        const source = sources.getByNameAndType(name, type);
-
-        if (source === undefined) {
-            return res.status(404).send(`No source with the name [${name}] and type [${type}`);
-        }
-
-        req.sourceName = name;
-        req.scrobbleSource = source;
-    }
-
-    next();
-}
-
-export type ClientCheckedMiddleTypedMiddleware = TypedMiddleware<{scrobbleClient: AbstractScrobbleClient}>;
-
-export const makeClientCheckMiddle = (clients: any) => (required: boolean): ClientCheckedMiddleTypedMiddleware => (req: any, res: any, next: any) => {
-    const {
-        query: {
-            name
-        } = {}
-    } = req;
-
-    if (required && name === undefined) {
-        return res.status(404).send('Client name must be defined');
-    } else if (name !== undefined) {
-        const client = clients.getByName(name);
-
-        if (client === undefined) {
-            return res.status(404).send(`No client with the name: ${name}`);
-        }
-
-        req.scrobbleClient = client;
-    }
-
-    next();
-}
-
 export const nonEmptyBody = (logger: Logger, origin: string = 'Origin'): TypedMiddleware => async (req, res, next) => {
     const bodyEmpty = req.body === undefined || req.body === null || (typeof req.body === 'object' && Object.keys(req.body).length === 0);
     if (bodyEmpty) {

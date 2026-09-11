@@ -8,7 +8,7 @@ import {Provider} from "../../client/components/Provider.js";
 import { generateClientApiJson, generateFakeError, generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList, generateSourceApiJson, generateSourcePlayerJson } from "../../core/tests/utils/apiFixtures.js";
 import type {PaginatedResponse, MsSseEvent, PlayApiCommonDetailed} from "../../core/Api.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
-import { sseProviderOptions } from "../../client/AppNext.js";
+import { sseProviderOptions } from "../../client/App.js";
 import { faker } from "@faker-js/faker";
 import dayjs from "dayjs";
 import { serializeError } from "serialize-error";
