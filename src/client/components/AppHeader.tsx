@@ -25,8 +25,8 @@ export const AppTitle = (props: { fetchable?: boolean } = {}) => {
             <LinkBox>
                 <HStack gap="2">
                     <Image maxWidth="30px" height="100%" width="100%" src="/icon.svg"></Image>
-                    <LinkOverlay asChild href="/next/">
-                        <RouterLink to='/next/'>
+                    <LinkOverlay asChild href="/">
+                        <RouterLink to='/'>
                             <Heading hideBelow="sm" size="sm">Multi Scrobbler</Heading>
                         </RouterLink>
                     </LinkOverlay>
