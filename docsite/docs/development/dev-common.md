@@ -10,11 +10,15 @@ description: Common Development Knowledge
 
 ## Architecture
 
-Multi-scrobbler is written entirely in [Typescript](https://www.typescriptlang.org/). It consists of a backend and frontend. The backend handles all Source/Client logic, mounts web server endpoints that listen for Auth callbacks and Source ingress using [expressjs](https://expressjs.com/), and  serves the frontend. The frontend is a standalone [Vitejs](https://vitejs.dev/) app that communicates via API to the backend in order to render the dashboard.
+Multi-scrobbler is written entirely in [Typescript](https://www.typescriptlang.org/). It consists of a backend and frontend.
+
+The backend handles all Source/Client (Component) logic, mounts web server endpoints that listen for Auth callbacks and Source ingress using [expressjs](https://expressjs.com/), and serves the frontend. It creates and uses a sqlite database to persist Plays/Scrobbles, manage queue functionality, and keep track of lifecycle events for Plays/Scrobbles.
+
+The frontend is a standalone [Vitejs](https://vitejs.dev/) app that communicates via API to the backend.
 
 ## Project Setup
 
-Development requires [Node v18.19.1](https://nodejs.org/en) or higher is installed on your system. 
+Development requires [Node v24.14.0](https://nodejs.org/en) or higher is installed on your system. 
 
 :::tip
 
@@ -29,6 +33,7 @@ git clone https://github.com/FoxxMD/multi-scrobbler.git .
 cd multi-scrobbler
 nvm use # optional, sets correct node version when running without devcontainer
 npm install
+npm run docs:install && npm run build
 npm run start
 ```
 
@@ -59,10 +64,11 @@ In both parts Source/Clients share some common properties/behavior before diverg
 
 ### Config
 
-The configuration for a Component should always have this minimum shape, enforced respectively by the interfaces [CommonSourceConfig](https://github.com/FoxxMD/multi-scrobbler/blob/master/src/backend/common/infrastructure/config/source/index.ts#L105) and [CommonClientConfig](https://github.com/FoxxMD/multi-scrobbler/blob/ce1c70a4e1e87fb5bea7cca960eaafbd15881a1f/src/backend/common/infrastructure/config/client/index.ts#L68):
+The configuration for a Component should always have this minimum shape, enforced respectively by the interfaces `CommonSourceConfig` and `CommonClientConfig`:
 
 ```ts
 interface MyConfig {
+  id: string
   name: string
   data?: object
   options?: object
@@ -93,7 +99,7 @@ This stage should be used to validate user configuration, parse any additional d
 
 :::info
 
-Implement [`doBuildInitData`](https://github.com/FoxxMD/multi-scrobbler/blob/master/src/backend/common/AbstractComponent.ts#L71) in your child class to invoke this stage.
+Implement `doBuildInitData` in your concrete class to invoke this stage.
 
 ::::
 
@@ -115,7 +121,7 @@ If the Component depends on **ingress** (like Jellyfin/Plex webhook) this stage 
 
 :::info
 
-Implement [`doCheckConnection`](https://github.com/FoxxMD/multi-scrobbler/blob/master/src/backend/common/AbstractComponent.ts#L103) in your child class to invoke this stage.
+Implement `doCheckConnection` in your concrete class to invoke this stage.
 
 ::::
 
@@ -148,7 +154,7 @@ You _should_ attempt to re-authenticate, if possible. Only throw an exception or
 
 :::info
 
-Implement [`doAuthentication`](https://github.com/FoxxMD/multi-scrobbler/blob/master/src/backend/common/AbstractComponent.ts#L111) in your child class to invoke this stage.
+Implement `doAuthentication` in your child class to invoke this stage.
 
 ::::
 
@@ -172,7 +178,7 @@ The **PlayObject** is the standard data structure MS uses to store listen (track
 
 Both Sources and Clients use the **PlayObject** interface. When a Component receives track info from its corresponding service it must transform this data into a PlayObject before it can be interacted with.
 
-For more refer to the TS documentation for `PlayObject` or [`AmbPlayObject`](https://github.com/FoxxMD/multi-scrobbler/blob/master/src/core/Atomic.ts#L141) in your project
+For more refer to the TS documentation for `PlayObject` or `AmbPlayObject` in your project
 
 ## Creating Clients and Sources
 

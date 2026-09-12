@@ -19,7 +19,7 @@ You are the developer of a fancy, new self-hosted web-based media player called 
 * Cool Player is by default accessed on port `6969`
 * Your personal instance of Cool Player is hosted at `http://192.168.0.100:6969` and the api is accessed at `http://192.168.0.100:6969/api`
 
-Because there is an API that MS can actively read this will be a **polling** Source where MS sends requests to Cool Player to get scrobble information -- as opposed to an **ingress** Source like Jellyfin/Plex that uses webhooks from the service to send data to MS.
+Because there is an API that MS can actively read this will be a **polling** Source where MS sends requests to Cool Player to get scrobble information -- as opposed to an **ingress** Source like Webscrobbler that uses webhooks from the service to send data to MS.
 
 ## Minimal Implementation
 
@@ -27,34 +27,55 @@ Because there is an API that MS can actively read this will be a **polling** Sou
 
 We will create a new config interface for Cool Player using the [Common Config](dev-common.md#config) and tell MS it is a valid config that can be used.
 
+MS uses [Zod](https://zod.dev/) to define schema objects and the infer the config type from this schema.
+
+The eaiest way to use this for our new config is focus on implementing only the **data** and **options** schemas, then assigning those to a generic source config schema.
+
 Create a new file for your config:
 
 ```ts title="/src/backend/common/infrastructure/config/source/coolplayer.ts"
-import { PollingOptions } from "../common.js";
-import { CommonSourceConfig, CommonSourceData } from "./index.js";
+import * as z from "zod";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
 
 // all of the required data for the Build Data and Test Auth stages (from Common Development docs)
 // should go here
-export interface CoolPlayerSourceData extends CommonSourceData, PollingOptions {
-// remember to annotation your properties!
+export const coolPlayerData = z.object({
+    token: z.string().meta({
+        description: 'The user-generated token for Cool Player auth created in Cool Player -> Settings -> User -> Tokens',
+        examples: ['f243331e-cf5b-49d7-846b-0845bdc965b4']
+    }),
+    baseUrl: z.string().meta({
+        description: 'The host and port where Cool Player is hosted',
+        examples: ['http://192.168.0.100:6969']
+    })
+});
+export type CoolPlayeryData = z.infer<typeof coolPlayerData>;
 
-  /**
-   * The user-generated token for Cool Player auth created in Cool Player -> Settings -> User -> Tokens
-   *
-   * @example f243331e-cf5b-49d7-846b-0845bdc965b4
-   * */
-  token: string
-  /**
-   * The host and port where Cool Player is hosted
-   *
-   * @example http://192.168.0.100:6969
-   * */
-  baseUrl: string
-}
+// the full Source config
+export const coolPlayerSourceConfigSchema = z.object({
+    ...commonSourceConfigSchema.shape,
+    data: coolPlayerData,
+    options: commonSourceOptionsSchema.optional(),
+});
+export type CoolPlayerSourceConfig = z.infer<typeof coolPlayerSourceConfigSchema>;
 
-export interface CoolPlayerSourceConfig extends CommonSourceConfig {
-  data: CoolPlayerSourceData
-}
+// if your Source should accept ENVs create them as a separate schema
+const envDataSchema = z.object({
+    COOL_USER: coolPlayerData.shape.token,
+    COOL_URL: coolPlayerData.shape.baseUrl,
+});
+// and then export an `envSchemas` that returns a normal data schema based on the ENVs
+export const envSchemas: EnvSourceSchema<typeof envDataSchema, CoolPlayerSourceConfig> = {
+    env: envDataSchema,
+    // prefix is used for generic settings that can be applied to this source
+    prefix: 'COOL',
+    toConfig: (partial) => ({
+            data: {
+                user: partial.COOL_USER,
+                baseUrl: partial.COOL_URL,
+            }
+    })
+};
 
 export interface CoolPlayerSourceAIOConfig extends CoolPlayerSourceConfig {
   // when using the all-in-one 'config.json' this is how users will identify this source
