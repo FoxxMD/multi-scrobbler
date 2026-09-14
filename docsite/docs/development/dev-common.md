@@ -182,7 +182,7 @@ For more refer to the TS documentation for `PlayObject` or `AmbPlayObject` in yo
 
 ## Creating Clients and Sources
 
-* [Source Development and Tutorial](dev-source.md)
+* [Source Development and Tutorial](/development/dev-source)
 * Client Development and Tutorial (TBD)
 
 ## Profiling
