@@ -469,15 +469,15 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed, co
         mutationKey: ['playAction', props.activity.uid],
         mutationFn: (data: {action: string, context?: QueueContext}) => {
             if(data.action === 'queue') {
-                return ky.post(`/api/components/${props.activity.componentId}/plays/${props.activity.uid}/queue`,{
+                return ky.post(`api/components/${props.activity.componentId}/plays/${props.activity.uid}/queue`,{
                     json: data.context ?? {}
                 });
             }
             if(data.action === 'delete') {
-                return ky.delete(`/api/components/${props.activity.componentId}/plays/${props.activity.uid}`);
+                return ky.delete(`api/components/${props.activity.componentId}/plays/${props.activity.uid}`);
             }
             const realAction = data.action === 'cancel' ? 'queue' : data.action;
-            return ky.delete(`/api/components/${props.activity.componentId}/plays/${props.activity.uid}/${realAction}`);
+            return ky.delete(`api/components/${props.activity.componentId}/plays/${props.activity.uid}/${realAction}`);
         }
     });
 

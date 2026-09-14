@@ -90,7 +90,19 @@ COPY --chown=abc:abc . /app
 # need to set before build so server/client build is optimized and has constants (if needed)
 ENV NODE_ENV=production
 
-RUN npm run build:parallel && rm -rf node_modules && rm -rf docsite/node_modules
+# Optional, only affects the self-hosted docs site (/docs)
+#
+# Docusaurus bakes its baseUrl in at build time, unlike the main app frontend, which resolves
+# its own base path at container runtime and needs nothing set here. Pass the
+# same value here and as the runtime BASE_URL env var, e.g.
+# --build-arg BASE_URL=http://example.com/myapp, to keep docs working under a subpath.
+ARG BASE_URL=""
+ENV BASE_URL=$BASE_URL
+
+RUN if [ -n "$BASE_URL" ]; then \
+        export DOCS_BASE="$(node -e "console.log(new URL(process.env.BASE_URL).pathname.replace(/\/$/, '') + '/docs')")"; \
+    fi; \
+    npm run build:parallel && rm -rf node_modules && rm -rf docsite/node_modules
 
 FROM base AS app
 

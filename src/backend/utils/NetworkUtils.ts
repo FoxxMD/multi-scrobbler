@@ -190,7 +190,16 @@ export const  normalizeWSAddress = (val: string, options: {defaultPort?: number 
 }
 
 export const generateBaseURL = (userUrl: string | undefined, defaultPort: number | string): URL => {
-    const urlStr = userUrl ?? `http://localhost:${defaultPort}`;
+    // handle scenario where passed value is an empty string *before* handing to normalizeUrl
+    // since this throws an error
+    let trueUserUrl: string | undefined = undefined;
+    if(userUrl !== undefined) {
+        const trimmed = userUrl.trim();
+        if(trimmed !== '' && trimmed !== '""' && trimmed !== "''") {
+            trueUserUrl = trimmed;
+        }
+    }
+    const urlStr = trueUserUrl ?? `http://localhost:${defaultPort}`;
     let cleanUserUrl = urlStr.trim();
     const results = parseRegexSingle(QUOTES_UNWRAP_REGEX, cleanUserUrl);
     if (results !== undefined && results.groups && results.groups.length > 0) {
@@ -201,7 +210,7 @@ export const generateBaseURL = (userUrl: string | undefined, defaultPort: number
     if (u.port === '') {
         if (u.protocol === 'https:') {
             u.port = '443';
-        } else if (userUrl.includes(`${u.hostname}:80`)) {
+        } else if (trueUserUrl.includes(`${u.hostname}:80`)) {
             u.port = '80';
         } else {
             u.port = defaultPort.toString();

@@ -398,7 +398,7 @@ export const ListContainerFilterable = (props: { componentId: number, componentT
     mutationKey: ['retryBulk', props.componentId, filters],
     // eslint-disable-next-line arrow-body-style
     mutationFn: (data: { action: string, context?: QueueContext }) => {
-      return ky.post<{ filters: QueryPlaysOptsJsonRefreshable, context?: QueueContext }>(`/api/components/${props.componentId}/plays/queue`, {
+      return ky.post<{ filters: QueryPlaysOptsJsonRefreshable, context?: QueueContext }>(`api/components/${props.componentId}/plays/queue`, {
         json: {
           filters: {
             ...filters,

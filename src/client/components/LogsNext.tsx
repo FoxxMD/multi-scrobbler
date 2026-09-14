@@ -71,7 +71,7 @@ export const LogsFetchable = (props: {settings?: LogOutputConfig, streamable?: b
 
     const connection = useSSE<{stream: MinLogInfo}>({
         key: ['stream'],
-        url: "/api/logs/stream",
+        url: "api/logs/stream",
         enabled: streamable,
         events: {
             stream: (data) => {
@@ -84,7 +84,7 @@ export const LogsFetchable = (props: {settings?: LogOutputConfig, streamable?: b
     });
 
     const mutateLogSettings = useMutation({
-        mutationFn: (settings: Partial<LogOutputConfig>) => ky.put('/api/logs', {json: settings}),
+        mutationFn: (settings: Partial<LogOutputConfig>) => ky.put('api/logs', {json: settings}),
         onSuccess: (sentData, variables) => {
             if(variables.level !== undefined) {
                 setLogLevel(variables.level);

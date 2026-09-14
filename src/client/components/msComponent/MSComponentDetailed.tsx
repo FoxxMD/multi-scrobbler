@@ -84,7 +84,7 @@ const dialog = createOverlay<AuthDialogProps>((props) => {
     });
     const {mutate, isPending: mutateIsPending, isSuccess} = useMutation({
         mutationKey: ['authChange', data.id],
-        mutationFn: () => ky.post(`/api/components/${data.id}/auth`)
+        mutationFn: () => ky.post(`api/components/${data.id}/auth`)
     });
 
     useEffect(() => {
@@ -193,7 +193,7 @@ export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof 
 
     const {mutate, isPending, variables, isSuccess} = useMutation({
         mutationKey: ['stateChange', componentId],
-        mutationFn: (action: ComponentStateBody['state']) => ky.post(`/api/components/${componentId}/state`,{
+        mutationFn: (action: ComponentStateBody['state']) => ky.post(`api/components/${componentId}/state`,{
             json: {state: action, reason: 'User initiated from UI'}
         })
     });
