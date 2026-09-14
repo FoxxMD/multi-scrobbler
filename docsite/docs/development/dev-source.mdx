@@ -1,0 +1,392 @@
+---
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+sidebar_position: 2
+title: Source Development/Tutorial
+description: Developing a new Source
+---
+import {RemoteCodeBlock} from "../../src/components/RemoteCodeBlock";
+
+This document will provide a step-by-step guide for creating a (trivial) new Source in MS alongside describing what aspects of the Source need to be implemented based on the service you use. Before using this document you should review [Common Development](dev-common.md#common-development).
+
+## Scenario
+
+You are the developer of a fancy, new self-hosted web-based media player called **Cool Player.** Cool Player has a slick interface and many bells and whistles, but most importantly it has an API. The API:
+
+* Has an unauthenticated health endpoint at `/api/health` that returns `200` if the service is running properly
+* Has authenticated endpoints that require a user-generated token in the header `Authorization MY_TOKEN`
+  * Has a `/api/recent` endpoint that lists recently played tracks with a timestamp
+  * Has a `/api/now-playing` endpoint that returns information about the state of the player like current track, player position in the track, etc...
+* Cool Player is by default accessed on port `6969`
+* Your personal instance of Cool Player is hosted at `http://192.168.0.100:6969` and the api is accessed at `http://192.168.0.100:6969/api`
+
+Because there is an API that MS can actively read this will be a **polling** Source where MS sends requests to Cool Player to get scrobble information -- as opposed to an **ingress** Source like Webscrobbler that uses webhooks from the service to send data to MS.
+
+## Minimal Implementation
+
+### Define and Implement Config
+
+We will create a new config interface for Cool Player using the [Common Config](dev-common.md#config) and tell MS it is a valid config that can be used.
+
+MS uses [Zod](https://zod.dev/) to define schema objects and the infer the config type from this schema.
+
+The eaiest way to use this for our new config is focus on implementing only the **data** and **options** schemas, then assigning those to a generic source config schema.
+
+Create a new file for your config and implement a **data** schema, this is the required config for the Source to operate:
+
+<RemoteCodeBlock 
+url="https://gist.githubusercontent.com/FoxxMD/d2d3d9a48b2a515b40bfede75f5f3983/raw/c332633c650b98e065e8794f56f23610dffb98d5/test.ts"
+language="typescript"
+ranges={[[1,18]]}
+interstitial="// ..."
+suffix={"// more implementation..."}
+title="coolplayer.ts"/>
+
+Basic options and the complete config shape:
+
+<RemoteCodeBlock 
+url="https://gist.githubusercontent.com/FoxxMD/d2d3d9a48b2a515b40bfede75f5f3983/raw/c332633c650b98e065e8794f56f23610dffb98d5/test.ts"
+language="typescript"
+ranges={[[20,34]]}
+prefix={"// more implementation...\n"}
+interstitial="// ..."
+suffix={"// more implementation..."}
+title="coolplayer.ts"/>
+
+If your Source should also be configurable via [ENV](/configuration?configType=env#configuration-types) then implement a separate shape for ENV (reusing shape from data/options) as well as an `envSchemas` object that is used by MS for validation, generating ENV config docs, and transforming common ENV keys for your Source:
+
+<RemoteCodeBlock 
+url="https://gist.githubusercontent.com/FoxxMD/d2d3d9a48b2a515b40bfede75f5f3983/raw/c332633c650b98e065e8794f56f23610dffb98d5/test.ts"
+language="typescript"
+ranges={[[36,52]]}
+prefix={"// more implementation...\n"}
+interstitial="// ..."
+suffix={"// more implementation..."}
+title="coolplayer.ts"/>
+
+Finally, add a shape for use with [AIO](/configuration?configType=aio#configuration-types) config:
+
+<RemoteCodeBlock 
+url="https://gist.githubusercontent.com/FoxxMD/d2d3d9a48b2a515b40bfede75f5f3983/raw/c332633c650b98e065e8794f56f23610dffb98d5/test.ts"
+language="typescript"
+ranges={[[55,60]]}
+prefix={"// more implementation...\n"}
+interstitial="// ..."
+title="coolplayer.ts"/>
+
+#### Add to Config Map
+
+Next, we add our newely created config Types and zod schemas to several data structures that MS uses for typing Sources, generating documentation, and parsing/validating config data.
+
+In [`sources.ts`](https://github.com/FoxxMD/multi-scrobbler/blob/master/src/backend/common/infrastructure/config/source/sources.ts), import `coolPlaySourceConfigSchema` (for File) and `coolPlayerSourceAIOConfigSchema` (for AIO) and add them to the ends of their respective union types:
+
+```ts title='sources.ts'
+export const sourceConfigSchema = z.union([
+    // ...
+    appleMusicSourceConfigSchema,
+    // highlight-start
+    coolPlaySourceConfigSchema
+    // highlight-end
+]);
+
+export type SourceConfig = z.infer<typeof sourceConfigSchema>;
+
+export const sourceAIOConfigSchema = z.union([
+    // ...
+    appleMusicSourceAIOConfigSchema,
+    // highlight-start
+    coolPlayerSourceAIOConfigSchema
+    // highlight-end
+]);
+```
+
+In [`sourcesMap.ts`](https://github.com/FoxxMD/multi-scrobbler/blob/master/src/backend/common/infrastructure/config/source/sourcesMap.ts) add `coolplayer` to `SourceTypeConfigMap` for type narrowing and `sourceConfigSchemaMapAsync` to enable dynamic importing for schema validation.
+
+```ts title='sourcesMap.ts'
+// ...
+export interface SourceTypeConfigMap extends Record<SourceType, [CommonSourceConfig, SourceAIOConfig, Partial<Pick<CommonSourceConfig, 'data' | 'options'>>]> {
+  // ...
+  // highlight-start
+  coolplayer: [CoolPlayerSourceConfig, CoolPlayerSourceAIOConfig, Partial<Pick<CoolPlayerSourceConfig, 'data' | 'options'>>];
+  // highlight-end
+}
+
+// ...
+
+export const sourceConfigSchemaMapAsync: { [K in keyof SourceTypeConfigMap]: () => Promise<[ZodType<SourceTypeConfigMap[K][0]>, ZodType<SourceTypeConfigMap[K][1]>, EnvSourceSchema<ZodObject, SourceTypeConfigMap[K][0]>]> } = {
+    // ...
+    // highlight-start
+    coolplayer: async () => {
+        const {coolPlayerSourceConfigSchema, coolPlayerSourceAIOConfigSchema, envSchemas } = (await import('./coolplayer.ts'));
+        return [coolPlayerSourceConfigSchema, coolPlayerSourceAIOConfigSchema, envSchemas]
+    },
+    // highlight-end
+}
+```
+
+### Create CoolPlayer Source
+
+Now we will create a new Source inheriting from [`AbstractComponent`](dev-common.md#concrete-class) that:
+
+* accepts our config interface
+* implements a function to transform CoolPlayer's track data into a [**PlayObject**](dev-common.md#play-object)
+* implements required [stages](dev-common.md#stages)
+* implements required methods to get current player state and/or now playing track
+
+First we create a new Source called `CoolPlayerSource` and setup our constructor to accept the config as well as setting any behavior `overrides`.
+
+<RemoteCodeBlock 
+url="https://gist.githubusercontent.com/FoxxMD/d2d3d9a48b2a515b40bfede75f5f3983/raw/fe3a5285dbf20e27b05893bfac1468fdc637316b/coolplayersource.ts"
+language="typescript"
+ranges={[[1,39]]}
+interstitial="// ..."
+suffix={"// more implementation..."}
+title="CoolPlayerSource.ts"/>
+
+### Implement Stages
+
+Next we will implement the [Stages](dev-common.md#stages) required to get CoolPlayerSource running.
+
+#### Build Data
+
+First we implement the [Build Data Stage](dev-common.md#stage-build-data). We will check the `baseUrl` property includes the necessary prefix and then parse it to a normalized data structure we can use elsewhere.
+
+<RemoteCodeBlock 
+url="https://gist.githubusercontent.com/FoxxMD/d2d3d9a48b2a515b40bfede75f5f3983/raw/fe3a5285dbf20e27b05893bfac1468fdc637316b/coolplayersource.ts"
+language="typescript"
+ranges={[[41,62]]}
+interstitial="// ..."
+prefix={"// more implementation..."}
+suffix={"// more implementation..."}
+title="CoolPlayerSource.ts"/>
+
+#### Check Connection
+
+Second we will implement the [Check Connection Stage](dev-common.md#stage-check-connection):
+
+<RemoteCodeBlock 
+url="https://gist.githubusercontent.com/FoxxMD/d2d3d9a48b2a515b40bfede75f5f3983/raw/fe3a5285dbf20e27b05893bfac1468fdc637316b/coolplayersource.ts"
+language="typescript"
+ranges={[[64,78]]}
+interstitial="// ..."
+prefix={"// more implementation..."}
+suffix={"// more implementation..."}
+title="CoolPlayerSource.ts"/>
+
+#### Test Auth
+
+Finally, we will implement [Auth Test Stage](dev-common.md#stage-test-auth):
+
+<RemoteCodeBlock 
+url="https://gist.githubusercontent.com/FoxxMD/d2d3d9a48b2a515b40bfede75f5f3983/raw/fe3a5285dbf20e27b05893bfac1468fdc637316b/coolplayersource.ts"
+language="typescript"
+ranges={[[85,96]]}
+interstitial="// ..."
+prefix={"// more implementation..."}
+suffix={"// more implementation..."}
+title="CoolPlayerSource.ts"/>
+
+### Implement Play Object Transform
+
+Now that Source initialization is taken care we can move on to implementing how our Source handles activity data from Cool Player.
+
+First, we create a static function that is used to take the track data returned from Cool Player's API and return a standard [`PlayObject`.](dev-common.md#play-object)
+
+<RemoteCodeBlock 
+url="https://gist.githubusercontent.com/FoxxMD/d2d3d9a48b2a515b40bfede75f5f3983/raw/e9ce9ae45f2fe2185b1e75278af0612fe96d9080/coolplayersource.ts"
+language="typescript"
+ranges={[[101,124]]}
+interstitial="// ..."
+prefix={"// more implementation..."}
+suffix={"// more implementation..."}
+title="CoolPlayerSource.ts"/>
+
+### Implement Polling
+
+Next, we implement the functions needed for MS to get the actual data from Cool Player and do something with it.
+
+The majority of Sources MS monitors primarily operate as a source of truth for a **music player** rather than a **played music history.**
+
+To this end, MS implements a [state machine](https://www.freecodecamp.org/news/state-machines-basics-of-computer-science-d42855debc66/) that emulates the behavior of a music player in order to keep track of when a song you are listening to should be scrobbled. It does this by monitoring the "currently playing" track reported by a Source's service, with varying degrees of accuracy depending on what information is returned from the service. The state machine is implemented in `MemorySource` which our `CoolPlayerSource` inherits from.
+
+For a polling Source to work properly we need to implement a function, `getRecentlyPlayed`, that returns PlayObjects or PlayObjects + Player data, that are "new". These are then checked against previously "discovered" Plays and their timestamp to determine if they should be surfaced to Clients to scrobble.
+
+To take advantage of the `MemorySource` state machine we will additionally use `processRecentPlays` from `MemorySource` inside `getRecentlyPlayed`. We pass track and/or player state returned from the Source service to `processRecentPlayers`. It then takes care of deriving Source player state based on how this data changes over time. The advantage to using `processRecentPlays` is that our Source service does not necessarily need to pass any player information -- as long as the track info has a **duration** we can more-or-less determine if it has been played long enough to scrobble.
+
+<RemoteCodeBlock 
+url="https://gist.githubusercontent.com/FoxxMD/d2d3d9a48b2a515b40bfede75f5f3983/raw/e9ce9ae45f2fe2185b1e75278af0612fe96d9080/coolplayersource.ts"
+language="typescript"
+ranges={[[126,177]]}
+interstitial="// ..."
+prefix={"// more implementation..."}
+title="CoolPlayerSource.ts"/>
+
+There are other types of Sources that can be implemented based on the granularity of data returned or the type of data returned. See further below, [Other Source Types](#other-source-types).
+
+### Initialize Source from Config
+
+The last step for this implementation is to add your new, concrete `CoolPlayerSource` class to the Source builder class that handles parsing user config.
+
+When MS starts it reads all configs and determines which Source to build based on the configs found. We need to tell it to build a `CoolPlayerSource` when a `coolplayer` config type is found.
+
+We modify [`ScrobbleSources.ts`](https://github.com/FoxxMD/multi-scrobbler/blob/master/src/backend/sources/ScrobbleSources.ts) to add `CoolPlayerSource` as a case in the `addSource` function:
+
+```ts title="src/backend/sources/ScrobbleSources.ts"
+// ...
+export default class ScrobbleSources {
+  // ...
+  addSource = async (sourceType: SourceType, strongConfigs: CommonParsedConfig[], defaults: SourceDefaults = {}) => {
+      switch (sourceType) {
+          case 'spotify':
+          // ...
+          //
+          // highlight-start
+          // add a dynamic import for CoolPlayersource
+          case 'coolplayer': {
+              const CoolPlayerSource = (await import('./CoolPlayerSource.ts')).default;
+              await this.instantiateSources('coolplayer', strongConfigs, defaults, CoolPlayerSource);
+          } break;
+          // highlight-end
+          default:
+              break;
+      }
+      // ...
+  }
+  // ...
+}
+```
+
+Congratulations! Your new **Cool Player** Source is implemented and ready to be built by MS with the config your defined.
+
+## Further Implementation
+
+### Backlog
+
+To have your Source try to scrobble "missed" tracks when MS starts up the Source's service must be able to provide:
+
+* track information
+* timestamp of when the track was played
+
+In your Source implement [`getBackloggedPlays`](https://github.com/FoxxMD/multi-scrobbler/blob/master/src/backend/sources/AbstractSource.ts#L235) and set setting in constructor indicating it has backlogging capabilities:
+
+```ts title="src/backend/sources/CoolPlayerSource.ts"
+import request from 'superagent';
+import {
+  PlayObject,
+} from "../common/infrastructure/Atomic.js";
+// ...
+export default class CoolPlayerSource extends MemorySource {
+
+  // tell MS it should try to get backlogged tracks on startup
+  override canBacklog: boolean = true;
+
+  constructor(/* ... */) {
+    super(/* ... */);
+    // ...
+  }
+
+  // ...
+
+  protected getBackloggedPlays = async (options: RecentlyPlayedOptions): Promise<PlayObject[]> => {
+    try {
+      const resp = await request
+              .get(`${this.urlData.url.toString()}/history`)
+              .set('Authorization', `Token ${this.config.token}`);
+
+      // assuming list from body looks like track info returned in 
+      // "Implement Play Object Transform" section
+      const {
+        body = []
+      } = resp;
+
+      return body.map(x => CoolPlayerSource.formatPlayObj(x));
+    } catch (e) {
+      throw new Error('Error occurred while getting recently played', {cause: e});
+    }
+
+  }
+}
+```
+
+### Other Source Types
+
+There are some scenarios where polling and/or state machine is not the right tool to handle determining if incoming data should be scrobbled:
+
+* The Source service handles scrobble threshold internally, the data being received should always be scrobbled (WebScrobbler, Plex, Tautulli, Listenbrainz, Last.fm)
+* You prefer to handle the scrobble determination yourself
+
+#### Music History Source
+
+If the Source is still polling but the track returned should always be scrobbled if not already seen IE the Source service is a **music history source** (Listenbrainz, Last.fm), rather than a music player, then simply indicate to MS the source of truth type by setting it in the constructor. The state machine will always return a track if it is new and not seen, regardless of how recently it was seen:
+
+
+```ts title="src/backend/sources/CoolPlayerSource.ts"
+import { SOURCE_SOT } from "../../core/Atomic.js";
+// ...
+export default class CoolPlayerSource extends MemorySource {
+
+  // tell MS it should immediately scrobble any new, unseen tracks from the upstream service
+  override playerSourceofTruth = SOURCE_SOT.HISTORY;
+
+  constructor(/* ... */) {
+    super(/* ... */);
+    // ...
+  }
+}
+```
+
+Remember to also set [`meta.parsedFrom`](#implement-play-object-transform) for your `Play` objects.
+
+#### Non-Polling Source
+
+**Ingress** Sources (like Plex, Tautulli, Webscrobbler, Jellyfin) do not having a polling mechanism because the upstream service contacts MS when there is an event, rather than MS contacting the upstream service.
+
+For these Sources you will need to implement endpoints in `src/service/api.ts` and corresponding files. See the existing Sources in the project as references for how to do this. 
+
+You may still wish to use the state machine `MemorySource` (like Jellyfin) if the events received are not "scrobble" events but instead of implementing `getRecentlyPlayed` you will implement your own function in your Source class, like `handle()`, that receives data and then uses `processRecentPlays`.
+
+After new plays have been determined see the next section for how to scrobble...
+
+#### Basic Source
+
+At the core of a Source that implements `AbstractSource`'s functionality is the ability to **Discover** and **Scrobble** plays. 
+
+These functions are not seen in the MVP `CoolPlayerSource` because they are automatically done by the polling functionality after being returned from `getRecentlyPlayed`.
+
+##### Discovery
+
+A Source keeps track of all the "plays" that are determined to be valid for scrobbling. When a play is valid it is checked to see if it has already been "discovered" by comparing the track info and timestamp of the play against already discovered plays. This prevents duplicate scrobbling by using the Source's own data and simplifies scrobbling for Sources by allowing your implementation to "always" ingest track data without having to worry about whether its new or not -- `AbstractSource` and `discover()` will take care of that for you.
+
+```ts title="src/backend/sources/MyBasicSource.ts"
+export default class MyBasicSource extends AbstractSource {
+  handle(somePlay: PlayObject) {
+    // if the track is "new" and not seen before it is returned in the discovered list
+    // we then know it is OK to be sent to Clients for scrobbling
+    const discovered: PlayObject[] = this.discover([somePlay]);
+  }
+}
+```
+
+This additionally will be surfaced to the user in the Dashboard in the "Tracks Discovered" page.
+
+##### Scrobbling
+
+After a play is verified to be discovered we can then scrobble it. This will emit the plays to the ScrobbleClients service which then disseminates the play to all Clients that were configured to listen in the Source's config.
+
+```ts title="src/backend/sources/MyBasicSource.ts"
+export default class MyBasicSourceSource extends AbstractSource {
+  handle(somePlay: PlayObject) {
+    const discovered: PlayObject[] = this.discover([somePlay]);
+    // emit plays that can be scrobbled by clients
+    this.scrobble(discovered);
+  }
+}
+```
+
+If your service only emits an event when a play is scrobbled you can _technically_ skip using `discover()` but it is good practice to use it unless you have a very good reason not to.
+
+:::note
+
+Using `scrobble()` does not guarantee a track is actually scrobbled! The Scrobble Clients also check the play against their own "recently scrobbled" list to prevent duplicates.
+
+:::
