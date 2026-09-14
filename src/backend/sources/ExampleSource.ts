@@ -35,6 +35,7 @@ export class CoolPlayerSource extends MemorySource {
 
     constructor(name: any, config: CoolPlayerSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         // the aio `type` literal is used here
+        // @ts-expect-error this type is not included in actual repository since it is just an example. Remove if using this for real implementation
         super('coolplayer', name, config, internal, emitter);
     }
 
