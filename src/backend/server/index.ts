@@ -123,19 +123,27 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
             res.redirect("/next/")
         });
 
-        const useHashRouter = root.get('isSubPath');
         const viteExpressOptions: Parameters<typeof ViteExpress.config>[0] = {
             mode: isProd ? 'production' : 'development',
             inlineViteConfig: {
                 base: basePath
             },
-            // tell the frontend at request time whether to use HashRouter --
-            // it can't be a build-time constant since the same build is
-            // shipped for every deployment (root or subpath)
-            transformer: (html) => html.replace(
-                '<head>',
-                `<head><script>window.__MS_RUNTIME__=${JSON.stringify({useHashRouter})};</script>`
-            )
+            // The build's asset/API references are relative (see vite.config.ts
+            // and the client's api/... calls); a relative URL resolves against
+            // the *current document path* so a nested
+            // client route (e.g. /components/3) would otherwise break them.
+            // <base href> pins resolution to the actual mount root for every
+            // route depth. window.__MS_RUNTIME__ tells react-router the same
+            // mount path so it can set `basename` -- neither can be a
+            // build-time constant since the same build serves every
+            // deployment (root or subpath).
+            transformer: (html) => {
+                const baseHref = basePath === '/' ? '/' : `${basePath}/`;
+                return html.replace(
+                    '<head>',
+                    `<head><base href="${baseHref}"><script>window.__MS_RUNTIME__=${JSON.stringify({basePath})};</script>`
+                );
+            }
         };
 
         if(!isProd) {

@@ -2,7 +2,6 @@ import { Box, Container } from '@chakra-ui/react';
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
 import {
     createBrowserRouter,
-    createHashRouter,
     Outlet,
     type RouteObject,
     RouterProvider, useLocation
@@ -100,12 +99,9 @@ const routesNested: RouteObject[] = [
     }
 ];
 
-const genRouter = () => {
-    const useHashRouter = window.__MS_RUNTIME__?.useHashRouter ?? false;
-    return useHashRouter ? createHashRouter(routesNested) : createBrowserRouter(routesNested);
-}
-
-const router = genRouter();
+// server injects window.__MS_RUNTIME__ per-request (src/backend/server/index.ts)
+// with the actual runtime mount path: '/' at root, '/myapp' under a subpath
+const router = createBrowserRouter(routesNested, { basename: window.__MS_RUNTIME__?.basePath ?? '/' });
 
 export const sseProviderOptions = {
     key: ['events'],
