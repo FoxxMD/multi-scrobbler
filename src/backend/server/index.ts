@@ -117,11 +117,7 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
             }
         }
 
-        app.use('/docs', express.static(path.resolve(projectRootDir, `./docsite/build`)));
-
-        app.get(/^\/next$/, (_, res) => {
-            res.redirect("/next/")
-        });
+        app.use(path.resolve(basePath, 'docs'), express.static(path.resolve(projectRootDir, `./docsite/build`)));
 
         const viteExpressOptions: Parameters<typeof ViteExpress.config>[0] = {
             mode: isProd ? 'production' : 'development',
