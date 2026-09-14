@@ -96,6 +96,9 @@ If your machine is accessible from the public internet consider installing multi
 
 </TabItem>
 <TabItem value="baseUrl" label="Base URL">
+
+<Tabs groupId="baseUrlUsage">
+<TabItem value="redirect" label="Redirects">
 **Optionally**, when
 
 * using a [Source or Client](../configuration/configuration.mdx) that has a "Redirect URI" that you have not explicitly defined
@@ -103,7 +106,7 @@ If your machine is accessible from the public internet consider installing multi
   * using a bridge network or
   * installing MS on a different machine than the one used to view the dashboard
 
-set the [Base URL](../configuration/configuration.mdx#base-url) as the IP of the host machine. (This is the IP you would use to view the dashboard in a browser)
+set the [Base URL](../configuration/configuration.mdx#base-url) as the IP/domain of the host machine. (This is the IP you would use to view the dashboard in a browser)
 
 
 ```yaml title="docker-compose.yml"
@@ -115,6 +118,57 @@ services:
     - BASE_URL=http://hostMachineIP
     // highlight-end
 ```
+</TabItem>
+<TabItem value="subpath" label="Deploying MS with a Subpath">
+When deploying MS to a domain where it will be served under a **subpath**, like `http://mydomain.com/multiscrobbler`, you **must** define `BASE_URL`:
+
+```yaml title="docker-compose.yml"
+services:
+  multi-scrobbler:
+    # ...
+    environment:
+      // highlight-start
+      # multi-scrobbler served under this subpath
+      - BASE_URL=https://mydomain.com/multiscrobbler
+      // highlight-end
+```
+
+This is **not required** when the root path is `/`, like `https://my-scrobbler.com` or `scrobbler.mydomain.com`.
+
+<DetailsAdmo type="important" summary="Self-Hosted Docs">
+
+Multi-Scrobbler's docs are at [docs.multi-scrobbler.app](https://docs.multi-scrobbler.app/) but they are also generated and hosted on your instance.
+
+If you are using a **subpath** and need these self-hosted docs as well you will need to **build your own docker image.** This is a limitation of Docusaurus, the framework the docs are built on.
+
+This build step is *optional* and not required for MS to run with a subpath, you just won't have self-hosted docs and will need to use the official, hosted docs instead.
+
+To build MS with self-hosted docs, provide the same `BASE_URL` used above as a build arg:
+
+```yaml title="docker-compose.yml"
+services:
+  multi-scrobbler:
+  // highlight-start
+  ## remove/comment out official image
+  # image: docker.io/foxxmd/multi-scrobbler:latest
+  ## add build spec
+    build:
+      context: https://github.com/FoxxMD/multi-scrobbler.git
+      args:
+        - BASE_URL=https://mydomain.com/multiscrobbler
+  // highlight-end
+  # ...
+    environment:
+        # ...
+        // highlight-start
+        # multi-scrobbler served under this subpath
+        - BASE_URL=https://mydomain.com/multiscrobbler
+        // highlight-end
+```
+
+</DetailsAdmo>
+</TabItem>
+</Tabs>
 
 </TabItem>
 <TabItem value="tz" label="Timezone">
