@@ -38,7 +38,7 @@ export const SettingsContainer = () => {
     },[setTheme]);
 
     const {mutate, isPending, variables, isSuccess} = useMutation({
-        mutationFn: (clearType: CacheClearType) => ky.delete(`/api/cache/${clearType}`)
+        mutationFn: (clearType: CacheClearType) => ky.delete(`api/cache/${clearType}`)
     });
 
     return (

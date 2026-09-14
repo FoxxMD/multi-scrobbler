@@ -53,7 +53,17 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
     });
 
     try {
-        app.use(router.getRouter());
+        const root = getRoot();
+        // pathname the app is mounted under (e.g. '/myapp', or '/' at root)
+        // decided at runtime from BASE_URL, not baked in at build time. See
+        // vite.config.ts (relative asset base) and src/client/App.tsx (router mode).
+        const local = root.get('localUrl');
+        const localDefined = root.get('hasDefinedBaseUrl');
+        const basePath = localDefined && local.pathname !== '/' ? local.pathname : '/';
+
+        // mount API routes under the same prefix the frontend's relative
+        // `api/...` fetches resolve against
+        app.use(basePath, router.getRouter());
         app.use(bodyParser.json());
         app.use(
             bodyParser.urlencoded({
@@ -68,8 +78,6 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
         app.use(passport.initialize());
         app.use(passport.session());
 
-        const root = getRoot();
-
         if(root.get('disableWeb')) {
             logger.warn('API and Dashboard have been DISABLED. Note that any ingress sources (Webscrobbler, Listenbrainz/Lastfm Endpoint Sources, etc...) will be unusable');
             return;
@@ -83,8 +91,6 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
 
         const isProd = root.get('isProd');
         const port = root.get('port');
-        const local = root.get('localUrl');
-        const localDefined = root.get('hasDefinedBaseUrl');
 
         const addy = getAddress();
         const addresses: string[] = [];
@@ -113,26 +119,33 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
 
         app.use('/docs', express.static(path.resolve(projectRootDir, `./docsite/build`)));
 
-        if(process.env.USE_HASH_ROUTER === undefined) {
-            process.env.USE_HASH_ROUTER = root.get('isSubPath').toString();
-        }
-
         app.get(/^\/next$/, (_, res) => {
             res.redirect("/next/")
         });
 
+        const useHashRouter = root.get('isSubPath');
         const viteExpressOptions: Parameters<typeof ViteExpress.config>[0] = {
             mode: isProd ? 'production' : 'development',
             inlineViteConfig: {
-                base: localDefined && local.pathname !== '/' ? local.toString() : '/'
-            }
+                base: basePath
+            },
+            // tell the frontend at request time whether to use HashRouter --
+            // it can't be a build-time constant since the same build is
+            // shipped for every deployment (root or subpath)
+            transformer: (html) => html.replace(
+                '<head>',
+                `<head><script>window.__MS_RUNTIME__=${JSON.stringify({useHashRouter})};</script>`
+            )
         };
 
         if(!isProd) {
             const conf = await ViteExpress.getViteConfig();
             viteExpressOptions.inlineViteConfig = {
                 ...viteExpressOptions.inlineViteConfig,
-                ...conf
+                ...conf,
+                // conf.base is the frontend's relative asset base ('./'), not
+                // the Express mount prefix -- keep our runtime-computed one
+                base: basePath
             };
         }
 

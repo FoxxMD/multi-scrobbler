@@ -78,4 +78,4 @@ export const isoToHuman = (iso?: string | null, opts?: DateFormatOptions) => {
     return parts.join(' ');
 }
 
-export const baseUrl = '/api/';
+export const baseUrl = 'api/';

@@ -1,38 +1,15 @@
 import react,{ reactCompilerPreset } from '@vitejs/plugin-react';
 import babel from '@rolldown/plugin-babel';
-import normalizeUrl from "normalize-url";
 import { defineConfig } from 'vite';
 import svgr from "vite-plugin-svgr";
 import { dirname, resolve } from 'node:path'
 
-const QUOTES_UNWRAP_REGEX: RegExp = new RegExp(/^"(.*)"$/);
-export const generateBaseURL = (userUrl: string | undefined): URL => {
-    let cleanUserUrl = userUrl.trim();
-    if (QUOTES_UNWRAP_REGEX.test(cleanUserUrl)) {
-        const results = cleanUserUrl.match(QUOTES_UNWRAP_REGEX);
-        cleanUserUrl = results[1];
-    }
-    const base = normalizeUrl(cleanUserUrl, { removeSingleSlash: true });
-    const u = new URL(base);
-    if (u.port === '') {
-        if (u.protocol === 'https:') {
-            u.port = '443';
-        } else if (userUrl.includes(`${u.hostname}:80`)) {
-            u.port = '80';
-        }
-    }
-    return u;
-}
-
+// Relative base so the built assets work from any mount path (root or a
+// runtime-chosen subpath) without needing to know it at build time
+//
+// the server picks the actual mount path/router mode at runtime, see
+// src/backend/server/index.ts and src/client/App.tsx.
 export default defineConfig(() => {
-    let baseUrlStr = '/';
-    if (process.env.BASE_URL !== undefined && process.env.BASE_URL !== '') {
-        const baseUrl = generateBaseURL(process.env.BASE_URL);
-        if (baseUrl.pathname !== '/') {
-            baseUrlStr = baseUrl.toString();
-        }
-    }
-    console.debug(`[VITE] BASE_URL ENV: ${process.env.BASE_URL} | Base Url String: ${baseUrlStr}`);
     return {
         server: {
             allowedHosts: (true as true),
@@ -43,7 +20,7 @@ export default defineConfig(() => {
         esbuild: {
             minifyIdentifiers: false
         },
-        base: baseUrlStr,
+        base: './',
         plugins: [
             react(),
                 babel({
@@ -62,9 +39,6 @@ export default defineConfig(() => {
                 keepNames: true,
                 sourcemap: true
             },
-        },
-        define: {
-            "__USE_HASH_ROUTER__": JSON.stringify((process.env.USE_HASH_ROUTER ?? false))
         },
         css: {
             preprocessorOptions: {

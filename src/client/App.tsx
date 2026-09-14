@@ -101,7 +101,7 @@ const routesNested: RouteObject[] = [
 ];
 
 const genRouter = () => {
-    const useHashRouter = __USE_HASH_ROUTER__ === 'true';
+    const useHashRouter = window.__MS_RUNTIME__?.useHashRouter ?? false;
     return useHashRouter ? createHashRouter(routesNested) : createBrowserRouter(routesNested);
 }
 
@@ -109,7 +109,7 @@ const router = genRouter();
 
 export const sseProviderOptions = {
     key: ['events'],
-    url: '/api/events?next=true'
+    url: 'api/events?next=true'
 }
 
 function App() {

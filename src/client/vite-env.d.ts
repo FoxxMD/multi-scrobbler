@@ -1,3 +1,8 @@
 /// <reference types="vite/client" />
 /// <reference types="vite-plugin-svgr/client" />
-declare const __USE_HASH_ROUTER__: boolean
+
+// Injected server-side per-request (src/backend/server/index.ts) since the
+// hash-vs-browser router choice depends on the runtime BASE_URL, not the build.
+interface Window {
+    __MS_RUNTIME__?: { useHashRouter: boolean };
+}
