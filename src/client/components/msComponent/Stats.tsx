@@ -173,7 +173,7 @@ export const DeadLetterIndicatorStreamable = (props: { data: Pick<ComponentClien
         if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === data.id) {
             switch (payload.type) {
                 case 'deadLetter':
-                    setStatsData({current: statsData.current + 1, total: statsData.total + 1});
+                    setStatsData({current: statsData.current, total: statsData.total + 1});
                     break;
                 case 'deadLetterRemoved':
                 case 'removeDeadLetter':

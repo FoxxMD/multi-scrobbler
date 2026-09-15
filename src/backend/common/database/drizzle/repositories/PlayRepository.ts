@@ -512,14 +512,15 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                 orderBy: {
                     updatedAt: 'asc'
                 }
-            }
+            },
+            events: true
         },
         // orderBy: {
         //     seenAt: 'asc'
         // },
     }).prepare()
 
-    public getQueueNext = async (queueName: string, opts: {order?: 'asc' | 'desc', retries?: number, notIds?: number[], status?: QueueStateSelect['queueStatus']} & ComponentConstrainedRepoOpts = {}): Promise<PlaySelectWithQueueStates | undefined> => {
+    public getQueueNext = async (queueName: string, opts: {order?: 'asc' | 'desc', retries?: number, notIds?: number[], status?: QueueStateSelect['queueStatus']} & ComponentConstrainedRepoOpts = {}): Promise<PlayWith<'queueStates' | 'events'> | undefined> => {
         const {
             retries = 1000,
             notIds,
@@ -528,7 +529,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             componentId = this.componentId
         } = opts;
 
-        let res: PlaySelectWithQueueStates | undefined;
+        let res: PlayWith<'queueStates' | 'events'>  | undefined;
 
         if (notIds === undefined) {
             if (this.getQueueNextPrepared === undefined) {
@@ -557,7 +558,8 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                         orderBy: {
                             updatedAt: 'asc'
                         }
-                    }
+                    },
+                    events: true
                 },
                 // orderBy: {
                 //     seenAt: 'asc'

@@ -966,10 +966,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     }
 
-    protected getDefaultDeadLetterRetries() {
-        return this.config.options?.deadLetterRetries ?? DEAD_LETTER_RETRIES_DEFAULT;
-    }
-
     //processQueueCurrentPlay
     async processPlay(playEntity: PlaySelectWithQueueStates, signal?: AbortSignal): Promise<PlayProcessingResult> {
         signal?.throwIfAborted();

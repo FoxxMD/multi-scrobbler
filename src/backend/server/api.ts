@@ -541,7 +541,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
             }
         } = req;
 
-        const play = await component.playRepo.findByUid(playUid);
+        const play = await component.playRepo.findByUidWith<'queueStates' | 'events'>(playUid, ['queues','events']);
         if(play === undefined) {
             return res.sendStatus(404);
         }

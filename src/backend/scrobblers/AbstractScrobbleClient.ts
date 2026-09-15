@@ -1006,10 +1006,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
     }
 
-    protected getDefaultDeadLetterRetries() {
-        return this.config.options?.deadLetterRetries ?? DEAD_LETTER_RETRIES_DEFAULT;
-    }
-
     processDeadLetterQueue = async (attemptWithRetries?: number, reason?: string, sync?: boolean) => {
 
         if (!(await this.isReady())) {
@@ -1085,7 +1081,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         });
     }
 
-    async processPlay(playEntity: PlaySelectWithQueueStates, signal?: AbortSignal): Promise<PlayProcessingResult> {
+    async processPlay(playEntity: PlayWith<'queueStates' | 'events'>, signal?: AbortSignal): Promise<PlayProcessingResult> {
         signal?.throwIfAborted();
 
         const queueState = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE);

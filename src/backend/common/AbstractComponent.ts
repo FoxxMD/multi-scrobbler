@@ -3,7 +3,7 @@ import {
     cacheFunctions,
 } from "@foxxmd/regex-buddy-core";
 import type EventEmitter from "events";
-import {COMPONENT_TYPE_CLIENT, DEAD_QUEUE, INGRESS_QUEUE, isPlayObject, MONITORING_ORIGIN_SYSTEM, MONITORING_ORIGIN_USER, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, type ComponentType, type LifecycleInput, type LifecycleStep, type PlayData, type PlayObject} from "../../core/Atomic.ts";
+import {COMPONENT_TYPE_CLIENT, DEAD_LETTER_RETRIES_DEFAULT, DEAD_QUEUE, INGRESS_QUEUE, isPlayObject, MONITORING_ORIGIN_SYSTEM, MONITORING_ORIGIN_USER, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, type ComponentType, type LifecycleInput, type LifecycleStep, type PlayData, type PlayObject} from "../../core/Atomic.ts";
 import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
 import type {CommonClientConfig} from "./infrastructure/config/client/index.ts";
 import type {CommonSourceConfig} from "./infrastructure/config/source/index.ts";
@@ -19,7 +19,7 @@ import AbstractInitializable from "./AbstractInitializable.ts";
 import type TransformerManager from "./transforms/TransformerManager.ts";
 import { getRoot } from "../ioc.ts";
 import { nanoid } from "nanoid";
-import { isDebugMode } from "../utils.ts";
+import { isDebugMode, sleep } from "../utils.ts";
 import { findCauseByFunc, findCauseByReference } from "../utils/ErrorUtils.ts";
 import { hashObject, normalizeStr, parseArrayFromMaybeString } from "../utils/StringUtils.ts";
 import { playContentInvariantTransform } from "../utils/PlayComparisonUtils.ts";
@@ -767,7 +767,11 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
     }
 
-    queuePlay = async (data: (PlayObject | PlayObject[]) | (PlaySelectWithQueueStates | PlaySelectWithQueueStates[]), context?: QueueContext & {isRetry?: boolean}) => {
+    protected getDefaultDeadLetterRetries() {
+        return this.config.options?.deadLetterRetries ?? DEAD_LETTER_RETRIES_DEFAULT;
+    }
+
+    queuePlay = async (data: (PlayObject | PlayObject[]) | (PlaySelectWithQueueStates | PlaySelectWithQueueStates[]), context?: QueueContext) => {
         const createdQueuedPlays: PlaySelect[] = [];
 
         const dataArray = Array.isArray(data) ? data : [data];
@@ -796,8 +800,16 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                     (playSelect as unknown as PlayWith<'events'>).events = events;
                 }
                 this.emitPlayUpdate({ ...playSelect } as unknown as PlayApiCommonDetailed);
-                this.emitEvent(queue.retries > 0 ? 'deadQueued' : 'playQueued', {queuedPlay: playSelect});
+                this.emitEvent('playQueued', {queuedPlay: playSelect});
                 createdQueuedPlays.push(playSelect);
+                this.queuedLength += 1;
+                this.queuedGauge.labels(this.getPrometheusLabels()).inc();
+                if(queue.retries > 0) {
+                    // was previously in 'failed' with retries
+                    // dequeue from failed-queue
+                    this.deadLetterQueued -= 1;
+                    this.emitEvent('deadLetterDequeued', playSelect);
+                }
             }
         } else if (dataArray.every(x => isPlayObject(x))) {
             /**
@@ -859,6 +871,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 this.emitPlayInsert({ ...playRow[0], queueStates: [queueState], events: createdEvents } as unknown as PlayApiCommonDetailed);
                 this.queuedLength += 1;
                 this.queuedGauge.labels(this.getPrometheusLabels()).inc();
+                // nothing to do with failed/deadletter since these are brand-new plays
             });
         } else {
             throw new Error('Data passed to queuePlay must be either all be PlayObject or all PlaySelect objects');
@@ -868,7 +881,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     abstract findPreQueueExistingPlay(queueablePlay: PlayObject, context?: QueueContext & {isRetry?: boolean}): Promise<PlayWith<'parent' | 'queueStates'>>
 
-    protected handlePlayProcessing = async (playEntity: PlaySelectWithQueueStates, signal?: AbortSignal) => {
+    protected handlePlayProcessing = async (playEntity: PlayWith<'queueStates'|'events'>, signal?: AbortSignal) => {
+        
         let res: PlayProcessingResult,
         err: Error;
         try {
@@ -894,37 +908,57 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 throw e;
             }
         } finally {
+            // every play handled by this function was previously added to queuedLength and emitted a 'playQueued' event
+            // it also already emitted 'deadLetterDequeued' when it was queued
+            this.queuedGauge.labels(this.getPrometheusLabels()).dec();
+            this.queuedLength -= 1;
+            this.emitEvent('playDequeued', { queuedScrobble: playEntity });
+
             let queueStates: QueueStateSelect[];
             const initialRetries = res.queue.retries ?? 0;
+            const last = res.playEntity.events.findLast(x => x.eventName === 'playStateChange' && (x as PlayEventPlayStateChange).data.state !== 'queued');
+            const lastWasNonFailureState = last === undefined || (last as PlayEventPlayStateChange).data.state !== 'failed';
             if(err !== undefined) {
                 res.queue.retries = (initialRetries + 1);
                 res.queue.updatedAt = dayjs();
-                await this.queueRepo.updateById(res.queue.id, {
-                    ...res.queue,
-                });
-                if(initialRetries === 0) {
+                if(lastWasNonFailureState) {
+                    // play moved from non-failure state to failure
+                    // so we should increment total failed
+                    this.emitEvent('deadLetter', res.playEntity);
                     this.deadLetterGauge.labels(this.getPrometheusLabels()).inc();
                     this.deadLetterLength += 1;
-                    this.deadLetterQueued += 1;
-                    this.emitEvent('deadLetter', res.playEntity);
                 }
-                queueStates = res.playEntity.queueStates.filter(x => x.queueName !== res.queue.queueName).concat([res.queue]);
+                let shouldDeleteQueue = false;
+                if(res.queue.retries > this.getDefaultDeadLetterRetries()) {
+                    shouldDeleteQueue = true;
+                } else if((res.queue.context ?? {}).isRetry === true) {
+                    // isRetry is initiated by the user
+                    // so we only want this play to be processed once
+                    shouldDeleteQueue = true;
+                }
+                if(shouldDeleteQueue) {
+                    queueStates = res.playEntity.queueStates.filter(x => x.queueName !== res.queue.queueName)
+                    await this.queueRepo.deleteByIds([res.queue.id]);
+                } else {
+                    await this.queueRepo.updateById(res.queue.id, {
+                        ...res.queue,
+                    });
+                    // play may have already have been in failure state
+                    // but failed this queue run so is back to fail queued
+                    this.deadLetterQueued += 1;
+                    this.emitEvent('deadQueued', res.playEntity);
+                    queueStates = res.playEntity.queueStates.filter(x => x.queueName !== res.queue.queueName).concat([res.queue]);
+                }
             } else {
                 await this.queueRepo.deleteByIds([res.queue.id]);
-                if(res.queue.retries > 0) {
+                if(res.queue.retries > 0 || !lastWasNonFailureState) {
+                    // play had retries or last non-queue state was failure, so it was counted in failure count
+                    // now we remove it
                     this.deadLetterGauge.labels(this.getPrometheusLabels()).dec();
                     this.deadLetterLength -= 1;
-                    this.emitEvent('removeDeadLetter', { dead: { id: res.playEntity.uid } });
+                    this.emitEvent('deadLetterRemoved', { dead: { id: res.playEntity.uid } });
                 }
                 queueStates = res.playEntity.queueStates.filter(x => x.queueName !== res.queue.queueName)
-            }
-            if(initialRetries === 0) {
-                this.queuedGauge.labels(this.getPrometheusLabels()).dec();
-                this.queuedLength -= 1;
-                this.emitEvent('playDequeued', { queuedScrobble: playEntity });
-            } else {
-                this.emitEvent('deadLetterDequeued', res.playEntity);
-                this.deadLetterQueued -= 1;
             }
             this.playRepo.updateById(playEntity.id, {play: res.playEntity.play, state: res.playEntity.state, error: res.playEntity.error});
             const createdEvents = await this.playEventsRepo.createMany(res.events.map(x => ({...x, playId: playEntity.id}))) as PlayEventSelect[];
@@ -936,17 +970,15 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
     }
 
-    markPlayDiscarded = async (dead: PlaySelectWithQueueStates) => {
+    markPlayDiscarded = async (dead: PlayWith<'events' | 'queueStates'>) => {
 
         const queueState = dead.queueStates.find(x => x.queueName === INGRESS_QUEUE);
-        // if(queueState === undefined) {
-        //     this.logger.warn(`Play ${dead.uid} does not have a dead state, nothing to remove.`);
-        //     return;
-        // }
+        const last = dead.events.findLast(x => x.eventName === 'playStateChange' && (x as PlayEventPlayStateChange).data.state !== 'queued');
+        const lastWasNonFailureState = last === undefined || (last as PlayEventPlayStateChange).data.state !== 'failed';
 
         this.setStatus(`Marking Play ${dead.uid} as discarded`);
 
-        const isFailed = dead.state === 'failed';
+        const lastState = dead.state;
         const events: PlayEventNew[] = [];
 
         if(dead.state !== 'discarded') {
@@ -976,24 +1008,22 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 events: createdEvents as unknown as PlayEvent<string>[]
         });
 
-        if(queueState !== undefined && queueState.retries > 0) {
-            if(queueState.queueStatus === 'queued') {
-                this.deadLetterQueued -= 1;
-                this.deadLetterLength -= 1;
-                this.deadLetterGauge.labels(this.getPrometheusLabels()).dec();
-                this.emitEvent('deadLetterDequeued', { dead: { id: dead.uid } });
-            } else {
-                this.deadLetterLength -= 1;
-                this.deadLetterGauge.labels(this.getPrometheusLabels()).dec();
-                this.emitEvent('removeDeadLetter', { dead: { id: dead.uid } });
-            }
-        } else if(isFailed) {
+        if(!lastWasNonFailureState) {
+            // play was in failure state
             this.deadLetterLength -= 1;
             this.deadLetterGauge.labels(this.getPrometheusLabels()).dec();
-            this.emitEvent('removeDeadLetter', { dead: { id: dead.uid } });
-        } else if(queueState !== undefined) {
+            this.emitEvent('deadLetterRemoved', dead);
+            if(queueState !== undefined && queueState.retries > 0) {
+                // and was queued
+                this.deadLetterQueued -= 1;
+                // give sse time to catch up
+                await sleep(20);
+                this.emitEvent('deadLetterDequeued', dead);
+            }
+        } else if(lastState === 'queued') {
             this.queuedLength -= 1;
             this.queuedGauge.labels(this.getPrometheusLabels()).dec();
+            this.emitEvent('playDequeued', dead);
         }
     }
 
@@ -1008,7 +1038,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }, 'id');
         this.deadLogger.info(`Marking ${ids.length} as discarded...`);
         await pMap(ids, async (id) => {
-            const entity = await this.playRepo.findByIdWith<'queueStates'>(id, ['queues']);
+            const entity = await this.playRepo.findByIdWith<'queueStates' | 'events'>(id, ['queues','events']);
             if(entity !== undefined) {
                 await this.markPlayDiscarded(entity);
             }
@@ -1022,14 +1052,21 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         if(queueState === undefined) {
             throw new SimpleError('Play does not have an associated queued');
         }
+        const last = playEntity.events.findLast(x => x.eventName === 'playStateChange' && (x as PlayEventPlayStateChange).data.state !== 'queued');
+        const lastWasNonFailureState = last === undefined || (last as PlayEventPlayStateChange).data.state !== 'failed';
+
         const playState = playEntity.state;
-        const lastStateEvent = playEntity.events.findLast(x => x.eventName === PLAY_EVENT_TYPE.playStateChange && (x as PlayEventPlayStateChange).data.state !== 'queued');
-        if(lastStateEvent === undefined) {
+        if(last === undefined) {
             // if play has only ever been queued then it has failed the initial lifecycle
             playEntity.state = 'failed';
+            if(lastWasNonFailureState) {
+                this.deadLetterLength += 1;
+                this.deadLetterGauge.labels(this.getPrometheusLabels()).inc();
+                this.emitEvent('deadLetter', playEntity);
+            }
         } else {
             //if it had a previous, completed state then use that instead
-            playEntity.state = (lastStateEvent as PlayEventPlayStateChange).data.state;
+            playEntity.state = (last as PlayEventPlayStateChange).data.state;
         }
         const eventsToCreate: PlayEventNew[] = [];
         if(playEntity.state !== playState) {
@@ -1044,13 +1081,15 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             queueStates: playEntity.queueStates.filter(x => x.queueName !== INGRESS_QUEUE) as unknown as QueueStateApi[],
             events: ((playEntity as unknown as PlayWith<'events'>).events ?? []).concat(createdEvents),
         } as unknown as PlayApiCommonDetailed);
-        if(queueState.retries === 0) {
+        if(queueState.queueStatus !== 'queued') {
+            // in failure queue state with retries
+            this.emitEvent('deadLetterDequeued', { queuedScrobble: playEntity });
+            this.deadLetterQueued -= 1;
+        } else {
+            // in actual queue state (may still be failure)
             this.emitEvent('playDequeued', { queuedScrobble: playEntity });
             this.queuedLength -= 1;
             this.queuedGauge.labels(this.getPrometheusLabels()).dec();
-        } else if(queueState.queueStatus === 'queued') {
-            this.emitEvent('deadLetterDequeued', { queuedScrobble: playEntity });
-            this.deadLetterQueued -= 1;
         }
     }
 
