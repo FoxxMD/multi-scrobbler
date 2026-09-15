@@ -37,9 +37,7 @@ URL From Config                => MS Uses
 'wss://mydomain.com/custom/azura/ws' => wss://mydomain.com/custom/azura/ws
 ```
 
-<ShouldScrobble filename="azuracast"/>
-
-When `autoMonitor` is not explicitly set, Multi-scrobbler will set the **default monitoring behavior** based on if either of these settings is configured:
+When [`autoMonitor`](/configuration/sources#default-monitoring-and-activity-detection) is not explicitly set, Multi-scrobbler will set the **default monitoring behavior** based on if either of these settings is configured:
 
 * live status (`AZURA_LIVE` or `monitorWhenLive`) or
 * listener count (`AZURA_LISTENERS_NUM` or `monitorWhenListeners`)

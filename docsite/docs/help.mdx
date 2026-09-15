@@ -6,9 +6,13 @@ title: Help
 
 ### Logs
 
-Multi-scrobbeler has a real-time log shown in the dashboard. These are the same logs you would find in docker logs. In the dashboard, logs can be filtered by LEVELS to give you a better view of errors/warnings.
+Multi-scrobbeler has a real-time log that is accessible from anywhere in the app. These are the same logs you would find in docker logs. Use the <kbd>Terminal</kbd> icon in the top-right of the app to open the floating log window.
 
-When creating an issue please include all logs at the lowest level possible (DEBUG) to help provide context for your issue. You should try to include logs that occurred *before* and *after* your issue/error occurs as this can help determine if MS was behaving normally.
+<img src={require('/img/logs.png').default}/>
+
+The <kbd>Copy</kbd> icon in the top-right of the log window will copy all logs to your clipboard. Alternatively, you can select and copy any logs.
+
+When creating an issue please include all logs at the lowest **Level** possible (`TRACE`) to help provide context for your issue. You should try to include logs that occurred *before* and *after* your issue/error occurs as this can help determine if MS was behaving normally.
 
 ### Debug Mode
 
@@ -18,15 +22,11 @@ This mode will make your logs very noisy, though, so it's recommended to turn it
 
 ### Copy Play Debug Data
 
-From the dashboard, each Source/Client has a few details page links:
-
-<img src={require('/img/details.jpg').default} height="400"/>
-
-Opening the details page for the Source/Client reveals a lists all of the Plays that were discovered (Sources) or scrobbled (Clients).
+Open the details page for the Source/Client experiencing an issue. Then, search or scroll to find the Play/Scrobble that where the problem is occurring.
 
 Click on the Debug icon to copy debugging data relevant to that Play. This data should be included in any issue you create.
 
-<img src={require('/img/debug_button.jpg').default} height="400"/>
+<img src={require('/img/debug_button.jpg').default}/>
 
 To include this data in an issue either paste the copied data into a text file and save as `debugdata.json`, attaching to the issue.
 
@@ -49,6 +49,24 @@ I am explaining my issue here. Here is the debug data:
 Thank you for your time.
 
 ````
+
+### Copy Error Data
+
+If the issue is occurring with a Source/Client itself, or there is an Error/Warning available, click the icon shown below to copy the error data to your clipboard.
+
+<img src={require('/img/error_copy.png').default}/>
+
+Include this in your issue using the code blocks, like shown in the Debug Data section above:
+
+```json
+{
+  "name": "Authentication Check",
+  "message": "Authentication test failed!",
+  "stack": "Authentication Check: Authentication test failed!\n..."
+  }
+}
+```
+
 
 ## Finding Help
 

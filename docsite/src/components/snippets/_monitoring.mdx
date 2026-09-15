@@ -1,0 +1,36 @@
+import CodeBlock from '@theme/CodeBlock';
+
+### Monitoring Activity
+
+Monitoring activity for a Source/Client can be explicitly toggled on/off from each Source/Client respective details page by choosing <kbd>Ignore</kbd> or <kbd>Monitor</kbd> from the Status dropdown.
+
+<p align="center">
+<img src={require('/img/monitoring_on.png').default} width="50%"/> <img src={require('/img/monitoring_off.jpg').default} width="50%"/>
+</p>
+
+When a Source/Client is *not* monitored it will *still show activity* (like an active Player) but the resulting Play will marked as **Discarded.**
+
+<img src={require('/img/monitoring_discarded.png').default}/>
+
+Discarded Plays are **not** forwarded from Sources -> Clients (Discovered) and for Clients are **not** Scrobbled to downstream scrobble clients.
+
+If you do want to Discover/Scrobble a discarded Play then click the <kbd>Retry</kbd> icon on the Play's status to force it to be processed.
+
+#### Default Monitoring and Activity Detection
+
+All Sources/Clients have monitoring enabled automatically (except those explicitly documented as requiring monitoring configuration).
+
+You can manually define whether a Source/Client starts, or is created, with monitoring enabled automatically by adding the following value to a Source/Client's `options` in [file or aio config](/configuration?configType=file#configuration-types):
+
+```json5 title="azuracast.json"
+{
+    "data": {
+        // ...
+    },
+    "options": {
+        // set to true to always monitor automatically
+        // set to false to never monitor automatically
+        "autoMonitor": true
+    }
+}
+```

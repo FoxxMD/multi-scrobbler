@@ -12,8 +12,7 @@ import {
   SelectedSnapDisplay,
   useSelectedSnapDisplay
 } from './SnapDisplay'
-import ComponentList from '@site/static/img/next/ms-componentlist.png';
-import ComponentListDesktop from '@site/static/img/next/ms-componentlistdesktop.png';
+import ComponentListDesktop from '@site/static/img/msDash.png';
 import ComponentDetailed from '@site/static/img/next/ms-componentdetailed.png';
 import PlaysList from '@site/static/img/next/ms-playlist.jpg';
 import Timeline from '@site/static/img/next/ms-mbemptyquery.png';
@@ -42,12 +41,12 @@ const EmblaCarousel = (props: {options?: EmblaOptionsType}) => {
               <div className="imageCaption">Source/Client List on desktop</div>
               </div>
           </div>
-          <div className="embla__slide" key="2">
+          {/* <div className="embla__slide" key="2">
             <div className="embla__slide__container">
               <img src={ComponentList} />
               <div className="imageCaption">Source/Client List on mobile</div>
               </div>
-          </div>
+          </div> */}
           <div className="embla__slide" key="3">
             <div className="embla__slide__container">
               <img src={ComponentDetailed} />
