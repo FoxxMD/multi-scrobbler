@@ -467,7 +467,7 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed, co
 
     const {mutate, isPending, variables, isSuccess} = useMutation({
         mutationKey: ['playAction', props.activity.uid],
-        mutationFn: (data: {action: string, context?: QueueContext}) => {
+        mutationFn: (data: {action: string, context?: QueueContext, state?: string}) => {
             if(data.action === 'queue') {
                 return ky.post(`api/components/${props.activity.componentId}/plays/${props.activity.uid}/queue`,{
                     json: data.context ?? {}
@@ -476,8 +476,14 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed, co
             if(data.action === 'delete') {
                 return ky.delete(`api/components/${props.activity.componentId}/plays/${props.activity.uid}`);
             }
-            const realAction = data.action === 'cancel' ? 'queue' : data.action;
-            return ky.delete(`api/components/${props.activity.componentId}/plays/${props.activity.uid}/${realAction}`);
+            if(data.action === 'cancel') {
+                return ky.delete(`api/components/${props.activity.componentId}/plays/${props.activity.uid}/queue`);
+            }
+            if(data.action === 'finish') {
+                return ky.post(`api/components/${props.activity.componentId}/plays/${props.activity.uid}/state`, {
+                    json: {state: data.state}
+                });
+            }
         }
     });
 
@@ -500,7 +506,7 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed, co
                 mutate({action: 'cancel'});
                 break;
             case 'finish':
-                mutate({action: 'dead'});
+                mutate({action: 'state', state: 'failed'});
                 break;
             case 'delete':
                 setDeleteOpen(true);
@@ -520,10 +526,12 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed, co
             menuItems = [<MenuItemDebug/>,<MenuItemTrash disabled={isPending} color="fg.error" _hover={{ bg: "bg.error", color: "fg.error" }}/>];
             break;
         case 'failed':
-            primaryAction = <RetryButton size={{base: '2xs', smTo2xl: 'xs'}} margin="1px" variant="subtle" onClick={() => mutate({action: 'queue'})}/>;
             menuItems = [<MenuItemRetryWith disabled={isPending} />,<MenuItemDebug/>,<MenuItemTrash disabled={isPending}  color="fg.error" _hover={{ bg: "bg.error", color: "fg.error" }}/>];
-            if(!hasDeadQueue) {
+            if(hasDeadQueue) {
+                primaryAction = <StopButton size={{base: '2xs', smTo2xl: 'xs'}} color="red.400" margin="1px" variant="subtle" onClick={() => mutate({action: 'cancel'})}/>;
                 menuItems.unshift(<MenuItemFinish disabled={isPending}/>)
+            } else {
+                primaryAction = <RetryButton size={{base: '2xs', smTo2xl: 'xs'}} margin="1px" variant="subtle" onClick={() => mutate({action: 'queue'})}/>;
             }
             break
         default:

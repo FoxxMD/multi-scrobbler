@@ -62,14 +62,14 @@ import { serializeError} from 'serialize-error';
 import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetchUtils.ts";
 import { spawn, isAbortError, delay, waitForEvent } from 'abort-controller-x';
 import { type QueryPlaysOpts, type WithPlayRelation } from "../common/database/drizzle/repositories/PlayRepository.ts";
-import type {PlayEventNew, PlayEventSelect, PlaySelectWithQueueStates, PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
+import type {PlaySelectWithQueueStates, PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
 import { asPlay } from "../../core/PlayMarshalUtils.ts";
 import { GenericRepository } from "../common/database/drizzle/repositories/BaseRepository.ts";
 import assert from "node:assert";
-import { COMPONENT_STATE, type ComponentClientApiJson, type PlayApiCommonDetailed, type QueueStateApi } from "../../core/Api.ts";
+import { COMPONENT_STATE, type ComponentClientApiJson, type PlayApiCommonDetailed } from "../../core/Api.ts";
 import type {ComponentState} from "react";
 import { PLAY_EVENT_TYPE, type PlayEvent } from "../../core/PlayEvent.ts";
-import { dupeCheckToPlayEvent, queueCompletionStateToPlayEvent, queueStateToPlayEvent, scrobbleToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from "../common/database/drizzle/entityUtils.ts";
+import { dupeCheckToPlayEvent, queueCompletionStateToPlayEvent, scrobbleToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from "../common/database/drizzle/entityUtils.ts";
 import type { PlayProcessingResult } from "../common/infrastructure/PlayProcessing.ts";
 import { PlayProcessingError } from "../common/errors/PlayProcessingError.ts";
 
@@ -132,8 +132,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     nowPlayingQueue: NowPlayingQueue = new Map();
     nowPlayingTaskInterval: number = 5000;
     npLogger: Logger;
-    dupeLogger: Logger;
-    deadLogger: Logger;
 
     declare config: CommonClientConfig;
 
@@ -396,19 +394,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             this.tracksScrobbledTotal = scrobbledCount['count(*)'];
         }
         await this.updateQueueStats([INGRESS_QUEUE, DEAD_QUEUE]);
-    }
-
-    protected async updateQueueStats(queueNames: string[]) {
-        if(queueNames.includes(INGRESS_QUEUE)) {
-            this.queuedLength = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], {retries: 0});
-            this.queuedGauge.labels(this.getPrometheusLabels()).set(this.queuedLength);
-        }
-        if(queueNames.includes(DEAD_QUEUE)) {
-            this.deadLetterLength = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], {queueStatus: ['failed','queued'], retries: 1, retryEq: 'gte'});
-            this.deadLetterQueued = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], {queueStatus: ['queued'], retries: 1, retryEq: 'gte'});
-            // TODO
-            this.deadLetterGauge.labels(this.getPrometheusLabels()).set(this.deadLetterLength);
-        }
     }
 
     protected generateStaggerMappers() {
@@ -1257,96 +1242,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: e}));
             }
             throw new PlayProcessingError(e, {playEntity, queue: queueState, events, showStopping: true});
-        }
-    }
-
-    removeDeadLetterScrobble = async (dead: PlaySelectWithQueueStates) => {
-
-        const queueState = dead.queueStates.find(x => x.queueName === INGRESS_QUEUE);
-        if(queueState === undefined) {
-            this.logger.warn(`Play ${dead.uid} does not have a dead state, nothing to remove.`);
-            return;
-        }
-        if(queueState.retries === 0) {
-            this.logger.warn(`Play ${dead.uid} has not failed yet, not removing.`);
-            return;
-        }
-
-        this.setStatus(`Marking Dead Play ${dead.uid} as completed`);
-
-        const events: PlayEventNew[] = [
-            { playId: dead.id, ...queueCompletionStateToPlayEvent({...queueState, error: undefined, queueStatus: QUEUE_STATUS_COMPLETED, context: {reason: 'Dead Play marked as completed by user'}}) }
-        ];
-        await this.queueRepo.deleteByIds([queueState.id]);
-        
-        if(dead.state === 'queued') {
-            dead.state = 'failed';
-            this.playRepo.updateById(dead.id, {state: 'failed'});
-            events.push(
-                { playId: dead.id, ...stateChangeToPlayEvent({ state: 'failed' }) }
-            )
-        }
-        const createdEvents = await this.playEventsRepo.createMany(events) as PlayEventSelect[];
-        this.emitPlayUpdate({uid: dead.uid,
-             state: dead.state,
-             queueStates: dead.queueStates.filter(x => x.queueName !== INGRESS_QUEUE) as unknown as QueueStateApi[],
-             events: createdEvents as unknown as PlayEvent<string>[]
-        });
-
-        this.deadLetterLength -= 1;
-        if(queueState.queueStatus === 'queued') {
-            this.emitEvent('deadLetterDequeued', { dead: { id: dead.uid } });
-            this.deadLetterQueued -= 1;
-        }
-        this.deadLetterGauge.labels(this.getPrometheusLabels()).dec();
-        this.emitEvent('removeDeadLetter', { dead: { id: dead.uid } });
-    }
-
-    removeDeadLetterScrobbles = async () => {
-        const ids = await this.playRepo.findPlayIdentifiers({
-            queues: [
-                {
-                    queueName: INGRESS_QUEUE,
-                    queueStatus: 'failed'
-                }
-            ]
-        }, 'id');
-        this.deadLogger.info(`Marking ${ids.length} as completed...`);
-        await pMap(ids, async (id) => {
-            const entity = await this.playRepo.findByIdWith<'queueStates'>(id, ['queues']);
-            if(entity !== undefined) {
-                await this.removeDeadLetterScrobble(entity);
-            }
-        }, {concurrency: 10});
-        this.deadLogger.info('Finished processing dead scrobbles.');
-        await this.updateQueueStats([DEAD_QUEUE]);
-    }
-
-    public cancelQueuedPlay = async (playEntity: PlaySelectWithQueueStates) => {
-        const queueState = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE);
-        if(queueState === undefined) {
-            throw new SimpleError('Play does not have an associated queued');
-        }
-        if(queueState.queueStatus !== 'queued') {
-            throw new SimpleError('Play is not queued');
-        }
-
-        queueState.queueStatus = QUEUE_STATUS_FAILED;
-        playEntity.state = 'failed';
-        const createdEvents = await this.playEventsRepo.createMany([
-            {playId: playEntity.id, ...stateChangeToPlayEvent({state: playEntity.state})},
-            {playId: playEntity.id, ...queueStateToPlayEvent({...queueState, context: {reason: 'Cancelled by user'}})}
-        ]) as PlayEventSelect[];
-        await this.queueRepo.updateById(queueState.id, {queueStatus: QUEUE_STATUS_FAILED});
-        await this.playRepo.updateById(playEntity.id, {state: 'failed'});
-        this.emitPlayUpdate({
-            ...playEntity, 
-            events: ((playEntity as unknown as PlayWith<'events'>).events ?? []).concat(createdEvents),
-        } as unknown as PlayApiCommonDetailed);
-        if(queueState.retries === 0) {
-            this.emitEvent('playDequeued', { queuedScrobble: playEntity });
-        } else {
-            this.emitEvent('deadLetterDequeued', { queuedScrobble: playEntity });
         }
     }
 
