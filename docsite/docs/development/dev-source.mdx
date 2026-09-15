@@ -35,44 +35,44 @@ The eaiest way to use this for our new config is focus on implementing only the 
 Create a new file for your config and implement a **data** schema, this is the required config for the Source to operate:
 
 <RemoteCodeBlock 
-url="https://gist.githubusercontent.com/FoxxMD/d2d3d9a48b2a515b40bfede75f5f3983/raw/c332633c650b98e065e8794f56f23610dffb98d5/test.ts"
+url="https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/refs/heads/master/src/backend/common/infrastructure/config/source/example.ts"
 language="typescript"
 ranges={[[1,18]]}
 interstitial="// ..."
 suffix={"// more implementation..."}
-title="coolplayer.ts"/>
+title="src/backend/common/infrastructure/config/source/coolplayer.ts"/>
 
 Basic options and the complete config shape:
 
 <RemoteCodeBlock 
-url="https://gist.githubusercontent.com/FoxxMD/d2d3d9a48b2a515b40bfede75f5f3983/raw/c332633c650b98e065e8794f56f23610dffb98d5/test.ts"
+url="https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/refs/heads/master/src/backend/common/infrastructure/config/source/example.ts"
 language="typescript"
 ranges={[[20,34]]}
 prefix={"// more implementation...\n"}
 interstitial="// ..."
 suffix={"// more implementation..."}
-title="coolplayer.ts"/>
+title="src/backend/common/infrastructure/config/source/coolplayer.ts"/>
 
 If your Source should also be configurable via [ENV](/configuration?configType=env#configuration-types) then implement a separate shape for ENV (reusing shape from data/options) as well as an `envSchemas` object that is used by MS for validation, generating ENV config docs, and transforming common ENV keys for your Source:
 
 <RemoteCodeBlock 
-url="https://gist.githubusercontent.com/FoxxMD/d2d3d9a48b2a515b40bfede75f5f3983/raw/c332633c650b98e065e8794f56f23610dffb98d5/test.ts"
+url="https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/refs/heads/master/src/backend/common/infrastructure/config/source/example.ts"
 language="typescript"
 ranges={[[36,52]]}
 prefix={"// more implementation...\n"}
 interstitial="// ..."
 suffix={"// more implementation..."}
-title="coolplayer.ts"/>
+title="src/backend/common/infrastructure/config/source/coolplayer.ts"/>
 
 Finally, add a shape for use with [AIO](/configuration?configType=aio#configuration-types) config:
 
 <RemoteCodeBlock 
-url="https://gist.githubusercontent.com/FoxxMD/d2d3d9a48b2a515b40bfede75f5f3983/raw/c332633c650b98e065e8794f56f23610dffb98d5/test.ts"
+url="https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/refs/heads/master/src/backend/common/infrastructure/config/source/example.ts"
 language="typescript"
 ranges={[[55,60]]}
 prefix={"// more implementation...\n"}
 interstitial="// ..."
-title="coolplayer.ts"/>
+title="src/backend/common/infrastructure/config/source/coolplayer.ts"/>
 
 #### Add to Config Map
 
@@ -136,12 +136,12 @@ Now we will create a new Source inheriting from [`AbstractComponent`](dev-common
 First we create a new Source called `CoolPlayerSource` and setup our constructor to accept the config as well as setting any behavior `overrides`.
 
 <RemoteCodeBlock 
-url="https://gist.githubusercontent.com/FoxxMD/d2d3d9a48b2a515b40bfede75f5f3983/raw/fe3a5285dbf20e27b05893bfac1468fdc637316b/coolplayersource.ts"
+url="https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/refs/heads/master/src/backend/sources/ExampleSource.ts"
 language="typescript"
-ranges={[[1,39]]}
+ranges={[[1,40]]}
 interstitial="// ..."
 suffix={"// more implementation..."}
-title="CoolPlayerSource.ts"/>
+title="src/backend/sources/CoolPlayerSource.ts"/>
 
 ### Implement Stages
 
@@ -152,9 +152,9 @@ Next we will implement the [Stages](dev-common.md#stages) required to get CoolPl
 First we implement the [Build Data Stage](dev-common.md#stage-build-data). We will check the `baseUrl` property includes the necessary prefix and then parse it to a normalized data structure we can use elsewhere.
 
 <RemoteCodeBlock 
-url="https://gist.githubusercontent.com/FoxxMD/d2d3d9a48b2a515b40bfede75f5f3983/raw/fe3a5285dbf20e27b05893bfac1468fdc637316b/coolplayersource.ts"
+url="https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/refs/heads/master/src/backend/sources/ExampleSource.ts"
 language="typescript"
-ranges={[[41,62]]}
+ranges={[[42,63]]}
 interstitial="// ..."
 prefix={"// more implementation..."}
 suffix={"// more implementation..."}
@@ -165,9 +165,9 @@ title="CoolPlayerSource.ts"/>
 Second we will implement the [Check Connection Stage](dev-common.md#stage-check-connection):
 
 <RemoteCodeBlock 
-url="https://gist.githubusercontent.com/FoxxMD/d2d3d9a48b2a515b40bfede75f5f3983/raw/fe3a5285dbf20e27b05893bfac1468fdc637316b/coolplayersource.ts"
+url="https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/refs/heads/master/src/backend/sources/ExampleSource.ts"
 language="typescript"
-ranges={[[64,78]]}
+ranges={[[65,79]]}
 interstitial="// ..."
 prefix={"// more implementation..."}
 suffix={"// more implementation..."}
@@ -178,9 +178,9 @@ title="CoolPlayerSource.ts"/>
 Finally, we will implement [Auth Test Stage](dev-common.md#stage-test-auth):
 
 <RemoteCodeBlock 
-url="https://gist.githubusercontent.com/FoxxMD/d2d3d9a48b2a515b40bfede75f5f3983/raw/fe3a5285dbf20e27b05893bfac1468fdc637316b/coolplayersource.ts"
+url="https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/refs/heads/master/src/backend/sources/ExampleSource.ts"
 language="typescript"
-ranges={[[85,96]]}
+ranges={[[81,97]]}
 interstitial="// ..."
 prefix={"// more implementation..."}
 suffix={"// more implementation..."}
@@ -193,9 +193,9 @@ Now that Source initialization is taken care we can move on to implementing how 
 First, we create a static function that is used to take the track data returned from Cool Player's API and return a standard [`PlayObject`.](dev-common.md#play-object)
 
 <RemoteCodeBlock 
-url="https://gist.githubusercontent.com/FoxxMD/d2d3d9a48b2a515b40bfede75f5f3983/raw/e9ce9ae45f2fe2185b1e75278af0612fe96d9080/coolplayersource.ts"
+url="https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/refs/heads/master/src/backend/sources/ExampleSource.ts"
 language="typescript"
-ranges={[[101,124]]}
+ranges={[[99,125]]}
 interstitial="// ..."
 prefix={"// more implementation..."}
 suffix={"// more implementation..."}
@@ -214,9 +214,9 @@ For a polling Source to work properly we need to implement a function, `getRecen
 To take advantage of the `MemorySource` state machine we will additionally use `processRecentPlays` from `MemorySource` inside `getRecentlyPlayed`. We pass track and/or player state returned from the Source service to `processRecentPlayers`. It then takes care of deriving Source player state based on how this data changes over time. The advantage to using `processRecentPlays` is that our Source service does not necessarily need to pass any player information -- as long as the track info has a **duration** we can more-or-less determine if it has been played long enough to scrobble.
 
 <RemoteCodeBlock 
-url="https://gist.githubusercontent.com/FoxxMD/d2d3d9a48b2a515b40bfede75f5f3983/raw/e9ce9ae45f2fe2185b1e75278af0612fe96d9080/coolplayersource.ts"
+url="https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/refs/heads/master/src/backend/sources/ExampleSource.ts"
 language="typescript"
-ranges={[[126,177]]}
+ranges={[[127,178]]}
 interstitial="// ..."
 prefix={"// more implementation..."}
 title="CoolPlayerSource.ts"/>
@@ -267,7 +267,7 @@ To have your Source try to scrobble "missed" tracks when MS starts up the Source
 * track information
 * timestamp of when the track was played
 
-In your Source implement [`getBackloggedPlays`](https://github.com/FoxxMD/multi-scrobbler/blob/master/src/backend/sources/AbstractSource.ts#L235) and set setting in constructor indicating it has backlogging capabilities:
+In your Source implement `getBackloggedPlays` and set setting in constructor indicating it has backlogging capabilities:
 
 ```ts title="src/backend/sources/CoolPlayerSource.ts"
 import request from 'superagent';
