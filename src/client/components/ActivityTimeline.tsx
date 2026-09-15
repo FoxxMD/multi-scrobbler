@@ -351,7 +351,7 @@ const QueueTimelineItem = (props: {queueState: PlayEventQueueStateChange<string>
             text = <TimelineItemSummaryText>{queueName === DEAD_QUEUE ? 'Dead ' : ''}Queue failed <Muted>at</Muted> {shortTodayAwareFormat(dayjs(createdAt))}</TimelineItemSummaryText>;
     }
 
-    if(error !== undefined && error !== null) {
+    if(error !== undefined && error !== null && typeof error === 'object' && Object.keys(error).length > 0) {
         title = (
             <MSCollapsible 
                 triggerProps={timelineCollapsibleProps}
