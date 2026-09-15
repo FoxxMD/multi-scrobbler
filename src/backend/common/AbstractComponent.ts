@@ -1022,7 +1022,6 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         if(queueState === undefined) {
             throw new SimpleError('Play does not have an associated queued');
         }
-        queueState.queueStatus = QUEUE_STATUS_FAILED;
         const playState = playEntity.state;
         const lastStateEvent = playEntity.events.findLast(x => x.eventName === PLAY_EVENT_TYPE.playStateChange && (x as PlayEventPlayStateChange).data.state !== 'queued');
         if(lastStateEvent === undefined) {
