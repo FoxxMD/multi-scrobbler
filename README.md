@@ -63,7 +63,30 @@ A dockerized app that monitors your music listening activity from *everywhere* a
 
 [**Quick Start Guide**](https://docs.multi-scrobbler.app//quickstart)
 
-<img src="/docsite/static/img/status-ui.png" width="800">
+<img src="/docsite/static/img/msDash.png" width="800">
+
+<details>
+
+<summary>More Screenshots</summary>
+
+<div align="center">
+
+<p>
+<img src="/docsite/static/img/msDetails.png" width="395">
+<img src="/docsite/static/img/msPlayDetails.png" width="395">
+</p>
+<p>
+<img src="/docsite/static/img/msTransform.png" width="395">
+<img src="/docsite/static/img/msClientTimeline.png" width="395">
+</p>
+<p>
+<img src="/docsite/static/img/msDashMobile.png" width="395">
+<img src="/docsite/static/img/msDetailsMobile.png" width="395">
+</p>
+
+</div>
+
+</details>
 
 **Why should I use this over a browser extension and/or mobile app scrobbler?**
 
