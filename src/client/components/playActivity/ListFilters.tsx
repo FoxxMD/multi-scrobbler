@@ -45,7 +45,7 @@ export const PlayStateFilter = (props: PlayStateFilterProps & {value?: PlayState
         onChange = noop,
         value
     } = props;
-    const availableStates = ['dead queued', ...(isComponentTypeSource(mode) ? PLAY_SOURCE_STATE : PLAY_CLIENT_STATE)];
+    const availableStates = ['failed TBR', ...(isComponentTypeSource(mode) ? PLAY_SOURCE_STATE : PLAY_CLIENT_STATE)];
     const selectOptions = createListCollection({ items: availableStates.map(x => ({ label: capitalizeWords(x), value: x })) });
     //const [enabledStates, setEnabledStates] = useState<PlayState[]>([]);
     // maxW="420px"

@@ -159,7 +159,7 @@ export interface SortPlaysByProps {
     sortBy: SortPlaysBy
 }
 
-export type PlayStateUI = PlayState | 'dead queued';
+export type PlayStateUI = PlayState | 'failed TBR';
 
 export type QueryPlaysOptsJson = {
     sort?: "playedAt" | "seenAt";

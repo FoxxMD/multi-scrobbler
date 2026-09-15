@@ -41,10 +41,10 @@ const activities = createQueryKeys('activities', {
             if(state !== undefined) {
               derived.state = state.filter(x => isPlayState(x));
 
-              if(state.includes('dead queued') && state.includes('queued')) {
+              if(state.includes('failed TBR') && state.includes('queued')) {
                 derived.queues = [{queueName: INGRESS_QUEUE, queueStatus: 'queued'},{queueName: INGRESS_QUEUE, queueStatus: 'failed'}];
                 derived.state = Array.from(new Set([...derived.state, 'failed', 'queued']));
-              } else if(state.includes('dead queued')) {
+              } else if(state.includes('failed TBR')) {
                   derived.queues = [{queueName: INGRESS_QUEUE, queueStatus: 'failed'}];
                   derived.state = Array.from(new Set([...derived.state, 'failed']));
               }
