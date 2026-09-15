@@ -54,7 +54,7 @@ A dockerized app that monitors your music listening activity from *everywhere* a
 * Monitor status of Sources and Clients using [webhooks (Gotify, Ntfy, Apprise)](https://docs.multi-scrobbler.app/configuration#webhook-configurations), [healthcheck endpoints](https://docs.multi-scrobbler.app/configuration#health-endpoint), or [prometheus metrics](https://docs.multi-scrobbler.app/configuration/#prometheus).
 * Supports [Now Playing](https://docs.multi-scrobbler.app/configuration/clients#now-playing) for scrobble Clients
 * Supports configuring for single or multiple users (scrobbling for your friends and family!)
-* Web server interface for stats, basic control, and detailed logs
+* Mobile-friendly web interface for stats, control, scrobble audit trail, and logs
 * Graceful network and client failure handling (queued scrobbles that auto-retry)
 * Smart handling of credentials (persistent, authorization through app)
 * Easy configuration through [ENVs or JSON](ttps://foxxmd.github.io/multi-scrobbler/configuration#configuration-types)
