@@ -3,7 +3,8 @@ import {
   IconButton,
   type IconButtonProps,
   Portal,
-  Tooltip as ChakraTooltip
+  Tooltip as ChakraTooltip,
+  Span,
 } from "@chakra-ui/react"
 import * as React from "react"
 import { HiOutlineInformationCircle } from "react-icons/hi"
@@ -25,13 +26,17 @@ export const ToggleTip = React.forwardRef<HTMLDivElement, ToggleTipProps>(
       content,
       contentProps,
       portalRef,
+      positioning: {
+        placement = 'top-start',
+        ...positiongRest
+      } = {},
       ...rest
     } = props
 
     return (
       <ChakraPopover.Root
         {...rest}
-        positioning={{ ...rest.positioning, gutter: 4 }}
+        positioning={{ placement, gutter: 4, ...positiongRest }}
       >
         <ChakraPopover.Trigger asChild>{children}</ChakraPopover.Trigger>
         <Portal disabled={!portalled} container={portalRef}>
@@ -43,6 +48,7 @@ export const ToggleTip = React.forwardRef<HTMLDivElement, ToggleTipProps>(
               textStyle="xs"
               rounded="sm"
               ref={ref}
+              width="auto"
               {...contentProps}
             >
               {showArrow && (
@@ -82,6 +88,20 @@ export const InfoTip = React.forwardRef<HTMLDivElement, InfoTipProps>(
   },
 )
 
+export interface TextTipProps extends Partial<ToggleTipProps> {
+  text: string | React.ReactNode
+}
+
+export const TextTip = React.forwardRef<HTMLDivElement, TextTipProps>(
+  (props, ref) => {
+    const { children, text, ...rest } = props
+    return (
+      <ToggleTip content={children} showArrow {...rest} ref={ref}>
+        <Span textDecoration="underline dashed 1px" cursor="pointer">{text}</Span>
+      </ToggleTip>
+    )
+  },
+)
 
 
 export interface TooltipProps extends ChakraTooltip.RootProps {
