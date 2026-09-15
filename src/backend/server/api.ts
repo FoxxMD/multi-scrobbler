@@ -547,8 +547,8 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         }
 
         switch(state) {
-            case 'failed':
-                await component.markPlayFailed(play);
+            case 'discarded':
+                await component.markPlayDiscarded(play);
                 break;
             default:
                 return res.status(400).json({error: {message: `Play state '${state}' is not supported.`}});

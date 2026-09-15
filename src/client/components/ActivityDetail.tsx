@@ -506,7 +506,7 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed, co
                 mutate({action: 'cancel'});
                 break;
             case 'finish':
-                mutate({action: 'state', state: 'failed'});
+                mutate({action: 'finish', state: 'discarded'});
                 break;
             case 'delete':
                 setDeleteOpen(true);
@@ -526,10 +526,9 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed, co
             menuItems = [<MenuItemDebug/>,<MenuItemTrash disabled={isPending} color="fg.error" _hover={{ bg: "bg.error", color: "fg.error" }}/>];
             break;
         case 'failed':
-            menuItems = [<MenuItemRetryWith disabled={isPending} />,<MenuItemDebug/>,<MenuItemTrash disabled={isPending}  color="fg.error" _hover={{ bg: "bg.error", color: "fg.error" }}/>];
+            menuItems = [<MenuItemRetryWith disabled={isPending} />,<MenuItemDebug/>,<MenuItemTrash disabled={isPending}  color="fg.error" _hover={{ bg: "bg.error", color: "fg.error" }}/>,<MenuItemFinish disabled={isPending}/>];
             if(hasDeadQueue) {
                 primaryAction = <StopButton size={{base: '2xs', smTo2xl: 'xs'}} color="red.400" margin="1px" variant="subtle" onClick={() => mutate({action: 'cancel'})}/>;
-                menuItems.unshift(<MenuItemFinish disabled={isPending}/>)
             } else {
                 primaryAction = <RetryButton size={{base: '2xs', smTo2xl: 'xs'}} margin="1px" variant="subtle" onClick={() => mutate({action: 'queue'})}/>;
             }

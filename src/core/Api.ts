@@ -224,7 +224,7 @@ export const componentStateBodySchema = z.object({
 export type ComponentStateBody = z.infer<typeof componentStateBodySchema>;
 
 export const playStateBodySchema = z.object({
-    state: z.enum(["failed"]),
+    state: z.enum(["discarded"]),
     reason: z.string().optional()
 });
 

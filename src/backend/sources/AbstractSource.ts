@@ -331,6 +331,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         if(discoveredCount !== undefined) {
             this.tracksDiscoveredTotal = discoveredCount['count(*)'];
         }
+        await this.updateQueueStats([INGRESS_QUEUE, DEAD_QUEUE]);
     }
 
     public getRunningState(): ComponentState {

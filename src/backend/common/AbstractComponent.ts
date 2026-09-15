@@ -275,12 +275,12 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     protected async updateQueueStats(queueNames: string[]) {
         if(queueNames.includes(INGRESS_QUEUE)) {
-            this.queuedLength = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], {retries: 0});
+            this.queuedLength = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], {queueStatus: ['queued'], retries: 0});
             this.queuedGauge.labels(this.getPrometheusLabels()).set(this.queuedLength);
         }
         if(queueNames.includes(DEAD_QUEUE)) {
-            this.deadLetterLength = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], {queueStatus: ['failed','queued'], retries: 1, retryEq: 'gte'});
-            this.deadLetterQueued = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], {queueStatus: ['queued'], retries: 1, retryEq: 'gte'});
+            this.deadLetterQueued = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], {queueStatus: ['failed'], retries: 1, retryEq: 'gte'});
+            this.deadLetterLength = await this.playRepo.getComponentFailedNoRetryCount() + this.deadLetterQueued;
             // TODO
             this.deadLetterGauge.labels(this.getPrometheusLabels()).set(this.deadLetterLength);
         }
@@ -936,7 +936,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
     }
 
-    markPlayFailed = async (dead: PlaySelectWithQueueStates) => {
+    markPlayDiscarded = async (dead: PlaySelectWithQueueStates) => {
 
         const queueState = dead.queueStates.find(x => x.queueName === INGRESS_QUEUE);
         // if(queueState === undefined) {
@@ -944,27 +944,28 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         //     return;
         // }
 
-        this.setStatus(`Marking Play ${dead.uid} as failed`);
+        this.setStatus(`Marking Play ${dead.uid} as discarded`);
 
         const isFailed = dead.state === 'failed';
-
         const events: PlayEventNew[] = [];
-        if(queueState !== undefined && queueState.queueStatus !== QUEUE_STATUS_COMPLETED) {
+
+        if(dead.state !== 'discarded') {
+            dead.state = 'discarded';
+            this.playRepo.updateById(dead.id, {state: 'discarded'});
             events.push(
-                { playId: dead.id, ...queueCompletionStateToPlayEvent({...queueState, error: undefined, queueStatus: QUEUE_STATUS_COMPLETED, context: {reason: 'Play marked as failed by user'}}) }
+                { playId: dead.id, ...stateChangeToPlayEvent({ state: 'discarded', reason: 'Play marked as discarded by user' }) }
+            )
+        }
+        
+        if(queueState !== undefined) {
+            events.push(
+                { playId: dead.id, ...queueCompletionStateToPlayEvent({...queueState, error: undefined, queueStatus: QUEUE_STATUS_COMPLETED, context: {reason: 'Play marked as discarded by user'}}) }
             );
         }
         if(queueState !== undefined) {
             await this.queueRepo.deleteByIds([queueState.id]);
         }
         
-        if(dead.state === 'queued') {
-            dead.state = 'failed';
-            this.playRepo.updateById(dead.id, {state: 'failed'});
-            events.push(
-                { playId: dead.id, ...stateChangeToPlayEvent({ state: 'failed' }) }
-            )
-        }
         let createdEvents: PlayEventSelect[] = [];
         if(events.length > 0) {
             createdEvents = await this.playEventsRepo.createMany(events) as PlayEventSelect[];
@@ -975,18 +976,28 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 events: createdEvents as unknown as PlayEvent<string>[]
         });
 
-        if(isFailed) {
+        if(queueState !== undefined && queueState.retries > 0) {
+            if(queueState.queueStatus === 'queued') {
+                this.deadLetterQueued -= 1;
+                this.deadLetterLength -= 1;
+                this.deadLetterGauge.labels(this.getPrometheusLabels()).dec();
+                this.emitEvent('deadLetterDequeued', { dead: { id: dead.uid } });
+            } else {
+                this.deadLetterLength -= 1;
+                this.deadLetterGauge.labels(this.getPrometheusLabels()).dec();
+                this.emitEvent('removeDeadLetter', { dead: { id: dead.uid } });
+            }
+        } else if(isFailed) {
             this.deadLetterLength -= 1;
             this.deadLetterGauge.labels(this.getPrometheusLabels()).dec();
             this.emitEvent('removeDeadLetter', { dead: { id: dead.uid } });
-        }
-        if(isFailed && queueState !== undefined && queueState.queueStatus === 'queued') {
-            this.emitEvent('deadLetterDequeued', { dead: { id: dead.uid } });
-            this.deadLetterQueued -= 1;
+        } else if(queueState !== undefined) {
+            this.queuedLength -= 1;
+            this.queuedGauge.labels(this.getPrometheusLabels()).dec();
         }
     }
 
-    markPlaysFailed = async () => {
+    markPlaysDiscarded = async () => {
         const ids = await this.playRepo.findPlayIdentifiers({
             queues: [
                 {
@@ -995,15 +1006,15 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 }
             ]
         }, 'id');
-        this.deadLogger.info(`Marking ${ids.length} as failed...`);
+        this.deadLogger.info(`Marking ${ids.length} as discarded...`);
         await pMap(ids, async (id) => {
             const entity = await this.playRepo.findByIdWith<'queueStates'>(id, ['queues']);
             if(entity !== undefined) {
-                await this.markPlayFailed(entity);
+                await this.markPlayDiscarded(entity);
             }
         }, {concurrency: 10});
         this.deadLogger.info('Finished processing failed scrobbles.');
-        await this.updateQueueStats([DEAD_QUEUE]);
+        await this.updateQueueStats([INGRESS_QUEUE]);
     }
 
     public cancelQueuedPlay = async (playEntity: PlayWith<'queueStates' | 'events'>) => {
@@ -1038,7 +1049,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             this.emitEvent('playDequeued', { queuedScrobble: playEntity });
             this.queuedLength -= 1;
             this.queuedGauge.labels(this.getPrometheusLabels()).dec();
-        } else {
+        } else if(queueState.queueStatus === 'queued') {
             this.emitEvent('deadLetterDequeued', { queuedScrobble: playEntity });
             this.deadLetterQueued -= 1;
         }

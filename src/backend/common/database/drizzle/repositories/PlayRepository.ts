@@ -1,6 +1,6 @@
 import { childLogger } from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
-import { eq, inArray, relationsFilterToSQL, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, notExists, relationsFilterToSQL, sql } from "drizzle-orm";
 import assert from "node:assert";
 import type { MarkOptional, ElementOf } from "ts-essentials";
 import { type DateLike, type DeepReplaceValue, type PlayObject, type PlayState, QUEUE_STATUS_QUEUED, type QueueName, SCROBBLE_TS_SOC_END, TA_DEFAULT_ACCURACY, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
@@ -850,6 +850,38 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             with: buildPlayWith(qWith)
         })) as PlayWith<'queueStates'>[]).map(x => ({...x, play: hydratePlaySelect(x)}));
     }
+
+    public getComponentPlayCountForStates = async (states: string[], componentId?: number): Promise<number> => (
+        await this.db.$count(plays, and(
+            eq(plays.componentId, componentId ?? this.componentId),
+            inArray(plays.state, states as PlaySelect['state'][])
+        ))
+    )
+
+    public getComponentFailedNoRetryCount = async (componentId?: number): Promise<number> => {
+
+
+        // gets all plays that are in failed state
+        // without any queueState relations
+        //
+        // these are plays that will not be retried at all
+        const entitiesWithoutRelationSubquery = this.db
+        .select({ id: plays.id })
+        .from(plays)
+        .leftJoin(queueStates, eq(plays.id, queueStates.playId))
+        .where(
+            and(
+            eq(plays.componentId, componentId ?? this.componentId),
+            eq(plays.state, 'failed'),
+            isNull(queueStates.id)
+        )
+        )
+        .as('entities_without_relation');
+
+        const count = await this.db.$count(entitiesWithoutRelationSubquery);
+
+        return count;
+}
 
     public getComponentPlayCountByState = async (componentId?: number): Promise<{state: PlayState, 'count(*)': number}[]> => {
 
