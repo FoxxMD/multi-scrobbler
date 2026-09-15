@@ -95,7 +95,7 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
                     logger.error(e);
                 }
             }
-            res.redirect('/next');
+            res.redirect('/');
             return;
         } else if(req.url.includes('ytmusic')) {
             const entity: YTMusicSource | undefined = scrobbleSources.getByName(name) as (YTMusicSource | undefined);
@@ -138,7 +138,7 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
                 source.replaceErrors(err, {predicate: (x) => err.message === x.message});
                 source.logger.error(err);
             }
-            res.redirect('/next');
+            res.redirect('/');
             return;
         }
     });
