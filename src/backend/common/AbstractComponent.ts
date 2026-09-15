@@ -279,7 +279,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             this.queuedGauge.labels(this.getPrometheusLabels()).set(this.queuedLength);
         }
         if(queueNames.includes(DEAD_QUEUE)) {
-            this.deadLetterQueued = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], {queueStatus: ['failed'], retries: 1, retryEq: 'gte'});
+            this.deadLetterQueued = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], {queueStatus: ['failed','queued'], retries: 1, retryEq: 'gte'});
             this.deadLetterLength = await this.playRepo.getComponentFailedNoRetryCount() + this.deadLetterQueued;
             // TODO
             this.deadLetterGauge.labels(this.getPrometheusLabels()).set(this.deadLetterLength);
