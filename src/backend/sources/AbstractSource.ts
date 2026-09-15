@@ -967,7 +967,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     }
 
     //processQueueCurrentPlay
-    async processPlay(playEntity: PlaySelectWithQueueStates, signal?: AbortSignal): Promise<PlayProcessingResult> {
+    async processPlay(playEntity: PlayWith<'queueStates' | 'events'>, signal?: AbortSignal): Promise<PlayProcessingResult> {
         signal?.throwIfAborted();
         this.setStatus(`Processing Play ${playEntity.uid}`);
 
