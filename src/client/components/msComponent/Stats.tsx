@@ -148,7 +148,7 @@ export const QueuedIndicatorStreamable = (props: { data: Pick<ComponentClientApi
 }
 
 export const DeadLetterIndicatorStatic = (props: Omit<ComponentProps<typeof Indicator>, 'currentText' | 'totalText' | 'helpText' | 'directionColors'>) => (
-    <Indicator currentText="Dead" helpText="Queuable and (Total)" totalText="Total" directionColors={['red', 'green']} {...props} />
+    <Indicator currentText="Failed" directionColors={['red', 'green']} {...props} />
 );
 
 export const DeadLetterIndicatorStreamable = (props: { data: Pick<ComponentClientApiJson, 'id' | 'deadLetterPlays' | 'deadLetterPlaysTotal'> }
