@@ -18,7 +18,7 @@ interface JsonDiffOptionalProps {
     right?: DiffableVal,
     left: DiffableVal
     diff?: Changeset
-    diffOpts?: FileDiffProps<undefined>
+    diffOpts?: FileDiffProps<undefined,undefined>
 }
 
 export type JsonDiffProps = MarkRequired<JsonDiffOptionalProps, 'diff'> | MarkRequired<JsonDiffOptionalProps, 'right'>
