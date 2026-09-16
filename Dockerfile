@@ -163,6 +163,9 @@ RUN npm ci --omit=dev --no-audit \
     && chown -R abc:abc node_modules \
     ## peerDependency of validbot and can(?) be removed for production
     && rm -r node_modules/typescript \
+    ## youtubei.js includes a large folder of maps and d.ts files that
+    ## are only used for frontend bundling, we we don't need
+    && rm -rf node_modules/youtubei.js/bundle \
     && npx @usex/prune-mod -w \
     && rm -rf /root/.cache
 
