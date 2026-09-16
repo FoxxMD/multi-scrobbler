@@ -83,7 +83,6 @@ export default class PlexApiSource extends MemoryPositionalSource {
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
-        this.regexCache
         const {
             data: {
                 token,
@@ -262,7 +261,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
         } catch (e) {
             this.logger.error(new Error('Cannot start polling because Plex prerequisite data could not be built', {cause: e}));
             return false;
-        }5
+        }
     }
 
     isActivityValid = (state: PlayerStateDataMaybePlay, session: GetSessionsMetadata): boolean | string => {
@@ -328,7 +327,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
                     meta: {
                         ...play.meta,
                         art: {
-                            track: `/api/source/art?name=${this.name}&type=${this.type}&data=${res.named.ratingkey}`
+                            track: `/api/components/${this.componentId}/art?ratingKey=${res.named.ratingkey}`
                         }
                     }
                 }
@@ -474,10 +473,10 @@ export default class PlexApiSource extends MemoryPositionalSource {
         return await this.processRecentPlays(validSessions);
     }
 
-    getSourceArt = async (data: string): Promise<[Readable, string]> => {
+    getExternalArt = async (data: {ratingKey: string}): Promise<[Readable, string]> => {
         try {
             const resp = await this.plexApi.media.getThumbImage({
-                ratingKey: parseInt(data),
+                ratingKey: parseInt(data.ratingKey),
                 width: 250,
                 height: 250,
                 minSize: 1,

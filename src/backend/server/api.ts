@@ -37,6 +37,7 @@ import type { createTypedRouter, TypedMiddleware } from "@minisylar/express-type
 import { hasMetricRepositories, registerMetrics, setMetricRepositories } from "./promMetrics.ts";
 import pMap from "p-map";
 import type { PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
+import { stripIndents } from "common-tags";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -383,6 +384,33 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
                 status: didAuth ? 'Authenticated successfully' : data.status
             });
         }
+    });
+
+    router.get('/api/components/:id/art', {
+        middleware: [componentAwareMiddle],
+        querySchema: z.looseObject({}),
+        tags: ['Source/Client'],
+        summary: 'Get External Art',
+        description: stripIndents`Fetches and returns art from the upstream/downstream external service
+Note: this is only supported by some components.`
+    }, async (req, res, next) => {
+        const {
+            component,
+            query
+        } = req;
+
+        if('getExternalArt' in component && typeof component.getExternalArt === 'function') {
+            const [stream, contentType] = await component.getExternalArt(query);
+            res.writeHead(200, {'Content-Type': contentType});
+            try {
+                return stream.pipe(res);
+            } catch (e) {
+                logger.error(new Error(`Error occurred while trying to stream art for Component ${component.componentId}`, {cause: e}));
+                return res.status(500).json({message: 'Error during art retrieval'});
+            }
+        }
+
+        return res.status(501).json({error: {message: `Component ${component.componentId} does not support art retrieval`}});
     });
 
     router.get('/api/components/:id/plays', {
