@@ -639,12 +639,12 @@ export type TypesAreEqual<T, U, Y=unknown, N=never> =
 export type MBID = `${string}-${string}-${string}-${string}-${string}`
 
 // ['queued','discovered','discarded','scrobbled','failed','duped']
-export type PlayStateCommon = 'queued' |'discarded' | 'failed';
-export const PLAY_STATE_COMMON: PlayStateCommon[] = ['queued', 'discarded', 'failed'];
+export type PlayStateCommon = 'queued' |'discarded' | 'failed' | 'duped';
+export const PLAY_STATE_COMMON: PlayStateCommon[] = ['queued', 'discarded', 'failed', 'duped'];
 export type PlaySourceState = PlayStateCommon | 'discovered';
 export const PLAY_SOURCE_STATE: PlaySourceState[] = [...PLAY_STATE_COMMON, 'discovered'];
-export type PlayClientState = PlayStateCommon | 'duped' | 'scrobbled';
-export const PLAY_CLIENT_STATE = [...PLAY_STATE_COMMON, 'duped', 'scrobbled'];
+export type PlayClientState = PlayStateCommon | 'scrobbled';
+export const PLAY_CLIENT_STATE = [...PLAY_STATE_COMMON, 'scrobbled'];
 export type PlayState = PlaySourceState | PlayClientState;
 export const PLAY_STATES = Array.from(new Set([...PLAY_CLIENT_STATE, ...PLAY_SOURCE_STATE]));
 export const isPlayState = (val: string): val is PlayState => PLAY_STATES.includes(val);
