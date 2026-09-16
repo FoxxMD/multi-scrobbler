@@ -1,5 +1,5 @@
 import type { Collapsible } from '@chakra-ui/react';
-import { Card, Text, Icon, SkeletonCircle, SkeletonText, Span, Tabs, Timeline, Tag, HStack, Stack, Separator} from '@chakra-ui/react';
+import { Card, Text, Icon, SkeletonCircle, SkeletonText, Span, Tabs, Timeline, Tag, HStack, Stack, Separator, Wrap} from '@chakra-ui/react';
 import { HiCheck } from "react-icons/hi"
 import dayjs from "dayjs";
 import React from "react";
@@ -331,7 +331,7 @@ const QueueTimelineItem = (props: {queueState: PlayEventQueueStateChange<string>
         tags.push(<CacheChip key="cache" check={useCache}/>)
     }
     if(tags.length > 0) {
-        contextHints.push(<HStack key="tags">{tags}</HStack>)
+        contextHints.push(<Wrap key="tags">{tags}</Wrap>)
     }
     if(reason !== undefined) {
         contextHints.push(<span key="reason">Reason - {reason}</span>);
