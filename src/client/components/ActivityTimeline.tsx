@@ -276,11 +276,11 @@ const ScrobbleResponseItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpe
 }
 
 const RetryChip = (props: { count: number }) => (<Tag.Root>
-    <Tag.Label>Attempt: {props.count}</Tag.Label>
+    <Tag.Label style={{textWrap: "nowrap"}}>Attempt: {props.count}</Tag.Label>
 </Tag.Root>)
 
 const BoolChip = (props: { text: string, check: boolean }) => (<Tag.Root>
-    <Tag.Label>{props.text}</Tag.Label>
+    <Tag.Label style={{textWrap: "nowrap"}}>{props.text}</Tag.Label>
     <Tag.EndElement>
         {props.check ? <HiCheck /> : <XIcon />}
     </Tag.EndElement>
