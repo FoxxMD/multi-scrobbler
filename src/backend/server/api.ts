@@ -12,8 +12,7 @@ import {
 } from "../../core/Atomic.ts";
 import type {LeveledLogData} from "../common/infrastructure/Atomic.ts";
 import { getRoot } from "../ioc.ts";
-import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts";
-import AbstractSource from "../sources/AbstractSource.ts";
+import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts";;
 import MemorySource from "../sources/MemorySource.ts";
 import { setupAuthRoutes } from "./auth.ts";
 import { setupDeezerRoutes } from "./deezerRoutes.ts";
@@ -28,7 +27,7 @@ import { findAuthIssue, SimpleError } from "../common/errors/MSErrors.ts";
 import { DrizzlePlayRepository, type QueryPlaysOpts, type QueryPlaysOptsJson } from "../common/database/drizzle/repositories/PlayRepository.ts";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.ts";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
-import {componentStateBodySchema, type ComponentClientApiJson, type ComponentSourceApiJson} from "../../core/Api.ts";
+import {componentStateBodySchema, playStateBodySchema, type ComponentClientApiJson, type ComponentSourceApiJson} from "../../core/Api.ts";
 import { asDayjsHydratedObject } from "../../core/DataUtils.ts";
 import type {Dayjs} from "dayjs";
 import { asSerializablePlaySelect } from "../../core/PlayMarshalUtils.ts";
@@ -482,7 +481,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     });
 
     router.post('/api/components/:id/plays/:uid/queue', {
-        middleware: [componentAwareMiddle],
+        middleware: [componentAwareMiddle,bodyParser.json({ type: ['text/*', 'application/json'] })],
         bodySchema: queueContextSchema.optional(),
         tags: ['Plays'],
         summary: 'Requeue a Play'
@@ -516,7 +515,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
             }
         } = req;
 
-        const play = await component.playRepo.findByUid(playUid);
+        const play = await component.playRepo.findByUidWith<'queueStates' | 'events'>(playUid, ['queues','events']);
         if(play === undefined) {
             return res.sendStatus(404);
         }
@@ -525,24 +524,35 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.sendStatus(200);
     });
 
-    router.delete('/api/components/:id/plays/:uid/dead', {
-        middleware: [componentAwareMiddle],
+    router.post('/api/components/:id/plays/:uid/state', {
+        middleware: [componentAwareMiddle, bodyParser.json({ type: ['text/*', 'application/json'] })],
+        bodySchema: playStateBodySchema,
         tags: ['Plays'],
-        summary: 'Mark Dead Play as Completed'
+        summary: 'Mark Play as Done'
     }, async (req, res, next) => {
         const {
             component,
             params: {
                 uid: playUid
+            },
+            body: {
+                state
             }
         } = req;
 
-        const play = await component.playRepo.findByUid(playUid);
+        const play = await component.playRepo.findByUidWith<'queueStates' | 'events'>(playUid, ['queues','events']);
         if(play === undefined) {
             return res.sendStatus(404);
         }
 
-        await component.removeDeadLetterScrobble(play);
+        switch(state) {
+            case 'discarded':
+                await component.markPlayDiscarded(play);
+                break;
+            default:
+                return res.status(400).json({error: {message: `Play state '${state}' is not supported.`}});
+        }
+
         return res.sendStatus(200);
     });
 

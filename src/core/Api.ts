@@ -159,7 +159,7 @@ export interface SortPlaysByProps {
     sortBy: SortPlaysBy
 }
 
-export type PlayStateUI = PlayState | 'dead queued';
+export type PlayStateUI = PlayState | 'failed TBR';
 
 export type QueryPlaysOptsJson = {
     sort?: "playedAt" | "seenAt";
@@ -222,3 +222,10 @@ export const componentStateBodySchema = z.object({
 });
 
 export type ComponentStateBody = z.infer<typeof componentStateBodySchema>;
+
+export const playStateBodySchema = z.object({
+    state: z.enum(["discarded"]),
+    reason: z.string().optional()
+});
+
+export type PlayStateBody = z.infer<typeof playStateBodySchema>;

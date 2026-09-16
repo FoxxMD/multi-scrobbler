@@ -662,7 +662,8 @@ export const queueContextSchema = z.object({
     transform: z.boolean().optional(),
     dupeCheck: z.boolean().optional(),
     useCache: z.boolean().optional(),
-    reason: z.string().optional()
+    reason: z.string().optional(),
+    isRetry: z.boolean().optional()
 });
 
 export type QueueContext = z.infer<typeof queueContextSchema>;

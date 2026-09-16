@@ -11,6 +11,7 @@ import {
 } from "@flamefrontend/sse-runtime-react";
 import dayjs from "dayjs";
 import { shortTodayAwareFormat } from "../../../core/TimeUtils.js";
+import { TextTip } from "../ToggleTip.js";
 
 type Color = BadgeProps['colorPalette'] & IconBaseProps['color'];
 
@@ -67,10 +68,19 @@ export const Indicator = (props: {
         recentTimeout.start();
     }
 
+    let contextText: string | ReactNode;
+    if(helpText !== undefined) {
+        contextText = helpText;
+    }
+    if(totalText !== undefined) {
+        contextText = <>{currentText} and ({totalText})</>;
+    }
+    const presentationText = contextText !== undefined ? <TextTip text={currentText}>{contextText}</TextTip> : currentText
+
     if (as === 'stat') {
         return (
             <Stat.Root size={{ smDown: "sm", base: "md" }} {...rest}>
-                <Stat.Label>{currentText}</Stat.Label>
+                <Stat.Label>{presentationText}</Stat.Label>
                 <HStack>
                     <Stat.ValueText textWrapMode="nowrap">{current} {total !== undefined && <>({total})</>}</Stat.ValueText>
                     {recent !== 0 ? <Badge colorPalette={recentDirection === 'up' ? directionColors[0] : directionColors[1]} gap="0">
@@ -78,7 +88,6 @@ export const Indicator = (props: {
                         {recent}
                     </Badge> : null}
                 </HStack>
-                {helpText !== undefined && totalText !== undefined && <Stat.HelpText>{helpText ?? <>{props.currentText} and ({totalText})</>}</Stat.HelpText>}
             </Stat.Root>
         );
     }
@@ -148,7 +157,7 @@ export const QueuedIndicatorStreamable = (props: { data: Pick<ComponentClientApi
 }
 
 export const DeadLetterIndicatorStatic = (props: Omit<ComponentProps<typeof Indicator>, 'currentText' | 'totalText' | 'helpText' | 'directionColors'>) => (
-    <Indicator currentText="Failed" directionColors={['red', 'green']} {...props} />
+    <Indicator currentText="Failed" directionColors={['red', 'green']} helpText="To Be Retried and Total" {...props} />
 );
 
 export const DeadLetterIndicatorStreamable = (props: { data: Pick<ComponentClientApiJson, 'id' | 'deadLetterPlays' | 'deadLetterPlaysTotal'> }
@@ -164,7 +173,7 @@ export const DeadLetterIndicatorStreamable = (props: { data: Pick<ComponentClien
         if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === data.id) {
             switch (payload.type) {
                 case 'deadLetter':
-                    setStatsData({current: statsData.current + 1, total: statsData.total + 1});
+                    setStatsData({current: statsData.current, total: statsData.total + 1});
                     break;
                 case 'deadLetterRemoved':
                 case 'removeDeadLetter':

@@ -22,7 +22,7 @@ const gridColumns = (columns: number): ComponentProps<typeof Box>['gridTemplateC
 })
 
 export const MSComponentList = (props: ComponentListProps) => {
-    const [value, setValue] = useLocalStorage('pref-component-columns', 0)
+    const [value, setValue] = useLocalStorage('pref-component-columns', 3)
     const [shownType, setShownType] = useState("All");
     const gc = useMemo(() => gridColumns(value),[value]);
     return (

@@ -2,7 +2,7 @@ import { childLogger, type LogDataPretty, type LogLevel } from '@foxxmd/logging'
 import dayjs, { type Dayjs } from "dayjs";
 import type { EventEmitter } from "events";
 import type { FixedSizeList } from "fixed-size-list";
-import { DEAD_LETTER_RETRIES_DEFAULT, INGRESS_QUEUE, PARSED_FROM, type PlayMatchResult, type PlayObject, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, SOURCE_SOT } from "../../core/Atomic.ts";
+import { DEAD_LETTER_RETRIES_DEFAULT, DEAD_QUEUE, INGRESS_QUEUE, PARSED_FROM, type PlayMatchResult, type PlayObject, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, SOURCE_SOT } from "../../core/Atomic.ts";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
 import AbstractComponent from "../common/AbstractComponent.ts";
 import {
@@ -39,15 +39,15 @@ import { consumeQueue } from '../utils/AsyncUtils.ts';
 import pMap from 'p-map';
 import type { Counter } from 'prom-client';
 import { spawn, isAbortError, delay, throwIfAborted, waitForEvent } from 'abort-controller-x';
-import { generateLoggableAbortReason, SimpleError, StageChangeError } from '../common/errors/MSErrors.ts';
+import { generateLoggableAbortReason, StageChangeError } from '../common/errors/MSErrors.ts';
 import { type QueryPlaysOpts, type RequestPlayQuery, type WithPlayRelation } from '../common/database/drizzle/repositories/PlayRepository.ts';
 import { asPlay } from '../../core/PlayMarshalUtils.ts';
 import { AsyncTask, SimpleIntervalJob, ToadScheduler } from 'toad-scheduler';
 import { COMPONENT_STATE, type ComponentSourceApiJson, type ComponentState, type PlayApiCommonDetailed } from '../../core/Api.ts';
-import type {PaginatedResponse, QueueStateApi} from "../../core/Api.ts";
-import type { PlayEventNew, PlayEventSelect, PlaySelectWithQueueStates, PlayWith } from '../common/database/drizzle/drizzleTypes.ts';
+import type {PaginatedResponse} from "../../core/Api.ts";
+import type { PlaySelectWithQueueStates, PlayWith } from '../common/database/drizzle/drizzleTypes.ts';
 import { PLAY_EVENT_TYPE, type PlayEvent } from '../../core/PlayEvent.ts';
-import { dupeCheckToPlayEvent, queueCompletionStateToPlayEvent, queueStateToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from '../common/database/drizzle/entityUtils.ts';
+import { dupeCheckToPlayEvent, queueCompletionStateToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from '../common/database/drizzle/entityUtils.ts';
 import type { PlayProcessingResult } from '../common/infrastructure/PlayProcessing.ts';
 import { PlayProcessingError } from '../common/errors/PlayProcessingError.ts';
 
@@ -120,6 +120,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.name = name;
         this.logger = childLogger(internal.logger, this.getIdentifier());
         this.loggerLabel = this.getIdentifier();
+        this.dupeLogger = childLogger(this.logger, 'Dupe');
+        this.deadLogger = childLogger(this.logger, DEAD_QUEUE);
         this.config = config;
         this.clients = clients;
         this.logger.debug(`Scrobble To: ${this.clients.length === 0 ? 'All' : this.clients.join(' | ')}`);
@@ -329,13 +331,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         if(discoveredCount !== undefined) {
             this.tracksDiscoveredTotal = discoveredCount['count(*)'];
         }
-    }
-
-    protected async updateQueueStats(queueNames: string[]) {
-        if(queueNames.includes(INGRESS_QUEUE)) {
-            this.queuedLength = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE]);
-            this.queuedGauge.labels(this.getPrometheusLabels()).set(this.queuedLength);
-        }
+        await this.updateQueueStats([INGRESS_QUEUE, DEAD_QUEUE]);
     }
 
     public getRunningState(): ComponentState {
@@ -970,40 +966,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     }
 
-    public cancelQueuedPlay = async (playEntity: PlaySelectWithQueueStates) => {
-        const queueState = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE);
-        if(queueState === undefined) {
-            throw new SimpleError('Play does not have an associated queued');
-        }
-        if(queueState.queueStatus !== 'queued') {
-            throw new SimpleError('Play is not queued');
-        }
-
-        queueState.queueStatus = QUEUE_STATUS_FAILED;
-        playEntity.state = 'failed';
-        const createdEvents = await this.playEventsRepo.createMany([
-            {playId: playEntity.id, ...stateChangeToPlayEvent({state: playEntity.state})},
-            {playId: playEntity.id, ...queueStateToPlayEvent({...queueState, context: {reason: 'Cancelled by user'}})}
-        ]) as PlayEventSelect[];
-        await this.queueRepo.updateById(queueState.id, {queueStatus: QUEUE_STATUS_FAILED});
-        await this.playRepo.updateById(playEntity.id, {state: 'failed'});
-        this.emitPlayUpdate({
-            ...playEntity, 
-            events: ((playEntity as unknown as PlayWith<'events'>).events ?? []).concat(createdEvents),
-        } as unknown as PlayApiCommonDetailed);
-        if(queueState.retries === 0) {
-            this.emitEvent('playDequeued', { queuedScrobble: playEntity });
-        } else {
-            this.emitEvent('deadLetterDequeued', { queuedScrobble: playEntity });
-        }
-    }
-
-    protected getDefaultDeadLetterRetries() {
-        return this.config.options?.deadLetterRetries ?? DEAD_LETTER_RETRIES_DEFAULT;
-    }
-
     //processQueueCurrentPlay
-    async processPlay(playEntity: PlaySelectWithQueueStates, signal?: AbortSignal): Promise<PlayProcessingResult> {
+    async processPlay(playEntity: PlayWith<'queueStates' | 'events'>, signal?: AbortSignal): Promise<PlayProcessingResult> {
         signal?.throwIfAborted();
         this.setStatus(`Processing Play ${playEntity.uid}`);
 
@@ -1121,48 +1085,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
             }
             throw new PlayProcessingError(e, {playEntity, queue: queueState, events, showStopping: true});
         } 
-    }
-
-    removeDeadLetterScrobble = async (dead: PlaySelectWithQueueStates) => {
-
-        const queueState = dead.queueStates.find(x => x.queueName === INGRESS_QUEUE);
-        if(queueState === undefined) {
-            this.logger.warn(`Play ${dead.uid} does not have a dead state, nothing to remove.`);
-            return;
-        }
-        if(queueState.retries === 0) {
-            this.logger.warn(`Play ${dead.uid} has not failed yet, not removing.`);
-            return;
-        }
-
-        this.setStatus(`Marking Dead Play ${dead.uid} as completed`);
-
-        const events: PlayEventNew[] = [
-            { playId: dead.id, ...queueStateToPlayEvent({...queueState, error: undefined, queueStatus: QUEUE_STATUS_COMPLETED, context: {reason: 'Dead Play marked as completed by user'}}) }
-        ];
-        await this.queueRepo.deleteByIds([queueState.id]);
-        
-        if(dead.state === 'queued') {
-            dead.state = 'failed';
-            this.playRepo.updateById(dead.id, {state: 'failed'});
-            events.push(
-                { playId: dead.id, ...stateChangeToPlayEvent({ state: 'failed' }) }
-            )
-        }
-        const createdEvents = await this.playEventsRepo.createMany(events) as PlayEventSelect[];
-        this.emitPlayUpdate({uid: dead.uid,
-                state: dead.state,
-                queueStates: dead.queueStates.filter(x => x.queueName !== INGRESS_QUEUE) as unknown as QueueStateApi[],
-                events: createdEvents as unknown as PlayEvent<string>[]
-        });
-
-        this.deadLetterLength -= 1;
-        if(queueState.queueStatus === 'queued') {
-            this.deadLetterQueued -= 1;
-            this.emitEvent('deadLetterDequeued', { dead: { id: dead.uid } });
-        }
-        this.deadLetterGauge.labels(this.getPrometheusLabels()).dec();
-        this.emitEvent('removeDeadLetter', { dead: { id: dead.uid } });
     }
 
     processDeadLetterQueue = async (attemptWithRetries?: number, reason?: string, sync?: boolean) => {

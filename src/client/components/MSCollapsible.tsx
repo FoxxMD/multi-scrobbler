@@ -19,7 +19,7 @@ export interface MSCollapsibleExternalProps {
 }
 
 export const timelineCollapsibleProps = {
-    indicatorProps: { paddingBottom: '4px' },
+    indicatorProps: {  },
     triggerProps: { paddingBlockStart: "0.3em" },
     triggerPropsClosed: {
          //paddingBlockStart: "0.3em",
@@ -122,7 +122,7 @@ export const MSCollapsible = (props: MSCollapsibleProps) => {
                 paddingY="3"
                 display="flex"
                 gap="2"
-                alignItems="flex-start"
+                alignItems="anchor-center"
                 {...tProps}
             >
                 <Collapsible.Indicator

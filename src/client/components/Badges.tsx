@@ -1,17 +1,18 @@
 import { Badge, HStack, Separator, Spinner } from "@chakra-ui/react";
 import { useSSEContext, useSSEEvent } from "@flamefrontend/sse-runtime-react";
-import React, { type ComponentProps, type PropsWithChildren, useCallback, useEffect, useState } from "react";
+import React, { type ComponentProps, type PropsWithChildren, type ReactNode, useCallback, useEffect, useState } from "react";
 import { useTimeout } from 'react-use-timeout';
 import { COMPONENT_STATE, type ComponentCommonApiJson, type ComponentsApiJson, componentStateToFriendly, type MsSseEvent, type PlayApiCommon } from "../../core/Api";
 import type {Second} from "../../core/Atomic";
 import { capitalizeWords } from "../../core/StringUtils";
+import { TextTip } from "./ToggleTip";
 
 export const PlayStateBadge = (props: PropsWithChildren<ComponentProps<typeof Badge>> & { state: PlayApiCommon['state'], suffix?: React.JSX.Element, hasDeadQueue?: boolean }) => {
 
   const { state, suffix, children, ...rest } = props;
 
   let badgeColor = undefined;
-  let badgeText = capitalizeWords(state);
+  let badgeText: string | ReactNode = capitalizeWords(state);
 
   switch (state) {
     case 'queued':
@@ -22,10 +23,10 @@ export const PlayStateBadge = (props: PropsWithChildren<ComponentProps<typeof Ba
       badgeColor = 'green';
       break;
     case 'failed':
-    case ('dead queued' as PlayApiCommon['state']): 
+    case ('failed TBR' as PlayApiCommon['state']): 
       badgeColor = 'red';
       if(props.hasDeadQueue) {
-        badgeText = 'Dead Queued';
+        badgeText = <TextTip text='Failed TBR'><span>Failed, <strong>T</strong>o <strong>B</strong>e <strong>R</strong>etried</span></TextTip>;
       }
       break;
     case 'duped':

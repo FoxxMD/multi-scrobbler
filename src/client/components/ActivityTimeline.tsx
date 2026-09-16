@@ -1,5 +1,5 @@
 import type { Collapsible } from '@chakra-ui/react';
-import { Card, Text, Icon, SkeletonCircle, SkeletonText, Span, Tabs, Timeline, Tag, HStack, Stack, Separator} from '@chakra-ui/react';
+import { Card, Text, Icon, SkeletonCircle, SkeletonText, Span, Tabs, Timeline, Tag, HStack, Stack, Separator, Wrap} from '@chakra-ui/react';
 import { HiCheck } from "react-icons/hi"
 import dayjs from "dayjs";
 import React from "react";
@@ -35,7 +35,7 @@ interface ActivityTimelineProps {
     componentName?: string
 }
 
-const timelineCollapsibleProps: Collapsible.TriggerProps = {alignItems: "flex-end"};
+const indicatorProps: Collapsible.TriggerProps = {};//{alignItems: "anchor-center"};
 
 const TimelineLoading = () => (
         <Timeline.Root variant="subtle" size="lg">
@@ -91,7 +91,7 @@ const NewItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpen' | 'activit
             <Timeline.Content>
                 <Timeline.Title>
                     <MSCollapsible
-                        triggerProps={timelineCollapsibleProps}
+                        triggerProps={indicatorProps}
                         indicator={<TimelineItemSummaryText>
                             {componentType === 'source' ? 'Discovered' : 'Recieved'} <Muted>new Play from</Muted> <Span fontWeight="medium">{capitalizeWords(source)}</Span> <Muted>at {shortTodayAwareFormat(dayjs(seenAt))}</Muted>
                         </TimelineItemSummaryText>}
@@ -150,7 +150,7 @@ const TransformsItem = (props: Pick<ActivityTimelineProps, 'activity' | 'collaps
         <Timeline.Content>
             <Timeline.Title>
                 <MSCollapsible
-                    triggerProps={timelineCollapsibleProps}
+                    triggerProps={indicatorProps}
                     indicator={<TimelineItemSummaryText>{transformVerb} <Muted>using configured Rules</Muted> <Muted>for</Muted> {steps[0].hook} {transformResult}</TimelineItemSummaryText>}
                     unmountOnExit
                     defaultOpen={collapsibleOpen}
@@ -197,7 +197,7 @@ const ScrobbleMatchItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpen'>
             <Timeline.Content>
                 <Timeline.Title>
                     <MSCollapsible
-                        triggerProps={timelineCollapsibleProps}
+                        triggerProps={indicatorProps}
                         indicator={<TimelineItemSummaryText><Muted>Found </Muted>{match.match ? <Span color="orange.solid"> a duplicate Scrobble</Span> : 'no duplicate Scrobbles'}{fromSource}</TimelineItemSummaryText>}
                         defaultOpen={collapsibleOpen}
                         disableUntil="md"
@@ -257,7 +257,7 @@ const ScrobbleResponseItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpe
             <Timeline.Content >
                 <Timeline.Title>
                     <MSCollapsible
-                        triggerProps={timelineCollapsibleProps}
+                        triggerProps={indicatorProps}
                         indicator={scrobbleSummary}
                         defaultOpen={collapsibleOpen}
                         timeline
@@ -276,11 +276,11 @@ const ScrobbleResponseItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpe
 }
 
 const RetryChip = (props: { count: number }) => (<Tag.Root>
-    <Tag.Label>Attempt: {props.count}</Tag.Label>
+    <Tag.Label style={{textWrap: "nowrap"}}>Attempt: {props.count}</Tag.Label>
 </Tag.Root>)
 
 const BoolChip = (props: { text: string, check: boolean }) => (<Tag.Root>
-    <Tag.Label>{props.text}</Tag.Label>
+    <Tag.Label style={{textWrap: "nowrap"}}>{props.text}</Tag.Label>
     <Tag.EndElement>
         {props.check ? <HiCheck /> : <XIcon />}
     </Tag.EndElement>
@@ -331,7 +331,7 @@ const QueueTimelineItem = (props: {queueState: PlayEventQueueStateChange<string>
         tags.push(<CacheChip key="cache" check={useCache}/>)
     }
     if(tags.length > 0) {
-        contextHints.push(<HStack key="tags">{tags}</HStack>)
+        contextHints.push(<Wrap key="tags">{tags}</Wrap>)
     }
     if(reason !== undefined) {
         contextHints.push(<span key="reason">Reason - {reason}</span>);
@@ -351,10 +351,10 @@ const QueueTimelineItem = (props: {queueState: PlayEventQueueStateChange<string>
             text = <TimelineItemSummaryText>{queueName === DEAD_QUEUE ? 'Dead ' : ''}Queue failed <Muted>at</Muted> {shortTodayAwareFormat(dayjs(createdAt))}</TimelineItemSummaryText>;
     }
 
-    if(error !== undefined && error !== null) {
+    if(error !== undefined && error !== null && typeof error === 'object' && Object.keys(error).length > 0) {
         title = (
             <MSCollapsible 
-                triggerProps={timelineCollapsibleProps}
+                triggerProps={indicatorProps}
                 indicator={text}
                 defaultOpen={collapsibleOpen}
                 disableUntil="md"
@@ -425,7 +425,7 @@ const StateChangeItem = (props: {event: PlayEventPlayStateChange<string>, collap
         content = (
             <Timeline.Title>
             <MSCollapsible 
-                triggerProps={timelineCollapsibleProps}
+                triggerProps={indicatorProps}
                 indicator={text}
                 defaultOpen={collapsibleOpen}
                 disableUntil="md"
