@@ -114,8 +114,13 @@ export const EXTERNAL_LINKS: SideNavProps = {
                 external: true
             },
             {
-                title: 'Docs',
+                title: 'Docs (Latest)',
                 url: 'https://docs.multi-scrobbler.app/',
+                external: true
+            },
+            {
+                title: 'Docs (Self-Hosted)',
+                url: '/docs',
                 external: true
             },
             {
