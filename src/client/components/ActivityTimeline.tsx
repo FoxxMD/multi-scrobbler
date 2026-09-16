@@ -35,7 +35,7 @@ interface ActivityTimelineProps {
     componentName?: string
 }
 
-const timelineCollapsibleProps: Collapsible.TriggerProps = {alignItems: "flex-end"};
+const indicatorProps: Collapsible.TriggerProps = {};//{alignItems: "anchor-center"};
 
 const TimelineLoading = () => (
         <Timeline.Root variant="subtle" size="lg">
@@ -91,7 +91,7 @@ const NewItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpen' | 'activit
             <Timeline.Content>
                 <Timeline.Title>
                     <MSCollapsible
-                        triggerProps={timelineCollapsibleProps}
+                        triggerProps={indicatorProps}
                         indicator={<TimelineItemSummaryText>
                             {componentType === 'source' ? 'Discovered' : 'Recieved'} <Muted>new Play from</Muted> <Span fontWeight="medium">{capitalizeWords(source)}</Span> <Muted>at {shortTodayAwareFormat(dayjs(seenAt))}</Muted>
                         </TimelineItemSummaryText>}
@@ -150,7 +150,7 @@ const TransformsItem = (props: Pick<ActivityTimelineProps, 'activity' | 'collaps
         <Timeline.Content>
             <Timeline.Title>
                 <MSCollapsible
-                    triggerProps={timelineCollapsibleProps}
+                    triggerProps={indicatorProps}
                     indicator={<TimelineItemSummaryText>{transformVerb} <Muted>using configured Rules</Muted> <Muted>for</Muted> {steps[0].hook} {transformResult}</TimelineItemSummaryText>}
                     unmountOnExit
                     defaultOpen={collapsibleOpen}
@@ -197,7 +197,7 @@ const ScrobbleMatchItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpen'>
             <Timeline.Content>
                 <Timeline.Title>
                     <MSCollapsible
-                        triggerProps={timelineCollapsibleProps}
+                        triggerProps={indicatorProps}
                         indicator={<TimelineItemSummaryText><Muted>Found </Muted>{match.match ? <Span color="orange.solid"> a duplicate Scrobble</Span> : 'no duplicate Scrobbles'}{fromSource}</TimelineItemSummaryText>}
                         defaultOpen={collapsibleOpen}
                         disableUntil="md"
@@ -257,7 +257,7 @@ const ScrobbleResponseItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpe
             <Timeline.Content >
                 <Timeline.Title>
                     <MSCollapsible
-                        triggerProps={timelineCollapsibleProps}
+                        triggerProps={indicatorProps}
                         indicator={scrobbleSummary}
                         defaultOpen={collapsibleOpen}
                         timeline
@@ -354,7 +354,7 @@ const QueueTimelineItem = (props: {queueState: PlayEventQueueStateChange<string>
     if(error !== undefined && error !== null && typeof error === 'object' && Object.keys(error).length > 0) {
         title = (
             <MSCollapsible 
-                triggerProps={timelineCollapsibleProps}
+                triggerProps={indicatorProps}
                 indicator={text}
                 defaultOpen={collapsibleOpen}
                 disableUntil="md"
@@ -425,7 +425,7 @@ const StateChangeItem = (props: {event: PlayEventPlayStateChange<string>, collap
         content = (
             <Timeline.Title>
             <MSCollapsible 
-                triggerProps={timelineCollapsibleProps}
+                triggerProps={indicatorProps}
                 indicator={text}
                 defaultOpen={collapsibleOpen}
                 disableUntil="md"
