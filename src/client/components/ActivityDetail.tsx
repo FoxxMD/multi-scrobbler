@@ -550,7 +550,7 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed, co
             <Group attached>
             {primaryAction}
             <Menu.Trigger asChild>
-                <EllipsisButton hideBelow="sm" disabled={isPending} {...primaryActionProps}/>
+                <EllipsisButton disabled={isPending} {...primaryActionProps}/>
             </Menu.Trigger>
             </Group>
             <Portal>
