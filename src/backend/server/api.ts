@@ -12,8 +12,7 @@ import {
 } from "../../core/Atomic.ts";
 import type {LeveledLogData} from "../common/infrastructure/Atomic.ts";
 import { getRoot } from "../ioc.ts";
-import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts";
-import AbstractSource from "../sources/AbstractSource.ts";
+import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts";;
 import MemorySource from "../sources/MemorySource.ts";
 import { setupAuthRoutes } from "./auth.ts";
 import { setupDeezerRoutes } from "./deezerRoutes.ts";
@@ -482,7 +481,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     });
 
     router.post('/api/components/:id/plays/:uid/queue', {
-        middleware: [componentAwareMiddle],
+        middleware: [componentAwareMiddle,bodyParser.json({ type: ['text/*', 'application/json'] })],
         bodySchema: queueContextSchema.optional(),
         tags: ['Plays'],
         summary: 'Requeue a Play'
