@@ -68,7 +68,7 @@
     "@foxxmd/redact-string": "^0.1.2",
     "@foxxmd/regex-buddy-core": "^0.1.2",
     "@foxxmd/string-sameness": "^0.4.0",
-    "@jellyfin/sdk": "^0.11.0",
+    "@jellyfin/sdk": "^1.0.0",
     "@kenyip/backoff-strategies": "^1.0.4",
     "@keyv/valkey": "^1.0.8",
     "@lukehagar/plexjs": "^0.39.0",

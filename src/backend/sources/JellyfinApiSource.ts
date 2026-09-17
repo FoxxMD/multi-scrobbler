@@ -1,37 +1,24 @@
 import { WS } from "iso-websocket";
-// @ts-expect-error weird typings?
 import type { Api } from "@jellyfin/sdk";
 import { Jellyfin } from "@jellyfin/sdk/lib/jellyfin.js";
 import {
-    // @ts-expect-error weird typings?
     type BaseItemDto,
-    // @ts-expect-error weird typings?
     type CollectionType,
-    // @ts-expect-error weird typings?
-    type ImageUrlsApi,
-    // @ts-expect-error weird typings?
+    type CollectionTypeOptions,
     MediaType,
-    // @ts-expect-error weird typings?
-    type SessionInfo,
-    // @ts-expect-error weird typings?
+    type SessionInfoDto,
     type UserDto,
-    // @ts-expect-error weird typings?
     type VirtualFolderInfo
 } from "@jellyfin/sdk/lib/generated-client/index.js";
 import {
-    // @ts-expect-error weird typings?
     SystemInfoIssue
 } from "@jellyfin/sdk/lib/index.js";
 import {
-    // @ts-expect-error weird typings?
+
     getImageApi,
-    // @ts-expect-error weird typings?
     getLibraryStructureApi,
-    // @ts-expect-error weird typings?
     getSessionApi,
-    // @ts-expect-error weird typings?
     getSystemApi,
-    // @ts-expect-error weird typings?
     getUserApi
 } from "@jellyfin/sdk/lib/utils/api/index.js";
 import dayjs from "dayjs";
@@ -51,6 +38,7 @@ import { hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.ts";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import * as axios from 'axios';
 import { AuthError } from "../common/errors/MSErrors.ts";
+import type { ImageUrlsApi } from "@jellyfin/sdk/lib/utils/api/image-urls-api.js";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -72,15 +60,15 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
     devicesBlock: string[] = [];
     librariesAllow: string[] = [];
     librariesBlock: string[] = [];
-    allowedLibraryTypes: CollectionType[] = [];
-    allowedMediaTypes: MediaType = [MediaType.Audio];
+    allowedLibraryTypes: (CollectionType | CollectionTypeOptions)[] = [];
+    allowedMediaTypes: MediaType[] = [MediaType.Audio];
 
     logFilterFailure: false | 'debug' | 'warn';
 
     mediaIdsSeen: FixedSizeList<string>;
     uniqueDropReasons: FixedSizeList<string>;
 
-    libraries: {name: string, paths: string[], collectionType: CollectionType}[] = [];
+    libraries: {name: string, paths: string[], collectionType: CollectionType | CollectionTypeOptions}[] = [];
 
     declare config: JellyApiSourceConfig;
     override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
@@ -153,7 +141,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         this.devicesBlock = parseArrayFromMaybeString(devicesBlock, {lower: true});
         this.librariesAllow = parseArrayFromMaybeString(librariesAllow, {lower: true});
         this.librariesBlock = parseArrayFromMaybeString(librariesBlock, {lower: true});
-        this.allowedLibraryTypes = Array.from(new Set(['music', ...parseArrayFromMaybeString(additionalAllowedLibraryTypes, {lower: true})]));
+        this.allowedLibraryTypes = Array.from(new Set(['music', ...parseArrayFromMaybeString(additionalAllowedLibraryTypes, {lower: true})])) as CollectionType[];
         const mt = parseArrayFromMaybeString(allowMediaTypes, {lower: true});
         if(mt.length > 0) {
             this.allowedMediaTypes = [];
@@ -241,6 +229,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
                 // not in use for now
                 //this.buildWSClient(this.address, token);
             } else {
+                // @ts-expect-error its fine
                 this.api.accessToken = this.config.data.apiKey;
                 token = this.config.data.apiKey;
                 const users = await getUserApi(this.api).getUsers();
@@ -305,7 +294,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         }
     }
 
-    isActivityValid = (state: PlayerStateDataMaybePlay, session: SessionInfo): boolean | string => {
+    isActivityValid = (state: PlayerStateDataMaybePlay, session: SessionInfoDto): boolean | string => {
         if(this.usersAllow.length > 0 && !this.usersAllow.includes(state.platformId[1].toLocaleLowerCase())) {
             return `'usersAllow does not include user ${state.platformId[1]}`;
         }
@@ -359,7 +348,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
             if(state.play.meta?.mediaType === undefined && !this.allowedMediaTypes.includes(MediaType.Unknown)) {
                 return `media without a MediaType detected is not allowed (Unknown not included in allowMediaTypes)`;
             }
-            if(!this.allowedMediaTypes.includes(state.play.meta.mediaType)) {
+            if(!this.allowedMediaTypes.includes(state.play.meta.mediaType as MediaType)) {
                 return `media detected as ${state.play.meta.mediaType} (MediaType) is not included in allowMediaTypes`;
             }
         }
@@ -373,7 +362,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
             if(session.NowPlayingItem === undefined && !this.allowedMediaTypes.includes(MediaType.Unknown)) {
                 return `media without a Type detected is not allowed (Unknown not included in allowMediaTypes)`;
             }
-            if(!this.allowedMediaTypes.includes(session.NowPlayingItem.Type)) {
+            if(!this.allowedMediaTypes.includes(session.NowPlayingItem.Type as MediaType)) {
                 return `media detected as a ${session.NowPlayingItem.Type} (Type) is not allowed`;
             }
         }
@@ -427,6 +416,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         const {
             Album,
             AlbumId,
+            AlbumArtist,
             AlbumArtists = [],
             Artists = [],
             ArtistItems = [],
@@ -460,14 +450,23 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
             meta.albumArtist = [ProviderIds.MusicBrainzAlbumArtist];
         }
 
-        const normalizedArtists = Artists.map(x => typeof x === 'string' ? artistNameToCredit(x) : artistNameToCredit(noCasePropObj(x)));
+        let normalizedArtists: ArtistCredit[] = [];
+        if(Artists.length > 0) {
+            normalizedArtists = Artists.map(x => typeof x === 'string' ? artistNameToCredit(x) : artistNameToCredit(noCasePropObj(x)));
+        } else if(ArtistItems.length > 0) {
+            normalizedArtists = ArtistItems.map(x => typeof x === 'string' ? artistNameToCredit(x) : artistNameToCredit(noCasePropObj(x)));
+        }
         let playArtists: ArtistCredit[] = [];
         if(normalizedArtists.length === 1 && meta.artist !== undefined) {
             playArtists.push({...normalizedArtists[0], mbid: meta.artist[0]});
         } else {
             playArtists = normalizedArtists;
         }
-        const normalizedAlbumArtists = AlbumArtists.map(x => typeof x === 'string' ? artistNameToCredit(x) : artistNameToCredit(noCasePropObj(x)));
+        let normalizedAlbumArtists = AlbumArtists.map(x => typeof x === 'string' ? artistNameToCredit(x) : artistNameToCredit(noCasePropObj(x)));
+        if(AlbumArtist !== undefined) {
+            normalizedAlbumArtists.push({name: AlbumArtist});
+            normalizedAlbumArtists = Array.from(new Set(normalizedAlbumArtists.map(x => x.name))).map(x => ({name: x}))
+        }
         let playAlbumArtists: ArtistCredit[] = [];
         if(normalizedAlbumArtists.length === 1 && meta.albumArtist !== undefined) {
             playAlbumArtists.push({...normalizedAlbumArtists[0], mbid: meta.albumArtist[0]});
@@ -508,10 +507,10 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         const nonMSSessions = sessions.data
         .filter(x => x.DeviceId !== this.deviceId)
         .map(x => [this.sessionToPlayerState(x), x])
-        .filter((x: [PlayerStateDataMaybePlay, SessionInfo]) => {
+        .filter((x: [PlayerStateDataMaybePlay, SessionInfoDto]) => {
             return x[0].play !== undefined
             || this.hasPlayer(x[0]);
-        }) as [PlayerStateDataMaybePlay, SessionInfo][];
+        }) as [PlayerStateDataMaybePlay, SessionInfoDto][];
         const validSessions: PlayerStateDataMaybePlay[] = [];
 
         for(const sessionData of nonMSSessions) {
@@ -538,7 +537,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         return await this.processRecentPlays(validSessions);
     }
 
-    sessionToPlayerState = (obj: SessionInfo): PlayerStateDataMaybePlay => {
+    sessionToPlayerState = (obj: SessionInfoDto): PlayerStateDataMaybePlay => {
 
         const {
             UserName,

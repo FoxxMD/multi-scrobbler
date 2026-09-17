@@ -5,19 +5,18 @@ import { describe, it } from 'mocha';
 import type {JsonPlayObject, PlayMeta} from "../../../core/Atomic.ts";
 
 import JellyfinApiSource from "../../sources/JellyfinApiSource.ts";
-import validSession from './validSession.json' with { type: "json" };
+import validSessionJson from './validSession.json' with { type: "json" };
 import type {JellyApiData} from "../../common/infrastructure/config/source/jellyfin.ts";
 import { generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
 import { faker } from "@faker-js/faker";
 import type {
-    // @ts-expect-error weird typings?
-    SessionInfo,
-    // @ts-expect-error weird typings?
+    SessionInfoDto,
     BaseItemDto,
 } from "@jellyfin/sdk/lib/generated-client/index.js";
-// @ts-expect-error weird typings?
 import { getImageApi } from "@jellyfin/sdk/lib/utils/api/index.js";
 import type {PlayerStateDataMaybePlay} from "../../common/infrastructure/Atomic.ts";
+
+const validSession = validSessionJson as SessionInfoDto;
 
 const dataAsFixture = (data: any): TestFixture => {
     return data as TestFixture;
@@ -59,7 +58,7 @@ const playWithMeta = (meta: PlayMeta): PlayerStateDataMaybePlay => {
     }
 }}// ({...validPlayerState, meta: {...validPlayerState.meta, ...meta}});
 
-const nowPlayingSession = (data: object): SessionInfo => ({...validSession, NowPlayingItem: {...validSession.NowPlayingItem, ...data}});
+const nowPlayingSession = (data: object): SessionInfoDto => ({...validSession, NowPlayingItem: {...validSession.NowPlayingItem, ...data}}) as SessionInfoDto;
 
 describe("Jellyfin API Source", function() {
     describe('Parses config allow/block correctly', function () {
@@ -115,11 +114,11 @@ describe("Jellyfin API Source", function() {
 
     describe('Parses and replaces frontendUrlOverride correctly if set', function () {
 
-        const item = {
-            AlbumId: 123,
+        const item: BaseItemDto = {
+            AlbumId: '123',
             AlbumPrimaryImageTag: 'Primary',
-            ParentId: 456,
-            ServerId: 789,
+            ParentId: '456',
+            ServerId: '789',
         };
         const sourceUrl = 'http://192.168.10.11:8096';
         const frontendUrlOverride = 'https://myjellyfin.com';
@@ -388,19 +387,35 @@ describe("Jellyfin API Source", function() {
 
             const itemObj: BaseItemDto = {
                 Name: faker.word.words({count: {min: 1, max: 3}}),
+                // may be because of different version of jellyfin being used as a source but
+                // @ts-expect-error can be both NameGuidPair and string
                 Artists: [{Name: faker.word.words({count: {min: 1, max: 3}})}]
             };
 
             const playObj = JellyfinApiSource.formatPlayObj(itemObj);
 
             expect(playObj.data.artists).length(1);
+            // @ts-expect-error can be both NamedGuidPair and string
             expect(playObj.data.artists[0].name).eq(itemObj.Artists[0].Name);
+
+            // but we know that ArtistItems should only be NameGuidPair
+            const itemArtistItems: BaseItemDto = {
+                Name: faker.word.words({count: {min: 1, max: 3}}),
+                ArtistItems: [{Name: faker.word.words({count: {min: 1, max: 3}})}]
+            };
+
+            const playObjArtistItems = JellyfinApiSource.formatPlayObj(itemArtistItems);
+
+            expect(playObjArtistItems.data.artists).length(1);
+            expect(playObjArtistItems.data.artists[0].name).eq(itemArtistItems.ArtistItems[0].Name);
         });
 
         it('Should handle album artists as strings or objects', async function () {
             const itemStr: BaseItemDto = {
                 Name: faker.word.words({count: {min: 1, max: 3}}),
                 Artists: [faker.word.words({count: {min: 1, max: 3}})],
+                // may be because of different version of jellyfin being used as a source but
+                // @ts-expect-error can be both NameGuidPair and string
                 AlbumArtists: [faker.word.words({count: {min: 1, max: 3}})]
             };
 
@@ -411,7 +426,7 @@ describe("Jellyfin API Source", function() {
 
             const itemObj: BaseItemDto = {
                 Name: faker.word.words({count: {min: 1, max: 3}}),
-                Artists: [{Name: faker.word.words({count: {min: 1, max: 3}})}],
+                Artists: [faker.word.words({count: {min: 1, max: 3}})],
                 AlbumArtists: [{Name: faker.word.words({count: {min: 1, max: 3}})}]
             };
 
@@ -421,11 +436,60 @@ describe("Jellyfin API Source", function() {
             expect(playObj.data.albumArtists[0].name).eq(itemObj.AlbumArtists[0].Name);
         });
 
+        describe('singular and multiple album artists', function() {
+
+            it('Should handle singular album artists', async function () {
+                // uses singular album artist when available
+                const itemSingular: BaseItemDto = {
+                    Name: faker.word.words({count: {min: 1, max: 3}}),
+                    Artists: [faker.word.words({count: {min: 1, max: 3}})],
+                    AlbumArtist: faker.word.words({count: {min: 1, max: 3}})
+                };
+
+                const playSingular = JellyfinApiSource.formatPlayObj(itemSingular);
+
+                expect(playSingular.data.albumArtists).length(1);
+                expect(playSingular.data.albumArtists[0].name).eq(itemSingular.AlbumArtist);
+            });
+
+            it('combines singular and multiple album artists when both are present', async function () {
+                const itemMulti: BaseItemDto = {
+                    Name: faker.word.words({count: {min: 1, max: 3}}),
+                    Artists: [faker.word.words({count: {min: 1, max: 3}})],
+                    AlbumArtist: faker.word.words({count: {min: 1, max: 3}}),
+                    AlbumArtists: [{Name: faker.word.words({count: {min: 1, max: 3}})}]
+                };
+
+                const playObj = JellyfinApiSource.formatPlayObj(itemMulti);
+
+                expect(playObj.data.albumArtists.map(x => x.name)).members([itemMulti.AlbumArtist,...(itemMulti.AlbumArtists.map(x => x.Name))]);
+            });
+
+            it('consolidates singular and multiple album artists when both are present and have identical names', async function () {
+                const aa = [{Name: faker.word.words({count: {min: 1, max: 3}})}];
+                const itemMulti: BaseItemDto = {
+                    Name: faker.word.words({count: {min: 1, max: 3}}),
+                    Artists: [faker.word.words({count: {min: 1, max: 3}})],
+                    AlbumArtist: aa[0].Name,
+                    AlbumArtists: aa
+                };
+
+                const consolidated = Array.from(new Set([itemMulti.AlbumArtist, ...(itemMulti.AlbumArtists.map(x => x.Name))]));
+
+                const playObj = JellyfinApiSource.formatPlayObj(itemMulti);
+                expect(playObj.data.albumArtists).length(consolidated.length);
+                expect(playObj.data.albumArtists.map(x => x.name)).members(consolidated);
+            });
+
+        });
+
+
+
         it('Should add mbids to artist props', async function () {
             const itemStr: BaseItemDto = {
                 Name: faker.word.words({count: {min: 1, max: 3}}),
                 Artists: [faker.word.words({count: {min: 1, max: 3}})],
-                AlbumArtists: [faker.word.words({count: {min: 1, max: 3}})],
+                AlbumArtists: [{Name: faker.word.words({count: {min: 1, max: 3}})}],
                 ProviderIds: {
                     MusicBrainzArtist: 'foo',
                     MusicBrainzAlbumArtist: 'bar'
@@ -442,7 +506,7 @@ describe("Jellyfin API Source", function() {
             const itemStr: BaseItemDto = {
                 Name: faker.word.words({count: {min: 1, max: 3}}),
                 Artists: [faker.word.words({count: {min: 1, max: 3}}), faker.word.words({count: {min: 1, max: 3}})],
-                AlbumArtists: [faker.word.words({count: {min: 1, max: 3}}), faker.word.words({count: {min: 1, max: 3}})],
+                AlbumArtists: [{Name: faker.word.words({count: {min: 1, max: 3}})},{Name: faker.word.words({count: {min: 1, max: 3}})}],
                 ProviderIds: {
                     MusicBrainzArtist: 'foo',
                     MusicBrainzAlbumArtist: 'bar'
