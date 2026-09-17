@@ -29,15 +29,15 @@ export default defineConfig(() => {
             svgr()
         ],
         build: {
-            sourcemap: true,
+            sourcemap: false,
             cssCodeSplit: true,
             rolldownOptions: {
                 input: {
                     main: resolve(import.meta.dirname, 'index.html'),
                     // next: resolve(import.meta.dirname, 'next/index.html'),
                 },
-                keepNames: true,
-                sourcemap: true
+                //keepNames: true,
+                sourcemap: false
             },
         },
         css: {
