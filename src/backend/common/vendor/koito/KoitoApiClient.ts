@@ -21,6 +21,8 @@ import { isSuperAgentResponseError } from "../../errors/ErrorUtils.ts";
 interface SubmitOptions {
     log?: boolean
     listenType?: ListenType
+    /** Include the source's device/player identifier as additional_info.media_player when media player info is not otherwise available */
+    deviceInfo?: boolean
 }
 
 const KOITO_LZ_PATH: RegExp = new RegExp(/^\/apis\/listenbrainz(\/?1?\/?)?$/);
@@ -194,8 +196,8 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
     // }
 
     submitListen = async (play: PlayObject, options: SubmitOptions = {}): Promise<ScrobbleActionResult> => {
-        const { log = false, listenType = 'single' } = options;
-        const listenPayload: SubmitPayload = { listen_type: listenType, payload: [playToListenPayload(play)] };
+        const { log = false, listenType = 'single', deviceInfo = this.config.deviceInfo } = options;
+        const listenPayload: SubmitPayload = { listen_type: listenType, payload: [playToListenPayload(play, {deviceInfo})] };
         try {
             if (listenType === 'playing_now') {
                 delete listenPayload.payload[0].listened_at;

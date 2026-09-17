@@ -1,4 +1,4 @@
-import type {PlayObject} from "../../../../core/Atomic.ts";
+import {NO_DEVICE, type PlayObject} from "../../../../core/Atomic.ts";
 import { isEmptyArrayOrUndefined } from "../../../utils.ts";
 import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
 import { getScrobbleTsSOCDate } from "../../../utils/TimeUtils.ts";
@@ -7,7 +7,14 @@ import type {ListenPayload, MinimumTrack, SubmitListenAdditionalTrackInfo, Submi
 import {version as appVersion } from '../../../version.ts';
 import { artistCreditsToNames, artistCreditToName } from "../../../../core/StringUtils.ts";
 
-export const playToListenPayload = (play: PlayObject, version?: string): ListenPayload => {
+export interface PlayToListenPayloadOptions {
+    version?: string
+    /** Include the source's device/player identifier (PlayObject meta.deviceId) as additional_info.media_player when media player info is not otherwise available */
+    deviceInfo?: boolean
+}
+
+export const playToListenPayload = (play: PlayObject, options: PlayToListenPayloadOptions = {}): ListenPayload => {
+    const { version, deviceInfo = false } = options;
     const {
         data: {
             playDate,
@@ -24,7 +31,7 @@ export const playToListenPayload = (play: PlayObject, version?: string): ListenP
                 spotify = {},
             } = {}
         }, meta: {
-            mediaPlayerName, mediaPlayerVersion, musicService, source
+            mediaPlayerName, mediaPlayerVersion, musicService, source, deviceId
         }
     } = play;
     // using submit-listens exmaple from openapi https://rain0r.github.io/listenbrainz-openapi/index.html#/lbCore/submitListens
@@ -39,7 +46,8 @@ export const playToListenPayload = (play: PlayObject, version?: string): ListenP
         release_artist_name: albumArtists.length === 1 ? albumArtists[0].name : undefined,
         release_artist_names: albumArtists.length > 0 ? artistCreditsToNames(albumArtists) : undefined,
         // use data from LZ response, if this Play was originally from LZ Source
-        media_player: mediaPlayerName ?? msAdditionalInfo.media_player,
+        // fall back to the source's device identifier, if opted-in with deviceInfo
+        media_player: mediaPlayerName ?? msAdditionalInfo.media_player ?? (deviceInfo && deviceId !== undefined && deviceId !== NO_DEVICE ? deviceId : undefined),
         media_player_version: mediaPlayerVersion ?? msAdditionalInfo.media_player_version,
         music_service: musicService !== undefined ? musicServiceToCononical(musicService) : msAdditionalInfo.music_service,
         music_service_name: musicService ?? source ?? msAdditionalInfo.music_service_name,
@@ -156,8 +164,8 @@ export const urlToMusicService = (url?: string): string | undefined => {
     return undefined;
 };
 export const playToSubmitPayload = (play: PlayObject, options: SubmitOptions = {}): SubmitPayload => {
-    const { listenType = 'single' } = options;
-    const listenPayload: SubmitPayload = { listen_type: listenType, payload: [playToListenPayload(play)] };
+    const { listenType = 'single', deviceInfo } = options;
+    const listenPayload: SubmitPayload = { listen_type: listenType, payload: [playToListenPayload(play, {deviceInfo})] };
     if (listenType === 'playing_now') {
         delete listenPayload.payload[0].listened_at;
     }

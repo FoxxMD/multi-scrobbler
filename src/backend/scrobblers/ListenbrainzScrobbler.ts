@@ -70,7 +70,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
     }
     
     public playToClientPayload(playObj: PlayObject): ListenPayload {
-        return playToListenPayload(playObj);
+        return playToListenPayload(playObj, {deviceInfo: this.config.data.deviceInfo});
     }
 
     doScrobble = async (playObj: PlayObject) => {

@@ -40,7 +40,17 @@ export const listenBrainzDataSchema = z.object({
     contact: z.string().optional().meta({
         description: '(If running a forked version of multi-scrobbler) A website or email Listenbrainz can contact you at in case of issues',
         examples: ['contact@mydomain.com']
-    })
+    }),
+
+    /**
+     * Include the device/player a track was played on, when the source provides it, as `media_player` in each listen's additional_info
+     *
+     * @default false
+     * */
+    deviceInfo: z.boolean().optional().meta({
+        description: "Include the device/player a track was played on, when the source provides it, as media_player in each listen's additional_info",
+        default: false
+    }),
 });
 
 export type ListenBrainzData = z.infer<typeof listenBrainzDataSchema>;
@@ -49,7 +59,8 @@ const envDataSchema = z.object({
     LZ_URL: listenBrainzDataSchema.shape.url,
     LZ_TOKEN: listenBrainzDataSchema.shape.token,
     LZ_USER: listenBrainzDataSchema.shape.username,
-    LZ_CONTACT: listenBrainzDataSchema.shape.contact
+    LZ_CONTACT: listenBrainzDataSchema.shape.contact,
+    LZ_DEVICE_INFO: z.stringbool().optional().meta({description: listenBrainzDataSchema.shape.deviceInfo.meta().description})
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, ListenBrainzClientConfig> = {
@@ -61,7 +72,8 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, ListenBrainzClien
                 url: partial.LZ_URL,
                 token: partial.LZ_TOKEN,
                 username: partial.LZ_USER,
-                contact: partial.LZ_CONTACT
+                contact: partial.LZ_CONTACT,
+                deviceInfo: partial.LZ_DEVICE_INFO
             }
     })
 };

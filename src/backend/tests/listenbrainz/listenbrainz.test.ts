@@ -3,7 +3,7 @@ import { assert, expect } from 'chai';
 import dayjs from "dayjs";
 import { describe, it } from 'mocha';
 import { http, HttpResponse } from "msw";
-import type {PlayObject} from "../../../core/Atomic.ts";
+import {NO_DEVICE, type PlayObject} from "../../../core/Atomic.ts";
 import { UpstreamError } from "../../common/errors/UpstreamError.ts";
 
 import { ListenbrainzApiClient, listenResponseToPlay, listenPayloadToPlay } from "../../common/vendor/ListenbrainzApiClient.ts";
@@ -234,7 +234,43 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const submitPayload = playToListenPayload(play);
 
         expect(submitPayload.track_metadata.additional_info.music_service_name).to.be.eql('Plex')
-        
+
+    });
+
+    it('Should not include deviceId as media_player by default', function() {
+
+        const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone'});
+        const submitPayload = playToListenPayload(play);
+
+        expect(submitPayload.track_metadata.additional_info.media_player).to.be.undefined;
+
+    });
+
+    it('Should include deviceId as media_player when deviceInfo is enabled', function() {
+
+        const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone'});
+        const submitPayload = playToListenPayload(play, {deviceInfo: true});
+
+        expect(submitPayload.track_metadata.additional_info.media_player).to.be.eql('a1b2c3d4e5-iPhone');
+
+    });
+
+    it('Should not include deviceId as media_player when device is not known', function() {
+
+        const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: NO_DEVICE});
+        const submitPayload = playToListenPayload(play, {deviceInfo: true});
+
+        expect(submitPayload.track_metadata.additional_info.media_player).to.be.undefined;
+
+    });
+
+    it('Should prefer mediaPlayerName over deviceId for media_player', function() {
+
+        const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone', mediaPlayerName: 'Rhythmbox'});
+        const submitPayload = playToListenPayload(play, {deviceInfo: true});
+
+        expect(submitPayload.track_metadata.additional_info.media_player).to.be.eql('Rhythmbox');
+
     });
 
     it('Should use artist_names if provided, rather than parse artist from string', function () {

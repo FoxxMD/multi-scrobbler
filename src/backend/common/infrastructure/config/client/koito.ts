@@ -75,6 +75,16 @@ export const koitoDataSchema = z.object({
     username: z.string().meta({
         description: "Username of the user to scrobble for"
     }),
+
+    /**
+     * Include the device/player a track was played on, when the source provides it, as `media_player` in each listen's additional_info
+     *
+     * @default false
+     * */
+    deviceInfo: z.boolean().optional().meta({
+        description: "Include the device/player a track was played on, when the source provides it, as media_player in each listen's additional_info",
+        default: false
+    }),
 }).meta({title: 'KoitoData'});
 
 export type KoitoData = z.infer<typeof koitoDataSchema>;
@@ -83,6 +93,7 @@ const envDataSchema = z.object({
     KOITO_URL: koitoDataSchema.shape.url,
     KOITO_TOKEN: koitoDataSchema.shape.token,
     KOITO_USER: koitoDataSchema.shape.username,
+    KOITO_DEVICE_INFO: z.stringbool().optional().meta({description: koitoDataSchema.shape.deviceInfo.meta().description}),
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, KoitoClientConfig> = {
@@ -93,7 +104,8 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, KoitoClientConfig
             data: {
                 url: partial.KOITO_URL,
                 token: partial.KOITO_TOKEN,
-                username: partial.KOITO_USER
+                username: partial.KOITO_USER,
+                deviceInfo: partial.KOITO_DEVICE_INFO
             }
     })
 };

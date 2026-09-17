@@ -36,6 +36,8 @@ import { getRoot } from '../../ioc.ts';
 export interface SubmitOptions {
     log?: boolean
     listenType?: ListenType
+    /** Include the source's device/player identifier as additional_info.media_player when media player info is not otherwise available */
+    deviceInfo?: boolean
 }
 
 export interface ListensResponse {
@@ -225,7 +227,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
     }
 
     submitListen = async (play: PlayObject, options: SubmitOptions = {}): Promise<ScrobbleActionResult> => {
-        const listenPayload = playToSubmitPayload(play, {listenType: options.listenType});
+        const listenPayload = playToSubmitPayload(play, {listenType: options.listenType, deviceInfo: options.deviceInfo ?? this.config.deviceInfo});
         const { log = false} = options;
         try {
             if(log) {
