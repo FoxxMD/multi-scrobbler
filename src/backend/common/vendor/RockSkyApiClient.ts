@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import type { Request, Response } from 'superagent';
 import request from 'superagent';
-import type {ArtistCredit, PlayObject, PlayObjectMinimal, ScrobbleActionResult, URLData} from "../../../core/Atomic.ts";
+import {rockskyRequiredFields, type ArtistCredit, type PlayObject, type PlayObjectMinimal, type RockskyConfidenceField, type RockskyMissingField, type ScrobbleActionResult, type URLData} from "../../../core/Atomic.ts";
 import { artistCreditsToNames, artistNamesToCredits, nonEmptyStringOrDefault } from "../../../core/StringUtils.ts";
 import { UpstreamError } from "../errors/UpstreamError.ts";
 import type {AbstractApiOptions, FormatPlayObjectOptions} from "../infrastructure/Atomic.ts";
@@ -28,6 +28,8 @@ import { isSuperAgentResponseError } from "../errors/ErrorUtils.ts";
 import { hashObject } from "../../utils/StringUtils.ts";
 import { stringSameness } from "@foxxmd/string-sameness";
 import clone from "clone";
+import { difference } from "../../utils.ts";
+import { RockskyClientPool } from "./rocksky/RockskyClientWrapped.ts";
 
 interface SubmitOptions {
     log?: boolean
@@ -58,6 +60,7 @@ export class RockSkyApiClient extends AbstractApiClient {
     userData!: HandleData
 
     rsClient?: RockskyClient;
+    rsPool: RockskyClientPool;
     rsAgent?: Agent;
 
     constructor(name: any, config: RockSkyData & RockSkyOptions, options: AbstractApiOptions) {
@@ -80,6 +83,7 @@ export class RockSkyApiClient extends AbstractApiClient {
             this.logger.warn(`DEPRECATED: Listenbrainz interface (API Application 'key' auth) has been deprecated in favor of native API (access token auth). Please refer to the MS Rocksky docs and switch. Listenbrainz/key auth will be removed in a future release`);
         }
 
+        this.rsPool = new RockskyClientPool('Pool', {apis: [{enable: true, token}]}, {logger: this.logger});
         this.rsClient = new RockskyClient(token);
     }
 
@@ -193,7 +197,7 @@ export class RockSkyApiClient extends AbstractApiClient {
         // so we can use the client for write operations later
         if(this.rsAgent === undefined) {
             try {
-                await this.rsClient.apikeys()
+                await this.rsPool.rsProxy.apikeys()
                 // const req = request.get('https://api.rocksky.app/profile').set('Authorization', `Bearer ${this.config.token}`);
                 // await req;
                 return true;
@@ -208,7 +212,7 @@ export class RockSkyApiClient extends AbstractApiClient {
     getUserListens = async (maxTracks: number, user?: string): Promise<RockskyScrobble[]> => {
         try {
 
-            const res = this.rsClient.scrobbles(user ?? this.userData.did ?? this.userData.handle, maxTracks, 0);
+            const res = this.rsPool.rsProxy.scrobbles(user ?? this.userData.did ?? this.userData.handle, maxTracks, 0);
             // const res = await this.rsClient.actor.getActorScrobbles({
             //     limit: maxTracks,
             //     offset: 0,
@@ -271,7 +275,7 @@ export class RockSkyApiClient extends AbstractApiClient {
             if(log) {
                 this.logger.debug(`Submit Payload: ${JSON.stringify(payload)}`);
             }
-            const resp = await this.rsClient.createScrobble(payload);
+            const resp = await this.rsPool.rsProxy.createScrobble(payload);
             return {payload, response: resp, createdAt: dayjs().toISOString()}
         }
 
@@ -280,9 +284,10 @@ export class RockSkyApiClient extends AbstractApiClient {
          * We get immediate feedback since we do all the work
          */
 
-        const missing = missingScrobbleFields(play);
-        if(missing.length > 0) {
-            throw new ScrobbleSubmitError(`Will not submit scrobble because required fields are missing from data: ${missing.join(', ')}`, {payload: playToRockskyClientRecord(play)});
+        const found = hasRequiredScrobbleFields(play);
+        if(found.length !== rockskyRequiredFields.options.length) {
+            
+            throw new ScrobbleSubmitError(`Will not submit scrobble because required fields are missing from data: ${difference(rockskyRequiredFields.options, found).join(', ')}`, {payload: playToRockskyClientRecord(play)});
         }
 
         const confidenceFields = hasScrobbleConfidenceFields(play);
@@ -324,7 +329,7 @@ export class RockSkyApiClient extends AbstractApiClient {
         let songDetailed: SongViewDetailed = await this.cache.cacheApi.get<SongViewDetailed>(cacheKey);
         if(songDetailed === undefined) {
             try {
-                songDetailed = await this.rsClient.matchSong(input.title, input.artist, input.mbId, input.isrc, input.album);
+                songDetailed = await this.rsPool.rsProxy.matchSong(input.title, input.artist, input.mbId, input.isrc, input.album);
                 await this.cache.cacheApi.set(cacheKey, songDetailed);
             } catch (e) {
                 throw new UpstreamError('Unable to match Play input with Rocksky song', {cause: e});
@@ -347,23 +352,23 @@ interface RsMatchSongInput {
     album?: string
 }
 
-export const missingScrobbleFields = (play: PlayObject): string[] => {
-    const missing: string[] = [];
+export const hasRequiredScrobbleFields = (play: PlayObject): RockskyMissingField[] => {
+    const found: RockskyMissingField[] = [];
 
-    if(play.data.track === undefined || play.data.track.trim() === '') {
-        missing.push('track');
+    if(play.data.track !== undefined && play.data.track.trim() !== '') {
+        found.push('track');
     }
-    if(play.data.artists === undefined || play.data.artists.length === 0) {
-        missing.push('artists');
+    if(play.data.artists !== undefined && play.data.artists.length > 0) {
+        found.push('artists');
     }
-    if(play.data.album === undefined || play.data.album.trim() === '') {
-        missing.push('album');
+    if(play.data.album !== undefined && play.data.album.trim() !== '') {
+        found.push('album');
     }
-    return missing;
+    return found;
 }
 
-export const hasScrobbleConfidenceFields = (play: PlayObject): string[] => {
-    const found: string[] = [];
+export const hasScrobbleConfidenceFields = (play: PlayObject): RockskyConfidenceField[] => {
+    const found: RockskyConfidenceField[] = [];
 
     if(play.data.isrc) {
         found.push('isrc');
@@ -415,7 +420,7 @@ const mergeSongViewWithPlay = (song: SongViewDetailed, play: PlayObject): PlayOb
     return mergedPlay;
 }
 
-const songViewToPlay = (song: SongViewDetailed): PlayObject => {
+export const songViewToPlay = (song: SongViewDetailed): PlayObject => {
 
     let artists: ArtistCredit[] = [],
     albumArtists: ArtistCredit[];

@@ -16,6 +16,7 @@ import { CoverArtApiClient } from "./common/vendor/musicbrainz/CoverArtApiClient
 import { version, stable } from "./version.ts";
 import type {DbConcrete} from "./common/database/drizzle/drizzleUtils.ts";
 import type { MSBackendEventMap } from "./common/infrastructure/MSBackendEventMap.ts";
+import type { RockskySingletonMap } from "./common/vendor/rocksky/RockskyClientWrapped.ts";
 
 let root: ReturnType<typeof createRoot>;
 export interface RootOptions {
@@ -27,6 +28,7 @@ export interface RootOptions {
     loggingConfig?: LogOptions
     cache?: CacheConfigOptions | MSCache | (() => MSCache)
     mbMap?: MusicBrainzSingletonMap | (() => MusicBrainzSingletonMap)
+    rsMap?: RockskySingletonMap | (() => RockskySingletonMap)
     transformers?: TransformerCommonConfig[]
     db?: DbConcrete | (() => Promise<DbConcrete>)
 }
@@ -72,6 +74,7 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         logger,
         cache,
         mbMap,
+        rsMap,
         db,
         transformers = []
     } = options || {};
@@ -99,6 +102,16 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         maybeSingletonMb = mbMap;
     } else {
         maybeSingletonMb = new Map();
+    }
+
+    let rsFunc: () => RockskySingletonMap;
+    let maybeSingletonRs: RockskySingletonMap;
+    if(typeof rsMap === 'function') {
+        rsFunc = rsMap;
+    } else if(maybeSingletonRs !== undefined) {
+        maybeSingletonRs = rsMap;
+    } else {
+        maybeSingletonRs = new Map();
     }
 
     let dbFunc: () => Promise<DbConcrete>;
@@ -179,6 +192,7 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         transformerManager,
         cache: () => maybeSingletonCache !== undefined ? () => maybeSingletonCache : cacheFunc,
         mbMap: () => maybeSingletonMb !== undefined ? () => maybeSingletonMb : mbFunc,
+        rsMap: () => maybeSingletonRs !== undefined ? () => maybeSingletonRs : rsFunc,
         coverArtApi,
         db: () => dbFunc
     }).add((items) => {
