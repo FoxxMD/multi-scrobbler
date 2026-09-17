@@ -1,6 +1,7 @@
 import * as z from "zod";
 import {requestRetryOptionsSchema} from "../common.ts";
 import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema, nowPlayingOptionsSchema, type EnvClientSchema} from "./index.ts";
+import { atProtoAppDataSchema } from "./atproto.ts";
 
 export const rockSkyDataSchema = z.object({
     ...requestRetryOptionsSchema.shape,
@@ -36,6 +37,9 @@ export const rockSkyDataSchema = z.object({
     handle: z.string().meta({
         description: "The **fully-qualified** handle for your ATPRoto/Bluesky account"
     }),
+    did: z.string().optional(),
+
+    appPassword: atProtoAppDataSchema.shape.appPassword.optional()
 });
 
 export type RockSkyData = z.infer<typeof rockSkyDataSchema>;
