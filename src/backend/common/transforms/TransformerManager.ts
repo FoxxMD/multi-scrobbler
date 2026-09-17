@@ -11,6 +11,7 @@ import MusicbrainzTransformer, { configFromEnv, type MusicbrainzTransformerConfi
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { nanoid } from "nanoid";
 import { SimpleError, StageTransformError } from "../errors/MSErrors.ts";
+import RockskyTransformer, { type RockskyTransformerConfig, configFromEnv as rsConfigFromEnv } from "./RockskyTransformer.ts";
 
 export default class TransformerManager {
 
@@ -55,6 +56,9 @@ export default class TransformerManager {
             case 'musicbrainz':
                 t = new MusicbrainzTransformer({ name: tName, ...config as MusicbrainzTransformerConfig }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
                 break;
+            case 'rocksky':
+                t = new RockskyTransformer({ name: tName, ...config as RockskyTransformerConfig }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
+                break;
             default:
                 throw new Error(`No transformer of type '${config.type}' exists.`);
         }
@@ -77,13 +81,26 @@ export default class TransformerManager {
             if(mbConfig !== undefined) {
                 this.register(mbConfig);
             } else {
-                this.logger.debug('No transformers to build from ENV');
+                this.logger.debug('No Musicbrainz transformer to build from ENV');
             }
         } catch (e) {
             if(e instanceof SimpleError) {
                 this.logger.error(`Unable to build Musicbrainz Transformer from ENV: ${e.message}`);
             }
             this.logger.error(new Error('Unable to build Musicbrainz Transformer from ENV', {cause: e}));
+        }
+        try {
+            const rsConfig = rsConfigFromEnv(this.logger);
+            if(rsConfig !== undefined) {
+                this.register(rsConfig);
+            } else {
+                this.logger.debug('No Rocksky transformer to build from ENV');
+            }
+        } catch (e) {
+            if(e instanceof SimpleError) {
+                this.logger.error(`Unable to build Rocksky Transformer from ENV: ${e.message}`);
+            }
+            this.logger.error(new Error('Unable to build Rocksky Transformer from ENV', {cause: e}));
         }
     }
 

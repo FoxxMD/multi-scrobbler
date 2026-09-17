@@ -20,7 +20,7 @@ export interface PlayTransformPartsAtomic<T> {
 }
 
 export const STAGE_TYPES_USER: StageTypeUser[] = ['user'];
-export const STAGE_TYPES_METADATA: StageTypeMetadata[] = ['musicbrainz','native'];
+export const STAGE_TYPES_METADATA: StageTypeMetadata[] = ['musicbrainz','native','rocksky'];
 export const STAGE_TYPES: StageType[] = [...STAGE_TYPES_METADATA, ...STAGE_TYPES_USER];
 
 export interface StageTyped {
@@ -169,9 +169,9 @@ export const flowControlSchema = z.object({
 
 export type FlowControl = z.infer<typeof flowControlSchema>;
 
-export const stageTypeMetadataSchema = z.enum(['musicbrainz', 'native']).meta({title: 'Stage Type Metadata'});
+export const stageTypeMetadataSchema = z.enum(['musicbrainz', 'native', 'rocksky']).meta({title: 'Stage Type Metadata'});
 
-export const typedStageSchema = z.enum(['musicbrainz', 'native','user']).meta({title: 'Stage Type'});
+export const typedStageSchema = z.enum(['musicbrainz', 'native','user', 'rocksky']).meta({title: 'Stage Type'});
 
 export type StageTypeMetadata = z.infer<typeof stageTypeMetadataSchema>;
 
@@ -255,7 +255,7 @@ const playTransformUserStageRulesSchema = z.object({
 }).meta({title: 'User Stage Rules'});
 
 const metadataStageForUnionSchema = playTransformMetadataStageSchema.extend({
-    type: z.enum(['musicbrainz']),
+    type: z.enum(['musicbrainz','rocksky']),
 }).meta({title: 'Transform External Stage'});
 
 const playTransformTypedStageOptionsSchema = z.discriminatedUnion('type', [
