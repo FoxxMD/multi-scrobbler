@@ -1,6 +1,6 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import type EventEmitter from "events";
-import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type SourcePlayerObj} from "../../core/Atomic.ts";
+import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type QueueContext, type SourcePlayerObj} from "../../core/Atomic.ts";
 import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import type {FormatPlayObjectOptions, InternalConfigOptional} from "../common/infrastructure/Atomic.ts";
@@ -10,9 +10,8 @@ import type {ListenPayload} from '../../core/vendor/listenbrainz/interfaces.ts';
 
 import { isDebugMode } from "../utils.ts";
 import { durationToHuman } from '../../core/TimeUtils.ts';
-import { RockSkyApiClient, rockskyScrobbleToPlay, type SubmitResponse } from "../common/vendor/RockSkyApiClient.ts";
+import { RockSkyApiClient, rockskyScrobbleToPlay } from "../common/vendor/RockSkyApiClient.ts";
 import type {RockSkyClientConfig} from "../common/infrastructure/config/client/rocksky.ts";
-import { ScrobbleSubmitError } from "../common/errors/MSErrors.ts";
 import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient.ts";
 import { fromStream } from '@atcute/repo';
 import fsPromise from 'node:fs/promises';
@@ -59,12 +58,12 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
     protected async doBuildInitData(): Promise<true | string | undefined> {
         const {
             data: {
-                key,
-                token,
+                appPassword,
+                token
             } = {}
         } = this.config;
-        if (key === undefined && token === undefined) {
-            throw new Error('Must provide an API Key or Access Token');
+        if (appPassword === undefined && token === undefined) {
+            throw new Error('Must provide an App Password or Access Token');
         }
         return true;
     }
@@ -94,7 +93,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         return playToListenPayload(playObj);
     }
 
-    doScrobble = async (playObj: PlayObject) => {
+    doScrobble = async (playObj: PlayObject, context?: QueueContext) => {
         const {
             meta: {
                 source,
@@ -102,12 +101,10 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
             } = {}
         } = playObj;
 
-        try {
-            const result = await this.api.submitListen(playObj, { log: isDebugMode() });
+        const {isRetry = false} = context ?? {};
 
-            if (this.api.isLzMode() && ((result.response as SubmitResponse).payload?.ignored_listens ?? 0) > 0) {
-                throw new ScrobbleSubmitError('Scrobble was successfully submitted but Rocksky ignored it', { showStopper: false, responseBody: result.response, payload: result.payload });
-            }
+        try {
+            const result = await this.api.submitListen(playObj, { log: isDebugMode(), force: isRetry === true });
 
             if (newFromSource) {
                 this.logger.info(`Scrobbled (New)     => (${source}) ${buildTrackString(playObj)}`);

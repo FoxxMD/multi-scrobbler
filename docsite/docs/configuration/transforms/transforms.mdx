@@ -133,6 +133,7 @@ Each [**hook**](#hook) is made up of one or more **Stages**. A Stage is a self-c
 * The [User](/configuration/transforms/user) Stage allows a user to define search-and-replace terms for Artist/Title/Album
 * The [Native](/configuration/transforms/native) Stage uses MS's built-in heuristics to extract Artists from a single Artist string
 * The [Musicbrainz](/configuration/transforms/musicbrainz) Stage tries to match Play data with the Musicbrainz database and to standardize the Artist/Title/Album data
+* The [Rocksky](/configuration/transforms/rocksky) Stage tries to match Play data with the Rocksky metadata API to enrich meta IDs (like MBID, ISRC), duration, and artwork
 
 Each Stage in a Hook receives Play data from the previous Stage.
 

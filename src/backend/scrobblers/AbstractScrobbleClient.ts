@@ -378,7 +378,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     protected async postCache(): Promise<void> {
         await super.postCache();
-        this.generateStaggerMappers();
+        await this.generateStaggerMappers();
     }
 
     protected async postDatabase(): Promise<void> {
@@ -396,7 +396,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         await this.updateQueueStats([INGRESS_QUEUE, DEAD_QUEUE]);
     }
 
-    protected generateStaggerMappers() {
+    protected async generateStaggerMappers() {
         const {
             preCompare = [],
             compare: {
@@ -408,7 +408,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             const pcInits: number[] = [0],
             pcMaxStagger: number[] = [];
             for(const hook of preCompare) {
-                const t = this.transformManager.getTransformerByStage({type: hook.type, name: hook.name});
+                const t = await this.transformManager.getTransformerByStage({type: hook.type, name: hook.name});
                 pcInits.push(t.staggerOpts?.initialInterval ?? 0);
                 pcMaxStagger.push(t.staggerOpts?.maxRandomStagger ?? 0)
             }
@@ -419,7 +419,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             const eInits: number[] = [0],
             eMaxStagger: number[] = [];
             for(const hook of existing) {
-                const t = this.transformManager.getTransformerByStage({type: hook.type, name: hook.name});
+                const t = await this.transformManager.getTransformerByStage({type: hook.type, name: hook.name});
                 eInits.push(t.staggerOpts?.initialInterval ?? 0);
                 eMaxStagger.push(t.staggerOpts?.maxRandomStagger ?? 0)
             }
@@ -777,7 +777,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return [s, [s]];
     }
 
-    public async scrobble(playObj: PlayObject, opts?: { delay?: number | false, signal?: AbortSignal }): Promise<PlayObject> {
+    public async scrobble(playObj: PlayObject, opts?: { delay?: number | false, signal?: AbortSignal } & QueueContext): Promise<PlayObject> {
         const {delay: delayDuration, signal} = opts || {};
         const scrobbleDelay = delayDuration === undefined ? this.scrobbleDelay : (delayDuration === false ? 0 : delayDuration);
         if (scrobbleDelay !== 0) {
@@ -795,7 +795,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
         try {
             this.setStatus(`Scrobbling Play ${playObj.uid}`);
-            const result = await this.doScrobble(playObj);
+            const result = await this.doScrobble(playObj, opts);
             const {
                 scrobble = {}
             } = playObj;
@@ -813,7 +813,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
     }
 
-    protected abstract doScrobble(playObj: PlayObject): Promise<ScrobbleActionResult & {play?: PlayObject}>
+    protected abstract doScrobble(playObj: PlayObject, context?: QueueContext): Promise<ScrobbleActionResult & {play?: PlayObject}>
 
     public abstract playToClientPayload(playObject: PlayObject): object
 
@@ -1087,14 +1087,14 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         const queueState = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE);
         queueState.error = undefined;
         const {
-            context,
+            context = {},
         } = queueState
         const {
             useCache = true,
             isRetry = false,
             transform = true,
             dupeCheck = true,
-        } = context || {};
+        } = context ?? {};
 
         const isDead = queueState.retries > 0 || isRetry;
 
@@ -1166,7 +1166,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 }
                 signal.throwIfAborted();
                 try {
-                    const scrobbledPlay = await this.scrobble(transformedScrobble, { signal });
+                    const scrobbledPlay = await this.scrobble(transformedScrobble, { signal, ...(context ?? {})});
                     const { scrobble } = scrobbledPlay;
                     events.push(scrobbleToPlayEvent(scrobble));
                     //currQueuedPlay.play = scrobbledPlay;

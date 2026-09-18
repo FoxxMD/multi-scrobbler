@@ -66,7 +66,7 @@ describe('Sources use transform plays correctly', function () {
                 }
             }
         };
-        source.buildTransformRules();
+        await source.buildTransformRules();
         const newScrobble = generatePlay({
             track: 'my cool track'
         });
@@ -92,7 +92,7 @@ describe('Sources use transform plays correctly', function () {
                 }
             }
         };
-        source.buildTransformRules();
+        await source.buildTransformRules();
         const newScrobble = generatePlay({
             track: 'my cool track'
         });

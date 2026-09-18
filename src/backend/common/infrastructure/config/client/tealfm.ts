@@ -6,8 +6,11 @@ import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSch
 
 export const tealDataSchema = z.object({
     ...requestRetryOptionsSchema.shape,
-    ...atProtoUserIdentifierDataSchema.shape,
+    //...atProtoUserIdentifierDataSchema.shape,
     ...atProtoAppDataSchema.shape,
+    identifier: atProtoUserIdentifierDataSchema.shape.identifier.meta({
+        description: "The **fully-qualified** handle, or identifier, for your Atmosphere account"
+    }),
     /**
      * The base URI of the Multi-Scrobbler to use for ATProto OAuth
      *

@@ -16,6 +16,7 @@ import { CoverArtApiClient } from "./common/vendor/musicbrainz/CoverArtApiClient
 import { version, stable } from "./version.ts";
 import type {DbConcrete} from "./common/database/drizzle/drizzleUtils.ts";
 import type { MSBackendEventMap } from "./common/infrastructure/MSBackendEventMap.ts";
+import type { RockskySingletonMap } from "./common/vendor/rocksky/RockskyClientWrapped.ts";
 
 let root: ReturnType<typeof createRoot>;
 export interface RootOptions {
@@ -27,6 +28,7 @@ export interface RootOptions {
     loggingConfig?: LogOptions
     cache?: CacheConfigOptions | MSCache | (() => MSCache)
     mbMap?: MusicBrainzSingletonMap | (() => MusicBrainzSingletonMap)
+    rsMap?: RockskySingletonMap | (() => RockskySingletonMap)
     transformers?: TransformerCommonConfig[]
     db?: DbConcrete | (() => Promise<DbConcrete>)
 }
@@ -72,6 +74,7 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         logger,
         cache,
         mbMap,
+        rsMap,
         db,
         transformers = []
     } = options || {};
@@ -101,6 +104,16 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         maybeSingletonMb = new Map();
     }
 
+    let rsFunc: () => RockskySingletonMap;
+    let maybeSingletonRs: RockskySingletonMap;
+    if(typeof rsMap === 'function') {
+        rsFunc = rsMap;
+    } else if(maybeSingletonRs !== undefined) {
+        maybeSingletonRs = rsMap;
+    } else {
+        maybeSingletonRs = new Map();
+    }
+
     let dbFunc: () => Promise<DbConcrete>;
     if(typeof db === 'function') {
         dbFunc = db;
@@ -120,20 +133,10 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
 
     const transformerManager = new TransformerManager(logger, maybeSingletonCache !== undefined ? maybeSingletonCache : cacheFunc());
     for(const c of transformers) {
-        try {
-            transformerManager.register(c);
-        } catch (e) {
-            logger.warn(new Error('Could not register a transformer', {cause: e}));
-        }
+        transformerManager.addTransformerConfig(c);
     }
     if(transformers.length === 0) {
         logger.debug('No user-supplied transformer configs were found.');
-    }
-    if(!transformerManager.hasTransformerType('user')) {
-        transformerManager.register({type: 'user', name: 'MSDefault'});
-    }
-    if(!transformerManager.hasTransformerType('native')) {
-        transformerManager.register({type: 'native', name: 'MSDefault'});
     }
 
     const cacheApi = (maybeSingletonCache !== undefined ? maybeSingletonCache : cacheFunc()).cacheApi;
@@ -179,6 +182,7 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         transformerManager,
         cache: () => maybeSingletonCache !== undefined ? () => maybeSingletonCache : cacheFunc,
         mbMap: () => maybeSingletonMb !== undefined ? () => maybeSingletonMb : mbFunc,
+        rsMap: () => maybeSingletonRs !== undefined ? () => maybeSingletonRs : rsFunc,
         coverArtApi,
         db: () => dbFunc
     }).add((items) => {
