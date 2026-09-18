@@ -1,23 +1,18 @@
-import { type ArtistCredit, DEFAULT_ROCKSKY_MISSING_TYPES, type LifecycleInput, type OptionalCacheUsage, type PlayObject, rockskyMissingFields, type RockskyMissingField, type TrackMeta, type ArtMeta } from "../../../../core/Atomic.ts";
+import { type ArtistCredit, DEFAULT_ROCKSKY_MISSING_TYPES, type LifecycleInput, type OptionalCacheUsage, type PlayObject, type RockskyMissingField, type TrackMeta, type ArtMeta } from "../../../../core/Atomic.ts";
 import { isWhenCondition, testWhenConditions } from "../../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../../infrastructure/config/health/webhooks.ts";
 import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../../core/Transform.ts";
 import AtomicPartsTransformer from "../AtomicPartsTransformer.ts";
 import type {TransformerOptions} from "../AbstractTransformer.ts";
-import { ARTIST_WEIGHT, TITLE_WEIGHT } from "../../infrastructure/Atomic.ts";
 import { DELIMITERS } from '../../../../core/Atomic.ts';
 import { MaybeLogger } from '../../MaybeLogger.ts';
 import { childLogger } from "@foxxmd/logging";
 import { type UsingTypes } from "../../vendor/musicbrainz/MusicbrainzApiClientPool.ts";
 import { difference } from "../../../utils.ts";
-import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
 import { SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../../errors/MSErrors.ts";
-import { parseArtistCredits, scoreNormalizedStringsWeighted } from "../../../utils/StringUtils.ts";
-import clone from "clone";
 import type { Cacheable } from "cacheable";
 import { artistCreditsToNames, splitByFirstRegexFound } from "../../../../core/StringUtils.ts";
 import { nativeParse } from "../NativeTransformer.ts";
-import { compareArtistCreditsNormalized, comparePlayArtistsNormalized, scoreTrackWeightedAndNormalized } from "../../../utils/PlayComparisonUtils.ts";
 import { hasRequiredScrobbleFields, hasScrobbleConfidenceFields, type SongViewDetailedMS, songViewToPlay } from "../../vendor/RockSkyApiClient.ts";
 import { RockskyError, type SongMatchView } from "@rocksky/sdk";
 import { RockskyClientPool } from "../../vendor/rocksky/RockskyClientWrapped.ts";
@@ -28,10 +23,6 @@ export const DEFAULT_SEARCHTYPE_ORDER: SearchType[] = ['isrc','basic'];
 
 export interface RockskyTransformerDataStrong extends RockskyTransformerData {
     searchWhenMissing: RockskyMissingField[]
-
-    titleWeight?: number
-    artistWeight?: number
-    albumWeight?: number
 }
 
 export interface RockskyTransformerDataStage extends RockskyTransformerDataStrong,PlayTransformMetadataStage {
@@ -47,9 +38,6 @@ export const parseStageConfig = (data: RockskyTransformerData | undefined = {}, 
         searchWhenMissing,
         searchArtistMethod,
         searchOrder = [],
-        titleWeight,
-        albumWeight,
-        artistWeight,
         ...rest
     } = data;
 
@@ -96,20 +84,6 @@ export const parseStageConfig = (data: RockskyTransformerData | undefined = {}, 
         if(k.includes('release') && v !== undefined) {
             logger.debug(`${k}: ${Array.isArray(v) ? v.join(' | ') : v}`);
         }
-    }
-
-    if(titleWeight !== undefined) {
-        config.titleWeight = titleWeight === true ? TITLE_WEIGHT : titleWeight;
-    }
-    if(artistWeight !== undefined) {
-        config.artistWeight = artistWeight === true ? ARTIST_WEIGHT : artistWeight;
-    }
-    if(albumWeight !== undefined) {
-        config.albumWeight = albumWeight === true ? 0.3 : albumWeight;
-    }
-
-    if(albumWeight !== undefined || titleWeight !== undefined || artistWeight !== undefined) {
-        logger.debug(`Ranking matches based on scrobble text. Weights => Title ${config.titleWeight} | Artist ${config.artistWeight} | Album ${config.albumWeight}`);
     }
 
     return config;
@@ -179,20 +153,7 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         const {
             searchWhenMissing = this.defaults.searchWhenMissing,
             forceSearch = this.defaults.forceSearch ?? false,
-            logPreMbid = this.defaults.logPreMbid ?? false
         } = stageConfig;
-
-        if(logPreMbid) {
-            const a = play.data.meta?.brainz?.artist;
-            const parts: string[] = [
-                `Recording ${play.data.meta?.brainz?.recording ?? '(None)'}`,
-                `Release ${play.data.meta?.brainz?.album ?? '(None)'}`,
-                `Artists ${a === undefined || a.length === 0 ? '(None)' : a.join(', ')}`,
-                `ISRC ${play.data.isrc ?? '(None)'}`
-            ];
-            this.logger.debug(`Original MBIDS => ${parts.join(' | ')}`);
-        }
-
 
         const found: RockskyMissingField[] = hasRequiredScrobbleFields(play).concat(hasScrobbleConfidenceFields(play));
         if(play.data.duration !== undefined && play.data.duration !== 0) {
@@ -460,12 +421,12 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
                 throw new StagePrerequisiteError('No matches returned from Rocksky API', {shortStack: true, inputs: transformData.requestQueries});
             }
         } else {
-            let filteredList: SongMatchView[] = transformData.matches.filter(x => x.score >= score);
+            const filteredList: SongMatchView[] = transformData.matches.filter(x => x.score >= score);
             if(filteredList.length === 0) {
                 throw new StagePrerequisiteError(`All ${transformData.matches} candidate matches associated with this match had a score < ${score}, best match was ${transformData.matches[0].score}`, {shortStack: true});
             }
-            const mergedConfig = Object.assign({}, removeUndefinedKeys({...this.defaults}), removeUndefinedKeys({...stageConfig}));
-            filteredList = rankSongMatchesByPriority(filteredList, mergedConfig, play);
+            //const mergedConfig = Object.assign({}, removeUndefinedKeys({...this.defaults}), removeUndefinedKeys({...stageConfig}));
+            //filteredList = rankSongMatchesByPriority(filteredList, mergedConfig, play);
 
             this.logger.debug(`${filteredList.length} of ${transformData.matches} were valid, filtered matches. Using match with best score of ${filteredList[0].score}`);
             mergedSongView = {
@@ -670,42 +631,42 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
 
 }
 
-const scoreMatchWithPlay = (weights: Pick<RockskyTransformerDataStage, 'albumWeight' | 'titleWeight' | 'artistWeight'>, view: SongMatchView, play: PlayObject): {titleScore, artistScore, albumScore} => {
-    let artistScore = 0,
-    titleScore = 0,
-    albumScore = 0;
+// const scoreMatchWithPlay = (weights: Pick<RockskyTransformerDataStage, 'albumWeight' | 'titleWeight' | 'artistWeight'>, view: SongMatchView, play: PlayObject): {titleScore, artistScore, albumScore} => {
+//     let artistScore = 0,
+//     titleScore = 0,
+//     albumScore = 0;
 
-    if(weights.artistWeight !== undefined && view.artist !== undefined) {
-            const artistRes = comparePlayArtistsNormalized(play, {data: {artists: [{name: view.artist}]}, meta:{}});
-            artistScore = artistRes[0] * (weights.artistWeight + (artistRes[1] > 0 ? 0.05 : 0));
-    }
-    if(weights.titleWeight !== undefined && view.title !== undefined) {
-        titleScore = weights.titleWeight === 0 ? 0 : scoreTrackWeightedAndNormalized(play.data.track, view.title, weights.titleWeight, {exact: 0.05, naive: 0.03})[0];
-    }
-    if(weights.albumWeight !== undefined && view.album !== undefined) {
-        albumScore = scoreNormalizedStringsWeighted(play.data.album, view.album, weights.albumWeight, weights.albumWeight !== 0 ? 0.05 : 0);
-    }
+//     if(weights.artistWeight !== undefined && view.artist !== undefined) {
+//             const artistRes = comparePlayArtistsNormalized(play, {data: {artists: [{name: view.artist}]}, meta:{}});
+//             artistScore = artistRes[0] * (weights.artistWeight + (artistRes[1] > 0 ? 0.05 : 0));
+//     }
+//     if(weights.titleWeight !== undefined && view.title !== undefined) {
+//         titleScore = weights.titleWeight === 0 ? 0 : scoreTrackWeightedAndNormalized(play.data.track, view.title, weights.titleWeight, {exact: 0.05, naive: 0.03})[0];
+//     }
+//     if(weights.albumWeight !== undefined && view.album !== undefined) {
+//         albumScore = scoreNormalizedStringsWeighted(play.data.album, view.album, weights.albumWeight, weights.albumWeight !== 0 ? 0.05 : 0);
+//     }
 
-    return {artistScore, titleScore, albumScore};
-}
+//     return {artistScore, titleScore, albumScore};
+// }
 
-export const rankSongMatchesByPriority = (list: SongMatchView[], stageConfig: RockskyTransformerDataStage, play: PlayObject, logger: MaybeLogger = new MaybeLogger()): SongMatchView[] => {
-        const {
-        albumWeight = 0,
-        titleWeight = 0,
-        artistWeight = 0
-    } = stageConfig;
+// export const rankSongMatchesByPriority = (list: SongMatchView[], stageConfig: RockskyTransformerDataStage, play: PlayObject, logger: MaybeLogger = new MaybeLogger()): SongMatchView[] => {
+//         const {
+//         albumWeight = 0,
+//         titleWeight = 0,
+//         artistWeight = 0
+//     } = stageConfig;
 
-    // reverse order so that "highest" priority (first in user list) ends up with the highest index, that we use as score
+//     // reverse order so that "highest" priority (first in user list) ends up with the highest index, that we use as score
 
-    const cList = clone(list) as SongMatchView[];
-    cList.sort((a, b) => {
-        const aScores = scoreMatchWithPlay({albumWeight, titleWeight, artistWeight}, a, play);
-        const bScores = scoreMatchWithPlay({albumWeight, titleWeight, artistWeight}, b, play);
-        return (bScores.albumScore + bScores.artistScore + bScores.titleScore) - (aScores.albumScore + aScores.artistScore + aScores.titleScore);
-    })
-    return cList;
-};
+//     const cList = clone(list) as SongMatchView[];
+//     cList.sort((a, b) => {
+//         const aScores = scoreMatchWithPlay({albumWeight, titleWeight, artistWeight}, a, play);
+//         const bScores = scoreMatchWithPlay({albumWeight, titleWeight, artistWeight}, b, play);
+//         return (bScores.albumScore + bScores.artistScore + bScores.titleScore) - (aScores.albumScore + aScores.artistScore + aScores.titleScore);
+//     })
+//     return cList;
+// };
 
 export class SearchPrerequisiteError extends SimpleError {
     name = 'Search Prerequistie Failure';
