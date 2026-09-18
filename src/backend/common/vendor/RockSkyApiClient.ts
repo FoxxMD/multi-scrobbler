@@ -400,21 +400,24 @@ const mergeSongViewWithPlay = (song: SongViewDetailed, play: PlayObject): PlayOb
             duration: svPlay.data.duration ?? play.data.duration,
             isrc: svPlay.data.isrc ?? play.data.isrc
         },
-        meta: {...play.meta}
+        meta: {
+            ...svPlay.meta,
+            ...play.meta
+        }
     };
-    if(song.mbid !== undefined) {
+    if (svPlay.data.meta?.brainz.recording !== undefined) {
         const {
             brainz,
             ...rest
         } = play.data.meta ?? {};
         mergedPlay.data.meta = {
-           ...rest,
-           brainz: {
-            recording: song.mbid
-           }
+            ...rest,
+            brainz: {
+                recording: svPlay.data.meta?.brainz.recording
+            }
         }
     } else {
-        mergedPlay.data.meta = {...play.data.meta};
+        mergedPlay.data.meta = { ...play.data.meta };
     }
 
     return mergedPlay;
@@ -457,11 +460,20 @@ export const songViewToPlay = (song: SongViewDetailed): PlayObject => {
             }
         }
     };
-    if(song.mbid !== undefined) {
+    // api returns mbId but type says mbid
+    const mb = song.mbid ?? (song as any).mbId;
+    if(mb !== undefined) {
         play.data.meta = {
             brainz: {
-                recording: song.mbid
+                recording: mb
             }
+        }
+    }
+
+    const match = (song.matches ?? []).length > 0 ? song.matches[0] : undefined;
+    if(match !== undefined) {
+        if(match.albumArt !== undefined) {
+            play.meta.art = {track: match.albumArt};
         }
     }
 
