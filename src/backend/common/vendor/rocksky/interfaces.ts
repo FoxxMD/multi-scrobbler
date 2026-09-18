@@ -1,5 +1,4 @@
 import type { ScrobbleViewBasic } from "@rocksky/sdk";
-import type { IRateLimiterOptions } from "rate-limiter-flexible";
 import * as z from 'zod';
 
 export type RockskyScrobble = ScrobbleViewBasic;

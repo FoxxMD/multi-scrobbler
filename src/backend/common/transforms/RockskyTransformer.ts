@@ -9,7 +9,6 @@ import { DELIMITERS } from '../../../core/Atomic.ts';
 import { MaybeLogger } from '../MaybeLogger.ts';
 import { childLogger } from "@foxxmd/logging";
 import { type UsingTypes } from "../vendor/musicbrainz/MusicbrainzApiClientPool.ts";
-import type {IRecordingList, IRecordingMatch} from "musicbrainz-api";
 import { difference } from "../../utils.ts";
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
 import { SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../errors/MSErrors.ts";
@@ -21,7 +20,7 @@ import { nativeParse } from "./NativeTransformer.ts";
 import { comparePlayArtistsNormalized, scoreTrackWeightedAndNormalized } from "../../utils/PlayComparisonUtils.ts";
 import * as z from 'zod';
 import { hasRequiredScrobbleFields, hasScrobbleConfidenceFields, songViewToPlay } from "../vendor/RockSkyApiClient.ts";
-import { type SongMatchView, type SongViewDetailed } from "@rocksky/sdk";
+import { RockskyError, type SongMatchView, type SongViewDetailed } from "@rocksky/sdk";
 import { RockskyClientPool } from "../vendor/rocksky/RockskyClientWrapped.ts";
 import type { RockskyApiClientConfig } from "../vendor/rocksky/interfaces.ts";
 
@@ -34,6 +33,7 @@ export interface RockskyTransformerData {
     searchWhenMissing?: RockskyMissingField[]
     forceSearch?: boolean
     score?: number
+    allowNoMatch?: boolean
     logPreMbid?: boolean
     searchOrder?: SearchType[]
     searchArtistMethod?: ('naive' | 'native')
@@ -60,25 +60,12 @@ export interface RockskyTransformerDataStrong extends RockskyTransformerData {
 export interface RockskyTransformerDataStage extends RockskyTransformerDataStrong,PlayTransformMetadataStage {
 }
 
-// export interface RockskyTransformerDataConfig {
-// }
-
-export type BestMatch = {play: PlayObject, score: number};
-
 export type RockskyTransformerConfig = TransformerCommon<RockskyTransformerData, RockskyApiClientConfig> & {options?: TransformOptions & {logUrl?: boolean}}
-
-export type RecordingRankedMatched = IRecordingMatch & {rankScore?: number, artistScore?: number, titleScore?: number, albumScore?: number}
-
-export interface IRecordingMSList extends IRecordingList {
-    recordings: RecordingRankedMatched[]
-    freeText?: boolean
-    requestQuery: string
-    requestQueries?: LifecycleInput[]
-}
 
 interface SongViewDetailedMS extends SongViewDetailed {
     requestQuery: string
     requestQueries?: LifecycleInput[]
+    mbArtists?: {name: string, mbid: string}[]
 }
 
 export const parseStageConfig = (data: RockskyTransformerData | undefined = {}, logger: MaybeLogger = new MaybeLogger()): RockskyTransformerDataStrong => {
@@ -257,7 +244,8 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         const {
             // preserve order of search from before searchOrder
             searchOrder = this.defaults.searchOrder ?? ['isrc', 'basic'],
-            score = this.defaults.score ?? 90
+            score = this.defaults.score ?? 90,
+            allowNoMatch = true,
         } = stageConfig;
         
         let results: SongViewDetailedMS;
@@ -282,17 +270,26 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
                         results = await this.searchByRecordingMbid(play, stageConfig, opts);
                         break;
                 }
-                queries.push({type: `rsQuery-${searchType}${results.matches.length === 0 ? '-empty' : ''}`, input: results.requestQuery});
-                if(results.matches.length === 0) {
-                    this.logger.debug(`'${searchType}' search type returned no matches`);
-                } else if(!results.matches.some(x => x.score >= score)) {
-                    this.logger.debug(`'${searchType}' search type returned no matches with score >= ${score}`);
+                queries.push({type: `rsQuery-${searchType}${results.matches.length === 0 ? '-resultButNoMatch'  : ''}`, input: results.requestQuery});
+                if((results.matches ?? []).length === 0 && !allowNoMatch) {
+                    this.logger.debug(`'${searchType}' search type returned result but no matches`);
+                    continue;
                 }
+                if((results.matches ?? []).length > 0 && !results.matches.some(x => x.score >= score)) {
+                    this.logger.debug(`'${searchType}' search type returned no matches with score >= ${score}`);
+                    continue;
+                }
+                break;
             } catch (e) {
                 if(e instanceof SearchPrerequisiteError) {
                     queries.push({type: `rsQuery-${searchType}-prereqFailure`, input: `Search type ${searchType} did not meet prerequesites: ${e.message}`});
                     this.logger.debug(`Search type ${searchType} did not meet prerequesites: ${e.message}`);
                 } else {
+                    if(e instanceof RockskyError && e.status === 500) {
+                        // thrown when there is no match? don't like that
+                        queries.push({type: `rsQuery-${searchType}-empty`, input: 'requestQuery' in e ? (e.requestQuery as string) : undefined});
+                        continue;
+                    }
                     // we should be catching any unrecoverable errors in api calls
                     // so we should only get here if something truly bad has happened
                     // and we probably don't want to try additional api calls
@@ -301,20 +298,26 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
             }
         }
 
-        return {...results, requestQueries: queries};
+        return {...(results ?? {requestQuery: undefined}), requestQueries: queries};
     }
 
     public async searchByBasicFields(play: PlayObject, stageConfig: RockskyTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<SongViewDetailedMS> {
         this.logger.debug({ labels: ['Basic Search'] }, 'Searching by artist/album/track');
-        const res = await this.api.rsProxy.matchSong(play.data.track, artistCreditsToNames(play.data.artists).join(', '), undefined, undefined, play.data.album);
-        return {
-            requestQuery: JSON.stringify({
-                title: play.data.track,
-                artitst: artistCreditsToNames(play.data.artists).join(', '),
-                album: play.data.album
-            }),
-            ...res
-        };
+        const requestQuery = JSON.stringify({
+            title: play.data.track,
+            artitst: artistCreditsToNames(play.data.artists).join(', '),
+            album: play.data.album
+        });
+        try {
+            const res = await this.api.rsProxy.matchSong(play.data.track, artistCreditsToNames(play.data.artists).join(', '), undefined, undefined, play.data.album);
+            return {
+                requestQuery,
+                ...res
+            };
+        } catch (e) {
+            e.requestQuery = requestQuery;
+            throw e;
+        }
     }
 
     public async searchByBasicFieldsOrIDs(play: PlayObject, stageConfig: RockskyTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<SongViewDetailedMS> {
@@ -339,30 +342,42 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         }
 
         this.logger.debug({labels: ['Basic Or MBID Search']}, `Searching using ${using.join(', ')}}`);
-        const res = await this.api.rsProxy.matchSong(play.data.track, artistCreditsToNames(play.data.artists).join(', '), brainz.recording, play.data.isrc, play.data.album);
-        return {
-            requestQuery: JSON.stringify({
-                title: play.data.track,
-                artitst: artistCreditsToNames(play.data.artists).join(', '),
-                album: play.data.album,
-                mbid: brainz.recording
-            }),
-            ...res
-        };
+        const requestQuery = JSON.stringify({
+            title: play.data.track,
+            artitst: artistCreditsToNames(play.data.artists).join(', '),
+            album: play.data.album,
+            mbid: brainz.recording
+        });
+        try {
+            const res = await this.api.rsProxy.matchSong(play.data.track, artistCreditsToNames(play.data.artists).join(', '), brainz.recording, play.data.isrc, play.data.album);
+            return {
+                requestQuery,
+                ...res
+            };
+        } catch (e) {
+            e.requestQuery = requestQuery;
+            throw e;
+        }
     }
 
     public async searchByIsrc(play: PlayObject, stageConfig: RockskyTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<SongViewDetailedMS> {
         if(play.data.isrc !== undefined) {
             this.logger.debug({labels: ['ISRC Search']},'Searching with ISRC');
-            const res = await this.api.rsProxy.matchSong(play.data.track, artistCreditsToNames(play.data.artists).join(', '), undefined, play.data.isrc);
-            return {
-                requestQuery: JSON.stringify({
-                    title: play.data.track,
-                    artitst: artistCreditsToNames(play.data.artists).join(', '),
-                    isrc: play.data.isrc
-                }),
-                ...res
-            };
+            const requestQuery =JSON.stringify({
+                title: play.data.track,
+                artitst: artistCreditsToNames(play.data.artists).join(', '),
+                isrc: play.data.isrc
+            });
+            try{
+                const res = await this.api.rsProxy.matchSong(play.data.track, artistCreditsToNames(play.data.artists).join(', '), undefined, play.data.isrc);
+                return {
+                    requestQuery,
+                    ...res
+                };
+            } catch (e) {
+                e.requestQuery = requestQuery;
+                throw e;
+            }
         }
         throw new SearchPrerequisiteError('Play does not have ISRC');
     }
@@ -370,15 +385,21 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
     public async searchByRecordingMbid(play: PlayObject, stageConfig: RockskyTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<SongViewDetailedMS> {
         if(play.data.meta?.brainz?.recording !== undefined) {
             this.logger.debug({labels: ['MBID Search']},'Searching with Recording MBID');
-            const res = await this.api.rsProxy.matchSong(play.data.track, artistCreditsToNames(play.data.artists).join(', '), play.data.meta?.brainz?.recording, undefined, undefined);
-            return {
-                requestQuery: JSON.stringify({
-                    title: play.data.track,
-                    artitst: artistCreditsToNames(play.data.artists).join(', '),
-                    mbid: play.data.meta?.brainz?.recording
-                }),
-                ...res
-            };
+            const requestQuery = JSON.stringify({
+                title: play.data.track,
+                artitst: artistCreditsToNames(play.data.artists).join(', '),
+                mbid: play.data.meta?.brainz?.recording
+            });
+            try {
+                const res = await this.api.rsProxy.matchSong(play.data.track, artistCreditsToNames(play.data.artists).join(', '), play.data.meta?.brainz?.recording, undefined, undefined);
+                return {
+                    requestQuery,
+                    ...res
+                };
+            } catch (e) {
+                e.requestQuery = requestQuery;
+                throw e;
+            }
         }
         throw new SearchPrerequisiteError('Play does not have recording MBID');
     }
@@ -398,14 +419,20 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
                     const naiveSplit = splitByFirstRegexFound(play.data.artists[0], [play.data.artists[0]]).map(x => x.trim());
                     if(naiveSplit.length > 1) {
                         this.logger.debug({labels: ['Parsed Artist Search']},'Searching with track + first value from artist string split');
-                        const res = await this.api.rsProxy.matchSong(play.data.track, naiveSplit[0]);
-                        return {
-                            requestQuery: JSON.stringify({
-                                title: play.data.track,
-                                artitst: naiveSplit[0],
-                            }),
-                            ...res
-                        };
+                        const requestQuery = JSON.stringify({
+                            title: play.data.track,
+                            artitst: naiveSplit[0],
+                        });
+                        try {
+                            const res = await this.api.rsProxy.matchSong(play.data.track, naiveSplit[0]);
+                            return {
+                                requestQuery,
+                                ...res
+                            };
+                        } catch (e) {
+                            e.requestQuery = requestQuery;
+                            throw e;
+                        }
                     } else {
                         throw new SearchPrerequisiteError('Naive parsing did not produce multiple artists');
                     }
@@ -420,14 +447,20 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
                     // so we split out all artists by all found delimiters
                     const nativePlay = nativeParse(play, {titleClean: true, delimiters: DELIMITERS});
                     this.logger.debug({labels: ['Parsed Artist Search']},'Searching with aggressive native parsing');
-                    const res = await this.api.rsProxy.matchSong(nativePlay.data.track, artistCreditsToNames(nativePlay.data.artists).join(', '));
-                    return {
-                        requestQuery: JSON.stringify({
-                            title: nativePlay.data.track,
-                            artitst: artistCreditsToNames(nativePlay.data.artists).join(', '),
-                        }),
-                        ...res
-                    };
+                    const requestQuery = JSON.stringify({
+                        title: nativePlay.data.track,
+                        artitst: artistCreditsToNames(nativePlay.data.artists).join(', '),
+                    });
+                    try {
+                        const res = await this.api.rsProxy.matchSong(nativePlay.data.track, artistCreditsToNames(nativePlay.data.artists).join(', '));
+                        return {
+                            requestQuery,
+                            ...res
+                        };
+                    } catch(e) {
+                        e.requestQuery = requestQuery;
+                        throw e; 
+                    }
                 }
             }
 
@@ -440,6 +473,10 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
     }
 
     public async handlePostFetch(play: PlayObject, transformData: SongViewDetailedMS, stageConfig: RockskyTransformerDataStage): Promise<PlayObject> {
+        const {
+            score = this.defaults.score ?? 90,
+            allowNoMatch = true,
+        } = stageConfig;
         // if all searches fail prereqs then no recording lists are assigned to results
         if(transformData === undefined) {
             throw new StagePrerequisiteError('All search prerequisites failed, Rocksky API could not be searched with the given searchOrder options',
@@ -448,13 +485,9 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
                     inputs: transformData.requestQueries
                 });
         }
-        if(transformData.matches.length === 0) {
+        if((transformData.matches ?? []).length === 0 && !allowNoMatch) {
             throw new StagePrerequisiteError('No matches returned from Rocksky API', {shortStack: true, inputs: transformData.requestQueries});
         }
-
-        const {
-            score = this.defaults.score ?? 90
-        } = stageConfig;
 
         let filteredList: SongMatchView[] = transformData.matches.filter(x => x.score >= score);
         if(filteredList.length === 0) {
