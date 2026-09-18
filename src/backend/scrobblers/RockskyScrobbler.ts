@@ -1,6 +1,6 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import type EventEmitter from "events";
-import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type SourcePlayerObj} from "../../core/Atomic.ts";
+import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type QueueContext, type SourcePlayerObj} from "../../core/Atomic.ts";
 import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import type {FormatPlayObjectOptions, InternalConfigOptional} from "../common/infrastructure/Atomic.ts";
@@ -94,7 +94,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         return playToListenPayload(playObj);
     }
 
-    doScrobble = async (playObj: PlayObject) => {
+    doScrobble = async (playObj: PlayObject, context?: QueueContext) => {
         const {
             meta: {
                 source,
@@ -102,8 +102,10 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
             } = {}
         } = playObj;
 
+        const {isRetry = false} = context ?? {};
+
         try {
-            const result = await this.api.submitListen(playObj, { log: isDebugMode() });
+            const result = await this.api.submitListen(playObj, { log: isDebugMode(), force: isRetry === true });
 
             if (this.api.isLzMode() && ((result.response as SubmitResponse).payload?.ignored_listens ?? 0) > 0) {
                 throw new ScrobbleSubmitError('Scrobble was successfully submitted but Rocksky ignored it', { showStopper: false, responseBody: result.response, payload: result.payload });
