@@ -22,7 +22,7 @@ import { hasRequiredScrobbleFields, hasScrobbleConfidenceFields, type SongViewDe
 import { RockskyError, type SongMatchView } from "@rocksky/sdk";
 import { RockskyClientPool } from "../../vendor/rocksky/RockskyClientWrapped.ts";
 import type { RockskyTransformerConfig, RockskyTransformerData } from "../../vendor/rocksky/interfaces.ts";
-import { type SearchType, searchType } from "./RockskyTransformerUtil.ts";
+import { DEFAULT_ROCKSKY_SEARCH_ORDER, type SearchType, searchType } from "./RockskyTransformerUtil.ts";
 
 export const DEFAULT_SEARCHTYPE_ORDER: SearchType[] = ['isrc','basic'];
 
@@ -60,7 +60,7 @@ export const parseStageConfig = (data: RockskyTransformerData | undefined = {}, 
     };
 
     if(searchWhenMissing !== undefined) {
-        config.searchWhenMissing = searchWhenMissing.map(x => rockskyMissingFields.parse(x.toLocaleLowerCase().trim()));
+        config.searchWhenMissing = DEFAULT_ROCKSKY_MISSING_TYPES;
     }
 
     logger.debug(`Will search if missing: ${config.searchWhenMissing.join(', ')} | Match if (default) score is >= ${config.score}`);
@@ -212,7 +212,7 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         
         const {
             // preserve order of search from before searchOrder
-            searchOrder = this.defaults.searchOrder ?? ['isrc', 'basic'],
+            searchOrder = this.defaults.searchOrder ?? DEFAULT_ROCKSKY_SEARCH_ORDER,
             score = this.defaults.score ?? 90,
             allowNoMatch = true,
         } = stageConfig;

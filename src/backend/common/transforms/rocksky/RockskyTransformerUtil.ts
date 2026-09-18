@@ -45,6 +45,8 @@ export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
     return rsConfig;
 }
 
+export const DEFAULT_ROCKSKY_SEARCH_ORDER: SearchType[] = ["isrc","basic"] 
+
 export const DEFAULTS_NATIVE: RockskyTransformerData = {
     "searchArtistMethod": "native",
     "searchOrder": ["artist"]
@@ -57,11 +59,11 @@ export const DEFAULTS_FIELDS_BIAS = {
 };
 
 export const DEFAULTS_PRESET: RockskyTransformerData = {
-    "searchOrder": ["isrc", "basic"]
+    "searchOrder": DEFAULT_ROCKSKY_SEARCH_ORDER
 };
 
 export const DEFAULTS_ID: RockskyTransformerData = {
-    "searchOrder": ["isrc", "mbid", "basicorids", "basic"]
+    "searchOrder": ["isrc", "mbid", "basic"]
 };
 
 export const PRESETS: Record<string, RockskyTransformerData> = {
