@@ -498,7 +498,13 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
             }
         }
 
-        return transformData.data.track;
+        // metadata needs more development on the rocksky side
+        // only use it if we have no track information here
+        if(play.data.track === undefined || play.data.track.trim() === '') {
+            return transformData.data.track;
+        }
+
+        return play.data.track;
     }
     protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<ArtistCredit[] | undefined> {
         if (parts === false) {
@@ -513,29 +519,48 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
             }
         }
 
-        // try to determine if new artist is a concatenated string of separate artists
-        // using the original artist data
-        if((play.data.artists ?? []).length > 1 && (transformData.data.artists ?? []).length === 1) {
-            // possible our original data is more accurate
-            // or is the same set of artists but in a nice list instead of a single string.
-            // if this is the case then keep the original so we don't lose fidelity
-
-            // since we aren't using MB mappings we should be conservative and assume artist string with & are proper names (not joiner)
-            const parsed = parseArtistCredits(transformData.data.artists[0].name, [',', '/', '\\']);
-            if(parsed !== undefined) {
-                let parsedCredits: ArtistCredit[] = [{name: parsed.primary}];
-                if(parsed.secondary !== undefined) {
-                    parsedCredits = parsedCredits.concat(parsed.secondary.map(x => ({name: x})));
-                }
-                const [score, wholeMatches] = compareArtistCreditsNormalized(play.data.artists, parsedCredits);
-                if(score > 90) {
-                    // enough confidence to say artists are the same as the original
-                    return play.data.artists;
-                }
-            }
+        // artist data needs development on the rocksky side
+        // only use it if we have no artist information here
+        // or there is a clear imbalance of fidelity biased *towards* rocksky
+        if(['spotify','listenbrainz','koito','maloja','endpointlz'].includes(play.meta?.source))
+        {
+            return play.data.artists;
+        }
+        // source provides no artists so anything is better than nothing
+        if((play.data.artists ?? []).length === 0) {
+            return transformData.data.artists;
+        }
+        // source provided only one artist but rocksky has real, separated artists
+        if((play.data.artists ?? []).length === 1 && transformData.data.artists.length > 1) {
+            return transformData.data.artists;
         }
 
-        return transformData.data.artists;
+        // otherwise use source
+        return play.data.artists;
+
+        // // try to determine if new artist is a concatenated string of separate artists
+        // // using the original artist data
+        // if((play.data.artists ?? []).length > 1 && (transformData.data.artists ?? []).length === 1) {
+        //     // possible our original data is more accurate
+        //     // or is the same set of artists but in a nice list instead of a single string.
+        //     // if this is the case then keep the original so we don't lose fidelity
+
+        //     // since we aren't using MB mappings we should be conservative and assume artist string with & are proper names (not joiner)
+        //     const parsed = parseArtistCredits(transformData.data.artists[0].name, [',', '/', '\\']);
+        //     if(parsed !== undefined) {
+        //         let parsedCredits: ArtistCredit[] = [{name: parsed.primary}];
+        //         if(parsed.secondary !== undefined) {
+        //             parsedCredits = parsedCredits.concat(parsed.secondary.map(x => ({name: x})));
+        //         }
+        //         const [score, wholeMatches] = compareArtistCreditsNormalized(play.data.artists, parsedCredits);
+        //         if(score > 90) {
+        //             // enough confidence to say artists are the same as the original
+        //             return play.data.artists;
+        //         }
+        //     }
+        // }
+
+        // return transformData.data.artists;
     }
     protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<ArtistCredit[] | undefined> {
         if (parts === false) {
@@ -549,7 +574,11 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
                 }
             }
         }
-        return transformData.data.albumArtists;
+
+        // metadata needs more development on the rocksky side
+        // it does not separate albumArtists into individual entities at all, at the moment
+        // so don't use albumArtists at all, for now
+        return play.data.albumArtists;
     }
     protected async handleAlbum(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<string | undefined> {
         if (parts === false) {
@@ -564,7 +593,13 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
             }
         }
 
-        return transformData.data.album;
+        // metadata needs more development on the rocksky side
+        // only use it if we have no album information here
+        if(play.data.album === undefined || play.data.album.trim() === '') {
+            return transformData.data.album;
+        }
+
+        return play.data.album;
     }
     protected async handleDuration(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<number | undefined> {
         if (parts === false || transformData.data.duration === undefined) {
@@ -594,7 +629,19 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
                 }
             }
         }
-        return transformData.data.meta;
+        // meta is okay to use but rocksky only returns brainz recording mbid right now
+        // so check for loss of fidelity or known bad sources before using it
+
+        if(play.meta.source === 'lastfm') {
+            return transformData.data.meta;
+        }
+        if(Object.keys(play.data.meta.brainz ?? {}).length <= 1) {
+            // only one (or none) mbids from original so likely no loss of fidelity by only using
+            // recording mbid from rocksky
+            return transformData.data.meta;
+        }
+
+        return play.data.meta;
     }
 
     public notify(payload: WebhookPayload): Promise<void> {
