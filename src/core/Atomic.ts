@@ -530,7 +530,7 @@ export type RockskyConfidenceField = z.infer<typeof rockskyConfidenceFields>;
 // https://stackoverflow.com/a/75478762
 export const rockskyMissingFields = z.enum([...rockskyRequiredFields.options,...rockskyConfidenceFields.options, 'duration'] as const);
 export type RockskyMissingField = z.infer<typeof rockskyMissingFields>;
-export const DEFAULT_ROCKSKY_MISSING_TYPES: RockskyMissingField[] = [...rockskyRequiredFields.options, rockskyConfidenceFields.enum.mbid];
+export const DEFAULT_ROCKSKY_MISSING_TYPES: RockskyMissingField[] = [...rockskyRequiredFields.options, 'duration', rockskyConfidenceFields.enum.mbid] as const;
 
 export type MissingMbidType = 'artists' | 'title' | 'album' | 'duration';
 export const DEFAULT_MISSING_TYPES: MissingMbidType[] = ['artists','title','album', 'duration'];

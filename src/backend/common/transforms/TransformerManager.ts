@@ -29,6 +29,7 @@ export default class TransformerManager {
         this.asyncStore = new AsyncLocalStorage();
         this.addTransformerConfig({type: 'user', name: 'MSDefault'});
         this.addTransformerConfig({type: 'native', name: 'MSDefault'});
+        this.addTransformerConfig({type: 'rocksky', name: 'MSDefault'});
     }
 
     public addTransformerConfig(config: TransformerCommonConfig): void {
@@ -94,7 +95,7 @@ export default class TransformerManager {
                 throw new Error(`No transformer of type '${config.type}' exists.`);
         }
         this.transformers.set(config.type, [...transformers, t]);
-        this.logger.verbose(`${config.type} transformer with name '${tName}' registered`);        
+        this.logger.verbose(`${config.type} transformer with name '${tName}' registered`);
     }
 
     public async registerFromEnv() {

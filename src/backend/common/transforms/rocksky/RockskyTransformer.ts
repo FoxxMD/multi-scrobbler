@@ -142,7 +142,7 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
     protected async doBuildInitData(): Promise<true | string | undefined> {
         this.defaults = parseStageConfig(this.config.defaults, childLogger(this.logger, 'Defaults'));
 
-        this.api = new RockskyClientPool(this.config.name, this.config.data, {logger: this.logger, cache: this.clientCache});   
+        this.api = new RockskyClientPool(this.config.name, this.config.data ?? {}, {logger: this.logger, cache: this.clientCache});   
         // new MusicbrainzApiClientPool(this.config.name, {apis: this.config.data.apis}, {
         //     logger: this.logger,
         //     cache: this.clientCache,
@@ -245,7 +245,7 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
                         results = await this.searchByRecordingMbid(play, stageConfig, opts);
                         break;
                 }
-                queries.push({type: `rsQuery-${searchType}${results.matches.length === 0 ? '-resultButNoMatch'  : ''}`, input: results.requestQuery});
+                queries.push({type: `rsQuery-${searchType}${(results.matches ?? []).length === 0 ? '-resultButNoMatch'  : ''}`, input: results.requestQuery});
                 if((results.matches ?? []).length === 0 && !allowNoMatch) {
                     this.logger.debug(`'${searchType}' search type returned result but no matches`);
                     continue;
@@ -460,26 +460,31 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
                     inputs: transformData.requestQueries
                 });
         }
+        let mergedSongView: SongViewDetailedMS = transformData;
+        if((transformData.matches ?? []).length === 0) {
+            if(!allowNoMatch) {
+                throw new StagePrerequisiteError('No matches returned from Rocksky API', {shortStack: true, inputs: transformData.requestQueries});
+            }
+        } else {
+            let filteredList: SongMatchView[] = transformData.matches.filter(x => x.score >= score);
+            if(filteredList.length === 0) {
+                throw new StagePrerequisiteError(`All ${transformData.matches} candidate matches associated with this match had a score < ${score}, best match was ${transformData.matches[0].score}`, {shortStack: true});
+            }
+            const mergedConfig = Object.assign({}, removeUndefinedKeys({...this.defaults}), removeUndefinedKeys({...stageConfig}));
+            filteredList = rankSongMatchesByPriority(filteredList, mergedConfig, play);
+
+            this.logger.debug(`${filteredList.length} of ${transformData.matches} were valid, filtered matches. Using match with best score of ${filteredList[0].score}`);
+            mergedSongView = {
+                ...transformData,
+                title: filteredList[0].title ?? transformData.title,
+                artist: filteredList[0].artist ?? transformData.artist,
+                album: filteredList[0].album ?? transformData.album,
+                isrc: filteredList[0].isrc ?? transformData.isrc
+            };
+        }
         if((transformData.matches ?? []).length === 0 && !allowNoMatch) {
             throw new StagePrerequisiteError('No matches returned from Rocksky API', {shortStack: true, inputs: transformData.requestQueries});
         }
-
-        let filteredList: SongMatchView[] = transformData.matches.filter(x => x.score >= score);
-        if(filteredList.length === 0) {
-             throw new StagePrerequisiteError(`All ${transformData.matches} candidate matches associated with this match had a score < ${score}, best match was ${transformData.matches[0].score}`, {shortStack: true});
-        }
-        const mergedConfig = Object.assign({}, removeUndefinedKeys({...this.defaults}), removeUndefinedKeys({...stageConfig}));
-        filteredList = rankSongMatchesByPriority(filteredList, mergedConfig, play);
-
-        this.logger.debug(`${filteredList.length} of ${transformData.matches} were valid, filtered matches. Using match with best score of ${filteredList[0].score}`);
-
-        const mergedSongView = {
-            ...transformData,
-            title: filteredList[0].title ?? transformData.title,
-            artist: filteredList[0].artist ?? transformData.artist,
-            album: filteredList[0].album ?? transformData.album,
-            isrc: filteredList[0].isrc ?? transformData.isrc
-        };
 
         const songViewPlay = songViewToPlay(mergedSongView);
         songViewPlay.meta.lifecycleInputs = [...(songViewPlay.meta.lifecycleInputs ?? []), ...(transformData.requestQueries ?? []), {type: 'rockskySongView', input: transformData}];
