@@ -41,12 +41,11 @@ export default class RockskySource extends MemorySource {
     protected async doBuildInitData(): Promise<true | string | undefined> {
         const {
             data: {
-                key,
                 token,
             } = {}
         } = this.config;
-        if (key === undefined && token === undefined) {
-            throw new Error('Must provide an API Key or Access Token');
+        if (token === undefined) {
+            throw new Error('Must provide an Access Token');
         }
         return true;
     }

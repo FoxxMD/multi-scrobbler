@@ -1,24 +1,20 @@
 import dayjs from "dayjs";
-import type { Request, Response } from 'superagent';
-import request from 'superagent';
+import type request from 'superagent';
 import {rockskyRequiredFields, type ArtistCredit, type LifecycleInput, type PlayObject, type PlayObjectMinimal, type RockskyConfidenceField, type RockskyMissingField, type ScrobbleActionResult, type URLData} from "../../../core/Atomic.ts";
 import { artistCreditsToNames, artistNamesToCredits, nonEmptyStringOrDefault } from "../../../core/StringUtils.ts";
 import { UpstreamError } from "../errors/UpstreamError.ts";
 import type {AbstractApiOptions, FormatPlayObjectOptions} from "../infrastructure/Atomic.ts";
 import type {RockSkyClientData, RockSkyData, RockSkyOptions} from "../infrastructure/config/client/rocksky.ts";
 import AbstractApiClient from "./AbstractApiClient.ts";
-import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.ts';
-import type {ListenResponse, ListenType, SubmitPayload} from '../../../core/vendor/listenbrainz/interfaces.ts';
-import { playToListenPayload } from './listenbrainz/lzUtils.ts';
-import type {Handle} from "@atcute/lexicons";
-import { getATProtoIdentifier, identifierToAtProtoHandle } from './atproto/atUtils.ts';
+import { isPortReachableConnect, normalizeWebAddress } from '../../utils/NetworkUtils.ts';
+import type {ListenResponse, ListenType} from '../../../core/vendor/listenbrainz/interfaces.ts';
+import { getATProtoIdentifier, identifierToAtProtoHandle, isDID } from './atproto/atUtils.ts';
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
 import { AuthError, ScrobbleSubmitError } from "../errors/MSErrors.ts";
-import { tryApiCall } from "../../utils/RequestUtils.ts";
 import { type CreateScrobbleInput, RockskyClient, Agent, type SongViewDetailed, type ScrobbleInput, type ScrobbleViewBasic } from "@rocksky/sdk";
 import { getRoot } from "../../ioc.ts";
 import type { MSCache } from "../Cache.ts";
-import type {HandleData} from "../infrastructure/config/client/atproto.ts";
+import type {ATProtoUserIdentifierData, HandleData} from "../infrastructure/config/client/atproto.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { removeUndefinedKeys } from "../../../core/DataUtils.ts";
 import { isrcNoHyphens } from '../../../core/PlayUtils.ts';
@@ -54,7 +50,6 @@ export class RockSkyApiClient extends AbstractApiClient {
     lzUrl: URLData;
     apiUrl: URLData;
     isKoito: boolean = false;
-    handle: Handle;
     cache: MSCache;
     userData!: HandleData
 
@@ -65,92 +60,17 @@ export class RockSkyApiClient extends AbstractApiClient {
     constructor(name: any, config: RockSkyData & RockSkyOptions, options: AbstractApiOptions) {
         super('RockSky', name, config, options);
         const {
-            audioScrobblerUrl,
             apiUrl,
             token,
-            key
         } = config;
 
         this.cache = getRoot().items.cache();
-        this.lzUrl = normalizeWebAddress(audioScrobblerUrl ?? 'https://audioscrobbler.rocksky.app/');
         this.apiUrl = normalizeWebAddress(apiUrl ?? 'https://api.rocksky.app/xrpc/');
 
-        this.logger.verbose(`Audioscrobbler URL: '${audioScrobblerUrl ?? '(None Given)'}' => Normalized: '${this.lzUrl.url}'`);
         this.logger.verbose(`API URL: '${apiUrl ?? '(None Given)'}' => Normalized: '${this.apiUrl.url}'`);
-        this.handle = identifierToAtProtoHandle(this.config.handle, {logger: this.logger, defaultDomain: 'bsky.social'});
-        if(key !== undefined) {
-            this.logger.warn(`DEPRECATED: Listenbrainz interface (API Application 'key' auth) has been deprecated in favor of native API (access token auth). Please refer to the MS Rocksky docs and switch. Listenbrainz/key auth will be removed in a future release`);
-        }
 
         this.rsPool = new RockskyClientPool('Pool', {apis: [{enable: true, token}]}, {logger: this.logger});
         this.rsClient = new RockskyClient(token);
-    }
-
-    isLzMode = () => this.config.key !== undefined && this.config.token === undefined && this.rsAgent === undefined;
-
-    doCallLZApi = async <T = Response>(req: Request, retries = 0): Promise<T> => {
-        try {
-            req.set('Authorization', `Token ${this.config.key}`);
-            return await req as T;
-        } catch (e) {
-            const {
-                message,
-                err,
-                status,
-                response: {
-                    body = undefined,
-                    text = undefined,
-                } = {}
-            } = e;
-            // TODO check err for network exception
-            if(status !== undefined) {
-                const msgParts = [`(HTTP Status ${status})`];
-                // if the response is 400 then its likely there was an issue with the data we sent rather than an error with the service
-                const showStopper = status !== 400;
-                if(body !== undefined) {
-                    if(typeof body === 'object') {
-                        if('code' in body) {
-                            msgParts.push(`Code ${body.code}`);
-                        }
-                        if('error' in body) {
-                            msgParts.push(`Error => ${body.error}`);
-                        }
-                        if('message' in body) {
-                            msgParts.push(`Message => ${body.error}`);
-                        }
-                        // if('track_metadata' in body) {
-                        //     msgParts.push(`Track Metadata => ${JSON.stringify(body.track_metadata)}`);
-                        // }
-                    } else if(typeof body === 'string') {
-                        msgParts.push(`Response => ${body}`);
-                    }
-                } else if (text !== undefined) {
-                    msgParts.push(`Response => ${text}`);
-                }
-                throw new UpstreamError(`Listenbrainz API Request Failed => ${msgParts.join(' | ')}`, {cause: e, showStopper});
-            }
-            throw e;
-        }
-    }
-
-    callLZApi = async <T = Response>(reqFunc: () => Request, retries = 0): Promise<T> => {
-
-        try {
-            return await tryApiCall(() => this.doCallLZApi(reqFunc()), {...this.config, logger: this.logger}) as T;
-        } catch (e) {
-            throw e;
-        }
-    }
-
-
-    callApi = async <T = Response>(reqFunc: () => Request, retries = 0): Promise<T> => {
-        const apiCall = async () => await reqFunc();
-
-        try {
-            return await tryApiCall(apiCall, {...this.config, logger: this.logger}) as T;
-        } catch (e) {
-            throw e;
-        }
     }
 
     testConnection = async () => {
@@ -159,18 +79,21 @@ export class RockSkyApiClient extends AbstractApiClient {
         } catch (e) {
             throw new Error('Could not reach API URL endpoint', {cause: e});
         }
-        if(this.isLzMode()) {
-            try {
-                await isPortReachableConnect(this.lzUrl.port, {host: this.lzUrl.url.hostname});
-            } catch (e) {
-                throw new Error('Could not reach Audioscrobbler URL endpoint', {cause: e});
-            }
-        }
         return true;
     }
 
     testAuth = async () => {
-        this.userData = await getATProtoIdentifier({identifier: this.handle, did: this.config.did }, { logger: this.logger, cache: this.cache.cacheAuth });
+        const atProtoHandleData: ATProtoUserIdentifierData = {
+            identifier: this.config.handle
+        };
+        const cleanIdentifier = this.config.handle;
+        if(isDID(cleanIdentifier)) {
+            this.logger.debug(`Identifier ${cleanIdentifier} looks like a DID, skipping parsing as a handle.`);
+            atProtoHandleData.did = cleanIdentifier;
+        } else {
+            atProtoHandleData.identifier = identifierToAtProtoHandle(cleanIdentifier, {logger: this.logger, defaultDomain: 'bsky.social'});
+        }
+        this.userData = await getATProtoIdentifier(atProtoHandleData, { logger: this.logger, cache: this.cache.cacheAuth });
 
         // authed write operations straight through PDS using xrpc
         if(this.userData !== undefined && this.config.appPassword !== undefined) {
@@ -181,18 +104,7 @@ export class RockSkyApiClient extends AbstractApiClient {
             }
         }
 
-        // no agent and no rs client token
-        if(this.isLzMode()) {
-            try {
-                const resp = await this.callLZApi(() => request.get(`${joinedUrl(this.lzUrl.url,'1/validate-token')}`));
-                return true;
-            } catch (e) {
-                const cause = findCauseByFunc<request.ResponseError>(e, (ee) => isSuperAgentResponseError(ee));
-                throw new AuthError('Failed to validate token for listenbrainz mode', {cause: e, unrecoverable: cause !== undefined && [401,403].includes(cause.status)});
-            }
-        }
-
-        // if no lz key and no xrpc client then we need to test if the token for the rs client is valid
+        // if no xrpc client then we need to test if the token for the rs client is valid
         // so we can use the client for write operations later
         if(this.rsAgent === undefined) {
             try {
@@ -234,41 +146,14 @@ export class RockSkyApiClient extends AbstractApiClient {
     }
 
     submitListen = async (play: PlayObject, options: SubmitOptions & {force?: boolean} = {}): Promise<ScrobbleActionResult> => {
-        const { log = false, listenType = 'single', force = false} = options;
+        const { log = false, force = false} = options;
 
         const warnings: string[] = [];
 
         /**
-         * First two paths are asynchronous, server-side validation of scrobbles
+         * paths is asynchronous, server-side validation of scrobbles
          * we don't recieve any real feedback about whether the scrobbles were accepted
          */
-        if(this.isLzMode()) {
-            const listenPayload = playToListenPayload(play);
-            if(listenType === 'playing_now') {
-                    delete listenPayload.listened_at;
-                }
-            // https://tangled.org/rocksky.app/rocksky/blob/main/crates/scrobbler/src/listenbrainz/types.rs#L11
-            // rocksky only uses duration_ms
-            if(play.data.duration !== undefined && listenPayload.track_metadata.additional_info?.duration !== undefined) {
-                delete listenPayload.track_metadata.additional_info.duration;
-                listenPayload.track_metadata.additional_info.duration_ms = Math.round(play.data.duration) * 1000;
-            }
-            const submitPayload: SubmitPayload = {listen_type: listenType, payload: [listenPayload]};
-
-            try {
-                if(log) {
-                    this.logger.debug(`Submit Payload: ${JSON.stringify(submitPayload)}`);
-                }
-                const resp = await this.callLZApi(() => request.post(`${joinedUrl(this.lzUrl.url,'1/submit-listens')}`).type('json').send(submitPayload));
-                if(log) {
-                    this.logger.debug(`Submit Response: ${resp.text}`)
-                }
-                return {payload: submitPayload, response: resp.body as SubmitResponse, createdAt: dayjs().toISOString()};
-            } catch (e) {
-                throw new ScrobbleSubmitError(`Error occurred while making Rocksky API scrobble (${listenType}) request`, {cause: e, payload: submitPayload});
-            }
-        }
-
         if(this.rsAgent === undefined) {
             const payload = removeUndefinedKeys(playToRockskyClientRecord(play));
             if(log) {
