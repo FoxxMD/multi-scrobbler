@@ -70,7 +70,6 @@ export const PRESETS: Record<string, RockskyTransformerData> = {
     default: DEFAULTS_PRESET,
     sensible: DEFAULTS_ID,
     native: DEFAULTS_NATIVE,
-    fields: { ...DEFAULTS_FIELDS_BIAS, ...DEFAULTS_PRESET },
     'id': DEFAULTS_ID
 };
 export const searchType = z.enum(['basic', 'basicorids', 'mbid', 'isrc', 'artist']);export type SearchType = z.infer<typeof searchType>;
