@@ -43,13 +43,16 @@ export const listenBrainzDataSchema = z.object({
     }),
 
     /**
-     * Include the device/player a track was played on, when the source provides it, as `media_player` in each listen's additional_info
+     * Only devices explicitly enumerated here are reported as `media_player` in each listen's additional_info.
      *
-     * @default false
+     * Keys match case-insensitively as substrings of the source's device id (longest match wins). What is submitted
+     * is the key's label value, or the key itself when the label is empty — never the raw device identifier.
+     *
+     * @examples [{"iphone": "", "9f3ec2-iphone": "kitchen ipad"}]
      * */
-    deviceInfo: z.boolean().optional().meta({
-        description: "Include the device/player a track was played on, when the source provides it, as media_player in each listen's additional_info",
-        default: false
+    allowDeviceList: z.record(z.string(), z.string()).optional().meta({
+        description: "Only devices explicitly enumerated here are reported as media_player in each listen's additional_info. Keys match case-insensitively as substrings of the source's device id (longest match wins); what is submitted is the key's label value, or the key itself when the label is empty — never the raw device identifier.",
+        examples: [{"iphone": "", "9f3ec2-iphone": "kitchen ipad"}]
     }),
 });
 
@@ -60,7 +63,22 @@ const envDataSchema = z.object({
     LZ_TOKEN: listenBrainzDataSchema.shape.token,
     LZ_USER: listenBrainzDataSchema.shape.username,
     LZ_CONTACT: listenBrainzDataSchema.shape.contact,
-    LZ_DEVICE_INFO: z.stringbool().optional().meta({description: listenBrainzDataSchema.shape.deviceInfo.meta().description})
+    LZ_ALLOW_DEVICE_LIST: z.string().optional().transform((val) => {
+        if (val === undefined || val.trim() === '') {
+            return undefined;
+        }
+        // comma-separated entries; 'match:label' gives a custom label, bare 'match' submits the match itself
+        const rec: Record<string, string> = {};
+        for (const part of val.split(',').map(x => x.trim()).filter(x => x !== '')) {
+            const sep = part.indexOf(':');
+            if (sep === -1) {
+                rec[part] = '';
+            } else {
+                rec[part.slice(0, sep).trim()] = part.slice(sep + 1).trim();
+            }
+        }
+        return rec;
+    }).meta({description: listenBrainzDataSchema.shape.allowDeviceList.meta().description})
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, ListenBrainzClientConfig> = {
@@ -73,7 +91,7 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, ListenBrainzClien
                 token: partial.LZ_TOKEN,
                 username: partial.LZ_USER,
                 contact: partial.LZ_CONTACT,
-                deviceInfo: partial.LZ_DEVICE_INFO
+                allowDeviceList: partial.LZ_ALLOW_DEVICE_LIST
             }
     })
 };

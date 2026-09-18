@@ -35,7 +35,7 @@ export default class KoitoScrobbler extends AbstractScrobbleClient {
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => listenObjectResponseToPlay(obj, options);
 
     public playToClientPayload(playObject: PlayObject): object {
-        return playToListenPayload(playObject, {deviceInfo: this.config.data.deviceInfo});
+        return playToListenPayload(playObject, {allowDeviceList: this.config.data.allowDeviceList});
     }
 
 

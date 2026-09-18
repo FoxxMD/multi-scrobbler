@@ -7,14 +7,40 @@ import type {ListenPayload, MinimumTrack, SubmitListenAdditionalTrackInfo, Submi
 import {version as appVersion } from '../../../version.ts';
 import { artistCreditsToNames, artistCreditToName } from "../../../../core/StringUtils.ts";
 
+export type AllowDeviceList = Record<string, string>;
+
+/**
+ * Match a device id against an explicitly enumerated allowlist and return the label to submit, or undefined if not allowed.
+ *
+ * Keys match as case-insensitive substrings of the device id, longest match wins. Returns the key's value, or the key itself
+ * when the value is empty — never the raw device id. EX `{'iphone': '', '3ec9a-iphone': 'kitchen ipad'}`
+ */
+export const matchDeviceLabel = (deviceId: string | undefined, allowList: AllowDeviceList | undefined): string | undefined => {
+    if (deviceId === undefined || deviceId === NO_DEVICE || allowList === undefined) {
+        return undefined;
+    }
+    const haystack = deviceId.toLocaleLowerCase();
+    let best: [string, string] | undefined;
+    for (const [match, label] of Object.entries(allowList)) {
+        if (match !== '' && haystack.includes(match.toLocaleLowerCase())
+            && (best === undefined || match.length > best[0].length)) {
+            best = [match, label];
+        }
+    }
+    if (best === undefined) {
+        return undefined;
+    }
+    return best[1] === '' ? best[0] : best[1];
+};
+
 export interface PlayToListenPayloadOptions {
     version?: string
-    /** Include the source's device/player identifier (PlayObject meta.deviceId) as additional_info.media_player when media player info is not otherwise available */
-    deviceInfo?: boolean
+    /** See matchDeviceLabel */
+    allowDeviceList?: AllowDeviceList
 }
 
 export const playToListenPayload = (play: PlayObject, options: PlayToListenPayloadOptions = {}): ListenPayload => {
-    const { version, deviceInfo = false } = options;
+    const { version, allowDeviceList } = options;
     const {
         data: {
             playDate,
@@ -46,8 +72,7 @@ export const playToListenPayload = (play: PlayObject, options: PlayToListenPaylo
         release_artist_name: albumArtists.length === 1 ? albumArtists[0].name : undefined,
         release_artist_names: albumArtists.length > 0 ? artistCreditsToNames(albumArtists) : undefined,
         // use data from LZ response, if this Play was originally from LZ Source
-        // fall back to the source's device identifier, if opted-in with deviceInfo
-        media_player: mediaPlayerName ?? msAdditionalInfo.media_player ?? (deviceInfo && deviceId !== undefined && deviceId !== NO_DEVICE ? deviceId : undefined),
+        media_player: mediaPlayerName ?? msAdditionalInfo.media_player ?? matchDeviceLabel(deviceId, allowDeviceList),
         media_player_version: mediaPlayerVersion ?? msAdditionalInfo.media_player_version,
         music_service: musicService !== undefined ? musicServiceToCononical(musicService) : msAdditionalInfo.music_service,
         music_service_name: musicService ?? source ?? msAdditionalInfo.music_service_name,
@@ -164,8 +189,8 @@ export const urlToMusicService = (url?: string): string | undefined => {
     return undefined;
 };
 export const playToSubmitPayload = (play: PlayObject, options: SubmitOptions = {}): SubmitPayload => {
-    const { listenType = 'single', deviceInfo } = options;
-    const listenPayload: SubmitPayload = { listen_type: listenType, payload: [playToListenPayload(play, {deviceInfo})] };
+    const { listenType = 'single', allowDeviceList } = options;
+    const listenPayload: SubmitPayload = { listen_type: listenType, payload: [playToListenPayload(play, {allowDeviceList})] };
     if (listenType === 'playing_now') {
         delete listenPayload.payload[0].listened_at;
     }
