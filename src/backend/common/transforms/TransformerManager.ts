@@ -12,6 +12,7 @@ import { SimpleError, StageTransformError } from "../errors/MSErrors.ts";
 import { configFromEnv as rsConfigFromEnv } from "./rocksky/RockskyTransformerUtil.ts";
 import { type RockskyTransformerConfig } from "../vendor/rocksky/interfaces.ts";
 
+export const DEFAULT_TRANSFORMER_NAME = 'MSDefault';
 export default class TransformerManager {
 
     protected logger: Logger;
@@ -27,9 +28,9 @@ export default class TransformerManager {
         this.parentLogger = logger;
         this.cache = cache;
         this.asyncStore = new AsyncLocalStorage();
-        this.addTransformerConfig({type: 'user', name: 'MSDefault'});
-        this.addTransformerConfig({type: 'native', name: 'MSDefault'});
-        this.addTransformerConfig({type: 'rocksky', name: 'MSDefault'});
+        this.addTransformerConfig({type: 'user', name: DEFAULT_TRANSFORMER_NAME});
+        this.addTransformerConfig({type: 'native', name: DEFAULT_TRANSFORMER_NAME});
+        this.addTransformerConfig({type: 'rocksky', name: DEFAULT_TRANSFORMER_NAME});
     }
 
     public addTransformerConfig(config: TransformerCommonConfig): void {
@@ -39,11 +40,15 @@ export default class TransformerManager {
         this.transformerConfigs.push(config);
     }
 
-    public hasTransformerConfigByIdentifiers(type: string, name: string = 'MSDefault') {
+    public hasTransformerConfigByIdentifiers(type: string, name: string = DEFAULT_TRANSFORMER_NAME) {
         return this.transformerConfigs.some(x => x.type === type && x.name === name);
     }
 
-    public async registerByIdentifiers(type: string, name: string = 'MSDefault') {
+    public hasTransformerConfigByType(type: string) {
+        return this.transformerConfigs.some(x => x.type === type);
+    }
+
+    public async registerByIdentifiers(type: string, name: string = DEFAULT_TRANSFORMER_NAME) {
         const transformers = this.transformers.get(type);
         if(transformers !== undefined && transformers.some(x => x.name !== name)) {
             this.logger.debug(`Transformer type ${type} with name ${name} already registered`);
@@ -157,18 +162,38 @@ export default class TransformerManager {
     public async getTransformerByStage(data: StageConfig): Promise<AbstractTransformer> {
         let list = this.transformers.get(data.type);
         if (list === undefined || list.length === 0) {
-            if(this.hasTransformerConfigByIdentifiers(data.type, data.name)) {
-                await this.registerByIdentifiers(data.type, data.name);
+            if(!this.hasTransformerConfigByType(data.type)) {
+                throw new Error(`No transformer configurations of type '${data.type}' exist.`);
+            }
+            if(data.name !== undefined) {
+                // if name for transform was specific then try to init and use that specific one
+                if(this.hasTransformerConfigByIdentifiers(data.type, data.name)) {
+                    await this.registerByIdentifiers(data.type, data.name);
+                    await this.initTransformers();
+                    list = this.transformers.get(data.type)
+                } else {
+                    throw new Error(`No transformer configuration of type '${data.type}' with name '${data.name}' exists.`);
+                }
+            } else {
+                // otherwise we try to get *any* transform of this type, starting with non-default
+                let configToUse: TransformerCommonConfig;
+                const nonDefault = this.transformerConfigs.find(x => x.type === data.type && x.name !== DEFAULT_TRANSFORMER_NAME);
+                if(nonDefault !== undefined) {
+                    // use first non-default, if there is one
+                    configToUse = nonDefault;
+                } else {
+                    // otherwise use first found
+                    configToUse = this.transformerConfigs.find(x => x.type === data.type);
+                }
+                await this.registerByIdentifiers(configToUse.type, configToUse.name);
                 await this.initTransformers();
                 list = this.transformers.get(data.type)
-            } else {
-                throw new Error(`No transformer of type '${data.type}' is registered.`);
             }
         }
 
         if(data.name === undefined) {
             if(list.length > 1) {
-                this.logger.warn(`More than one '${data.type}' transformer but name was not specified, using first registered`);
+                this.logger.warn(`More than one '${data.type}' transformer is registered but name was not specified, using first found`);
                 return list[0];
             }
             return list[0]            
@@ -182,6 +207,7 @@ export default class TransformerManager {
                 list = this.transformers.get(data.type);
                 namedTransformers = list.find(x => x.name.toLocaleLowerCase().trim() === data.name.toLocaleLowerCase().trim());
                 if(namedTransformers === undefined) {
+                    // this shouldn't really happen but just covering bases
                     throw new SimpleError(`Component wanted transformer type ${data.type} with name ${data.name}. Transforms of this type are registered but none have this name.`);
                 }
                 return namedTransformers;
