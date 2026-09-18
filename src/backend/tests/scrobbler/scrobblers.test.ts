@@ -673,7 +673,7 @@ describe('Scrobble client uses transform plays correctly', function() {
                 }
             }
         }
-        testScrobbler.buildTransformRules();
+        await testScrobbler.buildTransformRules();
         const newScrobble = generatePlay({
             track: 'my cool track'
         });
@@ -706,7 +706,7 @@ describe('Scrobble client uses transform plays correctly', function() {
         });
 
         testScrobbler.testRecentScrobbles = normalizePlays([newScrobble, ...withDurPlays], {initialDate: firstPlayDate});
-        testScrobbler.buildTransformRules();
+        await testScrobbler.buildTransformRules();
 
         expect((await testScrobbler.alreadyScrobbled(newScrobble))[0]).is.false;
     });
@@ -730,7 +730,7 @@ describe('Scrobble client uses transform plays correctly', function() {
         });
 
         testScrobbler.testRecentScrobbles = normalizePlays([newScrobble, ...withDurPlays], {initialDate: firstPlayDate});
-        testScrobbler.buildTransformRules();
+        await testScrobbler.buildTransformRules();
 
         expect((await testScrobbler.alreadyScrobbled(newScrobble))[0]).is.false;
     });

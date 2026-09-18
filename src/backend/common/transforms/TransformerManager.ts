@@ -1,18 +1,14 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import type AbstractTransformer from "./AbstractTransformer.ts";
 import type {OptionalCacheUsage, TransformerCommonConfig} from "../../../core/Atomic.ts";
-import UserTransformer from "./UserTransformer.ts";
 import type {StageConfig} from "../../../core/Transform.ts";
 import type {PlayObject} from "../../../core/Atomic.ts";
 import { isStageTyped } from "../../utils/PlayTransformUtils.ts";
 import type { MSCache } from "../Cache.ts";
-import NativeTransformer from "./NativeTransformer.ts";
-import MusicbrainzTransformer from "./MusicbrainzTransformer.ts";
 import { configFromEnv, type MusicbrainzTransformerConfig } from "./musicbrainz/MusicbrainzTransformerUtil.ts";
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { nanoid } from "nanoid";
 import { SimpleError, StageTransformError } from "../errors/MSErrors.ts";
-import RockskyTransformer from "./rocksky/RockskyTransformer.ts";
 import { configFromEnv as rsConfigFromEnv } from "./rocksky/RockskyTransformerUtil.ts";
 import { type RockskyTransformerConfig } from "../vendor/rocksky/interfaces.ts";
 
@@ -24,14 +20,42 @@ export default class TransformerManager {
     protected cache: MSCache;
     protected asyncStore: AsyncLocalStorage<string>;
 
+    protected transformerConfigs: TransformerCommonConfig[] = [];
+
     public constructor(logger: Logger, cache: MSCache) {
         this.logger = childLogger(logger, 'Transformer Manager');
         this.parentLogger = logger;
         this.cache = cache;
         this.asyncStore = new AsyncLocalStorage();
+        this.addTransformerConfig({type: 'user', name: 'MSDefault'});
+        this.addTransformerConfig({type: 'native', name: 'MSDefault'});
     }
 
-    public register(config: TransformerCommonConfig): void {
+    public addTransformerConfig(config: TransformerCommonConfig): void {
+        if(this.transformerConfigs.some(x => x.name === config.name && x.type === config.type)) {
+            throw new Error(`Cannot add two configs of the same type (${config.type}) with the same name '${config.name}'`);
+        }
+        this.transformerConfigs.push(config);
+    }
+
+    public hasTransformerConfigByIdentifiers(type: string, name: string = 'MSDefault') {
+        return this.transformerConfigs.some(x => x.type === type && x.name === name);
+    }
+
+    public async registerByIdentifiers(type: string, name: string = 'MSDefault') {
+        const transformers = this.transformers.get(type);
+        if(transformers !== undefined && transformers.some(x => x.name !== name)) {
+            this.logger.debug(`Transformer type ${type} with name ${name} already registered`);
+            return;
+        }
+        const config = this.transformerConfigs.find(x => x.name === name && x.type === type);
+        if(config === undefined) {
+            throw new Error(`No existing configuration for transformer of type ${type} with name ${name} exists`);
+        }
+        await this.register(config);
+    }
+
+    public async register(config: TransformerCommonConfig): Promise<void> {
         let transformers: AbstractTransformer[] = [];
         if (!this.transformers.has(config.type)) {
             this.transformers.set(config.type, []);
@@ -50,18 +74,22 @@ export default class TransformerManager {
 
         let t: AbstractTransformer;
         switch (config.type) {
-            case 'user':
+            case 'user': {
+                const UserTransformer = (await import("./UserTransformer.ts")).default;
                 t = new UserTransformer({ name: tName, ...config }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
-                break;
-            case 'native':
+            }    break;
+            case 'native': {
+                const NativeTransformer = (await import("./NativeTransformer.ts")).default;
                 t = new NativeTransformer({ name: tName,  ...config }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
-                break;
-            case 'musicbrainz':
+            }   break;
+            case 'musicbrainz': {
+                const MusicbrainzTransformer = (await import("./MusicbrainzTransformer.ts")).default;
                 t = new MusicbrainzTransformer({ name: tName, ...config as MusicbrainzTransformerConfig }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
-                break;
-            case 'rocksky':
+            }   break;
+            case 'rocksky': {
+                const RockskyTransformer = (await import("./rocksky/RockskyTransformer.ts")).default;
                 t = new RockskyTransformer({ name: tName, ...config as RockskyTransformerConfig }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
-                break;
+            }   break;
             default:
                 throw new Error(`No transformer of type '${config.type}' exists.`);
         }
@@ -69,20 +97,11 @@ export default class TransformerManager {
         this.logger.verbose(`${config.type} transformer with name '${tName}' registered`);        
     }
 
-    public async registeryDefaults() {
-        if(!this.hasTransformerType('user')) {
-            this.register({type: 'user', name: 'MSDefault'});
-        }
-        if(!this.hasTransformerType('native')) {
-            this.register({type: 'native', name: 'MSDefault'});
-        }
-    }
-
     public async registerFromEnv() {
         try {
             const mbConfig = configFromEnv(this.logger);
             if(mbConfig !== undefined) {
-                this.register(mbConfig);
+                this.addTransformerConfig(mbConfig);
             } else {
                 this.logger.debug('No Musicbrainz transformer to build from ENV');
             }
@@ -95,7 +114,7 @@ export default class TransformerManager {
         try {
             const rsConfig = rsConfigFromEnv(this.logger);
             if(rsConfig !== undefined) {
-                this.register(rsConfig);
+                this.addTransformerConfig(rsConfig);
             } else {
                 this.logger.debug('No Rocksky transformer to build from ENV');
             }
@@ -134,40 +153,55 @@ export default class TransformerManager {
         return this.transformers.get(type);
     }
 
-    public getTransformerByStage(data: StageConfig): AbstractTransformer {
-        const list = this.transformers.get(data.type);
+    public async getTransformerByStage(data: StageConfig): Promise<AbstractTransformer> {
+        let list = this.transformers.get(data.type);
         if (list === undefined || list.length === 0) {
-            throw new Error(`No transformer of type '${data.type}' is registered.`);
+            if(this.hasTransformerConfigByIdentifiers(data.type, data.name)) {
+                await this.registerByIdentifiers(data.type, data.name);
+                await this.initTransformers();
+                list = this.transformers.get(data.type)
+            } else {
+                throw new Error(`No transformer of type '${data.type}' is registered.`);
+            }
         }
 
-        if (list.length > 1) {
-            if(data.name === undefined) {
+        if(data.name === undefined) {
+            if(list.length > 1) {
                 this.logger.warn(`More than one '${data.type}' transformer but name was not specified, using first registered`);
                 return list[0];
-            } else {
-                const namedTransformers = list.find(x => x.name.toLocaleLowerCase().trim() === data.name.toLocaleLowerCase().trim());
+            }
+            return list[0]            
+        }
+
+        let namedTransformers = list.find(x => x.name.toLocaleLowerCase().trim() === data.name.toLocaleLowerCase().trim());
+        if(namedTransformers === undefined) {
+            if(this.hasTransformerConfigByIdentifiers(data.type, data.name)) {
+                await this.registerByIdentifiers(data.type, data.name);
+                await this.initTransformers();
+                list = this.transformers.get(data.type);
+                namedTransformers = list.find(x => x.name.toLocaleLowerCase().trim() === data.name.toLocaleLowerCase().trim());
                 if(namedTransformers === undefined) {
                     throw new SimpleError(`Component wanted transformer type ${data.type} with name ${data.name}. Transforms of this type are registered but none have this name.`);
                 }
                 return namedTransformers;
             }
-        } else {
-            return list[0]
+            throw new SimpleError(`Component wanted transformer type ${data.type} with name ${data.name}. Transforms of this type are registered but none have this name.`);
         }
+        return namedTransformers;
     }
 
-    public parseTransformerConfig(data: any) {
+    public async parseTransformerConfig(data: any) {
         if (!isStageTyped(data)) {
             throw new Error(`Must be an object with a 'type' property.`);
         }
-        const t = this.getTransformerByStage(data);
+        const t = await this.getTransformerByStage(data);
         const config = t.parseConfig(data);
         config.stageHash = t.configHash;
         return config;
     }
 
     public async handleStage(data: StageConfig, play: PlayObject, opts: {asyncId?: string} & OptionalCacheUsage): Promise<[PlayObject, string]> {
-        const t: AbstractTransformer = this.getTransformerByStage(data);
+        const t: AbstractTransformer = await this.getTransformerByStage(data);
         try {
             const transformedPlay = await this.asyncStore.run(opts.asyncId ?? nanoid(6), async () => {
                 return await t.handle(data, play);
