@@ -7,16 +7,6 @@ export const rockSkyDataSchema = z.object({
     ...requestRetryOptionsSchema.shape,
 
     /**
-     * API Key generated from [API Applications](https://docs.rocksky.app/migrating-from-listenbrainz-to-rocksky-1040189m0) in Rocksky for your account
-     *
-     * @examples ["6794186bf-1157-4de6-80e5-uvb411f3ea2b"]
-     * */
-    key: z.string().optional().meta({
-        description: "API Key generated from [API Applications](https://docs.rocksky.app/migrating-from-listenbrainz-to-rocksky-1040189m0) in Rocksky for your account",
-        examples: ["6794186bf-1157-4de6-80e5-uvb411f3ea2b"]
-    }),
-
-    /**
      * Access Token generated from https://rocksky.app/access-tokens in Rocksky for your account
      *
      * @examples ["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaWQ....."]
@@ -35,17 +25,15 @@ export const rockSkyDataSchema = z.object({
      *
      * */
     handle: z.string().meta({
-        description: "The **fully-qualified** handle for your ATPRoto/Bluesky account"
+        description: "The **fully-qualified** handle, or identifier, for your Atmosphere account"
     }),
-    did: z.string().optional(),
 
-    appPassword: atProtoAppDataSchema.shape.appPassword.optional()
+    appPassword: atProtoAppDataSchema.shape.appPassword.optional().meta(atProtoAppDataSchema.shape.appPassword.meta())
 });
 
 export type RockSkyData = z.infer<typeof rockSkyDataSchema>;
 
 const envDataSchema = z.object({
-    ROCKSKY_KEY: rockSkyDataSchema.shape.key,
     ROCKSKY_TOKEN: rockSkyDataSchema.shape.token,
     ROCKSKY_HANDLE: rockSkyDataSchema.shape.handle,
     ROCKSKY_APP_PW: rockSkyDataSchema.shape.appPassword
@@ -57,7 +45,6 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, RockSkyClientConf
     toConfig: (partial) => ({
             configureAs: 'client',
             data: {
-                key: partial.ROCKSKY_KEY,
                 token: partial.ROCKSKY_TOKEN,
                 handle: partial.ROCKSKY_HANDLE,
                 appPassword: partial.ROCKSKY_APP_PW
@@ -70,18 +57,6 @@ export const rockSkyClientDataSchema = rockSkyDataSchema.extend(commonClientData
 export type RockSkyClientData = z.infer<typeof rockSkyClientDataSchema>;
 
 export const rockSkyOptionsSchema = z.object({
-    /**
-     * URL for the Rocksky *Listenbrainz* endpoint, if not using the default
-     *
-     * @examples ["https://audioscrobbler.rocksky.app"]
-     * @default "https://audioscrobbler.rocksky.app"
-     * */
-    audioScrobblerUrl: z.string().optional().meta({
-        description: "URL for the Rocksky *Listenbrainz* endpoint, if not using the default",
-        default: "https://audioscrobbler.rocksky.app",
-        examples: ["https://audioscrobbler.rocksky.app"]
-    }),
-
     /**
      * URL for the Rocksky *API* endpoint, if not using the default
      *

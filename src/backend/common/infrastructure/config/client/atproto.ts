@@ -25,7 +25,7 @@ export const atProtoAppDataSchema = z.object({
      * **Use this if you are self-hosting Multi-Scrobbler on localhost or accessed like http://IP:PORT**
      */
     appPassword: z.string().meta({
-        description: "The [App Password](https://atproto.com/specs/xrpc#app-passwords) you created for your account"
+        description: "The [App Password](https://atproto.com/specs/xrpc#app-passwords) you created for your Atmosphere account"
     }),
 });
 

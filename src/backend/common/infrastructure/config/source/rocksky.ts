@@ -12,7 +12,6 @@ export const rockskySourceDataSchema = z.object({
 export type RockskySourceData = z.infer<typeof rockskySourceDataSchema>;
 
 const envDataSchema = z.object({
-    SOURCE_ROCKSKY_KEY: rockskySourceDataSchema.shape.key,
     SOURCE_ROCKSKY_HANDLE: rockskySourceDataSchema.shape.handle,
 });
 
@@ -22,7 +21,6 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, RockskySourceConf
     toConfig: (partial) => ({
             configureAs: 'source',
             data: {
-                key: partial.SOURCE_ROCKSKY_KEY,
                 handle: partial.SOURCE_ROCKSKY_HANDLE
             }
     })
