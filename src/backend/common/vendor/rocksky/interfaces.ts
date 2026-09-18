@@ -64,19 +64,19 @@ export interface RockskyTransformerData {
     forceSearch?: boolean;
     score?: number;
     allowNoMatch?: boolean;
-    logPreMbid?: boolean;
+    // logPreMbid?: boolean;
     searchOrder?: SearchType[];
     searchArtistMethod?: ('naive' | 'native');
 
-    /** Ignore album artist if it is "Various Artists"
-     *
-     * @default true
-     */
-    ignoreVA?: boolean;
+    // /** Ignore album artist if it is "Various Artists"
+    //  *
+    //  * @default true
+    //  */
+    // ignoreVA?: boolean;
 
-    titleWeight?: number | true;
-    artistWeight?: number | true;
-    albumWeight?: number | true;
+    // titleWeight?: number | true;
+    // artistWeight?: number | true;
+    // albumWeight?: number | true;
 }
 
 export type RockskyTransformerConfig = TransformerCommon<RockskyTransformerData, RockskyApiClientConfig> & { options?: TransformOptions & { logUrl?: boolean; }; };
