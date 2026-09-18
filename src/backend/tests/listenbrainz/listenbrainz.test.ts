@@ -3,7 +3,7 @@ import { assert, expect } from 'chai';
 import dayjs from "dayjs";
 import { describe, it } from 'mocha';
 import { http, HttpResponse } from "msw";
-import type {PlayObject} from "../../../core/Atomic.ts";
+import {NO_DEVICE, type PlayObject} from "../../../core/Atomic.ts";
 import { UpstreamError } from "../../common/errors/UpstreamError.ts";
 
 import { ListenbrainzApiClient, listenResponseToPlay, listenPayloadToPlay } from "../../common/vendor/ListenbrainzApiClient.ts";
@@ -234,7 +234,70 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const submitPayload = playToListenPayload(play);
 
         expect(submitPayload.track_metadata.additional_info.music_service_name).to.be.eql('Plex')
-        
+
+    });
+
+    it('Should not include any device info as media_player by default', function() {
+
+        const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone'});
+        const submitPayload = playToListenPayload(play);
+
+        expect(submitPayload.track_metadata.additional_info.media_player).to.be.undefined;
+
+    });
+
+    it('Should submit the allowlist KEY, never the raw device id, when the label is empty', function() {
+
+        const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone'});
+        const submitPayload = playToListenPayload(play, {allowDeviceList: {'iphone': ''}});
+
+        expect(submitPayload.track_metadata.additional_info.media_player).to.be.eql('iphone');
+
+    });
+
+    it('Should submit the allowlist LABEL when the key has one', function() {
+
+        const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone'});
+        const submitPayload = playToListenPayload(play, {allowDeviceList: {'a1b2c3d4e5': 'phone'}});
+
+        expect(submitPayload.track_metadata.additional_info.media_player).to.be.eql('phone');
+
+    });
+
+    it('Should prefer the most specific (longest) matching key regardless of order', function() {
+
+        const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone'});
+        const submitPayload = playToListenPayload(play, {allowDeviceList: {'iphone': '', 'a1b2c3d4e5-iphone': 'kitchen ipad'}});
+
+        expect(submitPayload.track_metadata.additional_info.media_player).to.be.eql('kitchen ipad');
+
+    });
+
+    it('Should not report devices that are not enumerated in the allowlist', function() {
+
+        const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'SmithsLivingRoom-Roku'});
+        const submitPayload = playToListenPayload(play, {allowDeviceList: {'iphone': '', 'android-auto': ''}});
+
+        expect(submitPayload.track_metadata.additional_info.media_player).to.be.undefined;
+
+    });
+
+    it('Should not report a device when the device is not known', function() {
+
+        const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: NO_DEVICE});
+        const submitPayload = playToListenPayload(play, {allowDeviceList: {[NO_DEVICE.toLocaleLowerCase()]: ''}});
+
+        expect(submitPayload.track_metadata.additional_info.media_player).to.be.undefined;
+
+    });
+
+    it('Should prefer mediaPlayerName over the allowlist label for media_player', function() {
+
+        const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone', mediaPlayerName: 'Rhythmbox'});
+        const submitPayload = playToListenPayload(play, {allowDeviceList: {'iphone': ''}});
+
+        expect(submitPayload.track_metadata.additional_info.media_player).to.be.eql('Rhythmbox');
+
     });
 
     it('Should use artist_names if provided, rather than parse artist from string', function () {

@@ -75,6 +75,19 @@ export const koitoDataSchema = z.object({
     username: z.string().meta({
         description: "Username of the user to scrobble for"
     }),
+
+    /**
+     * Only devices explicitly enumerated here are reported as `media_player` in each listen's additional_info.
+     *
+     * Keys match case-insensitively as substrings of the source's device id (longest match wins). What is submitted
+     * is the key's label value, or the key itself when the label is empty — never the raw device identifier.
+     *
+     * @examples [{"iphone": "", "9f3ec2-iphone": "kitchen ipad"}]
+     * */
+    allowDeviceList: z.record(z.string(), z.string()).optional().meta({
+        description: "Only devices explicitly enumerated here are reported as media_player in each listen's additional_info. Keys match case-insensitively as substrings of the source's device id (longest match wins); what is submitted is the key's label value, or the key itself when the label is empty — never the raw device identifier.",
+        examples: [{"iphone": "", "9f3ec2-iphone": "kitchen ipad"}]
+    }),
 }).meta({title: 'KoitoData'});
 
 export type KoitoData = z.infer<typeof koitoDataSchema>;
@@ -83,6 +96,22 @@ const envDataSchema = z.object({
     KOITO_URL: koitoDataSchema.shape.url,
     KOITO_TOKEN: koitoDataSchema.shape.token,
     KOITO_USER: koitoDataSchema.shape.username,
+    KOITO_ALLOW_DEVICE_LIST: z.string().optional().transform((val) => {
+        if (val === undefined || val.trim() === '') {
+            return undefined;
+        }
+        // comma-separated entries; 'match:label' gives a custom label, bare 'match' submits the match itself
+        const rec: Record<string, string> = {};
+        for (const part of val.split(',').map(x => x.trim()).filter(x => x !== '')) {
+            const sep = part.indexOf(':');
+            if (sep === -1) {
+                rec[part] = '';
+            } else {
+                rec[part.slice(0, sep).trim()] = part.slice(sep + 1).trim();
+            }
+        }
+        return rec;
+    }).meta({description: koitoDataSchema.shape.allowDeviceList.meta().description}),
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, KoitoClientConfig> = {
@@ -93,7 +122,8 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, KoitoClientConfig
             data: {
                 url: partial.KOITO_URL,
                 token: partial.KOITO_TOKEN,
-                username: partial.KOITO_USER
+                username: partial.KOITO_USER,
+                allowDeviceList: partial.KOITO_ALLOW_DEVICE_LIST
             }
     })
 };
