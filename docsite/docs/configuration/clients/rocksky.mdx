@@ -74,6 +74,111 @@ If you don't know what a PDS is or how to find this just use Bluesky:
 
 Use this App Password with ENV as `ROCKSKY_APP_PW` or as `appPassword` in File/AIO configuration.
 
+<DetailsAdmo type="note" summary="Scrobble Data Validation and Automatically Fixing It">
+
+When using the **PDS approach** Multi-scrobbler will validate that your scrobble data meets Rocksky's [scrobble data quality](#scrobble-data-standards) before it is sent:
+
+* if your data is missing `track`, `artist`, or `album` the scrobble will **always** fail
+* if your data does not have at least one of: `ISRC`, `Recording MBID`, or `Spotify Id` then it will fail on automatic scrobble
+  * You can **force** the scrobble if you are sure the data is correct by retrying the scrobble from MS's web UI
+
+There are some scenarios where you might not need to worry about this at all:
+
+* Your [Sources](/configuration/sources) already have high quality data: like Spotify, Listenbrainz, Plex/Jellyfin with metadata agents, Navidrome with Picard-matched files, etc... 
+* You have a [Musicbrainz Stage](/configuration/transforms/musicbrainz) enriching Play data before it gets to the Rocksky Client.
+
+Otherwise, you should consider configuring the [Rocksky **Transformer Stage**](/configuration/transforms/rocksky) to fix/enrich your scrobble data automatically. This stage uses Rocksky's own metadata API to match your data and correct it so that it is high enough quality to submit to Rocksky.
+
+The default configuration for Rocksky Transformer Stage only makes calls to Rocksky when essential data is missing and only modifies your data when it has high confidence. You can safely apply this Stage without worrying about it majorly affecting what is actually scrobbled.
+
+<details>
+
+<summary>Working Examples</summary>
+
+<Tabs groupId="configType" queryString>
+<TabItem value="env" label="ENV">
+```yaml
+services:
+  multi-scrobbler:
+    image: foxxmd/multi-scrobbler
+    environment:
+      // highlight-start
+       # searches with the searchOrder
+       # isrc => basic
+      - RS_PRESETS=default
+      // highlight-end
+       # ... your source ENVs go here
+       #
+      - ROCKSKY_ID=Rocky
+      - ROCKSKY_HANDLE=alice.bsky.social
+      - ROCKSKY_APP_PW=1234567
+      // highlight-start
+       # applies Rocksky Stage to preTransform of Rocksky Client
+      - ROCKSKY_TRANSFORMS=rocksky
+      // highlight-end
+
+
+    volumes:
+      - "./config:/config"
+    ports:
+      - "9078:9078"
+    restart: unless-stopped
+```
+</TabItem>
+<TabItem value="file" label="File">
+```json5 title="rocksky.json"
+[
+  { 
+    "name": "Rocky",
+    "configureAs": "client",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "rocksky",
+            "name": "MSDefault"
+          }
+        ]
+      }
+    }
+  }
+]
+```
+</TabItem>
+<TabItem value="aio" label="AIO">
+```json5 title="config.json"
+{
+    "sources": [/* ... */],
+    "clients": [
+        { 
+            "name": "Rocky",
+            "type": "rocksky"
+            "configureAs": "client",
+            "data": { /* ... */},
+            "options": {
+            "playTransform": {
+                "preCompare": [
+                {
+                    "type": "rocksky",
+                    "name": "MSDefault"
+                }
+                ]
+            }
+            }
+        }
+    ]
+}
+```
+</TabItem>
+</Tabs>
+
+</details>
+
+
+
+</DetailsAdmo>
+
 </TabItem>
 <TabItem value="server" label="Server (Deprecated)">
 
