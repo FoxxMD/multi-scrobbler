@@ -48,6 +48,7 @@ const envDataSchema = z.object({
     ROCKSKY_KEY: rockSkyDataSchema.shape.key,
     ROCKSKY_TOKEN: rockSkyDataSchema.shape.token,
     ROCKSKY_HANDLE: rockSkyDataSchema.shape.handle,
+    ROCKSKY_APP_PW: rockSkyDataSchema.shape.appPassword
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, RockSkyClientConfig> = {
@@ -58,7 +59,8 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, RockSkyClientConf
             data: {
                 key: partial.ROCKSKY_KEY,
                 token: partial.ROCKSKY_TOKEN,
-                handle: partial.ROCKSKY_HANDLE
+                handle: partial.ROCKSKY_HANDLE,
+                appPassword: partial.ROCKSKY_APP_PW
             }
     })
 };
