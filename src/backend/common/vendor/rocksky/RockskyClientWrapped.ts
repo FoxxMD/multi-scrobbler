@@ -59,12 +59,13 @@ export class RockskyClientPool extends AbstractApiClient {
     cache: Cacheable;
 
     constructor(name: any, config: RockskyApiClientConfig, options: AbstractApiOptions & { cache?: Cacheable }) {
-        super('Rocksky API', name, config, options);
+        const {apis = [{enable: true}]} = config;
+        super('Rocksky API', name, {...config, apis}, options);
         this.cache = options.cache ?? getRoot().items.cache().cacheApi;
 
         const rsMap = getRoot().items.rsMap();
 
-        const apis: RockskyClientWrapped[] = [];
+        const usedApis: RockskyClientWrapped[] = [];
         const hosts: string[] = [];
         for (const rsConfig of this.config.apis) {
             if ((rsConfig.enable ?? true) === false) {
@@ -82,11 +83,11 @@ export class RockskyClientPool extends AbstractApiClient {
                 duration: number;
             if (rs === undefined) {
                 switch (u.url.hostname) {
-                    case 'rocksky.app': {
+                    case 'api.rocksky.app': {
                         points = rate.requests ?? 1000;
                         duration = rate.perTime ?? 30;
                         const reqRate = maxRequestsPerSecond(points, duration);
-                        if (reqRate > 33) {
+                        if (reqRate > 33.4) {
                             this.logger.warn(`Cannot use a rate greater than 33req/s for rocksky.app. Reverting to 33req/s | Given: ${formatNumber(reqRate)}req/s`);
                             points = 1000;
                             duration = 30;
@@ -99,13 +100,13 @@ export class RockskyClientPool extends AbstractApiClient {
                 }
                 const api = new RockskyClientWrapped(undefined, rsConfig.token, {rate: {points, duration}});
                 rsMap.set(u.url.hostname, api);
-                apis.push(api);
+                usedApis.push(api);
                 this.logger.verbose(`Created Rocksky API for ${u.url.hostname} with Rate Limit ${points}req/${duration}s`);
             } else {
-                apis.push(rs);
+                usedApis.push(rs);
             }
         }
-        this.rsProxy = ProxyWithCircuitBreaker.create<RockskyClientWrapped>(apis,() => ({
+        this.rsProxy = ProxyWithCircuitBreaker.create<RockskyClientWrapped>(usedApis,() => ({
             halfOpenAfter: 30000,
             breaker: new ConsecutiveBreaker(3),
             onFailure: ({reason, duration}) => {
