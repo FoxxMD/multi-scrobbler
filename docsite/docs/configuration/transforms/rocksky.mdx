@@ -1,0 +1,926 @@
+---
+title: Rocksky Stage
+description: Enhancing Scrobbles with Rocksky
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+The **Rocksky** [Stage](/configuration/transforms#stage) matches your Play with metadata from [Rocksky](https://rocksky.app/). If the match score is high enough then Multi-Scrobbler uses the match to correct and fill-in some missing information in your Play data.
+
+**This Stage is useful for normalzing plays for the Rocksky scrobbler or adding metadata ids and artwork from a fast metadata provider.**
+
+:::important
+
+The Rocksky metadata service is still in development and the data behind it is still maturing.
+
+Because of this, this stage only transforms data that has a high confidence level (meta ids like MBID, isrc, artwork) or when your data is entirely missing fields (like a missing track, duration, or album name).
+
+See: [**What Data is Applied?**](#what-data-is-applied)
+
+:::
+
+:::tip
+
+If you are using [ENV Config](/configuration?config-type=env#configuration-types) for multi-scrobbler and just want a quick and easy setup, skip to [**ENV Configuration**](#env-configuration).
+
+:::
+
+:::tip
+
+Set up [Valkey Caching](/configuration?cachedThings=metadata#caching) to cache Rocksky API calls for faster processing.
+
+:::
+
+## Configuration
+
+### API Setup
+
+No API setup is required at this time. If you need to, API can still be configured in the event you using are using mirrors, a proxy, or want to configure different rate limiting.
+
+To use the default Stage in [Rules and Hooks](#rules-and-hooks) either omit `name` or specify it as `"name": "MSDefault"`.
+
+<details>
+
+<summary>Non-Default Servers and Rate Limiting</summary>
+
+Other, or _additional_, Rocksky Servers/Mirrors can be added to the API configuration. **If more than one server is defined then multi-scrobbler will load balance requests based on available rate capacity.**
+
+Use `url` to define the base URL of the Rocksky server to use. If `url` is not defined multi-scrobbler assumes it is the primary Rocksky server, `https://api.rocksky.app`.
+
+Example of multiple servers:
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      ,
+      "name": "MyRocksky",
+      "data": {
+        "apis": [
+          {
+            "enable": true
+            // uses default Rocksky server https://api.rocksky.app
+          },
+          // additional server
+          {
+            "enable": true,
+            "url": "https://my.rs.mirror.domain.com"
+          }
+        ]
+      },
+    }
+  ]
+}
+```
+
+<h3>Rate Limiting</h3>
+
+Rocksky servers can optionally be configured with rate limiting.
+
+Rate limiting is defined by **max number of requests** within **timespan of N seconds.**
+
+These constraints apply:
+
+* Official Rocksky server (`https://api.rocksky.app` or when no `url` is defined) is hard-limited to `1000 req / 30s`
+* No limits for other, custom servers but a default `1 req/s` limit is applied when none is configured
+
+Example of configuring rate limit:
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      ,
+      "name": "MyRocksky",
+      "data": {
+        "apis": [
+          {
+            "enable": true
+            // uses default Rocksky server https://api.rocksky.app
+            // hard-limited to 1000 req / 30s
+          },
+          // additional server
+          {
+            "enable": true,
+            "url": "https://my.rs.mirror.domain.com",
+            "rate": {
+              // IE 6 req/s
+              "requests": 6, // maximum of 6 requests
+              "perTime": 1 // can be made within 1 second
+            }
+          }
+        ]
+      },
+    }
+  ]
+}
+```
+
+</details>
+
+### Stage Configuration
+
+All of the properties found in [**Matching with Rocksky**](#matching-with-rocksky) section are configured in [Stage Configuration](/configuration/transforms#configuring-stages) as `defaults`.
+
+Example:
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "rocksky",
+      "name": "MyRocksky",
+      "data": {
+        "apis": [
+          {
+            "enable": true
+          }
+        ],
+        "defaults": {
+          "searchWhenMissing": ['duration','mbid']
+          "allowNoMatch": false
+        }
+      },
+    }
+  ]
+}
+```
+
+### Rules and Hooks
+
+[Add your Stage](/configuration/transforms/#stage) to a Source or Client by specifying it in a [Hook](/configuration/transforms/#hook):
+
+```json5 title="rocksky.json"
+[
+  { 
+    "name": "Rocky",
+    "configureAs": "client",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "rocksky",
+            "name": "MSDefault"
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+Each [**Stage Rule**](/configuration/transforms#stage-rules) should be either a boolean, specifying if the transformed data should be used for this field, or a [`when` condition](/configuration/transforms#conditional-modification):
+
+<details>
+
+<summary>Example</summary>
+
+```json5 title="rocksky.json"
+[
+  { 
+    "name": "Rocky",
+    "configureAs": "client",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "rocksky",
+            "name": "MSDefault"
+            // ...
+            "title": false, // will not apply any changes to Play title
+            "album": {
+              "when": {/* ... */}, // will only apply changes to Play artists if "when" is satisfied
+            /* ... */
+            },
+            "meta": true // adds MusicBrainz MBIDs to scrobble data
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+</details>
+
+:::tip[Per Component Override]
+
+The `defaults` you set in [Stage Configuration](#stage-configuration) [can be overriden/added to](/configuration/transforms/#overriding-configuration) (per property) in each Hook.
+
+<details>
+
+<summary>Example</summary>
+
+```json5 title="rocksky.json"
+[
+  { 
+    "name": "Rocky",
+    "configureAs": "client",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "rocksky",
+            "name": "MSDefault",
+            "searchWhenMissing": ['duration','mbid'], // override from defaults
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+</details>
+
+:::
+
+## ENV Configuration
+
+The general configuration shown above can also be configured from a selection of *presets* using [ENV Config](/configuration?configType=env#configuration-types) for individual Sources/Clients.
+
+To configure [stage defaults](#stage-configuration) use `RS_PRESETS` with a comma-delimited list of presets you wish to apply. More than one preset can be applied, in which case they combine. You must choose at least one of the presets below:
+
+* `default` - Adds the default [`searchOrder`](#search-methods) `isrc`+`basic` (same as using no presets that affect `searchOrder`)
+* `id` - Adds [`searchOrder`](#search-methods) methods that priorites searching by ID: `isrc` + `mbid` + `basic`
+* `native` - Adds **Extracted Artists** (`artist`) in `native` mode to [`searchOrder`](#search-methods)
+
+Finally, use ENV `*_TRANSFORMS=rocksky` on each Source/Client you wish to apply this stage to. This applies the stage in the [`preTransform` Hook](/configuration/transforms#lifecycle-hooks) with all [Rules](#rules-and-hooks) enabled.
+
+The `*` stands for the prefix used for each Source/Client's ENV keys. Refer to the individual Source/Client Configuration sections to find this. Example:
+
+* All [Rocksy Clients](/configuration/clients/rocksky) ENVs look like `ROCKSKY_USER=myuser` etc...
+* Use `ROCKSKY_TRANSFORMS=rocksky`
+
+<details>
+
+<summary>Example Full Docker Deploy with ENV Configuration</summary>
+
+Using [Jellyfin](/quickstart#create-docker-compose-file) example from Quickstart with Rocksky and the Rocksky Stage:
+
+```yaml
+services:
+  multi-scrobbler:
+    image: foxxmd/multi-scrobbler
+    container_name: multi-scrobbler
+    environment:
+      // highlight-start
+       # searches with the searchOrder
+       # isrc => basic
+      - RS_PRESETS=default
+      // highlight-end
+      - JELLYFIN_URL=192.168.0.110:8096
+      - JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56b
+      - JELLYFIN_USER=MyUser
+      - ROCKSKY_ID=Rocky
+      - ROCKSKY_HANDLE=alice.bsky.social
+      - ROCKSKY_APP_PW=1234567
+      // highlight-start
+       # applies Rocksky Stage to preTransform of Rocksky Client
+      - ROCKSKY_TRANSFORMS=rocksky
+      // highlight-end
+
+
+    volumes:
+      - "./config:/config"
+    ports:
+      - "9078:9078"
+    restart: unless-stopped
+```
+
+</details>
+
+## What Data is Applied?
+
+Rocksky metadata is still maturing so **the data MS ultimately applies your scrobbles is artifically restricted at this time.**
+
+Using [Rules for Play Data](https://docs.multi-scrobbler.app/configuration/transforms/#stage-rules) we can *usually* categorically transform any part of our Play (scrobble) using the data produced by a stage:
+
+<details>
+
+<summary>Example</summary>
+
+```json5
+// all properties *not* explicitly set default to true
+{
+    "type": "musicbrainz",
+    // ...
+    "title": false, // will not apply musicbrainz changes to Play title
+    //"albumArtists": true, // always applies
+    //"artists": true // always applies
+    "album": false, // will never apply changes to Play album
+    //"duration": true, // always applies
+    //"meta": true, // always applies
+}
+```
+
+</details>
+
+But for the Rocksky Stage some of these transformations come with conditions and some are completely disabled.
+
+You can still set all Rules normally, like any other Stage, but these prerequisites will always be checked, and the property transformation skipped, if they are not met:
+
+* `title` and `album` are only applied if the original scrobble is missing them
+* `albumArtists` is never applied
+* `artists` are only applied if the original scrobble
+  * has no artists
+  * has only 1 artist and Rocksky returned multiple
+* `meta` is only applied if the original scrobble is missing them (MBIDs) or only has recording MBID
+
+All other parts behave as normal.
+
+## Matching with Rocksky
+
+:::note
+
+**All properties found in this section are optional.**
+
+:::
+
+Matching your Scrobble's Play data with a result from Musicbrainz is comprised of two steps:
+
+* [**Searching**](#searching) Rocksky using parts of your Scrobble as queries
+* [**Refining**](#refining) matched results to select the desired/allowed match
+
+Both steps have separate configuration.
+
+### Searching
+
+#### Should MS Search?
+
+Before MS begins a search it checks if your Scrobble data already contains:
+
+* A track title, artists, album, and duration
+* An associated recording [MBID](https://musicbrainz.org/doc/MusicBrainz_Identifier)
+
+If it already has all required data types then the entire Rocksky Stage [is **skipped**.](/configuration/transforms/#flow-control) If any are missing then a search is performed.
+
+Define which data types are required using:
+
+* `searchWhenMissing` (defaults to all) - A list containing any of: `artists` `track` `album` `duration` `mbid`
+* `forceSearch` (default `false`) - Force searching even if all required data is present
+
+<details>
+
+<summary>Example</summary>
+
+[Stage Configuration](/configuration/transforms#configuring-stages) example:
+
+```json5
+// ...
+"defaults": {
+    // only search if duration or recording MBID is missing
+    "searchWithMissing": ["duration", "mbid"]
+
+    // uncomment to make the stage always search, even if above data is present
+    //forceSearch: true
+  }
+```
+
+</details>
+
+If required data is missing then the next step is making search queries to Rocksky's metadata API to try to get potential candidates.
+
+#### Search Methods
+
+Multi-scrobbler can search for Rocksky matches using **multiple** methods. You control:
+
+* the search methods that are used
+* **the order** in which search methods are executed
+
+All search methods will be run in the order they were defined until one method returns at least one match.
+
+**The methods you choose, and the order they run in, can drastically change how many API calls are needed to get a match, and what types of matches are returned.** See [**Search Considerations**](#search-considerations) for guidance on how to decide on methods based on Source.
+
+To set search methods and their order use the `searchOrder` option in your [Stage Configuration](/configuration/transforms#configuring-stages):
+
+```json5
+// ...
+"defaults": {
+    // only searches using these methods, in the order they are listed here
+    "searchOrder": ["isrc", "basic", "artist"]
+  }
+```
+
+:::tip[Default Search Methods]
+
+If `searchOrder` is undefined then Multi-scrobbler will default to using `isrc` then `basic` method.
+
+:::
+
+<h4>Available Methods</h4>
+
+<details>
+
+<summary>ISRC (`isrc`)</summary>
+
+If your Scrobble data contains an [ISRC](https://musicbrainz.org/doc/ISRC) (usually from Spotify) then Multi-scrobbler can search using this ID, title, and artist only.
+
+[Stage Configuration](/configuration/transforms#configuring-stages) example:
+
+```json5
+// ...
+"defaults": {
+    // will only search using isrc
+    "searchOrder": ["isrc"]
+  }
+```
+
+</details>
+
+<details>
+
+<summary>Recording MBID (`mbid`)</summary>
+
+If your Scrobble data contains a [Recording MBID](https://musicbrainz.org/doc/Recording) then Multi-scrobbler can search using this MBID, title, and artist only.
+
+[Stage Configuration](/configuration/transforms#configuring-stages) example:
+
+```json5
+// ...
+"defaults": {
+  // will only search using recording mbid
+    "searchOrder": ["mbidrecording"]
+  }
+```
+
+</details>
+
+<details>
+
+<summary>Album, Artist, and Title Fields (`basic`)</summary>
+
+Will search Musicbrainz using any/all available text fields from your scrobble: Album, Artists(s), and Title. Does not leverage any existing MBIDs.
+
+[Stage Configuration](/configuration/transforms#configuring-stages) example:
+
+```json5
+// ...
+"defaults": {
+    // will only search using album, artist(s), and title
+    "searchOrder": ["basic"]
+  }
+```
+
+</details>
+
+<details>
+
+<summary>Album/Artist/Title OR MBIDs (`basicorids`)</summary>
+
+This is the same as the above **Album, Artist, and Title Fields** search except that if the scrobble data contains a recording MBID it will use those as well as the plain text field.
+
+[Stage Configuration](/configuration/transforms#configuring-stages) example:
+
+```json5
+// ...
+"defaults": {
+    // will only search using album, artist(s), and title
+    "searchOrder": ["basicOrIds"]
+  }
+```
+
+</details>
+
+<details>
+
+<summary>Extracted Artists (`artist`)</summary>
+
+If your scrobble data contains only **one** artist string then Multi-scrobbler can attempt to extract multiple artists from your artist and track string.
+
+Use `artist` with `searchOrder` and optionally specify the extraction mode with `searchArtistMethod`:
+
+[Stage Configuration](/configuration/transforms#configuring-stages) example:
+
+```json5
+// ...
+"defaults": {
+    // will only search using title/album + extracted artists
+    "searchOrder": ["artist"],
+    //searchArtistMethod: 'native' // optional
+  }
+```
+
+`searchArtistMethod` can be set to **Native** or **Naive** mode:
+
+<Tabs groupId="searchArtistMethod" queryString>
+    <TabItem value="native" label="Native (Recommended)">
+
+    **Native** (`native`) mode uses an aggressive configuration of the [Native Stage](/configuration/transforms/native) to extract artists using common delimiters and common "joined" artist patterns from the artist and title string of your Scrobble data.
+
+
+    :::tip
+
+    If you already have a Native Stage configured you should use that instead, running it before the Rocksky stage.
+
+    :::
+
+    <details>
+
+    <summary>Native Mode Example</summary>
+
+    ```json
+    {
+        "title": "Endless Possibility (feat. Wheatus)",
+        "artists": ["Bowling For Soup & Punk Rock Factory, My Cool Band"]
+    }
+    ```
+
+    * Extracts `Bowling For Soup` `Punk Rock Factory` `My Cool Band` from artist string
+    * Extracts `Wheatus` from title string
+      * Removes `(feat. Wheatus)` from title string because it found an artist there
+
+    Resulting data used for Rocksky search:
+
+    ```json
+    {
+        "title": "Endless Possibility",
+        "artists": ["Bowling For Soup", "Punk Rock Factory", "My Cool Band", "Wheatus"]
+    }
+    ```
+
+    </details>
+
+    [Stage Configuration](/configuration/transforms#configuring-stages) example:
+
+    ```json5
+    // ...
+    "defaults": {
+      // will only search using title/album + native extracted artists
+      "searchOrder": ["artist"],
+      "searchArtistMethod": "native"
+      }
+    ```
+
+    </TabItem>
+    <TabItem value="naive" label="Naive">
+
+    **Naive** (`naive`) mode looks for the first found common delimiter in the artist string. If it finds one then it uses the preceding value as the only artist in the Rocksky search. It does not try to extract additional artists from the artist string, or extract anything from the title string.
+
+    <details>
+
+    <summary>Naive Mode Example</summary>
+
+    ```json
+    {
+        "title": "Endless Possibility (feat. Wheatus)",
+        "artists": ["Bowling For Soup, Punk Rock Factory & Wheatus"]
+    }
+    ```
+
+    * Finds `&` as first common delimiter, extracts "Bowling For Soup"
+
+    Resulting data used for Rocksky search:
+
+    ```json
+    {
+        "title": "Endless Possibility (feat. Wheatus)",
+        "artists": ["Bowling For Soup"]
+    }
+    ```
+    </details>
+
+    [Stage Configuration](/configuration/transforms#configuring-stages) example:
+
+    ```json5
+    // ...
+    "defaults": {
+      // will only search using title/album + naive extracted artists
+      "searchOrder": ["artist"],
+      "searchArtistMethod": "naive"
+      }
+    ```
+
+    </TabItem>
+</Tabs>
+
+</details>
+
+:::note
+
+If all defined search methods do not return any results then the stage is marked as [**failed** (`onFailure`) for **Flow Control**](/configuration/transforms/#flow-control).
+
+:::
+
+## Refining
+
+### Score
+
+Each match returned by Rocksky can contain a list of matched external provider entries (Spotify, Deezer, etc...) that contain a numeric score representing how close it was to the search parameters. Set `score` in configuration to set a minimum score that must be met by any of these entries. Default is `90`.
+
+```json5
+{
+  // ...
+  "score": 90 // external provider entries must score 90 or higher to be considered
+}
+```
+
+### No External Provider Entries
+
+Rocksky may still return a match *even if no external provider entries were associated.*
+
+You can configure whether a match is still considered valid when no entries are associated by setting `allowNoMatch`. The default is to *allow* matches with no associated entries.
+
+```json5
+{
+  // ...
+  "allowNoMatch": false // consider a match invalid if not associated with an external provider
+```
+
+## Best Practices
+
+### Caching
+
+You **should** setup [metadata caching](/configuration/transforms#caching) to reduce API calls, improve transform performance, and reduce memory usage when using this stage.
+
+### Search Considerations
+
+How complete, and accurate, your scrobble data is from a certain Source should dictate what [Search Methods](#search-methods) you should use for matching.
+
+Rocksky is generally pretty good at finding the *right* match given *mostly* good/consistent data but if you are not confident of the ID-type data in your scrobbles (MBID, ISRC) you should consider omitting these search method types.
+
+<DetailsAdmo type="tip" summary="Matching Scrobbles from Last.fm">
+
+Last.fm is inconsistent when it comes to matching your scrobbles. It will accept (almost) any fields for track/title/album and aggressively attempt to match/correct these, regardless of your intentions.
+
+Unless the client scrobbling to Last.fm is also sending an `mbid`, it's likely your scrobble will not be **consistently** matched correctly and so the `mbid` supplied by last.fm in its scrobble data will be wrong.
+
+Therefore, you should *avoid* using `mbid` and `basicorids` as the primary search methods (or understand the risks of using them). Instead, prefer to use field-based methods *before* falling back to id-based methods.
+
+</DetailsAdmo>
+
+### Using Partial Match
+
+Use [Rules](#rules-and-hooks) to apply Rocksky match data selectively.
+
+If you know that your music collection is well organized and you do not want to change the artists/title/album etc... sent to a [Client](/configuration/clients), you can still benefit from matches by only applying MBID using `meta` so that any Client that supports Musicbrainz data ([Koito](/configuration/clients/koito), [Tealfm](/configuration/clients/tealfm), [Listenbrainz](/configuration/clients/listenbrainz), [Rocksky](/configuration/clients/rocksky)) can still get that data.
+
+:::note
+
+The result of using these Rules is gated by this Stage unless they meet prerequisites. See [**What Data Is Applied?**](#what-data-is-applied)
+
+:::
+
+<details>
+
+<summary>Example</summary>
+
+```json5 title="rocksky.json"
+[
+  { 
+    "name": "Rocky",
+    "configureAs": "client",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "rocksky",
+            "name": "MSDefault",
+            "title": false,
+            "artists": false,
+            "album": false,
+            "albumArtists": false,
+            "meta": true
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+</details>
+
+## Examples
+
+### Minimal
+
+<details>
+
+<summary>Example</summary>
+
+In a [Rocksky Client](/configuration/clients/rocksky) [File Config](/configuration?configType=file#configuration-types):
+
+```json5 title="rocksky.json"
+[
+  { 
+    "name": "Rocky",
+    "configureAs": "client",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "rocksky",
+            "name": "MSDefault"
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+Or using a [Rocksky Client](/configuration/clients/rocksky) with [ENV Config](/configuration?configType=env#configuration-types):
+
+```yaml
+services:
+  multi-scrobbler:
+    image: foxxmd/multi-scrobbler
+    environment:
+      // highlight-start
+       # searches with the searchOrder
+       # isrc => basic
+      - RS_PRESETS=default
+      // highlight-end
+       # ... your source ENVs go here
+       #
+      - ROCKSKY_ID=Rocky
+      - ROCKSKY_HANDLE=alice.bsky.social
+      - ROCKSKY_APP_PW=1234567
+      // highlight-start
+       # applies Rocksky Stage to preTransform of Rocksky Client
+      - ROCKSKY_TRANSFORMS=rocksky
+      // highlight-end
+
+
+    volumes:
+      - "./config:/config"
+    ports:
+      - "9078:9078"
+    restart: unless-stopped
+```
+
+</details>
+
+### Add Metadata Only (No Scrobble Modification)
+
+If you do not want your scrobble data to be modified (artists/album/title) but still want to benefit from associating the scrobble with a Musicbrainz match (for Scrobble [Clients](/configuration/clients) like [Tealfm](/configuration/clients/tealfm), [Rocksky](/configuration/clients/rocksky), and [Koito](/configuration/clients/koito)), then use [Partial Match](#using-partial-match) rules to specify only `meta` to be updated.
+
+<details>
+
+<summary>Example</summary>
+
+In a [Jellyfin](/configuration/sources/jellyfin) [File Config](/configuration?configType=file#configuration-types):
+
+```json5 title="jellyfin.json"
+[
+  { 
+    "name": "MyJellyfin",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "rocksky",
+            "name": "MSDefault",
+            "title": false,
+            "artists": false,
+            "album": false,
+            "albumArtists": false,
+            "meta": true // only update scrobble metadata with MBIDs
+          }
+        ]
+      }
+    }
+  }
+]
+```
+</details>
+
+### Different Search Methods Based on Source (Last.fm and Spotify) {#override-stage-configuration-example}
+
+[Last.fm has unreliable MBIDs](#search-considerations) and Spotify provides an [ISRC](https://musicbrainz.org/doc/ISRC) and consistent formatting.
+
+* For Spotify, we want to rely on ID [searches](#search-methods)
+* For Last.fm, we want to use only text searches and take whatever correction is given to us
+
+Use [**Per Component Overrides**](#rules-and-hooks) to specify different search behavior for each Source.
+
+<details>
+
+<summary>Example</summary>
+
+```json5 title="lastfm.json"
+[
+  { 
+    "name": "MyLFM",
+    "configureAs": "source"
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "rocksky",
+            "name": "MSDefault",
+            "searchArtistMethod": "native"
+            // does not use any ID searches
+            "searchOrder": ["basic", "artist"]
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+```json5 title="spotify.json"
+[
+  { 
+    "name": "MySpotify",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "rocksky",
+            "name": "MSDefault",
+            // use ISRC as first search, then tries searching with title/artist/album/mbid
+            "searchOrder": ["isrc", "basicorids"]
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+</details>
+
+### Use Metadata for Discord Album Art
+
+The [Discord](/configuration/clients/discord) Client can fetch album art images from [Cover Art Archive](http://coverartarchive.org/) if the Scrobble data contains a Release MBID. Use the Rocksky Stage on the `preCompare` hook for your Discord client so that missing Rocksky IDs are populated for this functionality.
+
+<details>
+
+<summary>Example</summary>
+
+<Tabs groupId="configType" queryString>
+    <TabItem value="env" label="ENV">
+    Using the [ENV Configuration](#env-configuration) from above, add these fields to your docker compose `environment:`
+
+    ```yaml
+    - RS_PRESETS=default
+    - DISCORD_TRANSFORMS=rocksky
+    ```
+    </TabItem>
+    <TabItem value="file" label="File">
+    In your [Discord](/configuration/clients/discord) [File Config](/configuration?configType=file#configuration-types):
+
+    ```json5 title="discord.json"
+    [
+      { 
+        "name": "MS",
+        "data": { /* ... */},
+        "options": {
+          "playTransform": {
+            "preCompare": [
+              {
+                "type": "rocksky",
+                "name": "MSDefault"
+              }
+            ]
+          }
+        }
+      }
+    ]
+    ```
+    </TabItem>
+    <TabItem value="aio" label="AIO">
+    Your [AIO Config](/configuration?configType=aio#configuration-types):
+
+    ```json5 title="config.json"
+    {
+      // ...
+      "sources": [
+        { 
+          "name": "MS",
+          "type": "discord",
+          "data": { /* ... */},
+          "options": {
+            "playTransform": {
+              "preCompare": [
+                {
+                  "type": "rocksky",
+                  "name": "MSDefault"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+    ```
+    </TabItem>
+</Tabs>
+
+</details>
