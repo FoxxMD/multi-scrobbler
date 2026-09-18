@@ -10,13 +10,12 @@ import AbstractApiClient from "./AbstractApiClient.ts";
 import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.ts';
 import type {ListenResponse, ListenType, SubmitPayload} from '../../../core/vendor/listenbrainz/interfaces.ts';
 import { playToListenPayload } from './listenbrainz/lzUtils.ts';
-import type {RockskyScrobble} from './rocksky/interfaces.ts';
 import type {Handle} from "@atcute/lexicons";
 import { getATProtoIdentifier, identifierToAtProtoHandle } from './atproto/atUtils.ts';
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
 import { AuthError, ScrobbleSubmitError } from "../errors/MSErrors.ts";
 import { tryApiCall } from "../../utils/RequestUtils.ts";
-import { type CreateScrobbleInput, RockskyClient, Agent, type SongViewDetailed, type ScrobbleInput } from "@rocksky/sdk";
+import { type CreateScrobbleInput, RockskyClient, Agent, type SongViewDetailed, type ScrobbleInput, type ScrobbleViewBasic } from "@rocksky/sdk";
 import { getRoot } from "../../ioc.ts";
 import type { MSCache } from "../Cache.ts";
 import type {HandleData} from "../infrastructure/config/client/atproto.ts";
@@ -586,3 +585,4 @@ const rockskyUriToData = (str: string): { web?: string, playId?: string, user?: 
     }
     return undefined;
 }
+export type RockskyScrobble = ScrobbleViewBasic;
