@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import type { Request, Response } from 'superagent';
 import request from 'superagent';
-import {rockskyRequiredFields, type ArtistCredit, type PlayObject, type PlayObjectMinimal, type RockskyConfidenceField, type RockskyMissingField, type ScrobbleActionResult, type URLData} from "../../../core/Atomic.ts";
+import {rockskyRequiredFields, type ArtistCredit, type LifecycleInput, type PlayObject, type PlayObjectMinimal, type RockskyConfidenceField, type RockskyMissingField, type ScrobbleActionResult, type URLData} from "../../../core/Atomic.ts";
 import { artistCreditsToNames, artistNamesToCredits, nonEmptyStringOrDefault } from "../../../core/StringUtils.ts";
 import { UpstreamError } from "../errors/UpstreamError.ts";
 import type {AbstractApiOptions, FormatPlayObjectOptions} from "../infrastructure/Atomic.ts";
@@ -389,7 +389,7 @@ const playToMatchSongInput = (play: PlayObject): RsMatchSongInput => ({
         album: play.data.album
 })
 
-const mergeSongViewWithPlay = (song: SongViewDetailed, play: PlayObject): PlayObject => {
+const mergeSongViewWithPlay = (song: SongViewDetailedMS, play: PlayObject): PlayObject => {
     const svPlay = songViewToPlay(song);
 
     const mergedPlay: PlayObject = {
@@ -422,17 +422,19 @@ const mergeSongViewWithPlay = (song: SongViewDetailed, play: PlayObject): PlayOb
     return mergedPlay;
 }
 
-export const songViewToPlay = (song: SongViewDetailed): PlayObject => {
+export const songViewToPlay = (song: SongViewDetailedMS): PlayObject => {
 
     let artists: ArtistCredit[] = [],
     albumArtists: ArtistCredit[];
-    if(song.artists !== undefined && song.artists.length > 0) {
+    if(song.mbArtists !== undefined && song.mbArtists !== null && song.mbArtists.length > 0) {
+        artists = song.mbArtists.map(x => ({name: x.name, mbid: x.mbid}));
+    } else if(song.artists !== undefined && song.artists !== null && song.artists.length > 0) {
         artists = song.artists.map(x => ({name: x.name}))
-    } else if(song.artist !== undefined) {
+    } else if(song.artist !== undefined && song.artist !== null) {
         artists = [{name: song.artist}];
     }
 
-    if(song.albumArtist !== undefined) {
+    if(song.albumArtist !== undefined && song.albumArt !== null) {
         if(song.albumArtist === song.artist || stringSameness(song.albumArtist, artists.map(x => x.name).join(',')).highScore > 90) {
             albumArtists = artists;
         } else {
@@ -476,7 +478,7 @@ export const songViewToPlay = (song: SongViewDetailed): PlayObject => {
         }
     }
 
-    return play;
+    return baseFormatPlayObj(song, play);
 }
 
 export const rockskyScrobbleToPlay = (obj: RockskyScrobble, opts: {playId?: string, web?: string, user?: string} = {}): PlayObject => {
@@ -586,3 +588,9 @@ const rockskyUriToData = (str: string): { web?: string, playId?: string, user?: 
     return undefined;
 }
 export type RockskyScrobble = ScrobbleViewBasic;
+
+export interface SongViewDetailedMS extends SongViewDetailed {
+    requestQuery: string;
+    requestQueries?: LifecycleInput[];
+    mbArtists?: { name: string; mbid: string; }[];
+}
