@@ -5,8 +5,12 @@ toc_max_heading_level: 5
 ---
 
 import Bluesky from "@site/src/components/snippets/_bluesky.mdx";
+import Handle from "@site/src/components/snippets/_atmosphere_id.mdx";
 import JsonConfig from '!!raw-loader!@site/../config/rocksky.json.example';
 import ENVConfig from "@site/docs/configuration/clients/_env_configs/_rocksky.md"
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 :::tip[Other Uses]
 
@@ -30,50 +34,74 @@ Atproto PDS access is **public**, meaning your scrobbles are also public (read-o
 
 </DetailsAdmo>
 
-<DetailsAdmo type="important" summary="No Scrobbling Guarantee">
+## Scrobble Data Standards
 
-Rocksky **does not guarantee** that every scrobble you send will be persisted. Rocksky's design goal is to store scrobbles with **metdata-complete, 3rd party verifiable track information** so that it can be a metadata-rich discovery platform, rather than an exhaustive scrobble data source-of-truth.
+:::important
 
-To do this it *asynchronously* matches your scrobble data against Musicbrainz's and/or Spotify's catalogs, *after the scrobble has been submitted.* **If the scrobble does not end up matching then it is not persisted.**
+Rocksky's design goal is to store scrobbles with **metdata-complete, 3rd party verifiable track information** so that it can be a metadata-rich discovery platform.
 
-If you need your scrobbles to be 100% captured then you should scrobble to an *additional* [Scrobble Client](/configuration/clients).
+**It is not intended to be an exhaustive source-of-truth or backup for all your data.**
 
-</DetailsAdmo>
+If you need a client that will accept your data, regardless of its completeness, consistency, or quality, you should consider scrobbling to an *additional* [Scrobble Client](/configuration/clients) like Koito, Maloja, or Listenbrainz.
+
+:::
 
 ## Setup
 
-You will need an [**Atmosphere Account**](https://atmosphereaccount.com/) to use Rocksky.
+You will need an [**Atmosphere Account**](https://atmosphereaccount.com/) (like [Bluesky](https://bsky.app)) to use Rocksky.
 
-* Navigate to [rocksky.app](https://rocksky.app/) and sign up/logn using your Atmosphere Account
-* Then, navigate to the [Access Tokens](https://rocksky.app/access-tokens) in the Rocksky settings dropdown, and create a new token
+Navigate to [rocksky.app](https://rocksky.app/) and sign up/logn using your Atmosphere Account.
+
+Then, use one of the following approaches to configure communication with Rocksky and determine how scrobbling will occur.
+
+<Tabs groupId="rsComm" queryString>
+<TabItem value="pds" label="PDS (Recommended)">
+
+The **PDS** approach enables Multi-Scrobbler to directly scrobble to your account's repository.
+
+This is the recommended approach because MS can verify the [scrobble data quality](#scrobble-data-standards) before it is scrobbled, giving you the ability to get feedback on missing data and the chance to correct or retry the scrobble manually.
+
+<h2>Setup</h2>
+
+Navigate to the Account settings for your Atmosphere account on your respective PDS and create a new **App Password**.
+
+If you don't know what a PDS is or how to find this just use Bluesky:
+
+* Sign in to [Bluesky](https://bsky.app)  with your Atmosphere account
+* Navigate to https://bsky.app/settings/app-passwords
+  * Settings -> Privacy and Security -> App passwords
+* Create a new **App Password** and save it somewhere, it will not be shown again
+
+Use this App Password with ENV as `ROCKSKY_APP_PW` or as `appPassword` in File/AIO configuration.
+
+</TabItem>
+<TabItem value="server" label="Server (Deprecated)">
+
+The **Server** approach has Multi-Scrobbler scrobble to Rocksky's server at `api.rocksky.app`. This is an **asynchronous** process and validation of your data occurs *after* scrobbling has occurred.
+
+This means that MS recieves an "OK" response from Rocksky, but if Rocksky can't [validate the quality of your scrobble data](#scrobble-data-standards) it will delete the scrobble attempt and never add it your account's repository.
+
+:::warning
+
+This approach is **deprecated** and will be removed in a future version of Multi-Scrobbler. You should switch to the **PDS** approach as soon as possible.
+
+:::
+
+<h2>Setup</h2>
+
+Navigate to the [Access Tokens](https://rocksky.app/access-tokens) in the Rocksky settings dropdown, and create a new **token**.
+
+Use this token for the env `ROCKSKY_TOKEN` or `token` field in File/AIO configuration.
+
+
+</TabItem>
+</Tabs>
+
 
 ## Configuration
 
-### Handle
-
-The handle used with multi-scrobbler should be your **full** [**Atmosphere Account**](https://atmosphereaccount.com/) handle, including TLD.
-
-* For regular Bluesky account this will be like: `alice.bsky.social`
-* For Bluesky accounts that [use their website as their account](https://bsky.social/about/blog/4-28-2023-domain-handle-tutorial) this is your domain: `mydomain.com`
-* For non-Bluesky users, you probably already know your handle
-
-If you do not include a TLD then multi-scrobbler will automatically append `.bsky.social` to your handle value.
-
-<DetailsAdmo type="warning" summary="API Applications Deprecated">
-
-In < 0.14.1, Multi-Scrobber used Rocksky's API Appication "API Key" for communication with a Listenbrainz-compatible API from Rocksky.
-
-Going forward, this should be replaced with the official guidance in the [Setup](#setup) section above: use an **Access Token**. This uses the native Rocksky API which has more functionality.
-
-If your configuration is using either
-
-* (File/AIO) `'key': ...`
-* (ENV) `ROCKSKY_KEY`
-
-you should redo the [Setup](#setup) section and modify your configuration to use an Access Token instead.
-
-Keys are now **deprecated** and functionality for them will be removed in a future version of Multi-Scrobbler. 
-
+<DetailsAdmo type="tip" summary="Determining Your Atmosphere Handle/Identifier">
+<Handle/>
 </DetailsAdmo>
 
 <Config config="RockSkyClientConfig" fileContent={JsonConfig} client ambiguous name="rocksky">
