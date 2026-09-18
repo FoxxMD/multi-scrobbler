@@ -17,6 +17,7 @@ export interface PlayTransformPartsAtomic<T> {
     album?: T
     duration?: T
     meta?: T
+    art?: T
 }
 
 export const STAGE_TYPES_USER: StageTypeUser[] = ['user'];
@@ -95,6 +96,7 @@ const buildPartsAtomicSchema = <T extends z.ZodTypeAny>(term: T) => z.object({
         album: term.optional(),
         duration: term.optional(),
         meta: term.optional(),
+        art: term.optional()
     });
 
 const buildWhennablePartschema = <T extends z.ZodTypeAny>(term: T) => z.object({
@@ -106,6 +108,8 @@ const buildWhennablePartschema = <T extends z.ZodTypeAny>(term: T) => z.object({
         albumArtists: term.optional().meta({description: 'A string or regex pattern matching any artist of a Play'}),
         /** A string or regex pattern matching the album of a Play */
         album: term.optional().meta({description: 'A string or regex pattern matching the album of a Play'}),
+        /** A string or regex pattern matching any of the art links for a Play */
+        art: term.optional().meta({description: 'A string or regex pattern matching any of the art links for a Play'}),
     });
 
 const whenPartsStringSchema = buildWhennablePartschema(z.string());

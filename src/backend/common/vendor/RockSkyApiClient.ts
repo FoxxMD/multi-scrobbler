@@ -434,7 +434,7 @@ export const songViewToPlay = (song: SongViewDetailedMS): PlayObject => {
         artists = [{name: song.artist}];
     }
 
-    if(song.albumArtist !== undefined && song.albumArt !== null) {
+    if(song.albumArtist !== undefined && song.albumArtist !== null) {
         if(song.albumArtist === song.artist || stringSameness(song.albumArtist, artists.map(x => x.name).join(',')).highScore > 90) {
             albumArtists = artists;
         } else {
@@ -471,11 +471,16 @@ export const songViewToPlay = (song: SongViewDetailedMS): PlayObject => {
         }
     }
 
-    const match = (song.matches ?? []).length > 0 ? song.matches[0] : undefined;
-    if(match !== undefined) {
-        if(match.albumArt !== undefined) {
-            play.meta.art = {track: match.albumArt};
+    let albumArt = song.albumArt;
+    if(albumArt === undefined) {
+        const match = (song.matches ?? []).length > 0 ? song.matches[0] : undefined;
+        if(match !== undefined && match.albumArt !== undefined) {
+            albumArt = match.albumArt;
         }
+    }
+
+    if(albumArt !== undefined) {
+        play.meta.art = {album: albumArt};
     }
 
     return baseFormatPlayObj(song, play);

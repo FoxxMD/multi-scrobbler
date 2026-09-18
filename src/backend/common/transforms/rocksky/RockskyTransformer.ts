@@ -1,4 +1,4 @@
-import { type ArtistCredit, DEFAULT_ROCKSKY_MISSING_TYPES, type LifecycleInput, type OptionalCacheUsage, type PlayObject, rockskyMissingFields, type RockskyMissingField, type TrackMeta } from "../../../../core/Atomic.ts";
+import { type ArtistCredit, DEFAULT_ROCKSKY_MISSING_TYPES, type LifecycleInput, type OptionalCacheUsage, type PlayObject, rockskyMissingFields, type RockskyMissingField, type TrackMeta, type ArtMeta } from "../../../../core/Atomic.ts";
 import { isWhenCondition, testWhenConditions } from "../../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../../infrastructure/config/health/webhooks.ts";
 import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../../core/Transform.ts";
@@ -642,6 +642,26 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         }
 
         return play.data.meta;
+    }
+
+    protected async handleArt(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<ArtMeta | undefined> {
+        if (parts === false) {
+            return play.meta.art;
+        }
+        if (typeof parts === 'object') {
+            if (parts.when !== undefined) {
+                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
+                    this.logger.debug('When condition for duration not met, returning original duration');
+                    return play.meta.art;
+                }
+            }
+        }
+
+        if(transformData.meta?.art !== undefined && Object.keys(transformData.meta?.art).length > 0) {
+            return transformData.meta?.art;
+        }
+
+        return play.meta.art
     }
 
     public notify(payload: WebhookPayload): Promise<void> {
