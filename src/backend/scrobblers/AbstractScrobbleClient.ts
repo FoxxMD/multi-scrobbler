@@ -378,7 +378,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     protected async postCache(): Promise<void> {
         await super.postCache();
-        this.generateStaggerMappers();
+        await this.generateStaggerMappers();
     }
 
     protected async postDatabase(): Promise<void> {
@@ -396,7 +396,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         await this.updateQueueStats([INGRESS_QUEUE, DEAD_QUEUE]);
     }
 
-    protected generateStaggerMappers() {
+    protected async generateStaggerMappers() {
         const {
             preCompare = [],
             compare: {
@@ -408,7 +408,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             const pcInits: number[] = [0],
             pcMaxStagger: number[] = [];
             for(const hook of preCompare) {
-                const t = this.transformManager.getTransformerByStage({type: hook.type, name: hook.name});
+                const t = await this.transformManager.getTransformerByStage({type: hook.type, name: hook.name});
                 pcInits.push(t.staggerOpts?.initialInterval ?? 0);
                 pcMaxStagger.push(t.staggerOpts?.maxRandomStagger ?? 0)
             }
@@ -419,7 +419,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             const eInits: number[] = [0],
             eMaxStagger: number[] = [];
             for(const hook of existing) {
-                const t = this.transformManager.getTransformerByStage({type: hook.type, name: hook.name});
+                const t = await this.transformManager.getTransformerByStage({type: hook.type, name: hook.name});
                 eInits.push(t.staggerOpts?.initialInterval ?? 0);
                 eMaxStagger.push(t.staggerOpts?.maxRandomStagger ?? 0)
             }

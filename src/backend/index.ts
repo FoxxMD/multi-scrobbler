@@ -188,8 +188,6 @@ const dataDir = getDataDir();
         await notifiers.buildWebhooks(webhooks);
 
         await root.items.transformerManager.registerFromEnv();
-        await root.items.transformerManager.registeryDefaults();
-        await root.items.transformerManager.initTransformers();
 
         /*
         * setup clients

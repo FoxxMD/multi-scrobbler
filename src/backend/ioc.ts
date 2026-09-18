@@ -133,20 +133,10 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
 
     const transformerManager = new TransformerManager(logger, maybeSingletonCache !== undefined ? maybeSingletonCache : cacheFunc());
     for(const c of transformers) {
-        try {
-            transformerManager.register(c);
-        } catch (e) {
-            logger.warn(new Error('Could not register a transformer', {cause: e}));
-        }
+        transformerManager.addTransformerConfig(c);
     }
     if(transformers.length === 0) {
         logger.debug('No user-supplied transformer configs were found.');
-    }
-    if(!transformerManager.hasTransformerType('user')) {
-        transformerManager.register({type: 'user', name: 'MSDefault'});
-    }
-    if(!transformerManager.hasTransformerType('native')) {
-        transformerManager.register({type: 'native', name: 'MSDefault'});
     }
 
     const cacheApi = (maybeSingletonCache !== undefined ? maybeSingletonCache : cacheFunc()).cacheApi;

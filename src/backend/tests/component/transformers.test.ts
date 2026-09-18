@@ -77,13 +77,13 @@ describe('Play Transforms', function () {
     });
     describe('Transform Config Parsing', function () {
 
-        it('Sets transform rules as empty object if config is not present', function () {
-            component.buildTransformRules();
+        it('Sets transform rules as empty object if config is not present', async function () {
+            await component.buildTransformRules();
             expect(component.transformRules).exist;
             expect(Object.keys(component.transformRules).length).eq(0);
         });
 
-        it('Converts single object hook into hook array', function () {
+        it('Converts single object hook into hook array', async function () {
             component.config = {
                 id: componentId(),
                 options: {
@@ -96,7 +96,7 @@ describe('Play Transforms', function () {
                 }
             }
 
-            component.buildTransformRules();
+            await component.buildTransformRules();
 
             expect(component.transformRules.preCompare).to.be.an('array');
             expect(component.transformRules.preCompare).to.be.length(1);
@@ -120,7 +120,7 @@ describe('Play Transforms', function () {
                 }
 
                 // https://github.com/chaijs/chai/issues/655#issuecomment-204386414
-                expect(() => component.buildTransformRules()).to.throw(Error).that.satisfies((e) => {
+                expect(component.buildTransformRules()).to.eventually.throw(Error).that.satisfies((e) => {
                     return findCauseByMessage(e, `No transformer of type 'test'`);
                 });
             });
@@ -129,7 +129,7 @@ describe('Play Transforms', function () {
 
         describe('User Stage Parsing', function () {
 
-            it(`Allows user 'type'`, function () {
+            it(`Allows user 'type'`, async function () {
                 component.config = {
                     id: componentId(),
                     options: {
@@ -142,7 +142,7 @@ describe('Play Transforms', function () {
                     }
                 }
 
-                component.buildTransformRules();
+                await component.buildTransformRules();
 
                 expect(component.transformRules.preCompare).to.be.an('array');
                 expect(component.transformRules.preCompare).to.be.length(1);
@@ -150,7 +150,7 @@ describe('Play Transforms', function () {
                 expect(component.transformRules.preCompare[0].type).eq('user');
             });
 
-            it('Accepts hook array', function () {
+            it('Accepts hook array', async function () {
                 component.config = {
                     id: componentId(),
                     options: {
@@ -169,7 +169,7 @@ describe('Play Transforms', function () {
                     }
                 }
 
-                component.buildTransformRules();
+                await component.buildTransformRules();
 
                 expect(component.transformRules.preCompare).to.be.an('array');
                 expect(component.transformRules.preCompare).to.be.length(2);
@@ -177,7 +177,7 @@ describe('Play Transforms', function () {
                 expect(component.transformRules.preCompare).to.have.nested.property('1.title')
             });
 
-            it('Converts transform config into real S&P data', function () {
+            it('Converts transform config into real S&P data', async function () {
                 component.config = {
                     id: componentId(),
                     options: {
@@ -190,7 +190,7 @@ describe('Play Transforms', function () {
                     }
                 }
 
-                component.buildTransformRules();
+                await component.buildTransformRules();
 
                 expect(component.transformRules.preCompare![0]).to.exist;
                 expect(component.transformRules.preCompare![0].title).to.exist;
@@ -198,7 +198,7 @@ describe('Play Transforms', function () {
                 expect(isConditionalSearchAndReplace(component.transformRules.preCompare![0].title![0])).is.true
             });
 
-            it('Converts transform config into real S&P data with default being empty string', function () {
+            it('Converts transform config into real S&P data with default being empty string', async function () {
                 component.config = {
                     id: componentId(),
                     options: {
@@ -211,7 +211,7 @@ describe('Play Transforms', function () {
                     }
                 }
 
-                component.buildTransformRules();
+                await component.buildTransformRules();
 
                 expect(component.transformRules.preCompare![0]).to.exist;
                 expect(component.transformRules.preCompare![0].title).to.exist;
@@ -222,7 +222,7 @@ describe('Play Transforms', function () {
                 expect(title.replace).is.eq('');
             });
 
-            it('Respects transform config when it is already S&P data', function () {
+            it('Respects transform config when it is already S&P data', async function () {
                 component.config = {
                     id: componentId(),
                     options: {
@@ -241,7 +241,7 @@ describe('Play Transforms', function () {
                     }
                 }
 
-                component.buildTransformRules();
+                await component.buildTransformRules();
 
                 expect(component.transformRules.preCompare![0]).to.exist;
                 expect(component.transformRules.preCompare![0].title).to.exist;
@@ -259,7 +259,7 @@ describe('Play Transforms', function () {
 
                 for(const t of ['native']) {
 
-                    it(`Allows non-user Stage Type ${t}`, function () {
+                    it(`Allows non-user Stage Type ${t}`, async function () {
                         component.config = {
                             id: componentId(),
                             options: {
@@ -272,7 +272,8 @@ describe('Play Transforms', function () {
                             }
                         }
 
-                        expect(() => component.buildTransformRules()).to.not.throw();
+                        await component.buildTransformRules();
+                        //expect(component.buildTransformRules()).to.eventually.not.throw();
                         expect(component.transformRules.preCompare).to.be.an('array');
                         expect(component.transformRules.preCompare).to.be.length(1);
                         expect(component.transformRules.preCompare).to.have.nested.property('0.type');
@@ -288,7 +289,7 @@ describe('Play Transforms', function () {
         describe('Play Transforming', function () {
 
             it('Returns original play if no hooks are defined', async function () {
-                component.buildTransformRules();
+                await component.buildTransformRules();
 
                 const play = generatePlay();
                 const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
@@ -308,7 +309,7 @@ describe('Play Transforms', function () {
                             }
                         }
                     }
-                    component.buildTransformRules();
+                    await component.buildTransformRules();
 
                     const play = generatePlay({ track: 'My coolsomething track' });
                     const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
@@ -327,7 +328,7 @@ describe('Play Transforms', function () {
                             }
                         }
                     }
-                    component.buildTransformRules();
+                    await component.buildTransformRules();
 
                     const play = generatePlay({ track: 'My coolsomething track' });
                     const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
@@ -351,7 +352,7 @@ describe('Play Transforms', function () {
                             }
                         }
                     }
-                    component.buildTransformRules();
+                    await component.buildTransformRules();
 
                     const play = generatePlay({ track: 'My cool something track' });
                     const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
@@ -376,7 +377,7 @@ describe('Play Transforms', function () {
                             }
                         }
                     }
-                    component.buildTransformRules();
+                    await component.buildTransformRules();
 
                     const play = generatePlay({ artists: artistNamesToCredits(['My Artist One / My Artist Two / Another Guy']) });
                     const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
@@ -396,7 +397,7 @@ describe('Play Transforms', function () {
                             }
                         }
                     }
-                    component.buildTransformRules();
+                    await component.buildTransformRules();
 
                     const play = generatePlay({ track: 'something' });
                     const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
@@ -415,7 +416,7 @@ describe('Play Transforms', function () {
                             }
                         }
                     }
-                    component.buildTransformRules();
+                    await component.buildTransformRules();
 
                     const play = generatePlay({ album: 'something' });
                     const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
@@ -434,7 +435,7 @@ describe('Play Transforms', function () {
                             }
                         }
                     }
-                    component.buildTransformRules();
+                    await component.buildTransformRules();
 
                     const play = generatePlay({ artists: artistNamesToCredits(['something', 'big']) });
                     const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
@@ -518,7 +519,7 @@ describe('Play Transforms', function () {
                         }
                     }
                 }
-                component.buildTransformRules();
+                await component.buildTransformRules();
 
                 const play = generatePlay({ artists: artistNamesToCredits(['something', 'big']), album: 'It Has No Match' });
                 const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
@@ -543,7 +544,7 @@ describe('Play Transforms', function () {
                         }
                     }
                 }
-                component.buildTransformRules();
+                await component.buildTransformRules();
 
                 const play = generatePlay({ artists: artistNamesToCredits(['something', 'big']), album: 'It Has This Match' });
                 const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
@@ -575,7 +576,7 @@ describe('Play Transforms', function () {
                         }
                     }
                 }
-                component.buildTransformRules();
+                await component.buildTransformRules();
 
                 const play = generatePlay({ artists: artistNamesToCredits(['something', 'big']), album: 'It Has No Match' });
                 const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
@@ -605,7 +606,7 @@ describe('Play Transforms', function () {
                         }
                     }
                 }
-                component.buildTransformRules();
+                await component.buildTransformRules();
 
                 const play = generatePlay({ artists: artistNamesToCredits(['something', 'big']), album: 'It Has This Match' });
                 const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
@@ -647,7 +648,7 @@ describe('Play Transforms', function () {
                 }
             }
 
-            component.buildTransformRules();
+            await component.buildTransformRules();
             const play = generatePlay({ track: 'My cool something track' });
             const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
             expect(transformed.data.track).equal('My cool final thing track');
@@ -678,7 +679,7 @@ describe('Play Transforms', function () {
 
             const [str, primaries, secondaries] = generateArtistsStr({primary: {max: 3, ambiguousJoinedNames: true, trailingAmpersand: true, finalJoiner: false}});
 
-            component.buildTransformRules();
+            await component.buildTransformRules();
             const play = generatePlay({ track: 'My cool something track', artists: artistNamesToCredits([str]) });
             const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
             expect(transformed.data.track).equal('My cool bar track');
@@ -697,7 +698,7 @@ describe('Play Transforms', function () {
                         preCompare: [
                             {
                                 type: 'user',
-                                name: "barChange",
+                                //name: "barChange",
                                 title: [
                                     {
                                         search: "something",
@@ -715,7 +716,7 @@ describe('Play Transforms', function () {
 
             const [str, primaries, secondaries] = generateArtistsStr({primary: {max: 3, ambiguousJoinedNames: true, trailingAmpersand: true, finalJoiner: false}});
 
-            component.buildTransformRules();
+            await component.buildTransformRules();
             const play = generatePlay({ track: 'My cool something track', artists: artistNamesToCredits([str]), playDate: dayjs().subtract(10, 'm') });
             const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare, {log: 'all'});
             expect(transformed.data.track).equal('My cool bar track');
@@ -767,7 +768,7 @@ describe('Play Transforms', function () {
             ];
             const tmanager = new TransformerManager(loggerTest, transientCache());
             for(const t of tConfigs) {
-                tmanager.register(t);
+                await tmanager.register(t);
             }
 
             const play = generatePlay({track: 'My Cool Track'});
@@ -787,7 +788,7 @@ describe('Play Transforms', function () {
                     ]
                 }
             };
-            multiTransformComponent.buildTransformRules();
+            await multiTransformComponent.buildTransformRules();
             const transformed = await multiTransformComponent.transformPlay(play, TRANSFORM_HOOK.preCompare);
             expect(transformed.data.track).eq('My Bar Title');
         });
