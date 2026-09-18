@@ -5,15 +5,13 @@ import asPromised from 'chai-as-promised';
 import { before, describe, it } from 'mocha';
 import { initMemoryCache } from "../../common/Cache.ts";
 import { Cacheable } from "cacheable";
-import { DEFAULT_MISSING_TYPES, DEFAULT_ROCKSKY_MISSING_TYPES, type PlayObject } from "../../../core/Atomic.ts";
+import { DEFAULT_ROCKSKY_MISSING_TYPES, type PlayObject } from "../../../core/Atomic.ts";
 import { getPathFromCWD } from '../../common/index.ts';
 import path from 'path';
-import { generatePlay, withBrainz } from '../../../core/tests/utils/PlayTestUtils.ts';
-import { intersect, missingMbidTypes } from '../../utils.ts';
 import { artistNamesToCredits } from '../../../core/StringUtils.ts';
 import type { RockskyApiClientConfig } from '../../common/vendor/rocksky/interfaces.ts';
 import type { MarkRequired } from 'ts-essentials';
-import RockskyTransformer, { DEFAULT_SEARCHTYPE_ORDER } from '../../common/transforms/RockskyTransformer.ts';
+import RockskyTransformer, { DEFAULT_SEARCHTYPE_ORDER } from '../../common/transforms/rocksky/RockskyTransformer.ts';
 
 chai.use(asPromised);
 

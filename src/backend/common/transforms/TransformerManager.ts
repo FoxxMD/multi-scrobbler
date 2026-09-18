@@ -11,7 +11,9 @@ import MusicbrainzTransformer, { configFromEnv, type MusicbrainzTransformerConfi
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { nanoid } from "nanoid";
 import { SimpleError, StageTransformError } from "../errors/MSErrors.ts";
-import RockskyTransformer, { type RockskyTransformerConfig, configFromEnv as rsConfigFromEnv } from "./RockskyTransformer.ts";
+import RockskyTransformer from "./rocksky/RockskyTransformer.ts";
+import { configFromEnv as rsConfigFromEnv } from "./rocksky/RockskyTransformerUtil.ts";
+import { type RockskyTransformerConfig } from "../vendor/rocksky/interfaces.ts";
 
 export default class TransformerManager {
 

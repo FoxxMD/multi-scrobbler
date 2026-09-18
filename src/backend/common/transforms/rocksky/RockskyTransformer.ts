@@ -1,53 +1,30 @@
-import { type ArtistCredit, DEFAULT_ROCKSKY_MISSING_TYPES, type LifecycleInput, type OptionalCacheUsage, type PlayObject, rockskyMissingFields, type RockskyMissingField, type TrackMeta, type TransformerCommon, type TransformOptions } from "../../../core/Atomic.ts";
-import { isWhenCondition, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
-import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";
-import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../core/Transform.ts";
-import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
-import type {TransformerOptions} from "./AbstractTransformer.ts";
-import { ARTIST_WEIGHT, TITLE_WEIGHT } from "../infrastructure/Atomic.ts";
-import { DELIMITERS } from '../../../core/Atomic.ts';
-import { MaybeLogger } from '../MaybeLogger.ts';
+import { type ArtistCredit, DEFAULT_ROCKSKY_MISSING_TYPES, type LifecycleInput, type OptionalCacheUsage, type PlayObject, rockskyMissingFields, type RockskyMissingField, type TrackMeta } from "../../../../core/Atomic.ts";
+import { isWhenCondition, testWhenConditions } from "../../../utils/PlayTransformUtils.ts";
+import type {WebhookPayload} from "../../infrastructure/config/health/webhooks.ts";
+import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../../core/Transform.ts";
+import AtomicPartsTransformer from "../AtomicPartsTransformer.ts";
+import type {TransformerOptions} from "../AbstractTransformer.ts";
+import { ARTIST_WEIGHT, TITLE_WEIGHT } from "../../infrastructure/Atomic.ts";
+import { DELIMITERS } from '../../../../core/Atomic.ts';
+import { MaybeLogger } from '../../MaybeLogger.ts';
 import { childLogger } from "@foxxmd/logging";
-import { type UsingTypes } from "../vendor/musicbrainz/MusicbrainzApiClientPool.ts";
-import { difference } from "../../utils.ts";
-import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
-import { SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../errors/MSErrors.ts";
-import { scoreNormalizedStringsWeighted } from "../../utils/StringUtils.ts";
+import { type UsingTypes } from "../../vendor/musicbrainz/MusicbrainzApiClientPool.ts";
+import { difference } from "../../../utils.ts";
+import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
+import { SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../../errors/MSErrors.ts";
+import { scoreNormalizedStringsWeighted } from "../../../utils/StringUtils.ts";
 import clone from "clone";
 import type { Cacheable } from "cacheable";
-import { artistCreditsToNames, splitByFirstRegexFound } from "../../../core/StringUtils.ts";
-import { nativeParse } from "./NativeTransformer.ts";
-import { comparePlayArtistsNormalized, scoreTrackWeightedAndNormalized } from "../../utils/PlayComparisonUtils.ts";
-import * as z from 'zod';
-import { hasRequiredScrobbleFields, hasScrobbleConfidenceFields, songViewToPlay } from "../vendor/RockSkyApiClient.ts";
+import { artistCreditsToNames, splitByFirstRegexFound } from "../../../../core/StringUtils.ts";
+import { nativeParse } from "../NativeTransformer.ts";
+import { comparePlayArtistsNormalized, scoreTrackWeightedAndNormalized } from "../../../utils/PlayComparisonUtils.ts";
+import { hasRequiredScrobbleFields, hasScrobbleConfidenceFields, songViewToPlay } from "../../vendor/RockSkyApiClient.ts";
 import { RockskyError, type SongMatchView, type SongViewDetailed } from "@rocksky/sdk";
-import { RockskyClientPool } from "../vendor/rocksky/RockskyClientWrapped.ts";
-import type { RockskyApiClientConfig } from "../vendor/rocksky/interfaces.ts";
-
-const searchType = z.enum(['basic','basicorids','mbid','isrc','artist']);
-export type SearchType = z.infer<typeof searchType>;
+import { RockskyClientPool } from "../../vendor/rocksky/RockskyClientWrapped.ts";
+import type { RockskyTransformerConfig, RockskyTransformerData } from "../../vendor/rocksky/interfaces.ts";
+import { type SearchType, searchType } from "./RockskyTransformerUtil.ts";
 
 export const DEFAULT_SEARCHTYPE_ORDER: SearchType[] = ['isrc','basic'];
-
-export interface RockskyTransformerData {
-    searchWhenMissing?: RockskyMissingField[]
-    forceSearch?: boolean
-    score?: number
-    allowNoMatch?: boolean
-    logPreMbid?: boolean
-    searchOrder?: SearchType[]
-    searchArtistMethod?: ('naive' | 'native')
-
-    /** Ignore album artist if it is "Various Artists"
-     * 
-     * @default true
-     */
-    ignoreVA?: boolean
-
-    titleWeight?: number | true
-    artistWeight?: number | true
-    albumWeight?: number | true
-}
 
 export interface RockskyTransformerDataStrong extends RockskyTransformerData {
     searchWhenMissing: RockskyMissingField[]
@@ -59,8 +36,6 @@ export interface RockskyTransformerDataStrong extends RockskyTransformerData {
 
 export interface RockskyTransformerDataStage extends RockskyTransformerDataStrong,PlayTransformMetadataStage {
 }
-
-export type RockskyTransformerConfig = TransformerCommon<RockskyTransformerData, RockskyApiClientConfig> & {options?: TransformOptions & {logUrl?: boolean}}
 
 interface SongViewDetailedMS extends SongViewDetailed {
     requestQuery: string
@@ -643,78 +618,6 @@ export const rankSongMatchesByPriority = (list: SongMatchView[], stageConfig: Ro
     })
     return cList;
 };
-
-export const DEFAULTS_NATIVE: RockskyTransformerData = {
-    "searchArtistMethod": "native",
-    "searchOrder": ["artist"]
-}
-
-export const DEFAULTS_FIELDS_BIAS = {
-    "titleWeight": 0.33,
-    "albumWeight": 0.33,
-    "artistWeight": 0.33
-}
-
-export const DEFAULTS_PRESET: RockskyTransformerData = {
-    "searchOrder": ["isrc", "basic"]
-}
-
-export const DEFAULTS_ID: RockskyTransformerData = {
-    "searchOrder": ["isrc", "mbid", "basicorids", "basic"]
-};
-
-const PRESETS: Record<string, RockskyTransformerData> = {
-    default: DEFAULTS_PRESET,
-    sensible: DEFAULTS_ID,
-    native: DEFAULTS_NATIVE,
-    fields: {...DEFAULTS_FIELDS_BIAS, ...DEFAULTS_PRESET},
-    'id': DEFAULTS_ID
-}
-
-export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
-    const rsEnv = process.env.RS_PRESETS;
-    let rsConfig: RockskyTransformerConfig;
-    if (rsEnv !== undefined && rsEnv.trim() !== '') {
-        rsConfig = {
-            type: 'rocksky',
-            name: 'MSRockskyDefault',
-        data: {
-                apis: [
-                    {
-                        enable: true
-                    }
-                ]
-            },
-            defaults: {
-
-            }
-        }
-        const presets = rsEnv.split(',').map(x => x.trim().toLocaleLowerCase());
-        const soSet = new Set<SearchType>();
-        for (const pName of presets) {
-            const p = PRESETS[pName];
-            if(p === undefined) {
-                logger.warn(`No preset with name '${p}'`);
-                continue;
-            }
-            const { searchOrder = [], ...rest } = p;
-            rsConfig.defaults = {
-                ...rsConfig.defaults,
-                ...rest,
-            }
-            for (const o of searchOrder) {
-                soSet.add(o);
-            }
-        }
-        
-        if(soSet.size > 0) {
-            rsConfig.defaults.searchOrder = Array.from(soSet);
-        }
-        logger.debug(`Using presets: ${presets.join(',')}`);
-    }
-
-    return rsConfig;
-}
 
 export class SearchPrerequisiteError extends SimpleError {
     name = 'Search Prerequistie Failure';
