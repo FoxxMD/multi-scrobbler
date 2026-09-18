@@ -1,6 +1,6 @@
 import { strategies, stringSameness, type StringSamenessResult } from "@foxxmd/string-sameness";
 import { hasher } from 'node-object-hash';
-import type {PlayObject} from "../../core/Atomic.ts";
+import type {ArtistCredit, PlayObject} from "../../core/Atomic.ts";
 import { asPlayerStateData, type PlayerStateDataMaybePlay } from "../common/infrastructure/Atomic.ts";
 import { DELIMITERS_NO_AMP } from '../../core/Atomic.ts';
 import { DELIMITERS } from '../../core/Atomic.ts';
@@ -314,6 +314,10 @@ export const compareScrobbleArtists = (existing: PlayObject, candidate: PlayObje
         }
     } = candidate;
 
+    return compareNormalizedStrings(existingArtists.reduce((acc, curr) => `${acc} ${curr.name}`, ''), candidateArtists.reduce((acc, curr) => `${acc} ${curr.name}`, '')).highScore;
+}
+
+export const compareScrobbleArtistCredits = (existingArtists: ArtistCredit[], candidateArtists: ArtistCredit[]): number => {
     return compareNormalizedStrings(existingArtists.reduce((acc, curr) => `${acc} ${curr.name}`, ''), candidateArtists.reduce((acc, curr) => `${acc} ${curr.name}`, '')).highScore;
 }
 

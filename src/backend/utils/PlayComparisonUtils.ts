@@ -1,9 +1,9 @@
 import { getListDiff, type ListDiff } from "@donedeal0/superdiff";
-import { type AcceptableTemporalDuringReference, type PlayMatchResult, type PlayObject, type PlayObjectMinimal, SOURCE_SOT, type SOURCE_SOT_TYPES, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy, type TrackStringOptions } from "../../core/Atomic.ts";
+import { type AcceptableTemporalDuringReference, type ArtistCredit, type PlayMatchResult, type PlayObject, type PlayObjectMinimal, SOURCE_SOT, type SOURCE_SOT_TYPES, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy, type TrackStringOptions } from "../../core/Atomic.ts";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
 import { comparingMultipleArtists, playObjDataMatch, setIntersection } from "../utils.ts";
 import { comparePlayTemporally, hasAcceptableTemporalAccuracy, temporalAccuracyToString, type TemporalPlayComparisonOptions, temporalPlayComparisonSummary } from "./TimeUtils.ts";
-import { compareNormalizedStrings, compareScrobbleArtists, compareScrobbleTracks, compareTracks, normalizeStr, type TrackSamenessResults } from "./StringUtils.ts";
+import { compareNormalizedStrings, compareScrobbleArtistCredits, compareScrobbleArtists, compareScrobbleTracks, compareTracks, normalizeStr, type TrackSamenessResults } from "./StringUtils.ts";
 import { ARTIST_WEIGHT, DUP_SCORE_THRESHOLD, type ScrobbledPlayObject, TIME_WEIGHT, TITLE_WEIGHT } from "../common/infrastructure/Atomic.ts";
 import type {StringSamenessResult} from "@foxxmd/string-sameness";
 import type {Duration} from "dayjs/plugin/duration.js";
@@ -319,6 +319,14 @@ export const comparePlayArtistsNormalized = (existing: PlayObject, candidate: Pl
 
     const wholeMatches = setIntersection(new Set(normExisting), new Set(candidateExisting)).size;
     return [Math.min(compareScrobbleArtists(existing, candidate)/100, 1), wholeMatches]
+}
+
+export const compareArtistCreditsNormalized = (existingArtists: ArtistCredit[], candidateArtists: ArtistCredit[]): [number, number] => {
+    const normExisting = existingArtists.map(x => normalizeStr(x.name, {keepSingleWhitespace: true}));
+    const candidateExisting = candidateArtists.map(x => normalizeStr(x.name, {keepSingleWhitespace: true}));
+
+    const wholeMatches = setIntersection(new Set(normExisting), new Set(candidateExisting)).size;
+    return [Math.min(compareScrobbleArtistCredits(existingArtists, candidateArtists)/100, 1), wholeMatches]
 }
 
 export const comparePlayTracksNormalized = (existing: PlayObject, candidate: PlayObject): [number,TrackSamenessResults]  => {

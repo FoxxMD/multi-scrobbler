@@ -12,14 +12,14 @@ import { type UsingTypes } from "../../vendor/musicbrainz/MusicbrainzApiClientPo
 import { difference } from "../../../utils.ts";
 import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
 import { SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../../errors/MSErrors.ts";
-import { scoreNormalizedStringsWeighted } from "../../../utils/StringUtils.ts";
+import { parseArtistCredits, scoreNormalizedStringsWeighted } from "../../../utils/StringUtils.ts";
 import clone from "clone";
 import type { Cacheable } from "cacheable";
 import { artistCreditsToNames, splitByFirstRegexFound } from "../../../../core/StringUtils.ts";
 import { nativeParse } from "../NativeTransformer.ts";
-import { comparePlayArtistsNormalized, scoreTrackWeightedAndNormalized } from "../../../utils/PlayComparisonUtils.ts";
-import { hasRequiredScrobbleFields, hasScrobbleConfidenceFields, songViewToPlay } from "../../vendor/RockSkyApiClient.ts";
-import { RockskyError, type SongMatchView, type SongViewDetailed } from "@rocksky/sdk";
+import { compareArtistCreditsNormalized, comparePlayArtistsNormalized, scoreTrackWeightedAndNormalized } from "../../../utils/PlayComparisonUtils.ts";
+import { hasRequiredScrobbleFields, hasScrobbleConfidenceFields, type SongViewDetailedMS, songViewToPlay } from "../../vendor/RockSkyApiClient.ts";
+import { RockskyError, type SongMatchView } from "@rocksky/sdk";
 import { RockskyClientPool } from "../../vendor/rocksky/RockskyClientWrapped.ts";
 import type { RockskyTransformerConfig, RockskyTransformerData } from "../../vendor/rocksky/interfaces.ts";
 import { type SearchType, searchType } from "./RockskyTransformerUtil.ts";
@@ -35,12 +35,6 @@ export interface RockskyTransformerDataStrong extends RockskyTransformerData {
 }
 
 export interface RockskyTransformerDataStage extends RockskyTransformerDataStrong,PlayTransformMetadataStage {
-}
-
-interface SongViewDetailedMS extends SongViewDetailed {
-    requestQuery: string
-    requestQueries?: LifecycleInput[]
-    mbArtists?: {name: string, mbid: string}[]
 }
 
 export const parseStageConfig = (data: RockskyTransformerData | undefined = {}, logger: MaybeLogger = new MaybeLogger()): RockskyTransformerDataStrong => {
@@ -514,6 +508,28 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
             if (parts.when !== undefined) {
                 if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
                     this.logger.debug('When condition for artists not met, returning original artists');
+                    return play.data.artists;
+                }
+            }
+        }
+
+        // try to determine if new artist is a concatenated string of separate artists
+        // using the original artist data
+        if((play.data.artists ?? []).length > 1 && (transformData.data.artists ?? []).length === 1) {
+            // possible our original data is more accurate
+            // or is the same set of artists but in a nice list instead of a single string.
+            // if this is the case then keep the original so we don't lose fidelity
+
+            // since we aren't using MB mappings we should be conservative and assume artist string with & are proper names (not joiner)
+            const parsed = parseArtistCredits(transformData.data.artists[0].name, [',', '/', '\\']);
+            if(parsed !== undefined) {
+                let parsedCredits: ArtistCredit[] = [{name: parsed.primary}];
+                if(parsed.secondary !== undefined) {
+                    parsedCredits = parsedCredits.concat(parsed.secondary.map(x => ({name: x})));
+                }
+                const [score, wholeMatches] = compareArtistCreditsNormalized(play.data.artists, parsedCredits);
+                if(score > 90) {
+                    // enough confidence to say artists are the same as the original
                     return play.data.artists;
                 }
             }
