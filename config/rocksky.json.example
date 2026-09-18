@@ -4,7 +4,7 @@
     "name": "FoxxMD Rocksky Client",
     "configureAs": "client",
     "data": {
-      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaWQiOiJkaWQ6cGxjOng0NjVwZmtyeW5zaDZ...",
+      "appPassword": "l95n-0ndl-2jj7-b1p4",
       "handle": "alice.bsky.social"
     }
   },
