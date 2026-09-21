@@ -164,26 +164,32 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
     }
 
     protected async doHydrateHistoricalScrobbles(opts: {allowFailures?: boolean, signal?: AbortSignal } = {}) {
-        const logger =  childLogger(this.logger, ['Historical Plays']);
-        const {
-            allowFailures = false,
-            signal
-        } = opts;
-        let file: string;
         try {
-            logger.verbose('Fetching scrobbles from PDS...');
-            file = await this.fetchCarToFile();
-            signal?.throwIfAborted();
-        } catch (e) {
-            throw new Error('Failed to fetch repo CAR', {cause: e});
-        }
+            const logger =  childLogger(this.logger, ['Historical Plays']);
+            const {
+                allowFailures = false,
+                signal
+            } = opts;
+            let file: string;
+            try {
+                logger.verbose('Fetching scrobbles from PDS...');
+                file = await this.fetchCarToFile();
+                signal?.throwIfAborted();
+            } catch (e) {
+                throw new Error('Failed to fetch repo CAR', {cause: e});
+            }
 
-        try {
-            await this.parseScrobblesFromCar(file, 100, {allowFailures, logger: logger, signal});
+            try {
+                await this.parseScrobblesFromCar(file, 100, {allowFailures, logger: logger, signal});
+            } catch (e) {
+                throw new Error('Failed to convert CAR without any error', {cause: e});
+            } finally {
+                await fsPromise.rm(file);
+            }
         } catch (e) {
-            throw new Error('Failed to convert CAR without any error', {cause: e});
-        } finally {
-            await fsPromise.rm(file);
+            const historicalWarnings = new Error('Unable to hydrate historical plays. The client will still work but may not be able to catch all duplicates.', {cause: e});
+            this.warnings.push(historicalWarnings);
+            this.logger.warn(historicalWarnings);
         }
     }
 
