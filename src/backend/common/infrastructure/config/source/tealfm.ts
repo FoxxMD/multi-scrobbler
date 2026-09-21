@@ -5,10 +5,10 @@ import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSch
 
 export const tealSourceDataSchema = z.object({
     identifier: tealDataSchema.shape.identifier.meta(tealDataSchema.shape.identifier.meta()),
-    ...commonSourceDataSchema.shape,
-    ...pollingOptionsSchema.shape,
     serviceAllow: z.array(z.string()).optional(),
     serviceDeny: z.array(z.string()).optional(),
+    ...commonSourceDataSchema.shape,
+    ...pollingOptionsSchema.shape,
 });
 
 export type TealSourceData = z.infer<typeof tealSourceDataSchema>;

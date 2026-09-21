@@ -3,6 +3,6 @@
 | _**`ROCKSKY_ID`**_     | string  |                       | A globally unique ID EX `myComponentId`                                                                  |
 | `ROCKSKY_NAME`         | string  | Value of `ROCKSKY_ID` | A vanity name EX `My Cool Component`                                                                     |
 | `ROCKSKY_ENABLE`       | boolean | true                  | Should this component be used?                                                                           |
-| `ROCKSKY_TOKEN`        | string  |                       | Access Token generated from https://rocksky.app/access-tokens in Rocksky for your account                |
 | _**`ROCKSKY_HANDLE`**_ | string  |                       | The **fully-qualified** handle, or identifier, for your Atmosphere account                               |
 | `ROCKSKY_APP_PW`       | string  |                       | The [App Password](https://atproto.com/specs/xrpc#app-passwords) you created for your Atmosphere account |
+| `ROCKSKY_TOKEN`        | string  |                       | (DEPRECATED) Access Token generated from https://rocksky.app/access-tokens in Rocksky for your account   |

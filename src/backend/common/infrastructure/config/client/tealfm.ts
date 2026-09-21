@@ -5,21 +5,19 @@ import {atProtoAppDataSchema, atProtoUserIdentifierDataSchema} from "./atproto.t
 import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema, type EnvClientSchema} from "./index.ts";
 
 export const tealDataSchema = z.object({
-    ...requestRetryOptionsSchema.shape,
-    //...atProtoUserIdentifierDataSchema.shape,
-    ...atProtoAppDataSchema.shape,
-    appPassword: atProtoAppDataSchema.shape.appPassword.optional().meta(atProtoAppDataSchema.shape.appPassword.meta()),
     identifier: atProtoUserIdentifierDataSchema.shape.identifier.meta({
         description: "The **fully-qualified** handle, or identifier, for your Atmosphere account"
     }),
-    /**
-     * The base URI of the Multi-Scrobbler to use for ATProto OAuth
-     *
-     * Only include this if you want to use OAuth. The URI must be a non-IP/non-local domain using https: protocol.
-    */
-    baseUri: z.string().optional().meta({
-        description: "The base URI of the Multi-Scrobbler to use for ATProto OAuth"
-    }),
+    appPassword: atProtoAppDataSchema.shape.appPassword.meta(atProtoAppDataSchema.shape.appPassword.meta()),
+    // /**
+    //  * The base URI of the Multi-Scrobbler to use for ATProto OAuth
+    //  *
+    //  * Only include this if you want to use OAuth. The URI must be a non-IP/non-local domain using https: protocol.
+    // */
+    // baseUri: z.string().optional().meta({
+    //     description: "The base URI of the Multi-Scrobbler to use for ATProto OAuth"
+    // }),
+    ...requestRetryOptionsSchema.shape,
 });
 
 export type TealData = z.infer<typeof tealDataSchema>;

@@ -4,17 +4,6 @@ import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSch
 import { atProtoAppDataSchema } from "./atproto.ts";
 
 export const rockSkyDataSchema = z.object({
-    ...requestRetryOptionsSchema.shape,
-
-    /**
-     * Access Token generated from https://rocksky.app/access-tokens in Rocksky for your account
-     *
-     * @examples ["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaWQ....."]
-     * */
-    token: z.string().optional().meta({
-        description: "Access Token generated from https://rocksky.app/access-tokens in Rocksky for your account",
-        examples: ["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaWQ....."]
-    }),
 
     /**
      * The **fully-qualified** handle for your ATPRoto/Bluesky account, like:
@@ -27,16 +16,26 @@ export const rockSkyDataSchema = z.object({
     handle: z.string().meta({
         description: "The **fully-qualified** handle, or identifier, for your Atmosphere account"
     }),
-
-    appPassword: atProtoAppDataSchema.shape.appPassword.optional().meta(atProtoAppDataSchema.shape.appPassword.meta())
+    appPassword: atProtoAppDataSchema.shape.appPassword.optional().meta(atProtoAppDataSchema.shape.appPassword.meta()),
+    /**
+     * Access Token generated from https://rocksky.app/access-tokens in Rocksky for your account
+     *
+     * @examples ["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaWQ....."]
+     * */
+    token: z.string().optional().meta({
+        description: "(DEPRECATED) Access Token generated from https://rocksky.app/access-tokens in Rocksky for your account",
+        examples: ["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaWQ....."],
+        deprecated: true
+    }),
+    ...requestRetryOptionsSchema.shape,
 });
 
 export type RockSkyData = z.infer<typeof rockSkyDataSchema>;
 
 const envDataSchema = z.object({
-    ROCKSKY_TOKEN: rockSkyDataSchema.shape.token,
     ROCKSKY_HANDLE: rockSkyDataSchema.shape.handle,
-    ROCKSKY_APP_PW: rockSkyDataSchema.shape.appPassword
+    ROCKSKY_APP_PW: rockSkyDataSchema.shape.appPassword,
+    ROCKSKY_TOKEN: rockSkyDataSchema.shape.token,
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, RockSkyClientConfig> = {
@@ -45,9 +44,9 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, RockSkyClientConf
     toConfig: (partial) => ({
             configureAs: 'client',
             data: {
-                token: partial.ROCKSKY_TOKEN,
                 handle: partial.ROCKSKY_HANDLE,
-                appPassword: partial.ROCKSKY_APP_PW
+                appPassword: partial.ROCKSKY_APP_PW,
+                token: partial.ROCKSKY_TOKEN,
             }
     })
 };
