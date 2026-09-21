@@ -163,3 +163,4 @@ bun.lock
 
 *.car
 *-rsindex/
+.claude/
