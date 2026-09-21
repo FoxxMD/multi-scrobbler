@@ -187,12 +187,26 @@ For more refer to the TS documentation for `PlayObject` or `AmbPlayObject` in yo
 
 ## Profiling
 
-Run tsx with inspect args
+Run node with inspect args
 
 ```
-NODE_ENV=production node node_modules/.bin/tsx --inspect --heap-prof src/backend/index.ts
+NODE_ENV=production node --inspect --heap-prof src/backend/index.ts
 ```
 
 Use `chrome://inspect` from a chromium-based browser and attach to the running process, usually `localhost:9229`
 
 From the opened DevTools window use Performance or Memory to profile the running process.
+
+:::tip
+
+To profile/inspect the production docker image use `NODE_ARGS` env:
+
+```yaml
+services:
+  multi-scrobbler:
+    # ...
+    environment:
+      # ...
+      - NODE_ARGS=--inspect=0.0.0.0:9229 --heap-prof
+```
+:::
