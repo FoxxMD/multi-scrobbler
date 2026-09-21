@@ -493,7 +493,7 @@ export const playToActorTrackView = (play: PlayObject): ActorTrackView => remove
     artist: artistCreditsToNames(play.data.artists).join(', '),
     album: play.data.album,
     albumCoverUrl: play.meta.art?.track ?? play.meta.art?.album ?? play.meta.art?.artist,
-    durationMs: play.data.duration,
+    durationMs: play.data.duration !== undefined ? Math.floor(play.data.duration * 1000) : undefined,
     source: play.meta.musicService,
     recordingMbId: play.data.meta?.brainz?.recording
  })
