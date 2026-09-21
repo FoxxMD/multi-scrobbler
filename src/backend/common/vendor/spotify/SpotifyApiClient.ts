@@ -109,9 +109,10 @@ export class SpotifyApiClient extends AbstractApiClient {
             // and a fuzzy rank pass happens afterwards to confirm the rest of the artist credits
             parts.push(`artist:${luceneQuoteIfNeeded(play.data.artists[0].name)}`);
         }
-        if (play.data.album !== undefined) {
-            parts.push(`album:${luceneQuoteIfNeeded(play.data.album)}`);
-        }
+        // intentionally NOT filtering by album here -- unlike Musicbrainz's fuzzy Lucene backend, Spotify's field
+        // search is literal, so ANDing album into the query causes near-total misses whenever the track's Spotify
+        // album metadata differs even slightly from the scrobble (singles, re-releases, etc). Album confirmation
+        // happens afterwards via fuzzy ranking instead.
 
         const q = parts.join(' ');
         const cacheKey = `spotify-search-${hashObject({ q, limit, market })}`;
