@@ -213,6 +213,9 @@ export const transformPresetEnv = <T extends CommonClientOptions = CommonClientO
             case 'rocksky':
                 popts.preCompare.push({ type: 'rocksky' });
                 break;
+            case 'spotify':
+                popts.preCompare.push({ type: 'spotify' });
+                break;
         }
     }
 

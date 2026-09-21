@@ -1,0 +1,341 @@
+---
+title: Spotify Stage
+description: Enhancing Scrobbles with Spotify
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+The **Spotify** [Stage](/configuration/transforms#stage) matches your Play data with the [Spotify](https://open.spotify.com/) catalog, using the [Spotify Web API](https://developer.spotify.com/documentation/web-api). If the match is confident enough then Multi-Scrobbler uses it to correct and fill-in missing information in your Play data.
+
+**This Stage is useful for standardizing your Scrobble's Play data, regardless of the Source it is coming from**, and is a good complement (or alternative) to the [Musicbrainz Stage](/configuration/transforms/musicbrainz) if you'd prefer matches to come from Spotify's own catalog.
+
+:::tip
+
+If you are using [ENV Config](/configuration?config-type=env#configuration-types) for multi-scrobbler and just want a quick and easy setup, skip to [**ENV Configuration**](#env-configuration).
+
+:::
+
+:::tip
+
+Set up [Valkey Caching](/configuration?cachedThings=metadata#caching) to cache Spotify API calls for faster processing.
+
+:::
+
+## Configuration
+
+### API Setup
+
+This Stage uses Spotify's [Client Credentials Flow](https://developer.spotify.com/documentation/web-api/tutorials/client-credentials-flow) to search/lookup the Spotify catalog. This does **not** require a user to log in -- only an app `clientId`/`clientSecret` is needed. [Create a Spotify application](https://developer.spotify.com/documentation/web-api/concepts/apps) if you don't already have one (the same application used for the [Spotify Source](/configuration/sources/spotify) can be reused here).
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "spotify",
+      "name": "MySpotify",
+      "data": {
+        "clientId": "787c921a2a2ab42320831aba0c8f2fc2",
+        "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a"
+      },
+    }
+  ]
+}
+```
+
+<details>
+
+<summary>Market and Rate Limiting</summary>
+
+`market` (an [ISO 3166-1 alpha-2 country code](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2)) can be set to bias/limit search results to what is available in a specific market:
+
+```json5
+{
+  "type": "spotify",
+  "name": "MySpotify",
+  "data": {
+    "clientId": "787c921a2a2ab42320831aba0c8f2fc2",
+    "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a",
+    "market": "US"
+  },
+}
+```
+
+`rate` can be used to configure how many requests are made to the Spotify API, defined by **max number of requests** within **timespan of N seconds** (default `10 req/1s`):
+
+```json5
+{
+  "type": "spotify",
+  "name": "MySpotify",
+  "data": {
+    "clientId": "787c921a2a2ab42320831aba0c8f2fc2",
+    "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a",
+    "rate": {
+      "requests": 10,
+      "perTime": 1
+    }
+  },
+}
+```
+
+</details>
+
+### Stage Configuration
+
+All of the properties found in [**Matching with Spotify**](#matching-with-spotify) section are configured in [Stage Configuration](/configuration/transforms#configuring-stages) as `defaults`.
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "spotify",
+      "name": "MySpotify",
+      "data": {
+        "clientId": "787c921a2a2ab42320831aba0c8f2fc2",
+        "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a"
+      },
+      "defaults": {
+        "score": 0.6,
+        "deprioritizeCompilations": true
+      }
+    }
+  ]
+}
+```
+
+### Rules and Hooks
+
+[Add your Stage](/configuration/transforms/#stage) to a Source or Client by specifying it in a [Hook](/configuration/transforms/#hook):
+
+```json5 title="subsonic.json"
+[
+  {
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "spotify",
+            "name": "MySpotify"
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+Each [**Stage Rule**](/configuration/transforms#stage-rules) (`title`/`artists`/`albumArtists`/`album`/`duration`/`meta`) works the same way as it does for the [Musicbrainz Stage](/configuration/transforms/musicbrainz#rules-and-hooks): either a boolean specifying whether the transformed data should be used for this field, or a [`when` condition](/configuration/transforms#conditional-modification).
+
+:::tip[Per Component Override]
+
+The `defaults` you set in [Stage Configuration](#stage-configuration) [can be overriden/added to](/configuration/transforms/#overriding-configuration) (per property) in each Hook, exactly as with the [Musicbrainz Stage](/configuration/transforms/musicbrainz#rules-and-hooks).
+
+:::
+
+## ENV Configuration
+
+Use `SPOTIFY_TRANSFORM=true` to enable this Stage from ENV. `clientId`/`clientSecret` are read from `SPOTIFY_TRANSFORM_CLIENT_ID`/`SPOTIFY_TRANSFORM_CLIENT_SECRET`, falling back to `SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET` (the same ENVs used by the [Spotify Source](/configuration/sources/spotify), if configured) when the `_TRANSFORM_` variants are not set.
+
+* `SPOTIFY_TRANSFORM=true` - Enables this Stage
+* `SPOTIFY_TRANSFORM_CLIENT_ID` / `SPOTIFY_TRANSFORM_CLIENT_SECRET` - App credentials (optional if `SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET` are already set)
+* `SPOTIFY_TRANSFORM_MARKET` - Optional [market](#market-and-rate-limiting)
+* `SPOTIFY_TRANSFORM_DEPRIORITIZE_COMPILATIONS=true` - Optionally enable [`deprioritizeCompilations`](#deprioritize-compilations)
+
+Finally, use ENV `*_TRANSFORMS=spotify` on each Source/Client you wish to apply this stage to. This applies the stage in the [`preCompare` Hook](/configuration/transforms#lifecycle-hooks) with all [Rules](#rules-and-hooks) enabled.
+
+The `*` stands for the prefix used for each Source/Client's ENV keys. Refer to the individual Source/Client Configuration sections to find this. Example:
+
+* All [Subsonic Source](/configuration/sources/subsonic) ENVs look like `SUBSONIC_USER=myuser` etc...
+* Use `SUBSONIC_TRANSFORMS=spotify`
+
+<details>
+
+<summary>Example Full Docker Deploy with ENV Configuration</summary>
+
+```yaml
+services:
+  multi-scrobbler:
+    image: foxxmd/multi-scrobbler
+    container_name: multi-scrobbler
+    environment:
+      // highlight-start
+      - SPOTIFY_TRANSFORM=true
+      - SPOTIFY_CLIENT_ID=787c921a2a2ab42320831aba0c8f2fc2
+      - SPOTIFY_CLIENT_SECRET=ec42e09d5ae0ee0f0816ca151008412a
+      // highlight-end
+      - JELLYFIN_URL=192.168.0.110:8096
+      - JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56b
+      - JELLYFIN_USER=MyUser
+      // highlight-start
+      # applies spotify Stage to preCompare of Jellyfin source
+      - JELLYFIN_TRANSFORMS=spotify
+      // highlight-end
+
+      # maloja receives enhanced scrobble from Jellyfin
+      - MALOJA_URL=http://192.168.0.100:42010
+      - MALOJA_API_KEY=myApiKey
+
+    volumes:
+      - "./config:/config"
+    ports:
+      - "9078:9078"
+    restart: unless-stopped
+```
+
+</details>
+
+## Matching with Spotify
+
+:::note
+
+**All properties found in this section are optional.**
+
+:::
+
+Matching your Scrobble's Play data with a result from Spotify is comprised of two steps:
+
+* [**Searching**](#searching) Spotify using parts of your Scrobble as queries
+* [**Ranking**](#ranking) matched results to select the desired match
+
+### Searching
+
+#### Should MS Search?
+
+Before MS begins a search it checks if your Scrobble data already contains Spotify IDs for artist(s), album, and track, and a duration. If it already has all required data types then the entire Spotify Stage [is **skipped**.](/configuration/transforms/#flow-control) If any are missing then a search is performed.
+
+Define which data types are required using:
+
+* `searchWhenMissing` (defaults to all) - A list containing any of: `artists` `title` `album` `duration`
+* `forceSearch` (default `false`) - Force searching even if all required data is present
+
+#### Search Methods
+
+Multi-scrobbler searches for a Spotify match using, in order, up to two methods. Use `searchOrder` to control which methods run and in what order:
+
+```json5
+// ...
+"defaults": {
+    "searchOrder": ["isrc", "basic"]
+  }
+```
+
+<details>
+
+<summary>ISRC (`isrc`)</summary>
+
+If your Scrobble data contains an [ISRC](https://musicbrainz.org/doc/ISRC) then Multi-scrobbler searches Spotify's catalog using this ID.
+
+**If the ISRC is present on more than one Spotify album/track** (which happens often -- singles, re-releases, and compilation appearances of the same recording all share an ISRC) then the results are [ranked using fuzzy matching](#ranking) against your scrobble's existing album/artist data to pick the best candidate.
+
+</details>
+
+<details>
+
+<summary>Album, Artist, and Title Fields (`basic`)</summary>
+
+Searches Spotify using any/all available text fields from your scrobble: Album, primary Artist, and Title. Results are always [ranked using fuzzy matching](#ranking) since Spotify's text search does not otherwise guarantee an accurate/confident result.
+
+</details>
+
+:::tip[Default Search Methods]
+
+If `searchOrder` is undefined Multi-scrobbler defaults to using `isrc` then `basic`.
+
+:::
+
+:::note
+
+If all defined search methods do not return any results (or no results score high enough, see [Ranking](#ranking)) then the stage is marked as [**failed** (`onFailure`) for **Flow Control**](/configuration/transforms/#flow-control).
+
+:::
+
+### Ranking
+
+Unlike Musicbrainz (whose search backend returns its own relevance score) Spotify's search results do not carry a comparable score. So Multi-scrobbler always fuzzy-matches every candidate against your original scrobble's title/artist(s)/album to:
+
+* disambiguate between multiple candidates (EX an ISRC present on more than one album)
+* determine whether any candidate is a confident enough match to use at all
+
+#### Score
+
+Each candidate is scored between `0` and `1` based on how similar its title/artist(s)/album are to your original scrobble. Set `score` to change the minimum score a candidate must have to be used. Default is `0.6`.
+
+```json5
+{
+  // ...
+  "score": 0.6 // matches must score 0.6 or higher to be considered
+}
+```
+
+You can bias which of title/artist/album contributes most to a candidate's score with `titleWeight`, `artistWeight`, and `albumWeight` (defaults are `0.4`/`0.3`/`0.3`, respectively):
+
+```json5
+// ...
+"defaults": {
+    "titleWeight": 0.4,
+    "artistWeight": 0.3,
+    "albumWeight": 0.3
+  }
+```
+
+#### Deprioritize Compilations
+
+Spotify catalogs many recordings across multiple compilation albums (Greatest Hits, movie soundtracks that reuse a song, etc...) in addition to their "proper" studio album. If you'd prefer matches to avoid compilation albums when a better alternative exists, enable `deprioritizeCompilations`:
+
+```json5
+// ...
+"defaults": {
+    "deprioritizeCompilations": true
+  }
+```
+
+This does not **exclude** compilations -- it only lowers their score relative to other candidates, so a compilation can still be used if it's the only match found.
+
+## Best Practices
+
+### Caching
+
+You **should** setup [metadata caching](/configuration/transforms#caching) to reduce API calls, improve transform performance, and reduce memory usage when using this stage.
+
+### Using Partial Match
+
+Use [Rules](#rules-and-hooks) to apply Spotify match data selectively, exactly as described for the [Musicbrainz Stage](/configuration/transforms/musicbrainz#using-partial-match). This is useful if you don't want your scrobble's Artist/Title/Album modified but still want the Spotify IDs attached to `meta` for Clients that use them.
+
+<details>
+
+<summary>Example</summary>
+
+```json5 title="subsonic.json"
+[
+  {
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "spotify",
+            "name": "MySpotify",
+            "title": false,
+            "artists": false,
+            "album": false,
+            "albumArtists": false,
+            "meta": true
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+</details>
+
+## Logging
+
+If Spotify is not returning matches, or the resulting enhanced Scrobble is not what you expected, enable [**Debug Mode**](/configuration#debug-mode) to help diagnose issues with the Spotify API and Scrobble enhancement.
+
+If you have multiple Modification Stages and need to see the diff for your Play between each Stage, enable `"log": "all"` in the individual [Modification Stage](#rules-and-hooks), as described for the [Musicbrainz Stage](/configuration/transforms/musicbrainz#logging).

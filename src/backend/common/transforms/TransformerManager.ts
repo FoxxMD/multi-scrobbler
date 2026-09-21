@@ -11,6 +11,7 @@ import { nanoid } from "nanoid";
 import { SimpleError, StageTransformError } from "../errors/MSErrors.ts";
 import { configFromEnv as rsConfigFromEnv } from "./rocksky/RockskyTransformerUtil.ts";
 import { type RockskyTransformerConfig } from "../vendor/rocksky/interfaces.ts";
+import { configFromEnv as spotifyConfigFromEnv, type SpotifyTransformerConfig } from "./spotify/SpotifyTransformerUtil.ts";
 
 export const DEFAULT_TRANSFORMER_NAME = 'MSDefault';
 export default class TransformerManager {
@@ -96,6 +97,10 @@ export default class TransformerManager {
                 const RockskyTransformer = (await import("./rocksky/RockskyTransformer.ts")).default;
                 t = new RockskyTransformer({ name: tName, ...config as RockskyTransformerConfig }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
             }   break;
+            case 'spotify': {
+                const SpotifyTransformer = (await import("./SpotifyTransformer.ts")).default;
+                t = new SpotifyTransformer({ name: tName, ...config as SpotifyTransformerConfig }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
+            }   break;
             default:
                 throw new Error(`No transformer of type '${config.type}' exists.`);
         }
@@ -129,6 +134,19 @@ export default class TransformerManager {
                 this.logger.error(`Unable to build Rocksky Transformer from ENV: ${e.message}`);
             }
             this.logger.error(new Error('Unable to build Rocksky Transformer from ENV', {cause: e}));
+        }
+        try {
+            const spotifyConfig = spotifyConfigFromEnv(this.logger);
+            if(spotifyConfig !== undefined) {
+                this.addTransformerConfig(spotifyConfig);
+            } else {
+                this.logger.debug('No Spotify transformer to build from ENV');
+            }
+        } catch (e) {
+            if(e instanceof SimpleError) {
+                this.logger.error(`Unable to build Spotify Transformer from ENV: ${e.message}`);
+            }
+            this.logger.error(new Error('Unable to build Spotify Transformer from ENV', {cause: e}));
         }
     }
 

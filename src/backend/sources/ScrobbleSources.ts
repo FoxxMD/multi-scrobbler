@@ -484,6 +484,9 @@ const transformPresetEnv = <T extends CommonSourceOptions = CommonSourceOptions>
             case 'musicbrainz':
                 popts.preCompare.push({type: 'musicbrainz'});
                 break;
+            case 'spotify':
+                popts.preCompare.push({type: 'spotify'});
+                break;
         }
     }
 
