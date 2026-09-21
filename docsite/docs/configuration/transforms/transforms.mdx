@@ -384,6 +384,16 @@ These three properties can be added to the [Modification Stage](#stage) data, al
 * `onFailure` (default `stop`) - If the Stage encounters an error while processing, or otherwise fails to achieve the transformation result
 * `onSkip` (default `continue`) - If the Stage does not process the Play data due to stage-level [`when`](#conditional-modification) or other stage-specific skip conditions
 
+:::important[A Failed or Skipped Stage Never Applies Its Own Changes]
+
+`onFailure`/`onSkip` only control whether **later** Stages in the same Hook still run -- they do **not** cause a failed or skipped Stage to partially apply, or fall back to, any changes. A Stage that fails (EX no results found) or is skipped (EX a `when` condition wasn't met, or a stage-specific prerequisite wasn't met) contributes nothing to your Play.
+
+If you want a Stage to only ever apply data from a single, specific match method (EX only from an ID lookup) and do nothing at all otherwise, you don't need any special configuration for this -- it's the default behavior whenever that lookup method doesn't succeed.
+
+By default (`onFailure: "stop"`), a failure also reverts your Play all the way back to how it was **before any Stage in that Hook ran** -- so if you have multiple Stages in one Hook and a later one fails, earlier successful changes from that same Hook are discarded too. Set `failureReturnPartial: true` on the failing Stage to instead keep whatever earlier Stages in the same Hook already successfully applied, and only discard the failed Stage's own (nonexistent) contribution.
+
+:::
+
 :::tip
 
 The default behaviors for Flow Control are the same as you would intuitively think Stages should run IE the next Stage you have defined runs if the current Stage does not fail. 

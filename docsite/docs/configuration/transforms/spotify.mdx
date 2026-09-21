@@ -250,7 +250,26 @@ If `searchOrder` is undefined Multi-scrobbler defaults to using `isrc` then `bas
 
 If all defined search methods do not return any results (or no results score high enough, see [Ranking](#ranking)) then the stage is marked as [**failed** (`onFailure`) for **Flow Control**](/configuration/transforms/#flow-control).
 
+**A failed Stage never partially applies -- your Play is left completely unmodified.** See [Failed and Skipped Stages](/configuration/transforms/#flow-control) for details.
+
 :::
+
+<details>
+
+<summary>ISRC Only, No Fallback</summary>
+
+If you only want Spotify matches sourced from ISRC lookups -- and want your Play left untouched whenever an ISRC isn't available or Spotify has no match for it -- set `searchOrder` to only `isrc`. No further configuration is needed; a Stage that fails never modifies your Play (see above).
+
+```json5
+// ...
+"defaults": {
+    // only ever search by ISRC. If a Play has no ISRC, or Spotify has no match for it,
+    // the Play is passed through completely unmodified.
+    "searchOrder": ["isrc"]
+  }
+```
+
+</details>
 
 ### Ranking
 
