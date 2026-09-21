@@ -13,7 +13,6 @@
     "name": "FoxxMD Rocksky Source",
     "configureAs": "source",
     "data": {
-      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaWQiOiJkaWQ6cGxjOng0NjVwZmtyeW5zaDZ...",
       "handle": "alice.bsky.social"
     }
   }

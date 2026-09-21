@@ -1,5 +1,4 @@
 import dayjs from "dayjs";
-import type request from 'superagent';
 import {rockskyRequiredFields, type ArtistCredit, type LifecycleInput, type PlayObject, type PlayObjectMinimal, type RockskyConfidenceField, type RockskyMissingField, type ScrobbleActionResult, type URLData} from "../../../core/Atomic.ts";
 import { artistCreditsToNames, artistNamesToCredits, nonEmptyStringOrDefault } from "../../../core/StringUtils.ts";
 import { UpstreamError } from "../errors/UpstreamError.ts";
@@ -11,7 +10,7 @@ import type {ListenResponse, ListenType} from '../../../core/vendor/listenbrainz
 import { getATProtoIdentifier, identifierToAtProtoHandle, isDID } from './atproto/atUtils.ts';
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
 import { AuthError, ScrobbleSubmitError } from "../errors/MSErrors.ts";
-import { type CreateScrobbleInput, RockskyClient, Agent, type SongViewDetailed, type ScrobbleInput, type ScrobbleViewBasic } from "@rocksky/sdk";
+import { type CreateScrobbleInput, RockskyClient, Agent, type SongViewDetailed, type ScrobbleInput, type ScrobbleViewBasic, RockskyError } from "@rocksky/sdk";
 import { getRoot } from "../../ioc.ts";
 import type { MSCache } from "../Cache.ts";
 import type {ATProtoUserIdentifierData, HandleData} from "../infrastructure/config/client/atproto.ts";
@@ -19,7 +18,6 @@ import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { removeUndefinedKeys } from "../../../core/DataUtils.ts";
 import { isrcNoHyphens } from '../../../core/PlayUtils.ts';
 import { findCauseByFunc } from "../../utils/ErrorUtils.ts";
-import { isSuperAgentResponseError } from "../errors/ErrorUtils.ts";
 import { hashObject } from "../../utils/StringUtils.ts";
 import { stringSameness } from "@foxxmd/string-sameness";
 import clone from "clone";
@@ -51,7 +49,7 @@ export class RockSkyApiClient extends AbstractApiClient {
     apiUrl: URLData;
     isKoito: boolean = false;
     cache: MSCache;
-    userData!: HandleData
+    userData?: HandleData
 
     rsClient?: RockskyClient;
     rsPool: RockskyClientPool;
@@ -69,8 +67,26 @@ export class RockSkyApiClient extends AbstractApiClient {
 
         this.logger.verbose(`API URL: '${apiUrl ?? '(None Given)'}' => Normalized: '${this.apiUrl.url}'`);
 
-        this.rsPool = new RockskyClientPool('Pool', {apis: [{enable: true, token}]}, {logger: this.logger});
+        this.rsPool = new RockskyClientPool('Pool', {apis: [{enable: true}]}, {logger: this.logger});
         this.rsClient = new RockskyClient(token);
+    }
+
+    public async buildData() {
+        try {
+            const atProtoHandleData: ATProtoUserIdentifierData = {
+                identifier: this.config.handle
+            };
+            const cleanIdentifier = this.config.handle;
+            if(isDID(cleanIdentifier)) {
+                this.logger.debug(`Identifier ${cleanIdentifier} looks like a DID, skipping parsing as a handle.`);
+                atProtoHandleData.did = cleanIdentifier;
+            } else {
+                atProtoHandleData.identifier = identifierToAtProtoHandle(cleanIdentifier, {logger: this.logger, defaultDomain: 'bsky.social'});
+            }
+            this.userData = await getATProtoIdentifier(atProtoHandleData, { logger: this.logger, cache: this.cache.cacheAuth });
+        } catch (e) {
+            throw new UpstreamError('Unable to resolve atproto identifier', {cause: e, showStopper: false});
+        }
     }
 
     testConnection = async () => {
@@ -83,47 +99,45 @@ export class RockSkyApiClient extends AbstractApiClient {
     }
 
     testAuth = async () => {
-        const atProtoHandleData: ATProtoUserIdentifierData = {
-            identifier: this.config.handle
-        };
-        const cleanIdentifier = this.config.handle;
-        if(isDID(cleanIdentifier)) {
-            this.logger.debug(`Identifier ${cleanIdentifier} looks like a DID, skipping parsing as a handle.`);
-            atProtoHandleData.did = cleanIdentifier;
-        } else {
-            atProtoHandleData.identifier = identifierToAtProtoHandle(cleanIdentifier, {logger: this.logger, defaultDomain: 'bsky.social'});
+        if(this.userData === undefined) {
+            try {
+                await this.buildData();
+            } catch (e) {
+                this.logger.warn(new Error('Failed to deterine if atproto identifier is real. Will proceed with config-defined handle but it may fail!', {cause: e}));
+            }
         }
-        this.userData = await getATProtoIdentifier(atProtoHandleData, { logger: this.logger, cache: this.cache.cacheAuth });
 
         // authed write operations straight through PDS using xrpc
-        if(this.userData !== undefined && this.config.appPassword !== undefined) {
+        if((this.userData !== undefined || this.config.handle !== undefined) && this.config.appPassword !== undefined) {
             try {
-                this.rsAgent = await Agent.login(this.userData.did, this.config.appPassword);
+                this.rsAgent = await Agent.login(this.userData?.did ?? this.userData?.handle ?? this.config.handle, this.config.appPassword);
+                return true;
             } catch (e) {
-                throw new AuthError('Could not login using handle/did and appPassword', {cause: e});
+                throw new AuthError('Could not login using handle/did and appPassword', {cause: e, unrecoverable: true});
             }
         }
 
         // if no xrpc client then we need to test if the token for the rs client is valid
         // so we can use the client for write operations later
-        if(this.rsAgent === undefined) {
+        if(this.config.token !== undefined) {
             try {
-                await this.rsPool.rsProxy.apikeys()
+                await this.rsClient.apikeys()
                 // const req = request.get('https://api.rocksky.app/profile').set('Authorization', `Bearer ${this.config.token}`);
                 // await req;
                 return true;
             } catch (e) {
                 const upstreamErr = new UpstreamError('Failed to get apikeys() to test auth validity of token', {cause: e});
-                const cause = findCauseByFunc<request.ResponseError>(e, (ee) => isSuperAgentResponseError(ee));
+                const cause = findCauseByFunc<RockskyError>(e, (ee) => ee instanceof RockskyError);
                 throw new AuthError('Failed to get /profile with given token', {cause: upstreamErr, unrecoverable: cause !== undefined && [401,403].includes(cause.status)});
             }
         }
+        throw new AuthError('No required credentials provided to try an authentication method.', {unrecoverable: true});
     }
 
     getUserListens = async (maxTracks: number, user?: string): Promise<RockskyScrobble[]> => {
         try {
 
-            const res = this.rsPool.rsProxy.scrobbles(user ?? this.userData.did ?? this.userData.handle, maxTracks, 0);
+            const res = this.rsPool.rsProxy.scrobbles(user ?? this.userData?.did ?? this.userData?.handle ?? this.config.handle, maxTracks, 0);
             // const res = await this.rsClient.actor.getActorScrobbles({
             //     limit: maxTracks,
             //     offset: 0,
@@ -159,7 +173,7 @@ export class RockSkyApiClient extends AbstractApiClient {
             if(log) {
                 this.logger.debug(`Submit Payload: ${JSON.stringify(payload)}`);
             }
-            const resp = await this.rsPool.rsProxy.createScrobble(payload);
+            const resp = await this.rsClient.createScrobble(payload);
             return {payload, response: resp, createdAt: dayjs().toISOString()}
         }
 
@@ -200,7 +214,7 @@ export class RockSkyApiClient extends AbstractApiClient {
                     merged.meta.user = uData.user;
                 }
             }
-            return removeUndefinedKeys({payload, response: res, mergedScrobble: merged, createdAt: dayjs().toISOString()});
+            return removeUndefinedKeys({payload, response: res, mergedScrobble: merged, createdAt: dayjs().toISOString(), warnings: warnings.length === 0 ? undefined : warnings});
         } catch (e) {
             throw new ScrobbleSubmitError(`Error occurred while writing scrobble to PDS`, {cause: e, payload: payload});
         }

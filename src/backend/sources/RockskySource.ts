@@ -1,6 +1,5 @@
 import type EventEmitter from "events";
 import { COMPONENT_AUTH_TYPE, type ComponentAuthType, PARSED_FROM, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import type {FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic.ts";
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import MemorySource from "./MemorySource.ts";
@@ -39,13 +38,13 @@ export default class RockskySource extends MemorySource {
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}){ return RockSkyApiClient.formatPlayObj(obj, options); }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
-        const {
-            data: {
-                token,
-            } = {}
-        } = this.config;
-        if (token === undefined) {
-            throw new Error('Must provide an Access Token');
+        if ('token' in this.config.data) {
+            this.logger.warn('Token authentication is no longer required and can be safely removed.');
+        }
+        try {
+            await this.api.buildData();
+        } catch (e) {
+            this.logger.warn(new Error('Failed to deterine if atproto identifier is real. Will proceed with config-defined handle but it may fail!', {cause: e}));
         }
         return true;
     }
@@ -54,18 +53,6 @@ export default class RockskySource extends MemorySource {
         await this.api.testConnection();
         return true;
     }
-
-    doAuthentication = async () => {
-        try {
-            return await this.api.testAuth();
-        } catch (e) {
-            if(isNodeNetworkException(e)) {
-                this.logger.error('Could not communicate with Rocksky API');
-            }
-            throw e;
-        }
-    }
-
 
     getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}) => {
         const {limit = 20} = options;

@@ -65,6 +65,9 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         if (appPassword === undefined && token === undefined) {
             throw new Error('Must provide an App Password or Access Token');
         }
+        if(token !== undefined) {
+            this.logger.warn('Access Token authentication is DEPRECATED and will be removed in a future release. Please switch to handle/appPassword auth as soon as possible.');
+        }
         return true;
     }
 
