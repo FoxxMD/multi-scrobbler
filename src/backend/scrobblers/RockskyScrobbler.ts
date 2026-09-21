@@ -22,6 +22,7 @@ import { Readable } from 'stream';
 import { ATProtoUnauthenticatedApiClient } from "../common/vendor/atproto/ATProtoUnauthenticatedApiClient.ts";
 import { playToRepositoryCreatePlayHistoricalOpts, type RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
 import { isAbortError } from "abort-controller-x";
+import { shouldClearNPStatus } from "./AbstractScrobbleClient.ts";
 
 export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
 
@@ -29,6 +30,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
     override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
     requiresAuth = true;
     requiresAuthInteraction = false;
+    override nowPlayingIsRealtime: boolean = true;
 
     declare config: RockSkyClientConfig;
 
@@ -47,7 +49,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         // https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(user_name)-listens
         // 1000 is way too high. maxing at 100
         this.MAX_INITIAL_SCROBBLES_FETCH = 100;
-        this.supportsNowPlaying = false;
+        this.supportsNowPlaying = true;
         // PDS rate limit for operations is ~2/sec
         this.scrobbleDelay = 2000;
         this.configDir = options.configDir;
@@ -122,8 +124,19 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
     }
 
     doPlayingNow = async (data: SourcePlayerObj) => {
+
+        const isClearing = shouldClearNPStatus(data);
+
+        // we can avoid additional calls to PDS for clearing a status if the status is about to expire, or is already expired.
+        // this will usually happen if a player stops playing the last track in a queue
+        // -- worth doing since PDS calls have a daily rate limit
+        if(isClearing && (this.statusExpiresSoon() || this.statusAlreadyExpired())) {
+            this.npLogger.debug(`Not calling status record update because status  is about to expire (or has already), expiring ${durationToHuman(dayjs.duration(dayjs().diff(this.nowPlayingExpirationDate)))}`);
+            return;
+        }
+
         try {
-            await this.api.submitListen(data.play, { listenType: 'playing_now' });
+            await this.api.updateNowPlaying(isClearing ? undefined : data.play);
         } catch (e) {
             throw e;
         }

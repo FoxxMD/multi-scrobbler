@@ -9,8 +9,8 @@ import { isPortReachableConnect, normalizeWebAddress } from '../../utils/Network
 import type {ListenResponse, ListenType} from '../../../core/vendor/listenbrainz/interfaces.ts';
 import { getATProtoIdentifier, identifierToAtProtoHandle, isDID } from './atproto/atUtils.ts';
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
-import { AuthError, ScrobbleSubmitError } from "../errors/MSErrors.ts";
-import { type CreateScrobbleInput, RockskyClient, Agent, type SongViewDetailed, type ScrobbleInput, type ScrobbleViewBasic, RockskyError } from "@rocksky/sdk";
+import { AuthError, ScrobbleSubmitError, SimpleError } from "../errors/MSErrors.ts";
+import { type CreateScrobbleInput, RockskyClient, Agent, type SongViewDetailed, type ScrobbleInput, type ScrobbleViewBasic, RockskyError, type ActorTrackView } from "@rocksky/sdk";
 import { getRoot } from "../../ioc.ts";
 import type { MSCache } from "../Cache.ts";
 import type {ATProtoUserIdentifierData, HandleData} from "../infrastructure/config/client/atproto.ts";
@@ -218,6 +218,16 @@ export class RockSkyApiClient extends AbstractApiClient {
         } catch (e) {
             throw new ScrobbleSubmitError(`Error occurred while writing scrobble to PDS`, {cause: e, payload: payload});
         }
+    }
+
+    updateNowPlaying = async (play?: PlayObject): Promise<void> => {
+        if(this.rsAgent === undefined) {
+            throw new SimpleError('Cannot set now playing when no using user/appPassword authentication');
+        }
+        if(play === undefined) {
+            await this.rsAgent.clearNowPlaying();
+        }
+        await this.rsAgent.setNowPlaying(playToActorTrackView(play));
     }
 
     getRockskySongMatch = async (play: PlayObject): Promise<SongViewDetailed> => {
@@ -477,6 +487,16 @@ export const playToRockskyAgentRecord = (play: PlayObject): ScrobbleInput => {
     }
     return csi;
 }
+
+export const playToActorTrackView = (play: PlayObject): ActorTrackView => removeUndefinedKeys({
+    name: play.data.track,
+    artist: artistCreditsToNames(play.data.artists).join(', '),
+    album: play.data.album,
+    albumCoverUrl: play.meta.art?.track ?? play.meta.art?.album ?? play.meta.art?.artist,
+    durationMs: play.data.duration,
+    source: play.meta.musicService,
+    recordingMbId: play.data.meta?.brainz?.recording
+ })
 
 const ATPROTO_URI_REGEX = new RegExp(/at:\/\/(?<resource>(?<did>did.*?)\/app\.rocksky\.scrobble\/(?<tid>.*))/);
 
