@@ -1,5 +1,6 @@
 import dayjs, { type Dayjs } from "dayjs";
 import type EventEmitter from "events";
+import pMap from 'p-map';
 import { MusicKit, type MeHistoryRecentlyPlayedTracksProps, type Song } from "node-musickit-api";
 import { COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
 import type { InternalConfig } from "../common/infrastructure/Atomic.ts";
@@ -41,6 +42,7 @@ export default class AppleMusicSource extends AbstractSource {
 
     recentlyPlayed: PlayObject[] = [];
     musicKit!: MusicKit;
+    private storefront?: string;
 
     recentChangedHistoryResponses: {ts: Dayjs, plays: PlayObject[]}[] = [];
 
@@ -167,7 +169,69 @@ export default class AppleMusicSource extends AbstractSource {
         if (!result.data) {
             return [];
         }
-        return (result.data as Song[]).map(track => AppleMusicSource.formatPlayObj(track, {normalizeAlbum: this.config?.options?.normalizeAlbum}));
+        const tracks = result.data as Song[];
+        const plays = tracks.map(track => AppleMusicSource.formatPlayObj(track, {normalizeAlbum: this.config?.options?.normalizeAlbum}));
+        return pMap(plays, (play, i) => this.enrichIsrc(play, tracks[i]), {concurrency: 3});
+    }
+
+    /**
+     * Backfill ISRC if it is not present in Play
+     *
+     * The recently-played history endpoint returns full catalog data (including ISRC) for tracks of type
+     * "songs", but tracks played from the user's personal library ("library-songs") often omit it. When those
+     * library tracks are linked to a catalog song (`playParams.catalogId`) this makes one extra call to
+     * `/catalog/{storefront}/songs/{catalogId}` to backfill and cache the ISRC from the catalog counterpart.
+     */
+    protected enrichIsrc = async (play: PlayObject, track: Song): Promise<PlayObject> => {
+        if (this.config.options?.enrichIsrc === false || play.data.isrc !== undefined) {
+            return play;
+        }
+
+        // library-song resources aren't typed with `catalogId` but Apple's API includes it on `playParams`
+        // when the library item is linked to a matching catalog song
+        const catalogId = track.type === 'songs' ? track.id : (track.playParams as { catalogId?: string } | undefined)?.catalogId;
+        if (catalogId === undefined) {
+            return play;
+        }
+
+        const cacheKey = `applemusic-isrc-${catalogId}`;
+        try {
+            let isrc = await this.cache.cacheApi.get<string | null>(cacheKey);
+            if (isrc === undefined) {
+                const storefront = await this.getStorefront();
+                if (storefront === undefined) {
+                    return play;
+                }
+                const res = await this.musicKit.songs.get(storefront, catalogId);
+                isrc = (!res.error && res.data && res.data.length > 0) ? (res.data[0].isrc ?? null) : null;
+                await this.cache.cacheApi.set(cacheKey, isrc, '7d');
+            }
+            if (isrc !== null) {
+                play.data.isrc = isrc;
+            }
+        } catch (e) {
+            this.logger.debug(new Error(`Failed to backfill ISRC for Apple Music track ${catalogId} from catalog endpoint`, { cause: e }));
+            // set to null on failure so we don't make consecutive calls that result in failure on every poll attempt
+            await this.cache.cacheApi.set(cacheKey, null, '7d');
+        }
+        return play;
+    }
+
+    private getStorefront = async (): Promise<string | undefined> => {
+        if (this.storefront !== undefined) {
+            return this.storefront;
+        }
+        try {
+            const res = await this.musicKit.me.getStorefront();
+            if (res.error || !res.data || res.data.length === 0) {
+                throw new Error(res.error ?? 'No storefront returned');
+            }
+            this.storefront = res.data[0].id;
+            return this.storefront;
+        } catch (e) {
+            this.logger.warn(new Error('Could not determine Apple Music storefront, ISRC enrichment for library tracks will be skipped', { cause: e }));
+            return undefined;
+        }
     }
 
     getIncomingHistoryConsistencyResult = (plays: PlayObject[]): HistoryConsistencyResult => {

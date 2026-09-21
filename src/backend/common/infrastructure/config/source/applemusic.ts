@@ -70,6 +70,21 @@ export const appleMusicOptions = z.object({
             default: true,
             examples: [true, false]
         }),
+        /**
+         * Backfill ISRC data if it is missing
+         *
+         * Apple Music's recently-played history endpoint does not return an ISRC for tracks that come from the
+         * user's personal library rather than the Apple Music catalog. If this is enabled and a track is missing
+         * an ISRC, MS makes an additional catalog lookup (using the track's catalog ID, if one exists) to backfill it.
+         *
+         * @default true
+         * @examples [true]
+         */
+        enrichIsrc: z.boolean().optional().meta({
+            description: "Backfill ISRC data with an additional catalog lookup when the recently-played endpoint omits it",
+            default: true,
+            examples: [true]
+        }),
 });
 
 export type AppleMusicOptions = z.infer<typeof appleMusicOptions>;
@@ -93,7 +108,8 @@ const envDataSchema = z.object({
     APPLEMUSIC_TOKEN: appleMusicDataSchema.shape.token.optional(),
     APPLEMUSIC_ORIGIN_HEADER: appleMusicDataSchema.shape.origin,
     APPLEMUSIC_RECOVER_UNCHANGED_TOP_HISTORY: z.stringbool().optional().meta(appleMusicOptions.shape.recoverUnchangedTopHistory.meta()),
-    APPLEMUSIC_NORMALIZE_ALBUM: z.stringbool().optional().meta(appleMusicOptions.shape.normalizeAlbum.meta())
+    APPLEMUSIC_NORMALIZE_ALBUM: z.stringbool().optional().meta(appleMusicOptions.shape.normalizeAlbum.meta()),
+    APPLEMUSIC_ENRICH_ISRC: z.stringbool().optional().meta(appleMusicOptions.shape.enrichIsrc.meta())
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, AppleMusicSourceConfig> = {
@@ -134,7 +150,8 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, AppleMusicSourceC
             },
             options: {
                 recoverUnchangedTopHistory: partial.APPLEMUSIC_RECOVER_UNCHANGED_TOP_HISTORY,
-                normalizeAlbum: partial.APPLEMUSIC_NORMALIZE_ALBUM
+                normalizeAlbum: partial.APPLEMUSIC_NORMALIZE_ALBUM,
+                enrichIsrc: partial.APPLEMUSIC_ENRICH_ISRC
             }
         }
     }
