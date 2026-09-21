@@ -5,21 +5,21 @@ import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.ts";
 import type { MSCache } from "../../Cache.ts";
 import type {AbstractApiOptions, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PagelessTimeRangeListensResult} from "../../infrastructure/Atomic.ts";
-import type {ListRecord, RecordOptions, TealClientData} from "../../infrastructure/config/client/tealfm.ts";
+import type {ListRecord, RecordOptions, TealClientData, TealData} from "../../infrastructure/config/client/tealfm.ts";
 import AbstractApiClient from "../AbstractApiClient.ts";
 import { ATProtoAppApiClient } from "../atproto/ATProtoAppApiClient.ts";
-import type { FmTealActorStatus, FmTealAlphaActorStatus, FmTealAlphaFeedPlay, FmTealFeedPlay } from "./lexicons/index.ts";
+import type { FmTealActorStatus, FmTealAlphaFeedPlay, FmTealFeedPlay } from "./lexicons/index.ts";
 import { ScrobbleSubmitError } from "../../errors/MSErrors.ts";
 import { getScrobbleTsSOCDateWithContext, usecToUnix } from "../../../utils/TimeUtils.ts";
 import { musicServiceToCononical } from "../listenbrainz/lzUtils.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { decodeTid, generateTID } from "@ewanc26/tid";
-import type { ATProtoAuthenticatedApiClient } from "../atproto/ATProtoAuthenticatedApiClient.ts";
 import { UpstreamError } from "../../errors/UpstreamError.ts";
 import type { ComAtprotoRepoCreateRecord, ComAtprotoRepoPutRecord } from '@atcute/atproto';
 import { nowPlayingExpirationDuration } from "../../../scrobblers/AbstractScrobbleClient.ts";
 import { isrcNoHyphens, sortByNewestPlayDate } from "../../../../core/PlayUtils.ts";
 import { isGenericUri } from "@atcute/lexicons/syntax";
+import { ATProtoUnauthenticatedApiClient } from "../atproto/ATProtoUnauthenticatedApiClient.ts";
 
 type TealPlayRecord = FmTealAlphaFeedPlay.Main | FmTealFeedPlay.Main;
 
@@ -32,68 +32,17 @@ const asMusicServiceUri = (musicService?: string): `${string}:${string}` | undef
     return isGenericUri(musicService) ? musicService : `https://${musicService}`;
 };
 
-export class TealApiClient extends AbstractApiClient implements PagelessTimeRangeListens {
+export abstract class AbstractTealApiClient extends AbstractApiClient implements PagelessTimeRangeListens {
 
     declare config: TealClientData;
 
-    declare client: ATProtoAuthenticatedApiClient;
+    declare client: ATProtoAppApiClient | ATProtoUnauthenticatedApiClient;
 
     cache: MSCache;
 
-    constructor(name: any, config: TealClientData, options: AbstractApiOptions) {
+    constructor(name: any, config: TealData, options: AbstractApiOptions) {
         super('teal', name, config, options);
-
-        if(config.appPassword !== undefined) {
-            this.client = new ATProtoAppApiClient(name, config, {...options, logger: this.logger});
-        } else if(config.baseUri !== undefined) {
-            throw new Error('Oauth is not yet implemented');
-        } else {
-            throw new Error(`Must define either 'baseUri' or 'appPassword' in configuration!`);
-        }
-
         this.cache = getRoot().items.cache();
-    }
-
-
-    async createScrobbleRecord(record: FmTealFeedPlay.Main): Promise<ScrobbleActionResult> {
-        const input: ComAtprotoRepoCreateRecord.$input = {
-            repo: this.client.userData.did,
-            collection: 'fm.teal.feed.play',
-            record
-        };
-        try {
-            const res =  await this.client.post((client) => client.post('com.atproto.repo.createRecord', {
-                input,
-                params: {}
-                }));
-            if(!res.ok) {
-                throw new ScrobbleSubmitError(`Failed to create record for scrobble`, { payload: input, responseBody: {status: res.status, body: res.data } });
-            }
-            return {payload: input, response: res.data, createdAt: dayjs().toISOString()};
-        } catch (e) {
-            throw new ScrobbleSubmitError(`Failed to create record for scrobble`, { cause: e, payload: input, response: 'response' in e ? e.response : undefined });
-        }
-    }
-
-    async updateStatusRecord(record: FmTealActorStatus.Main): Promise<ScrobbleActionResult> {
-        const input: ComAtprotoRepoPutRecord.$input = {
-            repo: this.client.userData.did,
-            collection: "fm.teal.actor.status",
-            rkey: "self",
-            record
-        };
-        try {
-            const res = await this.client.post((client) => client.post('com.atproto.repo.putRecord', {
-                input,
-                params: {}
-            }));
-            if(!res.ok) {
-                throw new ScrobbleSubmitError(`Failed to update status record`, { payload: input, responseBody: {status: res.status, body: res.data } });
-            }
-            return {payload: input, response: res.data, createdAt: dayjs().toISOString()};
-        } catch (e) {
-            throw new ScrobbleSubmitError(`Failed to update status record`, { cause: e, payload: input, response: 'response' in e ? e.response : undefined });
-        }
     }
 
     getPaginatedUnitOfTime(): ManipulateType {
@@ -134,6 +83,70 @@ export class TealApiClient extends AbstractApiClient implements PagelessTimeRang
         const plays = playSets.flat().sort(sortByNewestPlayDate)
 
         return {data: plays, meta: {to, from, limit, more: false, order: 'desc'}};
+    }
+}
+
+export class TealApiUnauthenticatedClient extends AbstractTealApiClient {
+    declare client: ATProtoUnauthenticatedApiClient;
+    constructor(...args: ConstructorParameters<typeof AbstractTealApiClient>) {
+        super(...args);
+        const [name, config, options] = args;
+        this.client = new ATProtoUnauthenticatedApiClient(name, config, {...options, logger: this.logger});
+    }
+}
+
+export class TealApiAuthenticatedClient extends AbstractTealApiClient {
+    declare client: ATProtoAppApiClient;
+    constructor(name: any, config: TealClientData, options: AbstractApiOptions) {
+        super(name, config, options);
+        if(config.appPassword !== undefined) {
+            this.client = new ATProtoAppApiClient(name, config, {...options, logger: this.logger});
+        } else if(config.baseUri !== undefined) {
+            throw new Error('Oauth is not yet implemented');
+        } else {
+            throw new Error(`Must define either 'baseUri' or 'appPassword' in configuration!`);
+        }
+    }
+
+    async createScrobbleRecord(record: FmTealFeedPlay.Main): Promise<ScrobbleActionResult> {
+        const input: ComAtprotoRepoCreateRecord.$input = {
+            repo: this.client.userData.did,
+            collection: 'fm.teal.feed.play',
+            record
+        };
+        try {
+            const res =  await this.client.post((client) => client.post('com.atproto.repo.createRecord', {
+                input,
+                params: {}
+                }));
+            if(!res.ok) {
+                throw new ScrobbleSubmitError(`Failed to create record for scrobble`, { payload: input, responseBody: {status: res.status, body: res.data } });
+            }
+            return {payload: input, response: res.data, createdAt: dayjs().toISOString()};
+        } catch (e) {
+            throw new ScrobbleSubmitError(`Failed to create record for scrobble`, { cause: e, payload: input, response: 'response' in e ? e.response : undefined });
+        }
+    }
+
+    async updateStatusRecord(record: FmTealActorStatus.Main): Promise<ScrobbleActionResult> {
+        const input: ComAtprotoRepoPutRecord.$input = {
+            repo: this.client.userData.did,
+            collection: "fm.teal.actor.status",
+            rkey: "self",
+            record
+        };
+        try {
+            const res = await this.client.post((client) => client.post('com.atproto.repo.putRecord', {
+                input,
+                params: {}
+            }));
+            if(!res.ok) {
+                throw new ScrobbleSubmitError(`Failed to update status record`, { payload: input, responseBody: {status: res.status, body: res.data } });
+            }
+            return {payload: input, response: res.data, createdAt: dayjs().toISOString()};
+        } catch (e) {
+            throw new ScrobbleSubmitError(`Failed to update status record`, { cause: e, payload: input, response: 'response' in e ? e.response : undefined });
+        }
     }
 }
 

@@ -14,7 +14,7 @@ import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
 import { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractScrobbleClient.ts";
 import type {TealClientConfig} from "../common/infrastructure/config/client/tealfm.ts";
 import { ATProtoAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.ts";
-import { playToRecord, TealApiClient } from "../common/vendor/teal/TealApiClient.ts";
+import { playToRecord, TealApiAuthenticatedClient } from "../common/vendor/teal/TealApiClient.ts";
 import { playToStatusRecord } from "../common/vendor/teal/TealApiClient.ts";
 import { recordToPlay } from "../common/vendor/teal/TealApiClient.ts";
 import dayjs from "dayjs";
@@ -41,14 +41,14 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
 
     protected configDir: string;
 
-    client: TealApiClient;
+    client: TealApiAuthenticatedClient;
 
     constructor(name: any, config: TealClientConfig, options: InternalConfigOptional & {[key: string]: any}, emitter: EventEmitter, logger: Logger) {
         super('tealfm', name, config, emitter, logger);
         this.MAX_INITIAL_SCROBBLES_FETCH = 20;
         this.scrobbleDelay = 1500;
         this.supportsNowPlaying = true;
-        this.client = new TealApiClient(name, config.data, {...options, logger});
+        this.client = new TealApiAuthenticatedClient(name, config.data, {...options, logger});
         this.nowPlayingMaxThreshold = nowPlayingUpdateByPlayDuration;
         this.nowPlayingMinThreshold = (_) => 20;
         this.configDir = options.configDir;

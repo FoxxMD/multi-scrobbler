@@ -1,10 +1,9 @@
 import type EventEmitter from "events";
 import { COMPONENT_AUTH_TYPE, type ComponentAuthType, PARSED_FROM, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import type {FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic.ts";
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import MemorySource from "./MemorySource.ts";
-import { TealApiClient } from "../common/vendor/teal/TealApiClient.ts";
+import { TealApiUnauthenticatedClient } from "../common/vendor/teal/TealApiClient.ts";
 import { recordToPlay } from "../common/vendor/teal/TealApiClient.ts";
 import type {TealSourceConfig} from "../common/infrastructure/config/source/tealfm.ts";
 import { ATProtoAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.ts";
@@ -12,7 +11,7 @@ import { parseArrayFromMaybeString } from "../utils/StringUtils.ts";
 
 export default class TealfmSource extends MemorySource {
 
-    client: TealApiClient;
+    client: TealApiUnauthenticatedClient;
     override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
     requiresAuth = true;
     requiresAuthInteraction = false;
@@ -33,7 +32,7 @@ export default class TealfmSource extends MemorySource {
         super('tealfm', name, {...config, data: {interval, maxInterval, ...restData}}, internal, emitter);
         this.canPoll = true;
         this.canBacklog = true;
-        this.client = new TealApiClient(name, config.data, {...internal, logger: internal.logger});
+        this.client = new TealApiUnauthenticatedClient(name, config.data, {...internal, logger: internal.logger});
         this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
         this.supportsUpstreamRecentlyPlayed = true
         this.SCROBBLE_BACKLOG_COUNT = 20;
@@ -79,24 +78,6 @@ export default class TealfmSource extends MemorySource {
             return true;
         }
     }
-
-    doAuthentication = async () => {
-        try {
-            const sessionRes = await this.client.client.restoreSession();
-            if(sessionRes) {
-                return true;
-            }
-            if(this.client.client instanceof ATProtoAppApiClient) {
-                return await this.client.client.appLogin();
-            }
-        } catch (e) {
-            if(isNodeNetworkException(e)) {
-                this.logger.error('Could not communicate with ATProto API');
-            }
-            throw e;
-        }
-    }
-
 
     getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}) => {
         const {limit = 20} = options;

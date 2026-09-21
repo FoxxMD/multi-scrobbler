@@ -8,6 +8,7 @@ export const tealDataSchema = z.object({
     ...requestRetryOptionsSchema.shape,
     //...atProtoUserIdentifierDataSchema.shape,
     ...atProtoAppDataSchema.shape,
+    appPassword: atProtoAppDataSchema.shape.appPassword.optional().meta(atProtoAppDataSchema.shape.appPassword.meta()),
     identifier: atProtoUserIdentifierDataSchema.shape.identifier.meta({
         description: "The **fully-qualified** handle, or identifier, for your Atmosphere account"
     }),
@@ -40,7 +41,10 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, TealClientConfig>
     })
 };
 
-export const tealClientDataSchema = tealDataSchema.extend(commonClientDataSchema.shape);
+export const tealClientDataSchema = tealDataSchema.extend({
+    ...commonClientDataSchema.shape,
+    ...atProtoAppDataSchema.shape
+});
 
 export type TealClientData = z.infer<typeof tealClientDataSchema>;
 
