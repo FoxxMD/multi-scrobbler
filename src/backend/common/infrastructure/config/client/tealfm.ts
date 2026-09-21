@@ -8,7 +8,7 @@ export const tealDataSchema = z.object({
     identifier: atProtoUserIdentifierDataSchema.shape.identifier.meta({
         description: "The **fully-qualified** handle, or identifier, for your Atmosphere account"
     }),
-    appPassword: atProtoAppDataSchema.shape.appPassword.meta(atProtoAppDataSchema.shape.appPassword.meta()),
+    appPassword: atProtoAppDataSchema.shape.appPassword.optional().meta(atProtoAppDataSchema.shape.appPassword.meta()),
     // /**
     //  * The base URI of the Multi-Scrobbler to use for ATProto OAuth
     //  *
@@ -22,9 +22,18 @@ export const tealDataSchema = z.object({
 
 export type TealData = z.infer<typeof tealDataSchema>;
 
+export const tealClientDataSchema = z.object({
+    ...tealDataSchema.shape,
+    appPassword: atProtoAppDataSchema.shape.appPassword.meta(atProtoAppDataSchema.shape.appPassword.meta()),
+    ...commonClientDataSchema.shape,
+
+});
+
+export type TealClientData = z.infer<typeof tealClientDataSchema>;
+
 const envDataSchema = z.object({
-    TEALFM_IDENTIFIER: tealDataSchema.shape.identifier,
-    TEALFM_APP_PW: tealDataSchema.shape.appPassword,
+    TEALFM_IDENTIFIER: tealClientDataSchema.shape.identifier,
+    TEALFM_APP_PW: tealClientDataSchema.shape.appPassword,
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, TealClientConfig> = {
@@ -38,13 +47,6 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, TealClientConfig>
             }
     })
 };
-
-export const tealClientDataSchema = tealDataSchema.extend({
-    ...commonClientDataSchema.shape,
-    ...atProtoAppDataSchema.shape
-});
-
-export type TealClientData = z.infer<typeof tealClientDataSchema>;
 
 export const tealClientOptionsSchema = z.object({
     ...commonClientOptionsSchema.shape,

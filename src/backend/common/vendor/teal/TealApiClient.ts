@@ -34,7 +34,7 @@ const asMusicServiceUri = (musicService?: string): `${string}:${string}` | undef
 
 export abstract class AbstractTealApiClient extends AbstractApiClient implements PagelessTimeRangeListens {
 
-    declare config: TealClientData;
+    declare config: TealData;
 
     declare client: ATProtoAppApiClient | ATProtoUnauthenticatedApiClient;
 
@@ -101,8 +101,6 @@ export class TealApiAuthenticatedClient extends AbstractTealApiClient {
         super(name, config, options);
         if(config.appPassword !== undefined) {
             this.client = new ATProtoAppApiClient(name, config, {...options, logger: this.logger});
-        } else if(config.baseUri !== undefined) {
-            throw new Error('Oauth is not yet implemented');
         } else {
             throw new Error(`Must define either 'baseUri' or 'appPassword' in configuration!`);
         }
