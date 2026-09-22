@@ -93,7 +93,7 @@ export class SpotifyApiClient extends AbstractApiClient {
         const { limit = 50, market = this.config.market, locale = this.config.locale, useCachedResult } = opts;
         const q = `isrc:${isrcNoHyphens(isrc)}`;
         const cacheKey = `spotify-search-${hashObject({ q, limit, market, locale })}`;
-        this.logger.debug({ labels: ['ISRC Search'] }, `Search Query => ${q}`);
+        this.logger.debug({ labels: ['ISRC Search'] }, `Search Query => ${q} | market: ${market ?? '(none)'} | locale: ${locale ?? '(none)'}`);
         const res = await this.callApi((api) => api.searchTracks(q, { limit, market, ...(locale !== undefined ? { locale } : {}) }), { cacheKey, useCachedResult });
         return res.body.tracks?.items ?? [];
     }
@@ -117,7 +117,7 @@ export class SpotifyApiClient extends AbstractApiClient {
 
         const q = parts.join(' ');
         const cacheKey = `spotify-search-${hashObject({ q, limit, market, locale })}`;
-        this.logger.debug({ labels: ['Basic Search'] }, `Search Query => ${q}`);
+        this.logger.debug({ labels: ['Basic Search'] }, `Search Query => ${q} | market: ${market ?? '(none)'} | locale: ${locale ?? '(none)'}`);
         const res = await this.callApi((api) => api.searchTracks(q, { limit, market, ...(locale !== undefined ? { locale } : {}) }), { cacheKey, useCachedResult });
         return res.body.tracks?.items ?? [];
     }
