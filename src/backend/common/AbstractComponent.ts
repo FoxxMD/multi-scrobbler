@@ -166,6 +166,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         // update name on startup in case user has changed it
         if(this.dbComponent.name !== (this.config?.name ?? this.name)) {
             await this.componentRepo.updateById(this.componentId, {name: this.config?.name ?? this.name});
+            this.dbComponent.name = (this.config?.name ?? this.name);
         }
         this.playRepo = new DrizzlePlayRepository(this.db, {logger: this.logger});
         this.queueRepo = new DrizzleQueueRepository(this.db, {logger: this.logger});
