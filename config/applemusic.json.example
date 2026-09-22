@@ -23,7 +23,8 @@
     "options": {
       "logDiff": true,
       "recoverUnchangedTopHistory": true,
-      "normalizeAlbum": true
+      "normalizeAlbum": true,
+      "enrichIsrc": true
     }
   }
 ]
