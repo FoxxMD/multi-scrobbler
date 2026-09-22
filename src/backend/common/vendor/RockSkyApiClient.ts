@@ -63,12 +63,12 @@ export class RockSkyApiClient extends AbstractApiClient {
         } = config;
 
         this.cache = getRoot().items.cache();
-        this.apiUrl = normalizeWebAddress(apiUrl ?? 'https://api.rocksky.app/xrpc/');
+        this.apiUrl = normalizeWebAddress(apiUrl ?? 'https://api.rocksky.app/xrpc');
 
         this.logger.verbose(`API URL: '${apiUrl ?? '(None Given)'}' => Normalized: '${this.apiUrl.url}'`);
 
         this.rsPool = new RockskyClientPool('Pool', {apis: [{enable: true}]}, {logger: this.logger});
-        this.rsClient = new RockskyClient(token);
+        this.rsClient = new RockskyClient(this.apiUrl.url.origin, token);
     }
 
     public async buildData() {
@@ -91,7 +91,7 @@ export class RockSkyApiClient extends AbstractApiClient {
 
     testConnection = async () => {
         try {
-            await isPortReachableConnect(this.apiUrl.port, {host: this.apiUrl.url.hostname});
+            await isPortReachableConnect(this.apiUrl.port, {host: this.apiUrl.url.hostname, timeout: 2000});
         } catch (e) {
             throw new Error('Could not reach API URL endpoint', {cause: e});
         }
@@ -121,7 +121,7 @@ export class RockSkyApiClient extends AbstractApiClient {
         // so we can use the client for write operations later
         if(this.config.token !== undefined) {
             try {
-                await this.rsClient.apikeys()
+                await this.rsClient.apikeys();
                 // const req = request.get('https://api.rocksky.app/profile').set('Authorization', `Bearer ${this.config.token}`);
                 // await req;
                 return true;
