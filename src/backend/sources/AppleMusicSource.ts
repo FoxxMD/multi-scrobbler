@@ -17,6 +17,7 @@ import {
     playsAreBumpedOnly,
     playsAreSortConsistent
 } from "../utils/PlayComparisonUtils.ts";
+import { SimpleError } from "../common/errors/MSErrors.ts";
 
 export type AppleMusicHistoryDiffType = 'bump' | 'added' | 'top-rebound';
 
@@ -42,7 +43,7 @@ export default class AppleMusicSource extends AbstractSource {
 
     recentlyPlayed: PlayObject[] = [];
     musicKit!: MusicKit;
-    private storefront?: string;
+    private storefront?: string | null;
 
     recentChangedHistoryResponses: {ts: Dayjs, plays: PlayObject[]}[] = [];
 
@@ -199,20 +200,20 @@ export default class AppleMusicSource extends AbstractSource {
             let isrc = await this.cache.cacheApi.get<string | null>(cacheKey);
             if (isrc === undefined) {
                 const storefront = await this.getStorefront();
-                if (storefront === undefined) {
+                if (storefront === undefined || storefront === null) {
                     return play;
                 }
                 const res = await this.musicKit.songs.get(storefront, catalogId);
                 isrc = (!res.error && res.data && res.data.length > 0) ? (res.data[0].isrc ?? null) : null;
-                await this.cache.cacheApi.set(cacheKey, isrc, '7d');
+                await this.cache.cacheApi.set(cacheKey, isrc, '3h');
             }
             if (isrc !== null) {
                 play.data.isrc = isrc;
             }
         } catch (e) {
-            this.logger.debug(new Error(`Failed to backfill ISRC for Apple Music track ${catalogId} from catalog endpoint`, { cause: e }));
+            this.logger.warn(new SimpleError(`Failed to backfill ISRC for Apple Music track ${catalogId} from catalog endpoint`, { cause: e }));
             // set to null on failure so we don't make consecutive calls that result in failure on every poll attempt
-            await this.cache.cacheApi.set(cacheKey, null, '7d');
+            await this.cache.cacheApi.set(cacheKey, null, '3h');
         }
         return play;
     }
@@ -227,11 +228,12 @@ export default class AppleMusicSource extends AbstractSource {
                 throw new Error(res.error ?? 'No storefront returned');
             }
             this.storefront = res.data[0].id;
-            return this.storefront;
         } catch (e) {
-            this.logger.warn(new Error('Could not determine Apple Music storefront, ISRC enrichment for library tracks will be skipped', { cause: e }));
-            return undefined;
+            this.logger.warn(new SimpleError('Could not determine Apple Music storefront, ISRC enrichment for library tracks will be skipped', { cause: e }));
+            // store failure as non-undefined so we don't make consecutive calls to try to get storefront on failure
+            this.storefront = null;
         }
+        return this.storefront;
     }
 
     getIncomingHistoryConsistencyResult = (plays: PlayObject[]): HistoryConsistencyResult => {
