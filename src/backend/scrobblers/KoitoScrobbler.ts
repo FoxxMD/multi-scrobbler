@@ -23,7 +23,7 @@ export default class KoitoScrobbler extends AbstractScrobbleClient {
 
     constructor(name: any, config: KoitoClientConfig, options = {}, emitter: EventEmitter, logger: Logger) {
         super('koito', name, config, emitter, logger);
-        this.api = new KoitoApiClient(name, config.data, {logger: this.logger});
+        this.api = new KoitoApiClient(name, {...config.data, allowDeviceList: config.options.allowDeviceList}, {logger: this.logger});
         // https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(user_name)-listens
         // 1000 is way too high. maxing at 100
         this.MAX_INITIAL_SCROBBLES_FETCH = 100;
@@ -35,7 +35,7 @@ export default class KoitoScrobbler extends AbstractScrobbleClient {
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => listenObjectResponseToPlay(obj, options);
 
     public playToClientPayload(playObject: PlayObject): object {
-        return playToListenPayload(playObject, {allowDeviceList: this.config.data.allowDeviceList});
+        return playToListenPayload(playObject, {allowDeviceList: this.config.options?.allowDeviceList});
     }
 
 

@@ -61,11 +61,11 @@ export interface UserListensOptions {
 
 export class ListenbrainzApiClient extends AbstractApiClient implements PagelessTimeRangeListens {
 
-    declare config: ListenBrainzClientData;
+    declare config: ListenBrainzClientData & {allowDeviceList?: AllowDeviceList};
     url: URLData;
     userAgent: string
 
-    constructor(name: any, config: ListenBrainzClientData, options: AbstractApiOptions) {
+    constructor(name: any, config: ListenBrainzClientData & {allowDeviceList?: AllowDeviceList}, options: AbstractApiOptions) {
         super('ListenBrainz', name, config, options);
         const {
             url = 'https://api.listenbrainz.org/'

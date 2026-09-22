@@ -1,7 +1,7 @@
 import * as z from "zod";
 import {componentTypeSchema} from "../../../../../core/Atomic.ts";
 import {allowDeviceListEnvSchema, allowDeviceListSchema, requestRetryOptionsSchema} from "../common.ts";
-import {commonClientConfigSchema, commonClientDataSchema, type EnvClientSchema} from "./index.ts";
+import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema, nowPlayingOptionsSchema, type EnvClientSchema} from "./index.ts";
 import { httpUrl } from "../../../../utils/ZodUtils.ts";
 
 export const listenBrainzDataSchema = z.object({
@@ -41,7 +41,10 @@ export const listenBrainzDataSchema = z.object({
         description: '(If running a forked version of multi-scrobbler) A website or email Listenbrainz can contact you at in case of issues',
         examples: ['contact@mydomain.com']
     }),
+});
+export type ListenBrainzData = z.infer<typeof listenBrainzDataSchema>;
 
+export const listenbrainzOptionsSchema = z.object({
     /**
      * Only devices explicitly enumerated here are reported as `media_player` in each listen's additional_info.
      *
@@ -51,9 +54,9 @@ export const listenBrainzDataSchema = z.object({
      * @examples [{"iphone": "", "9f3ec2-iphone": "kitchen ipad"}]
      * */
     allowDeviceList: allowDeviceListSchema,
+    ...commonClientOptionsSchema.shape,
+    ...nowPlayingOptionsSchema.shape,
 });
-
-export type ListenBrainzData = z.infer<typeof listenBrainzDataSchema>;
 
 const envDataSchema = z.object({
     LZ_URL: listenBrainzDataSchema.shape.url,
@@ -73,6 +76,9 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, ListenBrainzClien
                 token: partial.LZ_TOKEN,
                 username: partial.LZ_USER,
                 contact: partial.LZ_CONTACT,
+                
+            },
+            options: {
                 allowDeviceList: partial.LZ_ALLOW_DEVICE_LIST
             }
     })
@@ -96,6 +102,7 @@ export const listenBrainzClientConfigSchema = z.object({
         examples: ["client"]
     }),
     data: listenBrainzClientDataSchema,
+    options: listenbrainzOptionsSchema.optional()
 });
 
 export type ListenBrainzClientConfig = z.infer<typeof listenBrainzClientConfigSchema>;

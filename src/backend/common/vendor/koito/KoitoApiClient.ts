@@ -29,10 +29,10 @@ const KOITO_LZ_PATH: RegExp = new RegExp(/^\/apis\/listenbrainz(\/?1?\/?)?$/);
 
 export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRangeListens<number> {
 
-    declare config: KoitoData;
+    declare config: KoitoData & {allowDeviceList?: AllowDeviceList};
     url: URLData;
 
-    constructor(name: any, config: KoitoData, options: AbstractApiOptions) {
+    constructor(name: any, config: KoitoData & {allowDeviceList?: AllowDeviceList}, options: AbstractApiOptions) {
         super('Koito', name, config, options);
 
         const {

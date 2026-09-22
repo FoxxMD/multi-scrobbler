@@ -2,7 +2,7 @@ import * as z from "zod";
 import type {UnixTimestamp} from "../../../../../core/Atomic.ts";
 import {componentTypeSchema} from "../../../../../core/Atomic.ts";
 import {allowDeviceListEnvSchema, allowDeviceListSchema, requestRetryOptionsSchema} from "../common.ts";
-import {commonClientConfigSchema, commonClientDataSchema, type EnvClientSchema} from "./index.ts";
+import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema, nowPlayingOptionsSchema, type EnvClientSchema} from "./index.ts";
 import { httpUrl } from "../../../../utils/ZodUtils.ts";
 
 export interface ListensResponse {
@@ -75,7 +75,11 @@ export const koitoDataSchema = z.object({
     username: z.string().meta({
         description: "Username of the user to scrobble for"
     }),
+}).meta({title: 'KoitoData'});
 
+export type KoitoData = z.infer<typeof koitoDataSchema>;
+
+export const koitoOptionsSchema = z.object({
     /**
      * Only devices explicitly enumerated here are reported as `media_player` in each listen's additional_info.
      *
@@ -85,9 +89,9 @@ export const koitoDataSchema = z.object({
      * @examples [{"iphone": "", "9f3ec2-iphone": "kitchen ipad"}]
      * */
     allowDeviceList: allowDeviceListSchema,
-}).meta({title: 'KoitoData'});
-
-export type KoitoData = z.infer<typeof koitoDataSchema>;
+    ...commonClientOptionsSchema.shape,
+    ...nowPlayingOptionsSchema.shape,
+});
 
 const envDataSchema = z.object({
     KOITO_URL: koitoDataSchema.shape.url,
@@ -105,6 +109,8 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, KoitoClientConfig
                 url: partial.KOITO_URL,
                 token: partial.KOITO_TOKEN,
                 username: partial.KOITO_USER,
+            },
+            options: {
                 allowDeviceList: partial.KOITO_ALLOW_DEVICE_LIST
             }
     })
@@ -128,6 +134,7 @@ export const koitoClientConfigSchema = z.object({
         examples: ["client"]
     }),
     data: koitoClientDataSchema,
+    options: koitoOptionsSchema.optional()
 });
 
 export type KoitoClientConfig = z.infer<typeof koitoClientConfigSchema>;

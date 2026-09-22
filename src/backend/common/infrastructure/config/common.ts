@@ -266,15 +266,6 @@ export const allowDeviceListSchema = z.record(z.string(), z.string()).optional()
         description: "A dictionary of allowed identifiers to use as `media_player` in scrobble submit data, when none is present.",
         examples: [{"iphone": "", "9f3ec2-iphone": "kitchen ipad"}]
 });
-/**
- * Only devices explicitly enumerated here are reported as `media_player` in each listen's additional_info.
- *
- * Keys match case-insensitively as substrings of the source's device id (longest match wins). What is submitted
- * is the key's label value, or the key itself when the label is empty
- *
- * @examples [{"iphone": "", "9f3ec2-iphone": "kitchen ipad"}]
- * */
-export type AllowDeviceList = z.infer<typeof allowDeviceListSchema>;
 
 export const allowDeviceListEnvSchema = z.string().optional().transform((val) => {
         if (val === undefined || val.trim() === '') {
