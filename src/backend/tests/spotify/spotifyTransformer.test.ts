@@ -1,15 +1,22 @@
-import { expect } from 'chai';
-import { describe, it } from 'mocha';
+import { loggerTest } from '@foxxmd/logging';
+import { Cacheable } from 'cacheable';
+import chai, { expect } from 'chai';
+import asPromised from 'chai-as-promised';
+import { before, describe, it } from 'mocha';
 import dayjs from 'dayjs';
 import type { PlayObject } from '../../../core/Atomic.ts';
-import {
+import { initMemoryCache } from '../../common/Cache.ts';
+import SpotifyTransformer, {
     COMPILATION_PENALTY,
     missingSpotifyTypes,
     parseStageConfig,
     rankTracksBySimilarity,
+    type SpotifyTransformerConfig,
     type SpotifyTransformerDataStage,
 } from '../../common/transforms/SpotifyTransformer.ts';
 import { isCompilation, trackToPlay } from '../../common/vendor/spotify/SpotifyApiClient.ts';
+
+chai.use(asPromised);
 
 const basePlay = (data: Partial<PlayObject['data']> = {}, meta: Partial<PlayObject['meta']> = {}): PlayObject => ({
     data: {
@@ -64,6 +71,25 @@ const fakeTrack = (opts: {
         },
     } as unknown as SpotifyApi.TrackObjectFull;
 };
+
+const memorycache = () => new Cacheable({ primary: initMemoryCache({ ttl: '1ms' }) });
+
+const createSpotifyTransformer = (config: Partial<SpotifyTransformerConfig> = {}) => {
+    const transformer = new SpotifyTransformer({
+        name: 'test',
+        type: 'spotify',
+        data: {
+            clientId: 'test-client-id',
+            clientSecret: 'test-client-secret',
+        },
+        ...config,
+    } as SpotifyTransformerConfig, {
+        logger: loggerTest,
+        cache: memorycache(),
+        clientCache: memorycache(),
+    });
+    return transformer;
+}
 
 describe('Spotify Transformer', function () {
 
@@ -186,6 +212,44 @@ describe('Spotify Transformer', function () {
             const ranked = new Map(withDeprioritize.map(x => [x.track.id, x.matchScore]));
             expect(ranked.get('studio')).to.be.greaterThan(ranked.get('comp'));
             expect(ranked.get('studio') - ranked.get('comp')).to.be.closeTo(COMPILATION_PENALTY, 0.0001);
+        });
+    });
+
+    describe('handlePostFetch', function () {
+
+        const stageConfig = { type: 'spotify' } as SpotifyTransformerDataStage;
+
+        let transformer: SpotifyTransformer;
+
+        before(async function () {
+            transformer = createSpotifyTransformer();
+            await transformer.initialize();
+        });
+
+        it('uses an ISRC match even when its title/artist text scores below the minimum threshold', async function () {
+            // scrobble source title is drastically different from the Spotify catalog title (localized/theatrical
+            // edition naming) but the ISRC identifies it as the same recording
+            const play = basePlay({ track: 'KAISEI:Movie Edition from Project SEKAI', artists: [{ name: 'Project SEKAI' }], isrc: 'JPPO02201234' });
+            const track = fakeTrack({ name: '快晴「劇場版プロジェクトセカイ」ver.', artists: [artist('a1', 'Project SEKAI')], isrc: 'JPPO02201234' });
+
+            const result = await transformer.handlePostFetch(play, { tracks: [track], requestQueries: [], searchType: 'isrc' }, stageConfig);
+            expect(result.data.track).to.equal('快晴「劇場版プロジェクトセカイ」ver.');
+        });
+
+        it('still filters a basic-search match by the minimum score threshold', async function () {
+            const play = basePlay({ track: 'KAISEI:Movie Edition from Project SEKAI', artists: [{ name: 'Project SEKAI' }], album: 'Original Soundtrack' });
+            const track = fakeTrack({ name: '快晴「劇場版プロジェクトセカイ」ver.', artists: [artist('a1', 'Project SEKAI')], albumName: 'Theatrical Edition Single' });
+
+            await expect(transformer.handlePostFetch(play, { tracks: [track], requestQueries: [], searchType: 'basic' }, stageConfig)).to.be.rejected;
+        });
+
+        it('picks the best-matching candidate by fuzzy score when an ISRC returns more than one album', async function () {
+            const play = basePlay({ track: 'My Track', artists: [{ name: 'My Artist' }], album: 'The Real Album', isrc: 'USRC17607839' });
+            const wrongAlbum = fakeTrack({ id: 'wrong', albumName: 'Some Compilation', isrc: 'USRC17607839' });
+            const rightAlbum = fakeTrack({ id: 'right', albumName: 'The Real Album', isrc: 'USRC17607839' });
+
+            const result = await transformer.handlePostFetch(play, { tracks: [wrongAlbum, rightAlbum], requestQueries: [], searchType: 'isrc' }, stageConfig);
+            expect(result.data.meta.spotify.track).to.equal('right');
         });
     });
 });

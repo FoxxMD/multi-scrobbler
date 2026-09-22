@@ -56,6 +56,12 @@ export interface SpotifyTransformerDataStage extends SpotifyTransformerDataStron
 export interface SpotifyTrackSearchResult {
     tracks: SpotifyApi.TrackObjectFull[]
     requestQueries: LifecycleInput[]
+    /** Which search type produced `tracks`. When 'isrc' the ISRC itself is treated as confirmation of the match --
+     * fuzzy title/artist/album scoring is only used to disambiguate between multiple candidates (EX the same ISRC
+     * appearing on more than one album/release) and is not used to reject the match, since an ISRC-identified
+     * recording may legitimately have very different title/artist text on Spotify (localized titles, "feat." credits,
+     * movie/theatrical edition suffixes, etc) than the scrobbling source. */
+    searchType?: SpotifySearchType
 }
 
 export interface RankedSpotifyTrack {
@@ -287,7 +293,7 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
                 if (tracks.length === 0) {
                     this.logger.debug(`'${searchType}' search type returned no matches`);
                 } else {
-                    break;
+                    return { tracks, requestQueries: queries, searchType };
                 }
             } catch (e) {
                 if (e instanceof SearchPrerequisiteError) {
@@ -330,7 +336,8 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
 
         const {
             tracks = [],
-            requestQueries = []
+            requestQueries = [],
+            searchType
         } = transformData ?? {};
 
         if (tracks.length === 0) {
@@ -345,12 +352,21 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
 
         const ranked = rankTracksBySimilarity(tracks, play, mergedConfig);
 
-        const filtered = ranked.filter(x => x.matchScore >= score);
-        if (filtered.length === 0) {
-            throw new StagePrerequisiteError(`All ${tracks.length} fetched matches had a score < ${score}, best match was ${ranked[0]?.matchScore.toFixed(3)}`, { shortStack: true, inputs: requestQueries });
+        let filtered: RankedSpotifyTrack[];
+        if (searchType === 'isrc') {
+            // an ISRC match already identifies the exact recording -- fuzzy scoring here is only used to pick
+            // between multiple candidates (the same ISRC on more than one album/release), not to reject the match.
+            // Title/artist text can legitimately diverge (localized titles, movie/theatrical edition suffixes, etc)
+            // for a track that is nonetheless the correct recording.
+            filtered = ranked;
+            this.logger.debug(`Using ISRC-confirmed match, skipping score threshold. Best match score of ${ranked[0].matchScore.toFixed(3)} from ${tracks.length} candidate(s)`);
+        } else {
+            filtered = ranked.filter(x => x.matchScore >= score);
+            if (filtered.length === 0) {
+                throw new StagePrerequisiteError(`All ${tracks.length} fetched matches had a score < ${score}, best match was ${ranked[0]?.matchScore.toFixed(3)}`, { shortStack: true, inputs: requestQueries });
+            }
+            this.logger.debug(`${filtered.length} of ${tracks.length} fetched matches were valid. Using match with best score of ${filtered[0].matchScore.toFixed(3)}`);
         }
-
-        this.logger.debug(`${filtered.length} of ${tracks.length} fetched matches were valid. Using match with best score of ${filtered[0].matchScore.toFixed(3)}`);
 
         const spotifyPlay = trackToPlay(filtered[0].track);
         spotifyPlay.meta.lifecycleInputs = [...(spotifyPlay.meta.lifecycleInputs ?? []), ...requestQueries, { type: 'spotifyTrack', input: filtered[0].track.id }];

@@ -230,6 +230,14 @@ If your Scrobble data contains an [ISRC](https://musicbrainz.org/doc/ISRC) then 
 
 **If the ISRC is present on more than one Spotify album/track** (which happens often -- singles, re-releases, and compilation appearances of the same recording all share an ISRC) then the results are [ranked using fuzzy matching](#ranking) against your scrobble's existing album/artist data to pick the best candidate.
 
+:::tip[ISRC Matches Skip the Score Threshold]
+
+The ISRC itself is treated as confirmation of the match, so an ISRC result is **always used regardless of its fuzzy match [score](#score)** -- fuzzy matching is only used to pick between multiple ISRC candidates, never to reject one. This matters because Spotify's title/artist text for the same recording can differ substantially from your scrobble source (localized titles, "feat." credits, movie/theatrical edition suffixes, etc) while still being the correct match.
+
+Only results from a `basic` search are filtered by the minimum `score`.
+
+:::
+
 </details>
 
 <details>
@@ -248,7 +256,7 @@ If `searchOrder` is undefined Multi-scrobbler defaults to using `isrc` then `bas
 
 :::note
 
-If all defined search methods do not return any results (or no results score high enough, see [Ranking](#ranking)) then the stage is marked as [**failed** (`onFailure`) for **Flow Control**](/configuration/transforms/#flow-control).
+If all defined search methods do not return any results (or, for a `basic` search, no results score high enough, see [Ranking](#ranking)) then the stage is marked as [**failed** (`onFailure`) for **Flow Control**](/configuration/transforms/#flow-control).
 
 **A failed Stage never partially applies -- your Play is left completely unmodified.** See [Failed and Skipped Stages](/configuration/transforms/#flow-control) for details.
 
@@ -276,11 +284,11 @@ If you only want Spotify matches sourced from ISRC lookups -- and want your Play
 Unlike Musicbrainz (whose search backend returns its own relevance score) Spotify's search results do not carry a comparable score. So Multi-scrobbler always fuzzy-matches every candidate against your original scrobble's title/artist(s)/album to:
 
 * disambiguate between multiple candidates (EX an ISRC present on more than one album)
-* determine whether any candidate is a confident enough match to use at all
+* for `basic` search results only, determine whether any candidate is a confident enough match to use at all -- **an `isrc` match is always used**, see [ISRC Matches Skip the Score Threshold](#search-methods)
 
 #### Score
 
-Each candidate is scored between `0` and `1` based on how similar its title/artist(s)/album are to your original scrobble. Set `score` to change the minimum score a candidate must have to be used. Default is `0.6`.
+Each candidate is scored between `0` and `1` based on how similar its title/artist(s)/album are to your original scrobble. Set `score` to change the minimum score a `basic`-search candidate must have to be used. Default is `0.6`. This has no effect on `isrc` matches, which are always used.
 
 ```json5
 {
