@@ -21,6 +21,12 @@ export interface SpotifyTransformerData {
     searchOrder?: SpotifySearchType[]
     /** An ISO 3166-1 alpha-2 country code used to bias/limit search results to what is available in this market */
     market?: string
+    /** A locale (EX en_US, ja_JP) used to try to bias which translation of a localized catalog name
+     * (artist/album/track) the Spotify API returns. Not officially documented by Spotify -- results may be
+     * inconsistent -- but can be used alongside (or instead of) `market` to try to force names into a
+     * specific language.
+     */
+    locale?: string
     /** Deprioritize (but do not exclude) matches whose album is a compilation when ranking candidates
      *
      * @default false
@@ -59,7 +65,8 @@ export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()): SpotifyT
         data: {
             clientId,
             clientSecret,
-            market: process.env.SPOTIFY_TRANSFORM_MARKET
+            market: process.env.SPOTIFY_TRANSFORM_MARKET,
+            locale: process.env.SPOTIFY_TRANSFORM_LOCALE
         },
         defaults: {
             ...(deprioritizeCompilations ? { deprioritizeCompilations } : {})

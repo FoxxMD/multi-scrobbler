@@ -316,9 +316,10 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
         }
         this.logger.debug({ labels: ['ISRC Search'] }, 'Searching with ISRC');
         const {
-            market = this.defaults.market
+            market = this.defaults.market,
+            locale = this.defaults.locale
         } = stageConfig;
-        return await this.api.searchByIsrc(play.data.isrc, { market, useCachedResult: opts.useCachedResult });
+        return await this.api.searchByIsrc(play.data.isrc, { market, locale, useCachedResult: opts.useCachedResult });
     }
 
     public async searchByBasicFields(play: PlayObject, stageConfig: SpotifyTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<SpotifyApi.TrackObjectFull[]> {
@@ -327,9 +328,10 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
         }
         this.logger.debug({ labels: ['Basic Search'] }, 'Searching by artist/album/track');
         const {
-            market = this.defaults.market
+            market = this.defaults.market,
+            locale = this.defaults.locale
         } = stageConfig;
-        return await this.api.searchByFields(play, { market, useCachedResult: opts.useCachedResult });
+        return await this.api.searchByFields(play, { market, locale, useCachedResult: opts.useCachedResult });
     }
 
     public async handlePostFetch(play: PlayObject, transformData: SpotifyTrackSearchResult, stageConfig: SpotifyTransformerDataStage): Promise<PlayObject> {

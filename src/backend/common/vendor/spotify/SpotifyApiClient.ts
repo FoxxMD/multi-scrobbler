@@ -15,6 +15,7 @@ import type { SpotifyTransformerApiConfigData } from "./SpotifyTypes.ts";
 export interface SpotifySearchOptions {
     limit?: number
     market?: string
+    locale?: string
     useCachedResult?: boolean
 }
 
@@ -89,16 +90,16 @@ export class SpotifyApiClient extends AbstractApiClient {
     }
 
     searchByIsrc = async (isrc: string, opts: SpotifySearchOptions = {}): Promise<SpotifyApi.TrackObjectFull[]> => {
-        const { limit = 50, market = this.config.market, useCachedResult } = opts;
+        const { limit = 50, market = this.config.market, locale = this.config.locale, useCachedResult } = opts;
         const q = `isrc:${isrcNoHyphens(isrc)}`;
-        const cacheKey = `spotify-search-${hashObject({ q, limit, market })}`;
+        const cacheKey = `spotify-search-${hashObject({ q, limit, market, locale })}`;
         this.logger.debug({ labels: ['ISRC Search'] }, `Search Query => ${q}`);
-        const res = await this.callApi((api) => api.searchTracks(q, { limit, market }), { cacheKey, useCachedResult });
+        const res = await this.callApi((api) => api.searchTracks(q, { limit, market, ...(locale !== undefined ? { locale } : {}) }), { cacheKey, useCachedResult });
         return res.body.tracks?.items ?? [];
     }
 
     searchByFields = async (play: PlayObject, opts: SpotifySearchOptions = {}): Promise<SpotifyApi.TrackObjectFull[]> => {
-        const { limit = 50, market = this.config.market, useCachedResult } = opts;
+        const { limit = 50, market = this.config.market, locale = this.config.locale, useCachedResult } = opts;
 
         const parts: string[] = [];
         if (play.data.track !== undefined) {
@@ -115,9 +116,9 @@ export class SpotifyApiClient extends AbstractApiClient {
         // happens afterwards via fuzzy ranking instead.
 
         const q = parts.join(' ');
-        const cacheKey = `spotify-search-${hashObject({ q, limit, market })}`;
+        const cacheKey = `spotify-search-${hashObject({ q, limit, market, locale })}`;
         this.logger.debug({ labels: ['Basic Search'] }, `Search Query => ${q}`);
-        const res = await this.callApi((api) => api.searchTracks(q, { limit, market }), { cacheKey, useCachedResult });
+        const res = await this.callApi((api) => api.searchTracks(q, { limit, market, ...(locale !== undefined ? { locale } : {}) }), { cacheKey, useCachedResult });
         return res.body.tracks?.items ?? [];
     }
 

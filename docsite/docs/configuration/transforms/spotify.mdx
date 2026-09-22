@@ -43,9 +43,9 @@ This Stage uses Spotify's [Client Credentials Flow](https://developer.spotify.co
 }
 ```
 
-<details id="market-and-rate-limiting">
+<details id="market-locale-and-rate-limiting">
 
-<summary>Market and Rate Limiting</summary>
+<summary>Market, Locale, and Rate Limiting</summary>
 
 `market` (an [ISO 3166-1 alpha-2 country code](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2)) can be set to bias/limit search results to what is available in a specific market:
 
@@ -60,6 +60,26 @@ This Stage uses Spotify's [Client Credentials Flow](https://developer.spotify.co
   },
 }
 ```
+
+`locale` (in `ISO-639-1_ISO-3166-1` format, EX `en_US`, `ja_JP`) can additionally be set to try to bias which translation of a localized catalog name (artist/album/track) Spotify returns for a match:
+
+```json5
+{
+  "type": "spotify",
+  "name": "MySpotify",
+  "data": {
+    "clientId": "787c921a2a2ab42320831aba0c8f2fc2",
+    "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a",
+    "locale": "en_US"
+  },
+}
+```
+
+:::note
+
+`locale` is not an officially documented parameter of the Spotify Web API and its behavior can be inconsistent -- some catalog entries only exist with one language's name at all, in which case no `locale`/`market` combination will produce an alternate translation because Spotify doesn't have one to return. Try setting `market` to your account's actual region first; add `locale` on top of that if names still aren't coming back in your preferred language.
+
+:::
 
 `rate` can be used to configure how many requests are made to the Spotify API, defined by **max number of requests** within **timespan of N seconds** (default `10 req/1s`):
 
@@ -141,7 +161,8 @@ Use `SPOTIFY_TRANSFORM=true` to enable this Stage from ENV. `clientId`/`clientSe
 
 * `SPOTIFY_TRANSFORM=true` - Enables this Stage
 * `SPOTIFY_TRANSFORM_CLIENT_ID` / `SPOTIFY_TRANSFORM_CLIENT_SECRET` - App credentials (optional if `SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET` are already set)
-* `SPOTIFY_TRANSFORM_MARKET` - Optional [market](#market-and-rate-limiting)
+* `SPOTIFY_TRANSFORM_MARKET` - Optional [market](#market-locale-and-rate-limiting)
+* `SPOTIFY_TRANSFORM_LOCALE` - Optional [locale](#market-locale-and-rate-limiting)
 * `SPOTIFY_TRANSFORM_DEPRIORITIZE_COMPILATIONS=true` - Optionally enable [`deprioritizeCompilations`](#deprioritize-compilations)
 
 Finally, use ENV `*_TRANSFORMS=spotify` on each Source/Client you wish to apply this stage to. This applies the stage in the [`preCompare` Hook](/configuration/transforms#lifecycle-hooks) with all [Rules](#rules-and-hooks) enabled.
