@@ -137,7 +137,7 @@ export class RockSkyApiClient extends AbstractApiClient {
     getUserListens = async (maxTracks: number, user?: string): Promise<RockskyScrobble[]> => {
         try {
 
-            const res = this.rsPool.rsProxy.scrobbles(user ?? this.userData?.did ?? this.userData?.handle ?? this.config.handle, maxTracks, 0);
+            const res = await this.rsPool.rsProxy.scrobbles(user ?? this.userData?.did ?? this.userData?.handle ?? this.config.handle, maxTracks, 0);
             // const res = await this.rsClient.actor.getActorScrobbles({
             //     limit: maxTracks,
             //     offset: 0,
