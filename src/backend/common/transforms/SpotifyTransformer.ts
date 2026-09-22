@@ -210,6 +210,7 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
             clientId,
             clientSecret,
             market,
+            locale,
             rate
         } = this.config.data ?? {};
 
@@ -217,7 +218,7 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
             throw new Error(`Spotify Transformer requires 'clientId' and 'clientSecret' to be set in 'data'`);
         }
 
-        this.api = new SpotifyApiClient(this.config.name, { clientId, clientSecret, market, rate }, {
+        this.api = new SpotifyApiClient(this.config.name, { clientId, clientSecret, market, locale, rate }, {
             logger: this.logger,
             cache: this.clientCache
         });
