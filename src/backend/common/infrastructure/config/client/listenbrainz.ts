@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {componentTypeSchema} from "../../../../../core/Atomic.ts";
-import {requestRetryOptionsSchema} from "../common.ts";
+import {allowDeviceListEnvSchema, allowDeviceListSchema, requestRetryOptionsSchema} from "../common.ts";
 import {commonClientConfigSchema, commonClientDataSchema, type EnvClientSchema} from "./index.ts";
 import { httpUrl } from "../../../../utils/ZodUtils.ts";
 
@@ -46,14 +46,11 @@ export const listenBrainzDataSchema = z.object({
      * Only devices explicitly enumerated here are reported as `media_player` in each listen's additional_info.
      *
      * Keys match case-insensitively as substrings of the source's device id (longest match wins). What is submitted
-     * is the key's label value, or the key itself when the label is empty — never the raw device identifier.
+     * is the key's label value, or the key itself when the label is empty
      *
      * @examples [{"iphone": "", "9f3ec2-iphone": "kitchen ipad"}]
      * */
-    allowDeviceList: z.record(z.string(), z.string()).optional().meta({
-        description: "Only devices explicitly enumerated here are reported as media_player in each listen's additional_info. Keys match case-insensitively as substrings of the source's device id (longest match wins); what is submitted is the key's label value, or the key itself when the label is empty — never the raw device identifier.",
-        examples: [{"iphone": "", "9f3ec2-iphone": "kitchen ipad"}]
-    }),
+    allowDeviceList: allowDeviceListSchema,
 });
 
 export type ListenBrainzData = z.infer<typeof listenBrainzDataSchema>;
@@ -63,22 +60,7 @@ const envDataSchema = z.object({
     LZ_TOKEN: listenBrainzDataSchema.shape.token,
     LZ_USER: listenBrainzDataSchema.shape.username,
     LZ_CONTACT: listenBrainzDataSchema.shape.contact,
-    LZ_ALLOW_DEVICE_LIST: z.string().optional().transform((val) => {
-        if (val === undefined || val.trim() === '') {
-            return undefined;
-        }
-        // comma-separated entries; 'match:label' gives a custom label, bare 'match' submits the match itself
-        const rec: Record<string, string> = {};
-        for (const part of val.split(',').map(x => x.trim()).filter(x => x !== '')) {
-            const sep = part.indexOf(':');
-            if (sep === -1) {
-                rec[part] = '';
-            } else {
-                rec[part.slice(0, sep).trim()] = part.slice(sep + 1).trim();
-            }
-        }
-        return rec;
-    }).meta({description: listenBrainzDataSchema.shape.allowDeviceList.meta().description})
+    LZ_ALLOW_DEVICE_LIST: allowDeviceListEnvSchema
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, ListenBrainzClientConfig> = {

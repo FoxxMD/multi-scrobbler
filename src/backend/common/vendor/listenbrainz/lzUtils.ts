@@ -8,12 +8,21 @@ import {version as appVersion } from '../../../version.ts';
 import { artistCreditsToNames, artistCreditToName } from "../../../../core/StringUtils.ts";
 
 export type AllowDeviceList = Record<string, string>;
-
 /**
  * Match a device id against an explicitly enumerated allowlist and return the label to submit, or undefined if not allowed.
  *
  * Keys match as case-insensitive substrings of the device id, longest match wins. Returns the key's value, or the key itself
- * when the value is empty — never the raw device id. EX `{'iphone': '', '3ec9a-iphone': 'kitchen ipad'}`
+ * when the value is empty
+ * 
+ * EX
+ * allowList: 
+ * {
+ *   'iphone': '',
+ *   '3ec9a-iphone': 'kitchen ipad'
+ * };
+ * 
+ * deviceId => 3ec9a-iphone => picks 'kitchen ipad'
+ * deviceId => momSmith-iphone => picks 'iphone'
  */
 export const matchDeviceLabel = (deviceId: string | undefined, allowList: AllowDeviceList | undefined): string | undefined => {
     if (deviceId === undefined || deviceId === NO_DEVICE || allowList === undefined) {

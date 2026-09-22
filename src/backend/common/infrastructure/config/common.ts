@@ -252,3 +252,47 @@ export const commonComponentEnvConfigToConfigPrimitives = <T extends string>(pre
         enable: raw[`${prefix}_ENABLE`] as boolean | undefined
     };
 };
+
+
+/**
+ * Only devices explicitly enumerated here are reported as `media_player` in each listen's additional_info.
+ *
+ * Keys match case-insensitively as substrings of the source's device id (longest match wins). What is submitted
+ * is the key's label value, or the key itself when the label is empty
+ *
+ * @examples [{"iphone": "", "9f3ec2-iphone": "kitchen ipad"}]
+ * */
+export const allowDeviceListSchema = z.record(z.string(), z.string()).optional().meta({
+        description: "A dictionary of allowed identifiers to use as `media_player` in scrobble submit data, when none is present.",
+        examples: [{"iphone": "", "9f3ec2-iphone": "kitchen ipad"}]
+});
+/**
+ * Only devices explicitly enumerated here are reported as `media_player` in each listen's additional_info.
+ *
+ * Keys match case-insensitively as substrings of the source's device id (longest match wins). What is submitted
+ * is the key's label value, or the key itself when the label is empty
+ *
+ * @examples [{"iphone": "", "9f3ec2-iphone": "kitchen ipad"}]
+ * */
+export type AllowDeviceList = z.infer<typeof allowDeviceListSchema>;
+
+export const allowDeviceListEnvSchema = z.string().optional().transform((val) => {
+        if (val === undefined || val.trim() === '') {
+            return undefined;
+        }
+        // comma-separated entries; 'match:label' gives a custom label, bare 'match' submits the match itself
+        const rec: Record<string, string> = {};
+        for (const part of val.split(',').map(x => x.trim()).filter(x => x !== '')) {
+            const sep = part.indexOf(':');
+            if (sep === -1) {
+                rec[part] = '';
+            } else {
+                rec[part.slice(0, sep).trim()] = part.slice(sep + 1).trim();
+            }
+        }
+        return rec;
+    }).meta({
+        description: 'A comma-delimited list of match:label entries to use as `media_play` in scrobble submit data, when none is present.',
+        examples: ['iphone,1234-smith-roku:familyRoku']
+});
+export type AllowDeviceListEnv = z.infer<typeof allowDeviceListEnvSchema>;
