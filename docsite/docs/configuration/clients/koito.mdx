@@ -9,6 +9,7 @@ import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import JsonConfig from '!!raw-loader!@site/../config/koito.json.example';
 import ENVConfig from "@site/docs/configuration/clients/_env_configs/_koito.md"
+import DeviceInfo from "@site/src/components/snippets/_device_allow_list.mdx";
 
 :::tip[Other Uses]
 
@@ -51,6 +52,10 @@ For Koito versions `<=0.1.7`, you must have the environment variable `KOITO_ALLO
 :::
 
 ## Configuration
+
+<DetailsAdmo type="tip" summary="Scrobbling Device Data">
+<DeviceInfo name="KOITO"/>
+</DetailsAdmo>
 
 <Config config="KoitoClientConfig" fileContent={JsonConfig} client ambiguous name="koito">
 <ENVConfig/>

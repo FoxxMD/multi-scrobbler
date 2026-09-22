@@ -1,0 +1,80 @@
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import CodeInline from '@theme/CodeInline';
+
+Many Sources report device identifiers with their listening data which can be included in the scrobble data for this client.
+
+However, Multi-Scrobbler does not include this information in scrobble data because it can contain [Personally Identifiable Information (PII)](/configuration/security##why-not-expose-it).
+
+You can opt-in to including this data by defining an *explicit* list of identifiers that are matched against real device idenitifiers that are then used *instead* of the real identifier, when scrobbling.
+
+You define a list of *matching strings* with optional labels. The most-specific matched-string to a real device identifier gets picked and then it, or it's label, is used as the device identifier in the scrobble data.
+
+<h3>Examples and Configuration</h3>
+
+In each of the examples configurations below, the resulting behavior for device identifier reporting is...
+
+* *Any* device with the string `iphone` in it will be reported as *only* `iphone`
+* A device with the string `smithFamily-roku` will be reported as `familyRoku`
+* Any *other* device with the string `roku` in it will be reported as `roku`
+
+<Tabs groupId="configType">
+<TabItem value="env" label="ENV">
+
+Define a comma-delimited list of `match:label` entries to the env <CodeInline>{props.name}_ALLOW_DEVICE_LIST</CodeInline>
+
+<CodeBlock language="yaml">
+{`
+services:
+    multi-scrobbler:
+      # ...
+      environment:
+        # ...
+        - ${props.name}_ALLOW_DEVICE_LIST=iphone,roku,smithFamily-roku:familyRoku
+`}
+</CodeBlock>
+
+</TabItem>
+<TabItem value="file" label="File">
+
+Define a dictionary of `allowDeviceList` entries. Entries without a label should use an empty string.
+
+```json5
+{
+    "id": "MyClient",
+    "data": { /* ... */},
+    "options": {
+        // ...
+        "allowDeviceList": {
+            "iphone": "",
+            "smithFamily-roku": "familyRoku",
+            "roku": ""
+        }
+    }
+}
+```
+</TabItem>
+<TabItem value="aio" label="Aio">
+
+Define a dictionary of `allowDeviceList` entries. Entries without a label should use an empty string.
+
+```json5 title="config.json"
+{
+    "clients": [{
+        "id": "MyClient",
+        "type": // ...,
+        "data": { /* ... */ },
+        "options": {
+            // ...
+            "allowDeviceList": {
+                "iphone": "",
+                "smithFamily-roku": "familyRoku",
+                "roku": ""
+            }
+        }
+    }]
+}
+```
+</TabItem>
+</Tabs>
