@@ -75,9 +75,15 @@ This Stage uses Spotify's [Client Credentials Flow](https://developer.spotify.co
 }
 ```
 
+:::tip[Example]
+
+Some catalog entries carry a translated name depending on locale, independent of `market`. EX the Japanese game-music artist "ATLUS Sound Team" is stored in Spotify's catalog under multiple localized names for the exact same artist ID -- without `locale` set, a lookup returns `アトラスサウンドチーム`; with `"locale": "en_US"` the same lookup returns `ATLUS Sound Team`. `market` alone does **not** control this -- it was tested independently and had no effect on the returned name for this artist.
+
+:::
+
 :::note
 
-`locale` is not an officially documented parameter of the Spotify Web API and its behavior can be inconsistent -- some catalog entries only exist with one language's name at all, in which case no `locale`/`market` combination will produce an alternate translation because Spotify doesn't have one to return. Try setting `market` to your account's actual region first; add `locale` on top of that if names still aren't coming back in your preferred language.
+`locale` is not an officially documented parameter of the Spotify Web API and its behavior can be inconsistent -- some catalog entries only exist with one language's name at all, in which case no `locale`/`market` combination will produce an alternate translation because Spotify doesn't have one to return.
 
 :::
 
