@@ -26,7 +26,7 @@ export default class RockskySource extends MemorySource {
         super('rocksky', name, {...config, data: {interval, maxInterval, ...restData}}, internal, emitter);
         this.canPoll = true;
         this.canBacklog = true;
-        this.api = new RockSkyApiClient(name, {...config.data, ...config.options}, {logger: this.logger});
+        this.api = new RockSkyApiClient(name, {...config.data, ...config.options}, {logger: this.logger, configDir: internal.configDir});
         this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
         this.supportsUpstreamRecentlyPlayed = true
         // https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(user_name)-listens
