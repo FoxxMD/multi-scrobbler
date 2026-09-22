@@ -13,6 +13,7 @@ import { loggerNoop } from '../common/MaybeLogger.ts';
 import { statefulInvariantTransform } from "../../core/PlayUtils.ts";
 import { findAsyncSequential } from "./AsyncUtils.ts";
 import dayjs from "dayjs";
+import { SimpleError } from "../common/errors/MSErrors.ts";
 
 
 export const metaInvariantTransform = (play: PlayObject): PlayObjectMinimal => {
@@ -433,6 +434,7 @@ export const playDateWithinDurationOfAny = (play: PlayObject, plays:  PlayObject
 export interface ExistingScrobbleOpts {
     transformPlay?: (play: PlayObject, hookType: TransformHook) => Promise<PlayObject>
     existingSubmitted?: (play: PlayObject) => Promise<[ScrobbledPlayObject?, ScrobbledPlayObject[]?]>
+    existingExternal?: (play: PlayObject) => Promise<{reason?: string, match: boolean, data?: string | Record<string, any>}>
     transformRules?: PlayTransformRules
     checkExistingScrobbles?: boolean
     logger?: Logger
@@ -443,6 +445,7 @@ export const existingScrobble = async (playObjPre: PlayObject, existingScrobbles
     const {
         transformPlay = (play, hook) => play,
         existingSubmitted = (play) => [undefined, undefined],
+        existingExternal,
         transformRules,
         checkExistingScrobbles = true,
         logger = loggerNoop
@@ -484,6 +487,22 @@ export const existingScrobble = async (playObjPre: PlayObject, existingScrobbles
             result.reason = 'Exact Match found in previously successfully scrobbled plays';
 
             existingScrobble = existingExactSubmitted.scrobble;
+        } else if(existingExternal !== undefined) {
+            try {
+                const res = await existingExternal(playObj);
+                if(res.match) {
+                    return {
+                        match: true,
+                        score: 1,
+                        breakdowns: [],
+                        reason: res.reason,
+                        summary: res.data !== undefined ? (typeof res.data === 'string' ? res.data : JSON.stringify(res.data)) : undefined,
+                        createdAt: dayjs().toISOString()
+                    }
+                }
+            } catch (e) {
+                logger.warn(new SimpleError('External existing check failed', {cause: e}));
+            }
         }
         // if not though then we need to check recent scrobbles from scrobble api.
         // this will be less accurate than checking existing submitted (obv) but will happen if backlogging or on a fresh server start

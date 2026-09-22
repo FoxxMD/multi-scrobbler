@@ -10,7 +10,8 @@ import type {ListenResponse, ListenType} from '../../../core/vendor/listenbrainz
 import { getATProtoIdentifier, identifierToAtProtoHandle, isDID } from './atproto/atUtils.ts';
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
 import { AuthError, ScrobbleSubmitError, SimpleError } from "../errors/MSErrors.ts";
-import { type CreateScrobbleInput, RockskyClient, Agent, type SongViewDetailed, type ScrobbleInput, type ScrobbleViewBasic, RockskyError, type ActorTrackView } from "@rocksky/sdk";
+import { type CreateScrobbleInput, RockskyClient, Agent, artistHash, type SongViewDetailed, type ScrobbleInput, type ScrobbleViewBasic, RockskyError, type ActorTrackView } from "@rocksky/sdk";
+import { RockskyIndex } from "@rocksky/sdk/dedup";
 import { getRoot } from "../../ioc.ts";
 import type { MSCache } from "../Cache.ts";
 import type {ATProtoUserIdentifierData, HandleData} from "../infrastructure/config/client/atproto.ts";
@@ -18,11 +19,15 @@ import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { removeUndefinedKeys } from "../../../core/DataUtils.ts";
 import { isrcNoHyphens } from '../../../core/PlayUtils.ts';
 import { findCauseByFunc } from "../../utils/ErrorUtils.ts";
-import { hashObject } from "../../utils/StringUtils.ts";
+import { hashObject, normalizeStr } from "../../utils/StringUtils.ts";
 import { stringSameness } from "@foxxmd/string-sameness";
 import clone from "clone";
 import { difference } from "../../utils.ts";
 import { RockskyClientPool } from "./rocksky/RockskyClientWrapped.ts";
+import path from "node:path";
+import { ATProtoUnauthenticatedApiClient } from "./atproto/ATProtoUnauthenticatedApiClient.ts";
+import fsPromise from 'node:fs/promises';
+import { getDataDir } from "../index.ts";
 
 interface SubmitOptions {
     log?: boolean
@@ -54,14 +59,18 @@ export class RockSkyApiClient extends AbstractApiClient {
     rsClient?: RockskyClient;
     rsPool: RockskyClientPool;
     rsAgent?: Agent;
+    rsIndex?: RockskyIndex;
 
-    constructor(name: any, config: RockSkyData & RockSkyOptions, options: AbstractApiOptions) {
+    protected configDir: string;
+
+    constructor(name: any, config: RockSkyData & RockSkyOptions, options: AbstractApiOptions & {configDir: string}) {
         super('RockSky', name, config, options);
         const {
             apiUrl,
             token,
         } = config;
 
+        this.configDir = options.configDir;
         this.cache = getRoot().items.cache();
         this.apiUrl = normalizeWebAddress(apiUrl ?? 'https://api.rocksky.app/xrpc');
 
@@ -69,9 +78,19 @@ export class RockSkyApiClient extends AbstractApiClient {
 
         this.rsPool = new RockskyClientPool('Pool', {apis: [{enable: true}]}, {logger: this.logger});
         this.rsClient = new RockskyClient(this.apiUrl.url.origin, token);
+        this.rsIndex = new RockskyIndex(path.resolve(getDataDir(), `${this.getSafeExternalId()}-rsindex`));
+    }
+
+    async [Symbol.asyncDispose]() {
+        try {
+            await this.rsIndex.close();
+        } catch (e) {
+            this.logger.warn(e);
+        }
     }
 
     public async buildData() {
+        await this.rsIndex.open();
         try {
             const atProtoHandleData: ATProtoUserIdentifierData = {
                 identifier: this.config.handle
@@ -111,6 +130,7 @@ export class RockSkyApiClient extends AbstractApiClient {
         if((this.userData !== undefined || this.config.handle !== undefined) && this.config.appPassword !== undefined) {
             try {
                 this.rsAgent = await Agent.login(this.userData?.did ?? this.userData?.handle ?? this.config.handle, this.config.appPassword);
+                this.rsAgent.useIndex(this.rsIndex);
                 return true;
             } catch (e) {
                 throw new AuthError('Could not login using handle/did and appPassword', {cause: e, unrecoverable: true});
@@ -250,6 +270,25 @@ export class RockSkyApiClient extends AbstractApiClient {
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions): PlayObject {
         return rockskyScrobbleToPlay(obj);
     }
+
+    async fetchCarToFile() {
+        // TODO use `since` to get CAR diff instead of entire repo
+        // can use last import date from migrations table
+        const filename = path.resolve(this.configDir, `${this.getSafeExternalId()}-${dayjs().unix()}.car`);
+        const atClient = new ATProtoUnauthenticatedApiClient('rocksky', { handleData: this.userData, identifier: this.config.handle }, { logger: this.logger });
+        await atClient.initClient();
+        await fsPromise.writeFile(filename, Buffer.from(await atClient.getCAR(this.userData.did)));
+        return filename;
+    }
+
+    async syncSdkRepo(filename: string) {
+        await this.rsIndex.indexCar(this.userData.did, await fsPromise.readFile(filename));
+    }
+
+    public getSafeExternalId() {
+        return `${this.type}-${normalizeStr(this.name, {keepSingleWhitespace: false})}`;
+    }
+    
 }
 
 interface RsMatchSongInput {

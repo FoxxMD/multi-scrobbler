@@ -10,7 +10,7 @@ import type {ListenPayload} from '../../core/vendor/listenbrainz/interfaces.ts';
 
 import { isDebugMode } from "../utils.ts";
 import { durationToHuman } from '../../core/TimeUtils.ts';
-import { RockSkyApiClient, rockskyScrobbleToPlay } from "../common/vendor/RockSkyApiClient.ts";
+import { playToRockskyClientRecord, RockSkyApiClient, rockskyScrobbleToPlay } from "../common/vendor/RockSkyApiClient.ts";
 import type {RockSkyClientConfig} from "../common/infrastructure/config/client/rocksky.ts";
 import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient.ts";
 import { fromStream } from '@atcute/repo';
@@ -23,6 +23,7 @@ import { ATProtoUnauthenticatedApiClient } from "../common/vendor/atproto/ATProt
 import { playToRepositoryCreatePlayHistoricalOpts, type RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
 import { isAbortError } from "abort-controller-x";
 import { shouldClearNPStatus } from "./AbstractScrobbleClient.ts";
+import { removeUndefinedKeys } from "../../core/DataUtils.ts";
 
 export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
 
@@ -45,7 +46,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
 
     constructor(name: any, config: RockSkyClientConfig, options: InternalConfigOptional & { [key: string]: any }, emitter: EventEmitter, logger: Logger) {
         super('rocksky', name, config, emitter, logger);
-        this.api = new RockSkyApiClient(name, { ...config.data, ...config.options }, { logger: this.logger });
+        this.api = new RockSkyApiClient(name, { ...config.data, ...config.options }, { logger: this.logger, configDir: options.configDir });
         // https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(user_name)-listens
         // 1000 is way too high. maxing at 100
         this.MAX_INITIAL_SCROBBLES_FETCH = 100;
@@ -53,6 +54,24 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         // PDS rate limit for operations is ~2/sec
         this.scrobbleDelay = 2000;
         this.configDir = options.configDir;
+        this.existingPlayOpts = {
+            logger: this.dupeLogger,
+            transformRules: this.transformRules,
+            transformPlay: this.transformPlay,
+            existingSubmitted: this.findExistingSubmittedPlayObj,
+            existingExternal: async (play) => {
+                const createRecord = removeUndefinedKeys(playToRockskyClientRecord(play));
+                const existingUri = await this.api.rsIndex.scrobbleUri(this.api.userData.did, createRecord.title, createRecord.artist, createRecord.album, createRecord.timestamp);
+                if(existingUri) {
+                    return {
+                        match: true,
+                        reason: 'matched existing scrobble record URI',
+                        data: existingUri
+                    }
+                }
+                return {match: false};
+            }
+        }
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => ListenbrainzApiClient.formatPlayObj(obj, options);
@@ -152,7 +171,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
             let file: string;
             try {
                 logger.verbose('Fetching scrobbles from PDS...');
-                file = await this.fetchCarToFile();
+                file = await this.api.fetchCarToFile()
                 signal?.throwIfAborted();
             } catch (e) {
                 throw new Error('Failed to fetch repo CAR', {cause: e});
@@ -183,6 +202,10 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
     }
 
     async parseScrobblesFromCar(filename: string, batchSize: number, opts: { allowFailures?: boolean, logger?: Logger, signal?: AbortSignal } = {}) {
+
+        if(this.api.rsAgent !== undefined) {
+            await this.api.syncSdkRepo(filename);
+        }
 
         const {
             allowFailures = false,
