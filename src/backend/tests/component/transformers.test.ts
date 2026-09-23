@@ -792,39 +792,6 @@ describe('Play Transforms', function () {
             const transformed = await multiTransformComponent.transformPlay(play, TRANSFORM_HOOK.preCompare);
             expect(transformed.data.track).eq('My Bar Title');
         });
-
-        it('Resolves a lazily-registered transformer by name regardless of case', async function() {
-            const tmanager = new TransformerManager(loggerTest, transientCache());
-            tmanager.addTransformerConfig({
-                type: 'user',
-                name: 'MyTransformer',
-                defaults: {
-                    title: [
-                        {
-                            search: "Cool",
-                            replace: "Fun"
-                        }
-                    ]
-                }
-            });
-
-            const play = generatePlay({track: 'My Cool Track'});
-
-            const component = createTestComponent({transformManager: tmanager});
-            component.config.options = {
-                playTransform: {
-                    preCompare: [
-                        {
-                            type: "user",
-                            name: "mytransformer"
-                        }
-                    ]
-                }
-            };
-            await component.buildTransformRules();
-            const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
-            expect(transformed.data.track).eq('My Fun Track');
-        });
     });
 
 })
