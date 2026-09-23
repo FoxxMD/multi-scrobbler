@@ -54,9 +54,11 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
         
             const newImport: ComponentMigrationSelect = await this.migrationRepo.create({name: 'historicalImport', componentId: this.dbComponent.id}) as ComponentMigrationSelect;
             try {
+                this.setStatus('Starting full mirror rebuild...');
                 await this.doHydrateHistoricalScrobbles({signal, allowFailures});
                 await this.migrationRepo.updateById(newImport.id, {success: true});
                 this.logger.info('Sync complete');
+                this.setStatus('Full mirror rebuild complete');
                 this.synced = true;
                 this.lastImportSuccess = dayjs();
             } catch (e) {
@@ -65,6 +67,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
                 this.syncError = e;
                 this.syncedReason = 'last attempted import failed';
                 this.synced = false;
+                this.setStatus('Full mirror rebuild failed.');
             } finally {
                 this.lastImport = dayjs();
                 this.emitComponentUpdate<Partial<ComponentClientApiJson>>({
@@ -147,15 +150,22 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
     protected abstract doSyncRecentHistoricalScrobbles(): Promise<[PlayObject[], boolean]>;
 
     async syncRecentHistoricalScrobbles(): ReturnType<AbstractHistoricalScrobbleClient['doSyncRecentHistoricalScrobbles']> {
-        this.logger.info('Pulling latest scrobbles into historical database...');
-        const [recent, gapSynced] = await this.doSyncRecentHistoricalScrobbles();
-        if(recent.length > 0) {
-            await this.createHistoricalPlays(recent.map((x) => playToRepositoryCreatePlayHistoricalOpts({play: x})));
-            this.logger.verbose(`Added ${recent.length} upstream plays to historical plays`);
-        } else {
-            this.logger.verbose('Most recent plays are already in historical database!');
+        try {
+            this.logger.info('Pulling latest scrobbles into mirror...');
+            this.setStatus('Pulling latest scrobbles into mirror...');
+            const [recent, gapSynced] = await this.doSyncRecentHistoricalScrobbles();
+            if(recent.length > 0) {
+                await this.createHistoricalPlays(recent.map((x) => playToRepositoryCreatePlayHistoricalOpts({play: x})));
+                this.logger.verbose(`Added ${recent.length} upstream plays to mirror`);
+                this.setStatus(`Added ${recent.length} upstream plays to mirror`);
+            } else {
+                this.logger.verbose('Most recent upstream plays were alerady mirrored.');
+                this.setStatus('Most recent upstream plays were alerady mirrored.');
+            }
+            return [recent, gapSynced];
+        } catch (e) {
+            this.setStatus('Recent plays sync failed.');
         }
-        return [recent, gapSynced];
     }
 
     protected async postInitialize(): Promise<void> {

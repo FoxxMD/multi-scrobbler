@@ -26,7 +26,8 @@ import {
     LuCopy,
     LuClock,
     LuSparkles,
-    LuLockOpen
+    LuLockOpen,
+    LuCopyPlus
 } from "react-icons/lu"
 import { VscDebugRestart } from 'react-icons/vsc';
 import { HiMiniStop } from "react-icons/hi2";
@@ -258,3 +259,7 @@ export const TrashIconButton = makeIconButton(TrashIconRaw);
 export const FinishIconRaw = FaFlagCheckered;
 export const FinishIcon = makeChakraIcon(FinishIconRaw);
 export const FinishButton = makeIconButton(FinishIconRaw);
+
+export const SyncPlayIconRaw = LuCopyPlus;
+export const SyncPlayIcon = makeChakraIcon(LuCopyPlus);
+export const SyncPlayButton = makeIconButton(LuCopyPlus);
