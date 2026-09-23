@@ -19,7 +19,8 @@ import {
     getLibraryStructureApi,
     getSessionApi,
     getSystemApi,
-    getUserApi
+    getUserApi,
+    getAuthenticationApi,
 } from "@jellyfin/sdk/lib/utils/api/index.js";
 import dayjs from "dayjs";
 import type EventEmitter from "events";
@@ -218,20 +219,15 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
      * */
     protected doAuthentication = async (): Promise<boolean> => {
         try {
-
-            let token: string;
             if(this.config.data.password !== undefined) {
-                const auth = await this.api.authenticateUserByName(this.config.data.user,this.config.data.password);
+                const auth = await getAuthenticationApi(this.api).authenticateUserByName({authenticateUserByName: {Username: this.config.data.user, Pw: this.config.data.password}});
                 this.user = auth.data.User;
-                token = auth.data.AccessToken;
                 this.logger.info(`Authenticated with user ${this.user.Name}`);
 
                 // not in use for now
                 //this.buildWSClient(this.address, token);
             } else {
-                // @ts-expect-error its fine
-                this.api.accessToken = this.config.data.apiKey;
-                token = this.config.data.apiKey;
+                this.api.update({accessToken: this.config.data.apiKey});
                 const users = await getUserApi(this.api).getUsers();
                 for(const user of users.data) {
                     if(user.Name.toLocaleLowerCase() === this.config.data.user.toLocaleLowerCase()) {
