@@ -11,9 +11,9 @@ import SpotifyTransformer, {
     missingSpotifyTypes,
     parseStageConfig,
     rankTracksBySimilarity,
-    type SpotifyTransformerConfig,
     type SpotifyTransformerDataStage,
 } from '../../common/transforms/SpotifyTransformer.ts';
+import type { SpotifyTransformerConfig } from '../../common/transforms/spotify/SpotifyTransformerUtil.ts';
 import { isCompilation, trackToPlay } from '../../common/vendor/spotify/SpotifyApiClient.ts';
 
 chai.use(asPromised);
