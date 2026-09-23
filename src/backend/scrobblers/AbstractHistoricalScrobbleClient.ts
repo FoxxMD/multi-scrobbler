@@ -128,7 +128,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
     protected async postInitialize(): Promise<void> {
         await super.postInitialize();
 
-        const syncPromise = spawn(new AbortController().signal, async (signal, {defer, fork}) => {
+        spawn(new AbortController().signal, async (signal, {defer, fork}) => {
 
             let shouldSync = true;
 
@@ -165,7 +165,9 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
                 }
             }
 
-        }).catch((e) => this.logger.warn(new Error('Failed to complete post-init historical database sync but continuing anyway', {cause: e})));
+        })
+        .then(() => null)
+        .catch((e) => this.logger.warn(new Error('Failed to complete post-init historical database sync but continuing anyway', {cause: e})));
     }
 
     protected async postDatabase(): Promise<void> {
