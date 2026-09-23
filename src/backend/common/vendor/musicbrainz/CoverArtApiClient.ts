@@ -5,59 +5,34 @@ import request from 'superagent';
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.ts";
 import { UpstreamError } from "../../errors/UpstreamError.ts";
 import { initMemoryCache } from "../../Cache.ts";
-import { joinedUrl } from "../../../utils/NetworkUtils.ts";
-import type {RequestRetryOptions} from "../../infrastructure/config/common.ts";
+import { joinedUrl, normalizeWebAddress } from "../../../utils/NetworkUtils.ts";
 import type {RetryContext} from "p-retry";
 import { NO_RETRY_HTTP_STATUS, tryApiCall } from "../../../utils/RequestUtils.ts";
-
-export type ThumbSize = 250 | 500 | 1200;
-const THUMB_SIZES = [250, 500, 1200];
-
-export interface ThumbOptions {
-    type?: 'front' | 'back'
-    size?: ThumbSize
-    retries?: number
-}
-
-export interface CoverArtReleaseImage {
-    types: ('Front' | 'Booklet' | 'Back')[]
-    front: boolean
-    back: boolean
-    image: string
-    comment: string
-    approve: boolean
-    id: string
-    thumbnails: {
-        250: string
-        500: string
-        1200: string
-        small: string
-        large: string
-    }
-}
-
-export interface CoverArtReleaseResponse {
-    /** URL to musicbrainz release */
-    release: string
-    images: CoverArtReleaseImage[]
-}
-
-export interface CoverArtApiConfig extends RequestRetryOptions {
-    url?: URL;
-}
+import { RateLimiterMemory, RateLimiterQueue } from "rate-limiter-flexible";
+import { type CoverArtReleaseResponse, DEFAULT_CAA_URL, THUMB_SIZES, type ThumbOptions, type CoverArtApiConfig } from "./CoverArtApiTypes.ts";
 
 export class CoverArtApiClient extends AbstractApiClient {
 
     declare config: CoverArtApiConfig;
     cache: Cacheable;
     baseUrl: URL;
+    public rateLimiterQueue: RateLimiterQueue;
 
     constructor(name: any, config: CoverArtApiConfig, options: AbstractApiOptions & { cache?: Cacheable }) {
         super('CoverArtArchive', '', config, options);
         const {
-            url = new URL('https://coverartarchive.org'),
+            url = DEFAULT_CAA_URL,// new URL('https://coverartarchive.org'),
+            rate: {
+                requests = 100,
+                perTime = 1
+            } = {}
         } = config;
-        this.baseUrl = url;
+        const u = normalizeWebAddress(url);
+        this.rateLimiterQueue = this.rateLimiterQueue = new RateLimiterQueue(new RateLimiterMemory({ 
+            points: requests, 
+            duration: perTime 
+        }), { maxQueueSize: 20 });
+        this.baseUrl = u.url;
         this.cache = options.cache ?? new Cacheable({ primary: initMemoryCache({ lruSize: 50 }) });
     }
 
@@ -116,6 +91,8 @@ export class CoverArtApiClient extends AbstractApiClient {
 
     protected coverThumbRequest = async (url: string): Promise<string | undefined> => {
         try {
+            await this.rateLimiterQueue.removeTokens(1);
+            // TODO make tryApiCall accept async shouldRetry
             // https://musicbrainz.org/doc/Cover_Art_Archive/API#/release/{mbid}/({id}|front|back)-(250|500|1200)
             const resp = await tryApiCall(() => request
                 .get(url)
@@ -141,16 +118,27 @@ export class CoverArtApiClient extends AbstractApiClient {
         }
     }
 
-    getCovers = async (mbid: string): Promise<CoverArtReleaseResponse | undefined> => {
-        const cacheKey = `albumart-${mbid}`;
+    public getCoverThumbFromUrl = async (url: string): Promise<string | undefined> => {
+        const cachedLocation = await this.cache.get<string>(url);
+        if(cachedLocation !== undefined) {
+            return cachedLocation;
+        }
+        const location = await this.coverThumbRequest(url);
+        await this.cache.set(url, false, '1hr');
+        return location;
+    }
+
+    getCovers = async (mbid: string, mbidType: 'release' | 'release-group'): Promise<CoverArtReleaseResponse | undefined> => {
+        const cacheKey = `caa-covers-${mbidType}-${mbid}`;
         const cachedArt = await this.cache.get<CoverArtReleaseResponse>(cacheKey);
         if (cachedArt !== undefined) {
             return cachedArt;
         } else {
             try {
+                await this.rateLimiterQueue.removeTokens(1);
                 // https://musicbrainz.org/doc/Cover_Art_Archive/API#/release/{mbid}/
                 const resp = await request
-                    .get(joinedUrl(this.baseUrl, `/release/${mbid}`))
+                    .get(joinedUrl(this.baseUrl, `/${mbidType}/${mbid}`))
                     .redirects(3);
                 await this.cache.set(cacheKey, resp.body, '1hr');
                 return resp.body as CoverArtReleaseResponse;

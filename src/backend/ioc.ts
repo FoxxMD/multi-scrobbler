@@ -17,6 +17,7 @@ import { version, stable } from "./version.ts";
 import type {DbConcrete} from "./common/database/drizzle/drizzleUtils.ts";
 import type { MSBackendEventMap } from "./common/infrastructure/MSBackendEventMap.ts";
 import type { RockskySingletonMap } from "./common/vendor/rocksky/RockskyClientWrapped.ts";
+import type { CovertArtSingletonMap } from "./common/vendor/musicbrainz/CovertArtApiPool.ts";
 
 let root: ReturnType<typeof createRoot>;
 export interface RootOptions {
@@ -29,6 +30,7 @@ export interface RootOptions {
     cache?: CacheConfigOptions | MSCache | (() => MSCache)
     mbMap?: MusicBrainzSingletonMap | (() => MusicBrainzSingletonMap)
     rsMap?: RockskySingletonMap | (() => RockskySingletonMap)
+    caMap?: CovertArtSingletonMap | (() => CovertArtSingletonMap)
     transformers?: TransformerCommonConfig[]
     db?: DbConcrete | (() => Promise<DbConcrete>)
 }
@@ -75,6 +77,7 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         cache,
         mbMap,
         rsMap,
+        caMap,
         db,
         transformers = []
     } = options || {};
@@ -112,6 +115,16 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         maybeSingletonRs = rsMap;
     } else {
         maybeSingletonRs = new Map();
+    }
+
+    let caFunc: () => CovertArtSingletonMap;
+    let maybeSingletonCa: CovertArtSingletonMap;
+    if(typeof caMap === 'function') {
+        caFunc = caMap;
+    } else if(maybeSingletonCa !== undefined) {
+        maybeSingletonCa = caMap;
+    } else {
+        maybeSingletonCa = new Map();
     }
 
     let dbFunc: () => Promise<DbConcrete>;
@@ -183,6 +196,7 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         cache: () => maybeSingletonCache !== undefined ? () => maybeSingletonCache : cacheFunc,
         mbMap: () => maybeSingletonMb !== undefined ? () => maybeSingletonMb : mbFunc,
         rsMap: () => maybeSingletonRs !== undefined ? () => maybeSingletonRs : rsFunc,
+        caMap: () => maybeSingletonCa !== undefined ? () => maybeSingletonCa : caFunc,
         coverArtApi,
         db: () => dbFunc
     }).add((items) => {

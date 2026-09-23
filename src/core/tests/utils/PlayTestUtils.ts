@@ -247,7 +247,7 @@ export const generateJsonPlays = (...args: Parameters<typeof generatePlays>): Js
 }
 
 export interface WithBrainzOptions {
-    include: ('track' | 'artist' | 'album' | 'recording')[]
+    include: ('track' | 'artist' | 'album' | 'recording' | 'releaseGroup')[]
 }
 export const generateBrainz = (play: PlayObject, opts: WithBrainzOptions): BrainzMeta => {
     const {include} = opts;
@@ -267,6 +267,11 @@ export const generateBrainz = (play: PlayObject, opts: WithBrainzOptions): Brain
             case 'album':
                 if(play.data.meta?.brainz?.album === undefined && play.data.album !== undefined) {
                     brainz.album = generateMbid();
+                }
+                break;
+            case 'releaseGroup':
+                if(play.data.meta?.brainz?.releaseGroup === undefined) {
+                    brainz.releaseGroup = generateMbid();
                 }
                 break;
             case 'artist':
