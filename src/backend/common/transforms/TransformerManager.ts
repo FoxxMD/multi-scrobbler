@@ -102,6 +102,7 @@ export default class TransformerManager {
             case 'spotify': {
                 const SpotifyTransformer = (await import("./SpotifyTransformer.ts")).default;
                 t = new SpotifyTransformer({ name: tName, ...config as SpotifyTransformerConfig }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
+            } break;
             case 'coverartarchive': {
                 const CovertArtArchiveTransformer = (await import("./coverartarchive/CoverArtArchiveTransformer.ts")).default;
                 t = new CovertArtArchiveTransformer({ name: tName, ...config as CovertArtArchiveTransformerConfig }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
