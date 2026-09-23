@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import type {ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi} from "../../Api.ts";
+import type {ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentHistoricalApi, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi} from "../../Api.ts";
 import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ComponentType, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes } from "../../Atomic.ts";
 import { generatePlay, normalizePlays } from "./PlayTestUtils.ts";
 import { generatePlayInput, generatePlayWithLifecycle, playWithLifecycleScrobble, randomPlayState } from "./fixtures.ts";
@@ -163,6 +163,34 @@ export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApi>
     }
 }
 
+export const generateHistoricalPlayApi = (data: Partial<ComponentHistoricalApi> = {}): ComponentHistoricalApi => {
+    let isSynced;
+    if(data.synced !== undefined) {
+        isSynced = data.synced;
+    } else if(data.syncedReason !== undefined || data.syncError !== undefined) {
+        isSynced = false;
+    }
+    const importDate = dayjs(faker.date.recent().toISOString());
+    if(isSynced) {
+        return {
+            synced: true,
+            syncedReason: undefined,
+            syncError: undefined,
+            lastImportSuccess: importDate,
+            lastImport: importDate,
+            ...data
+        }
+    }
+    const reason = faker.helpers.arrayElement(['last attempted import failed','no historical imports exist','component was inactive for more than an hour and last import was before last activity. There may be missed plays during the period of inactivity.']);
+    return {
+        synced: false,
+        syncedReason: reason,
+        syncError: reason.includes('failed') ? generateFakeError() : undefined,
+        lastImport: reason.includes('no historical') ? undefined : importDate,
+        lastImportSuccess: undefined
+    }
+}
+
 export const generateSourceApiJson = (data: Partial<ComponentSourceApi> = {}): ComponentSourceApiJson => {
     const {
         mode,
@@ -182,6 +210,9 @@ export const generateSourceApiJson = (data: Partial<ComponentSourceApi> = {}): C
         sleeping = false,
     } = data;
     return {
+        lastReadyAt: undefined,
+        lastImport: undefined,
+        lastImportSuccess: undefined,
         ...common,
         sot,
         supportsUpstreamRecentlyPlayed,
@@ -211,6 +242,9 @@ export const generateClientApiJson = (data: Partial<ComponentClientApi> = {}): C
         players = (data.players ?? {}),
     } = data;
     return {
+        lastReadyAt: undefined,
+        lastImport: undefined,
+        lastImportSuccess: undefined,
         ...common,
         tracksScrobbled: common.countLive,
         players,

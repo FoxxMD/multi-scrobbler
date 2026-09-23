@@ -84,9 +84,9 @@ export interface PlayProgressPositional extends PlayProgress {
     position: number
 }
 
-export interface ListenRangeDataAmb {
-    start: PlayProgressAmb
-    end: PlayProgressAmb
+export interface ListenRangeDataAmb<D extends DateLike = Dayjs> {
+    start: PlayProgressAmb<D>
+    end: PlayProgressAmb<D>
 }
 
 export interface ListenRangeData extends ListenRangeDataAmb {
@@ -173,7 +173,7 @@ export interface PlayData<D extends DateLike = Dayjs> extends TrackData {
     playDate?: D
     /** Number of seconds the track was listened to */
     listenedFor?: number
-    listenRanges?: ListenRangeData[]
+    listenRanges?: ListenRangeDataAmb<D>[]
     playDateCompleted?: D
     repeat?: boolean
 }

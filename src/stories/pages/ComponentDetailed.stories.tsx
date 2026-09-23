@@ -5,7 +5,7 @@ import { http, HttpResponse, sse } from 'msw';
 import { Container } from '@chakra-ui/react';
 import { ComponentDetailedDesktop } from "../../client/components/msComponent/MSComponentDetailed.js";
 import {Provider} from "../../client/components/Provider.js";
-import { generateClientApiJson, generateFakeError, generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList, generateSourceApiJson, generateSourcePlayerJson } from "../../core/tests/utils/apiFixtures.js";
+import { generateClientApiJson, generateFakeError, generateHistoricalPlayApi, generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList, generateSourceApiJson, generateSourcePlayerJson } from "../../core/tests/utils/apiFixtures.js";
 import type {PaginatedResponse, MsSseEvent, PlayApiCommonDetailed} from "../../core/Api.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
 import { sseProviderOptions } from "../../client/App.js";
@@ -87,6 +87,18 @@ decorators: [
 export const ClientDetailed = meta.story({
     args: {
       data: generateClientApiJson()
+    }
+});
+
+export const ClientHistoricalSuccessDetailed = meta.story({
+    args: {
+      data: generateClientApiJson(generateHistoricalPlayApi({synced: true}))
+    }
+});
+
+export const ClientHistoricalFailDetailed = meta.story({
+    args: {
+      data: generateClientApiJson(generateHistoricalPlayApi({synced: false}))
     }
 });
 

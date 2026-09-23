@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, type ComponentProps, useEffect } from "react"
+import React, { useCallback, useMemo, type ComponentProps, useEffect, type ReactNode } from "react"
 import { Portal, Group, Span, Menu, Box, Heading, Skeleton, Wrap, HStack, Stack, Flex, Text, Card, Button, CloseButton, SkeletonText, type BadgeProps, type MenuItemProps, createOverlay, Dialog, type MenuSelectionDetails } from '@chakra-ui/react';
 import { COMPONENT_STATE, type ComponentCommonApiJson, type ComponentsApiJson, type ComponentState, type ComponentStateBody, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
 import { capitalize } from "../../../core/StringUtils.js";
@@ -13,7 +13,7 @@ import {
     useSSEAnyEvent
 } from "@flamefrontend/sse-runtime-react";
 import { Link } from "react-router";
-import { CountIndicatorStreamable, DateIndicatorStreamable, DeadLetterIndicatorStreamable, QueuedIndicatorStreamable } from "./Stats.js";
+import { CountIndicatorStreamable, DateIndicatorStreamable, DeadLetterIndicatorStreamable, QueuedIndicatorStreamable, StaticStat } from "./Stats.js";
 import { ListContainerFilterable } from "../playActivity/ActivityList.js";
 import { useParams } from "react-router-dom";
 import { ComponentStateBadge } from "../Badges.js";
@@ -54,7 +54,36 @@ export const MSComponentType = (props: {data?: Pick<ComponentCommonApiJson, 'mod
     return <Heading color="fg.subtle" size="lg">({props.data.mode}) {capitalize(props.data.type)}</Heading>;
 }
 
-export const MSComponentStats = (props: { data?: ComponentCommonApiJson, live?: boolean }) => {
+const SyncedStat = (props: {data: Pick<ComponentsApiJson, 'synced' | 'syncedReason' | 'lastImport' | 'lastImportSuccess'>}) => {
+    const {
+        data: {
+            synced,
+            syncedReason,
+            lastImport,
+            lastImportSuccess
+        } = {}
+    } = props;
+    let helpText: ReactNode;
+    if(synced) {
+        helpText = (
+            <Stack margin="1">
+                <Text>Last historical play sync was successful.</Text>
+                {lastImportSuccess !== undefined && lastImportSuccess !== null ? <Text>Synced at {shortTodayAwareFormat(dayjs(lastImportSuccess))}</Text> : undefined}
+            </Stack>
+        );
+    } else {
+        helpText = (
+            <Stack margin="1">
+                <Text>Last historical play sync was unsuccessful: {syncedReason}</Text>
+                {lastImport !== undefined && lastImport !== null ? <Text>Attempted at {shortTodayAwareFormat(dayjs(lastImport))}</Text> : undefined}
+                {lastImportSuccess !== undefined && lastImportSuccess !== undefined ? <Text>Last successful sync was at {shortTodayAwareFormat(dayjs(lastImportSuccess))}</Text> : undefined}
+            </Stack>
+        );
+    }
+    return <StaticStat label="Synced?" helpText={helpText}>{synced ? 'Yes' : 'No'}</StaticStat>
+}
+
+export const MSComponentStats = (props: { data?: ComponentsApiJson, live?: boolean }) => {
     if (props.data === undefined) {
         return (
             <Box>
@@ -62,12 +91,18 @@ export const MSComponentStats = (props: { data?: ComponentCommonApiJson, live?: 
             </Box>
         )
     }
+    const {
+        data: {
+            synced,
+        } = {},
+    } = props;
     return (
         <Wrap gap="6" rowGap="5" justify="flex-start" flexGrow="0">
             <CountIndicatorStreamable data={props.data} flexGrow="0"/>
             <QueuedIndicatorStreamable data={props.data} flexGrow="0"/>
             <DeadLetterIndicatorStreamable data={props.data} flexGrow="0"/>
             <DateIndicatorStreamable data={props.data} flexGrow="0"/>
+            {synced !== undefined ? <SyncedStat data={props.data}/> : null}
         </Wrap>
     )
 }
@@ -293,9 +328,13 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentsApiJson, live?
             warnings = [],
             errors = [],
             authed,
-            authType
+            authType,
+            syncError
         } = {}
     } = props;
+    if(syncError !== undefined && syncError !== null) {
+        warnings.push(syncError);
+    }
     const isSource = isComponentSourceApiJson(data)
     if(isSource) {
         const {

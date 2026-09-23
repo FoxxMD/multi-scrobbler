@@ -359,6 +359,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     public getApiData(): ComponentSourceApiJson {
         return {
+            lastReadyAt: undefined,
+            lastImport: undefined,
+            lastImportSuccess: undefined,
             ...super.getApiData(),
             ...this.getComponentApiData(),
             type: this.type,

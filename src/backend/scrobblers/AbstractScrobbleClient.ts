@@ -449,6 +449,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     public getApiData(): ComponentClientApiJson {
         return {
+            lastReadyAt: undefined,
+            lastImport: undefined,
+            lastImportSuccess: undefined,
             ...super.getApiData(),
             ...this.getComponentApiData(),
             type: this.type,

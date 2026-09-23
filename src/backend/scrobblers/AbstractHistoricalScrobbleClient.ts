@@ -10,6 +10,7 @@ import type {Logger} from "@foxxmd/logging";
 import { buildTrackString } from "../../core/StringUtils.ts";
 import type {PlayObject} from "../../core/Atomic.ts";
 import { todayAwareFormat } from "../../core/TimeUtils.ts";
+import type { ComponentClientApiJson } from "../../core/Api.ts";
 
 export default abstract class AbstractHistoricalScrobbleClient extends AbstractScrobbleClient {
 
@@ -25,6 +26,17 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
     protected addScrobbleToHistorical: boolean = true;
 
     protected abstract doHydrateHistoricalScrobbles(opts: {allowFailures?: boolean, signal?: AbortSignal }): Promise<void>;
+
+    public getApiData(): ComponentClientApiJson {
+        return {
+            ...super.getApiData(),
+            synced: this.synced,
+            syncedReason: this.syncedReason,
+            syncError: this.syncError,
+            lastImport: this.lastImport !== undefined ? this.lastImport.toISOString() : undefined,
+            lastImportSuccess: this.lastImportSuccess !== undefined ? this.lastImportSuccess.toISOString() : undefined
+        }
+    }
 
     hydrateHistoricalScrobbles(allowFailures: boolean = false, cleanup: boolean = true): void {
         if(this.importAbortController !== undefined) {
@@ -55,6 +67,13 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
                 this.synced = false;
             } finally {
                 this.lastImport = dayjs();
+                this.emitComponentUpdate<Partial<ComponentClientApiJson>>({
+                    synced: this.synced,
+                    lastImportSuccess: this.lastImportSuccess.toISOString(),
+                    lastImport: this.lastImport.toISOString(),
+                    syncedReason: this.syncedReason ?? null,
+                    syncError: this.syncError ?? null
+                });
             }
             this.dbComponent.migrations.push(newImport);
         }).catch((e) => {
