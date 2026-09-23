@@ -28,6 +28,7 @@ import path from "node:path";
 import { ATProtoUnauthenticatedApiClient } from "./atproto/ATProtoUnauthenticatedApiClient.ts";
 import fsPromise from 'node:fs/promises';
 import { getDataDir } from "../index.ts";
+import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.ts";
 
 interface SubmitOptions {
     log?: boolean
@@ -503,7 +504,7 @@ export const playToRockskyClientRecord = (play: PlayObject): RealCreateScrobbleI
         isrc: play.data.isrc !== undefined ? isrcNoHyphens(play.data.isrc) : undefined,
         duration: play.data.duration !== undefined ? play.data.duration * 1000 : 0,
         spotifyLink: play.meta.source === 'spotify' && play.meta.url?.web !== undefined ? play.meta.url?.web : undefined,
-        timestamp: play.data.playDate.unix()
+        timestamp: getScrobbleTsSOCDate(play).unix()
     }
     return csi;
 }
@@ -522,7 +523,7 @@ export const playToRockskyAgentRecord = (play: PlayObject): ScrobbleInput => {
         isrc: play.data.isrc !== undefined ? isrcNoHyphens(play.data.isrc) : undefined,
         duration: play.data.duration !== undefined ? play.data.duration * 1000 : 0,
         spotifyLink: play.meta.source === 'spotify' && play.meta.url?.web !== undefined ? play.meta.url?.web : undefined,
-        createdAt: play.data.playDate.toISOString()
+        createdAt: getScrobbleTsSOCDate(play).toISOString()
     }
     return csi;
 }
