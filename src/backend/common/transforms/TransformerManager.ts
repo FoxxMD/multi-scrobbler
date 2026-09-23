@@ -42,7 +42,7 @@ export default class TransformerManager {
     }
 
     public hasTransformerConfigByIdentifiers(type: string, name: string = DEFAULT_TRANSFORMER_NAME) {
-        return this.transformerConfigs.some(x => x.type === type && x.name === name);
+        return this.transformerConfigs.some(x => x.type === type && x.name.toLocaleLowerCase().trim() === name.toLocaleLowerCase().trim());
     }
 
     public hasTransformerConfigByType(type: string) {
@@ -55,7 +55,7 @@ export default class TransformerManager {
             this.logger.debug(`Transformer type ${type} with name ${name} already registered`);
             return;
         }
-        const config = this.transformerConfigs.find(x => x.name === name && x.type === type);
+        const config = this.transformerConfigs.find(x => x.type === type && x.name.toLocaleLowerCase().trim() === name.toLocaleLowerCase().trim());
         if(config === undefined) {
             throw new Error(`No existing configuration for transformer of type ${type} with name ${name} exists`);
         }
