@@ -9,6 +9,7 @@ import { generateLoggableAbortReason } from "../common/errors/MSErrors.ts";
 import type {Logger} from "@foxxmd/logging";
 import { buildTrackString } from "../../core/StringUtils.ts";
 import type {PlayObject} from "../../core/Atomic.ts";
+import { todayAwareFormat } from "../../core/TimeUtils.ts";
 
 export default abstract class AbstractHistoricalScrobbleClient extends AbstractScrobbleClient {
 
@@ -43,6 +44,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
             try {
                 await this.doHydrateHistoricalScrobbles({signal, allowFailures});
                 await this.migrationRepo.updateById(newImport.id, {success: true});
+                this.logger.info('Sync complete');
                 this.synced = true;
                 this.lastImportSuccess = dayjs();
             } catch (e) {
@@ -123,7 +125,19 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
         return closeTemporalPlays.map(x => x.play);
     }
 
-    protected abstract syncRecentHistoricalScrobbles(): Promise<[PlayObject[], boolean]>;
+    protected abstract doSyncRecentHistoricalScrobbles(): Promise<[PlayObject[], boolean]>;
+
+    async syncRecentHistoricalScrobbles(): ReturnType<AbstractHistoricalScrobbleClient['doSyncRecentHistoricalScrobbles']> {
+        this.logger.info('Pulling latest scrobbles into historical database...');
+        const [recent, gapSynced] = await this.doSyncRecentHistoricalScrobbles();
+        if(recent.length > 0) {
+            await this.createHistoricalPlays(recent.map((x) => playToRepositoryCreatePlayHistoricalOpts({play: x})));
+            this.logger.verbose(`Added ${recent.length} upstream plays to historical plays`);
+        } else {
+            this.logger.verbose('Most recent plays are already in historical database!');
+        }
+        return [recent, gapSynced];
+    }
 
     protected async postInitialize(): Promise<void> {
         await super.postInitialize();
@@ -147,14 +161,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
 
             if(shouldSync){
                 // pull latest plays into database
-                this.logger.info('Pulling latest scrobbles into historical database...');
-                const [recent, gapSynced] = await this.syncRecentHistoricalScrobbles();
-                if(recent.length > 0) {
-                    await this.createHistoricalPlays(recent.map((x) => playToRepositoryCreatePlayHistoricalOpts({play: x})));
-                    this.logger.verbose(`Added ${recent.length} upstream plays to historical plays`);
-                } else {
-                    this.logger.verbose('Most recent plays are already in historical database!');
-                }
+                const [_, gapSynced] = await this.syncRecentHistoricalScrobbles();
                 if(this.syncedReason !== undefined && this.syncedReason.includes('component was inactive')) {
                     if(gapSynced) {
                         this.syncedReason = undefined;
@@ -190,6 +197,11 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
             if(success) {
                 this.lastImportSuccess = success.attemptedAt;
             }
+        }
+        if(this.synced) {
+            this.logger.info(`Last full historical play sync was successful${this.lastImportSuccess !== undefined ? ` and imported on ${todayAwareFormat(this.lastImportSuccess)}` : ''}`);
+        } else {
+            this.logger.info(`Last full historical play sync as not successful (${reason})${this.lastImport !== undefined ? ` and attempted on ${todayAwareFormat(this.lastImport)}` :''}`);
         }
     }
 

@@ -42,6 +42,8 @@ import { stripIndents } from "common-tags";
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
 
+const jsonParser = bodyParser.json({ type: ['text/*', 'application/json'] });
+
 const createAddToLogBuffer = (levelMap:  {[p: number]: string}) => (log: LogDataPretty) => {
     output[log.level].add({...log, levelLabel: levelMap[log.level]});
 }
@@ -152,7 +154,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     });
 
     router.put('/api/logs', {
-        middleware: [bodyParser.json({ type: ['text/*', 'application/json'] })],
+        middleware: [jsonParser],
         bodySchema: z.object({
             level: logLevelStandaloneSchema.optional(),
             limit: z.int().positive().max(500).optional()
@@ -309,7 +311,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     
     router.post('/api/components/:id/state',
    {
-    middleware: [componentAwareMiddle, bodyParser.json({ type: ['text/*', 'application/json'] })],
+    middleware: [componentAwareMiddle, jsonParser],
     bodySchema: componentStateBodySchema,
     tags: ['Source/Client'],
     summary: 'Update Source/Client State'
@@ -478,7 +480,7 @@ Note: this is only supported by some components.`
     });
 
     router.post('/api/components/:id/plays/queue', {
-        middleware: [componentAwareMiddle,bodyParser.json({ type: ['text/*', 'application/json'] })],
+        middleware: [componentAwareMiddle,jsonParser],
         bodySchema: z.object({
             context: queueContextSchema.optional(),
             filters: z.looseObject({})
@@ -509,7 +511,7 @@ Note: this is only supported by some components.`
     });
 
     router.post('/api/components/:id/plays/:uid/queue', {
-        middleware: [componentAwareMiddle,bodyParser.json({ type: ['text/*', 'application/json'] })],
+        middleware: [componentAwareMiddle,jsonParser],
         bodySchema: queueContextSchema.optional(),
         tags: ['Plays'],
         summary: 'Requeue a Play'
@@ -553,7 +555,7 @@ Note: this is only supported by some components.`
     });
 
     router.post('/api/components/:id/plays/:uid/state', {
-        middleware: [componentAwareMiddle, bodyParser.json({ type: ['text/*', 'application/json'] })],
+        middleware: [componentAwareMiddle, jsonParser],
         bodySchema: playStateBodySchema,
         tags: ['Plays'],
         summary: 'Mark Play as Done'
@@ -605,18 +607,30 @@ Note: this is only supported by some components.`
     });
 
     router.post('/api/components/:id/plays/historical', {
-        middleware: [componentAwareMiddle],
+        middleware: [componentAwareMiddle,jsonParser],
         tags: ['Plays'],
         summary: 'Hydrate Historical Plays',
-        description: 'If the Source/Client supports Historical Play capabilities, this route requests a manual hydration of all historical Plays'
+        bodySchema: z.object({type: z.enum(['full','recent']).optional().meta({
+            description: `Use \`full\` to initiate a complete sync of all history or \`recent\` to sync the last ~100 plays.`
+        })}).optional(),
+        description: 'If the Source/Client supports Historical Play capabilities, this route requests a manual hydration of historical Plays'
     }, async (req, res, next) => {
         const {
             component,
+            body: {
+                type: syncType = 'recent'
+            }
         } = req;
 
         if(component instanceof AbstractHistoricalScrobbleClient) {
             component.logger.info('User requested historical play hydration');
-            component.hydrateHistoricalScrobbles();
+            if(syncType === 'full') {
+                component.hydrateHistoricalScrobbles();
+            } else {
+                component.syncRecentHistoricalScrobbles()
+                .then(() => null)
+                .catch((e) => component.logger.error(new SimpleError('Sync attempt failed', {cause: e})));
+            }
             res.status(200).send('OK');
         } else {
             component.logger.warn('This client does not have historical play capabilities');

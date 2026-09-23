@@ -295,7 +295,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         logger.info(`Completed CAR conversion: Result ${allGood ? 'OK' : 'Some Errors'} in ${durationToHuman(dayjs.duration(dayjs().diff(start)))} | Records ${count} | Persisted ${persisted}`)
     }
 
-    protected async syncRecentHistoricalScrobbles(): Promise<[PlayObject[], boolean]> {
+    protected async doSyncRecentHistoricalScrobbles(): Promise<[PlayObject[], boolean]> {
         const recentPlays = await this.getScrobblesForTimeRange(undefined);
         const unseenPlays: PlayObject[] = [];
         let syncGapFilled = false;
