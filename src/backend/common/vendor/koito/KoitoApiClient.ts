@@ -7,7 +7,7 @@ import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress 
 import type { Request, Response } from 'superagent';
 import request from 'superagent';
 import { UpstreamError } from "../../errors/UpstreamError.ts";
-import { playToListenPayload } from '../listenbrainz/lzUtils.ts';
+import { playToListenPayload, type AllowDeviceList } from '../listenbrainz/lzUtils.ts';
 import type {SubmitPayload} from '../../../../core/vendor/listenbrainz/interfaces.ts';
 import type {ListenType} from '../../../../core/vendor/listenbrainz/interfaces.ts';
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.ts";
@@ -21,16 +21,18 @@ import { isSuperAgentResponseError } from "../../errors/ErrorUtils.ts";
 interface SubmitOptions {
     log?: boolean
     listenType?: ListenType
+    /** See matchDeviceLabel in lzUtils */
+    allowDeviceList?: AllowDeviceList
 }
 
 const KOITO_LZ_PATH: RegExp = new RegExp(/^\/apis\/listenbrainz(\/?1?\/?)?$/);
 
 export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRangeListens<number> {
 
-    declare config: KoitoData;
+    declare config: KoitoData & {allowDeviceList?: AllowDeviceList};
     url: URLData;
 
-    constructor(name: any, config: KoitoData, options: AbstractApiOptions) {
+    constructor(name: any, config: KoitoData & {allowDeviceList?: AllowDeviceList}, options: AbstractApiOptions) {
         super('Koito', name, config, options);
 
         const {
@@ -194,8 +196,8 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
     // }
 
     submitListen = async (play: PlayObject, options: SubmitOptions = {}): Promise<ScrobbleActionResult> => {
-        const { log = false, listenType = 'single' } = options;
-        const listenPayload: SubmitPayload = { listen_type: listenType, payload: [playToListenPayload(play)] };
+        const { log = false, listenType = 'single', allowDeviceList = this.config.allowDeviceList } = options;
+        const listenPayload: SubmitPayload = { listen_type: listenType, payload: [playToListenPayload(play, {allowDeviceList})] };
         try {
             if (listenType === 'playing_now') {
                 delete listenPayload.payload[0].listened_at;

@@ -1,8 +1,8 @@
 import * as z from "zod";
 import type {UnixTimestamp} from "../../../../../core/Atomic.ts";
 import {componentTypeSchema} from "../../../../../core/Atomic.ts";
-import {requestRetryOptionsSchema} from "../common.ts";
-import {commonClientConfigSchema, commonClientDataSchema, type EnvClientSchema} from "./index.ts";
+import {allowDeviceListEnvSchema, allowDeviceListSchema, requestRetryOptionsSchema} from "../common.ts";
+import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema, nowPlayingOptionsSchema, type EnvClientSchema} from "./index.ts";
 import { httpUrl } from "../../../../utils/ZodUtils.ts";
 
 export interface ListensResponse {
@@ -79,10 +79,25 @@ export const koitoDataSchema = z.object({
 
 export type KoitoData = z.infer<typeof koitoDataSchema>;
 
+export const koitoOptionsSchema = z.object({
+    /**
+     * Only devices explicitly enumerated here are reported as `media_player` in each listen's additional_info.
+     *
+     * Keys match case-insensitively as substrings of the source's device id (longest match wins). What is submitted
+     * is the key's label value, or the key itself when the label is empty
+     *
+     * @examples [{"iphone": "", "9f3ec2-iphone": "kitchen ipad"}]
+     * */
+    allowDeviceList: allowDeviceListSchema,
+    ...commonClientOptionsSchema.shape,
+    ...nowPlayingOptionsSchema.shape,
+});
+
 const envDataSchema = z.object({
     KOITO_URL: koitoDataSchema.shape.url,
     KOITO_TOKEN: koitoDataSchema.shape.token,
     KOITO_USER: koitoDataSchema.shape.username,
+    KOITO_ALLOW_DEVICE_LIST: allowDeviceListEnvSchema,
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, KoitoClientConfig> = {
@@ -93,7 +108,10 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, KoitoClientConfig
             data: {
                 url: partial.KOITO_URL,
                 token: partial.KOITO_TOKEN,
-                username: partial.KOITO_USER
+                username: partial.KOITO_USER,
+            },
+            options: {
+                allowDeviceList: partial.KOITO_ALLOW_DEVICE_LIST
             }
     })
 };
@@ -116,6 +134,7 @@ export const koitoClientConfigSchema = z.object({
         examples: ["client"]
     }),
     data: koitoClientDataSchema,
+    options: koitoOptionsSchema.optional()
 });
 
 export type KoitoClientConfig = z.infer<typeof koitoClientConfigSchema>;

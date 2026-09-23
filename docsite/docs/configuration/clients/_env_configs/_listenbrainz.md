@@ -7,3 +7,4 @@
 | _**`LZ_TOKEN`**_       | string  |                               | User token for the user to scrobble for                                                                               |
 | _**`LZ_USER`**_        | string  |                               | Username of the user to scrobble for                                                                                  |
 | `LZ_CONTACT`           | string  |                               | (If running a forked version of multi-scrobbler) A website or email Listenbrainz can contact you at in case of issues |
+| `LZ_ALLOW_DEVICE_LIST` | string  |                               | A comma-delimited list of match:label entries to use as `media_play` in scrobble submit data, when none is present.   |

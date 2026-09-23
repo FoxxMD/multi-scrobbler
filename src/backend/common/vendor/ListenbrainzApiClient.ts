@@ -28,7 +28,7 @@ import { AuthError, ScrobbleSubmitError, SimpleError } from '../errors/MSErrors.
 import pRetry from 'p-retry';
 import { findCauseByFunc } from '../../utils/ErrorUtils.ts';
 import { isSuperAgentResponseError } from '../errors/ErrorUtils.ts';
-import { playToSubmitPayload } from './listenbrainz/lzUtils.ts';
+import { playToSubmitPayload, type AllowDeviceList } from './listenbrainz/lzUtils.ts';
 import { isrcNoHyphens } from '../../../core/PlayUtils.ts';
 import { getRoot } from '../../ioc.ts';
 
@@ -36,6 +36,8 @@ import { getRoot } from '../../ioc.ts';
 export interface SubmitOptions {
     log?: boolean
     listenType?: ListenType
+    /** See matchDeviceLabel in lzUtils */
+    allowDeviceList?: AllowDeviceList
 }
 
 export interface ListensResponse {
@@ -59,11 +61,11 @@ export interface UserListensOptions {
 
 export class ListenbrainzApiClient extends AbstractApiClient implements PagelessTimeRangeListens {
 
-    declare config: ListenBrainzClientData;
+    declare config: ListenBrainzClientData & {allowDeviceList?: AllowDeviceList};
     url: URLData;
     userAgent: string
 
-    constructor(name: any, config: ListenBrainzClientData, options: AbstractApiOptions) {
+    constructor(name: any, config: ListenBrainzClientData & {allowDeviceList?: AllowDeviceList}, options: AbstractApiOptions) {
         super('ListenBrainz', name, config, options);
         const {
             url = 'https://api.listenbrainz.org/'
@@ -225,7 +227,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
     }
 
     submitListen = async (play: PlayObject, options: SubmitOptions = {}): Promise<ScrobbleActionResult> => {
-        const listenPayload = playToSubmitPayload(play, {listenType: options.listenType});
+        const listenPayload = playToSubmitPayload(play, {listenType: options.listenType, allowDeviceList: options.allowDeviceList ?? this.config.allowDeviceList});
         const { log = false} = options;
         try {
             if(log) {
