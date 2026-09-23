@@ -92,7 +92,7 @@ export const ytMusicDataSchema = z.object({
      * Additional options for authorization and tailoring YTM client
      */
     innertubeOptions: innertubeOptionsSchema.optional().meta({
-        description: "Additional options for authorization and tailoring YTM client"
+        description: "Additional options for authorization and tailoring YTM client.\n\nYou can pass *any* properties from ytjs.dev `SessionOptions` here, even if they are undocumented."
     }),
 });
 

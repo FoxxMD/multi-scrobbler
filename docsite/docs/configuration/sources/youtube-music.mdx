@@ -179,6 +179,12 @@ Only one of these methods needs to be used.
 
 ## Configuration
 
+<DetailsAdmo type="tip" summary="Session Options">
+For **File** and **AIO** config, `innerTubeOptions` is an optional property you can use to tailor [`SessionOptions`](https://ytjs.dev/api/type-aliases/SessionOptions.html) from ytjs.dev, for YTM.
+
+`innerTubeOptions` shown in the schema explorer documents *some* of the properties that may be relevant to your multi-scrobbler experience but you can pass *any* of the properties found in [`SessionOptions`](https://ytjs.dev/api/type-aliases/SessionOptions.html) to `innerTubeOptions`.
+</DetailsAdmo>
+
 <Config config="YTMusicSourceConfig" fileContent={JsonConfig} name="ytmusic">
 <ENVConfig/>
 </Config>

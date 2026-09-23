@@ -247,6 +247,11 @@ export default class YTMusicSource extends AbstractSource {
     protected async doBuildInitData(): Promise<true | string | undefined> {
         const {
             cookie,
+            // we accept *any* SessionsOptions the user passes
+            // into innertubeOptions so that they can tailor yti however they want
+            //
+            // but in docs we only explicitly document things that seem relevant for MS
+            // to reduce noise in file/aio schema explorer
             innertubeOptions = {},
         } = this.config.data || {};
         this.yti = await Innertube.create({
