@@ -25,7 +25,7 @@ Set up [Valkey Caching](/configuration?cachedThings=metadata#caching) to cache S
 
 ### API Setup
 
-This Stage uses Spotify's [Client Credentials Flow](https://developer.spotify.com/documentation/web-api/tutorials/client-credentials-flow) to search/lookup the Spotify catalog. This does **not** require a user to log in -- only an app `clientId`/`clientSecret` is needed. [Create a Spotify application](https://developer.spotify.com/documentation/web-api/concepts/apps) if you don't already have one (the same application used for the [Spotify Source](/configuration/sources/spotify) can be reused here).
+This Stage uses Spotify's API to search/lookup the Spotify catalog. This does **not** require a user to log in -- only an app `clientId`/`clientSecret` is needed. [Create a Spotify application](https://developer.spotify.com/documentation/web-api/concepts/apps) if you don't already have one (the same application used for the [Spotify Source](/configuration/sources/spotify) can be reused here).
 
 ```json5 title="config.json"
 {
@@ -83,7 +83,7 @@ Some catalog entries carry a translated name depending on locale, independent of
 
 :::note
 
-`locale` is not an officially documented parameter of the Spotify Web API and its behavior can be inconsistent -- some catalog entries only exist with one language's name at all, in which case no `locale`/`market` combination will produce an alternate translation because Spotify doesn't have one to return.
+`locale` is an **UNDOCUMENTED** parameter of the Spotify Web API **and may break at any time, without notice or warning**. Its behavior may also be inconsistent - some catalog entries only exist with one language's name at all, in which case no `locale`/`market` combination will produce an alternate translation because Spotify doesn't have one to return.
 
 :::
 
