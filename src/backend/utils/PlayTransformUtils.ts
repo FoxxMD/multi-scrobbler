@@ -157,6 +157,22 @@ export const testWhen = (parts: WhenParts<string>, play: PlayObject, options?: S
             return false;
         }
     }
+    if(parts.art !== undefined) {
+        if(parts.art.trim() === '') {
+            // user is testing to see if there is no art
+            // if test is empty string and there is no art then it passes
+            return play.meta.art === undefined || Object.keys(play.meta.art).length === 0
+        }
+        const {art = {}} = play.meta;
+        for(const [k,v] of Object.entries(art)) {
+            // passes if any art url matches the search
+            if(testMaybeRegex(parts.art, v ?? '')[0]) {
+                return true;
+            }
+        }
+        // otherwise fails
+        return false;
+    }
     return true;
 }
 

@@ -1,8 +1,8 @@
-import React, { useCallback, useMemo, type ComponentProps, useEffect } from "react"
-import { Portal, Group, Span, Menu, Box, Heading, Skeleton, Wrap, HStack, Stack, Flex, Text, Card, Button, CloseButton, SkeletonText, type BadgeProps, type MenuItemProps, createOverlay, Dialog, type MenuSelectionDetails } from '@chakra-ui/react';
+import React, { useCallback, useMemo, type ComponentProps, useEffect, type ReactNode } from "react"
+import { Portal, Group, Span, Menu, Box, Heading, Skeleton, Wrap, HStack, Badge, Stack, List, Flex, Text, Card, Button, CloseButton, SkeletonText, type BadgeProps, type MenuItemProps, createOverlay, Dialog, type MenuSelectionDetails } from '@chakra-ui/react';
 import { COMPONENT_STATE, type ComponentCommonApiJson, type ComponentsApiJson, type ComponentState, type ComponentStateBody, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
-import { capitalize } from "../../../core/StringUtils.js";
-import { ChevronLeftButton, EllipsisButton, ExternalLinkIcon, EyeButton, EyeClosedIcon, EyeIcon, IdleIcon, PowerButton, PowerIcon, type PowerOffButton, PowerOffIcon, RetryButton, RetryIcon, UnlockButton, UnlockIconRaw } from "../icons/ChakraIcons.js";
+import { capitalize, capitalizeWords } from "../../../core/StringUtils.js";
+import { ChevronLeftButton, EllipsisButton, ExternalLinkIcon, EyeButton, EyeClosedIcon, EyeIcon, IdleIcon, PowerButton, PowerIcon, type PowerOffButton, PowerOffIcon, RetryButton, RetryIcon, SyncPlayIconRaw, UnlockButton, UnlockIconRaw } from "../icons/ChakraIcons.js";
 import { PlayersContainer, PlayersContainerFetchable } from "../chakraPlayer/Player.js";
 import { Tooltip } from "../ToggleTip.js";
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
@@ -13,7 +13,7 @@ import {
     useSSEAnyEvent
 } from "@flamefrontend/sse-runtime-react";
 import { Link } from "react-router";
-import { CountIndicatorStreamable, DateIndicatorStreamable, DeadLetterIndicatorStreamable, QueuedIndicatorStreamable } from "./Stats.js";
+import { CountIndicatorStreamable, DateIndicatorStreamable, DeadLetterIndicatorStreamable, QueuedIndicatorStreamable, StaticStat } from "./Stats.js";
 import { ListContainerFilterable } from "../playActivity/ActivityList.js";
 import { useParams } from "react-router-dom";
 import { ComponentStateBadge } from "../Badges.js";
@@ -54,7 +54,36 @@ export const MSComponentType = (props: {data?: Pick<ComponentCommonApiJson, 'mod
     return <Heading color="fg.subtle" size="lg">({props.data.mode}) {capitalize(props.data.type)}</Heading>;
 }
 
-export const MSComponentStats = (props: { data?: ComponentCommonApiJson, live?: boolean }) => {
+const SyncedStat = (props: {data: Pick<ComponentsApiJson, 'synced' | 'syncedReason' | 'lastImport' | 'lastImportSuccess'>}) => {
+    const {
+        data: {
+            synced,
+            syncedReason,
+            lastImport,
+            lastImportSuccess
+        } = {}
+    } = props;
+    let helpText: ReactNode;
+    if(synced) {
+        helpText = (
+            <Stack margin="1">
+                <Text>Last historical play sync was successful.</Text>
+                {lastImportSuccess !== undefined && lastImportSuccess !== null ? <Text>Synced at {shortTodayAwareFormat(dayjs(lastImportSuccess))}</Text> : undefined}
+            </Stack>
+        );
+    } else {
+        helpText = (
+            <Stack margin="1">
+                <Text>Last historical play sync was unsuccessful: {syncedReason}</Text>
+                {lastImport !== undefined && lastImport !== null ? <Text>Attempted at {shortTodayAwareFormat(dayjs(lastImport))}</Text> : undefined}
+                {lastImportSuccess !== undefined && lastImportSuccess !== undefined ? <Text>Last successful sync was at {shortTodayAwareFormat(dayjs(lastImportSuccess))}</Text> : undefined}
+            </Stack>
+        );
+    }
+    return <StaticStat label="Synced?" helpText={helpText}>{synced ? 'Yes' : 'No'}</StaticStat>
+}
+
+export const MSComponentStats = (props: { data?: ComponentsApiJson, live?: boolean }) => {
     if (props.data === undefined) {
         return (
             <Box>
@@ -62,12 +91,18 @@ export const MSComponentStats = (props: { data?: ComponentCommonApiJson, live?: 
             </Box>
         )
     }
+    const {
+        data: {
+            synced,
+        } = {},
+    } = props;
     return (
         <Wrap gap="6" rowGap="5" justify="flex-start" flexGrow="0">
             <CountIndicatorStreamable data={props.data} flexGrow="0"/>
             <QueuedIndicatorStreamable data={props.data} flexGrow="0"/>
             <DeadLetterIndicatorStreamable data={props.data} flexGrow="0"/>
             <DateIndicatorStreamable data={props.data} flexGrow="0"/>
+            {synced !== undefined ? <SyncedStat data={props.data}/> : null}
         </Wrap>
     )
 }
@@ -159,6 +194,67 @@ const dialog = createOverlay<AuthDialogProps>((props) => {
       </Portal>
     </Dialog.Root>
   )
+});
+
+type SyncDialogProps = {data: Pick<ComponentsApiJson, 'id' | 'type'>};
+
+const syncDialog = createOverlay<SyncDialogProps>((props) => {
+  const { data,  ...rest } = props
+
+    const {mutate, isPending: mutateIsPending, isSuccess} = useMutation({
+        mutationKey: ['syncPlays', data.id],
+        mutationFn: (type: string) => ky.post(`api/components/${data.id}/plays/historical`, {json: {type}})
+    });
+
+    useEffect(() => {
+        if(isSuccess) {
+            syncDialog.close('syncPlays');
+        }
+    },[isSuccess, syncDialog])
+
+  return (
+    <Dialog.Root {...rest}>
+      <Portal>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.Header>
+                <Dialog.Title>Sync Local Mirror</Dialog.Title>
+              </Dialog.Header>
+            <Dialog.Body spaceY="4">
+              <Text>This component stores a <strong>local mirror</strong> of all of your Plays/Scrobbles.</Text>
+              <Text>During duplicate detection, it queries this mirror instead of making API calls to {capitalizeWords(data.type)} so it depends on this mirror being in-sync.</Text>
+              <Text>The local mirror is normally synced automatically when Multi-Scrobbler is started but can be manually initiated here.</Text>
+              <List.Root>
+                <List.Item mt="2">Use <Badge colorPalette="yellow" variant="surface">Full Sync</Badge> to initiate a full rebuild of the local mirror
+                    <List.Root mt="1" ps="5">
+                        <List.Item>This can take some time if you have many Plays/Scrobbles!</List.Item>
+                        <List.Item>Only use this if there are errors, "Synced" is "No", or a Recent Sync does not fix your issue.</List.Item>
+                    </List.Root>
+                </List.Item>
+                <List.Item mt="2">
+                    Use <Badge colorPalette="blue" variant="surface">Recent Sync</Badge> to fill in the last ~100 Plays/Scrobbles
+                    <List.Root mt="1" ps="5">
+                        <List.Item>Useful for "catching up" Multi-Scrobbler if an outside service added, or made changes to, your recent history.</List.Item>
+                    </List.Root>
+                </List.Item>
+              </List.Root>
+            </Dialog.Body>
+            <Dialog.Footer>
+            <Dialog.ActionTrigger asChild>
+                <Button variant="outline">Cancel</Button>
+            </Dialog.ActionTrigger>
+            <Button colorPalette="blue" variant="surface" loading={mutateIsPending} onClick={() => mutate('recent')}>Recent Sync</Button>
+            <Button colorPalette="yellow" variant="surface" loading={mutateIsPending} onClick={() => mutate('full')}>Full Sync</Button>
+            </Dialog.Footer>
+            <Dialog.CloseTrigger asChild>
+            <CloseButton size="sm" />
+            </Dialog.CloseTrigger>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Portal>
+    </Dialog.Root>
+  )
 })
 
 const stateIsStarted = (state: ComponentState): boolean => state <= COMPONENT_STATE.IGNORED;
@@ -172,6 +268,7 @@ const MenuItemStart = componentStateMenuItem(PowerIcon, 'start', 'Start');
 const MenuItemIgnore = componentStateMenuItem(EyeClosedIcon, 'ignore', 'Ignore')
 const MenuItemMonitor = componentStateMenuItem(EyeIcon, 'monitor', 'Monitor');
 const MenuItemAuth = componentStateMenuItem(UnlockIconRaw, 'auth', 'Auth');
+const MenuItemSync = componentStateMenuItem(SyncPlayIconRaw, 'syncHistorical', 'Sync Plays...');
 
 const primaryActionProps: ComponentProps<typeof PowerOffButton> = {
     margin: "1px",
@@ -179,7 +276,8 @@ const primaryActionProps: ComponentProps<typeof PowerOffButton> = {
     size: 'xs'
 }
 
-export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof ComponentStateBadge>, 'suffix'>) => {
+export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof ComponentStateBadge>, 'suffix' | 'data'> & {
+    data: ComponentProps<typeof ComponentStateBadge>['data'] & Pick<ComponentsApiJson, 'synced' | 'type'>}) => {
     const {
         componentId,
         live,
@@ -247,11 +345,21 @@ export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof 
         menuItems.push(<MenuItemAuth/>)
     }
 
+    if(props.data.synced !== undefined) {
+        menuItems.push(<MenuItemSync/>)
+    }
+
     const menuCb = useCallback((select: MenuSelectionDetails) => {
-        if(select.value !== 'auth') {
-            mutate(select.value as ComponentStateBody['state']);
-        } else {
-            dialog.open('auth', {data: {id: componentId, errors: props.data.errors, authType: props.data.authType}});
+        switch(select.value) {
+            case 'auth':
+                dialog.open('auth', {data: {id: componentId, errors: props.data.errors, authType: props.data.authType}});
+                break;
+            case 'syncHistorical':
+                syncDialog.open('syncPlays', {data: {id: componentId, type: props.data.type}});
+                break;
+            default:
+                mutate(select.value as ComponentStateBody['state']);
+                break;
         }
     },[mutate, props.data.errors, componentId, props.data.authType]);
 
@@ -293,9 +401,13 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentsApiJson, live?
             warnings = [],
             errors = [],
             authed,
-            authType
+            authType,
+            syncError
         } = {}
     } = props;
+    if(syncError !== undefined && syncError !== null) {
+        warnings.push(syncError);
+    }
     const isSource = isComponentSourceApiJson(data)
     if(isSource) {
         const {
@@ -332,6 +444,7 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentsApiJson, live?
     return (
         <MSErrorBoundary>
         <dialog.Viewport />
+        <syncDialog.Viewport />
         <Flex direction="row" wrap="wrap" style={{whiteSpace: 'break-spaces'}} truncate rowGap="4">
             <Wrap width="100%" ref={target}>
                 <Box marginEnd="auto" truncate>

@@ -1,6 +1,6 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import type EventEmitter from "events";
-import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type SourcePlayerObj} from "../../core/Atomic.ts";
+import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type QueueContext, type SourcePlayerObj} from "../../core/Atomic.ts";
 import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import type {FormatPlayObjectOptions, InternalConfigOptional} from "../common/infrastructure/Atomic.ts";
@@ -10,9 +10,8 @@ import type {ListenPayload} from '../../core/vendor/listenbrainz/interfaces.ts';
 
 import { isDebugMode } from "../utils.ts";
 import { durationToHuman } from '../../core/TimeUtils.ts';
-import { RockSkyApiClient, rockskyScrobbleToPlay, type SubmitResponse } from "../common/vendor/RockSkyApiClient.ts";
+import { playToRockskyClientRecord, RockSkyApiClient, rockskyScrobbleToPlay } from "../common/vendor/RockSkyApiClient.ts";
 import type {RockSkyClientConfig} from "../common/infrastructure/config/client/rocksky.ts";
-import { ScrobbleSubmitError } from "../common/errors/MSErrors.ts";
 import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient.ts";
 import { fromStream } from '@atcute/repo';
 import fsPromise from 'node:fs/promises';
@@ -23,6 +22,8 @@ import { Readable } from 'stream';
 import { ATProtoUnauthenticatedApiClient } from "../common/vendor/atproto/ATProtoUnauthenticatedApiClient.ts";
 import { playToRepositoryCreatePlayHistoricalOpts, type RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
 import { isAbortError } from "abort-controller-x";
+import { shouldClearNPStatus } from "./AbstractScrobbleClient.ts";
+import { removeUndefinedKeys } from "../../core/DataUtils.ts";
 
 export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
 
@@ -30,6 +31,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
     override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
     requiresAuth = true;
     requiresAuthInteraction = false;
+    override nowPlayingIsRealtime: boolean = true;
 
     declare config: RockSkyClientConfig;
 
@@ -44,14 +46,32 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
 
     constructor(name: any, config: RockSkyClientConfig, options: InternalConfigOptional & { [key: string]: any }, emitter: EventEmitter, logger: Logger) {
         super('rocksky', name, config, emitter, logger);
-        this.api = new RockSkyApiClient(name, { ...config.data, ...config.options }, { logger: this.logger });
+        this.api = new RockSkyApiClient(name, { ...config.data, ...config.options }, { logger: this.logger, configDir: options.configDir });
         // https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(user_name)-listens
         // 1000 is way too high. maxing at 100
         this.MAX_INITIAL_SCROBBLES_FETCH = 100;
-        this.supportsNowPlaying = false;
+        this.supportsNowPlaying = true;
         // PDS rate limit for operations is ~2/sec
         this.scrobbleDelay = 2000;
         this.configDir = options.configDir;
+        this.existingPlayOpts = {
+            logger: this.dupeLogger,
+            transformRules: this.transformRules,
+            transformPlay: this.transformPlay,
+            existingSubmitted: this.findExistingSubmittedPlayObj,
+            existingExternal: async (play) => {
+                const createRecord = removeUndefinedKeys(playToRockskyClientRecord(play));
+                const existingUri = await this.api.rsIndex.scrobbleUri(this.api.userData.did, createRecord.title, createRecord.artist, createRecord.album, createRecord.timestamp);
+                if(existingUri) {
+                    return {
+                        match: true,
+                        reason: 'matched existing scrobble record URI',
+                        data: existingUri
+                    }
+                }
+                return {match: false};
+            }
+        }
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => ListenbrainzApiClient.formatPlayObj(obj, options);
@@ -59,12 +79,15 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
     protected async doBuildInitData(): Promise<true | string | undefined> {
         const {
             data: {
-                key,
-                token,
+                appPassword,
+                token
             } = {}
         } = this.config;
-        if (key === undefined && token === undefined) {
-            throw new Error('Must provide an API Key or Access Token');
+        if (appPassword === undefined && token === undefined) {
+            throw new Error('Must provide an App Password or Access Token');
+        }
+        if(appPassword === undefined && token !== undefined) {
+            this.logger.warn('Access Token authentication is DEPRECATED and will be removed in a future release. Please switch to handle/appPassword auth as soon as possible.');
         }
         return true;
     }
@@ -94,7 +117,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         return playToListenPayload(playObj);
     }
 
-    doScrobble = async (playObj: PlayObject) => {
+    doScrobble = async (playObj: PlayObject, context?: QueueContext) => {
         const {
             meta: {
                 source,
@@ -102,12 +125,10 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
             } = {}
         } = playObj;
 
-        try {
-            const result = await this.api.submitListen(playObj, { log: isDebugMode() });
+        const {isRetry = false} = context ?? {};
 
-            if (this.api.isLzMode() && ((result.response as SubmitResponse).payload?.ignored_listens ?? 0) > 0) {
-                throw new ScrobbleSubmitError('Scrobble was successfully submitted but Rocksky ignored it', { showStopper: false, responseBody: result.response, payload: result.payload });
-            }
+        try {
+            const result = await this.api.submitListen(playObj, { log: isDebugMode(), force: isRetry === true });
 
             if (newFromSource) {
                 this.logger.info(`Scrobbled (New)     => (${source}) ${buildTrackString(playObj)}`);
@@ -122,34 +143,51 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
     }
 
     doPlayingNow = async (data: SourcePlayerObj) => {
+
+        const isClearing = shouldClearNPStatus(data);
+
+        // we can avoid additional calls to PDS for clearing a status if the status is about to expire, or is already expired.
+        // this will usually happen if a player stops playing the last track in a queue
+        // -- worth doing since PDS calls have a daily rate limit
+        if(isClearing && (this.statusExpiresSoon() || this.statusAlreadyExpired())) {
+            this.npLogger.debug(`Not calling status record update because status  is about to expire (or has already), expiring ${durationToHuman(dayjs.duration(dayjs().diff(this.nowPlayingExpirationDate)))}`);
+            return;
+        }
+
         try {
-            await this.api.submitListen(data.play, { listenType: 'playing_now' });
+            await this.api.updateNowPlaying(isClearing ? undefined : data.play);
         } catch (e) {
             throw e;
         }
     }
 
     protected async doHydrateHistoricalScrobbles(opts: {allowFailures?: boolean, signal?: AbortSignal } = {}) {
-        const logger =  childLogger(this.logger, ['Historical Plays']);
-        const {
-            allowFailures = false,
-            signal
-        } = opts;
-        let file: string;
         try {
-            logger.verbose('Fetching scrobbles from PDS...');
-            file = await this.fetchCarToFile();
-            signal?.throwIfAborted();
-        } catch (e) {
-            throw new Error('Failed to fetch repo CAR', {cause: e});
-        }
+            const logger =  childLogger(this.logger, ['Historical Plays']);
+            const {
+                allowFailures = false,
+                signal
+            } = opts;
+            let file: string;
+            try {
+                logger.verbose('Fetching scrobbles from PDS...');
+                file = await this.api.fetchCarToFile()
+                signal?.throwIfAborted();
+            } catch (e) {
+                throw new Error('Failed to fetch repo CAR', {cause: e});
+            }
 
-        try {
-            await this.parseScrobblesFromCar(file, 100, {allowFailures, logger: logger, signal});
+            try {
+                await this.parseScrobblesFromCar(file, 100, {allowFailures, logger: logger, signal});
+            } catch (e) {
+                throw new Error('Failed to convert CAR without any error', {cause: e});
+            } finally {
+                await fsPromise.rm(file);
+            }
         } catch (e) {
-            throw new Error('Failed to convert CAR without any error', {cause: e});
-        } finally {
-            await fsPromise.rm(file);
+            const historicalWarnings = new Error('Unable to hydrate historical plays. The client will still work but may not be able to catch all duplicates.', {cause: e});
+            this.warnings.push(historicalWarnings);
+            this.logger.warn(historicalWarnings);
         }
     }
 
@@ -157,13 +195,17 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         // TODO use `since` to get CAR diff instead of entire repo
         // can use last import date from migrations table
         const filename = path.resolve(this.configDir, `${this.getSafeExternalId()}-${dayjs().unix()}.car`);
-        const atClient = new ATProtoUnauthenticatedApiClient('rocksky', { handleData: this.api.userData, identifier: this.api.userData.handle }, { logger: this.logger });
+        const atClient = new ATProtoUnauthenticatedApiClient('rocksky', { handleData: this.api.userData, identifier: this.config.data.handle }, { logger: this.logger });
         await atClient.initClient();
         await fsPromise.writeFile(filename, Buffer.from(await atClient.getCAR(this.api.userData.did)));
         return filename;
     }
 
     async parseScrobblesFromCar(filename: string, batchSize: number, opts: { allowFailures?: boolean, logger?: Logger, signal?: AbortSignal } = {}) {
+
+        if(this.api.rsAgent !== undefined) {
+            await this.api.syncSdkRepo(filename);
+        }
 
         const {
             allowFailures = false,
@@ -243,7 +285,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         logger.info(`Completed CAR conversion: Result ${allGood ? 'OK' : 'Some Errors'} in ${durationToHuman(dayjs.duration(dayjs().diff(start)))} | Records ${count} | Persisted ${persisted}`)
     }
 
-    protected async syncRecentHistoricalScrobbles(): Promise<[PlayObject[], boolean]> {
+    protected async doSyncRecentHistoricalScrobbles(): Promise<[PlayObject[], boolean]> {
         const recentPlays = await this.getScrobblesForTimeRange(undefined);
         const unseenPlays: PlayObject[] = [];
         let syncGapFilled = false;

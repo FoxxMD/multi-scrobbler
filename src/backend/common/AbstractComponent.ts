@@ -49,7 +49,7 @@ import type { Gauge } from 'prom-client';
 import type { PlayProcessingResult } from "./infrastructure/PlayProcessing.ts";
 import { isAbortError } from "abort-controller-x";
 import { PlayProcessingError } from "./errors/PlayProcessingError.ts";
-import { PLAY_EVENT_TYPE, type PlayEvent, type PlayEventPlayStateChange } from "../../core/PlayEvent.ts";
+import { type PlayEvent, type PlayEventPlayStateChange } from "../../core/PlayEvent.ts";
 
 export type AbstractComponentConfig = (CommonClientConfig | CommonSourceConfig) & { transformManager?: TransformerManager };
 
@@ -137,9 +137,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         return {name: this.getSafeExternalName(), type: this.type};
     }
 
-    protected postCache(): Promise<void> {
+    protected async postCache(): Promise<void> {
         try {
-            this.buildTransformRules();
+            await this.buildTransformRules();
             return;
         } catch (e) {
             throw e;
@@ -178,10 +178,10 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         return true;
     }
 
-    public buildTransformRules() {
+    public async buildTransformRules() {
         this.logger.debug('Building transformer rules...');
         try {
-            this.doBuildTransformRules();
+            await this.doBuildTransformRules();
         } catch (e) {
             this.buildOK = false;
             throw new TransformRulesError('Could not build playTransform rules. Check your configuration is valid.', {cause: e});
@@ -194,7 +194,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
     }
 
-    protected doBuildTransformRules() {
+    protected async doBuildTransformRules() {
         const {
             options: {
                 playTransform
@@ -223,7 +223,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         const builtHooks: string[] = [];
         const emptyHooks: string[] = [];
         try {
-            preCompare = this.transformPartToStrong(preConfig);
+            preCompare = await this.transformPartToStrong(preConfig);
             if(preCompare === undefined) {
                 emptyHooks.push('preCompare')
             } else {
@@ -234,7 +234,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
 
         try {
-            candidate = this.transformPartToStrong(candidateConfig);
+            candidate = await this.transformPartToStrong(candidateConfig);
             if(candidate === undefined) {
                 emptyHooks.push('candidate')
             } else {
@@ -245,7 +245,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
 
         try {
-            existing = this.transformPartToStrong(existingConfig);
+            existing = await this.transformPartToStrong(existingConfig);
              if(existing === undefined) {
                 emptyHooks.push('existing')
             } else {
@@ -256,7 +256,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
 
         try {
-            postCompare = this.transformPartToStrong(postConfig);
+            postCompare = await this.transformPartToStrong(postConfig);
              if(postCompare === undefined) {
                 emptyHooks.push('postCompare')
             } else {
@@ -323,13 +323,13 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
     }
 
-    protected transformPartToStrong(data: any) {
+    protected async transformPartToStrong(data: any) {
         if(data === undefined) {
             return undefined;
         }
         const partArr = (Array.isArray(data) ? data : [data]);
 
-        return partArr.map(x => this.transformManager.parseTransformerConfig(x));
+        return await pMap(partArr, async (x) => this.transformManager.parseTransformerConfig(x));
     }
 
     public transformPlay = async (play: PlayObject, hookType: TransformHook, transformOpts: {log?: boolean | 'all'} & OptionalCacheUsage = {}) => {
@@ -662,7 +662,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     public abstract getRunningState(): ComponentState
 
-    public getApiData(): Omit<ComponentCommonApiJson, 'type' | 'countLive' | 'players' | 'deadLetterPlays' | 'deadLetterPlaysTotal' | 'queued'> & Pick<ComponentCommonApi, 'state' | 'errors' | 'warnings'>  {
+    public getApiData(): Omit<ComponentCommonApiJson, 'type' | 'countLive' | 'players' | 'deadLetterPlays' | 'deadLetterPlaysTotal' | 'queued' | 'historicalPlays'> & Pick<ComponentCommonApi, 'state' | 'errors' | 'warnings'>  {
         let state: ComponentState;
         if(!this.initializedOnce || this.initializing) {
             state = COMPONENT_STATE.INITIALIZING;

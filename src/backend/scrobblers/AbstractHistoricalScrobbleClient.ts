@@ -9,6 +9,8 @@ import { generateLoggableAbortReason } from "../common/errors/MSErrors.ts";
 import type {Logger} from "@foxxmd/logging";
 import { buildTrackString } from "../../core/StringUtils.ts";
 import type {PlayObject} from "../../core/Atomic.ts";
+import { todayAwareFormat } from "../../core/TimeUtils.ts";
+import type { ComponentClientApiJson } from "../../core/Api.ts";
 
 export default abstract class AbstractHistoricalScrobbleClient extends AbstractScrobbleClient {
 
@@ -24,6 +26,17 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
     protected addScrobbleToHistorical: boolean = true;
 
     protected abstract doHydrateHistoricalScrobbles(opts: {allowFailures?: boolean, signal?: AbortSignal }): Promise<void>;
+
+    public getApiData(): ComponentClientApiJson {
+        return {
+            ...super.getApiData(),
+            synced: this.synced,
+            syncedReason: this.syncedReason,
+            syncError: this.syncError,
+            lastImport: this.lastImport !== undefined ? this.lastImport.toISOString() : undefined,
+            lastImportSuccess: this.lastImportSuccess !== undefined ? this.lastImportSuccess.toISOString() : undefined
+        }
+    }
 
     hydrateHistoricalScrobbles(allowFailures: boolean = false, cleanup: boolean = true): void {
         if(this.importAbortController !== undefined) {
@@ -41,8 +54,11 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
         
             const newImport: ComponentMigrationSelect = await this.migrationRepo.create({name: 'historicalImport', componentId: this.dbComponent.id}) as ComponentMigrationSelect;
             try {
+                this.setStatus('Starting full mirror rebuild...');
                 await this.doHydrateHistoricalScrobbles({signal, allowFailures});
                 await this.migrationRepo.updateById(newImport.id, {success: true});
+                this.logger.info('Sync complete');
+                this.setStatus('Full mirror rebuild complete');
                 this.synced = true;
                 this.lastImportSuccess = dayjs();
             } catch (e) {
@@ -51,8 +67,16 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
                 this.syncError = e;
                 this.syncedReason = 'last attempted import failed';
                 this.synced = false;
+                this.setStatus('Full mirror rebuild failed.');
             } finally {
                 this.lastImport = dayjs();
+                this.emitComponentUpdate<Partial<ComponentClientApiJson>>({
+                    synced: this.synced,
+                    lastImportSuccess: this.lastImportSuccess.toISOString(),
+                    lastImport: this.lastImport.toISOString(),
+                    syncedReason: this.syncedReason ?? null,
+                    syncError: this.syncError ?? null
+                });
             }
             this.dbComponent.migrations.push(newImport);
         }).catch((e) => {
@@ -123,12 +147,31 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
         return closeTemporalPlays.map(x => x.play);
     }
 
-    protected abstract syncRecentHistoricalScrobbles(): Promise<[PlayObject[], boolean]>;
+    protected abstract doSyncRecentHistoricalScrobbles(): Promise<[PlayObject[], boolean]>;
+
+    async syncRecentHistoricalScrobbles(): ReturnType<AbstractHistoricalScrobbleClient['doSyncRecentHistoricalScrobbles']> {
+        try {
+            this.logger.info('Pulling latest scrobbles into mirror...');
+            this.setStatus('Pulling latest scrobbles into mirror...');
+            const [recent, gapSynced] = await this.doSyncRecentHistoricalScrobbles();
+            if(recent.length > 0) {
+                await this.createHistoricalPlays(recent.map((x) => playToRepositoryCreatePlayHistoricalOpts({play: x})));
+                this.logger.verbose(`Added ${recent.length} upstream plays to mirror`);
+                this.setStatus(`Added ${recent.length} upstream plays to mirror`);
+            } else {
+                this.logger.verbose('Most recent upstream plays were alerady mirrored.');
+                this.setStatus('Most recent upstream plays were alerady mirrored.');
+            }
+            return [recent, gapSynced];
+        } catch (e) {
+            this.setStatus('Recent plays sync failed.');
+        }
+    }
 
     protected async postInitialize(): Promise<void> {
         await super.postInitialize();
 
-        const syncPromise = spawn(new AbortController().signal, async (signal, {defer, fork}) => {
+        spawn(new AbortController().signal, async (signal, {defer, fork}) => {
 
             let shouldSync = true;
 
@@ -147,14 +190,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
 
             if(shouldSync){
                 // pull latest plays into database
-                this.logger.info('Pulling latest scrobbles into historical database...');
-                const [recent, gapSynced] = await this.syncRecentHistoricalScrobbles();
-                if(recent.length > 0) {
-                    await this.createHistoricalPlays(recent.map((x) => playToRepositoryCreatePlayHistoricalOpts({play: x})));
-                    this.logger.verbose(`Added ${recent.length} upstream plays to historical plays`);
-                } else {
-                    this.logger.verbose('Most recent plays are already in historical database!');
-                }
+                const [_, gapSynced] = await this.syncRecentHistoricalScrobbles();
                 if(this.syncedReason !== undefined && this.syncedReason.includes('component was inactive')) {
                     if(gapSynced) {
                         this.syncedReason = undefined;
@@ -165,7 +201,9 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
                 }
             }
 
-        }).catch((e) => this.logger.warn(new Error('Failed to complete post-init historical database sync but continuing anyway', {cause: e})));
+        })
+        .then(() => null)
+        .catch((e) => this.logger.warn(new Error('Failed to complete post-init historical database sync but continuing anyway', {cause: e})));
     }
 
     protected async postDatabase(): Promise<void> {
@@ -188,6 +226,11 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
             if(success) {
                 this.lastImportSuccess = success.attemptedAt;
             }
+        }
+        if(this.synced) {
+            this.logger.info(`Last full historical play sync was successful${this.lastImportSuccess !== undefined ? ` and imported on ${todayAwareFormat(this.lastImportSuccess)}` : ''}`);
+        } else {
+            this.logger.info(`Last full historical play sync as not successful (${reason})${this.lastImport !== undefined ? ` and attempted on ${todayAwareFormat(this.lastImport)}` :''}`);
         }
     }
 

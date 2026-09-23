@@ -1,4 +1,4 @@
-import { type ComponentProps, useState, useCallback, type ReactNode, useEffect } from "react"
+import { type ComponentProps, useState, useCallback, type ReactNode, type PropsWithChildren } from "react"
 import { Badge, Stat, HStack, type BadgeProps } from '@chakra-ui/react';
 import type {ComponentClientApiJson, ComponentCommonApiJson, MsSseEvent} from "../../../core/Api.js";
 import { TextMuted } from "../TextMuted.js";
@@ -14,6 +14,25 @@ import { shortTodayAwareFormat } from "../../../core/TimeUtils.js";
 import { TextTip } from "../ToggleTip.js";
 
 type Color = BadgeProps['colorPalette'] & IconBaseProps['color'];
+
+export const StaticStat = (props: PropsWithChildren<{
+    label: string | ReactNode
+    helpText?: string | ReactNode
+}> & ComponentProps<typeof Stat.Root>) => {
+    const {
+        children,
+        label,
+        helpText,
+        ...rest
+    } = props;
+    const presentationText = helpText !== undefined ? <TextTip text={label}>{helpText}</TextTip> : label
+    return (
+            <Stat.Root size={{ smDown: "sm", base: "md" }} {...rest}>
+                <Stat.Label>{presentationText}</Stat.Label>
+                <Stat.ValueText textWrapMode="nowrap">{children}</Stat.ValueText>
+            </Stat.Root>
+        );
+}
 
 export const Indicator = (props: {
     current?: number

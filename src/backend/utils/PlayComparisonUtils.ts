@@ -1,9 +1,9 @@
 import { getListDiff, type ListDiff } from "@donedeal0/superdiff";
-import { type AcceptableTemporalDuringReference, type PlayMatchResult, type PlayObject, type PlayObjectMinimal, SOURCE_SOT, type SOURCE_SOT_TYPES, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy, type TrackStringOptions } from "../../core/Atomic.ts";
+import { type AcceptableTemporalDuringReference, type ArtistCredit, type PlayMatchResult, type PlayObject, type PlayObjectMinimal, SOURCE_SOT, type SOURCE_SOT_TYPES, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy, type TrackStringOptions } from "../../core/Atomic.ts";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
 import { comparingMultipleArtists, playObjDataMatch, setIntersection } from "../utils.ts";
 import { comparePlayTemporally, hasAcceptableTemporalAccuracy, temporalAccuracyToString, type TemporalPlayComparisonOptions, temporalPlayComparisonSummary } from "./TimeUtils.ts";
-import { compareNormalizedStrings, compareScrobbleArtists, compareScrobbleTracks, compareTracks, normalizeStr, type TrackSamenessResults } from "./StringUtils.ts";
+import { compareNormalizedStrings, compareScrobbleArtistCredits, compareScrobbleArtists, compareScrobbleTracks, compareTracks, normalizeStr, type TrackSamenessResults } from "./StringUtils.ts";
 import { ARTIST_WEIGHT, DUP_SCORE_THRESHOLD, type ScrobbledPlayObject, TIME_WEIGHT, TITLE_WEIGHT } from "../common/infrastructure/Atomic.ts";
 import type {StringSamenessResult} from "@foxxmd/string-sameness";
 import type {Duration} from "dayjs/plugin/duration.js";
@@ -13,6 +13,7 @@ import { loggerNoop } from '../common/MaybeLogger.ts';
 import { statefulInvariantTransform } from "../../core/PlayUtils.ts";
 import { findAsyncSequential } from "./AsyncUtils.ts";
 import dayjs from "dayjs";
+import { SimpleError } from "../common/errors/MSErrors.ts";
 
 
 export const metaInvariantTransform = (play: PlayObject): PlayObjectMinimal => {
@@ -321,6 +322,14 @@ export const comparePlayArtistsNormalized = (existing: PlayObject, candidate: Pl
     return [Math.min(compareScrobbleArtists(existing, candidate)/100, 1), wholeMatches]
 }
 
+export const compareArtistCreditsNormalized = (existingArtists: ArtistCredit[], candidateArtists: ArtistCredit[]): [number, number] => {
+    const normExisting = existingArtists.map(x => normalizeStr(x.name, {keepSingleWhitespace: true}));
+    const candidateExisting = candidateArtists.map(x => normalizeStr(x.name, {keepSingleWhitespace: true}));
+
+    const wholeMatches = setIntersection(new Set(normExisting), new Set(candidateExisting)).size;
+    return [Math.min(compareScrobbleArtistCredits(existingArtists, candidateArtists)/100, 1), wholeMatches]
+}
+
 export const comparePlayTracksNormalized = (existing: PlayObject, candidate: PlayObject): [number,TrackSamenessResults]  => {
     const [highest, results] = compareScrobbleTracks(existing, candidate);
     return [Math.min(highest.highScore/100, 1), results];
@@ -425,6 +434,7 @@ export const playDateWithinDurationOfAny = (play: PlayObject, plays:  PlayObject
 export interface ExistingScrobbleOpts {
     transformPlay?: (play: PlayObject, hookType: TransformHook) => Promise<PlayObject>
     existingSubmitted?: (play: PlayObject) => Promise<[ScrobbledPlayObject?, ScrobbledPlayObject[]?]>
+    existingExternal?: (play: PlayObject) => Promise<{reason?: string, match: boolean, data?: string | Record<string, any>}>
     transformRules?: PlayTransformRules
     checkExistingScrobbles?: boolean
     logger?: Logger
@@ -435,6 +445,7 @@ export const existingScrobble = async (playObjPre: PlayObject, existingScrobbles
     const {
         transformPlay = (play, hook) => play,
         existingSubmitted = (play) => [undefined, undefined],
+        existingExternal,
         transformRules,
         checkExistingScrobbles = true,
         logger = loggerNoop
@@ -476,6 +487,22 @@ export const existingScrobble = async (playObjPre: PlayObject, existingScrobbles
             result.reason = 'Exact Match found in previously successfully scrobbled plays';
 
             existingScrobble = existingExactSubmitted.scrobble;
+        } else if(existingExternal !== undefined) {
+            try {
+                const res = await existingExternal(playObj);
+                if(res.match) {
+                    return {
+                        match: true,
+                        score: 1,
+                        breakdowns: [],
+                        reason: res.reason,
+                        summary: res.data !== undefined ? (typeof res.data === 'string' ? res.data : JSON.stringify(res.data)) : undefined,
+                        createdAt: dayjs().toISOString()
+                    }
+                }
+            } catch (e) {
+                logger.warn(new SimpleError('External existing check failed', {cause: e}));
+            }
         }
         // if not though then we need to check recent scrobbles from scrobble api.
         // this will be less accurate than checking existing submitted (obv) but will happen if backlogging or on a fresh server start

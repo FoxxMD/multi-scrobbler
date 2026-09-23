@@ -14,7 +14,7 @@ import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
 import { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractScrobbleClient.ts";
 import type {TealClientConfig} from "../common/infrastructure/config/client/tealfm.ts";
 import { ATProtoAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.ts";
-import { playToRecord, TealApiClient } from "../common/vendor/teal/TealApiClient.ts";
+import { playToRecord, TealApiAuthenticatedClient } from "../common/vendor/teal/TealApiClient.ts";
 import { playToStatusRecord } from "../common/vendor/teal/TealApiClient.ts";
 import { recordToPlay } from "../common/vendor/teal/TealApiClient.ts";
 import dayjs from "dayjs";
@@ -41,14 +41,14 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
 
     protected configDir: string;
 
-    client: TealApiClient;
+    client: TealApiAuthenticatedClient;
 
     constructor(name: any, config: TealClientConfig, options: InternalConfigOptional & {[key: string]: any}, emitter: EventEmitter, logger: Logger) {
         super('tealfm', name, config, emitter, logger);
         this.MAX_INITIAL_SCROBBLES_FETCH = 20;
         this.scrobbleDelay = 1500;
         this.supportsNowPlaying = true;
-        this.client = new TealApiClient(name, config.data, {...options, logger});
+        this.client = new TealApiAuthenticatedClient(name, config.data, {...options, logger});
         this.nowPlayingMaxThreshold = nowPlayingUpdateByPlayDuration;
         this.nowPlayingMinThreshold = (_) => 20;
         this.configDir = options.configDir;
@@ -164,26 +164,32 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
     }
 
     protected async doHydrateHistoricalScrobbles(opts: {allowFailures?: boolean, signal?: AbortSignal } = {}) {
-        const logger =  childLogger(this.logger, ['Historical Plays']);
-        const {
-            allowFailures = false,
-            signal
-        } = opts;
-        let file: string;
         try {
-            logger.verbose('Fetching scrobbles from PDS...');
-            file = await this.fetchCarToFile();
-            signal?.throwIfAborted();
-        } catch (e) {
-            throw new Error('Failed to fetch repo CAR', {cause: e});
-        }
+            const logger =  childLogger(this.logger, ['Historical Plays']);
+            const {
+                allowFailures = false,
+                signal
+            } = opts;
+            let file: string;
+            try {
+                logger.verbose('Fetching scrobbles from PDS...');
+                file = await this.fetchCarToFile();
+                signal?.throwIfAborted();
+            } catch (e) {
+                throw new Error('Failed to fetch repo CAR', {cause: e});
+            }
 
-        try {
-            await this.parseScrobblesFromCar(file, 100, {allowFailures, logger: logger, signal});
+            try {
+                await this.parseScrobblesFromCar(file, 100, {allowFailures, logger: logger, signal});
+            } catch (e) {
+                throw new Error('Failed to convert CAR without any error', {cause: e});
+            } finally {
+                await fsPromise.rm(file);
+            }
         } catch (e) {
-            throw new Error('Failed to convert CAR without any error', {cause: e});
-        } finally {
-            await fsPromise.rm(file);
+            const historicalWarnings = new Error('Unable to hydrate historical plays. The client will still work but may not be able to catch all duplicates.', {cause: e});
+            this.warnings.push(historicalWarnings);
+            this.logger.warn(historicalWarnings);
         }
     }
 
@@ -289,7 +295,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         logger.info(`Completed CAR conversion: Result ${allGood ? 'OK' : 'Some Errors'} in ${durationToHuman(dayjs.duration(dayjs().diff(start)))} | Records ${count} | Persisted ${persisted}`)
     }
 
-    protected async syncRecentHistoricalScrobbles(): Promise<[PlayObject[], boolean]> {
+    protected async doSyncRecentHistoricalScrobbles(): Promise<[PlayObject[], boolean]> {
         const recentPlays = await this.getScrobblesForTimeRange(undefined);
         const unseenPlays: PlayObject[] = [];
         let syncGapFilled = false;

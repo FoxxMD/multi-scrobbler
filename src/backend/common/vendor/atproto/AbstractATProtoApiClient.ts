@@ -42,11 +42,15 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
             this.config.identifier = config.handleData.handle;
         } else {
             const cleanIdentifier = this.config.identifier;
-            if(isDID(cleanIdentifier)) {
-                this.logger.debug(`Identifier ${cleanIdentifier} looks like a DID, skipping parsing as a handle.`);
-                this.config.did = cleanIdentifier;
-            } else {
-                this.config.identifier = identifierToAtProtoHandle(this.config.identifier, {logger: this.logger, defaultDomain: 'bsky.social'});
+            try {
+                if(isDID(cleanIdentifier)) {
+                    this.logger.debug(`Identifier ${cleanIdentifier} looks like a DID, skipping parsing as a handle.`);
+                    this.config.did = cleanIdentifier;
+                } else {
+                    this.config.identifier = identifierToAtProtoHandle(this.config.identifier, {logger: this.logger, defaultDomain: 'bsky.social'});
+                }
+            } catch (e) {
+                new Error('Unable to resolve identifier', {cause: e})
             }
         }
     }

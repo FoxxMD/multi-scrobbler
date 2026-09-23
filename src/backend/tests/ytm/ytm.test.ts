@@ -30,7 +30,7 @@ const createYtSource = async (opts?: {
     } = opts || {};
     const source = new YTMusicSource('test', {id: `test-${Date.now()}`, ...config}, { localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test' }, emitter);
     await source.buildDatabase();
-    source.buildTransformRules();
+    await source.buildTransformRules();
     return source;
 }
 

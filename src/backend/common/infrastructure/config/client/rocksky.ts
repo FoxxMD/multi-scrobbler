@@ -1,29 +1,9 @@
 import * as z from "zod";
 import {requestRetryOptionsSchema} from "../common.ts";
 import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema, nowPlayingOptionsSchema, type EnvClientSchema} from "./index.ts";
+import { atProtoAppDataSchema } from "./atproto.ts";
 
 export const rockSkyDataSchema = z.object({
-    ...requestRetryOptionsSchema.shape,
-
-    /**
-     * API Key generated from [API Applications](https://docs.rocksky.app/migrating-from-listenbrainz-to-rocksky-1040189m0) in Rocksky for your account
-     *
-     * @examples ["6794186bf-1157-4de6-80e5-uvb411f3ea2b"]
-     * */
-    key: z.string().optional().meta({
-        description: "API Key generated from [API Applications](https://docs.rocksky.app/migrating-from-listenbrainz-to-rocksky-1040189m0) in Rocksky for your account",
-        examples: ["6794186bf-1157-4de6-80e5-uvb411f3ea2b"]
-    }),
-
-    /**
-     * Access Token generated from https://rocksky.app/access-tokens in Rocksky for your account
-     *
-     * @examples ["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaWQ....."]
-     * */
-    token: z.string().optional().meta({
-        description: "Access Token generated from https://rocksky.app/access-tokens in Rocksky for your account",
-        examples: ["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaWQ....."]
-    }),
 
     /**
      * The **fully-qualified** handle for your ATPRoto/Bluesky account, like:
@@ -34,16 +14,28 @@ export const rockSkyDataSchema = z.object({
      *
      * */
     handle: z.string().meta({
-        description: "The **fully-qualified** handle for your ATPRoto/Bluesky account"
+        description: "The **fully-qualified** handle, or identifier, for your Atmosphere account"
     }),
+    appPassword: atProtoAppDataSchema.shape.appPassword.optional().meta(atProtoAppDataSchema.shape.appPassword.meta()),
+    /**
+     * Access Token generated from https://rocksky.app/access-tokens in Rocksky for your account
+     *
+     * @examples ["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaWQ....."]
+     * */
+    token: z.string().optional().meta({
+        description: "(DEPRECATED) Access Token generated from https://rocksky.app/access-tokens in Rocksky for your account",
+        examples: ["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaWQ....."],
+        deprecated: true
+    }),
+    ...requestRetryOptionsSchema.shape,
 });
 
 export type RockSkyData = z.infer<typeof rockSkyDataSchema>;
 
 const envDataSchema = z.object({
-    ROCKSKY_KEY: rockSkyDataSchema.shape.key,
-    ROCKSKY_TOKEN: rockSkyDataSchema.shape.token,
     ROCKSKY_HANDLE: rockSkyDataSchema.shape.handle,
+    ROCKSKY_APP_PW: rockSkyDataSchema.shape.appPassword,
+    ROCKSKY_TOKEN: rockSkyDataSchema.shape.token,
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, RockSkyClientConfig> = {
@@ -52,9 +44,9 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, RockSkyClientConf
     toConfig: (partial) => ({
             configureAs: 'client',
             data: {
-                key: partial.ROCKSKY_KEY,
+                handle: partial.ROCKSKY_HANDLE,
+                appPassword: partial.ROCKSKY_APP_PW,
                 token: partial.ROCKSKY_TOKEN,
-                handle: partial.ROCKSKY_HANDLE
             }
     })
 };
@@ -64,18 +56,6 @@ export const rockSkyClientDataSchema = rockSkyDataSchema.extend(commonClientData
 export type RockSkyClientData = z.infer<typeof rockSkyClientDataSchema>;
 
 export const rockSkyOptionsSchema = z.object({
-    /**
-     * URL for the Rocksky *Listenbrainz* endpoint, if not using the default
-     *
-     * @examples ["https://audioscrobbler.rocksky.app"]
-     * @default "https://audioscrobbler.rocksky.app"
-     * */
-    audioScrobblerUrl: z.string().optional().meta({
-        description: "URL for the Rocksky *Listenbrainz* endpoint, if not using the default",
-        default: "https://audioscrobbler.rocksky.app",
-        examples: ["https://audioscrobbler.rocksky.app"]
-    }),
-
     /**
      * URL for the Rocksky *API* endpoint, if not using the default
      *

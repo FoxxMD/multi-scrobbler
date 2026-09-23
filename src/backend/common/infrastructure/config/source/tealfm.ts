@@ -4,19 +4,17 @@ import {pollingOptionsSchema} from "../common.ts";
 import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
 
 export const tealSourceDataSchema = z.object({
-    ...tealDataSchema.shape,
-    ...commonSourceDataSchema.shape,
-    ...pollingOptionsSchema.shape,
-    appPassword: tealDataSchema.shape.appPassword,
+    identifier: tealDataSchema.shape.identifier.meta(tealDataSchema.shape.identifier.meta()),
     serviceAllow: z.array(z.string()).optional(),
     serviceDeny: z.array(z.string()).optional(),
+    ...commonSourceDataSchema.shape,
+    ...pollingOptionsSchema.shape,
 });
 
 export type TealSourceData = z.infer<typeof tealSourceDataSchema>;
 
 const envDataSchema = z.object({
     SOURCE_TEALFM_IDENTIFIER: tealSourceDataSchema.shape.identifier,
-    SOURCE_TEALFM_APP_PW: tealSourceDataSchema.shape.appPassword,
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, TealSourceConfig> = {
@@ -26,7 +24,6 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, TealSourceConfig>
             configureAs: 'source',
             data: {
                 identifier: partial.SOURCE_TEALFM_IDENTIFIER,
-                appPassword: partial.SOURCE_TEALFM_APP_PW
             }
     })
 };

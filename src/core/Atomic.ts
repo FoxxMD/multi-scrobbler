@@ -84,9 +84,9 @@ export interface PlayProgressPositional extends PlayProgress {
     position: number
 }
 
-export interface ListenRangeDataAmb {
-    start: PlayProgressAmb
-    end: PlayProgressAmb
+export interface ListenRangeDataAmb<D extends DateLike = Dayjs> {
+    start: PlayProgressAmb<D>
+    end: PlayProgressAmb<D>
 }
 
 export interface ListenRangeData extends ListenRangeDataAmb {
@@ -173,7 +173,7 @@ export interface PlayData<D extends DateLike = Dayjs> extends TrackData {
     playDate?: D
     /** Number of seconds the track was listened to */
     listenedFor?: number
-    listenRanges?: ListenRangeData[]
+    listenRanges?: ListenRangeDataAmb<D>[]
     playDateCompleted?: D
     repeat?: boolean
 }
@@ -522,6 +522,15 @@ export interface TransformerCommonConfig<T = Record<string, any>, Y = Record<str
 export interface TransformerCommon<T = Record<string, any>, Y = Record<string, any>> extends TransformerCommonConfig<T,Y> {
     name: string
 }
+
+export const rockskyRequiredFields = z.enum(['track','artists','album']);
+export type RockskyRequiredFields = z.infer<typeof rockskyRequiredFields>;
+export const rockskyConfidenceFields = z.enum(['isrc','mbid','spotify']);
+export type RockskyConfidenceField = z.infer<typeof rockskyConfidenceFields>;
+// https://stackoverflow.com/a/75478762
+export const rockskyMissingFields = z.enum([...rockskyRequiredFields.options,...rockskyConfidenceFields.options, 'duration'] as const);
+export type RockskyMissingField = z.infer<typeof rockskyMissingFields>;
+export const DEFAULT_ROCKSKY_MISSING_TYPES: RockskyMissingField[] = [...rockskyRequiredFields.options, 'duration', rockskyConfidenceFields.enum.mbid] as const;
 
 export type MissingMbidType = 'artists' | 'title' | 'album' | 'duration';
 export const DEFAULT_MISSING_TYPES: MissingMbidType[] = ['artists','title','album', 'duration'];

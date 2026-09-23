@@ -1,6 +1,6 @@
 import type { PickKeys } from "ts-essentials"
 import type { CompareOpKey, ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
-import type { ClientType, ComponentAuthType, MonitoringStatus, QueueContext } from "./Atomic.ts"
+import type { ClientType, ComponentAuthType, DeepReplaceValue, MonitoringStatus, QueueContext } from "./Atomic.ts"
 import type { SourceType } from "./Atomic.ts"
 import type { ComponentType, DateLike, ErrorLike, JsonPlayObject, PlayState, QueueName, Replace, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.ts"
 import type { Dayjs } from "dayjs"
@@ -94,6 +94,14 @@ export type ComponentCommonApi = {
 
 export type ComponentCommonApiJson = Replace<ComponentCommonApi, PickKeys<ComponentCommonApi, Dayjs>, string>;
 
+export type ComponentHistoricalApi = {
+    synced: boolean
+    syncedReason: string | undefined
+    syncError: ErrorIsh | undefined
+    lastImport: Dayjs
+    lastImportSuccess: Dayjs
+}
+
 export type ComponentDetailedApi = ComponentCommonApi & {
     hasAuth: boolean;
     hasAuthInteraction: boolean;
@@ -108,7 +116,7 @@ export type ComponentCientApiBase = {
     players: Record<string, SourcePlayerJson & {expiration?: string}>
 }
 
-export type ComponentClientApi = ComponentDetailedApi & ComponentCientApiBase;
+export type ComponentClientApi = ComponentDetailedApi & ComponentCientApiBase & Partial<ComponentHistoricalApi>;
 export type ComponentClientApiJson = Replace<ComponentClientApi, PickKeys<ComponentClientApi, Dayjs>, string>;
 
 export type ComponentSourceApiBase = {
@@ -119,7 +127,7 @@ export type ComponentSourceApiBase = {
     sleeping: boolean
 }
 
-export type ComponentSourceApi = ComponentDetailedApi & ComponentSourceApiBase;
+export type ComponentSourceApi = ComponentDetailedApi & ComponentSourceApiBase & Partial<ComponentHistoricalApi>;
 export type ComponentSourceApiJson = Replace<ComponentSourceApi, PickKeys<ComponentSourceApi, Dayjs>, string>;
 
 export type SubsonicSourceApiJson = ComponentSourceApiJson & { playbackReporting?: boolean }
@@ -129,7 +137,6 @@ export type ComponentsApiJson = ComponentSourceApiJson | ComponentClientApiJson;
 export const isComponentSourceApiJson = (data: ComponentCommonApiJson): data is ComponentSourceApiJson => {
     return data.mode === 'source';
 }
-
 export const isComponentClientApiJson = (data: ComponentCommonApiJson): data is ComponentClientApiJson => {
     return data.mode === 'client';
 }
