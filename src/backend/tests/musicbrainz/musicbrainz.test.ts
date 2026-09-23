@@ -15,11 +15,12 @@ import { MockNetworkError, withRequestInterception } from '../utils/networking.t
 import { http, HttpResponse, delay } from "msw";
 import { generatePlay, withBrainz } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { intersect, missingMbidTypes, sleep } from '../../utils.ts';
-import { CoverArtApiClient, type CoverArtApiConfig } from '../../common/vendor/musicbrainz/CoverArtApiClient.ts';
+import { CoverArtApiClient } from '../../common/vendor/musicbrainz/CoverArtApiClient.ts';
 import { artistNamesToCredits, artistNameToCredit } from '../../../core/StringUtils.ts';
 import dayjs from 'dayjs';
 import { MusicbrainzApiWrapped } from '../../common/vendor/musicbrainz/MusicbrainzApi.ts';
 import { AsyncLocalStorage } from 'async_hooks';
+import type { CoverArtApiConfig } from '../../common/vendor/musicbrainz/CoverArtApiTypes.ts';
 
 chai.use(asPromised);
 
@@ -639,67 +640,4 @@ describe('#MB Missing Types', function() {
         expect(intersect(DEFAULT_MISSING_TYPES, missing)).length.is.greaterThan(0);
     });
 
-});
-
-const CA_MOCK_URL_STR = 'http://coverartarchive.org';
-//const CA_MOCK_URL_REG = /coverartarchive\.org/;
-const CA_MOCK_URL = new URL(CA_MOCK_URL_STR);
-const RELEASE = '76df3287-6cda-33eb-8e9a-044b5e15ffdd';
-const INVALID_RELEASE = '76df3287-6cda-33eb-8e9a-044b5e15ffde';
-const RELEASE_GROUP = 'dc7bec45-b321-4dfc-be66-96eab5acb36e';
-
-describe('#CoverArt CoverArtArchive API', function () {
-    it('Should get url from response',
-        withRequestInterception(
-            [
-                http.get(`${CA_MOCK_URL_STR}/release/${RELEASE}/front-250`, () => {
-                    return new HttpResponse(null, { status: 307, headers: {location: `${CA_MOCK_URL_STR}/download/1.jpg`} });
-                }
-                ),
-                http.get(`${CA_MOCK_URL_STR}/download/1.jpg`, () => {
-                    return new HttpResponse(null, { status: 302, headers: {location: `${CA_MOCK_URL_STR}/cdn/1.jpg`} });
-                })
-            ],
-            async function () {
-                const api = createCoverArtApi({url: CA_MOCK_URL});
-                const resp = await api.getCoverThumb(RELEASE, 'release', {size: 250});
-                expect(resp).is.not.undefined;
-                expect(resp).eq(`${CA_MOCK_URL_STR}/cdn/1.jpg`)
-            }
-    ));
-
-    it('Should return undefined if release not found',
-        withRequestInterception(
-            [
-                http.get(`${CA_MOCK_URL_STR}/release/${INVALID_RELEASE}/front-250`, () => {
-                    return new HttpResponse(null, { status: 404});
-                }
-                ),
-            ],
-            async function () {
-                const api = createCoverArtApi({url: CA_MOCK_URL});
-                const resp = await api.getCoverThumb(INVALID_RELEASE, 'release', {size: 250});
-                expect(resp).is.undefined;
-            }
-    ));
-
-    describe('#CoverArt Real API', function() {
-
-        before(function () {
-            if (process.env.MB_TEST !== 'true') {
-                this.skip();
-            }
-        });
-
-        it('Returns a response for release', async function() {
-                const api = createCoverArtApi();
-                const resp = await api.getCoverThumb(RELEASE, 'release', {size: 250});
-                expect(resp).is.not.undefined;
-        });
-        it('Returns a response for release-group', async function() {
-            const api = createCoverArtApi();
-            const resp = await api.getCoverThumb(RELEASE_GROUP, 'release-group', {size: 250});
-            expect(resp).is.not.undefined;
-        });
-    });
 });

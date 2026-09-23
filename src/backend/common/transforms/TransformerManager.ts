@@ -11,6 +11,7 @@ import { nanoid } from "nanoid";
 import { SimpleError, StageTransformError } from "../errors/MSErrors.ts";
 import { configFromEnv as rsConfigFromEnv } from "./rocksky/RockskyTransformerUtil.ts";
 import { type RockskyTransformerConfig } from "../vendor/rocksky/interfaces.ts";
+import type { CovertArtArchiveTransformerConfig } from "./coverartarchive/CoverArtArchiveTransformerUtil.ts";
 
 export const DEFAULT_TRANSFORMER_NAME = 'MSDefault';
 export default class TransformerManager {
@@ -31,6 +32,7 @@ export default class TransformerManager {
         this.addTransformerConfig({type: 'user', name: DEFAULT_TRANSFORMER_NAME});
         this.addTransformerConfig({type: 'native', name: DEFAULT_TRANSFORMER_NAME});
         this.addTransformerConfig({type: 'rocksky', name: DEFAULT_TRANSFORMER_NAME});
+        this.addTransformerConfig({type: 'coverartarchive', name: DEFAULT_TRANSFORMER_NAME});
     }
 
     public addTransformerConfig(config: TransformerCommonConfig): void {
@@ -95,6 +97,10 @@ export default class TransformerManager {
             case 'rocksky': {
                 const RockskyTransformer = (await import("./rocksky/RockskyTransformer.ts")).default;
                 t = new RockskyTransformer({ name: tName, ...config as RockskyTransformerConfig }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
+            }   break;
+            case 'coverartarchive': {
+                const CovertArtArchiveTransformer = (await import("./coverartarchive/CoverArtArchiveTransformer.ts")).default;
+                t = new CovertArtArchiveTransformer({ name: tName, ...config as CovertArtArchiveTransformerConfig }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
             }   break;
             default:
                 throw new Error(`No transformer of type '${config.type}' exists.`);
