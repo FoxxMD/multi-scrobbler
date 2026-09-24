@@ -1,17 +1,22 @@
 import type {
-    MissingMbidType,
     TransformerCommon,
     TransformOptions,
 } from "../../../../core/Atomic.ts";
 import type { SpotifyTransformerApiConfigData } from "../../vendor/spotify/SpotifyTypes.ts";
 import { MaybeLogger } from "../../MaybeLogger.ts";
+import * as z from 'zod';
 
-export type SpotifySearchType = 'isrc' | 'basic';
+export const spotifyMissingTypes = z.enum(['album','title','artists','duration','isrc','ids']);
+export type SpotifyMissingType = z.infer<typeof spotifyMissingTypes>;
+export const DEFAULT_SPOTIFY_MISSING_TYPES: SpotifyMissingType[] = ['album','artists','title','duration'] as const;
+
+export const spotifySearchTypes = z.enum(['isrc','basic']);
+export type SpotifySearchType = z.infer<typeof spotifySearchTypes>;
 
 export const DEFAULT_SPOTIFY_SEARCH_ORDER: SpotifySearchType[] = ['isrc', 'basic'];
 
 export interface SpotifyTransformerData {
-    searchWhenMissing?: MissingMbidType[]
+    searchWhenMissing?: SpotifyMissingType[]
     forceSearch?: boolean
     /** Minimum (0-1) fuzzy match score a candidate must have to be used
      *

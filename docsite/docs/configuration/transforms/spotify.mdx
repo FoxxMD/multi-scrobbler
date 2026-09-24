@@ -231,11 +231,18 @@ Matching your Scrobble's Play data with a result from Spotify is comprised of tw
 
 #### Should MS Search?
 
-Before MS begins a search it checks if your Scrobble data already contains Spotify IDs for artist(s), album, and track, and a duration. If it already has all required data types then the entire Spotify Stage [is **skipped**.](/configuration/transforms/#flow-control) If any are missing then a search is performed.
+Before MS begins a search it checks if your Scrobble data already contains:
+
+* A track title, artists, album, and duration
+* All spotify IDs and an ISRC
+
+If it already has all required data types then the entire Spotify Stage [is **skipped**.](/configuration/transforms/#flow-control) If any are missing then a search is performed.
 
 Define which data types are required using:
 
-* `searchWhenMissing` (defaults to all) - A list containing any of: `artists` `title` `album` `duration`
+* `searchWhenMissing` - A list containing any of: `album`,`title`,`artists`,`duration`,`isrc`, and `ids`
+  * `ids` is *any* missing spotify id (track, artists, albumArtists, and album ids)
+  * the default when `searchWhenMissing` is not defined is: `album`,`artists`,`title`, and `duration`
 * `forceSearch` (default `false`) - Force searching even if all required data is present
 
 #### Search Methods
@@ -255,11 +262,13 @@ Multi-scrobbler searches for a Spotify match using, in order, up to two methods.
 
 If your Scrobble data contains an [ISRC](https://musicbrainz.org/doc/ISRC) then Multi-scrobbler searches Spotify's catalog using this ID.
 
-**If the ISRC is present on more than one Spotify album/track** (which happens often -- singles, re-releases, and compilation appearances of the same recording all share an ISRC) then the results are [ranked using fuzzy matching](#ranking) against your scrobble's existing album/artist data to pick the best candidate.
+**If the ISRC is present on more than one Spotify album/track** (which happens often IE singles, re-releases, and compilation appearances of the same recording all share an ISRC) then the results are [ranked using fuzzy matching](#ranking) against your scrobble's existing album/artist data to pick the best candidate.
 
 :::tip[ISRC Matches Skip the Score Threshold]
 
-The ISRC itself is treated as confirmation of the match, so an ISRC result is **always used regardless of its fuzzy match [score](#score)** -- fuzzy matching is only used to pick between multiple ISRC candidates, never to reject one. This matters because Spotify's title/artist text for the same recording can differ substantially from your scrobble source (localized titles, "feat." credits, movie/theatrical edition suffixes, etc) while still being the correct match.
+If an ISRC search finds results then filtering results by [score](#score) is **skipped** since all results are confirmed matches. Ranking by fuzzy matching, as described above, still occurs.
+
+This matters because Spotify's title/artist text for the same recording can differ substantially from your scrobble source (localized titles, "feat." credits, movie/theatrical edition suffixes, etc) while still being the correct match.
 
 Only results from a `basic` search are filtered by the minimum `score`.
 
@@ -289,29 +298,12 @@ If all defined search methods do not return any results (or, for a `basic` searc
 
 :::
 
-<details>
-
-<summary>ISRC Only, No Fallback</summary>
-
-If you only want Spotify matches sourced from ISRC lookups -- and want your Play left untouched whenever an ISRC isn't available or Spotify has no match for it -- set `searchOrder` to only `isrc`. No further configuration is needed; a Stage that fails never modifies your Play (see above).
-
-```json5
-// ...
-"defaults": {
-    // only ever search by ISRC. If a Play has no ISRC, or Spotify has no match for it,
-    // the Play is passed through completely unmodified.
-    "searchOrder": ["isrc"]
-  }
-```
-
-</details>
-
 ### Ranking
 
-Unlike Musicbrainz (whose search backend returns its own relevance score) Spotify's search results do not carry a comparable score. So Multi-scrobbler always fuzzy-matches every candidate against your original scrobble's title/artist(s)/album to:
+Spotify's search results do not carry a confidence/similarity score so Multi-scrobbler fuzzy-matches every candidate against your original scrobble's title/artist(s)/album to:
 
 * disambiguate between multiple candidates (EX an ISRC present on more than one album)
-* for `basic` search results only, determine whether any candidate is a confident enough match to use at all -- **an `isrc` match is always used**, see [ISRC Matches Skip the Score Threshold](#search-methods)
+* for `basic` search results only, determine whether any candidate is a confident enough match to use at all
 
 #### Score
 
@@ -356,7 +348,7 @@ You **should** setup [metadata caching](/configuration/transforms#caching) to re
 
 ### Using Partial Match
 
-Use [Rules](#rules-and-hooks) to apply Spotify match data selectively, exactly as described for the [Musicbrainz Stage](/configuration/transforms/musicbrainz#using-partial-match). This is useful if you don't want your scrobble's Artist/Title/Album modified but still want the Spotify IDs attached to `meta` for Clients that use them.
+Use [Rules](#rules-and-hooks) to apply Spotify match data selectively. This is useful if you don't want your scrobble's Artist/Title/Album modified but still want Spotify IDs or ISRC defined for [Clients](/configuration/clients) or other Stages to leverage them.
 
 <details>
 

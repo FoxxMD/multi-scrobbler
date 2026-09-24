@@ -2,14 +2,12 @@ import { childLogger } from "@foxxmd/logging";
 import type { Cacheable } from "cacheable";
 import type { WebhookPayload } from "../infrastructure/config/health/webhooks.ts";
 import {
-    DEFAULT_MISSING_MBIDS_TYPES,
-    DEFAULT_MISSING_TYPES,
     type ArtistCredit,
+    type ArtMeta,
     type LifecycleInput,
-    type MissingMbidType,
     type OptionalCacheUsage,
     type PlayObject,
-    type TrackMeta,
+    type TrackMetaIsrc,
 } from "../../../core/Atomic.ts";
 import { ARTIST_WEIGHT, TITLE_WEIGHT } from "../infrastructure/Atomic.ts";
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
@@ -23,27 +21,23 @@ import { MaybeLogger } from '../MaybeLogger.ts';
 import { SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../errors/MSErrors.ts";
 import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
 import type { TransformerOptions } from "./AbstractTransformer.ts";
-import { asMissingMbid, SearchPrerequisiteError } from "./MusicbrainzTransformer.ts";
+import { SearchPrerequisiteError } from "./MusicbrainzTransformer.ts";
 import {
+    DEFAULT_SPOTIFY_MISSING_TYPES,
     DEFAULT_SPOTIFY_SEARCH_ORDER,
+    spotifyMissingTypes,
+    spotifySearchTypes,
+    type SpotifyMissingType,
     type SpotifySearchType,
     type SpotifyTransformerConfig,
     type SpotifyTransformerData,
 } from "./spotify/SpotifyTransformerUtil.ts";
 
-export const asSpotifySearchType = (str: string): SpotifySearchType => {
-    const clean = str.trim().toLocaleLowerCase();
-    if (clean === 'isrc' || clean === 'basic') {
-        return clean;
-    }
-    throw new Error(`SearchType must be one of 'isrc' or 'basic', given: ${clean}`);
-}
-
 /** How much to subtract from a candidate's match score when it belongs to a compilation album and deprioritizeCompilations is enabled */
 export const COMPILATION_PENALTY = 0.15;
 
 export interface SpotifyTransformerDataStrong extends SpotifyTransformerData {
-    searchWhenMissing: MissingMbidType[]
+    searchWhenMissing: SpotifyMissingType[]
 
     titleWeight?: number
     artistWeight?: number
@@ -85,19 +79,19 @@ export const parseStageConfig = (data: SpotifyTransformerData | undefined = {}, 
     } = data;
 
     const config: SpotifyTransformerDataStrong = {
-        searchWhenMissing: DEFAULT_MISSING_TYPES,
+        searchWhenMissing: DEFAULT_SPOTIFY_MISSING_TYPES,
         score: 0.6,
         ...rest,
     };
 
     if (searchWhenMissing !== undefined) {
-        config.searchWhenMissing = searchWhenMissing.map(asMissingMbid);
+        config.searchWhenMissing = searchWhenMissing.map((x) => spotifyMissingTypes.parse(x.toLocaleLowerCase().trim()));
     }
 
     logger.debug(`Will search if missing: ${config.searchWhenMissing.join(', ')} | Match if (default) score is >= ${config.score}`);
 
     if (searchOrder !== undefined) {
-        const so = parseArrayFromMaybeString(searchOrder as unknown as string[], { lower: true }).map(asSpotifySearchType);
+        const so = parseArrayFromMaybeString(searchOrder as unknown as string[], { lower: true }).map<SpotifySearchType>((x) => spotifySearchTypes.parse(x.trim()));
         if (so.length > 0) {
             config.searchOrder = so;
             logger.debug(`Search Order => ${so.join(' | ')}`);
@@ -118,23 +112,32 @@ export const parseStageConfig = (data: SpotifyTransformerData | undefined = {}, 
 }
 
 /** Analogous to musicbrainz's missingMbidTypes but checks the presence of Spotify IDs on the Play instead of MBIDs */
-export const missingSpotifyTypes = (play: PlayObject): MissingMbidType[] => {
-    let missing: MissingMbidType[] = [];
+export const missingSpotifyTypes = (play: PlayObject): SpotifyMissingType[] => {
+    let missing: SpotifyMissingType[] = [];
 
     if (play.data.duration === undefined) {
         missing.push('duration');
     }
 
     if (play.data.meta?.spotify === undefined) {
-        missing = missing.concat(DEFAULT_MISSING_MBIDS_TYPES);
-        return missing;
+        missing = missing.concat('ids');
+    } else {
+        const {
+            track,
+            album,
+            artist
+        } = play.data.meta.spotify; 
+        if (track === undefined || album === undefined || artist === undefined) {
+            missing.push('ids');
+        }
     }
 
     const {
         track,
         album,
-        artist
-    } = play.data.meta.spotify;
+        artists,
+        duration
+    } = play.data;
 
     if (track === undefined) {
         missing.push('title');
@@ -142,8 +145,11 @@ export const missingSpotifyTypes = (play: PlayObject): MissingMbidType[] => {
     if (album === undefined) {
         missing.push('album');
     }
-    if (artist === undefined || (artist ?? []).length !== (play.data.artists ?? []).length) {
+    if (artists === undefined || (artists ?? []).length === 0) {
         missing.push('artists');
+    }
+    if(duration === undefined) {
+        missing.push('duration');
     }
 
     return missing;
@@ -237,7 +243,7 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
             type: 'spotify'
         }
 
-        for (const k of ['artists', 'albumArtists', 'title', 'album', 'meta', 'duration']) {
+        for (const k of ['artists', 'albumArtists', 'title', 'album', 'meta', 'duration', 'art']) {
             if (!(k in stage)) {
                 stage[k] = true;
                 continue;
@@ -451,7 +457,7 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
         return transformData.data.duration;
     }
 
-    protected async handleMeta(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<TrackMeta | undefined> {
+    protected async handleMeta(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<TrackMetaIsrc | undefined> {
         if (parts === false) {
             return play.data.meta;
         }
@@ -463,7 +469,23 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
                 }
             }
         }
-        return transformData.data.meta;
+        return removeUndefinedKeys<TrackMetaIsrc>({...transformData.data.meta, isrc: transformData.data.isrc});
+    }
+
+    protected async handleArt(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<ArtMeta | undefined> {
+        if (parts === false) {
+            return play.meta.art;
+        }
+        if (typeof parts === 'object') {
+            if (parts.when !== undefined) {
+                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
+                    this.logger.debug('When condition for duration not met, returning original duration');
+                    return play.meta.art;
+                }
+            }
+        }
+
+        return transformData.meta.art;
     }
 
     public notify(payload: WebhookPayload): Promise<void> {

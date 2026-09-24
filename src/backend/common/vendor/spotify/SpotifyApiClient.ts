@@ -1,7 +1,7 @@
 import SpotifyWebApi from "spotify-web-api-node";
 import { RateLimiterMemory, RateLimiterQueue } from 'rate-limiter-flexible';
 import type { Cacheable } from "cacheable";
-import type { PlayObject, PlayObjectMinimal } from "../../../../core/Atomic.ts";
+import type { ArtMeta, PlayObject, PlayObjectMinimal } from "../../../../core/Atomic.ts";
 import { artistNameToCredit } from "../../../../core/StringUtils.ts";
 import { isrcNoHyphens } from "../../../../core/PlayUtils.ts";
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.ts";
@@ -70,7 +70,7 @@ export class SpotifyApiClient extends AbstractApiClient {
         if (cacheKey !== undefined && useCachedResult) {
             const cached = await this.cache.get<T>(cacheKey);
             if (cached !== undefined) {
-                this.logger.debug(`Cache hit for ${cacheKey}`);
+                this.logger.trace(`Cache hit for ${cacheKey}`);
                 return cached;
             }
         }
@@ -106,11 +106,11 @@ export class SpotifyApiClient extends AbstractApiClient {
             parts.push(`track:${luceneQuoteIfNeeded(play.data.track)}`);
         }
         if (play.data.artists !== undefined && play.data.artists.length > 0) {
-            // use only the primary artist -- Spotify's search does not support matching multiple artist filters well
+            // use only the primary artist because Spotify's search does not support matching multiple artist filters well
             // and a fuzzy rank pass happens afterwards to confirm the rest of the artist credits
             parts.push(`artist:${luceneQuoteIfNeeded(play.data.artists[0].name)}`);
         }
-        // intentionally NOT filtering by album here -- unlike Musicbrainz's fuzzy Lucene backend, Spotify's field
+        // intentionally NOT filtering by album here because, unlike Musicbrainz's fuzzy Lucene backend, Spotify's field
         // search is literal, so ANDing album into the query causes near-total misses whenever the track's Spotify
         // album metadata differs even slightly from the scrobble (singles, re-releases, etc). Album confirmation
         // happens afterwards via fuzzy ranking instead.
@@ -125,6 +125,38 @@ export class SpotifyApiClient extends AbstractApiClient {
     static formatPlayObj(obj: SpotifyApi.TrackObjectFull, options: FormatPlayObjectOptions = {}): PlayObject {
         return trackToPlay(obj);
     }
+}
+
+export const chooseImageByResolution = (images: SpotifyApi.ImageObject[], opts: { minHeight?: number, minWidth?: number, fallbackBest?: boolean } = {}): SpotifyApi.ImageObject => {
+    const {
+        minHeight,
+        minWidth,
+        fallbackBest = false
+    } = opts;
+
+    let bestImage: SpotifyApi.ImageObject,
+        bestRes: number = 0;
+
+    for (const i of images) {
+        if (fallbackBest && i.height + i.width > bestRes) {
+            bestRes = i.height + i.width;
+            bestImage = i;
+        }
+        if (minHeight !== undefined || minWidth !== undefined) {
+            if (minHeight !== undefined && i.height < minHeight) {
+                continue;
+            }
+            if (minWidth !== undefined && i.width < minWidth) {
+                continue;
+            }
+            return i;
+        }
+    }
+
+    if (fallbackBest === false) {
+        throw new Error(`No image met minimum resolution of ${minHeight}x${minHeight}`);
+    }
+    return bestImage;
 }
 
 export const trackToPlay = (track: SpotifyApi.TrackObjectFull): PlayObject => {
@@ -168,6 +200,12 @@ export const trackToPlay = (track: SpotifyApi.TrackObjectFull): PlayObject => {
         meta: {
             source: 'spotify',
             trackId: id
+        }
+    }
+
+    if((album?.images ?? []).length > 0) {
+        play.meta.art = {
+            album: chooseImageByResolution(album.images, {fallbackBest: true}).url
         }
     }
 
