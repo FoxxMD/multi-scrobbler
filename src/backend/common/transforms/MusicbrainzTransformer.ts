@@ -1,4 +1,4 @@
-import { type ArtistCredit, asMBReleasePrimaryGroupType, asMBReleaseSecondaryGroupType, asMBReleaseStatus, DEFAULT_MISSING_TYPES, type LifecycleInput, type MBReleaseGroupPrimaryType, type MBReleaseGroupSecondaryType, type MBReleaseStatus, type MissingMbidType, type OptionalCacheUsage, type PlayObject, type TrackMeta } from "../../../core/Atomic.ts";
+import { type ArtistCredit, asMBReleasePrimaryGroupType, asMBReleaseSecondaryGroupType, asMBReleaseStatus, DEFAULT_MISSING_TYPES, type LifecycleInput, type MBReleaseGroupPrimaryType, type MBReleaseGroupSecondaryType, type MBReleaseStatus, type MissingMbidType, type OptionalCacheUsage, type PlayObject, type TrackMeta, type TrackMetaIsrc } from "../../../core/Atomic.ts";
 import { isWhenCondition, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";
 import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../core/Transform.ts";
@@ -628,7 +628,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         return transformData.data.duration;
     }
 
-    protected async handleMeta(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<TrackMeta | undefined> {
+    protected async handleMeta(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<TrackMetaIsrc | undefined> {
         if (parts === false) {
             return play.data.meta;
         }
@@ -640,7 +640,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
                 }
             }
         }
-        return transformData.data.meta;
+        return removeUndefinedKeys<TrackMetaIsrc>({...transformData.data.meta, isrc: transformData.data.isrc});
     }
 
     public notify(payload: WebhookPayload): Promise<void> {

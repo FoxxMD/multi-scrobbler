@@ -147,6 +147,10 @@ export interface TrackMeta {
     spotify?: SpotifyMeta
 }
 
+export interface TrackMetaIsrc extends TrackMeta {
+    isrc?: string
+}
+
 export interface TrackData {
     artists?: ArtistCredit[]
     albumArtists?: ArtistCredit[]

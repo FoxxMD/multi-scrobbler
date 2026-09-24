@@ -578,7 +578,7 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         return transformData.data.duration;
     }
 
-    protected async handleMeta(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<TrackMeta | undefined> {
+    protected async handleMeta(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<TrackMetaIsrc | undefined> {
         if (parts === false) {
             return play.data.meta;
         }
