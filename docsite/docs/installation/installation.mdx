@@ -312,25 +312,6 @@ npm run start
 
 Pass ENVs directly to `node`/`npm`, or make a new `.env` (using `.env.example` as a reference), to configure MS for basic settings and [**Persistent Directories**](./?#persistent-directories) for config/data/log directories.
 
-#### Rollup build error
-
-During building if you encounter an error like: `Your current platform "XXX" and architecture "XXX" combination is not yet supported by the native Rollup build.`
-
-Modify `overrides` in `package.json` to use `@rollup/wasm-node` as a drop-in replacement for rollup:
-
-```json
-"overrides": {
-  "spotify-web-api-node": {
-    "superagent": "$superagent"
-  }
-  "vite": {
-    "rollup": "npm:@rollup/wasm-node@^4.9.6"
-  }
-}
-```
-
-See [this issue](https://github.com/FoxxMD/multi-scrobbler/issues/135#issuecomment-1927080260) for more detail.
-
 #### Usage Examples
 
 :::note
