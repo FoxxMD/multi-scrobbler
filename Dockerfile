@@ -245,4 +245,5 @@ EXPOSE $PORT
 ARG data_dir=/config
 VOLUME $data_dir
 ENV CONFIG_DIR=$data_dir
+ENV LOGS_DIR=$data_dir/logs
 ENV DATA_DIR=$data_dir

@@ -2,6 +2,7 @@ services:
   multi-scrobbler:
     image: foxxmd/multi-scrobbler
     container_name: multi-scrobbler
+    #env_file: .env
     environment:
       - TZ=Etc/GMT # Specify timezone from TZ Database name found here https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
       #- JELLYFIN_APIKEY=
