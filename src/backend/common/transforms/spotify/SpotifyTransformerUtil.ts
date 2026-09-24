@@ -5,6 +5,7 @@ import type {
 import type { SpotifyTransformerApiConfigData } from "../../vendor/spotify/SpotifyTypes.ts";
 import { MaybeLogger } from "../../MaybeLogger.ts";
 import * as z from 'zod';
+import { removeUndefinedKeys } from "../../../../core/DataUtils.ts";
 
 export const spotifyMissingTypes = z.enum(['album','title','artists','duration','isrc','ids']);
 export type SpotifyMissingType = z.infer<typeof spotifyMissingTypes>;
@@ -63,7 +64,11 @@ export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()): SpotifyT
         return undefined;
     }
 
-    const deprioritizeCompilations = (process.env.SPOTIFY_TRANSFORM_DEPRIORITIZE_COMPILATIONS ?? '').trim().toLocaleLowerCase() === 'true';
+    const defaults = {
+        market: process.env.SPOTIFY_TRANSFORM_MARKET,
+        locale: process.env.SPOTIFY_TRANSFORM_LOCALE,
+        deprioritizeCompilations: process.env.SPOTIFY_TRANSFORM_DEPRIORITIZE_COMPILATIONS !== undefined ? process.env.SPOTIFY_TRANSFORM_DEPRIORITIZE_COMPILATIONS.trim().toLocaleLowerCase() === 'true' : undefined
+    }
 
     return {
         type: 'spotify',
@@ -71,11 +76,7 @@ export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()): SpotifyT
         data: {
             clientId,
             clientSecret,
-            market: process.env.SPOTIFY_TRANSFORM_MARKET,
-            locale: process.env.SPOTIFY_TRANSFORM_LOCALE
         },
-        defaults: {
-            ...(deprioritizeCompilations ? { deprioritizeCompilations } : {})
-        }
+        defaults: removeUndefinedKeys(defaults, false)
     };
 }
