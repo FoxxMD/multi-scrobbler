@@ -26,10 +26,11 @@ export interface SpotifyTransformerData {
     searchOrder?: SpotifySearchType[]
     /** An ISO 3166-1 alpha-2 country code used to bias/limit search results to what is available in this market */
     market?: string
-    /** A locale (EX en_US, ja_JP) used to try to bias which translation of a localized catalog name
-     * (artist/album/track) the Spotify API returns. Not officially documented by Spotify -- results may be
-     * inconsistent -- but can be used alongside (or instead of) `market` to try to force names into a
-     * specific language.
+    /**
+     * A locale in ISO-639-1_ISO-3166-1 format (EX en_US, ja_JP) used to bias which translation of a localized
+     * catalog name (artist/album/track) the Spotify API returns. Support for this is not officially documented
+     * by Spotify and results may be inconsistent, but it can be used alongside (or instead of) `market` to try
+     * to force names into a specific language.
      */
     locale?: string
     /** Deprioritize (but do not exclude) matches whose album is a compilation when ranking candidates

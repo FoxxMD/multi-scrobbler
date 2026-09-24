@@ -115,9 +115,14 @@ export const parseStageConfig = (data: SpotifyTransformerData | undefined = {}, 
 export const missingSpotifyTypes = (play: PlayObject): SpotifyMissingType[] => {
     let missing: SpotifyMissingType[] = [];
 
-    if (play.data.duration === undefined) {
-        missing.push('duration');
-    }
+        const {
+        track,
+        album,
+        artists: dataArtists,
+        artists,
+        duration,
+        isrc
+    } = play.data;
 
     if (play.data.meta?.spotify === undefined) {
         missing = missing.concat('ids');
@@ -130,14 +135,12 @@ export const missingSpotifyTypes = (play: PlayObject): SpotifyMissingType[] => {
         if (track === undefined || album === undefined || artist === undefined) {
             missing.push('ids');
         }
+        if(artist !== undefined && dataArtists !== undefined && artist.length !== dataArtists.length) {
+            missing.push('ids');
+        }
     }
 
-    const {
-        track,
-        album,
-        artists,
-        duration
-    } = play.data;
+
 
     if (track === undefined) {
         missing.push('title');
@@ -145,11 +148,14 @@ export const missingSpotifyTypes = (play: PlayObject): SpotifyMissingType[] => {
     if (album === undefined) {
         missing.push('album');
     }
-    if (artists === undefined || (artists ?? []).length === 0) {
+    if (dataArtists === undefined || (dataArtists ?? []).length === 0) {
         missing.push('artists');
     }
     if(duration === undefined) {
         missing.push('duration');
+    }
+    if(isrc === undefined) {
+        missing.push('isrc');
     }
 
     return missing;
@@ -215,8 +221,6 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
         const {
             clientId,
             clientSecret,
-            market,
-            locale,
             rate
         } = this.config.data ?? {};
 
@@ -224,7 +228,7 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
             throw new Error(`Spotify Transformer requires 'clientId' and 'clientSecret' to be set in 'data'`);
         }
 
-        this.api = new SpotifyApiClient(this.config.name, { clientId, clientSecret, market, locale, rate }, {
+        this.api = new SpotifyApiClient(this.config.name, { clientId, clientSecret, rate }, {
             logger: this.logger,
             cache: this.clientCache
         });

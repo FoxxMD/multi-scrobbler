@@ -13,7 +13,7 @@ import SpotifyTransformer, {
     rankTracksBySimilarity,
     type SpotifyTransformerDataStage,
 } from '../../common/transforms/SpotifyTransformer.ts';
-import type { SpotifyTransformerConfig } from '../../common/transforms/spotify/SpotifyTransformerUtil.ts';
+import { DEFAULT_SPOTIFY_MISSING_TYPES, spotifyMissingTypes, type SpotifyTransformerConfig } from '../../common/transforms/spotify/SpotifyTransformerUtil.ts';
 import { isCompilation, trackToPlay } from '../../common/vendor/spotify/SpotifyApiClient.ts';
 
 chai.use(asPromised);
@@ -23,6 +23,7 @@ const basePlay = (data: Partial<PlayObject['data']> = {}, meta: Partial<PlayObje
         track: 'My Track',
         artists: [{ name: 'My Artist' }],
         album: 'My Album',
+        isrc: '1234',
         duration: 180,
         ...data,
     },
@@ -98,7 +99,7 @@ describe('Spotify Transformer', function () {
         it('applies defaults when no data is given', function () {
             const config = parseStageConfig();
             expect(config.score).to.equal(0.6);
-            expect(config.searchWhenMissing).to.deep.equal(['artists', 'title', 'album', 'duration']);
+            expect(config.searchWhenMissing).to.deep.equal(DEFAULT_SPOTIFY_MISSING_TYPES);
         });
 
         it('converts weight shorthand (true) to library default weight constants', function () {
@@ -120,13 +121,12 @@ describe('Spotify Transformer', function () {
 
     describe('missingSpotifyTypes', function () {
 
-        it('returns all types when no spotify meta or duration exists', function () {
-            const play = basePlay({ duration: undefined });
-            const missing = missingSpotifyTypes(play);
-            expect(missing).to.include.members(['duration', 'artists', 'title', 'album']);
+        it('returns all types when no spotify meta or fields exists', function () {
+            const missing = missingSpotifyTypes({data: {}, meta: {}});
+            expect(missing).to.deep.include.members(spotifyMissingTypes.options);
         });
 
-        it('returns empty when all spotify ids and duration are present', function () {
+        it('returns empty when all missing types are present', function () {
             const play = basePlay({}, {});
             play.data.meta = { spotify: { track: 't1', album: 'a1', artist: ['ar1'] } };
             const missing = missingSpotifyTypes(play);
@@ -137,7 +137,7 @@ describe('Spotify Transformer', function () {
             const play = basePlay({ artists: [{ name: 'One' }, { name: 'Two' }] });
             play.data.meta = { spotify: { track: 't1', album: 'a1', artist: ['ar1'] } };
             const missing = missingSpotifyTypes(play);
-            expect(missing).to.include('artists');
+            expect(missing).to.include('ids');
         });
     });
 

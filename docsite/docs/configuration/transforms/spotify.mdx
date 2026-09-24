@@ -43,49 +43,9 @@ This Stage uses Spotify's API to search/lookup the Spotify catalog. This does **
 }
 ```
 
-<details id="market-locale-and-rate-limiting">
+<details>
 
-<summary>Market, Locale, and Rate Limiting</summary>
-
-`market` (an [ISO 3166-1 alpha-2 country code](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2)) can be set to bias/limit search results to what is available in a specific market:
-
-```json5
-{
-  "type": "spotify",
-  "name": "MySpotify",
-  "data": {
-    "clientId": "787c921a2a2ab42320831aba0c8f2fc2",
-    "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a",
-    "market": "US"
-  },
-}
-```
-
-`locale` (in `ISO-639-1_ISO-3166-1` format, EX `en_US`, `ja_JP`) can additionally be set to try to bias which translation of a localized catalog name (artist/album/track) Spotify returns for a match:
-
-```json5
-{
-  "type": "spotify",
-  "name": "MySpotify",
-  "data": {
-    "clientId": "787c921a2a2ab42320831aba0c8f2fc2",
-    "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a",
-    "locale": "en_US"
-  },
-}
-```
-
-:::tip[Example]
-
-Some catalog entries carry a translated name depending on locale, independent of `market`. EX the Japanese game-music artist "ATLUS Sound Team" is stored in Spotify's catalog under multiple localized names for the exact same artist ID -- without `locale` set, a lookup returns `アトラスサウンドチーム`; with `"locale": "en_US"` the same lookup returns `ATLUS Sound Team`. `market` alone does **not** control this -- it was tested independently and had no effect on the returned name for this artist.
-
-:::
-
-:::note
-
-`locale` is an **UNDOCUMENTED** parameter of the Spotify Web API **and may break at any time, without notice or warning**. Its behavior may also be inconsistent - some catalog entries only exist with one language's name at all, in which case no `locale`/`market` combination will produce an alternate translation because Spotify doesn't have one to return.
-
-:::
+<summary>Rate Limiting</summary>
 
 `rate` can be used to configure how many requests are made to the Spotify API, defined by **max number of requests** within **timespan of N seconds** (default `10 req/1s`):
 
@@ -96,10 +56,12 @@ Some catalog entries carry a translated name depending on locale, independent of
   "data": {
     "clientId": "787c921a2a2ab42320831aba0c8f2fc2",
     "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a",
+    // highlight-start
     "rate": {
       "requests": 10,
       "perTime": 1
     }
+    // highlight-end
   },
 }
 ```
@@ -109,6 +71,8 @@ Some catalog entries carry a translated name depending on locale, independent of
 ### Stage Configuration
 
 All of the properties found in [**Matching with Spotify**](#matching-with-spotify) section are configured in [Stage Configuration](/configuration/transforms#configuring-stages) as `defaults`.
+
+These are all also **optional** so you can use the Spotify Transform stage without configuring any of this.
 
 ```json5 title="config.json"
 {
@@ -121,10 +85,12 @@ All of the properties found in [**Matching with Spotify**](#matching-with-spotif
         "clientId": "787c921a2a2ab42320831aba0c8f2fc2",
         "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a"
       },
+      // highlight-start
       "defaults": {
         "score": 0.6,
         "deprioritizeCompilations": true
       }
+      // highlight-end
     }
   ]
 }
@@ -294,9 +260,72 @@ If `searchOrder` is undefined Multi-scrobbler defaults to using `isrc` then `bas
 
 If all defined search methods do not return any results (or, for a `basic` search, no results score high enough, see [Ranking](#ranking)) then the stage is marked as [**failed** (`onFailure`) for **Flow Control**](/configuration/transforms/#flow-control).
 
-**A failed Stage never partially applies -- your Play is left completely unmodified.** See [Failed and Skipped Stages](/configuration/transforms/#flow-control) for details.
+A failed Stage never modifies your play data unless you eplicitly configure it to. See [Failed and Skipped Stages](/configuration/transforms/#flow-control) for details.
 
 :::
+
+<DetailsAdmo type="tip" summary="Biasing Search Results with market and locale">
+
+`market` (an [ISO 3166-1 alpha-2 country code](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2)) can be set to bias/limit search results to what is available in a specific market:
+
+<details>
+
+<summary>Example</summary>
+
+```json5
+{
+  "type": "spotify",
+  "name": "MySpotify",
+  "data": {/* */},
+  "defaults": {
+    // ...
+    "market": "US"
+  }
+}
+```
+
+</details>
+
+`locale` (in `ISO-639-1_ISO-3166-1` format, EX `en_US`, `ja_JP`) can additionally be set to try to bias which translation of a localized catalog name (artist/album/track) Spotify returns for a match:
+
+<details>
+
+<summary>Example</summary>
+
+```json5
+{
+  "type": "spotify",
+  "name": "MySpotify",
+  "data": {/* */},
+  "defaults": {
+    // ...
+    "locale": "en_US"
+  }
+}
+
+```
+</details>
+
+:::tip[Real World Example]
+
+Some catalog entries carry a translated name depending on locale, independent of `market`. EX the Japanese game-music artist "ATLUS Sound Team" is stored in Spotify's catalog under multiple localized names for the exact same artist ID.
+
+* Without `locale` set, a lookup returns `アトラスサウンドチーム`;
+* with `"locale": "en_US"` the same lookup returns `ATLUS Sound Team`.
+
+`market` alone does **not** control this.
+
+:::
+
+:::important
+
+`locale` is an **UNDOCUMENTED** parameter of the Spotify Web API **and may break at any time, without notice or warning**.
+
+Its behavior may also be inconsistent. Some catalog entries only exist with one language's name at all, in which case no `locale`/`market` combination will produce an alternate translation because Spotify doesn't have one to return.
+
+:::
+
+</DetailsAdmo >
 
 ### Ranking
 

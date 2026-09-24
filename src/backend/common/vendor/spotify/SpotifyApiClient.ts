@@ -1,7 +1,7 @@
 import SpotifyWebApi from "spotify-web-api-node";
 import { RateLimiterMemory, RateLimiterQueue } from 'rate-limiter-flexible';
 import type { Cacheable } from "cacheable";
-import type { ArtMeta, PlayObject, PlayObjectMinimal } from "../../../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal } from "../../../../core/Atomic.ts";
 import { artistNameToCredit } from "../../../../core/StringUtils.ts";
 import { isrcNoHyphens } from "../../../../core/PlayUtils.ts";
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.ts";
@@ -11,6 +11,7 @@ import AbstractApiClient from "../AbstractApiClient.ts";
 import type { AbstractApiOptions, FormatPlayObjectOptions } from "../../infrastructure/Atomic.ts";
 import { getRoot } from "../../../ioc.ts";
 import type { SpotifyTransformerApiConfigData } from "./SpotifyTypes.ts";
+import { removeUndefinedKeys } from "../../../../core/DataUtils.ts";
 
 export interface SpotifySearchOptions {
     limit?: number
@@ -90,16 +91,16 @@ export class SpotifyApiClient extends AbstractApiClient {
     }
 
     searchByIsrc = async (isrc: string, opts: SpotifySearchOptions = {}): Promise<SpotifyApi.TrackObjectFull[]> => {
-        const { limit = 50, market = this.config.market, locale = this.config.locale, useCachedResult } = opts;
+        const { limit = 50, market, locale, useCachedResult } = opts;
         const q = `isrc:${isrcNoHyphens(isrc)}`;
         const cacheKey = `spotify-search-${hashObject({ q, limit, market, locale })}`;
         this.logger.debug({ labels: ['ISRC Search'] }, `Search Query => ${q} | market: ${market ?? '(none)'} | locale: ${locale ?? '(none)'}`);
-        const res = await this.callApi((api) => api.searchTracks(q, { limit, market, ...(locale !== undefined ? { locale } : {}) }), { cacheKey, useCachedResult });
+        const res = await this.callApi((api) => api.searchTracks(q, removeUndefinedKeys({ limit, market })), { cacheKey, useCachedResult });
         return res.body.tracks?.items ?? [];
     }
 
     searchByFields = async (play: PlayObject, opts: SpotifySearchOptions = {}): Promise<SpotifyApi.TrackObjectFull[]> => {
-        const { limit = 50, market = this.config.market, locale = this.config.locale, useCachedResult } = opts;
+        const { limit = 50, market, locale, useCachedResult } = opts;
 
         const parts: string[] = [];
         if (play.data.track !== undefined) {
@@ -118,7 +119,7 @@ export class SpotifyApiClient extends AbstractApiClient {
         const q = parts.join(' ');
         const cacheKey = `spotify-search-${hashObject({ q, limit, market, locale })}`;
         this.logger.debug({ labels: ['Basic Search'] }, `Search Query => ${q} | market: ${market ?? '(none)'} | locale: ${locale ?? '(none)'}`);
-        const res = await this.callApi((api) => api.searchTracks(q, { limit, market, ...(locale !== undefined ? { locale } : {}) }), { cacheKey, useCachedResult });
+        const res = await this.callApi((api) => api.searchTracks(q, removeUndefinedKeys({ limit, market })), { cacheKey, useCachedResult });
         return res.body.tracks?.items ?? [];
     }
 
