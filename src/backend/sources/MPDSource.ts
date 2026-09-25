@@ -91,7 +91,8 @@ export class MPDSource extends MemoryPositionalSource {
                 throw e;
             }
         }
-        return null as unknown as undefined; // TODO strict: returns null, base expects undefined when check not required
+        // no host means a socket connection, which is checked during authentication
+        return undefined;
     }
 
     doAuthentication = async () => {
