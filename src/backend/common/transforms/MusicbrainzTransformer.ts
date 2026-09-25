@@ -643,8 +643,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         return removeUndefinedKeys<TrackMetaIsrc>({...transformData.data.meta, isrc: transformData.data.isrc});
     }
 
-    public notify(payload: WebhookPayload): Promise<void> {
-        return undefined as unknown as Promise<void>;
+    public async notify(payload: WebhookPayload): Promise<void> {
     }
 
 }

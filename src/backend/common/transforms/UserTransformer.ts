@@ -114,8 +114,7 @@ export default class UserTransformer extends AtomicPartsTransformer<ConditionalS
         return result.trim();
     }
 
-    public notify(payload: WebhookPayload): Promise<void> {
-        return undefined as unknown as Promise<void>;
+    public async notify(payload: WebhookPayload): Promise<void> {
     }
 
 }

@@ -123,8 +123,7 @@ export const queueStateToEventData = (qs: QueueStateSelect): PlayEventQueueState
     return {
         queueName,
         queueStatus,
-        // TODO strict: QueueStateSelect.error may be null but PlayEventQueueStateChangeData.error is only optional
-        error: error as ErrorLike | undefined,
+        error,
         retries
     }
 }
@@ -143,11 +142,10 @@ export const stateChangeToPlayEvent = (partial: PlayEventPlayStateChangeData): O
 
 type QueueStateEventInput = Omit<QueueStateSelect, 'error'> & { error?: ErrorLike | null };
 
-// TODO strict: error may be null here but PlayEventQueueStateChangeData.error is only optional, hence casts
 export const queueStateToPlayEvent = (partial: MarkOptional<QueueStateEventInput, 'context'>): Omit<PlayEventQueueStateChange, 'playId'> => ({
     eventName: PLAY_EVENT_TYPE.queueStateChange,
     createdAt: dayjs(),
-    data: partial as PlayEventQueueStateChangeData
+    data: partial
 });
 export const queueCompletionStateToPlayEvent = (partial: MarkOptional<QueueStateEventInput, 'context' | 'retries'>): Omit<PlayEventQueueStateChange, 'playId'> => {
     const {
@@ -158,7 +156,7 @@ export const queueCompletionStateToPlayEvent = (partial: MarkOptional<QueueState
     return {
         eventName: PLAY_EVENT_TYPE.queueStateChange,
         createdAt: dayjs(),
-        data: rest as PlayEventQueueStateChangeData
+        data: rest
     }
 }
 

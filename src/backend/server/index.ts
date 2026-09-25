@@ -80,8 +80,8 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
 
         if(root.get('disableWeb')) {
             logger.warn('API and Dashboard have been DISABLED. Note that any ingress sources (Webscrobbler, Listenbrainz/Lastfm Endpoint Sources, etc...) will be unusable');
-            // TODO strict: callers expect a tuple but disableWeb returns nothing
-            return undefined!;
+            // app is returned but never listens
+            return [app, router];
         }
 
         setupApi({app, router, scrobbleSources: sources, scrobbleClients: clients}, {...opts, logger});

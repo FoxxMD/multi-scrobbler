@@ -492,7 +492,6 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
         return transformData.meta.art;
     }
 
-    public notify(payload: WebhookPayload): Promise<void> {
-        return undefined as unknown as Promise<void>;
+    public async notify(payload: WebhookPayload): Promise<void> {
     }
 }

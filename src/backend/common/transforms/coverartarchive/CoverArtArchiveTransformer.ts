@@ -299,8 +299,7 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
         }
     }
 
-    public notify(payload: WebhookPayload): Promise<void> {
-        return undefined as unknown as Promise<void>;
+    public async notify(payload: WebhookPayload): Promise<void> {
     }
 
 }

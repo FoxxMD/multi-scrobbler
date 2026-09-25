@@ -190,8 +190,7 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
         return play.data.album;
     }
 
-    public notify(payload: WebhookPayload): Promise<void> {
-        return undefined as unknown as Promise<void>;
+    public async notify(payload: WebhookPayload): Promise<void> {
     }
 
 }

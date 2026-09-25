@@ -625,8 +625,7 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         return play.meta.art
     }
 
-    public notify(payload: WebhookPayload): Promise<void> {
-        return undefined as unknown as Promise<void>;
+    public async notify(payload: WebhookPayload): Promise<void> {
     }
 
 }
