@@ -58,8 +58,8 @@ export const mprisDataSchema = z.object({
 export type MPRISData = z.infer<typeof mprisDataSchema>;
 
 const envDataSchema = z.object({
-    MPRIS_BLACKLIST: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(mprisDataSchema.shape.blacklist.meta()!)),
-    MPRIS_WHITELIST: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(mprisDataSchema.shape.whitelist.meta()!)),
+    MPRIS_BLACKLIST: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(mprisDataSchema.shape.blacklist.meta())),
+    MPRIS_WHITELIST: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(mprisDataSchema.shape.whitelist.meta())),
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, MPRISSourceConfig> = {

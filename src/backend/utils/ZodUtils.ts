@@ -96,7 +96,10 @@ export const zodObjectToTableColumns = <Shape extends z.ZodRawShape>(schema: z.Z
 export const transformSplitMaybeString = z.transform((val: string) => val === undefined ? undefined : parseArrayFromMaybeString(val));
 export const transformSplitMaybeStringOrBoolean = z.transform((val: string | true) => val === undefined ? undefined : parseBoolOrArrayFromMaybeString(val));
 
-export const envMetaNormalize = (meta: z.GlobalMeta): z.GlobalMeta => {
+export const envMetaNormalize = (meta: z.GlobalMeta | undefined): z.GlobalMeta => {
+    if(meta === undefined) {
+        return {};
+    }
     if(meta.description !== undefined) {
         return {
             ...meta,

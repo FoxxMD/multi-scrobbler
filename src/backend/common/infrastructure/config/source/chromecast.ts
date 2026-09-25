@@ -134,10 +134,10 @@ export const chromecastDataSchema = z.object({
 export type ChromecastData = z.infer<typeof chromecastDataSchema>;
 
 const envDataSchema = z.object({
-    CC_BLACKLIST_DEVICES: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(chromecastDataSchema.shape.blacklistDevices.meta()!)),
-    CC_WHITELIST_DEVICES: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(chromecastDataSchema.shape.whitelistDevices.meta()!)),
-    CC_BLACKLIST_APPS: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(chromecastDataSchema.shape.blacklistApps.meta()!)),
-    CC_WHITELIST_APPS: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(chromecastDataSchema.shape.whitelistApps.meta()!)),
+    CC_BLACKLIST_DEVICES: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(chromecastDataSchema.shape.blacklistDevices.meta())),
+    CC_WHITELIST_DEVICES: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(chromecastDataSchema.shape.whitelistDevices.meta())),
+    CC_BLACKLIST_APPS: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(chromecastDataSchema.shape.blacklistApps.meta())),
+    CC_WHITELIST_APPS: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(chromecastDataSchema.shape.whitelistApps.meta())),
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, ChromecastSourceConfig> = {

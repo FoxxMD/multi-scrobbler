@@ -1,7 +1,7 @@
 import * as z from "zod";
 import {commonClientConfigSchema, commonClientDataSchema, type EnvClientSchema} from "./index.ts";
 import {componentTypeSchema} from "../../../../../core/Atomic.ts";
-import { transformSplitMaybeString } from "../../../../utils/ZodUtils.ts";
+import { envMetaNormalize, transformSplitMaybeString } from "../../../../utils/ZodUtils.ts";
 
 export const statusTypeSchema = z.union([z.literal("online"), z.literal("idle"), z.literal("dnd"), z.literal("invisible")]);
 
@@ -44,8 +44,8 @@ const envDataSchema = z.object({
     DISCORD_APPLICATION_ID: discordDataSchema.shape.applicationId,
     DISCORD_IPC_LOCATIONS: z.string().optional().pipe(transformSplitMaybeString),
     DISCORD_ARTWORK_DEFAULT_URL: discordDataSchema.shape.artworkDefaultUrl,
-    DISCORD_STATUS_OVERRIDE_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(discordDataSchema.shape.statusOverrideAllow.meta()!),
-    DISCORD_LISTENING_ACTIVITY_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(discordDataSchema.shape.listeningActivityAllow.meta()!),
+    DISCORD_STATUS_OVERRIDE_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(discordDataSchema.shape.statusOverrideAllow.meta())),
+    DISCORD_LISTENING_ACTIVITY_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(discordDataSchema.shape.listeningActivityAllow.meta())),
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, DiscordClientConfig> = {
@@ -101,8 +101,9 @@ export const ActivityTypes: ActivityTypeString[] = ['playing','streaming','liste
 
 export const discordStrongDataSchema = discordDataSchema.extend({
     artwork: z.union([z.boolean(), z.array(z.string())]).optional(),
-    statusOverrideAllow: z.array(statusTypeSchema).optional(),
-    listeningActivityAllow: z.array(z.string()).optional(),
+    // always populated by configToStrong
+    statusOverrideAllow: z.array(statusTypeSchema),
+    listeningActivityAllow: z.array(z.string()),
     //ipcLocations: z.array(z.union([z.string(), z.tuple([z.number(),z.string()])])).optional()
 });
 
