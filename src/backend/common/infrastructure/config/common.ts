@@ -199,22 +199,23 @@ export const transformPresetEnv = <T extends CommonClientOptions = CommonClientO
         return existing;
     }
 
+    const preCompare: NonNullable<PlayTransformHooks<ExternalMetadataTerm>['preCompare']> = [];
     const popts: PlayTransformHooks<ExternalMetadataTerm> = {
-        preCompare: []
+        preCompare
     };
     for (const p of env.split(',').map(x => x.trim().toLocaleLowerCase())) {
         switch (p) {
             case 'native':
-                popts.preCompare!.push({ type: 'native' });
+                preCompare.push({ type: 'native' });
                 break;
             case 'musicbrainz':
-                popts.preCompare!.push({ type: 'musicbrainz' });
+                preCompare.push({ type: 'musicbrainz' });
                 break;
             case 'rocksky':
-                popts.preCompare!.push({ type: 'rocksky' });
+                preCompare.push({ type: 'rocksky' });
                 break;
             case 'spotify':
-                popts.preCompare!.push({ type: 'spotify' });
+                preCompare.push({ type: 'spotify' });
                 break;
         }
     }
