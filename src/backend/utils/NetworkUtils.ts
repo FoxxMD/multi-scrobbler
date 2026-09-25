@@ -167,8 +167,7 @@ export const  normalizeWSAddress = (val: string, options: {defaultPort?: number 
 
     const {defaultPort, defaultPath} = options;
 
-    // TODO strict: port is undefined when url already has a port, URLData.port claims number
-    let port!: number;
+    let port: number;
     if(url.port === null || url.port === '') {
         if(defaultPort !== undefined) {
             url.port = defaultPort.toString();
@@ -176,6 +175,8 @@ export const  normalizeWSAddress = (val: string, options: {defaultPort?: number 
         } else {
             port = url.protocol === 'ws:' ? 80 : 443;
         }
+    } else {
+        port = parseInt(url.port);
     }
 
     if(url.pathname === '/' && defaultPath !== undefined) {
