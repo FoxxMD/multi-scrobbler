@@ -23,7 +23,7 @@ export class ATProtoAppApiClient extends ATProtoAuthenticatedApiClient {
         this.logger.verbose(`Using ${this.userData.did} on PDS ${this.userData.pds}`);
     }
 
-    restoreSession = async (): Promise<boolean | undefined> => {
+    restoreSession = async (): Promise<boolean> => {
         await this.checkRateLimit();
         const savedSessionCute = await this.getSession();
         if (savedSessionCute !== undefined) {
@@ -40,11 +40,13 @@ export class ATProtoAppApiClient extends ATProtoAuthenticatedApiClient {
                     },
                 });
                 this.client = new Client({ handler: session });
+                return true;
             } catch (e) {
                 this.logger.warn(new Error('Could not resume app password session from data', { cause: e }));
                 return false;
             }
         }
+        return false;
     }
 
     protected async saveSession(data: PasswordSessionData): Promise<void> {
