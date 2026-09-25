@@ -247,10 +247,9 @@ export class ChromecastSource extends MemoryPositionalSource {
         }
     }
 
-    protected initializeClientPlatform = async (device: MdnsDeviceInfo): Promise<[InstanceType<typeof CastClient>, PersistentClient, PlatformType] | undefined> => {
+    protected initializeClientPlatform = async (device: MdnsDeviceInfo): Promise<[InstanceType<typeof CastClient>, PersistentClient, PlatformType]> => {
 
-        const index = 0;
-        for(const address of device.addresses) {
+        for(const [index, address] of device.addresses.entries()) {
 
             const castClient = new CastClient;
             const client: PersistentClient = new PersistentClient({host: address, client: castClient});
@@ -274,6 +273,7 @@ export class ChromecastSource extends MemoryPositionalSource {
 
             return [castClient, client, platform];
         }
+        throw new Error(`${device.name} has no addresses to connect to`);
     }
 
     protected handleCastClientEvent = (clientName: string, event: string, payload?: any) => {
