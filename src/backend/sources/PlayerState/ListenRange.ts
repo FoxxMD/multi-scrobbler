@@ -4,6 +4,9 @@ import { type ListenProgress, ListenProgressPositional,  ListenProgressTS } from
 import type { RealtimePlayer } from "./RealtimePlayer.ts";
 import { GenericRealtimePlayer } from "./RealtimePlayer.ts";
 
+/** [false] if not seeked, otherwise [true, seeked amount in ms] */
+export type SeekedResult = [false] | [true, Millisecond];
+
 export abstract class ListenRange {
     public start: ListenProgress;
     public end: ListenProgress;
@@ -22,7 +25,7 @@ export abstract class ListenRange {
 
     public abstract isPositional(): boolean;
     public abstract isInitial(): boolean;
-    public abstract seeked(position?: number, reportedTS?: Dayjs): [boolean, Second?];
+    public abstract seeked(position?: number, reportedTS?: Dayjs): SeekedResult;
     public abstract setRangeStart(data: ListenProgress | Partial<PlayProgress>): void;
     public abstract setRangeEnd(data: ListenProgress | Partial<PlayProgress>): void;
     public abstract getDuration(): Second;
@@ -44,7 +47,7 @@ export class ListenRangeTS extends ListenRange implements ListenRangeData {
         return this.start.timestamp.isSame(this.end.timestamp);
     }
 
-    seeked(position?: number, reportedTS: Dayjs = dayjs()): [boolean, Second?] {
+    seeked(position?: number, reportedTS: Dayjs = dayjs()): SeekedResult {
         return [false];
     }
 
@@ -92,13 +95,13 @@ export class ListenRangePositional extends ListenRange {
 
     protected allowedDrift: number;
 
-    constructor(start?: ListenProgressPositional, end?: ListenProgressPositional, options: {rtTruth?: boolean, allowedDrift?: number, rtImmediate?: boolean} = {}) {
+    constructor(start: ListenProgressPositional, end?: ListenProgressPositional, options: {rtTruth?: boolean, allowedDrift?: number, rtImmediate?: boolean} = {}) {
         super(start, end);
         const { allowedDrift = 2000, rtTruth = false, rtImmediate = true } = options;
         this.allowedDrift = allowedDrift;
         this.rtTruth = rtTruth;
         this.rtPlayer = new GenericRealtimePlayer();
-        this.rtPlayer.setPosition(start!.position * 1000);
+        this.rtPlayer.setPosition(start.position * 1000);
         if(rtImmediate) {
             this.rtPlayer.play();
         }
@@ -118,7 +121,7 @@ export class ListenRangePositional extends ListenRange {
         return this.start.position === this.end.position;
     }
 
-    seeked(position: Second, reportedTS: Dayjs = dayjs()): [boolean, Millisecond?] {
+    seeked(position: Second, reportedTS: Dayjs = dayjs()): SeekedResult {
         // if (new) position is earlier than last stored position then the user has seeked backwards on the player
         if (position < this.end.position) {
             return [true, (position - this.end.position) * 1000];

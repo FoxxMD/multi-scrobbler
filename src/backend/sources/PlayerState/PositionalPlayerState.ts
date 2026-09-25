@@ -26,19 +26,23 @@ export class PositionalPlayerState extends AbstractPlayerState {
         this.rtTruth = rtTruth;
     }
 
-    protected newListenProgress(data?: Partial<PlayProgress> & Pick<PlayProgressPositional, 'position'>): ListenProgressPositional {
-       return new ListenProgressPositional(data!);
+    protected newListenProgress(data: Partial<PlayProgress> & Pick<PlayProgressPositional, 'position'>): ListenProgressPositional {
+       return new ListenProgressPositional(data);
     }
-    protected newListenRange(start?: ListenProgressPositional, end?: ListenProgressPositional, options: object = {}): ListenRangePositional {
+    protected newListenRange(start: ListenProgressPositional, end?: ListenProgressPositional, options: object = {}): ListenRangePositional {
        return new ListenRangePositional(start, end, {allowedDrift: this.allowedDrift, rtTruth: this.rtTruth, ...options});
     }
 
     protected isSessionStillPlaying(position: number): boolean {
         //return this.reportedStatus === REPORTED_PLAYER_STATUSES.playing;
-        if(!this.currentListenRange!.isOverDrifted(position)) {
+        const range = this.currentListenRange;
+        if(range === undefined) {
+            return false;
+        }
+        if(!range.isOverDrifted(position)) {
             return true;
         }
-        return position !== this.currentListenRange!.end.position;
+        return position !== range.end.position;
     }
 
     protected currentListenSessionContinue(position: number = 0, timestamp?: Dayjs) {
@@ -88,7 +92,7 @@ export class PositionalPlayerState extends AbstractPlayerState {
                     data: {
                         duration,
                     } = {}
-                } = this.currentPlay!;
+                } = this.currentPlay ?? {};
                 if(duration !== undefined && duration !== 0 && (duration - this.currentListenRange.end.position) < this.gracefulEndBuffer) {
                     // likely the track was listened to until it ended
                     // but polling interval or network delays caused MS to not get data on the very end
