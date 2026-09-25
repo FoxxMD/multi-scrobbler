@@ -1,6 +1,6 @@
 import { childLogger } from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
-import { and, eq, inArray, isNull, notExists, relationsFilterToSQL, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, relationsFilterToSQL, sql } from "drizzle-orm";
 import assert from "node:assert";
 import type { MarkOptional, ElementOf } from "ts-essentials";
 import { type DateLike, type DeepReplaceValue, type PlayObject, type PlayState, QUEUE_STATUS_QUEUED, type QueueName, SCROBBLE_TS_SOC_END, TA_DEFAULT_ACCURACY, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
@@ -18,7 +18,7 @@ import { playEvents, playInputs, plays, queueStates, relations, type TSchema } f
 import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
 import type {PaginatedResponse} from "../../../../../core/Api.ts";
 import type {PaginatedQueryResponse} from "../../../../../core/Api.ts";
-import { type PlayEventTransform, type PlayEventPlayStateChangeData } from "../../../../../core/PlayEvent.ts";
+import { type PlayEventTransform } from "../../../../../core/PlayEvent.ts";
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 
@@ -149,7 +149,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                 return generateInputEntity({ play: inputPlay, playId: x.id, ...restInput });
             });
 
-            const inputRow = await this.db.insert(playInputs).values(inputDatas);
+            const inputRows = await this.db.insert(playInputs).values(inputDatas).returning();
 
             const eventData = nakedPlays.map((x, index) => {
                 const {
@@ -167,7 +167,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                 await this.db.insert(playEvents).values(eventData);
             }
 
-            playRows = nakedPlays.map((x, index) => ({...x, play: hydratePlaySelect(x, hydrate), input: (inputRow as any)[index]})); // TODO strict: insert without returning() is not indexable, this is always undefined
+            playRows = nakedPlays.map((x, index) => ({...x, play: hydratePlaySelect(x, hydrate), input: inputRows[index]}));
         });
 
         return playRows;
@@ -917,8 +917,7 @@ group by componentId,compacted;`);
         if(data.event === true) {
             if(data.state !== undefined) {
                 try {
-                    // TODO strict: data.error may be null but PlayEventPlayStateChangeData.error is only optional
-                    await this.db.insert(playEvents).values({...stateChangeToPlayEvent(removeUndefinedKeys({state: data.state, reason: data.reason, error: data.error})! as PlayEventPlayStateChangeData), playId: id});
+                    await this.db.insert(playEvents).values({...stateChangeToPlayEvent(removeUndefinedKeys({state: data.state, reason: data.reason, error: data.error})!), playId: id});
                 } catch (e) {
                     this.logger.warn(new Error(`Failed to create Play Event for state change ${data.state} on Play ${id}`));
                 }
