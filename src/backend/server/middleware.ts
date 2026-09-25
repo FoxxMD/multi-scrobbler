@@ -9,7 +9,8 @@ import type { TypedMiddleware } from "@minisylar/express-typed-router";
 export const nonEmptyBody = (logger: Logger, origin: string = 'Origin'): TypedMiddleware => async (req, res, next) => {
     const bodyEmpty = req.body === undefined || req.body === null || (typeof req.body === 'object' && Object.keys(req.body).length === 0);
     if (bodyEmpty) {
-        const length = req.header('content-length') !== undefined ? Number.parseInt(req.header('content-length')!) : undefined;
+        const lengthHeader = req.header('content-length');
+        const length = lengthHeader !== undefined ? Number.parseInt(lengthHeader) : undefined;
         // can't think of a way a user would send an empty body for a payload but if they meant to do it don't spam them with errors...
         if (length === 0) {
             return;
