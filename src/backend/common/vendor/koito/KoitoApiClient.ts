@@ -58,7 +58,7 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
         try {
             req.set('Authorization', `Token ${this.config.token}`);
             return await req as T;
-        } catch (e) {
+        } catch (e: any) {
             const {
                 message,
                 err,
@@ -120,7 +120,7 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
             if(resp.type !== 'application/json') {
                 throw new Error(`Expected response from ${resp.request.url} to be 'application/json' but got ${resp.type}. Is the Normalized Koito URL correct?`);
             }
-        } catch (e) {
+        } catch (e: any) {
             let allowedHint = '';
             if(e.cause !== undefined && 'response' in e.cause) {
                 if(e.cause.response.status === 403) {
@@ -138,7 +138,7 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
             return true;
         } catch (e) {
             const superagentError = findCauseByFunc<request.ResponseError>(e, (ee) => isSuperAgentResponseError(ee));
-            throw new AuthError('Could not validate Koito API Key', { cause: e, unrecoverable: superagentError !== undefined && [401,403].includes(superagentError.status)});
+            throw new AuthError('Could not validate Koito API Key', { cause: e, unrecoverable: superagentError?.status !== undefined && [401,403].includes(superagentError.status)});
         }
     }
 
@@ -214,7 +214,7 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
                 this.logger.debug(`Submit Response: ${resp.text}`)
             }
             return {payload: listenPayload, response: resp.text, createdAt: dayjs().toISOString()};
-        } catch (e) {
+        } catch (e: any) {
             throw new ScrobbleSubmitError(`Error occurred while making Koito API submit request (listen_type ${listenPayload.listen_type})`, {cause: e, payload: listenPayload, response: e.response, responseBody: e.response?.text});
         }
     }

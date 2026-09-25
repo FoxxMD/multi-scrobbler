@@ -36,7 +36,9 @@ export abstract class RealtimePlayer {
     [Symbol.dispose]() {
         this.scheduler.stop();
         for(const job of this.scheduler.getAllJobs()) {
-            this.scheduler.removeById(job.id);
+            if(job.id !== undefined) {
+                this.scheduler.removeById(job.id);
+            }
         }
     }
 

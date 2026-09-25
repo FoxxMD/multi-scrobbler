@@ -4,8 +4,10 @@ import { queueStates } from '../drizzle/schema/schema.ts';
 import { eq } from 'drizzle-orm';
 
 
-export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase, ctx: MigrateBaseContext): Promise<void> => {
-
+export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase, ctx: MigrateBaseContext | undefined): Promise<void> => {
+    if(ctx === undefined) {
+        throw new Error('Context must be defined');
+    }
     ctx.logger.info('Beginning queue entities consolidation.');
 
     ctx.logger.verbose('Deleting (now) unused completed queue states...');
@@ -37,8 +39,16 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
         for(const p of plays) {
             const ingress = p.queueStates.find(x => x.queueName === 'ingress');
             const dead = p.queueStates.find(x => x.queueName === 'dead');
+            if(dead === undefined) {
+                // should not happen since query only returns plays with a dead queue state
+                continue;
+            }
 
             if(ingress === undefined) {
+                if(p.componentId === null) {
+                    ctx.logger.warn(`Play ${p.id} has a dead queue state but no component, cannot create an ingress queue state for it`);
+                    continue;
+                }
                 await ctx.db.insert(queueStates).values([{
                     componentId: p.componentId,
                     playId: p.id,
@@ -70,7 +80,7 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
     ctx.logger.info('Done.');
 };
 
-export const down: Migration<MigrateBaseContext>['down'] = async (db: SqliteDatabase, ctx: MigrateBaseContext): Promise<void> => {
+export const down: Migration<MigrateBaseContext>['down'] = async (db: SqliteDatabase, ctx: MigrateBaseContext | undefined): Promise<void> => {
     // Rollback code here
     // context is passed as ctx
 };

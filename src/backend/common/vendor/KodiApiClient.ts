@@ -138,10 +138,10 @@ export class KodiApiClient extends AbstractApiClient {
 
             await this.client.connect();
             // https://kodi.wiki/view/JSON-RPC_API/v12#JSONRPC.Version
-            const jsonInfo = await this.client.JSONRPC.Version();
+            const jsonInfo = await requireKodiNamespace(this.client.JSONRPC, 'JSONRPC').Version();
 
             // https://kodi.wiki/view/JSON-RPC_API/v12#Application.GetProperties
-            const applicationInfo = await this.client.Application.GetProperties(['version']);
+            const applicationInfo = await requireKodiNamespace(this.client.Application, 'Application').GetProperties(['version']);
 
             this.version = `${applicationInfo.version.major}.${applicationInfo.version.minor}`;
             this.logger.info(`Found Kodi v${applicationInfo.version.major}.${applicationInfo.version.minor} (JSONRPC v${jsonInfo.version.major}.${jsonInfo.version.minor})`);
@@ -171,7 +171,7 @@ export class KodiApiClient extends AbstractApiClient {
 
     getActivePlayers = async (): Promise<ActivePlayer[]> => {
         // https://kodi.wiki/view/JSON-RPC_API/v12#Player.GetActivePlayers
-        const players = await this.client.Player.GetActivePlayers();
+        const players = await requireKodiNamespace(this.client.Player, 'Player').GetActivePlayers();
         return players as ActivePlayer[];
     }
 
@@ -193,4 +193,12 @@ export class KodiApiClient extends AbstractApiClient {
 
         return [play];
     }
+}
+
+/** kodi client namespaces are only populated after the client has connected */
+const requireKodiNamespace = <T>(ns: T | undefined, name: string): T => {
+    if (ns === undefined) {
+        throw new Error(`Kodi client ${name} namespace is not available, is the client connected?`);
+    }
+    return ns;
 }

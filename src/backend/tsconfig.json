@@ -6,6 +6,7 @@
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
+    "strict": true,
     "lib": [
       "dom",
       "dom.iterable",

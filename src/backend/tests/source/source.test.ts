@@ -188,7 +188,7 @@ describe('Sources correctly parse incoming payloads', function () {
         const play = SpotifySource.formatPlayObj(noAAPayload as SpotifyApi.CurrentPlaybackResponse);
         expect(play.data.track).eq('The Sandpits Of Zonhoven');
         expect(play.data.album).eq('Bloodbags And Downtube Shifters');
-        expect(artistCreditsToNames(play.data.artists)).eql(['Dubmood', 'MASTER BOOT RECORD']);
+        expect(artistCreditsToNames(play.data.artists!)).eql(['Dubmood', 'MASTER BOOT RECORD']);
         expect(play.data.albumArtists).to.be.empty;
     });
 
@@ -196,8 +196,8 @@ describe('Sources correctly parse incoming payloads', function () {
         const play = SpotifySource.formatPlayObj(spotifyPayload as SpotifyApi.CurrentPlaybackResponse);
         expect(play.data.track).eq('The Sandpits Of Zonhoven');
         expect(play.data.album).eq('Bloodbags And Downtube Shifters');
-        expect(artistCreditsToNames(play.data.artists)).eql(['Dubmood', 'MASTER BOOT RECORD']);
-        expect(artistCreditsToNames(play.data.albumArtists)).eql(['Dubmood']);
+        expect(artistCreditsToNames(play.data.artists!)).eql(['Dubmood', 'MASTER BOOT RECORD']);
+        expect(artistCreditsToNames(play.data.albumArtists!)).eql(['Dubmood']);
     });
 
     it('Spotify parses payload with identical album artists correctly', function() {
@@ -206,8 +206,8 @@ describe('Sources correctly parse incoming payloads', function () {
         const identicalArtistsPlay = SpotifySource.formatPlayObj(identicalArtistsPayload as SpotifyApi.CurrentPlaybackResponse);
         expect(identicalArtistsPlay.data.track).eq('The Sandpits Of Zonhoven');
         expect(identicalArtistsPlay.data.album).eq('Bloodbags And Downtube Shifters');
-        expect(artistCreditsToNames(identicalArtistsPlay.data.artists)).eql(['Dubmood', 'MASTER BOOT RECORD']);
-        expect(artistCreditsToNames(identicalArtistsPlay.data.albumArtists)).to.be.empty;
+        expect(artistCreditsToNames(identicalArtistsPlay.data.artists!)).eql(['Dubmood', 'MASTER BOOT RECORD']);
+        expect(artistCreditsToNames(identicalArtistsPlay.data.albumArtists!)).to.be.empty;
     });
 });
 
@@ -477,10 +477,10 @@ describe('Deezer Internal Source', function() {
     describe('When fuzzyDiscoveryIgnore is not defined or false', function () {
 
         it('discovers fuzzy play', async function() {
-            const interimPlay = generatePlay({playDate: lastPlay.data.playDate.add(15, 's'), duration: 80});
+            const interimPlay = generatePlay({playDate: lastPlay.data.playDate!.add(15, 's'), duration: 80});
             const targetPlay = normalizedPlays[normalizedPlays.length - 2]
             const fuzzyPlay = clone(targetPlay);
-            fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
+            fuzzyPlay.data.playDate = targetPlay.data.playDate!.add(targetPlay.data.duration!, 's');
 
             await using source = await generateDeezerSource();
             const queued = await source.queuePlay([...normalizedPlays, interimPlay]);
@@ -496,10 +496,10 @@ describe('Deezer Internal Source', function() {
     describe('When fuzzyDiscoveryIgnore is true', function () {
 
         it('does not discover fuzzy play with interim plays', async function() {
-            const interimPlay = generatePlay({playDate: lastPlay.data.playDate.add(15, 's'), duration: 80});
+            const interimPlay = generatePlay({playDate: lastPlay.data.playDate!.add(15, 's'), duration: 80});
             const targetPlay = normalizedPlays[normalizedPlays.length - 2]
             const fuzzyPlay = clone(targetPlay);
-            fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
+            fuzzyPlay.data.playDate = targetPlay.data.playDate!.add(targetPlay.data.duration!, 's');
 
             await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: true});
             const queued = await source.queuePlay([...normalizedPlays, interimPlay]);
@@ -513,7 +513,7 @@ describe('Deezer Internal Source', function() {
         it('discovers fuzzy play when it is the last play ', async function() {
             const targetPlay = normalizedPlays[normalizedPlays.length - 1]
             const fuzzyPlay = clone(targetPlay);
-            fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
+            fuzzyPlay.data.playDate = targetPlay.data.playDate!.add(targetPlay.data.duration!, 's');
 
             await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: true});
             const queued = await source.queuePlay(normalizedPlays);
@@ -527,7 +527,7 @@ describe('Deezer Internal Source', function() {
         it('discovers fuzzy play when it is played consecutively', async function() {
             const targetPlay = normalizedPlays[normalizedPlays.length - 1]
             const fuzzyPlay = clone(targetPlay);
-            fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
+            fuzzyPlay.data.playDate = targetPlay.data.playDate!.add(targetPlay.data.duration!, 's');
             const morePlays = normalizePlays([...normalizedPlays, fuzzyPlay, ...generatePlays(2)], {initialDate: firstPlayDate});
 
             await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: false});
@@ -541,10 +541,10 @@ describe('Deezer Internal Source', function() {
         describe('When fuzzyDiscoveryIgnore is aggressive', function () {
 
             it('does not discover fuzzy play with interim plays', async function() {
-                const interimPlay = generatePlay({playDate: lastPlay.data.playDate.add(15, 's'), duration: 80});
+                const interimPlay = generatePlay({playDate: lastPlay.data.playDate!.add(15, 's'), duration: 80});
                 const targetPlay = normalizedPlays[normalizedPlays.length - 2]
                 const fuzzyPlay = clone(targetPlay);
-                fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
+                fuzzyPlay.data.playDate = targetPlay.data.playDate!.add(targetPlay.data.duration!, 's');
 
                 await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
                 const queued = await source.queuePlay([...normalizedPlays, interimPlay]);
@@ -558,10 +558,10 @@ describe('Deezer Internal Source', function() {
             });
 
             it('does not discover play found during duration of previous', async function() {
-                const interimPlay = generatePlay({playDate: lastPlay.data.playDate.add(15, 's'), duration: 80});
+                const interimPlay = generatePlay({playDate: lastPlay.data.playDate!.add(15, 's'), duration: 80});
                 const targetPlay = normalizedPlays[normalizedPlays.length - 2]
                 const duringPlay = clone(targetPlay);
-                duringPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration * 0.5, 's');
+                duringPlay.data.playDate = targetPlay.data.playDate!.add(targetPlay.data.duration! * 0.5, 's');
 
                 await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
                 //await source.discover([...normalizedPlays, interimPlay]);
@@ -574,10 +574,10 @@ describe('Deezer Internal Source', function() {
             });
 
             it('does not discover fuzzy play with delay of up to 40 seconds', async function() {
-                const interimPlay = generatePlay({playDate: lastPlay.data.playDate.add(15, 's'), duration: 80});
+                const interimPlay = generatePlay({playDate: lastPlay.data.playDate!.add(15, 's'), duration: 80});
                 const targetPlay = normalizedPlays[normalizedPlays.length - 2]
                 const fuzzyPlay = clone(targetPlay);
-                fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration + 39, 's');
+                fuzzyPlay.data.playDate = targetPlay.data.playDate!.add(targetPlay.data.duration! + 39, 's');
 
                 await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
                 await source.queuePlay([...normalizedPlays, interimPlay]);
@@ -591,7 +591,7 @@ describe('Deezer Internal Source', function() {
             it('it does not discover fuzzy play when it is the last play ', async function() {
                 const targetPlay = normalizedPlays[normalizedPlays.length - 1]
                 const fuzzyPlay = clone(targetPlay);
-                fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
+                fuzzyPlay.data.playDate = targetPlay.data.playDate!.add(targetPlay.data.duration!, 's');
 
                 await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
                 await source.queuePlay(normalizedPlays);
@@ -604,7 +604,7 @@ describe('Deezer Internal Source', function() {
             it('does not discover fuzzy play when it is played consecutively', async function() {
                 const targetPlay = normalizedPlays[normalizedPlays.length - 1]
                 const fuzzyPlay = clone(targetPlay);
-                fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
+                fuzzyPlay.data.playDate = targetPlay.data.playDate!.add(targetPlay.data.duration!, 's');
                 const morePlays = normalizePlays([...normalizedPlays, fuzzyPlay, ...generatePlays(2)], {initialDate: firstPlayDate});
 
                 await using source = await generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});

@@ -23,7 +23,7 @@ export type CovertArtArchiveTransformerConfig = TransformerCommon<CoverArtArchiv
 
 export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
     const transformEnv = process.env.CAA_PRESETS;
-    let tConfig: CovertArtArchiveTransformerConfig;
+    let tConfig: CovertArtArchiveTransformerConfig | undefined;
     if (transformEnv !== undefined && transformEnv.trim() !== '') {
         tConfig = {
             type: 'coverartarchive',

@@ -78,7 +78,7 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
                 }
             }
 
-            let source: EndpointLastfmSource;
+            let source: EndpointLastfmSource | undefined;
             // try to find by username or api_key or sk
             if(req.body.api_key !== undefined) {
                 source = validSources.find(x => x.config.data?.apiKey === req.body.api_key);

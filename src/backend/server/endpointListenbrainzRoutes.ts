@@ -169,7 +169,7 @@ export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof cr
 
         let username = "Multi-Scrobbler";
         if(validSources.length > 0) {
-            username = validSources[0].config.data.username ?? validSources[0].name;
+            username = validSources[0].config.data?.username ?? validSources[0].name;
         }
 
         logger.info('Validated token');

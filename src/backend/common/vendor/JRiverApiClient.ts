@@ -83,7 +83,7 @@ const jriverResponseTransform = <T>(val: JRiverResponse): JRiverTransformedRespo
     });
     return {
         status,
-        data: items.reduce((acc, curr) => {
+        data: (items ?? []).reduce((acc: Record<string, string>, curr) => {
             acc[curr[0]] = curr[1];
             return acc;
         }, {}) as T
@@ -146,7 +146,7 @@ export class JRiverApiClient extends AbstractApiClient {
         try {
             const req = request.get(`${this.url}Authenticate`);
             if (this.config.username !== undefined) {
-                req.auth(this.config.username, this.config.password);
+                req.auth(this.config.username, this.config.password as string);
             }
             const resp = await this.callApi<Authenticate>(req);
             this.token = resp.body.data.Token;

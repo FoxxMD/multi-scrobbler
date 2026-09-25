@@ -70,7 +70,7 @@ export default class ListenbrainzSource extends MemorySource {
                 throw new Error('The given URL looks like a Koito instance. Use the Koito Source instead of Listenbrainz.')
             }
             return true;
-        } catch (e) {
+        } catch (e: any) {
             if(isNodeNetworkException(e)) {
                 throw new Error('Could not communicate with Listenbrainz API server', {cause: e});
             } else if(e.status !== 410) {

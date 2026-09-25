@@ -204,7 +204,7 @@ export default class ScrobbleClients {
 
             let strongConfigs: CommonParsedConfig[] = [];
             for (const entry of clientUnparsedConfigs) {
-                let parsedConfig: CommonParsedConfig;
+                let parsedConfig!: CommonParsedConfig;
                 try {
                     switch (entry.source) {
                         case 'env': {

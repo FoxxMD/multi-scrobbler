@@ -13,11 +13,9 @@ import { hasArtFields, type CAAMissingType, type CoverArtArchiveTransformData, t
 import { CoverArtClientPool } from "../../vendor/musicbrainz/CovertArtApiPool.ts";
 import { coverImageHas, type CoverArtReleaseResponse } from "../../vendor/musicbrainz/CoverArtApiTypes.ts";
 
-export interface CoverArtArchiveTransformDataStrong extends CoverArtArchiveTransformData {
-}
+export type CoverArtArchiveTransformDataStrong = CoverArtArchiveTransformData & Required<Pick<CoverArtArchiveTransformData, 'searchWhenMissing' | 'allowedTypes' | 'forceSearch' | 'allowedSizes'>>;
 
-export interface CoverArtArchiveTransformerDataStage extends CoverArtArchiveTransformDataStrong,PlayTransformMetadataStage {
-}
+export type CoverArtArchiveTransformerDataStage = CoverArtArchiveTransformData & PlayTransformMetadataStage;
 
 type MSCoverArtReleaseResponse = CoverArtReleaseResponse & {type?: 'album' | 'releaseGroup', requestQuery: string, lifecycleInputs?: LifecycleInput[]};
 
@@ -48,9 +46,9 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
 
     declare config: CovertArtArchiveTransformerConfig;
 
-    protected defaults: CoverArtArchiveTransformDataStrong;
+    protected defaults!: CoverArtArchiveTransformDataStrong;
 
-    protected api: CoverArtClientPool;
+    protected api!: CoverArtClientPool;
     protected clientCache?: Cacheable;
 
     public constructor(config: CovertArtArchiveTransformerConfig, options: TransformerOptions & {clientCache?: Cacheable}) {
@@ -81,7 +79,7 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
             type: 'coverartarchive'
         }
 
-        for (const k of ['art']) {
+        for (const k of ['art'] as const) {
             if (!(k in stage)) {
                 stage[k] = true;
                 continue;
@@ -131,13 +129,13 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
             allowedSizes = this.defaults.allowedSizes,
         } = stageConfig;
         
-        let results: MSCoverArtReleaseResponse;
-        let resultType: 'album' | 'releaseGroup';
+        let results: MSCoverArtReleaseResponse | undefined;
+        let resultType: 'album' | 'releaseGroup' | undefined;
         const queries: LifecycleInput[] = [];
 
         for(const searchType of ['album','releaseGroup'] as const) {
             try {
-                results = await this.searchByMbid(play, searchType, stageConfig, opts);
+                results = (await this.searchByMbid(play, searchType, stageConfig, opts));
                 queries.push({type: `rsQuery-${searchType}${results.images === undefined ? '-empty'  : ''}`, input: results.requestQuery});
                 if(results.images !== undefined) {
                     if(allowedTypes.includes('any') && allowedSizes.includes('any')) {
@@ -179,7 +177,7 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
         return {...(results ?? {requestQuery: undefined}), lifecycleInputs: queries, type: resultType};
     }
 
-    public async searchByMbid(play: PlayObject, mbidType: 'album' | 'releaseGroup', stageConfig: CoverArtArchiveTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<MSCoverArtReleaseResponse | undefined> {
+    public async searchByMbid(play: PlayObject, mbidType: 'album' | 'releaseGroup', stageConfig: CoverArtArchiveTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<MSCoverArtReleaseResponse> {
         const mbid = play.data.meta?.brainz?.[mbidType];
         if(mbid === undefined) {
             throw new SearchPrerequisiteError(`Play does not have ${mbidType} MBID`);
@@ -192,8 +190,8 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
             return {
                 requestQuery,
                 ...res
-            };
-        } catch (e) {
+            } as MSCoverArtReleaseResponse;
+        } catch (e: any) {
             e.requestQuery = requestQuery;
             throw e;
         }
@@ -213,7 +211,9 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
                     inputs: transformData.lifecycleInputs
                 });
         }
-        if(transformData.images.length === 0) {
+        // type is only set when images met requirements
+        const resultType = transformData.type;
+        if(transformData.images.length === 0 || resultType === undefined) {
             throw new StagePrerequisiteError('CoverArtArchive API returned results but none met configured requirements',
                 {
                     shortStack: true,
@@ -232,7 +232,7 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
             return true;
         });
 
-        let preferred: string;
+        let preferred: string | undefined;
         for(const p of preferredSizes) {
             for(const image of validImages) {
                 if(image.thumbnails[p] !== undefined) {
@@ -246,12 +246,16 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
             preferred = Object.values(validImages[0].thumbnails)[0];
         }
 
+        let artUrl: string | undefined;
         try {
-            const artUrl = await this.api.proxy.getCoverThumbFromUrl(preferred);
-            return {uri: artUrl, lifecycleInputs: transformData.lifecycleInputs, type: transformData.type}
+            artUrl = await this.api.proxy.getCoverThumbFromUrl(preferred);
         } catch (e) {
             throw new StageTransformError('Fetch Error', 'Unexpected error occurred while getting CoverArtArchive final url', {cause: e, inputs: transformData.lifecycleInputs});
         }
+        if(artUrl === undefined) {
+            throw new StageTransformError('Fetch Error', 'CoverArtArchive did not return a final url for the thumbnail', {inputs: transformData.lifecycleInputs});
+        }
+        return {uri: artUrl, lifecycleInputs: transformData.lifecycleInputs, type: resultType}
     }
 
     protected async handleTitle(play: PlayObject, parts: boolean | { when?: { title?: string; artists?: string; albumArtists?: string; album?: string; art?: string; }[]; }, transformData: ArtUriData): Promise<string | undefined> {
@@ -299,8 +303,7 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
         }
     }
 
-    public notify(payload: WebhookPayload): Promise<void> {
-        return;
+    public async notify(payload: WebhookPayload): Promise<void> {
     }
 
 }

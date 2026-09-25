@@ -12,17 +12,17 @@ import { loggerNoop } from "../../MaybeLogger.ts";
 type MusicbrainzApiWrappedOptions  = ConstructorParameters<typeof MusicBrainzApi>[0] & {
     rate?: Partial<IRateLimiterOptions>
     hostname: string
-    asyncStore: AsyncLocalStorage<string>
+    asyncStore: AsyncLocalStorage<string | undefined>
     logger?: Logger
 };
 
 export class MusicbrainzApiWrapped extends MusicBrainzApi {
     public rateLimiterQueue: RateLimiterQueue;
-    protected asyncStore: AsyncLocalStorage<string>;
+    protected asyncStore: AsyncLocalStorage<string | undefined>;
     public hostname: string;
     logger: Logger;
 
-    constructor(config?: MusicbrainzApiWrappedOptions) {
+    constructor(config: MusicbrainzApiWrappedOptions) {
         const {
             rate: {
                 points = 1,
@@ -63,7 +63,7 @@ export class MusicbrainzApiWrapped extends MusicBrainzApi {
                 throw new Error(res.error);
             }
             return res as T;
-        } catch (e) {
+        } catch (e: any) {
             if(e instanceof SimpleError) {
                 throw e;
             }

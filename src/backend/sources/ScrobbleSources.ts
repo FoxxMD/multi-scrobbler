@@ -18,6 +18,7 @@ import { getSourceEnvSchema, validateSourceAIOJson, validateSourceJson } from '.
 import type { SourceTypeConfigMap } from "../common/infrastructure/config/source/sourcesMap.ts";
 import { stripIndents } from 'common-tags';
 import type { MSBackendEventMap } from '../common/infrastructure/MSBackendEventMap.ts';
+import { loggerNoop } from '../common/MaybeLogger.ts';
 
 type UnparsedSourceConfig = UnparsedConfig<SourceType>;
 
@@ -94,8 +95,9 @@ export default class ScrobbleSources {
             } = fileDefaults;
             buildDefaults.scrobbleThresholds = {...scrobbleThresholds};
 
-            if(duration === undefined && nonEmptyStringOrDefault(scrobbleDurationEnv) !== undefined) {
-                const envDur = Number.parseInt(scrobbleDurationEnv);
+            const durationEnvVal = nonEmptyStringOrDefault(scrobbleDurationEnv);
+            if(duration === undefined && durationEnvVal !== undefined) {
+                const envDur = Number.parseInt(durationEnvVal);
                 if(Number.isNaN(envDur)) {
                     this.logger.warn(`Ignoring value '${scrobbleDurationEnv}' for env SOURCE_SCROBBLE_DURATION because it is not a number`);
                 } else {
@@ -103,8 +105,9 @@ export default class ScrobbleSources {
                     this.logger.verbose(`Set default scrobble threshold duration to '${scrobbleDurationEnv}' based on env SOURCE_SCROBBLE_DURATION`);
                 }
             }
-            if(percent === undefined && nonEmptyStringOrDefault(scrobblePercentEnv) !== undefined) {
-                const envPercent = Number.parseInt(scrobblePercentEnv);
+            const percentEnvVal = nonEmptyStringOrDefault(scrobblePercentEnv);
+            if(percent === undefined && percentEnvVal !== undefined) {
+                const envPercent = Number.parseInt(percentEnvVal);
                 if(Number.isNaN(envPercent)) {
                     this.logger.warn(`Ignoring value '${scrobblePercentEnv}' for env SOURCE_SCROBBLE_PERCENT because it is not a number`);
                 } else {
@@ -219,7 +222,7 @@ export default class ScrobbleSources {
 
             let strongConfigs: CommonParsedConfig[] = [];
             for (const entry of sourceUnparsedConfigs) {
-                let parsedConfig: CommonParsedConfig;
+                let parsedConfig!: CommonParsedConfig;
                 try {
                     switch (entry.source) {
                         case 'env': {
@@ -228,7 +231,7 @@ export default class ScrobbleSources {
                             const primitives: CommonConfigPrimitives = commonComponentEnvConfigToConfigPrimitives(configTypeUpper, parsed);
                             const parsedEnvConfigValues = envSchema.env.parse(entry.config);
                             const { data = {}, options = {}, ...rest } = envSchema.toConfig(parsedEnvConfigValues);
-                            const transformOptions = transformPresetEnv(configTypeUpper);
+                            const transformOptions = transformPresetEnv(configTypeUpper, undefined, this.logger);
                             parsedConfig = {
                                 name: `${configType} - ${entry.source}${entry.pos !== '' ? ` - ${entry.pos}` : ''} `,
                                 ...primitives,
@@ -465,27 +468,36 @@ export default class ScrobbleSources {
     }
 }
 
-const transformPresetEnv = <T extends CommonSourceOptions = CommonSourceOptions>(prefix: string, existing: T = undefined): undefined | T => {
+const transformPresetEnv = <T extends CommonSourceOptions = CommonSourceOptions>(prefix: string, existing: T | undefined = undefined, logger: Logger = loggerNoop): undefined | T => {
 
     const env = process.env[`${prefix}_TRANSFORMS`];
     if(env === undefined || env.trim() === '') {
         return existing;
     }
 
+    const preCompare: NonNullable<PlayTransformHooks<ExternalMetadataTerm>['preCompare']> = [];
     const popts: PlayTransformHooks<ExternalMetadataTerm> = {
-        preCompare: [
-        ]
+        preCompare
     }
     for(const p of env.split(',').map(x => x.trim().toLocaleLowerCase())) {
         switch(p) {
             case 'native':
-                popts.preCompare.push({type: 'native'});
+                preCompare.push({type: 'native'});
                 break;
             case 'musicbrainz':
-                popts.preCompare.push({type: 'musicbrainz'});
+                preCompare.push({type: 'musicbrainz'});
                 break;
             case 'spotify':
-                popts.preCompare.push({type: 'spotify'});
+                preCompare.push({type: 'spotify'});
+                break;
+            case 'coverartarchive':
+                preCompare.push({type: 'coverartarchive'});
+                break;
+            case 'rocksky':
+                preCompare.push({type: 'rocksky'});
+                break;
+            default:
+                logger.warn(`Unrecognized transformer type '${p} in env ${env}'`);
                 break;
         }
     }

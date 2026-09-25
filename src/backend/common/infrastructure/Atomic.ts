@@ -88,7 +88,7 @@ export interface PlayerStateDataMaybePlay {
     playUpdatedAt?: Dayjs
 }
 
-export const asPlayerStateData = (obj: object): obj is PlayerStateData => asPlayerStateDataMaybePlay(obj) && 'play' in obj && isPlayObject(obj.play)
+export const asPlayerStateData = (obj: object): obj is PlayerStateData => asPlayerStateDataMaybePlay(obj) && 'play' in obj && obj.play !== undefined && isPlayObject(obj.play)
 
 export const asPlayerStateDataMaybePlay = (obj: object): obj is PlayerStateDataMaybePlay => 'platformId' in obj
 
@@ -110,12 +110,12 @@ export type GroupedFixedPlays = TupleMap<DeviceId,PlayUserId,FixedSizeList<Progr
 
 export interface ScrobbledPlayObject {
     play: PlayObject
-    scrobble: PlayObjectMinimal
+    scrobble?: PlayObjectMinimal
 }
 
 
 export interface RemoteIdentityParts {
-    host: string,
+    host: string | undefined,
     proxy: string | undefined,
     agent: string | undefined
 }

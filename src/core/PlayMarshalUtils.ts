@@ -28,7 +28,7 @@ const blockedPaths: BlockPaths = [
 ];
 
 export const shouldBlock = (ctx: TraverseContext): boolean => {
-  if (blockedKeys.includes(ctx.key)) {
+  if (ctx.key !== undefined && blockedKeys.includes(ctx.key)) {
     return true;
   }
   return blockedPaths.some((x) => {
@@ -55,7 +55,7 @@ export const asJsonPlayObject = (play: AmbPlayObject<DateLike>): JsonPlayObject 
   return cloned as unknown as JsonPlayObject;
 };
 
-export type SerializablePlaySelect = Replace<MarkOptional<PlayApiCommonDetailed, 'queueStates'>, 'error', ErrorObject> & {queueStates?: Replace<ElementOf<PlayApiCommonDetailed['queueStates']>, 'error', ErrorObject>[]};
+export type SerializablePlaySelect = Replace<MarkOptional<PlayApiCommonDetailed, 'queueStates'>, 'error', ErrorObject> & {queueStates?: Replace<ElementOf<PlayApiCommonDetailed['queueStates']>, 'error', ErrorObject | undefined>[]};
 export const asSerializablePlaySelect = (data: MarkOptional<PlayApiCommonDetailed, 'queueStates'>): SerializablePlaySelect => {
   const {
     error,

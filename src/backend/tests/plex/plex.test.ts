@@ -41,7 +41,7 @@ const playWithMeta = (meta: PlayMeta): PlayerStateDataMaybePlay => {
     ...validPlayerState,
     platformId: [deviceId ?? platformId[0], user ?? platformId[1]],
     play: {
-        ...validPlayerState.play,
+        ...validPlayerState.play!,
         meta: {
             ...validPlayerState.play?.meta,
             ...meta

@@ -64,7 +64,7 @@ export const parseStageConfig = (data: NativeTransformerData | undefined, logger
         data.artistsIgnore = asArray(data.artistsIgnore);
         const nonStr = data.artistsIgnore.filter(x => typeof x !== 'string');
         if (nonStr.length > 0) {
-            throw new Error(`ignoreArtists must be an array of strings but non-strings found: ${nonStr.map(x => (x as unknown).toString()).join(' | ')}`)
+            throw new Error(`ignoreArtists must be an array of strings but non-strings found: ${nonStr.map(x => (x as any).toString()).join(' | ')}`)
         }
         config.ignoreArtistsRegex = [];
         for (const i of data.artistsIgnore) {
@@ -106,7 +106,7 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
 
     ignoreArtistsRegex: RegExp[] = [];
     delimiters?: string[]
-    parseArtistsFrom: ArtistParseSource[]
+    parseArtistsFrom!: ArtistParseSource[]
 
     public constructor(config: NativeTransformerConfig, options: TransformerOptions) {
         super(config, options);
@@ -128,7 +128,7 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
             type: 'native'
         }
 
-        for (const k of ['artists', 'albumArtists', 'title', 'album']) {
+        for (const k of ['artists', 'albumArtists', 'title', 'album'] as const) {
             if (!(k in stage)) {
                 stage[k] = true;
                 continue;
@@ -190,8 +190,7 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
         return play.data.album;
     }
 
-    public notify(payload: WebhookPayload): Promise<void> {
-        return;
+    public async notify(payload: WebhookPayload): Promise<void> {
     }
 
 }
@@ -211,11 +210,15 @@ export const nativeParse = (play: PlayObject, options?: NativeTransformerDataStr
 
         if(artistsParseFrom.includes('artists')) {
 
-            if(play.data.artists.length === 1 || (play.data.artists.length > 1 && artistsParseMonolithicOnly === false)) {
+            const playArtists = play.data.artists ?? [];
+            if(playArtists.length === 1 || (playArtists.length > 1 && artistsParseMonolithicOnly === false)) {
 
-                for(const artist of play.data.artists) {
+                for(const artist of playArtists) {
                 
-                    const matchedIgnoreArtists = ignoreArtistsRegex.map(x => ({reg: x.toString(), res: parseRegexSingle(x, artist.name)})).filter(x => x.res !== undefined);
+                    const matchedIgnoreArtists = ignoreArtistsRegex.flatMap(x => {
+                        const res = parseRegexSingle(x, artist.name);
+                        return res !== undefined ? [{reg: x.toString(), res}] : [];
+                    });
                     if(matchedIgnoreArtists.length > 0) {
                         logger.debug(`Will not parse artist because it matched an ignore regex:\n${matchedIgnoreArtists.map(x => `Reg: ${x.reg} => ${x.res.match}`).join('\n')}`);
                         artists.push(artist);
@@ -226,7 +229,7 @@ export const nativeParse = (play: PlayObject, options?: NativeTransformerDataStr
                                 artists.push({name: artistCredits.primary});
                             }
                             if (artistCredits.secondary !== undefined) {
-                                artists = artists.concat(artistCredits.secondary.map(artistNameToCredit));
+                                artists = artists.concat(artistCredits.secondary.map((x) => artistNameToCredit(x)));
                             }
                         } else {
                             // couldn't parse anything from artist string, use as-is
@@ -239,22 +242,22 @@ export const nativeParse = (play: PlayObject, options?: NativeTransformerDataStr
             } else {
                 // user does not want to try to parse artists when we already have more than one artist string
                 // -- likely this is because the user knows the artist data is already good and shouldn't be modified
-                artists = play.data.artists;
+                artists = playArtists;
             }
 
         }
 
         if(artistsParseFrom.includes('title')) {
-            const trackArtists = parseTrackCredits(play.data.track, delimiters);
+            const trackArtists = play.data.track !== undefined ? parseTrackCredits(play.data.track, delimiters) : undefined;
             if (trackArtists !== undefined && trackArtists.secondary !== undefined) {
-                artists = artists.concat(trackArtists.secondary.map(artistNameToCredit));
+                artists = artists.concat(trackArtists.secondary.map((x) => artistNameToCredit(x)));
                 if(titleClean) {
                     track = trackArtists.primary;
                 }
             }
         }
 
-        artists = (uniqueNormalizedStrArr([...artists.map(artistCreditToName)])).map(artistNameToCredit);
+        artists = (uniqueNormalizedStrArr([...artists.map((x) => artistCreditToName(x))])).map((x) => artistNameToCredit(x));
 
         return {
             ...play,

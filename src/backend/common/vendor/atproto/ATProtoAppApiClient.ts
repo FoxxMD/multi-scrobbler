@@ -40,18 +40,20 @@ export class ATProtoAppApiClient extends ATProtoAuthenticatedApiClient {
                     },
                 });
                 this.client = new Client({ handler: session });
+                return true;
             } catch (e) {
                 this.logger.warn(new Error('Could not resume app password session from data', { cause: e }));
                 return false;
             }
         }
+        return false;
     }
 
     protected async saveSession(data: PasswordSessionData): Promise<void> {
         await this.cache.cacheAuth.set(`appPwSessionCute-${this.name}-${this.userData.did}`, data, '1000h');
     }
 
-    protected async getSession(): Promise<PasswordSessionData> {
+    protected async getSession(): Promise<PasswordSessionData | undefined> {
         return await this.cache.cacheAuth.get<PasswordSessionData>(`appPwSessionCute-${this.name}-${this.userData.did}`);
     }
 
@@ -80,7 +82,7 @@ export class ATProtoAppApiClient extends ATProtoAuthenticatedApiClient {
 
             this.client = new Client({ handler: session });
             return true;
-        } catch (e) {
+        } catch (e: any) {
             throw await this.handleError(e);
         }
     }

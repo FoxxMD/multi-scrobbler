@@ -52,6 +52,9 @@ export class CoolPlayerSource extends MemorySource {
             } = {}
         } = this.config;
 
+        if(baseUrl === undefined) {
+            throw new Error('baseUrl must be defined');
+        }
         if(!baseUrl.includes('/api')) {
             this.logger.warn('Cool Player connections usually have an /api prefix but none was detected!');
             // may also want to throw here instead if this is show stopping:

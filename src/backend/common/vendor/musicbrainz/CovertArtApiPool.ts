@@ -25,7 +25,7 @@ export class CoverArtClientPool extends AbstractApiClient {
 
         const usedApis: CoverArtApiClient[] = [];
         const hosts: string[] = [];
-        for (const apiConfig of this.config.apis) {
+        for (const apiConfig of apis) {
             if ((apiConfig.enable ?? true) === false) {
                 this.logger.verbose(`Not using config for ${apiConfig.url ?? DEFAULT_CAA_URL} because it is disabled`);
                 continue;
@@ -58,7 +58,7 @@ export class CoverArtClientPool extends AbstractApiClient {
         this.proxy = ProxyWithCircuitBreaker.create<CoverArtApiClient>(usedApis,() => ({
             halfOpenAfter: 30000,
             breaker: new ConsecutiveBreaker(3),
-            onFailure: ({reason, duration}) => {
+            onFailure: ({reason, duration}: any) => {
                 this.logger.warn(new SimpleError(`Error occurred after ${duration}ms, will try next host`, {cause: reason, shortStack: true}));
             },
         }), {

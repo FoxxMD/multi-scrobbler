@@ -243,9 +243,9 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
     declare config: MusicbrainzTransformerConfig;
 
-    protected defaults: MusicbrainzTransformerDataStrong;
+    protected defaults!: MusicbrainzTransformerDataStrong;
 
-    protected api: MusicbrainzApiClientPool;
+    protected api!: MusicbrainzApiClientPool;
     protected clientCache?: Cacheable;
 
     public constructor(config: MusicbrainzTransformerConfig, options: TransformerOptions & {clientCache?: Cacheable}) {
@@ -260,7 +260,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
     protected async doBuildInitData(): Promise<true | string | undefined> {
         this.defaults = parseStageConfig(this.config.defaults, childLogger(this.logger, 'Defaults'));
 
-        this.api = new MusicbrainzApiClientPool(this.config.name, {apis: this.config.data.apis}, {
+        this.api = new MusicbrainzApiClientPool(this.config.name, {apis: this.config.data?.apis ?? [{enable: true}]}, {
             logger: this.logger,
             cache: this.clientCache,
             logUrl: this.config.options?.logUrl
@@ -280,7 +280,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             type: 'musicbrainz'
         }
 
-        for (const k of ['artists', 'albumArtists', 'title', 'album', 'meta', 'duration']) {
+        for (const k of ['artists', 'albumArtists', 'title', 'album', 'meta', 'duration'] as const) {
             if (!(k in stage)) {
                 stage[k] = true;
                 continue;
@@ -333,32 +333,32 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             searchOrder = this.defaults.searchOrder ?? ['isrc', 'basic']
         } = stageConfig;
         
-        let results: IRecordingMSList;
+        let results!: IRecordingMSList;
         const queries: LifecycleInput[] = [];
 
         for(const searchType of searchOrder) {
             try {
                 switch(searchType) {
                     case 'isrc':
-                        results = await this.searchByIsrc(play, stageConfig, opts);
+                        results = (await this.searchByIsrc(play, stageConfig, opts));
                         break;
                     case 'album':
-                        results = await this.searchByAlbum(play, stageConfig, opts);
+                        results = (await this.searchByAlbum(play, stageConfig, opts));
                         break;
                     case 'artist':
-                        results = await this.searchByArtist(play, stageConfig, opts);
+                        results = (await this.searchByArtist(play, stageConfig, opts));
                         break;
                     case 'basic':
-                        results = await this.searchByBasicFields(play, stageConfig, opts);
+                        results = (await this.searchByBasicFields(play, stageConfig, opts));
                         break;
                     case 'freetext':
-                        results = await this.searchByFreeText(play, stageConfig, opts);
+                        results = (await this.searchByFreeText(play, stageConfig, opts));
                         break;
                     case 'basicorids':
-                        results = await this.searchByBasicFieldsOrMBIDs(play, stageConfig, opts);
+                        results = (await this.searchByBasicFieldsOrMBIDs(play, stageConfig, opts));
                         break;
                     case 'mbidrecording':
-                        results = await this.searchByRecordingMbid(play, stageConfig, opts);
+                        results = (await this.searchByRecordingMbid(play, stageConfig, opts));
                         break;
                 }
                 queries.push({type: `mbQuery-${searchType}${results.recordings.length === 0 ? '-empty' : ''}`, input: results.requestQuery});
@@ -441,54 +441,53 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         if(play.data.artists === undefined) {
             throw new SearchPrerequisiteError('Play does not have any artists');
         }
-        if(play.data.artists.length === 1) {
-            throw new SearchPrerequisiteError('Play only has one artist');
-        }
+        // only other possibility is artists is empty
+        throw new SearchPrerequisiteError('Play does not have any artists');
     }
 
     public async searchByArtist(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList> {
         const {
             searchArtistMethod = this.defaults.searchArtistMethod,
         } = stageConfig;
-            // if only one artist
-            // then its likely artist string is combined
-            if(play.data.artists !== undefined && play.data.artists.length === 1) {
-
-                if(searchArtistMethod === 'naive') {
-                    // try a naive split using any common delimiter found and use the first value as artist
-                    // -- this will likely result in a less accurate match but at least it might find something
-                    // -- usually the "primary artist" is listed first in a combined artist string so cross your fingers this works
-                    const naiveSplit = splitByFirstRegexFound(play.data.artists[0], [play.data.artists[0]]).map(x => x.trim());
-                    if(naiveSplit.length > 1) {
-                        this.logger.debug({labels: ['Parsed Artist Search']},'Searching with track + first value from artist string split');
-                        return await this.api.searchByRecording({...play, data: {
-                            ...play.data,
-                            artists: [naiveSplit[0]]
-                        }}, {using: ['title','artist']});
-                    } else {
-                        throw new SearchPrerequisiteError('Naive parsing did not produce multiple artists');
-                    }
-                } else if(searchArtistMethod === 'native') {
-                    // use MS native parsing to extract artists from artist string and title
-                    // -- cleaning title is aggressive but at this point MB has not found anything which means its likely not "proper"
-                    // IE "My Track (Cool Remix)" is a proper recording name but "My Track (feat. Someone)" is not bc MB would have removed the joiner from the name
-                    // so we do the same to hopefully get a match
-                    //
-                    // ...additionally, since MB hasn't found anything with single artist string its likely the artist name does not have a common delimiter as part of their proper name
-                    // IE "Crosby, Stills, Nash & Young" is a proper artist name with delimiters included but "My Artist & My Feat Artists" is not
-                    // so we split out all artists by all found delimiters
-                    const nativePlay = nativeParse(play, {titleClean: true, delimiters: DELIMITERS});
-                    this.logger.debug({labels: ['Parsed Artist Search']},'Searching with aggressive native parsing');
-                    return await this.api.searchByRecording(nativePlay, {using: ['title','artist'], ...opts});
-                }
+        if(play.data.artists === undefined) {
+            throw new SearchPrerequisiteError('Play does not have any artists');
+        }
+        if(play.data.artists.length > 1) {
+            throw new SearchPrerequisiteError('Play has more than one artist already');
+        }
+        if(play.data.artists.length === 0) {
+            throw new SearchPrerequisiteError('Play does not have any artists');
+        }  
+        // if only one artist
+        // then its likely artist string is combined
+        if(searchArtistMethod === 'naive') {
+            // try a naive split using any common delimiter found and use the first value as artist
+            // -- this will likely result in a less accurate match but at least it might find something
+            // -- usually the "primary artist" is listed first in a combined artist string so cross your fingers this works
+            const naiveSplit = splitByFirstRegexFound(play.data.artists[0].name, [play.data.artists[0].name]).map(x => x.trim()); 
+            if(naiveSplit.length > 1) {
+                this.logger.debug({labels: ['Parsed Artist Search']},'Searching with track + first value from artist string split');
+                return await this.api.searchByRecording({...play, data: {
+                    ...play.data,
+                    artists: [{name: naiveSplit[0]}]
+                }}, {using: ['title','artist']});
             }
-
-            if(play.data.artists === undefined) {
-                throw new SearchPrerequisiteError('Play does not have any artists');
-            }
-            if(play.data.artists.length > 1) {
-                throw new SearchPrerequisiteError('Play has more than one artist already');
-            }
+            throw new SearchPrerequisiteError('Naive parsing did not produce multiple artists');
+        }
+        if(searchArtistMethod === 'native') {
+            // use MS native parsing to extract artists from artist string and title
+            // -- cleaning title is aggressive but at this point MB has not found anything which means its likely not "proper"
+            // IE "My Track (Cool Remix)" is a proper recording name but "My Track (feat. Someone)" is not bc MB would have removed the joiner from the name
+            // so we do the same to hopefully get a match
+            //
+            // ...additionally, since MB hasn't found anything with single artist string its likely the artist name does not have a common delimiter as part of their proper name
+            // IE "Crosby, Stills, Nash & Young" is a proper artist name with delimiters included but "My Artist & My Feat Artists" is not
+            // so we split out all artists by all found delimiters
+            const nativePlay = nativeParse(play, {titleClean: true, delimiters: DELIMITERS});
+            this.logger.debug({labels: ['Parsed Artist Search']},'Searching with aggressive native parsing');
+            return await this.api.searchByRecording(nativePlay, {using: ['title','artist'], ...opts});
+        }
+        throw new SearchPrerequisiteError(`Unknown searchArtistMethod '${searchArtistMethod}'`);
     }
 
     public async searchByFreeText(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList> {
@@ -643,8 +642,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         return removeUndefinedKeys<TrackMetaIsrc>({...transformData.data.meta, isrc: transformData.data.isrc});
     }
 
-    public notify(payload: WebhookPayload): Promise<void> {
-        return;
+    public async notify(payload: WebhookPayload): Promise<void> {
     }
 
 }
@@ -668,7 +666,7 @@ export const filterByValidReleaseStatus = <T extends IRecordingMatch[]>(list: T,
             })
         }));
     return releaseFiltered.filter(x => (
-        (list.find(y => y.id === x.id).releases ?? []).length === 0 
+        (list.find(y => y.id === x.id)?.releases ?? []).length === 0 
         && releaseAllowEmpty
     ) 
     || x.releases.length > 0);
@@ -693,7 +691,7 @@ export const filterByValidReleaseGroupPrimary = <T extends IRecordingMatch[]>(li
             })
         }));
     return releaseFiltered.filter(x => (
-        (list.find(y => y.id === x.id).releases ?? []).length === 0 
+        (list.find(y => y.id === x.id)?.releases ?? []).length === 0 
         && releaseAllowEmpty
     ) 
     || x.releases.length > 0);
@@ -718,7 +716,7 @@ export const filterByValidReleaseGroupSecondary = (list: IRecordingMatch[], stag
             })
         }));
     return releaseFiltered.filter(x => (
-        (list.find(y => y.id === x.id).releases ?? []).length === 0 
+        (list.find(y => y.id === x.id)?.releases ?? []).length === 0 
         && releaseAllowEmpty
     )
     || x.releases.length > 0);
@@ -743,29 +741,30 @@ export const filterByValidReleaseCountry = (list: IRecordingMatch[], stageConfig
             })
         }));
     return releaseFiltered.filter(x => (
-        (list.find(y => y.id === x.id).releases ?? []).length === 0 
+        (list.find(y => y.id === x.id)?.releases ?? []).length === 0 
         && releaseAllowEmpty
     ) 
     || x.releases.length > 0);
 }
 
 export const filterByExplicitTrackMbid = (list: IRecordingMatch[], play: PlayObject): [IRecordingMatch[], boolean] => {
-    if (play.data.meta?.brainz?.track === undefined) {
+    const trackMbid = play.data.meta?.brainz?.track;
+    if (trackMbid === undefined) {
         return [list, false];
     }
-    let recMatch: IRecordingMatch,
+    let recMatch: IRecordingMatch | undefined,
         releaseMatchId: string;
     for (const rec of list) {
         if (recMatch !== undefined) {
             break;
         }
-        for (const rel of rec.releases) {
+        for (const rel of rec.releases ?? []) {
             if (rel.media.some(x => {
                 if(x.tracks !== undefined) {
-                    return x.tracks.some(y => y.id === play.data.meta.brainz.track);
+                    return x.tracks.some(y => y.id === trackMbid);
                 }
                 if(x.track !== undefined) {
-                    return x.track.some(y => y.id === play.data.meta.brainz.track);
+                    return x.track.some(y => y.id === trackMbid);
                 }
                 return false;
             })) {
@@ -777,24 +776,25 @@ export const filterByExplicitTrackMbid = (list: IRecordingMatch[], play: PlayObj
     }
     if (recMatch !== undefined) {
         const r = structuredClone(recMatch);
-        r.releases = r.releases.filter(x => x.id === releaseMatchId);
+        r.releases = (r.releases ?? []).filter(x => x.id === releaseMatchId);
         return [[r], true];
     }
     return [list, false];
 }
 
 export const filterByExplicitReleaseMbid = (list: IRecordingMatch[], play: PlayObject): [IRecordingMatch[], boolean] => {
-    if (play.data.meta?.brainz?.album === undefined) {
+    const albumMbid = play.data.meta?.brainz?.album;
+    if (albumMbid === undefined) {
         return [list, false];
     }
-    let recMatch: IRecordingMatch,
+    let recMatch: IRecordingMatch | undefined,
         releaseMatchId: string;
     for (const rec of list) {
         if (recMatch !== undefined) {
             break;
         }
-        for (const rel of rec.releases) {
-            if(rel.id === play.data.meta.brainz.album) {
+        for (const rel of rec.releases ?? []) {
+            if(rel.id === albumMbid) {
                 releaseMatchId = rel.id;
                 recMatch = rec;
             }
@@ -802,7 +802,7 @@ export const filterByExplicitReleaseMbid = (list: IRecordingMatch[], play: PlayO
     }
     if (recMatch !== undefined) {
         const r = structuredClone(recMatch);
-        r.releases = r.releases.filter(x => x.id === releaseMatchId);
+        r.releases = (r.releases ?? []).filter(x => x.id === releaseMatchId);
         return [[r], true];
     }
     return [list, false];
@@ -835,7 +835,7 @@ export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: Mus
         const releases = (x.releases ?? []).map((a) => {
             const statAScore = statusPriority.findIndex(x => a.status !== undefined && x === a.status.toLocaleLowerCase()) + 1;
             const grpPAScore = groupPrimaryPriority.findIndex(x => x === a["release-group"]?.["primary-type"]?.toLocaleLowerCase()) + 1;
-            const grpSAScore = (a["release-group"]?.["secondary-types"] ?? []).reduce((acc: number, curr: MBReleaseGroupSecondaryType) => acc + groupSecPriority.findIndex(x => x === (curr as MBReleaseGroupSecondaryType).toLocaleLowerCase()) + 1,0);
+            const grpSAScore = (a["release-group"]?.["secondary-types"] ?? []).reduce((acc: number, curr: string) => acc + groupSecPriority.findIndex(x => x === (curr as MBReleaseGroupSecondaryType).toLocaleLowerCase()) + 1,0);
             const countryAScore = countryPriority.findIndex(x => a.country === undefined ? false : x === a.country.toLocaleLowerCase()) + 1;
             const compareScore = scoreNormalizedStringsWeighted(play.data.album, a.title, albumWeight, albumWeight !== 0 ? 0.05 : 0);
             return {
@@ -849,7 +849,7 @@ export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: Mus
         if(releases.length > 0) {
             albumScore = releases[0].albumCompareScore;
         }
-        const titleScore = titleWeight === 0 ? 0 : scoreTrackWeightedAndNormalized(play.data.track, x.title, titleWeight, {exact: 0.05, naive: 0.03})[0];
+        const titleScore = titleWeight === 0 ? 0 : scoreTrackWeightedAndNormalized(play.data.track ?? '', x.title, titleWeight, {exact: 0.05, naive: 0.03})[0];
 
         return {
             ...x,

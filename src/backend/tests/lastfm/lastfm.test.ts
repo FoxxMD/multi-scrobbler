@@ -59,17 +59,17 @@ describe('#LFM Track to Play', function() {
         const toArtText = generateLastfmTrackObject();
         delete toArtText.artist.name;
         expect(toArtText.artist['#text']).to.not.be.undefined;
-        expect(formatPlayObj(toArtText).data.artists[0].name).to.eq(toArtText.artist['#text']);
+        expect(formatPlayObj(toArtText).data.artists![0].name).to.eq(toArtText.artist['#text']);
 
         const toArtTextEmptyNAme = generateLastfmTrackObject();
         toArtTextEmptyNAme.artist.name = '';
         expect(toArtTextEmptyNAme.artist['#text']).to.not.be.undefined;
-        expect(formatPlayObj(toArtTextEmptyNAme).data.artists[0].name).to.eq(toArtTextEmptyNAme.artist['#text']);
+        expect(formatPlayObj(toArtTextEmptyNAme).data.artists![0].name).to.eq(toArtTextEmptyNAme.artist['#text']);
 
         const toArtName = generateLastfmTrackObject();
-        delete toArtName.artist['#text'];
+        delete (toArtName.artist as Partial<typeof toArtName.artist>)['#text'];
         expect(toArtName.artist.name).to.not.be.undefined;
-        expect(formatPlayObj(toArtName).data.artists[0].name).to.eq(toArtName.artist.name);
+        expect(formatPlayObj(toArtName).data.artists![0].name).to.eq(toArtName.artist.name);
     });
 
 });
@@ -102,7 +102,7 @@ describe('#LFM Error Response Handling', function () {
             } catch (e) {
                 const cause = findCauseByReference(e, LastFMResponseError);
                 expect(cause).is.not.undefined;
-                expect(cause.message).includes('Expected JSON response');
+                expect(cause!.message).includes('Expected JSON response');
             }
         })();
     });
@@ -133,7 +133,7 @@ describe('#LFM Error Response Handling', function () {
             } catch (e) {
                 const cause = findCauseByReference(e, SimpleError);
                 expect(cause).is.not.undefined;
-                expect(cause.message).includes('Request attempt 1 failed');
+                expect(cause!.message).includes('Request attempt 1 failed');
             }
         })();
     });

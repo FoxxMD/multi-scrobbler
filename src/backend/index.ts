@@ -49,9 +49,9 @@ output.unshift(log);
 output = output.slice(0, 301);
 });
 
-let logger: FoxLogger;
+let logger!: FoxLogger;
 
-let db: DbConcrete;
+let db!: DbConcrete;
 const dbConnectionsClosed = false;
 
 process.on('uncaughtExceptionMonitor', (err, origin) => {
@@ -120,7 +120,7 @@ const dataDir = getDataDir();
                 initLogger.verbose(`No AIO config found at ${configDir}/config.json`);
             }
         } catch (e) {
-            appConfigFail = e;
+            appConfigFail = e as Error;
         }
 
         const {
@@ -207,7 +207,8 @@ const dataDir = getDataDir();
         if(nameColl.length > 0) {
             logger.warn(`Last.FM source and clients have same names [${nameColl.map(x => x.name).join(',')}] -- this may cause issues`);
         }
-        const initOptions = {deadDelay: nonEmptyStringOrDefault(process.env.DEBUG_DEAD_DELAY, undefined) !== undefined ? Number.parseInt(process.env.DEBUG_DEAD_DELAY) : undefined};
+        const deadDelay = nonEmptyStringOrDefault(process.env.DEBUG_DEAD_DELAY, undefined);
+        const initOptions = {deadDelay: deadDelay !== undefined ? Number.parseInt(deadDelay) : undefined};
         for(const c of scrobbleClients.clients) {
             c.initTasks(initOptions);
             const res = await Promise.race([

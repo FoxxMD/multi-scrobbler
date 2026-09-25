@@ -33,7 +33,7 @@ export async function findAsync<T>(
     array: T[],
     predicate: (t: T) => Promise<boolean>): Promise<T | undefined> {
   const i = await findIndexAsync(array, predicate);
-  if(i === undefined) {
+  if(i === -1) {
     return undefined;
   }
   return array[i];
@@ -41,7 +41,7 @@ export async function findAsync<T>(
 
 export async function findIndexAsync<T>(
     array: T[],
-    predicate: (t: T) => Promise<boolean>): Promise<number | undefined> {
+    predicate: (t: T) => Promise<boolean>): Promise<number> {
   const promises = array.map(predicate);
   const results = await Promise.all(promises);
   const index = results.findIndex(result => result);
@@ -94,7 +94,7 @@ export const consumeQueueOnce = async <T>(next: () => Promise<T | undefined>, pr
         try {
           await process(item);
         } catch (err) {
-          await onError?.(err); // swallow so one bad item doesn't kill the loop
+          await onError?.(err as Error); // swallow so one bad item doesn't kill the loop
         }
       })();
       inFlight.add(task);
@@ -136,7 +136,7 @@ export const consumeQueue = async <T>(
             await process(item, qId);
             onSuccess?.(item, qId);
           } catch (err) {
-            await onError?.(err, qId); // swallow so one bad item doesn't kill the loop
+            await onError?.(err as Error, qId); // swallow so one bad item doesn't kill the loop
           }
         })();
         inFlight.add(task);

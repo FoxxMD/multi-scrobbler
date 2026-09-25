@@ -37,7 +37,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
             for(const test of noArtistMapping as unknown as LZTestFixture[]) {
                 const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers(artistCreditsToNames(play.data.artists), test.expected.artists);
+                assert.sameDeepMembers(artistCreditsToNames(play.data.artists!), test.expected.artists);
             }
         });
 
@@ -45,7 +45,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
             for(const test of veryWrong as unknown as LZTestFixture[]) {
                 const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers( artistCreditsToNames(play.data.artists), test.expected.artists);
+                assert.sameDeepMembers( artistCreditsToNames(play.data.artists!), test.expected.artists);
             }
         });
 
@@ -53,7 +53,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
             for(const test of incorrectMultiArtistsTrackName as unknown as LZTestFixture[]) {
                 const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers(artistCreditsToNames(play.data.artists), test.expected.artists);
+                assert.sameDeepMembers(artistCreditsToNames(play.data.artists!), test.expected.artists);
             }
         });
     })
@@ -65,7 +65,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
             for(const test of slightlyDifferentNames as unknown as LZTestFixture[]) {
                 const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers(artistCreditsToNames(play.data.artists), test.expected.artists);
+                assert.sameDeepMembers(artistCreditsToNames(play.data.artists!), test.expected.artists);
             }
         });
 
@@ -73,7 +73,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
             for(const test of multiMappedArtistsWithSingleUserArtist as unknown as LZTestFixture[]) {
                 const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers(artistCreditsToNames(play.data.artists), test.expected.artists);
+                assert.sameDeepMembers(artistCreditsToNames(play.data.artists!), test.expected.artists);
             }
         });
 
@@ -81,7 +81,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
             for(const test of artistWithProperJoiner as unknown as LZTestFixture[]) {
                 const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers( artistCreditsToNames(play.data.artists), test.expected.artists);
+                assert.sameDeepMembers( artistCreditsToNames(play.data.artists!), test.expected.artists);
             }
         });
 
@@ -89,7 +89,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
             for(const test of multiArtistInArtistName as unknown as LZTestFixture[]) {
                 const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers(artistCreditsToNames(play.data.artists), test.expected.artists);
+                assert.sameDeepMembers(artistCreditsToNames(play.data.artists!), test.expected.artists);
             }
         });
 
@@ -97,7 +97,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
             for(const test of multiArtistsInTrackName as unknown as LZTestFixture[]) {
                 const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers(artistCreditsToNames(play.data.artists), test.expected.artists);
+                assert.sameDeepMembers(artistCreditsToNames(play.data.artists!), test.expected.artists);
             }
         });
 
@@ -105,7 +105,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
             for(const test of normalizedValues as unknown as LZTestFixture[]) {
                 const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers(artistCreditsToNames(play.data.artists), test.expected.artists);
+                assert.sameDeepMembers(artistCreditsToNames(play.data.artists!), test.expected.artists);
             }
         });
     });
@@ -148,7 +148,7 @@ describe('Listenbrainz Response Behavior', function() {
             }
             try {
                 await client.submitListen(play);
-            } catch (e) {
+            } catch (e: any) {
                 assert.isTrue(e instanceof UpstreamError);
                 assert.isTrue(e.showStopper === false);
             }
@@ -203,13 +203,13 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []});
         const submitPayload = playToListenPayload(play);
 
-        const additionalArtists = [...submitPayload.track_metadata.additional_info.artist_names, 'Artist B'];
+        const additionalArtists = [...submitPayload.track_metadata.additional_info!.artist_names!, 'Artist B'];
 
-        submitPayload.track_metadata.additional_info.artist_names = additionalArtists;
+        submitPayload.track_metadata.additional_info!.artist_names = additionalArtists;
 
         const playFromPayload = listenPayloadToPlay(submitPayload);
 
-        expect(artistCreditsToNames(playFromPayload.data.artists)).to.be.eql(additionalArtists)
+        expect(artistCreditsToNames(playFromPayload.data.artists!)).to.be.eql(additionalArtists)
         
     });
 
@@ -220,11 +220,11 @@ describe('Listenbrainz Endpoint Behavior', function() {
 
         const additionalArtists = ['Artist A', 'Artist B'];
 
-        submitPayload.track_metadata.additional_info.artist_names = additionalArtists;
+        submitPayload.track_metadata.additional_info!.artist_names = additionalArtists;
 
         const playFromPayload = listenPayloadToPlay(submitPayload);
 
-        expect(artistCreditsToNames(playFromPayload.data.artists)).to.be.eql(['Artist A', 'Artist B'])
+        expect(artistCreditsToNames(playFromPayload.data.artists!)).to.be.eql(['Artist A', 'Artist B'])
         
     });
 
@@ -233,8 +233,8 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {source: 'Plex'});
         const submitPayload = playToListenPayload(play);
 
-        expect(submitPayload.track_metadata.additional_info.music_service_name).to.be.eql('Plex')
-
+        expect(submitPayload.track_metadata.additional_info!.music_service_name).to.be.eql('Plex')
+        
     });
 
     it('Should not include any device info as media_player by default', function() {
@@ -242,7 +242,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone'});
         const submitPayload = playToListenPayload(play);
 
-        expect(submitPayload.track_metadata.additional_info.media_player).to.be.undefined;
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.undefined;
 
     });
 
@@ -251,7 +251,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone'});
         const submitPayload = playToListenPayload(play, {allowDeviceList: {'iphone': ''}});
 
-        expect(submitPayload.track_metadata.additional_info.media_player).to.be.eql('iphone');
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.eql('iphone');
 
     });
 
@@ -260,7 +260,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone'});
         const submitPayload = playToListenPayload(play, {allowDeviceList: {'a1b2c3d4e5': 'phone'}});
 
-        expect(submitPayload.track_metadata.additional_info.media_player).to.be.eql('phone');
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.eql('phone');
 
     });
 
@@ -269,7 +269,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone'});
         const submitPayload = playToListenPayload(play, {allowDeviceList: {'iphone': '', 'a1b2c3d4e5-iphone': 'kitchen ipad'}});
 
-        expect(submitPayload.track_metadata.additional_info.media_player).to.be.eql('kitchen ipad');
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.eql('kitchen ipad');
 
     });
 
@@ -278,7 +278,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'SmithsLivingRoom-Roku'});
         const submitPayload = playToListenPayload(play, {allowDeviceList: {'iphone': '', 'android-auto': ''}});
 
-        expect(submitPayload.track_metadata.additional_info.media_player).to.be.undefined;
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.undefined;
 
     });
 
@@ -287,7 +287,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: NO_DEVICE});
         const submitPayload = playToListenPayload(play, {allowDeviceList: {[NO_DEVICE.toLocaleLowerCase()]: ''}});
 
-        expect(submitPayload.track_metadata.additional_info.media_player).to.be.undefined;
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.undefined;
 
     });
 
@@ -296,7 +296,70 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone', mediaPlayerName: 'Rhythmbox'});
         const submitPayload = playToListenPayload(play, {allowDeviceList: {'iphone': ''}});
 
-        expect(submitPayload.track_metadata.additional_info.media_player).to.be.eql('Rhythmbox');
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.eql('Rhythmbox');
+
+    });
+
+    it('Should not include any device info as media_player by default', function() {
+
+        const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone'});
+        const submitPayload = playToListenPayload(play);
+
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.undefined;
+
+    });
+
+    it('Should submit the allowlist KEY, never the raw device id, when the label is empty', function() {
+
+        const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone'});
+        const submitPayload = playToListenPayload(play, {allowDeviceList: {'iphone': ''}});
+
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.eql('iphone');
+
+    });
+
+    it('Should submit the allowlist LABEL when the key has one', function() {
+
+        const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone'});
+        const submitPayload = playToListenPayload(play, {allowDeviceList: {'a1b2c3d4e5': 'phone'}});
+
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.eql('phone');
+
+    });
+
+    it('Should prefer the most specific (longest) matching key regardless of order', function() {
+
+        const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone'});
+        const submitPayload = playToListenPayload(play, {allowDeviceList: {'iphone': '', 'a1b2c3d4e5-iphone': 'kitchen ipad'}});
+
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.eql('kitchen ipad');
+
+    });
+
+    it('Should not report devices that are not enumerated in the allowlist', function() {
+
+        const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'SmithsLivingRoom-Roku'});
+        const submitPayload = playToListenPayload(play, {allowDeviceList: {'iphone': '', 'android-auto': ''}});
+
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.undefined;
+
+    });
+
+    it('Should not report a device when the device is not known', function() {
+
+        const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: NO_DEVICE});
+        const submitPayload = playToListenPayload(play, {allowDeviceList: {[NO_DEVICE.toLocaleLowerCase()]: ''}});
+
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.undefined;
+
+    });
+
+    it('Should prefer mediaPlayerName over the allowlist label for media_player', function() {
+
+        const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone', mediaPlayerName: 'Rhythmbox'});
+        const submitPayload = playToListenPayload(play, {allowDeviceList: {'iphone': ''}});
+
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.eql('Rhythmbox');
 
     });
 
@@ -304,7 +367,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
 
         const playFromPayload = listenPayloadToPlay(submit);
 
-        expect(artistCreditsToNames(playFromPayload.data.artists)).to.be.eql(submit.track_metadata.additional_info.artist_names);
+        expect(artistCreditsToNames(playFromPayload.data.artists!)).to.be.eql(submit.track_metadata.additional_info!.artist_names);
 
     });
 

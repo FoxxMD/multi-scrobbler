@@ -259,7 +259,7 @@ describe('Compare lists by order', function () {
 
             it('matches identical plays with close timestamps', function() {
                 const closePlay = clone(newPlay);
-                closePlay.data.playDate = closePlay.data.playDate.add(3, 's');
+                closePlay.data.playDate = closePlay.data.playDate!.add(3, 's');
                 expect(genericSourcePlayMatch(newPlay, closePlay)).to.be.true;
             });
 
@@ -275,7 +275,7 @@ describe('Compare lists by order', function () {
 
             it('does not match unique plays with close timestamps', function() {
                 const diffPlay = generatePlay();
-                diffPlay.data.playDate = newPlay.data.playDate.add(3, 's');
+                diffPlay.data.playDate = newPlay.data.playDate!.add(3, 's');
                 expect(genericSourcePlayMatch(newPlay, diffPlay)).to.be.false;
             });
         });

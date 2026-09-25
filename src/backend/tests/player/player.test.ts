@@ -24,7 +24,7 @@ const newPlay = generatePlay({duration: 300});
 const testState = (data: Omit<PlayerStateDataMaybePlay, 'platformId'>): PlayerStateDataMaybePlay => ({...data, platformId: SINGLE_USER_PLATFORM_ID});
 
 class TestPositionalPlayerState extends PositionalPlayerState {
-    protected newListenRange(start?: ListenProgressPositional, end?: ListenProgressPositional, options: object = {}): ListenRangePositional {
+    protected newListenRange(start: ListenProgressPositional, end?: ListenProgressPositional, options: object = {}): ListenRangePositional {
         const range = super.newListenRange(start, end, {allowedDrift: this.allowedDrift, rtImmediate: false, rtTruth: this.rtTruth, ...options});
         return range;
     }
@@ -65,13 +65,13 @@ describe('Basic player state', function () {
 
         player.update(testState({play: newPlay}));
 
-        assert.isTrue(playObjDataMatch(player.currentPlay, newPlay));
+        assert.isTrue(playObjDataMatch(player.currentPlay!, newPlay));
 
-        const nextPlay = generatePlay({playDate: newPlay.data.playDate.add(2, 'seconds')});
+        const nextPlay = generatePlay({playDate: newPlay.data.playDate!.add(2, 'seconds')});
         const [returnedPlay, prevPlay] = player.update(testState({play: nextPlay}));
 
-        assert.isTrue(playObjDataMatch(prevPlay, newPlay));
-        assert.isTrue(playObjDataMatch(player.currentPlay, nextPlay));
+        assert.isTrue(playObjDataMatch(prevPlay!, newPlay));
+        assert.isTrue(playObjDataMatch(player.currentPlay!, nextPlay));
     });
 });
 
@@ -127,7 +127,7 @@ describe('Player status', function () {
 
             player.update(testState({play: positioned, position: 3}));
 
-            player.currentListenRange.rtPlayer.setPosition(13000);
+            player.currentListenRange!.rtPlayer.setPosition(13000);
             player.update(testState({play: positioned, position: 13}), dayjs().add(10, 'seconds'));
 
             assert.equal(CALCULATED_PLAYER_STATUSES.playing, player.calculatedStatus);
@@ -141,10 +141,10 @@ describe('Player status', function () {
 
             player.update(testState({play: positioned, position: 3}));
 
-            player.currentListenRange.rtPlayer.setPosition(13000);
+            player.currentListenRange!.rtPlayer.setPosition(13000);
             player.update(testState({play: positioned, position: 13}), dayjs().add(10, 'seconds'));
 
-            player.currentListenRange.rtPlayer.setPosition(23000);
+            player.currentListenRange!.rtPlayer.setPosition(23000);
             player.update(testState({play: positioned, position: 13}), dayjs().add(20, 'seconds'));
 
             assert.equal(CALCULATED_PLAYER_STATUSES.paused, player.calculatedStatus);
@@ -158,15 +158,15 @@ describe('Player status', function () {
 
             player.update(testState({play: positioned, position: 3}));
 
-            player.currentListenRange.rtPlayer.setPosition(13000);
+            player.currentListenRange!.rtPlayer.setPosition(13000);
             player.update(testState({play: positioned, position: 13}), dayjs().add(10, 'seconds'));
 
-            player.currentListenRange.rtPlayer.setPosition(23000);
+            player.currentListenRange!.rtPlayer.setPosition(23000);
             player.update(testState({play: positioned, position: 23}), dayjs().add(20, 'seconds'));
 
             const staleDate = dayjs().add(41, 'seconds')
-            player.currentListenRange.rtPlayer.setPosition(44000);
-            expect(player.currentListenRange.isOverDrifted(23)).to.be.true;
+            player.currentListenRange!.rtPlayer.setPosition(44000);
+            expect(player.currentListenRange!.isOverDrifted(23)).to.be.true;
 
             expect(player.checkStale(staleDate)).to.be.true;
             expect(player.listenRanges[player.listenRanges.length - 1].end.position).to.eq(23);
@@ -236,7 +236,7 @@ describe('Player listen ranges', function () {
 
             player.update(testState({play: positioned, position: 3}));
 
-            player.currentListenRange.rtPlayer.setPosition(10000);
+            player.currentListenRange!.rtPlayer.setPosition(10000);
             player.update(testState({play: positioned, position: 10}), dayjs().add(10, 'seconds'));
 
             assert.equal(player.getListenDuration(), 7);
@@ -250,7 +250,7 @@ describe('Player listen ranges', function () {
 
             player.update(testState({play: positioned, position: 3}));
 
-            player.currentListenRange.rtPlayer.setPosition(10000);
+            player.currentListenRange!.rtPlayer.setPosition(10000);
             player.update(testState({play: positioned, position: 10}), dayjs().add(10, 'seconds'));
 
             assert.equal(player.getListenDuration(), 7);
@@ -264,15 +264,15 @@ describe('Player listen ranges', function () {
 
             player.update(testState({play: positioned, position: 3, status: REPORTED_PLAYER_STATUSES.playing}));
 
-            player.currentListenRange.rtPlayer.setPosition(10000);
+            player.currentListenRange!.rtPlayer.setPosition(10000);
             player.update(testState({play: positioned, position: 10, status: REPORTED_PLAYER_STATUSES.playing}), dayjs().add(10, 'seconds'));
 
-            player.currentListenRange.rtPlayer.setPosition(20000);
+            player.currentListenRange!.rtPlayer.setPosition(20000);
             player.update(testState({play: positioned, position: 20, status: REPORTED_PLAYER_STATUSES.playing}), dayjs().add(20, 'seconds'));
 
             const otherPlay = clone(positioned);
             otherPlay.data.track = "A New Track";
-            player.currentListenRange.rtPlayer.setPosition(30000);
+            player.currentListenRange!.rtPlayer.setPosition(30000);
             const [currPlay, prevPlay] = player.update(testState({play: otherPlay, position: 2, status: REPORTED_PLAYER_STATUSES.playing}), dayjs().add(30, 'seconds'));
 
             assert.isDefined(prevPlay);
@@ -285,7 +285,7 @@ describe('Player listen ranges', function () {
             const positioned = clone(newPlay);
             player.update(testState({play: positioned, position: 3}));
 
-            player.currentListenRange.rtPlayer.setPosition(10000);
+            player.currentListenRange!.rtPlayer.setPosition(10000);
             player.update(testState({play: positioned, position: 3}), dayjs().add(10, 'seconds'));
 
             assert.equal(player.getListenDuration(), 0);
@@ -297,17 +297,17 @@ describe('Player listen ranges', function () {
             const positioned = clone(newPlay);
             player.update(testState({play: positioned, position: 3}));
 
-            player.currentListenRange.rtPlayer.setPosition(7000);
+            player.currentListenRange!.rtPlayer.setPosition(7000);
             player.update(testState({play: positioned, position: 7}), dayjs().add(4, 'seconds'));
 
 
-            player.currentListenRange.rtPlayer.setPosition(23000);
+            player.currentListenRange!.rtPlayer.setPosition(23000);
             player.update(testState({play: positioned, position: 23}), dayjs().add(20, 'seconds'));
 
-            player.currentListenRange.rtPlayer.setPosition(33000);
+            player.currentListenRange!.rtPlayer.setPosition(33000);
             player.update(testState({play: positioned, position: 33}), dayjs().add(30, 'seconds'));
 
-            player.currentListenRange.rtPlayer.setPosition(43000);
+            player.currentListenRange!.rtPlayer.setPosition(43000);
             player.update(testState({play: positioned, position: 43}), dayjs().add(40, 'seconds'));
 
             assert.equal(player.getListenDuration(), 40);
@@ -322,11 +322,11 @@ describe('Player listen ranges', function () {
                 player.update(testState({play: positioned, position: 3}));
 
                 positioned.meta.trackProgressPosition = 13;
-                player.currentListenRange.rtPlayer.setPosition(13000);
+                player.currentListenRange!.rtPlayer.setPosition(13000);
                 player.update(testState({play: positioned, position: 13}), dayjs().add(10, 'seconds'));
 
-                player.currentListenRange.rtPlayer.setPosition(17000);
-                const [isSeeked, time] = player.currentListenRange.seeked(24, dayjs().add(17, 'seconds'))
+                player.currentListenRange!.rtPlayer.setPosition(17000);
+                const [isSeeked, time] = player.currentListenRange!.seeked(24, dayjs().add(17, 'seconds'))
                 assert.isTrue(isSeeked);
                 assert.equal(time, 7000)
             });
@@ -337,11 +337,11 @@ describe('Player listen ranges', function () {
                 const positioned = clone(newPlay);
                 player.update(testState({play: positioned, position: 3}));
 
-                player.currentListenRange.rtPlayer.setPosition(13000);
+                player.currentListenRange!.rtPlayer.setPosition(13000);
                 player.update(testState({play: positioned, position: 13}), dayjs().add(10, 'seconds'));
 
-                player.currentListenRange.rtPlayer.setPosition(17000);
-                const [isSeeked, time] = player.currentListenRange.seeked(10, dayjs().add(17, 'seconds'))
+                player.currentListenRange!.rtPlayer.setPosition(17000);
+                const [isSeeked, time] = player.currentListenRange!.seeked(10, dayjs().add(17, 'seconds'))
                 assert.isTrue(isSeeked);
                 assert.equal(time, -3000)
             });
@@ -355,17 +355,17 @@ describe('Player listen ranges', function () {
                 positioned.data.duration = 70;
                 player.update(testState({play: positioned, position: 45}));
 
-                player.currentListenRange.rtPlayer.setPosition(65000);
+                player.currentListenRange!.rtPlayer.setPosition(65000);
                 player.update(testState({play: positioned, position: 65}), dayjs().add(20, 'seconds'));
 
                 const isRepeat = player.testSessionRepeat(5,  dayjs().add(20, 'seconds'));
                 assert.isTrue(isRepeat);
 
-                player.currentListenRange.rtPlayer.setPosition(67000);
+                player.currentListenRange!.rtPlayer.setPosition(67000);
                 const [curr, prevPlay] = player.update(testState({play: positioned, position: 5}), dayjs().add(22, 'seconds'));
 
                 assert.isDefined(prevPlay);
-                assert.isTrue(curr.data.repeat)
+                assert.isTrue(curr!.data.repeat)
                 assert.equal(player.getListenDuration(), 0);
             });
 
@@ -377,19 +377,19 @@ describe('Player listen ranges', function () {
 
                 player.update(testState({play: positioned, position: 351}));
 
-                player.currentListenRange.rtPlayer.setPosition(361000);
+                player.currentListenRange!.rtPlayer.setPosition(361000);
                 player.update(testState({play: positioned, position: 361}), dayjs().add(10, 'seconds'));
 
-                player.currentListenRange.rtPlayer.setPosition(371000);
+                player.currentListenRange!.rtPlayer.setPosition(371000);
                 player.update(testState({play: positioned, position: 371}), dayjs().add(20, 'seconds'));
 
                 const isRepeat = player.testSessionRepeat(20,  dayjs().add(30, 'seconds'));
                 assert.isTrue(isRepeat);
 
-                player.currentListenRange.rtPlayer.setPosition(381000);
+                player.currentListenRange!.rtPlayer.setPosition(381000);
                 const [curr, prevPlay] = player.update(testState({play: positioned, position: 20}), dayjs().add(30, 'seconds'));
 
-                assert.isTrue(curr.data.repeat);
+                assert.isTrue(curr!.data.repeat);
                 assert.isDefined(prevPlay);
                 assert.equal(player.getListenDuration(), 0);
             });
@@ -402,17 +402,17 @@ describe('Player listen ranges', function () {
 
                 player.update(testState({play: positioned, position: 0}));
 
-                player.currentListenRange.rtPlayer.setPosition(40000);
+                player.currentListenRange!.rtPlayer.setPosition(40000);
                 player.update(testState({play: positioned, position: 40}), dayjs().add(40, 'seconds'));
 
                 const isRepeat = player.testSessionRepeat(2,  dayjs().add(50, 'seconds'));
                 assert.isTrue(isRepeat);
 
                 positioned.meta.trackProgressPosition = 2;
-                player.currentListenRange.rtPlayer.setPosition(50000);
+                player.currentListenRange!.rtPlayer.setPosition(50000);
                 const [curr, prevPlay] = player.update(testState({play: positioned, position: 2}), dayjs().add(50, 'seconds'));
 
-                assert.isTrue(curr.data.repeat)
+                assert.isTrue(curr!.data.repeat)
                 assert.isDefined(prevPlay);
                 assert.equal(player.getListenDuration(), 0);
             });
@@ -425,21 +425,21 @@ describe('Player listen ranges', function () {
 
                 player.update(testState({play: positioned, position: 0}));
 
-                player.currentListenRange.rtPlayer.setPosition(40000);
+                player.currentListenRange!.rtPlayer.setPosition(40000);
                 player.update(testState({play: positioned, position: 40}), dayjs().add(40, 'seconds'));
 
                 const isRepeat = player.testSessionRepeat(2,  dayjs().add(50, 'seconds'));
                 assert.isTrue(isRepeat);
 
                 positioned.meta.trackProgressPosition = 2;
-                player.currentListenRange.rtPlayer.setPosition(50000);
+                player.currentListenRange!.rtPlayer.setPosition(50000);
                 const [curr, prevPlay] = player.update(testState({play: positioned, position: 2}), dayjs().add(50, 'seconds'));
 
-                assert.isTrue(curr.data.repeat)
+                assert.isTrue(curr!.data.repeat)
                 assert.isDefined(prevPlay);
                 assert.equal(player.getListenDuration(), 0);
 
-                player.currentListenRange.rtPlayer.setPosition(55000);
+                player.currentListenRange!.rtPlayer.setPosition(55000);
                 const [currNew, prevPlayRepeat] = player.update(testState({play: generatePlay(), position: 1}), dayjs().add(55, 'seconds'));
 
                 assert.isDefined(prevPlayRepeat)

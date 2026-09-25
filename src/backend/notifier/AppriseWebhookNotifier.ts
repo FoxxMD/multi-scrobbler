@@ -17,9 +17,9 @@ export class AppriseWebhookNotifier extends AbstractWebhookNotifier {
 
     declare config: AppriseConfig;
 
-    priorities: PrioritiesConfig;
+    priorities!: PrioritiesConfig;
 
-    protected endpoint: URLData;
+    protected endpoint!: URLData;
 
     urls: string[];
     keys: string[];

@@ -104,12 +104,12 @@ describe('MusicCast State Handling', function() {
             source.connectionOK = true;
             await source.getRecentlyPlayed();
             expect(source.players.size).to.eq(1);
-            const playerState = source.players.get(source.players.keys().next().value).getApiState();
-            expect(playerState.play.data.album).to.eq('Test Album');
-            expect(playerState.play.data.track).to.eq('Cool Track');
-            expect(playerState.play.data.duration).to.eq(60);
-            expect(playerState.play.meta.trackProgressPosition).to.eq(10);
-            expect(playerState.play.meta.deviceId).to.eq('av1');
+            const playerState = source.players.get(source.players.keys().next().value!)!.getApiState();
+            expect(playerState.play!.data.album).to.eq('Test Album');
+            expect(playerState.play!.data.track).to.eq('Cool Track');
+            expect(playerState.play!.data.duration).to.eq(60);
+            expect(playerState.play!.meta.trackProgressPosition).to.eq(10);
+            expect(playerState.play!.meta.deviceId).to.eq('av1');
             expect(playerState.status.reported).to.eq(REPORTED_PLAYER_STATUSES.playing);
         }
     ));
@@ -147,11 +147,11 @@ describe('MusicCast State Handling', function() {
             source.connectionOK = true;
             await source.getRecentlyPlayed();
             expect(source.players.size).to.eq(1);
-            const playerState = source.players.get(source.players.keys().next().value).getApiState();
-            expect(playerState.play.data.album).to.eq('Test Album');
-            expect(playerState.play.data.track).to.eq('Cool Track');
-            expect(playerState.play.data.duration).to.eq(60);
-            expect(playerState.play.meta.trackProgressPosition).to.eq(10);
+            const playerState = source.players.get(source.players.keys().next().value!)!.getApiState();
+            expect(playerState.play!.data.album).to.eq('Test Album');
+            expect(playerState.play!.data.track).to.eq('Cool Track');
+            expect(playerState.play!.data.duration).to.eq(60);
+            expect(playerState.play!.meta.trackProgressPosition).to.eq(10);
             expect(playerState.status.reported).to.eq(REPORTED_PLAYER_STATUSES.playing);
         }
     ));
@@ -221,7 +221,7 @@ describe('MusicCast State Handling', function() {
             source.connectionOK = true;
             await source.getRecentlyPlayed();
             expect(source.players.size).to.eq(1);
-            const playerState = source.players.get(source.players.keys().next().value).getApiState();
+            const playerState = source.players.get(source.players.keys().next().value!)!.getApiState();
             expect(playerState.status.reported).to.eq(REPORTED_PLAYER_STATUSES.stopped);
         }
     ));

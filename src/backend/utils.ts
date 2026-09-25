@@ -231,8 +231,9 @@ export const remoteHostStr = (req: Request): string => {
  * */
 export const removeDuplicates = (plays: PlayObject[]): PlayObject[] => {
     return plays.reduce((acc: PlayObject[], currPlay: PlayObject) => {
-        if(currPlay.meta.trackId !== undefined && currPlay.meta.deviceId !== undefined && currPlay.data.playDate !== undefined) {
-            if(acc.some((x: PlayObject) => x.meta.trackId === currPlay.meta.trackId && x.meta.deviceId === currPlay.meta.deviceId && x.data.playDate.isSame(currPlay.data.playDate, 'minute'))) {
+        const currDate = currPlay.data.playDate;
+        if(currPlay.meta.trackId !== undefined && currPlay.meta.deviceId !== undefined && currDate !== undefined) {
+            if(acc.some((x: PlayObject) => x.meta.trackId === currPlay.meta.trackId && x.meta.deviceId === currPlay.meta.deviceId && x.data.playDate !== undefined && x.data.playDate.isSame(currDate, 'minute'))) {
                 // don't add current play to list if we find an existing that matches track, device, and play date
                 return acc;
             }
@@ -254,10 +255,10 @@ export const getProgress = (initial: ProgressAwarePlayObject, curr: PlayObject):
 
 export const thresholdResultSummary = (result: ScrobbleThresholdResult) => {
     const parts: string[] = [];
-    if(result.duration.passes !== undefined) {
+    if(result.duration.passes !== undefined && result.duration.value !== undefined) {
         parts.push(`tracked time of ${result.duration.value.toFixed(2)}s (wanted ${result.duration.threshold}s)`);
     }
-    if(result.percent.passes !== undefined) {
+    if(result.percent.passes !== undefined && result.percent.value !== undefined) {
         parts.push(`tracked percent of ${(result.percent.value).toFixed(2)}% (wanted ${result.percent.threshold}%)`)
     }
 
@@ -435,7 +436,7 @@ export const getFirstNonEmptyVal = <T = unknown>(values: unknown[], options: Non
     for(const v of values) {
         const nonEmptyVal = getNonEmptyVal(v, options);
         if(nonEmptyVal !== undefined) {
-            return nonEmptyVal as T;
+            return nonEmptyVal as NonNullable<T>;
         }
     }
     return undefined;
@@ -451,7 +452,7 @@ export const getNonEmptyVal = <T = unknown>(value: unknown, options: NonEmptyOpt
     if (options.test !== undefined && options.test(value as T) === false) {
         return undefined;
     }
-    return value as T;
+    return value as NonNullable<T>;
 }
 
 const nonEmptyStringOpts: NonEmptyOptions<string> = { ofType: 'string', test: (v) => v.trim() !== '' };

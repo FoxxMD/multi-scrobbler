@@ -2,13 +2,14 @@ import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
 import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
 import { SimpleError } from "../../../errors/MSErrors.ts";
+import { envMetaNormalize } from "../../../../utils/ZodUtils.ts";
 
 export const appleMusicKeySchema = z.object({
     id: z.string(),
     teamId: z.string(),
     p8: z.string()
 });
-const envKeyKeys = ['APPLEMUSIC_KEY_ID','APPLEMUSIC_KEY_P8','APPLEMUSIC_TEAM_ID'];
+const envKeyKeys = ['APPLEMUSIC_KEY_ID','APPLEMUSIC_KEY_P8','APPLEMUSIC_TEAM_ID'] as const;
 
 export type AppleMusicKey = z.infer<typeof appleMusicKeySchema>;
 
@@ -107,9 +108,9 @@ const envDataSchema = z.object({
     APPLEMUSIC_MEDIA_USER_TOKEN: appleMusicDataSchema.shape.mediaUserToken,
     APPLEMUSIC_TOKEN: appleMusicDataSchema.shape.token.optional(),
     APPLEMUSIC_ORIGIN_HEADER: appleMusicDataSchema.shape.origin,
-    APPLEMUSIC_RECOVER_UNCHANGED_TOP_HISTORY: z.stringbool().optional().meta(appleMusicOptions.shape.recoverUnchangedTopHistory.meta()),
-    APPLEMUSIC_NORMALIZE_ALBUM: z.stringbool().optional().meta(appleMusicOptions.shape.normalizeAlbum.meta()),
-    APPLEMUSIC_ENRICH_ISRC: z.stringbool().optional().meta(appleMusicOptions.shape.enrichIsrc.meta())
+    APPLEMUSIC_RECOVER_UNCHANGED_TOP_HISTORY: z.stringbool().optional().meta(envMetaNormalize(appleMusicOptions.shape.recoverUnchangedTopHistory.meta())),
+    APPLEMUSIC_NORMALIZE_ALBUM: z.stringbool().optional().meta(envMetaNormalize(appleMusicOptions.shape.normalizeAlbum.meta())),
+    APPLEMUSIC_ENRICH_ISRC: z.stringbool().optional().meta(envMetaNormalize(appleMusicOptions.shape.enrichIsrc.meta()))
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, AppleMusicSourceConfig> = {
@@ -120,16 +121,16 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, AppleMusicSourceC
         let token: string | undefined;
         let origin: string | undefined;
         if(envKeyKeys.some(x => partial[x] !== undefined)) {
-            for(const k of envKeyKeys) {
-                if(partial[k] === undefined) {
-                    throw new SimpleError(`ENV ${k} is not defined but when providing auth via MusicKit Key you must provide all of these: ${envKeyKeys.join(', ')}`);
-                }
-                appleMusicKey = {
-                    id: partial.APPLEMUSIC_KEY_ID,
-                    teamId: partial.APPLEMUSIC_TEAM_ID,
-                    p8: partial.APPLEMUSIC_KEY_P8
-                };
+            const {
+                APPLEMUSIC_KEY_ID: id,
+                APPLEMUSIC_TEAM_ID: teamId,
+                APPLEMUSIC_KEY_P8: p8
+            } = partial;
+            if(id === undefined || teamId === undefined || p8 === undefined) {
+                const missing = envKeyKeys.filter(k => partial[k] === undefined);
+                throw new SimpleError(`ENV ${missing.join(', ')} is not defined but when providing auth via MusicKit Key you must provide all of these: ${envKeyKeys.join(', ')}`);
             }
+            appleMusicKey = {id, teamId, p8};
         } else {
             token = partial.APPLEMUSIC_TOKEN;
             if(token === undefined) {

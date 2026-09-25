@@ -24,7 +24,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
 
     constructor(name: any, config: ListenBrainzClientConfig, options = {}, emitter: EventEmitter, logger: Logger) {
         super('listenbrainz', name, config, emitter, logger);
-        this.api = new ListenbrainzApiClient(name, {...config.data, allowDeviceList: config.options.allowDeviceList}, {logger: this.logger});
+        this.api = new ListenbrainzApiClient(name, {...config.data, allowDeviceList: config.options?.allowDeviceList}, {logger: this.logger});
         // https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(user_name)-listens
         // 1000 is way too high. maxing at 100
         this.MAX_INITIAL_SCROBBLES_FETCH = DEFAULT_MS_ITEMS_PER_GET_LZ;
@@ -90,7 +90,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
                 this.logger.info(`Scrobbled (Backlog) => (${source}) ${buildTrackString(playObj)}`);
             }
             return result;
-        } catch (e) {
+        } catch (e: any) {
             await this.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             throw e;
         }
@@ -99,6 +99,9 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
     doPlayingNow = async (data: SourcePlayerObj) => {
         // listenbrainz shows Now Playing for the same time as the duration of the track being submitted
         try {
+            if(data.play === undefined) {
+                return;
+            }
             await this.api.submitListen(data.play, { listenType: 'playing_now'});
         } catch (e) {
             throw e;

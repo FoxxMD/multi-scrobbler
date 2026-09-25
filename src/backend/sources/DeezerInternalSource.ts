@@ -68,9 +68,9 @@ export default class DeezerInternalSource extends MemorySource {
     requiresAuthInteraction = false;
     isSubAccount: boolean = false;
 
-    authedAccount: DeezerAuthedUserData;
+    authedAccount!: DeezerAuthedUserData;
 
-    accounts?: DeezerAccountData[] = []
+    accounts: DeezerAccountData[] = []
 
     csrfToken?: string;
 
@@ -180,18 +180,19 @@ export default class DeezerInternalSource extends MemorySource {
                 }
             } else {
                 const enumerated = await this.enumerateChildAccounts();
-                if(this.config.data.accountId !== undefined) {
+                const {accountId} = this.config.data;
+                if(accountId !== undefined) {
                     if(!enumerated) {
                         this.logger.warn('Unable to verify if account history is available for accountId due to enumeration issue.');
                     } else {
-                        const requestedAccount = this.accounts.find(x => x.USER_ID === this.config.data.accountId);
+                        const requestedAccount = this.accounts.find(x => x.USER_ID === accountId);
                         if(requestedAccount === undefined) {
                             this.logger.warn(`Could not find a linked account matching ${this.config.data.accountId}. History fetching may fail.`);
                         } else {
                             const authedAccount = this.accounts.find(x => x.USER_ID === this.authedAccount.USER.USER_ID);
-                            if(!authedAccount.EXTRA_FAMILY.IS_LOGGABLE_AS && this.config.data.accountId !== this.authedAccount.USER.USER_ID) {
+                            if(authedAccount !== undefined && !authedAccount.EXTRA_FAMILY?.IS_LOGGABLE_AS && accountId !== this.authedAccount.USER.USER_ID) {
                                 this.logger.warn(`Authed Account (${this.authedAccount.USER.USER_ID}) is private and specified accountId is not the same (${this.config.data.accountId}), likely history returned will not be correct.`);
-                            } else if(!requestedAccount.EXTRA_FAMILY.IS_LOGGABLE_AS) {
+                            } else if(!requestedAccount.EXTRA_FAMILY?.IS_LOGGABLE_AS) {
                                 this.logger.warn('Account specified by accountId is private, likely returned will not be correct!');
                             }
                         }
@@ -234,7 +235,7 @@ export default class DeezerInternalSource extends MemorySource {
             }
             const nonSong = resp.results.data.filter(x => x.__TYPE__ !== 'song');
             if (nonSong.length > 0) {
-                const nonSongTypes = [];
+                const nonSongTypes: string[] = [];
                 for (const n of nonSong) {
                     if (!nonSongTypes.includes(n.__TYPE__)) {
                         nonSongTypes.push(n.__TYPE__);
@@ -258,7 +259,7 @@ export default class DeezerInternalSource extends MemorySource {
             this.accounts = resp;
             const accountSummaries: string[] = [];
             for(const a of this.accounts) {
-                accountSummaries.push(`Name: ${a.BLOG_NAME} | ID: ${a.USER_ID} | Private?: ${a.EXTRA_FAMILY.IS_LOGGABLE_AS ? 'No' : 'Yes'}`);
+                accountSummaries.push(`Name: ${a.BLOG_NAME} | ID: ${a.USER_ID} | Private?: ${a.EXTRA_FAMILY?.IS_LOGGABLE_AS ? 'No' : 'Yes'}`);
             }
             this.logger.verbose(`Linked Accounts:\n${accountSummaries.join('\n')}`)
             return true;
@@ -290,11 +291,11 @@ export default class DeezerInternalSource extends MemorySource {
         }
     }
 
-    callApi = async (req: request.SuperAgentRequest, retries = 0) => {
+    callApi = async (req: request.SuperAgentRequest, retries = 0): Promise<any> => {
         const {
             maxRequestRetries = 1,
             retryMultiplier = DEFAULT_RETRY_MULTIPLIER
-        } = this.config.options;
+        } = this.config.options ?? {};
 
         req.query({
             input: 3,
@@ -318,7 +319,7 @@ export default class DeezerInternalSource extends MemorySource {
                 throw  err;
             }
             return resp.body;
-        } catch (e) {
+        } catch (e: any) {
             if(retries < maxRequestRetries) {
                 const retryAfter = parseRetryAfterSecsFromObj(e) ?? (retryMultiplier * (retries + 1));
                 this.logger.warn(`Request failed but retries (${retries}) less than max (${maxRequestRetries}), retrying request after ${retryAfter} seconds...`);
@@ -337,7 +338,7 @@ export default class DeezerInternalSource extends MemorySource {
     protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) => await this.getRecentlyPlayed({formatted: true, ...options})
 
 
-    async existingDiscovered(play: PlayObject): Promise<PlayMatchResult | undefined> {
+    async existingDiscovered(play: PlayObject): Promise<PlayMatchResult> {
         const list: PlayObject[] = await this.getRecentPlays();
         const candidate = await this.transformPlay(play, TRANSFORM_HOOK.candidate);
         const existing = await findAsync(list, async x => {
@@ -355,20 +356,20 @@ export default class DeezerInternalSource extends MemorySource {
             }
         }
         if(this.config.options?.fuzzyDiscoveryIgnore === true || this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {
-            const fuzzyIndex = await findIndexAsync(list, async x => {
+            const fuzzyIndex = (await findIndexAsync(list, async x => {
                 const e = await this.transformPlay(x, TRANSFORM_HOOK.existing);
                 let temporalOptions: TemporalPlayComparisonOptions = {};
                 const temporalAccuracy: TemporalAccuracy[] = [TA_EXACT, TA_CLOSE, TA_FUZZY];
                 if(this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {
                     temporalOptions = {
-                        fuzzyDiffThreshold: Math.max(100, x.data.duration * 0.5),
+                        fuzzyDiffThreshold: x.data.duration !== undefined ? Math.max(100, x.data.duration * 0.5) : 100,
                         duringReferences: ['duration', 'listenedFor', 'range'],
                         logger: this.logger
                     }
                     temporalAccuracy.push(TA_DURING);
                 }
                 return genericSourcePlayMatch(e, candidate, temporalAccuracy, temporalOptions);
-            });
+            }));
             if(fuzzyIndex !== -1) {
                 if(this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {
                     // always return fuzzy match as existing

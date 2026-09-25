@@ -135,7 +135,12 @@ export const getAllIndexes = <T>(arr: T[], truthyFunc: (val: T) => boolean) => {
             indexes.push(i);
     return indexes;
 };
-export const removeUndefinedKeys = <T extends Record<string, any>>(obj: T, returnUndefined: boolean = true): T | undefined => {
+// using function overloading for typescript types is ok here
+export function removeUndefinedKeys<T extends Record<string, any>>(obj: T, returnUndefined: false): T;
+// eslint-disable-next-line no-redeclare
+export function removeUndefinedKeys<T extends Record<string, any>>(obj: T, returnUndefined?: boolean): T | undefined;
+// eslint-disable-next-line no-redeclare
+export function removeUndefinedKeys<T extends Record<string, any>>(obj: T, returnUndefined: boolean = true): T | undefined {
     const newObj: any = {};
     Object.keys(obj).forEach((key) => {
         if (Array.isArray(obj[key])) {
@@ -161,7 +166,7 @@ export const removeUndefinedKeys = <T extends Record<string, any>>(obj: T, retur
     });
     //Object.keys(newObj).forEach(key => newObj[key] === undefined || newObj[key] && delete newObj[key])
     return newObj;
-};
+}
 
 export const pick = <T extends {}, K extends keyof T>(obj: T, ...keys: K[]) => (
   Object.fromEntries(

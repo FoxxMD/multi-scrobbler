@@ -34,7 +34,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
 
     declare config: DiscordWSData;
 
-    heartbeatInterval: number
+    heartbeatInterval?: number
     // used for debugging/troubleshooting weird interval speed up
     // can remove once this bug is for sure squashed
     lastHeartbeatIntervalSentAt?: Dayjs;
@@ -43,15 +43,15 @@ export class DiscordWSClient extends DiscordAbstractClient {
 
     // https://docs.discord.com/developers/events/gateway#ready-event
     // used for resuming session, if possible
-    session_id: string;
-    resume_gateway_url: string;
-    sequence: number;
+    session_id?: string;
+    resume_gateway_url?: string;
+    sequence?: number;
 
     initialGatewayUrl?: string;
 
     gatewayMsgLogger: Logger;
 
-    user: APIUser;
+    user?: APIUser;
 
     declare client: WS;
 
@@ -60,7 +60,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
     authOK?: boolean
     reconnecting?: boolean = false;
 
-    lastActiveStatus?: PresenceUpdateStatus = PresenceUpdateStatus.Offline;
+    lastActiveStatus: PresenceUpdateStatus = PresenceUpdateStatus.Offline;
     lastActivities: GatewayActivity[] = [];
 
     activityTimeout?: NodeJS.Timeout;
@@ -88,7 +88,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
     initClient = async () => {
 
         const url = () => {
-            let baseUrl: string;
+            let baseUrl: string | undefined;
             if (this.resume_gateway_url !== undefined) {
                 baseUrl = this.resume_gateway_url;
             } else {
@@ -113,7 +113,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
 
                     let discordImmediateStop = false;
 
-                    if ([
+                    if (e.code !== undefined && [
                         GatewayCloseCodes.AuthenticationFailed,
                         GatewayCloseCodes.InvalidShard,
                         GatewayCloseCodes.ShardingRequired,
@@ -331,10 +331,11 @@ export class DiscordWSClient extends DiscordAbstractClient {
             this.logger.warn('Did not recieve Heartbeat ACK! May be a zombie so trying to reconnect.');
             return this.handleReconnect().then(() => null).catch((e) => this.logger.error(e));
         } else {
-            if(this.lastHeartbeatIntervalSentAt !== undefined) {
+            const interval = this.heartbeatInterval;
+            if(this.lastHeartbeatIntervalSentAt !== undefined && interval !== undefined) {
                 const diff = dayjs().diff(this.lastHeartbeatIntervalSentAt, 'ms');
-                if(diff < this.heartbeatInterval && this.heartbeatInterval - diff > 2000) {
-                    this.logger.warn(`Time since last heartbeat interval sent is ${this.heartbeatInterval - diff}ms shorter than interval (${this.heartbeatInterval})`)
+                if(diff < interval && interval - diff > 2000) {
+                    this.logger.warn(`Time since last heartbeat interval sent is ${interval - diff}ms shorter than interval (${interval})`)
                 }
             }
             const sent = this.sendHeartbeat(true);
@@ -448,6 +449,10 @@ export class DiscordWSClient extends DiscordAbstractClient {
     }
 
     sendResume() {
+        if(this.session_id === undefined || this.sequence === undefined) {
+            this.logger.warn(`Cannot send resume because there is no previous session/sequence`);
+            return;
+        }
         const data: GatewayResumeData = {
             token: this.config.token,
             session_id: this.session_id,
@@ -644,7 +649,8 @@ export class DiscordWSClient extends DiscordAbstractClient {
 
     playStateToActivity = async (data: SourcePlayerObj): Promise<GatewayActivity> => {
         const {activity: msActivity, artUrl} = playStateToActivityData(data);
-        const assets = await this.getArtAsset(data.play, artUrl);
+        // playStateToActivityData throws if there is no play
+        const assets = data.play !== undefined ? await this.getArtAsset(data.play, artUrl) : undefined;
         if(assets !== undefined) {
             const {
                 assets: msAssets = {}
@@ -653,7 +659,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
                 ...msAssets,
                 ...assets
             }
-        } else if(Object.keys(msActivity.assets ?? {}).length === 1 && msActivity.assets.largeText !== undefined) {
+        } else if(msActivity.assets !== undefined && Object.keys(msActivity.assets).length === 1 && msActivity.assets.largeText !== undefined) {
             // this means we can't set any artwork, likely because there is no applicationId. So delete all assets to ensure activity is accepted
             delete msActivity.assets;
         }
@@ -662,7 +668,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
     }
 
     sendActivity = async (data: SourcePlayerObj | undefined) => {
-        if(data === undefined) {
+        if(data === undefined || data.play === undefined) {
             this.sendClearActivity();
             return;
         }
@@ -676,7 +682,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
 
         const activity = await this.playStateToActivity(data);
 
-        const play = isPlayObject(data) ? data : data.play;
+        const play = (isPlayObject(data) ? data : data.play);
 
         let clearTime = dayjs().add(260, 'seconds'); // funny number
         if (activity.timestamps?.end !== undefined) {

@@ -17,7 +17,7 @@ import dayjs from "dayjs";
 
 export default class DiscordScrobbler extends AbstractScrobbleClient {
 
-    api: DiscordWSClient | DiscordIPCClient;
+    api!: DiscordWSClient | DiscordIPCClient;
     override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
     requiresAuth = true;
     requiresAuthInteraction = false;
@@ -31,10 +31,10 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
         super('discord', name, {...config, data: strong}, emitter, logger);
         this.supportsNowPlaying = true;
         this.nowPlayingMaxThreshold = nowPlayingUpdateByPlayDuration;
-        this.nowPlayingMinThreshold = (_) => 5;
+        this.nowPlayingMinThreshold = (_: any) => 5;
     }
 
-    getScrobblesForTimeRange = async (_) => [];
+    getScrobblesForTimeRange = async (_: any) => [];
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => obj;
 
@@ -98,7 +98,7 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
         try {
             await this.api.tryConnect();
             return true;
-        } catch (e) {
+        } catch (e: any) {
             if(this.api instanceof DiscordIPCClient) {
                 if(e.message.includes(4000)) {
                     // swallow this for now since we know that comms work but auth is bad
@@ -124,7 +124,7 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    queuePlay = async (data: PlayObject | PlayObject[]) => {
+    queuePlay = async (data: Parameters<AbstractScrobbleClient['queuePlay']>[0]) => {
         // discord does not handle scrobbles, only Now Playing
         // so don't bother queueing any scrobbles as we don't want to cache them
         // or give the user the impression they are used (in UI as a number of queued scrobbles)

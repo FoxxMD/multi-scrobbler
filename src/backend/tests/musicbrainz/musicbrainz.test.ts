@@ -96,7 +96,7 @@ describe('Musicbrainz API', function () {
                     track: 'Cyber Space (CrossWorlds Remix): Final Lap (No Chants)',
                     album: "Sonic Racing: CrossWorlds Original Soundtrack - Echoes of Dimensions",
                     artists: [
-                        artistNameToCredit("Kanon Oguni")
+                        artistNameToCredit("Kanon Oguni")!
                     ]
                 },
                 meta: {
@@ -209,7 +209,7 @@ describe('Musicbrainz API', function () {
             expect(res.recordings).to.exist;
             expect(res.recordings).to.not.be.empty;
             const postFetch = await mbTransformer.handlePostFetch(play, res, stageConfig);
-            expect(postFetch.data.meta.brainz.album).to.eq('e5913eac-3d74-47af-a3f2-7aa6618f140a');
+            expect(postFetch.data.meta!.brainz!.album).to.eq('e5913eac-3d74-47af-a3f2-7aa6618f140a');
         });
 
         it('uses correct release if release mbid is explict', async function (){
@@ -243,7 +243,7 @@ describe('Musicbrainz API', function () {
             expect(res.recordings).to.exist;
             expect(res.recordings).to.not.be.empty;
             const postFetch = await mbTransformer.handlePostFetch(play, res, stageConfig);
-            expect(postFetch.data.meta.brainz.album).to.eq('e5913eac-3d74-47af-a3f2-7aa6618f140a');
+            expect(postFetch.data.meta!.brainz!.album).to.eq('e5913eac-3d74-47af-a3f2-7aa6618f140a');
         });
 
         it('tries second query using only track and album', async function () {
@@ -382,7 +382,7 @@ describe('Musicbrainz API', function () {
                 titleWeight: 0.3,
                 artistWeight: 0.3,
             });
-            expect(chosenPlay.data.meta.brainz.album).to.eq("82de33b1-1cd6-4236-b116-561d0ecc8acf")
+            expect(chosenPlay.data.meta!.brainz!.album).to.eq("82de33b1-1cd6-4236-b116-561d0ecc8acf")
         });
 
         it('records prerequisite failures', async function () {

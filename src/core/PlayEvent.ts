@@ -25,15 +25,15 @@ export type PlayEventTransform<D extends DateLike = Dayjs> = BasePlayEvent<'tran
 export interface PlayEventQueueStateChangeData {
     queueName: string
     queueStatus: QueueStatus
-    context?: QueueContext
+    context?: QueueContext | null
     retries?: number
-    error?: ErrorLike
+    error?: ErrorLike | null
 }
 export type PlayEventQueueStateChange<D extends DateLike = Dayjs> = BasePlayEvent<'queueStateChange', PlayEventQueueStateChangeData, D>;
 
 export interface PlayEventPlayStateChangeData {
     state: PlayState
-    error?: ErrorLike
+    error?: ErrorLike | null
     reason?: string
 }
 export type PlayEventPlayStateChange<D extends DateLike = Dayjs> = BasePlayEvent<'playStateChange', PlayEventPlayStateChangeData, D>;

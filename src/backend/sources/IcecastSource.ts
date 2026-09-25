@@ -5,6 +5,7 @@ import {
     type FormatPlayObjectOptions,
     type InternalConfig,
     type PlayerStateData,
+    type PlayerStateDataMaybePlay,
 } from "../common/infrastructure/Atomic.ts";
 import { SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
@@ -25,7 +26,7 @@ export class IcecastSource extends MemorySource {
     urlData!: URLData;
 
     currentMetadata?: IcecastMetadata
-    statsListener?: IcecastMetadataStats
+    statsListener?: InstanceType<typeof IcecastMetadataStats>
 
     streamError?: Error;
     streaming: boolean = false;
@@ -67,7 +68,7 @@ export class IcecastSource extends MemorySource {
             await isPortReachableConnect(this.urlData.port, { host: this.urlData.url.hostname });
             this.logger.verbose(`${this.urlData.url.hostname}:${this.urlData.port} is reachable.`);
             return true;
-        } catch (e) {
+        } catch (e: any) {
             const hint = e.error?.cause?.message ?? undefined;
             throw new Error(`Could not connect to Icecast server${hint !== undefined ? ` (${hint})` : ''}`, { cause: e.error ?? e });
         }
@@ -87,7 +88,7 @@ export class IcecastSource extends MemorySource {
 
         this.statsListener = new IcecastMetadataStats(this.urlData.url.toString(), {
             ...icecastOpts,
-            onStats: (stats) => {
+            onStats: (stats: any) => {
                 if(isDebugMode()) {
                     this.logger.debug(stats);
                 }
@@ -97,7 +98,7 @@ export class IcecastSource extends MemorySource {
                     this.streaming = false;
                 }
             },
-            onError: (e) => {
+            onError: (e: any) => {
                 this.streaming = false;
                 this.streamError = e;
                 this.statsListener.stop();
@@ -143,7 +144,7 @@ export class IcecastSource extends MemorySource {
             play = undefined;
         }
 
-        const playerState: PlayerStateData = {
+        const playerState: PlayerStateDataMaybePlay = {
             platformId: SINGLE_USER_PLATFORM_ID,
             status: REPORTED_PLAYER_STATUSES.playing,
             play
@@ -157,9 +158,9 @@ const formatPlayObj = (obj: IcecastMetadata, options: FormatPlayObjectOptions = 
 
 
     let artist: string,
-        track: string,
+        track: string | undefined,
         artists: string[] = [],
-        album: string;
+        album: string | undefined;
 
     if (obj.ogg?.TITLE !== undefined) {
         const {
@@ -171,13 +172,13 @@ const formatPlayObj = (obj: IcecastMetadata, options: FormatPlayObjectOptions = 
         track = oggTitle;
         album = oggAlbum;
 
-        const artistCred = parseArtistCredits(oggArtist);
+        const artistCred = oggArtist !== undefined ? parseArtistCredits(oggArtist) : undefined;
         if (artistCred !== undefined) {
             artists.push(artistCred.primary);
             if (artistCred.secondary !== undefined) {
                 artists = artists.concat(artistCred.secondary);
             }
-        } else {
+        } else if (oggArtist !== undefined) {
             artists.push(oggArtist);
         }
     } else if(obj.icy?.StreamTitle !== undefined) {

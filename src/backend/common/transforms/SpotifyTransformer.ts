@@ -201,9 +201,9 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
 
     declare config: SpotifyTransformerConfig;
 
-    protected defaults: SpotifyTransformerDataStrong;
+    protected defaults!: SpotifyTransformerDataStrong;
 
-    protected api: SpotifyApiClient;
+    protected api!: SpotifyApiClient;
     protected clientCache?: Cacheable;
 
     public constructor(config: SpotifyTransformerConfig, options: TransformerOptions & { clientCache?: Cacheable }) {
@@ -247,7 +247,7 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
             type: 'spotify'
         }
 
-        for (const k of ['artists', 'albumArtists', 'title', 'album', 'meta', 'duration', 'art']) {
+        for (const k of ['artists', 'albumArtists', 'title', 'album', 'meta', 'duration', 'art'] as const) {
             if (!(k in stage)) {
                 stage[k] = true;
                 continue;
@@ -492,7 +492,6 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
         return transformData.meta.art;
     }
 
-    public notify(payload: WebhookPayload): Promise<void> {
-        return;
+    public async notify(payload: WebhookPayload): Promise<void> {
     }
 }

@@ -58,6 +58,12 @@ export interface RecentlyPlayedOptions {
     display?: boolean
 }
 
+/** list is only guaranteed when hydrating, otherwise it is undefined if not already cached */
+type RecentPlaysGetter = {
+    (hydrate?: true): Promise<PlayObject[]>
+    (hydrate: boolean): Promise<PlayObject[] | undefined>
+}
+
 export default abstract class AbstractSource extends AbstractComponent implements Authenticatable {
 
     declare type: SourceType;
@@ -154,7 +160,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.scheduler.stop();
         for(const job of this.scheduler.getAllJobs()) {
             job.stop();
-            this.scheduler.removeById(job.id);
+            if(job.id !== undefined) {
+                this.scheduler.removeById(job.id);
+            }
         }
     }
     async [Symbol.asyncDispose]() {
@@ -204,11 +212,11 @@ export default abstract class AbstractSource extends AbstractComponent implement
                     (): Promise<any> => {
                         if(this.isReady()) {
                             return this.processDeadLetterQueue(undefined, 'Reprocessing bulk dead Plays by system').then(() => null).catch((e) => {
-                                this.warnings = e;
+                                this.warnings.push(e);
                                 this.logger.error(e);
                             })
                         }
-                        return new Promise((resolve, reject) => resolve);
+                        return Promise.resolve();
                     },
                     (err: Error) => {
                         this.warnings.push(err);
@@ -273,7 +281,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 if (!this.canAuthUnattended()) {
                     this.logger.warn({ labels: 'Heartbeat' }, 'Source is not ready but will not try to initialize because auth state is not good and cannot be corrected unattended.')
                     return false;
-                }const noopTransform = async (x) => x;
+                }
                 try {
                     this.setStatus('Attempting to initialize...');
                     await this.initialize({ force: true, notify: true, notifyTitle: 'Could not initialize automatically' });
@@ -306,7 +314,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
             this.scheduler.stop();
             for (const job of this.scheduler.getAllJobs()) {
                 job.stop();
-                this.scheduler.removeById(job.id);
+                if(job.id !== undefined) {
+                    this.scheduler.removeById(job.id);
+                }
             }
             this.setStatus('Stopped');
             this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({state: COMPONENT_STATE.STOPPED});
@@ -359,7 +369,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     public getApiData(): ComponentSourceApiJson {
         return {
-            lastReadyAt: undefined,
             lastImport: undefined,
             lastImportSuccess: undefined,
             ...super.getApiData(),
@@ -407,7 +416,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         * 
         * ...for INGRESS we skip check because the assumption is whatever client is sending requests is very intentional and the user wants to see that their activity was recieved
         */
-        if (([PARSED_FROM.history, PARSED_FROM.backlog] as PARSED_FROM_TYPE[]).includes(queueablePlay.meta.parsedFrom)) {
+        if (queueablePlay.meta.parsedFrom !== undefined && ([PARSED_FROM.history, PARSED_FROM.backlog] as PARSED_FROM_TYPE[]).includes(queueablePlay.meta.parsedFrom)) {
             // we should be adding Plays to the queue without any transforms
             // so run on "raw" play input
             // if we have seen a play with close temporality with the exact input hash then skip it entirely
@@ -458,7 +467,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     }
 
 
-    getRecentlyDiscoveredPlays = async (hydrate: boolean = true): Promise<PlayObject[]> => {
+    getRecentlyDiscoveredPlays = (async (hydrate: boolean = true): Promise<PlayObject[] | undefined> => {
         const cacheKey = this.recentDiscoveredCacheKey();
         let list = await this.cache.cacheDb.get<PlayObject[]>(cacheKey);
         if(list === undefined && hydrate) {
@@ -472,9 +481,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
             await this.cache.cacheDb.set<PlayObject[]>(cacheKey, list, '2m');
         }
         return list;
-    }
+    }) as RecentPlaysGetter;
 
-    getRecentPlays = async (hydrate: boolean = true): Promise<PlayObject[]> => {
+    getRecentPlays = (async (hydrate: boolean = true): Promise<PlayObject[] | undefined> => {
         const cacheKey = this.recentCacheKey();
         let list = await this.cache.cacheDb.get<PlayObject[]>(cacheKey);
         if(list === undefined && hydrate) {
@@ -488,7 +497,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             await this.cache.cacheDb.set<PlayObject[]>(cacheKey, list, '2m');
         }
         return list;
-    }
+    }) as RecentPlaysGetter;
 
     async existingDiscovered(play: PlayObject): Promise<PlayMatchResult> {
         let list: PlayObject[] = await this.getRecentPlays(true);
@@ -512,7 +521,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             for(const p of postCompareMapped) {
                 const {lifecycle = []} = p;
                 const psLifecycle = lifecycle.filter(x => x.hook === TRANSFORM_HOOK.postCompare);
-                if(psLifecycle.length > 0) {
+                if(psLifecycle.length > 0 && p.id !== undefined) {
                     events.push({...transformToPlayEvent(psLifecycle), playId: p.id, createdAt: dayjs()});
                 }
             }
@@ -520,7 +529,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 data: postCompareMapped,
                 options: {
                     ...options,
-                    checkTime: newDiscoveredPlays[newDiscoveredPlays.length-1].data.playDate.add(2, 'second'),
+                    checkTime: newDiscoveredPlays[newDiscoveredPlays.length-1].data.playDate?.add(2, 'second'),
                     scrobbleFrom: this.getIdentifier(),
                     scrobbleTo: this.clients
                 }
@@ -595,7 +604,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 this.replaceErrors(err, {predicate: (x) => x.message === err.message});
                 this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({errors: this.errors});
                 if(notify) {
-                    await this.notify( {title: `Polling Error`, message: `Cannot start polling because Source is not ready: ${truncateStringToLength(500)(messageWithCausesTruncatedDefault(e))}`, priority: 'error'});
+                    await this.notify( {title: `Polling Error`, message: `Cannot start polling because Source is not ready: ${truncateStringToLength(500)(messageWithCausesTruncatedDefault(e as Error))}`, priority: 'error'});
                 }
                 return;
             }
@@ -609,8 +618,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
         this.setStatus('Starting polling...');
 
-        this.abortController = new AbortController();
-        this.pollingPromise = spawn(this.abortController.signal, async (signal, { defer, fork }) => {
+        const abortController = new AbortController();
+        this.abortController = abortController;
+        this.pollingPromise = spawn(abortController.signal, async (signal, { defer, fork }) => {
             defer(async () => {
                 this.polling = false;
                 this.isSleeping = false;
@@ -637,7 +647,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 state: COMPONENT_STATE.IDLE
             };
             if (isAbortError(e)) {
-                const err = generateLoggableAbortReason('Polling stopped', this.abortController.signal);
+                const err = generateLoggableAbortReason('Polling stopped', abortController.signal);
                 this.logger.info(err);
                 //this.logger.trace(e);
                 componentUpdate.status = 'Polling cancelled';
@@ -661,11 +671,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.pollRetries = 0;
 
         const {
-            options: {
-                maxPollRetries = 5,
-                retryMultiplier = DEFAULT_RETRY_MULTIPLIER,
-            }
-        } = this.config;
+            maxPollRetries = 5,
+            retryMultiplier = DEFAULT_RETRY_MULTIPLIER,
+        } = this.config.options ?? {};
 
         // can't have negative retries!
         const maxRetries = Math.max(0, maxPollRetries);
@@ -693,12 +701,12 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 if (this.pollRetries < maxRetries) {
                     const delayFor = pollingBackoff(this.pollRetries + 1, retryMultiplier);
                     this.logger.info(`Poll retries (${this.pollRetries}) less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay...`);
-                    await this.notify({title: `Polling Retry`, message: `Encountered error while polling but retries (${this.pollRetries}) are less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay. | Error: ${e.message}`, priority: 'warn'});
+                    await this.notify({title: `Polling Retry`, message: `Encountered error while polling but retries (${this.pollRetries}) are less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay. | Error: ${(e as Error).message}`, priority: 'warn'});
                     await sleep((delayFor) * 1000);
                     this.pollRetries++;
                 } else {
                     this.logger.warn(`Poll retries (${this.pollRetries}) equal to max poll retries (${maxRetries}), stopping polling!`);
-                    await this.notify({title: `Polling Error`, message: `Encountered error while polling and retries (${this.pollRetries}) are equal to max poll retries (${maxRetries}), stopping polling!. | Error: ${e.message}`, priority: 'error'});
+                    await this.notify({title: `Polling Error`, message: `Encountered error while polling and retries (${this.pollRetries}) are equal to max poll retries (${maxRetries}), stopping polling!. | Error: ${(e as Error).message}`, priority: 'error'});
                     throw e;
                 }
             }
@@ -741,7 +749,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         const checkActiveFor = 120;
         let maxInterval = DEFAULT_POLLING_MAX_INTERVAL;
 
-        if('maxInterval' in this.config.data) {
+        if(this.config.data !== undefined && 'maxInterval' in this.config.data && this.config.data.maxInterval !== undefined) {
             maxInterval = this.config.data.maxInterval;
         }
         let isInactive = false;
@@ -769,7 +777,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
                 if(playObjs.length > 0) {
                     const now = dayjs().unix();
-                    const closeToInterval = playObjs.some(x => now - x.data.playDate.unix() < 5);
+                    const closeToInterval = playObjs.some(x => x.data.playDate !== undefined && now - x.data.playDate.unix() < 5);
                     if (playObjs.length > 0 && closeToInterval) {
                         // because the interval check was so close to the play date we are going to delay client calls for a few secs
                         // this way we don't accidentally scrobble ahead of any other clients (we always want to be behind so we can check for dups)
@@ -794,8 +802,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 if(playObjs.length > 0) {
                     playObjs.sort(sortByNewestPlayDate);
                     // only update date if the play date is after the current activity date (in the case of backlogged plays)
-                    if(playObjs[0].data.playDate.isAfter(this.lastActivityAt)) {
-                        this.lastActivityAt = playObjs[0].data.playDate;
+                    const newestPlayDate = playObjs[0].data.playDate;
+                    if(newestPlayDate !== undefined && newestPlayDate.isAfter(this.lastActivityAt)) {
+                        this.lastActivityAt = newestPlayDate;
                     }
                     checksOverThreshold = 0;
                 }
@@ -846,7 +855,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             if(!isAbortError(e)) {
                 this.logger.error(new Error('Error occurred while polling', {cause: e}));
             }
-            if(e.message.includes('Status code: 401')) {
+            if((e as Error).message.includes('Status code: 401')) {
                 this.authed = false;
                 this.authFailure = true;
             }
@@ -859,14 +868,15 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     startDiscoveryQueue = async () => {
         this.setStatus('Starting discovery queue processing');
-        this.ingressQueueAbortController = new AbortController();
-        this.ingressQueuePromise = spawn(this.ingressQueueAbortController.signal, async (signal, { defer }) => {
+        const ingressQueueAbortController = new AbortController();
+        this.ingressQueueAbortController = ingressQueueAbortController;
+        this.ingressQueuePromise = spawn(ingressQueueAbortController.signal, async (signal, { defer }) => {
                 await this.processDiscoveryQueue(signal);
         }).catch((e) => {
             const componentUpdate: Partial<ComponentSourceApiJson> = {
             };
             if (isAbortError(e)) {
-                const err = generateLoggableAbortReason('Discovery queue processing stopped', this.ingressQueueAbortController.signal);
+                const err = generateLoggableAbortReason('Discovery queue processing stopped', ingressQueueAbortController.signal);
                 this.logger.info(err);
                 //this.logger.trace(e);
                 componentUpdate.status = 'Discovery queue processing cancelled';
@@ -975,7 +985,10 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.setStatus(`Processing Play ${playEntity.uid}`);
 
         const queueState = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE);
-        queueState.error = undefined;
+        if(queueState === undefined) {
+            throw new Error(`Play ${playEntity.uid} does not have an ${INGRESS_QUEUE} queue state`);
+        }
+        queueState.error = null;
         const {
             context,
         } = queueState
@@ -1008,7 +1021,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                     events.push({...transformToPlayEvent(lifecycle), createdAt: dayjs()});
                 }
             }
-            let existing: PlayObject;
+            let existing: PlayObject | undefined;
             if (dupeCheck) {
                 // cheap check for existing
                 const cheapExisting = await this.playRepo.checkExisting(preCompared, {
@@ -1017,10 +1030,10 @@ export default abstract class AbstractSource extends AbstractComponent implement
                      // that way we don't accidentally mark the "original" of some N number of duplicate inputs as a dupe as well
                      //
                      // IE the "oldest" play of a set of duplicates should not itself be marked as a dupe of the "newer" duplicates
-                     seenAt: {
+                     seenAt: playEntity.seenAt !== null ? {
                         type: 'lt',
                         date: playEntity.seenAt
-                     }
+                     } : undefined
                     });
                 if (cheapExisting !== undefined) {
                     events.push(dupeCheckToPlayEvent({ match: true, reason: `Matched hash on existing Play ${cheapExisting.uid} with close temporality` }));
@@ -1029,7 +1042,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                     const matchRes = await this.existingDiscovered({...preCompared, id: playEntity.id, uid: playEntity.uid});
                     events.push(dupeCheckToPlayEvent({...matchRes, createdAt: dayjs().toISOString()}));
                     if (matchRes.match) {
-                        existing = matchRes.closestMatchedPlay;
+                        existing = matchRes.closestMatchedPlay as PlayObject;
                     }
                 }
             }
@@ -1045,10 +1058,13 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 this.emitEvent('discovered', {play: preCompared});
                 await this.scrobble([{...playEntity.play, id: playEntity.id, uid: playEntity.uid}]);
             } else {
-                await this.playRepo.updateById(existing.id, {updatedAt: dayjs()});
+                // existing plays are always from the db so should always have an id
+                if(existing.id !== undefined) {
+                    await this.playRepo.updateById(existing.id, {updatedAt: dayjs()});
+                }
                 playEntity.state = 'duped';
                 events.push(stateChangeToPlayEvent({state: 'duped'}));
-                playEntity.parentId = existing.id;
+                playEntity.parentId = existing.id ?? null;
             }
 
             const recentPlays = await this.getRecentPlays(false);
@@ -1076,7 +1092,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
             }
             if(isAbortError(e)) {
                 events.push(stateChangeToPlayEvent({state: 'failed'}));
-                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: generateLoggableAbortReason('Interrupted by abort signal', this.ingressQueueAbortController.signal)}));
+                const abortSignal = signal ?? this.ingressQueueAbortController?.signal;
+                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: abortSignal !== undefined ? generateLoggableAbortReason('Interrupted by abort signal', abortSignal) : e as Error}));
                 throw e;
             }
             if(!events.some(x => x.eventName === PLAY_EVENT_TYPE.playStateChange)) {
@@ -1084,9 +1101,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 playEntity.state = 'failed';
             }
             if(!events.some(x => x.eventName === PLAY_EVENT_TYPE.queueStateChange)) {
-                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: e}));
+                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: e as Error}));
             }
-            throw new PlayProcessingError(e, {playEntity, queue: queueState, events, showStopping: true});
+            throw new PlayProcessingError(e as Error, {playEntity, queue: queueState, events, showStopping: true});
         } 
     }
 
@@ -1110,8 +1127,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
         const retries = attemptWithRetries ?? deadLetterRetries;
 
-        this.deadQueueAbortController = new AbortController();
-        this.deadQueuePromise = spawn(this.deadQueueAbortController.signal, async (signal, { defer, fork }) => {
+        const deadQueueAbortController = new AbortController();
+        this.deadQueueAbortController = deadQueueAbortController;
+        this.deadQueuePromise = spawn(deadQueueAbortController.signal, async (signal, { defer, fork }) => {
 
             //const processable = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], [QUEUE_STATUS_FAILED], retries);
             const processableArgs: QueryPlaysOpts  = {queues: [{queueName: INGRESS_QUEUE, queueStatus: QUEUE_STATUS_FAILED, retries}], with: ['queues']};
@@ -1147,7 +1165,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             }
         }).catch((e) => {
             if (isAbortError(e)) {
-                const err = generateLoggableAbortReason('Dead scrobble processing stopped', this.deadQueueAbortController.signal);
+                const err = generateLoggableAbortReason('Dead scrobble processing stopped', deadQueueAbortController.signal);
                 this.logger.info(err);
                 logger.trace(e)
             } else {
@@ -1178,7 +1196,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     protected getInterval(log?: boolean) {
         let interval = DEFAULT_POLLING_INTERVAL;
 
-        if('interval' in this.config.data) {
+        if(this.config.data !== undefined && 'interval' in this.config.data && this.config.data.interval !== undefined) {
             interval = this.config.data.interval;
         }
         return interval;
@@ -1187,7 +1205,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     protected getMaxBackoff() {
         let maxInterval = DEFAULT_POLLING_MAX_INTERVAL;
 
-        if('maxInterval' in this.config.data) {
+        if(this.config.data !== undefined && 'maxInterval' in this.config.data && this.config.data.maxInterval !== undefined) {
             maxInterval = this.config.data.maxInterval;
         }
         return maxInterval - this.getInterval();
@@ -1257,12 +1275,17 @@ export default abstract class AbstractSource extends AbstractComponent implement
             const root = getRoot();
             const stream = root.get('loggerStream');
             const logConfig = root.get('loggingConfig');
+            if(stream === undefined) {
+                this.logger.warn('No logger stream is available, cannot build component logger');
+                return;
+            }
             const cLogger = await componentFileLogger(this.type, this.name, true, logConfig);
-            this.componentLogger = childLogger(cLogger, this.logger.labels);
+            const componentLogger = childLogger(cLogger, this.logger.labels);
+            this.componentLogger = componentLogger;
             stream.on('data', (d: LogDataPretty) => {
                 const {level, msg, line, labels, ...rest} = d;
                 if(d.labels.includes(this.loggerLabel)) {
-                    this.componentLogger[this.componentLogger.levels.labels[d.level]]({...rest, labels: difference(labels, this.logger.labels)}, msg);
+                    componentLogger[componentLogger.levels.labels[d.level] as LogLevel]({...rest, labels: difference(labels, this.logger.labels)}, msg as string);
                 }
             });
         }

@@ -81,7 +81,7 @@ describe('Sample Configs', function () {
                     await copyFile(samplePath(componentType), `${componentType}.json`);
 
                     let fileContents = await readJson(`${componentType}.json`);
-                    fileContents = fileContents.filter(x => x.configureAs === undefined || x.configureAs === 'source');
+                    fileContents = fileContents.filter((x: any) => x.configureAs === undefined || x.configureAs === 'source');
                     for (const [i,rawConf] of fileContents.entries()) {
                         try {
                             await validateSourceJson(componentType, rawConf);
@@ -142,7 +142,7 @@ describe('Sample Configs', function () {
                     const primitiveMockData = zocker(primitives).generate();
                     primitiveMockData[`${envSchema.prefix.toLocaleUpperCase()}_ENABLE`] = true;
 
-                    const mockData = {
+                    const mockData: Record<string, any> = {
                         ...componentMockData,
                         ...primitiveMockData
                     }
@@ -197,7 +197,7 @@ describe('Sample Configs', function () {
                     await copyFile(samplePath(componentType), `${componentType}.json`);
 
                     let fileContents = await readJson(`${componentType}.json`);
-                    fileContents = fileContents.filter(x => x.configureAs === undefined || x.configureAs === 'client');
+                    fileContents = fileContents.filter((x: any) => x.configureAs === undefined || x.configureAs === 'client');
                     for (const [i,rawConf] of fileContents.entries()) {
                         try {
                             await validateClientJson(componentType, rawConf);
@@ -249,7 +249,7 @@ describe('Sample Configs', function () {
                     const primitiveMockData = zocker(primitives).generate();
                     primitiveMockData[`${envSchema.prefix.toLocaleUpperCase()}_ENABLE`] = true;
 
-                    const mockData = {
+                    const mockData: Record<string, any> = {
                         ...componentMockData,
                         ...primitiveMockData
                     }

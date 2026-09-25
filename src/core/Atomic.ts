@@ -60,13 +60,13 @@ export interface TrackStringOptions<T = string> {
     include?: PlayObjectIncludeTypes[]
     transformers?: {
         artists?: (a: string[]) => T | string
-        album?: (t: string,data: AmbPlayObject, hasExistingParts?: boolean) => T | string
-        track?: (t: string,data: AmbPlayObject, hasExistingParts?: boolean) => T | string
-        time?: (t: Dayjs, i?: ScrobbleTsSOC) => T | string
-        timeFromNow?: (t: Dayjs) => T | string
+        album?: (t: string | undefined, data: AmbPlayObject, hasExistingParts?: boolean) => T | string | undefined
+        track?: (t: string | undefined, data: AmbPlayObject, hasExistingParts?: boolean) => T | string
+        time?: (t: Dayjs | undefined, i?: ScrobbleTsSOC) => T | string
+        timeFromNow?: (t: Dayjs | undefined) => T | string | undefined
         comment?: (c: string | undefined) => T | string
-        platform?: (d: string | undefined, u: string | undefined, s: string | undefined) => T | string
-        reducer?: (arr: (T | string)[]) => T //(acc: T, curr: T | string) => T
+        platform?: (d: string | undefined, u: string | undefined, s: string | undefined) => T | string | undefined
+        reducer?: (arr: (T | string | undefined)[]) => T //(acc: T, curr: T | string) => T
     }
 }
 
@@ -227,14 +227,14 @@ export interface PlayMetaBase<D extends DateLike = Dayjs> {
          * * Spotify Source <-- url to spotify track
          * * Maloja Client <--- url to specific scrobble
          */
-        web: string
+        web?: string
         /**
          * The URL where this play was originally played
          * 
          * IE Frank Sinatra - My way FROM youtube.com <-- URL pointing to specific video
          */
         origin?: string
-        [key: string]: string
+        [key: string]: string | undefined
     }
     /**
      * Hot-linkable images for use with displaying art for this play
@@ -371,6 +371,8 @@ export const isPlayObject = (obj: object): obj is PlayObject => {
 }
 
 export type PlayObject<T = {}> = AmbPlayObject<Dayjs,T>;
+/** PlayObject that is known to have a playDate */
+export type DatedPlayObject<T = {}> = PlayObject<T> & { data: { playDate: Dayjs } };
 export type PlayObjectMinimal<D extends DateLike = Dayjs, T = {}> = AmbPlayObjectMinimal<D,T>;
 export interface PlayActivity {
   play: JsonPlayObject
@@ -685,7 +687,7 @@ export const actionContextSchema = queueContextSchema.extend({action: z.enum(['a
 
 /**
  * @see https://github.com/ts-essentials/ts-essentials/issues/339#issuecomment-4681920369 */
-export type Replace<Type, Keys extends keyof Type, TReplace> = StrictOmit<Type, Keys> & Record<Keys, TReplace>
+export type Replace<Type extends Record<PropertyKey, any>, Keys extends keyof Type, TReplace> = StrictOmit<Type, Keys> & Record<Keys, TReplace>
 
 type Match<Value, ReplaceTuple extends readonly [any, any][], Acc = never> = ReplaceTuple extends readonly [[infer From, infer To], ...infer Rest extends readonly [any, any][]]
     ? [From] extends [Value]

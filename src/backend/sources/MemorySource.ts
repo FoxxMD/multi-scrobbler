@@ -76,7 +76,9 @@ export default class MemorySource extends AbstractSource {
     [Symbol.dispose]() {
         this.scheduler.stop();
         for(const job of this.scheduler.getAllJobs()) {
-            this.scheduler.removeById(job.id);
+            if(job.id !== undefined) {
+                this.scheduler.removeById(job.id);
+            }
         }
         for(const p of this.players.keys()) {
             this.deletePlayer(p);
@@ -87,7 +89,9 @@ export default class MemorySource extends AbstractSource {
         await super[Symbol.asyncDispose]();
         this.scheduler.stop();
         for(const job of this.scheduler.getAllJobs()) {
-            this.scheduler.removeById(job.id);
+            if(job.id !== undefined) {
+                this.scheduler.removeById(job.id);
+            }
         }
         this[Symbol.dispose]();
     }
@@ -183,12 +187,14 @@ export default class MemorySource extends AbstractSource {
 
     getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions): AbstractPlayerState => new GenericPlayerState(logger, id, opts)
 
-    setNewPlayer = (idStr: string, logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions = {}) => {
-        this.players.set(idStr, this.getNewPlayer(this.logger, id, {
+    setNewPlayer = (idStr: string, logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions = {}): AbstractPlayerState => {
+        const player = this.getNewPlayer(this.logger, id, {
             ...createPlayerOptions(this.config.data as Partial<PollingOptions>, this.playerSourceOfTruth, this.logger),
             ...opts
-        }));
+        });
+        this.players.set(idStr, player);
         this.playerState.set(idStr, '');
+        return player;
     }
 
     hasPlayer = (data: string | PlayerStateDataMaybePlay): boolean => {
@@ -202,7 +208,7 @@ export default class MemorySource extends AbstractSource {
     }
 
     isZombiePlayer = (id: string, lastUpdated: Dayjs): boolean => {
-        return this.deceasedPlayers.has(id) && this.deceasedPlayers.get(id).isSame(lastUpdated);
+        return this.deceasedPlayers.get(id)?.isSame(lastUpdated) === true;
     }
 
     genPlayerId = (data: PlayObject | PlayerStateDataMaybePlay): string => {
@@ -210,13 +216,13 @@ export default class MemorySource extends AbstractSource {
     }
 
     deletePlayer = (id: string, reason?: string) => {
-        if(!this.players.has(id)) {
+        using player = this.players.get(id);
+        if(player === undefined) {
             return;
         }
         if(reason !== undefined) {
-            this.players.get(id)?.logger.debug(reason);
+            player.logger.debug(reason);
         }
-        using player = this.players.get(id);
         this.deceasedPlayers.set(id, player.stateLastUpdatedAt);
         player[Symbol.dispose]();
         this.players.delete(id);
@@ -234,10 +240,8 @@ export default class MemorySource extends AbstractSource {
     processRecentPlays = async (datas: (PlayObject | PlayerStateDataMaybePlay)[], reportedTS?: Dayjs) => {
 
         const {
-            options: {
-                scrobbleThresholds = {}
-            }
-        } = this.config;
+            scrobbleThresholds = {}
+        } = this.config.options ?? {};
 
         const newStatefulPlays: PlayObject[] = [];
 
@@ -255,12 +259,11 @@ export default class MemorySource extends AbstractSource {
                         this.deceasedPlayers.delete(idStr);
                     }
                 }
-                this.setNewPlayer(idStr, this.logger, id);
+                const newPlayer = this.setNewPlayer(idStr, this.logger, id);
 
                 if(!this.multiPlatform && this.players.size > 1) {
                     // new platform should have old platform data transferred
                     const [id,firstPlayer] = Array.from(this.players.entries())[0];
-                    const newPlayer = this.players.get(idStr);
                     firstPlayer.transferToNewPlayer(newPlayer);
                     this.deletePlayer(id, 'Removed due to player transfer');
                 }
@@ -358,13 +361,11 @@ export default class MemorySource extends AbstractSource {
     protected isListenedPlayDiscoverable = async (candidate: PlayObject): Promise<[boolean, string]> => {
 
         const {
-            options: {
-                scrobbleThresholds = {}
-            }
-        } = this.config;
+            scrobbleThresholds = {}
+        } = this.config.options ?? {};
 
         const stPrefix = `${buildTrackString(candidate, {include: ['trackId', 'artist', 'track']})}`;
-        const thresholdResults = timePassesScrobbleThreshold(scrobbleThresholds, candidate.data.listenedFor, candidate.data.duration);
+        const thresholdResults = timePassesScrobbleThreshold(scrobbleThresholds, candidate.data.listenedFor ?? 0, candidate.data.duration);
 
         if (thresholdResults.passes) {
             const matchingRecent = await this.existingDiscovered(candidate); //sRecentlyPlayed.find(x => playObjDataMatch(x, candidate));
@@ -372,7 +373,11 @@ export default class MemorySource extends AbstractSource {
                 return [true,`${stPrefix} added after ${thresholdResultSummary(thresholdResults)} and not matching any prior plays`];
             } else {
                 const {data: {playDate, duration}} = candidate;
-                const {closestMatchedPlay: {data: {playDate: rplayDate}} = {}} = matchingRecent;
+                // existingPlay always sets closestMatchedPlay when match is true
+                const rplayDate = matchingRecent.closestMatchedPlay?.data.playDate;
+                if (playDate === undefined || rplayDate === undefined) {
+                    return [false, `${stPrefix} matched a prior play but could not compare timestamps because a play date is missing`];
+                }
                 if (!playDate.isSame(rplayDate)) {
                     if (duration !== undefined) {
                         if (playDate.isAfter(rplayDate.add(duration, 's'))) {

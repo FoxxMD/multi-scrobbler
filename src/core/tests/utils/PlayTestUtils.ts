@@ -90,10 +90,10 @@ export const normalizePlays = (plays: PlayObject[],
 
             if(index + 1 <= plays.length - 1) {
                 const listenTime = (plays[index+1].data.duration ?? defaultDuration) + faker.number.int({min: 0, max: 2});
-                lastDate = cleanPlay.data.playDate.subtract(listenTime, 'seconds');
+                lastDate = cleanPlay.data.playDate!.subtract(listenTime, 'seconds');
             }
             remaining--;
-            remainingTime -= cleanPlay.data.duration;
+            remainingTime -= cleanPlay.data.duration!;
             index++;
         }
 
@@ -108,7 +108,7 @@ export const normalizePlays = (plays: PlayObject[],
             }
         }
 
-        let lastDate: Dayjs = progressDirection === 'newer' ? actualInitialDate : endDate;
+        let lastDate: Dayjs = progressDirection === 'newer' ? actualInitialDate! : endDate!;
         let index = 0;
         for (const play of plays) {
 
@@ -133,10 +133,10 @@ export const normalizePlays = (plays: PlayObject[],
 
             if(progressDirection === 'newer') {
                 const listenTime = (cleanPlay.data.duration ?? defaultDuration) + faker.number.int({min: 0, max: 2});
-                lastDate = cleanPlay.data.playDate.add(listenTime, 'seconds');
+                lastDate = cleanPlay.data.playDate!.add(listenTime, 'seconds');
             } else if(index + 1 <= plays.length - 1) {
                 const listenTime = (plays[index+1].data.duration ?? defaultDuration) + faker.number.int({min: 0, max: 2});
-                lastDate = cleanPlay.data.playDate.subtract(listenTime, 'seconds');
+                lastDate = cleanPlay.data.playDate!.subtract(listenTime, 'seconds');
             }
 
             normalizedPlays.push(cleanPlay);
@@ -199,15 +199,15 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: PlayMeta = {}, opt
     }
 
     if(play.data.playDateCompleted === undefined && playDateCompleted) {
-        play.data.playDateCompleted = play.data.playDate.add(play.data.duration)
+        play.data.playDateCompleted = play.data.playDate!.add(play.data.duration!)
     }
 
     if(listenRanges) {
         play.data.listenRanges = [];
         const lf = play.data.listenedFor;
         const sessions = faker.number.int({min: 1, max: 3});
-        const sessionTime = lf / sessions;
-        let nextTime = play.data.playDate;
+        const sessionTime = lf! / sessions;
+        let nextTime = play.data.playDate!;
         switch(faker.number.int({min: 1, max: 2})) {
             case 1: {
                 // timestamps only
@@ -276,7 +276,7 @@ export const generateBrainz = (play: PlayObject, opts: WithBrainzOptions): Brain
                 break;
             case 'artist':
                 if(play.data.meta?.brainz?.artist === undefined && (play.data.artists ?? []).length > 0) {
-                    const artistMbids = play.data.artists.map(x => generateMbid());
+                    const artistMbids = play.data.artists!.map(x => generateMbid());
                     brainz.artist = artistMbids;
                 }
                 break;
@@ -350,13 +350,13 @@ export const generateArtists = (num?: number, max: number = 3, opts: ArtistGener
 }
 
 export const generateArtistCredit = (name: string = faker.music.artist(), mbidVal: MBID | boolean = true): ArtistCredit => {
-    let mbid: MBID;
+    let mbid: MBID | undefined;
     if(mbidVal === true) {
         mbid = generateMbid();
     } else if(typeof mbidVal === 'string') {
         mbid = mbidVal as MBID;
     }
-    return removeUndefinedKeys<ArtistCredit>({name, mbid});
+    return removeUndefinedKeys<ArtistCredit>({name, mbid})!;
 }
 
 export const generateArtistCredits = (num?: number, max?: number, opts: ArtistGenerationOptions & {mbidVal?: boolean} = {}): ArtistCredit[] => {
@@ -528,7 +528,7 @@ export interface GenerateSourcePlayerObjOptions {
 export const generateSourcePlayerObj = (opts: GenerateSourcePlayerObjOptions): SourcePlayerObj => {
     let platformId: string;
     if(opts.play !== undefined) {
-        platformId = opts.play.meta.deviceId;
+        platformId = opts.play.meta.deviceId!;
     } else {
         platformId = opts.playPlatform ?? genGroupIdStr(SINGLE_USER_PLATFORM_ID);
     }

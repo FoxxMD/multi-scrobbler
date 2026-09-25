@@ -10,7 +10,7 @@ import type {ListenPayload} from '../../core/vendor/listenbrainz/interfaces.ts';
 
 import { isDebugMode } from "../utils.ts";
 import { durationToHuman } from '../../core/TimeUtils.ts';
-import { playToRockskyClientRecord, RockSkyApiClient, rockskyScrobbleToPlay } from "../common/vendor/RockSkyApiClient.ts";
+import { playToRockskyClientRecord, RockSkyApiClient, rockskyScrobbleToPlay, type RockskyScrobble } from "../common/vendor/RockSkyApiClient.ts";
 import type {RockSkyClientConfig} from "../common/infrastructure/config/client/rocksky.ts";
 import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient.ts";
 import { fromStream } from '@atcute/repo';
@@ -23,7 +23,6 @@ import { ATProtoUnauthenticatedApiClient } from "../common/vendor/atproto/ATProt
 import { playToRepositoryCreatePlayHistoricalOpts, type RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
 import { isAbortError } from "abort-controller-x";
 import { shouldClearNPStatus } from "./AbstractScrobbleClient.ts";
-import { removeUndefinedKeys } from "../../core/DataUtils.ts";
 
 export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
 
@@ -60,14 +59,25 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
             transformPlay: this.transformPlay,
             existingSubmitted: this.findExistingSubmittedPlayObj,
             existingExternal: async (play) => {
-                const createRecord = removeUndefinedKeys(playToRockskyClientRecord(play));
-                const existingUri = await this.api.rsIndex.scrobbleUri(this.api.userData.did, createRecord.title, createRecord.artist, createRecord.album, createRecord.timestamp);
+                const {userData} = this.api;
+                if(userData === undefined) {
+                    return {match: false, reason: 'atproto identifier is not resolved so existing scrobble records cannot be checked'};
+                }
+                const {title, artist, album, timestamp} = playToRockskyClientRecord(play);
+                if(album === undefined || timestamp === undefined) {
+                    // rocksky requires album so a record without one could not have been scrobbled
+                    return {match: false};
+                }
+                const existingUri = await this.api.rsIndex.scrobbleUri(userData.did, title, artist, album, timestamp);
                 if(existingUri) {
                     return {
                         match: true,
                         reason: 'matched existing scrobble record URI',
                         data: existingUri
                     }
+                }
+                if(this.api.rsAgent === undefined) {
+                    return {match: false, reason: 'must be using PDS auth to use local mirror, no matches will ever be found'}
                 }
                 return {match: false};
             }
@@ -109,7 +119,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         }
     }
 
-    getScrobblesForTimeRange = async (_) => {
+    getScrobblesForTimeRange = async (_: any) => {
         return await this.api.getRecentlyPlayed(this.MAX_INITIAL_SCROBBLES_FETCH);
     }
 
@@ -136,7 +146,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
                 this.logger.info(`Scrobbled (Backlog) => (${source}) ${buildTrackString(playObj)}`);
             }
             return result;
-        } catch (e) {
+        } catch (e: any) {
             await this.notify({ title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error' });
             throw e;
         }
@@ -194,14 +204,23 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
     async fetchCarToFile() {
         // TODO use `since` to get CAR diff instead of entire repo
         // can use last import date from migrations table
+        const {userData} = this.api;
+        if(userData === undefined) {
+            throw new Error('Cannot fetch CAR because atproto identifier has not been resolved');
+        }
         const filename = path.resolve(this.configDir, `${this.getSafeExternalId()}-${dayjs().unix()}.car`);
-        const atClient = new ATProtoUnauthenticatedApiClient('rocksky', { handleData: this.api.userData, identifier: this.config.data.handle }, { logger: this.logger });
+        const atClient = new ATProtoUnauthenticatedApiClient('rocksky', { handleData: userData, identifier: this.config.data.handle }, { logger: this.logger });
         await atClient.initClient();
-        await fsPromise.writeFile(filename, Buffer.from(await atClient.getCAR(this.api.userData.did)));
+        await fsPromise.writeFile(filename, Buffer.from(await atClient.getCAR(userData.did)));
         return filename;
     }
 
     async parseScrobblesFromCar(filename: string, batchSize: number, opts: { allowFailures?: boolean, logger?: Logger, signal?: AbortSignal } = {}) {
+
+        if(this.api.userData === undefined) {
+            throw new Error('Cannot parse CAR because atproto identifier has not been resolved');
+        }
+        const {did} = this.api.userData;
 
         if(this.api.rsAgent !== undefined) {
             await this.api.syncSdkRepo(filename);
@@ -215,7 +234,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
 
         const stream = Readable.toWeb(fs.createReadStream(filename));
 
-        await using repo = fromStream(stream);
+        await using repo = fromStream(stream as ReadableStream<Uint8Array>);
 
         let batch: RepositoryCreatePlayHistoricalOpts[] = [];
         let allGood = true;
@@ -229,7 +248,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
             if (entry.collection === 'app.rocksky.scrobble') {
                 let play: PlayObject;
                 try {
-                    play = rockskyScrobbleToPlay(entry.record, {user: this.api.userData.did, playId: entry.rkey, web: `${this.api.userData.did}/app.rocksky.scrobble/${entry.rkey}`})
+                    play = rockskyScrobbleToPlay(entry.record as RockskyScrobble, {user: did, playId: entry.rkey, web: `${did}/app.rocksky.scrobble/${entry.rkey}`})
                     if (isDebugMode()) {
                         logger.trace(`(${count}) rKey ${entry.rkey} => ${buildTrackString(play)}`);
                     }
@@ -290,6 +309,10 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         const unseenPlays: PlayObject[] = [];
         let syncGapFilled = false;
         for (const p of recentPlays) {
+            if(p.meta.playId === undefined) {
+                this.logger.warn(`Cannot determine if play has been seen because it has no playId, skipping => ${buildTrackString(p)}`);
+                continue;
+            }
             if(!(await this.playsHistoricalRepo.hasByUid(p.meta.playId))) {
                 unseenPlays.push(p);
             } else {

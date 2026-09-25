@@ -13,8 +13,7 @@ import {
     type PaginatedListensTimeRangeOptions,
     type PaginatedTimeRangeListens,
     type PaginatedTimeRangeListensResult,
-    type PlayerStateData,
-    type SourceData,
+    type PlayerStateDataMaybePlay,
     type TimeRangeListensFetcher,
 } from "../common/infrastructure/Atomic.ts";
 import { NO_USER } from '../../core/Atomic.ts';
@@ -49,7 +48,7 @@ const shortDeviceId = truncateStringToLength(10, '');
 
 export default class SpotifySource extends MemoryPositionalSource implements PaginatedTimeRangeListens<string> {
 
-    spotifyApi: SpotifyWebApi;
+    spotifyApi!: SpotifyWebApi;
     workingCredsPath: string;
 
     override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.interactive;
@@ -96,7 +95,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
         let played_at: Dayjs;
         let playDateCompleted: Dayjs | undefined;
         let id: string;
-        let url: string;
+        let url: string | undefined;
         let playbackPosition: number | undefined;
         let deviceId: string | undefined;
         let isrcString: string | undefined;
@@ -182,7 +181,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             duration_ms = dm;
             album = a;
             url = spotify;
-            playbackPosition = progress_ms / 1000;
+            playbackPosition = progress_ms !== null && progress_ms !== undefined ? progress_ms / 1000 : undefined;
             deviceId = combinePartsToString([shortDeviceId(deviceIdentifier), deviceName]);
             isrcString = isrc;
             trackNumber = track_number
@@ -205,9 +204,9 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             actualAlbumArtists = albumArtists;
         }
 
-        let imageData: {url: string};
+        let imageData: {url: string} | undefined;
         if(images.length > 0) {
-            imageData = images.find(x => x.height < 640);
+            imageData = images.find(x => x.height !== undefined && x.height < 640);
             if(imageData === undefined) {
                 imageData = images[0];
             }
@@ -252,7 +251,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             brainz.trackNumber = trackNumber;
         }
         if(Object.keys(brainz).length > 0) {
-            play.data.meta.brainz = brainz;
+            play.data.meta = {...play.data.meta, brainz};
         }
 
         if(imageData !== undefined) {
@@ -333,7 +332,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             if(isNodeNetworkException(e)) {
                 throw new Error('Could not communicate with Spotify API server', {cause: e});
             }
-            if(e.status >= 500) {
+            if((e as any).status >= 500) {
                 throw new Error('Spotify API server returned an unexpected response', { cause: e});
             }
             return true;
@@ -347,7 +346,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             }
             await this.callApi<ReturnType<typeof this.spotifyApi.getMe>>(((api: any) => api.getMe()));
             return true;
-        } catch (e) {
+        } catch (e: any) {
             if(e instanceof AuthError) {
                 throw e;
             }
@@ -389,11 +388,11 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
-        const plays: SourceData[] = [];
+        const plays: (PlayObject | PlayerStateDataMaybePlay)[] = [];
         if(this.canGetState) {
             const state = await this.getCurrentPlaybackState();
             if(state.playerState !== undefined) {
-                if(state.device.is_private_session) {
+                if(state.device?.is_private_session) {
                     this.logger.debug(`Will not track play on Device ${state.device.name} because it is in a private session.`);
                 } else {
                     plays.push(state.playerState);
@@ -446,7 +445,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
 
             if(to !== undefined) {
                 const toDate = dayjs.unix(to);
-                plays = plays.filter(x => x.data.playDate.isBefore(toDate));
+                plays = plays.filter(x => x.data.playDate !== undefined && x.data.playDate.isBefore(toDate));
             }
             // if no plays returned
             // or if filtered plays are less than results then we've hit the to date
@@ -532,7 +531,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
         return play;
     }
 
-    getCurrentPlaybackState = async (logError = true): Promise<{device?: SpotifyApi.UserDevice, playerState?: PlayerStateData}> => {
+    getCurrentPlaybackState = async (logError = true): Promise<{device?: SpotifyApi.UserDevice, playerState?: PlayerStateDataMaybePlay}> => {
         try {
             const funcState = (api: SpotifyWebApi) => api.getMyCurrentPlaybackState();
             const res = await this.callApi<ReturnType<typeof this.spotifyApi.getMyCurrentPlaybackState>>(funcState);
@@ -560,7 +559,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
                 return {
                     device,
                     playerState: {
-                        platformId: [combinePartsToString([shortDeviceId(device.id), device.name]), NO_USER],
+                        platformId: [combinePartsToString([shortDeviceId(device.id), device.name]) ?? NO_DEVICE, NO_USER],
                         status,
                         play,
                         stateUpdatedAt: dayjs(),
@@ -570,7 +569,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             }
 
             return {};
-        } catch (e) {
+        } catch (e: any) {
             if(hasApiError(e)) {
                 throw new UpstreamError('Error occurred while trying to retrieve current playback state', {cause: e});
             }
@@ -587,10 +586,10 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
         const {
             maxRequestRetries = 1,
             retryMultiplier = 2,
-        } = this.config.options;
+        } = this.config.options ?? {};
         try {
             return await func(this.spotifyApi);
-        } catch (e) {
+        } catch (e: any) {
             const spotifyError = new UpstreamError('Spotify API call failed', {cause: e});
             if (e.statusCode === 401 && !hasApiPermissionError(e)) {
                 if (this.spotifyApi.getRefreshToken() === undefined) {
@@ -610,6 +609,9 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
                             token_type
                         } = {}
                     } = tokenResponse;
+                    if(access_token === undefined || expires_in === undefined) {
+                        throw new SimpleError('Refresh token response did not include an access token and/or expiration');
+                    }
                     this.spotifyApi.setAccessToken(access_token);
                     await writeFile(this.workingCredsPath, JSON.stringify({
                         token: access_token,
@@ -659,7 +661,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
         try {
             await this.getCurrentPlaybackState(false);
             this.canGetState = true;
-        } catch (e) {
+        } catch (e: any) {
             if(hasApiPermissionError(e)) {
                 this.logger.warn('multi-scrobbler does not have sufficient permissions to access Spotify API "Get Playback State". MS will continue to work but accuracy for determining if/when a track played from a Spotify Connect device (smart device controlled through Spotify app) may be degraded. To fix this re-authenticate MS with Spotify and restart polling.');
                 this.canGetState = false;

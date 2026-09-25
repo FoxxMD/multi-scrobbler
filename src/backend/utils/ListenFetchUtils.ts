@@ -1,7 +1,7 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
 import type {Duration} from "dayjs/plugin/duration.js";
-import type {PlayObject} from "../../core/Atomic.ts";
+import type {DatedPlayObject, PlayObject} from "../../core/Atomic.ts";
 import { type CursorType, hasPagelessTimeRangeListens, hasPaginatedTimeRangeListens, type PagelessTimeRangeListensResult, type PaginatedListensTimeRangeOptions, type PaginatedTimeRangeCommonOptions, type PaginatedTimeRangeListensResult, type PaginatedTimeRangeOptions, type PaginatedTimeRangeSource, REFRESH_STALE_DEFAULT, type TimeRangeListensFetcher } from "../common/infrastructure/Atomic.ts";
 import { loggerNoop } from '../common/MaybeLogger.ts';
 import type { MaybeLogger } from '../common/MaybeLogger.ts';
@@ -94,30 +94,36 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
                     if (results.meta.order === undefined || results.meta.order === 'asc') {
                         // if meta.order is ascending then assumption the response returns *oldest first* list
                         // so that the newest play from the response should be used as the new `from`
-                        const nextFrom = [...results.data].sort(sortByNewestPlayDate)[0].data.playDate.unix() + 1;
-                        currOpts.from = nextFrom;
+                        const newestDate = [...results.data].sort(sortByNewestPlayDate)[0].data.playDate;
+                        if(newestDate === undefined) {
+                            throw new Error('Cannot determine next page time range because newest play has no playDate');
+                        }
+                        currOpts.from = newestDate.unix() + 1;
                     } else {
                         // otherwise, oldest found play should be the new `to`
-                        const nextTo = [...results.data].sort(sortByOldestPlayDate)[0].data.playDate.unix() - 1;
-                        currOpts.to = nextTo;
+                        const oldestDate = [...results.data].sort(sortByOldestPlayDate)[0].data.playDate;
+                        if(oldestDate === undefined) {
+                            throw new Error('Cannot determine next page time range because oldest play has no playDate');
+                        }
+                        currOpts.to = oldestDate.unix() - 1;
                     }
                 }
             }
             return plays;
         }
     } else if (hasPaginatedTimeRangeListens(fetcher)) {
-        return async (opts: PaginatedListensTimeRangeOptions): Promise<PlayObject[]> => {
+        return async (opts: PaginatedTimeRangeCommonOptions | PaginatedListensTimeRangeOptions): Promise<PlayObject[]> => {
             let plays: PlayObject[] = [];
             requestCount = 0;
             let more = true;
-            const currOpts: PaginatedListensTimeRangeOptions = opts;
+            const currOpts = opts as PaginatedListensTimeRangeOptions;
             let initial = true;
-            let timeRangeHint: string;
+            let timeRangeHint: string | undefined;
             if(currOpts.to !== undefined && currOpts.from !== undefined) {
                 timeRangeHint = `Between ${todayAwareFormat(dayjs.unix(currOpts.from))} and ${todayAwareFormat(dayjs.unix(currOpts.to))}`;
             } else if(currOpts.to) {
                 timeRangeHint= `Until ${todayAwareFormat(dayjs.unix(currOpts.to))}`;
-            } else if(currOpts.to) {
+            } else if(currOpts.from) {
                 timeRangeHint = `From ${todayAwareFormat(dayjs.unix(currOpts.from))}`;
             }
             while (more) {
@@ -222,9 +228,10 @@ export const groupPlaysToTimeRanges = (plays: PlayObject[], existingRanges: Pagi
     } = opts;
     const newRanges: PaginatedTimeRangeOptions[] = [];
 
-    const temporallyClosePlaySets: PlayObject[][] = [];
+    const temporallyClosePlaySets: DatedPlayObject[][] = [];
 
-    const sorted = [...plays];
+    // plays without a playDate can't be placed in a time range
+    const sorted = plays.filter((x): x is DatedPlayObject => x.data.playDate !== undefined);
     sorted.sort(sortByOldestPlayDate);
 
     for(const p of sorted) {
@@ -239,59 +246,27 @@ export const groupPlaysToTimeRanges = (plays: PlayObject[], existingRanges: Pagi
     // make sure each grouped list is sorted
     temporallyClosePlaySets.forEach((x) => x.sort(sortByOldestPlayDate));
     // sort all lists so oldest list of plays is first
-    temporallyClosePlaySets.sort((a, b) => {
-    const aPlayDate = a[0].data.playDate;
-    const bPlayDate = b[0].data.playDate;
-        if(aPlayDate === undefined && bPlayDate === undefined) {
-            return 0;
-        }
-        if(aPlayDate === undefined) {
-            return 1;
-        }
-        if(bPlayDate === undefined) {
-            return -1;
-        }
-        return aPlayDate.isAfter(bPlayDate) ? 1 : -1
-    });
+    temporallyClosePlaySets.sort((a, b) => a[0].data.playDate.isAfter(b[0].data.playDate) ? 1 : -1);
 
     // try to consolidate lists if they are within a few hours (or consolidateDuration) of their neighbors
-    interface NeighorAcc {
-        lists: PlayObject[][]
-        open: PlayObject[] | undefined
-    }
-    let consolidated: PlayObject[][] = temporallyClosePlaySets;
+    let consolidated: DatedPlayObject[][] = temporallyClosePlaySets;
 
     if(consolidated.length > 1) {
-        consolidated = temporallyClosePlaySets.reduce((acc: NeighorAcc, curr, index) => {
-            // if no list is currently being evaluated then open this one and iterate
-            if(index === 0) {
-                acc.open = curr;
-                //return acc;
+        consolidated = [];
+        // open the first list and iterate over the rest
+        let open = temporallyClosePlaySets[0];
+        for(const curr of temporallyClosePlaySets.slice(1)) {
+            // see if time b/w oldest of open and newest of curr is less than allowed time
+            if(curr[curr.length - 1].data.playDate.diff(open[0].data.playDate, 's') < consolidateDuration.asSeconds()) {
+                // if less than consolidateDuration then consolidate and iterate
+                open = open.concat(curr);
             } else {
-                // if a list is open then we need to see if time b/w oldest and newest of curr is less than allowed time
-
-                if(curr[curr.length - 1].data.playDate.diff(acc.open[0].data.playDate, 's') < consolidateDuration.asSeconds()) {
-                    // if less than consolidateDuration then consolidate and iterate
-                    acc.open = acc.open.concat(curr);
-                    //return acc;
-                } else {
-                    // if its not less than consolidateDuration then close list
-                    acc.lists.push(acc.open);
-
-                    // and open with curr
-                    acc.open = curr;
-                }
+                // if its not less than consolidateDuration then close list and open with curr
+                consolidated.push(open);
+                open = curr;
             }
-
-            if(index === temporallyClosePlaySets.length - 1) {
-                // if this is the last iteration then push current as well
-                acc.lists.push(acc.open)
-            }
-
-            return acc;
-            
-
-        }, {lists: [], open: undefined}).lists;
+        }
+        consolidated.push(open);
         logger.trace(`Reduced timerange groups ${temporallyClosePlaySets.length} => ${consolidated.length}`);
     }
 

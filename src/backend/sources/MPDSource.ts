@@ -6,7 +6,7 @@ import type {BrainzMeta, ComponentAuthType, PlayObject, PlayObjectMinimal} from 
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
-    type PlayerStateData,
+    type PlayerStateDataMaybePlay,
 } from "../common/infrastructure/Atomic.ts";
 import { COMPONENT_AUTH_TYPE, SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
@@ -31,10 +31,10 @@ export class MPDSource extends MemoryPositionalSource {
 
     host?: string
     port?: number
-    mpc: MPC;
-    deviceId: string
+    mpc!: MPC;
+    deviceId!: string
 
-    protected currentPlayPath: string;
+    protected currentPlayPath!: string;
     protected currentPlaySong?: Song;
 
     override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
@@ -83,7 +83,7 @@ export class MPDSource extends MemoryPositionalSource {
     }
 
     protected async doCheckConnection(): Promise<true | string | undefined> {
-        if(this.host !== undefined) {
+        if(this.host !== undefined && this.port !== undefined) {
             try {
                 await isPortReachable(this.port, {host: this.host});
                 return `${this.host}:${this.port} is reachable.`;
@@ -91,7 +91,8 @@ export class MPDSource extends MemoryPositionalSource {
                 throw e;
             }
         }
-        return null;
+        // no host means a socket connection, which is checked during authentication
+        return undefined;
     }
 
     doAuthentication = async () => {
@@ -111,7 +112,11 @@ export class MPDSource extends MemoryPositionalSource {
                     throw new Error('Timed out waiting for TCP response from MPD');
                 }
             } else {
-                await this.mpc.connectUnixSocket(this.config.data.path);
+                const socketPath = this.config.data?.path;
+                if(socketPath === undefined) {
+                    throw new Error('Neither a host nor a socket path is configured');
+                }
+                await this.mpc.connectUnixSocket(socketPath);
             }
 
             if(this.config.data.password !== undefined) {
@@ -125,7 +130,7 @@ export class MPDSource extends MemoryPositionalSource {
                 }
             });
             return true;
-        } catch (e) {
+        } catch (e: any) {
             let friendlyError: string | undefined;
             if(e.code === 'ENOENT') {
                 friendlyError = 'Socket file does not exist'
@@ -148,12 +153,12 @@ export class MPDSource extends MemoryPositionalSource {
 
     formatPlayObj(obj: Song | PlaylistItem, options: FormatPlayObjectOptions & {state?: Status} = {}): PlayObject {
 
-        let trackName: string,
-        album: string,
+        let trackName: string | undefined,
+        album: string | undefined,
         artists: string[] | undefined = [],
         albumArtists: string[] | undefined = [],
-        duration: number,
-        position: number,
+        duration: number | undefined,
+        position: number | undefined,
         brainz: BrainzMeta = {};
 
         const {
@@ -232,7 +237,7 @@ export class MPDSource extends MemoryPositionalSource {
             } = obj;
 
             trackName = title ?? name;
-            if(trackName === undefined) {
+            if(trackName === undefined && file !== undefined) {
                 const pathSplit = file.split(path.sep);
                 if(pathSplit.length > 1) {
                     trackName = pathSplit[pathSplit.length - 1];
@@ -318,9 +323,9 @@ export class MPDSource extends MemoryPositionalSource {
             }
         }
 
-        const playerState: PlayerStateData = {
+        const playerState: PlayerStateDataMaybePlay = {
             platformId: SINGLE_USER_PLATFORM_ID,
-            status: CLIENT_PLAYER_STATE[mpcStatus.state],
+            status: mpcStatus.state !== undefined ? CLIENT_PLAYER_STATE[mpcStatus.state] : REPORTED_PLAYER_STATUSES.unknown,
             play,
             position: play?.meta?.trackProgressPosition
         }

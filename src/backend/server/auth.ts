@@ -89,7 +89,7 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
                 }
             } catch (e) {
                 if(entity !== undefined) {
-                    entity.errors.push(e);
+                    entity.errors.push(e as Error);
                     entity.logger.error(e);
                 } else {
                     logger.error(e);
@@ -100,9 +100,11 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
         } else if(req.url.includes('ytmusic')) {
             const entity: YTMusicSource | undefined = scrobbleSources.getByName(name) as (YTMusicSource | undefined);
             if(entity === undefined) {
-                logger.error(`No YTMUsic source with name ${state} was found`);
+                logger.error(`No YTMUsic source with name ${name} was found`);
+                res.status(404).send(`No YTMusic source with name ${name} was found`);
+                return;
             }
-            const result = await entity.handleAuthCodeCallback(req.query);
+            const result = await entity.handleAuthCodeCallback(req.query as Record<string, any>);
             let responseContent = 'OK';
             if(result === true) {
                 entity.authFailure = false;

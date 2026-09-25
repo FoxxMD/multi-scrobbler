@@ -9,7 +9,7 @@ import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 export class KodiSource extends MemoryPositionalSource {
     declare config: KodiSourceConfig;
 
-    client: KodiApiClient;
+    client!: KodiApiClient;
     clientReady: boolean = false;
     override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
 

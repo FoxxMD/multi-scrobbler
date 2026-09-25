@@ -19,7 +19,7 @@ export const generateComponentEntity = (data: MarkOptional<ComponentNew, 'uid'>)
     };
 }
 
-export type PlayEntityOpts = Partial<Pick<PlayNew, 'seenAt' | 'playedAt' | 'uid' | 'state' | 'parentId' | 'componentId'>> & { error?: ErrorLike };
+export type PlayEntityOpts = Partial<Pick<PlayNew, 'seenAt' | 'playedAt' | 'uid' | 'state' | 'parentId' | 'componentId'>> & { error?: ErrorLike | null };
 export type PlayHistoricalEntityOpts = Partial<Pick<PlayHistoricalNew, 'seenAt' | 'playedAt' | 'uid' | 'componentId'>>;
 
 export const generatePlayEntity = (play: PlayObject, opts: PlayEntityOpts = {}): PlayNew => {
@@ -29,7 +29,7 @@ export const generatePlayEntity = (play: PlayObject, opts: PlayEntityOpts = {}):
         playedAt = play.data.playDate,
         ...restOpts
     } = opts;
-    let playHash: string = undefined;
+    let playHash: string | undefined = undefined;
     try {
         playHash = hashObject(playContentBasicInvariantTransform(play).data);
     } catch (e) {
@@ -62,7 +62,7 @@ export const hydratePlaySelect = <T extends PlaySelect | PlayHistoricalSelect>(s
     //     res = asPlay(res);
     // }
     if(opts.includes('uid')) {
-        res.uid = select.uid;
+        res.uid = select.uid ?? undefined;
         //res.meta.dbUid = select.uid;
     }
     if(opts.includes('id')) {
@@ -72,24 +72,28 @@ export const hydratePlaySelect = <T extends PlaySelect | PlayHistoricalSelect>(s
     return res;
 }
 
-export const playSelectToDeadScrobble = (select: PlaySelectWithQueueStates, serializedError: boolean = false): DeadLetterScrobble<PlayObject> => {
-    const deadQueue = select.queueStates.find(x => x.queueName === DEAD_QUEUE);
-    return {
-        play: select.play,
-        id: select.uid,
-        source: select.play.meta.source,
-        retries: deadQueue.retries,
-        lastRetry: deadQueue.updatedAt,
-        error: (serializedError ? serializeError(select.error) : select.error) as unknown as string,
-        status: deadQueue.queueStatus as 'queued' | 'failed'
-    }
-}
-
 export const generateInputEntity = (data: PlayInputNew): PlayInputNew => {
     const {
         playHash = hashObject(playContentBasicInvariantTransform(data.play).data)
     } = data;
     return {...data, playHash};
+}
+
+export const generatePlayHistoricalEntity = (play: PlayObject, opts: PlayHistoricalEntityOpts = {}): PlayHistoricalNew => {
+    const {
+        seenAt = dayjs(),
+        playedAt = play.data.playDate,
+        ...restOpts
+    } = opts;
+    const {playHash, mbidIdentifier} = generatePlayEntity(play);
+    return {
+        play,
+        playHash,
+        mbidIdentifier,
+        playedAt,
+        seenAt: play.meta.seenAt ?? seenAt,
+        ...restOpts
+    };
 }
 
 export const generateQueueStateEntity = (data: QueueStateNew): QueueStateNew => {
@@ -123,12 +127,14 @@ export const stateChangeToPlayEvent = (partial: PlayEventPlayStateChangeData): O
     data: partial
 })
 
-export const queueStateToPlayEvent = (partial: MarkOptional<QueueStateSelect, 'context'>): Omit<PlayEventQueueStateChange, 'playId'> => ({
+type QueueStateEventInput = Omit<QueueStateSelect, 'error'> & { error?: ErrorLike | null };
+
+export const queueStateToPlayEvent = (partial: MarkOptional<QueueStateEventInput, 'context'>): Omit<PlayEventQueueStateChange, 'playId'> => ({
     eventName: PLAY_EVENT_TYPE.queueStateChange,
     createdAt: dayjs(),
     data: partial
 });
-export const queueCompletionStateToPlayEvent = (partial: MarkOptional<QueueStateSelect, 'context' | 'retries'>): Omit<PlayEventQueueStateChange, 'playId'> => {
+export const queueCompletionStateToPlayEvent = (partial: MarkOptional<QueueStateEventInput, 'context' | 'retries'>): Omit<PlayEventQueueStateChange, 'playId'> => {
     const {
         context,
         retries,

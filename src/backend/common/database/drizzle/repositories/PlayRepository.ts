@@ -1,6 +1,6 @@
 import { childLogger } from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
-import { and, eq, inArray, isNull, notExists, relationsFilterToSQL, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, relationsFilterToSQL, sql } from "drizzle-orm";
 import assert from "node:assert";
 import type { MarkOptional, ElementOf } from "ts-essentials";
 import { type DateLike, type DeepReplaceValue, type PlayObject, type PlayState, QUEUE_STATUS_QUEUED, type QueueName, SCROBBLE_TS_SOC_END, TA_DEFAULT_ACCURACY, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
@@ -118,7 +118,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         const {
             hydrate
         } = opts;
-        let playRows: PlayWith<'input'>[];
+        let playRows!: PlayWith<'input'>[];
 
         await runTransaction(this.db, async () => {
 
@@ -149,7 +149,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                 return generateInputEntity({ play: inputPlay, playId: x.id, ...restInput });
             });
 
-            const inputRow = await this.db.insert(playInputs).values(inputDatas);
+            const inputRows = await this.db.insert(playInputs).values(inputDatas).returning();
 
             const eventData = nakedPlays.map((x, index) => {
                 const {
@@ -167,7 +167,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                 await this.db.insert(playEvents).values(eventData);
             }
 
-            playRows = nakedPlays.map((x, index) => ({...x, play: hydratePlaySelect(x, hydrate), input: inputRow[index]}));
+            playRows = nakedPlays.map((x, index) => ({...x, play: hydratePlaySelect(x, hydrate), input: inputRows[index]}));
         });
 
         return playRows;
@@ -231,7 +231,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                 }
             }
         }
-        query = removeUndefinedKeys(query);
+        query = removeUndefinedKeys(query, false);
         const results = await this.db.query.plays.findMany(query);
         return results.map((x) => ({...x, play: hydratePlaySelect(x, hydrate)}));
     }
@@ -258,7 +258,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             }
         }
 
-        query = removeUndefinedKeys(query);
+        query = removeUndefinedKeys(query, false);
         const results = await this.db.query.plays.findMany({
             ...query,
             limit: args.limit,
@@ -286,7 +286,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return results.map(identifierExtractor[identifier]);
     }
 
-    findPlaysPaginated = async <T = PlayWith<'queueStates' | 'input' | 'parent'>>(args: QueryPlaysOpts, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PaginatedResponse<T>> => {
+    findPlaysPaginated = async <T = PlayWith<'queueStates' | 'input' | 'parent'>>(args: QueryPlaysOpts, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PaginatedResponse<T> & {meta: {total: number}}> => {
         const {
             limit = 100,
             offset = 0,
@@ -471,7 +471,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                                         return x;
                                     });
                                     if(compactedInput) {
-                                        await this.db.update(playEvents).set({data: transformEvent.data}).where(eq(playEvents.id, transformEvent.id));
+                                        await this.db.update(playEvents).set({data: transformEvent.data}).where(eq(playEvents.id, ev.id));
                                     }
                                 }
                             }
@@ -748,22 +748,23 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         * it's also how we ignore exact plays from history-polling sources
         * since those plays are always the same
         */
-        const playHashOr: ElementOf<typeof where.AND> = {
-            OR: [
-                {
-                    playHash: hash
-                }
-            ]
+        const playHashOrConds: NonNullable<ElementOf<NonNullable<typeof where.AND>>['OR']> = [
+            {
+                playHash: hash
+            }
+        ];
+        const playHashOr: ElementOf<NonNullable<typeof where.AND>> = {
+            OR: playHashOrConds
         };
 
         const mbidId = playMbidIdentifier(play);
         if (mbidId !== undefined || inputHash !== undefined) {
             // }];
             if (mbidId !== undefined) {
-                playHashOr.OR.push({ mbidIdentifier: mbidId });
+                playHashOrConds.push({ mbidIdentifier: mbidId });
             }
             if (inputHash !== undefined) {
-                playHashOr.OR.push({ input: { playHash: typeof inputHash === 'string' ? inputHash : hashObject(playContentBasicInvariantTransform(inputHash).data) } });
+                playHashOrConds.push({ input: { playHash: typeof inputHash === 'string' ? inputHash : hashObject(playContentBasicInvariantTransform(inputHash).data) } });
             }
         }
 
@@ -787,7 +788,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         */
 
         if (parentId !== undefined) {
-            playHashOr.OR.push({
+            playHashOrConds.push({
                 parent: {
                     id: parentId,
                     playHash: hash
@@ -853,9 +854,17 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         })) as PlayWith<'queueStates'>[]).map(x => ({...x, play: hydratePlaySelect(x)}));
     }
 
+    protected requireComponentId = (componentId?: number): number => {
+        const cid = componentId ?? this.componentId;
+        if(cid === undefined) {
+            throw new Error('A componentId must be provided when repository has no default componentId');
+        }
+        return cid;
+    }
+
     public getComponentPlayCountForStates = async (states: string[], componentId?: number): Promise<number> => (
         await this.db.$count(plays, and(
-            eq(plays.componentId, componentId ?? this.componentId),
+            eq(plays.componentId, this.requireComponentId(componentId)),
             inArray(plays.state, states as PlaySelect['state'][])
         ))
     )
@@ -873,7 +882,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         .leftJoin(queueStates, eq(plays.id, queueStates.playId))
         .where(
             and(
-            eq(plays.componentId, componentId ?? this.componentId),
+            eq(plays.componentId, this.requireComponentId(componentId)),
             eq(plays.state, 'failed'),
             isNull(queueStates.id)
         )
@@ -895,20 +904,20 @@ group by state;`);
 
     public getPlayCountByState = async () => {
 
-        const res = await this.db.all(sql`select state,componentId, count(*) from plays p
+        const res = await this.db.all<{state: string, componentId: number, 'count(*)': number}>(sql`select state,componentId, count(*) from plays p
 group by state,componentId;`);
         return res;
     }
 
     public getCompactedPlayCountByComponent = async () => {
 
-        const res = await this.db.all(sql`select componentId,compacted,count(*) from plays p
+        const res = await this.db.all<{componentId: number, compacted: string, 'count(*)': number}>(sql`select componentId,compacted,count(*) from plays p
 where compacted IS NOT NULL
 group by componentId,compacted;`);
         return res;
     }
 
-    async updateById(id: number, data: Partial<PlayNew> & {event?: boolean, reason?: string, error?: ErrorLike}): Promise<typeof this.table.$inferSelect> {
+    async updateById(id: number, data: Partial<PlayNew> & {event?: boolean, reason?: string, error?: ErrorLike | null}): Promise<typeof this.table.$inferSelect> {
         if(data.play !== undefined) {
             data.playHash = hashObject(playContentBasicInvariantTransform(data.play).data);
             data.mbidIdentifier = playMbidIdentifier(data.play);
@@ -917,7 +926,7 @@ group by componentId,compacted;`);
         if(data.event === true) {
             if(data.state !== undefined) {
                 try {
-                    await this.db.insert(playEvents).values({...stateChangeToPlayEvent(removeUndefinedKeys({state: data.state, reason: data.reason, error: data.error})), playId: id});
+                    await this.db.insert(playEvents).values({...stateChangeToPlayEvent(removeUndefinedKeys({state: data.state, reason: data.reason, error: data.error}, false)), playId: id});
                 } catch (e) {
                     this.logger.warn(new Error(`Failed to create Play Event for state change ${data.state} on Play ${id}`));
                 }
@@ -959,17 +968,19 @@ export const getTemporallyCloseDateCompareOp = (play: PlayObject, opts: {bufferT
 
         // make sure we use the 
         const [sotPlayDate, SOT] = getScrobbleTsSOCDateWithContext(play);
+        const {playDate} = play.data;
 
-        if(useDuration && play.data.duration !== undefined) {
+        // if play has no playDate fallback to using SOT date (which defaults to now)
+        if(useDuration && play.data.duration !== undefined && playDate !== undefined) {
             if(SOT === SCROBBLE_TS_SOC_END) {
-                endRange = play.data.playDate.add(bufferTime, 's');
-                startRange = play.data.playDate.subtract(play.data.duration + bufferTime,'s')
+                endRange = playDate.add(bufferTime, 's');
+                startRange = playDate.subtract(play.data.duration + bufferTime,'s')
             } else {
-                endRange = play.data.playDate.add(play.data.duration + bufferTime, 's');
-                startRange = play.data.playDate.subtract(bufferTime,'s')
+                endRange = playDate.add(play.data.duration + bufferTime, 's');
+                startRange = playDate.subtract(bufferTime,'s')
             }
-        } else if(play.data.playDateCompleted !== undefined && useCompleted) {
-            startRange = play.data.playDate.subtract(bufferTime, 's');
+        } else if(play.data.playDateCompleted !== undefined && useCompleted && playDate !== undefined) {
+            startRange = playDate.subtract(bufferTime, 's');
             // this will be present if source reports it
             // or we tracked it live with MemorySource
             endRange = play.data.playDateCompleted.add(bufferTime, 's');
@@ -1059,9 +1070,9 @@ export const buildPlayWhere = (args: PlayWhereOpts): WhereClause<'plays'> => {
         }
         // so that we can use this type
         // or else assigning an array to OR using only `typeof where.queueStates` causes a type error
-        const queueWhere: typeof where.queueStates.OR[0][] = [];
+        const queueWhere: NonNullable<typeof where.queueStates.OR>[0][] = [];
         for(const q of queues) {
-            const qWhereCriteria: typeof where.queueStates.OR[0] =  {
+            const qWhereCriteria: NonNullable<typeof where.queueStates.OR>[0] =  {
                 queueName: q.queueName,
                 queueStatus: typeof q.queueStatus === 'string' ? q.queueStatus : {
                     in: q.queueStatus

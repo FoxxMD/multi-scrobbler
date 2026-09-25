@@ -24,7 +24,7 @@ export const isPortReachable = async (port: number, opts: PortReachableOpts) => 
     const promise = new Promise(((resolve, reject) => {
         const socket = new net.Socket();
 
-        const onError = (e) => {
+        const onError = (e: any) => {
             socket.destroy();
             reject(e);
         };
@@ -175,6 +175,8 @@ export const  normalizeWSAddress = (val: string, options: {defaultPort?: number 
         } else {
             port = url.protocol === 'ws:' ? 80 : 443;
         }
+    } else {
+        port = parseInt(url.port);
     }
 
     if(url.pathname === '/' && defaultPath !== undefined) {
@@ -210,7 +212,7 @@ export const generateBaseURL = (userUrl: string | undefined, defaultPort: number
     if (u.port === '') {
         if (u.protocol === 'https:') {
             u.port = '443';
-        } else if (trueUserUrl.includes(`${u.hostname}:80`)) {
+        } else if (trueUserUrl !== undefined && trueUserUrl.includes(`${u.hostname}:80`)) {
             u.port = '80';
         } else {
             u.port = defaultPort.toString();
@@ -229,8 +231,8 @@ export const getBaseFromUrl = (url: URL): URL => new URL(`${url.protocol}//${url
 
 export const getAddress = (host = '0.0.0.0', logger?: Logger): { v4?: string, v6?: string, host: string } => {
     const local = host === '0.0.0.0' || host === '::' ? 'localhost' : host;
-    let v4: string,
-        v6: string;
+    let v4: string | undefined,
+        v6: string | undefined;
     try {
         v4 = address.ip();
         v6 = address.ipv6();
@@ -258,7 +260,7 @@ export const isIPv4 = (address: string): boolean => {
 export const formatWebsocketClose = (e: CloseEvent): string => {
     const closeParts = [];
     let code = `${e.code}`;
-    const codeHint = WEBSOCKET_CLOSE_CODE_REASONS[e.code];
+    const codeHint = WEBSOCKET_CLOSE_CODE_REASONS[e.code as keyof typeof WEBSOCKET_CLOSE_CODE_REASONS];
     if(codeHint !== undefined) {
         code = `(${e.code}) ${codeHint}`;
     }
@@ -315,8 +317,9 @@ export const streamBodyProgress = async (stream: ReadableStream<Uint8Array<Array
     let length: number,
     chunkReportSize: number = chunkDefaultSize,
     lastReportedSize: number = 0;
-    if(headers !== undefined && null !== headers.get('content-length')) {
-        length = +headers.get('content-length');
+    const contentLength = headers?.get('content-length');
+    if(contentLength !== undefined && contentLength !== null) {
+        length = +contentLength;
         const [summary, size, unit] = formatBytes(length);
         if(unit === 'MiB' && size > 10) {
             switch(true) {

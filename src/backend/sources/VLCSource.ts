@@ -6,7 +6,7 @@ import type {ComponentAuthType, PlayObject, PlayObjectMinimal} from "../../core/
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
-    type PlayerStateData,
+    type PlayerStateDataMaybePlay,
 } from "../common/infrastructure/Atomic.ts";
 import { COMPONENT_AUTH_TYPE, SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
@@ -34,7 +34,7 @@ export class VLCSource extends MemoryPositionalSource {
     host?: string
     port?: number
     client!: VLC.Client;
-    deviceId: string
+    deviceId!: string
     vlcVersion?: string;
     filenamePatterns: RegExp[] = [];
 
@@ -79,7 +79,8 @@ export class VLCSource extends MemoryPositionalSource {
         this.client = new VLC.Client({
             ip: host,
             port: this.port,
-            password: password
+            // VLC http interface requires a password, empty will fail during auth
+            password: password ?? ''
         });
 
         let fp = filenamePatterns;
@@ -100,15 +101,15 @@ export class VLCSource extends MemoryPositionalSource {
     }
 
     protected async doCheckConnection(): Promise<true | string | undefined> {
-        if(this.host !== undefined) {
-            try {
-                await isPortReachable(this.port, {host: this.host});
-                return `${this.host}:${this.port} is reachable.`;
-            } catch (e) {
-                throw e;
+        try {
+            if(this.port === undefined || this.host === undefined) {
+                throw new Error('host and port have not been initialized');
             }
+            await isPortReachable(this.port, {host: this.host});
+            return `${this.host}:${this.port} is reachable.`;
+        } catch (e) {
+            throw e;
         }
-        return null;
     }
 
     doAuthentication = async () => {
@@ -125,7 +126,7 @@ export class VLCSource extends MemoryPositionalSource {
 
     formatPlayObj(obj: VlcAudioMeta, options: FormatPlayObjectOptions = {}): PlayObject {
 
-        let vlcState: VlcStatus;
+        let vlcState: VlcStatus | undefined;
         const {
             vlcStatus,
         } = options;
@@ -148,7 +149,7 @@ export class VLCSource extends MemoryPositionalSource {
         let artists: string[] = [];
         let albumArtists: string[] = [];
         const validArtist = firstNonEmptyStr([artist, StreamArtist, ALBUMARTIST, Writer]);
-        if(artist !== undefined) {
+        if(validArtist !== undefined) {
             artists.push(validArtist);
         }
         const aa = firstNonEmptyStr([ALBUMARTIST]);
@@ -177,17 +178,18 @@ export class VLCSource extends MemoryPositionalSource {
                 const matchedPatternDebug: Record<string, string> = {};
                 if (result !== undefined) {
                     anyMatched = true;
-                    if (result.named.title !== undefined) {
-                        trackName = result.named.title;
-                        matchedPatternDebug.title = trackName;
+                    const {title: namedTitle, album: namedAlbum} = result.named;
+                    if (namedTitle !== undefined) {
+                        trackName = namedTitle;
+                        matchedPatternDebug.title = namedTitle;
                     }
                     if (result.named.artist !== undefined) {
                         artists.push(result.named.artist);
                         matchedPatternDebug.artist = result.named.artist;
                     }
-                    if (result.named.album !== undefined) {
-                        album = result.named.album;
-                        matchedPatternDebug.album = album;
+                    if (namedAlbum !== undefined) {
+                        album = namedAlbum;
+                        matchedPatternDebug.album = namedAlbum;
                     }
 
                     if (logFilenamePatterns) {
@@ -257,9 +259,9 @@ export class VLCSource extends MemoryPositionalSource {
             }
         }
 
-        const playerState: PlayerStateData = {
+        const playerState: PlayerStateDataMaybePlay = {
             platformId: SINGLE_USER_PLATFORM_ID,
-            status: CLIENT_PLAYER_STATE[state.state],
+            status: CLIENT_PLAYER_STATE[state.state as PlayerState],
             play,
             position: state.time
         }

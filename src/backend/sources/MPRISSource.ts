@@ -180,7 +180,7 @@ export class MPRISSource extends MemorySource {
 
     protected getPlayerPosition = async (props: DBusInterface): Promise<number> => {
         try {
-            const pos = await props['Position'];
+            const pos = await (props as any)['Position'];
             // microseconds
             return dayjs.duration({milliseconds: Number(pos / 1000)}).asSeconds();
         } catch(e) {
@@ -191,7 +191,7 @@ export class MPRISSource extends MemorySource {
 
     protected getPlayerStatus = async (props: DBusInterface): Promise<PlaybackStatus> => {
         try {
-            const status = await props['PlaybackStatus'];
+            const status = await (props as any)['PlaybackStatus'];
             return status as PlaybackStatus;
         } catch (e) {
              
@@ -201,7 +201,7 @@ export class MPRISSource extends MemorySource {
 
     protected getPlayerMetadata = async (props: DBusInterface): Promise<MPRISMetadata> => {
         try {
-            const metadata = await props['Metadata'];
+            const metadata = await (props as any)['Metadata'];
             return this.metadataToPlain(metadata);
         } catch(e) {
              
@@ -209,8 +209,8 @@ export class MPRISSource extends MemorySource {
         }
     }
 
-    metadataToPlain = (metadataVariant): MPRISMetadata => {
-        const metadataPlain = {};
+    metadataToPlain = (metadataVariant: any): MPRISMetadata => {
+        const metadataPlain: Record<string, any> = {};
         for (const k of Object.keys(metadataVariant)) {
             const value = metadataVariant[k];
             if (value === undefined || value === null) {
@@ -269,7 +269,7 @@ const convertDBusExceptionToError = (e: any): Error => {
 // unfortunately had to recreate this function from dbus-ts/Connection
 // in order to be able to create the Connection class without immediate init
 // so we can catch errors
-const createStream = (opts: ConnectOpts): Readable&Writable => {
+const createStream = (opts: ConnectOpts): (Readable&Writable) => {
     if (typeof opts !== 'object') {
         opts = {};
     }
@@ -310,7 +310,7 @@ const createStream = (opts: ConnectOpts): Readable&Writable => {
                 default:
                     throw new Error('unknown address type:' + family);
             }
-        } catch (e) {
+        } catch (e: any) {
             if (i < addresses.length - 1) {
                 console.warn(e.message);
             } else {
@@ -318,4 +318,6 @@ const createStream = (opts: ConnectOpts): Readable&Writable => {
             }
         }
     }
+    // not reachable since last address either returns or throws
+    throw new Error('unknown bus address');
 }

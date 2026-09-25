@@ -63,19 +63,19 @@ describe('#Caching', function () {
 
                 const now = dayjs();
 
-                await keyv.set('foo', now);
-                flat.save(true);
-                keyv.disconnect();
+                await keyv!.set('foo', now);
+                flat!.save(true);
+                keyv!.disconnect!();
 
                 const [cleanKeyv, cleanFlat] = await initFileCache({ cacheDir: process.cwd(), persistInterval: 5, expirationInterval: 4 });
 
-                const time = await cleanKeyv.get('foo');
+                const time = await cleanKeyv!.get('foo');
 
                 expect(time).to.not.be.undefined;
                 expect(time instanceof dayjs).is.true;
                 expect(now.toJSON()).eq((time as any).toJSON());
-                flat.destroy();
-                cleanFlat.destroy();
+                flat!.destroy();
+                cleanFlat!.destroy();
                 await sleep(10);
             }, { unsafeCleanup: true, postfix: 'fileCacheDajys' });
         });

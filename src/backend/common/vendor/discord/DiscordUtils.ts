@@ -10,12 +10,15 @@ import { parseArrayFromMaybeString } from "../../../utils/StringUtils.ts";
 
 export const playStateToActivityData = (data: SourcePlayerObj, opts: { useArt?: boolean } = {}): { activity: ActivityData, artUrl?: string } => {
     // unix timestamps in milliseconds
-    let startTime: number,
-        endTime: number;
+    let startTime: number | undefined,
+        endTime: number | undefined;
 
-    const play: PlayObject = data.play;
+    const play: PlayObject | undefined = data.play;
+    if(play === undefined) {
+        throw new Error('Cannot build activity data from player state without a Play');
+    }
 
-    const position = data.position ?? data.play.meta?.trackProgressPosition;
+    const position = data.position ?? play.meta?.trackProgressPosition;
     if(position !== undefined && play.data.duration !== undefined) {
         let realPosition = position;
         if(data.playerLastUpdatedAt !== undefined) {
@@ -45,15 +48,15 @@ export const playStateToActivityData = (data: SourcePlayerObj, opts: { useArt?: 
         statusDisplayType: 1, // state
         name: activityName,
         
-        details: play.data.track.padEnd(2,'\u200B'),
+        details: play.data.track?.padEnd(2,'\u200B'),
         state: play.data.artists !== undefined && play.data.artists.length > 0 ? play.data.artists.map(x => x.name.padEnd(2, '\u200B')).join(' / ') : undefined,
         // https://docs.discord.com/developers/events/gateway-events#activity-object-activity-assets
         // https://docs.discord.com/developers/events/gateway-events#activity-object-activity-asset-image
-        assets: {
+        assets: play.data.album !== undefined ? {
             largeText: play.data.album.padEnd(2, '\u200B')
-        },
+        } : undefined,
         createdAt: dayjs().unix()
-    });
+    }, false);
     if (endTime !== undefined && startTime !== undefined) {
         activity.timestamps = {
             start: startTime,
@@ -125,10 +128,13 @@ export const configToStrong = (data: DiscordData): DiscordStrongData => {
         ipcLocations
     } = data;
 
+    const saRaw = parseArrayFromMaybeString(statusOverrideAllow);
+
     const strongConfig: DiscordStrongData = {
         token,
         applicationId,
         listeningActivityAllow: parseArrayFromMaybeString(listeningActivityAllow),
+        statusOverrideAllow: saRaw.map(statusStringToType),
         artworkDefaultUrl,
     };
 
@@ -142,8 +148,6 @@ export const configToStrong = (data: DiscordData): DiscordStrongData => {
         }
     }
 
-    const saRaw = parseArrayFromMaybeString(statusOverrideAllow);
-    strongConfig.statusOverrideAllow = saRaw.map(statusStringToType);
 
     if (ipcLocations !== undefined) {
         if (typeof ipcLocations === 'string') {

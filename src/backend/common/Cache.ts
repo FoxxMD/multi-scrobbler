@@ -56,10 +56,10 @@ export class MSCache {
 
     logger: Logger;
 
-    cacheHits: Gauge;
-    cacheMisses: Gauge;
-    cacheSets: Gauge;
-    cacheCount: Gauge;
+    cacheHits!: Gauge;
+    cacheMisses!: Gauge;
+    cacheSets!: Gauge;
+    cacheCount!: Gauge;
     //cacheVSize: Gauge;
 
     constructor(logger: Logger, config: CacheConfigOptions = {}) {
@@ -250,13 +250,16 @@ export class MSCache {
 
     }
 
-    protected initCachableType = async (namespace: string, config: CacheConfig, logger: Logger): Promise<Keyv<any> | KeyvStoreAdapter> => {
+    protected initCachableType = async (namespace: string, config: CacheConfig, logger: Logger): Promise<Keyv<any> | KeyvStoreAdapter | undefined> => {
 
         if (config.provider === 'memory') {
             return initMemoryCache({ namespace, lruSize: config.lruSize, ttl: config.ttl });
         }
 
         if (config.provider === 'valkey') {
+            if(config.connection === undefined) {
+                throw new Error('valkey cache must have a connection string');
+            }
             logger.debug(`Building valkey cache from ${config.connection}`);
             try {
                 const cache = await initValkeyCache(namespace, config.connection, undefined, {ttl: config.ttl});
@@ -398,9 +401,9 @@ export const flatCacheLoad = async (flatCache: FlatCache, logger: Logger = logge
         await streamPromise;
         logger.debug(`File cache loaded`);
         return;
-    } catch (e) {
+    } catch (e: any) {
         if (null !== e.message.match(/Cache file .+ does not exist/)) {
-            let loadError: Error;
+            let loadError: Error | undefined;
             try {
                 const onlySaveError = (e: Error) => {
                     loadError = e;
@@ -481,13 +484,13 @@ const typesonMarshalling: Pick<KeyvOptions, 'serialize' | 'deserialize'> = {
 }
 
 const getStat = (cache: Cacheable, statName: string, getSecondary: boolean = true): [number, number?] => {
-    let primary = cache.stats[statName];
+    let primary = (cache.stats as unknown as Record<string, number>)[statName];
     if(statName === 'count' && cache.primary.store instanceof KeyvCacheableMemory) {
         primary = cache.primary.store.store.size;
     }
-    let secondary: number;
+    let secondary: number | undefined;
     if(getSecondary && cache.secondary !== undefined) {
-        secondary = cache.secondary.stats[statName];
+        secondary = (cache.secondary.stats as unknown as Record<string, number>)[statName];
     }
     return [primary, secondary];
 }
@@ -495,11 +498,11 @@ const getStat = (cache: Cacheable, statName: string, getSecondary: boolean = tru
 const noopKeyv: KeyvStoreAdapter = {
         opts: {},
         namespace: 'noop',
-        get: (_) => undefined,
+        get: (_) => undefined as any,
         set: (_, __, ___) => undefined,
-        delete: (_) => undefined,
+        delete: (_) => undefined as any,
         clear: () => Promise.resolve(),
-        on: (_, __) => undefined
+        on: (_, __) => undefined as any
 }
 
 export const parseUserConfig = (config: CacheConfigUser = {}, parentLogger: Logger = loggerNoop): CacheConfigOptions => {

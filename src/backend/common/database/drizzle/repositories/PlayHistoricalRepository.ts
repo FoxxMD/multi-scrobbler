@@ -1,18 +1,16 @@
 import { type DbConcrete, runTransaction } from "../drizzleUtils.ts";
 import { type PlayObject, TA_DEFAULT_ACCURACY, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
-import { generatePlayEntity, hydratePlaySelect, type PlayHydateOptions, type PlayHistoricalEntityOpts } from "../entityUtils.ts";
+import { generatePlayHistoricalEntity, hydratePlaySelect, type PlayHydateOptions, type PlayHistoricalEntityOpts } from "../entityUtils.ts";
 import { plays, playsHistorical } from "../schema/schema.ts";
 import type {FindWhere, FindMany, WhereClause, PlayHistoricalSelect, PlayHistoricalNew} from "../drizzleTypes.ts";;
 import type { MarkOptional } from "ts-essentials";
 import { removeUndefinedKeys } from '../../../../../core/DataUtils.ts';
-import type {Dayjs} from "dayjs";
 import { inArray, sql } from "drizzle-orm";
 import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
 import type {PaginatedResponse} from "../../../../../core/Api.ts";
 import { hashObject } from "../../../../utils/StringUtils.ts";
 import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../../utils/PlayComparisonUtils.ts";
-import { comparePlayTemporally, getTemporalAccuracyCloseVal, hasAcceptableTemporalAccuracy } from "../../../../utils/TimeUtils.ts";
-import type {SourceType} from "../../../../../core/Atomic.ts";
+import { comparePlayTemporally, hasAcceptableTemporalAccuracy } from "../../../../utils/TimeUtils.ts";
 import { getTemporallyCloseDateCompareOp } from "./PlayRepository.ts";
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
@@ -60,6 +58,9 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
                 componentId: opts.componentId ?? this.componentId
             }
         });
+        if(res === undefined) {
+            return res;
+        }
         res.play = hydratePlaySelect(res, opts.hydrate);
         return res;
     }
@@ -80,7 +81,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
         const {
             hydrate
         } = opts;
-        let playRows: PlayHistoricalSelect[];
+        let playRows!: PlayHistoricalSelect[];
 
         await runTransaction(this.db, async () => {
 
@@ -89,7 +90,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
                     play,
                     ...rest
                 } = data;
-                return generatePlayEntity(play, { componentId: this.componentId, ...rest });
+                return generatePlayHistoricalEntity(play, { componentId: this.componentId, ...rest });
             });
 
             playRows = await this.db.insert(playsHistorical).values(entitiesData).returning();
@@ -128,7 +129,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
             }
         }
 
-        query = removeUndefinedKeys(query);
+        query = removeUndefinedKeys(query, false);
         const results = await this.db.query.playsHistorical.findMany(query);
         return results.map((x) => ({...x, play: hydratePlaySelect(x, hydrate)}));
     }
@@ -155,7 +156,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
             }
         }
 
-        query = removeUndefinedKeys(query);
+        query = removeUndefinedKeys(query, false);
         const results = await this.db.query.playsHistorical.findMany({
             ...query,
             limit: args.limit,
@@ -180,7 +181,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
         });
 
         // we getting fancy now
-        return results.map(identifierExtractor[identifier]);
+        return results.map(identifierExtractor[identifier] as (play: {id: number, uid: string | null}) => PlayIdentifierPrimitiveMap[T]);
     }
 
     findPlaysPaginated = async (args: QueryPlaysOpts, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PaginatedResponse<PlayHistoricalSelect>> => {
@@ -217,15 +218,15 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
         // which we can then use with temporal comparison to make sure we are comparing the correct dates
         //
         // this isn't as fast as just comparing playDate directly but its still much faster/cheaper than paginating plays and doing everything in-memory
-        const dateGranularity = getTemporalAccuracyCloseVal(play.meta.source as SourceType);
-        let endRange: Dayjs;
-        if(play.data.playDateCompleted !== undefined) {
-            // this will be present if source reports it
-            // or we tracked it live with MemorySource
-            endRange = play.data.playDateCompleted.add(dateGranularity, 's');
-        } else {
-            endRange = play.data.playDate.add(dateGranularity, 's');
-        }
+        //const dateGranularity = getTemporalAccuracyCloseVal(play.meta.source as SourceType);
+        // let endRange: Dayjs;
+        // if(play.data.playDateCompleted !== undefined) {
+        //     // this will be present if source reports it
+        //     // or we tracked it live with MemorySource
+        //     endRange = play.data.playDateCompleted.add(dateGranularity, 's');
+        // } else {
+        //     endRange = getScrobbleTsSOCDate(play).add(dateGranularity, 's');
+        // }
         const where: FindWhere<'playsHistorical'> = {
             componentId,
             playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play)),
@@ -282,7 +283,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
 
     public getPlayCountByComponent = async () => {
 
-        const res = await this.db.all(sql`select componentId, count(*) from plays_historical p
+        const res = await this.db.all<{componentId: number, 'count(*)': number}>(sql`select componentId, count(*) from plays_historical p
 group by componentId;`);
         return res;
     }
@@ -311,7 +312,6 @@ export const buildPlayHistoricalWhere = (args: PlayWhereOpts): WhereClause<'play
 
 export const playToRepositoryCreatePlayHistoricalOpts = (data: MarkOptional<RepositoryCreatePlayHistoricalOpts, 'componentId'>): RepositoryCreatePlayHistoricalOpts => {
     return {
-        play: data.play,
         uid: data.play.meta?.playId,
         ...data
     }

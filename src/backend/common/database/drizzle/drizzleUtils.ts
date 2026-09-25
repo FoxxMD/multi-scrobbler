@@ -41,7 +41,7 @@ export async function getDbMigrationStatus(dbVal: string | DbConcrete, opts: {lo
       SELECT count(*) FROM sqlite_master WHERE type='table' AND name='__drizzle_migrations';
       `);
 
-    if (res[0]['count(*)'] === 0) {
+    if ((res[0] as Record<string, number>)['count(*)'] === 0) {
       //logger.info(`Database exists but there is no __drizzle_migrations table??`);
       return {backupRequired: true, pending: [], reason: 'missingTable', log: 'Database exists but there is no __drizzle_migrations table'};
     }

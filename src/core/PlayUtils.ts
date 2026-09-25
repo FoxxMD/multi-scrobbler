@@ -2,7 +2,7 @@ import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import type {AmbPlayObject, DateLike, PlayObject, PlayObjectMinimal, PlayPlatformId} from "./Atomic.ts";
 import dayjs from "dayjs";
 
-export const sortByNewestDate = (aPlayDate: DateLike, bPlayDate: DateLike) => {
+export const sortByNewestDate = (aPlayDate: DateLike | undefined, bPlayDate: DateLike | undefined) => {
     if (aPlayDate === undefined && bPlayDate === undefined) {
         return 0;
     }
@@ -19,7 +19,7 @@ export const sortByNewestDate = (aPlayDate: DateLike, bPlayDate: DateLike) => {
 };
 
 /** sorts playObj formatted objects by playDate in descending (newest first) order */
-export const sortByNewestPlayDateAccessor = (accessor: (play: AmbPlayObject<DateLike>) => DateLike) => (a: AmbPlayObject<DateLike>, b: AmbPlayObject<DateLike>) => {
+export const sortByNewestPlayDateAccessor = (accessor: (play: AmbPlayObject<DateLike>) => DateLike | undefined) => (a: AmbPlayObject<DateLike>, b: AmbPlayObject<DateLike>) => {
     const aPlayDate = accessor(a);
     const bPlayDate = accessor(b);
     return sortByNewestDate(aPlayDate, bPlayDate);

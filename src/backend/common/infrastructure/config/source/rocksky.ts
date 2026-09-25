@@ -4,7 +4,7 @@ import {pollingOptionsSchema} from "../common.ts";
 import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
 
 export const rockskySourceDataSchema = z.object({
-    handle: rockSkyDataSchema.shape.handle.meta(rockSkyDataSchema.shape.handle.meta()),
+    handle: rockSkyDataSchema.shape.handle.meta(rockSkyDataSchema.shape.handle.meta() ?? {}),
     ...commonSourceDataSchema.shape,
     ...pollingOptionsSchema.shape,
 });

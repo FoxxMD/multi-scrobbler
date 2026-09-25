@@ -76,7 +76,7 @@ export default class AppleMusicSource extends AbstractSource {
                 key: { id: '__token__', teamId: '__token__', p8: '__token__' },
                 mediaUserToken,
             });
-            this.musicKit.token = token!;
+            this.musicKit.token = token ?? null;
         }
 
         if (origin) {
@@ -150,7 +150,7 @@ export default class AppleMusicSource extends AbstractSource {
         return baseFormatPlayObj(track, play);
     }
 
-    recentlyPlayedTrackIsValid = (playObj: PlayObject) => playObj.meta.newFromSource
+    recentlyPlayedTrackIsValid = (playObj: PlayObject) => playObj.meta.newFromSource === true
 
     getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
         return this.getTracks(this.UPSTREAM_TRACK_LIMIT);
@@ -218,7 +218,7 @@ export default class AppleMusicSource extends AbstractSource {
         return play;
     }
 
-    private getStorefront = async (): Promise<string | undefined> => {
+    private getStorefront = async (): Promise<string | null | undefined> => {
         if (this.storefront !== undefined) {
             return this.storefront;
         }
@@ -259,7 +259,7 @@ export default class AppleMusicSource extends AbstractSource {
             if(diffResults[2] !== 'prepend') {
                 return {...results, consistent: false, reason: `Previously seen Apple Music history was bumped in an unexpected way (${diffResults[2]}), resetting history to new list`, diffType, diffResults};
             }
-            return {...results, plays: [...diffResults[1]!].reverse(), diffType, diffResults};
+            return {...results, plays: [...diffResults[1]].reverse(), diffType, diffResults};
         } else {
             diffResults = playsAreAddedOnly(this.recentlyPlayed, plays);
             if(diffResults[0] === true) {
@@ -271,7 +271,7 @@ export default class AppleMusicSource extends AbstractSource {
                 if(revertedToRecent !== -1) {
                     return {...results, consistent: false, reason: `Apple Music History has exact order as another recent response (${revertedToRecent + 1} ago) which means last history (n - 1) was probably out of date. Resetting history to current list and NOT ADDING new tracks since we probably already discovered them earlier.`, diffType, diffResults};
                 }
-                return {...results, plays: [...diffResults[1]!].reverse(), diffType, diffResults};
+                return {...results, plays: [...diffResults[1]].reverse(), diffType, diffResults};
             } else {
                 return {...results, consistent: false, reason: 'Apple Music History returned temporally inconsistent order, resetting history to new list.'};
             }

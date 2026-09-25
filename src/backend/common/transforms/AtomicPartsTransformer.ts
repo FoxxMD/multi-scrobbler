@@ -84,30 +84,25 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
                 }
             }
 
-            let mergedMeta: TrackMetaIsrc; 
+            let mergedMeta: TrackMetaIsrc | undefined; 
             if (parts.meta !== undefined) {
                 try {
-                    const meta = await this.handleMeta(play, parts.duration, transformData);
+                    const meta = await this.handleMeta(play, parts.meta, transformData);
 
                     if (meta !== undefined) {
                         mergedMeta = {
                             ...(play.data.meta ?? {})
                         };
-                        for (const [k, v] of Object.entries(meta)) {
-                            if(k === 'isrc') {
-                                continue;
-                            }
-                            if (mergedMeta[k] !== undefined) {
-                                mergedMeta[k] = {
-                                    ...mergedMeta[k],
-                                    ...v
-                                }
-                            } else {
-                                mergedMeta[k] = v;
+                        const {isrc, ...metaSources} = meta;
+                        // shallow merge each meta source (brainz, spotify...) with existing
+                        const mergeTarget = mergedMeta as Record<string, object | undefined>;
+                        for (const [k, v] of Object.entries(metaSources)) {
+                            if (v !== undefined) {
+                                mergeTarget[k] = {...mergeTarget[k], ...v};
                             }
                         }
-                        if(meta.isrc !== undefined) {
-                            transformedPlayData.isrc = meta.isrc;
+                        if(isrc !== undefined) {
+                            transformedPlayData.isrc = isrc;
                         }
                     }
                 } catch (e) {
@@ -120,7 +115,7 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
                 }
             }
 
-            let mergedArt: ArtMeta;
+            let mergedArt: ArtMeta | undefined;
             if (parts.art !== undefined) {
                 try {
                     const art = await this.handleArt(play, parts.art, transformData);
@@ -129,13 +124,9 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
                         mergedArt = {
                             ...(play.meta?.art ?? {})
                         };
-                        for (const [k, v] of Object.entries(art)) {
-                            if (mergedArt[k] !== undefined) {
-                                mergedArt[k] = {
-                                    ...mergedArt[k],
-                                    ...v
-                                }
-                            } else {
+                        // art values are url strings so new values replace existing
+                        for (const [k, v] of Object.entries(art) as [keyof ArtMeta, string | undefined][]) {
+                            if (v !== undefined) {
                                 mergedArt[k] = v;
                             }
                         }
@@ -165,13 +156,14 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
                 transformedPlay.meta.art = mergedArt;
             }
 
-            if(typeof transformData === 'object' && isPlayObject(transformData) && transformData.meta?.lifecycleInputs !== undefined) {
+            const transformInputs = typeof transformData === 'object' && isPlayObject(transformData as object) ? (transformData as PlayObject).meta?.lifecycleInputs : undefined;
+            if(transformInputs !== undefined) {
                 const {
                     meta: {
                         lifecycleInputs = [],
                     } = {},
                 } = transformedPlay;
-                transformedPlay.meta.lifecycleInputs = lifecycleInputs.concat(transformData.meta?.lifecycleInputs);
+                transformedPlay.meta.lifecycleInputs = lifecycleInputs.concat(transformInputs);
             }
 
             return transformedPlay;

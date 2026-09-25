@@ -37,7 +37,7 @@ export const truncateStringToLength = (length: any, truncStr = '...') => (val: a
     return str.length > length ? `${str.slice(0, length)}${truncStr}` : str;
 }
 export const defaultTrackTransformer = (input: any, data: AmbPlayObject, hasExistingParts: boolean = false) => hasExistingParts ? `- ${input}` : input;
-export const defaultReducer = (acc, curr) => `${acc} ${curr}`;
+export const defaultReducer = (acc: any, curr: any) => `${acc} ${curr}`;
 export const defaultArtistFunc = (a: string[]) => a === undefined ? '' : a.join(' / ');
 export const defaultAlbumFunc = (input: any, data: AmbPlayObject, hasExistingParts: boolean = false) => {
     if(input === undefined) {
@@ -70,7 +70,7 @@ export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: Tr
             timeFromNow = defaultBuildTrackStringTransformers.timeFromNow,
             comment: commentFunc = defaultBuildTrackStringTransformers.comment,
             platform: platformFunc = defaultBuildTrackStringTransformers.platform,
-            reducer = arr => arr.join(' ') // (acc, curr) => `${acc} ${curr}`
+            reducer = (arr: any[]) => arr.join(' ') // (acc, curr) => `${acc} ${curr}`
         } = {},
     } = options;
     const {
@@ -91,7 +91,7 @@ export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: Tr
         } = {},
     } = playObj;
 
-    let pd: Dayjs;
+    let pd: Dayjs | undefined;
     let usedTsSOC: ScrobbleTsSOC = scrobbleTsSOC;
     if(scrobbleTsSOC === SCROBBLE_TS_SOC_END && playDateCompleted !== undefined) {
         pd = typeof playDateCompleted === 'string' ? dayjs(playDateCompleted) : playDateCompleted;
@@ -100,7 +100,7 @@ export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: Tr
         pd = typeof playDate === 'string' ? dayjs(playDate) : playDate;
     }
 
-    const strParts: (T | string)[] = [];
+    const strParts: (T | string | undefined)[] = [];
     if(include.includes('platform')) {
         strParts.push(platformFunc(deviceId, user, include.includes('session') ? sessionId : undefined))
     } else if(include.includes('session') && sessionId !== undefined) {
@@ -232,7 +232,7 @@ export const splitByFirstRegexFound = <T>(str: any, onNotAStringVal: T, delimsRe
 /**
  * Returns value if it is a non-empty string or returns default value
  * */
-export const nonEmptyStringOrDefault = <T = undefined>(str: any, defaultVal: T = undefined): string | T => {
+export const nonEmptyStringOrDefault = <T = undefined>(str: any, defaultVal: T = undefined as T): string | T => {
     if (str === undefined || str === null || typeof str !== 'string' || str.trim() === '') {
         return defaultVal;
     }
@@ -313,11 +313,16 @@ export const stringIsOnlyNumbers = (str: string) => NUMBERS_REGEX.test(str);
 
 export const artistNamesToCredits = (names: (string | Partial<ArtistCredit>)[] | undefined): ArtistCredit[] => {
     if(names === undefined) {
-        return undefined;
+        throw new Error('Must pass names');
     }
-    return names.map(artistNameToCredit).filter(x => x !== undefined);
+    return names.map(x => artistNameToCredit(x)!).filter(x => x !== undefined);
 };
-export const artistNameToCredit = (val: string | undefined | Partial<ArtistCredit>): ArtistCredit => {
+// typing overloading here is ok
+export function artistNameToCredit(val: string): ArtistCredit;
+// eslint-disable-next-line no-redeclare
+export function artistNameToCredit(val: string | undefined | Partial<ArtistCredit>): ArtistCredit | undefined;
+// eslint-disable-next-line no-redeclare
+export function artistNameToCredit(val: string | undefined | Partial<ArtistCredit>): ArtistCredit | undefined {
     if(val === undefined) {
         return undefined;
     }
@@ -329,9 +334,9 @@ export const artistNameToCredit = (val: string | undefined | Partial<ArtistCredi
         mbid,
         ...rest
     } = val;
-    return removeUndefinedKeys({name, mbid, ...rest});
+    return removeUndefinedKeys({name, mbid, ...rest}) as ArtistCredit;
 }
 export const artistCreditToName = (a: ArtistCredit): string => a.name;
-export const artistCreditsToNames = (a: ArtistCredit[]): string[] => a.map((x) => x.name);
+export const artistCreditsToNames = (a: ArtistCredit[] = []): string[] => a.map((x) => x.name);
 
 export const generatePlayUid = () => nanoid(20);

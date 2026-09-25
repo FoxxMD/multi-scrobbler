@@ -5,7 +5,6 @@ import { childLogger, type Logger } from "@foxxmd/logging";
 import { Client as CastClient } from 'castv2';
 import dayjs from "dayjs";
 import type { EventEmitter } from "events";
-import e from "express";
 import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
 import { artistNamesToCredits, buildTrackString } from "../../core/StringUtils.ts";
 import { NETWORK_ERROR_FAILURE_CODES } from "../common/errors/NodeErrors.ts";
@@ -16,7 +15,7 @@ import {
     type PlayerStateData,
     type SourceData,
 } from "../common/infrastructure/Atomic.ts";
-import { NO_USER } from '../../core/Atomic.ts';
+import { NO_DEVICE, NO_USER } from '../../core/Atomic.ts';
 import type {ChromecastSourceConfig} from "../common/infrastructure/config/source/chromecast.ts";
 import { MaybeLogger } from '../common/MaybeLogger.ts';
 import {
@@ -38,7 +37,7 @@ import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 interface ChromecastDeviceInfo {
     mdns: MdnsDeviceInfo
     client: PersistentClient
-    castv2: CastClient
+    castv2: InstanceType<typeof CastClient>
     logger: Logger,
     retries: number
     platform: PlatformType
@@ -82,12 +81,12 @@ export class ChromecastSource extends MemoryPositionalSource {
         } = config;
 
         for (const propName of ['whitelistDevices', 'blacklistDevices', 'whitelistApps', 'blacklistApps', 'forceMediaRecognitionOn', 'allowUnknownMedia']) {
-            const configData = data[propName] ?? [];
+            const configData = (data as Record<string, any>)[propName] ?? [];
 
             if (!Array.isArray(configData)) {
-                this[propName] = configData.split(',').map(x => x.toLocaleLowerCase())
+                (this as any)[propName] = configData.split(',').map((x: string) => x.toLocaleLowerCase())
             } else {
-                this[propName] = configData.map(x => x.toLocaleLowerCase());
+                (this as any)[propName] = configData.map((x: string) => x.toLocaleLowerCase());
             }
         }
 
@@ -229,7 +228,7 @@ export class ChromecastSource extends MemoryPositionalSource {
         }
 
         try {
-            const [castClient, client, platform] = await this.initializeClientPlatform(device);
+            const [castClient, client, platform] = (await this.initializeClientPlatform(device));
             this.logger.info(`${discovered} => Connected!`);
             const applications = new Map<string, PlatformApplicationWithContext>();
             this.devices.set(device.name, {
@@ -247,10 +246,9 @@ export class ChromecastSource extends MemoryPositionalSource {
         }
     }
 
-    protected initializeClientPlatform = async (device: MdnsDeviceInfo): Promise<[CastClient, PersistentClient, PlatformType]> => {
+    protected initializeClientPlatform = async (device: MdnsDeviceInfo): Promise<[InstanceType<typeof CastClient>, PersistentClient, PlatformType]> => {
 
-        const index = 0;
-        for(const address of device.addresses) {
+        for(const [index, address] of device.addresses.entries()) {
 
             const castClient = new CastClient;
             const client: PersistentClient = new PersistentClient({host: address, client: castClient});
@@ -274,6 +272,7 @@ export class ChromecastSource extends MemoryPositionalSource {
 
             return [castClient, client, platform];
         }
+        throw new Error(`${device.name} has no addresses to connect to`);
     }
 
     protected handleCastClientEvent = (clientName: string, event: string, payload?: any) => {
@@ -286,7 +285,7 @@ export class ChromecastSource extends MemoryPositionalSource {
                     }
                     if(event === "reconnect") {
                         if(payload instanceof Error) {
-                            info.logger.warn(new Error(`Failed to reconnect, will retry ${5 - info.retries} more times`, {cause: e}))
+                            info.logger.warn(new Error(`Failed to reconnect, will retry ${5 - info.retries} more times`, {cause: payload}))
                         } else {
                             info.logger.verbose(`Reconnected`);
                             info.retries = 0;
@@ -410,6 +409,9 @@ export class ChromecastSource extends MemoryPositionalSource {
             const storedStale = difference(storedApps, currApps);
             for(const staleId of storedStale) {
                 const staleApp = v.applications.get(staleId);
+                if(staleApp === undefined) {
+                    continue;
+                }
                 if(staleApp.filtered || !staleApp.validAppType) {
                     staleApp.logger.verbose(`Became stale and is unused, removing immediately.`);
                     //staleApp.logger.close();
@@ -429,6 +431,9 @@ export class ChromecastSource extends MemoryPositionalSource {
             this.logger.warn(reason);
         }
         const device = this.devices.get(deviceName);
+        if(device === undefined) {
+            return;
+        }
         device.platform.close();
         device.client.close();
         this.devices.delete(deviceName);
@@ -441,7 +446,7 @@ export class ChromecastSource extends MemoryPositionalSource {
             return;
         }
         for(const [tId, app] of deviceInfo.applications) {
-            app.controller.dispose();
+            app.controller?.dispose();
             this.deletePlayer(app.playerId, reason)
             //app.logger.close();
             deviceInfo.applications.delete(tId);
@@ -457,13 +462,13 @@ export class ChromecastSource extends MemoryPositionalSource {
             const forDeletion: [string, string][] = [];
 
             for(const [tId, app] of v.applications.entries()) {
-                if(app.stale && Math.abs(app.staleAt.diff(dayjs(), 's')) > 60) {
+                if(app.stale && app.staleAt !== undefined && Math.abs(app.staleAt.diff(dayjs(), 's')) > 60) {
                     app.logger.info(`Removing due to being stale for 60 seconds`);
                     //app.logger.close();
-                    app.controller.dispose();
+                    app.controller?.dispose();
                     v.applications.delete(tId);
                     forDeletion.push([app.playerId, 'No updates for 60 seconds']);
-                } else if(app.badData && Math.abs(app.badDataAt.diff(dayjs(), 's')) > 60 && this.players.has(app.playerId)) {
+                } else if(app.badData && app.badDataAt !== undefined && Math.abs(app.badDataAt.diff(dayjs(), 's')) > 60 && this.players.has(app.playerId)) {
                     forDeletion.push([app.playerId, 'Bad data for 60 seconds']);
                 }
             }
@@ -523,7 +528,7 @@ export class ChromecastSource extends MemoryPositionalSource {
                     let mediaStatus: Media.MediaStatus
                     try {
                         mediaStatus = await getMediaStatus(application.controller);
-                    } catch (e) {
+                    } catch (e: any) {
                         if (e.message.includes('timed out')) {
                             // application probably no longer exists or media is no longer being played?
                             v.logger.debug(`Timeout occurred`);
@@ -551,7 +556,7 @@ export class ChromecastSource extends MemoryPositionalSource {
                                         // its fine just do error without play string
                                     }
                                     application.logger.verbose(`Skipping status for ${maybePlay !== undefined ? buildTrackString(maybePlay) : 'unknown media'} because it is buffering.`);
-                                    if (this.config.options.logPayload || isDebugMode()) {
+                                    if (this.config.options?.logPayload || isDebugMode()) {
                                         application.logger.debug(`Media Status Payload:\n ${status[0] === undefined || status[0] === null ? 'undefined' : JSON.stringify(status[0])}`);
                                     }
                                     continue;
@@ -563,7 +568,7 @@ export class ChromecastSource extends MemoryPositionalSource {
                         throw e;
                     }
 
-                    if (this.config.options.logPayload || isDebugMode()) {
+                    if (this.config.options?.logPayload || isDebugMode()) {
                         application.logger.debug(`Media Status Payload:\n ${mediaStatus === undefined || mediaStatus === null ? 'undefined' : JSON.stringify(mediaStatus)}`);
                     }
 
@@ -575,7 +580,7 @@ export class ChromecastSource extends MemoryPositionalSource {
                         });
                     }
 
-                    if (play === undefined || play.data.artists.length === 0 || play.data.track === undefined) {
+                    if (play === undefined || (play.data.artists ?? []).length === 0 || play.data.track === undefined) {
                         if (!application.badData) {
                             application.logger.warn(`Media information either did not return artists or track. This isn't scrollable! Skipping this update and marking App as having bad data (to be removed after 60 seconds)`);
                             application.badData = true;
@@ -623,7 +628,7 @@ export class ChromecastSource extends MemoryPositionalSource {
                     }
 
                     const playerState: PlayerStateData = {
-                        platformId: [play.meta.deviceId, NO_USER],
+                        platformId: [play.meta.deviceId ?? NO_DEVICE, NO_USER],
                         play,
                         position: play.meta.trackProgressPosition,
                         status: chromePlayerStateToReported(mediaStatus.playerState)
@@ -649,24 +654,20 @@ export class ChromecastSource extends MemoryPositionalSource {
 
     static formatPlayObj(obj: Media.MediaStatus, options: FormatPlayObjectOptions = {}): PlayObject {
         // https://developers.google.com/cast/docs/media/messages
-
+        const {currentTime} = obj;
+        // media, metadata, and duration can all be null
+        const duration = obj.media?.duration ?? undefined;
         const {
-            currentTime,
-            media: {
-                duration,
-                metadata: {
-                    metadataType,
-                    title,
-                    subtitle,
-                    songName,
-                    artist,
-                    artistName,
-                    albumArtist,
-                    albumName,
-                    album: albumNorm
-                } = {}
-            } = {}
-        } = obj;
+            metadataType,
+            title,
+            subtitle,
+            songName,
+            artist,
+            artistName,
+            albumArtist,
+            albumName,
+            album: albumNorm
+        } = (obj.media?.metadata ?? {}) as Record<string, unknown>;
 
         let artists: string[] = [],
             albumArtists: string[] = [],

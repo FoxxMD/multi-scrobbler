@@ -9,7 +9,8 @@ import type { TypedMiddleware } from "@minisylar/express-typed-router";
 export const nonEmptyBody = (logger: Logger, origin: string = 'Origin'): TypedMiddleware => async (req, res, next) => {
     const bodyEmpty = req.body === undefined || req.body === null || (typeof req.body === 'object' && Object.keys(req.body).length === 0);
     if (bodyEmpty) {
-        const length = req.header('content-length') !== undefined ? Number.parseInt(req.header('content-length')) : undefined;
+        const lengthHeader = req.header('content-length');
+        const length = lengthHeader !== undefined ? Number.parseInt(lengthHeader) : undefined;
         // can't think of a way a user would send an empty body for a payload but if they meant to do it don't spam them with errors...
         if (length === 0) {
             return;
@@ -42,7 +43,7 @@ export const makeComponentMiddle = (sources: ScrobbleSources, clients: ScrobbleC
         return;
     }
 
-    let component: AbstractSource | AbstractScrobbleClient;
+    let component: AbstractSource | AbstractScrobbleClient | undefined;
     component = sources.sources.find(x => x.componentId === componentId);
     if (component === undefined) {
         component = clients.clients.find(x => x.componentId === componentId);
@@ -78,7 +79,7 @@ export const makeSourceNextMiddle = (sources: ScrobbleSources): TypedMiddleware<
        return;
     }
 
-    const component: AbstractSource = sources.sources.find(x => x.componentId === componentId);
+    const component: AbstractSource | undefined = sources.sources.find(x => x.componentId === componentId);
     if(component === undefined) {
         res.status(404).json({error: `No Source with the Id ${componentId} exists`});
         return;
@@ -102,7 +103,7 @@ export const makeClientNextMiddle = (clients: ScrobbleClients): TypedMiddleware<
         return;
     }
 
-    const component: AbstractScrobbleClient = clients.clients.find(x => x.componentId === componentId);
+    const component: AbstractScrobbleClient | undefined = clients.clients.find(x => x.componentId === componentId);
     if(component === undefined) {
         res.status(404).json({error: `No Client with the Id ${componentId} exists`});
         return;

@@ -152,8 +152,8 @@ describe('Spotify Transformer', function () {
             expect(play.data.duration).to.equal(180);
             expect(play.data.artists).to.deep.equal([{ name: 'My Artist' }]);
             expect(play.data.albumArtists).to.deep.equal([]);
-            expect(play.data.meta.spotify.track).to.equal('track1');
-            expect(play.data.meta.spotify.album).to.equal('album1');
+            expect(play.data.meta!.spotify!.track).to.equal('track1');
+            expect(play.data.meta!.spotify!.album).to.equal('album1');
         });
 
         it('includes album artists when they differ from track artists', function () {
@@ -210,8 +210,8 @@ describe('Spotify Transformer', function () {
 
             const withDeprioritize = rankTracksBySimilarity([compilationMatch, studioMatch], play, { ...stageConfig, deprioritizeCompilations: true });
             const ranked = new Map(withDeprioritize.map(x => [x.track.id, x.matchScore]));
-            expect(ranked.get('studio')).to.be.greaterThan(ranked.get('comp'));
-            expect(ranked.get('studio') - ranked.get('comp')).to.be.closeTo(COMPILATION_PENALTY, 0.0001);
+            expect(ranked.get('studio')).to.be.greaterThan(ranked.get('comp')!);
+            expect(ranked.get('studio')! - ranked.get('comp')!).to.be.closeTo(COMPILATION_PENALTY, 0.0001);
         });
     });
 
@@ -249,7 +249,7 @@ describe('Spotify Transformer', function () {
             const rightAlbum = fakeTrack({ id: 'right', albumName: 'The Real Album', isrc: 'USRC17607839' });
 
             const result = await transformer.handlePostFetch(play, { tracks: [wrongAlbum, rightAlbum], requestQueries: [], searchType: 'isrc' }, stageConfig);
-            expect(result.data.meta.spotify.track).to.equal('right');
+            expect(result.data.meta!.spotify!.track).to.equal('right');
         });
     });
 });

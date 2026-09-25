@@ -31,7 +31,7 @@ export class DiscordAbstractClient extends AbstractApiClient {
 
     getArtworkUrl = async (artUrl: string): Promise<string | undefined> => {
 
-        if (this.config.applicationId === undefined) {
+        if (this.config.applicationId === undefined || this.config.token === undefined) {
             return;
         }
         if(this.artFail) {

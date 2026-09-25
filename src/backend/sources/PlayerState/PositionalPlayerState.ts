@@ -2,7 +2,7 @@ import type {Logger} from "@foxxmd/logging";
 import { CALCULATED_PLAYER_STATUSES } from '../../../core/Atomic.ts';
 import type {PlayPlatformId} from '../../../core/Atomic.ts';
 import { AbstractPlayerState, type PlayerStateOptions } from "./AbstractPlayerState.ts";
-import type {PlayProgressPositional, Second} from "../../../core/Atomic.ts";
+import type {PlayProgress, PlayProgressPositional, Second} from "../../../core/Atomic.ts";
 import type {Dayjs} from "dayjs";
 import { ListenProgressPositional } from "./ListenProgress.ts";
 import { ListenRangePositional } from "./ListenRange.ts";
@@ -26,19 +26,23 @@ export class PositionalPlayerState extends AbstractPlayerState {
         this.rtTruth = rtTruth;
     }
 
-    protected newListenProgress(data?: PlayProgressPositional): ListenProgressPositional {
+    protected newListenProgress(data: Partial<PlayProgress> & Pick<PlayProgressPositional, 'position'>): ListenProgressPositional {
        return new ListenProgressPositional(data);
     }
-    protected newListenRange(start?: ListenProgressPositional, end?: ListenProgressPositional, options: object = {}): ListenRangePositional {
+    protected newListenRange(start: ListenProgressPositional, end?: ListenProgressPositional, options: object = {}): ListenRangePositional {
        return new ListenRangePositional(start, end, {allowedDrift: this.allowedDrift, rtTruth: this.rtTruth, ...options});
     }
 
     protected isSessionStillPlaying(position: number): boolean {
         //return this.reportedStatus === REPORTED_PLAYER_STATUSES.playing;
-        if(!this.currentListenRange.isOverDrifted(position)) {
+        const range = this.currentListenRange;
+        if(range === undefined) {
+            return false;
+        }
+        if(!range.isOverDrifted(position)) {
             return true;
         }
-        return position !== this.currentListenRange.end.position;
+        return position !== range.end.position;
     }
 
     protected currentListenSessionContinue(position: number = 0, timestamp?: Dayjs) {
@@ -82,13 +86,13 @@ export class PositionalPlayerState extends AbstractPlayerState {
     protected currentListenSessionEnd() {
         if (this.currentListenRange !== undefined && this.currentListenRange.getDuration() !== 0) {
             this.logger.debug('Ended current Player listen range.')
-            let finalPosition: number;
+            let finalPosition: number | undefined;
             if([CALCULATED_PLAYER_STATUSES.playing, CALCULATED_PLAYER_STATUSES.stale].includes(this.calculatedStatus) && !this.currentListenRange.isInitial()) {
                 const {
                     data: {
                         duration,
                     } = {}
-                } = this.currentPlay;
+                } = this.currentPlay ?? {};
                 if(duration !== undefined && duration !== 0 && (duration - this.currentListenRange.end.position) < this.gracefulEndBuffer) {
                     // likely the track was listened to until it ended
                     // but polling interval or network delays caused MS to not get data on the very end

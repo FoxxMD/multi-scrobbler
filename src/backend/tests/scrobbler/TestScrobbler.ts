@@ -20,8 +20,8 @@ export class TestScrobbler extends AbstractScrobbleClient {
     testRecentScrobbles: PlayObject[] = [];
     getScrobblesForTimeRange: TimeRangeListensFetcher;
 
-    public playRepoTest: DrizzlePlayRepository;
-    public queueRepoTest: DrizzleQueueRepository;
+    public playRepoTest!: DrizzlePlayRepository;
+    public queueRepoTest!: DrizzleQueueRepository;
 
     constructor(config: MarkOptional<CommonClientConfig, 'id'> = {name: 'test'}) {
         const logger = loggerNoop;
@@ -74,7 +74,7 @@ export class TestAuthScrobbler extends TestScrobbler {
             await request.get('http://example.com');
             return true;
         } catch (e) {
-            throw new AuthError('Failed to auth', {cause: e, unrecoverable: isSuperAgentResponseError(e) && [401,403].includes(e.status)});
+            throw new AuthError('Failed to auth', {cause: e, unrecoverable: isSuperAgentResponseError(e) && [401,403].includes(e.status!)});
         }
     }
 }

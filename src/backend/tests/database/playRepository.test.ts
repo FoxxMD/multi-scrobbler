@@ -37,7 +37,7 @@ describe('Repository Operations', function () {
 
             expect(play.play.data.track).eq(ref.play.data.track);
             expect(play.input).to.not.undefined;
-            expect(objectsEqual(play.input.data, ref.input.data)).is.true;
+            expect(objectsEqual(play.input.data!, ref.input.data!)).is.true;
         })
 
     });
@@ -274,8 +274,8 @@ describe('Repository Operations', function () {
             const existing = await repoB.checkExisting(clonedPlay, { parentId: rowsA[1].id });
 
             expect(existing, 'checkExisting should return the client play whose parent the clone is based off of').to.not.be.undefined;
-            expect(existing.id).eq(rowsB[0].id);
-            expect(existing.play.data.track).eq(childPlay.data.track);
+            expect(existing!.id).eq(rowsB[0].id);
+            expect(existing!.play.data.track).eq(childPlay.data.track);
         });
 
     });
@@ -301,7 +301,7 @@ describe('Repository Operations', function () {
                         {
                             OR: [
                                 {
-                                    RAW: (p) => sql`lower(json_extract(${p.play}, '$.data.track')) LIKE '%'|| ${playRows[0].play.data.track.substring(0, 5).toLocaleLowerCase()} || '%'`
+                                    RAW: (p) => sql`lower(json_extract(${p.play}, '$.data.track')) LIKE '%'|| ${playRows[0].play.data.track!.substring(0, 5).toLocaleLowerCase()} || '%'`
                                 }
                             ]
                         }

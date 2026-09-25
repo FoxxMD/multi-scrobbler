@@ -20,15 +20,15 @@ export default abstract class AbstractInitializable {
     databaseOK?: boolean | null;
     connectionOK?: boolean | null;
     cacheOK?: boolean | null;
-    errors?: Error[] = [];
-    warnings?: Error[] = [];
+    errors: Error[] = [];
+    warnings: Error[] = [];
 
     protected initializedOnce: boolean = false;
     initializing: boolean = false;
 
     config: Record<string, any>;
 
-    logger: Logger;
+    logger!: Logger;
     componentLogger?: Logger;
 
     protected constructor(config: Record<string, any>) {
@@ -94,7 +94,7 @@ export default abstract class AbstractInitializable {
                 return true;
             } catch(e) {
                 if(notify) {
-                    await this.notify({identifier: this.getIdentifier(), title: notifyTitle, message: truncateStringToLength(500)(messageWithCausesTruncatedDefault(e)), priority: 'error'});
+                    await this.notify({identifier: this.getIdentifier(), title: notifyTitle, message: truncateStringToLength(500)(messageWithCausesTruncatedDefault(e as Error)), priority: 'error'});
                 }
                 const initError = new Error('Initialization failed', {cause: e});
                 this.errors = [initError];

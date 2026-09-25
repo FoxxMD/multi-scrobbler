@@ -75,7 +75,7 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
             as: 'stream'
         });
         if(!resp.ok) {
-            let text: string;
+            let text: string | undefined;
             if(isXRPCErrorPayload(resp.data)) {
                 text = resp.data.error;
             }
@@ -95,7 +95,7 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
             const res = await func(this.client);
             this.setRateLimitsFromResponse(res.headers);
             return res;
-        } catch (e) {
+        } catch (e: any) {
             throw await this.handleError(e);
         }
     }
@@ -105,7 +105,7 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
             const res = await func(this.client);
             this.setRateLimitsFromResponse(res.headers);
             return res;
-        } catch (e) {
+        } catch (e: any) {
             throw await this.handleError(e);
         }
     }
@@ -115,7 +115,7 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
             const res = await func(this.client);
             this.setRateLimitsFromResponse(res.headers);
             return res;
-        } catch (e) {
+        } catch (e: any) {
             throw await this.handleError(e);
         }
     }

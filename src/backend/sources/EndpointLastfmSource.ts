@@ -6,7 +6,7 @@ import {
     type FormatPlayObjectOptions,
     type InternalConfig,
     type PlayerStateData} from "../common/infrastructure/Atomic.ts";
-import { NO_USER } from '../../core/Atomic.ts';
+import { NO_DEVICE, NO_USER } from '../../core/Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type {PlayPlatformId} from '../../core/Atomic.ts';
 import MemorySource from "./MemorySource.ts";
@@ -53,7 +53,8 @@ export class EndpointLastfmSource extends MemorySource {
             return false;
         }
 
-        return (this.config.data.slug === undefined && slug === undefined) || (slug !== undefined && this.config.data.slug !== undefined && this.config.data.slug.toLowerCase().trim() === slug.toLocaleLowerCase().trim());
+        const configSlug = this.config.data?.slug;
+        return (configSlug === undefined && slug === undefined) || (slug !== undefined && configSlug !== undefined && configSlug.toLowerCase().trim() === slug.toLocaleLowerCase().trim());
     }
 
     static formatPlayObj(obj: LastFmSingleSubmitPayload, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -109,7 +110,7 @@ export const playStateFromRequest = (obj: LastFmSubmitPayload): PlayerStateData[
         const play = scrobblePayloadToPlay(x);
         play.meta.sourceSOT = SOURCE_SOT.INGRESS;
         return {
-            platformId: [play.meta.deviceId, NO_USER],
+            platformId: [play.meta.deviceId ?? NO_DEVICE, NO_USER],
             play,
             status: obj.method === 'track.updateNowPlaying' ? REPORTED_PLAYER_STATUSES.playing : REPORTED_PLAYER_STATUSES.unknown,
             stateUpdatedAt: dayjs()

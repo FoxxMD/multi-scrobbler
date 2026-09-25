@@ -30,7 +30,7 @@ describe('#Sonos', function() {
 
     it('does stuff', async function() {
 
-        const s = await createSource({host: process.env.SONOS_HOST_TEST});
+        const s = await createSource({host: process.env.SONOS_HOST_TEST!});
         await s.checkConnection();
         await s.getRecentlyPlayed();
         const f = 1;

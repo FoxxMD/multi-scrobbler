@@ -23,7 +23,7 @@ export default class KoitoScrobbler extends AbstractScrobbleClient {
 
     constructor(name: any, config: KoitoClientConfig, options = {}, emitter: EventEmitter, logger: Logger) {
         super('koito', name, config, emitter, logger);
-        this.api = new KoitoApiClient(name, {...config.data, allowDeviceList: config.options.allowDeviceList}, {logger: this.logger});
+        this.api = new KoitoApiClient(name, {...config.data, allowDeviceList: config.options?.allowDeviceList}, {logger: this.logger});
         // https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(user_name)-listens
         // 1000 is way too high. maxing at 100
         this.MAX_INITIAL_SCROBBLES_FETCH = 100;
@@ -85,7 +85,7 @@ export default class KoitoScrobbler extends AbstractScrobbleClient {
                 this.logger.info(`Scrobbled (Backlog) => (${source}) ${buildTrackString(playObj)}`);
             }
             return result;
-        } catch (e) {
+        } catch (e: any) {
             await this.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             throw e;
         }
@@ -93,6 +93,9 @@ export default class KoitoScrobbler extends AbstractScrobbleClient {
 
     doPlayingNow = async (data: SourcePlayerObj) => {
         try {
+            if(data.play === undefined) {
+                return;
+            }
             await this.api.submitListen(data.play, { listenType: 'playing_now'});
         } catch (e) {
             throw e;

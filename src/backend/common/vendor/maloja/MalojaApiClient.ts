@@ -180,7 +180,7 @@ export class MalojaApiClient extends AbstractApiClient implements PaginatedTimeR
             }
         } catch (e) {
             const superagentError = findCauseByFunc<request.ResponseError>(e, (ee) => isSuperAgentResponseError(ee));
-            throw new AuthError('Failed to test Maloja API with apikey', {cause: e, unrecoverable: superagentError !== undefined && [401,403].includes(superagentError.status)});
+            throw new AuthError('Failed to test Maloja API with apikey', {cause: e, unrecoverable: superagentError?.status !== undefined && [401,403].includes(superagentError.status)});
         }
     }
 
@@ -200,7 +200,7 @@ export class MalojaApiClient extends AbstractApiClient implements PaginatedTimeR
             perpage: params.limit,
             page: params.cursor,
             from: params.from !== undefined ? dayjs.unix(params.from).format('YYYY/MM/DD') : undefined,
-            until: params.to !== undefined ? dayjs.unix(params.from).format('YYYY/MM/DD') : undefined
+            until: params.to !== undefined ? dayjs.unix(params.to).format('YYYY/MM/DD') : undefined
         };
 
         const resp = await this.getScrobbles(opts);
@@ -212,7 +212,7 @@ export class MalojaApiClient extends AbstractApiClient implements PaginatedTimeR
     }
 
     getScrobbles = async (options: RecentlyPlayedRequestOptions = {}): Promise<RecentlyPlayedResponse> => {
-        const resp = await this.callApi(() => request.get(`${this.url.url}/apis/mlj_1/scrobbles`).query(removeUndefinedKeys(options)));
+        const resp = await this.callApi(() => request.get(`${this.url.url}/apis/mlj_1/scrobbles`).query(removeUndefinedKeys(options, false)));
                 const {
             body
         } = resp;
@@ -250,7 +250,7 @@ export class MalojaApiClient extends AbstractApiClient implements PaginatedTimeR
                 .type('json')
                 .send(scrobbleData));
 
-            let scrobbleResponse: MalojaScrobbleData;
+            let scrobbleResponse: MalojaScrobbleData | undefined;
             let responseBody: MalojaScrobbleV3ResponseData;
             let warnStr: string;
             const msWarnings: string[] = [];
@@ -263,18 +263,19 @@ export class MalojaApiClient extends AbstractApiClient implements PaginatedTimeR
             } = responseBody;
             if (status === 'success') {
                 if (track !== undefined) {
-                    scrobbleResponse = {
+                    const trackResponse = {
                         time: pd.unix(),
                         track: {
                             ...track,
                             length: duration
                         },
-                    }
+                    };
+                    scrobbleResponse = trackResponse;
                     if (album !== undefined) {
                         const {
                             album: malojaAlbum = {},
                         } = track;
-                        scrobbleResponse.track.album = {
+                        trackResponse.track.album = {
                             name: album,
                             artists: artistCreditsToNames(albumArtists),
                             ...malojaAlbum,
@@ -299,7 +300,7 @@ export class MalojaApiClient extends AbstractApiClient implements PaginatedTimeR
             }
 
             return {createdAt: dayjs().toISOString(), payload: scrobbleData, warnings: msWarnings.length > 0 ? msWarnings : undefined, response: responseBody, mergedScrobble: scrobbleResponse !== undefined ? formatPlayObj(scrobbleResponse, {url: this.url.normal}) : undefined};
-        } catch (e) {
+        } catch (e: any) {
             let scrobbleError: ScrobbleSubmitError;
             if(e instanceof ScrobbleSubmitError) {
                 scrobbleError = e;
@@ -309,7 +310,7 @@ export class MalojaApiClient extends AbstractApiClient implements PaginatedTimeR
             this.logger.error({ playInfo: buildTrackString(playObj), payload: scrobbleData }, `Scrobble Error (${sType})`);
             const responseError = getMalojaResponseError(e);
             if (responseError !== undefined) {
-                if (responseError.status < 500 && e instanceof UpstreamError) {
+                if (responseError.status !== undefined && responseError.status < 500 && e instanceof UpstreamError) {
                     e.showStopper = false;
                 }
                 if (responseError.response?.text !== undefined) {
@@ -413,7 +414,7 @@ export const formatPlayObj = (obj: MalojaScrobbleData, options: FormatPlayObject
         const aStrings = aString.split(',');
         return [...acc, ...aStrings];
     }, []);
-    const urlParams = new URLSearchParams([['artist', artists[0]], ['title', title]]);
+    const urlParams = new URLSearchParams([['artist', artists[0]], ['title', title as string]]);
     const play: PlayObjectMinimal = {
         data: removeUndefinedKeys({
             artists: artistNamesToCredits([...new Set(artistStrings)] as string[]),
@@ -422,7 +423,7 @@ export const formatPlayObj = (obj: MalojaScrobbleData, options: FormatPlayObject
             duration,
             listenedFor,
             playDate: dayjs.unix(time),
-        }),
+        }, false),
         meta: {
             source: 'Maloja',
             url: {
@@ -449,7 +450,9 @@ export const playToScrobblePayload = (playObj: PlayObject, apiKey?: string): Mal
     const [pd, scrobbleTsSOC] = getScrobbleTsSOCDateWithContext(playObj);
 
     const scrobbleData: MalojaScrobbleV3RequestData = {
-        title: track,
+        // title is required by maloja, an empty value will be rejected upstream
+        // but we don't throw here since this is also used to build payloads for logging failed scrobbles
+        title: track ?? '',
         artists: artistCreditsToNames(artists),
         album,
         key: apiKey,

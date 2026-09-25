@@ -217,7 +217,7 @@ export abstract class AbstractPlayerState {
                 if (this.calculatedStatus !== CALCULATED_PLAYER_STATUSES.playing) {
                     this.calculatedStatus = CALCULATED_PLAYER_STATUSES.unknown;
                 }
-                return [this.getPlayedObject(), played];
+                return [this.requirePlayedObject(), played];
             } else if (status !== undefined && !AbstractPlayerState.isProgressStatus(status)) {
                 this.currentListenSessionEnd();
                 this.calculatedStatus = this.reportedStatus;
@@ -235,7 +235,7 @@ export abstract class AbstractPlayerState {
                 }
                 this.logger.debug('New Play is a repeat');
                 this.setCurrentPlay(state, {reportedTS});
-                return [this.getPlayedObject(), played];
+                return [this.requirePlayedObject(), played];
             } else {
                 if(this.currentListenRange !== undefined) {
                     const [isSeeked, seekedPos] = this.currentListenRange.seeked(state.position, reportedTS);
@@ -255,7 +255,7 @@ export abstract class AbstractPlayerState {
             this.isRepeatPlay = false;
             // compensate for Players that report as STOPPED between Plays
             // -- should we check for closeToPlayStart() as well?
-            if(this.lastPlay !== undefined) {
+            if(this.lastPlay !== undefined && this.lastPlayUpdatedAt !== undefined) {
                 const lastPlayDiff = Math.abs(this.lastPlayUpdatedAt.diff(dayjs(), 's'));
                 const shortDiff = lastPlayDiff < 20;
                 const lastPlayMatch = playObjDataMatch(play, this.lastPlay);
@@ -271,10 +271,10 @@ export abstract class AbstractPlayerState {
             this.reportedStatus = REPORTED_PLAYER_STATUSES.unknown;
         }
 
-        return [this.getPlayedObject(), undefined];
+        return [this.requirePlayedObject(), undefined];
     }
 
-    protected incomingPlayMatchesExisting(play: PlayObject): boolean { return playObjDataMatch(this.currentPlay, play); }
+    protected incomingPlayMatchesExisting(play: PlayObject): boolean { return this.currentPlay !== undefined && playObjDataMatch(this.currentPlay, play); }
 
     protected clearPlayer() {
         this.lastPlay = this.currentPlay;
@@ -292,6 +292,15 @@ export abstract class AbstractPlayerState {
         this.calculatedStatus = 'stopped';
         this.playLastUpdatedAt = dayjs();
         this.currentListenSessionEnd();
+    }
+
+    /** Use when currentPlay is known to be set */
+    protected requirePlayedObject(completed: boolean = false): PlayObject {
+        const played = this.getPlayedObject(completed);
+        if(played === undefined) {
+            throw new Error('Expected player to have a current Play but it does not');
+        }
+        return played;
     }
 
     public getPlayedObject(completed: boolean = false): PlayObject | undefined {
@@ -339,9 +348,9 @@ export abstract class AbstractPlayerState {
         return listenDur;
     }
 
-    protected abstract currentListenSessionContinue(position?: number | undefined, timestamp?: Dayjs);
+    protected abstract currentListenSessionContinue(position?: number | undefined, timestamp?: Dayjs): void;
 
-    protected abstract currentListenSessionEnd();
+    protected abstract currentListenSessionEnd(): void;
 
     /** Check if new Player Position was seeked to a Position that indicates user is repeating the track
      * 
@@ -351,6 +360,11 @@ export abstract class AbstractPlayerState {
      *     * Previous Position was close to end of Play
      */
     protected isSessionRepeat(position?: number, reportedTS?: Dayjs): boolean {
+        const currentPlay = this.currentPlay;
+        // can't be close to start without a position
+        if(currentPlay === undefined || position === undefined) {
+            return false;
+        }
         if(this.currentListenRange !== undefined) {
             const [isSeeked, seekPos] = this.currentListenRange.seeked(position, reportedTS);
             if (isSeeked === false || seekPos > 0) {
@@ -361,15 +375,15 @@ export abstract class AbstractPlayerState {
         const hints: string[] = [];
 
         const repeatHint = `New Position (${position})`;
-        const trackDur = this.currentPlay.data.duration;
+        const trackDur = currentPlay.data.duration;
 
         // new position is close to start of Play
-        const [closeStart, closeStartHint] = closeToPlayStart(this.currentPlay, position, {hintPrefix: false});
+        const [closeStart, closeStartHint] = closeToPlayStart(currentPlay, position, {hintPrefix: false});
         hints.push(closeStartHint);
 
         if (closeStart) {
             const playerDur = this.getListenDuration();
-            const [repeatDurationOk, repeatDurationHint] = repeatDurationPlayed(this.currentPlay, playerDur, {hintPrefix: false});
+            const [repeatDurationOk, repeatDurationHint] = repeatDurationPlayed(currentPlay, playerDur, {hintPrefix: false});
 
             // user has played at least 2 minutes or 50% of track
             // and the current (new) listen range was close to the start
@@ -402,7 +416,7 @@ export abstract class AbstractPlayerState {
             }
             if (trackDur !== undefined && lastPosCandidate.length > 0) {
                 for(const posData of lastPosCandidate) {
-                    const [nearEnd, nearEndHint] = closeToPlayEnd(this.currentPlay, posData.pos, {hintPrefix: false});
+                    const [nearEnd, nearEndHint] = closeToPlayEnd(currentPlay, posData.pos, {hintPrefix: false});
                     // last position is close to end of Play
                     if(nearEnd) {
                         this.logger.verbose(`${repeatHint} ${[closeStartHint, `${posData.context} (${posData.pos}s) ${nearEndHint}`].join(' and ')}`);
@@ -443,24 +457,26 @@ export abstract class AbstractPlayerState {
     public textSummary() {
         const parts = [''];
         let play: string;
-        if (this.currentPlay !== undefined) {
-            parts.push(`${buildTrackString(this.currentPlay, {include: ['trackId', 'artist', 'track', 'session']})} @ ${todayAwareFormat(this.playFirstSeenAt)}`);
+        const currentPlay = this.currentPlay;
+        const duration = currentPlay?.data.duration;
+        if (currentPlay !== undefined) {
+            parts.push(`${buildTrackString(currentPlay, {include: ['trackId', 'artist', 'track', 'session']})} @ ${this.playFirstSeenAt !== undefined ? todayAwareFormat(this.playFirstSeenAt) : 'N/A'}`);
         }
         parts.push(`Reported: ${this.reportedStatus.toUpperCase()} | Calculated: ${this.calculatedStatus.toUpperCase()} | Stale: ${this.isUpdateStale() ? 'Yes' : 'No'} | Orphaned: ${this.isOrphaned() ? 'Yes' : 'No'} | Player Updated At: ${todayAwareFormat(this.stateLastUpdatedAt)} | Play Updated At: ${this.playLastUpdatedAt === undefined ? 'N/A' : todayAwareFormat(this.playLastUpdatedAt)}`);
         let progress = '';
-        if (this.currentListenRange !== undefined && this.currentListenRange instanceof ListenRangePositional && this.currentPlay.data.duration !== undefined && this.currentPlay.data.duration !== 0) {
-            progress = `${progressBar(this.currentListenRange.end.position / this.currentPlay.data.duration, 1, 15)} ${formatNumber(this.currentListenRange.end.position, {toFixed: 0})}/${formatNumber(this.currentPlay.data.duration, {toFixed: 0})}s Reported | `;
+        if (this.currentListenRange !== undefined && this.currentListenRange instanceof ListenRangePositional && duration !== undefined && duration !== 0) {
+            progress = `${progressBar(this.currentListenRange.end.position / duration, 1, 15)} ${formatNumber(this.currentListenRange.end.position, {toFixed: 0})}/${formatNumber(duration, {toFixed: 0})}s Reported | `;
         }
         let listenedPercent = '';
-        if (this.currentPlay !== undefined && this.currentPlay.data.duration !== undefined && this.currentPlay.data.duration !== 0) {
-            listenedPercent = formatNumber((this.getListenDuration() / this.currentPlay.data.duration) * 100, {
+        if (duration !== undefined && duration !== 0) {
+            listenedPercent = formatNumber((this.getListenDuration() / duration) * 100, {
                 suffix: '%',
                 toFixed: 0
             })
         }
         parts.push(`${progress}Listened For: ${formatNumber(this.getListenDuration(), {toFixed: 0})}s ${listenedPercent}`);
-        if (this.currentListenRange !== undefined && this.currentListenRange instanceof ListenRangePositional && this.currentListenRange.rtTruth) {
-            const rtProgress = `${progressBar((this.currentListenRange.rtPlayer.getPosition() / 1000) / this.currentPlay.data.duration, 1, 15)} ${formatNumber(this.currentListenRange.rtPlayer.getPosition() / 1000, {toFixed: 0})}/${formatNumber(this.currentPlay.data.duration, {toFixed: 0})}s`;
+        if (this.currentListenRange !== undefined && this.currentListenRange instanceof ListenRangePositional && this.currentListenRange.rtTruth && duration !== undefined) {
+            const rtProgress = `${progressBar((this.currentListenRange.rtPlayer.getPosition() / 1000) / duration, 1, 15)} ${formatNumber(this.currentListenRange.rtPlayer.getPosition() / 1000, {toFixed: 0})}/${formatNumber(duration, {toFixed: 0})}s`;
             parts.push(`${rtProgress} Realtime | Drifted ${formatNumber(Math.abs(this.currentListenRange.getDrift() / 1000), {toFixed: 1})}s (Max ${formatNumber(this.currentListenRange.getAllowedDrift() / 1000, {toFixed: 1})})`);
         }
         return parts.join('\n');

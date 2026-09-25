@@ -68,7 +68,7 @@ describe('Handles temporal inconsistency in history', function () {
         const prependResult = source.parseRecentAgainstResponse(prependedPlays);
         expect(prependResult.plays).length(1);
         expect(prependResult).to.deep.include({consistent: true, diffType: 'added'});
-        expect(prependResult.diffResults[2]).eq('prepend');
+        expect(prependResult.diffResults![2]).eq('prepend');
 
         expect(source.parseRecentAgainstResponse(prependedPlays).plays).length(0);
     });
@@ -96,7 +96,7 @@ describe('Handles temporal inconsistency in history', function () {
         const bumpedResults = source.parseRecentAgainstResponse(bumpedList);
         expect(bumpedResults.plays).length(1);
         expect(bumpedResults).to.deep.include({consistent: true, diffType: 'bump'});
-        expect(bumpedResults.diffResults[2]).eq('prepend');
+        expect(bumpedResults.diffResults![2]).eq('prepend');
     });
 
     it(`Does not add appended track`, async function () {
@@ -118,7 +118,7 @@ describe('Handles temporal inconsistency in history', function () {
         const appenedResult =source.parseRecentAgainstResponse(appendPlays);
         expect(appenedResult.plays).length(0);
         expect(appenedResult).to.deep.include({consistent: false, diffType: 'added'});
-        expect(appenedResult.diffResults[2]).eq('append');
+        expect(appenedResult.diffResults![2]).eq('append');
     });
 
     it(`Detects outdated recent history when order was previously seen`, async function () {
@@ -148,7 +148,7 @@ describe('Handles temporal inconsistency in history', function () {
         // should be detected as append since "removed" track in last position from previous history is seen again
         const badAppend = source.parseRecentAgainstResponse(plays);
         expect(badAppend).to.deep.include({consistent: false, diffType: 'added', plays: []});
-        expect(badAppend.diffResults[2]).eq('append');
+        expect(badAppend.diffResults![2]).eq('append');
 
         await sleep(10);
 

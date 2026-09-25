@@ -98,7 +98,7 @@ export type VLCSourceAIOConfig = z.infer<typeof vlcSourceAIOConfigSchema>;
 export type PlayerState = 'playing' | 'stopped' | 'paused';
 
 // if not provided the value is an EMPTY STRING or undefined
-export interface VlcAudioMeta extends VlcMeta {
+export type VlcAudioMeta = VlcMeta & {
     track_id?: string
     date?: string
     description?: string

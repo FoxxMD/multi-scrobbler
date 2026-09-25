@@ -4,7 +4,7 @@ import {pollingOptionsSchema} from "../common.ts";
 import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
 
 export const tealSourceDataSchema = z.object({
-    identifier: tealDataSchema.shape.identifier.meta(tealDataSchema.shape.identifier.meta()),
+    identifier: tealDataSchema.shape.identifier.meta(tealDataSchema.shape.identifier.meta() ?? {}),
     serviceAllow: z.array(z.string()).optional(),
     serviceDeny: z.array(z.string()).optional(),
     ...commonSourceDataSchema.shape,

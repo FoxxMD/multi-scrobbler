@@ -6,7 +6,7 @@ import {
     type InternalConfig,
     type PlayerStateData,
 } from "../common/infrastructure/Atomic.ts";
-import { NO_USER } from '../../core/Atomic.ts';
+import { NO_DEVICE, NO_USER } from '../../core/Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type {ReportedPlayerStatus} from '../../core/Atomic.ts';
 import type {PlayPlatformId} from '../../core/Atomic.ts';
@@ -56,16 +56,17 @@ export class WebScrobblerSource extends MemorySource {
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
-        this.logger.info(`Accepting requests at ${joinedUrl(this.localUrl, 'api/webscrobbler', this.config.data.slug ?? '')}`);
+        this.logger.info(`Accepting requests at ${joinedUrl(this.localUrl, 'api/webscrobbler', this.config.data?.slug ?? '')}`);
         return true;
     }
 
     matchSlug(slug: string | undefined) {
-        if (this.config.data.slug === undefined) {
+        const configSlug = this.config.data?.slug;
+        if (configSlug === undefined || configSlug === null) {
             return slug === undefined;
         }
 
-        return slug.toLowerCase() === this.config.data.slug.toLowerCase().trim();
+        return slug !== undefined && slug.toLowerCase() === configSlug.toLowerCase().trim();
     }
 
     static webhookEventAsPlayerStatus(event: WebScrobblerHookEvent): ReportedPlayerStatus {
@@ -90,7 +91,7 @@ export class WebScrobblerSource extends MemorySource {
         const play = WebScrobblerSource.formatPlayObj(obj.data.song, {nowPlaying: eventName !== 'scrobble'});
         play.meta.sourceSOT = SOURCE_SOT.INGRESS;
         return {
-            platformId: [play.meta.deviceId, NO_USER],
+            platformId: [play.meta.deviceId ?? NO_DEVICE, NO_USER],
             play,
             status: WebScrobblerSource.webhookEventAsPlayerStatus(eventName),
             stateUpdatedAt: dayjs.unix(time)
@@ -142,16 +143,16 @@ export class WebScrobblerSource extends MemorySource {
                 }
             },
             meta: {
-                trackId: uniqueID,
+                trackId: uniqueID ?? undefined,
                 parsedFrom: PARSED_FROM.ingress,
                 url: {
                     web: trackUrl,
-                    origin: originUrl
+                    origin: originUrl ?? undefined
                 },
                 deviceId: `${connectorLabel}-${controllerTabId}`,
                 musicService: connectorL,
                 source: 'WebScrobbler',
-                scrobbleAllowed: isScrobblingAllowed,
+                scrobbleAllowed: isScrobblingAllowed ?? undefined,
                 nowPlaying: options.nowPlaying ?? false
             }
         }
@@ -168,14 +169,15 @@ export class WebScrobblerSource extends MemorySource {
 
         if (playObj.meta.musicService !== undefined) {
             const lowerSource = playObj.meta.musicService.toLowerCase();
-            if (Array.isArray(this.config.data.blacklist) && this.config.data.blacklist.length > 0) {
-                if (this.config.data.blacklist.some(x => x === lowerSource)) {
+            const {blacklist, whitelist} = this.config.data ?? {};
+            if (Array.isArray(blacklist) && blacklist.length > 0) {
+                if (blacklist.some(x => x === lowerSource)) {
                     this.logger.debug(`Will not scrobble play because it is from a blacklisted connector '${lowerSource}'`);
                     return false;
                 }
             }
-            if (Array.isArray(this.config.data.whitelist) && this.config.data.whitelist.length > 0) {
-                if (!this.config.data.whitelist.some(x => x === lowerSource)) {
+            if (Array.isArray(whitelist) && whitelist.length > 0) {
+                if (!whitelist.some(x => x === lowerSource)) {
                     this.logger.debug(`Will not scrobble play because it is not from a whitelisted connector '${lowerSource}'`);
                     return false;
                 }
