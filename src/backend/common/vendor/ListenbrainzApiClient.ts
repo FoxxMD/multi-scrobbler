@@ -702,7 +702,7 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
                 track: normalTrackName,
                 artists: artistNamesToCredits(artists),
                 album: release_name,
-                albumArtists: artistNamesToCredits(albumArtists!),
+                albumArtists: albumArtists !== undefined ? artistNamesToCredits(albumArtists) : undefined,
                 duration: dur,
                 isrc: isrc !== undefined ? isrcNoHyphens(isrc) : undefined,
                 meta: {
