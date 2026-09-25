@@ -38,11 +38,19 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
 
         for(const p of plays) {
             const ingress = p.queueStates.find(x => x.queueName === 'ingress');
-            const dead = p.queueStates.find(x => x.queueName === 'dead')!;
+            const dead = p.queueStates.find(x => x.queueName === 'dead');
+            if(dead === undefined) {
+                // should not happen since query only returns plays with a dead queue state
+                continue;
+            }
 
             if(ingress === undefined) {
+                if(p.componentId === null) {
+                    ctx.logger.warn(`Play ${p.id} has a dead queue state but no component, cannot create an ingress queue state for it`);
+                    continue;
+                }
                 await ctx.db.insert(queueStates).values([{
-                    componentId: p.componentId!,
+                    componentId: p.componentId,
                     playId: p.id,
                     queueName: 'ingress',
                     queueStatus: 'failed',
