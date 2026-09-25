@@ -105,7 +105,7 @@ export const isPlayTransformStage = (val: object | Partial<PlayTransformStage<Se
         throw new Error(`Stage has invalid 'type'. Must be one of: ${STAGE_TYPES.join(', ')}`);
     }
 
-    for (const k of ['artist', 'title', 'album']) {
+    for (const k of ['artists', 'title', 'album']) {
         if (!(k in val)) {
             continue;
         }
