@@ -409,11 +409,7 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         } = stageConfig;
         // if all searches fail prereqs then no recording lists are assigned to results
         if(transformData === undefined) {
-            throw new StagePrerequisiteError('All search prerequisites failed, Rocksky API could not be searched with the given searchOrder options',
-                {
-                    shortStack: true,
-                    inputs: (transformData as SongViewDetailedMS).requestQueries
-                });
+            throw new StagePrerequisiteError('All search prerequisites failed, Rocksky API could not be searched with the given searchOrder options', {shortStack: true});
         }
         let mergedSongView: SongViewDetailedMS = transformData;
         if((transformData.matches ?? []).length === 0) {
@@ -423,12 +419,12 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         } else {
             const filteredList: SongMatchView[] = transformData.matches!.filter(x => x.score! >= score);
             if(filteredList.length === 0) {
-                throw new StagePrerequisiteError(`All ${transformData.matches} candidate matches associated with this match had a score < ${score}, best match was ${transformData.matches![0].score}`, {shortStack: true});
+                throw new StagePrerequisiteError(`All ${transformData.matches!.length} candidate matches associated with this match had a score < ${score}, best match was ${transformData.matches![0].score}`, {shortStack: true});
             }
             //const mergedConfig = Object.assign({}, removeUndefinedKeys({...this.defaults}), removeUndefinedKeys({...stageConfig}));
             //filteredList = rankSongMatchesByPriority(filteredList, mergedConfig, play);
 
-            this.logger.debug(`${filteredList.length} of ${transformData.matches} were valid, filtered matches. Using match with best score of ${filteredList[0].score}`);
+            this.logger.debug(`${filteredList.length} of ${transformData.matches!.length} were valid, filtered matches. Using match with best score of ${filteredList[0].score}`);
             mergedSongView = {
                 ...transformData,
                 title: filteredList[0].title ?? transformData.title,
