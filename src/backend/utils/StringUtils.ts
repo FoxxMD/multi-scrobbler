@@ -134,7 +134,6 @@ export const parseCredits = (str: string, delimiters?: boolean | string[]): Play
         return undefined;
     }
 
-    let primary: string | undefined;
     let secondary: string[] = [];
     let suffix: string | undefined;
     const results = parseRegexSingle(PRIMARY_SECONDARY_SECTIONS_REGEX, str);
@@ -147,7 +146,7 @@ export const parseCredits = (str: string, delimiters?: boolean | string[]): Play
             delims = [];
         }
 
-        primary = results.named.primary.trim();
+        const primary: string = results.named.primary.trim();
         for(const strat of SECONDARY_REGEX_STRATS) {
             const secCredits = parseRegexSingle(strat, results.named.secondary);
             if(secCredits !== undefined) {
@@ -161,7 +160,7 @@ export const parseCredits = (str: string, delimiters?: boolean | string[]): Play
             return undefined;
         }
         return {
-            primary: primary!,
+            primary: primary,
             primaryComposite: `${primary}${suffix ?? ''}`,
             secondary,
             suffix
@@ -188,7 +187,7 @@ export const parseArtistCredits = (str: string, delimiters?: boolean | string[],
             return {
                 primary: primaries[0],
                 primaryComposite: primaries[0],
-                secondary: primaries.slice(1).concat(withJoiner.secondary!)
+                secondary: primaries.slice(1).concat(withJoiner.secondary ?? [])
             }
         }
         return withJoiner;
@@ -279,7 +278,7 @@ export const compareScrobbleTracks = (existing: PlayObject, candidate: PlayObjec
         }
     } = candidate;
 
-    return compareTracks(existingTrack!, candidateTrack!);
+    return compareTracks(existingTrack ?? '', candidateTrack ?? '');
 }
 
 export const compareTracks = (existingTrack: string, candidateTrack: string): [StringSamenessResult, TrackSamenessResults] => {
@@ -406,13 +405,13 @@ export const compareNormalizedStrings = (existing: string, candidate: string): S
     })
 }
 
-export const scoreNormalizedStringsWeighted = (reference: string, candidate: string, weight: number, exactBonus?: number): number => {
+export const scoreNormalizedStringsWeighted = (reference: string | undefined, candidate: string | undefined, weight: number, exactBonus: number = 0): number => {
     const sameness = compareNormalizedStrings(reference ?? '', candidate ?? '');
     const exact = reference === candidate;
 
     const normalScore = Math.min(sameness.highScore/100, 1);
 
-    return normalScore * (weight + (exact ? exactBonus! : 0));
+    return normalScore * (weight + (exact ? exactBonus : 0));
 }
 
 interface ArrParseOpts {

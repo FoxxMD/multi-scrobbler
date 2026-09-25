@@ -212,7 +212,7 @@ export const generateBaseURL = (userUrl: string | undefined, defaultPort: number
     if (u.port === '') {
         if (u.protocol === 'https:') {
             u.port = '443';
-        } else if (trueUserUrl!.includes(`${u.hostname}:80`)) {
+        } else if (trueUserUrl !== undefined && trueUserUrl.includes(`${u.hostname}:80`)) {
             u.port = '80';
         } else {
             u.port = defaultPort.toString();
@@ -317,8 +317,9 @@ export const streamBodyProgress = async (stream: ReadableStream<Uint8Array<Array
     let length: number,
     chunkReportSize: number = chunkDefaultSize,
     lastReportedSize: number = 0;
-    if(headers !== undefined && null !== headers.get('content-length')) {
-        length = +headers.get('content-length')!;
+    const contentLength = headers?.get('content-length');
+    if(contentLength !== undefined && contentLength !== null) {
+        length = +contentLength;
         const [summary, size, unit] = formatBytes(length);
         if(unit === 'MiB' && size > 10) {
             switch(true) {

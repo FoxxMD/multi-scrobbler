@@ -60,13 +60,13 @@ export interface TrackStringOptions<T = string> {
     include?: PlayObjectIncludeTypes[]
     transformers?: {
         artists?: (a: string[]) => T | string
-        album?: (t: string,data: AmbPlayObject, hasExistingParts?: boolean) => T | string
-        track?: (t: string,data: AmbPlayObject, hasExistingParts?: boolean) => T | string
-        time?: (t: Dayjs, i?: ScrobbleTsSOC) => T | string
-        timeFromNow?: (t: Dayjs) => T | string
+        album?: (t: string | undefined, data: AmbPlayObject, hasExistingParts?: boolean) => T | string | undefined
+        track?: (t: string | undefined, data: AmbPlayObject, hasExistingParts?: boolean) => T | string
+        time?: (t: Dayjs | undefined, i?: ScrobbleTsSOC) => T | string
+        timeFromNow?: (t: Dayjs | undefined) => T | string | undefined
         comment?: (c: string | undefined) => T | string
-        platform?: (d: string | undefined, u: string | undefined, s: string | undefined) => T | string
-        reducer?: (arr: (T | string)[]) => T //(acc: T, curr: T | string) => T
+        platform?: (d: string | undefined, u: string | undefined, s: string | undefined) => T | string | undefined
+        reducer?: (arr: (T | string | undefined)[]) => T //(acc: T, curr: T | string) => T
     }
 }
 

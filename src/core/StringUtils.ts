@@ -91,18 +91,18 @@ export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: Tr
         } = {},
     } = playObj;
 
-    let pd: Dayjs;
+    let pd: Dayjs | undefined;
     let usedTsSOC: ScrobbleTsSOC = scrobbleTsSOC;
     if(scrobbleTsSOC === SCROBBLE_TS_SOC_END && playDateCompleted !== undefined) {
         pd = typeof playDateCompleted === 'string' ? dayjs(playDateCompleted) : playDateCompleted;
     } else {
         usedTsSOC = SCROBBLE_TS_SOC_START;
-        pd = typeof playDate === 'string' ? dayjs(playDate) : playDate!;
+        pd = typeof playDate === 'string' ? dayjs(playDate) : playDate;
     }
 
-    const strParts: (T | string)[] = [];
+    const strParts: (T | string | undefined)[] = [];
     if(include.includes('platform')) {
-        strParts.push(platformFunc(deviceId, user, include.includes('session') ? sessionId : undefined)!)
+        strParts.push(platformFunc(deviceId, user, include.includes('session') ? sessionId : undefined))
     } else if(include.includes('session') && sessionId !== undefined) {
         strParts.push(`(Session ${sessionId})`);
     }
@@ -110,13 +110,13 @@ export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: Tr
         strParts.push(`(${trackId})`);
     }
     if (include.includes('artist')) {
-        strParts.push(artistsFunc(artistCreditsToNames(artists!)))
+        strParts.push(artistsFunc(artistCreditsToNames(artists)))
     }
     if (include.includes('track')) {
-        strParts.push(trackFunc(track!, playObj, strParts.length > 0));
+        strParts.push(trackFunc(track, playObj, strParts.length > 0));
     }
     if (include.includes('album')) {
-        strParts.push(albumFunc(album!, playObj, strParts.length > 0));
+        strParts.push(albumFunc(album, playObj, strParts.length > 0));
     }
     if (include.includes('time')) {
         strParts.push(timeFunc(pd, usedTsSOC));

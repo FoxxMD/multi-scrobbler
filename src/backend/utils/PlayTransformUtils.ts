@@ -101,7 +101,7 @@ export const isPlayTransformStage = (val: object | Partial<PlayTransformStage<Se
     if (!('type' in val)) {
         throw new Error(`Stage is missing 'type'. Must be one of: ${STAGE_TYPES.join(', ')}`);
     }
-    if (!STAGE_TYPES.includes(val.type!)) {
+    if (typeof val.type !== 'string' || !STAGE_TYPES.includes(val.type)) {
         throw new Error(`Stage has invalid 'type'. Must be one of: ${STAGE_TYPES.join(', ')}`);
     }
 
@@ -145,10 +145,11 @@ export const testWhen = (parts: WhenParts<string>, play: PlayObject, options?: S
             return false;
         }
     }
-    if(parts.artists !== undefined) {
+    const artistsTest = parts.artists;
+    if(artistsTest !== undefined) {
         // allows user to test if artists are empty
-        const artists = parts.artists.length === 0 ? [{name: ''}] : play.data.artists;
-        if(artists!.every(x => !testMaybeRegex(parts.artists!, x.name)[0])) {
+        const artists = artistsTest.length === 0 ? [{name: ''}] : (play.data.artists ?? []);
+        if(artists.every(x => !testMaybeRegex(artistsTest, x.name)[0])) {
             return false;
         }
     }
@@ -189,6 +190,10 @@ export interface TransformPlayPartsOptions {
 }
 
 export const baseFormatPlayObj = (data: any, play: PlayObjectMinimal): PlayObject => {
+    const original = {
+        data,
+        play,
+    };
     const basePlay: PlayObject =  {
         data: {
             ...play.data
@@ -197,11 +202,8 @@ export const baseFormatPlayObj = (data: any, play: PlayObjectMinimal): PlayObjec
             seenAt: dayjs(),
             ...play.meta,
         },
-        original: {
-            data,
-            play,
-        }
+        original
     }
-    basePlay.original!.play!.meta.seenAt = basePlay.meta.seenAt;
+    original.play.meta.seenAt = basePlay.meta.seenAt;
     return basePlay;
 }

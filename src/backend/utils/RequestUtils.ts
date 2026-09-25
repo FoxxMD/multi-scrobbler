@@ -27,8 +27,8 @@ export const getValidMultipartJsonFile = (files: Files | File): [typeof Volatile
     try {
 
         if (isVolatileFile(files)) {
-            if ('mimetype' in files && files.mimetype !== undefined) {
-                if (files.mimetype!.includes('json')) {
+            if ('mimetype' in files && typeof files.mimetype === 'string') {
+                if (files.mimetype.includes('json')) {
                     logs.push(`Found ${getFileIdentifier(files)} with mimetype '${files.mimetype}'`)
                     return [files as unknown as typeof VolatileFile, logs];
                 } else {
@@ -41,8 +41,8 @@ export const getValidMultipartJsonFile = (files: Files | File): [typeof Volatile
             for (const [partName, namedFile] of Object.entries(files)) {
                 if (Array.isArray(namedFile)) {
                     for (const [index, file] of Object.entries(namedFile)) {
-                        if ('mimetype' in file && file.mimetype !== undefined) {
-                            if (file.mimetype!.includes('json')) {
+                        if ('mimetype' in file && typeof file.mimetype === 'string') {
+                            if (file.mimetype.includes('json')) {
                                 logs.push(`Found ${partName}.${index}.${getFileIdentifier(file)} with mimetype '${file.mimetype}'`)
                                 return [file as unknown as typeof VolatileFile, logs];
                             } else {
@@ -55,8 +55,8 @@ export const getValidMultipartJsonFile = (files: Files | File): [typeof Volatile
                 } else {
                     // this shouldn't happen but it was happening so...
                     const singleFile = namedFile as unknown as File;
-                    if (typeof singleFile === 'object' && 'mimetype' in singleFile && singleFile.mimetype !== undefined) {
-                        if (singleFile.mimetype!.includes('json')) {
+                    if (typeof singleFile === 'object' && 'mimetype' in singleFile && typeof singleFile.mimetype === 'string') {
+                        if (singleFile.mimetype.includes('json')) {
                             logs.push(`Found ${partName}.${getFileIdentifier(singleFile)} with mimetype '${singleFile.mimetype}'`);
                             return [namedFile as unknown as typeof VolatileFile, logs];
                         } else {
@@ -147,7 +147,7 @@ export const tryApiCall = async <T = Response>(reqFunc: () => T, opts: TryApiCal
                         willRetry = false;
                     } else if (isNodeNetworkException(cause)) {
                         willRetry = true;
-                    } else if (noRetryStatus.includes(cause.status!)) {
+                    } else if (cause.status !== undefined && noRetryStatus.includes(cause.status)) {
                         willRetry = false;
                     } else {
                         willRetry = true;

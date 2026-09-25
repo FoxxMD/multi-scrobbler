@@ -28,7 +28,7 @@ const blockedPaths: BlockPaths = [
 ];
 
 export const shouldBlock = (ctx: TraverseContext): boolean => {
-  if (blockedKeys.includes(ctx.key!)) {
+  if (ctx.key !== undefined && blockedKeys.includes(ctx.key)) {
     return true;
   }
   return blockedPaths.some((x) => {
