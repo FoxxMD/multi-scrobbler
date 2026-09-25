@@ -24,7 +24,7 @@ const newPlay = generatePlay({duration: 300});
 const testState = (data: Omit<PlayerStateDataMaybePlay, 'platformId'>): PlayerStateDataMaybePlay => ({...data, platformId: SINGLE_USER_PLATFORM_ID});
 
 class TestPositionalPlayerState extends PositionalPlayerState {
-    protected newListenRange(start?: ListenProgressPositional, end?: ListenProgressPositional, options: object = {}): ListenRangePositional {
+    protected newListenRange(start: ListenProgressPositional, end?: ListenProgressPositional, options: object = {}): ListenRangePositional {
         const range = super.newListenRange(start, end, {allowedDrift: this.allowedDrift, rtImmediate: false, rtTruth: this.rtTruth, ...options});
         return range;
     }
