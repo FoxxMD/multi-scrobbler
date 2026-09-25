@@ -3,7 +3,7 @@ import {
     cacheFunctions,
 } from "@foxxmd/regex-buddy-core";
 import type EventEmitter from "events";
-import {COMPONENT_TYPE_CLIENT, DEAD_LETTER_RETRIES_DEFAULT, DEAD_QUEUE, INGRESS_QUEUE, isPlayObject, MONITORING_ORIGIN_SYSTEM, MONITORING_ORIGIN_USER, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, type ComponentType, type LifecycleInput, type LifecycleStep, type PlayData, type PlayObject} from "../../core/Atomic.ts";
+import {COMPONENT_TYPE_CLIENT, DEAD_LETTER_RETRIES_DEFAULT, DEAD_QUEUE, INGRESS_QUEUE, isPlayObject, MONITORING_ORIGIN_SYSTEM, MONITORING_ORIGIN_USER, QUEUE_STATUS_COMPLETED, type ComponentType, type LifecycleInput, type LifecycleStep, type PlayData, type PlayObject} from "../../core/Atomic.ts";
 import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
 import type {CommonClientConfig} from "./infrastructure/config/client/index.ts";
 import type {CommonSourceConfig} from "./infrastructure/config/source/index.ts";
@@ -680,8 +680,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             monitoringStatus: this.getMonitoringStatus(),
             countNonLive: this.dbComponent.countNonLive,
             createdAt: this.dbComponent.createdAt?.toISOString(),
-            lastReadyAt: this.lastActiveAt !== undefined ? this.lastReadyAt!.toISOString() : undefined,
-            lastActiveAt: this.lastActiveAt !== undefined ? this.lastActiveAt?.toISOString() : undefined,
+            lastReadyAt: this.lastReadyAt?.toISOString(),
+            lastActiveAt: this.lastActiveAt?.toISOString(),
             errors: this.errors.map(x => x instanceof Error ? serializeError(x) : x),
             warnings: this.warnings.map(x => x instanceof Error ? serializeError(x) : x),
             ...this.additionalApiData()
