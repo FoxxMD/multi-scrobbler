@@ -127,7 +127,7 @@ export interface Track {
     duration?: number;
 }
 
-export const listenTypeSchema = z.enum(['single', 'playing_now']);
+export const listenTypeSchema = z.enum(['single', 'playing_now','import']);
 export type ListenType = z.infer<typeof listenTypeSchema>;
 export const mbidMappingSchema = z.object({
     recording_name: z.string().optional(),
