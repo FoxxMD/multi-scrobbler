@@ -62,7 +62,7 @@ export const hydratePlaySelect = <T extends PlaySelect | PlayHistoricalSelect>(s
     //     res = asPlay(res);
     // }
     if(opts.includes('uid')) {
-        res.uid = select.uid!;
+        res.uid = select.uid ?? undefined;
         //res.meta.dbUid = select.uid;
     }
     if(opts.includes('id')) {
@@ -70,19 +70,6 @@ export const hydratePlaySelect = <T extends PlaySelect | PlayHistoricalSelect>(s
         //res.meta.dbId = select.id;
     }
     return res;
-}
-
-export const playSelectToDeadScrobble = (select: PlaySelectWithQueueStates, serializedError: boolean = false): DeadLetterScrobble<PlayObject> => {
-    const deadQueue = select.queueStates.find(x => x.queueName === DEAD_QUEUE)!;
-    return {
-        play: select.play,
-        id: select.uid,
-        source: select.play.meta.source!,
-        retries: deadQueue.retries,
-        lastRetry: deadQueue.updatedAt,
-        error: (serializedError ? serializeError(select.error) : select.error) as unknown as string,
-        status: deadQueue.queueStatus as 'queued' | 'failed'
-    }
 }
 
 export const generateInputEntity = (data: PlayInputNew): PlayInputNew => {
