@@ -40,8 +40,7 @@ export class AzuracastApiClient extends AbstractApiClient {
         }          
           
           // Handle a now-playing event from a station. Update your now-playing data accordingly.
-          // TODO strict: `this` is unbound here at runtime (non-arrow function), so these assignments never reach the class instance
-          function handleSseData(this: any, ssePayload: any, useTime = true) {
+          const handleSseData = (ssePayload: any, useTime = true) => {
             const jsonData = ssePayload.data;
           
             if (useTime && 'current_time' in jsonData) {
@@ -49,7 +48,7 @@ export class AzuracastApiClient extends AbstractApiClient {
             }
           
             this.wsNowPlaying = jsonData.np as AzuraStationResponse;
-          }
+          };
           
           socket.onmessage = (e) => {
 
