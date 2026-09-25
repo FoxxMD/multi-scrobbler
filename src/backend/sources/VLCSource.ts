@@ -79,7 +79,8 @@ export class VLCSource extends MemoryPositionalSource {
         this.client = new VLC.Client({
             ip: host,
             port: this.port,
-            password: password!
+            // VLC http interface requires a password, empty will fail during auth
+            password: password ?? ''
         });
 
         let fp = filenamePatterns;
@@ -101,7 +102,10 @@ export class VLCSource extends MemoryPositionalSource {
 
     protected async doCheckConnection(): Promise<true | string | undefined> {
         try {
-            await isPortReachable(this.port!, {host: this.host!});
+            if(this.port === undefined || this.host === undefined) {
+                throw new Error('host and port have not been initialized');
+            }
+            await isPortReachable(this.port, {host: this.host});
             return `${this.host}:${this.port} is reachable.`;
         } catch (e) {
             throw e;
@@ -145,8 +149,8 @@ export class VLCSource extends MemoryPositionalSource {
         let artists: string[] = [];
         let albumArtists: string[] = [];
         const validArtist = firstNonEmptyStr([artist, StreamArtist, ALBUMARTIST, Writer]);
-        if(artist !== undefined) {
-            artists.push(validArtist!);
+        if(validArtist !== undefined) {
+            artists.push(validArtist);
         }
         const aa = firstNonEmptyStr([ALBUMARTIST]);
         if(aa !== undefined) {
@@ -174,17 +178,18 @@ export class VLCSource extends MemoryPositionalSource {
                 const matchedPatternDebug: Record<string, string> = {};
                 if (result !== undefined) {
                     anyMatched = true;
-                    if (result.named.title !== undefined) {
-                        trackName = result.named.title;
-                        matchedPatternDebug.title = trackName!;
+                    const {title: namedTitle, album: namedAlbum} = result.named;
+                    if (namedTitle !== undefined) {
+                        trackName = namedTitle;
+                        matchedPatternDebug.title = namedTitle;
                     }
                     if (result.named.artist !== undefined) {
                         artists.push(result.named.artist);
                         matchedPatternDebug.artist = result.named.artist;
                     }
-                    if (result.named.album !== undefined) {
-                        album = result.named.album;
-                        matchedPatternDebug.album = album!;
+                    if (namedAlbum !== undefined) {
+                        album = namedAlbum;
+                        matchedPatternDebug.album = namedAlbum;
                     }
 
                     if (logFilenamePatterns) {

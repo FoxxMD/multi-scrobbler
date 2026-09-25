@@ -131,10 +131,10 @@ export class SonosSource extends MemoryPositionalSource {
         if(this.devicesBlock.length > 0 && this.devicesBlock.some(x => data.device.Name.toLocaleLowerCase().includes(x))) {
             return `'devicesBlock includes a phrase found in ${data.device.Name}`;
         }
-        if(this.groupsAllow.length > 0 && !this.groupsAllow.some(x => data.device.GroupName!.toLocaleLowerCase().includes(x))) {
+        if(this.groupsAllow.length > 0 && !this.groupsAllow.some(x => (data.device.GroupName ?? '').toLocaleLowerCase().includes(x))) {
             return `'groupsAllow does not include a phrase found in ${data.device.GroupName}`;
         }
-        if(this.groupsBlock.length > 0 && this.groupsBlock.some(x => data.device.GroupName!.toLocaleLowerCase().includes(x))) {
+        if(this.groupsBlock.length > 0 && this.groupsBlock.some(x => (data.device.GroupName ?? '').toLocaleLowerCase().includes(x))) {
             return `'groupsBlock includes a phrase found in ${data.device.GroupName}`;
         }
         if (typeof data.state.positionInfo?.TrackMetaData === 'string') {
@@ -161,9 +161,10 @@ export class SonosSource extends MemoryPositionalSource {
                 if(e instanceof Error) {
                     let muted = false,
                     seen = false;
-                    if(this.badDeviceError[d.Name] !== undefined) {
-                        seen = this.badDeviceError[d.Name].err === e.message;
-                        if(seen && this.badDeviceError[d.Name].time !== undefined && Math.abs(this.badDeviceError[d.Name].time!.diff(dayjs(), 's')) < 60) {
+                    const badDevice = this.badDeviceError[d.Name];
+                    if(badDevice !== undefined) {
+                        seen = badDevice.err === e.message;
+                        if(seen && badDevice.time !== undefined && Math.abs(badDevice.time.diff(dayjs(), 's')) < 60) {
                             muted = true;
                         }
                     }
@@ -267,7 +268,7 @@ export class SonosSource extends MemoryPositionalSource {
                     let allowOneNonProgress = false;
 
                     const playerId = this.genPlayerId(playerState);
-                    if(this.hasPlayer(playerId) && this.players.get(playerId)!.isProgressing()) {
+                    if(this.players.get(playerId)?.isProgressing() === true) {
                         // update player state with a stopped/paused/unknown reported state so that player scrobbles any existing play
                         allowOneNonProgress = true;
                     }
@@ -322,11 +323,11 @@ export const formatPlayObj = (obj: SonosState, options: FormatPlayObjectOptions 
 
     const metadatas: Track[] = [];
 
-    if (typeof CurrentURIMetaData !== 'string') {
-        metadatas.push(CurrentURIMetaData!);
+    if (CurrentURIMetaData !== undefined && typeof CurrentURIMetaData !== 'string') {
+        metadatas.push(CurrentURIMetaData);
     }
-    if (typeof TrackMetaData !== 'string') {
-        metadatas.push(TrackMetaData!);
+    if (TrackMetaData !== undefined && typeof TrackMetaData !== 'string') {
+        metadatas.push(TrackMetaData);
     }
 
     let titleStr: string | undefined;
@@ -358,14 +359,14 @@ export const formatPlayObj = (obj: SonosState, options: FormatPlayObjectOptions 
 
     let dur: number | undefined;
     if (Duration !== undefined && Duration !== "NOT_IMPLEMENTED") {
-        dur = parseDurationFromTimestamp(Duration)!.asSeconds();
+        dur = parseDurationFromTimestamp(Duration)?.asSeconds();
     } else if (TrackDuration !== undefined && TrackDuration !== "NOT_IMPLEMENTED") {
-        dur = parseDurationFromTimestamp(TrackDuration)!.asSeconds();
+        dur = parseDurationFromTimestamp(TrackDuration)?.asSeconds();
     }
 
     let progress: number | undefined;
     if (RelTime !== undefined && RelTime !== "NOT_IMPLEMENTED") {
-        progress = parseDurationFromTimestamp(RelTime)!.asSeconds();
+        progress = parseDurationFromTimestamp(RelTime)?.asSeconds();
     }
 
     if (titleStr === undefined && Title !== undefined && Title !== 'Spotify') {

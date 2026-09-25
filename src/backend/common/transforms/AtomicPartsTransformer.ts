@@ -156,13 +156,14 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
                 transformedPlay.meta.art = mergedArt;
             }
 
-            if(typeof transformData === 'object' && isPlayObject(transformData as object) && (transformData as PlayObject).meta?.lifecycleInputs !== undefined) {
+            const transformInputs = typeof transformData === 'object' && isPlayObject(transformData as object) ? (transformData as PlayObject).meta?.lifecycleInputs : undefined;
+            if(transformInputs !== undefined) {
                 const {
                     meta: {
                         lifecycleInputs = [],
                     } = {},
                 } = transformedPlay;
-                transformedPlay.meta.lifecycleInputs = lifecycleInputs.concat((transformData as PlayObject).meta?.lifecycleInputs!);
+                transformedPlay.meta.lifecycleInputs = lifecycleInputs.concat(transformInputs);
             }
 
             return transformedPlay;

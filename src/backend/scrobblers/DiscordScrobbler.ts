@@ -51,8 +51,8 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
             this.logger.info('Detected token, using WS (Headless) Discord Client');
             this.apiMode = 'ws';
 
-            this.logger.verbose(`Allow override statuses: ${this.config.data.statusOverrideAllow!.join(', ')}`);
-            this.logger.verbose(`Allow broadcasting during other listening activities: ${this.config.data.listeningActivityAllow!.join(', ')}`);
+            this.logger.verbose(`Allow override statuses: ${this.config.data.statusOverrideAllow.join(', ')}`);
+            this.logger.verbose(`Allow broadcasting during other listening activities: ${this.config.data.listeningActivityAllow.join(', ')}`);
             this.api = new DiscordWSClient(this.name, { ...this.config.data, ...this.config.options }, { logger: this.logger });
         } else if(applicationId !== undefined) {
             this.logger.info('Detected applicationId, using IPC Discord Client');

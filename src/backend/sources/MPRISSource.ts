@@ -88,7 +88,7 @@ export class MPRISSource extends MemorySource {
                 trackId: trackid,
                 newFromSource,
                 url: {
-                    web: url!
+                    web: url
                 },
                 trackProgressPosition: position,
                 deviceId: name,
@@ -108,7 +108,7 @@ export class MPRISSource extends MemorySource {
     }
 
     protected getDBus = async () => {
-        const conn = new Connection(createStream({})!);
+        const conn = new Connection(createStream({}));
         try {
             const res = await Promise.race([
                 pEvent(conn, 'error'),
@@ -269,7 +269,7 @@ const convertDBusExceptionToError = (e: any): Error => {
 // unfortunately had to recreate this function from dbus-ts/Connection
 // in order to be able to create the Connection class without immediate init
 // so we can catch errors
-const createStream = (opts: ConnectOpts): (Readable&Writable) | undefined => {
+const createStream = (opts: ConnectOpts): (Readable&Writable) => {
     if (typeof opts !== 'object') {
         opts = {};
     }
@@ -318,4 +318,6 @@ const createStream = (opts: ConnectOpts): (Readable&Writable) | undefined => {
             }
         }
     }
+    // not reachable since last address either returns or throws
+    throw new Error('unknown bus address');
 }

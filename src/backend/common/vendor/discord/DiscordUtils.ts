@@ -13,7 +13,10 @@ export const playStateToActivityData = (data: SourcePlayerObj, opts: { useArt?: 
     let startTime: number | undefined,
         endTime: number | undefined;
 
-    const play: PlayObject = data.play!;
+    const play: PlayObject | undefined = data.play;
+    if(play === undefined) {
+        throw new Error('Cannot build activity data from player state without a Play');
+    }
 
     const position = data.position ?? play.meta?.trackProgressPosition;
     if(position !== undefined && play.data.duration !== undefined) {
@@ -125,10 +128,13 @@ export const configToStrong = (data: DiscordData): DiscordStrongData => {
         ipcLocations
     } = data;
 
+    const saRaw = parseArrayFromMaybeString(statusOverrideAllow);
+
     const strongConfig: DiscordStrongData = {
         token,
         applicationId,
         listeningActivityAllow: parseArrayFromMaybeString(listeningActivityAllow),
+        statusOverrideAllow: saRaw.map(statusStringToType),
         artworkDefaultUrl,
     };
 
@@ -142,8 +148,6 @@ export const configToStrong = (data: DiscordData): DiscordStrongData => {
         }
     }
 
-    const saRaw = parseArrayFromMaybeString(statusOverrideAllow);
-    strongConfig.statusOverrideAllow = saRaw.map(statusStringToType);
 
     if (ipcLocations !== undefined) {
         if (typeof ipcLocations === 'string') {

@@ -11,7 +11,7 @@ export class DrizzleComponentRepository extends DrizzleBaseRepository<'component
         super(db, 'components', 'Component', opts);
     }
 
-    findOrInsert = async (data: { mode: ComponentType, type: string, uid?: string, name?: string }): Promise<ComponentSelect> => {
+    findOrInsert = async (data: { mode: ComponentType, type: string, uid?: string, name: string }): Promise<ComponentSelect> => {
         const where: FindWhere<'components'> = {
             mode: data.mode,
             type: data.type,
@@ -31,7 +31,7 @@ export class DrizzleComponentRepository extends DrizzleBaseRepository<'component
             uid: data.uid ?? data.name,
             mode: data.mode,
             type: data.type,
-            name: data.name!
+            name: data.name
         })).returning())[0] as ComponentSelect;
         componentNew.migrations = [];
         return componentNew;

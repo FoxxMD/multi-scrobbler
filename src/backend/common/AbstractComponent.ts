@@ -439,9 +439,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 transformedPlay.lifecycle = steps;
                 isNew = true;
             }
-            const {
-                lifecycle = []
-            } = transformedPlay;
+            const lifecycle = transformedPlay.lifecycle ?? [];
+            transformedPlay.lifecycle = lifecycle;
             steps.forEach((s, index) => {
                 if(diffFailure) {
                     return;
@@ -451,9 +450,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 if(!isNew) {
                     const existingStepIndex = lifecycle.findIndex(x => x.stageName === s.stageName && x.stageType === s.stageType && x.hook === s.hook && x.source === this.getIdentifier());
                     if(existingStepIndex !== -1) {
-                        transformedPlay.lifecycle![existingStepIndex] = s;
+                        lifecycle[existingStepIndex] = s;
                     } else {
-                        transformedPlay.lifecycle!.push(s);
+                        lifecycle.push(s);
                     }
                 }
 
@@ -496,7 +495,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                             diffs.push(`${last.name} => ${curr.name} -- No Change`);
                         } else {
                             try {
-                                const formattedDiff = diffObjectsConsoleOutput(lastTransformed.data!, curr.data);
+                                const formattedDiff = diffObjectsConsoleOutput(lastTransformed.data ?? {}, curr.data);
                                 diffs.push(`${last.name} => ${curr.name}\n${formattedDiff}`);
                                 lastTransformed = curr;
                             } catch(e) {
@@ -564,7 +563,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         //const stepName = `${hookType} - ${hookItem.type} - ${hookItem.name}`
         const existingStepIndex = lifecycle.findIndex(x => x.hook === hookType && hookItem.name === x.stageName && x.stageType === hookItem.type && x.source === this.getIdentifier());
         const step: LifecycleStep = existingStepIndex !== -1 && lifecycle[existingStepIndex] !== undefined ? lifecycle[existingStepIndex] : {
-            stageName: hookItem.name!,
+            // overwritten below with resolved stage name
+            stageName: hookItem.name ?? 'Unnamed',
             hook: hookType,
             stageType: hookItem.type,
             source: this.getIdentifier(),
@@ -700,15 +700,15 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     public emitComponentUpdate = <T extends Partial<ReturnType<typeof this.getApiData>>>(payload: T) => {
         if('errors' in payload) {
-            if(payload.errors!.length > 0) {
-                payload.errors = payload.errors!.map(x => x instanceof Error ? serializeError(x) : x);
+            if(payload.errors !== undefined && payload.errors.length > 0) {
+                payload.errors = payload.errors.map(x => x instanceof Error ? serializeError(x) : x);
             } else {
                 payload.errors = [];
             }
         }
         if('warnings' in payload) {
-            if(payload.warnings!.length > 0) {
-               payload.warnings = payload.warnings!.map(x => x instanceof Error ? serializeError(x) : x); 
+            if(payload.warnings !== undefined && payload.warnings.length > 0) {
+               payload.warnings = payload.warnings.map(x => x instanceof Error ? serializeError(x) : x); 
             } else {
                 payload.warnings = [];
             }
@@ -864,7 +864,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 const playRow = await this.playRepo.createPlays([createPlayData]);
                 const queueState = await this.queueRepo.create({ componentId: this.dbComponent.id, playId: playRow[0].id, queueName: INGRESS_QUEUE, context }) as QueueStateSelect;
                 const createdEvents = await this.playEventsRepo.createMany([
-                    { playId: playRow[0].id, ...stateChangeToPlayEvent({ state: 'queued' }), createdAt: playRow[0].seenAt!.add(1, 'ms') },
+                    { playId: playRow[0].id, ...stateChangeToPlayEvent({ state: 'queued' }), createdAt: (playRow[0].seenAt ?? dayjs()).add(1, 'ms') },
                     { playId: playRow[0].id, ...queueStateToPlayEvent(queueState), createdAt: queueState.createdAt }
                 ]);
                 createdQueuedPlays.push(playRow[0]);

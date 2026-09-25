@@ -96,8 +96,8 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         try {
             const result = await this.api.scrobble(playObj);
             const scrobbleInfo = `Scrobbled (${newFromSource ? 'New' : 'Backlog'})     => (${source}) ${buildTrackString(playObj)}`;
-            if ((result.warnings?.length ?? 0) > 0) {
-                this.logger.warn(`${scrobbleInfo} | ${result.warnings!.join(' | ')}`);
+            if (result.warnings !== undefined && result.warnings.length > 0) {
+                this.logger.warn(`${scrobbleInfo} | ${result.warnings.join(' | ')}`);
             } else {
                 this.logger.info(scrobbleInfo);
             }

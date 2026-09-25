@@ -286,7 +286,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return results.map(identifierExtractor[identifier]);
     }
 
-    findPlaysPaginated = async <T = PlayWith<'queueStates' | 'input' | 'parent'>>(args: QueryPlaysOpts, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PaginatedResponse<T>> => {
+    findPlaysPaginated = async <T = PlayWith<'queueStates' | 'input' | 'parent'>>(args: QueryPlaysOpts, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PaginatedResponse<T> & {meta: {total: number}}> => {
         const {
             limit = 100,
             offset = 0,
@@ -471,7 +471,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                                         return x;
                                     });
                                     if(compactedInput) {
-                                        await this.db.update(playEvents).set({data: transformEvent.data}).where(eq(playEvents.id, transformEvent.id!));
+                                        await this.db.update(playEvents).set({data: transformEvent.data}).where(eq(playEvents.id, ev.id));
                                     }
                                 }
                             }
@@ -748,22 +748,23 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         * it's also how we ignore exact plays from history-polling sources
         * since those plays are always the same
         */
+        const playHashOrConds: NonNullable<ElementOf<NonNullable<typeof where.AND>>['OR']> = [
+            {
+                playHash: hash
+            }
+        ];
         const playHashOr: ElementOf<NonNullable<typeof where.AND>> = {
-            OR: [
-                {
-                    playHash: hash
-                }
-            ]
+            OR: playHashOrConds
         };
 
         const mbidId = playMbidIdentifier(play);
         if (mbidId !== undefined || inputHash !== undefined) {
             // }];
             if (mbidId !== undefined) {
-                playHashOr.OR!.push({ mbidIdentifier: mbidId });
+                playHashOrConds.push({ mbidIdentifier: mbidId });
             }
             if (inputHash !== undefined) {
-                playHashOr.OR!.push({ input: { playHash: typeof inputHash === 'string' ? inputHash : hashObject(playContentBasicInvariantTransform(inputHash).data) } });
+                playHashOrConds.push({ input: { playHash: typeof inputHash === 'string' ? inputHash : hashObject(playContentBasicInvariantTransform(inputHash).data) } });
             }
         }
 
@@ -787,7 +788,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         */
 
         if (parentId !== undefined) {
-            playHashOr.OR!.push({
+            playHashOrConds.push({
                 parent: {
                     id: parentId,
                     playHash: hash
@@ -853,9 +854,17 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         })) as PlayWith<'queueStates'>[]).map(x => ({...x, play: hydratePlaySelect(x)}));
     }
 
+    protected requireComponentId = (componentId?: number): number => {
+        const cid = componentId ?? this.componentId;
+        if(cid === undefined) {
+            throw new Error('A componentId must be provided when repository has no default componentId');
+        }
+        return cid;
+    }
+
     public getComponentPlayCountForStates = async (states: string[], componentId?: number): Promise<number> => (
         await this.db.$count(plays, and(
-            eq(plays.componentId, (componentId ?? this.componentId)!),
+            eq(plays.componentId, this.requireComponentId(componentId)),
             inArray(plays.state, states as PlaySelect['state'][])
         ))
     )
@@ -873,7 +882,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         .leftJoin(queueStates, eq(plays.id, queueStates.playId))
         .where(
             and(
-            eq(plays.componentId, (componentId ?? this.componentId)!),
+            eq(plays.componentId, this.requireComponentId(componentId)),
             eq(plays.state, 'failed'),
             isNull(queueStates.id)
         )
@@ -917,7 +926,7 @@ group by componentId,compacted;`);
         if(data.event === true) {
             if(data.state !== undefined) {
                 try {
-                    await this.db.insert(playEvents).values({...stateChangeToPlayEvent(removeUndefinedKeys({state: data.state, reason: data.reason, error: data.error})!), playId: id});
+                    await this.db.insert(playEvents).values({...stateChangeToPlayEvent(removeUndefinedKeys({state: data.state, reason: data.reason, error: data.error}, false)), playId: id});
                 } catch (e) {
                     this.logger.warn(new Error(`Failed to create Play Event for state change ${data.state} on Play ${id}`));
                 }

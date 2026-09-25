@@ -12,17 +12,17 @@ import { loggerNoop } from "../../MaybeLogger.ts";
 type MusicbrainzApiWrappedOptions  = ConstructorParameters<typeof MusicBrainzApi>[0] & {
     rate?: Partial<IRateLimiterOptions>
     hostname: string
-    asyncStore: AsyncLocalStorage<string>
+    asyncStore: AsyncLocalStorage<string | undefined>
     logger?: Logger
 };
 
 export class MusicbrainzApiWrapped extends MusicBrainzApi {
     public rateLimiterQueue: RateLimiterQueue;
-    protected asyncStore: AsyncLocalStorage<string>;
+    protected asyncStore: AsyncLocalStorage<string | undefined>;
     public hostname: string;
     logger: Logger;
 
-    constructor(config?: MusicbrainzApiWrappedOptions) {
+    constructor(config: MusicbrainzApiWrappedOptions) {
         const {
             rate: {
                 points = 1,
@@ -31,7 +31,7 @@ export class MusicbrainzApiWrapped extends MusicBrainzApi {
             hostname,
             asyncStore,
             logger = loggerNoop
-        } = config!;
+        } = config;
         super(config);
         this.rateLimiterQueue = new RateLimiterQueue(new RateLimiterMemory({points, duration}), {maxQueueSize: 20});
         this.asyncStore = asyncStore;
@@ -50,7 +50,7 @@ export class MusicbrainzApiWrapped extends MusicBrainzApi {
         this.logger.trace(`Rate Tokens => Used 1 | Remaining ${remainingTokens}`);
 
         try {
-            const res = await this.asyncStore.run(cacheKey!, async () => {
+            const res = await this.asyncStore.run(cacheKey, async () => {
                 return await Promise.race([
                     func(this),
                     sleep(timeout)

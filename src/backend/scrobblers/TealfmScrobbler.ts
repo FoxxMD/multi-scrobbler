@@ -160,7 +160,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         }
 
         try {
-            await this.client.updateStatusRecord(playToStatusRecord(data.play!, isClearing, data.position));
+            await this.client.updateStatusRecord(playToStatusRecord(data.play, isClearing, data.position));
         } catch (e) {
             throw e;
         }
@@ -303,7 +303,11 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         const unseenPlays: PlayObject[] = [];
         let syncGapFilled = false;
         for(const p of recentPlays) {
-            if(!(await this.playsHistoricalRepo.hasByUid(p.meta.playId!))) {
+            if(p.meta.playId === undefined) {
+                this.logger.warn(`Cannot determine if play has been seen because it has no playId, skipping => ${buildTrackString(p)}`);
+                continue;
+            }
+            if(!(await this.playsHistoricalRepo.hasByUid(p.meta.playId))) {
                 unseenPlays.push(p);
             } else {
                 syncGapFilled = true;

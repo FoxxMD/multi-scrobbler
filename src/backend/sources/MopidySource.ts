@@ -166,7 +166,7 @@ export class MopidySource extends MemoryPositionalSource {
                 album: albumName,
                 albumArtists: artistNamesToCredits(actualAlbumArtists.length > 0 ? actualAlbumArtists.map(x => x.name) : []),
                 artists: artistNamesToCredits(artists.length > 0 ? artists.map(x => x.name) : []),
-                duration: Math.round(length! / 1000),
+                duration: length !== undefined ? Math.round(length / 1000) : undefined,
                 playDate: dayjs()
             },
             meta: {
@@ -187,17 +187,22 @@ export class MopidySource extends MemoryPositionalSource {
             return [];
         }
 
-        const state = await this.client.playback!.getState();
-        const currTrack = await this.client.playback!.getCurrentTrack();
-        const playback = await this.client.playback!.getTimePosition();
+        const playbackApi = this.client.playback;
+        if (playbackApi === undefined) {
+            this.logger.warn('Cannot actively poll since client playback API is not available.');
+            return [];
+        }
+        const state = await playbackApi.getState();
+        const currTrack = await playbackApi.getCurrentTrack();
+        const playback = await playbackApi.getTimePosition();
 
         let play: PlayObject | undefined = currTrack === null ? undefined : this.formatPlayObj(currTrack, {trackProgressPosition: playback});
 
-        if(play !== undefined) {
+        if(play !== undefined && currTrack !== null) {
             if (this.uriWhitelist.length > 0) {
-                const match = this.uriWhitelist.find(x => currTrack!.uri.includes(x));
+                const match = this.uriWhitelist.find(x => currTrack.uri.includes(x));
                 if (match === undefined) {
-                    this.logger.debug(`URI for currently playing (${currTrack!.uri}) did not match any in whitelist. Will not track play ${buildTrackString(play)}`);
+                    this.logger.debug(`URI for currently playing (${currTrack.uri}) did not match any in whitelist. Will not track play ${buildTrackString(play)}`);
                     play = undefined;
                 }
             } else if (this.uriBlacklist.length > 0) {

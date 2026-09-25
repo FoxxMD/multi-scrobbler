@@ -67,7 +67,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
                 track,
             } = {},
         } = playObj;
-        return track!.toLocaleLowerCase().trim();
+        return (track ?? '').toLocaleLowerCase().trim();
     }
 
     public playToClientPayload(playObject: PlayObject): object {

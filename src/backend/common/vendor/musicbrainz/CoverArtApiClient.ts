@@ -106,8 +106,8 @@ export class CoverArtApiClient extends AbstractApiClient {
         } catch (e) {
             if (isSuperAgentResponseError(e)) {
                 if (e.status === 302) {
-                    return e.response!.header['location'];
-                } else if ([404].includes(e.status!)) {
+                    return e.response?.header['location'];
+                } else if (e.status === 404) {
                     return undefined;
                 } else {
                     throw new UpstreamError(`Unexpected response when trying to get album art`, { cause: e });
@@ -144,7 +144,7 @@ export class CoverArtApiClient extends AbstractApiClient {
                 return resp.body as CoverArtReleaseResponse;
             } catch (e) {
                 if (isSuperAgentResponseError(e)) {
-                    if ([404].includes(e.status!)) {
+                    if (e.status === 404) {
                         // no image
                     } else {
                         this.logger.warn(new UpstreamError(`Unexpected response when trying to get album art`, { cause: e }));
@@ -158,5 +158,5 @@ export class CoverArtApiClient extends AbstractApiClient {
 }
 
 const logUnexpectedStatus = (context: RetryContext): boolean => {
-    return !isSuperAgentResponseError(context.error) || ![404,302,307].includes(context.error.status!);
+    return !isSuperAgentResponseError(context.error) || context.error.status === undefined || ![404,302,307].includes(context.error.status);
 }

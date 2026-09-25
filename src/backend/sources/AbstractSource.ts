@@ -416,7 +416,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         * 
         * ...for INGRESS we skip check because the assumption is whatever client is sending requests is very intentional and the user wants to see that their activity was recieved
         */
-        if (([PARSED_FROM.history, PARSED_FROM.backlog] as PARSED_FROM_TYPE[]).includes(queueablePlay.meta.parsedFrom!)) {
+        if (queueablePlay.meta.parsedFrom !== undefined && ([PARSED_FROM.history, PARSED_FROM.backlog] as PARSED_FROM_TYPE[]).includes(queueablePlay.meta.parsedFrom)) {
             // we should be adding Plays to the queue without any transforms
             // so run on "raw" play input
             // if we have seen a play with close temporality with the exact input hash then skip it entirely
@@ -521,15 +521,15 @@ export default abstract class AbstractSource extends AbstractComponent implement
             for(const p of postCompareMapped) {
                 const {lifecycle = []} = p;
                 const psLifecycle = lifecycle.filter(x => x.hook === TRANSFORM_HOOK.postCompare);
-                if(psLifecycle.length > 0) {
-                    events.push({...transformToPlayEvent(psLifecycle), playId: p.id!, createdAt: dayjs()});
+                if(psLifecycle.length > 0 && p.id !== undefined) {
+                    events.push({...transformToPlayEvent(psLifecycle), playId: p.id, createdAt: dayjs()});
                 }
             }
             this.emitEvent('discoveredToScrobble', {
                 data: postCompareMapped,
                 options: {
                     ...options,
-                    checkTime: newDiscoveredPlays[newDiscoveredPlays.length-1].data.playDate!.add(2, 'second'),
+                    checkTime: newDiscoveredPlays[newDiscoveredPlays.length-1].data.playDate?.add(2, 'second'),
                     scrobbleFrom: this.getIdentifier(),
                     scrobbleTo: this.clients
                 }
@@ -749,8 +749,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
         const checkActiveFor = 120;
         let maxInterval = DEFAULT_POLLING_MAX_INTERVAL;
 
-        if('maxInterval' in this.config.data!) {
-            maxInterval = this.config.data.maxInterval!;
+        if(this.config.data !== undefined && 'maxInterval' in this.config.data && this.config.data.maxInterval !== undefined) {
+            maxInterval = this.config.data.maxInterval;
         }
         let isInactive = false;
 
@@ -777,7 +777,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
                 if(playObjs.length > 0) {
                     const now = dayjs().unix();
-                    const closeToInterval = playObjs.some(x => now - x.data.playDate!.unix() < 5);
+                    const closeToInterval = playObjs.some(x => x.data.playDate !== undefined && now - x.data.playDate.unix() < 5);
                     if (playObjs.length > 0 && closeToInterval) {
                         // because the interval check was so close to the play date we are going to delay client calls for a few secs
                         // this way we don't accidentally scrobble ahead of any other clients (we always want to be behind so we can check for dups)
@@ -802,8 +802,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 if(playObjs.length > 0) {
                     playObjs.sort(sortByNewestPlayDate);
                     // only update date if the play date is after the current activity date (in the case of backlogged plays)
-                    if(playObjs[0].data.playDate!.isAfter(this.lastActivityAt)) {
-                        this.lastActivityAt = playObjs[0].data.playDate!;
+                    const newestPlayDate = playObjs[0].data.playDate;
+                    if(newestPlayDate !== undefined && newestPlayDate.isAfter(this.lastActivityAt)) {
+                        this.lastActivityAt = newestPlayDate;
                     }
                     checksOverThreshold = 0;
                 }
@@ -875,7 +876,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             const componentUpdate: Partial<ComponentSourceApiJson> = {
             };
             if (isAbortError(e)) {
-                const err = generateLoggableAbortReason('Discovery queue processing stopped', this.ingressQueueAbortController!.signal);
+                const err = generateLoggableAbortReason('Discovery queue processing stopped', ingressQueueAbortController.signal);
                 this.logger.info(err);
                 //this.logger.trace(e);
                 componentUpdate.status = 'Discovery queue processing cancelled';
@@ -1029,10 +1030,10 @@ export default abstract class AbstractSource extends AbstractComponent implement
                      // that way we don't accidentally mark the "original" of some N number of duplicate inputs as a dupe as well
                      //
                      // IE the "oldest" play of a set of duplicates should not itself be marked as a dupe of the "newer" duplicates
-                     seenAt: {
+                     seenAt: playEntity.seenAt !== null ? {
                         type: 'lt',
-                        date: playEntity.seenAt!
-                     }
+                        date: playEntity.seenAt
+                     } : undefined
                     });
                 if (cheapExisting !== undefined) {
                     events.push(dupeCheckToPlayEvent({ match: true, reason: `Matched hash on existing Play ${cheapExisting.uid} with close temporality` }));
@@ -1057,10 +1058,13 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 this.emitEvent('discovered', {play: preCompared});
                 await this.scrobble([{...playEntity.play, id: playEntity.id, uid: playEntity.uid}]);
             } else {
-                await this.playRepo.updateById(existing.id!, {updatedAt: dayjs()});
+                // existing plays are always from the db so should always have an id
+                if(existing.id !== undefined) {
+                    await this.playRepo.updateById(existing.id, {updatedAt: dayjs()});
+                }
                 playEntity.state = 'duped';
                 events.push(stateChangeToPlayEvent({state: 'duped'}));
-                playEntity.parentId = existing.id!;
+                playEntity.parentId = existing.id ?? null;
             }
 
             const recentPlays = await this.getRecentPlays(false);
@@ -1130,7 +1134,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             //const processable = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], [QUEUE_STATUS_FAILED], retries);
             const processableArgs: QueryPlaysOpts  = {queues: [{queueName: INGRESS_QUEUE, queueStatus: QUEUE_STATUS_FAILED, retries}], with: ['queues']};
             let processable = await this.playRepo.findPlaysPaginated(processableArgs);
-            this.deadLetterQueued = processable.meta.total!;
+            this.deadLetterQueued = processable.meta.total;
 
             const total = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], {queueStatus: [QUEUE_STATUS_FAILED], retries: 10000});
             this.deadLetterLength = total;
@@ -1192,8 +1196,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
     protected getInterval(log?: boolean) {
         let interval = DEFAULT_POLLING_INTERVAL;
 
-        if('interval' in this.config.data!) {
-            interval = this.config.data.interval!;
+        if(this.config.data !== undefined && 'interval' in this.config.data && this.config.data.interval !== undefined) {
+            interval = this.config.data.interval;
         }
         return interval;
     }
@@ -1201,8 +1205,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
     protected getMaxBackoff() {
         let maxInterval = DEFAULT_POLLING_MAX_INTERVAL;
 
-        if('maxInterval' in this.config.data!) {
-            maxInterval = this.config.data.maxInterval!;
+        if(this.config.data !== undefined && 'maxInterval' in this.config.data && this.config.data.maxInterval !== undefined) {
+            maxInterval = this.config.data.maxInterval;
         }
         return maxInterval - this.getInterval();
     }
@@ -1271,12 +1275,17 @@ export default abstract class AbstractSource extends AbstractComponent implement
             const root = getRoot();
             const stream = root.get('loggerStream');
             const logConfig = root.get('loggingConfig');
+            if(stream === undefined) {
+                this.logger.warn('No logger stream is available, cannot build component logger');
+                return;
+            }
             const cLogger = await componentFileLogger(this.type, this.name, true, logConfig);
-            this.componentLogger = childLogger(cLogger, this.logger.labels);
-            stream!.on('data', (d: LogDataPretty) => {
+            const componentLogger = childLogger(cLogger, this.logger.labels);
+            this.componentLogger = componentLogger;
+            stream.on('data', (d: LogDataPretty) => {
                 const {level, msg, line, labels, ...rest} = d;
                 if(d.labels.includes(this.loggerLabel)) {
-                    this.componentLogger![this.componentLogger!.levels.labels[d.level] as LogLevel]({...rest, labels: difference(labels, this.logger.labels)}, msg as string);
+                    componentLogger[componentLogger.levels.labels[d.level] as LogLevel]({...rest, labels: difference(labels, this.logger.labels)}, msg as string);
                 }
             });
         }

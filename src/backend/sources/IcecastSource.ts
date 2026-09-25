@@ -172,14 +172,14 @@ const formatPlayObj = (obj: IcecastMetadata, options: FormatPlayObjectOptions = 
         track = oggTitle;
         album = oggAlbum;
 
-        const artistCred = parseArtistCredits(oggArtist!);
+        const artistCred = oggArtist !== undefined ? parseArtistCredits(oggArtist) : undefined;
         if (artistCred !== undefined) {
             artists.push(artistCred.primary);
             if (artistCred.secondary !== undefined) {
                 artists = artists.concat(artistCred.secondary);
             }
-        } else {
-            artists.push(oggArtist!);
+        } else if (oggArtist !== undefined) {
+            artists.push(oggArtist);
         }
     } else if(obj.icy?.StreamTitle !== undefined) {
         const value: string = obj.icy.StreamTitle;

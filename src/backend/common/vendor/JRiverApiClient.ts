@@ -83,7 +83,7 @@ const jriverResponseTransform = <T>(val: JRiverResponse): JRiverTransformedRespo
     });
     return {
         status,
-        data: items!.reduce((acc: Record<string, string>, curr) => {
+        data: (items ?? []).reduce((acc: Record<string, string>, curr) => {
             acc[curr[0]] = curr[1];
             return acc;
         }, {}) as T

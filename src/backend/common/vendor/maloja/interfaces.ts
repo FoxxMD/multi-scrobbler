@@ -21,7 +21,7 @@ export interface MalojaV3ScrobbleData {
         /**
          * length of the track
          * */
-        length: number
+        length?: number
     }
     /**
      * how long the track was listened to before it was scrobbled
@@ -94,7 +94,7 @@ export const getMalojaResponseError = (e: Error, asObject: boolean = false): Res
         if (!isSuperAgentResponseError(err)) {
             return false;
         }
-        return isMalojaAPIErrorBody(err.response!.body);
+        return err.response !== undefined && isMalojaAPIErrorBody(err.response.body);
     }) as ResponseError | undefined;
 }
 

@@ -42,8 +42,10 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
         if(this.importAbortController !== undefined) {
             throw new Error('Cannot start a new import while one is already running');
         }
-        this.importAbortController = new AbortController();
-        this.importPromise = spawn(this.importAbortController.signal, async (signal, {defer, fork}) => {
+        // keep local reference since cleanup unsets importAbortController before catch runs
+        const importAbortController = new AbortController();
+        this.importAbortController = importAbortController;
+        this.importPromise = spawn(importAbortController.signal, async (signal, {defer, fork}) => {
 
             defer(async () => {
                 if(cleanup) {
@@ -81,7 +83,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
             this.dbComponent.migrations.push(newImport);
         }).catch((e) => {
             if (isAbortError(e)) {
-                const err = generateLoggableAbortReason('Import processing stopped', this.importAbortController!.signal);
+                const err = generateLoggableAbortReason('Import processing stopped', importAbortController.signal);
                 this.logger.info(err);
                 this.logger.trace(e)
             } else {
@@ -101,7 +103,8 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
         }
 
         // vibing this duration for now...
-        if(this.dbComponent.lastActiveAt!.diff(dayjs(), 'minutes') > 60 && imports[0].attemptedAt.isBefore(this.dbComponent.lastActiveAt)) {
+        const {lastActiveAt} = this.dbComponent;
+        if(lastActiveAt !== null && lastActiveAt.diff(dayjs(), 'minutes') > 60 && imports[0].attemptedAt.isBefore(lastActiveAt)) {
             return [true, 'component was inactive for more than an hour and last import was before last activity. There may be missed plays during the period of inactivity.'];
         }
 
@@ -164,6 +167,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
             }
             return [recent, gapSynced];
         } catch (e) {
+            this.logger.warn(new Error('Recent plays sync failed', {cause: e}));
             this.setStatus('Recent plays sync failed.');
         }
     }
@@ -190,7 +194,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
 
             if(shouldSync){
                 // pull latest plays into database
-                const [_, gapSynced] = (await this.syncRecentHistoricalScrobbles())!;
+                const [_, gapSynced = false] = (await this.syncRecentHistoricalScrobbles()) ?? [];
                 if(this.syncedReason !== undefined && this.syncedReason.includes('component was inactive')) {
                     if(gapSynced) {
                         this.syncedReason = undefined;

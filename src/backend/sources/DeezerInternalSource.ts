@@ -70,7 +70,7 @@ export default class DeezerInternalSource extends MemorySource {
 
     authedAccount!: DeezerAuthedUserData;
 
-    accounts?: DeezerAccountData[] = []
+    accounts: DeezerAccountData[] = []
 
     csrfToken?: string;
 
@@ -180,18 +180,19 @@ export default class DeezerInternalSource extends MemorySource {
                 }
             } else {
                 const enumerated = await this.enumerateChildAccounts();
-                if(this.config.data.accountId !== undefined) {
+                const {accountId} = this.config.data;
+                if(accountId !== undefined) {
                     if(!enumerated) {
                         this.logger.warn('Unable to verify if account history is available for accountId due to enumeration issue.');
                     } else {
-                        const requestedAccount = this.accounts!.find(x => x.USER_ID === this.config.data.accountId);
+                        const requestedAccount = this.accounts.find(x => x.USER_ID === accountId);
                         if(requestedAccount === undefined) {
                             this.logger.warn(`Could not find a linked account matching ${this.config.data.accountId}. History fetching may fail.`);
                         } else {
-                            const authedAccount = this.accounts!.find(x => x.USER_ID === this.authedAccount.USER.USER_ID);
-                            if(!authedAccount!.EXTRA_FAMILY!.IS_LOGGABLE_AS && this.config.data.accountId !== this.authedAccount.USER.USER_ID) {
+                            const authedAccount = this.accounts.find(x => x.USER_ID === this.authedAccount.USER.USER_ID);
+                            if(authedAccount !== undefined && !authedAccount.EXTRA_FAMILY?.IS_LOGGABLE_AS && accountId !== this.authedAccount.USER.USER_ID) {
                                 this.logger.warn(`Authed Account (${this.authedAccount.USER.USER_ID}) is private and specified accountId is not the same (${this.config.data.accountId}), likely history returned will not be correct.`);
-                            } else if(!requestedAccount.EXTRA_FAMILY!.IS_LOGGABLE_AS) {
+                            } else if(!requestedAccount.EXTRA_FAMILY?.IS_LOGGABLE_AS) {
                                 this.logger.warn('Account specified by accountId is private, likely returned will not be correct!');
                             }
                         }
@@ -258,7 +259,7 @@ export default class DeezerInternalSource extends MemorySource {
             this.accounts = resp;
             const accountSummaries: string[] = [];
             for(const a of this.accounts) {
-                accountSummaries.push(`Name: ${a.BLOG_NAME} | ID: ${a.USER_ID} | Private?: ${a.EXTRA_FAMILY!.IS_LOGGABLE_AS ? 'No' : 'Yes'}`);
+                accountSummaries.push(`Name: ${a.BLOG_NAME} | ID: ${a.USER_ID} | Private?: ${a.EXTRA_FAMILY?.IS_LOGGABLE_AS ? 'No' : 'Yes'}`);
             }
             this.logger.verbose(`Linked Accounts:\n${accountSummaries.join('\n')}`)
             return true;
@@ -361,7 +362,7 @@ export default class DeezerInternalSource extends MemorySource {
                 const temporalAccuracy: TemporalAccuracy[] = [TA_EXACT, TA_CLOSE, TA_FUZZY];
                 if(this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {
                     temporalOptions = {
-                        fuzzyDiffThreshold: Math.max(100, x.data.duration! * 0.5),
+                        fuzzyDiffThreshold: x.data.duration !== undefined ? Math.max(100, x.data.duration * 0.5) : 100,
                         duringReferences: ['duration', 'listenedFor', 'range'],
                         logger: this.logger
                     }

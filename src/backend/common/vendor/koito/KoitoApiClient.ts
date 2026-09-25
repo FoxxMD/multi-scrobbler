@@ -138,7 +138,7 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
             return true;
         } catch (e) {
             const superagentError = findCauseByFunc<request.ResponseError>(e, (ee) => isSuperAgentResponseError(ee));
-            throw new AuthError('Could not validate Koito API Key', { cause: e, unrecoverable: superagentError !== undefined && [401,403].includes(superagentError.status!)});
+            throw new AuthError('Could not validate Koito API Key', { cause: e, unrecoverable: superagentError?.status !== undefined && [401,403].includes(superagentError.status)});
         }
     }
 

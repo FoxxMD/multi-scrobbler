@@ -65,11 +65,10 @@ export default class TransformerManager {
     }
 
     public async register(config: TransformerCommonConfig): Promise<void> {
-        let transformers: AbstractTransformer[] = [];
-        if (!this.transformers.has(config.type)) {
-            this.transformers.set(config.type, []);
-        } else {
-            transformers = this.transformers.get(config.type)!;
+        let transformers = this.transformers.get(config.type);
+        if (transformers === undefined) {
+            transformers = [];
+            this.transformers.set(config.type, transformers);
         }
 
         if (config.name !== undefined && transformers.some(x => x.config.name === config.name)) {
@@ -200,14 +199,11 @@ export default class TransformerManager {
                 }
             } else {
                 // otherwise we try to get *any* transform of this type, starting with non-default
-                let configToUse: TransformerCommonConfig;
-                const nonDefault = this.transformerConfigs.find(x => x.type === data.type && x.name !== DEFAULT_TRANSFORMER_NAME);
-                if(nonDefault !== undefined) {
-                    // use first non-default, if there is one
-                    configToUse = nonDefault;
-                } else {
-                    // otherwise use first found
-                    configToUse = this.transformerConfigs.find(x => x.type === data.type)!;
+                // use first non-default, if there is one, otherwise use first found
+                const configToUse = this.transformerConfigs.find(x => x.type === data.type && x.name !== DEFAULT_TRANSFORMER_NAME)
+                    ?? this.transformerConfigs.find(x => x.type === data.type);
+                if(configToUse === undefined) {
+                    throw new Error(`No transformer configurations of type '${data.type}' exist.`);
                 }
                 await this.registerByIdentifiers(configToUse.type, configToUse.name);
                 await this.initTransformers();
@@ -215,21 +211,26 @@ export default class TransformerManager {
             }
         }
 
-        if(data.name === undefined) {
-            if(list!.length > 1) {
-                this.logger.warn(`More than one '${data.type}' transformer is registered but name was not specified, using first found`);
-                return list![0];
-            }
-            return list![0]            
+        if (list === undefined || list.length === 0) {
+            throw new Error(`No transformers of type '${data.type}' could be registered.`);
         }
 
-        let namedTransformers = list!.find(x => x.name.toLocaleLowerCase().trim() === data.name!.toLocaleLowerCase().trim());
+        const name = data.name;
+        if(name === undefined) {
+            if(list.length > 1) {
+                this.logger.warn(`More than one '${data.type}' transformer is registered but name was not specified, using first found`);
+                return list[0];
+            }
+            return list[0]            
+        }
+
+        let namedTransformers = list.find(x => x.name.toLocaleLowerCase().trim() === name.toLocaleLowerCase().trim());
         if(namedTransformers === undefined) {
             if(this.hasTransformerConfigByIdentifiers(data.type, data.name)) {
                 await this.registerByIdentifiers(data.type, data.name);
                 await this.initTransformers();
                 list = this.transformers.get(data.type);
-                namedTransformers = list!.find(x => x.name.toLocaleLowerCase().trim() === data.name!.toLocaleLowerCase().trim());
+                namedTransformers = list?.find(x => x.name.toLocaleLowerCase().trim() === name.toLocaleLowerCase().trim());
                 if(namedTransformers === undefined) {
                     // this shouldn't really happen but just covering bases
                     throw new SimpleError(`Component wanted transformer type ${data.type} with name ${data.name}. Transforms of this type are registered but none have this name.`);

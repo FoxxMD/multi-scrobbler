@@ -134,15 +134,19 @@ export class SubsonicSource extends MemoryPositionalSource {
             } = {},
         } = this.config;
 
+        if(user === undefined || password === undefined) {
+            throw new Error(`'user' and 'password' must be defined in config data`);
+        }
+
         const queryOpts: Record<string, string> = {
-            u: user!,
+            u: user,
             v: '1.15.0',
             c: `multi-scrobbler - ${this.name}`,
             f: 'json'
         };
         if((this.config?.data?.legacyAuthentication ?? false)) {
             //queryOpts.p = password;
-            queryOpts.p = `enc:${Buffer.from(password!).toString('hex')}`
+            queryOpts.p = `enc:${Buffer.from(password).toString('hex')}`
         } else {
             const salt = crypto.randomBytes(10).toString('hex');
             const hash = crypto.createHash('md5').update(`${password}${salt}`).digest('hex')
@@ -280,9 +284,9 @@ export class SubsonicSource extends MemoryPositionalSource {
         } catch (e: any) {
 
             const subResponseError = getSubsonicResponseFromError(e);
-            if(subResponseError !== undefined) {
-                const resp = getSubsonicResponse(subResponseError.response!)
-                this.logger.info(`Subsonic Server reachable: ${identifiersFromResponse(resp!)}`);
+            const resp = subResponseError?.response !== undefined ? getSubsonicResponse(subResponseError.response) : undefined;
+            if(resp !== undefined) {
+                this.logger.info(`Subsonic Server reachable: ${identifiersFromResponse(resp)}`);
                 this.sourceData = resp as SourceIdentifierData;
                 await this.discoverPlaybackReportSupport();
                 return true;
@@ -345,7 +349,7 @@ export class SubsonicSource extends MemoryPositionalSource {
             return true;
         } catch (e) {
             const superagentError = findCauseByFunc<request.ResponseError>(e, (ee) => isSuperAgentResponseError(ee));
-            throw new AuthError('Failed to authenticate', {cause: e, unrecoverable: superagentError !== undefined && [403,401].includes(superagentError.status!)})
+            throw new AuthError('Failed to authenticate', {cause: e, unrecoverable: superagentError?.status !== undefined && [403,401].includes(superagentError.status)})
         }
     }
 

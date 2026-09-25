@@ -53,7 +53,8 @@ export class EndpointLastfmSource extends MemorySource {
             return false;
         }
 
-        return (this.config.data!.slug === undefined && slug === undefined) || (slug !== undefined && this.config.data!.slug !== undefined && this.config.data!.slug.toLowerCase().trim() === slug.toLocaleLowerCase().trim());
+        const configSlug = this.config.data?.slug;
+        return (configSlug === undefined && slug === undefined) || (slug !== undefined && configSlug !== undefined && configSlug.toLowerCase().trim() === slug.toLocaleLowerCase().trim());
     }
 
     static formatPlayObj(obj: LastFmSingleSubmitPayload, options: FormatPlayObjectOptions = {}): PlayObject {

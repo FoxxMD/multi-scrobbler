@@ -31,7 +31,7 @@ export class DiscordAbstractClient extends AbstractApiClient {
 
     getArtworkUrl = async (artUrl: string): Promise<string | undefined> => {
 
-        if (this.config.applicationId === undefined) {
+        if (this.config.applicationId === undefined || this.config.token === undefined) {
             return;
         }
         if(this.artFail) {
@@ -45,7 +45,7 @@ export class DiscordAbstractClient extends AbstractApiClient {
 
         try {
             const imgResp = await request.post(`https://discord.com/api/v10/applications/${this.config.applicationId}/external-assets`)
-                .set('Authorization', this.config.token!)
+                .set('Authorization', this.config.token)
                 .type('json')
                 .send({ "urls": [artUrl] });
             this.artFailCount = 0;

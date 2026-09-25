@@ -79,11 +79,11 @@ export class DiscordIPCClient extends DiscordAbstractClient {
             this.logger.debug(e);
         });
         this.client.transport.on('close', (e) => {
-            const closeError = typeof e === 'string' ? e : `${e!.code} - ${e!.message}`;
+            const closeError = e === undefined ? 'Unknown reason' : (typeof e === 'string' ? e : `${e.code} - ${e.message}`);
             this.closeErrors.push(closeError);
             this.logger.warn(`Closed by transport: ${closeError}`);
-            if(typeof e !== 'string') {
-                if(e!.code === 4000) {
+            if(e !== undefined && typeof e !== 'string') {
+                if(e.code === 4000) {
                     this.appError = true;
                     this.emitter.emit('stopped', { authFailure: true });
                 }
@@ -117,12 +117,12 @@ export class DiscordIPCClient extends DiscordAbstractClient {
     }
 
     async sendActivity(data?: SourcePlayerObj | undefined) {
-        if (data === undefined) {
+        if (data === undefined || data.play === undefined) {
             await this.sendClearActivity();
             return;
         }
         const { activity: msActivity, artUrl } = playStateToActivityData(data);
-        const assets = await this.getArtAsset(data.play!, artUrl, false);
+        const assets = await this.getArtAsset(data.play, artUrl, false);
         if (assets !== undefined) {
             const {
                 assets: msAssets = {}
@@ -135,7 +135,7 @@ export class DiscordIPCClient extends DiscordAbstractClient {
         const activity = activityDataToSetActivity(msActivity);
         await this.client.user?.setActivity(activity);
 
-        const play = (isPlayObject(data) ? data : data.play)!;
+        const play = (isPlayObject(data) ? data : data.play);
 
         let clearTime = dayjs().add(260, 'seconds'); // funny number
         if (msActivity.timestamps?.end !== undefined) {
@@ -156,7 +156,7 @@ export class DiscordIPCClient extends DiscordAbstractClient {
             clearTimeout(this.activityTimeout);
             this.activityTimeout = undefined;
         }
-        await this.client.user!.clearActivity();
+        await this.client.user?.clearActivity();
     }
 
     async checkOkToSend(): Promise<[boolean, string?, string?]> {

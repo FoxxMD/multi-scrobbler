@@ -142,7 +142,11 @@ export const getATProtoIdentifier = async (data: ATProtoUserIdentifierData, opts
     if (typeof doc.service[0].serviceEndpoint !== 'string') {
         throw new Error(`Do not know how to handle this serviceEndpoint data structure!\n${JSON.stringify(doc.service[0].serviceEndpoint)}`);
     }
-    hd = { did, pds: getPdsEndpoint(doc)!, handle: getAtprotoHandle(doc) as string };
+    const pds = getPdsEndpoint(doc);
+    if (pds === undefined) {
+        throw new Error('did document did not include a PDS endpoint');
+    }
+    hd = { did, pds, handle: getAtprotoHandle(doc) as string };
 
     if (cache !== undefined) {
         cache.set(`${key}-handleData`, hd, '1d');

@@ -9,7 +9,7 @@ import type {ListRecord, RecordOptions, TealClientData, TealData} from "../../in
 import AbstractApiClient from "../AbstractApiClient.ts";
 import { ATProtoAppApiClient } from "../atproto/ATProtoAppApiClient.ts";
 import type { FmTealActorStatus, FmTealAlphaFeedPlay, FmTealFeedPlay } from "./lexicons/index.ts";
-import { ScrobbleSubmitError } from "../../errors/MSErrors.ts";
+import { ScrobbleSubmitError, SimpleError } from "../../errors/MSErrors.ts";
 import { getScrobbleTsSOCDateWithContext, usecToUnix } from "../../../utils/TimeUtils.ts";
 import { musicServiceToCononical } from "../listenbrainz/lzUtils.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
@@ -185,10 +185,11 @@ export const recordToPlay = (record: TealPlayRecord, options: RecordOptions = {}
         }
     };
 
+    const artistMbids = artists.flatMap(x => x.artistMbId !== undefined ? [x.artistMbId] : []);
     const brainz = removeUndefinedKeys<BrainzMeta>({
         recording: record.recordingMbId,
         album: record.releaseMbId,
-        artist: artists.filter(x => x.artistMbId !== undefined).length > 0 ? artists.filter(x => x.artistMbId !== undefined).map(x => x.artistMbId!) : undefined
+        artist: artistMbids.length > 0 ? artistMbids : undefined
     });
 
     if (brainz !== undefined) {
@@ -198,8 +199,8 @@ export const recordToPlay = (record: TealPlayRecord, options: RecordOptions = {}
     return baseFormatPlayObj(record, play);
 }
 
-export const playToStatusRecord = (play: PlayObject, notPlaying: boolean, position?: number): FmTealActorStatus.Main => {
-    const item = notPlaying
+export const playToStatusRecord = (play: PlayObject | undefined, notPlaying: boolean, position?: number): FmTealActorStatus.Main => {
+    const item = notPlaying || play === undefined
         ? { trackName: "", artists: [] }
         : (() => {
             const {
@@ -248,6 +249,9 @@ export type MBIDURI = `mbid:${MBID}`;
 export const playToRecord = (play: PlayObject): FmTealFeedPlay.Main => {
     const musicService = musicServiceToCononical(play.meta.musicService) ?? play.meta.musicService;
 
+    if(play.data.track === undefined) {
+        throw new SimpleError('Play must have a track title to be converted to a teal.fm record');
+    }
     const record: FmTealFeedPlay.Main = {
         $type: "fm.teal.feed.play",
         trackName: play.data.track,

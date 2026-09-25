@@ -95,8 +95,9 @@ export default class ScrobbleSources {
             } = fileDefaults;
             buildDefaults.scrobbleThresholds = {...scrobbleThresholds};
 
-            if(duration === undefined && nonEmptyStringOrDefault(scrobbleDurationEnv) !== undefined) {
-                const envDur = Number.parseInt(scrobbleDurationEnv!);
+            const durationEnvVal = nonEmptyStringOrDefault(scrobbleDurationEnv);
+            if(duration === undefined && durationEnvVal !== undefined) {
+                const envDur = Number.parseInt(durationEnvVal);
                 if(Number.isNaN(envDur)) {
                     this.logger.warn(`Ignoring value '${scrobbleDurationEnv}' for env SOURCE_SCROBBLE_DURATION because it is not a number`);
                 } else {
@@ -104,8 +105,9 @@ export default class ScrobbleSources {
                     this.logger.verbose(`Set default scrobble threshold duration to '${scrobbleDurationEnv}' based on env SOURCE_SCROBBLE_DURATION`);
                 }
             }
-            if(percent === undefined && nonEmptyStringOrDefault(scrobblePercentEnv) !== undefined) {
-                const envPercent = Number.parseInt(scrobblePercentEnv!);
+            const percentEnvVal = nonEmptyStringOrDefault(scrobblePercentEnv);
+            if(percent === undefined && percentEnvVal !== undefined) {
+                const envPercent = Number.parseInt(percentEnvVal);
                 if(Number.isNaN(envPercent)) {
                     this.logger.warn(`Ignoring value '${scrobblePercentEnv}' for env SOURCE_SCROBBLE_PERCENT because it is not a number`);
                 } else {

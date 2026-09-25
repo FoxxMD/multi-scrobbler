@@ -83,9 +83,9 @@ export class MPDSource extends MemoryPositionalSource {
     }
 
     protected async doCheckConnection(): Promise<true | string | undefined> {
-        if(this.host !== undefined) {
+        if(this.host !== undefined && this.port !== undefined) {
             try {
-                await isPortReachable(this.port!, {host: this.host});
+                await isPortReachable(this.port, {host: this.host});
                 return `${this.host}:${this.port} is reachable.`;
             } catch (e) {
                 throw e;
@@ -112,7 +112,11 @@ export class MPDSource extends MemoryPositionalSource {
                     throw new Error('Timed out waiting for TCP response from MPD');
                 }
             } else {
-                await this.mpc.connectUnixSocket(this.config.data.path!);
+                const socketPath = this.config.data?.path;
+                if(socketPath === undefined) {
+                    throw new Error('Neither a host nor a socket path is configured');
+                }
+                await this.mpc.connectUnixSocket(socketPath);
             }
 
             if(this.config.data.password !== undefined) {
@@ -233,8 +237,8 @@ export class MPDSource extends MemoryPositionalSource {
             } = obj;
 
             trackName = title ?? name;
-            if(trackName === undefined) {
-                const pathSplit = file!.split(path.sep);
+            if(trackName === undefined && file !== undefined) {
+                const pathSplit = file.split(path.sep);
                 if(pathSplit.length > 1) {
                     trackName = pathSplit[pathSplit.length - 1];
                 } else {
@@ -321,7 +325,7 @@ export class MPDSource extends MemoryPositionalSource {
 
         const playerState: PlayerStateDataMaybePlay = {
             platformId: SINGLE_USER_PLATFORM_ID,
-            status: CLIENT_PLAYER_STATE[mpcStatus.state!],
+            status: mpcStatus.state !== undefined ? CLIENT_PLAYER_STATE[mpcStatus.state] : REPORTED_PLAYER_STATUSES.unknown,
             play,
             position: play?.meta?.trackProgressPosition
         }

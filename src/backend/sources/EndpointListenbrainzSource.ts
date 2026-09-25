@@ -54,14 +54,15 @@ export class EndpointListenbrainzSource extends MemorySource {
     }
 
     matchRequest(req: Pick<ExpressRequest, 'baseUrl' | 'originalUrl' | 'header'>): boolean {
-        let matchesToken = this.config.data!.token === undefined;
+        const {token: configToken, slug: configSlug} = this.config.data ?? {};
+        let matchesToken = configToken === undefined;
         const reqToken = parseTokenFromRequest(req, requestMatchers);
         if (reqToken === false) {
             return false;
         }
-        matchesToken = this.config.data!.token === undefined && reqToken === undefined ||
-            (reqToken !== undefined && this.config.data!.token !== undefined
-                && this.config.data!.token.toLowerCase().trim() === reqToken.toLowerCase().trim());
+        matchesToken = configToken === undefined && reqToken === undefined ||
+            (reqToken !== undefined && configToken !== undefined
+                && configToken.toLowerCase().trim() === reqToken.toLowerCase().trim());
 
         if (!matchesToken) {
             return false;
@@ -72,7 +73,7 @@ export class EndpointListenbrainzSource extends MemorySource {
         if (slug === false) {
             return false;
         } else {
-            matchesPath = (this.config.data!.slug === undefined && slug === undefined) || (slug !== undefined && this.config.data!.slug !== undefined && this.config.data!.slug.toLowerCase().trim() === slug.toLocaleLowerCase().trim());
+            matchesPath = (configSlug === undefined && slug === undefined) || (slug !== undefined && configSlug !== undefined && configSlug.toLowerCase().trim() === slug.toLocaleLowerCase().trim());
         }
 
         return matchesToken && matchesPath;

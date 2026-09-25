@@ -13,11 +13,9 @@ import { hasArtFields, type CAAMissingType, type CoverArtArchiveTransformData, t
 import { CoverArtClientPool } from "../../vendor/musicbrainz/CovertArtApiPool.ts";
 import { coverImageHas, type CoverArtReleaseResponse } from "../../vendor/musicbrainz/CoverArtApiTypes.ts";
 
-export interface CoverArtArchiveTransformDataStrong extends CoverArtArchiveTransformData {
-}
+export type CoverArtArchiveTransformDataStrong = CoverArtArchiveTransformData & Required<Pick<CoverArtArchiveTransformData, 'searchWhenMissing' | 'allowedTypes' | 'forceSearch' | 'allowedSizes'>>;
 
-export interface CoverArtArchiveTransformerDataStage extends CoverArtArchiveTransformDataStrong,PlayTransformMetadataStage {
-}
+export type CoverArtArchiveTransformerDataStage = CoverArtArchiveTransformData & PlayTransformMetadataStage;
 
 type MSCoverArtReleaseResponse = CoverArtReleaseResponse & {type?: 'album' | 'releaseGroup', requestQuery: string, lifecycleInputs?: LifecycleInput[]};
 
@@ -37,9 +35,9 @@ export const parseStageConfig = (data: CoverArtArchiveTransformData | undefined 
         ...data,
     };
 
-    logger.debug(`Will search if missing: ${config.searchWhenMissing === true ? 'all' : config.searchWhenMissing!.join(', ')}`);
+    logger.debug(`Will search if missing: ${config.searchWhenMissing === true ? 'all' : config.searchWhenMissing.join(', ')}`);
 
-    logger.debug(`Allowed image types: ${config.allowedTypes!.join(',')}`);
+    logger.debug(`Allowed image types: ${config.allowedTypes.join(',')}`);
 
     return config;
 }
@@ -112,13 +110,13 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
             }
                 this.logger.debug('Play has no art fields');
         } else {
-            const missing = difference(searchWhenMissing!, found);
+            const missing = difference(searchWhenMissing, found);
             if(missing.length > 0) {
                 this.logger.debug(`Play is missing desired fields: ${missing.join(', ')}`);
             } else if(forceSearch) {
                 this.logger.debug(`All desired fields exist but forceSearch = true`);
             } else {
-                throw new SkipTransformStageError(`No desired fields (${searchWhenMissing!.join(',')}) are missing`, {shortStack: true});
+                throw new SkipTransformStageError(`No desired fields (${searchWhenMissing.join(',')}) are missing`, {shortStack: true});
             }
         }
 
@@ -137,19 +135,19 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
 
         for(const searchType of ['album','releaseGroup'] as const) {
             try {
-                results = (await this.searchByMbid(play, searchType, stageConfig, opts))!;
+                results = (await this.searchByMbid(play, searchType, stageConfig, opts));
                 queries.push({type: `rsQuery-${searchType}${results.images === undefined ? '-empty'  : ''}`, input: results.requestQuery});
                 if(results.images !== undefined) {
-                    if(allowedTypes!.includes('any') && allowedSizes!.includes('any')) {
+                    if(allowedTypes.includes('any') && allowedSizes.includes('any')) {
                         resultType = searchType;
                         break;
                     }
                     const meetsRequirements = results.images.some(x => {
                         const hasFields = coverImageHas(x);
-                        if(!allowedTypes!.includes('any') && difference(allowedTypes!, hasFields.types).length > 0) {
+                        if(!allowedTypes.includes('any') && difference(allowedTypes, hasFields.types).length > 0) {
                             return false;
                         }
-                        if(!allowedSizes!.includes('any') && difference(allowedSizes!, hasFields.sizes).length > 0) {
+                        if(!allowedSizes.includes('any') && difference(allowedSizes, hasFields.sizes).length > 0) {
                             return false;
                         }
                         return true;
@@ -179,7 +177,7 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
         return {...(results ?? {requestQuery: undefined}), lifecycleInputs: queries, type: resultType};
     }
 
-    public async searchByMbid(play: PlayObject, mbidType: 'album' | 'releaseGroup', stageConfig: CoverArtArchiveTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<MSCoverArtReleaseResponse | undefined> {
+    public async searchByMbid(play: PlayObject, mbidType: 'album' | 'releaseGroup', stageConfig: CoverArtArchiveTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<MSCoverArtReleaseResponse> {
         const mbid = play.data.meta?.brainz?.[mbidType];
         if(mbid === undefined) {
             throw new SearchPrerequisiteError(`Play does not have ${mbidType} MBID`);
@@ -213,7 +211,9 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
                     inputs: transformData.lifecycleInputs
                 });
         }
-        if(transformData.images.length === 0) {
+        // type is only set when images met requirements
+        const resultType = transformData.type;
+        if(transformData.images.length === 0 || resultType === undefined) {
             throw new StagePrerequisiteError('CoverArtArchive API returned results but none met configured requirements',
                 {
                     shortStack: true,
@@ -223,10 +223,10 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
 
         const validImages = transformData.images.filter(x => {
             const hasFields = coverImageHas(x);
-            if(!allowedTypes!.includes('any') && difference(allowedTypes!, hasFields.types).length > 0) {
+            if(!allowedTypes.includes('any') && difference(allowedTypes, hasFields.types).length > 0) {
                 return false;
             }
-            if(!allowedSizes!.includes('any') && difference(allowedSizes!, hasFields.sizes).length > 0) {
+            if(!allowedSizes.includes('any') && difference(allowedSizes, hasFields.sizes).length > 0) {
                 return false;
             }
             return true;
@@ -246,12 +246,16 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
             preferred = Object.values(validImages[0].thumbnails)[0];
         }
 
+        let artUrl: string | undefined;
         try {
-            const artUrl = await this.api.proxy.getCoverThumbFromUrl(preferred!);
-            return {uri: artUrl!, lifecycleInputs: transformData.lifecycleInputs, type: transformData.type!}
+            artUrl = await this.api.proxy.getCoverThumbFromUrl(preferred);
         } catch (e) {
             throw new StageTransformError('Fetch Error', 'Unexpected error occurred while getting CoverArtArchive final url', {cause: e, inputs: transformData.lifecycleInputs});
         }
+        if(artUrl === undefined) {
+            throw new StageTransformError('Fetch Error', 'CoverArtArchive did not return a final url for the thumbnail', {inputs: transformData.lifecycleInputs});
+        }
+        return {uri: artUrl, lifecycleInputs: transformData.lifecycleInputs, type: resultType}
     }
 
     protected async handleTitle(play: PlayObject, parts: boolean | { when?: { title?: string; artists?: string; albumArtists?: string; album?: string; art?: string; }[]; }, transformData: ArtUriData): Promise<string | undefined> {

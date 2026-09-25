@@ -63,6 +63,8 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
     declare config: LastfmData;
     sessionKey?: string;
     lastRefreshed?: number
+    // always set in constructor
+    declare redirectUri: string;
 
     path!: string;
     upstreamName: string = 'Last.fm';
@@ -144,7 +146,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
                     let shouldThrow = false;
 
                     if (error instanceof LastFMResponseError) {
-                        const status = error.response!.statusCode;
+                        const status = error.response?.statusCode;
                         parts.push(`HTTP ${status}`);
                         parts.push(error.message);
                         if (status === 429) {
@@ -208,11 +210,11 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
         let authUrl: string;
         if(isLastFm) {
             this.logger.debug('Detected last.fm host');
-            authUrl = `http://www.last.fm/api/auth/?api_key=${this.config.apiKey}&cb=${encodeURIComponent(this.redirectUri!)}`;
+            authUrl = `http://www.last.fm/api/auth/?api_key=${this.config.apiKey}&cb=${encodeURIComponent(this.redirectUri)}`;
         } else {
             this.logger.debug('Detected non-last.fm host (probably libre.fm)');
             const aUrl = new URL(this.url.url.toString());
-            aUrl.search = `?api_key=${this.config.apiKey}&cb=${encodeURIComponent(this.redirectUri!)}`;
+            aUrl.search = `?api_key=${this.config.apiKey}&cb=${encodeURIComponent(this.redirectUri)}`;
             aUrl.pathname = '/api/auth';
             authUrl = aUrl.toString();
         }
@@ -236,8 +238,11 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
                 name, // username
             } = {}
         } = sessionRes;
+        if(sessionKey === undefined) {
+            throw new Error(`${this.upstreamName} did not return a session key`);
+        }
         this.lastRefreshed = dayjs().unix();
-        this.logger.debug(`Created session for user ${name}! Session key: ${redactString(sessionKey!, 6)} | Refreshed At ${this.lastRefreshed}`);
+        this.logger.debug(`Created session for user ${name}! Session key: ${redactString(sessionKey, 6)} | Refreshed At ${this.lastRefreshed}`);
         this.sessionKey = sessionKey;
         this.user = name;        
 
@@ -252,7 +257,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
     }
 
     protected initApi = () => {
-        this.logger.debug(`Creating new API instances with: API Key ${redactString(this.config.apiKey, 6)} | Secret: ${redactString(this.config.secret, 6)} | Session Key ${redactString(this.sessionKey!, 6)} | Host ${this.url.url.host} | Path ${this.url.url.pathname}`);
+        this.logger.debug(`Creating new API instances with: API Key ${redactString(this.config.apiKey, 6)} | Secret: ${redactString(this.config.secret, 6)} | Session Key ${this.sessionKey !== undefined ? redactString(this.sessionKey, 6) : 'N/A'} | Host ${this.url.url.host} | Path ${this.url.url.pathname}`);
         this.userApi = new LastFMUser(this.config.apiKey, this.config.secret, this.sessionKey, {
                 hostname: this.url.url.host,
                 path: this.url.url.pathname
@@ -340,7 +345,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             let unrecoverable: boolean | undefined;
             if(e instanceof LastFMResponseError) {
                 try {
-                    const errorContent = JSON.parse(e.content!);
+                    const errorContent = e.content !== undefined ? JSON.parse(e.content) : {};
                     if(`error` in errorContent) {
                         unrecoverable = unrecoverableAuthErrorCodes.includes(errorContent.error);
                     }
@@ -351,7 +356,8 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             if(unrecoverable === undefined) {
                 const errorWithMessage = findCauseByFunc(e, (ee) => `response` in ee) as Error & {response: IncomingMessage} | undefined;
                 if(errorWithMessage !== undefined) {
-                    unrecoverable = [401,403].includes(errorWithMessage.response?.statusCode!);
+                    const statusCode = errorWithMessage.response?.statusCode;
+                    unrecoverable = statusCode !== undefined && [401,403].includes(statusCode);
                 }
             }
             throw new AuthError('Testing auth failed', {cause: e, unrecoverable});
@@ -498,7 +504,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
                     recenttracks: {
                         track: [],
                         '@attr': {
-                            user: this.user!,
+                            user: this.user ?? '',
                             totalPages: '0',
                             total: '0',
                             page: '1',
@@ -559,7 +565,9 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
 
             const modifiedPlay = clone(playObj);
             delete modifiedPlay.data.playDateCompleted;
-            modifiedPlay.data.playDate = dayjs.unix(timestamp!);
+            if(timestamp !== undefined) {
+                modifiedPlay.data.playDate = dayjs.unix(timestamp);
+            }
             if(trackName !== undefined) {
                 modifiedPlay.data.track = trackName;
             }
@@ -595,7 +603,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
                             } = {},
                         } = {}
                     } = response;
-                    if (ignoreCode! > 0) {
+                    if (ignoreCode !== undefined && ignoreCode > 0) {
                         this.logger.warn({payload: rest}, `Service ignored this scrobble => (Code ${ignoreCode}) ${(ignoreMsg === '' ? '(No error message returned)' : ignoreMsg)} -- See https://www.last.fm/api/show/track.updateNowPlaying for more information`);
                     }
                     return response;
@@ -712,7 +720,9 @@ export const playToClientPayload = (playObj: PlayObject): LastFMScrobblePayload 
 
         const rawPayload: LastFMScrobblePayload = {
             artist: artist,
-            track: track!,
+            // track is required by LFM, an empty value will be rejected upstream
+            // but we don't throw here since this is also used to build payloads for logging failed scrobbles
+            track: track ?? '',
             album,
             timestamp: getScrobbleTsSOCDate(playObj).unix(),
             mbid,
@@ -1007,7 +1017,7 @@ export const ingressPayloads = (obj: LastfmScrobbleMaybeMultiPayload): LastfmScr
         if(typeof cleaned.duration === 'string') {
             cleaned.duration = Number.parseInt(cleaned.duration);
         }
-        if(isNaN(cleaned.duration!) || cleaned.duration! <= 0) {
+        if(cleaned.duration === undefined || isNaN(cleaned.duration) || cleaned.duration <= 0) {
             cleaned.duration = undefined;
         }
         if(typeof cleaned.timestamp === 'string') {
@@ -1030,7 +1040,7 @@ export const playToScrobbleApiResponseJson = (play: PlayObject) => {
                 scrobble: {
                     track: {
                         corrected: 0,
-                        '#text': play.data.track!
+                        '#text': play.data.track ?? ''
                     },
                     artist: {
                         corrected: 0,
@@ -1038,7 +1048,7 @@ export const playToScrobbleApiResponseJson = (play: PlayObject) => {
                     },
                     album: {
                         corrected: 0,
-                        '#text': play.data.album!
+                        '#text': play.data.album ?? ''
                     },
                     albumArtist: {
                         corrected: 0,
@@ -1060,7 +1070,7 @@ export const playToNowPlayingApiResponseJson = (play: PlayObject) => {
             nowplaying: {
                     track: {
                         corrected: 0,
-                        '#text': play.data.track
+                        '#text': play.data.track ?? ''
                     },
                     artist: {
                         corrected: 0,
@@ -1068,7 +1078,7 @@ export const playToNowPlayingApiResponseJson = (play: PlayObject) => {
                     },
                     album: {
                         corrected: 0,
-                        '#text': play.data.album
+                        '#text': play.data.album ?? ''
                     },
                     albumArtist: {
                         corrected: 0,

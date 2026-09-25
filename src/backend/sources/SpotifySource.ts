@@ -95,7 +95,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
         let played_at: Dayjs;
         let playDateCompleted: Dayjs | undefined;
         let id: string;
-        let url: string;
+        let url: string | undefined;
         let playbackPosition: number | undefined;
         let deviceId: string | undefined;
         let isrcString: string | undefined;
@@ -138,7 +138,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             id = i;
             duration_ms = dm;
             album = a;
-            url = spotify!;
+            url = spotify;
             isrcString = isrc;
             trackNumber = track_number;
 
@@ -180,8 +180,8 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             id = i;
             duration_ms = dm;
             album = a;
-            url = spotify!;
-            playbackPosition = progress_ms! / 1000;
+            url = spotify;
+            playbackPosition = progress_ms !== null && progress_ms !== undefined ? progress_ms / 1000 : undefined;
             deviceId = combinePartsToString([shortDeviceId(deviceIdentifier), deviceName]);
             isrcString = isrc;
             trackNumber = track_number
@@ -206,7 +206,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
 
         let imageData: {url: string} | undefined;
         if(images.length > 0) {
-            imageData = images.find(x => x.height! < 640);
+            imageData = images.find(x => x.height !== undefined && x.height < 640);
             if(imageData === undefined) {
                 imageData = images[0];
             }
@@ -251,7 +251,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             brainz.trackNumber = trackNumber;
         }
         if(Object.keys(brainz).length > 0) {
-            play.data.meta!.brainz = brainz;
+            play.data.meta = {...play.data.meta, brainz};
         }
 
         if(imageData !== undefined) {
@@ -392,8 +392,8 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
         if(this.canGetState) {
             const state = await this.getCurrentPlaybackState();
             if(state.playerState !== undefined) {
-                if(state.device!.is_private_session) {
-                    this.logger.debug(`Will not track play on Device ${state.device!.name} because it is in a private session.`);
+                if(state.device?.is_private_session) {
+                    this.logger.debug(`Will not track play on Device ${state.device.name} because it is in a private session.`);
                 } else {
                     plays.push(state.playerState);
                 }
@@ -445,7 +445,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
 
             if(to !== undefined) {
                 const toDate = dayjs.unix(to);
-                plays = plays.filter(x => x.data.playDate!.isBefore(toDate));
+                plays = plays.filter(x => x.data.playDate !== undefined && x.data.playDate.isBefore(toDate));
             }
             // if no plays returned
             // or if filtered plays are less than results then we've hit the to date
@@ -559,7 +559,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
                 return {
                     device,
                     playerState: {
-                        platformId: [combinePartsToString([shortDeviceId(device.id), device.name])!, NO_USER],
+                        platformId: [combinePartsToString([shortDeviceId(device.id), device.name]) ?? NO_DEVICE, NO_USER],
                         status,
                         play,
                         stateUpdatedAt: dayjs(),
@@ -609,11 +609,14 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
                             token_type
                         } = {}
                     } = tokenResponse;
-                    this.spotifyApi.setAccessToken(access_token!);
+                    if(access_token === undefined || expires_in === undefined) {
+                        throw new SimpleError('Refresh token response did not include an access token and/or expiration');
+                    }
+                    this.spotifyApi.setAccessToken(access_token);
                     await writeFile(this.workingCredsPath, JSON.stringify({
                         token: access_token,
                         refreshToken: refresh_token,
-                        expires: Date.now() + (expires_in! * 1000),
+                        expires: Date.now() + (expires_in * 1000),
                         expiresIn: expires_in,
                         grant: token_type
                     }));
