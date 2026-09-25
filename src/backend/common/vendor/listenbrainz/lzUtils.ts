@@ -103,11 +103,11 @@ export const playToListenPayload = (play: PlayObject, options: PlayToListenPaylo
                 addInfo.spotify_id = trackUrl;
             }
         }
-        if (isEmptyArrayOrUndefined(addInfo.spotify_artist_ids) && !isEmptyArrayOrUndefined(spotify.artist)) {
-            addInfo.spotify_artist_ids = spotify.artist!.map(x => `https://open.spotify.com/artist/${x}`);
+        if (isEmptyArrayOrUndefined(addInfo.spotify_artist_ids) && spotify.artist !== undefined && spotify.artist.length > 0) {
+            addInfo.spotify_artist_ids = spotify.artist.map(x => `https://open.spotify.com/artist/${x}`);
         }
-        if (isEmptyArrayOrUndefined(addInfo.spotify_album_artist_ids) && !isEmptyArrayOrUndefined(spotify.albumArtist)) {
-            addInfo.spotify_album_artist_ids = spotify.albumArtist!.map(x => `https://open.spotify.com/artist/${x}`);
+        if (isEmptyArrayOrUndefined(addInfo.spotify_album_artist_ids) && spotify.albumArtist !== undefined && spotify.albumArtist.length > 0) {
+            addInfo.spotify_album_artist_ids = spotify.albumArtist.map(x => `https://open.spotify.com/artist/${x}`);
         }
         if (addInfo.spotify_album_id === undefined && spotify.album !== undefined) {
             addInfo.spotify_album_id = `https://open.spotify.com/album/${spotify.album}`;
@@ -126,7 +126,9 @@ export const playToListenPayload = (play: PlayObject, options: PlayToListenPaylo
 
     const minTrackData = removeUndefinedKeys<MinimumTrack>({
         artist_name: Array.from(new Set([...artists.map(artistCreditToName)])).join(', '),
-        track_name: track!,
+        // track name is required by LZ, an empty value will be rejected upstream
+        // but we don't throw here since this is also used to build payloads for logging failed scrobbles
+        track_name: track ?? '',
         release_name: al,
     }, false);
 
@@ -135,7 +137,7 @@ export const playToListenPayload = (play: PlayObject, options: PlayToListenPaylo
         track_metadata: {
             ...minTrackData,
             additional_info: {
-                duration: play.data.duration !== undefined ? Math.round(duration!) : undefined,
+                duration: duration !== undefined ? Math.round(duration) : undefined,
                 track_mbid: brainz.track,
                 recording_mbid: brainz.recording,
                 artist_mbids: brainz.artist,
