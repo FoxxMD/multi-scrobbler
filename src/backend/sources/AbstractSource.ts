@@ -17,7 +17,6 @@ import {
 import type {PARSED_FROM_TYPE, PlayUserId, QueueContext} from '../../core/Atomic.ts';
 import type {DeviceId} from '../../core/Atomic.ts';
 import type {SourceConfig} from '../common/infrastructure/config/source/sources.ts';
-import type {SourceRetryOptions} from '../common/infrastructure/config/source/index.ts';
 import type {SourceType} from "../../core/Atomic.ts";
 import { TRANSFORM_HOOK } from "../../core/Transform.ts";
 import TupleMap from "../common/TupleMap.ts";
@@ -57,6 +56,12 @@ export interface RecentlyPlayedOptions {
     formatted?: boolean
 
     display?: boolean
+}
+
+/** list is only guaranteed when hydrating, otherwise it is undefined if not already cached */
+type RecentPlaysGetter = {
+    (hydrate?: true): Promise<PlayObject[]>
+    (hydrate: boolean): Promise<PlayObject[] | undefined>
 }
 
 export default abstract class AbstractSource extends AbstractComponent implements Authenticatable {
@@ -458,7 +463,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     }
 
 
-    getRecentlyDiscoveredPlays = async (hydrate: boolean = true): Promise<PlayObject[]> => {
+    getRecentlyDiscoveredPlays = (async (hydrate: boolean = true): Promise<PlayObject[] | undefined> => {
         const cacheKey = this.recentDiscoveredCacheKey();
         let list = await this.cache.cacheDb.get<PlayObject[]>(cacheKey);
         if(list === undefined && hydrate) {
@@ -471,11 +476,10 @@ export default abstract class AbstractSource extends AbstractComponent implement
             list.sort(sortByOldestPlayDate);
             await this.cache.cacheDb.set<PlayObject[]>(cacheKey, list, '2m');
         }
-        // TODO strict: list is undefined when hydrate=false; callers passing false already check for undefined
-        return list!;
-    }
+        return list;
+    }) as RecentPlaysGetter;
 
-    getRecentPlays = async (hydrate: boolean = true): Promise<PlayObject[]> => {
+    getRecentPlays = (async (hydrate: boolean = true): Promise<PlayObject[] | undefined> => {
         const cacheKey = this.recentCacheKey();
         let list = await this.cache.cacheDb.get<PlayObject[]>(cacheKey);
         if(list === undefined && hydrate) {
@@ -488,9 +492,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
             list.sort(sortByOldestPlayDate);
             await this.cache.cacheDb.set<PlayObject[]>(cacheKey, list, '2m');
         }
-        // TODO strict: list is undefined when hydrate=false; callers passing false already check for undefined
-        return list!;
-    }
+        return list;
+    }) as RecentPlaysGetter;
 
     async existingDiscovered(play: PlayObject): Promise<PlayMatchResult> {
         let list: PlayObject[] = await this.getRecentPlays(true);
@@ -647,7 +650,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 const err = new Error('Polling stopped with error', { cause: e });
                 this.logger.warn(err);
                 componentUpdate.status = 'Polling stopped with error';
-                this.warnings!.push(err);
+                this.warnings.push(err);
                 componentUpdate.warnings = this.warnings;
             }
             this.emitComponentUpdate<Partial<ComponentSourceApiJson>>(componentUpdate);
@@ -663,11 +666,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.pollRetries = 0;
 
         const {
-            options: {
-                maxPollRetries = 5,
-                retryMultiplier = DEFAULT_RETRY_MULTIPLIER,
-            }
-        } = this.config as { options: Partial<SourceRetryOptions> }; // TODO strict: not every source's options type includes maxPollRetries
+            maxPollRetries = 5,
+            retryMultiplier = DEFAULT_RETRY_MULTIPLIER,
+        } = this.config.options ?? {};
 
         // can't have negative retries!
         const maxRetries = Math.max(0, maxPollRetries);
