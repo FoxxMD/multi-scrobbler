@@ -115,14 +115,19 @@ export const parseStageConfig = (data: SpotifyTransformerData | undefined = {}, 
 export const missingSpotifyTypes = (play: PlayObject): SpotifyMissingType[] => {
     let missing: SpotifyMissingType[] = [];
 
-        const {
+    const {
         track,
         album,
         artists: dataArtists,
-        artists,
         duration,
         isrc
     } = play.data;
+
+    const {
+        art: {
+            album: albumArt
+        } = {}
+    }  = play.meta ?? {};
 
     if (play.data.meta?.spotify === undefined) {
         missing = missing.concat('ids');
@@ -140,8 +145,6 @@ export const missingSpotifyTypes = (play: PlayObject): SpotifyMissingType[] => {
         }
     }
 
-
-
     if (track === undefined) {
         missing.push('title');
     }
@@ -156,6 +159,9 @@ export const missingSpotifyTypes = (play: PlayObject): SpotifyMissingType[] => {
     }
     if(isrc === undefined) {
         missing.push('isrc');
+    }
+    if(albumArt === undefined) {
+        missing.push('art');
     }
 
     return missing;

@@ -331,3 +331,7 @@ export type PlayTransformRules = z.infer<typeof playTransformRulesSchema>;
 export const playTransformOptionsToRulesSchema = playTransformOptionsSchema.transform((val): PlayTransformRules => {
     throw new Error('Not implemented: use AbstractComponent.transformPartToStrong for PlayTransformOptions -> PlayTransformRules normalization');
 }).meta({title: 'Transform Options to Rules'});
+
+export const DEFAULT_TRANSFORMER_NAME = 'MSDefault';
+export const DEFAULT_TRANSFORMER_ENV_NAME = 'MSEnv';
+

@@ -1,6 +1,7 @@
 import * as z from "zod";
 import { MaybeLogger } from "../../MaybeLogger.ts";
 import type { RockskyTransformerConfig, RockskyTransformerData } from "../../vendor/rocksky/interfaces.ts";
+import { DEFAULT_TRANSFORMER_ENV_NAME } from "../../../../core/Transform.ts";
 
 export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
     const rsEnv = process.env.RS_PRESETS;
@@ -8,7 +9,7 @@ export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
     if (rsEnv !== undefined && rsEnv.trim() !== '') {
         rsConfig = {
             type: 'rocksky',
-            name: 'MSRockskyDefault',
+            name: DEFAULT_TRANSFORMER_ENV_NAME,
             data: {
                 apis: [
                     {

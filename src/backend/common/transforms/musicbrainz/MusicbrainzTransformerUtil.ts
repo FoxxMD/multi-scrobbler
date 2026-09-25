@@ -1,6 +1,7 @@
 import type { MissingMbidType, TransformerCommon, TransformOptions } from "../../../../core/Atomic.ts";
 import type { MusicbrainzApiConfigData } from "../../infrastructure/Atomic.ts";
 import { MaybeLogger } from "../../MaybeLogger.ts";
+import { DEFAULT_TRANSFORMER_ENV_NAME } from "../../../../core/Transform.ts";
 
 export interface MusicbrainzTransformerDataConfig {
     apis: MusicbrainzApiConfigData[];
@@ -153,7 +154,7 @@ export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
     if (mbEnv !== undefined && mbEnv.trim() !== '') {
         mbConfig = {
             type: 'musicbrainz',
-            name: 'MSDefault',
+            name: DEFAULT_TRANSFORMER_ENV_NAME,
             data: {
                 apis: [
                     {

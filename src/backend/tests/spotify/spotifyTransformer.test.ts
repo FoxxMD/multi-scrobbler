@@ -127,7 +127,7 @@ describe('Spotify Transformer', function () {
         });
 
         it('returns empty when all missing types are present', function () {
-            const play = basePlay({}, {});
+            const play = basePlay({}, {art: {album: 'https://example.com'}});
             play.data.meta = { spotify: { track: 't1', album: 'a1', artist: ['ar1'] } };
             const missing = missingSpotifyTypes(play);
             expect(missing).to.be.empty;

@@ -11,6 +11,7 @@ import { asArray } from "../../utils/DataUtils.ts";
 import { MaybeLogger } from '../MaybeLogger.ts';
 import { childLogger } from "@foxxmd/logging";
 import { artistCreditToName, artistNameToCredit } from "../../../core/StringUtils.ts";
+import { SimpleError } from "../errors/MSErrors.ts";
 
 export type ArtistParseSource = 'artists' | 'title'
 
@@ -71,7 +72,7 @@ export const parseStageConfig = (data: NativeTransformerData | undefined, logger
             try {
                 config.ignoreArtistsRegex.push(parseToRegexOrLiteralSearch(i));
             } catch (e) {
-                throw new Error(`Could not convert ignoreArtist string to regex (or literal): ${i}`);
+                throw new SimpleError(`Could not convert ignoreArtist string to regex (or literal): ${i}`);
             }
         }
         logger.debug(`Defaults - Ignoring artists using ${data.artistsIgnore.length} rules`);

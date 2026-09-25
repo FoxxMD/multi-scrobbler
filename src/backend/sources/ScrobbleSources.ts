@@ -10,15 +10,13 @@ import { pick } from '../../core/DataUtils.ts';
 import { readJson } from '../utils/DataUtils.ts';
 import type AbstractSource from "./AbstractSource.ts";
 import { nonEmptyStringOrDefault } from '../../core/StringUtils.ts';
-import type {CommonSourceConfig, CommonSourceOptions} from '../common/infrastructure/config/source/index.ts';
-import type {ExternalMetadataTerm, PlayTransformHooks} from '../../core/Transform.ts';
+import type {CommonSourceConfig} from '../common/infrastructure/config/source/index.ts';
 import { prettifyError, ZodError } from 'zod';
-import { commonComponentEnvConfigToConfigPrimitives, generateCommonComponentEnvConfigSchema, generateConfigLocation, type CommonConfigPrimitives, type UnparsedConfig } from '../common/infrastructure/config/common.ts';
+import { commonComponentEnvConfigToConfigPrimitives, generateCommonComponentEnvConfigSchema, generateConfigLocation, transformPresetEnv, type CommonConfigPrimitives, type UnparsedConfig } from '../common/infrastructure/config/common.ts';
 import { getSourceEnvSchema, validateSourceAIOJson, validateSourceJson } from '../common/infrastructure/config/source/sourcesMap.ts';
 import type { SourceTypeConfigMap } from "../common/infrastructure/config/source/sourcesMap.ts";
 import { stripIndents } from 'common-tags';
 import type { MSBackendEventMap } from '../common/infrastructure/MSBackendEventMap.ts';
-import { loggerNoop } from '../common/MaybeLogger.ts';
 
 type UnparsedSourceConfig = UnparsedConfig<SourceType>;
 
@@ -466,45 +464,4 @@ export default class ScrobbleSources {
                 break;
         }
     }
-}
-
-const transformPresetEnv = <T extends CommonSourceOptions = CommonSourceOptions>(prefix: string, existing: T | undefined = undefined, logger: Logger = loggerNoop): undefined | T => {
-
-    const env = process.env[`${prefix}_TRANSFORMS`];
-    if(env === undefined || env.trim() === '') {
-        return existing;
-    }
-
-    const preCompare: NonNullable<PlayTransformHooks<ExternalMetadataTerm>['preCompare']> = [];
-    const popts: PlayTransformHooks<ExternalMetadataTerm> = {
-        preCompare
-    }
-    for(const p of env.split(',').map(x => x.trim().toLocaleLowerCase())) {
-        switch(p) {
-            case 'native':
-                preCompare.push({type: 'native'});
-                break;
-            case 'musicbrainz':
-                preCompare.push({type: 'musicbrainz'});
-                break;
-            case 'spotify':
-                preCompare.push({type: 'spotify'});
-                break;
-            case 'coverartarchive':
-                preCompare.push({type: 'coverartarchive'});
-                break;
-            case 'rocksky':
-                preCompare.push({type: 'rocksky'});
-                break;
-            default:
-                logger.warn(`Unrecognized transformer type '${p} in env ${env}'`);
-                break;
-        }
-    }
-
-    // @ts-expect-error T is fine
-    return {
-        ...(existing || {}),
-        playTransform: popts
-    };
 }
