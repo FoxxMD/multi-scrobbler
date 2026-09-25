@@ -182,7 +182,7 @@ export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
         }
 
         if (soSet.size > 0) {
-            mbConfig.defaults!.searchOrder = Array.from(soSet);
+            mbConfig.defaults = {...mbConfig.defaults, searchOrder: Array.from(soSet)};
         }
         logger.debug(`Using presets: ${presets.join(',')}`);
     }
