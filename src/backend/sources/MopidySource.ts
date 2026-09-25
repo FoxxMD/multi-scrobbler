@@ -201,9 +201,9 @@ export class MopidySource extends MemoryPositionalSource {
                     play = undefined;
                 }
             } else if (this.uriBlacklist.length > 0) {
-                const match = this.uriWhitelist.find(x => currTrack!.uri.includes(x));
+                const match = this.uriBlacklist.find(x => currTrack.uri.includes(x));
                 if (match !== undefined) {
-                    this.logger.debug(`URI for currently playing (${currTrack!.uri}) matched from blacklist (${match}). Will not track play ${buildTrackString(play)}`);
+                    this.logger.debug(`URI for currently playing (${currTrack.uri}) matched from blacklist (${match}). Will not track play ${buildTrackString(play)}`);
                     play = undefined;
                 }
             }
