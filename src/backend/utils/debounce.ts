@@ -39,11 +39,11 @@ export interface DebouncedFunction {
 }
 
 export const debounce: DebounceConstructor = (func: (...args: unknown[]) => void, wait: number, immediate?: boolean) => {
-    let timeout: NodeJS.Timeout | null = null;
+    let timeout: NodeJS.Timeout | undefined;
     const debouncedFn: DebouncedFunction = (...args) => new Promise((resolve) => {
-        clearTimeout(timeout!);
+        clearTimeout(timeout);
         timeout = setTimeout(() => {
-            timeout = null;
+            timeout = undefined;
             if (!immediate) {
                 void Promise.resolve(func.apply(this, [...args])).then(resolve);
             }
@@ -54,14 +54,14 @@ export const debounce: DebounceConstructor = (func: (...args: unknown[]) => void
     });
 
     debouncedFn.cancel = () => {
-        clearTimeout(timeout!);
-        timeout = null;
+        clearTimeout(timeout);
+        timeout = undefined;
     };
 
     debouncedFn.doImmediately = (...args) => new Promise((resolve) => {
-        clearTimeout(timeout!);
+        clearTimeout(timeout);
         timeout = setTimeout(() => {
-            timeout = null;
+            timeout = undefined;
             void Promise.resolve(func.apply(this, [...args])).then(resolve);
         }, 0);
     });
