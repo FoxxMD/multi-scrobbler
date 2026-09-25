@@ -130,9 +130,9 @@ export class WebScrobblerSource extends MemorySource {
         const play: PlayObjectMinimal<Dayjs, WebScrobbleMeta> = {
             data: {
                 track,
-                artists: artist !== undefined ? [artistNameToCredit(artist)!] : [],
+                artists: artist !== undefined ? [artistNameToCredit(artist)] : [],
                 album: album === null ? undefined : album,
-                albumArtists: albumArtist === null ? undefined : albumArtist === undefined ? undefined : [artistNameToCredit(albumArtist)!],
+                albumArtists: albumArtist === null ? undefined : albumArtist === undefined ? undefined : [artistNameToCredit(albumArtist)],
                 playDate: dayjs.unix(startTimestamp),
                 duration: duration === null ? undefined : duration,
                 meta: {

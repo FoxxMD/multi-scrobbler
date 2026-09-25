@@ -317,7 +317,12 @@ export const artistNamesToCredits = (names: (string | Partial<ArtistCredit>)[] |
     }
     return names.map(x => artistNameToCredit(x)!).filter(x => x !== undefined);
 };
-export const artistNameToCredit = (val: string | undefined | Partial<ArtistCredit>): ArtistCredit | undefined => {
+// typing overloading here is ok
+export function artistNameToCredit(val: string): ArtistCredit;
+// eslint-disable-next-line no-redeclare
+export function artistNameToCredit(val: string | undefined | Partial<ArtistCredit>): ArtistCredit | undefined;
+// eslint-disable-next-line no-redeclare
+export function artistNameToCredit(val: string | undefined | Partial<ArtistCredit>): ArtistCredit | undefined {
     if(val === undefined) {
         return undefined;
     }
@@ -332,6 +337,6 @@ export const artistNameToCredit = (val: string | undefined | Partial<ArtistCredi
     return removeUndefinedKeys({name, mbid, ...rest}) as ArtistCredit;
 }
 export const artistCreditToName = (a: ArtistCredit): string => a.name;
-export const artistCreditsToNames = (a: ArtistCredit[]): string[] => a.map((x) => x.name);
+export const artistCreditsToNames = (a: ArtistCredit[] = []): string[] => a.map((x) => x.name);
 
 export const generatePlayUid = () => nanoid(20);

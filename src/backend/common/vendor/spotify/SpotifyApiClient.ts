@@ -184,8 +184,8 @@ export const trackToPlay = (track: SpotifyApi.TrackObjectFull): PlayObject => {
     const play: PlayObjectMinimal = {
         data: {
             track: name,
-            artists: artists.map(x => artistNameToCredit(x.name)!),
-            albumArtists: actualAlbumArtists.map(x => artistNameToCredit(x.name)!),
+            artists: artists.map(x => artistNameToCredit(x.name)),
+            albumArtists: actualAlbumArtists.map(x => artistNameToCredit(x.name)),
             album: album?.name,
             duration: duration_ms !== undefined ? Math.round(duration_ms / 1000) : undefined,
             isrc,

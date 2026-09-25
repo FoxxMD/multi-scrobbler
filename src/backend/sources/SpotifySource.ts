@@ -214,8 +214,8 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
 
         const play: PlayObjectMinimal = {
             data: {
-                artists: artists.map(x => artistNameToCredit(x.name)!),
-                albumArtists: actualAlbumArtists.map(x => artistNameToCredit(x.name)!),
+                artists: artists.map(x => artistNameToCredit(x.name)),
+                albumArtists: actualAlbumArtists.map(x => artistNameToCredit(x.name)),
                 album: albumName,
                 track: name,
                 duration: duration_ms / 1000,

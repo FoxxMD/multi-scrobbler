@@ -92,7 +92,7 @@ export class SubsonicSource extends MemoryPositionalSource {
 
         const play: PlayObjectMinimal = {
             data: {
-                artists: [artistNameToCredit(artist)!],
+                artists: [artistNameToCredit(artist)],
                 album,
                 track: title,
                 duration,

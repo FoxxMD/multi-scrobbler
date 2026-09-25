@@ -657,7 +657,7 @@ export const scrobblePayloadToPlay = (obj: LastFmSingleSubmitPayload): PlayObjec
         data: {
             track,
             album: nonEmptyStringOrDefault(album),
-            albumArtists: nonEmptyStringOrDefault(albumArtist) !== undefined ? [artistNameToCredit(albumArtist)!] : undefined,
+            albumArtists: typeof albumArtist === 'string' && nonEmptyStringOrDefault(albumArtist) !== undefined ? [artistNameToCredit(albumArtist)] : undefined,
             duration: typeof duration === 'string' ? parseInt(duration, 10) : duration,
             playDate: ts,
             artists: artistNamesToCredits(artists)
