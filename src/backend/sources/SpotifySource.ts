@@ -20,7 +20,6 @@ import { NO_USER } from '../../core/Atomic.ts';
 import { NO_DEVICE } from '../../core/Atomic.ts';
 import type {ComponentAuthType, ReportedPlayerStatus} from '../../core/Atomic.ts';
 import type {SpotifySourceConfig} from "../common/infrastructure/config/source/spotify.ts";
-import type {RequestRetryOptions} from "../common/infrastructure/config/common.ts";
 import {
     parseRetryAfterSecsFromObj,
     sleep,
@@ -587,7 +586,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
         const {
             maxRequestRetries = 1,
             retryMultiplier = 2,
-        } = this.config.options as RequestRetryOptions; // TODO strict: spotify options schema does not include requestRetryOptionsSchema
+        } = this.config.options ?? {};
         try {
             return await func(this.spotifyApi);
         } catch (e: any) {

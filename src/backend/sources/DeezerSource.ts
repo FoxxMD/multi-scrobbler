@@ -151,7 +151,7 @@ export default class DeezerSource extends AbstractSource {
         const {
             maxRequestRetries = 1,
             retryMultiplier = DEFAULT_RETRY_MULTIPLIER
-        } = (this.config.options as any); // TODO strict: retry options are not in deezer options schema
+        } = this.config.options ?? {};
 
         req.query({
             access_token: this.config.data.accessToken,

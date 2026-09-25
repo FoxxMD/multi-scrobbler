@@ -294,7 +294,7 @@ export default class DeezerInternalSource extends MemorySource {
         const {
             maxRequestRetries = 1,
             retryMultiplier = DEFAULT_RETRY_MULTIPLIER
-        } = (this.config.options as any); // TODO strict: retry options are not in deezer options schema
+        } = this.config.options ?? {};
 
         req.query({
             input: 3,
@@ -368,7 +368,7 @@ export default class DeezerInternalSource extends MemorySource {
                     temporalAccuracy.push(TA_DURING);
                 }
                 return genericSourcePlayMatch(e, candidate, temporalAccuracy, temporalOptions);
-            }))!; // TODO strict: findIndexAsync may return undefined
+            }));
             if(fuzzyIndex !== -1) {
                 if(this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {
                     // always return fuzzy match as existing
