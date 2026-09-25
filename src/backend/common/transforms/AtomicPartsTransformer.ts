@@ -1,4 +1,4 @@
-import { type ArtistCredit, type ArtMeta, isPlayObject, type ObjectPlayData, type PlayObject, type TrackMeta } from "../../../core/Atomic.ts";
+import { type ArtistCredit, type ArtMeta, isPlayObject, type ObjectPlayData, type PlayObject, type TrackMetaIsrc } from "../../../core/Atomic.ts";
 import type {AtomicStageConfig, StageConfig} from "../../../core/Transform.ts";
 import AbstractTransformer from "./AbstractTransformer.ts";
 
@@ -84,7 +84,7 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
                 }
             }
 
-            let mergedMeta: TrackMeta; 
+            let mergedMeta: TrackMetaIsrc; 
             if (parts.meta !== undefined) {
                 try {
                     const meta = await this.handleMeta(play, parts.duration, transformData);
@@ -94,6 +94,9 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
                             ...(play.data.meta ?? {})
                         };
                         for (const [k, v] of Object.entries(meta)) {
+                            if(k === 'isrc') {
+                                continue;
+                            }
                             if (mergedMeta[k] !== undefined) {
                                 mergedMeta[k] = {
                                     ...mergedMeta[k],
@@ -102,6 +105,9 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
                             } else {
                                 mergedMeta[k] = v;
                             }
+                        }
+                        if(meta.isrc !== undefined) {
+                            transformedPlayData.isrc = meta.isrc;
                         }
                     }
                 } catch (e) {
@@ -126,7 +132,7 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
                         for (const [k, v] of Object.entries(art)) {
                             if (mergedArt[k] !== undefined) {
                                 mergedArt[k] = {
-                                    ...mergedMeta[k],
+                                    ...mergedArt[k],
                                     ...v
                                 }
                             } else {
@@ -179,7 +185,7 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
             return play.data.duration;
         }
     
-        protected async handleMeta(play: PlayObject, parts: Y, transformData: T): Promise<TrackMeta | undefined> {
+        protected async handleMeta(play: PlayObject, parts: Y, transformData: T): Promise<TrackMetaIsrc | undefined> {
             return undefined;
         }
 

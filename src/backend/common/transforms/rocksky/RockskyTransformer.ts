@@ -1,4 +1,4 @@
-import { type ArtistCredit, DEFAULT_ROCKSKY_MISSING_TYPES, type LifecycleInput, type OptionalCacheUsage, type PlayObject, type RockskyMissingField, type TrackMeta, type ArtMeta } from "../../../../core/Atomic.ts";
+import { type ArtistCredit, DEFAULT_ROCKSKY_MISSING_TYPES, type LifecycleInput, type OptionalCacheUsage, type PlayObject, type RockskyMissingField, type ArtMeta, type TrackMetaIsrc } from "../../../../core/Atomic.ts";
 import { isWhenCondition, testWhenConditions } from "../../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../../infrastructure/config/health/webhooks.ts";
 import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../../core/Transform.ts";
@@ -578,7 +578,7 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         return transformData.data.duration;
     }
 
-    protected async handleMeta(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<TrackMeta | undefined> {
+    protected async handleMeta(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<TrackMetaIsrc | undefined> {
         if (parts === false) {
             return play.data.meta;
         }
