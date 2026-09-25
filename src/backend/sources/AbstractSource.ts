@@ -339,9 +339,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         // this.queueRepo.componentId = this.dbComponent.id;
         const counts = await this.playRepo.getComponentPlayCountByState();
         const discoveredCount = counts.find(x => x.state === 'discovered');
-        if(discoveredCount !== undefined) {
-            this.tracksDiscoveredTotal = discoveredCount['count(*)'];
-        }
+        this.tracksDiscoveredTotal = await this.restoreCountLive(discoveredCount?.['count(*)'] ?? 0);
         await this.updateQueueStats([INGRESS_QUEUE, DEAD_QUEUE]);
     }
 
@@ -1056,6 +1054,11 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 events.push(stateChangeToPlayEvent({state: 'discovered'}));
                 this.tracksDiscovered++;
                 this.tracksDiscoveredTotal++
+                try {
+                    await this.incrementCountLive();
+                } catch (e) {
+                    this.logger.warn(new Error('Unable to update discovered count', {cause: e}));
+                }
                 this.discoveredCounter.labels(this.getPrometheusLabels()).inc();
                 this.emitEvent('discovered', {play: preCompared});
                 await this.scrobble([{...playEntity.play, id: playEntity.id, uid: playEntity.uid}]);
