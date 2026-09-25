@@ -49,7 +49,7 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
     protected rrProxy: CircuitBreakerProxy<MusicbrainzApiWrapped>
     protected url!: URLData;
     cache: Cacheable;
-    protected asyncStore: AsyncLocalStorage<string>;
+    protected asyncStore: AsyncLocalStorage<string | undefined>;
 
     constructor(name: any, config: MusicbrainzApiClientConfig, options: AbstractApiOptions & {cache?: Cacheable, logUrl?: boolean, reqQueueDuration?: number}) {
         super('Musicbrainz', name, config, options);
@@ -150,7 +150,7 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
         } = options || {};
 
         try {
-            const cachedTransform = useCachedResult ? await this.cache.get<T>(cacheKey!) : undefined;
+            const cachedTransform = useCachedResult && cacheKey !== undefined ? await this.cache.get<T>(cacheKey) : undefined;
             if (cachedTransform !== undefined) {
                 const cacheUrl = await this.cache.get<string>(`${cacheKey}-url`);
                 const cacheQs = await this.cache.get<string>(`${cacheKey}-qs`);
@@ -184,7 +184,7 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
         }
     }
 
-    searchByRecording = async(play: PlayObject, options?: SearchOptions & OptionalCacheUsage): Promise<IRecordingMSList | undefined> => {
+    searchByRecording = async(play: PlayObject, options?: SearchOptions & OptionalCacheUsage): Promise<IRecordingMSList> => {
 
         const {
             escapeCharacters = true,
@@ -337,7 +337,7 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
     testConnection = async () => {
         for(const a of this.config.apis) {
             try {
-                const u = normalizeWebAddress(a.url!);
+                const u = normalizeWebAddress(a.url ?? MUSICBRAINZ_URL);
                 await isPortReachableConnect(u.port, { host: u.url.hostname });
             } catch (e) {
                 throw new Error('Could not reach API URL endpoint', { cause: e });

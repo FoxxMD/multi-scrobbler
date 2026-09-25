@@ -67,7 +67,7 @@ export class RockskyClientPool extends AbstractApiClient {
 
         const usedApis: RockskyClientWrapped[] = [];
         const hosts: string[] = [];
-        for (const rsConfig of this.config.apis!) {
+        for (const rsConfig of apis) {
             if ((rsConfig.enable ?? true) === false) {
                 this.logger.verbose(`Not using config for ${rsConfig.url ?? ROCKSKY_URL} because it is disabled`);
                 continue;

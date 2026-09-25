@@ -25,7 +25,7 @@ export class CoverArtClientPool extends AbstractApiClient {
 
         const usedApis: CoverArtApiClient[] = [];
         const hosts: string[] = [];
-        for (const apiConfig of this.config.apis!) {
+        for (const apiConfig of apis) {
             if ((apiConfig.enable ?? true) === false) {
                 this.logger.verbose(`Not using config for ${apiConfig.url ?? DEFAULT_CAA_URL} because it is disabled`);
                 continue;
