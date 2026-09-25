@@ -290,8 +290,8 @@ describe('Repository Operations', function () {
             const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
             const playRows = await db.insert(plays).values([
-                fixtureCreatePlay({ componentId: component[0].id, play: generatePlay({}, { source: 'test1' }) }),
-                fixtureCreatePlay({ componentId: component[0].id, play: generatePlay({}, { source: 'test2' }) })
+                fixtureCreatePlay({ componentId: component[0].id, play: generatePlay({track: 'foo'}, { source: 'test1' }) }),
+                fixtureCreatePlay({ componentId: component[0].id, play: generatePlay({track: 'bar'}, { source: 'test2' }) })
             ]).returning();
 
             // https://github.com/drizzle-team/drizzle-orm/discussions/938#discussioncomment-6542336
