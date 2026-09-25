@@ -327,24 +327,28 @@ export const generateArtists = (num?: number, max: number = 3, opts: ArtistGener
         ambiguousJoinedNames = false
     } = opts;
 
+    const isAmbiguous = (a: string) => {
+        const foundDelims = findDelimiters(a);
+        return foundDelims !== undefined && foundDelims.length > 0 && !(foundDelims.length === 1 && foundDelims[0] === '&');
+    }
+
+    if(!ambiguousJoinedNames) {
+        artists = artists.map(x => {
+            let a = x;
+            while(isAmbiguous(a)) {
+                a = faker.music.artist();
+            }
+            return a;
+        });
+    }
+    // must run AFTER ambiguous name replacement, otherwise a replacement could re-introduce a trailing '&' name
     if(!trailingAmpersand) {
         // its really hard to parse an artist name that contains an '&' when it comes at the end of a list
         // because its ambigious if the list is joining the list with & or if & is part of the artist name
         // so by default don't generate these (we test for specific scenarios in playParsing.test.ts)
-        while(artists[artists.length - 1].includes('&')) {
+        while(artists[artists.length - 1].includes('&') || (!ambiguousJoinedNames && isAmbiguous(artists[artists.length - 1]))) {
             artists = artists.slice(0, artists.length - 1).concat(faker.music.artist());
         }
-    }
-    if(!ambiguousJoinedNames) {
-        artists = artists.map(x => {
-            let a = x;
-            let foundDelims = findDelimiters(a);
-            while(foundDelims !== undefined && foundDelims.length > 0 && !(foundDelims.length === 1 && foundDelims[0] === '&')) {
-                a = faker.music.artist();
-                foundDelims = findDelimiters(a);
-            }
-            return a;
-        });
     }
     return artists;
 }

@@ -129,7 +129,19 @@ export const PRIMARY_SECONDARY_SECTIONS_REGEX = new RegExp(/^(?<primary>.+?)(?<s
  *   => May have closing character ) ]
  * */
 // export const SECONDARY_ARTISTS_REGEX = new RegExp(//ig);
-export const parseCredits = (str: string, delimiters?: boolean | string[]): PlayCredits | undefined => {
+export interface ParseCreditsOptions {
+    /**
+     * When secondary credits are NOT wrapped (SECONDARY_FREE_REGEX) a trailing parenthetical is normally treated as a suffix
+     *
+     * EX Criminal mind Ft Akon (Remix Braquer vos têtes) => suffix = (Remix Braquer vos têtes)
+     *
+     * For artist strings a trailing parenthetical is instead part of the last artist's name, so it should stay with the credits
+     *
+     * EX Roy Orbison featuring Snow Patrol / Cliff Edwards (Ukelele Ike) => last credit = Cliff Edwards (Ukelele Ike)
+     * */
+    wrappedSuffixIsCredit?: boolean
+}
+export const parseCredits = (str: string, delimiters?: boolean | string[], opts: ParseCreditsOptions = {}): PlayCredits | undefined => {
     if (str.trim() === '') {
         return undefined;
     }
@@ -150,8 +162,14 @@ export const parseCredits = (str: string, delimiters?: boolean | string[]): Play
         for(const strat of SECONDARY_REGEX_STRATS) {
             const secCredits = parseRegexSingle(strat, results.named.secondary);
             if(secCredits !== undefined) {
-                secondary = parseContextAwareStringList(secCredits.named.credits as string, delims)
+                let credits = secCredits.named.credits as string;
                 suffix = secCredits.named.creditsSuffix;
+                if(opts.wrappedSuffixIsCredit && strat === SECONDARY_FREE_REGEX && suffix !== undefined && /^\s*[([].+[)\]]\s*$/.test(suffix)) {
+                    // move the parenthetical "suffix" back onto the credits so it is kept as part of the last credit
+                    credits = `${credits}${suffix}`;
+                    suffix = undefined;
+                }
+                secondary = parseContextAwareStringList(credits, delims)
                 break;
             }
         }
@@ -178,7 +196,7 @@ export const parseArtistCredits = (str: string, delimiters?: boolean | string[],
     } else if (delimiters === false) {
         delims = [];
     }
-    const withJoiner = parseCredits(str, delimiters);
+    const withJoiner = parseCredits(str, delimiters, {wrappedSuffixIsCredit: true});
     if (withJoiner !== undefined) {
         // all this does is make sure and "ft" or parenthesis/brackets are separated --
         // it doesn't also separate primary artists so do that now

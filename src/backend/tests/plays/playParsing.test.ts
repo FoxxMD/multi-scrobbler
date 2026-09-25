@@ -116,7 +116,7 @@ Found    => ${parsed.join(' || ')}`)
     describe('When joiner is known', function () {
 
         it('Parses many primary artists', function () {
-            for(const i of Array(10)) {
+            for(const i of Array(40)) {
                 const [str, primaries, secondaries] = generateArtistsStr({primary: {max: 3, joiner: '/'}, secondary: 0});
                 const credits = parseArtistCredits(str, ['/']);
                 const allArtists = primaries.concat(secondaries);
@@ -131,8 +131,57 @@ Found    => ${parsed.join(' || ')}`)
 
         it('Parses many secondary artists', function () {
             // fails on -- Peso Pluma / Lil Baby / R. Kelly (featuring TOMORROW X TOGETHER / AC/DC / DaVido)
-            for(const i of Array(10)) {
+            for(const i of Array(40)) {
                 const [str, primaries, secondaries] = generateArtistsStr({primary: {max: 3, joiner: '/'}, secondary: {joiner: '/', finalJoiner: false}});
+                const credits = parseArtistCredits(str, ['/']);
+                const allArtists = primaries.concat(secondaries);
+                const parsed = [credits!.primary].concat(credits!.secondary ?? [])
+                expect(primaries.concat(secondaries),`
+'${str}'
+Expected => ${allArtists.join(' || ')}
+Found    => ${parsed.join(' || ')}
+Primaries => ${primaries.join(' || ')}
+Secondaries => ${secondaries.join(' || ')}
+`)
+        .eql(parsed)
+            }
+        });
+
+        it('Parses edge case artists formats', function () {
+            const edgeCases: ReturnType<typeof generateArtistsStr>[] = [
+                [
+                    'Paul Whiteman / BROCKHAMPTON / The Rolling Stones featuring Sonu Nigam / Supertramp / Cliff Edwards (Ukelele Ike)',
+                    ['Paul Whiteman','BROCKHAMPTON','The Rolling Stones'],
+                    ['Sonu Nigam','Supertramp','Cliff Edwards (Ukelele Ike)']
+                ],
+                [
+                    'Stray Kids / Mario Lanza vs Cliff Edwards (Ukelele Ike)',
+                    ['Stray Kids','Mario Lanza'],
+                    ['Cliff Edwards (Ukelele Ike)']
+                ],
+                [
+                    'Peso Pluma / Lil Baby / R. Kelly (featuring TOMORROW X TOGETHER / AC/DC / DaVido)',
+                    ['Peso Pluma','Lil Baby', 'R. Kelly'],
+                    ['TOMORROW X TOGETHER', 'AC/DC','DaVido']
+                ],
+                [
+                    'Roy Orbison featuring Snow Patrol / The Detroit Spinners / Cliff Edwards (Ukelele Ike)',
+                    ['Roy Orbison'],
+                    ['Snow Patrol','The Detroit Spinners','Cliff Edwards (Ukelele Ike)']
+                ],
+                [
+                    'Stray Kids / Mario Lanza (featuring Snow Patrol / Cliff Edwards (Ukelele Ike))',
+                    ['Stray Kids','Mario Lanza'],
+                    ['Snow Patrol','Cliff Edwards (Ukelele Ike)']
+                ],
+                [
+                    'Cliff Edwards (Ukelele Ike) / Stray Kids feat. Snow Patrol',
+                    ['Cliff Edwards (Ukelele Ike)','Stray Kids'],
+                    ['Snow Patrol']
+                ],
+            ];
+            for(const edge of edgeCases) {
+                const [str, primaries, secondaries] = edge;
                 const credits = parseArtistCredits(str, ['/']);
                 const allArtists = primaries.concat(secondaries);
                 const parsed = [credits!.primary].concat(credits!.secondary ?? [])
@@ -151,6 +200,12 @@ Found    => ${parsed.join(' || ')}`)
 });
 
 describe('Play Track Strings',function () {
+
+    it('should keep unwrapped trailing parenthetical as track suffix', function() {
+        const res = parseTrackCredits('Criminal mind Ft Akon (Remix Braquer vos têtes)')!;
+        expect(res.secondary).eql(['Akon']);
+        expect(res.primaryComposite).eq('Criminal mind (Remix Braquer vos têtes)');
+    });
 
     const testFixtures = testData as unknown as PlayTestFixture[];
     const joinerData = testFixtures.filter(x => intersect(['joiner','track'], x.caseHints).length === 2);
