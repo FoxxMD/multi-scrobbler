@@ -178,7 +178,7 @@ export const recordToPlay = (record: TealPlayRecord, options: RecordOptions = {}
             musicService,
             playId: options.playId,
             url: {
-                web: options.web as string, // TODO strict: meta.url.web should allow undefined
+                web: options.web,
                 origin
             },
             user: options.user

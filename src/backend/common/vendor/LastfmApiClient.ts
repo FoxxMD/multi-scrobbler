@@ -791,7 +791,7 @@ export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectO
             nowPlaying: nowplaying === 'true',
             source,
             url: {
-                web: url!,
+                web: url,
             }
         }
     }

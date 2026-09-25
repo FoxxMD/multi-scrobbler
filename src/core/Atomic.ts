@@ -227,7 +227,7 @@ export interface PlayMetaBase<D extends DateLike = Dayjs> {
          * * Spotify Source <-- url to spotify track
          * * Maloja Client <--- url to specific scrobble
          */
-        web: string
+        web?: string
         /**
          * The URL where this play was originally played
          * 

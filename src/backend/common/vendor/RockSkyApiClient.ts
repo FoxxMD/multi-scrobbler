@@ -226,7 +226,7 @@ export class RockSkyApiClient extends AbstractApiClient {
                 merged = clone(play);
                 merged.meta.url = {
                     ...(merged.meta.url ?? {}),
-                    web: uData.web!
+                    web: uData.web
                 };
                 if(merged.meta.playId === undefined) {
                     merged.meta.playId = uData.playId;
@@ -406,7 +406,7 @@ export const songViewToPlay = (song: SongViewDetailedMS): PlayObject => {
             trackId: song.id,
             source: 'Rocksky',
             url: {
-                web: song.uri!
+                web: song.uri
             }
         }
     };
@@ -472,7 +472,7 @@ export const rockskyScrobbleToPlay = (obj: RockskyScrobble, opts: {playId?: stri
         if(uData !== undefined) {
             if(web === undefined) {
                 play.meta.url = {
-                    web: uData.web!
+                    web: uData.web
                 }
             }
             if(playId === undefined) {

@@ -234,7 +234,7 @@ export const listenObjectResponseToPlay = (obj: ListenObjectResponse, options: {
             newFromSource: options.newFromSource ?? false,
             trackId: obj.track.id.toString(),
             url: {
-                    web: options.url !== undefined ? joinedUrl(options.url, `/track/${obj.track.id.toString()}`).toString() : undefined as unknown as string // TODO strict: meta.url.web should allow undefined
+                    web: options.url !== undefined ? joinedUrl(options.url, `/track/${obj.track.id.toString()}`).toString() : undefined
             }
         }
     }
