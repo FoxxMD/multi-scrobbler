@@ -63,7 +63,7 @@ describe('CoverArtArchive Transformer', function () {
 
             this.timeout(350000);
 
-            const coverResponse = generateCoverResponse({images: [generateCoverReleaseImageResponse()]});
+            const coverResponse = generateCoverResponse({images: [generateCoverReleaseImageResponse({types: ['Front'], front: true})]});
             const imageResponse = faker.internet.url();
 
             await withRequestInterception(
