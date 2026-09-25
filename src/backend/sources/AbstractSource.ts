@@ -160,7 +160,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.scheduler.stop();
         for(const job of this.scheduler.getAllJobs()) {
             job.stop();
-            this.scheduler.removeById(job.id!);
+            if(job.id !== undefined) {
+                this.scheduler.removeById(job.id);
+            }
         }
     }
     async [Symbol.asyncDispose]() {
@@ -312,7 +314,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
             this.scheduler.stop();
             for (const job of this.scheduler.getAllJobs()) {
                 job.stop();
-                this.scheduler.removeById(job.id!);
+                if(job.id !== undefined) {
+                    this.scheduler.removeById(job.id);
+                }
             }
             this.setStatus('Stopped');
             this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({state: COMPONENT_STATE.STOPPED});
@@ -614,8 +618,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
         this.setStatus('Starting polling...');
 
-        this.abortController = new AbortController();
-        this.pollingPromise = spawn(this.abortController.signal, async (signal, { defer, fork }) => {
+        const abortController = new AbortController();
+        this.abortController = abortController;
+        this.pollingPromise = spawn(abortController.signal, async (signal, { defer, fork }) => {
             defer(async () => {
                 this.polling = false;
                 this.isSleeping = false;
@@ -642,7 +647,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 state: COMPONENT_STATE.IDLE
             };
             if (isAbortError(e)) {
-                const err = generateLoggableAbortReason('Polling stopped', this.abortController!.signal);
+                const err = generateLoggableAbortReason('Polling stopped', abortController.signal);
                 this.logger.info(err);
                 //this.logger.trace(e);
                 componentUpdate.status = 'Polling cancelled';
@@ -862,8 +867,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     startDiscoveryQueue = async () => {
         this.setStatus('Starting discovery queue processing');
-        this.ingressQueueAbortController = new AbortController();
-        this.ingressQueuePromise = spawn(this.ingressQueueAbortController.signal, async (signal, { defer }) => {
+        const ingressQueueAbortController = new AbortController();
+        this.ingressQueueAbortController = ingressQueueAbortController;
+        this.ingressQueuePromise = spawn(ingressQueueAbortController.signal, async (signal, { defer }) => {
                 await this.processDiscoveryQueue(signal);
         }).catch((e) => {
             const componentUpdate: Partial<ComponentSourceApiJson> = {
@@ -977,7 +983,10 @@ export default abstract class AbstractSource extends AbstractComponent implement
         signal?.throwIfAborted();
         this.setStatus(`Processing Play ${playEntity.uid}`);
 
-        const queueState = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE)!;
+        const queueState = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE);
+        if(queueState === undefined) {
+            throw new Error(`Play ${playEntity.uid} does not have an ${INGRESS_QUEUE} queue state`);
+        }
         queueState.error = null;
         const {
             context,
@@ -1079,7 +1088,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
             }
             if(isAbortError(e)) {
                 events.push(stateChangeToPlayEvent({state: 'failed'}));
-                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: generateLoggableAbortReason('Interrupted by abort signal', this.ingressQueueAbortController!.signal)}));
+                const abortSignal = signal ?? this.ingressQueueAbortController?.signal;
+                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: abortSignal !== undefined ? generateLoggableAbortReason('Interrupted by abort signal', abortSignal) : e as Error}));
                 throw e;
             }
             if(!events.some(x => x.eventName === PLAY_EVENT_TYPE.playStateChange)) {
@@ -1113,8 +1123,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
         const retries = attemptWithRetries ?? deadLetterRetries;
 
-        this.deadQueueAbortController = new AbortController();
-        this.deadQueuePromise = spawn(this.deadQueueAbortController.signal, async (signal, { defer, fork }) => {
+        const deadQueueAbortController = new AbortController();
+        this.deadQueueAbortController = deadQueueAbortController;
+        this.deadQueuePromise = spawn(deadQueueAbortController.signal, async (signal, { defer, fork }) => {
 
             //const processable = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], [QUEUE_STATUS_FAILED], retries);
             const processableArgs: QueryPlaysOpts  = {queues: [{queueName: INGRESS_QUEUE, queueStatus: QUEUE_STATUS_FAILED, retries}], with: ['queues']};
@@ -1150,7 +1161,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             }
         }).catch((e) => {
             if (isAbortError(e)) {
-                const err = generateLoggableAbortReason('Dead scrobble processing stopped', this.deadQueueAbortController!.signal);
+                const err = generateLoggableAbortReason('Dead scrobble processing stopped', deadQueueAbortController.signal);
                 this.logger.info(err);
                 logger.trace(e)
             } else {

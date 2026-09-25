@@ -894,7 +894,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             res = await this.processPlay(playEntity, signal);
         } catch (e: unknown | Error | PlayProcessingError) {
             if(isAbortError(e)) {
-                err = generateLoggableAbortReason('Interrupted by abort signal', this.ingressQueueAbortController!.signal);
+                const abortSignal = signal ?? this.ingressQueueAbortController?.signal;
+                err = abortSignal !== undefined ? generateLoggableAbortReason('Interrupted by abort signal', abortSignal) : e as Error;
                 throw e;
             }
             if(e instanceof PlayProcessingError) {

@@ -228,7 +228,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.scheduler.stop();
         for(const job of this.scheduler.getAllJobs()) {
             job.stop();
-            this.scheduler.removeById(job.id!);
+            if(job.id !== undefined) {
+                this.scheduler.removeById(job.id);
+            }
         }
     }
     async [Symbol.asyncDispose]() {
@@ -361,7 +363,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             this.scheduler.stop();
             for (const job of this.scheduler.getAllJobs()) {
                 job.stop();
-                this.scheduler.removeById(job.id!);
+                if(job.id !== undefined) {
+                    this.scheduler.removeById(job.id);
+                }
             }
             await this.tryStopScrobbling(opts.reason);
             await this.tryStopDeadProcessing(opts.reason);
@@ -838,8 +842,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }
         }
         this.setStatus('Starting scrobbling processing');
-        this.ingressQueueAbortController = new AbortController();
-        this.ingressQueuePromise = spawn(this.ingressQueueAbortController.signal, async (signal, { defer, fork }) => {
+        // keep local reference since controller is unset before catch may run
+        const ingressQueueAbortController = new AbortController();
+        this.ingressQueueAbortController = ingressQueueAbortController;
+        this.ingressQueuePromise = spawn(ingressQueueAbortController.signal, async (signal, { defer, fork }) => {
 
             defer(async () => {
                 this.scrobbling = false;
@@ -1031,8 +1037,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
         const retries = attemptWithRetries ?? deadLetterRetries;
 
-        this.deadQueueAbortController = new AbortController();
-        this.deadQueuePromise = spawn(this.deadQueueAbortController.signal, async (signal, { defer, fork }) => {
+        // keep local reference since controller is unset in finally
+        const deadQueueAbortController = new AbortController();
+        this.deadQueueAbortController = deadQueueAbortController;
+        this.deadQueuePromise = spawn(deadQueueAbortController.signal, async (signal, { defer, fork }) => {
 
             defer(async () => {
                 this.deadQueueProcessing = false;
@@ -1090,7 +1098,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     async processPlay(playEntity: PlayWith<'queueStates' | 'events'>, signal?: AbortSignal): Promise<PlayProcessingResult> {
         signal?.throwIfAborted();
 
-        const queueState = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE)!;
+        const queueState = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE);
+        if(queueState === undefined) {
+            throw new Error(`Play ${playEntity.uid} does not have an ${INGRESS_QUEUE} queue state`);
+        }
         queueState.error = null;
         const {
             context = {},
@@ -1234,7 +1245,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }
             if(isAbortError(e)) {
                 events.push(stateChangeToPlayEvent({state: 'failed'}));
-                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: generateLoggableAbortReason('Interrupted by abort signal', this.ingressQueueAbortController!.signal)}));
+                const abortSignal = signal ?? this.ingressQueueAbortController?.signal;
+                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: abortSignal !== undefined ? generateLoggableAbortReason('Interrupted by abort signal', abortSignal) : e}));
                 throw e;
             }
             if(!events.some(x => x.eventName === PLAY_EVENT_TYPE.playStateChange)) {
