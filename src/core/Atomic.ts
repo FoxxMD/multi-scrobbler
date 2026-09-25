@@ -371,6 +371,8 @@ export const isPlayObject = (obj: object): obj is PlayObject => {
 }
 
 export type PlayObject<T = {}> = AmbPlayObject<Dayjs,T>;
+/** PlayObject that is known to have a playDate */
+export type DatedPlayObject<T = {}> = PlayObject<T> & { data: { playDate: Dayjs } };
 export type PlayObjectMinimal<D extends DateLike = Dayjs, T = {}> = AmbPlayObjectMinimal<D,T>;
 export interface PlayActivity {
   play: JsonPlayObject
