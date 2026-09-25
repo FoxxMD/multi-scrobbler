@@ -79,7 +79,6 @@ type NowPlayingQueue = Map<string, PlatformMappedPlays>;
 
 const platformTruncate = truncateStringToLength(10);
 
-const noopTransform = async (x: any) => x;
 
 const bufferNPUpdateReasonFragments: string[] = [
     'previous update play data does not match current',
@@ -285,7 +284,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                                 this.logger.error(e);
                             })
                         }
-                        return new Promise((resolve, reject) => resolve);
+                        return Promise.resolve();
                     },
                     (err: Error) => {
                         this.warnings.push(err);
@@ -774,8 +773,12 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             return hasAcceptableTemporalAccuracy(temporalComparison.match)
         });
 
-        // TODO strict: matchPlayDate can be undefined if no temporal match found, which would throw here
-        const s: ScrobbledPlayObject = {play: matchPlayDate!, scrobble: matchPlayDate!.scrobble?.mergedScrobble!};
+        if (matchPlayDate === undefined) {
+            // data matched but none were close enough in time to be the same play
+            return [undefined, []];
+        }
+
+        const s: ScrobbledPlayObject = {play: matchPlayDate, scrobble: matchPlayDate.scrobble?.mergedScrobble!};
 
         return [s, [s]];
     }

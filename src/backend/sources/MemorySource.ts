@@ -11,7 +11,6 @@ import {
 import { CALCULATED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type {PlayPlatformId} from '../../core/Atomic.ts';
 import type {SourceConfig} from '../common/infrastructure/config/source/sources.ts';
-import type {CommonSourceOptions} from "../common/infrastructure/config/source/index.ts";
 import type {SourceType} from "../../core/Atomic.ts";
 import type {PollingOptions} from "../common/infrastructure/config/common.ts";
 import {
@@ -235,10 +234,8 @@ export default class MemorySource extends AbstractSource {
     processRecentPlays = async (datas: (PlayObject | PlayerStateDataMaybePlay)[], reportedTS?: Dayjs) => {
 
         const {
-            options: {
-                scrobbleThresholds = {}
-            }
-        } = this.config as {options: CommonSourceOptions}; // TODO strict: not all SourceConfig option types include scrobbleThresholds
+            scrobbleThresholds = {}
+        } = this.config.options ?? {};
 
         const newStatefulPlays: PlayObject[] = [];
 
@@ -359,10 +356,8 @@ export default class MemorySource extends AbstractSource {
     protected isListenedPlayDiscoverable = async (candidate: PlayObject): Promise<[boolean, string]> => {
 
         const {
-            options: {
-                scrobbleThresholds = {}
-            }
-        } = this.config as {options: CommonSourceOptions}; // TODO strict: not all SourceConfig option types include scrobbleThresholds
+            scrobbleThresholds = {}
+        } = this.config.options ?? {};
 
         const stPrefix = `${buildTrackString(candidate, {include: ['trackId', 'artist', 'track']})}`;
         const thresholdResults = timePassesScrobbleThreshold(scrobbleThresholds, candidate.data.listenedFor!, candidate.data.duration);
@@ -373,7 +368,8 @@ export default class MemorySource extends AbstractSource {
                 return [true,`${stPrefix} added after ${thresholdResultSummary(thresholdResults)} and not matching any prior plays`];
             } else {
                 const {data: {playDate, duration}} = candidate;
-                const {closestMatchedPlay: {data: {playDate: rplayDate}}} = matchingRecent as {closestMatchedPlay: PlayObject}; // TODO strict: closestMatchedPlay assumed present when match is true
+                // existingPlay always sets closestMatchedPlay when match is true
+                const rplayDate = matchingRecent.closestMatchedPlay!.data.playDate;
                 if (!playDate!.isSame(rplayDate)) {
                     if (duration !== undefined) {
                         if (playDate!.isAfter(rplayDate!.add(duration, 's'))) {
