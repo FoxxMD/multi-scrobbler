@@ -92,6 +92,23 @@ export const generateInputEntity = (data: PlayInputNew): PlayInputNew => {
     return {...data, playHash};
 }
 
+export const generatePlayHistoricalEntity = (play: PlayObject, opts: PlayHistoricalEntityOpts = {}): PlayHistoricalNew => {
+    const {
+        seenAt = dayjs(),
+        playedAt = play.data.playDate,
+        ...restOpts
+    } = opts;
+    const {playHash, mbidIdentifier} = generatePlayEntity(play);
+    return {
+        play,
+        playHash,
+        mbidIdentifier,
+        playedAt,
+        seenAt: play.meta.seenAt ?? seenAt,
+        ...restOpts
+    };
+}
+
 export const generateQueueStateEntity = (data: QueueStateNew): QueueStateNew => {
     return data;
 }

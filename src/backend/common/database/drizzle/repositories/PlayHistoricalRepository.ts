@@ -1,6 +1,6 @@
 import { type DbConcrete, runTransaction } from "../drizzleUtils.ts";
 import { type PlayObject, TA_DEFAULT_ACCURACY, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
-import { generatePlayEntity, hydratePlaySelect, type PlayHydateOptions, type PlayHistoricalEntityOpts, type PlayEntityOpts } from "../entityUtils.ts";
+import { generatePlayHistoricalEntity, hydratePlaySelect, type PlayHydateOptions, type PlayHistoricalEntityOpts } from "../entityUtils.ts";
 import { plays, playsHistorical } from "../schema/schema.ts";
 import type {FindWhere, FindMany, WhereClause, PlayHistoricalSelect, PlayHistoricalNew} from "../drizzleTypes.ts";;
 import type { MarkOptional } from "ts-essentials";
@@ -92,8 +92,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
                     play,
                     ...rest
                 } = data;
-                // TODO strict
-                return generatePlayEntity(play, { componentId: this.componentId, ...rest } as PlayEntityOpts);
+                return generatePlayHistoricalEntity(play, { componentId: this.componentId, ...rest });
             });
 
             playRows = await this.db.insert(playsHistorical).values(entitiesData).returning();
