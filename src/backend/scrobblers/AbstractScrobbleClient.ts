@@ -79,7 +79,7 @@ type NowPlayingQueue = Map<string, PlatformMappedPlays>;
 
 const platformTruncate = truncateStringToLength(10);
 
-const noopTransform = async (x) => x;
+const noopTransform = async (x: any) => x;
 
 const bufferNPUpdateReasonFragments: string[] = [
     'previous update play data does not match current',
@@ -122,8 +122,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     supportsNowPlaying: boolean = false;
     nowPlayingIsRealtime: boolean = false;
     nowPlayingInit: boolean = false;
-    nowPlayingEnabled: boolean;
-    nowPlayingFilter: (queue: NowPlayingQueue) => SourceMappedPlayer | undefined;
+    nowPlayingEnabled!: boolean;
+    nowPlayingFilter!: (queue: NowPlayingQueue) => SourceMappedPlayer | undefined;
     nowPlayingMinThreshold: NowPlayingUpdateThreshold = (_) => 10;
     nowPlayingMaxThreshold: NowPlayingUpdateThreshold = (_) => 30;
     nowPlayingLastUpdated?: Dayjs;
@@ -135,12 +135,12 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     declare config: CommonClientConfig;
 
-    notifier: Notifiers;
+    notifier!: Notifiers;
 
     protected scrobbledCounter: Counter;
-    protected problemGauge: Gauge;
+    protected problemGauge!: Gauge;
 
-    protected staggerOpts: Partial<StaggerOptions>;
+    protected staggerOpts!: Partial<StaggerOptions>;
     protected staggerMappers = {
         preCompare: staggerMapper<PlayObject, PlayObject>({concurrency: 2}),
         existing: staggerMapper<PlayObject, PlayObject>({concurrency: 2})
@@ -229,7 +229,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.scheduler.stop();
         for(const job of this.scheduler.getAllJobs()) {
             job.stop();
-            this.scheduler.removeById(job.id);
+            this.scheduler.removeById(job.id!);
         }
     }
     async [Symbol.asyncDispose]() {
@@ -250,12 +250,12 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 'Heartbeat',
                 (): Promise<any> => {
                     return this.heartbeatTask().then(() => null).catch((err) => {
-                        this.errors.push(err);
+                        this.errors!.push(err);
                         this.logger.error(err);
                     });
                 },
                 (err: Error) => {
-                    this.errors.push(err);
+                    this.errors!.push(err);
                     this.logger.error(err);
                 }
             ), {id: 'heartbeat'}));
@@ -288,7 +288,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                         return new Promise((resolve, reject) => resolve);
                     },
                     (err: Error) => {
-                        this.warnings.push(err);
+                        this.warnings!.push(err);
                         this.logger.error(err);
                     }
                 ), {id: 'dead'}));
@@ -362,7 +362,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             this.scheduler.stop();
             for (const job of this.scheduler.getAllJobs()) {
                 job.stop();
-                this.scheduler.removeById(job.id);
+                this.scheduler.removeById(job.id!);
             }
             await this.tryStopScrobbling(opts.reason);
             await this.tryStopDeadProcessing(opts.reason);
@@ -449,7 +449,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     public getApiData(): ComponentClientApiJson {
         return {
-            lastReadyAt: undefined,
             lastImport: undefined,
             lastImportSuccess: undefined,
             ...super.getApiData(),
@@ -529,7 +528,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }, (err: Error) => {
                 const npErr = new Error('Unexpected error while processing Now Playing queue', {cause: err});
                 this.npLogger.error(npErr);
-                this.warnings.push(npErr);
+                this.warnings!.push(npErr);
                 this.emitComponentUpdate<Partial<ComponentClientApiJson>>({warnings: this.warnings});
             });
 
@@ -579,7 +578,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 }
             }
 
-            this.nowPlayingFilter = (queue: NowPlayingQueue): SourceMappedPlayer => {
+            this.nowPlayingFilter = (queue: NowPlayingQueue): SourceMappedPlayer | undefined => {
                 if (queue.size === 0) {
                     return undefined;
                 }
@@ -658,7 +657,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                         this.setStatus(`Preloaded 0 scrobbles.`);
                     } else {
                         preload.sort(sortByOldestPlayDate);
-                        const from = preload[0].data.playDate;
+                        const from = preload[0].data.playDate!;
                         // we are assuming that all fetchers return latest scrobbles first (pretty sure this is the case)
                         const to = dayjs();// preload[preload.length - 1].data.playDate;
                         await this.cache.cacheClientScrobbles.set<PlayObject[]>(this.getScrobbleCacheKey(from, to), preload, '60s');
@@ -669,7 +668,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 }
             } catch (e) {
                 const preloadErr = new SimpleError('Could not preload scrobbles', {cause: e, shortStack: true});
-                this.warnings.push(preloadErr);
+                this.warnings!.push(preloadErr);
                 this.emitComponentUpdate<Partial<ComponentClientApiJson>>({warnings: this.warnings});
                 this.logger.warn(preloadErr);
             }
@@ -690,12 +689,12 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     async getSOTScrobblesForPlay(play: PlayObject, opts: {useCache?: boolean} = {}): Promise<PlayObject[]> {
         const {useCache = true} = opts;
-        let range: PaginatedTimeRangeOptions = this.scrobbleSOTRanges.find(x => x.from <= play.data.playDate.unix() && x.to > Math.min(dayjs().subtract(this.config.options?.refreshStaleAfter ?? REFRESH_STALE_DEFAULT, 's').unix(), play.data.playDate.unix()));
+        let range: PaginatedTimeRangeOptions | undefined = this.scrobbleSOTRanges.find(x => x.from <= play.data.playDate!.unix() && x.to > Math.min(dayjs().subtract(this.config.options?.refreshStaleAfter ?? REFRESH_STALE_DEFAULT, 's').unix(), play.data.playDate!.unix()));
         if(range === undefined) {
             this.logger.warn(`No Scrobble SOT range found! Should have been handled before this. Creating a new one for ${buildTrackString(play)}`);
             range = {
-                from: play.data.playDate.subtract(DEFAULT_NEW_PADDING).unix(), 
-                to: Math.min(play.data.playDate.add(DEFAULT_NEW_PADDING).unix(), dayjs().subtract(this.config.options?.refreshStaleAfter ?? REFRESH_STALE_DEFAULT, 's').unix()) 
+                from: play.data.playDate!.subtract(DEFAULT_NEW_PADDING).unix(), 
+                to: Math.min(play.data.playDate!.add(DEFAULT_NEW_PADDING).unix(), dayjs().subtract(this.config.options?.refreshStaleAfter ?? REFRESH_STALE_DEFAULT, 's').unix()) 
             };
             this.scrobbleSOTRanges.push(range);
         }
@@ -718,7 +717,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             plays.sort(sortByOldestPlayDate);
             await this.cache.cacheClientScrobbles.set<PlayObject[] | Error>(this.getScrobbleCacheKey(range.from, range.to), plays, (this.config.options?.refreshStaleAfter ?? REFRESH_STALE_DEFAULT) * 1000);
             return plays;
-        } catch (e) {
+        } catch (e: any) {
             await this.cache.cacheClientScrobbles.set<PlayObject[] | Error>(this.getScrobbleCacheKey(range.from, range.to), e, '10s');
             throw new SimpleError('Cannot get historical plays', {cause: e, shortStack: true});
         }
@@ -748,7 +747,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.tracksScrobbledTotal++;
     }
 
-    findExistingSubmittedPlayObj = async (playObjPre: PlayObject): Promise<([undefined, undefined] | [ScrobbledPlayObject, ScrobbledPlayObject[]])> => {
+    findExistingSubmittedPlayObj = async (playObjPre: PlayObject): Promise<([undefined, undefined] | [undefined, ScrobbledPlayObject[]] | [ScrobbledPlayObject, ScrobbledPlayObject[]])> => {
 
         const playObj = await this.transformPlay(playObjPre, TRANSFORM_HOOK.candidate);
 
@@ -756,7 +755,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             // if no existing transform then we can run cheap db match
             const cheapExisting = await this.playRepo.checkExisting(playObj, {states: ['scrobbled'], notId: playObjPre.id});
             if(cheapExisting !== undefined) {
-                const s: ScrobbledPlayObject = {play: cheapExisting.play, scrobble: cheapExisting.play.scrobble?.mergedScrobble};
+                const s: ScrobbledPlayObject = {play: cheapExisting.play, scrobble: cheapExisting.play.scrobble?.mergedScrobble!};
                 return [s, [s]];
             }
         }
@@ -775,7 +774,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             return hasAcceptableTemporalAccuracy(temporalComparison.match)
         });
 
-        const s: ScrobbledPlayObject = {play: matchPlayDate, scrobble: matchPlayDate.scrobble?.mergedScrobble};
+        // TODO strict: matchPlayDate can be undefined if no temporal match found, which would throw here
+        const s: ScrobbledPlayObject = {play: matchPlayDate!, scrobble: matchPlayDate!.scrobble?.mergedScrobble!};
 
         return [s, [s]];
     }
@@ -826,7 +826,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         if(!this.isReady() || force) {
             try {
                 await this.initialize(options);
-            } catch (e) {
+            } catch (e: any) {
                 this.logger.error(new Error('Cannot start monitoring because Client is not ready', {cause: e}));
                 if(notify) {
                     await this.notify( {title: `Processing Error`, message: `Cannot start monitoring because Client is not ready: ${truncateStringToLength(500)(messageWithCausesTruncatedDefault(e))}`, priority: 'error'});
@@ -850,7 +850,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 state: COMPONENT_STATE.IDLE
             };
             if (isAbortError(e)) {
-                const err = generateLoggableAbortReason('Scrobble processing stopped', this.ingressQueueAbortController.signal);
+                const err = generateLoggableAbortReason('Scrobble processing stopped', this.ingressQueueAbortController!.signal);
                 this.logger.info(err);
                 //this.logger.trace(e);
                 componentUpdate.status = 'Processing cancelled';
@@ -858,7 +858,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 const err = new Error('Scrobble processing stopped with error', { cause: e });
                 this.logger.warn(err);
                 componentUpdate.status = 'Processing stopped with error';
-                this.warnings.push(err);
+                this.warnings!.push(err);
                 componentUpdate.warnings = this.warnings;
             }
             this.emitComponentUpdate<Partial<ComponentClientApiJson>>(componentUpdate);
@@ -892,7 +892,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         while (this.scrobbleRetries <= maxRetries) {
             try {
                 await this.doProcessing(signal);
-            } catch (e) {
+            } catch (e: any) {
                 if(isAbortError(e)) {
                     throw e;
                 }
@@ -984,7 +984,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 if(nextQueued !== undefined) {
                     while (nextQueued !== undefined) {
                         await this.handlePlayProcessing(nextQueued, signal);
-                        if(this.errors.length > 0) {
+                        if(this.errors!.length > 0) {
                             // we made it through a scrobble without any issues so clear any issue we may have previously had
                             this.errors = [];
                             this.emitComponentUpdate<Partial<ComponentClientApiJson>>({errors: []});
@@ -1041,7 +1041,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             //const processable = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], [QUEUE_STATUS_FAILED], retries);
             const processableArgs: QueryPlaysOpts  = {queues: [{queueName: INGRESS_QUEUE, queueStatus: QUEUE_STATUS_FAILED, retries}], with: ['queues']};
             let processable = await this.playRepo.findPlaysPaginated(processableArgs);
-            this.deadLetterQueued = processable.meta.total;
+            this.deadLetterQueued = processable.meta.total!;
 
             const total = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], {queueStatus: [QUEUE_STATUS_FAILED], retries: 10000});
             this.deadLetterLength = total;
@@ -1072,7 +1072,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }
         }).catch((e) => {
             if (isAbortError(e)) {
-                const err = generateLoggableAbortReason('Dead scrobble processing stopped', this.deadQueueAbortController.signal);
+                const err = generateLoggableAbortReason('Dead scrobble processing stopped', this.deadQueueAbortController!.signal);
                 this.logger.info(err);
                 this.logger.trace(e)
             } else {
@@ -1087,8 +1087,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     async processPlay(playEntity: PlayWith<'queueStates' | 'events'>, signal?: AbortSignal): Promise<PlayProcessingResult> {
         signal?.throwIfAborted();
 
-        const queueState = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE);
-        queueState.error = undefined;
+        const queueState = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE)!;
+        queueState.error = undefined as any; // TODO strict: type is ErrorLike | null but undefined is intentionally used here
         const {
             context = {},
         } = queueState
@@ -1130,7 +1130,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 await this.handleQueuedScrobbleRanges();
                 try {
                     historicalPlays = await this.getSOTScrobblesForPlay(playEntity.play, {useCache: !(isRetry || !useCache)});
-                } catch (e) {
+                } catch (e: any) {
 
                     if (e.message === 'Cannot get historical plays due to cached error') {
                         logger.warn(`${buildTrackString(playEntity.play)} from Source '${playEntity.play.meta.source}' => Previous error while getting historical scrobbles means this scrobble cannot be compared, will queue as dead for now.`);
@@ -1143,12 +1143,12 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     playEntity.state = 'failed';
                     events.push(stateChangeToPlayEvent({state: 'failed'}));
                     queueState.queueStatus = QUEUE_STATUS_FAILED;
-                    queueState.error = processError;
+                    queueState.error = processError!;
                     events.push(queueCompletionStateToPlayEvent({...queueState}));
-                    throw new PlayProcessingError(processError, {playEntity, events, queue: queueState, showStopping: false});
+                    throw new PlayProcessingError(processError!, {playEntity, events, queue: queueState, showStopping: false});
                     //deadQueueEntity = await this.addDeadLetterScrobble(playEntity, e);
                 }
-                signal.throwIfAborted();
+                signal?.throwIfAborted();
             }
 
             let isDupe = false;
@@ -1158,7 +1158,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 isDupe = matchResult.match;
             }
 
-            signal.throwIfAborted();
+            signal?.throwIfAborted();
             if (!isDupe) {
                 const transformedScrobble = transform ? await this.transformPlay(playEntity.play, TRANSFORM_HOOK.postCompare, {useCachedResult: useCache}) : playEntity.play;
                 const { lifecycle = [], ...restPlay } = transformedScrobble;
@@ -1167,18 +1167,18 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 if (psLifecycle.length > 0) {
                     events.push({ ...transformToPlayEvent(psLifecycle), createdAt: dayjs() });
                 }
-                signal.throwIfAborted();
+                signal?.throwIfAborted();
                 try {
                     const scrobbledPlay = await this.scrobble(transformedScrobble, { signal, ...(context ?? {})});
                     const { scrobble } = scrobbledPlay;
-                    events.push(scrobbleToPlayEvent(scrobble));
+                    events.push(scrobbleToPlayEvent(scrobble!));
                     //currQueuedPlay.play = scrobbledPlay;
                     await this.addScrobbledTrack(scrobbledPlay);
                     events.push(stateChangeToPlayEvent({state: 'scrobbled'}));
                     events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED}));
                     this.scrobbleRetries = 0;
                     playEntity.state = 'scrobbled';
-                    playEntity.error = undefined;
+                    playEntity.error = undefined as any; // TODO strict: type is ErrorLike | null but undefined is intentionally used here
                     return {playEntity, events, queue: queueState};
                 } catch (e) {
                     const scrobbleRes: ScrobbleResult = {
@@ -1224,13 +1224,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED}));
                 return {playEntity, events, queue: queueState};
             }
-        } catch (e) {
+        } catch (e: any) {
             if(e instanceof PlayProcessingError) {
                 throw e;
             }
             if(isAbortError(e)) {
                 events.push(stateChangeToPlayEvent({state: 'failed'}));
-                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: generateLoggableAbortReason('Interrupted by abort signal', this.ingressQueueAbortController.signal)}));
+                events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_FAILED, error: generateLoggableAbortReason('Interrupted by abort signal', this.ingressQueueAbortController!.signal)}));
                 throw e;
             }
             if(!events.some(x => x.eventName === PLAY_EVENT_TYPE.playStateChange)) {
@@ -1287,7 +1287,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             // want to be very confident of this
             if (existingQueued.match && existingQueued.score > 0.99) {
                 this.logger.trace(`Not adding to queue because it is already in the queue\n${existingQueued.summary}`);
-                return await this.playRepo.findByIdWith<'queueStates' | 'parent'>(existingQueued.closestMatchedPlay.id, ['queues','parent']);
+                return await this.playRepo.findByIdWith<'queueStates' | 'parent'>(existingQueued.closestMatchedPlay!.id!, ['queues','parent']);
             }
             if (data.length < meta.limit) {
                 break;
@@ -1393,7 +1393,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
     }
 
-    nowPlayingHasDiscrepancy = (data: SourcePlayerObj): [boolean, string?] => {
+    nowPlayingHasDiscrepancy = (data: SourcePlayerObj): [boolean, string] => {
         if(this.nowPlayingLastPlay === undefined || this.nowPlayingLastUpdated === undefined) {
             return [true, 'Now Playing has not yet been set'];
         }
@@ -1411,7 +1411,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             return [true, 'player state has changed'];
         }
         
-        if(!playObjDataMatch(data.play, this.nowPlayingLastPlay.play)) {
+        if(!playObjDataMatch(data.play!, this.nowPlayingLastPlay.play!)) {
             return [true, 'previous update play data does not match current'];
         }
 
@@ -1453,7 +1453,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 return [false, npUpdateTopReason];
             } 
 
-            let validStatusReason: string;
+            let validStatusReason: string | undefined;
             if(shouldUpdate) {
                 // next we check if new player state is even valid to use for an update
                 const [statusValid, reason] = this.nowPlayingIsRealtime ? playerInValidNPUpdateState(sourcePlayerData) : playerInNPPlayingOnlyState(sourcePlayerData);
@@ -1577,7 +1577,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
     }
 
-    public emitEvent = (eventName: string, payload: object) => {
+    public emitEvent = (eventName: string, payload?: object) => {
         this.emitter.emit(eventName, {
             data: payload,
             type: this.type,

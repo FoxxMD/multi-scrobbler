@@ -13,7 +13,7 @@ export class GotifyWebhookNotifier extends AbstractWebhookNotifier {
 
     priorities: PrioritiesConfig;
 
-    protected endpoint: URLData;
+    protected endpoint!: URLData;
 
     constructor(defaultName: string, config: GotifyConfig, logger: Logger) {
         super('Gotify', defaultName, config, logger);

@@ -31,7 +31,7 @@ export class MusicbrainzApiWrapped extends MusicBrainzApi {
             hostname,
             asyncStore,
             logger = loggerNoop
-        } = config;
+        } = config!;
         super(config);
         this.rateLimiterQueue = new RateLimiterQueue(new RateLimiterMemory({points, duration}), {maxQueueSize: 20});
         this.asyncStore = asyncStore;
@@ -50,7 +50,7 @@ export class MusicbrainzApiWrapped extends MusicBrainzApi {
         this.logger.trace(`Rate Tokens => Used 1 | Remaining ${remainingTokens}`);
 
         try {
-            const res = await this.asyncStore.run(cacheKey, async () => {
+            const res = await this.asyncStore.run(cacheKey!, async () => {
                 return await Promise.race([
                     func(this),
                     sleep(timeout)
@@ -63,7 +63,7 @@ export class MusicbrainzApiWrapped extends MusicBrainzApi {
                 throw new Error(res.error);
             }
             return res as T;
-        } catch (e) {
+        } catch (e: any) {
             if(e instanceof SimpleError) {
                 throw e;
             }

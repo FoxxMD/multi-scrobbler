@@ -53,7 +53,7 @@ export class EndpointLastfmSource extends MemorySource {
             return false;
         }
 
-        return (this.config.data.slug === undefined && slug === undefined) || (slug !== undefined && this.config.data.slug !== undefined && this.config.data.slug.toLowerCase().trim() === slug.toLocaleLowerCase().trim());
+        return (this.config.data!.slug === undefined && slug === undefined) || (slug !== undefined && this.config.data!.slug !== undefined && this.config.data!.slug.toLowerCase().trim() === slug.toLocaleLowerCase().trim());
     }
 
     static formatPlayObj(obj: LastFmSingleSubmitPayload, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -109,7 +109,8 @@ export const playStateFromRequest = (obj: LastFmSubmitPayload): PlayerStateData[
         const play = scrobblePayloadToPlay(x);
         play.meta.sourceSOT = SOURCE_SOT.INGRESS;
         return {
-            platformId: [play.meta.deviceId, NO_USER],
+            // TODO strict: deviceId may be undefined here, PlayPlatformId expects string
+            platformId: [play.meta.deviceId!, NO_USER],
             play,
             status: obj.method === 'track.updateNowPlaying' ? REPORTED_PLAYER_STATUSES.playing : REPORTED_PLAYER_STATUSES.unknown,
             stateUpdatedAt: dayjs()

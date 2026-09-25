@@ -243,9 +243,9 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
     declare config: MusicbrainzTransformerConfig;
 
-    protected defaults: MusicbrainzTransformerDataStrong;
+    protected defaults!: MusicbrainzTransformerDataStrong;
 
-    protected api: MusicbrainzApiClientPool;
+    protected api!: MusicbrainzApiClientPool;
     protected clientCache?: Cacheable;
 
     public constructor(config: MusicbrainzTransformerConfig, options: TransformerOptions & {clientCache?: Cacheable}) {
@@ -260,7 +260,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
     protected async doBuildInitData(): Promise<true | string | undefined> {
         this.defaults = parseStageConfig(this.config.defaults, childLogger(this.logger, 'Defaults'));
 
-        this.api = new MusicbrainzApiClientPool(this.config.name, {apis: this.config.data.apis}, {
+        this.api = new MusicbrainzApiClientPool(this.config.name, {apis: this.config.data!.apis}, {
             logger: this.logger,
             cache: this.clientCache,
             logUrl: this.config.options?.logUrl
@@ -280,7 +280,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             type: 'musicbrainz'
         }
 
-        for (const k of ['artists', 'albumArtists', 'title', 'album', 'meta', 'duration']) {
+        for (const k of ['artists', 'albumArtists', 'title', 'album', 'meta', 'duration'] as const) {
             if (!(k in stage)) {
                 stage[k] = true;
                 continue;
@@ -333,32 +333,32 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             searchOrder = this.defaults.searchOrder ?? ['isrc', 'basic']
         } = stageConfig;
         
-        let results: IRecordingMSList;
+        let results!: IRecordingMSList;
         const queries: LifecycleInput[] = [];
 
         for(const searchType of searchOrder) {
             try {
                 switch(searchType) {
                     case 'isrc':
-                        results = await this.searchByIsrc(play, stageConfig, opts);
+                        results = (await this.searchByIsrc(play, stageConfig, opts))!;
                         break;
                     case 'album':
-                        results = await this.searchByAlbum(play, stageConfig, opts);
+                        results = (await this.searchByAlbum(play, stageConfig, opts))!;
                         break;
                     case 'artist':
-                        results = await this.searchByArtist(play, stageConfig, opts);
+                        results = (await this.searchByArtist(play, stageConfig, opts))!;
                         break;
                     case 'basic':
-                        results = await this.searchByBasicFields(play, stageConfig, opts);
+                        results = (await this.searchByBasicFields(play, stageConfig, opts))!;
                         break;
                     case 'freetext':
-                        results = await this.searchByFreeText(play, stageConfig, opts);
+                        results = (await this.searchByFreeText(play, stageConfig, opts))!;
                         break;
                     case 'basicorids':
-                        results = await this.searchByBasicFieldsOrMBIDs(play, stageConfig, opts);
+                        results = (await this.searchByBasicFieldsOrMBIDs(play, stageConfig, opts))!;
                         break;
                     case 'mbidrecording':
-                        results = await this.searchByRecordingMbid(play, stageConfig, opts);
+                        results = (await this.searchByRecordingMbid(play, stageConfig, opts))!;
                         break;
                 }
                 queries.push({type: `mbQuery-${searchType}${results.recordings.length === 0 ? '-empty' : ''}`, input: results.requestQuery});
@@ -383,12 +383,12 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         return {...results, requestQueries: queries};
     }
 
-    public async searchByBasicFields(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList> {
+    public async searchByBasicFields(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList | undefined> {
         this.logger.debug({labels: ['Basic Search']}, 'Searching by artist/album/track');
         return await this.api.searchByRecording(play, opts);
     }
 
-    public async searchByBasicFieldsOrMBIDs(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList> {
+    public async searchByBasicFieldsOrMBIDs(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList | undefined> {
         const using: UsingTypes[] = [];
         const {
             data: {
@@ -412,7 +412,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         return await this.api.searchByRecording(play, {using, ...opts});
     }
 
-    public async searchByIsrc(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList> {
+    public async searchByIsrc(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList | undefined> {
         if(play.data.isrc !== undefined) {
             this.logger.debug({labels: ['ISRC Search']},'Searching with ISRC');
             return await this.api.searchByRecording(play, {using: ['isrc'], ...opts});
@@ -420,7 +420,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         throw new SearchPrerequisiteError('Play does not have ISRC');
     }
 
-    public async searchByRecordingMbid(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList> {
+    public async searchByRecordingMbid(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList | undefined> {
         if(play.data.meta?.brainz?.recording !== undefined) {
             this.logger.debug({labels: ['MBID Search']},'Searching with Recording MBID');
             return await this.api.searchByRecording(play, {using: ['mbidrecording'], ...opts});
@@ -428,7 +428,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         throw new SearchPrerequisiteError('Play does not have recording MBID');
     }
 
-    public async searchByAlbum(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList> {
+    public async searchByAlbum(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList | undefined> {
         // possibly the artist is incorrect (may be combined as one string)
         // if we have an album we can likely still get a decent hit w/o using artist
         if(play.data.album !== undefined && play.data.artists !== undefined && play.data.artists.length > 0) {
@@ -446,7 +446,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         }
     }
 
-    public async searchByArtist(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList> {
+    public async searchByArtist(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList | undefined> {
         const {
             searchArtistMethod = this.defaults.searchArtistMethod,
         } = stageConfig;
@@ -458,12 +458,12 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
                     // try a naive split using any common delimiter found and use the first value as artist
                     // -- this will likely result in a less accurate match but at least it might find something
                     // -- usually the "primary artist" is listed first in a combined artist string so cross your fingers this works
-                    const naiveSplit = splitByFirstRegexFound(play.data.artists[0], [play.data.artists[0]]).map(x => x.trim());
+                    const naiveSplit = splitByFirstRegexFound(play.data.artists[0].name, [play.data.artists[0].name]).map(x => x.trim()); 
                     if(naiveSplit.length > 1) {
                         this.logger.debug({labels: ['Parsed Artist Search']},'Searching with track + first value from artist string split');
                         return await this.api.searchByRecording({...play, data: {
                             ...play.data,
-                            artists: [naiveSplit[0]]
+                            artists: [{name: naiveSplit[0]}]
                         }}, {using: ['title','artist']});
                     } else {
                         throw new SearchPrerequisiteError('Naive parsing did not produce multiple artists');
@@ -491,7 +491,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             }
     }
 
-    public async searchByFreeText(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList> {
+    public async searchByFreeText(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList | undefined> {
         this.logger.debug({labels: ['Freetext Search']},'Trying freetext search');
         const results = await this.api.searchByRecording(play, {freetext: true, ...opts}) as IRecordingMSList;
         results.freeText = true;
@@ -644,7 +644,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
     }
 
     public notify(payload: WebhookPayload): Promise<void> {
-        return;
+        return undefined as unknown as Promise<void>;
     }
 
 }
@@ -668,7 +668,7 @@ export const filterByValidReleaseStatus = <T extends IRecordingMatch[]>(list: T,
             })
         }));
     return releaseFiltered.filter(x => (
-        (list.find(y => y.id === x.id).releases ?? []).length === 0 
+        (list.find(y => y.id === x.id)!.releases ?? []).length === 0 
         && releaseAllowEmpty
     ) 
     || x.releases.length > 0);
@@ -693,7 +693,7 @@ export const filterByValidReleaseGroupPrimary = <T extends IRecordingMatch[]>(li
             })
         }));
     return releaseFiltered.filter(x => (
-        (list.find(y => y.id === x.id).releases ?? []).length === 0 
+        (list.find(y => y.id === x.id)!.releases ?? []).length === 0 
         && releaseAllowEmpty
     ) 
     || x.releases.length > 0);
@@ -718,7 +718,7 @@ export const filterByValidReleaseGroupSecondary = (list: IRecordingMatch[], stag
             })
         }));
     return releaseFiltered.filter(x => (
-        (list.find(y => y.id === x.id).releases ?? []).length === 0 
+        (list.find(y => y.id === x.id)!.releases ?? []).length === 0 
         && releaseAllowEmpty
     )
     || x.releases.length > 0);
@@ -743,7 +743,7 @@ export const filterByValidReleaseCountry = (list: IRecordingMatch[], stageConfig
             })
         }));
     return releaseFiltered.filter(x => (
-        (list.find(y => y.id === x.id).releases ?? []).length === 0 
+        (list.find(y => y.id === x.id)!.releases ?? []).length === 0 
         && releaseAllowEmpty
     ) 
     || x.releases.length > 0);
@@ -753,19 +753,19 @@ export const filterByExplicitTrackMbid = (list: IRecordingMatch[], play: PlayObj
     if (play.data.meta?.brainz?.track === undefined) {
         return [list, false];
     }
-    let recMatch: IRecordingMatch,
+    let recMatch: IRecordingMatch | undefined,
         releaseMatchId: string;
     for (const rec of list) {
         if (recMatch !== undefined) {
             break;
         }
-        for (const rel of rec.releases) {
+        for (const rel of rec.releases!) {
             if (rel.media.some(x => {
                 if(x.tracks !== undefined) {
-                    return x.tracks.some(y => y.id === play.data.meta.brainz.track);
+                    return x.tracks.some(y => y.id === play.data.meta!.brainz!.track);
                 }
                 if(x.track !== undefined) {
-                    return x.track.some(y => y.id === play.data.meta.brainz.track);
+                    return x.track.some(y => y.id === play.data.meta!.brainz!.track);
                 }
                 return false;
             })) {
@@ -777,7 +777,7 @@ export const filterByExplicitTrackMbid = (list: IRecordingMatch[], play: PlayObj
     }
     if (recMatch !== undefined) {
         const r = structuredClone(recMatch);
-        r.releases = r.releases.filter(x => x.id === releaseMatchId);
+        r.releases = r.releases!.filter(x => x.id === releaseMatchId);
         return [[r], true];
     }
     return [list, false];
@@ -787,14 +787,14 @@ export const filterByExplicitReleaseMbid = (list: IRecordingMatch[], play: PlayO
     if (play.data.meta?.brainz?.album === undefined) {
         return [list, false];
     }
-    let recMatch: IRecordingMatch,
+    let recMatch: IRecordingMatch | undefined,
         releaseMatchId: string;
     for (const rec of list) {
         if (recMatch !== undefined) {
             break;
         }
-        for (const rel of rec.releases) {
-            if(rel.id === play.data.meta.brainz.album) {
+        for (const rel of rec.releases!) {
+            if(rel.id === play.data.meta!.brainz!.album) {
                 releaseMatchId = rel.id;
                 recMatch = rec;
             }
@@ -802,7 +802,7 @@ export const filterByExplicitReleaseMbid = (list: IRecordingMatch[], play: PlayO
     }
     if (recMatch !== undefined) {
         const r = structuredClone(recMatch);
-        r.releases = r.releases.filter(x => x.id === releaseMatchId);
+        r.releases = r.releases!.filter(x => x.id === releaseMatchId);
         return [[r], true];
     }
     return [list, false];
@@ -835,9 +835,9 @@ export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: Mus
         const releases = (x.releases ?? []).map((a) => {
             const statAScore = statusPriority.findIndex(x => a.status !== undefined && x === a.status.toLocaleLowerCase()) + 1;
             const grpPAScore = groupPrimaryPriority.findIndex(x => x === a["release-group"]?.["primary-type"]?.toLocaleLowerCase()) + 1;
-            const grpSAScore = (a["release-group"]?.["secondary-types"] ?? []).reduce((acc: number, curr: MBReleaseGroupSecondaryType) => acc + groupSecPriority.findIndex(x => x === (curr as MBReleaseGroupSecondaryType).toLocaleLowerCase()) + 1,0);
+            const grpSAScore = (a["release-group"]?.["secondary-types"] ?? []).reduce((acc: number, curr: string) => acc + groupSecPriority.findIndex(x => x === (curr as MBReleaseGroupSecondaryType).toLocaleLowerCase()) + 1,0);
             const countryAScore = countryPriority.findIndex(x => a.country === undefined ? false : x === a.country.toLocaleLowerCase()) + 1;
-            const compareScore = scoreNormalizedStringsWeighted(play.data.album, a.title, albumWeight, albumWeight !== 0 ? 0.05 : 0);
+            const compareScore = scoreNormalizedStringsWeighted(play.data.album!, a.title, albumWeight, albumWeight !== 0 ? 0.05 : 0);
             return {
                 ...a,
                 albumScore: statAScore + grpPAScore + grpSAScore + countryAScore + compareScore,
@@ -849,7 +849,7 @@ export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: Mus
         if(releases.length > 0) {
             albumScore = releases[0].albumCompareScore;
         }
-        const titleScore = titleWeight === 0 ? 0 : scoreTrackWeightedAndNormalized(play.data.track, x.title, titleWeight, {exact: 0.05, naive: 0.03})[0];
+        const titleScore = titleWeight === 0 ? 0 : scoreTrackWeightedAndNormalized(play.data.track!, x.title, titleWeight, {exact: 0.05, naive: 0.03})[0];
 
         return {
             ...x,

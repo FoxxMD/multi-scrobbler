@@ -234,7 +234,7 @@ export interface PlayMetaBase<D extends DateLike = Dayjs> {
          * IE Frank Sinatra - My way FROM youtube.com <-- URL pointing to specific video
          */
         origin?: string
-        [key: string]: string
+        [key: string]: string | undefined
     }
     /**
      * Hot-linkable images for use with displaying art for this play
@@ -685,7 +685,7 @@ export const actionContextSchema = queueContextSchema.extend({action: z.enum(['a
 
 /**
  * @see https://github.com/ts-essentials/ts-essentials/issues/339#issuecomment-4681920369 */
-export type Replace<Type, Keys extends keyof Type, TReplace> = StrictOmit<Type, Keys> & Record<Keys, TReplace>
+export type Replace<Type extends Record<PropertyKey, any>, Keys extends keyof Type, TReplace> = StrictOmit<Type, Keys> & Record<Keys, TReplace>
 
 type Match<Value, ReplaceTuple extends readonly [any, any][], Acc = never> = ReplaceTuple extends readonly [[infer From, infer To], ...infer Rest extends readonly [any, any][]]
     ? [From] extends [Value]

@@ -47,7 +47,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
     users: string[] = [];
 
     client: Jellyfin
-    api: Api
+    api!: Api
     imageApi!: ImageUrlsApi
     wsClient!: WS;
     address!: string;
@@ -64,7 +64,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
     allowedLibraryTypes: (CollectionType | CollectionTypeOptions)[] = [];
     allowedMediaTypes: MediaType[] = [MediaType.Audio];
 
-    logFilterFailure: false | 'debug' | 'warn';
+    logFilterFailure!: false | 'debug' | 'warn';
 
     mediaIdsSeen: FixedSizeList<string>;
     uniqueDropReasons: FixedSizeList<string>;
@@ -130,7 +130,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         if(usersAllow === true) {
             this.usersAllow = [];
         } else {
-            const ua = parseArrayFromMaybeString(usersAllow, {lower: true});
+            const ua = parseArrayFromMaybeString(usersAllow as string | string[], {lower: true});
             if(ua.length === 1 && ua[0] === 'true') {
                 this.usersAllow = [];
             } else {
@@ -221,7 +221,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         try {
             if(this.config.data.password !== undefined) {
                 const auth = await getAuthenticationApi(this.api).authenticateUserByName({authenticateUserByName: {Username: this.config.data.user, Pw: this.config.data.password}});
-                this.user = auth.data.User;
+                this.user = auth.data.User!;
                 this.logger.info(`Authenticated with user ${this.user.Name}`);
 
                 // not in use for now
@@ -230,7 +230,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
                 this.api.update({accessToken: this.config.data.apiKey});
                 const users = await getUserApi(this.api).getUsers();
                 for(const user of users.data) {
-                    if(user.Name.toLocaleLowerCase() === this.config.data.user.toLocaleLowerCase()) {
+                    if(user.Name!.toLocaleLowerCase() === this.config.data.user.toLocaleLowerCase()) {
                         this.user = user;
                         break;
                     }
@@ -239,7 +239,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
             }
             return true;
         } catch (e) {
-            const unrecoverable = axios.isAxiosError(e) && [401,403].includes(e.status);
+            const unrecoverable = axios.isAxiosError(e) && [401,403].includes(e.status!);
             throw new AuthError('API Key failed to authenticate', {cause: e, unrecoverable});
         }
     }
@@ -257,7 +257,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         try {
             const virtualResp = await getLibraryStructureApi(this.api).getVirtualFolders();
             const folders = virtualResp.data as VirtualFolderInfo[];
-            this.libraries = folders.map(x => ({name: x.Name, paths: x.Locations, collectionType: x.CollectionType}));
+            this.libraries = folders.map(x => ({name: x.Name!, paths: x.Locations!, collectionType: x.CollectionType!}));
         } catch (e) {
             throw new Error('Unable to get server Libraries and paths', {cause: e});
         }
@@ -312,7 +312,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
             } = session.NowPlayingItem;
 
             const allowedLibraries = this.getAllowedLibraries();
-            if(allowedLibraries.length > 0 && (Path === undefined || !allowedLibraries.map(x => x.paths).flat(1).some(x => Path.includes(x)))) {
+            if(allowedLibraries.length > 0 && (Path === undefined || !allowedLibraries.map(x => x.paths).flat(1).some(x => Path!.includes(x)))) {
                 if(Path === undefined) {
                     return 'media does not have a path, cannot be included in librariesAllow';
                 }
@@ -324,14 +324,14 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
                 if(blockedLibraries.length > 0) {
                     let blockedLibrary = undefined;
                     if(Path !== undefined) {
-                        blockedLibrary = blockedLibraries.find(x => x.paths.some(y => Path.includes(y)));
+                        blockedLibrary = blockedLibraries.find(x => x.paths.some(y => Path!.includes(y)));
                     }
                     if(blockedLibrary !== undefined) {
                         return `media included in librariesBlock '${blockedLibrary.name}'`;
                     }
                 }
     
-                if(Path === undefined || !this.getValidLibraries().map(x => x.paths).flat(1).some(x => Path.includes(x))) {
+                if(Path === undefined || !this.getValidLibraries().map(x => x.paths).flat(1).some(x => Path!.includes(x))) {
                     if(Path === undefined) {
                         return 'media does not have a path, cannot be part of a valid library';
                     }
@@ -391,13 +391,13 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
 
         if(AlbumId !== undefined && AlbumPrimaryImageTag !== undefined) {
             const existingArt = play.meta?.art || {};
-            existingArt.album = this.replaceUrlIfNeeded(this.imageApi.getItemImageUrlById(AlbumId, undefined, {maxHeight: 500}));
+            existingArt.album = this.replaceUrlIfNeeded(this.imageApi.getItemImageUrlById(AlbumId!, undefined, {maxHeight: 500}));
             play.meta.art = existingArt;
         }
         if(ParentId !== undefined) {
             const u = joinedUrl(new URL(this.address), '/web/#/details')
-            u.searchParams.append('id', ParentId);
-            u.searchParams.append('serviceId', ServerId);
+            u.searchParams.append('id', ParentId!);
+            u.searchParams.append('serviceId', ServerId!);
             play.meta.url = {
                 ...(play.meta?.url || {}),
                 web: this.replaceUrlIfNeeded(u.toString().replace('%23', '#'))
@@ -428,29 +428,29 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
 
         const meta: BrainzMeta = {};
 
-        if(ProviderIds.MusicBrainzAlbum !== undefined) {
-            meta.album = ProviderIds.MusicBrainzAlbum;
+        if(ProviderIds!.MusicBrainzAlbum !== undefined) {
+            meta.album = ProviderIds!.MusicBrainzAlbum!;
         }
         // jellyfin can return both the Track MBID and Recording MBID
         // https://github.com/jellyfin/jellyfin/blob/0a0aaefad55ed16f88d3a3d61549331342e52377/MediaBrowser.Providers/MediaInfo/AudioFileProber.cs#L421
-        if(ProviderIds.MusicBrainzTrack !== undefined) {
-            meta.track = ProviderIds.MusicBrainzTrack;
+        if(ProviderIds!.MusicBrainzTrack !== undefined) {
+            meta.track = ProviderIds!.MusicBrainzTrack!;
         }
-        if(ProviderIds.MusicBrainzRecording !== undefined) {
-            meta.recording = ProviderIds.MusicBrainzRecording;
+        if(ProviderIds!.MusicBrainzRecording !== undefined) {
+            meta.recording = ProviderIds!.MusicBrainzRecording!;
         }
-        if(ProviderIds.MusicBrainzArtist !== undefined) {
-            meta.artist = [ProviderIds.MusicBrainzArtist];
+        if(ProviderIds!.MusicBrainzArtist !== undefined) {
+            meta.artist = [ProviderIds!.MusicBrainzArtist!];
         }
-        if(ProviderIds.MusicBrainzAlbumArtist !== undefined) {
-            meta.albumArtist = [ProviderIds.MusicBrainzAlbumArtist];
+        if(ProviderIds!.MusicBrainzAlbumArtist !== undefined) {
+            meta.albumArtist = [ProviderIds!.MusicBrainzAlbumArtist!];
         }
 
         let normalizedArtists: ArtistCredit[] = [];
-        if(Artists.length > 0) {
-            normalizedArtists = Artists.map(x => typeof x === 'string' ? artistNameToCredit(x) : artistNameToCredit(noCasePropObj(x)));
-        } else if(ArtistItems.length > 0) {
-            normalizedArtists = ArtistItems.map(x => typeof x === 'string' ? artistNameToCredit(x) : artistNameToCredit(noCasePropObj(x)));
+        if(Artists!.length > 0) {
+            normalizedArtists = Artists!.map(x => typeof x === 'string' ? artistNameToCredit(x)! : artistNameToCredit(noCasePropObj(x))!);
+        } else if(ArtistItems!.length > 0) {
+            normalizedArtists = ArtistItems!.map(x => typeof x === 'string' ? artistNameToCredit(x)! : artistNameToCredit(noCasePropObj(x) as Partial<ArtistCredit>)!);
         }
         let playArtists: ArtistCredit[] = [];
         if(normalizedArtists.length === 1 && meta.artist !== undefined) {
@@ -458,9 +458,9 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         } else {
             playArtists = normalizedArtists;
         }
-        let normalizedAlbumArtists = AlbumArtists.map(x => typeof x === 'string' ? artistNameToCredit(x) : artistNameToCredit(noCasePropObj(x)));
+        let normalizedAlbumArtists = AlbumArtists!.map(x => typeof x === 'string' ? artistNameToCredit(x)! : artistNameToCredit(noCasePropObj(x) as Partial<ArtistCredit>)!);
         if(AlbumArtist !== undefined) {
-            normalizedAlbumArtists.push({name: AlbumArtist});
+            normalizedAlbumArtists.push({name: AlbumArtist!});
             normalizedAlbumArtists = Array.from(new Set(normalizedAlbumArtists.map(x => x.name))).map(x => ({name: x}))
         }
         let playAlbumArtists: ArtistCredit[] = [];
@@ -473,15 +473,15 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         const play: PlayObjectMinimal = {
             data: {
                 artists: playArtists,
-                album: Album,
-                track: Name,
+                album: Album!,
+                track: Name!,
                 albumArtists: playAlbumArtists,
                 playDate: UserData !== undefined ? dayjs(UserData.LastPlayedDate) : undefined,
-                duration: RunTimeTicks !== undefined ? ticksToSeconds(RunTimeTicks) : undefined
+                duration: RunTimeTicks !== undefined ? ticksToSeconds(RunTimeTicks!) : undefined
             },
             meta: {
                 trackId: Id,
-                server: ServerId,
+                server: ServerId!,
                 mediaType: md,
                 source: 'Jellyfin',
             }
@@ -502,7 +502,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         const sessions = await getSessionApi(this.api).getSessions();
         const nonMSSessions = sessions.data
         .filter(x => x.DeviceId !== this.deviceId)
-        .map(x => [this.sessionToPlayerState(x), x])
+        .map(x => [this.sessionToPlayerState(x), x] as [PlayerStateDataMaybePlay, SessionInfoDto])
         .filter((x: [PlayerStateDataMaybePlay, SessionInfoDto]) => {
             return x[0].play !== undefined
             || this.hasPlayer(x[0]);
@@ -549,12 +549,12 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
                 IsPaused,
                 CanSeek
             }
-        } = obj;
+        } = obj as SessionInfoDto & Required<Pick<SessionInfoDto, 'PlayState'>>;
 
         const msDeviceId = combinePartsToString([shortDeviceId(DeviceId), DeviceName, Client]);
         // sometimes, immediately after a track change on the player, PlayState indicates it is NOT paused but
         // does not return PositionTicks
-        const playerPosition = PositionTicks !== undefined ? ticksToSeconds(PositionTicks) : undefined; // dayjs.duration(PositionTicks / 1000, 'ms').asSeconds() : undefined;
+        const playerPosition = PositionTicks !== undefined ? ticksToSeconds(PositionTicks!) : undefined; // dayjs.duration(PositionTicks / 1000, 'ms').asSeconds() : undefined;
 
         let play: PlayObject | undefined;
         if(NowPlayingItem !== undefined) {
@@ -573,9 +573,9 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
                 }
             }
 
-            if(this.config.options.logPayload && !this.mediaIdsSeen.data.includes(NowPlayingItem.Id)) {
+            if(this.config.options!.logPayload && !this.mediaIdsSeen.data.includes(NowPlayingItem.Id!)) {
                 this.logger.debug(`First time seeing media ${NowPlayingItem.Id} on ${msDeviceId} (play position ${playerPosition}) => ${JSON.stringify(NowPlayingItem)}`);
-                this.mediaIdsSeen.add(NowPlayingItem.Id);
+                this.mediaIdsSeen.add(NowPlayingItem.Id!);
             }
         }
 
@@ -587,7 +587,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         const sessionUpdatedAt = LastActivityDate !== undefined ? dayjs(LastActivityDate) : undefined;
 
         return {
-            platformId: [msDeviceId, UserName ?? UserId],
+            platformId: [msDeviceId!, (UserName ?? UserId)!],
             play,
             status: reportedStatus,
             position: playerPosition,

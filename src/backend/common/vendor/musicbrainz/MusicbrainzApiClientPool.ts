@@ -47,7 +47,7 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
 
     declare config: MusicbrainzApiClientConfig;
     protected rrProxy: CircuitBreakerProxy<MusicbrainzApiWrapped>
-    protected url: URLData;
+    protected url!: URLData;
     cache: Cacheable;
     protected asyncStore: AsyncLocalStorage<string>;
 
@@ -129,7 +129,7 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
         this.rrProxy = ProxyWithCircuitBreaker.create<MusicbrainzApiWrapped>(apis,() => ({
             halfOpenAfter: 30000,
             breaker: new ConsecutiveBreaker(3),
-            onFailure: ({reason, duration}) => {
+            onFailure: ({reason, duration}: any) => {
                 this.logger.warn(new SimpleError(`Error occurred after ${duration}ms, will try next host`, {cause: reason, shortStack: true}));
             },
         }), {
@@ -150,7 +150,7 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
         } = options || {};
 
         try {
-            const cachedTransform = useCachedResult ? await this.cache.get<T>(cacheKey) : undefined;
+            const cachedTransform = useCachedResult ? await this.cache.get<T>(cacheKey!) : undefined;
             if (cachedTransform !== undefined) {
                 const cacheUrl = await this.cache.get<string>(`${cacheKey}-url`);
                 const cacheQs = await this.cache.get<string>(`${cacheKey}-qs`);
@@ -240,12 +240,12 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
             }
             if(escapeCharacters) {
                 for(const [k,v] of Object.entries(query)) {
-                    query[k] = Array.isArray(v) ? v.map(escapeLuceneSpecialChars) : escapeLuceneSpecialChars(v);
+                    (query as any)[k] = Array.isArray(v) ? v.map(escapeLuceneSpecialChars) : escapeLuceneSpecialChars(v);
                 }
             }
             if(removeCharacters) {
                  for(const [k,v] of Object.entries(query)) {
-                    query[k] = Array.isArray(v) ? v.map(removeNonWordCharacters) : removeNonWordCharacters(v);
+                    (query as any)[k] = Array.isArray(v) ? v.map(removeNonWordCharacters) : removeNonWordCharacters(v);
                 }
             }
 
@@ -337,7 +337,7 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
     testConnection = async () => {
         for(const a of this.config.apis) {
             try {
-                const u = normalizeWebAddress(a.url);
+                const u = normalizeWebAddress(a.url!);
                 await isPortReachableConnect(u.port, { host: u.url.hostname });
             } catch (e) {
                 throw new Error('Could not reach API URL endpoint', { cause: e });
@@ -357,10 +357,10 @@ export const recordingToPlay = (data: IRecording, options?: {ignoreVA?: boolean}
         ignoreVA = true,
     } = options || {};
 
-    let album: IRelease;
+    let album: IRelease | undefined;
 
-    let albumArtists: ArtistCredit[];
-    let albumArtistIds: string[];
+    let albumArtists: ArtistCredit[] | undefined;
+    let albumArtistIds: string[] | undefined;
     const artists = (data["artist-credit"] ?? []).map(x => ({ name: x.name, mbid: x.artist.id}));
     if(data.releases !== undefined && data.releases.length > 0) {
         album = data.releases[0];

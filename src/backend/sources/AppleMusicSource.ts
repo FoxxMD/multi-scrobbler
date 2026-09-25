@@ -150,7 +150,7 @@ export default class AppleMusicSource extends AbstractSource {
         return baseFormatPlayObj(track, play);
     }
 
-    recentlyPlayedTrackIsValid = (playObj: PlayObject) => playObj.meta.newFromSource
+    recentlyPlayedTrackIsValid = (playObj: PlayObject) => playObj.meta.newFromSource!
 
     getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
         return this.getTracks(this.UPSTREAM_TRACK_LIMIT);
@@ -218,7 +218,7 @@ export default class AppleMusicSource extends AbstractSource {
         return play;
     }
 
-    private getStorefront = async (): Promise<string | undefined> => {
+    private getStorefront = async (): Promise<string | null | undefined> => {
         if (this.storefront !== undefined) {
             return this.storefront;
         }

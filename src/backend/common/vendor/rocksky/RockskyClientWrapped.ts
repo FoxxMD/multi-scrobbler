@@ -67,7 +67,7 @@ export class RockskyClientPool extends AbstractApiClient {
 
         const usedApis: RockskyClientWrapped[] = [];
         const hosts: string[] = [];
-        for (const rsConfig of this.config.apis) {
+        for (const rsConfig of this.config.apis!) {
             if ((rsConfig.enable ?? true) === false) {
                 this.logger.verbose(`Not using config for ${rsConfig.url ?? ROCKSKY_URL} because it is disabled`);
                 continue;
@@ -109,7 +109,7 @@ export class RockskyClientPool extends AbstractApiClient {
         this.rsProxy = ProxyWithCircuitBreaker.create<RockskyClientWrapped>(usedApis,() => ({
             halfOpenAfter: 30000,
             breaker: new ConsecutiveBreaker(3),
-            onFailure: ({reason, duration}) => {
+            onFailure: ({reason, duration}: {reason: any, duration: number}) => {
                 this.logger.warn(new SimpleError(`Error occurred after ${duration}ms, will try next host`, {cause: reason, shortStack: true}));
             },
         }), {

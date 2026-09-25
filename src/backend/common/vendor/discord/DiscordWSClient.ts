@@ -34,7 +34,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
 
     declare config: DiscordWSData;
 
-    heartbeatInterval: number
+    heartbeatInterval?: number
     // used for debugging/troubleshooting weird interval speed up
     // can remove once this bug is for sure squashed
     lastHeartbeatIntervalSentAt?: Dayjs;
@@ -43,15 +43,15 @@ export class DiscordWSClient extends DiscordAbstractClient {
 
     // https://docs.discord.com/developers/events/gateway#ready-event
     // used for resuming session, if possible
-    session_id: string;
-    resume_gateway_url: string;
-    sequence: number;
+    session_id?: string;
+    resume_gateway_url?: string;
+    sequence?: number;
 
     initialGatewayUrl?: string;
 
     gatewayMsgLogger: Logger;
 
-    user: APIUser;
+    user?: APIUser;
 
     declare client: WS;
 
@@ -88,7 +88,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
     initClient = async () => {
 
         const url = () => {
-            let baseUrl: string;
+            let baseUrl: string | undefined;
             if (this.resume_gateway_url !== undefined) {
                 baseUrl = this.resume_gateway_url;
             } else {
@@ -120,7 +120,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
                         GatewayCloseCodes.InvalidAPIVersion,
                         GatewayCloseCodes.InvalidIntents,
                         GatewayCloseCodes.DisallowedIntents
-                    ].includes(e.code)) {
+                    ].includes(e.code!)) {
                         this.canResume = false;
                     }
                     // don't attempt to reconnect, will always fail
@@ -333,8 +333,8 @@ export class DiscordWSClient extends DiscordAbstractClient {
         } else {
             if(this.lastHeartbeatIntervalSentAt !== undefined) {
                 const diff = dayjs().diff(this.lastHeartbeatIntervalSentAt, 'ms');
-                if(diff < this.heartbeatInterval && this.heartbeatInterval - diff > 2000) {
-                    this.logger.warn(`Time since last heartbeat interval sent is ${this.heartbeatInterval - diff}ms shorter than interval (${this.heartbeatInterval})`)
+                if(diff < this.heartbeatInterval! && this.heartbeatInterval! - diff > 2000) {
+                    this.logger.warn(`Time since last heartbeat interval sent is ${this.heartbeatInterval! - diff}ms shorter than interval (${this.heartbeatInterval})`)
                 }
             }
             const sent = this.sendHeartbeat(true);
@@ -450,8 +450,8 @@ export class DiscordWSClient extends DiscordAbstractClient {
     sendResume() {
         const data: GatewayResumeData = {
             token: this.config.token,
-            session_id: this.session_id,
-            seq: this.sequence
+            session_id: this.session_id!,
+            seq: this.sequence!
         }
 
         if(this.client.OPEN !== this.client.readyState) {
@@ -644,7 +644,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
 
     playStateToActivity = async (data: SourcePlayerObj): Promise<GatewayActivity> => {
         const {activity: msActivity, artUrl} = playStateToActivityData(data);
-        const assets = await this.getArtAsset(data.play, artUrl);
+        const assets = await this.getArtAsset(data.play!, artUrl);
         if(assets !== undefined) {
             const {
                 assets: msAssets = {}
@@ -653,7 +653,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
                 ...msAssets,
                 ...assets
             }
-        } else if(Object.keys(msActivity.assets ?? {}).length === 1 && msActivity.assets.largeText !== undefined) {
+        } else if(Object.keys(msActivity.assets ?? {}).length === 1 && msActivity.assets!.largeText !== undefined) {
             // this means we can't set any artwork, likely because there is no applicationId. So delete all assets to ensure activity is accepted
             delete msActivity.assets;
         }
@@ -676,7 +676,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
 
         const activity = await this.playStateToActivity(data);
 
-        const play = isPlayObject(data) ? data : data.play;
+        const play = (isPlayObject(data) ? data : data.play)!;
 
         let clearTime = dayjs().add(260, 'seconds'); // funny number
         if (activity.timestamps?.end !== undefined) {
@@ -729,7 +729,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
         return {
             since: null,
             activities: [],
-            status: this.lastActiveStatus,
+            status: this.lastActiveStatus!,
             // TODO determine this?
             afk: this.lastActiveStatus === PresenceUpdateStatus.Idle
         }
@@ -750,7 +750,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
     }
 
     presenceIsAllowedByStatus = (status?: PresenceUpdateStatus | StatusType): [boolean, string?] => {
-        if (!this.config.statusOverrideAllow.includes(status as StatusType ?? this.lastActiveStatus as StatusType)) {
+        if (!this.config.statusOverrideAllow!.includes(status as StatusType ?? this.lastActiveStatus as StatusType)) {
             return [false, `most active session has a disallowed status: ${status ?? this.lastActiveStatus}`];
         }
         return [true];
@@ -760,7 +760,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
         const activities = manualActivities ?? this.lastActivities;
         const listeningActivities = activities.filter(x => x.type === ACTIVITY_TYPE.Listening);
         if (listeningActivities.length !== 0) {
-            const disallowedActivityName = activities.find(x => !this.config.listeningActivityAllow.some(y => x.name.toLocaleLowerCase().includes(y.toLocaleLowerCase())));
+            const disallowedActivityName = activities.find(x => !this.config.listeningActivityAllow!.some(y => x.name.toLocaleLowerCase().includes(y.toLocaleLowerCase())));
             if (disallowedActivityName !== undefined) {
                 return [false, `a session has a listening activity MS is not allowed to broadcast at the same time as: ${disallowedActivityName.name}`];
             }
@@ -834,6 +834,6 @@ export const activityDataToGatewayActivity = (data: ActivityData): GatewayActivi
         assets,
         ...rest,
     }
-    );
+    )!;
     return activity as GatewayActivity;
 }

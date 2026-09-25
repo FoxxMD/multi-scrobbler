@@ -1,8 +1,7 @@
-import type { PickKeys } from "ts-essentials"
 import type { CompareOpKey, ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
 import type { ClientType, ComponentAuthType, DeepReplaceValue, MonitoringStatus, QueueContext } from "./Atomic.ts"
 import type { SourceType } from "./Atomic.ts"
-import type { ComponentType, DateLike, ErrorLike, JsonPlayObject, PlayState, QueueName, Replace, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.ts"
+import type { ComponentType, DateLike, ErrorLike, JsonPlayObject, PlayState, QueueName, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.ts"
 import type { Dayjs } from "dayjs"
 import type { ErrorIsh } from "./ErrorUtils.ts"
 import type { PlayEvent } from "./PlayEvent.ts"
@@ -92,14 +91,19 @@ export type ComponentCommonApi = {
     queued: number
 } & Omit<ComponentMinimalSelect, 'type'>
 
-export type ComponentCommonApiJson = Replace<ComponentCommonApi, PickKeys<ComponentCommonApi, Dayjs>, string>;
+/** Maps Dayjs (including nullable/optional Dayjs) properties to string, preserving optionality */
+// nullable Dayjs fields are emitted as undefined (key omitted) when missing, so allow undefined as well as null
+type DayjsJsonVal<V> = Dayjs extends V ? Exclude<V, Dayjs> | string | (null extends V ? undefined : never) : V;
+type DayjsToJson<T> = { [K in keyof T]: DayjsJsonVal<T[K]> };
+
+export type ComponentCommonApiJson = DayjsToJson<ComponentCommonApi>;
 
 export type ComponentHistoricalApi = {
     synced: boolean
-    syncedReason: string | undefined
-    syncError: ErrorIsh | undefined
-    lastImport: Dayjs
-    lastImportSuccess: Dayjs
+    syncedReason: string | null | undefined
+    syncError: ErrorIsh | null | undefined
+    lastImport: Dayjs | undefined
+    lastImportSuccess: Dayjs | undefined
 }
 
 export type ComponentDetailedApi = ComponentCommonApi & {
@@ -117,7 +121,7 @@ export type ComponentCientApiBase = {
 }
 
 export type ComponentClientApi = ComponentDetailedApi & ComponentCientApiBase & Partial<ComponentHistoricalApi>;
-export type ComponentClientApiJson = Replace<ComponentClientApi, PickKeys<ComponentClientApi, Dayjs>, string>;
+export type ComponentClientApiJson = DayjsToJson<ComponentClientApi>;
 
 export type ComponentSourceApiBase = {
     sot: SOURCE_SOT_TYPES
@@ -128,7 +132,7 @@ export type ComponentSourceApiBase = {
 }
 
 export type ComponentSourceApi = ComponentDetailedApi & ComponentSourceApiBase & Partial<ComponentHistoricalApi>;
-export type ComponentSourceApiJson = Replace<ComponentSourceApi, PickKeys<ComponentSourceApi, Dayjs>, string>;
+export type ComponentSourceApiJson = DayjsToJson<ComponentSourceApi>;
 
 export type SubsonicSourceApiJson = ComponentSourceApiJson & { playbackReporting?: boolean }
 

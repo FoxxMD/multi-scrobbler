@@ -143,7 +143,7 @@ export const playWithLifecycleScrobble = async (play: PlayObject, opts: Scrobble
   }
 
   if(warnings) {
-    scrobbleRes.warnings = faker.helpers.multiple(faker.lorem.sentence, {count: {min: 1, max: 3}});
+    scrobbleRes.warnings = faker.helpers.multiple(faker.lorem.sentence as (v: unknown, index: number) => string, {count: {min: 1, max: 3}});
   }
 
   scrobbleRes.response = generateRandomObj(2);
@@ -230,7 +230,7 @@ export const generateLifecycleStep = (play: PlayObject, opts: GenerateLifecycleO
   let somethingModified = false;
   while (!somethingModified) {
     new Traverse(modifiedPlay).forEach((ctx, x) => {
-      if (modifiableKeys.includes(ctx.key)) {
+      if (modifiableKeys.includes(ctx.key!)) {
         if (faker.datatype.boolean(0.3)) {
           if(ctx.key === 'meta' && (ctx.parent === undefined || ctx.parent.key !== 'data')) {
             return;
@@ -245,7 +245,7 @@ export const generateLifecycleStep = (play: PlayObject, opts: GenerateLifecycleO
               ctx.update(generateMbid());
             }
           } else {
-            ctx.update(randomPlay.data[ctx.key]);
+            ctx.update(randomPlay.data[ctx.key as keyof typeof randomPlay.data]);
           }
         }
       }
@@ -265,7 +265,7 @@ export interface RandomObjOptions {
   allowUndefined?: boolean
 }
 
-const generateRandomVal = (depth: number = 0, opt: RandomObjOptions = {}, typeId?: number) => {
+const generateRandomVal = (depth: number = 0, opt: RandomObjOptions = {}, typeId?: number): any => {
   const i = typeId ?? faker.number.int({ min: 1, max: depth > (opt.maxDepth ?? 3) ? 6 : 8 });
   switch (i) {
     case 1:
@@ -290,7 +290,7 @@ const generateRandomVal = (depth: number = 0, opt: RandomObjOptions = {}, typeId
   }
 }
 
-export const generateRandomObj = (depth: number = 0, opt: RandomObjOptions = {}) => {
+export const generateRandomObj = (depth: number = 0, opt: RandomObjOptions = {}): any => {
   const tgrt: any = {}
 
   const keyCount = opt.keyCount ?? faker.number.int({ min: 1, max: 13 });

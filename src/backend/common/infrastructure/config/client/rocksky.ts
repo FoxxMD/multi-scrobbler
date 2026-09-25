@@ -16,7 +16,7 @@ export const rockSkyDataSchema = z.object({
     handle: z.string().meta({
         description: "The **fully-qualified** handle, or identifier, for your Atmosphere account"
     }),
-    appPassword: atProtoAppDataSchema.shape.appPassword.optional().meta(atProtoAppDataSchema.shape.appPassword.meta()),
+    appPassword: atProtoAppDataSchema.shape.appPassword.optional().meta(atProtoAppDataSchema.shape.appPassword.meta()!),
     /**
      * Access Token generated from https://rocksky.app/access-tokens in Rocksky for your account
      *

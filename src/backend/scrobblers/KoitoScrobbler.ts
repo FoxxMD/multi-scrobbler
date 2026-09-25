@@ -85,7 +85,7 @@ export default class KoitoScrobbler extends AbstractScrobbleClient {
                 this.logger.info(`Scrobbled (Backlog) => (${source}) ${buildTrackString(playObj)}`);
             }
             return result;
-        } catch (e) {
+        } catch (e: any) {
             await this.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             throw e;
         }
@@ -93,7 +93,7 @@ export default class KoitoScrobbler extends AbstractScrobbleClient {
 
     doPlayingNow = async (data: SourcePlayerObj) => {
         try {
-            await this.api.submitListen(data.play, { listenType: 'playing_now'});
+            await this.api.submitListen(data.play!, { listenType: 'playing_now'});
         } catch (e) {
             throw e;
         }

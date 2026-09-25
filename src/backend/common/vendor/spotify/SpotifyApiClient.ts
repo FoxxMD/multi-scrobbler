@@ -135,19 +135,19 @@ export const chooseImageByResolution = (images: SpotifyApi.ImageObject[], opts: 
         fallbackBest = false
     } = opts;
 
-    let bestImage: SpotifyApi.ImageObject,
+    let bestImage: SpotifyApi.ImageObject | undefined,
         bestRes: number = 0;
 
     for (const i of images) {
-        if (fallbackBest && i.height + i.width > bestRes) {
-            bestRes = i.height + i.width;
+        if (fallbackBest && i.height! + i.width! > bestRes) {
+            bestRes = i.height! + i.width!;
             bestImage = i;
         }
         if (minHeight !== undefined || minWidth !== undefined) {
-            if (minHeight !== undefined && i.height < minHeight) {
+            if (minHeight !== undefined && i.height! < minHeight) {
                 continue;
             }
-            if (minWidth !== undefined && i.width < minWidth) {
+            if (minWidth !== undefined && i.width! < minWidth) {
                 continue;
             }
             return i;
@@ -157,7 +157,7 @@ export const chooseImageByResolution = (images: SpotifyApi.ImageObject[], opts: 
     if (fallbackBest === false) {
         throw new Error(`No image met minimum resolution of ${minHeight}x${minHeight}`);
     }
-    return bestImage;
+    return bestImage!;
 }
 
 export const trackToPlay = (track: SpotifyApi.TrackObjectFull): PlayObject => {
@@ -184,8 +184,8 @@ export const trackToPlay = (track: SpotifyApi.TrackObjectFull): PlayObject => {
     const play: PlayObjectMinimal = {
         data: {
             track: name,
-            artists: artists.map(x => artistNameToCredit(x.name)),
-            albumArtists: actualAlbumArtists.map(x => artistNameToCredit(x.name)),
+            artists: artists.map(x => artistNameToCredit(x.name)!),
+            albumArtists: actualAlbumArtists.map(x => artistNameToCredit(x.name)!),
             album: album?.name,
             duration: duration_ms !== undefined ? Math.round(duration_ms / 1000) : undefined,
             isrc,

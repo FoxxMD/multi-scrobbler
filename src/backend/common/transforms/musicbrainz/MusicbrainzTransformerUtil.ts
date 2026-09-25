@@ -149,7 +149,7 @@ export const PRESETS: Record<string, MusicbrainzTransformerData> = {
 
 export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
     const mbEnv = process.env.MB_PRESETS;
-    let mbConfig: MusicbrainzTransformerConfig;
+    let mbConfig: MusicbrainzTransformerConfig | undefined;
     if (mbEnv !== undefined && mbEnv.trim() !== '') {
         mbConfig = {
             type: 'musicbrainz',
@@ -182,7 +182,7 @@ export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
         }
 
         if (soSet.size > 0) {
-            mbConfig.defaults.searchOrder = Array.from(soSet);
+            mbConfig.defaults!.searchOrder = Array.from(soSet);
         }
         logger.debug(`Using presets: ${presets.join(',')}`);
     }

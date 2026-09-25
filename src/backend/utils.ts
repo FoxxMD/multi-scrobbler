@@ -217,7 +217,7 @@ export const remoteHostIdentifiers = (req: Request): RemoteIdentityParts => {
     const proxyRemote = Array.isArray(req.headers["x-forwarded-for"]) ? req.headers["x-forwarded-for"][0] : req.headers["x-forwarded-for"];
     const ua = req.headers["user-agent"];
 
-    return {host: remote, proxy: proxyRemote, agent: ua};
+    return {host: remote!, proxy: proxyRemote, agent: ua};
 }
 
 export const remoteHostStr = (req: Request): string => {
@@ -232,7 +232,7 @@ export const remoteHostStr = (req: Request): string => {
 export const removeDuplicates = (plays: PlayObject[]): PlayObject[] => {
     return plays.reduce((acc: PlayObject[], currPlay: PlayObject) => {
         if(currPlay.meta.trackId !== undefined && currPlay.meta.deviceId !== undefined && currPlay.data.playDate !== undefined) {
-            if(acc.some((x: PlayObject) => x.meta.trackId === currPlay.meta.trackId && x.meta.deviceId === currPlay.meta.deviceId && x.data.playDate.isSame(currPlay.data.playDate, 'minute'))) {
+            if(acc.some((x: PlayObject) => x.meta.trackId === currPlay.meta.trackId && x.meta.deviceId === currPlay.meta.deviceId && x.data.playDate!.isSame(currPlay.data.playDate, 'minute'))) {
                 // don't add current play to list if we find an existing that matches track, device, and play date
                 return acc;
             }
@@ -255,10 +255,10 @@ export const getProgress = (initial: ProgressAwarePlayObject, curr: PlayObject):
 export const thresholdResultSummary = (result: ScrobbleThresholdResult) => {
     const parts: string[] = [];
     if(result.duration.passes !== undefined) {
-        parts.push(`tracked time of ${result.duration.value.toFixed(2)}s (wanted ${result.duration.threshold}s)`);
+        parts.push(`tracked time of ${result.duration.value!.toFixed(2)}s (wanted ${result.duration.threshold}s)`);
     }
     if(result.percent.passes !== undefined) {
-        parts.push(`tracked percent of ${(result.percent.value).toFixed(2)}% (wanted ${result.percent.threshold}%)`)
+        parts.push(`tracked percent of ${(result.percent.value!).toFixed(2)}% (wanted ${result.percent.threshold}%)`)
     }
 
     return `${result.passes ? 'met' : 'did not meet'} thresholds with ${parts.join(' and ')}`;
@@ -435,7 +435,7 @@ export const getFirstNonEmptyVal = <T = unknown>(values: unknown[], options: Non
     for(const v of values) {
         const nonEmptyVal = getNonEmptyVal(v, options);
         if(nonEmptyVal !== undefined) {
-            return nonEmptyVal as T;
+            return nonEmptyVal as NonNullable<T>;
         }
     }
     return undefined;
@@ -451,7 +451,7 @@ export const getNonEmptyVal = <T = unknown>(value: unknown, options: NonEmptyOpt
     if (options.test !== undefined && options.test(value as T) === false) {
         return undefined;
     }
-    return value as T;
+    return value as NonNullable<T>;
 }
 
 const nonEmptyStringOpts: NonEmptyOptions<string> = { ofType: 'string', test: (v) => v.trim() !== '' };

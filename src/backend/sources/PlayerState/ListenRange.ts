@@ -23,12 +23,12 @@ export abstract class ListenRange {
     public abstract isPositional(): boolean;
     public abstract isInitial(): boolean;
     public abstract seeked(position?: number, reportedTS?: Dayjs): [boolean, Second?];
-    public abstract setRangeStart(data: ListenProgress | Partial<PlayProgress>);
-    public abstract setRangeEnd(data: ListenProgress | Partial<PlayProgress>);
+    public abstract setRangeStart(data: ListenProgress | Partial<PlayProgress>): void;
+    public abstract setRangeEnd(data: ListenProgress | Partial<PlayProgress>): void;
     public abstract getDuration(): Second;
     public abstract getPosition(): Second | undefined;
-    public abstract finalize(position?: number);
-    public abstract toJSON();
+    public abstract finalize(position?: number): void;
+    public abstract toJSON(): ListenProgress[];
 }
 
 export class ListenRangeTS extends ListenRange implements ListenRangeData {
@@ -70,7 +70,7 @@ export class ListenRangeTS extends ListenRange implements ListenRangeData {
         return this.start.getDuration(this.end);
     }
 
-    public getPosition(): Second {
+    public getPosition(): Second | undefined {
         return this.end.position;
     }
 
@@ -98,7 +98,7 @@ export class ListenRangePositional extends ListenRange {
         this.allowedDrift = allowedDrift;
         this.rtTruth = rtTruth;
         this.rtPlayer = new GenericRealtimePlayer();
-        this.rtPlayer.setPosition(start.position * 1000);
+        this.rtPlayer.setPosition(start!.position * 1000);
         if(rtImmediate) {
             this.rtPlayer.play();
         }

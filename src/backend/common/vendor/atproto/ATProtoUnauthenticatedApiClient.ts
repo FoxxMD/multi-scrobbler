@@ -26,7 +26,7 @@ export class ATProtoUnauthenticatedApiClient extends AbstractATProtoApiClient {
                 }
             });
             return response;
-        } catch (e) {
+        } catch (e: any) {
             throw new UpstreamError(`Failed to list scrobble record`, { cause: e, response: 'response' in e ? e.response : undefined });
         }
     }

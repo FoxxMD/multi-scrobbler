@@ -20,7 +20,7 @@ import type { MarkOptional } from "ts-essentials";
 // typings from Formidable are all nuts.
 // VolatileFile is missing buffer and also does not extend File even though it should
 
-export const getValidMultipartJsonFile = (files: Files | File): [typeof VolatileFile, string[]?] => {
+export const getValidMultipartJsonFile = (files: Files | File): [typeof VolatileFile | undefined, string[]?] => {
 
     const logs: string[] = [];
 
@@ -28,7 +28,7 @@ export const getValidMultipartJsonFile = (files: Files | File): [typeof Volatile
 
         if (isVolatileFile(files)) {
             if ('mimetype' in files && files.mimetype !== undefined) {
-                if (files.mimetype.includes('json')) {
+                if (files.mimetype!.includes('json')) {
                     logs.push(`Found ${getFileIdentifier(files)} with mimetype '${files.mimetype}'`)
                     return [files as unknown as typeof VolatileFile, logs];
                 } else {
@@ -42,7 +42,7 @@ export const getValidMultipartJsonFile = (files: Files | File): [typeof Volatile
                 if (Array.isArray(namedFile)) {
                     for (const [index, file] of Object.entries(namedFile)) {
                         if ('mimetype' in file && file.mimetype !== undefined) {
-                            if (file.mimetype.includes('json')) {
+                            if (file.mimetype!.includes('json')) {
                                 logs.push(`Found ${partName}.${index}.${getFileIdentifier(file)} with mimetype '${file.mimetype}'`)
                                 return [file as unknown as typeof VolatileFile, logs];
                             } else {
@@ -54,9 +54,9 @@ export const getValidMultipartJsonFile = (files: Files | File): [typeof Volatile
                     }
                 } else {
                     // this shouldn't happen but it was happening so...
-                    const singleFile = namedFile as File;
+                    const singleFile = namedFile as unknown as File;
                     if (typeof singleFile === 'object' && 'mimetype' in singleFile && singleFile.mimetype !== undefined) {
-                        if (singleFile.mimetype.includes('json')) {
+                        if (singleFile.mimetype!.includes('json')) {
                             logs.push(`Found ${partName}.${getFileIdentifier(singleFile)} with mimetype '${singleFile.mimetype}'`);
                             return [namedFile as unknown as typeof VolatileFile, logs];
                         } else {
@@ -130,7 +130,7 @@ export const tryApiCall = async <T = Response>(reqFunc: () => T, opts: TryApiCal
         return await pRetry(() => reqFunc(), {
             ...retryOpts,
             shouldRetry(context) {
-                let willRetry: boolean;
+                let willRetry: boolean | undefined;
                 if (shouldRetry !== undefined) {
                     try {
                         const res = shouldRetry(context);
@@ -147,7 +147,7 @@ export const tryApiCall = async <T = Response>(reqFunc: () => T, opts: TryApiCal
                         willRetry = false;
                     } else if (isNodeNetworkException(cause)) {
                         willRetry = true;
-                    } else if (noRetryStatus.includes(cause.status)) {
+                    } else if (noRetryStatus.includes(cause.status!)) {
                         willRetry = false;
                     } else {
                         willRetry = true;

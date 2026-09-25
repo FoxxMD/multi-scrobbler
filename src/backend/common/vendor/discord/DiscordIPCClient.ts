@@ -42,7 +42,7 @@ export class DiscordIPCClient extends DiscordAbstractClient {
         const {
             ipcLocations = []
         } = this.config;
-        const pathList: PathData[] = [...ipcLocations.map(x => ({platform: typeof x === 'string' ? ['linux','darwin'] as NodeJS.Platform[] : ['linux','darwin','win32'] as NodeJS.Platform[], format: (_) =>  x})), ...defaultPathList];
+        const pathList: PathData[] = [...ipcLocations.map(x => ({platform: typeof x === 'string' ? ['linux','darwin'] as NodeJS.Platform[] : ['linux','darwin','win32'] as NodeJS.Platform[], format: (_: number) =>  x})), ...defaultPathList];
         const canidatePaths = pathList.filter(x => x.platform.includes(process.platform));
         const candidateHint = canidatePaths.map(x => {
             const res = x.format(0);
@@ -79,11 +79,11 @@ export class DiscordIPCClient extends DiscordAbstractClient {
             this.logger.debug(e);
         });
         this.client.transport.on('close', (e) => {
-            const closeError = typeof e === 'string' ? e : `${e.code} - ${e.message}`;
+            const closeError = typeof e === 'string' ? e : `${e!.code} - ${e!.message}`;
             this.closeErrors.push(closeError);
             this.logger.warn(`Closed by transport: ${closeError}`);
             if(typeof e !== 'string') {
-                if(e.code === 4000) {
+                if(e!.code === 4000) {
                     this.appError = true;
                     this.emitter.emit('stopped', { authFailure: true });
                 }
@@ -98,7 +98,7 @@ export class DiscordIPCClient extends DiscordAbstractClient {
         this.closeErrors = [];
         try {
             await this.client.login();
-        } catch(e) {
+        } catch(e: any) {
             if(e.message.includes('Unable to find any Discord client')) {
                 throw new SimpleError('There are no files paths to existing unix sockets and no TCP connections available', {shortStack: true});
             }
@@ -122,7 +122,7 @@ export class DiscordIPCClient extends DiscordAbstractClient {
             return;
         }
         const { activity: msActivity, artUrl } = playStateToActivityData(data);
-        const assets = await this.getArtAsset(data.play, artUrl, false);
+        const assets = await this.getArtAsset(data.play!, artUrl, false);
         if (assets !== undefined) {
             const {
                 assets: msAssets = {}
@@ -135,7 +135,7 @@ export class DiscordIPCClient extends DiscordAbstractClient {
         const activity = activityDataToSetActivity(msActivity);
         await this.client.user?.setActivity(activity);
 
-        const play = isPlayObject(data) ? data : data.play;
+        const play = (isPlayObject(data) ? data : data.play)!;
 
         let clearTime = dayjs().add(260, 'seconds'); // funny number
         if (msActivity.timestamps?.end !== undefined) {
@@ -156,7 +156,7 @@ export class DiscordIPCClient extends DiscordAbstractClient {
             clearTimeout(this.activityTimeout);
             this.activityTimeout = undefined;
         }
-        await this.client.user.clearActivity();
+        await this.client.user!.clearActivity();
     }
 
     async checkOkToSend(): Promise<[boolean, string?, string?]> {
@@ -167,7 +167,7 @@ export class DiscordIPCClient extends DiscordAbstractClient {
             try {
                 await this.tryConnect();
             } catch (e) {
-                const err = mergeSimpleError(e);
+                const err = mergeSimpleError(e as Error);
                 return [false, err.message, 'debug'];
             }
         }
@@ -265,7 +265,7 @@ export const activityDataToSetActivity = (data: ActivityData): SetActivity => {
         startTimestamp: start,
         endTimestamp: end,
         ...rest
-    });
+    })!;
 
     return activity;
 }

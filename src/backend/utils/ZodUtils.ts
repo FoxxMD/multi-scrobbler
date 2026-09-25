@@ -103,6 +103,7 @@ export const envMetaNormalize = (meta: z.GlobalMeta): z.GlobalMeta => {
             description: commaSeparatedListReplace(meta.description)
         }
     }
+    return meta;
 }
 
 //export const UrlDataSchema = z.custom<URLData>((val: URLData) => z.url().parse(val.url.toString()))

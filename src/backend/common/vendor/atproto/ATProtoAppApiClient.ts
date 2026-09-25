@@ -23,7 +23,7 @@ export class ATProtoAppApiClient extends ATProtoAuthenticatedApiClient {
         this.logger.verbose(`Using ${this.userData.did} on PDS ${this.userData.pds}`);
     }
 
-    restoreSession = async (): Promise<boolean> => {
+    restoreSession = async (): Promise<boolean | undefined> => {
         await this.checkRateLimit();
         const savedSessionCute = await this.getSession();
         if (savedSessionCute !== undefined) {
@@ -51,7 +51,7 @@ export class ATProtoAppApiClient extends ATProtoAuthenticatedApiClient {
         await this.cache.cacheAuth.set(`appPwSessionCute-${this.name}-${this.userData.did}`, data, '1000h');
     }
 
-    protected async getSession(): Promise<PasswordSessionData> {
+    protected async getSession(): Promise<PasswordSessionData | undefined> {
         return await this.cache.cacheAuth.get<PasswordSessionData>(`appPwSessionCute-${this.name}-${this.userData.did}`);
     }
 
@@ -80,7 +80,7 @@ export class ATProtoAppApiClient extends ATProtoAuthenticatedApiClient {
 
             this.client = new Client({ handler: session });
             return true;
-        } catch (e) {
+        } catch (e: any) {
             throw await this.handleError(e);
         }
     }

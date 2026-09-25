@@ -192,7 +192,7 @@ export const generateConfigLocation = (configType: string, config: UnparsedConfi
     return `${capitalize(configType)} ${config.type}${identifiers.length > 0 ? ` (${identifiers.join(',')})` : ''} from ENV`;
 }
 
-export const transformPresetEnv = <T extends CommonClientOptions = CommonClientOptions>(prefix: string, existing: T = undefined): undefined | T => {
+export const transformPresetEnv = <T extends CommonClientOptions = CommonClientOptions>(prefix: string, existing: T | undefined = undefined): undefined | T => {
 
     const env = process.env[`${prefix}_TRANSFORMS`];
     if (env === undefined || env.trim() === '') {
@@ -205,16 +205,16 @@ export const transformPresetEnv = <T extends CommonClientOptions = CommonClientO
     for (const p of env.split(',').map(x => x.trim().toLocaleLowerCase())) {
         switch (p) {
             case 'native':
-                popts.preCompare.push({ type: 'native' });
+                popts.preCompare!.push({ type: 'native' });
                 break;
             case 'musicbrainz':
-                popts.preCompare.push({ type: 'musicbrainz' });
+                popts.preCompare!.push({ type: 'musicbrainz' });
                 break;
             case 'rocksky':
-                popts.preCompare.push({ type: 'rocksky' });
+                popts.preCompare!.push({ type: 'rocksky' });
                 break;
             case 'spotify':
-                popts.preCompare.push({ type: 'spotify' });
+                popts.preCompare!.push({ type: 'spotify' });
                 break;
         }
     }

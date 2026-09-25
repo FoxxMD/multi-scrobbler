@@ -94,11 +94,11 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
                     if (results.meta.order === undefined || results.meta.order === 'asc') {
                         // if meta.order is ascending then assumption the response returns *oldest first* list
                         // so that the newest play from the response should be used as the new `from`
-                        const nextFrom = [...results.data].sort(sortByNewestPlayDate)[0].data.playDate.unix() + 1;
+                        const nextFrom = [...results.data].sort(sortByNewestPlayDate)[0].data.playDate!.unix() + 1;
                         currOpts.from = nextFrom;
                     } else {
                         // otherwise, oldest found play should be the new `to`
-                        const nextTo = [...results.data].sort(sortByOldestPlayDate)[0].data.playDate.unix() - 1;
+                        const nextTo = [...results.data].sort(sortByOldestPlayDate)[0].data.playDate!.unix() - 1;
                         currOpts.to = nextTo;
                     }
                 }
@@ -106,19 +106,19 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
             return plays;
         }
     } else if (hasPaginatedTimeRangeListens(fetcher)) {
-        return async (opts: PaginatedListensTimeRangeOptions): Promise<PlayObject[]> => {
+        return async (opts: PaginatedTimeRangeCommonOptions | PaginatedListensTimeRangeOptions): Promise<PlayObject[]> => {
             let plays: PlayObject[] = [];
             requestCount = 0;
             let more = true;
-            const currOpts: PaginatedListensTimeRangeOptions = opts;
+            const currOpts = opts as PaginatedListensTimeRangeOptions;
             let initial = true;
-            let timeRangeHint: string;
+            let timeRangeHint: string | undefined;
             if(currOpts.to !== undefined && currOpts.from !== undefined) {
                 timeRangeHint = `Between ${todayAwareFormat(dayjs.unix(currOpts.from))} and ${todayAwareFormat(dayjs.unix(currOpts.to))}`;
             } else if(currOpts.to) {
                 timeRangeHint= `Until ${todayAwareFormat(dayjs.unix(currOpts.to))}`;
             } else if(currOpts.to) {
-                timeRangeHint = `From ${todayAwareFormat(dayjs.unix(currOpts.from))}`;
+                timeRangeHint = `From ${todayAwareFormat(dayjs.unix(currOpts.from!))}`;
             }
             while (more) {
                 requestCount++;
@@ -270,13 +270,13 @@ export const groupPlaysToTimeRanges = (plays: PlayObject[], existingRanges: Pagi
             } else {
                 // if a list is open then we need to see if time b/w oldest and newest of curr is less than allowed time
 
-                if(curr[curr.length - 1].data.playDate.diff(acc.open[0].data.playDate, 's') < consolidateDuration.asSeconds()) {
+                if(curr[curr.length - 1].data.playDate!.diff(acc.open![0].data.playDate, 's') < consolidateDuration.asSeconds()) {
                     // if less than consolidateDuration then consolidate and iterate
-                    acc.open = acc.open.concat(curr);
+                    acc.open = acc.open!.concat(curr);
                     //return acc;
                 } else {
                     // if its not less than consolidateDuration then close list
-                    acc.lists.push(acc.open);
+                    acc.lists.push(acc.open!);
 
                     // and open with curr
                     acc.open = curr;
@@ -285,7 +285,7 @@ export const groupPlaysToTimeRanges = (plays: PlayObject[], existingRanges: Pagi
 
             if(index === temporallyClosePlaySets.length - 1) {
                 // if this is the last iteration then push current as well
-                acc.lists.push(acc.open)
+                acc.lists.push(acc.open!)
             }
 
             return acc;
@@ -299,12 +299,12 @@ export const groupPlaysToTimeRanges = (plays: PlayObject[], existingRanges: Pagi
         let oldest: Dayjs,
         newest: Dayjs;
         if(tc.length === 1) {
-            oldest = tc[0].data.playDate;
+            oldest = tc[0].data.playDate!;
             newest = oldest;
             //newest = tc[0].data.playDate.add(1, 'hour').unix();
         } else {
-            oldest = tc[0].data.playDate;
-            newest = tc[tc.length - 1].data.playDate;
+            oldest = tc[0].data.playDate!;
+            newest = tc[tc.length - 1].data.playDate!;
         }
 
         let bufferedNewest = newest;

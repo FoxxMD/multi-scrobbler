@@ -4,7 +4,7 @@ import type { RockskyTransformerConfig, RockskyTransformerData } from "../../ven
 
 export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
     const rsEnv = process.env.RS_PRESETS;
-    let rsConfig: RockskyTransformerConfig;
+    let rsConfig: RockskyTransformerConfig | undefined;
     if (rsEnv !== undefined && rsEnv.trim() !== '') {
         rsConfig = {
             type: 'rocksky',
@@ -37,7 +37,7 @@ export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
         }
 
         if (soSet.size > 0) {
-            rsConfig.defaults.searchOrder = Array.from(soSet);
+            rsConfig.defaults!.searchOrder = Array.from(soSet);
         }
         logger.debug(`Using presets: ${presets.join(',')}`);
     }

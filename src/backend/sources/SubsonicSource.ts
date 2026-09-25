@@ -92,7 +92,7 @@ export class SubsonicSource extends MemoryPositionalSource {
 
         const play: PlayObjectMinimal = {
             data: {
-                artists: [artistNameToCredit(artist)],
+                artists: [artistNameToCredit(artist)!],
                 album,
                 track: title,
                 duration,
@@ -135,14 +135,14 @@ export class SubsonicSource extends MemoryPositionalSource {
         } = this.config;
 
         const queryOpts: Record<string, string> = {
-            u: user,
+            u: user!,
             v: '1.15.0',
             c: `multi-scrobbler - ${this.name}`,
             f: 'json'
         };
         if((this.config?.data?.legacyAuthentication ?? false)) {
             //queryOpts.p = password;
-            queryOpts.p = `enc:${Buffer.from(password).toString('hex')}`
+            queryOpts.p = `enc:${Buffer.from(password!).toString('hex')}`
         } else {
             const salt = crypto.randomBytes(10).toString('hex');
             const hash = crypto.createHash('md5').update(`${password}${salt}`).digest('hex')
@@ -212,7 +212,7 @@ export class SubsonicSource extends MemoryPositionalSource {
 
             // @ts-expect-error it is assignable to T idk
             return ssResp;
-        } catch (e) {
+        } catch (e: any) {
             if(e instanceof UpstreamError) {
                 throw e;
             }
@@ -277,12 +277,12 @@ export class SubsonicSource extends MemoryPositionalSource {
             this.logger.info(`Subsonic Server reachable: ${identifiersFromResponse(resp)}`);
             await this.discoverPlaybackReportSupport();
             return true;
-        } catch (e) {
+        } catch (e: any) {
 
             const subResponseError = getSubsonicResponseFromError(e);
             if(subResponseError !== undefined) {
-                const resp = getSubsonicResponse(subResponseError.response)
-                this.logger.info(`Subsonic Server reachable: ${identifiersFromResponse(resp)}`);
+                const resp = getSubsonicResponse(subResponseError.response!)
+                this.logger.info(`Subsonic Server reachable: ${identifiersFromResponse(resp!)}`);
                 this.sourceData = resp as SourceIdentifierData;
                 await this.discoverPlaybackReportSupport();
                 return true;
@@ -345,7 +345,7 @@ export class SubsonicSource extends MemoryPositionalSource {
             return true;
         } catch (e) {
             const superagentError = findCauseByFunc<request.ResponseError>(e, (ee) => isSuperAgentResponseError(ee));
-            throw new AuthError('Failed to authenticate', {cause: e, unrecoverable: superagentError !== undefined && [403,401].includes(superagentError.status)})
+            throw new AuthError('Failed to authenticate', {cause: e, unrecoverable: superagentError !== undefined && [403,401].includes(superagentError.status!)})
         }
     }
 
@@ -402,7 +402,7 @@ const subsonicPlaybackStateToReportedStatus = (state: string | undefined) => {
     }
 };
 
-export const getSubsonicResponseFromError = (error: unknown): UpstreamError => findCauseByFunc(error, (err) => {
+export const getSubsonicResponseFromError = (error: unknown): UpstreamError | undefined => findCauseByFunc(error, (err) => {
         if(err instanceof UpstreamError && err.response !== undefined) {
             return getSubsonicResponse(err.response) !== undefined;
         }
@@ -429,7 +429,7 @@ export const parseApiResponseErrorToThrowable = (resp: SubsonicResponse) => {
         body = {},
     } = resp;
     if(Object.keys(ssResp).length > 0) {
-        return `(${identifiersFromResponse(body['subsonic-response'])}) Subsonic Api Response => (${code}) ${ssStatus}: ${ssMessage}`;
+        return `(${identifiersFromResponse((body as any)['subsonic-response'])}) Subsonic Api Response => (${code}) ${ssStatus}: ${ssMessage}`;
     }
     if(Object.keys(body).length > 0) {
         return `Subsonic Server Response => (${status}) ${JSON.stringify(body)}`;

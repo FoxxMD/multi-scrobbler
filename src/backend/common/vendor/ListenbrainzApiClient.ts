@@ -92,7 +92,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
             req.set('Authorization', `Token ${this.config.token}`);
             req.set('User-Agent', this.userAgent);
             return await req as T;
-        } catch (e) {
+        } catch (e: any) {
             const {
                 message,
                 err,
@@ -161,7 +161,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
                     if(cause === undefined) {
                         return false;
                     }
-                    if([400,403,401].includes(cause.status)) {
+                    if([400,403,401].includes(cause.status!)) {
                         return false;
                     }
                     return true;
@@ -176,7 +176,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
         try {
             await isPortReachableConnect(this.url.port, {host: this.url.url.hostname});
             return true;
-        } catch (e) {
+        } catch (e: any) {
             if(e.status === 410 || e.message.includes('HTTP Status 410')) {
                 return true;
             }
@@ -190,7 +190,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
             return true;
         } catch (err) {
             const cause = findCauseByFunc<request.ResponseError>(err, (e) => isSuperAgentResponseError(e));
-            if(cause !== undefined && [401,403,400].includes(cause.status)) {
+            if(cause !== undefined && [401,403,400].includes(cause.status!)) {
                 throw new AuthError('Failed to validate token', {cause: err, unrecoverable: true});
             }
             throw new AuthError('Failed to validate token due to non-auth error', {cause: err, unrecoverable: false});
@@ -242,7 +242,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
                 this.logger.debug(`Submit Response: ${resp.text}`)
             }
             return {payload: listenPayload, response: resp.text, createdAt: dayjs().toISOString()};
-        } catch (e) {
+        } catch (e: any) {
             throw new ScrobbleSubmitError(`Failed to submit to Listenbrainz (listen_type ${listenPayload.listen_type})`, {cause: e, payload: listenPayload, response: e.response, responseBody: e.response?.text});
         }
     }
@@ -369,15 +369,15 @@ export const listenResponseToPlay = (listen: ListenResponse): PlayObject => {
 
         const mappedArtists = artistMappings.length > 0 ? artistMappings.map(x => x.artist_credit_name) : [];
 
-        let normalTrackName: string = track_name;
+        let normalTrackName: string = track_name!;
         let primaryArtistHint: string | undefined;
         let artistsFromUserValues: string[] = [];
         let derivedArtists: string[] = [];
 
-        let filteredSubmittedArtistName = artist_name;
-        let filteredSubmittedTrackName = track_name;
+        let filteredSubmittedArtistName = artist_name!;
+        let filteredSubmittedTrackName = track_name!;
 
-        let primaryArtist;
+        let primaryArtist: string | undefined;
 
         if(artistMappings.length > 0) {
 
@@ -470,7 +470,7 @@ export const listenResponseToPlay = (listen: ListenResponse): PlayObject => {
             if (parsedTrackArtists !== undefined) {
                 // if we found "ft. something" in track string then we now have a "real" track name and more artists
                 normalTrackName = parsedTrackArtists.primary;
-                artistsFromUserValues = artistsFromUserValues.concat(parsedTrackArtists.secondary)
+                artistsFromUserValues = artistsFromUserValues.concat(parsedTrackArtists.secondary!)
             }
 
             artistsFromUserValues = uniqueNormalizedStrArr(artistsFromUserValues);
@@ -577,7 +577,7 @@ export const listenResponseToPlay = (listen: ListenResponse): PlayObject => {
         }
 
         const brainzMetaRaw: BrainzMeta = {
-            ...(naivePlay.data.meta.brainz ?? {}),
+            ...(naivePlay.data.meta!.brainz ?? {}),
             artist: artistMappings.map(x => x.artist_mbid),
             album: release_mbid,
             releaseGroup: release_group_mbid
@@ -587,7 +587,7 @@ export const listenResponseToPlay = (listen: ListenResponse): PlayObject => {
         const primaryArtistMBMapping = artistMappings.find(x => x.artist_credit_name === primaryArtist);
         if(primaryArtistMBMapping !== undefined) {
             // only include as primary if musicbrainz does not disagree with us
-            if(release_artist_names.length === 0 || (release_artist_names.length > 0 && release_artist_names.includes(primaryArtist))) {
+            if(release_artist_names.length === 0 || (release_artist_names.length > 0 && release_artist_names.includes(primaryArtist!))) {
                 brainzMetaRaw.albumArtist = [primaryArtistMBMapping.artist_mbid];
             }
         }
@@ -667,27 +667,27 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
         if(artist_names.length > 0) {
             artists = artist_names;
         } else if(artist_name !== null) {
-            artists = [artist_name];
+            artists = [artist_name!];
 
             // since we aren't using MB mappings we should be conservative and assume artist string with & are proper names (not joiner)
-            const parsedArtists = parseCredits(artist_name, [',', '/', '\\']);
+            const parsedArtists = parseCredits(artist_name!, [',', '/', '\\']);
             if (parsedArtists !== undefined) {
                 if (parsedArtists.primary !== undefined) {
                     artists.push(parsedArtists.primary);
                 }
-                artists = artists.concat(parsedArtists.secondary);
+                artists = artists.concat(parsedArtists.secondary!);
             }
             // use all delimiters when trying to find artists in track name
-            const parsedTrackArtists = parseCredits(track_name);
+            const parsedTrackArtists = parseCredits(track_name!);
             if (parsedTrackArtists !== undefined) {
                 // if we found "ft. something" in track string then we now have a "real" track name and more artists
                 normalTrackName = parsedTrackArtists.primary;
-                artists = artists.concat(parsedTrackArtists.secondary)
+                artists = artists.concat(parsedTrackArtists.secondary!)
             }
             artists = uniqueNormalizedStrArr(artists);
         }
 
-        let albumArtists: string[];
+        let albumArtists: string[] | undefined;
         if(release_artist_name !== undefined) {
             albumArtists = [release_artist_name];
         }
@@ -702,7 +702,7 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
                 track: normalTrackName,
                 artists: artistNamesToCredits(artists),
                 album: release_name,
-                albumArtists: artistNamesToCredits(albumArtists),
+                albumArtists: artistNamesToCredits(albumArtists!),
                 duration: dur,
                 isrc: isrc !== undefined ? isrcNoHyphens(isrc) : undefined,
                 meta: {
@@ -728,7 +728,7 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
         }
         if(artist_mbids.filter(x => x.trim() !== "").length > 0) {
             brainzMeta.artist = artist_mbids.filter(x => x.trim() !== "");
-            brainzMeta.additionalInfo.artist_mbids = brainzMeta.artist;
+            brainzMeta.additionalInfo!.artist_mbids = brainzMeta.artist;
         }
 
         if(Object.keys(brainzMeta).length > 0) {

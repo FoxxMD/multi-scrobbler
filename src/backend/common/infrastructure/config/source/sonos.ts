@@ -47,10 +47,10 @@ export type SonosData = z.infer<typeof sonosDataSchema>;
 
 const envDataSchema = z.object({
     SONOS_HOST: sonosDataSchema.shape.host,
-    SONOS_DEVICES_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(sonosDataSchema.shape.devicesAllow.meta())),
-    SONOS_DEVICES_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(sonosDataSchema.shape.devicesBlock.meta())),
-    SONOS_GROUPS_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(sonosDataSchema.shape.groupsAllow.meta())),
-    SONOS_GROUPS_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(sonosDataSchema.shape.groupsBlock.meta())),
+    SONOS_DEVICES_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(sonosDataSchema.shape.devicesAllow.meta()!)),
+    SONOS_DEVICES_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(sonosDataSchema.shape.devicesBlock.meta()!)),
+    SONOS_GROUPS_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(sonosDataSchema.shape.groupsAllow.meta()!)),
+    SONOS_GROUPS_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(sonosDataSchema.shape.groupsBlock.meta()!)),
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, SonosSourceConfig> = {

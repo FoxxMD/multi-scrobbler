@@ -84,10 +84,10 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
                 }
             }
 
-            let mergedMeta: TrackMetaIsrc; 
+            let mergedMeta: TrackMetaIsrc | undefined; 
             if (parts.meta !== undefined) {
                 try {
-                    const meta = await this.handleMeta(play, parts.duration, transformData);
+                    const meta = await this.handleMeta(play, parts.duration!, transformData);
 
                     if (meta !== undefined) {
                         mergedMeta = {
@@ -97,13 +97,14 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
                             if(k === 'isrc') {
                                 continue;
                             }
-                            if (mergedMeta[k] !== undefined) {
-                                mergedMeta[k] = {
-                                    ...mergedMeta[k],
+                            // TODO strict
+                            if ((mergedMeta as any)[k] !== undefined) {
+                                (mergedMeta as any)[k] = {
+                                    ...(mergedMeta as any)[k],
                                     ...v
                                 }
                             } else {
-                                mergedMeta[k] = v;
+                                (mergedMeta as any)[k] = v;
                             }
                         }
                         if(meta.isrc !== undefined) {
@@ -120,7 +121,7 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
                 }
             }
 
-            let mergedArt: ArtMeta;
+            let mergedArt: ArtMeta | undefined;
             if (parts.art !== undefined) {
                 try {
                     const art = await this.handleArt(play, parts.art, transformData);
@@ -130,13 +131,14 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
                             ...(play.meta?.art ?? {})
                         };
                         for (const [k, v] of Object.entries(art)) {
-                            if (mergedArt[k] !== undefined) {
-                                mergedArt[k] = {
-                                    ...mergedArt[k],
+                            // TODO strict
+                            if ((mergedArt as any)[k] !== undefined) {
+                                (mergedArt as any)[k] = {
+                                    ...(mergedArt as any)[k],
                                     ...v
                                 }
                             } else {
-                                mergedArt[k] = v;
+                                (mergedArt as any)[k] = v;
                             }
                         }
                     }
@@ -165,13 +167,13 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
                 transformedPlay.meta.art = mergedArt;
             }
 
-            if(typeof transformData === 'object' && isPlayObject(transformData) && transformData.meta?.lifecycleInputs !== undefined) {
+            if(typeof transformData === 'object' && isPlayObject(transformData as object) && (transformData as PlayObject).meta?.lifecycleInputs !== undefined) {
                 const {
                     meta: {
                         lifecycleInputs = [],
                     } = {},
                 } = transformedPlay;
-                transformedPlay.meta.lifecycleInputs = lifecycleInputs.concat(transformData.meta?.lifecycleInputs);
+                transformedPlay.meta.lifecycleInputs = lifecycleInputs.concat((transformData as PlayObject).meta?.lifecycleInputs!);
             }
 
             return transformedPlay;

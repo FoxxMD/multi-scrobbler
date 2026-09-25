@@ -6,8 +6,10 @@ import { playContentBasicInvariantTransform } from '../../../utils/PlayCompariso
 import { hashObject } from '../../../utils/StringUtils.ts';
 
 
-export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase, ctx: MigrateBaseContext): Promise<void> => {
-
+export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase, ctx: MigrateBaseContext | undefined): Promise<void> => {
+    if(ctx === undefined) {
+        throw new Error('Context must be defined');
+    }
     ctx.logger.info('Generating hashes for Play input data...');
 
     let more = true;
@@ -67,7 +69,7 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
     }
 };
 
-export const down: Migration<MigrateBaseContext>['down'] = async (db: SqliteDatabase, ctx: MigrateBaseContext): Promise<void> => {
+export const down: Migration<MigrateBaseContext>['down'] = async (db: SqliteDatabase, ctx: MigrateBaseContext | undefined): Promise<void> => {
     // Rollback code here
     // context is passed as ctx
 };

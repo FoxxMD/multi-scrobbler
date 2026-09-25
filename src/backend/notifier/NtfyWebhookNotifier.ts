@@ -13,7 +13,7 @@ export class NtfyWebhookNotifier extends AbstractWebhookNotifier {
 
     priorities: PrioritiesConfig;
 
-    protected endpoint: URLData;
+    protected endpoint!: URLData;
 
     constructor(defaultName: string, config: NtfyConfig, logger: Logger) {
         super('Ntfy', defaultName, config, logger);
@@ -38,7 +38,7 @@ export class NtfyWebhookNotifier extends AbstractWebhookNotifier {
         if(this.config.token !== undefined) {
             this.logger.verbose(`Using Access Token '${redactString(this.config.token, 3)}' for authentication`);
         } else if(this.config.username !== undefined) {
-            this.logger.verbose(`Using Username/Password '${redactString(this.config.username, 3)}/${redactString(this.config.password, 3)}' for authentication`);
+            this.logger.verbose(`Using Username/Password '${redactString(this.config.username, 3)}/${redactString(this.config.password!, 3)}' for authentication`);
         } else {
             this.logger.verbose('No authentication provided, will not be able to push to protected topics');
         }
@@ -85,7 +85,7 @@ export class NtfyWebhookNotifier extends AbstractWebhookNotifier {
             } else if (this.config.username !== undefined) {
                 req.authorization = {
                     username: this.config.username,
-                    password: this.config.password,
+                    password: this.config.password!,
                 }
             }
             await publish(req);

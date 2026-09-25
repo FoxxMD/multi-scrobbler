@@ -54,14 +54,14 @@ export class EndpointListenbrainzSource extends MemorySource {
     }
 
     matchRequest(req: Pick<ExpressRequest, 'baseUrl' | 'originalUrl' | 'header'>): boolean {
-        let matchesToken = this.config.data.token === undefined;
+        let matchesToken = this.config.data!.token === undefined;
         const reqToken = parseTokenFromRequest(req, requestMatchers);
         if (reqToken === false) {
             return false;
         }
-        matchesToken = this.config.data.token === undefined && reqToken === undefined ||
-            (reqToken !== undefined && this.config.data.token !== undefined
-                && this.config.data.token.toLowerCase().trim() === reqToken.toLowerCase().trim());
+        matchesToken = this.config.data!.token === undefined && reqToken === undefined ||
+            (reqToken !== undefined && this.config.data!.token !== undefined
+                && this.config.data!.token.toLowerCase().trim() === reqToken.toLowerCase().trim());
 
         if (!matchesToken) {
             return false;
@@ -72,7 +72,7 @@ export class EndpointListenbrainzSource extends MemorySource {
         if (slug === false) {
             return false;
         } else {
-            matchesPath = (this.config.data.slug === undefined && slug === undefined) || (slug !== undefined && this.config.data.slug !== undefined && this.config.data.slug.toLowerCase().trim() === slug.toLocaleLowerCase().trim());
+            matchesPath = (this.config.data!.slug === undefined && slug === undefined) || (slug !== undefined && this.config.data!.slug !== undefined && this.config.data!.slug.toLowerCase().trim() === slug.toLocaleLowerCase().trim());
         }
 
         return matchesToken && matchesPath;
@@ -136,7 +136,8 @@ export const playStateFromRequest = (obj: SubmitPayload): PlayerStateData[] => {
         const play = listenPayloadToPlay(x, listen_type === 'playing_now');
         play.meta.sourceSOT = SOURCE_SOT.INGRESS;
         return {
-            platformId: [play.meta.deviceId, NO_USER],
+            // TODO strict: deviceId may be undefined here, PlayPlatformId expects string
+            platformId: [play.meta.deviceId!, NO_USER],
             play,
             status: listenTypeAsPlayerStatus(listen_type),
             stateUpdatedAt: dayjs()

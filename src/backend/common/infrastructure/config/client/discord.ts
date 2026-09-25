@@ -44,8 +44,8 @@ const envDataSchema = z.object({
     DISCORD_APPLICATION_ID: discordDataSchema.shape.applicationId,
     DISCORD_IPC_LOCATIONS: z.string().optional().pipe(transformSplitMaybeString),
     DISCORD_ARTWORK_DEFAULT_URL: discordDataSchema.shape.artworkDefaultUrl,
-    DISCORD_STATUS_OVERRIDE_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(discordDataSchema.shape.statusOverrideAllow.meta()),
-    DISCORD_LISTENING_ACTIVITY_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(discordDataSchema.shape.listeningActivityAllow.meta()),
+    DISCORD_STATUS_OVERRIDE_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(discordDataSchema.shape.statusOverrideAllow.meta()!),
+    DISCORD_LISTENING_ACTIVITY_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(discordDataSchema.shape.listeningActivityAllow.meta()!),
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, DiscordClientConfig> = {

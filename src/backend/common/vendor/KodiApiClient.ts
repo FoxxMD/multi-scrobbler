@@ -138,10 +138,10 @@ export class KodiApiClient extends AbstractApiClient {
 
             await this.client.connect();
             // https://kodi.wiki/view/JSON-RPC_API/v12#JSONRPC.Version
-            const jsonInfo = await this.client.JSONRPC.Version();
+            const jsonInfo = await this.client.JSONRPC!.Version();
 
             // https://kodi.wiki/view/JSON-RPC_API/v12#Application.GetProperties
-            const applicationInfo = await this.client.Application.GetProperties(['version']);
+            const applicationInfo = await this.client.Application!.GetProperties(['version']);
 
             this.version = `${applicationInfo.version.major}.${applicationInfo.version.minor}`;
             this.logger.info(`Found Kodi v${applicationInfo.version.major}.${applicationInfo.version.minor} (JSONRPC v${jsonInfo.version.major}.${jsonInfo.version.minor})`);
@@ -171,7 +171,7 @@ export class KodiApiClient extends AbstractApiClient {
 
     getActivePlayers = async (): Promise<ActivePlayer[]> => {
         // https://kodi.wiki/view/JSON-RPC_API/v12#Player.GetActivePlayers
-        const players = await this.client.Player.GetActivePlayers();
+        const players = await this.client.Player!.GetActivePlayers();
         return players as ActivePlayer[];
     }
 

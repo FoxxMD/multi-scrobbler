@@ -12,7 +12,7 @@ export class AzuracastApiClient extends AbstractApiClient {
 
     urlData: URLData;
 
-    wsNowPlaying: AzuraStationResponse
+    wsNowPlaying!: AzuraStationResponse
     wsCurrenTime: number = 0;
     socket!: WS;
 
@@ -40,7 +40,8 @@ export class AzuracastApiClient extends AbstractApiClient {
         }          
           
           // Handle a now-playing event from a station. Update your now-playing data accordingly.
-          function handleSseData(ssePayload, useTime = true) {
+          // TODO strict: `this` is unbound here at runtime (non-arrow function), so these assignments never reach the class instance
+          function handleSseData(this: any, ssePayload: any, useTime = true) {
             const jsonData = ssePayload.data;
           
             if (useTime && 'current_time' in jsonData) {
@@ -60,7 +61,7 @@ export class AzuracastApiClient extends AbstractApiClient {
               if ('data' in connectData) {
                 // Legacy SSE data
                 connectData.data.forEach(
-                  (initialRow) => handleSseData(initialRow)
+                  (initialRow: any) => handleSseData(initialRow)
                 );
               } else {
                 // New Centrifugo time format
@@ -72,7 +73,7 @@ export class AzuracastApiClient extends AbstractApiClient {
                 for (const subName in connectData.subs) {
                   const sub = connectData.subs[subName];
                   if ('publications' in sub && sub.publications.length > 0) {
-                    sub.publications.forEach((initialRow) => handleSseData(initialRow, false));
+                    sub.publications.forEach((initialRow: any) => handleSseData(initialRow, false));
                   }
                 }
               }

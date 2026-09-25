@@ -68,7 +68,7 @@ export class MusicCastSource extends MemoryPositionalSource {
                 this.logger.warn('Could not get device info! Ignoring but probably not good...');
             }
             return true;
-        } catch (e) {
+        } catch (e: any) {
             const hint = e.error?.cause?.message ?? undefined;
             throw new Error(`Could not connect to MusicCast server${hint !== undefined ? ` (${hint})` : ''}`, { cause: e.error ?? e });
         }

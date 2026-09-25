@@ -89,7 +89,7 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
                 }
             } catch (e) {
                 if(entity !== undefined) {
-                    entity.errors.push(e);
+                    entity.errors.push(e as Error);
                     entity.logger.error(e);
                 } else {
                     logger.error(e);
@@ -102,11 +102,11 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
             if(entity === undefined) {
                 logger.error(`No YTMUsic source with name ${state} was found`);
             }
-            const result = await entity.handleAuthCodeCallback(req.query);
+            const result = await entity!.handleAuthCodeCallback(req.query as Record<string, any>);
             let responseContent = 'OK';
             if(result === true) {
-                entity.authFailure = false;
-                entity.poll().catch((e) => logger.error(e));
+                entity!.authFailure = false;
+                entity!.poll().catch((e) => logger.error(e));
             } else {
                 responseContent = result;
             }

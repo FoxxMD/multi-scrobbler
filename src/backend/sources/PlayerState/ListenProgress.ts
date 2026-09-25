@@ -22,7 +22,7 @@ export class ListenProgressTS implements PlayProgress {
     toJSON() {
         return {
             timestamp: this.timestamp.toISOString(),
-            position: undefined,
+            position: undefined as Second | undefined,
             positionPercent: this.positionPercent
         }
     }
@@ -31,7 +31,7 @@ export class ListenProgressTS implements PlayProgress {
 export class ListenProgressPositional extends ListenProgressTS implements PlayProgressPositional {
     declare public position: Second;
 
-    constructor(data: PlayProgressPositional) {
+    constructor(data: Partial<PlayProgress> & Pick<PlayProgressPositional, 'position'>) {
         super(data);
         const {timestamp, position} = data;
         this.timestamp = timestamp ?? dayjs();
@@ -47,7 +47,7 @@ export class ListenProgressPositional extends ListenProgressTS implements PlayPr
         return {
             timestamp: this.timestamp.toISOString(),
             position: this.position,
-            positionPercent: undefined
+            positionPercent: undefined as number | undefined
         }
     }
 }

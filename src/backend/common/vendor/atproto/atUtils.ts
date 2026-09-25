@@ -82,7 +82,7 @@ export const getATProtoIdentifier = async (data: ATProtoUserIdentifierData, opts
 
     const key = [data.did, data.identifier].filter(x => x !== undefined).join('-');
 
-    let hd: HandleData;
+    let hd: HandleData | undefined;
     if (cache !== undefined) {
         hd = await cache.get<HandleData>(`${key}-handleData`);
         if (hd !== undefined) {
@@ -142,7 +142,7 @@ export const getATProtoIdentifier = async (data: ATProtoUserIdentifierData, opts
     if (typeof doc.service[0].serviceEndpoint !== 'string') {
         throw new Error(`Do not know how to handle this serviceEndpoint data structure!\n${JSON.stringify(doc.service[0].serviceEndpoint)}`);
     }
-    hd = { did, pds: getPdsEndpoint(doc), handle: getAtprotoHandle(doc) };
+    hd = { did, pds: getPdsEndpoint(doc)!, handle: getAtprotoHandle(doc) as string };
 
     if (cache !== undefined) {
         cache.set(`${key}-handleData`, hd, '1d');
@@ -152,7 +152,7 @@ export const getATProtoIdentifier = async (data: ATProtoUserIdentifierData, opts
 }
 
 export const checkPds = async (data: ATProtoUserIdentifierData, opts: IdentifyOptions): Promise<true> => {
-    let hd: HandleData;
+    let hd: HandleData | undefined;
     try {
         hd = await getATProtoIdentifier(data, opts);
     } catch (e) {

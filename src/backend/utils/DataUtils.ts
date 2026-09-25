@@ -14,7 +14,7 @@ export const asArray = <T>(data: T | T[]): T[] => {
     return [data];
 }
 
-const handler: ProxyHandler<object> =
+const handler: ProxyHandler<Record<PropertyKey, any>> =
 {
     ownKeys(target) {
       return Reflect.ownKeys(target).map(x => typeof x === 'string' ? x.toLocaleLowerCase() : x);
@@ -70,7 +70,7 @@ const handler: ProxyHandler<object> =
     },
 };
 
-const checkAtomic = (value) => {
+const checkAtomic = (value: any): any => {
     if (typeof value == "object")
         return noCasePropObj(value); // recursive call only for Objects
     return value;
@@ -103,7 +103,7 @@ export const noCasePropObj = <T extends object>(obj: T): LowercaseKeys<T> => {
         if (typeof key == "string") {
             const objKey = key.toUpperCase();
             if (!(key in newObj))
-                newObj[objKey] = checkAtomic(obj[key]);
+                (newObj as Record<string, any>)[objKey] = checkAtomic(obj[key]);
         }
     }
     return newObj; // object with upper cased keys
@@ -123,7 +123,7 @@ export async function readJson(this: any, path: any, options: ReadJsonOptions = 
             return JSON5.parse(replaced);
         }
         return JSON5.parse(data);
-    } catch (e) {
+    } catch (e: any) {
         const { code } = e;
         if (code === 'ENOENT') {
             if (throwOnNotFound) {
@@ -199,11 +199,11 @@ export const objectsEqual = (a: object, b: object) => {
 
 export const getCommonComponentEnvConfig = (prefix: string): Partial<CommonConfigPrimitives> => {
     const e = nonEmptyStringOrDefault(process.env[`${prefix}_ENABLE`], undefined);
-    return removeUndefinedKeys<CommonConfigPrimitives>({
+    return removeUndefinedKeys<Partial<CommonConfigPrimitives>>({
         id: nonEmptyStringOrDefault(process.env[`${prefix}_ID`], undefined),
         name: nonEmptyStringOrDefault(process.env[`${prefix}_NAME`], undefined),
         enable: e !== undefined ? parseBoolStrict(e) : undefined
-    }, false);
+    }, false)!;
 }
 
 const byteSizes = ['Bytes', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB']

@@ -95,7 +95,7 @@ export default class ScrobbleSources {
             buildDefaults.scrobbleThresholds = {...scrobbleThresholds};
 
             if(duration === undefined && nonEmptyStringOrDefault(scrobbleDurationEnv) !== undefined) {
-                const envDur = Number.parseInt(scrobbleDurationEnv);
+                const envDur = Number.parseInt(scrobbleDurationEnv!);
                 if(Number.isNaN(envDur)) {
                     this.logger.warn(`Ignoring value '${scrobbleDurationEnv}' for env SOURCE_SCROBBLE_DURATION because it is not a number`);
                 } else {
@@ -104,7 +104,7 @@ export default class ScrobbleSources {
                 }
             }
             if(percent === undefined && nonEmptyStringOrDefault(scrobblePercentEnv) !== undefined) {
-                const envPercent = Number.parseInt(scrobblePercentEnv);
+                const envPercent = Number.parseInt(scrobblePercentEnv!);
                 if(Number.isNaN(envPercent)) {
                     this.logger.warn(`Ignoring value '${scrobblePercentEnv}' for env SOURCE_SCROBBLE_PERCENT because it is not a number`);
                 } else {
@@ -219,7 +219,7 @@ export default class ScrobbleSources {
 
             let strongConfigs: CommonParsedConfig[] = [];
             for (const entry of sourceUnparsedConfigs) {
-                let parsedConfig: CommonParsedConfig;
+                let parsedConfig!: CommonParsedConfig;
                 try {
                     switch (entry.source) {
                         case 'env': {
@@ -465,7 +465,7 @@ export default class ScrobbleSources {
     }
 }
 
-const transformPresetEnv = <T extends CommonSourceOptions = CommonSourceOptions>(prefix: string, existing: T = undefined): undefined | T => {
+const transformPresetEnv = <T extends CommonSourceOptions = CommonSourceOptions>(prefix: string, existing: T | undefined = undefined): undefined | T => {
 
     const env = process.env[`${prefix}_TRANSFORMS`];
     if(env === undefined || env.trim() === '') {
@@ -479,13 +479,13 @@ const transformPresetEnv = <T extends CommonSourceOptions = CommonSourceOptions>
     for(const p of env.split(',').map(x => x.trim().toLocaleLowerCase())) {
         switch(p) {
             case 'native':
-                popts.preCompare.push({type: 'native'});
+                popts.preCompare!.push({type: 'native'});
                 break;
             case 'musicbrainz':
-                popts.preCompare.push({type: 'musicbrainz'});
+                popts.preCompare!.push({type: 'musicbrainz'});
                 break;
             case 'spotify':
-                popts.preCompare.push({type: 'spotify'});
+                popts.preCompare!.push({type: 'spotify'});
                 break;
         }
     }

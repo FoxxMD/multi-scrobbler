@@ -103,9 +103,9 @@ export type MopidySourceConfig = z.infer<typeof mopidySourceConfigSchema>;
 
 const envDataSchema = z.object({
     MOPIDY_URL: mopidyDataSchema.shape.url,
-    MOPIDY_URI_DENYLIST: z.string().optional().pipe(transformSplitMaybeString).meta(mopidyDataSchema.shape.uriBlacklist.meta()),
-    MOPIDY_URI_ALLOWLIST: z.string().optional().pipe(transformSplitMaybeString).meta(mopidyDataSchema.shape.uriWhitelist.meta()),
-    MOPIDY_ALBUM_DENYLIST: z.string().optional().pipe(transformSplitMaybeString).meta(mopidyDataSchema.shape.albumBlacklist.meta()),
+    MOPIDY_URI_DENYLIST: z.string().optional().pipe(transformSplitMaybeString).meta(mopidyDataSchema.shape.uriBlacklist.meta()!),
+    MOPIDY_URI_ALLOWLIST: z.string().optional().pipe(transformSplitMaybeString).meta(mopidyDataSchema.shape.uriWhitelist.meta()!),
+    MOPIDY_ALBUM_DENYLIST: z.string().optional().pipe(transformSplitMaybeString).meta(mopidyDataSchema.shape.albumBlacklist.meta()!),
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, MopidySourceConfig> = {

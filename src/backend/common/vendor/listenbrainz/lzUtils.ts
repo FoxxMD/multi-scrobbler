@@ -104,17 +104,17 @@ export const playToListenPayload = (play: PlayObject, options: PlayToListenPaylo
             }
         }
         if (isEmptyArrayOrUndefined(addInfo.spotify_artist_ids) && !isEmptyArrayOrUndefined(spotify.artist)) {
-            addInfo.spotify_artist_ids = spotify.artist.map(x => `https://open.spotify.com/artist/${x}`);
+            addInfo.spotify_artist_ids = spotify.artist!.map(x => `https://open.spotify.com/artist/${x}`);
         }
         if (isEmptyArrayOrUndefined(addInfo.spotify_album_artist_ids) && !isEmptyArrayOrUndefined(spotify.albumArtist)) {
-            addInfo.spotify_album_artist_ids = spotify.albumArtist.map(x => `https://open.spotify.com/artist/${x}`);
+            addInfo.spotify_album_artist_ids = spotify.albumArtist!.map(x => `https://open.spotify.com/artist/${x}`);
         }
         if (addInfo.spotify_album_id === undefined && spotify.album !== undefined) {
             addInfo.spotify_album_id = `https://open.spotify.com/album/${spotify.album}`;
         }
     }
 
-    addInfo = removeUndefinedKeys(addInfo);
+    addInfo = removeUndefinedKeys(addInfo)!;
 
     // possible lastfm provides an empty album field when no album data is found
     let al = album;
@@ -126,16 +126,16 @@ export const playToListenPayload = (play: PlayObject, options: PlayToListenPaylo
 
     const minTrackData = removeUndefinedKeys<MinimumTrack>({
         artist_name: Array.from(new Set([...artists.map(artistCreditToName)])).join(', '),
-        track_name: track,
+        track_name: track!,
         release_name: al,
-    });
+    })!;
 
     return {
         listened_at: getScrobbleTsSOCDate(play).unix(),
         track_metadata: {
             ...minTrackData,
             additional_info: {
-                duration: play.data.duration !== undefined ? Math.round(duration) : undefined,
+                duration: play.data.duration !== undefined ? Math.round(duration!) : undefined,
                 track_mbid: brainz.track,
                 recording_mbid: brainz.recording,
                 artist_mbids: brainz.artist,

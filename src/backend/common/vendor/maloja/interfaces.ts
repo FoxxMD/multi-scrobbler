@@ -94,7 +94,7 @@ export const getMalojaResponseError = (e: Error, asObject: boolean = false): Res
         if (!isSuperAgentResponseError(err)) {
             return false;
         }
-        return isMalojaAPIErrorBody(err.response.body);
+        return isMalojaAPIErrorBody(err.response!.body);
     }) as ResponseError | undefined;
 }
 

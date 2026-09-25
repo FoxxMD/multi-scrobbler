@@ -97,9 +97,12 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
             if(sessionRes) {
                 return true;
             }
+            // should always be AppApiClient
             if(this.client.client instanceof ATProtoAppApiClient) {
                 const res = await this.client.client.appLogin();
                 return res;
+            } else {
+                throw new Error('Non-AppApiClient types not implemented');
             }
         } catch (e) {
             const nodeNetError = isNodeNetworkException(e);
@@ -113,7 +116,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         }
     }
 
-    getScrobblesForTimeRange = async (_) => {
+    getScrobblesForTimeRange = async (_: any) => {
         try {
             const {data} = await this.client.getPagelessTimeRangeListens({limit: 100})
             return data;
@@ -138,7 +141,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
                 this.logger.info(`Scrobbled (Backlog) => (${source}) ${buildTrackString(playObj)}`);
             }
             return res;
-        } catch (e) {
+        } catch (e: any) {
             await this.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             throw e;
         }
@@ -157,7 +160,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         }
 
         try {
-            await this.client.updateStatusRecord(playToStatusRecord(data.play, isClearing, data.position));
+            await this.client.updateStatusRecord(playToStatusRecord(data.play!, isClearing, data.position));
         } catch (e) {
             throw e;
         }
@@ -211,7 +214,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
 
         const stream = Readable.toWeb(fs.createReadStream(filename));
 
-        await using repo = fromStream(stream);
+        await using repo = fromStream(stream as ReadableStream<Uint8Array>);
 
         const did = this.client.client.userData.did;
 
@@ -300,7 +303,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         const unseenPlays: PlayObject[] = [];
         let syncGapFilled = false;
         for(const p of recentPlays) {
-            if(!(await this.playsHistoricalRepo.hasByUid(p.meta.playId))) {
+            if(!(await this.playsHistoricalRepo.hasByUid(p.meta.playId!))) {
                 unseenPlays.push(p);
             } else {
                 syncGapFilled = true;

@@ -90,7 +90,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
                 this.logger.info(`Scrobbled (Backlog) => (${source}) ${buildTrackString(playObj)}`);
             }
             return result;
-        } catch (e) {
+        } catch (e: any) {
             await this.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             throw e;
         }
@@ -99,7 +99,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
     doPlayingNow = async (data: SourcePlayerObj) => {
         // listenbrainz shows Now Playing for the same time as the duration of the track being submitted
         try {
-            await this.api.submitListen(data.play, { listenType: 'playing_now'});
+            await this.api.submitListen(data.play!, { listenType: 'playing_now'});
         } catch (e) {
             throw e;
         }

@@ -28,7 +28,8 @@ export default class LibrefmSource extends LastfmSource {
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
-        this.api = new LastfmApiClient(this.name, {...this.config.data, rateLimit: {points: 1, duration: 1}}, {logger: this.logger, type: 'librefm', ...this.internalOptions});
+        const {logger, ...internalRest} = this.internalOptions
+        this.api = new LastfmApiClient(this.name, {...this.config.data, rateLimit: {points: 1, duration: 1}}, {type: 'librefm', ...internalRest, logger: this.logger});
         this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this.api, this.api.logger);
         return await this.api.initialize();
     }

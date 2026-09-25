@@ -37,9 +37,9 @@ export const parseStageConfig = (data: CoverArtArchiveTransformData | undefined 
         ...data,
     };
 
-    logger.debug(`Will search if missing: ${config.searchWhenMissing === true ? 'all' : config.searchWhenMissing.join(', ')}`);
+    logger.debug(`Will search if missing: ${config.searchWhenMissing === true ? 'all' : config.searchWhenMissing!.join(', ')}`);
 
-    logger.debug(`Allowed image types: ${config.allowedTypes.join(',')}`);
+    logger.debug(`Allowed image types: ${config.allowedTypes!.join(',')}`);
 
     return config;
 }
@@ -48,9 +48,9 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
 
     declare config: CovertArtArchiveTransformerConfig;
 
-    protected defaults: CoverArtArchiveTransformDataStrong;
+    protected defaults!: CoverArtArchiveTransformDataStrong;
 
-    protected api: CoverArtClientPool;
+    protected api!: CoverArtClientPool;
     protected clientCache?: Cacheable;
 
     public constructor(config: CovertArtArchiveTransformerConfig, options: TransformerOptions & {clientCache?: Cacheable}) {
@@ -81,7 +81,7 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
             type: 'coverartarchive'
         }
 
-        for (const k of ['art']) {
+        for (const k of ['art'] as const) {
             if (!(k in stage)) {
                 stage[k] = true;
                 continue;
@@ -112,13 +112,13 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
             }
                 this.logger.debug('Play has no art fields');
         } else {
-            const missing = difference(searchWhenMissing, found);
+            const missing = difference(searchWhenMissing!, found);
             if(missing.length > 0) {
                 this.logger.debug(`Play is missing desired fields: ${missing.join(', ')}`);
             } else if(forceSearch) {
                 this.logger.debug(`All desired fields exist but forceSearch = true`);
             } else {
-                throw new SkipTransformStageError(`No desired fields (${searchWhenMissing.join(',')}) are missing`, {shortStack: true});
+                throw new SkipTransformStageError(`No desired fields (${searchWhenMissing!.join(',')}) are missing`, {shortStack: true});
             }
         }
 
@@ -131,25 +131,25 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
             allowedSizes = this.defaults.allowedSizes,
         } = stageConfig;
         
-        let results: MSCoverArtReleaseResponse;
-        let resultType: 'album' | 'releaseGroup';
+        let results: MSCoverArtReleaseResponse | undefined;
+        let resultType: 'album' | 'releaseGroup' | undefined;
         const queries: LifecycleInput[] = [];
 
         for(const searchType of ['album','releaseGroup'] as const) {
             try {
-                results = await this.searchByMbid(play, searchType, stageConfig, opts);
+                results = (await this.searchByMbid(play, searchType, stageConfig, opts))!;
                 queries.push({type: `rsQuery-${searchType}${results.images === undefined ? '-empty'  : ''}`, input: results.requestQuery});
                 if(results.images !== undefined) {
-                    if(allowedTypes.includes('any') && allowedSizes.includes('any')) {
+                    if(allowedTypes!.includes('any') && allowedSizes!.includes('any')) {
                         resultType = searchType;
                         break;
                     }
                     const meetsRequirements = results.images.some(x => {
                         const hasFields = coverImageHas(x);
-                        if(!allowedTypes.includes('any') && difference(allowedTypes, hasFields.types).length > 0) {
+                        if(!allowedTypes!.includes('any') && difference(allowedTypes!, hasFields.types).length > 0) {
                             return false;
                         }
-                        if(!allowedSizes.includes('any') && difference(allowedSizes, hasFields.sizes).length > 0) {
+                        if(!allowedSizes!.includes('any') && difference(allowedSizes!, hasFields.sizes).length > 0) {
                             return false;
                         }
                         return true;
@@ -192,8 +192,8 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
             return {
                 requestQuery,
                 ...res
-            };
-        } catch (e) {
+            } as MSCoverArtReleaseResponse;
+        } catch (e: any) {
             e.requestQuery = requestQuery;
             throw e;
         }
@@ -223,16 +223,16 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
 
         const validImages = transformData.images.filter(x => {
             const hasFields = coverImageHas(x);
-            if(!allowedTypes.includes('any') && difference(allowedTypes, hasFields.types).length > 0) {
+            if(!allowedTypes!.includes('any') && difference(allowedTypes!, hasFields.types).length > 0) {
                 return false;
             }
-            if(!allowedSizes.includes('any') && difference(allowedSizes, hasFields.sizes).length > 0) {
+            if(!allowedSizes!.includes('any') && difference(allowedSizes!, hasFields.sizes).length > 0) {
                 return false;
             }
             return true;
         });
 
-        let preferred: string;
+        let preferred: string | undefined;
         for(const p of preferredSizes) {
             for(const image of validImages) {
                 if(image.thumbnails[p] !== undefined) {
@@ -247,8 +247,8 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
         }
 
         try {
-            const artUrl = await this.api.proxy.getCoverThumbFromUrl(preferred);
-            return {uri: artUrl, lifecycleInputs: transformData.lifecycleInputs, type: transformData.type}
+            const artUrl = await this.api.proxy.getCoverThumbFromUrl(preferred!);
+            return {uri: artUrl!, lifecycleInputs: transformData.lifecycleInputs, type: transformData.type!}
         } catch (e) {
             throw new StageTransformError('Fetch Error', 'Unexpected error occurred while getting CoverArtArchive final url', {cause: e, inputs: transformData.lifecycleInputs});
         }
@@ -300,7 +300,7 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
     }
 
     public notify(payload: WebhookPayload): Promise<void> {
-        return;
+        return undefined as unknown as Promise<void>;
     }
 
 }

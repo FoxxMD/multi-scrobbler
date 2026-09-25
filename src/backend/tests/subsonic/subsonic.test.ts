@@ -76,7 +76,7 @@ describe('Subsonic now-playing expiration', () => {
 
         const play = formatPlay(entry(3));
 
-        expect(play.data.playDate.isSame(dayjs('2026-01-01T12:02:00Z'))).to.be.true;
+        expect(play.data.playDate!.isSame(dayjs('2026-01-01T12:02:00Z'))).to.be.true;
     });
 
     it('keeps a now-playing row within the track duration and tolerance', () => {
@@ -116,7 +116,7 @@ describe('Subsonic now-playing expiration', () => {
 
         const play = formatPlay(entry(3, 184));
 
-        expect(play.data.playDate.isSame(dayjs('2026-01-01T12:01:00Z'))).to.be.true;
+        expect(play.data.playDate!.isSame(dayjs('2026-01-01T12:01:00Z'))).to.be.true;
         expect(isSubsonicNowPlayingExpired(play)).to.be.false;
     });
 
@@ -179,7 +179,7 @@ describe('Subsonic playback reports', () => {
         expect(state.play!.data.track).to.equal('Track');
         expect(state.status).to.equal(REPORTED_PLAYER_STATUSES.playing);
         expect(state.position).to.equal(12.345);
-        expect(state.play.meta.trackProgressPosition).to.equal(12.345);
+        expect(state.play!.meta.trackProgressPosition).to.equal(12.345);
     });
 
     for (const [reportedState, expectedStatus] of [
@@ -331,7 +331,7 @@ describe('Subsonic playback report capability discovery', () => {
             })
         ], async () => {
             const source = createSource();
-            source.config.options.maxRequestRetries = 1;
+            source.config.options!.maxRequestRetries = 1;
 
             expect(await source.doCheckConnection()).to.be.true;
             expect(attempts).to.equal(2);
@@ -363,7 +363,7 @@ describe('Subsonic playback report capability discovery', () => {
         })
     ], async () => {
         const source = createSource();
-        source.config.options.maxRequestRetries = 0;
+        source.config.options!.maxRequestRetries = 0;
         let error: unknown;
 
         try {

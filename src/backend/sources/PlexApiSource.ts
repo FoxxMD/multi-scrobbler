@@ -43,14 +43,14 @@ export default class PlexApiSource extends MemoryPositionalSource {
 
     override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
 
-    plexApi: PlexAPI;
-    plexUser: string;
+    plexApi!: PlexAPI;
+    plexUser!: string;
 
-    httpClient: HTTPClient;
+    httpClient!: HTTPClient;
 
     deviceId: string;
 
-    address: URLData;
+    address!: URLData;
 
     usersAllow: string[] = [];
     usersBlock: string[] = [];
@@ -59,7 +59,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
     librariesAllow: string[] = [];
     librariesBlock: string[] = [];
 
-    logFilterFailure: false | 'debug' | 'warn';
+    logFilterFailure!: false | 'debug' | 'warn';
 
     mediaIdsSeen: FixedSizeList<string>;
     uniqueDropReasons: FixedSizeList<string>;
@@ -190,7 +190,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
 
             try {
             const tokenDetails = await this.plexApi.authentication.getTokenDetails();
-            userPlexAccount = tokenDetails.userPlexAccount;
+            userPlexAccount = tokenDetails.userPlexAccount!;
             } catch (e) {
                 if(e instanceof SDKValidationError && 'UserPlexAccount' in (e.rawValue as object)) {
                     userPlexAccount = (e.rawValue as {UserPlexAccount: GetTokenDetailsUserPlexAccount}).UserPlexAccount as GetTokenDetailsUserPlexAccount;
@@ -199,16 +199,16 @@ export default class PlexApiSource extends MemoryPositionalSource {
                 }
             }
 
-            this.plexUser = getFirstNonEmptyString([userPlexAccount.username, userPlexAccount.title, userPlexAccount.friendlyName, userPlexAccount.email]);
+            this.plexUser = getFirstNonEmptyString([userPlexAccount.username, userPlexAccount.title, userPlexAccount.friendlyName, userPlexAccount.email])!;
 
             if(this.usersAllow.length === 0) {
                 this.usersAllow.push(this.plexUser.toLocaleLowerCase());
                 this.usersAllow.push(LOCAL_USER.toLocaleLowerCase());
             }
 
-            this.logger.info(`Authenticated on behalf of user ${this.plexUser} on Server ${server.object.mediaContainer.friendlyName} (version ${server.object.mediaContainer.version})`);
+            this.logger.info(`Authenticated on behalf of user ${this.plexUser} on Server ${server.object!.mediaContainer!.friendlyName} (version ${server.object!.mediaContainer!.version})`);
             return true;
-        } catch (e) {
+        } catch (e: any) {
             if(e.message.includes('401') && e.message.includes('API error occurred')) {
                 throw new Error('Plex Token was not valid for the specified server', {cause: e});
             } else {
@@ -220,14 +220,14 @@ export default class PlexApiSource extends MemoryPositionalSource {
         try {
             const libraries = await this.plexApi.library.getAllLibraries();
 
-            this.libraries = libraries.object.mediaContainer.directory.map(x => ({name: x.title, collectionType: x.type, uuid: x.uuid}));
+            this.libraries = libraries.object!.mediaContainer!.directory!.map(x => ({name: x.title, collectionType: x.type, uuid: x.uuid}));
         } catch (e) {
             if(e instanceof SDKValidationError) {
                 if((e.rawValue as any).object?.MediaContainer?.Directory !== undefined) {
                     // ensure directory has required values
-                    const ok = (e.rawValue as any).object?.MediaContainer?.Directory.every(x => x.title !== undefined && x.type !== undefined && x.uuid !== undefined);
+                    const ok = (e.rawValue as any).object?.MediaContainer?.Directory.every((x: any) => x.title !== undefined && x.type !== undefined && x.uuid !== undefined);
                     if(ok) {
-                        this.libraries = (e.rawValue as any).object.MediaContainer.Directory.map(x => ({name: x.title, collectionType: x.type, uuid: x.uuid}));
+                        this.libraries = (e.rawValue as any).object.MediaContainer.Directory.map((x: any) => ({name: x.title, collectionType: x.type, uuid: x.uuid}));
                         return;
                     }
                 }
@@ -282,14 +282,14 @@ export default class PlexApiSource extends MemoryPositionalSource {
 
         if(state.play !== undefined) {
             const allowedLibraries = this.getAllowedLibraries();
-            if(allowedLibraries.length > 0 && !allowedLibraries.some(x => (state.play.meta.library ?? '').toLocaleLowerCase() === x.name.toLocaleLowerCase())) {
+            if(allowedLibraries.length > 0 && !allowedLibraries.some(x => (state.play!.meta.library ?? '').toLocaleLowerCase() === x.name.toLocaleLowerCase())) {
                 return `media not included in librariesAllow`;
             }
             
             if(allowedLibraries.length === 0) {
                 const blockedLibraries = this.getBlockedLibraries();
                 if(blockedLibraries.length > 0) {
-                    const blockedLibrary = blockedLibraries.find(x => (state.play.meta.library ?? '').toLocaleLowerCase() === x.name.toLocaleLowerCase());
+                    const blockedLibrary = blockedLibraries.find(x => (state.play!.meta.library ?? '').toLocaleLowerCase() === x.name.toLocaleLowerCase());
                     if(blockedLibrary !== undefined) {
                         return `media included in librariesBlock '${blockedLibrary.name}'`;
                     }
@@ -298,7 +298,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
                 // this is inside this block because we SHOULD allow non-music libraries if
                 // user specified name in librariesAllow
                 // -- so only check for this if nothing is specified
-                if(!this.getValidLibraries().some(x => (state.play.meta.library ?? '') === x.name)) {
+                if(!this.getValidLibraries().some(x => (state.play!.meta.library ?? '') === x.name)) {
                     return `media not included in a valid library`;
                 }
             }
@@ -367,9 +367,9 @@ export default class PlexApiSource extends MemoryPositionalSource {
 
         if(trackArtist !== undefined) {
             realArtists.push(trackArtist);
-            albumArtists.push(artist);
+            albumArtists.push(artist!);
         } else {
-            realArtists.push(artist);
+            realArtists.push(artist!);
         }
 
         const play: PlayObjectMinimal = {
@@ -379,7 +379,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
                 album,
                 track,
                 // albumArtists: AlbumArtists !== undefined ? AlbumArtists.map(x => x.Name) : undefined,
-                duration: duration / 1000
+                duration: duration! / 1000
             },
             meta: {
                 // If a user does not have to login to Plex (local IP and no Home Management(?)) then the User node is never populated
@@ -392,7 +392,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
                 library,
                 deviceId: combinePartsToString([shortDeviceId(machineIdentifier), product, playerTitle]),
                 sessionId: sessionKey,
-                trackProgressPosition: viewOffset / 1000,
+                trackProgressPosition: viewOffset! / 1000,
             }
         }
         return baseFormatPlayObj(obj, play);
@@ -402,7 +402,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
 
         const result = await this.plexApi.sessions.getSessions();
 
-        const allSessions: [PlayerStateDataMaybePlay, GetSessionsMetadata][] = (result.object.mediaContainer?.metadata ?? [])
+        const allSessions: [PlayerStateDataMaybePlay, GetSessionsMetadata][] = (result.object!.mediaContainer?.metadata ?? [])
         .map(x => [this.sessionToPlayerState(x), x]);
         const validSessions: PlayerStateDataMaybePlay[] = [];
 
@@ -416,14 +416,14 @@ export default class PlexApiSource extends MemoryPositionalSource {
                     this.getMusicBrainzId(sessionData[1].grandparentRatingKey),
                 ]);
                 
-                if (!sessionData[0].play.data.meta) {
-                    sessionData[0].play.data.meta = {};
+                if (!sessionData[0].play!.data.meta) {
+                    sessionData[0].play!.data.meta = {};
                 }
                 
                 const computedBrainz: BrainzMeta = {
-                    ...(sessionData[0].play.data.meta.brainz ?? {}),
-                    track: trackMbId ?? sessionData[0].play.data?.meta?.brainz?.track,
-                    album: albumMbId ?? sessionData[0].play.data?.meta?.brainz?.album,
+                    ...(sessionData[0].play!.data.meta.brainz ?? {}),
+                    track: trackMbId ?? sessionData[0].play!.data?.meta?.brainz?.track,
+                    album: albumMbId ?? sessionData[0].play!.data?.meta?.brainz?.album,
                 }
                 // Plex doesn't store MBIDs for track artists, so we use the
                 // album artist MBID instead BUT ONLY if
@@ -434,14 +434,14 @@ export default class PlexApiSource extends MemoryPositionalSource {
                 // otherwise we might accidentally set "Various Artists" like MBIDs as actual artist
                 if(albumArtistMbId !== undefined 
                     && albumArtistMbId !== MBID_VARIOUS_ARTISTS 
-                    && (sessionData[0].play.data.albumArtists.length === 0 
-                        || sessionData[0].play.data.artists.every(y => (sessionData[0].play.data.albumArtists ?? []).includes(y)))) {
+                    && (sessionData[0].play!.data.albumArtists!.length === 0 
+                        || sessionData[0].play!.data.artists!.every(y => (sessionData[0].play!.data.albumArtists ?? []).includes(y)))) {
                     computedBrainz.artist = [...new Set([...(computedBrainz.artist ?? []), albumArtistMbId])];
 
                     // since we don't get artist and mbid at the same time we only be sure these are actually associated
                     // if there is only one of each
-                    if(computedBrainz.artist.length === 1 && sessionData[0].play.data.artists.length === 1) {
-                        sessionData[0].play.data.artists[0].mbid = computedBrainz.artist[0];
+                    if(computedBrainz.artist.length === 1 && sessionData[0].play!.data.artists!.length === 1) {
+                        sessionData[0].play!.data.artists![0].mbid = computedBrainz.artist[0];
                     }
                 }
 
@@ -450,12 +450,12 @@ export default class PlexApiSource extends MemoryPositionalSource {
 
                     // since we don't get albumartist and mbid at the same time we only be sure these are actually associated
                     // if there is only one of each
-                    if(computedBrainz.albumArtist.length === 1 && sessionData[0].play.data.albumArtists.length === 1) {
-                        sessionData[0].play.data.albumArtists[0].mbid = computedBrainz.albumArtist[0];
+                    if(computedBrainz.albumArtist.length === 1 && sessionData[0].play!.data.albumArtists!.length === 1) {
+                        sessionData[0].play!.data.albumArtists![0].mbid = computedBrainz.albumArtist[0];
                     }
                 }
 
-                sessionData[0].play.data.meta.brainz = computedBrainz;
+                sessionData[0].play!.data.meta.brainz = computedBrainz;
 
                 // need to add this to original object since lifecycle has already been set in sessionToPlayerState
                 //sessionData[0].play.meta.lifecycle.original = clone(sessionData[0].play);
@@ -481,7 +481,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
                 height: 250,
                 minSize: 1,
                 upscale: 0,
-                xPlexToken: this.config.data.token
+                xPlexToken: this.config.data.token!
             });
 
             // @ts-expect-error its fine
@@ -499,7 +499,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
         // then choose the player state with the "latest" session key
         if(sessions.every(x => asPlayerStateDataMaybePlay(x) && 'sessionId' in x)) {
             const pStateSessions = sessions as PlayerStateDataMaybePlay[];
-            pStateSessions.sort((a, b) => parseInt(a.sessionId) - parseInt(b.sessionId));
+            pStateSessions.sort((a, b) => parseInt(a.sessionId!) - parseInt(b.sessionId!));
 
             const validSession = pStateSessions[sessions.length - 1];
             const droppingSessions = pStateSessions.filter(x => x.sessionId !== validSession.sessionId).map(x => buildStatePlayerPlayIdententifyingInfo(x)).join('\n');
@@ -531,20 +531,20 @@ export default class PlexApiSource extends MemoryPositionalSource {
 
         const play: PlayObject = this.formatPlayObjAware(obj);
 
-        if((this.config.options.logPayload || isDebugMode()) && !this.mediaIdsSeen.data.includes(play.meta.trackId)) {
+        if((this.config.options!.logPayload || isDebugMode()) && !this.mediaIdsSeen.data.includes(play.meta.trackId!)) {
             this.logger.debug(`First time seeing media ${play.meta.trackId} on ${msDeviceId} => ${JSON.stringify(play)}
 Plex Payload:
 ${JSON.stringify(obj)}`);
-            this.mediaIdsSeen.add(play.meta.trackId);
+            this.mediaIdsSeen.add(play.meta.trackId!);
         }
 
         const reportedStatus = state !== 'playing' ? REPORTED_PLAYER_STATUSES.paused : REPORTED_PLAYER_STATUSES.playing;
         return {
-            platformId: [msDeviceId, play.meta.user],
+            platformId: [msDeviceId!, play.meta.user!],
             sessionId: sessionKey,
             play,
             status: reportedStatus,
-            position: viewOffset / 1000
+            position: viewOffset! / 1000
         }
     }
 
@@ -574,7 +574,7 @@ ${JSON.stringify(obj)}`);
                     {
                         method: "GET",
                         headers: {
-                            "X-Plex-Token": this.config.data.token,
+                            "X-Plex-Token": this.config.data.token!,
                             "Accept": "application/json",
                         },
                         signal
@@ -589,7 +589,7 @@ ${JSON.stringify(obj)}`);
             // There shouldn't be multiple metadata or GUID objects, but we return
             // the first MBID to be safe.
             metadataLoop: for (const metadata of result?.MediaContainer?.Metadata ?? []) {
-                this.logger.trace(`Guid: '${metadata.Guid?.map(g => g.id)?.join(", ")}', guid: '${metadata.guid}'`)
+                this.logger.trace(`Guid: '${metadata.Guid?.map((g: any) => g.id)?.join(", ")}', guid: '${metadata.guid}'`)
                 
                 if (Array.isArray(metadata.Guid)) {
                     for (const guid of metadata.Guid) {

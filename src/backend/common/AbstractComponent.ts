@@ -53,7 +53,7 @@ import { type PlayEvent, type PlayEventPlayStateChange } from "../../core/PlayEv
 
 export type AbstractComponentConfig = (CommonClientConfig | CommonSourceConfig) & { transformManager?: TransformerManager };
 
-const noopTransform = async (x) => x;
+const noopTransform = async (x: any) => x;
 
 export default abstract class AbstractComponent extends AbstractInitializable {
 
@@ -63,7 +63,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     regexCache!: ReturnType<typeof cacheFunctions>;
     protected transformManager: TransformerManager;
     protected cache: MSCache;
-    protected db: DbConcrete;
+    protected db!: DbConcrete;
     protected componentRepo!: DrizzleComponentRepository;
     protected dbComponent!: ComponentSelect;
     public playRepo!: DrizzlePlayRepository;
@@ -72,7 +72,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     componentId!: number;
     protected retentionOpts: RetentionOptions;
     status: string = 'Waiting to initialize...';
-    emitter: EventEmitter;
+    emitter!: EventEmitter;
 
     protected ingressQueueAbortController: AbortController | undefined;
     protected ingressQueuePromise: Promise<void> | undefined;
@@ -80,9 +80,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     monitoringActivity?: boolean | undefined;
     monitoringActivityDefault: boolean = true;
 
-    protected componentType: ComponentType;
-    type: ClientType | SourceType;
-    name: string;
+    protected componentType!: ComponentType;
+    type!: ClientType | SourceType;
+    name!: string;
 
     lastActiveAt?: Dayjs;
     lastReadyAt?: Dayjs;
@@ -215,10 +215,10 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             postCompare: postConfig
         } = playTransform;
 
-        let preCompare: StageConfig[],
-            candidate: StageConfig[],
-            existing: StageConfig[],
-            postCompare: StageConfig[];
+        let preCompare: StageConfig[] | undefined,
+            candidate: StageConfig[] | undefined,
+            existing: StageConfig[] | undefined,
+            postCompare: StageConfig[] | undefined;
 
         const builtHooks: string[] = [];
         const emptyHooks: string[] = [];
@@ -339,10 +339,10 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             useCachedResult = true
         } = transformOpts;
 
-        let logger: Logger;
+        let logger!: Logger;
 
         try {
-            let hook: StageConfig[];
+            let hook: StageConfig[] | undefined;
 
             switch (hookType) {
                 case TRANSFORM_HOOK.preCompare:
@@ -451,9 +451,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 if(!isNew) {
                     const existingStepIndex = lifecycle.findIndex(x => x.stageName === s.stageName && x.stageType === s.stageType && x.hook === s.hook && x.source === this.getIdentifier());
                     if(existingStepIndex !== -1) {
-                        transformedPlay.lifecycle[existingStepIndex] = s;
+                        transformedPlay.lifecycle![existingStepIndex] = s;
                     } else {
-                        transformedPlay.lifecycle.push(s);
+                        transformedPlay.lifecycle!.push(s);
                     }
                 }
 
@@ -496,7 +496,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                             diffs.push(`${last.name} => ${curr.name} -- No Change`);
                         } else {
                             try {
-                                const formattedDiff = diffObjectsConsoleOutput(lastTransformed.data, curr.data);
+                                const formattedDiff = diffObjectsConsoleOutput(lastTransformed.data!, curr.data);
                                 diffs.push(`${last.name} => ${curr.name}\n${formattedDiff}`);
                                 lastTransformed = curr;
                             } catch(e) {
@@ -564,21 +564,21 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         //const stepName = `${hookType} - ${hookItem.type} - ${hookItem.name}`
         const existingStepIndex = lifecycle.findIndex(x => x.hook === hookType && hookItem.name === x.stageName && x.stageType === hookItem.type && x.source === this.getIdentifier());
         const step: LifecycleStep = existingStepIndex !== -1 && lifecycle[existingStepIndex] !== undefined ? lifecycle[existingStepIndex] : {
-            stageName: hookItem.name,
+            stageName: hookItem.name!,
             hook: hookType,
             stageType: hookItem.type,
             source: this.getIdentifier(),
             createdAt: dayjs().toString()
         }
 
-        let newTransformedPlay: PlayObject,
+        let newTransformedPlay!: PlayObject,
             stageName: string = 'Unnamed',
-            err: Error;
+            err: Error | undefined;
         try {
             [newTransformedPlay, stageName] = await this.transformManager.handleStage(hookItem, playTruth, {asyncId, useCachedResult});
             newTransformedPlay = clone(newTransformedPlay);
         } catch (e) {
-            err = e;
+            err = e as Error;
             if (e instanceof StageTransformError) {
                 stageName = e.stageName;
             }
@@ -647,9 +647,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 step.patch = patch;
             }
 
-            if (newTransformedPlay.meta.lifecycleInputs?.length > 0) {
+            if ((newTransformedPlay.meta.lifecycleInputs?.length ?? 0) > 0) {
                 step.inputs = clone(newTransformedPlay.meta.lifecycleInputs)
-            } else if (playTruth.meta.lifecycleInputs?.length > 0) {
+            } else if ((playTruth.meta.lifecycleInputs?.length ?? 0) > 0) {
                 logger.warn({ label: `${hookItem.type} - ${hookItem.name}` }, `Should only be adding inputs to transformed play!`);
                 step.inputs = clone(playTruth.meta.lifecycleInputs)
             }
@@ -680,7 +680,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             monitoringStatus: this.getMonitoringStatus(),
             countNonLive: this.dbComponent.countNonLive,
             createdAt: this.dbComponent.createdAt?.toISOString(),
-            lastReadyAt: this.lastActiveAt !== undefined ? this.lastReadyAt.toISOString() : undefined,
+            lastReadyAt: this.lastActiveAt !== undefined ? this.lastReadyAt!.toISOString() : undefined,
             lastActiveAt: this.lastActiveAt !== undefined ? this.lastActiveAt?.toISOString() : undefined,
             errors: this.errors.map(x => x instanceof Error ? serializeError(x) : x),
             warnings: this.warnings.map(x => x instanceof Error ? serializeError(x) : x),
@@ -700,15 +700,15 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     public emitComponentUpdate = <T extends Partial<ReturnType<typeof this.getApiData>>>(payload: T) => {
         if('errors' in payload) {
-            if(payload.errors.length > 0) {
-                payload.errors = payload.errors.map(x => x instanceof Error ? serializeError(x) : x);
+            if(payload.errors!.length > 0) {
+                payload.errors = payload.errors!.map(x => x instanceof Error ? serializeError(x) : x);
             } else {
                 payload.errors = [];
             }
         }
         if('warnings' in payload) {
-            if(payload.warnings.length > 0) {
-               payload.warnings = payload.warnings.map(x => x instanceof Error ? serializeError(x) : x); 
+            if(payload.warnings!.length > 0) {
+               payload.warnings = payload.warnings!.map(x => x instanceof Error ? serializeError(x) : x); 
             } else {
                 payload.warnings = [];
             }
@@ -724,7 +724,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     async notify(payload: Omit<WebhookPayload, 'identifier'>) {
         this.emitEvent('notify', {...payload, identifier: this.getIdentifier()});
-        this.setStatus(payload.title);
+        this.setStatus(payload.title ?? payload.message);
     }
 
     public setStatus = (status: string) => {
@@ -864,7 +864,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 const playRow = await this.playRepo.createPlays([createPlayData]);
                 const queueState = await this.queueRepo.create({ componentId: this.dbComponent.id, playId: playRow[0].id, queueName: INGRESS_QUEUE, context }) as QueueStateSelect;
                 const createdEvents = await this.playEventsRepo.createMany([
-                    { playId: playRow[0].id, ...stateChangeToPlayEvent({ state: 'queued' }), createdAt: playRow[0].seenAt.add(1, 'ms') },
+                    { playId: playRow[0].id, ...stateChangeToPlayEvent({ state: 'queued' }), createdAt: playRow[0].seenAt!.add(1, 'ms') },
                     { playId: playRow[0].id, ...queueStateToPlayEvent(queueState), createdAt: queueState.createdAt }
                 ]);
                 createdQueuedPlays.push(playRow[0]);
@@ -884,17 +884,17 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         return createdQueuedPlays;
     }
 
-    abstract findPreQueueExistingPlay(queueablePlay: PlayObject, context?: QueueContext & {isRetry?: boolean}): Promise<PlayWith<'parent' | 'queueStates'>>
+    abstract findPreQueueExistingPlay(queueablePlay: PlayObject, context?: QueueContext & {isRetry?: boolean}): Promise<PlayWith<'parent' | 'queueStates'> | undefined>
 
     protected handlePlayProcessing = async (playEntity: PlayWith<'queueStates'|'events'>, signal?: AbortSignal) => {
         
-        let res: PlayProcessingResult,
-        err: Error;
+        let res!: PlayProcessingResult,
+        err: Error | undefined;
         try {
             res = await this.processPlay(playEntity, signal);
         } catch (e: unknown | Error | PlayProcessingError) {
             if(isAbortError(e)) {
-                err = generateLoggableAbortReason('Interrupted by abort signal', this.ingressQueueAbortController.signal);
+                err = generateLoggableAbortReason('Interrupted by abort signal', this.ingressQueueAbortController!.signal);
                 throw e;
             }
             if(e instanceof PlayProcessingError) {

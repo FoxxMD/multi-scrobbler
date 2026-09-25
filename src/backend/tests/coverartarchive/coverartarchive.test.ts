@@ -47,7 +47,7 @@ describe('CoverArtArchive Transformer', function () {
             await withRequestInterception(
                 [
                 http.get(/coverartarchive\.org\/(release|release-group)\/.+/, () => HttpResponse.json(coverResponse, { status: 200 })),
-                http.get(/.+/, () => new HttpResponse(null, { status: 302, headers: {location: imageResponse} }))
+                http.get(/.+/, () => new HttpResponse(null, { status: 302, headers: {location: imageResponse!} }))
                 ], async function() {
                     await transformer.initialize();
                     const play = withBrainz(generatePlay(), {include: ['album']});
@@ -70,7 +70,7 @@ describe('CoverArtArchive Transformer', function () {
                 [
                 http.get('https://coverartarchive.org/release-group/:mbid', () => HttpResponse.json(coverResponse, { status: 200 })),
                 http.get('https://coverartarchive.org/release/:mbid', () => new HttpResponse(null, {status: 404})),
-                http.get(/.+/, () => new HttpResponse(null, { status: 302, headers: {location: imageResponse} }))
+                http.get(/.+/, () => new HttpResponse(null, { status: 302, headers: {location: imageResponse!} }))
                 ], async function() {
                     await transformer.initialize();
                     const play = withBrainz(generatePlay(), {include: ['album','releaseGroup']});
@@ -78,7 +78,7 @@ describe('CoverArtArchive Transformer', function () {
                         type: 'coverartarchive'
                     });
                     expect(res.type).eq('releaseGroup');
-                    expect(res.lifecycleInputs.find(x => x.type.includes('album-prereqFailure')));
+                    expect(res.lifecycleInputs!.find(x => x.type.includes('album-prereqFailure')));
                 }
             )();
         });
@@ -93,7 +93,7 @@ describe('CoverArtArchive Transformer', function () {
             await withRequestInterception(
                 [
                 http.get('https://coverartarchive.org/release/:mbid', () => HttpResponse.json(coverResponse, { status: 200 })),
-                http.get(/.+/, () => new HttpResponse(null, { status: 302, headers: {location: imageResponse} }))
+                http.get(/.+/, () => new HttpResponse(null, { status: 302, headers: {location: imageResponse!} }))
                 ], async function() {
                     await transformer.initialize();
                     const play = withBrainz(generatePlay(), {include: ['album']});
@@ -116,7 +116,7 @@ describe('CoverArtArchive Transformer', function () {
             await withRequestInterception(
                 [
                 http.get('https://coverartarchive.org/release/:mbid', () => HttpResponse.json(coverResponse, { status: 200 })),
-                http.get(/.+/, () => new HttpResponse(null, { status: 302, headers: {location: imageResponse} }))
+                http.get(/.+/, () => new HttpResponse(null, { status: 302, headers: {location: imageResponse!} }))
                 ], async function() {
                     await transformer.initialize();
                     const play = withBrainz(generatePlay(), {include: ['album']});
@@ -144,7 +144,7 @@ describe('CoverArtArchive Transformer', function () {
             await withRequestInterception(
                 [
                 http.get('https://coverartarchive.org/release/:mbid', () => HttpResponse.json(coverResponse, { status: 200 })),
-                http.get(/.+/, () => new HttpResponse(null, { status: 302, headers: {location: imageResponse} }))
+                http.get(/.+/, () => new HttpResponse(null, { status: 302, headers: {location: imageResponse!} }))
                 ], async function() {
                     await transformer.initialize();
                     const play = withBrainz(generatePlay(), {include: ['album']});

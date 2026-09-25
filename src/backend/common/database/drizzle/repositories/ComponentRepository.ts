@@ -31,7 +31,7 @@ export class DrizzleComponentRepository extends DrizzleBaseRepository<'component
             uid: data.uid ?? data.name,
             mode: data.mode,
             type: data.type,
-            name: data.name
+            name: data.name!
         })).returning())[0] as ComponentSelect;
         componentNew.migrations = [];
         return componentNew;

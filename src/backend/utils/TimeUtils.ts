@@ -43,21 +43,21 @@ import { loggerNoop } from "../common/MaybeLogger.ts";
 export const temporalPlayComparisonSummary = (data: TemporalPlayComparison, existingPlay?: PlayObject, candidatePlay?: PlayObject) => {
     const parts: string[] = [];
     if (existingPlay !== undefined && candidatePlay !== undefined) {
-        if (existingPlay.data.playDate.isSame(candidatePlay.data.playDate, 'day')) {
-            parts.push(`Existing: ${existingPlay.data.playDate.format('HH:mm:ssZ')} - Candidate: ${candidatePlay.data.playDate.format('HH:mm:ssZ')}`);
+        if (existingPlay.data.playDate!.isSame(candidatePlay.data.playDate, 'day')) {
+            parts.push(`Existing: ${existingPlay.data.playDate!.format('HH:mm:ssZ')} - Candidate: ${candidatePlay.data.playDate!.format('HH:mm:ssZ')}`);
         } else {
-            parts.push(`Existing: ${existingPlay.data.playDate.toISOString()} - Candidate: ${candidatePlay.data.playDate.toISOString()}`);
+            parts.push(`Existing: ${existingPlay.data.playDate!.toISOString()} - Candidate: ${candidatePlay.data.playDate!.toISOString()}`);
         }
     }
     parts.push(`Temporal Sameness: ${capitalize(temporalAccuracyToString(data.match))}`);
     if (data.date !== undefined) {
         parts.push(`Play Diff: ${formatNumber(data.date.diff, {toFixed: 0})}s (Needed <${data.date.threshold}s)`)
     }
-    if (data.date.fuzzyDurationDiff !== undefined) {
-        parts.push(`Fuzzy Duration Diff: ${formatNumber(data.date.fuzzyDurationDiff, {toFixed: 0})}s (Needed <= ${data.date.fuzzyDiffThreshold}s)`);
+    if (data.date!.fuzzyDurationDiff !== undefined) {
+        parts.push(`Fuzzy Duration Diff: ${formatNumber(data.date!.fuzzyDurationDiff, {toFixed: 0})}s (Needed <= ${data.date!.fuzzyDiffThreshold}s)`);
     }
-    if (data.date.fuzzyListenedDiff !== undefined) {
-        parts.push(`Fuzzy Listened Diff: ${formatNumber(data.date.fuzzyDurationDiff, {toFixed: 0})}s (Needed <= ${data.date.fuzzyDiffThreshold}s)`);
+    if (data.date!.fuzzyListenedDiff !== undefined) {
+        parts.push(`Fuzzy Listened Diff: ${formatNumber(data.date!.fuzzyDurationDiff!, {toFixed: 0})}s (Needed <= ${data.date!.fuzzyDiffThreshold}s)`);
     }
 
     if(data.range === undefined) {
@@ -184,12 +184,12 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
         // playDate depending on the play's scrobbleTsSOC, which would put the window in the wrong
         // place entirely (starting from roughly when the track ended, not when it started)
         if(duringReferences.includes('listenedFor') && existingPlay.data.listenedFor !== undefined) {
-            const listenedForEnd = existingPlay.data.playDate.add(existingPlay.data.listenedFor, 's');
+            const listenedForEnd = existingPlay.data.playDate!.add(existingPlay.data.listenedFor, 's');
             if (candidateTsSOCDate.isBetween(existingPlay.data.playDate, listenedForEnd)) {
                 result.match = TA_DURING;
                 result.range = {
                         type: 'listenedFor',
-                        timestamps: [existingPlay.data.playDate, listenedForEnd]
+                        timestamps: [existingPlay.data.playDate!, listenedForEnd]
                 }
                 return result;
             }
@@ -199,12 +199,12 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
             // prefer the play's actual observed completion time over the nominal duration --
             // a real listen can take longer than the track's length if it was paused partway through,
             // and playDateCompleted reflects that real wall-clock span while playDate + duration doesn't
-            const durationEnd = existingPlay.data.playDateCompleted ?? existingPlay.data.playDate.add(existingPlay.data.duration, 's');
+            const durationEnd = existingPlay.data.playDateCompleted ?? existingPlay.data.playDate!.add(existingPlay.data.duration, 's');
             if (candidateTsSOCDate.isBetween(existingPlay.data.playDate, durationEnd)) {
                 result.match = TA_DURING;
                 result.range = {
                         type: 'duration',
-                        timestamps: [existingPlay.data.playDate, durationEnd]
+                        timestamps: [existingPlay.data.playDate!, durationEnd]
                 }
                 return result;
             }

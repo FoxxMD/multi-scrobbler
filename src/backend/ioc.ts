@@ -86,8 +86,8 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         disableWeb = process.env.DISABLE_WEB === 'true';
     }
 
-    let cacheFunc: () => MSCache;
-    let maybeSingletonCache: MSCache;
+    let cacheFunc!: () => MSCache;
+    let maybeSingletonCache!: MSCache;
 
     if(cache instanceof MSCache) {
         maybeSingletonCache = cache;
@@ -98,31 +98,31 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
     }
 
     let mbFunc: () => MusicBrainzSingletonMap;
-    let maybeSingletonMb: MusicBrainzSingletonMap;
+    let maybeSingletonMb!: MusicBrainzSingletonMap;
     if(typeof mbMap === 'function') {
         mbFunc = mbMap;
     } else if(maybeSingletonMb !== undefined) {
-        maybeSingletonMb = mbMap;
+        maybeSingletonMb = mbMap!;
     } else {
         maybeSingletonMb = new Map();
     }
 
     let rsFunc: () => RockskySingletonMap;
-    let maybeSingletonRs: RockskySingletonMap;
+    let maybeSingletonRs!: RockskySingletonMap;
     if(typeof rsMap === 'function') {
         rsFunc = rsMap;
     } else if(maybeSingletonRs !== undefined) {
-        maybeSingletonRs = rsMap;
+        maybeSingletonRs = rsMap!;
     } else {
         maybeSingletonRs = new Map();
     }
 
     let caFunc: () => CovertArtSingletonMap;
-    let maybeSingletonCa: CovertArtSingletonMap;
+    let maybeSingletonCa!: CovertArtSingletonMap;
     if(typeof caMap === 'function') {
         caFunc = caMap;
     } else if(maybeSingletonCa !== undefined) {
-        maybeSingletonCa = caMap;
+        maybeSingletonCa = caMap!;
     } else {
         maybeSingletonCa = new Map();
     }
@@ -131,7 +131,7 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
     if(typeof db === 'function') {
         dbFunc = db;
     } else {
-        dbFunc = async () => db;
+        dbFunc = async () => db!;
     }
 
     const cEmitter = new WildcardEmitter<MSBackendEventMap>();

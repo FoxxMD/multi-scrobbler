@@ -129,7 +129,7 @@ export const PRIMARY_SECONDARY_SECTIONS_REGEX = new RegExp(/^(?<primary>.+?)(?<s
  *   => May have closing character ) ]
  * */
 // export const SECONDARY_ARTISTS_REGEX = new RegExp(//ig);
-export const parseCredits = (str: string, delimiters?: boolean | string[]): PlayCredits => {
+export const parseCredits = (str: string, delimiters?: boolean | string[]): PlayCredits | undefined => {
     if (str.trim() === '') {
         return undefined;
     }
@@ -161,7 +161,7 @@ export const parseCredits = (str: string, delimiters?: boolean | string[]): Play
             return undefined;
         }
         return {
-            primary,
+            primary: primary!,
             primaryComposite: `${primary}${suffix ?? ''}`,
             secondary,
             suffix
@@ -188,7 +188,7 @@ export const parseArtistCredits = (str: string, delimiters?: boolean | string[],
             return {
                 primary: primaries[0],
                 primaryComposite: primaries[0],
-                secondary: primaries.slice(1).concat(withJoiner.secondary)
+                secondary: primaries.slice(1).concat(withJoiner.secondary!)
             }
         }
         return withJoiner;
@@ -239,12 +239,12 @@ export const parseContextAwareStringList = (str: string, delimiters: string[] = 
 
 const bypassJoinerMap = [
     {
-        rejoin: str => str.replaceAll(/(.*?\S)(\^\^\^)(\S.*?)/g, '$1/$3'),
-        bypass: str => str.replaceAll(/(.*?\S)(\/)(\S.*?)/g, '$1^^^$3')
+        rejoin: (str: string) => str.replaceAll(/(.*?\S)(\^\^\^)(\S.*?)/g, '$1/$3'),
+        bypass: (str: string) => str.replaceAll(/(.*?\S)(\/)(\S.*?)/g, '$1^^^$3')
     },
     {
-        rejoin: str => str.replaceAll(/(.*)(###)(.*)/g, '$1\\$3'),
-        bypass: str => str.replaceAll(/(.*\S)(\\)(.*\S)/g, '$1###$3')
+        rejoin: (str: string) => str.replaceAll(/(.*)(###)(.*)/g, '$1\\$3'),
+        bypass: (str: string) => str.replaceAll(/(.*\S)(\\)(.*\S)/g, '$1###$3')
     }
 ];
 export const bypassJoiners = (str: string): string => {
@@ -279,7 +279,7 @@ export const compareScrobbleTracks = (existing: PlayObject, candidate: PlayObjec
         }
     } = candidate;
 
-    return compareTracks(existingTrack, candidateTrack);
+    return compareTracks(existingTrack!, candidateTrack!);
 }
 
 export const compareTracks = (existingTrack: string, candidateTrack: string): [StringSamenessResult, TrackSamenessResults] => {
@@ -412,7 +412,7 @@ export const scoreNormalizedStringsWeighted = (reference: string, candidate: str
 
     const normalScore = Math.min(sameness.highScore/100, 1);
 
-    return normalScore * (weight + (exact ? exactBonus : 0));
+    return normalScore * (weight + (exact ? exactBonus! : 0));
 }
 
 interface ArrParseOpts {

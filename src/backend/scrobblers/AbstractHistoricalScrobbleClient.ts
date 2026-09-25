@@ -19,7 +19,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
     protected playsHistoricalRepo!: DrizzlePlayHistoricalRepository;
     lastImport?: Dayjs;
     lastImportSuccess?: Dayjs;
-    synced: boolean;
+    synced!: boolean;
     syncedReason?: string;
     syncError?: ErrorIsh;
     override preloadScrobbles: boolean = false;
@@ -61,7 +61,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
                 this.setStatus('Full mirror rebuild complete');
                 this.synced = true;
                 this.lastImportSuccess = dayjs();
-            } catch (e) {
+            } catch (e: any) {
                 await this.migrationRepo.updateById(newImport.id, {success: false, error: e});
                 this.logger.warn(new Error('Failed to hydrate historical scrobbles', {cause: e}));
                 this.syncError = e;
@@ -72,7 +72,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
                 this.lastImport = dayjs();
                 this.emitComponentUpdate<Partial<ComponentClientApiJson>>({
                     synced: this.synced,
-                    lastImportSuccess: this.lastImportSuccess.toISOString(),
+                    lastImportSuccess: this.lastImportSuccess?.toISOString(),
                     lastImport: this.lastImport.toISOString(),
                     syncedReason: this.syncedReason ?? null,
                     syncError: this.syncError ?? null
@@ -81,7 +81,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
             this.dbComponent.migrations.push(newImport);
         }).catch((e) => {
             if (isAbortError(e)) {
-                const err = generateLoggableAbortReason('Import processing stopped', this.importAbortController.signal);
+                const err = generateLoggableAbortReason('Import processing stopped', this.importAbortController!.signal);
                 this.logger.info(err);
                 this.logger.trace(e)
             } else {
@@ -101,7 +101,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
         }
 
         // vibing this duration for now...
-        if(this.dbComponent.lastActiveAt.diff(dayjs(), 'minutes') > 60 && imports[0].attemptedAt.isBefore(this.dbComponent.lastActiveAt)) {
+        if(this.dbComponent.lastActiveAt!.diff(dayjs(), 'minutes') > 60 && imports[0].attemptedAt.isBefore(this.dbComponent.lastActiveAt)) {
             return [true, 'component was inactive for more than an hour and last import was before last activity. There may be missed plays during the period of inactivity.'];
         }
 
@@ -149,7 +149,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
 
     protected abstract doSyncRecentHistoricalScrobbles(): Promise<[PlayObject[], boolean]>;
 
-    async syncRecentHistoricalScrobbles(): ReturnType<AbstractHistoricalScrobbleClient['doSyncRecentHistoricalScrobbles']> {
+    async syncRecentHistoricalScrobbles(): Promise<Awaited<ReturnType<AbstractHistoricalScrobbleClient['doSyncRecentHistoricalScrobbles']>> | undefined> {
         try {
             this.logger.info('Pulling latest scrobbles into mirror...');
             this.setStatus('Pulling latest scrobbles into mirror...');
@@ -190,7 +190,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
 
             if(shouldSync){
                 // pull latest plays into database
-                const [_, gapSynced] = await this.syncRecentHistoricalScrobbles();
+                const [_, gapSynced] = (await this.syncRecentHistoricalScrobbles())!;
                 if(this.syncedReason !== undefined && this.syncedReason.includes('component was inactive')) {
                     if(gapSynced) {
                         this.syncedReason = undefined;
@@ -220,7 +220,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
             imports.sort((a, b) => sortByNewestDate(a.attemptedAt, b.attemptedAt));
             this.lastImport = imports[0].attemptedAt;
             if(!this.synced) {
-                this.syncError = imports[0].error;
+                this.syncError = imports[0].error as ErrorIsh | undefined; // TODO strict: db error is nullable, syncError type expects undefined
             }
             const success = imports.find(x => x.success);
             if(success) {

@@ -72,7 +72,7 @@ export const asSubsonicResponseCommon = (obj: unknown): obj is SubsonicResponseC
     return obj !== null && typeof obj === 'object' && 'status' in obj;
 }
 
-export const asSubsonicResponseBody = (obj: unknown): obj is SubsonicResponse => {
+export const asSubsonicResponseBody = (obj: unknown): obj is SubsonicResponseBody => {
     return obj !== null && typeof obj === 'object' && 'subsonic-response' in obj;
 }
 

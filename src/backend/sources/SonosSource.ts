@@ -3,7 +3,7 @@ import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
-    type PlayerStateData,
+    type PlayerStateDataMaybePlay,
 } from "../common/infrastructure/Atomic.ts";
 import { NO_USER } from '../../core/Atomic.ts';
 import { NO_DEVICE } from '../../core/Atomic.ts';
@@ -51,8 +51,8 @@ export class SonosSource extends MemoryPositionalSource {
     manager: SonosManager;
     deviceHashSeen: FixedSizeList<string>;
     uniqueDropReasons: FixedSizeList<string>;
-    logFilterFailure: false | 'debug' | 'warn';
-    logEmptyPlayer: boolean
+    logFilterFailure!: false | 'debug' | 'warn';
+    logEmptyPlayer!: boolean
 
     devicesAllow: string[] = [];
     devicesBlock: string[] = [];
@@ -131,10 +131,10 @@ export class SonosSource extends MemoryPositionalSource {
         if(this.devicesBlock.length > 0 && this.devicesBlock.some(x => data.device.Name.toLocaleLowerCase().includes(x))) {
             return `'devicesBlock includes a phrase found in ${data.device.Name}`;
         }
-        if(this.groupsAllow.length > 0 && !this.groupsAllow.some(x => data.device.GroupName.toLocaleLowerCase().includes(x))) {
+        if(this.groupsAllow.length > 0 && !this.groupsAllow.some(x => data.device.GroupName!.toLocaleLowerCase().includes(x))) {
             return `'groupsAllow does not include a phrase found in ${data.device.GroupName}`;
         }
-        if(this.groupsBlock.length > 0 && this.groupsBlock.some(x => data.device.GroupName.toLocaleLowerCase().includes(x))) {
+        if(this.groupsBlock.length > 0 && this.groupsBlock.some(x => data.device.GroupName!.toLocaleLowerCase().includes(x))) {
             return `'groupsBlock includes a phrase found in ${data.device.GroupName}`;
         }
         if (typeof data.state.positionInfo?.TrackMetaData === 'string') {
@@ -152,7 +152,7 @@ export class SonosSource extends MemoryPositionalSource {
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
 
-        const playerStates: PlayerStateData[] = [];
+        const playerStates: PlayerStateDataMaybePlay[] = [];
         for (const d of this.manager.Devices) {
             let state: SonosState;
             try {
@@ -163,7 +163,7 @@ export class SonosSource extends MemoryPositionalSource {
                     seen = false;
                     if(this.badDeviceError[d.Name] !== undefined) {
                         seen = this.badDeviceError[d.Name].err === e.message;
-                        if(seen && this.badDeviceError[d.Name].time !== undefined && Math.abs(this.badDeviceError[d.Name].time.diff(dayjs(), 's')) < 60) {
+                        if(seen && this.badDeviceError[d.Name].time !== undefined && Math.abs(this.badDeviceError[d.Name].time!.diff(dayjs(), 's')) < 60) {
                             muted = true;
                         }
                     }
@@ -238,7 +238,7 @@ export class SonosSource extends MemoryPositionalSource {
 
                 const position = play !== undefined ? play.meta.trackProgressPosition : undefined;
 
-                const playerState: PlayerStateData = {
+                const playerState: PlayerStateDataMaybePlay = {
                     platformId: [deviceId, NO_USER],
                     status: playIsEmpty ? REPORTED_PLAYER_STATUSES.stopped : status,
                     play: playIsEmpty ? undefined : play,
@@ -267,7 +267,7 @@ export class SonosSource extends MemoryPositionalSource {
                     let allowOneNonProgress = false;
 
                     const playerId = this.genPlayerId(playerState);
-                    if(this.hasPlayer(playerId) && this.players.get(playerId).isProgressing()) {
+                    if(this.hasPlayer(playerId) && this.players.get(playerId)!.isProgressing()) {
                         // update player state with a stopped/paused/unknown reported state so that player scrobbles any existing play
                         allowOneNonProgress = true;
                     }
@@ -323,13 +323,13 @@ export const formatPlayObj = (obj: SonosState, options: FormatPlayObjectOptions 
     const metadatas: Track[] = [];
 
     if (typeof CurrentURIMetaData !== 'string') {
-        metadatas.push(CurrentURIMetaData);
+        metadatas.push(CurrentURIMetaData!);
     }
     if (typeof TrackMetaData !== 'string') {
-        metadatas.push(TrackMetaData);
+        metadatas.push(TrackMetaData!);
     }
 
-    let titleStr: string;
+    let titleStr: string | undefined;
 
     if (metadatas.length === 0) {
         titleStr = TrackMetaData as string ?? CurrentURIMetaData as string;
@@ -356,16 +356,16 @@ export const formatPlayObj = (obj: SonosState, options: FormatPlayObjectOptions 
         UpnpClass
     } = mergedMetadata;
 
-    let dur: number;
+    let dur: number | undefined;
     if (Duration !== undefined && Duration !== "NOT_IMPLEMENTED") {
-        dur = parseDurationFromTimestamp(Duration).asSeconds();
+        dur = parseDurationFromTimestamp(Duration)!.asSeconds();
     } else if (TrackDuration !== undefined && TrackDuration !== "NOT_IMPLEMENTED") {
-        dur = parseDurationFromTimestamp(TrackDuration).asSeconds();
+        dur = parseDurationFromTimestamp(TrackDuration)!.asSeconds();
     }
 
-    let progress: number;
+    let progress: number | undefined;
     if (RelTime !== undefined && RelTime !== "NOT_IMPLEMENTED") {
-        progress = parseDurationFromTimestamp(RelTime).asSeconds();
+        progress = parseDurationFromTimestamp(RelTime)!.asSeconds();
     }
 
     if (titleStr === undefined && Title !== undefined && Title !== 'Spotify') {

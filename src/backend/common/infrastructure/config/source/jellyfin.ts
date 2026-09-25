@@ -129,14 +129,14 @@ const envDataSchema = z.object({
     JELLYFIN_PASSWORD: jellyApiDataSchema.shape.password,
     JELLYFIN_APIKEY: jellyApiDataSchema.shape.apiKey,
     JELLYFIN_URL: jellyApiDataSchema.shape.url,
-    JELLYFIN_USERS_ALLOW: z.union([z.string(),z.literal(true)]).optional().pipe(transformSplitMaybeStringOrBoolean).meta(envMetaNormalize(jellyApiDataSchema.shape.usersAllow.meta())),
-    JELLYFIN_USERS_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(jellyApiDataSchema.shape.usersBlock.meta())),
-    JELLYFIN_DEVICES_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(jellyApiDataSchema.shape.devicesAllow.meta())),
-    JELLYFIN_DEVICES_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(jellyApiDataSchema.shape.devicesBlock.meta())),
-    JELLYFIN_LIBRARIES_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(jellyApiDataSchema.shape.librariesAllow.meta())),
-    JELLYFIN_LIBRARIES_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(jellyApiDataSchema.shape.librariesBlock.meta())),
+    JELLYFIN_USERS_ALLOW: z.union([z.string(),z.literal(true)]).optional().pipe(transformSplitMaybeStringOrBoolean).meta(envMetaNormalize(jellyApiDataSchema.shape.usersAllow.meta()!)),
+    JELLYFIN_USERS_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(jellyApiDataSchema.shape.usersBlock.meta()!)),
+    JELLYFIN_DEVICES_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(jellyApiDataSchema.shape.devicesAllow.meta()!)),
+    JELLYFIN_DEVICES_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(jellyApiDataSchema.shape.devicesBlock.meta()!)),
+    JELLYFIN_LIBRARIES_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(jellyApiDataSchema.shape.librariesAllow.meta()!)),
+    JELLYFIN_LIBRARIES_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(jellyApiDataSchema.shape.librariesBlock.meta()!)),
     JELLYFIN_FRONTEND_URL_OVERRIDE: jellyApiDataSchema.shape.frontendUrlOverride,
-    JELLYFIN_MEDIATYPES_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(jellyApiDataSchema.shape.allowMediaTypes.meta())),
+    JELLYFIN_MEDIATYPES_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(jellyApiDataSchema.shape.allowMediaTypes.meta()!)),
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, JellyApiSourceConfig> = {

@@ -24,7 +24,7 @@ describe('#PlayParse Parsing Artists from String', function() {
             const [str, primaries, secondaries] = generateArtistsStr({primary: {max: 3, ambiguousJoinedNames: true, trailingAmpersand: true, finalJoiner: false}});
             const credits = parseArtistCredits(str);
             const allArtists = primaries.concat(secondaries);
-            const parsed = [credits.primary].concat(credits.secondary ?? []);
+            const parsed = [credits!.primary].concat(credits!.secondary ?? []);
             expect(primaries.concat(secondaries),`
 '${str}'
 Expected => ${allArtists.join(' || ')}
@@ -53,7 +53,7 @@ Found    => ${parsed.join(' || ')}`)
 
         for(const d of data) {
             const credits = parseArtistCredits(d.str);
-            const parsed = [credits.primary].concat(credits.secondary ?? [])
+            const parsed = [credits!.primary].concat(credits!.secondary ?? [])
             expect(d.expected).eql(parsed)
         }
     
@@ -68,7 +68,7 @@ Found    => ${parsed.join(' || ')}`)
 
         for(const d of data) {
             const credits = parseArtistCredits(d.str);
-            const parsed = [credits.primary].concat(credits.secondary ?? [])
+            const parsed = [credits!.primary].concat(credits!.secondary ?? [])
             expect(d.expected).eql(parsed)
         }
     });
@@ -87,7 +87,7 @@ Found    => ${parsed.join(' || ')}`)
 
         for(const d of data) {
             const credits = parseArtistCredits(d.str);
-            const parsed = [credits.primary].concat(credits.secondary ?? [])
+            const parsed = [credits!.primary].concat(credits!.secondary ?? [])
             expect(d.expected).eql(parsed)
         }
     });
@@ -101,7 +101,7 @@ Found    => ${parsed.join(' || ')}`)
 
         for(const d of data) {
             const credits = parseArtistCredits(d.str);
-            const parsed = [credits.primary].concat(credits.secondary ?? [])
+            const parsed = [credits!.primary].concat(credits!.secondary ?? [])
             expect(d.expected).eql(parsed)
         }
     });
@@ -120,7 +120,7 @@ Found    => ${parsed.join(' || ')}`)
                 const [str, primaries, secondaries] = generateArtistsStr({primary: {max: 3, joiner: '/'}, secondary: 0});
                 const credits = parseArtistCredits(str, ['/']);
                 const allArtists = primaries.concat(secondaries);
-                const parsed = [credits.primary].concat(credits.secondary ?? [])
+                const parsed = [credits!.primary].concat(credits!.secondary ?? [])
                 expect(primaries.concat(secondaries),`
 '${str}'
 Expected => ${allArtists.join(' || ')}
@@ -135,7 +135,7 @@ Found    => ${parsed.join(' || ')}`)
                 const [str, primaries, secondaries] = generateArtistsStr({primary: {max: 3, joiner: '/'}, secondary: {joiner: '/', finalJoiner: false}});
                 const credits = parseArtistCredits(str, ['/']);
                 const allArtists = primaries.concat(secondaries);
-                const parsed = [credits.primary].concat(credits.secondary ?? [])
+                const parsed = [credits!.primary].concat(credits!.secondary ?? [])
                 expect(primaries.concat(secondaries),`
 '${str}'
 Expected => ${allArtists.join(' || ')}
@@ -157,7 +157,7 @@ describe('Play Track Strings',function () {
 
     it('should parse joiners from track title', function() {
         for(const test of joinerData) {
-            const res = parseTrackCredits(test.data.track);
+            const res = parseTrackCredits(test.data.track)!;
             let artists: string[] = [...test.data.artists];
             if(res.secondary !== undefined) {
                 artists = uniqueNormalizedStrArr([...artists, ...res.secondary]);

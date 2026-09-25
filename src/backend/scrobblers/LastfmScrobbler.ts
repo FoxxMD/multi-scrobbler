@@ -12,12 +12,12 @@ import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.ts
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
-    api: LastfmApiClient;
+    api!: LastfmApiClient;
     override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.interactive;
     requiresAuth = true;
     requiresAuthInteraction = true;
     upstreamType: string = 'Last.fm';
-    getScrobblesForTimeRange: TimeRangeListensFetcher
+    getScrobblesForTimeRange!: TimeRangeListensFetcher
     protected internalOptions: InternalConfigOptional & AbstractApiOptions;
 
     declare config: LastfmClientConfig;
@@ -67,7 +67,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
                 track,
             } = {},
         } = playObj;
-        return track.toLocaleLowerCase().trim();
+        return track!.toLocaleLowerCase().trim();
     }
 
     public playToClientPayload(playObject: PlayObject): object {
@@ -93,7 +93,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
             this.logger.info(`Scrobbled (Backlog) => (${source}) ${buildTrackString(playObj)}`);
         }
         return respPlay;
-        } catch (e) {
+        } catch (e: any) {
             const ignored = findCauseByReference(e, LastFMIgnoredScrobble);
             if(ignored !== undefined) {
                 await this.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Ignored`, message: `Failed to scrobble => ${buildTrackString(playObj)} | ${e.message}`, priority: 'warn'});
@@ -108,7 +108,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     doPlayingNow = async (data: SourcePlayerObj) => {
         // last.fm shows Now Playing for the same time as the duration of the track being submitted
         try {
-            return this.api.playingNow(data.play);
+            return this.api.playingNow(data.play!);
         } catch (e) {
             throw e;
         }

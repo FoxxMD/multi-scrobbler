@@ -42,7 +42,7 @@ export default class UserTransformer extends AtomicPartsTransformer<ConditionalS
             type: 'user'
         }
 
-        for (const k of ['artists', 'title', 'album', 'albumArtists']) {
+        for (const k of ['artists', 'title', 'album', 'albumArtists'] as const) {
             if (!(k in stage)) {
                 continue;
             }
@@ -51,7 +51,7 @@ export default class UserTransformer extends AtomicPartsTransformer<ConditionalS
             }
             try {
                 isSearchAndReplaceTerm(stage[k]);
-                stage[k] = stage[k].map(configValToSearchReplace);
+                stage[k] = stage[k].map(configValToSearchReplace) as ConditionalSearchAndReplaceRegExp[];
             } catch (e) {
                 throw new Error(`Property '${k}' was not a valid type`, { cause: e });
             }
@@ -60,7 +60,7 @@ export default class UserTransformer extends AtomicPartsTransformer<ConditionalS
     }
 
     protected generateMapper(play: PlayObject) {
-        return (x: ConditionalSearchAndReplaceRegExp): ConditionalSearchAndReplaceRegExp => ({ ...x, test: (x.when !== undefined ? () => testWhenConditions(x.when, play, { testMaybeRegex: this.regex.testMaybeRegex }) : undefined) });
+        return (x: ConditionalSearchAndReplaceRegExp): ConditionalSearchAndReplaceRegExp => ({ ...x, test: (x.when !== undefined ? () => testWhenConditions(x.when!, play, { testMaybeRegex: this.regex.testMaybeRegex }) : undefined) });
     }
 
     protected async handleTitle(play: PlayObject, parts: ConditionalSearchAndReplaceRegExp[], _transformData: undefined): Promise<string | undefined> {
@@ -115,7 +115,7 @@ export default class UserTransformer extends AtomicPartsTransformer<ConditionalS
     }
 
     public notify(payload: WebhookPayload): Promise<void> {
-        return;
+        return undefined as unknown as Promise<void>;
     }
 
 }

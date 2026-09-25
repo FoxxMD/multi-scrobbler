@@ -69,7 +69,7 @@ export default class TransformerManager {
         if (!this.transformers.has(config.type)) {
             this.transformers.set(config.type, []);
         } else {
-            transformers = this.transformers.get(config.type);
+            transformers = this.transformers.get(config.type)!;
         }
 
         if (config.name !== undefined && transformers.some(x => x.config.name === config.name)) {
@@ -93,19 +93,19 @@ export default class TransformerManager {
             }   break;
             case 'musicbrainz': {
                 const MusicbrainzTransformer = (await import("./MusicbrainzTransformer.ts")).default;
-                t = new MusicbrainzTransformer({ name: tName, ...config as MusicbrainzTransformerConfig }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
+                t = new MusicbrainzTransformer({ name: tName, ...config as Omit<MusicbrainzTransformerConfig, 'name'> }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
             }   break;
             case 'rocksky': {
                 const RockskyTransformer = (await import("./rocksky/RockskyTransformer.ts")).default;
-                t = new RockskyTransformer({ name: tName, ...config as RockskyTransformerConfig }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
+                t = new RockskyTransformer({ name: tName, ...config as Omit<RockskyTransformerConfig, 'name'> }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
             }   break;
             case 'spotify': {
                 const SpotifyTransformer = (await import("./SpotifyTransformer.ts")).default;
-                t = new SpotifyTransformer({ name: tName, ...config as SpotifyTransformerConfig }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
+                t = new SpotifyTransformer({ name: tName, ...config as Omit<SpotifyTransformerConfig, 'name'> }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
             } break;
             case 'coverartarchive': {
                 const CovertArtArchiveTransformer = (await import("./coverartarchive/CoverArtArchiveTransformer.ts")).default;
-                t = new CovertArtArchiveTransformer({ name: tName, ...config as CovertArtArchiveTransformerConfig }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
+                t = new CovertArtArchiveTransformer({ name: tName, ...config as Omit<CovertArtArchiveTransformerConfig, 'name'> }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
             }   break;
             default:
                 throw new Error(`No transformer of type '${config.type}' exists.`);
@@ -207,7 +207,7 @@ export default class TransformerManager {
                     configToUse = nonDefault;
                 } else {
                     // otherwise use first found
-                    configToUse = this.transformerConfigs.find(x => x.type === data.type);
+                    configToUse = this.transformerConfigs.find(x => x.type === data.type)!;
                 }
                 await this.registerByIdentifiers(configToUse.type, configToUse.name);
                 await this.initTransformers();
@@ -216,20 +216,20 @@ export default class TransformerManager {
         }
 
         if(data.name === undefined) {
-            if(list.length > 1) {
+            if(list!.length > 1) {
                 this.logger.warn(`More than one '${data.type}' transformer is registered but name was not specified, using first found`);
-                return list[0];
+                return list![0];
             }
-            return list[0]            
+            return list![0]            
         }
 
-        let namedTransformers = list.find(x => x.name.toLocaleLowerCase().trim() === data.name.toLocaleLowerCase().trim());
+        let namedTransformers = list!.find(x => x.name.toLocaleLowerCase().trim() === data.name!.toLocaleLowerCase().trim());
         if(namedTransformers === undefined) {
             if(this.hasTransformerConfigByIdentifiers(data.type, data.name)) {
                 await this.registerByIdentifiers(data.type, data.name);
                 await this.initTransformers();
                 list = this.transformers.get(data.type);
-                namedTransformers = list.find(x => x.name.toLocaleLowerCase().trim() === data.name.toLocaleLowerCase().trim());
+                namedTransformers = list!.find(x => x.name.toLocaleLowerCase().trim() === data.name!.toLocaleLowerCase().trim());
                 if(namedTransformers === undefined) {
                     // this shouldn't really happen but just covering bases
                     throw new SimpleError(`Component wanted transformer type ${data.type} with name ${data.name}. Transforms of this type are registered but none have this name.`);

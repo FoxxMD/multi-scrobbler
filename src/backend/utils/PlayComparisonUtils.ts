@@ -129,15 +129,15 @@ export const playsAreSortConsistent = (aPlays: PlayObject[], bPlays: PlayObject[
 }
 
 export const getDiffIndexState = (results: any, index: number) => {
-    const replaced = results.diff.filter(x => (x.status === 'deleted' && x.prevIndex === index) || (x.status === 'added' && x.newIndex === index));
+    const replaced = results.diff.filter((x: any) => (x.status === 'deleted' && x.prevIndex === index) || (x.status === 'added' && x.newIndex === index));
     if(replaced.length === 2) {
         return 'replaced';
     }
-    let diff = results.diff.find(x => x.newIndex === index);
+    let diff = results.diff.find((x: any) => x.newIndex === index);
     if(diff !== undefined) {
         return diff.status;
     }
-    diff = results.diff.find(x => x.prevIndex === index);
+    diff = results.diff.find((x: any) => x.prevIndex === index);
     if(diff !== undefined) {
         return diff.status;
     }
@@ -157,7 +157,7 @@ export const playsAreAddedOnly = (aPlays: PlayObject[], bPlays: PlayObject[], tr
         return [false];
     }
 
-    let addType: 'insert' | 'append' | 'prepend';
+    let addType: 'insert' | 'append' | 'prepend' | undefined;
      for(const [index, play] of bPlays.entries()) {
          const isEqual = results.diff.some(x => x.status === 'equal' && x.prevIndex === index && x.newIndex === index);
 
@@ -199,7 +199,7 @@ export const playsAreAddedOnly = (aPlays: PlayObject[], bPlays: PlayObject[], tr
          }
      }
     const added = results.diff.filter(x => x.status === 'added');
-    return [addType !== 'insert' && addType !== undefined, added.map(x => bPlays[x.newIndex]), addType];
+    return [addType !== 'insert' && addType !== undefined, added.map(x => bPlays[x.newIndex!]), addType];
 }
 
 export const playsAreBumpedOnly = (aPlays: PlayObject[], bPlays: PlayObject[], transformers: ListTransformers = defaultListTransformers): PlayOrderConsistencyResults<PlayOrderBumpedType> => {
@@ -211,8 +211,8 @@ export const playsAreBumpedOnly = (aPlays: PlayObject[], bPlays: PlayObject[], t
     return [false];
    }
 
-   let addTypeShouldBe: 'append' | 'prepend';
-   let cursor: 'moved' | 'equal';
+   let addTypeShouldBe!: 'append' | 'prepend';
+   let cursor: 'moved' | 'equal' | undefined;
 
    for(const [index, diffData] of results.diff.entries()) {
     if(diffData.status !== 'moved' && diffData.status !== 'equal') {
@@ -220,7 +220,7 @@ export const playsAreBumpedOnly = (aPlays: PlayObject[], bPlays: PlayObject[], t
     }
 
         if(index === 0) {
-            if(diffData.status === 'moved' && diffData.indexDiff < 0) {
+            if(diffData.status === 'moved' && diffData.indexDiff! < 0) {
                addTypeShouldBe = 'prepend';
             } else if(diffData.status === 'equal') {
                 addTypeShouldBe = 'append';
@@ -235,7 +235,7 @@ export const playsAreBumpedOnly = (aPlays: PlayObject[], bPlays: PlayObject[], t
                 }
             } else {
 
-                if(![-1,0,1].includes(diffData.indexDiff)) {
+                if(![-1,0,1].includes(diffData.indexDiff!)) {
                     return [false]; // shifted more than one spot in list which isn't a bump
                 }
                 if(cursor === undefined) { // first non-initial item
@@ -267,7 +267,7 @@ export const humanReadableDiff = (aPlay: PlayObject[], bPlay: PlayObject[], resu
         if(!isEqual) {
             const moved = result.diff.filter(x => x.status === 'moved' && x.newIndex === index);
             if(moved.length > 0) {
-                ab.push(`Moved -  Originally at ${moved[0].prevIndex + 1}`);
+                ab.push(`Moved -  Originally at ${moved[0].prevIndex! + 1}`);
             } else {
                 // look for replaced first
                 const replaced = result.diff.filter(x => (x.status === 'deleted' && x.prevIndex === index) || (x.status === 'added' && x.newIndex === index));
@@ -282,7 +282,7 @@ export const humanReadableDiff = (aPlay: PlayObject[], bPlay: PlayObject[], resu
                         // was updated, probably??
                         const updated = result.diff.filter(x => x.status === 'deleted' && x.prevIndex === index);
                         if(updated.length > 0) {
-                            ab.push(`Updated - Original => ${buildTrackString( aPlay[updated[0].prevIndex])}`);
+                            ab.push(`Updated - Original => ${buildTrackString( aPlay[updated[0].prevIndex!])}`);
                         } else {
                             ab.push('Should not have gotten this far!');
                         }
@@ -345,11 +345,11 @@ export const scoreTrackWeightedAndNormalized = (ref: string, candidate: string, 
 
     let trackBonus = 0;
     if(trackRes.exact) {
-        trackBonus = exact;
+        trackBonus = exact!;
     } else if(trackRes.naive.highScore > trackRes.cleaned.highScore) {
-        trackBonus = naive;
+        trackBonus = naive!;
     }
-    const trackScore = trackHigh * (weight + trackBonus);
+    const trackScore = trackHigh * (weight! + trackBonus);
 
     return [trackScore, trackRes];
 }
@@ -428,7 +428,7 @@ export const scorePlaySameness = (ref: PlayObject, candidate: PlayObject, option
 }
 
 export const playDateWithinDurationOfAny = (play: PlayObject, plays:  PlayObject[], dur: Duration): PlayObject | undefined => {
-    return plays.find(x => Math.abs(x.data.playDate.diff(play.data.playDate, 's')) <= dur.asSeconds());
+    return plays.find(x => Math.abs(x.data.playDate!.diff(play.data.playDate, 's')) <= dur.asSeconds());
 }
 
 export interface ExistingScrobbleOpts {
@@ -523,7 +523,7 @@ export const existingScrobble = async (playObjPre: PlayObject, existingScrobbles
             //
             // OR if play was generated from a source that uses History (endpoint sources, lfm or lz history sources)
             // then we can be reasonably sure that our candidate play has an accurate timestamp and wouldn't fuzzy match a previous scrobble
-            const looseTimeAccuracy = playObj.data.repeat || ([SOURCE_SOT.HISTORY, SOURCE_SOT.INGRESS] as SOURCE_SOT_TYPES[]).includes(playObj.meta.sourceSOT) ? [TA_DURING] : [TA_FUZZY, TA_DURING];
+            const looseTimeAccuracy = playObj.data.repeat || ([SOURCE_SOT.HISTORY, SOURCE_SOT.INGRESS] as SOURCE_SOT_TYPES[]).includes(playObj.meta.sourceSOT!) ? [TA_DURING] : [TA_FUZZY, TA_DURING];
 
             
             existingScrobble = await findAsyncSequential(existingScrobbles, async (xPre) => {
@@ -623,7 +623,7 @@ export const existingScrobble = async (playObjPre: PlayObject, existingScrobbles
         if(result.closestMatchedPlay !== undefined) {
             closestScrobbleParts.push(`Closest Scrobble: ${buildTrackString(result.closestMatchedPlay, scoreTrackOpts)}`);
         }
-        closestScrobbleParts.push(result.reason);
+        closestScrobbleParts.push(result.reason!);
         const summaryStart = `${capitalize(playObj.meta.source ?? 'Source')}: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobbleParts.join(' => ')}`;
         const summary = `${summaryStart}${result.breakdowns.length > 0 ? `\n${result.breakdowns.join('\n')}` : ''}`
         result.summary = summary;

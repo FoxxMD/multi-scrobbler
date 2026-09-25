@@ -52,12 +52,12 @@ export class CoolPlayerSource extends MemorySource {
             } = {}
         } = this.config;
 
-        if(!baseUrl.includes('/api')) {
+        if(!baseUrl!.includes('/api')) {
             this.logger.warn('Cool Player connections usually have an /api prefix but none was detected!');
             // may also want to throw here instead if this is show stopping:
             // throw new Error(`Cool Player connections require an /api prefix but none was detected. Given: ${baseUrl}`);
         }
-        this.urlData = normalizeWebAddress(baseUrl);
+        this.urlData = normalizeWebAddress(baseUrl!);
         // if everything is ok then return true
         return true;
     }

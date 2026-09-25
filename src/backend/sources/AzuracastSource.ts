@@ -9,7 +9,7 @@ import type {PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts"
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
-    type PlayerStateData,
+    type PlayerStateDataMaybePlay,
 } from "../common/infrastructure/Atomic.ts";
 import { SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
@@ -25,7 +25,7 @@ export class AzuracastSource extends MemorySource {
 
     urlData!: URLData;
 
-    wsNowPlaying: AzuraStationResponse
+    wsNowPlaying!: AzuraStationResponse
     wsCurrenTime: number = 0;
     client!: WS;
     override monitoringActivityDefault = false;
@@ -114,7 +114,7 @@ export class AzuracastSource extends MemorySource {
             if ('data' in connectData) {
                 // Legacy SSE data
                 connectData.data.forEach(
-                    (initialRow) => this.parseWSPayload(initialRow)
+                    (initialRow: any) => this.parseWSPayload(initialRow)
                 );
             } else {
                 // New Centrifugo time format
@@ -126,7 +126,7 @@ export class AzuracastSource extends MemorySource {
                 for (const subName in connectData.subs) {
                     const sub = connectData.subs[subName];
                     if ('publications' in sub && sub.publications.length > 0) {
-                        sub.publications.forEach((initialRow) => this.parseWSPayload(initialRow, false));
+                        sub.publications.forEach((initialRow: any) => this.parseWSPayload(initialRow, false));
                     }
                 }
             }
@@ -147,7 +147,7 @@ export class AzuracastSource extends MemorySource {
             this.client.open();
             const opened = await pEvent(this.client, 'open');
             return true;
-        } catch (e) {
+        } catch (e: any) {
             this.client.close();
             const hint = e.error?.cause?.message ?? undefined;
             throw new Error(`Could not connect to Azuracast server${hint !== undefined ? ` (${hint})` : ''}`, { cause: e.error ?? e });
@@ -203,7 +203,7 @@ export class AzuracastSource extends MemorySource {
             play = formatPlayObj(this.wsNowPlaying.now_playing);
         }
 
-        const playerState: PlayerStateData = {
+        const playerState: PlayerStateDataMaybePlay = {
             platformId: SINGLE_USER_PLATFORM_ID,
             status: online ? REPORTED_PLAYER_STATUSES.playing : REPORTED_PLAYER_STATUSES.stopped,
             play,

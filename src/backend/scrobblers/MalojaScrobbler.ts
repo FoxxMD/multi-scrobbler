@@ -18,7 +18,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
     override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.unattended;
     requiresAuth = true;
     serverVersion: any;
-    webUrl: string;
+    webUrl!: string;
 
     api: MalojaApiClient;
     getScrobblesForTimeRange: TimeRangeListensFetcher
@@ -96,13 +96,13 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         try {
             const result = await this.api.scrobble(playObj);
             const scrobbleInfo = `Scrobbled (${newFromSource ? 'New' : 'Backlog'})     => (${source}) ${buildTrackString(playObj)}`;
-            if (result.warnings?.length > 0) {
-                this.logger.warn(`${scrobbleInfo} | ${result.warnings.join(' | ')}`);
+            if ((result.warnings?.length ?? 0) > 0) {
+                this.logger.warn(`${scrobbleInfo} | ${result.warnings!.join(' | ')}`);
             } else {
                 this.logger.info(scrobbleInfo);
             }
             return result;
-        } catch (e) {
+        } catch (e: any) {
             await this.notify({ title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error' });
             throw e;
         }

@@ -9,7 +9,7 @@ import { UpstreamError } from "../common/errors/UpstreamError.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
-    type PlayerStateData,
+    type PlayerStateDataMaybePlay,
 } from "../common/infrastructure/Atomic.ts";
 import { COMPONENT_AUTH_TYPE, SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
 import type {MCAuthenticateRequest, MCAuthenticateResponse, MCPlaybackOverviewRequest, MCPlaybackOverviewResponse, MusikcubeSourceConfig} from "../common/infrastructure/config/source/musikcube.ts";
@@ -119,7 +119,7 @@ export class MusikcubeSource extends MemoryPositionalSource {
             this.client.open();
             const opened = await pEvent(this.client, 'open');
             return true;
-        } catch (e) {
+        } catch (e: any) {
             this.client.close();
             const hint = e.error?.cause?.message ?? undefined;
             throw new Error(`Could not connect to Musikcube metadata server${hint !== undefined ? ` (${hint})` : ''}`, {cause: e.error ?? e});
@@ -231,7 +231,7 @@ export class MusikcubeSource extends MemoryPositionalSource {
 
         const play: PlayObject | undefined = playbackOverview.options.playing_track === undefined ? undefined : this.formatPlayObj(playbackOverview);
 
-        const playerState: PlayerStateData = {
+        const playerState: PlayerStateDataMaybePlay = {
             platformId: SINGLE_USER_PLATFORM_ID,
             status: playbackOverview.options.state,
             play,

@@ -147,11 +147,11 @@ export default class DeezerSource extends AbstractSource {
         return resp.data.map((x: any) => DeezerSource.formatPlayObj(x)).sort(sortByOldestPlayDate);
     }
 
-    callApi = async (req: any, retries = 0) => {
+    callApi = async (req: any, retries = 0): Promise<any> => {
         const {
             maxRequestRetries = 1,
             retryMultiplier = DEFAULT_RETRY_MULTIPLIER
-        } = this.config.options;
+        } = (this.config.options as any); // TODO strict: retry options are not in deezer options schema
 
         req.query({
             access_token: this.config.data.accessToken,
@@ -176,7 +176,7 @@ export default class DeezerSource extends AbstractSource {
                 throw  err;
             }
             return body;
-        } catch (e) {
+        } catch (e: any) {
             if(retries < maxRequestRetries) {
                 const retryAfter = parseRetryAfterSecsFromObj(e) ?? (retryMultiplier * (retries + 1));
                 this.logger.warn(`Request failed but retries (${retries}) less than max (${maxRequestRetries}), retrying request after ${retryAfter} seconds...`);

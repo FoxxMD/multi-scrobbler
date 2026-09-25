@@ -8,7 +8,7 @@ export const appleMusicKeySchema = z.object({
     teamId: z.string(),
     p8: z.string()
 });
-const envKeyKeys = ['APPLEMUSIC_KEY_ID','APPLEMUSIC_KEY_P8','APPLEMUSIC_TEAM_ID'];
+const envKeyKeys = ['APPLEMUSIC_KEY_ID','APPLEMUSIC_KEY_P8','APPLEMUSIC_TEAM_ID'] as const;
 
 export type AppleMusicKey = z.infer<typeof appleMusicKeySchema>;
 
@@ -107,9 +107,9 @@ const envDataSchema = z.object({
     APPLEMUSIC_MEDIA_USER_TOKEN: appleMusicDataSchema.shape.mediaUserToken,
     APPLEMUSIC_TOKEN: appleMusicDataSchema.shape.token.optional(),
     APPLEMUSIC_ORIGIN_HEADER: appleMusicDataSchema.shape.origin,
-    APPLEMUSIC_RECOVER_UNCHANGED_TOP_HISTORY: z.stringbool().optional().meta(appleMusicOptions.shape.recoverUnchangedTopHistory.meta()),
-    APPLEMUSIC_NORMALIZE_ALBUM: z.stringbool().optional().meta(appleMusicOptions.shape.normalizeAlbum.meta()),
-    APPLEMUSIC_ENRICH_ISRC: z.stringbool().optional().meta(appleMusicOptions.shape.enrichIsrc.meta())
+    APPLEMUSIC_RECOVER_UNCHANGED_TOP_HISTORY: z.stringbool().optional().meta(appleMusicOptions.shape.recoverUnchangedTopHistory.meta()!),
+    APPLEMUSIC_NORMALIZE_ALBUM: z.stringbool().optional().meta(appleMusicOptions.shape.normalizeAlbum.meta()!),
+    APPLEMUSIC_ENRICH_ISRC: z.stringbool().optional().meta(appleMusicOptions.shape.enrichIsrc.meta()!)
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, AppleMusicSourceConfig> = {
@@ -125,9 +125,9 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, AppleMusicSourceC
                     throw new SimpleError(`ENV ${k} is not defined but when providing auth via MusicKit Key you must provide all of these: ${envKeyKeys.join(', ')}`);
                 }
                 appleMusicKey = {
-                    id: partial.APPLEMUSIC_KEY_ID,
-                    teamId: partial.APPLEMUSIC_TEAM_ID,
-                    p8: partial.APPLEMUSIC_KEY_P8
+                    id: partial.APPLEMUSIC_KEY_ID!,
+                    teamId: partial.APPLEMUSIC_TEAM_ID!,
+                    p8: partial.APPLEMUSIC_KEY_P8!
                 };
             }
         } else {

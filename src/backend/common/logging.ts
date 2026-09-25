@@ -38,7 +38,7 @@ export const componentFileLogger = async (type: string, name: string, fileConfig
         logDefaultPath: './scrobble.log'
     });
 
-    const base = path.dirname(typeof opts.file.path === 'function' ? opts.file.path() : opts.file.path);
+    const base = path.dirname(typeof opts.file.path === 'function' ? opts.file.path() : opts.file.path!);
     const componentLogPath = path.join(base, `${type}-${name}.log`);
 
     const componentConfig: LogOptions = {
@@ -62,8 +62,8 @@ export const componentFileLogger = async (type: string, name: string, fileConfig
     const streams: LogLevelStreamEntry[] = [];
 
     if(strongOpts.file.level !== false) {
-        const file = await buildDestinationRollingFile(componentConfig.file.level ?? componentConfig.level, {...strongOpts.file})
-        streams.push(file);
+        const file = await buildDestinationRollingFile((componentConfig.file.level ?? componentConfig.level)!, {...strongOpts.file})
+        streams.push(file!);
 
         return buildLogger('trace' as LogLevel, streams);
     } else {

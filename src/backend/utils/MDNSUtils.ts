@@ -32,7 +32,7 @@ export const discoveryAvahi = async (service: string, options?: DiscoveryOptions
         sanity = false,
         onDiscover,
         onDnsError
-    } = options;
+    } = options!;
 
     const maybeLogger = new MaybeLogger(logger, 'Avahi mDNS');
     maybeLogger.debug(`Starting mDNS discovery with Avahi => Listening for ${(duration / 1000).toFixed(2)}s`);
@@ -43,7 +43,7 @@ export const discoveryAvahi = async (service: string, options?: DiscoveryOptions
     const triggerDiscovery = () => {
         for(const [k,v] of services.entries()) {
             maybeLogger.debug(`Discovered device "${v.name}" with ${v.addresses.length} interfaces`);
-            onDiscover(v);
+            onDiscover!(v);
             services.delete(k);
         }
     }
@@ -76,7 +76,7 @@ export const discoveryAvahi = async (service: string, options?: DiscoveryOptions
                 }
             }
         });
-        browser.on(AvahiBrowser.EVENT_DNSSD_ERROR, (err) => {
+        browser.on(AvahiBrowser.EVENT_DNSSD_ERROR, (err: any) => {
             const e = new Error('Error occurred while using avahi-browse', {cause: err});
             if (onDnsError) {
                 onDnsError(e)
@@ -107,7 +107,7 @@ export const discoveryNative = async (service: string, options?: DiscoveryOption
         sanity = false,
         onDiscover,
         onDnsError
-    } = options;
+    } = options!;
 
     const maybeLogger = new MaybeLogger(logger, 'mDNS');
     maybeLogger.debug(`Starting mDNS discovery => Listening for ${(duration / 1000).toFixed(2)}s`);

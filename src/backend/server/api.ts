@@ -52,7 +52,7 @@ const getLogs = (minLevel: number, limit: number = maxBufferSize, sort: 'asc' | 
     const allLogs: LeveledLogData[][] = [];
     for(const level of Object.keys(output)) {
         if(Number.parseInt(level) >= minLevel) {
-            allLogs.push(output[level].data);
+            allLogs.push(output[level as unknown as number].data as LeveledLogData[]);
         }
     }
     if(sort === 'desc') {
@@ -90,7 +90,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     } = opts;
     
     for(const level of Object.keys(logger.levels.labels)) {
-        output[level] = new FixedSizeList<LeveledLogData>(maxBufferSize);
+        output[level as unknown as number] = new FixedSizeList<LeveledLogData>(maxBufferSize);
     }
 
     const addToLogBuffer = createAddToLogBuffer(logger.levels.labels);
@@ -376,7 +376,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
             didAuth = true;
             return res.sendStatus(200);
         } catch (e) {
-            component.replaceErrors(e, {predicate: x => findAuthIssue(x) !== undefined});
+            component.replaceErrors(e as Error, {predicate: x => findAuthIssue(x) !== undefined});
             return res.status(500).json({error: serializeError(e)});
         } finally {
             const data = component.getApiData();
@@ -425,7 +425,7 @@ Note: this is only supported by some components.`
             query
         } = req;
 
-        const hydratedQuery = asDayjsHydratedObject<QueryPlaysOptsJson, QueryPlaysOpts<Dayjs>>(query);
+        const hydratedQuery = asDayjsHydratedObject<QueryPlaysOptsJson, QueryPlaysOpts<Dayjs>>(query as QueryPlaysOptsJson);
         const playRes = await component.getPlaysPaginated(hydratedQuery);
 
         // @ts-expect-error its fine
@@ -505,7 +505,7 @@ Note: this is only supported by some components.`
             pMap(res.data, async (x) => await queueFunc(x), {concurrency: 5});
             more = res.data.length === res.meta.limit;
             if(more) {
-                currentFilters.offset += res.meta.limit
+                currentFilters.offset! += res.meta.limit
             }
         }
     });
@@ -620,7 +620,7 @@ Note: this is only supported by some components.`
             body: {
                 type: syncType = 'recent'
             }
-        } = req;
+        } = req as Omit<typeof req, 'body'> & {body: NonNullable<typeof req.body>};
 
         if(component instanceof AbstractHistoricalScrobbleClient) {
             component.logger.info('User requested historical play hydration');

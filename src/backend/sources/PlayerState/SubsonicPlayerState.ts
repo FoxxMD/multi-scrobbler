@@ -58,7 +58,7 @@ export class SubsonicPlayerState extends PositionalPlayerState {
         }
         // if track has a duration and the listened duration for this session is greater than 100% + 5% (for buffer)
         // then assume track is on repeat
-        if(this.currentPlay.data.duration !== undefined && this.getListenDuration() > (this.currentPlay.data.duration + (0.05 * this.currentPlay.data.duration))) {
+        if(this.currentPlay!.data.duration !== undefined && this.getListenDuration() > (this.currentPlay!.data.duration + (0.05 * this.currentPlay!.data.duration))) {
             this.logger.debug('Listened duration for this session is over 105%, triggering as a repeat');
             return true;
         }

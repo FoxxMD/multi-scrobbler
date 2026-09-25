@@ -109,10 +109,9 @@ describe('Play Transforms', function () {
                 component.config = {
                     options: {
                         playTransform: {
+                            // @ts-expect-error no type named test, stage is untyped
                             preCompare: {
-                                // @ts-expect-error no type named test
                                 type: "test",
-                                // @ts-expect-error stage is untyped
                                 title: ['something']
                             }
                         }
@@ -120,7 +119,7 @@ describe('Play Transforms', function () {
                 }
 
                 // https://github.com/chaijs/chai/issues/655#issuecomment-204386414
-                expect(component.buildTransformRules()).to.eventually.throw(Error).that.satisfies((e) => {
+                expect(component.buildTransformRules()).to.eventually.throw(Error).that.satisfies((e: any) => {
                     return findCauseByMessage(e, `No transformer of type 'test'`);
                 });
             });
@@ -147,7 +146,7 @@ describe('Play Transforms', function () {
                 expect(component.transformRules.preCompare).to.be.an('array');
                 expect(component.transformRules.preCompare).to.be.length(1);
                 expect(component.transformRules.preCompare).to.have.nested.property('0.type');
-                expect(component.transformRules.preCompare[0].type).eq('user');
+                expect(component.transformRules.preCompare![0].type).eq('user');
             });
 
             it('Accepts hook array', async function () {
@@ -195,7 +194,7 @@ describe('Play Transforms', function () {
                 expect(component.transformRules.preCompare![0]).to.exist;
                 expect(component.transformRules.preCompare![0].title).to.exist;
                 expect(Array.isArray(component.transformRules.preCompare![0].title)).is.true;
-                expect(isConditionalSearchAndReplace(component.transformRules.preCompare![0].title![0])).is.true
+                expect(isConditionalSearchAndReplace((component.transformRules.preCompare![0].title as any[])[0])).is.true
             });
 
             it('Converts transform config into real S&P data with default being empty string', async function () {
@@ -216,8 +215,8 @@ describe('Play Transforms', function () {
                 expect(component.transformRules.preCompare![0]).to.exist;
                 expect(component.transformRules.preCompare![0].title).to.exist;
                 expect(Array.isArray(component.transformRules.preCompare![0].title)).is.true;
-                expect(isConditionalSearchAndReplace(component.transformRules.preCompare![0].title![0])).is.true
-                const title = component.transformRules.preCompare![0].title![0] as ConditionalSearchAndReplaceRegExp;
+                expect(isConditionalSearchAndReplace((component.transformRules.preCompare![0].title as any[])[0])).is.true
+                const title = (component.transformRules.preCompare![0].title as any[])[0] as ConditionalSearchAndReplaceRegExp;
                 expect(title.search).is.eq('something');
                 expect(title.replace).is.eq('');
             });
@@ -246,8 +245,8 @@ describe('Play Transforms', function () {
                 expect(component.transformRules.preCompare![0]).to.exist;
                 expect(component.transformRules.preCompare![0].title).to.exist;
                 expect(Array.isArray(component.transformRules.preCompare![0].title)).is.true;
-                expect(isConditionalSearchAndReplace(component.transformRules.preCompare![0].title![0])).is.true
-                const title = component.transformRules.preCompare![0].title![0] as ConditionalSearchAndReplaceRegExp;
+                expect(isConditionalSearchAndReplace((component.transformRules.preCompare![0].title as any[])[0])).is.true
+                const title = (component.transformRules.preCompare![0].title as any[])[0] as ConditionalSearchAndReplaceRegExp;
                 expect(title.search).is.eq('nothing');
                 expect(title.replace).is.eq('anything');
             });
@@ -277,7 +276,7 @@ describe('Play Transforms', function () {
                         expect(component.transformRules.preCompare).to.be.an('array');
                         expect(component.transformRules.preCompare).to.be.length(1);
                         expect(component.transformRules.preCompare).to.have.nested.property('0.type');
-                        expect(component.transformRules.preCompare[0].type).eq(t);
+                        expect(component.transformRules.preCompare![0].type).eq(t);
                     });
 
                 }
@@ -382,7 +381,7 @@ describe('Play Transforms', function () {
                     const play = generatePlay({ artists: artistNamesToCredits(['My Artist One / My Artist Two / Another Guy']) });
                     const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                     expect(transformed.data.artists).length(1)
-                    expect(transformed.data.artists[0].name).equal('My Artist One');
+                    expect(transformed.data.artists![0].name).equal('My Artist One');
                 });
 
                 it('Removes title when transform replaces with empty string', async function () {
@@ -459,7 +458,7 @@ describe('Play Transforms', function () {
             const play = generatePlay({artists: artistNamesToCredits([str])});
 
             const transformedPlay = await t.handle(t.parseConfig({type: 'native'}), play);
-            expect(artistCreditsToNames(transformedPlay.data.artists)).eql(primaries.concat(secondaries));
+            expect(artistCreditsToNames(transformedPlay.data.artists!)).eql(primaries.concat(secondaries));
         });
 
         it('Ignores artists', async function() {
@@ -473,7 +472,7 @@ describe('Play Transforms', function () {
             const play = generatePlay({artists: artistNamesToCredits([str]), track: 'My Test'});
 
             const transformedPlay = await t.handle(t.parseConfig({type: 'native'}), play);
-            expect(artistCreditsToNames(transformedPlay.data.artists)).eql([str]);
+            expect(artistCreditsToNames(transformedPlay.data.artists!)).eql([str]);
         });
 
         it('Uses custom delimiters artists', async function() {
@@ -494,7 +493,7 @@ describe('Play Transforms', function () {
             const play = generatePlay({artists: artistNamesToCredits([str]), track: 'My Test'});
 
             const transformedPlay = await t.handle(t.parseConfig({type: 'native'}), play);
-            expect(artistCreditsToNames(transformedPlay.data.artists)).eql(primaries.concat(secondaries));
+            expect(artistCreditsToNames(transformedPlay.data.artists!)).eql(primaries.concat(secondaries));
         });
 
     });
@@ -683,7 +682,7 @@ describe('Play Transforms', function () {
             const play = generatePlay({ track: 'My cool something track', artists: artistNamesToCredits([str]) });
             const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
             expect(transformed.data.track).equal('My cool bar track');
-            expect(artistCreditsToNames(transformed.data.artists)).eql(primaries.concat(secondaries));
+            expect(artistCreditsToNames(transformed.data.artists!)).eql(primaries.concat(secondaries));
         });
 
     });
@@ -720,15 +719,15 @@ describe('Play Transforms', function () {
             const play = generatePlay({ track: 'My cool something track', artists: artistNamesToCredits([str]), playDate: dayjs().subtract(10, 'm') });
             const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare, {log: 'all'});
             expect(transformed.data.track).equal('My cool bar track');
-            expect(artistCreditsToNames(transformed.data.artists)).eql(primaries.concat(secondaries));
+            expect(artistCreditsToNames(transformed.data.artists!)).eql(primaries.concat(secondaries));
 
             const cachablePlay = clone(play);
             const laterDate = dayjs().subtract(5, 'm');
             cachablePlay.data.playDate = laterDate;
             const cacheTransformed = await component.transformPlay(cachablePlay, TRANSFORM_HOOK.preCompare, {log: 'all'});
             expect(cacheTransformed.data.track).equal('My cool bar track');
-            expect(artistCreditsToNames(cacheTransformed.data.artists)).eql(primaries.concat(secondaries));
-            expect(cacheTransformed.data.playDate.isSame(cachablePlay.data.playDate));
+            expect(artistCreditsToNames(cacheTransformed.data.artists!)).eql(primaries.concat(secondaries));
+            expect(cacheTransformed.data.playDate!.isSame(cachablePlay.data.playDate));
         });
 
     });

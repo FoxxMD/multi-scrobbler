@@ -16,8 +16,8 @@ export default class TealfmSource extends MemorySource {
     requiresAuth = true;
     requiresAuthInteraction = false;
 
-    serviceAllow: string[]
-    serviceDeny: string[]
+    serviceAllow!: string[]
+    serviceDeny!: string[]
 
     declare config: TealSourceConfig;
 
@@ -92,12 +92,12 @@ export default class TealfmSource extends MemorySource {
         await this.processRecentPlays([]);
         if(this.serviceAllow.length > 0) {
             plays = plays.filter(x => 
-                (x.meta.musicService !== undefined && this.serviceAllow.some(y => x.meta.musicService.toLocaleLowerCase().includes(y)))
+                (x.meta.musicService !== undefined && this.serviceAllow.some(y => x.meta.musicService!.toLocaleLowerCase().includes(y)))
             || (x.meta.musicService === undefined && this.serviceAllow.includes('unknown'))
         );
         } else if(this.serviceDeny.length > 0) {
             plays = plays.filter(x => 
-                (x.meta.musicService !== undefined && !this.serviceDeny.some(y => x.meta.musicService.toLocaleLowerCase().includes(y)))
+                (x.meta.musicService !== undefined && !this.serviceDeny.some(y => x.meta.musicService!.toLocaleLowerCase().includes(y)))
                 || (x.meta.musicService === undefined && !this.serviceAllow.includes('unknown'))
             );
         }

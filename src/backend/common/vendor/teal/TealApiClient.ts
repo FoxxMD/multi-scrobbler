@@ -121,7 +121,7 @@ export class TealApiAuthenticatedClient extends AbstractTealApiClient {
                 throw new ScrobbleSubmitError(`Failed to create record for scrobble`, { payload: input, responseBody: {status: res.status, body: res.data } });
             }
             return {payload: input, response: res.data, createdAt: dayjs().toISOString()};
-        } catch (e) {
+        } catch (e: any) {
             throw new ScrobbleSubmitError(`Failed to create record for scrobble`, { cause: e, payload: input, response: 'response' in e ? e.response : undefined });
         }
     }
@@ -142,7 +142,7 @@ export class TealApiAuthenticatedClient extends AbstractTealApiClient {
                 throw new ScrobbleSubmitError(`Failed to update status record`, { payload: input, responseBody: {status: res.status, body: res.data } });
             }
             return {payload: input, response: res.data, createdAt: dayjs().toISOString()};
-        } catch (e) {
+        } catch (e: any) {
             throw new ScrobbleSubmitError(`Failed to update status record`, { cause: e, payload: input, response: 'response' in e ? e.response : undefined });
         }
     }
@@ -150,13 +150,13 @@ export class TealApiAuthenticatedClient extends AbstractTealApiClient {
 
 export const recordToPlay = (record: TealPlayRecord, options: RecordOptions = {}): PlayObject => {
     const artists = record.artists ?? [];
-    let musicService: string;
+    let musicService: string | undefined;
     if('musicServiceUri' in record) {
         musicService = record.musicServiceUri
     } else if(`musicServiceBaseDomain` in record) {
         musicService = record.musicServiceBaseDomain;
     }
-    let origin: string;
+    let origin: string | undefined;
     if('originUri' in record) {
         origin = record.originUri;
     } else if(`originUrl` in record) {
@@ -178,7 +178,7 @@ export const recordToPlay = (record: TealPlayRecord, options: RecordOptions = {}
             musicService,
             playId: options.playId,
             url: {
-                web: options.web,
+                web: options.web as string, // TODO strict: meta.url.web should allow undefined
                 origin
             },
             user: options.user
@@ -188,7 +188,7 @@ export const recordToPlay = (record: TealPlayRecord, options: RecordOptions = {}
     const brainz = removeUndefinedKeys<BrainzMeta>({
         recording: record.recordingMbId,
         album: record.releaseMbId,
-        artist: artists.filter(x => x.artistMbId !== undefined).length > 0 ? artists.filter(x => x.artistMbId !== undefined).map(x => x.artistMbId) : undefined
+        artist: artists.filter(x => x.artistMbId !== undefined).length > 0 ? artists.filter(x => x.artistMbId !== undefined).map(x => x.artistMbId!) : undefined
     });
 
     if (brainz !== undefined) {
@@ -250,9 +250,9 @@ export const playToRecord = (play: PlayObject): FmTealFeedPlay.Main => {
 
     const record: FmTealFeedPlay.Main = {
         $type: "fm.teal.feed.play",
-        trackName: play.data.track,
-        artists: (play.data.artists ?? []).map(x => removeUndefinedKeys({ artistName: x.name, artistMbId: mbidUriOrUndefined(x.mbid as MBID) })),
-        duration: Math.round(play.data.duration),
+        trackName: play.data.track!,
+        artists: (play.data.artists ?? []).map(x => removeUndefinedKeys({ artistName: x.name, artistMbId: mbidUriOrUndefined(x.mbid as MBID) })!),
+        duration: Math.round(play.data.duration!),
         playedTime: getScrobbleTsSOCDateWithContext(play)[0].toISOString(),
         releaseName: play.data.album,
         submissionClientAgent: `multi-scrobbler/${getRoot().items.version}`,

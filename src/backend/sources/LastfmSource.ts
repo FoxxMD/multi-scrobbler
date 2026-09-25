@@ -15,12 +15,12 @@ import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.ts
 
 export default class LastfmSource extends MemorySource {
 
-    api: LastfmApiClient;
+    api!: LastfmApiClient;
     override authType: ComponentAuthType = COMPONENT_AUTH_TYPE.interactive;
     requiresAuth = true;
     requiresAuthInteraction = true;
     upstreamType: string = 'Last.fm';
-    getScrobblesForTimeRange: TimeRangeListensFetcher
+    getScrobblesForTimeRange!: TimeRangeListensFetcher
     protected internalOptions: InternalConfig;
 
     declare config: LastfmSourceConfig;
@@ -50,7 +50,8 @@ export default class LastfmSource extends MemorySource {
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
-        this.api = new LastfmApiClient(this.name, this.config.data, {logger: this.logger, type: 'lastfm', ...this.internalOptions});
+        const {logger, ...internalRest} = this.internalOptions
+        this.api = new LastfmApiClient(this.name, this.config.data, {logger: this.logger, type: 'lastfm', ...internalRest});
         this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this.api, this.api.logger);
         return await this.api.initialize();
     }

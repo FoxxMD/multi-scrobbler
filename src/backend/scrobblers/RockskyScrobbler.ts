@@ -10,7 +10,7 @@ import type {ListenPayload} from '../../core/vendor/listenbrainz/interfaces.ts';
 
 import { isDebugMode } from "../utils.ts";
 import { durationToHuman } from '../../core/TimeUtils.ts';
-import { playToRockskyClientRecord, RockSkyApiClient, rockskyScrobbleToPlay } from "../common/vendor/RockSkyApiClient.ts";
+import { playToRockskyClientRecord, RockSkyApiClient, rockskyScrobbleToPlay, type RockskyScrobble } from "../common/vendor/RockSkyApiClient.ts";
 import type {RockSkyClientConfig} from "../common/infrastructure/config/client/rocksky.ts";
 import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient.ts";
 import { fromStream } from '@atcute/repo';
@@ -61,7 +61,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
             existingSubmitted: this.findExistingSubmittedPlayObj,
             existingExternal: async (play) => {
                 const createRecord = removeUndefinedKeys(playToRockskyClientRecord(play));
-                const existingUri = await this.api.rsIndex.scrobbleUri(this.api.userData.did, createRecord.title, createRecord.artist, createRecord.album, createRecord.timestamp);
+                const existingUri = await this.api.rsIndex!.scrobbleUri(this.api.userData!.did, createRecord!.title, createRecord!.artist, createRecord!.album!, createRecord!.timestamp!);
                 if(existingUri) {
                     return {
                         match: true,
@@ -109,7 +109,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         }
     }
 
-    getScrobblesForTimeRange = async (_) => {
+    getScrobblesForTimeRange = async (_: any) => {
         return await this.api.getRecentlyPlayed(this.MAX_INITIAL_SCROBBLES_FETCH);
     }
 
@@ -136,7 +136,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
                 this.logger.info(`Scrobbled (Backlog) => (${source}) ${buildTrackString(playObj)}`);
             }
             return result;
-        } catch (e) {
+        } catch (e: any) {
             await this.notify({ title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error' });
             throw e;
         }
@@ -197,7 +197,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         const filename = path.resolve(this.configDir, `${this.getSafeExternalId()}-${dayjs().unix()}.car`);
         const atClient = new ATProtoUnauthenticatedApiClient('rocksky', { handleData: this.api.userData, identifier: this.config.data.handle }, { logger: this.logger });
         await atClient.initClient();
-        await fsPromise.writeFile(filename, Buffer.from(await atClient.getCAR(this.api.userData.did)));
+        await fsPromise.writeFile(filename, Buffer.from(await atClient.getCAR(this.api.userData!.did)));
         return filename;
     }
 
@@ -215,7 +215,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
 
         const stream = Readable.toWeb(fs.createReadStream(filename));
 
-        await using repo = fromStream(stream);
+        await using repo = fromStream(stream as ReadableStream<Uint8Array>);
 
         let batch: RepositoryCreatePlayHistoricalOpts[] = [];
         let allGood = true;
@@ -229,7 +229,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
             if (entry.collection === 'app.rocksky.scrobble') {
                 let play: PlayObject;
                 try {
-                    play = rockskyScrobbleToPlay(entry.record, {user: this.api.userData.did, playId: entry.rkey, web: `${this.api.userData.did}/app.rocksky.scrobble/${entry.rkey}`})
+                    play = rockskyScrobbleToPlay(entry.record as RockskyScrobble, {user: this.api.userData!.did, playId: entry.rkey, web: `${this.api.userData!.did}/app.rocksky.scrobble/${entry.rkey}`})
                     if (isDebugMode()) {
                         logger.trace(`(${count}) rKey ${entry.rkey} => ${buildTrackString(play)}`);
                     }
@@ -290,7 +290,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         const unseenPlays: PlayObject[] = [];
         let syncGapFilled = false;
         for (const p of recentPlays) {
-            if(!(await this.playsHistoricalRepo.hasByUid(p.meta.playId))) {
+            if(!(await this.playsHistoricalRepo.hasByUid(p.meta.playId!))) {
                 unseenPlays.push(p);
             } else {
                 syncGapFilled = true;

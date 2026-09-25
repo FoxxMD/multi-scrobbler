@@ -50,7 +50,7 @@ const playWithMeta = (meta: PlayMeta): PlayerStateDataMaybePlay => {
     ...validPlayerState,
     platformId: [deviceId ?? platformId[0], user ?? platformId[1]],
     play: {
-        ...validPlayerState.play,
+        ...validPlayerState.play!,
         meta: {
             ...validPlayerState.play?.meta,
             ...meta
@@ -130,8 +130,8 @@ describe("Jellyfin API Source", function() {
             jf.api = jf.client.createApi(jf.address);
             jf.imageApi = getImageApi(jf.api);
 
-            expect(jf.formatPlayObjAware(item).meta.art.album).to.be.eql(`${sourceUrl}/Items/123/Images/Primary?maxHeight=500`);
-            expect(jf.formatPlayObjAware(item).meta.url.web).to.be.eql(`${sourceUrl}/web/#/details?id=456&serviceId=789`);
+            expect(jf.formatPlayObjAware(item).meta.art!.album).to.be.eql(`${sourceUrl}/Items/123/Images/Primary?maxHeight=500`);
+            expect(jf.formatPlayObjAware(item).meta.url!.web).to.be.eql(`${sourceUrl}/web/#/details?id=456&serviceId=789`);
 
             await jf.destroy();
         });
@@ -143,8 +143,8 @@ describe("Jellyfin API Source", function() {
             jf.api = jf.client.createApi(jf.address);
             jf.imageApi = getImageApi(jf.api);
 
-            expect(jf.formatPlayObjAware(item).meta.art.album).to.be.eql(`${frontendUrlOverride}/Items/123/Images/Primary?maxHeight=500`);
-            expect(jf.formatPlayObjAware(item).meta.url.web).to.be.eql(`${frontendUrlOverride}/web/#/details?id=456&serviceId=789`);
+            expect(jf.formatPlayObjAware(item).meta.art!.album).to.be.eql(`${frontendUrlOverride}/Items/123/Images/Primary?maxHeight=500`);
+            expect(jf.formatPlayObjAware(item).meta.url!.web).to.be.eql(`${frontendUrlOverride}/web/#/details?id=456&serviceId=789`);
 
             await jf.destroy();
         });
@@ -190,7 +190,7 @@ describe("Jellyfin API Source", function() {
             const jf = createJfApi({...defaultJfApiCreds, url: sourceUrl, frontendUrlOverride: frontendUrlOverride});
             await jf.buildInitData();
 
-            expect(jf.replaceUrlIfNeeded(undefined)).to.be.undefined;
+            expect(jf.replaceUrlIfNeeded(undefined!)).to.be.undefined;
 
             await jf.destroy();
         });
@@ -383,7 +383,7 @@ describe("Jellyfin API Source", function() {
             const playStr = JellyfinApiSource.formatPlayObj(itemStr);
 
             expect(playStr.data.artists).length(1);
-            expect(playStr.data.artists[0].name).eq(itemStr.Artists[0]);
+            expect(playStr.data.artists![0].name).eq(itemStr.Artists![0]);
 
             const itemObj: BaseItemDto = {
                 Name: faker.word.words({count: {min: 1, max: 3}}),
@@ -396,7 +396,7 @@ describe("Jellyfin API Source", function() {
 
             expect(playObj.data.artists).length(1);
             // @ts-expect-error can be both NamedGuidPair and string
-            expect(playObj.data.artists[0].name).eq(itemObj.Artists[0].Name);
+            expect(playObj.data.artists![0].name).eq(itemObj.Artists![0].Name);
 
             // but we know that ArtistItems should only be NameGuidPair
             const itemArtistItems: BaseItemDto = {
@@ -407,7 +407,7 @@ describe("Jellyfin API Source", function() {
             const playObjArtistItems = JellyfinApiSource.formatPlayObj(itemArtistItems);
 
             expect(playObjArtistItems.data.artists).length(1);
-            expect(playObjArtistItems.data.artists[0].name).eq(itemArtistItems.ArtistItems[0].Name);
+            expect(playObjArtistItems.data.artists![0].name).eq(itemArtistItems.ArtistItems![0].Name);
         });
 
         it('Should handle album artists as strings or objects', async function () {
@@ -422,7 +422,7 @@ describe("Jellyfin API Source", function() {
             const playStr = JellyfinApiSource.formatPlayObj(itemStr);
 
             expect(playStr.data.albumArtists).length(1);
-            expect(playStr.data.albumArtists[0].name).eq(itemStr.AlbumArtists[0]);
+            expect(playStr.data.albumArtists![0].name).eq(itemStr.AlbumArtists![0]);
 
             const itemObj: BaseItemDto = {
                 Name: faker.word.words({count: {min: 1, max: 3}}),
@@ -433,7 +433,7 @@ describe("Jellyfin API Source", function() {
             const playObj = JellyfinApiSource.formatPlayObj(itemObj);
 
             expect(playObj.data.albumArtists).length(1);
-            expect(playObj.data.albumArtists[0].name).eq(itemObj.AlbumArtists[0].Name);
+            expect(playObj.data.albumArtists![0].name).eq(itemObj.AlbumArtists![0].Name);
         });
 
         describe('singular and multiple album artists', function() {
@@ -449,7 +449,7 @@ describe("Jellyfin API Source", function() {
                 const playSingular = JellyfinApiSource.formatPlayObj(itemSingular);
 
                 expect(playSingular.data.albumArtists).length(1);
-                expect(playSingular.data.albumArtists[0].name).eq(itemSingular.AlbumArtist);
+                expect(playSingular.data.albumArtists![0].name).eq(itemSingular.AlbumArtist);
             });
 
             it('combines singular and multiple album artists when both are present', async function () {
@@ -462,7 +462,7 @@ describe("Jellyfin API Source", function() {
 
                 const playObj = JellyfinApiSource.formatPlayObj(itemMulti);
 
-                expect(playObj.data.albumArtists.map(x => x.name)).members([itemMulti.AlbumArtist,...(itemMulti.AlbumArtists.map(x => x.Name))]);
+                expect(playObj.data.albumArtists!.map(x => x.name)).members([itemMulti.AlbumArtist,...(itemMulti.AlbumArtists!.map(x => x.Name))]);
             });
 
             it('consolidates singular and multiple album artists when both are present and have identical names', async function () {
@@ -474,11 +474,11 @@ describe("Jellyfin API Source", function() {
                     AlbumArtists: aa
                 };
 
-                const consolidated = Array.from(new Set([itemMulti.AlbumArtist, ...(itemMulti.AlbumArtists.map(x => x.Name))]));
+                const consolidated = Array.from(new Set([itemMulti.AlbumArtist, ...(itemMulti.AlbumArtists!.map(x => x.Name))]));
 
                 const playObj = JellyfinApiSource.formatPlayObj(itemMulti);
                 expect(playObj.data.albumArtists).length(consolidated.length);
-                expect(playObj.data.albumArtists.map(x => x.name)).members(consolidated);
+                expect(playObj.data.albumArtists!.map(x => x.name)).members(consolidated);
             });
 
         });
@@ -498,8 +498,8 @@ describe("Jellyfin API Source", function() {
 
             const playStr = JellyfinApiSource.formatPlayObj(itemStr);
 
-            expect(playStr.data.artists[0].mbid).eq(itemStr.ProviderIds.MusicBrainzArtist);
-            expect(playStr.data.albumArtists[0].mbid).eq(itemStr.ProviderIds.MusicBrainzAlbumArtist);
+            expect(playStr.data.artists![0].mbid).eq(itemStr.ProviderIds!.MusicBrainzArtist);
+            expect(playStr.data.albumArtists![0].mbid).eq(itemStr.ProviderIds!.MusicBrainzAlbumArtist);
         });
 
         it('Does not add mbids to artist props if there are multiple artists', async function () {
@@ -515,8 +515,8 @@ describe("Jellyfin API Source", function() {
 
             const playStr = JellyfinApiSource.formatPlayObj(itemStr);
 
-            expect(playStr.data.artists[0].mbid).is.undefined;
-            expect(playStr.data.albumArtists[0].mbid).is.undefined;
+            expect(playStr.data.artists![0].mbid).is.undefined;
+            expect(playStr.data.albumArtists![0].mbid).is.undefined;
         });
 
     });

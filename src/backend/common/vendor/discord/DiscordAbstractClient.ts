@@ -45,7 +45,7 @@ export class DiscordAbstractClient extends AbstractApiClient {
 
         try {
             const imgResp = await request.post(`https://discord.com/api/v10/applications/${this.config.applicationId}/external-assets`)
-                .set('Authorization', this.config.token)
+                .set('Authorization', this.config.token!)
                 .type('json')
                 .send({ "urls": [artUrl] });
             this.artFailCount = 0;

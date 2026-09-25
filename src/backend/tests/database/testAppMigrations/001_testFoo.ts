@@ -3,11 +3,13 @@ import { DrizzlePlayRepository } from '../../../common/database/drizzle/reposito
 import type {MigrateBaseContext} from '../../../common/database/appMigrator.ts';
 
 export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase, ctx): Promise<void> => {
-
+  if(ctx === undefined) {
+    throw new Error('Context must be defined');
+  }
   const countRes = await db.prepare(`
     select COUNT(*) from plays;
   `).get();
-  const count = countRes['COUNT(*)'];
+  const count = (countRes as Record<string, number>)['COUNT(*)'];
   if(count > 0) {
    ctx. logger.info(`Updating ${count} play rows`);
 
@@ -28,6 +30,9 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
   }
 };
 
-export const down: Migration<MigrateBaseContext>['down'] = async (db: SqliteDatabase, ctx: MigrateBaseContext): Promise<void> => {
+export const down: Migration<MigrateBaseContext>['down'] = async (db: SqliteDatabase, ctx: MigrateBaseContext | undefined): Promise<void> => {
+  if(ctx === undefined) {
+    throw new Error('Context must be defined');
+  }
   ctx.logger.info('No DOWN action');
 };

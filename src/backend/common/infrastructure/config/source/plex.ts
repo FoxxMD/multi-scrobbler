@@ -61,12 +61,12 @@ export type PlexApiData = z.infer<typeof plexApiDataSchema>;
 const envDataSchema = z.object({
     PLEX_URL: plexApiDataSchema.shape.url,
     PLEX_TOKEN: plexApiDataSchema.shape.token,
-    PLEX_USERS_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(plexApiDataSchema.shape.usersAllow.meta())),
-    PLEX_USERS_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(plexApiDataSchema.shape.usersBlock.meta())),
-    PLEX_DEVICES_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(plexApiDataSchema.shape.devicesBlock.meta())),
-    PLEX_DEVICES_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(plexApiDataSchema.shape.devicesAllow.meta())),
-    PLEX_LIBRARIES_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(plexApiDataSchema.shape.librariesAllow.meta())),
-    PLEX_LIBRARIES_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(plexApiDataSchema.shape.librariesBlock.meta())),
+    PLEX_USERS_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(plexApiDataSchema.shape.usersAllow.meta()!)),
+    PLEX_USERS_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(plexApiDataSchema.shape.usersBlock.meta()!)),
+    PLEX_DEVICES_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(plexApiDataSchema.shape.devicesBlock.meta()!)),
+    PLEX_DEVICES_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(plexApiDataSchema.shape.devicesAllow.meta()!)),
+    PLEX_LIBRARIES_ALLOW: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(plexApiDataSchema.shape.librariesAllow.meta()!)),
+    PLEX_LIBRARIES_BLOCK: z.string().optional().pipe(transformSplitMaybeString).meta(envMetaNormalize(plexApiDataSchema.shape.librariesBlock.meta()!)),
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, PlexApiSourceConfig> = {

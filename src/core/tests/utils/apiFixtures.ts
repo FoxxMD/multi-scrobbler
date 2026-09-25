@@ -29,7 +29,7 @@ export const generatePlayApiCommon = (commonData: Partial<PlayApiCommon> & {play
     }
 
     const {
-        playedAt = typeof play.data.playDate === 'string' ? play.data.playDate : play.data.playDate.toISOString(),
+        playedAt = typeof play.data.playDate === 'string' ? play.data.playDate : play.data.playDate!.toISOString(),
         seenAt = playedAt,
         updatedAt = dayjs().toISOString(),
         compacted = false,
@@ -96,7 +96,7 @@ export const generatePlayApiCommonDetailed = (opts: {
 
     const playCommon = generatePlayApiCommon(...playOpts);
     const inputRes = generatePlayInputApi(...inputOpts);
-    const queueRes = generateQueueStateApi(queueOpts[0]);
+    const queueRes = generateQueueStateApi(queueOpts[0]!);
 
     return {
         ...playCommon,
@@ -131,7 +131,7 @@ export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApi>
     } = data;
 
 
-    let mode: ComponentType = data.mode;
+    let mode: ComponentType | undefined = data.mode;
     if(mode === undefined) {
         if(isSourceType(type)) {
             mode = 'source';
@@ -144,9 +144,9 @@ export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApi>
         id: faker.number.int({min: 1, max: 100}),
         uid: generatePlayUid(),
         name: `${faker.word.adjective()} ${faker.word.noun()}`,
-        createdAt: createdAt.toISOString(),
-        lastActiveAt: lastActiveAt.toISOString(),
-        lastReadyAt: lastReadyAt.toISOString(),
+        createdAt: createdAt!.toISOString(),
+        lastActiveAt: lastActiveAt!.toISOString(),
+        lastReadyAt: lastReadyAt!.toISOString(),
         type,
         mode,
         countLive: faker.number.int({min: 0, max: 2000}),
@@ -210,7 +210,6 @@ export const generateSourceApiJson = (data: Partial<ComponentSourceApi> = {}): C
         sleeping = false,
     } = data;
     return {
-        lastReadyAt: undefined,
         lastImport: undefined,
         lastImportSuccess: undefined,
         ...common,
@@ -242,7 +241,6 @@ export const generateClientApiJson = (data: Partial<ComponentClientApi> = {}): C
         players = (data.players ?? {}),
     } = data;
     return {
-        lastReadyAt: undefined,
         lastImport: undefined,
         lastImportSuccess: undefined,
         ...common,
@@ -263,8 +261,8 @@ export const generateComponentApiJson = (data: Partial<ComponentCommonApi> = {})
         type: typeData
     } = data;
 
-    let mode: ComponentCommonApi['mode'],
-    type: ComponentCommonApi['type'];
+    let mode!: ComponentCommonApi['mode'],
+    type!: ComponentCommonApi['type'];
 
     if(modeData === undefined && typeData === undefined) {
         mode = faker.helpers.arrayElement(['source', 'client']);

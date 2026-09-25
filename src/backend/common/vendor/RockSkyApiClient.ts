@@ -51,7 +51,7 @@ export interface SubmitResponse {
 export class RockSkyApiClient extends AbstractApiClient {
 
     declare config: RockSkyClientData;
-    lzUrl: URLData;
+    lzUrl!: URLData;
     apiUrl: URLData;
     isKoito: boolean = false;
     cache: MSCache;
@@ -84,14 +84,14 @@ export class RockSkyApiClient extends AbstractApiClient {
 
     async [Symbol.asyncDispose]() {
         try {
-            await this.rsIndex.close();
+            await this.rsIndex!.close();
         } catch (e) {
             this.logger.warn(e);
         }
     }
 
     public async buildData() {
-        await this.rsIndex.open();
+        await this.rsIndex!.open();
         try {
             const atProtoHandleData: ATProtoUserIdentifierData = {
                 identifier: this.config.handle
@@ -131,7 +131,7 @@ export class RockSkyApiClient extends AbstractApiClient {
         if((this.userData !== undefined || this.config.handle !== undefined) && this.config.appPassword !== undefined) {
             try {
                 this.rsAgent = await Agent.login(this.userData?.did ?? this.userData?.handle ?? this.config.handle, this.config.appPassword);
-                this.rsAgent.useIndex(this.rsIndex);
+                this.rsAgent.useIndex(this.rsIndex!);
                 return true;
             } catch (e) {
                 throw new AuthError('Could not login using handle/did and appPassword', {cause: e, unrecoverable: true});
@@ -142,14 +142,14 @@ export class RockSkyApiClient extends AbstractApiClient {
         // so we can use the client for write operations later
         if(this.config.token !== undefined) {
             try {
-                await this.rsClient.apikeys();
+                await this.rsClient!.apikeys();
                 // const req = request.get('https://api.rocksky.app/profile').set('Authorization', `Bearer ${this.config.token}`);
                 // await req;
                 return true;
             } catch (e) {
                 const upstreamErr = new UpstreamError('Failed to get apikeys() to test auth validity of token', {cause: e});
                 const cause = findCauseByFunc<RockskyError>(e, (ee) => ee instanceof RockskyError);
-                throw new AuthError('Failed to get /profile with given token', {cause: upstreamErr, unrecoverable: cause !== undefined && [401,403].includes(cause.status)});
+                throw new AuthError('Failed to get /profile with given token', {cause: upstreamErr, unrecoverable: cause !== undefined && [401,403].includes(cause.status!)});
             }
         }
         throw new AuthError('No required credentials provided to try an authentication method.', {unrecoverable: true});
@@ -174,7 +174,7 @@ export class RockSkyApiClient extends AbstractApiClient {
         try {
             const resp = await this.getUserListens(maxTracks, user);
             return resp.map(x => rockskyScrobbleToPlay(x));
-        } catch (e) {
+        } catch (e: any) {
             this.logger.error(`Error encountered while getting User listens | Error =>  ${e.message}`);
             return [];
         }
@@ -190,11 +190,11 @@ export class RockSkyApiClient extends AbstractApiClient {
          * we don't recieve any real feedback about whether the scrobbles were accepted
          */
         if(this.rsAgent === undefined) {
-            const payload = removeUndefinedKeys(playToRockskyClientRecord(play));
+            const payload = removeUndefinedKeys(playToRockskyClientRecord(play))!;
             if(log) {
                 this.logger.debug(`Submit Payload: ${JSON.stringify(payload)}`);
             }
-            const resp = await this.rsClient.createScrobble(payload);
+            const resp = await this.rsClient!.createScrobble(payload);
             return {payload, response: resp, createdAt: dayjs().toISOString()}
         }
 
@@ -218,7 +218,7 @@ export class RockSkyApiClient extends AbstractApiClient {
         }
 
         const payload = playToRockskyAgentRecord(play);
-        let merged: PlayObject;
+        let merged: PlayObject | undefined;
         try {
             const res = await this.rsAgent.scrobble(payload);
             const uData = rockskyUriToData(res);
@@ -226,7 +226,7 @@ export class RockSkyApiClient extends AbstractApiClient {
                 merged = clone(play);
                 merged.meta.url = {
                     ...(merged.meta.url ?? {}),
-                    web: uData.web
+                    web: uData.web!
                 };
                 if(merged.meta.playId === undefined) {
                     merged.meta.playId = uData.playId;
@@ -235,7 +235,7 @@ export class RockSkyApiClient extends AbstractApiClient {
                     merged.meta.user = uData.user;
                 }
             }
-            return removeUndefinedKeys({payload, response: res, mergedScrobble: merged, createdAt: dayjs().toISOString(), warnings: warnings.length === 0 ? undefined : warnings});
+            return removeUndefinedKeys({payload, response: res, mergedScrobble: merged, createdAt: dayjs().toISOString(), warnings: warnings.length === 0 ? undefined : warnings})!;
         } catch (e) {
             throw new ScrobbleSubmitError(`Error occurred while writing scrobble to PDS`, {cause: e, payload: payload});
         }
@@ -248,14 +248,14 @@ export class RockSkyApiClient extends AbstractApiClient {
         if(play === undefined) {
             await this.rsAgent.clearNowPlaying();
         }
-        await this.rsAgent.setNowPlaying(playToActorTrackView(play));
+        await this.rsAgent.setNowPlaying(playToActorTrackView(play!));
     }
 
     getRockskySongMatch = async (play: PlayObject): Promise<SongViewDetailed> => {
         const input = playToMatchSongInput(play);
-        const inputHash = hashObject(removeUndefinedKeys(input));
+        const inputHash = hashObject(removeUndefinedKeys(input)!);
         const cacheKey = `rsMatchSong-${inputHash}`;
-        let songDetailed: SongViewDetailed = await this.cache.cacheApi.get<SongViewDetailed>(cacheKey);
+        let songDetailed: SongViewDetailed | undefined = await this.cache.cacheApi.get<SongViewDetailed>(cacheKey);
         if(songDetailed === undefined) {
             try {
                 songDetailed = await this.rsPool.rsProxy.matchSong(input.title, input.artist, input.mbId, input.isrc, input.album);
@@ -278,12 +278,12 @@ export class RockSkyApiClient extends AbstractApiClient {
         const filename = path.resolve(this.configDir, `${this.getSafeExternalId()}-${dayjs().unix()}.car`);
         const atClient = new ATProtoUnauthenticatedApiClient('rocksky', { handleData: this.userData, identifier: this.config.handle }, { logger: this.logger });
         await atClient.initClient();
-        await fsPromise.writeFile(filename, Buffer.from(await atClient.getCAR(this.userData.did)));
+        await fsPromise.writeFile(filename, Buffer.from(await atClient.getCAR(this.userData!.did)));
         return filename;
     }
 
     async syncSdkRepo(filename: string) {
-        await this.rsIndex.indexCar(this.userData.did, await fsPromise.readFile(filename));
+        await this.rsIndex!.indexCar(this.userData!.did, await fsPromise.readFile(filename));
     }
 
     public getSafeExternalId() {
@@ -331,8 +331,8 @@ export const hasScrobbleConfidenceFields = (play: PlayObject): RockskyConfidence
 }
 
 const playToMatchSongInput = (play: PlayObject): RsMatchSongInput => ({
-        title: play.data.track,
-        artist: play.data.artists.map(x => x.name).join(', '),
+        title: play.data.track!,
+        artist: play.data.artists!.map(x => x.name).join(', '),
         mbId: play.data.meta?.brainz?.track ?? play.data.meta?.brainz?.recording,
         isrc: play.data.isrc,
         album: play.data.album
@@ -353,7 +353,7 @@ const mergeSongViewWithPlay = (song: SongViewDetailedMS, play: PlayObject): Play
             ...play.meta
         }
     };
-    if (svPlay.data.meta?.brainz.recording !== undefined) {
+    if (svPlay.data.meta?.brainz!.recording !== undefined) {
         const {
             brainz,
             ...rest
@@ -378,7 +378,7 @@ export const songViewToPlay = (song: SongViewDetailedMS): PlayObject => {
     if(song.mbArtists !== undefined && song.mbArtists !== null && song.mbArtists.length > 0) {
         artists = song.mbArtists.map(x => ({name: x.name, mbid: x.mbid}));
     } else if(song.artists !== undefined && song.artists !== null && song.artists.length > 0) {
-        artists = song.artists.map(x => ({name: x.name}))
+        artists = song.artists.map(x => ({name: x.name!}))
     } else if(song.artist !== undefined && song.artist !== null) {
         artists = [{name: song.artist}];
     }
@@ -399,14 +399,14 @@ export const songViewToPlay = (song: SongViewDetailedMS): PlayObject => {
             artists,
             albumArtists,
             album: song.album !== '' ? song.album : undefined,
-            duration: song.duration !== 0 ? song.duration / 1000 : undefined,
+            duration: song.duration !== 0 ? song.duration! / 1000 : undefined,
             isrc: song.isrc
         },
         meta: {
             trackId: song.id,
             source: 'Rocksky',
             url: {
-                web: song.uri
+                web: song.uri!
             }
         }
     };
@@ -422,7 +422,7 @@ export const songViewToPlay = (song: SongViewDetailedMS): PlayObject => {
 
     let albumArt = song.albumArt;
     if(albumArt === undefined) {
-        const match = (song.matches ?? []).length > 0 ? song.matches[0] : undefined;
+        const match = (song.matches ?? []).length > 0 ? song.matches![0] : undefined;
         if(match !== undefined && match.albumArt !== undefined) {
             albumArt = match.albumArt;
         }
@@ -444,8 +444,8 @@ export const rockskyScrobbleToPlay = (obj: RockskyScrobble, opts: {playId?: stri
     const play: PlayObjectMinimal = {
         data: {
             track: obj.title,
-            artists: artistNamesToCredits(nonEmptyStringOrDefault(obj.artist) ? [obj.artist] : []),
-            albumArtists: artistNamesToCredits(nonEmptyStringOrDefault(obj.albumArtist) ? [obj.albumArtist] : []),
+            artists: artistNamesToCredits(nonEmptyStringOrDefault(obj.artist) ? [obj.artist!] : []),
+            albumArtists: artistNamesToCredits(nonEmptyStringOrDefault(obj.albumArtist) ? [obj.albumArtist!] : []),
             album: nonEmptyStringOrDefault(obj.album),
             playDate: dayjs.utc(obj.createdAt).local()
         },
@@ -472,7 +472,7 @@ export const rockskyScrobbleToPlay = (obj: RockskyScrobble, opts: {playId?: stri
         if(uData !== undefined) {
             if(web === undefined) {
                 play.meta.url = {
-                    web: uData.web
+                    web: uData.web!
                 }
             }
             if(playId === undefined) {
@@ -491,14 +491,14 @@ export const rockskyScrobbleToPlay = (obj: RockskyScrobble, opts: {playId?: stri
 type RealCreateScrobbleInput = CreateScrobbleInput & {albumArtist: string};
 
 export const playToRockskyClientRecord = (play: PlayObject): RealCreateScrobbleInput => {
-    const artistStr = artistCreditsToNames(play.data.artists).join(', ');
+    const artistStr = artistCreditsToNames(play.data.artists!).join(', ');
 
     const csi: RealCreateScrobbleInput = {
-        title: play.data.track,
+        title: play.data.track!,
         artist: artistStr,
         // albumArtist is a required field on rocksky server-side
         // tsiry's advice is that if there really is no album artists then just use the same value as artist
-        albumArtist: (play.data.albumArtists ?? []).length === 0 ? artistStr : artistCreditsToNames(play.data.albumArtists).join(', '),
+        albumArtist: (play.data.albumArtists ?? []).length === 0 ? artistStr : artistCreditsToNames(play.data.albumArtists!).join(', '),
         album: play.data.album,
         mbId: play.data.meta?.brainz?.recording,
         isrc: play.data.isrc !== undefined ? isrcNoHyphens(play.data.isrc) : undefined,
@@ -510,15 +510,15 @@ export const playToRockskyClientRecord = (play: PlayObject): RealCreateScrobbleI
 }
 
 export const playToRockskyAgentRecord = (play: PlayObject): ScrobbleInput => {
-    const artistStr = artistCreditsToNames(play.data.artists).join(', ');
+    const artistStr = artistCreditsToNames(play.data.artists!).join(', ');
 
     const csi: ScrobbleInput = {
-        title: play.data.track,
+        title: play.data.track!,
         artist: artistStr,
         // albumArtist is a required field on rocksky server-side
         // tsiry's advice is that if there really is no album artists then just use the same value as artist
-        albumArtist: (play.data.albumArtists ?? []).length === 0 ? artistStr : artistCreditsToNames(play.data.albumArtists).join(', '),
-        album: play.data.album,
+        albumArtist: (play.data.albumArtists ?? []).length === 0 ? artistStr : artistCreditsToNames(play.data.albumArtists!).join(', '),
+        album: play.data.album!,
         mbid: play.data.meta?.brainz?.recording,
         isrc: play.data.isrc !== undefined ? isrcNoHyphens(play.data.isrc) : undefined,
         duration: play.data.duration !== undefined ? play.data.duration * 1000 : 0,
@@ -529,14 +529,14 @@ export const playToRockskyAgentRecord = (play: PlayObject): ScrobbleInput => {
 }
 
 export const playToActorTrackView = (play: PlayObject): ActorTrackView => removeUndefinedKeys({
-    name: play.data.track,
-    artist: artistCreditsToNames(play.data.artists).join(', '),
+    name: play.data.track!,
+    artist: artistCreditsToNames(play.data.artists!).join(', '),
     album: play.data.album,
     albumCoverUrl: play.meta.art?.track ?? play.meta.art?.album ?? play.meta.art?.artist,
     durationMs: play.data.duration !== undefined ? Math.floor(play.data.duration * 1000) : undefined,
     source: play.meta.musicService,
     recordingMbId: play.data.meta?.brainz?.recording
- })
+ })!
 
 const ATPROTO_URI_REGEX = new RegExp(/at:\/\/(?<resource>(?<did>did.*?)\/app\.rocksky\.scrobble\/(?<tid>.*))/);
 

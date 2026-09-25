@@ -6,8 +6,10 @@ import { eq } from 'drizzle-orm';
 import type {PlayLifecycle, PlayObject} from '../../../../core/Atomic.ts';
 
 
-export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase, ctx: MigrateBaseContext): Promise<void> => {
-
+export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase, ctx: MigrateBaseContext | undefined): Promise<void> => {
+    if(ctx === undefined) {
+        throw new Error('Context must be defined');
+    }
     ctx.logger.info('Migrating Play lifecycle data to top-level location. This may take some time...');
 
     let more = true;
@@ -39,7 +41,7 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
                 if (scrobble !== undefined) {
                     row.play.scrobble = clone(scrobble);
                 }
-                // @ts-expect-error
+                // @ts-expect-error its fine
                 delete row.play.meta.lifecycle;
                 await ctx.db.update(drizzlePlays).set({ play: row.play }).where(eq(drizzlePlays.id, row.id));
                 updated++;
@@ -60,7 +62,7 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
     // context is passed as ctx
 };
 
-export const down: Migration<MigrateBaseContext>['down'] = async (db: SqliteDatabase, ctx: MigrateBaseContext): Promise<void> => {
+export const down: Migration<MigrateBaseContext>['down'] = async (db: SqliteDatabase, ctx: MigrateBaseContext | undefined): Promise<void> => {
     // Rollback code here
     // context is passed as ctx
 };

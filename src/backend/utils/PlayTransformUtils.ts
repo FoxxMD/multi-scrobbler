@@ -50,7 +50,7 @@ export const configValToSearchReplace = (val: string | undefined | object): Cond
     throw new Error(`Value must be a string or an object containing 'search: string' and 'replace: 'string'. Given: ${val}`);
 }
 export const isConditionalSearchAndReplace = (val: unknown): val is ConditionalSearchAndReplaceRegExp => {
-    return typeof val === 'object'
+    return typeof val === 'object' && val !== null
         && ('search' in val && typeof val.search === 'string')
         && ('replace' in val && typeof val.replace === 'string')
         && (!('when' in val) || isWhenConditionConfig(val.when));
@@ -101,7 +101,7 @@ export const isPlayTransformStage = (val: object | Partial<PlayTransformStage<Se
     if (!('type' in val)) {
         throw new Error(`Stage is missing 'type'. Must be one of: ${STAGE_TYPES.join(', ')}`);
     }
-    if (!STAGE_TYPES.includes(val.type)) {
+    if (!STAGE_TYPES.includes(val.type!)) {
         throw new Error(`Stage has invalid 'type'. Must be one of: ${STAGE_TYPES.join(', ')}`);
     }
 
@@ -110,17 +110,17 @@ export const isPlayTransformStage = (val: object | Partial<PlayTransformStage<Se
             continue;
         }
         if (val.type === 'user') {
-            if (!Array.isArray(val[k])) {
+            if (!Array.isArray((val as any)[k])) {
                 throw new Error(`${k} must be an array`);
             }
             try {
-                isSearchAndReplaceTerm(val[k]);
+                isSearchAndReplaceTerm((val as any)[k]);
             } catch (e) {
                 throw new Error(`Property '${k}' was not a valid type`, { cause: e });
             }
         } else {
             try {
-                isExternalMetadataTerm(val[k]);
+                isExternalMetadataTerm((val as any)[k]);
 
             } catch (e) {
                 throw new Error(`Property '${k}' was not a valid type`, { cause: e });
@@ -148,7 +148,7 @@ export const testWhen = (parts: WhenParts<string>, play: PlayObject, options?: S
     if(parts.artists !== undefined) {
         // allows user to test if artists are empty
         const artists = parts.artists.length === 0 ? [{name: ''}] : play.data.artists;
-        if(artists.every(x => !testMaybeRegex(parts.artists, x.name)[0])) {
+        if(artists!.every(x => !testMaybeRegex(parts.artists!, x.name)[0])) {
             return false;
         }
     }
@@ -202,6 +202,6 @@ export const baseFormatPlayObj = (data: any, play: PlayObjectMinimal): PlayObjec
             play,
         }
     }
-    basePlay.original.play.meta.seenAt = basePlay.meta.seenAt;
+    basePlay.original!.play!.meta.seenAt = basePlay.meta.seenAt;
     return basePlay;
 }

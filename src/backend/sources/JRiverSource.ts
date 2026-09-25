@@ -129,7 +129,7 @@ export class JRiverSource extends MemoryPositionalSource {
             return [];
         }
 
-        let play = [];
+        let play: PlayObject[] = [];
 
         //should it use zones?
         //const zoneResp = await this.client.getZones();

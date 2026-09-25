@@ -141,7 +141,7 @@ describe('Migrations', function () {
 
                 // add dummy data to migration so migrate() doesn't fail
                 const newMigrationFolder = (await fs.readdir(path.resolve('./migrations/'))).find(x => x.includes('newMigration'));
-                await fs.appendFile(path.resolve('./migrations/',newMigrationFolder, 'migration.sql'),`\nselect count(*) from plays;`);
+                await fs.appendFile(path.resolve('./migrations/',newMigrationFolder!, 'migration.sql'),`\nselect count(*) from plays;`);
 
                 await getMigratedDb(dbPath, {migrationsFolder: mf, migrationsAppFolder: process.cwd()});
                 const contents = await fs.readdir(path.resolve('./'));
@@ -206,12 +206,12 @@ describe('Basic DB Operations', function () {
                 }
             ]);
 
-            const fullPlay = await db.query.plays.findFirst({
+            const fullPlay = (await db.query.plays.findFirst({
                 with: {
                     input: true,
                     queueStates: true,
                 },
-            });
+            }))!;
 
 
             expect(fullPlay.queueStates).to.not.be.undefined;
@@ -255,12 +255,12 @@ describe('Basic DB Operations', function () {
                 }
             ]).returning();
 
-            const fullPlay = await db.query.plays.findFirst({
+            const fullPlay = (await db.query.plays.findFirst({
                 with: {
                     input: true,
                     queueStates: true,
                 },
-            });
+            }))!;
 
 
             expect(fullPlay.queueStates).to.not.be.undefined;
