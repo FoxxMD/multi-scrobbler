@@ -107,8 +107,11 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
     doPlayingNow = async (data: SourcePlayerObj) => {
         // last.fm shows Now Playing for the same time as the duration of the track being submitted
+        if(data.play === undefined) {
+            return;
+        }
         try {
-            return this.api.playingNow(data.play!);
+            return this.api.playingNow(data.play);
         } catch (e) {
             throw e;
         }

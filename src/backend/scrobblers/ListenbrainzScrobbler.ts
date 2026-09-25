@@ -99,7 +99,10 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
     doPlayingNow = async (data: SourcePlayerObj) => {
         // listenbrainz shows Now Playing for the same time as the duration of the track being submitted
         try {
-            await this.api.submitListen(data.play!, { listenType: 'playing_now'});
+            if(data.play === undefined) {
+                return;
+            }
+            await this.api.submitListen(data.play, { listenType: 'playing_now'});
         } catch (e) {
             throw e;
         }

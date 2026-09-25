@@ -247,6 +247,7 @@ export class RockSkyApiClient extends AbstractApiClient {
         }
         if(play === undefined) {
             await this.rsAgent.clearNowPlaying();
+            return;
         }
         await this.rsAgent.setNowPlaying(playToActorTrackView(play!));
     }

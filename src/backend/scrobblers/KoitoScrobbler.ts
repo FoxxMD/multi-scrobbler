@@ -93,7 +93,10 @@ export default class KoitoScrobbler extends AbstractScrobbleClient {
 
     doPlayingNow = async (data: SourcePlayerObj) => {
         try {
-            await this.api.submitListen(data.play!, { listenType: 'playing_now'});
+            if(data.play === undefined) {
+                return;
+            }
+            await this.api.submitListen(data.play, { listenType: 'playing_now'});
         } catch (e) {
             throw e;
         }
