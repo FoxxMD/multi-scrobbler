@@ -35,7 +35,10 @@ export interface HistoryIngressResult {
 
 export const ytiHistoryResponseToListItems = (res: ApiResponse): YTNodes.MusicResponsiveListItem[] => {
     const page = Parser.parseResponse<IBrowseResponse>(res.data);
-    const items = page.contents_memo!.getType(YTNodes.MusicResponsiveListItem);
+    if(page.contents_memo === undefined) {
+        return [];
+    }
+    const items = page.contents_memo.getType(YTNodes.MusicResponsiveListItem);
     return Array.from(items);
 }
 
@@ -64,7 +67,10 @@ const loggedErrorExtra = (err: Error): object | undefined => {
 export const ytiHistoryResponseFromShelfToPlays = (res: ApiResponse, options: {newFromSource?: boolean} = {}): PlayObject[] => {
     const page = Parser.parseResponse<IBrowseResponse>(res.data);
     const items: PlayObject[] = [];
-    const shelves = page.contents_memo!.getType(YTNodes.MusicShelf);
+    if(page.contents_memo === undefined) {
+        return items;
+    }
+    const shelves = page.contents_memo.getType(YTNodes.MusicShelf);
     shelves.forEach((shelf) => {
         shelf.contents.forEach((listItem) => {
             items.push(YTMusicSource.formatPlayObj(listItem, {shelf: shelf.title.text, newFromSource: options.newFromSource ?? false}));
@@ -233,8 +239,8 @@ export default class YTMusicSource extends AbstractSource {
         } 
 
         this.oauthClient = new OAuth2Client({
-            clientId: this.config.data!.clientId,
-            clientSecret: this.config.data!.clientSecret,
+            clientId: this.config.data?.clientId,
+            clientSecret: this.config.data?.clientSecret,
             redirectUri: this.redirectUri,
         });
 
@@ -247,6 +253,8 @@ export default class YTMusicSource extends AbstractSource {
     protected async doBuildInitData(): Promise<true | string | undefined> {
         const {
             cookie,
+            clientId,
+            clientSecret,
             // we accept *any* SessionsOptions the user passes
             // into innertubeOptions so that they can tailor yti however they want
             //
@@ -260,18 +268,18 @@ export default class YTMusicSource extends AbstractSource {
             cache: new UniversalCache(true, this.workingCredsPath)
         });
 
-        if (this.config.data!.clientId !== undefined && this.config.data!.clientSecret !== undefined) {
+        if (clientId !== undefined && clientSecret !== undefined) {
             try {
                 this.configureCustomOauth();
             } catch (e) {
                 throw new Error('Unable to build custom OAuth Client', { cause: e });
             }
             this.logger.info(`Will use custom OAuth Client:
-Client ID     : ${truncateStringToLength(10)(this.config.data!.clientId)}
-Client Secret : ${truncateStringToLength(10)(this.config.data!.clientSecret)}
+Client ID     : ${truncateStringToLength(10)(clientId)}
+Client Secret : ${truncateStringToLength(10)(clientSecret)}
 Redirect URI  : ${this.redirectUri}`);
-        } else if (this.config.data!.clientId !== undefined || this.config.data!.clientSecret !== undefined) {
-            const missing = this.config.data!.clientId !== undefined ? 'clientSecret' : 'clientId';
+        } else if (clientId !== undefined || clientSecret !== undefined) {
+            const missing = clientId !== undefined ? 'clientSecret' : 'clientId';
             throw new Error(`It looks like you tried to configure a custom OAuth Client but are missing '${missing}'! Cannot build client.`);
         } else if (cookie !== undefined) {
             this.logger.info(`Will use cookie '${truncateStringToLength(10)(cookie)}' for auth`);
@@ -309,7 +317,13 @@ Redirect URI  : ${this.redirectUri}`);
             return false;
         }
 
-        const { tokens } = await this.oauthClient!.getToken(obj.code as string);
+        const {clientId, clientSecret} = this.config.data ?? {};
+        if (this.oauthClient === undefined || clientId === undefined || clientSecret === undefined) {
+            this.logger.error(`Authorization callback received but custom OAuth Client is not configured`);
+            return false;
+        }
+
+        const { tokens } = await this.oauthClient.getToken(obj.code as string);
 
         if (tokens.access_token && tokens.refresh_token && tokens.expiry_date) {
             await this.yti.session.signIn({
@@ -317,8 +331,8 @@ Redirect URI  : ${this.redirectUri}`);
                 refresh_token: tokens.refresh_token,
                 expiry_date: new Date(tokens.expiry_date).toISOString(),
                 client: {
-                    client_id: this.config.data!.clientId!,
-                    client_secret: this.config.data!.clientSecret!
+                    client_id: clientId,
+                    client_secret: clientSecret
                 }
             });
             this.authed = true;
@@ -333,7 +347,7 @@ Redirect URI  : ${this.redirectUri}`);
 
     doAuthentication = async () => {
         try {
-            if (this.config.data!.cookie !== undefined) {
+            if (this.config.data?.cookie !== undefined) {
                 try {
                     await this.yti.account.getInfo()
                     this.authed = true;
@@ -395,12 +409,13 @@ Redirect URI  : ${this.redirectUri}`);
         } else if(authorData !== undefined) {
             artists = authorData.map(x => x.name) as string[];
         }
-        if(artists.length === 0 && obj.flex_columns.at(1)?.title?.text !== undefined) {
+        const artistText = obj.flex_columns.at(1)?.title?.text;
+        if(artists.length === 0 && artistText !== undefined) {
             // if YTM doesn't have an endpoint (page) for an artist (combined) then YouTube.js doesn't include it
             // in the music shelf object created from parsing data
             // BUT YouTube.js does expose the raw data so we can try to recover artists from plain text
             // https://github.com/LuanRT/YouTube.js/issues/381
-            const credits = parseArtistCredits(obj.flex_columns.at(1)?.title?.text!);
+            const credits = parseArtistCredits(artistText);
             if(credits !== undefined) {
                 // try to be clever
                 artists.push(credits.primary);
@@ -411,7 +426,7 @@ Redirect URI  : ${this.redirectUri}`);
                     }
                 }
             } else {
-                artists = [obj.flex_columns.at(1)?.title?.text!];
+                artists = [artistText];
             }
         }
 
@@ -450,7 +465,7 @@ Redirect URI  : ${this.redirectUri}`);
         return baseFormatPlayObj(obj, play);
     }
 
-    recentlyPlayedTrackIsValid = (playObj: PlayObject) => playObj.meta.newFromSource!
+    recentlyPlayedTrackIsValid = (playObj: PlayObject) => playObj.meta.newFromSource === true
 
     protected getLibraryHistory = async (): Promise<ApiResponse> => {
         // internally for this call YT returns a *list* of playlists with decreasing granularity from most recent to least recent like this:
@@ -538,7 +553,7 @@ Redirect URI  : ${this.redirectUri}`);
                 results.consistent = false;
                 results.reason = `(Bump Plays Detected) Previously seen YTM history was bumped in an unexpected way (${diffResults[2]}), resetting history to new list`;
             } else {
-                results.plays = [...diffResults[1]!].reverse();
+                results.plays = [...diffResults[1]].reverse();
             }
         } else {
             diffResults = playsAreAddedOnly(this.recentlyPlayed, plays);
@@ -553,7 +568,7 @@ Redirect URI  : ${this.redirectUri}`);
                         results.consistent = false;
                         results.reason = `(Add Plays Detected) YTM History has exact order as another recent response *where history was changed* (${revertedToRecent + 1} ago @ ${todayAwareFormat(this.recentChangedHistoryResponses[revertedToRecent].ts)}) which means last history (n - 1) was probably out of date. Resetting history to current list and NOT ADDING new tracks since we probably already discovered them earlier.`
                     } else {
-                        results.plays = [...diffResults[1]!].reverse();
+                        results.plays = [...diffResults[1]].reverse();
                     }
                 }
             } else {
