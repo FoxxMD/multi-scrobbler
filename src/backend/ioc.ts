@@ -101,8 +101,8 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
     let maybeSingletonMb!: MusicBrainzSingletonMap;
     if(typeof mbMap === 'function') {
         mbFunc = mbMap;
-    } else if(maybeSingletonMb !== undefined) {
-        maybeSingletonMb = mbMap!;
+    } else if(mbMap !== undefined) {
+        maybeSingletonMb = mbMap;
     } else {
         maybeSingletonMb = new Map();
     }
@@ -111,8 +111,8 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
     let maybeSingletonRs!: RockskySingletonMap;
     if(typeof rsMap === 'function') {
         rsFunc = rsMap;
-    } else if(maybeSingletonRs !== undefined) {
-        maybeSingletonRs = rsMap!;
+    } else if(rsMap !== undefined) {
+        maybeSingletonRs = rsMap;
     } else {
         maybeSingletonRs = new Map();
     }
@@ -121,8 +121,8 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
     let maybeSingletonCa!: CovertArtSingletonMap;
     if(typeof caMap === 'function') {
         caFunc = caMap;
-    } else if(maybeSingletonCa !== undefined) {
-        maybeSingletonCa = caMap!;
+    } else if(caMap !== undefined) {
+        maybeSingletonCa = caMap;
     } else {
         maybeSingletonCa = new Map();
     }
@@ -130,8 +130,12 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
     let dbFunc: () => Promise<DbConcrete>;
     if(typeof db === 'function') {
         dbFunc = db;
+    } else if(db !== undefined) {
+        dbFunc = async () => db;
     } else {
-        dbFunc = async () => db!;
+        dbFunc = async () => {
+            throw new Error('No database was provided to root container');
+        };
     }
 
     const cEmitter = new WildcardEmitter<MSBackendEventMap>();
