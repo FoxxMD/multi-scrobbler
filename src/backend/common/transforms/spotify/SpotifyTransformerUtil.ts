@@ -6,8 +6,9 @@ import type { SpotifyTransformerApiConfigData } from "../../vendor/spotify/Spoti
 import { MaybeLogger } from "../../MaybeLogger.ts";
 import * as z from 'zod';
 import { removeUndefinedKeys } from "../../../../core/DataUtils.ts";
+import { DEFAULT_TRANSFORMER_ENV_NAME } from "../../../../core/Transform.ts";
 
-export const spotifyMissingTypes = z.enum(['album','title','artists','duration','isrc','ids']);
+export const spotifyMissingTypes = z.enum(['album','title','artists','duration','isrc','ids','art']);
 export type SpotifyMissingType = z.infer<typeof spotifyMissingTypes>;
 export const DEFAULT_SPOTIFY_MISSING_TYPES: SpotifyMissingType[] = ['album','artists','title','duration'] as const;
 
@@ -50,9 +51,43 @@ export interface SpotifyTransformerDataConfig extends SpotifyTransformerApiConfi
 
 export type SpotifyTransformerConfig = TransformerCommon<SpotifyTransformerData, SpotifyTransformerDataConfig> & { options?: TransformOptions };
 
+const DEFAULTS_PRESET: SpotifyTransformerData = {
+}
+
+const DEFAULTS_ISRC_SEARCH: SpotifyTransformerData = {
+    searchOrder: ['isrc']
+}
+
+const DEFAULTS_DECOMP: SpotifyTransformerData = {
+    deprioritizeCompilations: true
+}
+
+const DEFAULTS_MISSING_FIELDS: SpotifyTransformerData = {
+    searchWhenMissing: ['album','artists','title','duration']
+}
+const DEFAULTS_MISSING_ISRC: SpotifyTransformerData = {
+    searchWhenMissing: ['isrc']
+}
+const DEFAULTS_MISSING_IDS: SpotifyTransformerData = {
+    searchWhenMissing: ['ids']
+}
+const DEFAULTS_MISSING_ART: SpotifyTransformerData = {
+    searchWhenMissing: ['art']
+}
+
+const PRESETS: Record<string, SpotifyTransformerData> = {
+    default: DEFAULTS_PRESET,
+    searchisrc: DEFAULTS_ISRC_SEARCH,
+    decomp: DEFAULTS_DECOMP,
+    missingfields: DEFAULTS_MISSING_FIELDS,
+    missingids: DEFAULTS_MISSING_IDS,
+    missingisrc: DEFAULTS_MISSING_ISRC,
+    missingart: DEFAULTS_MISSING_ART
+} as const;
+
 export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()): SpotifyTransformerConfig | undefined => {
-    const enabled = process.env.SPOTIFY_TRANSFORM;
-    if (enabled === undefined || enabled.trim() === '' || enabled.trim().toLocaleLowerCase() === 'false') {
+    const sEnv = process.env.SPOTIFY_TRANSFORM_PRESETS;
+    if(sEnv === undefined || sEnv.trim() === '') {
         return undefined;
     }
 
@@ -64,19 +99,47 @@ export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()): SpotifyT
         return undefined;
     }
 
-    const defaults = {
-        market: process.env.SPOTIFY_TRANSFORM_MARKET,
-        locale: process.env.SPOTIFY_TRANSFORM_LOCALE,
-        deprioritizeCompilations: process.env.SPOTIFY_TRANSFORM_DEPRIORITIZE_COMPILATIONS !== undefined ? process.env.SPOTIFY_TRANSFORM_DEPRIORITIZE_COMPILATIONS.trim().toLocaleLowerCase() === 'true' : undefined
-    }
-
-    return {
+    const envConfig: SpotifyTransformerConfig = {
         type: 'spotify',
-        name: 'MSDefault',
+        name: DEFAULT_TRANSFORMER_ENV_NAME,
         data: {
             clientId,
             clientSecret,
         },
-        defaults: removeUndefinedKeys(defaults, false)
-    };
+        defaults: removeUndefinedKeys({
+            market: process.env.SPOTIFY_TRANSFORM_MARKET,
+            locale: process.env.SPOTIFY_TRANSFORM_LOCALE    
+        }, false)
+    }
+
+    const presets = sEnv.split(',').map(x => x.trim().toLocaleLowerCase());
+    const soSet = new Set<SpotifySearchType>();
+    const searchMissingSet = new Set<SpotifyMissingType>();
+    for (const pName of presets) {
+        const p = PRESETS[pName];
+        if (p === undefined) {
+            logger.warn(`No preset with name '${p}'`);
+            continue;
+        }
+        const { searchOrder = [], searchWhenMissing = [], ...rest } = p;
+        envConfig.defaults = {
+            ...envConfig.defaults,
+            ...rest,
+        };
+        for (const o of searchOrder) {
+            soSet.add(o);
+        }
+        for(const o of searchWhenMissing) {
+            searchMissingSet.add(o);
+        }
+    }
+
+    if (soSet.size > 0) {
+        envConfig.defaults = {...envConfig.defaults, searchOrder: Array.from(soSet)};
+    }
+    if (searchMissingSet.size > 0) {
+        envConfig.defaults = {...envConfig.defaults, searchWhenMissing: Array.from(searchMissingSet)};
+    }
+
+    return envConfig;
 }
