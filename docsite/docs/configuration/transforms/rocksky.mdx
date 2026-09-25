@@ -37,7 +37,7 @@ Set up [Valkey Caching](/configuration?cachedThings=metadata#caching) to cache R
 
 ### API Setup
 
-No API setup is required at this time. If you need to, API can still be configured in the event you using are using mirrors, a proxy, or want to configure different rate limiting.
+No API setup is required at this time. APIs can still be configured in the event you using are using mirrors, a proxy, or want to configure different rate limiting.
 
 To use the default Stage in [Rules and Hooks](#rules-and-hooks) either omit `name` or specify it as `"name": "MSDefault"`.
 
@@ -135,17 +135,10 @@ Example:
     {
       "type": "rocksky",
       "name": "MyRocksky",
-      "data": {
-        "apis": [
-          {
-            "enable": true
-          }
-        ],
-        "defaults": {
-          "searchWhenMissing": ['duration','mbid']
-          "allowNoMatch": false
-        }
-      },
+      "defaults": {
+        "searchWhenMissing": ['duration','mbid']
+        "allowNoMatch": false
+      }
     }
   ]
 }
