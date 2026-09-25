@@ -18,6 +18,7 @@ import { getSourceEnvSchema, validateSourceAIOJson, validateSourceJson } from '.
 import type { SourceTypeConfigMap } from "../common/infrastructure/config/source/sourcesMap.ts";
 import { stripIndents } from 'common-tags';
 import type { MSBackendEventMap } from '../common/infrastructure/MSBackendEventMap.ts';
+import { loggerNoop } from '../common/MaybeLogger.ts';
 
 type UnparsedSourceConfig = UnparsedConfig<SourceType>;
 
@@ -228,7 +229,7 @@ export default class ScrobbleSources {
                             const primitives: CommonConfigPrimitives = commonComponentEnvConfigToConfigPrimitives(configTypeUpper, parsed);
                             const parsedEnvConfigValues = envSchema.env.parse(entry.config);
                             const { data = {}, options = {}, ...rest } = envSchema.toConfig(parsedEnvConfigValues);
-                            const transformOptions = transformPresetEnv(configTypeUpper);
+                            const transformOptions = transformPresetEnv(configTypeUpper, undefined, this.logger);
                             parsedConfig = {
                                 name: `${configType} - ${entry.source}${entry.pos !== '' ? ` - ${entry.pos}` : ''} `,
                                 ...primitives,
@@ -465,27 +466,36 @@ export default class ScrobbleSources {
     }
 }
 
-const transformPresetEnv = <T extends CommonSourceOptions = CommonSourceOptions>(prefix: string, existing: T | undefined = undefined): undefined | T => {
+const transformPresetEnv = <T extends CommonSourceOptions = CommonSourceOptions>(prefix: string, existing: T | undefined = undefined, logger: Logger = loggerNoop): undefined | T => {
 
     const env = process.env[`${prefix}_TRANSFORMS`];
     if(env === undefined || env.trim() === '') {
         return existing;
     }
 
+    const preCompare: NonNullable<PlayTransformHooks<ExternalMetadataTerm>['preCompare']> = [];
     const popts: PlayTransformHooks<ExternalMetadataTerm> = {
-        preCompare: [
-        ]
+        preCompare
     }
     for(const p of env.split(',').map(x => x.trim().toLocaleLowerCase())) {
         switch(p) {
             case 'native':
-                popts.preCompare!.push({type: 'native'});
+                preCompare.push({type: 'native'});
                 break;
             case 'musicbrainz':
-                popts.preCompare!.push({type: 'musicbrainz'});
+                preCompare.push({type: 'musicbrainz'});
                 break;
             case 'spotify':
-                popts.preCompare!.push({type: 'spotify'});
+                preCompare.push({type: 'spotify'});
+                break;
+            case 'coverartarchive':
+                preCompare.push({type: 'coverartarchive'});
+                break;
+            case 'rocksky':
+                preCompare.push({type: 'rocksky'});
+                break;
+            default:
+                logger.warn(`Unrecognized transformer type '${p} in env ${env}'`);
                 break;
         }
     }
