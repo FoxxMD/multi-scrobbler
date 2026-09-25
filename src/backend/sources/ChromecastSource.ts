@@ -649,26 +649,20 @@ export class ChromecastSource extends MemoryPositionalSource {
 
     static formatPlayObj(obj: Media.MediaStatus, options: FormatPlayObjectOptions = {}): PlayObject {
         // https://developers.google.com/cast/docs/media/messages
-        // TODO strict: media/metadata/duration may be null at runtime (null media or metadata would throw during destructuring)
-        type NonNullMedia = Omit<NonNullable<Media.MediaStatus['media']>, 'metadata' | 'duration'> & {metadata?: Record<string, unknown>, duration?: number};
-
+        const {currentTime} = obj;
+        // media, metadata, and duration can all be null
+        const duration = obj.media?.duration ?? undefined;
         const {
-            currentTime,
-            media: {
-                duration,
-                metadata: {
-                    metadataType,
-                    title,
-                    subtitle,
-                    songName,
-                    artist,
-                    artistName,
-                    albumArtist,
-                    albumName,
-                    album: albumNorm
-                } = {}
-            } = {} as NonNullMedia
-        } = obj as Omit<Media.MediaStatus, 'media'> & {media?: NonNullMedia};
+            metadataType,
+            title,
+            subtitle,
+            songName,
+            artist,
+            artistName,
+            albumArtist,
+            albumName,
+            album: albumNorm
+        } = (obj.media?.metadata ?? {}) as Record<string, unknown>;
 
         let artists: string[] = [],
             albumArtists: string[] = [],
