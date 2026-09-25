@@ -139,15 +139,18 @@ export const chooseImageByResolution = (images: SpotifyApi.ImageObject[], opts: 
         bestRes: number = 0;
 
     for (const i of images) {
-        if (fallbackBest && i.height! + i.width! > bestRes) {
-            bestRes = i.height! + i.width!;
+        // dimensions may be missing, treat as 0
+        const height = i.height ?? 0,
+            width = i.width ?? 0;
+        if (fallbackBest && (bestImage === undefined || height + width > bestRes)) {
+            bestRes = height + width;
             bestImage = i;
         }
         if (minHeight !== undefined || minWidth !== undefined) {
-            if (minHeight !== undefined && i.height! < minHeight) {
+            if (minHeight !== undefined && height < minHeight) {
                 continue;
             }
-            if (minWidth !== undefined && i.width! < minWidth) {
+            if (minWidth !== undefined && width < minWidth) {
                 continue;
             }
             return i;
@@ -157,7 +160,10 @@ export const chooseImageByResolution = (images: SpotifyApi.ImageObject[], opts: 
     if (fallbackBest === false) {
         throw new Error(`No image met minimum resolution of ${minHeight}x${minHeight}`);
     }
-    return bestImage!;
+    if (bestImage === undefined) {
+        throw new Error('No images to choose from');
+    }
+    return bestImage;
 }
 
 export const trackToPlay = (track: SpotifyApi.TrackObjectFull): PlayObject => {
