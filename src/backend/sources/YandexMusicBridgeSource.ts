@@ -398,7 +398,12 @@ export default class YandexMusicBridgeSource extends MemoryPositionalSource {
                 continue;
             }
             if (this.shouldKeepAliveSynthetic(playerId, nowMs)) {
-                const bridgeDataForKeepAlive = this.lastBridgeDataByPlayer.get(playerId)!;
+                const bridgeDataForKeepAlive = this.lastBridgeDataByPlayer.get(playerId);
+                if (bridgeDataForKeepAlive === undefined) {
+                    // should not happen, bridge data and last play are always set/removed together
+                    this.logger.warn(`keep alive bridge data was not set for ${playerId} but should be`);
+                    continue;
+                }
                 const playbackState = this.getPlaybackState(playerId, bridgeDataForKeepAlive, lastPlay);
 
                 if (this.shouldFinalizeSyntheticTrack(playerId, nowMs)) {
