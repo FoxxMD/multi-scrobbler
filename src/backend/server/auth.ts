@@ -100,13 +100,15 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
         } else if(req.url.includes('ytmusic')) {
             const entity: YTMusicSource | undefined = scrobbleSources.getByName(name) as (YTMusicSource | undefined);
             if(entity === undefined) {
-                logger.error(`No YTMUsic source with name ${state} was found`);
+                logger.error(`No YTMUsic source with name ${name} was found`);
+                res.status(404).send(`No YTMusic source with name ${name} was found`);
+                return;
             }
-            const result = await entity!.handleAuthCodeCallback(req.query as Record<string, any>);
+            const result = await entity.handleAuthCodeCallback(req.query as Record<string, any>);
             let responseContent = 'OK';
             if(result === true) {
-                entity!.authFailure = false;
-                entity!.poll().catch((e) => logger.error(e));
+                entity.authFailure = false;
+                entity.poll().catch((e) => logger.error(e));
             } else {
                 responseContent = result;
             }

@@ -505,7 +505,7 @@ Note: this is only supported by some components.`
             pMap(res.data, async (x) => await queueFunc(x), {concurrency: 5});
             more = res.data.length === res.meta.limit;
             if(more) {
-                currentFilters.offset! += res.meta.limit
+                currentFilters.offset = (currentFilters.offset ?? 0) + res.meta.limit
             }
         }
     });
