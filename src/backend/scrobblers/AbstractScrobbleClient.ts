@@ -758,7 +758,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             // if no existing transform then we can run cheap db match
             const cheapExisting = await this.playRepo.checkExisting(playObj, {states: ['scrobbled'], notId: playObjPre.id});
             if(cheapExisting !== undefined) {
-                const s: ScrobbledPlayObject = {play: cheapExisting.play, scrobble: cheapExisting.play.scrobble?.mergedScrobble!};
+                const s: ScrobbledPlayObject = {play: cheapExisting.play, scrobble: cheapExisting.play.scrobble?.mergedScrobble};
                 return [s, [s]];
             }
         }
@@ -782,7 +782,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             return [undefined, []];
         }
 
-        const s: ScrobbledPlayObject = {play: matchPlayDate, scrobble: matchPlayDate.scrobble?.mergedScrobble!};
+        const s: ScrobbledPlayObject = {play: matchPlayDate, scrobble: matchPlayDate.scrobble?.mergedScrobble};
 
         return [s, [s]];
     }

@@ -110,7 +110,7 @@ export type GroupedFixedPlays = TupleMap<DeviceId,PlayUserId,FixedSizeList<Progr
 
 export interface ScrobbledPlayObject {
     play: PlayObject
-    scrobble: PlayObjectMinimal
+    scrobble?: PlayObjectMinimal
 }
 
 
