@@ -6,7 +6,7 @@ import {
     type FormatPlayObjectOptions,
     type InternalConfig,
     type PlayerStateData} from "../common/infrastructure/Atomic.ts";
-import { NO_USER } from '../../core/Atomic.ts';
+import { NO_DEVICE, NO_USER } from '../../core/Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type {ReportedPlayerStatus} from '../../core/Atomic.ts';
 import type {PlayPlatformId} from '../../core/Atomic.ts';
@@ -136,8 +136,7 @@ export const playStateFromRequest = (obj: SubmitPayload): PlayerStateData[] => {
         const play = listenPayloadToPlay(x, listen_type === 'playing_now');
         play.meta.sourceSOT = SOURCE_SOT.INGRESS;
         return {
-            // TODO strict: deviceId may be undefined here, PlayPlatformId expects string
-            platformId: [play.meta.deviceId!, NO_USER],
+            platformId: [play.meta.deviceId ?? NO_DEVICE, NO_USER],
             play,
             status: listenTypeAsPlayerStatus(listen_type),
             stateUpdatedAt: dayjs()
