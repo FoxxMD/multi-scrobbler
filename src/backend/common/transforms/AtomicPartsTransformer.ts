@@ -87,28 +87,22 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
             let mergedMeta: TrackMetaIsrc | undefined; 
             if (parts.meta !== undefined) {
                 try {
-                    const meta = await this.handleMeta(play, parts.duration!, transformData);
+                    const meta = await this.handleMeta(play, parts.meta, transformData);
 
                     if (meta !== undefined) {
                         mergedMeta = {
                             ...(play.data.meta ?? {})
                         };
-                        for (const [k, v] of Object.entries(meta)) {
-                            if(k === 'isrc') {
-                                continue;
-                            }
-                            // TODO strict
-                            if ((mergedMeta as any)[k] !== undefined) {
-                                (mergedMeta as any)[k] = {
-                                    ...(mergedMeta as any)[k],
-                                    ...v
-                                }
-                            } else {
-                                (mergedMeta as any)[k] = v;
+                        const {isrc, ...metaSources} = meta;
+                        // shallow merge each meta source (brainz, spotify...) with existing
+                        const mergeTarget = mergedMeta as Record<string, object | undefined>;
+                        for (const [k, v] of Object.entries(metaSources)) {
+                            if (v !== undefined) {
+                                mergeTarget[k] = {...mergeTarget[k], ...v};
                             }
                         }
-                        if(meta.isrc !== undefined) {
-                            transformedPlayData.isrc = meta.isrc;
+                        if(isrc !== undefined) {
+                            transformedPlayData.isrc = isrc;
                         }
                     }
                 } catch (e) {
@@ -130,15 +124,10 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
                         mergedArt = {
                             ...(play.meta?.art ?? {})
                         };
-                        for (const [k, v] of Object.entries(art)) {
-                            // TODO strict
-                            if ((mergedArt as any)[k] !== undefined) {
-                                (mergedArt as any)[k] = {
-                                    ...(mergedArt as any)[k],
-                                    ...v
-                                }
-                            } else {
-                                (mergedArt as any)[k] = v;
+                        // art values are url strings so new values replace existing
+                        for (const [k, v] of Object.entries(art) as [keyof ArtMeta, string | undefined][]) {
+                            if (v !== undefined) {
+                                mergedArt[k] = v;
                             }
                         }
                     }
