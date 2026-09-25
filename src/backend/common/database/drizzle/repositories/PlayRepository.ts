@@ -231,7 +231,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                 }
             }
         }
-        query = removeUndefinedKeys(query)!;
+        query = removeUndefinedKeys(query, false);
         const results = await this.db.query.plays.findMany(query);
         return results.map((x) => ({...x, play: hydratePlaySelect(x, hydrate)}));
     }
@@ -258,7 +258,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             }
         }
 
-        query = removeUndefinedKeys(query)!;
+        query = removeUndefinedKeys(query, false);
         const results = await this.db.query.plays.findMany({
             ...query,
             limit: args.limit,

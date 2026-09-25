@@ -190,7 +190,7 @@ export class RockSkyApiClient extends AbstractApiClient {
          * we don't recieve any real feedback about whether the scrobbles were accepted
          */
         if(this.rsAgent === undefined) {
-            const payload = removeUndefinedKeys(playToRockskyClientRecord(play))!;
+            const payload = removeUndefinedKeys(playToRockskyClientRecord(play), false);
             if(log) {
                 this.logger.debug(`Submit Payload: ${JSON.stringify(payload)}`);
             }
@@ -253,7 +253,7 @@ export class RockSkyApiClient extends AbstractApiClient {
 
     getRockskySongMatch = async (play: PlayObject): Promise<SongViewDetailed> => {
         const input = playToMatchSongInput(play);
-        const inputHash = hashObject(removeUndefinedKeys(input)!);
+        const inputHash = hashObject(removeUndefinedKeys(input, false));
         const cacheKey = `rsMatchSong-${inputHash}`;
         let songDetailed: SongViewDetailed | undefined = await this.cache.cacheApi.get<SongViewDetailed>(cacheKey);
         if(songDetailed === undefined) {

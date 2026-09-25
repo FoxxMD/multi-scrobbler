@@ -834,6 +834,6 @@ export const activityDataToGatewayActivity = (data: ActivityData): GatewayActivi
         assets,
         ...rest,
     }
-    )!;
+    );
     return activity as GatewayActivity;
 }

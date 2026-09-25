@@ -114,7 +114,7 @@ export const playToListenPayload = (play: PlayObject, options: PlayToListenPaylo
         }
     }
 
-    addInfo = removeUndefinedKeys(addInfo)!;
+    addInfo = removeUndefinedKeys(addInfo, false);
 
     // possible lastfm provides an empty album field when no album data is found
     let al = album;
@@ -128,7 +128,7 @@ export const playToListenPayload = (play: PlayObject, options: PlayToListenPaylo
         artist_name: Array.from(new Set([...artists.map(artistCreditToName)])).join(', '),
         track_name: track!,
         release_name: al,
-    })!;
+    }, false);
 
     return {
         listened_at: getScrobbleTsSOCDate(play).unix(),

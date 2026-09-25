@@ -203,7 +203,7 @@ export const getCommonComponentEnvConfig = (prefix: string): Partial<CommonConfi
         id: nonEmptyStringOrDefault(process.env[`${prefix}_ID`], undefined),
         name: nonEmptyStringOrDefault(process.env[`${prefix}_NAME`], undefined),
         enable: e !== undefined ? parseBoolStrict(e) : undefined
-    }, false)!;
+    }, false);
 }
 
 const byteSizes = ['Bytes', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB']

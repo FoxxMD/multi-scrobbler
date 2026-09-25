@@ -734,7 +734,7 @@ export const playToClientPayload = (playObj: PlayObject): LastFMScrobblePayload 
         // ...but in either case if any of the below properties is undefined (possibly also null??)
         // then last.fm responds with an IGNORED scrobble and error code 1 (totally unhelpful)
         // so remove all undefined keys from the object before passing to the api client
-        return removeUndefinedKeys(rawPayload)!;
+        return removeUndefinedKeys(rawPayload, false);
     }
 
 export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectOptions & {source?: string} = {}): PlayObject => {

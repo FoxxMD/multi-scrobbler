@@ -265,7 +265,7 @@ export const activityDataToSetActivity = (data: ActivityData): SetActivity => {
         startTimestamp: start,
         endTimestamp: end,
         ...rest
-    })!;
+    });
 
     return activity;
 }

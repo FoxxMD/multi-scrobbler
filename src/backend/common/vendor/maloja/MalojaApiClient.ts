@@ -212,7 +212,7 @@ export class MalojaApiClient extends AbstractApiClient implements PaginatedTimeR
     }
 
     getScrobbles = async (options: RecentlyPlayedRequestOptions = {}): Promise<RecentlyPlayedResponse> => {
-        const resp = await this.callApi(() => request.get(`${this.url.url}/apis/mlj_1/scrobbles`).query(removeUndefinedKeys(options)!));
+        const resp = await this.callApi(() => request.get(`${this.url.url}/apis/mlj_1/scrobbles`).query(removeUndefinedKeys(options, false)));
                 const {
             body
         } = resp;
@@ -422,7 +422,7 @@ export const formatPlayObj = (obj: MalojaScrobbleData, options: FormatPlayObject
             duration,
             listenedFor,
             playDate: dayjs.unix(time),
-        })!,
+        }, false),
         meta: {
             source: 'Maloja',
             url: {

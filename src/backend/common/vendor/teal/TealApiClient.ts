@@ -250,9 +250,9 @@ export const playToRecord = (play: PlayObject): FmTealFeedPlay.Main => {
 
     const record: FmTealFeedPlay.Main = {
         $type: "fm.teal.feed.play",
-        trackName: play.data.track!,
-        artists: (play.data.artists ?? []).map(x => removeUndefinedKeys({ artistName: x.name, artistMbId: mbidUriOrUndefined(x.mbid as MBID) })!),
-        duration: Math.round(play.data.duration!),
+        trackName: play.data.track,
+        artists: (play.data.artists ?? []).map(x => removeUndefinedKeys({ artistName: x.name, artistMbId: mbidUriOrUndefined(x.mbid as MBID) }, false)),
+        duration: play.data.duration !== undefined ? Math.round(play.data.duration) : undefined,
         playedTime: getScrobbleTsSOCDateWithContext(play)[0].toISOString(),
         releaseName: play.data.album,
         submissionClientAgent: `multi-scrobbler/${getRoot().items.version}`,
