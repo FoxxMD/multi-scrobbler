@@ -129,13 +129,45 @@ The `defaults` you set in [Stage Configuration](#stage-configuration) [can be ov
 
 ## ENV Configuration
 
-Use `SPOTIFY_TRANSFORM=true` to enable this Stage from ENV. `clientId`/`clientSecret` are read from `SPOTIFY_TRANSFORM_CLIENT_ID`/`SPOTIFY_TRANSFORM_CLIENT_SECRET`, falling back to `SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET` (the same ENVs used by the [Spotify Source](/configuration/sources/spotify), if configured) when the `_TRANSFORM_` variants are not set.
+Your Spotify Stage can be configured using [ENV Config](/configuration?configType=env#configuration-types) by specifying client/secret and, optionally, combining different presets.
 
-* `SPOTIFY_TRANSFORM=true` - Enables this Stage
-* `SPOTIFY_TRANSFORM_CLIENT_ID` / `SPOTIFY_TRANSFORM_CLIENT_SECRET` - App credentials (optional if `SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET` are already set)
-* `SPOTIFY_TRANSFORM_MARKET` - Optional [market](#market-locale-and-rate-limiting)
-* `SPOTIFY_TRANSFORM_LOCALE` - Optional [locale](#market-locale-and-rate-limiting)
-* `SPOTIFY_TRANSFORM_DEPRIORITIZE_COMPILATIONS=true` - Optionally enable [`deprioritizeCompilations`](#deprioritize-compilations)
+Client ID and Secret are the only **required** configuration:
+
+* Client Id => ENV `SPOTIFY_TRANSFORM_CLIENT_ID` or ENV `SPOTIFY_CLIENT_ID` from the [Spotify Source](/configuration/sources/spotify)
+* Client Secret => ENV `SPOTIFY_TRANSFORM_CLIENT_SECRET` or ENV `SPOTIFY_CLIENT_SECRET` from the [Spotify Source](/configuration/sources/spotify)
+
+To configure [stage defaults](#stage-configuration) use ENV `SPOTIFY_TRANSFORM_PRESETS=` with a *comma-delimited* list of presets you wish to apply. If `SPOTIFY_TRANSFORM_PRESETS` is not set the stage will use defaults.
+
+* `searchIsrc` - Restricts [search methods](#search-methods) to `isrc` only (default is `isrc` and `basic`)
+* `missingFields` - Only run transform if `album`, `artist`, `title`, or `duration` are [missing in data](#should-ms-search)
+* `missingIds` - Only run transform if spotify ids are [missing in data](#should-ms-search)
+* `missingIsrc` - Only run transform if `isrc` is [missing in data](#should-ms-search)
+* `missingArt` - Only run transform if `art` is [missing in data](#should-ms-search)
+* `decomp` - [Deprioritize compilations](#deprioritize-compilations) when ranking matches
+
+More than one preset can be applied, in which case they combine. 
+
+<details>
+
+<summary>Example</summary>
+
+```yaml title="docker-compose.yaml"
+services:
+  multi-scrobbler:
+    # ...
+    environment:
+      # ...
+      - SPOTIFY_CLIENT_ID=787c921a2a2ab42320831aba0c8f2fc2
+      - SPOTIFY_CLIENT_SECRET=ec42e09d5ae0ee0f0816ca151008412a
+      // highlight-start
+      # only runs transform if album, artists, title, duration, or art are missing in data
+      # and only searches by isrc
+      - SPOTIFY_TRANSFORMS_PRESETS=missingArt,missingFields,searchIsrc
+      // highlight-end
+    # ...
+```
+
+</details>
 
 Finally, use ENV `*_TRANSFORMS=spotify` on each Source/Client you wish to apply this stage to. This applies the stage in the [`preCompare` Hook](/configuration/transforms#lifecycle-hooks) with all [Rules](#rules-and-hooks) enabled.
 
@@ -155,7 +187,9 @@ services:
     container_name: multi-scrobbler
     environment:
       // highlight-start
-      - SPOTIFY_TRANSFORM=true
+      # only runs transform if art or fields are missing in data
+      # and only searches by isrc
+      - SPOTIFY_TRANSFORMS_PRESETS=missingArt,missingFields,searchIsrc
       - SPOTIFY_CLIENT_ID=787c921a2a2ab42320831aba0c8f2fc2
       - SPOTIFY_CLIENT_SECRET=ec42e09d5ae0ee0f0816ca151008412a
       // highlight-end
