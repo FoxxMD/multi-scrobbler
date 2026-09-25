@@ -1402,12 +1402,14 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             return [true, 'Now Playing has not yet been set'];
         }
 
-        const playExistingDiscrepancy = (this.nowPlayingLastPlay.play !== undefined && data.play === undefined) || (this.nowPlayingLastPlay === undefined && data.play !== undefined);
+        const lastPlay = this.nowPlayingLastPlay.play;
+        const currPlay = data.play;
+        const playExistingDiscrepancy = (lastPlay !== undefined && currPlay === undefined) || (lastPlay === undefined && currPlay !== undefined);
         if(playExistingDiscrepancy) {
-            return [true, `previous update ${this.nowPlayingLastPlay.play !== undefined ? 'exists' : 'does not exist'} and current update ${data.play !== undefined ? 'exists' : 'does not exist'}`];
+            return [true, `previous update ${lastPlay !== undefined ? 'exists' : 'does not exist'} and current update ${currPlay !== undefined ? 'exists' : 'does not exist'}`];
         }
 
-        if(this.nowPlayingLastPlay.play === undefined && data.play === undefined) {
+        if(lastPlay === undefined || currPlay === undefined) {
             return [false, 'both previous and current update do not exist, nothing to update'];
         }
 
@@ -1415,7 +1417,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             return [true, 'player state has changed'];
         }
         
-        if(!playObjDataMatch(data.play!, this.nowPlayingLastPlay.play!)) {
+        if(!playObjDataMatch(currPlay, lastPlay)) {
             return [true, 'previous update play data does not match current'];
         }
 
