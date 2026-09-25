@@ -257,9 +257,12 @@ export class MSCache {
         }
 
         if (config.provider === 'valkey') {
+            if(config.connection === undefined) {
+                throw new Error('valkey cache must have a connection string');
+            }
             logger.debug(`Building valkey cache from ${config.connection}`);
             try {
-                const cache = await initValkeyCache(namespace, config.connection!, undefined, {ttl: config.ttl});
+                const cache = await initValkeyCache(namespace, config.connection, undefined, {ttl: config.ttl});
                 logger.debug('valkey cache connected');
                 return cache;
             } catch (e) {
