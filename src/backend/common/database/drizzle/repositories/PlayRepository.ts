@@ -959,17 +959,19 @@ export const getTemporallyCloseDateCompareOp = (play: PlayObject, opts: {bufferT
 
         // make sure we use the 
         const [sotPlayDate, SOT] = getScrobbleTsSOCDateWithContext(play);
+        const {playDate} = play.data;
 
-        if(useDuration && play.data.duration !== undefined) {
+        // if play has no playDate fallback to using SOT date (which defaults to now)
+        if(useDuration && play.data.duration !== undefined && playDate !== undefined) {
             if(SOT === SCROBBLE_TS_SOC_END) {
-                endRange = play.data.playDate!.add(bufferTime, 's');
-                startRange = play.data.playDate!.subtract(play.data.duration + bufferTime,'s')
+                endRange = playDate.add(bufferTime, 's');
+                startRange = playDate.subtract(play.data.duration + bufferTime,'s')
             } else {
-                endRange = play.data.playDate!.add(play.data.duration + bufferTime, 's');
-                startRange = play.data.playDate!.subtract(bufferTime,'s')
+                endRange = playDate.add(play.data.duration + bufferTime, 's');
+                startRange = playDate.subtract(bufferTime,'s')
             }
-        } else if(play.data.playDateCompleted !== undefined && useCompleted) {
-            startRange = play.data.playDate!.subtract(bufferTime, 's');
+        } else if(play.data.playDateCompleted !== undefined && useCompleted && playDate !== undefined) {
+            startRange = playDate.subtract(bufferTime, 's');
             // this will be present if source reports it
             // or we tracked it live with MemorySource
             endRange = play.data.playDateCompleted.add(bufferTime, 's');
