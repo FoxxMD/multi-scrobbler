@@ -33,7 +33,7 @@ export async function findAsync<T>(
     array: T[],
     predicate: (t: T) => Promise<boolean>): Promise<T | undefined> {
   const i = await findIndexAsync(array, predicate);
-  if(i === undefined) {
+  if(i === -1) {
     return undefined;
   }
   return array[i];
@@ -41,7 +41,7 @@ export async function findAsync<T>(
 
 export async function findIndexAsync<T>(
     array: T[],
-    predicate: (t: T) => Promise<boolean>): Promise<number | undefined> {
+    predicate: (t: T) => Promise<boolean>): Promise<number> {
   const promises = array.map(predicate);
   const results = await Promise.all(promises);
   const index = results.findIndex(result => result);
