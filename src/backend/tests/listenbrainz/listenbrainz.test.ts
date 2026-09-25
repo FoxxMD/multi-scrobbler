@@ -242,7 +242,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone'});
         const submitPayload = playToListenPayload(play);
 
-        expect(submitPayload.track_metadata.additional_info.media_player).to.be.undefined;
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.undefined;
 
     });
 
@@ -251,7 +251,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone'});
         const submitPayload = playToListenPayload(play, {allowDeviceList: {'iphone': ''}});
 
-        expect(submitPayload.track_metadata.additional_info.media_player).to.be.eql('iphone');
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.eql('iphone');
 
     });
 
@@ -260,7 +260,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone'});
         const submitPayload = playToListenPayload(play, {allowDeviceList: {'a1b2c3d4e5': 'phone'}});
 
-        expect(submitPayload.track_metadata.additional_info.media_player).to.be.eql('phone');
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.eql('phone');
 
     });
 
@@ -269,7 +269,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone'});
         const submitPayload = playToListenPayload(play, {allowDeviceList: {'iphone': '', 'a1b2c3d4e5-iphone': 'kitchen ipad'}});
 
-        expect(submitPayload.track_metadata.additional_info.media_player).to.be.eql('kitchen ipad');
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.eql('kitchen ipad');
 
     });
 
@@ -278,7 +278,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'SmithsLivingRoom-Roku'});
         const submitPayload = playToListenPayload(play, {allowDeviceList: {'iphone': '', 'android-auto': ''}});
 
-        expect(submitPayload.track_metadata.additional_info.media_player).to.be.undefined;
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.undefined;
 
     });
 
@@ -287,7 +287,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: NO_DEVICE});
         const submitPayload = playToListenPayload(play, {allowDeviceList: {[NO_DEVICE.toLocaleLowerCase()]: ''}});
 
-        expect(submitPayload.track_metadata.additional_info.media_player).to.be.undefined;
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.undefined;
 
     });
 
@@ -296,7 +296,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone', mediaPlayerName: 'Rhythmbox'});
         const submitPayload = playToListenPayload(play, {allowDeviceList: {'iphone': ''}});
 
-        expect(submitPayload.track_metadata.additional_info.media_player).to.be.eql('Rhythmbox');
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.eql('Rhythmbox');
 
     });
 
@@ -305,7 +305,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone'});
         const submitPayload = playToListenPayload(play);
 
-        expect(submitPayload.track_metadata.additional_info.media_player).to.be.undefined;
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.undefined;
 
     });
 
@@ -314,7 +314,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone'});
         const submitPayload = playToListenPayload(play, {allowDeviceList: {'iphone': ''}});
 
-        expect(submitPayload.track_metadata.additional_info.media_player).to.be.eql('iphone');
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.eql('iphone');
 
     });
 
@@ -323,7 +323,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone'});
         const submitPayload = playToListenPayload(play, {allowDeviceList: {'a1b2c3d4e5': 'phone'}});
 
-        expect(submitPayload.track_metadata.additional_info.media_player).to.be.eql('phone');
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.eql('phone');
 
     });
 
@@ -332,7 +332,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone'});
         const submitPayload = playToListenPayload(play, {allowDeviceList: {'iphone': '', 'a1b2c3d4e5-iphone': 'kitchen ipad'}});
 
-        expect(submitPayload.track_metadata.additional_info.media_player).to.be.eql('kitchen ipad');
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.eql('kitchen ipad');
 
     });
 
@@ -341,7 +341,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'SmithsLivingRoom-Roku'});
         const submitPayload = playToListenPayload(play, {allowDeviceList: {'iphone': '', 'android-auto': ''}});
 
-        expect(submitPayload.track_metadata.additional_info.media_player).to.be.undefined;
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.undefined;
 
     });
 
@@ -350,7 +350,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: NO_DEVICE});
         const submitPayload = playToListenPayload(play, {allowDeviceList: {[NO_DEVICE.toLocaleLowerCase()]: ''}});
 
-        expect(submitPayload.track_metadata.additional_info.media_player).to.be.undefined;
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.undefined;
 
     });
 
@@ -359,7 +359,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const play = generatePlay({artists: artistNamesToCredits(['Artist A']), albumArtists: []}, {deviceId: 'a1b2c3d4e5-iPhone', mediaPlayerName: 'Rhythmbox'});
         const submitPayload = playToListenPayload(play, {allowDeviceList: {'iphone': ''}});
 
-        expect(submitPayload.track_metadata.additional_info.media_player).to.be.eql('Rhythmbox');
+        expect(submitPayload.track_metadata.additional_info!.media_player).to.be.eql('Rhythmbox');
 
     });
 
