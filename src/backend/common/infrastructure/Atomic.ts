@@ -115,7 +115,7 @@ export interface ScrobbledPlayObject {
 
 
 export interface RemoteIdentityParts {
-    host: string,
+    host: string | undefined,
     proxy: string | undefined,
     agent: string | undefined
 }
