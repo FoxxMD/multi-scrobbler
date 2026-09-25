@@ -250,12 +250,12 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 'Heartbeat',
                 (): Promise<any> => {
                     return this.heartbeatTask().then(() => null).catch((err) => {
-                        this.errors!.push(err);
+                        this.errors.push(err);
                         this.logger.error(err);
                     });
                 },
                 (err: Error) => {
-                    this.errors!.push(err);
+                    this.errors.push(err);
                     this.logger.error(err);
                 }
             ), {id: 'heartbeat'}));
@@ -281,14 +281,14 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     (): Promise<any> => {
                         if(this.isReady()) {
                             return this.processDeadLetterQueue(undefined, 'Reprocessing bulk dead Plays by system').then(() => null).catch((e) => {
-                                this.warnings = e;
+                                this.warnings.push(e);
                                 this.logger.error(e);
                             })
                         }
                         return new Promise((resolve, reject) => resolve);
                     },
                     (err: Error) => {
-                        this.warnings!.push(err);
+                        this.warnings.push(err);
                         this.logger.error(err);
                     }
                 ), {id: 'dead'}));
@@ -528,7 +528,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }, (err: Error) => {
                 const npErr = new Error('Unexpected error while processing Now Playing queue', {cause: err});
                 this.npLogger.error(npErr);
-                this.warnings!.push(npErr);
+                this.warnings.push(npErr);
                 this.emitComponentUpdate<Partial<ComponentClientApiJson>>({warnings: this.warnings});
             });
 
@@ -668,7 +668,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 }
             } catch (e) {
                 const preloadErr = new SimpleError('Could not preload scrobbles', {cause: e, shortStack: true});
-                this.warnings!.push(preloadErr);
+                this.warnings.push(preloadErr);
                 this.emitComponentUpdate<Partial<ComponentClientApiJson>>({warnings: this.warnings});
                 this.logger.warn(preloadErr);
             }
@@ -858,7 +858,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 const err = new Error('Scrobble processing stopped with error', { cause: e });
                 this.logger.warn(err);
                 componentUpdate.status = 'Processing stopped with error';
-                this.warnings!.push(err);
+                this.warnings.push(err);
                 componentUpdate.warnings = this.warnings;
             }
             this.emitComponentUpdate<Partial<ComponentClientApiJson>>(componentUpdate);
@@ -1088,7 +1088,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         signal?.throwIfAborted();
 
         const queueState = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE)!;
-        queueState.error = undefined as any; // TODO strict: type is ErrorLike | null but undefined is intentionally used here
+        queueState.error = null;
         const {
             context = {},
         } = queueState
@@ -1178,7 +1178,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED}));
                     this.scrobbleRetries = 0;
                     playEntity.state = 'scrobbled';
-                    playEntity.error = undefined as any; // TODO strict: type is ErrorLike | null but undefined is intentionally used here
+                    // null (not undefined) so the db update clears any error from a previous failed attempt
+                    playEntity.error = null;
                     return {playEntity, events, queue: queueState};
                 } catch (e) {
                     const scrobbleRes: ScrobbleResult = {

@@ -176,13 +176,13 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 'Heartbeat',
                 (): Promise<any> => {
                     return this.heartbeatTask().then(() => null).catch((err) => {
-                        this.errors!.push(err);
+                        this.errors.push(err);
                         this.logger.error(err);
                     });
                 },
                 (err: Error) => {
                     this.logger.error(err);
-                    this.errors!.push(err);
+                    this.errors.push(err);
                 }
             ), {id: 'heartbeat'}));
         } else {
@@ -205,14 +205,14 @@ export default abstract class AbstractSource extends AbstractComponent implement
                     (): Promise<any> => {
                         if(this.isReady()) {
                             return this.processDeadLetterQueue(undefined, 'Reprocessing bulk dead Plays by system').then(() => null).catch((e) => {
-                                this.warnings = e;
+                                this.warnings.push(e);
                                 this.logger.error(e);
                             })
                         }
-                        return new Promise((resolve, reject) => resolve);
+                        return Promise.resolve();
                     },
                     (err: Error) => {
-                        this.warnings!.push(err);
+                        this.warnings.push(err);
                         this.logger.error(err);
                     }
                 ), {id: 'dead'}));
@@ -274,7 +274,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 if (!this.canAuthUnattended()) {
                     this.logger.warn({ labels: 'Heartbeat' }, 'Source is not ready but will not try to initialize because auth state is not good and cannot be corrected unattended.')
                     return false;
-                }const noopTransform = async (x: any) => x;
+                }
                 try {
                     this.setStatus('Attempting to initialize...');
                     await this.initialize({ force: true, notify: true, notifyTitle: 'Could not initialize automatically' });
@@ -876,7 +876,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 const err = new Error('Scrobble processing stopped with error', { cause: e });
                 this.logger.warn(err);
                 componentUpdate.status = 'Discovery queue stopped with error';
-                this.warnings!.push(err);
+                this.warnings.push(err);
                 componentUpdate.warnings = this.warnings;
             }
             this.emitComponentUpdate<Partial<ComponentSourceApiJson>>(componentUpdate);
@@ -977,7 +977,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.setStatus(`Processing Play ${playEntity.uid}`);
 
         const queueState = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE)!;
-        queueState.error = undefined as unknown as null; // TODO strict: runtime assigns undefined but column type is ErrorLike | null
+        queueState.error = null;
         const {
             context,
         } = queueState
