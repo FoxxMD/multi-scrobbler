@@ -45,6 +45,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
 
     plexApi!: PlexAPI;
     plexUser!: string;
+    token!: string;
 
     httpClient!: HTTPClient;
 
@@ -105,6 +106,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
         if((token === undefined || token.trim() === '')) {
             throw new Error(`'token' must be specified in config data`);
         }
+        this.token = token;
 
         if (logFilterFailure !== false && !['debug', 'warn'].includes(logFilterFailure)) {
             this.logger.warn(`logFilterFailure value of '${logFilterFailure.toString()}' is NOT VALID. Logging will not occur if filters fail. You should fix this.`);
@@ -481,7 +483,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
                 height: 250,
                 minSize: 1,
                 upscale: 0,
-                xPlexToken: this.config.data.token!
+                xPlexToken: this.token
             });
 
             // @ts-expect-error its fine
