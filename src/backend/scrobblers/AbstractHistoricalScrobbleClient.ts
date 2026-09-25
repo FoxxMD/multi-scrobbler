@@ -220,7 +220,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
             imports.sort((a, b) => sortByNewestDate(a.attemptedAt, b.attemptedAt));
             this.lastImport = imports[0].attemptedAt;
             if(!this.synced) {
-                this.syncError = imports[0].error as ErrorIsh | undefined; // TODO strict: db error is nullable, syncError type expects undefined
+                this.syncError = imports[0].error ?? undefined;
             }
             const success = imports.find(x => x.success);
             if(success) {
