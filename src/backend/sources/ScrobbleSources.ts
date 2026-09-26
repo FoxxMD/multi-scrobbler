@@ -460,6 +460,10 @@ export default class ScrobbleSources {
                 const AppleMusicSource = (await import('./AppleMusicSource.ts')).default;
                 await this.instantiateSources('applemusic', strongConfigs, defaults, AppleMusicSource);
             } break;
+            case 'mixcloud': {
+                const MixcloudSource = (await import('./MixcloudSource.ts')).default;
+                await this.instantiateSources('mixcloud', strongConfigs, defaults, MixcloudSource);
+            } break;
             default:
                 break;
         }
