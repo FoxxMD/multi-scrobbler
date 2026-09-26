@@ -360,6 +360,7 @@ Each [Stage](#stage) may specify whether it should apply the resulting transform
     "album": true, // will always apply changes to Play album
     "duration": true, // will always apply changes to Play duration (length of track)
     "meta": true, // will always apply changes to Play meta (MBIDs, spotify links, etc...)
+    "art": true // will always apply art to Play (if stage provides art)
 }
 ```
 
@@ -494,9 +495,39 @@ If the `when` test does not pass then the Stage is [**skipped (`onSkip`)**](#flo
 }
 ```
 
+<DetailsAdmo type="tip" summary="Checking for Art">
+
+To test if your Play/scrobble has *no* `art` associated with the data use an empty string for `art`:
+
+```json5
+{
+  "when": [
+    {
+      "art": "", // run the stage when play has no art (album, track, or artist art)
+    },
+  ]
+}
+```
+
+Otherwise, using a string/regex pattern for `art` will test if *any* art url includes that pattern.
+
+EX: only run stage if art does *not* come from deezer, use deezer's cdn in a not regex statement:
+
+```json5
+{
+  "when": [
+    {
+      "art": "/^((?!(dzcdn)).)*$/", // run the stage when play has no art (album, track, or artist art)
+    },
+  ]
+}
+```
+
+</DetailsAdmo>
+
 More succinctly:
 
-* All parts (`artist` `album` `albumArtist` `duration` `meta` `title`) of a `when` are `AND` conditions
+* All parts (`artist` `album` `albumArtist` `duration` `meta` `title` `art`) of a `when` are `AND` conditions
 * All part-objects in the `when` array are `OR` conditions
 
 <details>
