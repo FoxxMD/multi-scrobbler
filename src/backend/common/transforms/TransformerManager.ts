@@ -10,6 +10,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { nanoid } from "nanoid";
 import { SimpleError, StageTransformError } from "../errors/MSErrors.ts";
 import { configFromEnv as rsConfigFromEnv } from "./rocksky/RockskyTransformerUtil.ts";
+import { configFromEnv as caaConfigFromEnv } from "./coverartarchive/CoverArtArchiveTransformerUtil.ts";
 import { type RockskyTransformerConfig } from "../vendor/rocksky/interfaces.ts";
 import { configFromEnv as spotifyConfigFromEnv, type SpotifyTransformerConfig } from "./spotify/SpotifyTransformerUtil.ts";
 import type { CovertArtArchiveTransformerConfig } from "./coverartarchive/CoverArtArchiveTransformerUtil.ts";
@@ -151,6 +152,19 @@ export default class TransformerManager {
                 this.logger.error(`Unable to build Spotify Transformer from ENV: ${e.message}`);
             }
             this.logger.error(new Error('Unable to build Spotify Transformer from ENV', {cause: e}));
+        }
+        try {
+            const caaConfig = caaConfigFromEnv(this.logger);
+            if(caaConfig !== undefined) {
+                this.addTransformerConfig(caaConfig);
+            } else {
+                this.logger.debug('No Covert Art Archive transformer to build from ENV');
+            }
+        } catch (e) {
+            if(e instanceof SimpleError) {
+                this.logger.error(`Unable to build Cover Art Archive Transformer from ENV: ${e.message}`);
+            }
+            this.logger.error(new Error('Unable to build Cover Art Archive Transformer from ENV', {cause: e}));
         }
     }
 

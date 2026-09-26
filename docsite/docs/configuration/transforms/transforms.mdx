@@ -135,6 +135,7 @@ Each [**hook**](#hook) is made up of one or more **Stages**. A Stage is a self-c
 * The [Musicbrainz](/configuration/transforms/musicbrainz) Stage tries to match Play data with the Musicbrainz database and to standardize the Artist/Title/Album data
 * The [Rocksky](/configuration/transforms/rocksky) Stage tries to match Play data with the Rocksky metadata API to enrich meta IDs (like MBID, ISRC), duration, and artwork
 * The [Spotify](/configuration/transforms/spotify) Stage tries to match Play data with the Spotify catalog (prioritizing ISRC lookups) to standardize the Artist/Title/Album data
+* The [Cover Art Archive](/configuration/transforms/coverartarchive) Stage adds album art to your scrobble based on Musicbrainz Relase/Release-Group MBID
 
 Each Stage in a Hook receives Play data from the previous Stage.
 

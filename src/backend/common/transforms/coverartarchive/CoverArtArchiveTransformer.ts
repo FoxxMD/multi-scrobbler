@@ -6,7 +6,7 @@ import AtomicPartsTransformer from "../AtomicPartsTransformer.ts";
 import type {TransformerOptions} from "../AbstractTransformer.ts";
 import { MaybeLogger } from '../../MaybeLogger.ts';
 import { childLogger } from "@foxxmd/logging";
-import { difference } from "../../../utils.ts";
+import { difference, intersect } from "../../../utils.ts";
 import { SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../../errors/MSErrors.ts";
 import type { Cacheable } from "cacheable";
 import { hasArtFields, type CAAMissingType, type CoverArtArchiveTransformData, type CovertArtArchiveTransformerConfig } from "./CoverArtArchiveTransformerUtil.ts";
@@ -106,9 +106,12 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
         const found: CAAMissingType[] = hasArtFields(play);
         if(searchWhenMissing === true) {
             if(found.length !== 0) {
-                throw new SkipTransformStageError(`At least one art field (${found.join(',')}) already exists`, {shortStack: true});
+                if(!forceSearch) {
+                    throw new SkipTransformStageError(`At least one art field (${found.join(',')}) already exists`, {shortStack: true});
+                }
+                this.logger.debug('Play has at least one art field but forceSearch=true so will still search for art');
             }
-                this.logger.debug('Play has no art fields');
+            this.logger.debug('Play has no art fields');
         } else {
             const missing = difference(searchWhenMissing, found);
             if(missing.length > 0) {
@@ -144,10 +147,10 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
                     }
                     const meetsRequirements = results.images.some(x => {
                         const hasFields = coverImageHas(x);
-                        if(!allowedTypes.includes('any') && difference(allowedTypes, hasFields.types).length > 0) {
+                        if(!allowedTypes.includes('any') && intersect(allowedTypes, hasFields.types).length === 0) {
                             return false;
                         }
-                        if(!allowedSizes.includes('any') && difference(allowedSizes, hasFields.sizes).length > 0) {
+                        if(!allowedSizes.includes('any') && intersect(allowedSizes, hasFields.sizes).length === 0) {
                             return false;
                         }
                         return true;
@@ -223,24 +226,25 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
 
         const validImages = transformData.images.filter(x => {
             const hasFields = coverImageHas(x);
-            if(!allowedTypes.includes('any') && difference(allowedTypes, hasFields.types).length > 0) {
+            if(!allowedTypes.includes('any') && intersect(allowedTypes, hasFields.types).length === 0) {
                 return false;
             }
-            if(!allowedSizes.includes('any') && difference(allowedSizes, hasFields.sizes).length > 0) {
+            if(!allowedSizes.includes('any') && intersect(allowedSizes, hasFields.sizes).length === 0) {
                 return false;
             }
             return true;
         });
 
         let preferred: string | undefined;
-        for(const p of preferredSizes) {
-            for(const image of validImages) {
-                if(image.thumbnails[p] !== undefined) {
-                    preferred = image.thumbnails[p];
-                    break;
+        loop1:
+            for(const p of preferredSizes) {
+                for(const image of validImages) {
+                    if(image.thumbnails[p] !== undefined) {
+                        preferred = image.thumbnails[p];
+                        break loop1;
+                    }
                 }
             }
-        }
         if(preferred === undefined) {
             // get the first thumb from the first image
             preferred = Object.values(validImages[0].thumbnails)[0];
@@ -278,28 +282,21 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
         if (typeof parts === 'object') {
             if (parts.when !== undefined) {
                 if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for duration not met, returning original duration');
+                    this.logger.debug('When condition for art not met, returning original art');
                     return play.meta.art;
                 }
             }
         }
 
         const {
-            type = 'album',
             uri
         } = transformData;
 
         const existing = play.meta?.art ?? {};
 
-        if(type === 'album') {
-            return {
-                ...existing,
-                album: uri
-            }
-        }
         return {
             ...existing,
-            artist: uri
+            album: uri
         }
     }
 

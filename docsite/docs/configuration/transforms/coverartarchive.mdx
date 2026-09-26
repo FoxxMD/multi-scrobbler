@@ -1,0 +1,549 @@
+---
+title: Cover Art Archive Stage
+description: Enhancing Scrobbles Art with Cover Art Archive
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+The **Cover Art Archive** [Stage](/configuration/transforms#stage) finds album art for your Play using [Cover Art Archive](https://coverartarchive.org/), a free and open collection of album art that is part of [MusicBrainz](https://musicbrainz.org/).
+
+**This Stage is useful for adding artwork to scrobbles from Sources that do not provide any art.**
+
+This Stage is simpler than other Stages: it **only** changes the **art** of your Play and **only** runs when your Play does not already have art (by default).
+
+:::important
+
+This Stage finds art by using the MusicBrainz ID ([MBID](https://musicbrainz.org/doc/MusicBrainz_Identifier)) of the album that is already in your Play data. It does **not** search using the album name or artist name.
+
+If your Play does not have an album MBID then this Stage cannot find art. Use a Stage that adds MBIDs, like the [Musicbrainz Stage](/configuration/transforms/musicbrainz) or the [Rocksky Stage](/configuration/transforms/rocksky), **before** this Stage. See [**Get MBIDs First**](#get-mbids-first).
+
+:::
+
+:::tip
+
+If you are using [ENV Config](/configuration?config-type=env#configuration-types) for multi-scrobbler and just want a quick and easy setup, skip to [**ENV Configuration**](#env-configuration).
+
+:::
+
+:::tip
+
+Set up [Valkey Caching](/configuration?cachedThings=metadata#caching) to cache Cover Art Archive API calls for faster processing.
+
+:::
+
+## Configuration
+
+### API Setup
+
+No API setup is required. APIs can still be configured in the event you are using mirrors, a proxy, or want to configure different rate limiting.
+
+To use the default Stage in [Rules and Hooks](#rules-and-hooks) either omit `name` or specify it as `"name": "MSDefault"`.
+
+<details>
+
+<summary>Non-Default Servers and Rate Limiting</summary>
+
+Other, or _additional_, Cover Art Archive Servers/Mirrors can be added to the API configuration. **If more than one server is defined then multi-scrobbler will load balance requests based on available rate capacity.**
+
+Use `url` to define the base URL of the Cover Art Archive server to use. If `url` is not defined multi-scrobbler assumes it is the primary Cover Art Archive server, `https://coverartarchive.org`.
+
+Example of multiple servers:
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "coverartarchive",
+      "name": "MyCAA",
+      "data": {
+        "apis": [
+          {
+            "enable": true
+            // uses default Cover Art Archive server https://coverartarchive.org
+          },
+          // additional server
+          {
+            "enable": true,
+            "url": "https://my.caa.mirror.domain.com"
+          }
+        ]
+      },
+    }
+  ]
+}
+```
+
+<h3>Rate Limiting</h3>
+
+Cover Art Archive servers can optionally be configured with rate limiting.
+
+Rate limiting is defined by **max number of requests** within **timespan of N seconds.** If no rate limit is configured then a default of `100 req/s` is used.
+
+Example of configuring rate limit:
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "coverartarchive",
+      "name": "MyCAA",
+      "data": {
+        "apis": [
+          {
+            "enable": true,
+            "rate": {
+              // IE 10 req/s
+              "requests": 10, // maximum of 10 requests
+              "perTime": 1 // can be made within 1 second
+            }
+          }
+        ]
+      },
+    }
+  ]
+}
+```
+
+</details>
+
+### Stage Configuration
+
+All of the properties found in the [**Finding Art**](#finding-art) section are configured in [Stage Configuration](/configuration/transforms#configuring-stages) as `defaults`.
+
+Example:
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "coverartarchive",
+      "name": "MyCAA",
+      "defaults": {
+        "allowedTypes": ["any"],
+        "preferredSizes": ["500"]
+      }
+    }
+  ]
+}
+```
+
+### Rules and Hooks
+
+[Add your Stage](/configuration/transforms/#stage) to a Source or Client by specifying it in a [Hook](/configuration/transforms/#hook):
+
+```json5 title="discord.json"
+[
+  { 
+    "name": "MyDiscord",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "coverartarchive",
+            "name": "MSDefault"
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+This Stage only has one [**Stage Rule**](/configuration/transforms#stage-rules): `art`. It should be either a boolean, specifying if the found art should be used, or a [`when` condition](/configuration/transforms#conditional-modification). If `art` is not set it defaults to `true`.
+
+<details>
+
+<summary>Example</summary>
+
+```json5 title="discord.json"
+[
+  { 
+    "name": "MyDiscord",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "coverartarchive",
+            "name": "MSDefault",
+            "art": {
+              "when": {/* ... */}, // will only apply art to Play if "when" is satisfied
+            }
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+</details>
+
+:::tip[Per Component Override]
+
+The `defaults` you set in [Stage Configuration](#stage-configuration) [can be overriden/added to](/configuration/transforms/#overriding-configuration) (per property) in each Hook.
+
+<details>
+
+<summary>Example</summary>
+
+```json5 title="discord.json"
+[
+  { 
+    "name": "MyDiscord",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "coverartarchive",
+            "name": "MSDefault",
+            "allowedTypes": ["any"], // override from defaults
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+</details>
+
+:::
+
+## ENV Configuration
+
+The general configuration shown above can also be configured from a selection of *presets* using [ENV Config](/configuration?configType=env#configuration-types) for individual Sources/Clients.
+
+To configure [stage defaults](#stage-configuration) use `CAA_PRESETS` with a comma-delimited list of presets you wish to apply. More than one preset can be applied, in which case they combine. If `CAA_PRESETS` is not set the stage will use defaults.
+
+* `default` - Only uses art that is marked as the **front cover** of the album. This is the same as using no presets.
+* `any` - Uses art of [**any type**](#art-type): front cover, back cover, or booklet.
+
+Finally, use ENV `*_TRANSFORMS=coverartarchive` on each Source/Client you wish to apply this stage to. This applies the stage in the [`preCompare` Hook](/configuration/transforms#lifecycle-hooks) with all [Rules](#rules-and-hooks) enabled.
+
+The `*` stands for the prefix used for each Source/Client's ENV keys. Refer to the individual Source/Client Configuration sections to find this. Example:
+
+* All [Jellyfin Sources](/configuration/sources/jellyfin) ENVs look like `JELLYFIN_URL=192.168.0.110:8096` etc...
+* Use `JELLYFIN_TRANSFORMS=coverartarchive`
+
+:::tip
+
+Stages in `*_TRANSFORMS` run in the order they are written. To [get MBIDs first](#get-mbids-first), list the stage that adds MBIDs **before** `coverartarchive`, like `JELLYFIN_TRANSFORMS=musicbrainz,coverartarchive`
+
+:::
+
+<details>
+
+<summary>Example Full Docker Deploy with ENV Configuration</summary>
+
+Using [Jellyfin](/quickstart#create-docker-compose-file) example from Quickstart with the Musicbrainz Stage and the Cover Art Archive Stage:
+
+```yaml
+services:
+  multi-scrobbler:
+    image: foxxmd/multi-scrobbler
+    container_name: multi-scrobbler
+    environment:
+      - MB_PRESETS=default
+      // highlight-start
+       # allow any type of art, not only front covers
+      - CAA_PRESETS=any
+      // highlight-end
+      - JELLYFIN_URL=192.168.0.110:8096
+      - JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56b
+      - JELLYFIN_USER=MyUser
+      // highlight-start
+       # adds MBIDs with Musicbrainz Stage, then finds art with Cover Art Archive Stage
+      - JELLYFIN_TRANSFORMS=musicbrainz,coverartarchive
+      // highlight-end
+      - MALOJA_URL=http://domain.tld:42010
+      - MALOJA_API_KEY=1234
+
+    volumes:
+      - "./config:/config"
+    ports:
+      - "9078:9078"
+    restart: unless-stopped
+```
+
+</details>
+
+## Finding Art
+
+:::note
+
+**All properties found in this section are optional.**
+
+:::
+
+### Should MS Search?
+
+Before MS searches for art it checks if your Play already has **album** art. By default, **if your Play has album art then the Stage [is **skipped**.](/configuration/transforms/#flow-control)**
+
+Use these options to change when MS searches:
+
+* `forceSearch` (default `false`) - Always search, even when your Play already has album art
+
+<details>
+
+<summary>Example</summary>
+
+[Stage Configuration](/configuration/transforms#configuring-stages) example:
+
+```json5
+// ...
+"defaults": {
+    // uncomment to make the stage always search, even if album art is present
+    //"forceSearch": true
+  }
+```
+
+</details>
+
+### How MS Searches
+
+MS looks up art using the MBIDs in your Play, in this order:
+
+1. The **album** MBID (MusicBrainz calls this a [Release](https://musicbrainz.org/doc/Release)). This is the exact version of the album you listened to, like a special edition or a specific country's release.
+2. The **album group** MBID (MusicBrainz calls this a [Release Group](https://musicbrainz.org/doc/Release_Group)). This covers all versions of the same album. MS only uses it when step 1 does not find art that meets your requirements.
+
+When one step finds art that meets your requirements, MS stops and uses that art.
+
+:::note
+
+If your Play has neither MBID, or no art meets your requirements, then the stage is marked as [**failed** (`onFailure`) for **Flow Control**](/configuration/transforms/#flow-control).
+
+:::
+
+### Art Type
+
+Cover Art Archive labels each image with what it shows. Use `allowedTypes` to choose which images MS may use. Can contain any of:
+
+* `front` - The front cover of the album
+* `back` - The back cover of the album
+* `booklet` - A page from the booklet that comes with the album
+* `any` - Any image, no matter what it shows
+
+The default is `["front"]`.
+
+:::tip
+
+If you list more than one type then an image must be labeled with **all** of them. For example, `["front", "back"]` only allows images labeled as both a front **and** a back cover. To allow any image use `["any"]`.
+
+**Note:** Not all art is labelled correctly, or at all, on CAA. If you just want *some* album art for your data then you should use `any`.
+
+:::
+
+```json5
+// ...
+"defaults": {
+    // allow any image
+    "allowedTypes": ["any"]
+  }
+```
+
+### Art Size
+
+Cover Art Archive has each image in different sizes. Sizes are measured in pixels (the width of the image). Available sizes are:
+
+* `250` - small
+* `500` - medium
+* `1200` - large
+
+There are two options for sizes:
+
+* `allowedSizes` (default `["any"]`) - Only use images that are available in these sizes. An image must be available in **at least one** size you list, or use `any` to allow any image.
+* `preferredSizes` (default `["250", "500", "1200"]`) - The sizes you want, in order. MS uses the first size in your list that is available. If none are available, MS uses any size the image has.
+
+```json5
+// ...
+"defaults": {
+    // allow art with either 1200 or 500 sizes
+    "allowedSizes": ["1200","500"],
+    // prefer the largest size first
+    "preferredSizes": ["1200", "500"]
+  }
+```
+
+## Best Practices
+
+### Caching
+
+You **should** setup [metadata caching](/configuration/transforms#caching) to reduce API calls, improve transform performance, and reduce memory usage when using this stage.
+
+### Get MBIDs First
+
+This Stage needs an album MBID in your Play. Many Sources do not provide MBIDs. Put a Stage that adds MBIDs, like [Musicbrainz](/configuration/transforms/musicbrainz) or [Rocksky](/configuration/transforms/rocksky), **before** this Stage in the same Hook.
+
+Set [`failureReturnPartial: true`](/configuration/transforms/#flow-control) on this Stage. Then, if this Stage cannot find art, the changes from the earlier Stage are still kept.
+
+<details>
+
+<summary>Example</summary>
+
+```json5 title="jellyfin.json"
+[
+  { 
+    "name": "MyJellyfin",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            // adds MBIDs to the Play
+            "type": "musicbrainz",
+            "name": "MSDefault"
+          },
+          {
+            // uses the MBIDs to find art
+            "type": "coverartarchive",
+            "name": "MSDefault",
+            // keep Musicbrainz changes even if no art is found
+            "failureReturnPartial": true
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+</details>
+
+## Examples
+
+### Minimal
+
+<details>
+
+<summary>Example</summary>
+
+In a [Jellyfin Source](/configuration/sources/jellyfin) [File Config](/configuration?configType=file#configuration-types):
+
+```json5 title="jellyfin.json"
+[
+  { 
+    "name": "MyJellyfin",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "coverartarchive",
+            "name": "MSDefault"
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+Or using a [Jellyfin Source](/configuration/sources/jellyfin) with [ENV Config](/configuration?configType=env#configuration-types):
+
+```yaml
+services:
+  multi-scrobbler:
+    image: foxxmd/multi-scrobbler
+    environment:
+       # ... your source ENVs go here
+       #
+      // highlight-start
+       # applies Cover Art Archive Stage to preCompare of Jellyfin Source
+      - JELLYFIN_TRANSFORMS=coverartarchive
+      // highlight-end
+
+    volumes:
+      - "./config:/config"
+    ports:
+      - "9078:9078"
+    restart: unless-stopped
+```
+
+</details>
+
+### Add Album Art for Discord
+
+The [Discord](/configuration/clients/discord) Client shows album art when your Play has art. Use the Musicbrainz Stage and the Cover Art Archive Stage on the `preCompare` hook for your Discord client so that missing art is added.
+
+<details>
+
+<summary>Example</summary>
+
+<Tabs groupId="configType" queryString>
+    <TabItem value="env" label="ENV">
+    Using the [ENV Configuration](#env-configuration) from above, add these fields to your docker compose `environment:`
+
+    ```yaml
+    - CAA_PRESETS=any
+    - DISCORD_TRANSFORMS=musicbrainz,coverartarchive
+    ```
+    </TabItem>
+    <TabItem value="file" label="File">
+    In your [Discord](/configuration/clients/discord) [File Config](/configuration?configType=file#configuration-types):
+
+    ```json5 title="discord.json"
+    [
+      { 
+        "name": "MyDiscord",
+        "data": { /* ... */},
+        "options": {
+          "playTransform": {
+            "preCompare": [
+              {
+                "type": "musicbrainz",
+                "name": "MSDefault"
+              },
+              {
+                "type": "coverartarchive",
+                "name": "MSDefault",
+                "failureReturnPartial": true
+              }
+            ]
+          }
+        }
+      }
+    ]
+    ```
+    </TabItem>
+    <TabItem value="aio" label="AIO">
+    Your [AIO Config](/configuration?configType=aio#configuration-types):
+
+    ```json5 title="config.json"
+    {
+      // ...
+      "clients": [
+        { 
+          "name": "MyDiscord",
+          "type": "discord",
+          "data": { /* ... */},
+          "options": {
+            "playTransform": {
+              "preCompare": [
+                {
+                  "type": "musicbrainz",
+                  "name": "MSDefault"
+                },
+                {
+                  "type": "coverartarchive",
+                  "name": "MSDefault",
+                  "failureReturnPartial": true
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+    ```
+    </TabItem>
+</Tabs>
+
+</details>

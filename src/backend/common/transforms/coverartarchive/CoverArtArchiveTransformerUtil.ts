@@ -2,8 +2,9 @@ import * as z from "zod";
 import { MaybeLogger } from "../../MaybeLogger.ts";
 import type { PlayObject, TransformerCommon, TransformOptions } from "../../../../core/Atomic.ts";
 import { caaArtType, thumbSizes, type CovertArtApiClientConfig } from "../../vendor/musicbrainz/CoverArtApiTypes.ts";
+import { DEFAULT_TRANSFORMER_ENV_NAME } from "../../../../core/Transform.ts";
 
-export const caaMissingTypes = z.enum(['album','track','artist']);
+export const caaMissingTypes = z.enum(['album']);
 export type CAAMissingType = z.infer<typeof caaMissingTypes>;
 export const caaSizesConfig = z.enum([...thumbSizes.options, 'any']);
 export type CAASizesConfig = z.infer<typeof caaSizesConfig>;
@@ -27,7 +28,7 @@ export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
     if (transformEnv !== undefined && transformEnv.trim() !== '') {
         tConfig = {
             type: 'coverartarchive',
-            name: 'MSCAADefault',
+            name: DEFAULT_TRANSFORMER_ENV_NAME,
             data: {
                 apis: [
                     {
@@ -75,11 +76,11 @@ export const hasArtFields = (play: PlayObject): CAAMissingType[] => {
     if(play.meta.art?.album !== undefined) {
         t.push('album');
     }
-    if(play.meta.art?.artist !== undefined) {
-        t.push('artist');
-    }
-    if(play.meta.art?.track !== undefined) {
-        t.push('track');
-    }
+    // if(play.meta.art?.artist !== undefined) {
+    //     t.push('artist');
+    // }
+    // if(play.meta.art?.track !== undefined) {
+    //     t.push('track');
+    // }
     return t;
 }
