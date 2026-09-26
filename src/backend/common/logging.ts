@@ -37,7 +37,7 @@ export const componentFileLogger = async (type: string, name: string, fileConfig
     });
 
     const filePath = typeof opts.file.path === 'function' ? opts.file.path() : opts.file.path;
-    const base = filePath !== undefined ? path.dirname(filePath) : logPath;
+    const base = filePath !== undefined ? path.dirname(filePath) : getLogsDir();
     const componentLogPath = path.join(base, `${type}-${name}.log`);
 
     const componentConfig: LogOptions = {
