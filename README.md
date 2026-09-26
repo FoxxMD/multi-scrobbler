@@ -27,6 +27,7 @@ A dockerized app that monitors your music listening activity from *everywhere* a
     * [ListenBrainz](https://docs.multi-scrobbler.app/configuration/sources/listenbrainz-source)
     * [ListenBrainz (Endpoint)](https://docs.multi-scrobbler.app/configuration/sources/listenbrainz-endpoint) (Home Assistant, Navidrome, TIDAL Hi-Fi)
     * [Maloja](https://docs.multi-scrobbler.app/configuration/sources/maloja)
+    * [Mixcloud](https://docs.multi-scrobbler.app/configuration/sources/mixcloud)
     * [Mopidy](https://docs.multi-scrobbler.app/configuration/sources/mopidy)
     * [MPD (Music Player Daemon)](https://docs.multi-scrobbler.app/configuration/sources/mpd)
     * [MPRIS (Linux Desktop)](https://docs.multi-scrobbler.app/configuration/sources/mpris)

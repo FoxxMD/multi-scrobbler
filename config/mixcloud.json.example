@@ -1,0 +1,14 @@
+[
+  {
+    "id": "myMixcloud",
+    "name": "MyMixcloud",
+    "enable": true,
+    "clients": [],
+    "data": {
+      "username": "MyUsername",
+
+      // optional: polling interval in seconds (default 60)
+      "interval": 60
+    }
+  }
+]
