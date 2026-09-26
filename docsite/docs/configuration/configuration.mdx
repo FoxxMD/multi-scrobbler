@@ -35,7 +35,7 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
     <TabItem value="env" label="ENV">
         MS will parse environmental variables present in the OS/container when it is run.
         
-        This method means MS **does not require config files** but it will still create and use data files in the [local](/installation/#config-and-data-directories) or [docker](/installation/?dockerSetting=storage#recommended-settings) data directory.
+        This method means MS **does not require config files** but it will still create and use data files in the [local](/installation/#persistent-directories) or [docker](/installation/?dockerSetting=storage#recommended-settings) data directory.
 
         <details>
           <summary>Use ENV-based configuration if...</summary>
@@ -72,7 +72,7 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
     <TabItem value="file" label="File">
         MS will parse configuration files located in the directory specified by the `CONFIG_DIR` environmental variable. This variable defaults to:
 
-        * Local installation -> See [Config and Data Directories](/installation/#config-and-data-directories)
+        * Local installation -> See [Persistent Directories](/installation/#persistent-directories)
         * Docker -> `/config` (in the container) -- see the [**Storage** tab in the Docker installation docs](/installation/?dockerSetting=storage#recommended-settings) for how to configure this correctly
 
         <details>
@@ -157,7 +157,7 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
     <TabItem value="aio" label="File AIO">
         MS will parse an **all-in-one** configuration file (`config.json`) located in the directory specified by the `CONFIG_DIR` environmental variable. The file's location defaults to:
 
-        * Local installation -> See [Config and Data Directories](/installation/#config-and-data-directories)
+        * Local installation -> See [Persistent Directories](/installation/#persistent-directories)
         * Docker -> `/config/config.json` (in the container) -- see the [**Storage** tab in the Docker installation docs](/installation/?dockerSetting=storage#recommended-settings) for how to configure this correctly
 
         <details>

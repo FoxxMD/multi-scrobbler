@@ -3,10 +3,8 @@ import { buildDestinationJsonPrettyStream, buildDestinationRollingFile, buildDes
 import type { Transform } from "node:stream";
 import { PassThrough } from "node:stream";
 import path from "path";
-import { getDataDir } from "./index.ts";
+import { getLogsDir } from "./index.ts";
 import { isDebugMode } from '../utils.ts';
-
-const logPath = path.resolve(getDataDir(), `./logs`);
 
 export const initLogger = (): [Logger, Transform] => {
     const opts = parseLogOptions({file: false, console: 'trace'})
@@ -21,9 +19,9 @@ export const initLogger = (): [Logger, Transform] => {
 export const appLogger = async (config: LogOptions = {}): Promise<[Logger, PassThrough]> => {
     const stream = new PassThrough({objectMode: true});
     const { file } = config;
-    const opts = parseLogOptions(isDebugMode() ? {...config, file: typeof file === 'object' ? {...file, level: 'trace'} : 'trace', console: 'trace', level: 'trace'} : {...config}, {logBaseDir: logPath, logDefaultPath: './scrobble.log'});
+    const opts = parseLogOptions(isDebugMode() ? {...config, file: typeof file === 'object' ? {...file, level: 'trace'} : 'trace', console: 'trace', level: 'trace'} : {...config}, {logBaseDir: getLogsDir(), logDefaultPath: './scrobble.log'});
     const logger = await loggerAppRolling(opts, {
-        logBaseDir: logPath,
+        logBaseDir: getLogsDir(),
         logDefaultPath: './scrobble.log',
         destinations: [
             buildDestinationJsonPrettyStream('trace', {destination: stream, object: true, colorize: true})
@@ -34,7 +32,7 @@ export const appLogger = async (config: LogOptions = {}): Promise<[Logger, PassT
 
 export const componentFileLogger = async (type: string, name: string, fileConfig: true | LogLevel | FileLogOptions, config: LogOptions = {}): Promise<Logger> => {
     const opts = parseLogOptions(config, {
-        logBaseDir: logPath,
+        logBaseDir: getLogsDir(),
         logDefaultPath: './scrobble.log'
     });
 

@@ -295,7 +295,7 @@ services:
 ```
 ## Local Installation
 
-After installation see [service.md](service.md) to configure multi-scrobbler to run automatically in the background.
+After installation see [As a Service](/installation/service) to configure multi-scrobbler to run automatically in the background.
 
 ### Nodejs
 
@@ -310,53 +310,15 @@ npm run docs:install && npm run build
 npm run start
 ```
 
-#### Config And Data Directories
-
-The directories MS uses for **Configuration** (`config.json`, `jellyfin.json`, etc...) and **Data** (database, cache, etc...) can be specified by environmental variables passed directly to `npm`/`node`, or set in an `.env` file in the working directory.
-
-When parsing these ENVs MS will resolve relative directories but *not* bash expansions like `~` for home. Examples:
-
-* `CONFIG_DIR=/my/absolute/path` => sets directory to use for config files
-* `DATA_DIR=./relative/data` => sets directory relative to working directory for data files
-
-If you do not set these environmental variables then MS will attempt to use OS-standardized directories:
-
-<Tabs>
-    <TabItem value="linux" label="Linux">
-        * Config => `$XDG_CONFIG_HOME/multi-scrobbler` or `~/.config/multi-scrobbler`
-        * Data => `$XDG_DATA_HOME/multi-scrobbler` or `~/.local/share/multi-scrobbler`
-    </TabItem>
-    <TabItem value="mac" label="MacOS">
-        * Config => `~/Library/Preferences/multi-scrobbler`
-        * Data => `~/Library/Application Support/multi-scrobbler`
-    </TabItem>
-    <TabItem value="win" label="Windows">
-        * Config => `%APPDATA%\multi-scrobbler\Config`
-        * Data => `%LOCALAPPDATA%\multi-scrobbler\Data`
-    </TabItem>
-</Tabs>
-
-
-#### Rollup build error
-
-During building if you encounter an error like: `Your current platform "XXX" and architecture "XXX" combination is not yet supported by the native Rollup build.`
-
-Modify `overrides` in `package.json` to use `@rollup/wasm-node` as a drop-in replacement for rollup:
-
-```json
-"overrides": {
-  "spotify-web-api-node": {
-    "superagent": "$superagent"
-  }
-  "vite": {
-    "rollup": "npm:@rollup/wasm-node@^4.9.6"
-  }
-}
-```
-
-See [this issue](https://github.com/FoxxMD/multi-scrobbler/issues/135#issuecomment-1927080260) for more detail.
+Pass ENVs directly to `node`/`npm`, or make a new `.env` (using `.env.example` as a reference), to configure MS for basic settings and [**Persistent Directories**](./?#persistent-directories) for config/data/log directories.
 
 #### Usage Examples
+
+:::note
+
+Regardless of the config type you are using, some settings must be set via ENV such as [**Persistent Directories**](./?#persistent-directories) for config/data/log directories.
+
+:::
 
 <Tabs groupId="configType" queryString>
 <TabItem value="env" label="ENV">
@@ -410,10 +372,93 @@ The web UI and API is served on port `9078`. This can be modified using the `POR
 
 :::
 
-### Flatpak
+## Persistent Directories
 
-:::warning[Unsupported]
+The directories MS uses for 
 
-Flatpak/Flathub installs are no longer supported. You can still build MS as a [Flatpak app from source.](../development/flatpak) See more information about [Flatpak EOL.](https://github.com/FoxxMD/multi-scrobbler/issues/287)
+* **Configuration** - `config.json`, `jellyfin.json`, etc...
+* **Data** - database, cache, etc...
+* **Logs**
 
-:::
+can be specified by environmental variables passed directly to `npm`/`node`, or set in an `.env` file in the working directory.
+
+Settings these paths is *optional.* If you do not set paths MS will try to use OS-standardized directories, falling back to subfolders in the working directory (`.config/`). **Note: These paths are automatically set for you when using Docker.**
+
+<DetailsAdmo type="note" summary="Relative and Absolute Paths Only">
+
+When parsing these ENVs MS will resolve relative directories but *not* bash expansions like `~` for home. Examples:
+
+* `CONFIG_DIR=/my/absolute/path` => sets directory to use for config files
+* `DATA_DIR=./relative/data` => sets directory relative to working directory for data files
+* `LOGS_DIR=~/myDir/logs` => ❌ cannot use this path!
+
+(The bash expansions shown below are for example only)
+
+</DetailsAdmo>
+
+<Tabs groupId="dirType" queryString>
+    <TabItem value="config" label="Config">
+
+      All of your configuration files, like `config.json`, `jellyfin.json`, etc... will be read from this directory.
+
+      Order of path acquisition:
+
+      * `$CONFIG_DIR` - user-defined (or auto defined in Docker image)
+      * `$CONFIGURATION_DIRECTORY` - defined by [systemd](/installation/service)
+      * OS-standardized directory from below...
+      
+      <Tabs>
+        <TabItem value="linux" label="Linux">
+            `$XDG_CONFIG_HOME/multi-scrobbler` or `~/.config/multi-scrobbler`
+        </TabItem>
+        <TabItem value="mac" label="MacOS">
+            `~/Library/Preferences/multi-scrobbler`
+        </TabItem>
+        <TabItem value="win" label="Windows">
+            `%APPDATA%\multi-scrobbler\Config`
+        </TabItem>
+      </Tabs>
+    </TabItem>
+    <TabItem value="data" label="Data">
+      All of the persistent data -- like the database (`ms.db`), cache, and credential files -- will be written to this directory.
+
+      Order of path acquisition:
+
+      * `$DATA_DIR` - user-defined (or auto defined in Docker image)
+      * `$STATE_DIRECTORY` - defined by [systemd](/installation/service)
+      * OS-standardized directory from below...
+      
+      <Tabs>
+        <TabItem value="linux" label="Linux">
+            `$XDG_DATA_HOME/multi-scrobbler` or `~/.local/share/multi-scrobbler`
+        </TabItem>
+        <TabItem value="mac" label="MacOS">
+            `~/Library/Application Support/multi-scrobbler`
+        </TabItem>
+        <TabItem value="win" label="Windows">
+            `%LOCALAPPDATA%\multi-scrobbler\Data`
+        </TabItem>
+      </Tabs>
+    </TabItem>
+    <TabItem value="logs" label="Logs">
+      Logs will be written to this directory.
+
+      Order of path acquisition:
+
+      * `$LOGS_DIR` - user-defined (or auto defined in Docker image)
+      * `$LOGS_DIRECTORY` - defined by [systemd](/installation/service)
+      * OS-standardized directory from below...
+      
+      <Tabs>
+        <TabItem value="linux" label="Linux">
+            `$XDG_STATE_HOME/multi-scrobbler` or `~/.local/state/multi-scrobbler`
+        </TabItem>
+        <TabItem value="mac" label="MacOS">
+            `~/Library/Logs/multi-scrobbler`
+        </TabItem>
+        <TabItem value="win" label="Windows">
+            `%LOCALAPPDATA%\multi-scrobbler\Log`
+        </TabItem>
+      </Tabs>
+    </TabItem>
+</Tabs>

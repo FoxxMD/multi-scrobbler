@@ -4,15 +4,19 @@ title: As a Service
 description: Local Install as a Service
 ---
 
-If you have multi-scrobbler installed [locally](installation.mdx#nodejs) you can enable it to run as a background service when you login.
-
-Before running as a service you should run it at least once in the foreground to ensure it can start up correctly!
-
 # [Systemd](https://systemd.io/)
 
 Systemd is system and service manager that is used by [most popular linux distros](https://en.wikipedia.org/wiki/Systemd#Adoption) including [Ubuntu](https://wiki.ubuntu.com/SystemdForUpstartUsers), [Fedora](https://docs.fedoraproject.org/en-US/quick-docs/understanding-and-administering-systemd/), Pop!_OS, [Debian](https://wiki.debian.org/systemd), and [Arch](https://wiki.archlinux.org/title/systemd).
 
 This setup will create a [user service](https://wiki.archlinux.org/title/systemd/User) that runs on login.
+
+:::tip
+
+Before running as a service you should run it at least once in the foreground to ensure it can start up correctly!
+
+:::
+
+
 
 ## Create A Unit File
 
@@ -39,6 +43,12 @@ Restart=no
 [Install]
 WantedBy=default.target
 ```
+
+:::tip
+
+If you set [directories for your service](https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#:~:text=Table%C2%A02%2E%C2%A0Automatic%20directory%20creation%20and%20environment%20variables) (under `Automatic directory creation and environment variables`), like `StateDirectory`, Multi-Scrobbler will use the [associated environmental variables](/installation#persistent-directories)
+
+:::
 
 ## Start the Service
 
