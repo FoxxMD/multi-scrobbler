@@ -9,6 +9,14 @@ The **Spotify** [Stage](/configuration/transforms#stage) matches your Play data 
 
 **This Stage is useful for standardizing your Scrobble's Play data, regardless of the Source it is coming from**, and is a good complement (or alternative) to the [Musicbrainz Stage](/configuration/transforms/musicbrainz) if you'd prefer matches to come from Spotify's own catalog.
 
+:::important
+
+Like the [Spotify Source](/configuration/sources/spotify), this Stage requires **Spotify Premium** to access the Spotify API. This is not due to any specific functionality this Stage uses but due to Spotify now requiring Premium for *any* access to their API.
+
+See the **Premium Account Required** expandable section in the Spotify Source docs for your options, if you are not a premium user.
+
+:::
+
 :::tip
 
 If you are using [ENV Config](/configuration?config-type=env#configuration-types) for multi-scrobbler and just want a quick and easy setup, skip to [**ENV Configuration**](#env-configuration).
