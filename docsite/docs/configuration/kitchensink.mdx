@@ -91,3 +91,139 @@ You want to use the [Musicbrainz Transformer](/configuration/transforms/musicbra
 <Musicbrainz/>
 
 </details>
+
+### Use Multiple Stages to Get Album Art
+
+You want to send Now Playing data to a client like [Discord](/configuration/clients/discord) and want to use multiple Stages to ensure at least one fills in any missing artwork for your data.
+
+* All stages [only run if art is missing...](/configuration/transforms/#conditional-modification)
+  * Tries [Rocksky Stage](/configuration/transforms/rocksky) since it is fast and includes art
+  * If Rocksy Stage fails to match, it uses [stage flow](/configuration/transforms/#flow-control) to try [Musicbrainz Stage](/configuration/transforms/musicbrainz) to get MBIDs
+  * If Musicbrainz Stage succeeds then uses [Cover Art Archive Stage](/configuration/transforms/coverartarchive) to try to get album art
+
+<details>
+
+<summary>Configuration</summary>
+
+```json5 file="discord.json"
+[
+    {
+        "name": "Discord",
+        "enable": true,
+        "id": "myDiscordRemote",
+        "data": {
+            "token": "Ma7XBvzRERK3gQdkX4dkb3OQ.6aaGmJ.rvFiiVrzG4VXHHL3LyhZYhpWdG3Ph_if9aKz5E",
+            "applicationId": "8190211179716453570"
+        },
+        "options": {
+            "playTransform": {
+                "preCompare": [
+                    {
+                        // try rocksky first
+                        "type": "rocksky",
+                        // but only if we don't already have art
+                        "when": [
+                            {
+                                "art": ""
+                            }
+                        ],
+                        // if matched, only add mbid and/or art
+                        "title": false,
+                        "artists": false,
+                        "album": false,
+                        "meta": true,
+                        "art": true,
+                        // if rocksky fails to match
+                        // keep trying later stages
+                        // but if does match then we have art so stop early
+                        "onSucess": "stop",
+                        "onFailure": "continue"
+                    },
+                    {
+                        "type": "musicbrainz",
+                        "when": [
+                            {
+                                "art": ""
+                            }
+                        ],
+                        "title": false,
+                        "artists": false,
+                        "album": false,
+                        // we get album/release-group mbid needed for cover art
+                        "meta": true
+                    },
+                    {
+                        // uses mbids from previous stage to find album art
+                        "type": "coverartarchive",
+                        "when": [
+                            {
+                                "art": ""
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+]
+```
+
+</details>
+
+If your data already has art but it's not from a public source and you want to ensure its useable for [Discord](/configuration/clients/discord/discord-app/#artwork) then remove the [`art` when condition](/configuration/transforms/#conditional-modification) and use force search for all Stages.
+
+<details>
+
+<summary>Configuration</summary>
+
+```json5 file="discord.json"
+[
+    {
+        "name": "Discord",
+        "enable": true,
+        "id": "myDiscordRemote",
+        "data": {
+            "token": "Ma7XBvzRERK3gQdkX4dkb3OQ.6aaGmJ.rvFiiVrzG4VXHHL3LyhZYhpWdG3Ph_if9aKz5E",
+            "applicationId": "8190211179716453570"
+        },
+        "options": {
+            "playTransform": {
+                "preCompare": [
+                    {
+                        // try rocksky first
+                        "type": "rocksky",
+                        "forceSearch": true,
+                        // if matched, only add mbid and/or art
+                        "title": false,
+                        "artists": false,
+                        "album": false,
+                        "meta": true,
+                        "art": true,
+                        // if rocksky fails to match
+                        // keep trying later stages
+                        // but if does match then we have art so stop early
+                        "onSucess": "stop",
+                        "onFailure": "continue"
+                    },
+                    {
+                        "type": "musicbrainz",
+                        "forceSearch": true,
+                        "title": false,
+                        "artists": false,
+                        "album": false,
+                        // we get album/release-group mbid needed for cover art
+                        "meta": true
+                    },
+                    {
+                        // uses mbids from previous stage to find album art
+                        "type": "coverartarchive",
+                        "forceSearch": true
+                    }
+                ]
+            }
+        }
+    }
+]
+```
+
+</details>
