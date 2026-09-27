@@ -605,7 +605,9 @@ export const KNOWN_MEDIA_PROVIDER_URLS = [
 'jamendo.com',
 'play.google.com',
 'listenbrainz.org',
-'musicbrainz.org'
+'musicbrainz.org',
+'dzcdn.net',
+'fastly.net'
 ];
 
 /** Number of SECONDS since 1970 */
