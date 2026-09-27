@@ -206,7 +206,6 @@ In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?co
 ]
 ```
 
-
 </details>
 
 Multiple stages of the same type may be configured, allowing you to define several sets of default behavior.
@@ -286,6 +285,46 @@ In a [VLC](/configuration/sources/vlc) [File Config](/configuration?configType=f
 ```
 
 </details>
+
+#### Stage Names and Default Stages
+
+When specifying a Stage within a [Hook](#hook) (like in `preCompare`), the `name` for a Stage is **potentially optional.**
+
+If Stages exists for the `type` you want to use in the hook and you do not specify a `name`...
+
+<details>
+
+<summary>Example</summary>
+
+```json5 title="vlc.json"
+[
+  { 
+    "name": "MyVLC",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "rocksky"
+            // no "name" is specified
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+</details>
+
+Multi-Scrobbler looks for configured Stages in this order:
+
+* The *first* non-default, non-ENV configured Stage IE a [Stage](#stage) you [configured](#configuring-stages) with an explicit `name`
+* An ENV configured stage, like [Rocksky's ENV Configuration](/configuration/transforms/rocksky#env-configuration)
+  * ENV configured stages are always named `MSEnv`
+* The **default**, built-in Stage from Multi-Scrobbler. This is always named `MSDefault`
+
+All of the [Modification Stages](#stage) have an `MSDefault` configured Stage except for Spotify.
 
 #### Overriding Configuration
 
