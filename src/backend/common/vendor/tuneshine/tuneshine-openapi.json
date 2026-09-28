@@ -1,0 +1,547 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Tuneshine Device API",
+    "description": "HTTP API for controlling Tuneshine over your LAN.",
+    "version": "1.0.1"
+  },
+  "servers": [
+    {
+      "url": "http://{host}",
+      "variables": {
+        "host": {
+          "default": "tuneshine-4064.local"
+        }
+      }
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "Device is alive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "alive"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "summary": "OpenAPI specification",
+        "operationId": "getSpec",
+        "responses": {
+          "200": {
+            "description": "This OpenAPI spec as JSON",
+            "content": {
+              "application/json": {
+
+              }
+            }
+          }
+        }
+      }
+    },
+    "/state": {
+      "get": {
+        "summary": "Get device state",
+        "operationId": "getState",
+        "responses": {
+          "200": {
+            "description": "Current device state, including device config and any metadata that's been sent to the device. You can check this endpoint to see what has been sent from the server and add additional functionality that reacts to the current track metadata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/image": {
+      "post": {
+        "summary": "Upload or fetch an image",
+        "operationId": "postImage",
+        "description": "Display an image on the device by providing an image URL (application/json POST) or directly including a 64x64 WebP image in the request body (multipart/form-data POST). You can also include metadata about the image (e.g. track and artist name) which will be returned in the /state response. To update the metadata without changing the image, send a POST request with the existing image URL and the new metadata fields.\n\nIf there is an error downloading or decoding the image, you will need to make a subsequent request to /state to check the lastImageError field in the response.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "image"
+                ],
+                "properties": {
+                  "image": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "WebP image file (max 768 kB). Must be 64x64. Supports animated WebP images."
+                  },
+                  "metadata": {
+                    "type": "string",
+                    "description": "JSON string with image metadata. See the TrackMetadata schema for supported fields.",
+                    "example": "{\"trackName\":\"Song\",\"artistName\":\"Artist\"}"
+                  }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImageUrlRequest"
+              },
+              "example": {
+                "imageUrl": "http://example.com/image.jpeg",
+                "trackName": "Song",
+                "artistName": "Artist",
+                "albumName": "Album"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Image accepted or metadata updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Metadata-only update but no local image exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete current image",
+        "operationId": "deleteImage",
+        "description": "Remove the locally-provided image (shown in localMetadata in the /state endpoint) and revert to the current idle image. If you don't have an image to show but would still like to provide metadata (for example, if your music source is missing an image) you can DELETE the current image and include the new metadata in the DELETE request body as JSON.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrackMetadata"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Image removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusOk"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/brightness": {
+      "post": {
+        "summary": "Set display brightness",
+        "operationId": "postBrightness",
+        "description": "If the Tuneshine has its brightness config set on the Tuneshine server, this will overwrite the brightness stored in the database with consideration for the currently active schedule.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "active": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "description": "Active brightness (1-100)"
+                  },
+                  "idle": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "description": "Idle brightness (1-100)"
+                  }
+                },
+                "minProperties": 1
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Brightness updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/artwork": {
+      "get": {
+        "summary": "Get stored artwork",
+        "operationId": "getArtwork",
+        "description": "If you have uploaded artwork with the POST /image multipart/form-data endpoint, and didn’t provide a URL for the image, the Tuneshine will let you fetch the artwork from this endpoint so that it can be displayed by other clients. Since the URL does not change, you may want to use the itemID field provided in the metadata as a cache bust parameter on the url, e.g. /artwork?itemId=12345.",
+        "responses": {
+          "200": {
+            "description": "WebP image data",
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No artwork stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "summary": "Check if artwork exists",
+        "operationId": "headArtwork",
+        "description": "This is necessary for some clients to ensure image loading works correctly.",
+        "responses": {
+          "200": {
+            "description": "Artwork exists"
+          },
+          "404": {
+            "description": "No artwork stored"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "StatusOk": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "TrackMetadata": {
+        "type": "object",
+        "properties": {
+          "trackName": {
+            "type": "string",
+            "description": "Track or song name"
+          },
+          "artistName": {
+            "type": "string",
+            "description": "Artist name"
+          },
+          "albumName": {
+            "type": "string",
+            "description": "Album name"
+          },
+          "serviceName": {
+            "type": "string",
+            "description": "Music service name (e.g. Spotify, Roon, Apple Music)"
+          },
+          "subServiceName": {
+            "type": "string",
+            "description": "Sub-service or service variant (e.g. TIDAL on Roon)."
+          },
+          "itemId": {
+            "type": "string",
+            "description": "Unique identifier for the track or item within the service. Can be useful to use as a cache-busting query parameter when fetching artwork from the /artwork endpoint."
+          },
+          "serviceIconUrl": {
+            "type": "string",
+            "description": "URL or base64 data URL of the service icon. Used by clients (like the Tuneshine mobile app) to show an icon for the service currently in use. Up to 4 kB, good for a small 32x32ish icon."
+          },
+          "zoneName": {
+            "type": "string",
+            "description": "Speaker or zone the music is playing on"
+          },
+          "accountName": {
+            "type": "string",
+            "description": "Account or user name the music is playing from"
+          },
+          "accountId": {
+            "type": "string",
+            "description": "Account or user ID"
+          },
+          "idle": {
+            "type": "boolean",
+            "description": "Whether this image is an idle/screensaver image"
+          },
+          "overridable": {
+            "type": "boolean",
+            "description": "If true and idle is true, a remote non-idle image will override this local idle image. When the remote image becomes idle again, this local idle image is automatically restored. Defaults to false. This is useful for adding custom behavior when the device is idle."
+          }
+        }
+      },
+      "ImageUrlRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/TrackMetadata"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "imageUrl": {
+                "type": "string",
+                "format": "uri",
+                "description": "URL to fetch the image from (must be http://). Supports PNG, JPEG, and WebP. Omit to update metadata on the existing local image (for example, if the song has changed but the album art is the same). You can include this even if doing a multipart/form-data upload, which can be useful if you want to send an optimized image to the Tuneshine but also provide a URL for clients to fetch the image from (e.g. for showing the image in the Tuneshine mobile app).\n\n If only image URL is provided and must be downloaded on-device, the max file size is 768kB. There are additional limitations on image dimensions as the whole image must be decoded in to RAM—for a PNG and WebP it's about 724 x 724, for a JPEG about 5792 x 5792. The larger the image, the longer it will take to decode. Animated WebP images must be scaled to 64x64 or only the first frame will be shown."
+              },
+              "contentType": {
+                "type": "string",
+                "enum": [
+                  "track",
+                  "podcast",
+                  "audiobook",
+                  "radio",
+                  "video"
+                ],
+                "description": "Content type"
+              },
+              "animation": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "dissolve",
+                  "crate",
+                  "crate_to_idle",
+                  "crate_from_idle"
+                ],
+                "description": "Override the default transition animation for this image change."
+              },
+              "timeoutMs": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 60000,
+                "default": 10000,
+                "description": "Timeout in milliseconds for fetching the image from the url"
+              }
+            }
+          }
+        ]
+      },
+      "ImageMetadata": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/TrackMetadata"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "imageUrl": {
+                "type": "string",
+                "description": "URL of the image currently displayed"
+              },
+              "contentType": {
+                "type": "string",
+                "enum": [
+                  "track",
+                  "podcast",
+                  "audiobook",
+                  "radio",
+                  "video"
+                ],
+                "description": "Content type of for the item represented by the current image"
+              },
+              "lastImageError": {
+                "type": "string",
+                "nullable": true,
+                "description": "Error code from the last failed image decode, or null if the last decode succeeded"
+              },
+              "overridable": {
+                "type": "boolean",
+                "description": "When true, this local idle image can be temporarily overridden by remote non-idle images. Omitted when false."
+              }
+            }
+          }
+        ]
+      },
+      "DeviceState": {
+        "type": "object",
+        "required": [
+          "name",
+          "firmwareVersion",
+          "hardwareId",
+          "config",
+          "imageSource",
+          "localMetadata",
+          "remoteMetadata"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true,
+            "description": "Custom device name, or null if not set"
+          },
+          "firmwareVersion": {
+            "type": "string",
+            "description": "Currently running firmware version"
+          },
+          "hardwareId": {
+            "type": "string",
+            "description": "Unique hardware identifier for the device. Equal to the device's MAC address."
+          },
+          "config": {
+            "type": "object",
+            "required": [
+              "brightness",
+              "animation"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "brightness": {
+                "type": "object",
+                "required": [
+                  "base",
+                  "active",
+                  "idle"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "base": {
+                    "type": "integer",
+                    "description": "Default brightness used on startup and for unknown content types. Should be the dimmest of the brightness values."
+                  },
+                  "active": {
+                    "type": "integer",
+                    "description": "Brightness when showing album artwork and other non-idle images."
+                  },
+                  "idle": {
+                    "type": "integer",
+                    "description": "Brightness used when displaying idle/screensaver images"
+                  }
+                }
+              },
+              "animation": {
+                "type": "string",
+                "description": "Current animation preference: none, dissolve, or crate"
+              }
+            }
+          },
+          "imageSource": {
+            "type": "string",
+            "enum": [
+              "system",
+              "local",
+              "remote"
+            ],
+            "description": "Source of the currently displayed image. 'system' means no image has been received yet (showing startup splash). 'local' means the image was uploaded via the local HTTP API. 'remote' means the image came from the WebSocket connection."
+          },
+          "localMetadata": {
+            "nullable": true,
+            "description": "Metadata for the image set via the local API server (/image POST), or null if no local image is active",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ImageMetadata"
+              }
+            ]
+          },
+          "remoteMetadata": {
+            "nullable": true,
+            "description": "Metadata for the image set via the WebSocket connection to the Tuneshine server, or null if no remote image is active",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ImageMetadata"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
