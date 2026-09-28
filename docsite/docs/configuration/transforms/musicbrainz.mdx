@@ -321,6 +321,8 @@ To configure [stage defaults](#stage-configuration) use `MB_PRESETS` with a comm
 * `aggressive` - Adds **Free Text Search** (`freetext`) to [`searchOrder`](#search-methods)
 * `fields` - Applies [Field Scoring](#field-scoring) to match sorting so match text is baised towards similarity to original scrobble
 * `sensible` - Applies the [Sensible Default](#sensible-default) configuration for [sorting releases](#sorting-releases)
+* `musicvideo` - *Allows* music videos as a valid search result (not allowed by default)
+* `audiobook` - *Allows* audiobooks as a valid search result (not allowed by default)
 
 Finally, use ENV `*_TRANSFORMS=musicbrainz` on each Source/Client you wish to apply this stage to. This applies the stage in the [`preTransform` Hook](/configuration/transforms#lifecycle-hooks) with all [Rules](#rules-and-hooks) enabled.
 
@@ -732,7 +734,7 @@ An easy way to think about this:
 * Should a track that belongs to a Compilation album be allowed to match?
 * What country do you prefer an album release to be from?
 
-##### Release Attributes
+#### Release Attributes
 
 These attributes (`attribute_name` in config) are:
 
@@ -757,11 +759,67 @@ EX to exclude compilations
 "releaseGroupSecondaryTypeDeny": ["compilation"]
 ```
 
+:::tip[Allow Overrides Deny]
+
+When a release attributes has both types of filter (`allow` and `deny`), only `allow` is used:
+
+```
+"releaseStatusAllow": ["official"],
+"releaseStatusDeny": ["bootleg","promotional"] // this is ignored!
+```
+
+:::
+
+<DetailsAdmo type="note" summary="Audiobooks Denied by Default">
+
+The [Release Group **Secondary Type**](https://wiki.musicbrainz.org/Release_Group/Type#Secondary_types) (`releaseGroupSecondaryType`) can be `audiobook` which is rarely a desired result.
+
+When `releaseGroupSecondaryTypeDeny` is **not** defined it defaults to:
+
+```
+"releaseGroupSecondaryTypeDeny": ["audiobook"]
+```
+
+which filters out audiobook results.
+
+If you *want* to include audiobook results then explicitly define this and set it to an empty array EX: 
+
+```
+"releaseGroupSecondaryTypeDeny": []
+```
+
+</DetailsAdmo>
+
+#### Music Videos
+
+Search results can also return Recordings that are **Music Videos**. These are rarely a desired result so they are **filtered out by default.**
+
+If you want to include music videos in results then add this to your config: `"allowMusicVideo": true`
+
+<details>
+
+<summary>Example</summary>
+
+```json5
+// ...
+"defaults": {
+  //"releaseStatusAllow": ["official"],
+  // ...etc
+  "allowMusicVideo": true
+}
+```
+
+</details>
+
 #### Empty Releases
 
 Sometimes a Recording may not have any associated Releases. This may be because there is not enough information about the Recording yet, or it was never included on an actual Release.
 
-You may want to filter the majority of your matches by releases but allow matching a Recording that has no releases to begin with. To allow this set `releaseAllowEmpty` to `true` in configuration:
+You may want to filter the majority of your matches by releases but allow matching a Recording that has no releases to begin with. To allow this set `releaseAllowEmpty` to `true` in configuration.
+
+<details>
+
+<summary>Example</summary>
 
 ```json5
 // ...
@@ -770,6 +828,8 @@ You may want to filter the majority of your matches by releases but allow matchi
   "releaseAllowEmpty": true // don't remove a match during filtering just because it has no releases
 }
 ```
+
+</details>
 
 ### Sorting
 

@@ -2,6 +2,7 @@ import type { MissingMbidType, TransformerCommon, TransformOptions } from "../..
 import type { MusicbrainzApiConfigData } from "../../infrastructure/Atomic.ts";
 import { MaybeLogger } from "../../MaybeLogger.ts";
 import { DEFAULT_TRANSFORMER_ENV_NAME } from "../../../../core/Transform.ts";
+import type { MBReleaseGroupPrimaryType, MBReleaseGroupSecondaryType, MBReleaseStatus } from "../../vendor/musicbrainz/MusicbrainzTypes.ts";
 
 export interface MusicbrainzTransformerDataConfig {
     apis: MusicbrainzApiConfigData[];
@@ -34,49 +35,49 @@ export interface MusicbrainzTransformerData {
      *
      * @see https://wiki.musicbrainz.org/Release_Group/Type#Primary_types
     */
-    releaseGroupPrimaryTypeAllow?: string[];
+    releaseGroupPrimaryTypeAllow?: MBReleaseGroupPrimaryType[];
     /** Filter out any releases with release groups with these primary types
      *
      * @see https://wiki.musicbrainz.org/Release_Group/Type#Primary_types
     */
-    releaseGroupPrimaryTypeDeny?: string[];
+    releaseGroupPrimaryTypeDeny?: MBReleaseGroupPrimaryType[];
     /** Prioritise releases to use based on the order of these release group types
       *
       * @see https://wiki.musicbrainz.org/Release_Group/Type#Primary_types
      */
-    releaseGroupPrimaryTypePriority?: string[];
+    releaseGroupPrimaryTypePriority?: MBReleaseGroupPrimaryType[];
 
     /** Allow only releases with release groups with these secondary types
      *
      * @see https://wiki.musicbrainz.org/Release_Group/Type#Secondary_types
     */
-    releaseGroupSecondaryTypeAllow?: string[];
+    releaseGroupSecondaryTypeAllow?: MBReleaseGroupSecondaryType[];
     /** Filter out any releases with release groups with these secondary types
      *
      * @see https://wiki.musicbrainz.org/Release_Group/Type#Secondary_types
     */
-    releaseGroupSecondaryTypeDeny?: string[];
+    releaseGroupSecondaryTypeDeny?: MBReleaseGroupSecondaryType[];
     /** Prioritise releases to use based on the order of these release group secondary types
      *
      * @see https://wiki.musicbrainz.org/Release_Group/Type#Secondary_types
     */
-    releaseGroupSecondaryTypePriority?: string[];
+    releaseGroupSecondaryTypePriority?: MBReleaseGroupSecondaryType[];
 
     /** Allow only releases with these statuses
      *
      * @see https://wiki.musicbrainz.org/Release#Status
     */
-    releaseStatusAllow?: string[];
+    releaseStatusAllow?: MBReleaseStatus[];
     /** Filter out any releases with these statuses
      *
      * @see https://wiki.musicbrainz.org/Release#Status
     */
-    releaseStatusDeny?: string[];
+    releaseStatusDeny?: MBReleaseStatus[];
     /** Prioritise releases to used based on the order of these statuses
      *
      * @see https://wiki.musicbrainz.org/Release#Status
     */
-    releaseStatusPriority?: string[];
+    releaseStatusPriority?: MBReleaseStatus[];
 
     /** Allow only releases from these ISO2 countries
  *
@@ -101,6 +102,12 @@ export interface MusicbrainzTransformerData {
      *
      */
     releaseAllowEmpty?: boolean;
+
+    /** Allow music video Recording types?
+     * 
+     * @default false
+    */
+    allowMusicVideo?: boolean
 
     titleWeight?: number | true;
     artistWeight?: number | true;
@@ -139,12 +146,22 @@ export const DEFAULTS_ID: MusicbrainzTransformerData = {
     "searchOrder": ["isrc", "mbidrecording", "basicorids", "basic"]
 };
 
+export const DEFAULTS_MUSIC_VIDEO: MusicbrainzTransformerData = {
+    allowMusicVideo: true
+};
+
+export const DEFAULTS_AUDIOBOOK: MusicbrainzTransformerData = {
+    releaseGroupSecondaryTypeDeny: []
+};
+
 export const PRESETS: Record<string, MusicbrainzTransformerData> = {
     default: DEFAULTS_PRESET,
     sensible: DEFAULTS_SENSIBLE,
     native: DEFAULTS_NATIVE,
     aggressive: DEFAULTS_AGGRESSIVE,
     fields: DEFAULTS_FIELDS_BIAS,
+    musicvideo: DEFAULTS_MUSIC_VIDEO,
+    audiobook: DEFAULTS_AUDIOBOOK,
     'id': DEFAULTS_ID
 };
 

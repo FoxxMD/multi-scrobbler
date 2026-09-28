@@ -1,5 +1,5 @@
 import { type ArtistCredit, DEFAULT_MISSING_TYPES, type LifecycleInput, type MissingMbidType, type OptionalCacheUsage, type PlayObject, type TrackMetaIsrc } from "../../../core/Atomic.ts";
-import { mBReleaseSecondaryGroupTypesSchema } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
+import { MB_RELEASE_GROUP_SECONDARY_TYPES, mBReleaseSecondaryGroupTypesSchema } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import { type MBReleaseGroupSecondaryType } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import { type MBReleaseGroupPrimaryType } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import { mBReleasePrimaryGroupTypesSchema } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
@@ -113,7 +113,7 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
         releaseGroupPrimaryTypeDeny,
         releaseGroupPrimaryTypePriority,
         releaseGroupSecondaryTypeAllow,
-        releaseGroupSecondaryTypeDeny,
+        releaseGroupSecondaryTypeDeny = [MB_RELEASE_GROUP_SECONDARY_TYPES.enum.audiobook],
         releaseGroupSecondaryTypePriority,
         releaseStatusAllow,
         releaseStatusDeny,
@@ -131,6 +131,7 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
         titleWeight,
         albumWeight,
         artistWeight,
+        allowMusicVideo = false,
         ...rest
     } = data;
 
@@ -153,6 +154,7 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
         releaseCountryAllow: maybeStringLowerArrayFromString.parse(releaseCountryAllow),
         releaseCountryDeny: maybeStringLowerArrayFromString.parse(releaseCountryDeny),
         releaseCountryPriority: maybeStringLowerArrayFromString.parse(releaseCountryPriority),
+        allowMusicVideo,
         ...rest,
     };
 
@@ -161,6 +163,10 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
     }
 
     logger.debug(`Will search if missing: ${config.searchWhenMissing.join(', ')} | Match if (default) score is >= ${config.score}`);
+
+    if(allowMusicVideo === false) {
+        logger.debug('Disallowing music videos in results');
+    }
 
     let soSet = searchOrder.length > 0 ? new Set<SearchType>(searchOrder.map(asSearchType)) : new Set<SearchType>();
     const depSearch = [];
@@ -518,7 +524,8 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         }
 
         const {
-            score = this.defaults.score ?? 90
+            score = this.defaults.score ?? 90,
+            allowMusicVideo = this.defaults.allowMusicVideo ?? false
         } = stageConfig;
 
         // if brainz meta contains track MBID then we should be able to get the exact release
@@ -539,6 +546,12 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         if(filteredList.length === 0) {
              throw new StagePrerequisiteError(`All ${transformData.count} fetched matches had a score < ${score}, best match was ${transformData.recordings[0].score}`, {shortStack: true});
         }
+        let hadMusicVideo = false;
+        if(allowMusicVideo === false && filteredList.some(x => x.video === true)) {
+            hadMusicVideo = true;
+            filteredList = filteredList.filter(x => x.video !== true);
+        }
+
         const mergedConfig = Object.assign({}, removeUndefinedKeys({...this.defaults}), removeUndefinedKeys({...stageConfig}));
         filteredList = filterByValidReleaseStatus(filteredList, mergedConfig);
         filteredList = filterByValidReleaseGroupPrimary(filteredList, mergedConfig);
@@ -547,7 +560,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
 
         if(filteredList.length === 0) {
-            throw new StagePrerequisiteError(`All ${transformData.count} recordings were filtered out by allow/deny release config`, {shortStack: true});
+            throw new StagePrerequisiteError(`All ${transformData.count} recordings were filtered out by allow/deny release config${hadMusicVideo ? ' and music video filter' : ''}`, {shortStack: true});
         }
 
         filteredList = rankReleasesByPriority(filteredList, mergedConfig, play);
