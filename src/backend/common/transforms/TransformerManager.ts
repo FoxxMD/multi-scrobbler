@@ -33,6 +33,7 @@ export default class TransformerManager {
         this.addTransformerConfig({type: 'native', name: DEFAULT_TRANSFORMER_NAME});
         this.addTransformerConfig({type: 'rocksky', name: DEFAULT_TRANSFORMER_NAME});
         this.addTransformerConfig({type: 'coverartarchive', name: DEFAULT_TRANSFORMER_NAME});
+        this.addTransformerConfig({type: 'musicbrainz', name: DEFAULT_TRANSFORMER_NAME});
     }
 
     public addTransformerConfig(config: TransformerCommonConfig): void {
