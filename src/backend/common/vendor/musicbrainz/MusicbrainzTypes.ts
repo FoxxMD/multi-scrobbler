@@ -1,3 +1,20 @@
+import * as z from "zod";
+import { maybeArrayFromStringSchemaCreate } from "../../../utils/ZodUtils.ts";
 import type { MusicbrainzApiWrapped } from "./MusicbrainzApi.ts";
 
 export type MusicBrainzSingletonMap = Map<string, MusicbrainzApiWrapped>;
+
+export const MB_RELEASE_STATUSES = z.enum(['official', 'promotion', 'bootleg', 'pseudo-release', 'withdrawn', 'expunged', 'cancelled']);
+export type MBReleaseStatus = z.infer<typeof MB_RELEASE_STATUSES>;
+export const mBReleaseStatusesSchema = maybeArrayFromStringSchemaCreate(MB_RELEASE_STATUSES, { lower: true });export const mBReleaseStatusSchema = z.string().transform(x => x.trim().toLocaleLowerCase()).pipe(MB_RELEASE_STATUSES);
+
+export const MB_RELEASE_GROUP_PRIMARY_TYPES = z.enum(['album', 'single', 'ep', 'broadcast', 'other']);
+export type MBReleaseGroupPrimaryType = z.infer<typeof MB_RELEASE_GROUP_PRIMARY_TYPES>;
+export const mBReleasePrimaryGroupTypeSchema = z.string().transform(x => x.trim().toLocaleLowerCase()).pipe(MB_RELEASE_GROUP_PRIMARY_TYPES);
+export const mBReleasePrimaryGroupTypesSchema = maybeArrayFromStringSchemaCreate(MB_RELEASE_GROUP_PRIMARY_TYPES, { lower: true });
+
+export const MB_RELEASE_GROUP_SECONDARY_TYPES = z.enum(['compilation', 'soundtrack', 'live', 'remix', 'audiobook']);
+export type MBReleaseGroupSecondaryType = z.infer<typeof MB_RELEASE_GROUP_SECONDARY_TYPES>;
+export const mBReleaseSecondaryGroupTypeSchema = z.string().transform(x => x.trim().toLocaleLowerCase()).pipe(MB_RELEASE_GROUP_SECONDARY_TYPES);
+export const mBReleaseSecondaryGroupTypesSchema = maybeArrayFromStringSchemaCreate(MB_RELEASE_GROUP_SECONDARY_TYPES, { lower: true });
+

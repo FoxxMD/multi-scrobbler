@@ -1,4 +1,10 @@
-import { type ArtistCredit, asMBReleasePrimaryGroupType, asMBReleaseSecondaryGroupType, asMBReleaseStatus, DEFAULT_MISSING_TYPES, type LifecycleInput, type MBReleaseGroupPrimaryType, type MBReleaseGroupSecondaryType, type MBReleaseStatus, type MissingMbidType, type OptionalCacheUsage, type PlayObject, type TrackMeta, type TrackMetaIsrc } from "../../../core/Atomic.ts";
+import { type ArtistCredit, DEFAULT_MISSING_TYPES, type LifecycleInput, type MissingMbidType, type OptionalCacheUsage, type PlayObject, type TrackMetaIsrc } from "../../../core/Atomic.ts";
+import { mBReleaseSecondaryGroupTypesSchema } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
+import { type MBReleaseGroupSecondaryType } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
+import { type MBReleaseGroupPrimaryType } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
+import { mBReleasePrimaryGroupTypesSchema } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
+import { type MBReleaseStatus } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
+import { mBReleaseStatusesSchema } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import { isWhenCondition, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";
 import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../core/Transform.ts";
@@ -13,13 +19,14 @@ import type {IRecordingList, IRecordingMatch} from "musicbrainz-api";
 import { intersect, missingMbidTypes } from "../../utils.ts";
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
 import { SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../errors/MSErrors.ts";
-import { parseArrayFromMaybeString, scoreNormalizedStringsWeighted } from "../../utils/StringUtils.ts";
+import { scoreNormalizedStringsWeighted } from "../../utils/StringUtils.ts";
 import clone from "clone";
 import type { Cacheable } from "cacheable";
 import { splitByFirstRegexFound } from "../../../core/StringUtils.ts";
 import { nativeParse } from "./NativeTransformer.ts";
 import { comparePlayArtistsNormalized, scoreTrackWeightedAndNormalized } from "../../utils/PlayComparisonUtils.ts";
 import type { MusicbrainzTransformerConfig, MusicbrainzTransformerData, SearchType } from "./musicbrainz/MusicbrainzTransformerUtil.ts";
+import { maybeStringLowerArrayFromString } from "../../utils/ZodUtils.ts";
 
 export const asMissingMbid = (str: string): MissingMbidType => {
     const clean = str.trim().toLocaleLowerCase();
@@ -131,21 +138,21 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
         searchWhenMissing: DEFAULT_MISSING_TYPES,
         score: 90,
 
-        releaseGroupPrimaryTypeAllow: releaseGroupPrimaryTypeAllow !== undefined ? parseArrayFromMaybeString(releaseGroupPrimaryTypeAllow, {lower: true}).map(asMBReleasePrimaryGroupType) : undefined,
-        releaseGroupPrimaryTypeDeny: releaseGroupPrimaryTypeDeny !== undefined  ?parseArrayFromMaybeString(releaseGroupPrimaryTypeDeny, {lower: true}).map(asMBReleasePrimaryGroupType) : undefined,
-        releaseGroupPrimaryTypePriority: releaseGroupPrimaryTypePriority !== undefined ? parseArrayFromMaybeString(releaseGroupPrimaryTypePriority, {lower: true}).map(asMBReleasePrimaryGroupType) : undefined,
+        releaseGroupPrimaryTypeAllow: mBReleasePrimaryGroupTypesSchema.parse(releaseGroupPrimaryTypeAllow),
+        releaseGroupPrimaryTypeDeny: mBReleasePrimaryGroupTypesSchema.parse(releaseGroupPrimaryTypeDeny),
+        releaseGroupPrimaryTypePriority: mBReleasePrimaryGroupTypesSchema.parse(releaseGroupPrimaryTypePriority),
 
-        releaseGroupSecondaryTypeAllow: releaseGroupSecondaryTypeAllow !== undefined ? parseArrayFromMaybeString(releaseGroupSecondaryTypeAllow, {lower: true}).map(asMBReleaseSecondaryGroupType) : undefined,
-        releaseGroupSecondaryTypeDeny: releaseGroupSecondaryTypeDeny !== undefined ?  parseArrayFromMaybeString(releaseGroupSecondaryTypeDeny, {lower: true}).map(asMBReleaseSecondaryGroupType) : undefined,
-        releaseGroupSecondaryTypePriority: releaseGroupSecondaryTypePriority !== undefined ?  parseArrayFromMaybeString(releaseGroupSecondaryTypePriority, {lower: true}).map(asMBReleaseSecondaryGroupType) : undefined,
+        releaseGroupSecondaryTypeAllow: mBReleaseSecondaryGroupTypesSchema.parse(releaseGroupSecondaryTypeAllow),
+        releaseGroupSecondaryTypeDeny: mBReleaseSecondaryGroupTypesSchema.parse(releaseGroupSecondaryTypeDeny),
+        releaseGroupSecondaryTypePriority: mBReleaseSecondaryGroupTypesSchema.parse(releaseGroupSecondaryTypePriority),
 
-        releaseStatusAllow: releaseStatusAllow !== undefined ? parseArrayFromMaybeString(releaseStatusAllow, {lower: true}).map(asMBReleaseStatus) : undefined,
-        releaseStatusDeny: releaseStatusDeny !== undefined ?  parseArrayFromMaybeString(releaseStatusDeny, {lower: true}).map(asMBReleaseStatus) : undefined,
-        releaseStatusPriority: releaseStatusPriority !== undefined ? parseArrayFromMaybeString(releaseStatusPriority, {lower: true}).map(asMBReleaseStatus) : undefined,
+        releaseStatusAllow: mBReleaseStatusesSchema.parse(releaseStatusAllow),
+        releaseStatusDeny: mBReleaseStatusesSchema.parse(releaseStatusDeny),
+        releaseStatusPriority: mBReleaseStatusesSchema.parse(releaseStatusPriority),
 
-        releaseCountryAllow: releaseCountryAllow !== undefined ? parseArrayFromMaybeString(releaseCountryAllow, {lower: true}) : undefined,
-        releaseCountryDeny:  releaseCountryDeny !== undefined ? parseArrayFromMaybeString(releaseCountryDeny, {lower: true}) : undefined,
-        releaseCountryPriority:  releaseCountryPriority !== undefined ? parseArrayFromMaybeString(releaseCountryPriority, {lower: true}) : undefined,
+        releaseCountryAllow: maybeStringLowerArrayFromString.parse(releaseCountryAllow),
+        releaseCountryDeny: maybeStringLowerArrayFromString.parse(releaseCountryDeny),
+        releaseCountryPriority: maybeStringLowerArrayFromString.parse(releaseCountryPriority),
         ...rest,
     };
 

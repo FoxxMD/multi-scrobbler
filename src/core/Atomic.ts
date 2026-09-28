@@ -542,48 +542,6 @@ export type MissingMbidType = 'artists' | 'title' | 'album' | 'duration';
 export const DEFAULT_MISSING_TYPES: MissingMbidType[] = ['artists','title','album', 'duration'];
 export const DEFAULT_MISSING_MBIDS_TYPES: MissingMbidType[] = ['artists','title','album'];
 
-export type MBReleaseStatus = 'official' | 'promotion' | 'bootleg' | 'pseudo-release' | 'withdrawn' | 'expunged' | 'cancelled';
-export const MB_RELEASE_STATUSES: MBReleaseStatus[] = ['official','promotion','bootleg','pseudo-release','withdrawn','expunged' ,'cancelled'];
-export const isMBReleaseStatus = (str: string): str is MBReleaseStatus => {
-    return MB_RELEASE_STATUSES.includes(str as MBReleaseStatus);
-}
-export const asMBReleaseStatus = (str: string): MBReleaseStatus => {
-    const clean = str.toLocaleLowerCase();
-    if(isMBReleaseStatus(clean)) {
-        return clean;
-    } else {
-        throw new Error(`Release Status is not valid: ${str}`);
-    }
-}
-
-export type MBReleaseGroupPrimaryType = 'album' | 'single' | 'ep' | 'broadcast' | 'other';
-export const MB_RELEASE_GROUP_PRIMARY_TYPES: MBReleaseGroupPrimaryType[] = ['album','single','ep','broadcast','other'];
-export const isMBReleasePrimaryGroupType = (str: string): str is MBReleaseGroupPrimaryType => {
-    return MB_RELEASE_GROUP_PRIMARY_TYPES.includes(str as MBReleaseGroupPrimaryType);
-}
-export const asMBReleasePrimaryGroupType = (str: string): MBReleaseGroupPrimaryType => {
-    const clean = str.toLocaleLowerCase();
-    if(isMBReleasePrimaryGroupType(clean)) {
-        return clean;
-    } else {
-        throw new Error(`Primary Release Group is not valid: ${str}`);
-    }
-}
-
-export type MBReleaseGroupSecondaryType = 'compilation' | 'soundtrack' | 'live' | 'remix';
-export const MB_RELEASE_GROUP_SECONDARY_TYPES: MBReleaseGroupSecondaryType[] = ['compilation','soundtrack','live','remix'];
-export const isMBReleaseSecondaryGroupType = (str: string): str is MBReleaseGroupSecondaryType => {
-    return MB_RELEASE_GROUP_SECONDARY_TYPES.includes(str as MBReleaseGroupSecondaryType);
-}
-export const asMBReleaseSecondaryGroupType = (str: string): MBReleaseGroupSecondaryType => {
-    const clean = str.toLocaleLowerCase();
-    if(isMBReleaseSecondaryGroupType(clean)) {
-        return clean;
-    } else {
-        throw new Error(`Secondary Release Group is not valid: ${str}`);
-    }
-}
-
 export interface TransformResult {
     type: string,
     name: string,
@@ -734,6 +692,7 @@ export const qsOptions: IParseBaseOptions = {
     allowPrototypes: false
 };
 
+// eslint-disable-next-line no-useless-escape
 export const DELIMITERS = [',', '&', '/', '\\'];export const DELIMETERS_REGEX: RegExp = new RegExp(/[,&\/\\]/);
 export const DELIMITERS_NO_AMP = [',', '/', '\\'];
 export type DeviceId = string;

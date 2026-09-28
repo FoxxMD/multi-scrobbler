@@ -96,6 +96,35 @@ export const zodObjectToTableColumns = <Shape extends z.ZodRawShape>(schema: z.Z
 export const transformSplitMaybeString = z.transform((val: string) => val === undefined ? undefined : parseArrayFromMaybeString(val));
 export const transformSplitMaybeStringOrBoolean = z.transform((val: string | true) => val === undefined ? undefined : parseBoolOrArrayFromMaybeString(val));
 
+/**
+ * Generate a Zod schema that parses an array of Zod Type from a nullish comma-delimited string or array of strings
+ * 
+ * The generated schema takes a string, array of strings, or undefined
+ * splits it by comma (if a string) and maybe lowercases it (by arg)
+ * maps its values that are parsed/cast from the Zod Type
+ * 
+ * 
+ * @param item 
+ * @returns 
+ */
+export const maybeArrayFromStringSchemaCreate = <T extends z.ZodType<unknown, string>>(item: T, opts: {lower?: boolean} = {}) =>
+    z.union([
+        z.string().transform(s => s.split(',')),
+        z.array(z.string()),
+    ])
+    .transform(arr => arr.map(x => {
+        let clean = x.trim();
+        if(opts.lower) {
+            clean = clean.toLocaleLowerCase();
+        }
+        return clean;
+    }).filter(x => x !== ''))
+    .pipe(z.array(item))
+    .optional();
+
+export const maybeStringArrayFromString = maybeArrayFromStringSchemaCreate(z.string());
+export const maybeStringLowerArrayFromString = maybeArrayFromStringSchemaCreate(z.string(), {lower: true});
+
 export const envMetaNormalize = (meta: z.GlobalMeta | undefined): z.GlobalMeta => {
     if(meta === undefined) {
         return {};
