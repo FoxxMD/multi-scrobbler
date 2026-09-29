@@ -83,7 +83,7 @@ const envDataSchema = z.object({
     SPOTIFY_CLIENT_SECRET: spotifySourceDataSchema.shape.clientSecret,
     SPOTIFY_REDIRECT_URI: spotifySourceDataSchema.shape.redirectUri,
     SPOTIFY_SCROBBLE_BACKLOG: z.stringbool().optional().meta({
-        description: "Fetch recent listening history on startup and periodically refetch from Spotify's API to reconcile plays missed during live tracking. Note: Backfilled tracks scrobble under Spotify's ~30s history rule rather than normal listen thresholds (see [Scrobble Threshold Trade-off](#scrobbling-backlog-and-reconciling-history)).",
+        description: "Should backlogging and history reconciliation be enabled? (see [Scrobbling Backlog and Reconciling History](#scrobbling-backlog-and-reconciling-history)).",
         default: true
     }),
 });
