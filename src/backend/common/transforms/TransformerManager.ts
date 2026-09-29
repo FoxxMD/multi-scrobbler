@@ -173,7 +173,7 @@ export default class TransformerManager {
         this.logger.verbose('Initializing transformers...');
         for (const list of this.transformers.values()) {
             for (const transformer of list) {
-                if (!transformer.isReady()) {
+                if (!transformer.isReady() && !transformer.initializing) {
                     if (!transformer.canAuthUnattended()) {
                         transformer.logger.warn({ label: 'Heartbeat' }, 'Transformer is not ready but will not try to initialize because auth state is not good and cannot be correct unattended.');
                     }
