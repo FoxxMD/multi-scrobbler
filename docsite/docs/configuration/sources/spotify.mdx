@@ -117,6 +117,20 @@ To work around this, multi-scrobbler makes one extra call to the `tracks/{id}` e
 
 If you would rather not make this extra API call set `enrichIsrc` to `false` in your Spotify source config.
 
+#### Scrobbling Backlog and Reconciling History
+
+When `scrobbleBacklog` is enabled (default `true`), multi-scrobbler will:
+* On startup, check Spotify's recent listening history to scrobble any backlogged tracks played while MS was not running.
+* Periodically (every 15 minutes), check Spotify's recent listening history to reconcile and backfill any plays that may have been missed by real-time tracking (for example, during Spotify Connect device switches or transient API dropouts). Any tracks already tracked or scrobbled in real-time are automatically deduplicated.
+
+:::caution Scrobble Threshold Trade-off
+Under normal live playback tracking, multi-scrobbler enforces your configured [scrobble thresholds](/configuration/sources#scrobble-thresholds) (by default, listening to at least **50% of the track** or 4 minutes) before submitting a scrobble.
+
+Due to Spotify API limitations, the recent history endpoint does not report playback duration or whether a track was skipped. Spotify automatically records any listen lasting at least ~30 seconds into your recent history. Consequently, **any track queued from backlog (at startup or via periodic reconcile) will be scrobbled if Spotify logged it (~30+ seconds)**, bypassing the standard 50% or 4-minute listen threshold.
+
+If you prefer to strictly enforce duration thresholds and avoid scrobbling short/skipped listens that Spotify logged to history, set `scrobbleBacklog` to `false` in your Spotify source options (or via ENV `SPOTIFY_SCROBBLE_BACKLOG=false`).
+:::
+
 ## Configuration
 
 <Config config="SpotifySourceConfig" fileContent={SpotifyConfig} name="spotify">
