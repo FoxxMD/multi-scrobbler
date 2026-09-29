@@ -1,6 +1,6 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import type AbstractTransformer from "./AbstractTransformer.ts";
-import type {OptionalCacheUsage, TransformerCommonConfig} from "../../../core/Atomic.ts";
+import type {OptionalCacheUsage, TransformerCommon, TransformerCommonConfig} from "../../../core/Atomic.ts";
 import {DEFAULT_TRANSFORMER_ENV_NAME, DEFAULT_TRANSFORMER_NAME, type StageConfig} from "../../../core/Transform.ts";
 import type {PlayObject} from "../../../core/Atomic.ts";
 import { isStageTyped } from "../../utils/PlayTransformUtils.ts";
@@ -14,15 +14,18 @@ import { configFromEnv as caaConfigFromEnv } from "./coverartarchive/CoverArtArc
 import { type RockskyTransformerConfig } from "../vendor/rocksky/interfaces.ts";
 import { configFromEnv as spotifyConfigFromEnv, type SpotifyTransformerConfig } from "./spotify/SpotifyTransformerUtil.ts";
 import type { CovertArtArchiveTransformerConfig } from "./coverartarchive/CoverArtArchiveTransformerUtil.ts";
+
+type TransformNamedMap = Map<string, AbstractTransformer>;
+type TransformTypedMap = Map<string,TransformNamedMap>;
 export default class TransformerManager {
 
     protected logger: Logger;
     protected parentLogger: Logger;
-    protected transformers: Map<string, AbstractTransformer[]> = new Map();
+    protected transformers: TransformTypedMap = new Map();
     protected cache: MSCache;
     protected asyncStore: AsyncLocalStorage<string>;
 
-    protected transformerConfigs: TransformerCommonConfig[] = [];
+    protected transformerConfigs: TransformerCommon[] = [];
 
     public constructor(logger: Logger, cache: MSCache) {
         this.logger = childLogger(logger, 'Transformer Manager');
@@ -37,27 +40,33 @@ export default class TransformerManager {
     }
 
     public addTransformerConfig(config: TransformerCommonConfig): void {
-        if(this.transformerConfigs.some(x => x.name === config.name && x.type === config.type)) {
-            throw new Error(`Cannot add two configs of the same type (${config.type}) with the same name '${config.name}'`);
+        config.type = config.type.toLocaleLowerCase().trim();
+        const name = config.name ?? `unnamed-${this.transformerConfigs.filter(x => x.type === config.type).length + 1}`;
+        const namedConfig: TransformerCommon = {
+            ...config,
+            name
         }
-        this.transformerConfigs.push(config);
+        if(this.transformerConfigs.some(x => x.name.toLocaleLowerCase() === namedConfig.name.toLocaleLowerCase() && x.type === config.type)) {
+            throw new Error(`Cannot add two configs of the same type (${namedConfig.type}) with the same name '${namedConfig.name}'`);
+        }
+        this.transformerConfigs.push(namedConfig);
     }
 
     public hasTransformerConfigByIdentifiers(type: string, name: string = DEFAULT_TRANSFORMER_NAME) {
-        return this.transformerConfigs.some(x => x.type === type && x.name === name);
+        return this.transformerConfigs.some(x => x.type === type.toLocaleLowerCase().trim() && x.name.toLocaleLowerCase() === name.toLocaleLowerCase().trim());
     }
 
     public hasTransformerConfigByType(type: string) {
-        return this.transformerConfigs.some(x => x.type === type);
+        return this.transformerConfigs.some(x => x.type === type.toLocaleLowerCase().trim());
     }
 
     public async registerByIdentifiers(type: string, name: string = DEFAULT_TRANSFORMER_NAME) {
-        const transformers = this.transformers.get(type);
-        if(transformers !== undefined && transformers.some(x => x.name !== name)) {
+        const transformers = this.transformers.get(type.toLocaleLowerCase().trim());
+        if(transformers !== undefined && transformers.has(name.toLocaleLowerCase().trim())) {
             this.logger.debug(`Transformer type ${type} with name ${name} already registered`);
             return;
         }
-        const config = this.transformerConfigs.find(x => x.name === name && x.type === type);
+        const config = this.transformerConfigs.find(x => x.name.toLocaleLowerCase().trim() === name.toLocaleLowerCase().trim() && x.type === type.toLocaleLowerCase().trim());
         if(config === undefined) {
             throw new Error(`No existing configuration for transformer of type ${type} with name ${name} exists`);
         }
@@ -65,53 +74,54 @@ export default class TransformerManager {
         await this.register(config);
     }
 
-    public async register(config: TransformerCommonConfig): Promise<void> {
-        let transformers = this.transformers.get(config.type);
-        if (transformers === undefined) {
-            transformers = [];
-            this.transformers.set(config.type, transformers);
+    public async register(config: TransformerCommon): Promise<void> {
+        // TODO replace with getOrInsert in node 26+
+        let namedTransformerMap = this.transformers.get(config.type.toLocaleLowerCase().trim());
+        if(namedTransformerMap === undefined) {
+            namedTransformerMap = new Map();
+            this.transformers.set(config.type.toLocaleLowerCase().trim(), namedTransformerMap);
         }
 
-        if (config.name !== undefined && transformers.some(x => x.config.name === config.name)) {
+        if (namedTransformerMap.has(config.name.toLocaleLowerCase().trim())) {
             throw new Error(`Cannot register ${config.type} transformer with name '${config.name}' because an existing transformer already has that name`);
         }
-        const tName = config.name ?? `unnamed-${transformers.length + 1}`;
 
-        this.logger.verbose(`Registering ${config.type} transformer with name '${tName}'`);
+        this.logger.verbose(`Registering ${config.type} transformer with name '${config.name}'`);
 
         const tLogger = childLogger(this.parentLogger, ['Transformer', () => this.asyncStore.getStore() ?? undefined]);
 
         let t: AbstractTransformer;
-        switch (config.type) {
+        switch (config.type.toLocaleLowerCase().trim()) {
             case 'user': {
                 const UserTransformer = (await import("./UserTransformer.ts")).default;
-                t = new UserTransformer({ name: tName, ...config }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
+                t = new UserTransformer({ ...config }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
             }    break;
             case 'native': {
                 const NativeTransformer = (await import("./NativeTransformer.ts")).default;
-                t = new NativeTransformer({ name: tName,  ...config }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
+                t = new NativeTransformer({ ...config }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
             }   break;
             case 'musicbrainz': {
                 const MusicbrainzTransformer = (await import("./MusicbrainzTransformer.ts")).default;
-                t = new MusicbrainzTransformer({ name: tName, ...config as Omit<MusicbrainzTransformerConfig, 'name'> }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
+                t = new MusicbrainzTransformer({ ...config as MusicbrainzTransformerConfig }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
             }   break;
             case 'rocksky': {
                 const RockskyTransformer = (await import("./rocksky/RockskyTransformer.ts")).default;
-                t = new RockskyTransformer({ name: tName, ...config as Omit<RockskyTransformerConfig, 'name'> }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
+                t = new RockskyTransformer({ ...config as RockskyTransformerConfig }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
             }   break;
             case 'spotify': {
                 const SpotifyTransformer = (await import("./SpotifyTransformer.ts")).default;
-                t = new SpotifyTransformer({ name: tName, ...config as Omit<SpotifyTransformerConfig, 'name'> }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
+                t = new SpotifyTransformer({ ...config as SpotifyTransformerConfig }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
             } break;
             case 'coverartarchive': {
                 const CovertArtArchiveTransformer = (await import("./coverartarchive/CoverArtArchiveTransformer.ts")).default;
-                t = new CovertArtArchiveTransformer({ name: tName, ...config as Omit<CovertArtArchiveTransformerConfig, 'name'> }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
+                t = new CovertArtArchiveTransformer({ ...config as CovertArtArchiveTransformerConfig }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
             }   break;
             default:
                 throw new Error(`No transformer of type '${config.type}' exists.`);
         }
-        this.transformers.set(config.type, [...transformers, t]);
-        this.logger.verbose(`${config.type} transformer with name '${tName}' registered`);
+
+        this.transformers.get(config.type.toLocaleLowerCase().trim())!.set(config.name.toLocaleLowerCase().trim(), t);
+        this.logger.verbose(`${config.type} transformer with name '${config.name}' registered`);
     }
 
     public async registerFromEnv() {
@@ -172,7 +182,7 @@ export default class TransformerManager {
     public async initTransformers() {
         this.logger.verbose('Initializing transformers...');
         for (const list of this.transformers.values()) {
-            for (const transformer of list) {
+            for (const transformer of list.values()) {
                 if (!transformer.isReady() && !transformer.initializing) {
                     if (!transformer.canAuthUnattended()) {
                         transformer.logger.warn({ label: 'Heartbeat' }, 'Transformer is not ready but will not try to initialize because auth state is not good and cannot be correct unattended.');
@@ -192,16 +202,16 @@ export default class TransformerManager {
         return this.transformers.has(type);
     }
 
-    public getTransformerType(type: string): AbstractTransformer[] | undefined {
+    public getTransformerType(type: string): TransformNamedMap | undefined {
         return this.transformers.get(type);
     }
 
     public async getTransformerByStage(data: StageConfig): Promise<AbstractTransformer> {
-        const transformType: string = data.type;
+        const transformType: string = data.type.toLocaleLowerCase().trim();
         let configName: string | undefined = data.name;
 
-        let list = this.transformers.get(transformType);
-        if (list === undefined || list.length === 0) {
+        let namedMap = this.transformers.get(transformType);
+        if (namedMap === undefined || namedMap.size === 0) {
             if(!this.hasTransformerConfigByType(transformType)) {
                 throw new Error(`No transformer configurations of type '${transformType}' exist.`);
             }
@@ -209,8 +219,9 @@ export default class TransformerManager {
                 // if name for transform was specific then try to init and use that specific one
                 if(this.hasTransformerConfigByIdentifiers(transformType, configName)) {
                     await this.registerByIdentifiers(transformType, configName);
+
                     await this.initTransformers();
-                    list = this.transformers.get(transformType)
+                    namedMap = this.transformers.get(transformType)
                 } else {
                     throw new Error(`No transformer configuration of type '${transformType}' with name '${configName}' exists.`);
                 }
@@ -239,16 +250,16 @@ export default class TransformerManager {
                 await this.registerByIdentifiers(anyExistingConfig.type, anyExistingConfig.name);
                 await this.initTransformers();
                 configName = anyExistingConfig.name;
-                list = this.transformers.get(transformType)
+                namedMap = this.transformers.get(transformType)
             }
         }
 
-        if (list === undefined || list.length === 0) {
+        if (namedMap === undefined || namedMap.size === 0) {
             throw new Error(`No transformers of type '${transformType}' could be registered.`);
         }
 
         if(configName === undefined) {
-            const transformers = getTransformByPriority(list);
+            const transformers = getTransformByPriority(namedMap.values().toArray());
             if(transformers.nonDefault !== undefined) {
                 return transformers.nonDefault;
             }
@@ -262,22 +273,21 @@ export default class TransformerManager {
             throw new Error(`No transformers of type '${transformType}' could be found`);       
         }
 
-        let namedTransformers = list.find(x => x.name.toLocaleLowerCase().trim() === configName.toLocaleLowerCase().trim());
-        if(namedTransformers === undefined) {
+        let namedTransformer = namedMap.get(configName.toLocaleLowerCase().trim());
+        if(namedTransformer === undefined) {
             if(this.hasTransformerConfigByIdentifiers(data.type, data.name)) {
                 await this.registerByIdentifiers(data.type, data.name);
                 await this.initTransformers();
-                list = this.transformers.get(data.type);
-                namedTransformers = list?.find(x => x.name.toLocaleLowerCase().trim() === configName.toLocaleLowerCase().trim());
-                if(namedTransformers === undefined) {
+                namedTransformer = this.transformers.get(data.type)?.get(configName.toLocaleLowerCase().trim());
+                if(namedTransformer === undefined) {
                     // this shouldn't really happen but just covering bases
                     throw new SimpleError(`Component wanted transformer type ${data.type} with name ${data.name}. Transforms of this type are registered but none have this name.`);
                 }
-                return namedTransformers;
+                return namedTransformer;
             }
             throw new SimpleError(`Component wanted transformer type ${data.type} with name ${data.name}. Transforms of this type are registered but none have this name.`);
         }
-        return namedTransformers;
+        return namedTransformer;
     }
 
     public async parseTransformerConfig(data: any) {
@@ -333,65 +343,3 @@ const getTransformByPriority = <T extends TransformerCommonConfig | AbstractTran
             nonDefaultMany: true
         }
     }, {default: undefined, env: undefined, nonDefault: undefined, nonDefaultMany: false});
-
-// interface TransformConfigPriorityObj {
-//     default?: TransformerCommonConfig,
-//     env?: TransformerCommonConfig,
-//     nonDefault?: TransformerCommonConfig,
-//     nonDefaultMany: boolean
-// }
-// const getTransformConfigsByPriority = (configs: TransformerCommonConfig[]): TransformConfigPriorityObj => configs.reduce((acc: TransformConfigPriorityObj, curr) => {
-//         if(curr.name === DEFAULT_TRANSFORMER_NAME) {
-//             return {
-//                 ...acc,
-//                 default: curr
-//             }
-//         }
-//         if(curr.name === DEFAULT_TRANSFORMER_ENV_NAME) {
-//             return {
-//                 ...acc,
-//                 env: curr
-//             }
-//         }
-//         if(acc.nonDefault === undefined) {
-//             return {
-//                 ...acc,
-//                 nonDefault: curr
-//             }
-//         }
-//         return {
-//             ...acc,
-//             nonDefaultMany: true
-//         }
-//     }, {default: undefined, env: undefined, nonDefault: undefined, nonDefaultMany: false});
-
-// interface TransformInstancePriorityObj {
-//     default?: AbstractTransformer,
-//     env?: AbstractTransformer,
-//     nonDefault?: AbstractTransformer,
-//     nonDefaultMany: boolean
-// }
-// const getTransformInstanceByPriority = (configs: AbstractTransformer[]): TransformInstancePriorityObj => configs.reduce((acc: TransformInstancePriorityObj, curr) => {
-//         if(curr.name === DEFAULT_TRANSFORMER_NAME) {
-//             return {
-//                 ...acc,
-//                 default: curr
-//             }
-//         }
-//         if(curr.name === DEFAULT_TRANSFORMER_ENV_NAME) {
-//             return {
-//                 ...acc,
-//                 env: curr
-//             }
-//         }
-//         if(acc.nonDefault === undefined) {
-//             return {
-//                 ...acc,
-//                 nonDefault: curr
-//             }
-//         }
-//         return {
-//             ...acc,
-//             nonDefaultMany: true
-//         }
-//     }, {default: undefined, env: undefined, nonDefault: undefined, nonDefaultMany: false})

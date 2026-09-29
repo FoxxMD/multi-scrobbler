@@ -119,7 +119,7 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
     }
 
     protected doParseConfig(data: NativeTransformerDataStage) {
-        if (data.type !== 'native') {
+        if (data.type.toLocaleLowerCase().trim() !== 'native') {
             throw new Error(`NativeTransformer is only usable with 'native' type stages`);
         }
 

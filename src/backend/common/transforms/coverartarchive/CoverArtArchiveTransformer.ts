@@ -69,7 +69,7 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
     }
 
     protected doParseConfig(data: CoverArtArchiveTransformerDataStage) {
-        if (data.type !== 'coverartarchive') {
+        if (data.type.toLocaleLowerCase().trim() !== 'coverartarchive') {
             throw new Error(`CoverArtAchive Transformer is only usable with 'coverartarchive' type stages`);
         }
 

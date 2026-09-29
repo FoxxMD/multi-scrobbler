@@ -13,7 +13,7 @@ import { findCauseByMessage } from "../../utils/ErrorUtils.ts";
 import NativeTransformer from "../../common/transforms/NativeTransformer.ts";
 import { initMemoryCache } from "../../common/Cache.ts";
 import { Cacheable } from "cacheable";
-import type {PlayMatchResult, PlayObject, QueueContext, TransformerCommonConfig} from "../../../core/Atomic.ts";
+import type {PlayMatchResult, PlayObject, QueueContext, TransformerCommon, TransformerCommonConfig} from "../../../core/Atomic.ts";
 import TransformerManager from "../../common/transforms/TransformerManager.ts";
 import { transientCache } from "../utils/TransientTestUtils.ts";
 import dayjs from "dayjs";
@@ -735,7 +735,7 @@ describe('Play Transforms', function () {
     describe('Transform Manager', function() {
 
         it('Uses user transforms in the order supplied within component', async function() {
-            const tConfigs: TransformerCommonConfig[] = [
+            const tConfigs: TransformerCommon[] = [
                 {
                     type: 'user',
                     name: 't1',
@@ -790,6 +790,116 @@ describe('Play Transforms', function () {
             await multiTransformComponent.buildTransformRules();
             const transformed = await multiTransformComponent.transformPlay(play, TRANSFORM_HOOK.preCompare);
             expect(transformed.data.track).eq('My Bar Title');
+        });
+
+        it('Handles transform config case-insensitive', async function() {
+            const tConfigs: TransformerCommonConfig[] = [
+                {
+                    type: 'UsEr',
+                    name: 't1',
+                    defaults: {
+                        title: [
+                            {
+                                search: "Cool",
+                                replace: "Fun"
+                            }
+                        ]
+                    }
+                },
+                {
+                    type: 'UsEr',
+                    name: 't2',
+                    defaults: {
+                        title: [
+                            {
+                                search: "Cool",
+                                replace: "Fun"
+                            }
+                        ]
+                    }
+                }
+            ];
+            const tmanager = new TransformerManager(loggerTest, transientCache());
+            for(const t of tConfigs) {
+                tmanager.addTransformerConfig(t);
+            }
+
+            const multiTransformComponent = createTestComponent({transformManager: tmanager});
+            multiTransformComponent.config.options = {
+                playTransform: {
+                    preCompare: [
+                        {
+                            // @ts-expect-error bad user input but should handle it
+                            type: "usEr",
+                            name: "t2"
+                        },
+                        {
+                            // @ts-expect-error bad user input but should handle it
+                            type: "User",
+                            name: "t1"
+                        }
+                    ]
+                }
+            };
+            await multiTransformComponent.buildTransformRules();
+            expect(multiTransformComponent.transformRules.preCompare).to.exist;
+            expect(multiTransformComponent.transformRules.preCompare![0].name).eq('t2')
+            expect(multiTransformComponent.transformRules.preCompare![1].name).eq('t1')
+        });
+
+        it('Handles transform names case-insensitive', async function() {
+            const tConfigs: TransformerCommonConfig[] = [
+                {
+                    type: 'user',
+                    name: 'MyBarConfig',
+                    defaults: {
+                        title: [
+                            {
+                                search: "Cool",
+                                replace: "Fun"
+                            }
+                        ]
+                    }
+                },
+                {
+                    type: 'user',
+                    name: 'MyFooConfig',
+                    defaults: {
+                        title: [
+                            {
+                                search: "Cool",
+                                replace: "Fun"
+                            }
+                        ]
+                    }
+                }
+            ];
+            const tmanager = new TransformerManager(loggerTest, transientCache());
+            for(const t of tConfigs) {
+                tmanager.addTransformerConfig(t);
+            }
+
+            const multiTransformComponent = createTestComponent({transformManager: tmanager});
+            multiTransformComponent.config.options = {
+                playTransform: {
+                    preCompare: [
+                        {
+                            // @ts-expect-error bad user input but should handle it
+                            type: "usEr",
+                            name: "MYFOOCONFIG"
+                        },
+                        {
+                            // @ts-expect-error bad user input but should handle it
+                            type: "User",
+                            name: "mybarconfig"
+                        }
+                    ]
+                }
+            };
+            await multiTransformComponent.buildTransformRules();
+            expect(multiTransformComponent.transformRules.preCompare).to.exist;
+            expect(multiTransformComponent.transformRules.preCompare![0].name).eq('MYFOOCONFIG')
+            expect(multiTransformComponent.transformRules.preCompare![1].name).eq('mybarconfig')
         });
     });
 

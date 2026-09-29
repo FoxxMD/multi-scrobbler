@@ -121,7 +121,7 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
     }
 
     protected doParseConfig(data: RockskyTransformerDataStage) {
-        if (data.type !== 'rocksky') {
+        if (data.type.toLocaleLowerCase().trim() !== 'rocksky') {
             throw new Error(`Rocksky Transformer is only usable with 'rocksky' type stages`);
         }
 

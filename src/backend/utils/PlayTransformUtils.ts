@@ -132,7 +132,7 @@ export const isPlayTransformStage = (val: object | Partial<PlayTransformStage<Se
 }
 
 export const isUserStage = <T>(val: StageTypedConfig): val is StageTypedConfig => {
-    return val.type === 'user';
+    return val.type.toLocaleLowerCase().trim() === 'user';
 }
 
 export const testWhen = (parts: WhenParts<string>, play: PlayObject, options?: SuppliedRegex): boolean => {

@@ -243,7 +243,7 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
     }
 
     protected doParseConfig(data: SpotifyTransformerDataStage) {
-        if (data.type !== 'spotify') {
+        if (data.type.toLocaleLowerCase().trim() !== 'spotify') {
             throw new Error(`Spotify Transformer is only usable with 'spotify' type stages`);
         }
 

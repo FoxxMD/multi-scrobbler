@@ -283,7 +283,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
     }
 
     protected doParseConfig(data: MusicbrainzTransformerDataStage) {
-        if (data.type !== 'musicbrainz') {
+        if (data.type.toLocaleLowerCase().trim() !== 'musicbrainz') {
             throw new Error(`Musicbrainz Transformer is only usable with 'musicbrinz' type stages`);
         }
 
