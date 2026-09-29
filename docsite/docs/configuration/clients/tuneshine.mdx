@@ -1,0 +1,61 @@
+---
+title: Tuneshine
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import JsonConfig from '!!raw-loader!@site/../config/tuneshine.json.example';
+import ENVConfig from "@site/docs/configuration/clients/_env_configs/_tuneshine.md"
+
+[**Tuneshine**](https://www.tuneshine.rocks/) is a wifi-connected hardware device with an aesthetic, low-count LED display for showcasing the album art of the music you are currently listening to.
+
+You can use Multi-Scrobbler to push [**Now Playing**](/configuration/clients#now-playing) activity from any of your [Sources](/configuration/sources) (that include album art) to Tuneshine.
+
+:::important[Artwork is Required]
+
+Tuneshine **requires** that artwork is sent with Now Playing data. Therefore, if your Source does not provide artwork (no album art is shown in MS dashboard) then MS will not send Now Playing to Tuneshine.
+
+Consider using [Transforms](/configuration/transforms) from [Rocksky](/configuration/transforms/rocksky/#use-metadata-for-discord-album-art), [Spotify](/configuration/transforms/spotify), or Musicbrainz + [Cover Art Archive](/configuration/transforms/coverartarchive/#add-album-art-for-discord) to fill in missing artwork.
+
+:::
+
+<DetailsAdmo type="note" summary="Artwork URL Reachability">
+
+MS sends resized, formatted image data directly to Tuneshine.
+
+To do this it **downloads** the art image from the URL reported by your Sources, converts it in-memory, and sends that to Tuneshine. Consequently, the image URLs must be reachable by MS: they cannot be protected by authentication or otherwise unreachable on the network from wherever MS is hosted.
+
+</DetailsAdmo>
+
+## Setup
+
+Your Tuneshine will need to be [connected to wifi](https://links.tuneshine.rocks/help#wifi) in order for Multi-Scrobbler to talk to it.
+
+Find the IP address or [advirtised hostname](https://links.tuneshine.rocks/help#api) for your Tuneshine, then use that as a URL in your MS config either as `host` or `TUNE_HOST` (see configuration below.)
+
+<DetailsAdmo type="note" summary="URL Format">
+
+    If you are using the IP address for your Tuneshine then then URL used for `host` should be like
+
+    ```
+    http://192.168.YOUR.IP
+    ```
+
+    If you are using the advirtised hostname on your local network then `host` should be like
+
+    ```
+    http://tuneshine-4064.local
+    ```
+
+    If you are reaching your Tuneshine in some other form (like behind a reverse proxy) then just treat it as a normal web server when forming your URL.
+
+</DetailsAdmo>
+
+## Configuration
+
+<Config config="TuneshineClientConfig" fileContent={JsonConfig} client ambiguous name="tuneshine">
+<ENVConfig/>
+</Config>
