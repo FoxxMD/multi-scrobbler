@@ -680,8 +680,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
 
     public override initTasks(opts: {deadDelay?: number} = {}) {
         super.initTasks(opts);
-        const { scrobbleBacklog = true } = this.config.options ?? {};
-        if(!this.scheduler.existsById('reconcile') && scrobbleBacklog) {
+        if(!this.scheduler.existsById('reconcile') && (this.config.options?.scrobbleBacklog ?? true)) {
             this.logger.info('Adding Backlog Reconcile Task');
             this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
                 minutes: 15,
