@@ -1,4 +1,4 @@
-import { childLogger, type Logger } from "@foxxmd/logging";
+import { childLogger, type Logger, type LogLevel } from "@foxxmd/logging";
 import type EventEmitter from "events";
 import {type PlayMatchResult, type PlayObject, type SourcePlayerObj} from "../../core/Atomic.ts";
 import type {FormatPlayObjectOptions} from "../common/infrastructure/Atomic.ts";
@@ -69,5 +69,23 @@ export default class TuneshineScrobbler extends AbstractScrobbleClient {
         } catch (e) {
             throw e;
         }
+    }
+
+    shouldUpdatePlayingNowPlatformSpecific = async (data: SourcePlayerObj): Promise<[boolean, string?, LogLevel?]> => {
+        if(data === undefined || data.play === undefined) {
+            return [true];
+        }
+        let artUrl: string | undefined = undefined;
+        if (data.play.meta?.art?.track !== undefined) {
+            artUrl = data.play.meta?.art?.track;
+        } else if (data.play.meta?.art?.album !== undefined) {
+            artUrl = data.play.meta?.art?.album;
+        } else if (data.play.meta?.art?.artist !== undefined) {
+            artUrl = data.play.meta?.art?.artist;
+        }
+        if (artUrl === undefined) {
+            return [false, 'Play does not contain artwork'];
+        }
+        return [true];
     }
 }
