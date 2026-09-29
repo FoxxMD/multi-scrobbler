@@ -12,8 +12,8 @@ export const tuneshineDataSchema = z.object({
      * @examples ["192.168.1.100"]
      * */
     host: httpUrl.meta({
-        description: "IP or hostname for the Tuneshine device",
-        examples: ["192.168.1.100"]
+        description: "IP or http(s)://hostname for the Tuneshine device",
+        examples: ["http://192.168.1.100"]
     }),
 });
 export type TuneshineData = z.infer<typeof tuneshineDataSchema>;
@@ -34,7 +34,6 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, TuneshineClientCo
             configureAs: 'client',
             data: {
                 host: partial.TUNE_HOST,
-                
             }
     })
 };

@@ -13,7 +13,6 @@ import {
     QUEUE_STATUS_COMPLETED,
     SOURCE_SOT,
     QUEUE_STATUS_FAILED,
-    DEAD_LETTER_RETRIES_DEFAULT,
     PARSED_FROM
 } from "../../core/Atomic.ts";
 import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.ts";
@@ -62,7 +61,7 @@ import { serializeError} from 'serialize-error';
 import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetchUtils.ts";
 import { spawn, isAbortError, delay, waitForEvent } from 'abort-controller-x';
 import { type QueryPlaysOpts, type WithPlayRelation } from "../common/database/drizzle/repositories/PlayRepository.ts";
-import type {PlaySelectWithQueueStates, PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
+import type {PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
 import { asPlay } from "../../core/PlayMarshalUtils.ts";
 import { GenericRepository } from "../common/database/drizzle/repositories/BaseRepository.ts";
 import assert from "node:assert";
