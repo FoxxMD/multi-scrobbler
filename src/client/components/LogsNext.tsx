@@ -37,7 +37,7 @@ interface MinLogInfo {
     levelLabel: string
 }
 
-const createFixedList = (size, initialList: MinLogInfo[] = []): FixedSizeList<MinLogInfo> => {
+const createFixedList = (size: number, initialList: MinLogInfo[] = []): FixedSizeList<MinLogInfo> => {
     return new FixedSizeList<MinLogInfo>(size, initialList);
 }
 
@@ -114,7 +114,9 @@ export const LogsFetchable = (props: {settings?: LogOutputConfig, streamable?: b
     </SegmentGroup.Root>
 
     const limitGroup = <SegmentGroup.Root value={logLimit.toString()} size="xs" onValueChange={(val) => {
-        mutateLogSettings.mutate({limit: Number.parseInt(val.value)});
+        if(val.value !== null) {
+            mutateLogSettings.mutate({limit: Number.parseInt(val.value)});
+        }
         }}>
         <SegmentGroup.Indicator />
         <SegmentGroup.Items items={[
@@ -134,7 +136,7 @@ export const LogsFetchable = (props: {settings?: LogOutputConfig, streamable?: b
     const logRef = useRef<HTMLDivElement>(null);
 
     const getLogCopyText = useCallback(() =>{
-        const content = logRef.current.innerText;
+        const content = logRef.current?.innerText ?? '';
         return content.replaceAll(/\n\[/g, '[');
     },[logRef]);
 
@@ -178,8 +180,11 @@ const isAnyCornerOutside = (rectangleA: Rectangle, rectangleB: Rectangle): boole
   );
 };
 
-const defaultPosition = (width: number, height: number): ComponentProps<typeof FloatingPanel['Root']>['position'] =>  ({x: width * 0.03, y: height * 0.65});
-const defaultSize = (width: number, height: number): ComponentProps<typeof FloatingPanel['Root']>['size'] =>  ({ width: width * 0.95, height: height * 0.3 });
+type FloatingPanelPosition = NonNullable<ComponentProps<typeof FloatingPanel['Root']>['position']>;
+type FloatingPanelSize = NonNullable<ComponentProps<typeof FloatingPanel['Root']>['size']>;
+
+const defaultPosition = (width: number, height: number): FloatingPanelPosition =>  ({x: width * 0.03, y: height * 0.65});
+const defaultSize = (width: number, height: number): FloatingPanelSize =>  ({ width: width * 0.95, height: height * 0.3 });
 
 export const FloatingLogs = (props: {streamable?: boolean}) => {
     const [width, height] = useWindowSize();
@@ -187,8 +192,8 @@ export const FloatingLogs = (props: {streamable?: boolean}) => {
     // remember logs state across refreshes
     // keep logs open if it was last opened, in the last position/size *if still within viewport bounds*
     const [logsOpen, setLogsOpen] = useLocalStorage('logsOpen', false);
-    const [logsPosition, setLogsPosition] = useLocalStorage<ComponentProps<typeof FloatingPanel['Root']>['position']>('logsPosition', defaultPosition(width, height));
-    const [logsSize, setLogsSize] = useLocalStorage<ComponentProps<typeof FloatingPanel['Root']>['size']>('logsSize', defaultSize(width, height));
+    const [logsPosition, setLogsPosition] = useLocalStorage<FloatingPanelPosition>('logsPosition', defaultPosition(width, height));
+    const [logsSize, setLogsSize] = useLocalStorage<FloatingPanelSize>('logsSize', defaultSize(width, height));
 
     // when logs are opened
     // check if any part of the logs window is outside the bounds of the viewport

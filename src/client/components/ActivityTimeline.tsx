@@ -58,13 +58,13 @@ const TimelineLoading = () => (
         </Timeline.Root>
     )
 
-const NewItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpen' | 'activity' | 'componentType'>) => {
+const NewItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpen' | 'componentType'> & {activity: PlayApiCommonDetailed}) => {
     const {
         activity: {
             play,
             input,
             seenAt,
-        } = {},
+        },
         collapsibleOpen,
         componentType
     } = props;
@@ -93,7 +93,7 @@ const NewItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpen' | 'activit
                     <MSCollapsible
                         triggerProps={indicatorProps}
                         indicator={<TimelineItemSummaryText>
-                            {componentType === 'source' ? 'Discovered' : 'Recieved'} <Muted>new Play from</Muted> <Span fontWeight="medium">{capitalizeWords(source)}</Span> <Muted>at {shortTodayAwareFormat(dayjs(seenAt))}</Muted>
+                            {componentType === 'source' ? 'Discovered' : 'Recieved'} <Muted>new Play from</Muted> <Span fontWeight="medium">{capitalizeWords(source ?? 'unknown')}</Span> <Muted>at {shortTodayAwareFormat(dayjs(seenAt))}</Muted>
                         </TimelineItemSummaryText>}
                         defaultOpen={collapsibleOpen}
                         timeline
@@ -228,7 +228,7 @@ const ScrobbleResponseItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpe
         componentName = 'downstream service'
     } = props;
 
-    let scrobbleSummary: React.JSX.Element;
+    let scrobbleSummary: React.JSX.Element | undefined;
     const scrobbleIconProps: Record<string, any> = {
         color: 'green.focusRing'
     };
@@ -289,7 +289,7 @@ const DupeChip = (props: { check: boolean }) => <BoolChip {...props} text="Dupli
 const TransformChip = (props: { check: boolean }) => <BoolChip {...props} text="Transform" />
 const CacheChip = (props: { check: boolean }) => <BoolChip {...props} text="Use Cache" />
 
-const QueueTimelineItem = (props: {queueState: PlayEventQueueStateChange<string>, collapsibleOpen: boolean}) => {
+const QueueTimelineItem = (props: {queueState: PlayEventQueueStateChange<string>, collapsibleOpen?: boolean}) => {
     const {
         queueState: {
             data: {
@@ -300,7 +300,7 @@ const QueueTimelineItem = (props: {queueState: PlayEventQueueStateChange<string>
                 context,
             },
             createdAt,
-        } = {},
+        },
         collapsibleOpen,
     } = props;
 
@@ -347,6 +347,7 @@ const QueueTimelineItem = (props: {queueState: PlayEventQueueStateChange<string>
             text = <TimelineItemSummaryText>{queueName === DEAD_QUEUE ? 'Dead ' : ''}Queue finished processing <Muted>at</Muted> {shortTodayAwareFormat(dayjs(createdAt))}</TimelineItemSummaryText>;
             break;
         case QUEUE_STATUS_FAILED:
+        default:
             indicator = <ExclamationTriangleIcon color="orange.focusRing" {...timelineIconProps}/>;
             text = <TimelineItemSummaryText>{queueName === DEAD_QUEUE ? 'Dead ' : ''}Queue failed <Muted>at</Muted> {shortTodayAwareFormat(dayjs(createdAt))}</TimelineItemSummaryText>;
     }
@@ -387,7 +388,7 @@ const QueueTimelineItem = (props: {queueState: PlayEventQueueStateChange<string>
     );
 }
 
-const StateChangeItem = (props: {event: PlayEventPlayStateChange<string>, collapsibleOpen: boolean}) => {
+const StateChangeItem = (props: {event: PlayEventPlayStateChange<string>, collapsibleOpen?: boolean}) => {
         const {
         event: {
             data: {
@@ -396,7 +397,7 @@ const StateChangeItem = (props: {event: PlayEventPlayStateChange<string>, collap
                 reason
             },
             createdAt,
-        } = {},
+        },
         collapsibleOpen,
     } = props;
 
@@ -414,6 +415,7 @@ const StateChangeItem = (props: {event: PlayEventPlayStateChange<string>, collap
             color = 'red';
             break;
         case 'queued':
+        default:
             color = 'gray';
             break;
     }
@@ -463,19 +465,21 @@ const StateChangeItem = (props: {event: PlayEventPlayStateChange<string>, collap
 
 export const ActivityTimeline = (props: ActivityTimelineProps) => {
 
-    if(props.activity === undefined) {
-        return <TimelineLoading/>;
-    }
-
     const {
-        activity:{
-            input,
-            events = [],
-        } = {},
+        activity,
         collapsibleOpen,
         componentType,
         componentName
     } = props;
+
+    if(activity === undefined) {
+        return <TimelineLoading/>;
+    }
+
+    const {
+        input,
+        events = [],
+    } = activity;
     const {
         play: original,
     } = input || {};
@@ -483,13 +487,17 @@ export const ActivityTimeline = (props: ActivityTimelineProps) => {
     events.sort((a, b) => sortByNewestDate(b.createdAt, a.createdAt));
 
     const timelineElements: React.JSX.Element[] = [
-        <NewItem key="newPlay" activity={props.activity} collapsibleOpen={collapsibleOpen} componentType={componentType}/>
+        <NewItem key="newPlay" activity={activity} collapsibleOpen={collapsibleOpen} componentType={componentType}/>
     ];
 
     let lastTransformedPlay = original;
     for(const event of events) {
         switch(event.eventName) {
             case 'transform': {
+                if(lastTransformedPlay === undefined) {
+                    // no original (input) play to diff transform steps against, so there is nothing meaningful to render
+                    break;
+                }
                 //const d: TransformStepsTimelineData = {id: 'transform-steps', dt: dayjs(event.data[0].createdAt), steps: event.data, original: lastTransformedPlay};
                 timelineElements.push(<TransformsItem key={event.id} steps={event.data} original={lastTransformedPlay}/>);
                 const [__, finalPlay] = diffElements(lastTransformedPlay, event.data);

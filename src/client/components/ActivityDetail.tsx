@@ -36,16 +36,16 @@ export const useActivityQuery = (componentId: number, activityUid: string, optio
     } = options;
     const queryClient = useQueryClient();
 
-    const { isPending, isError, data: activity, error } = useQuery({
+    const query = useQuery({
         ...tanQueries.activities.single(componentId, activityUid),
         ...rest,
         staleTime: Infinity,
         initialData: () => {
-            if (msQuery === undefined && preloadedActivity === undefined) {
-                return undefined;
-            }
             if(preloadedActivity !== undefined) {
                 return preloadedActivity;
+            }
+            if (msQuery === undefined) {
+                return undefined;
             }
             const data = queryClient.getQueryData(
                 tanQueries.activities.list(componentId, msQuery).queryKey
@@ -81,7 +81,8 @@ export const useActivityQuery = (componentId: number, activityUid: string, optio
         }
     });
 
-    return { activity, isPending, isError, error };
+    // return the full query result (rather than a new object) so consumers keep discriminated union narrowing on isError/isPending
+    return query;
 };
 export interface ActivityDetailProps {
     activity: PlayApiCommonDetailed
@@ -100,11 +101,11 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
             play,
             isNew,
             updatedAt
-        } = {},
+        },
         activity,
         sortBy
     } = props;
-    const [updated, setUpdated] = useState<{lastUpdated: string, updated: boolean}>({lastUpdated: updatedAt, updated: false});
+    const [updated, setUpdated] = useState<{lastUpdated?: string, updated: boolean}>({lastUpdated: updatedAt, updated: false});
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setUpdated((old) => {
@@ -126,7 +127,7 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
                 <Span truncate marginEnd="auto"><HStack>{play.data.track}{ephemeralStatus}</HStack></Span>
                 {/* <PlayStateBadge state={activity.state} /> */}
             </Flex>
-            <TextMuted textAlign="left" truncate>{play.data.artists.map(x => x.name).join(' / ')}</TextMuted>
+            <TextMuted textAlign="left" truncate>{(play.data.artists ?? []).map(x => x.name).join(' / ')}</TextMuted>
             <HStack gap="1">
                 <ShortDateDisplay date={sortBy === 'played' ? play.data.playDate : play.meta?.seenAt} prefix={sortBy === 'played' ? 'Played' : 'Seen'} /><Separator orientation="vertical" height="4" />
                 <TextMuted>{play.meta?.source}</TextMuted>
@@ -137,13 +138,13 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
 }
 
 export const ActivitySummaryFetchable = (props: MarkOptional<ActivitySummaryProps, 'activity'> & { componentId: number, activityUid: string, query: QueryPlaysOptsJson}) => {
-    const {isError, error, isPending, activity} = useActivityQuery(props.componentId, props.activityUid, {activity: props.activity});
+    const {isError, error, data: activity} = useActivityQuery(props.componentId, props.activityUid, {activity: props.activity});
 
     if(isError) {
         return <ErrorAlert error={error}/>
     }
 
-    if(activity === undefined && isPending) {
+    if(activity === undefined) {
         return <ActivitySummarySkeleton/>;
     }
 
@@ -172,7 +173,7 @@ export const ActivityErrorSummary = (props: {activity: ActivityDetailProps['acti
                 <Alert.Title>Error occurred during Play Transform in <Span color="fg.muted">Stage </Span>{lifecycleError.stageType}-{lifecycleError.stageName}<Span color="fg.muted"> in Hook </Span>{lifecycleError.hook} <Span color="fg.muted">from</Span> {lifecycleError.source}</Alert.Title>
                 <Alert.Description>
                     <Stack gap="0.5">
-                        <Code width="fit-content" my="2" variant="surface">{lifecycleError.error.message}</Code>                        
+                        <Code width="fit-content" my="2" variant="surface">{lifecycleError.error?.message}</Code>                        
                         <Box>Open the <strong>Timeline</strong> to find the error specifics.</Box>
                     </Stack>                    
                 </Alert.Description>
@@ -234,7 +235,7 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
         return <ExpandCollapse hideBelow="sm" display={useAccordionItemContext()?.expanded ? 'flex' : 'none'} onClick={(val) => setCollapsibleOpen(val)} />
     }
 
-    const [collapsibleOpen, setCollapsibleOpen] = useState(undefined);
+    const [collapsibleOpen, setCollapsibleOpen] = useState<boolean | undefined>(undefined);
 
     let timelineStatusIcon: React.JSX.Element | undefined;
     const timelineIssue = activityTimelineHasIssue(activity);
@@ -292,7 +293,7 @@ export interface ActivityDetailFetchableProps {
 }
 
 export const ActivityDetailFetchable = (props: ActivityDetailFetchableProps) => {
-    const {isError, error, isPending, activity} = useActivityQuery(props.componentId, props.uid, {activity: props.activity, refetchOnMount: 'always'});
+    const {isError, error, isPending, data: activity} = useActivityQuery(props.componentId, props.uid, {activity: props.activity, refetchOnMount: 'always'});
 
     const { data } = useQueryWatcher<ComponentsApiJson>(tanQueries.components.single(props.componentId).queryKey);
 
@@ -359,17 +360,14 @@ const RetryWithDialog = (props: { open: boolean, setOpen: (open: boolean) => voi
                             </Text>
                                 <form.Field
                                     name="transform"
-                                    // @ts-expect-error need compiler strict: true
                                     children={(field) => (<FormCheckbox field={field} label="Transform?"/>)}
                                 />
                                 <form.Field
                                     name="dupeCheck"
-                                    // @ts-expect-error need compiler strict: true
                                     children={(field) => (<FormCheckbox field={field} label="Check for Duplicate?"/>)}
                                 />
                                 <form.Field
                                     name="useCache"
-                                    // @ts-expect-error need compiler strict: true
                                     children={(field) => (<FormCheckbox field={field} label="Use Cache?"/>)}
                                 />
                             </Stack>
@@ -484,6 +482,7 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed, co
                     json: {state: data.state}
                 });
             }
+            throw new Error(`Unknown play action '${data.action}'`);
         }
     });
 
@@ -581,7 +580,7 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed, co
 }
 
 export const ActivityStateActionsFetchable = (props: ActivityDetailFetchableProps) => {
-    const {isError, error, isPending, activity} = useActivityQuery(props.componentId, props.uid, {activity: props.activity});
+    const {isError, isPending, data: activity} = useActivityQuery(props.componentId, props.uid, {activity: props.activity});
 
     if(!isPending && !isError) {
         return <ActivityStateActions activity={activity} componentType={props.componentType}/>;

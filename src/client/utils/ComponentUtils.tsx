@@ -105,13 +105,12 @@ export const findAuthError = (err: ErrorIsh): ErrorIsh | undefined => {
     return findAuthError(err.cause);
 }
 
-export const findAnyAuthError = (e: ErrorIsh): [ErrorIsh, boolean] => {
+export const findAnyAuthError = (e: ErrorIsh): [ErrorIsh | undefined, boolean] => {
     const aError = findAuthError(e);
-    const aCheckError = findAuthCheckError(e);
-    if(aError)
     if(aError !== undefined && 'unrecoverable' in aError && aError.unrecoverable === true) {
         return [aError, true];
     }
+    const aCheckError = findAuthCheckError(e);
     if(aCheckError !== undefined && 'unrecoverable' in aCheckError && aCheckError.unrecoverable === true) {
         return [aCheckError, true];
     }

@@ -7,7 +7,7 @@ export interface ExpandCollapseProps {
     size?: string
 }
 
-export const ExpandCollapse = (props: ExpandCollapseProps & ComponentProps<typeof HStack>) => {
+export const ExpandCollapse = (props: ExpandCollapseProps & Omit<ComponentProps<typeof HStack>, "onClick">) => {
     const {
         onClick,
         ...rest

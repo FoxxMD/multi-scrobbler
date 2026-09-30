@@ -29,9 +29,9 @@ export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
         componentName = 'downstream service'
     } = props;
 
-    let responseSuffix: React.JSX.Element,
-        warningsElm: React.JSX.Element,
-        errorElm: React.JSX.Element | null;
+    let responseSuffix: React.JSX.Element | undefined,
+        warningsElm: React.JSX.Element | undefined,
+        errorElm: React.JSX.Element | undefined;
 
     if (warnings.length > 0) {
         warningsElm = <Span color="orange.solid">warnings</Span>
@@ -64,7 +64,7 @@ export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
                             defaultOpen={collapsibleOpen}
                             disableUntil="md"
                             timeline>
-                            <ChakraCodeBlockShort code={payload} language="json" maxLines={20} />
+                            {payload !== undefined ? <ChakraCodeBlockShort code={payload} language="json" maxLines={20} /> : null}
                         </MSCollapsible>
                     </Timeline.Title>
                 </Timeline.Content>

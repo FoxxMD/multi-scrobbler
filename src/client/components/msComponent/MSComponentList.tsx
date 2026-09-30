@@ -29,14 +29,14 @@ export const MSComponentList = (props: ComponentListProps) => {
         <Container boxSize="full" p="0" maxWidth={value === 1 ? '4xl' : '8xl'}>
             <Stack gap="3">
                 <Flex justify="space-between" alignItems="end" mdDown={{alignItems: 'center', justifyContent: 'center'}}>
-                    <SegmentGroup.Root value={shownType} onValueChange={(val) => setShownType(val.value)}>
+                    <SegmentGroup.Root value={shownType} onValueChange={(val) => val.value !== null && setShownType(val.value)}>
                         <SegmentGroup.Indicator />
                         <SegmentGroup.Items items={["All", "Sources", "Clients"]} />
                     </SegmentGroup.Root>
                 <Box hideBelow="md">
                     <Field.Root>
                         <Field.Label><TextMuted>Grid Max Width</TextMuted></Field.Label>
-                        <SegmentGroup.Root value={value.toString()} onValueChange={(val) => setValue(Number.parseInt(val.value))}>
+                        <SegmentGroup.Root value={value.toString()} onValueChange={(val) => val.value !== null && setValue(Number.parseInt(val.value))}>
                                 <SegmentGroup.Indicator />
                                     <SegmentGroup.Item key="list" value="1">
                                     <SegmentGroup.ItemText>1</SegmentGroup.ItemText>

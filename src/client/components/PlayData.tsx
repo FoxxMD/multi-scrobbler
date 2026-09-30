@@ -1,5 +1,5 @@
 import React, { useCallback, useState, type ComponentProps } from 'react';
-import { EmptyState, DataList, HStack, Tabs, Box, Flex, Stack, Text, Separator, IconButton, Container, Float, Icon, Link, Span, Show, Menu, Group, Portal, type MenuItemProps, type MenuSelectionDetails } from "@chakra-ui/react"
+import { EmptyState, DataList, HStack, Tabs, Box, Flex, Stack, Text, Separator, IconButton, Container, Float, Icon, Link, Span, Menu, Group, Portal, type MenuItemProps, type MenuSelectionDetails } from "@chakra-ui/react"
 import { LuCode, LuText, LuCheck, LuX } from "react-icons/lu"
 import type { JsonPlayObject, PlayObjectMinimal } from '../../core/Atomic.js';
 import { shortTodayAwareFormat, timeToHumanTimestamp } from '../../core/TimeUtils.js';
@@ -149,7 +149,7 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
     } = props;
 
 
-    let albumArtistElm: React.JSX.Element;
+    let albumArtistElm: React.JSX.Element | undefined;
 
     if (play.data.albumArtists !== undefined && play.data.albumArtists.length > 0) {
         albumArtistElm = (
@@ -207,7 +207,7 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
                     <DataList.ItemLabel>Artists</DataList.ItemLabel>
                     <DataList.ItemValue>
                         {artists.length === 0 ? <Text color="fg.muted">(No Artists)</Text> :
-                            <ArtistCreditTags data={play.data.artists} showMbid={showMbid} />}
+                            <ArtistCreditTags data={artists} showMbid={showMbid} />}
                     </DataList.ItemValue>
                 </DataList.Item>
                 {albumArtistElm}
@@ -216,9 +216,7 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
                     <DataList.ItemValue>
                         <HStack>
                             {play.data.album}
-                            <Show when={brainz.album !== undefined}>
-                                <MusicbrainzInfoIcon type="release" mbid={brainz.album} link tooltip showMbid={showMbid} />
-                            </Show>
+                            {brainz.album !== undefined ? <MusicbrainzInfoIcon type="release" mbid={brainz.album} link tooltip showMbid={showMbid} /> : null}
                         </HStack>
                     </DataList.ItemValue>
                 </DataList.Item>
@@ -230,7 +228,7 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
                     <DataList.ItemValue>
                         <Stack gap="1">
                             <Text textStyle="xs">Track Length: {duration === undefined ? 'N/A' : timeToHumanTimestamp(dayjs.duration(duration, 's'))}</Text>
-                            {listenedFor !== undefined ? <Muted textStyle="xs">Listened For: {timeToHumanTimestamp(dayjs.duration(listenedFor, 's'))} ({formatNumber((listenedFor / duration) * 100)}%)</Muted> : null}
+                            {listenedFor !== undefined ? <Muted textStyle="xs">Listened For: {timeToHumanTimestamp(dayjs.duration(listenedFor, 's'))}{duration !== undefined ? ` (${formatNumber((listenedFor / duration) * 100)}%)` : null}</Muted> : null}
                         </Stack>
                     </DataList.ItemValue>
                 </DataList.Item>
@@ -289,11 +287,11 @@ export const PlayDatesFooter = (props: { play: JsonPlayObject, dates: DisplayDat
         dates
     } = props;
 
-    let dateElm: React.JSX.Element;
+    let dateElm: React.JSX.Element | null = null;
 
     if (dates !== false) {
-        let playDate: React.JSX.Element,
-            seenDate: React.JSX.Element;
+        let playDate: React.JSX.Element | undefined,
+            seenDate: React.JSX.Element | undefined;
         if (play.data.playDate !== undefined && ['all', 'played'].includes(dates)) {
             playDate = <Text textStyle="xs" color="fg.muted">{`Played ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</Text>
         }

@@ -29,16 +29,18 @@ const components = createQueryKeys('components', {
     })
 })
 
+export const fetchPlaysPage = (componentId: number, filters: QueryPlaysOptsJsonRefreshable, offset?: number) => {
+    const derived: QueryPlaysOptsJson = queryPlayOptsRefreshableToJson(filters)
+    return ky.get(`components/${componentId}/plays`, {
+        baseUrl: baseUrl,
+        searchParams: qs.stringify({...derived, offset})
+    }).json<PaginatedResponse<PlayApiCommonDetailed>>()
+}
+
 const activities = createQueryKeys('activities', {
     list: (componentId: number, filters: QueryPlaysOptsJsonRefreshable) => ({
         queryKey: ['components', componentId, 'plays', filters],
-        queryFn: (ctx) => {
-            const derived: QueryPlaysOptsJson = queryPlayOptsRefreshableToJson(filters)
-            return ky.get(`components/${componentId}/plays`, {
-                baseUrl: baseUrl,
-                searchParams: qs.stringify({...derived, offset: ctx.pageParam})
-            }).json<PaginatedResponse<PlayApiCommonDetailed>>()
-        }
+        queryFn: (ctx) => fetchPlaysPage(componentId, filters, typeof ctx.pageParam === "number" ? ctx.pageParam : undefined)
     }),
     single: (componentId: number, activityUid: string) => ({
         queryKey: ['components', componentId, 'play', activityUid],

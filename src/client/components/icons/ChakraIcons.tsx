@@ -218,7 +218,7 @@ export const UnlockIconRaw = LuLockOpen;
 export const UnlockIcon = makeChakraIcon(LuLockOpen);
 export const UnlockButton = makeIconButton(LuLockOpen);
 
-export const getMusicServiceIcon = (service: string): IconType => {
+export const getMusicServiceIcon = (service?: string): IconType => {
     const lower = service === undefined ? undefined : service.toLocaleLowerCase();
     switch(lower) {
         case 'spotify':
@@ -238,7 +238,7 @@ export const getMusicServiceIcon = (service: string): IconType => {
     }
 }
 
-export const getMusicServiceIconElement = (service: string): ReactNode => {
+export const getMusicServiceIconElement = (service?: string): ReactNode => {
     const ServiceIcon = getMusicServiceIcon(service);
     return <ServiceIcon/>;
 }

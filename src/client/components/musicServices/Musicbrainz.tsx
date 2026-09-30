@@ -32,7 +32,7 @@ export const MusicbrainzInfoIcon = (props: MusicbrainzInfoIconProps) => {
     } else {
         content = icon;
     }
-    let visibleMbid: React.JSX.Element = null;
+    let visibleMbid: React.JSX.Element | null = null;
     if(showMbid) {
         visibleMbid = <><Separator orientation="vertical" height="4" /><Muted textStyle="xs">{`${capitalize(type)}`} {mbid}</Muted></>
     }

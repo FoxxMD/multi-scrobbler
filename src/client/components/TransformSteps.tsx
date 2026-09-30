@@ -4,6 +4,7 @@ import { BsExclamationTriangle, BsSkipForward, BsStoplights } from "react-icons/
 import { MdMusicNote } from "react-icons/md";
 import type {JsonPlayObject, LifecycleStep} from "../../core/Atomic";
 import { patchObject } from "../../core/DataUtils";
+import { isErrorIsh } from "../../core/ErrorUtils";
 import { timelineIconProps, timelineTextFormatting } from "../utils/ComponentUtils";
 import { ChakraCodeBlockShort } from "./CodeBlock";
 import { ErrorAlert } from "./ErrorAlert";
@@ -17,12 +18,12 @@ export interface LifeycleStepsTimelineProps extends MSCollapsibleExternalProps {
     original: JsonPlayObject
 }
 
-export const diffElements = (original: JsonPlayObject, steps: LifecycleStep[]): [React.JSX.Element[], JsonPlayObject?] => {
+export const diffElements = (original: JsonPlayObject, steps: LifecycleStep[]): [(React.JSX.Element | null)[], JsonPlayObject?] => {
 
     const currentPlay: JsonPlayObject = structuredClone(original); // JSON.parse(JSON.stringify(original));
     let patchFailed = false;
 
-    const diffElements: React.JSX.Element[] | null = [];
+    const diffElements: (React.JSX.Element | null)[] = [];
     let index = 0;
 
     for (const step of steps) {
@@ -65,13 +66,13 @@ export const diffElements = (original: JsonPlayObject, steps: LifecycleStep[]): 
                 <JsonDiffPatch left={left.data} right={currentPlay.data}/>
             )
         } catch (e) {
-            diffElements.push(<Fragment><ErrorAlert error={e} /><ChakraCodeBlockShort title="Diff Patch" key={`diffblockfallback-${index}`} code={patch} /></Fragment>);
+            diffElements.push(<Fragment><ErrorAlert error={isErrorIsh(e) ? e : new Error(String(e))} /><ChakraCodeBlockShort title="Diff Patch" key={`diffblockfallback-${index}`} code={patch} /></Fragment>);
             patchFailed = true;
         }
 
     }
 
-    return [diffElements, patchFailed !== undefined ? currentPlay : undefined]
+    return [diffElements, !patchFailed ? currentPlay : undefined]
 }
 
 export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
@@ -100,9 +101,9 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                 } = x;
 
                 let timelineIcon: React.JSX.Element,
-                iconProps: Record<string, any>,
+                iconProps: Record<string, any> = {},
                 summary: React.JSX.Element,
-                alertStatus: "error" | "info" | "warning" | "success" | "neutral";
+                alertStatus: "error" | "info" | "warning" | "success" | "neutral" | undefined = undefined;
                 if(error === undefined && error !== null) {
                     timelineIcon = <BsStoplights/>;
                     iconProps = flowResult === 'continue' ? {color: "green.focusRing"} : {color: "red.focusRing"};
@@ -161,7 +162,7 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                                     <Fragment>
                                         <Heading size="sm">Inputs</Heading>
                                         <Stack gap="1">
-                                            {x.inputs.map((y, inputsIndex) => {
+                                            {inputs.map((y, inputsIndex) => {
                                                 return <ChakraCodeBlockShort key={`inputs-${inputsIndex}`} code={y.input} title={y.type} />
                                             })}
                                         </Stack></Fragment>) : null}

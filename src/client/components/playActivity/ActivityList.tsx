@@ -6,7 +6,7 @@ import doy from 'dayjs/plugin/dayOfYear.js';
 import { type ComponentProps, useCallback, useMemo, useState } from "react";
 import type {MsSseEvent, MsSseEventPayload, PaginatedResponse, PlayApiCommonDetailed, QueryPlaysOptsJson} from '../../../core/Api.js';
 import {actionContextSchema, type ComponentType, type QueueContext} from '../../../core/Atomic.js';
-import { type QueryPlaysOptsJsonRefreshable, tanQueries, useQueryWatcher } from '../../queries/index.js';
+import { fetchPlaysPage, type QueryPlaysOptsJsonRefreshable, tanQueries, useQueryWatcher } from '../../queries/index.js';
 import { ActivitySummarySkeleton } from '../ActivityDetail.js';
 import { ErrorAlert } from '../ErrorAlert.js';
 import { ListFilters, ListRefereshButton, todayRange } from './ListFilters.js';
@@ -29,7 +29,7 @@ export const ActivityList = (props: ActivityLogProps & Pick<UseInfiniteQueryResu
     sortBy = 'played',
   } = props;
 
-  return <VirtualizedListDynamic data={data} sortBy={sortBy} {...props} />
+  return <VirtualizedListDynamic {...props} data={data} sortBy={sortBy} />
 
   // if (render === 'accordian') {
   //   return <PlainAccordian data={data} sortBy={sortBy} {...props} />
@@ -38,7 +38,7 @@ export const ActivityList = (props: ActivityLogProps & Pick<UseInfiniteQueryResu
   //   return <VirtualizedListNormal data={data} sortBy={sortBy} {...props} />
   // }
   // if (render === 'virtDynamic') {
-  //   return <VirtualizedListDynamic data={data} sortBy={sortBy} {...props} />
+  //   return <VirtualizedListDynamic {...props} data={data} sortBy={sortBy} />
   // }
   // if (render === 'virtExp') {
   //   return <VirtualizedListExp data={data} sortBy={sortBy} {...props} />
@@ -46,7 +46,7 @@ export const ActivityList = (props: ActivityLogProps & Pick<UseInfiniteQueryResu
 }
 
 
-export const ListContainer = (props?: ComponentProps<typeof ActivityList>) => {
+export const ListContainer = (props: ComponentProps<typeof ActivityList>) => {
   return <Container maxWidth="3xl"><ActivityList {...props} /></Container>
 }
 
@@ -67,7 +67,9 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
     isFetchingNextPage,
     status
   } = useInfiniteQuery({
-    ...tanQueries.activities.list(componentId, query),
+    queryKey: tanQueries.activities.list(componentId, query).queryKey,
+    // query-key-factory types queryFn pageParam as never so we call the fetcher directly to get a typed (number) pageParam
+    queryFn: (ctx) => fetchPlaysPage(componentId, query, ctx.pageParam),
     initialPageParam: 0,
   getNextPageParam: (lastPage, allPages, lastPageParam) => {
     if (lastPage.data.length < lastPage.meta.limit) {
@@ -127,7 +129,7 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
   let rendered;
   if (isPending) {
     rendered = <Stack width="100%"><ActivitySummarySkeleton /><ActivitySummarySkeleton /><ActivitySummarySkeleton /></Stack>;
-  } else if (isError || status === 'error') {
+  } else if (isError) {
     rendered = <ErrorAlert error={error} />
   } else if(!isFetching && allPlays.length === 0) {
     rendered = <NoPlayResults type="empty"/>
@@ -163,7 +165,7 @@ const insertInfinitePlay = (data: PlayApiCommonDetailed, queryData: InfiniteData
       newQueryData.pages.push(p);
       continue;
     }
-    let beforeIndex: number;
+    let beforeIndex: number | undefined;
     try {
       beforeIndex = p.data.findIndex(x => dayjs(x.play.data.playDate).isBefore(playedAt));
     } catch (e) {
@@ -214,10 +216,6 @@ const playInWindow = (data: PlayApiCommonDetailed, query: QueryPlaysOptsJson): b
         someFound = true;
         break;
       }
-      if (data.play.data.track.toLocaleLowerCase().includes(t)) {
-        someFound = true;
-        break;
-      }
       if ((data.play.data.artists ?? []).some(x => x.name.toLocaleLowerCase().includes(t))) {
         someFound = true;
       }
@@ -228,7 +226,7 @@ const playInWindow = (data: PlayApiCommonDetailed, query: QueryPlaysOptsJson): b
     }
   }
   const played = dayjs(data.play.data.playDate);
-  if (query.playedAt.type === 'between' && (
+  if (query.playedAt?.type === 'between' && (
     !played.isAfter(dayjs(query.playedAt.range[0]))
     || !played.isBefore(dayjs(query.playedAt.range[1])))) {
       console.debug(`[Insert Check ${data.uid}] Play playedAt ${data.play.data.playDate} is not between filter date range of ${query.playedAt.range[0]} and ${query.playedAt.range[1]}`);

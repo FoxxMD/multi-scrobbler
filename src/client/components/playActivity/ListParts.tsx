@@ -86,7 +86,7 @@ export const generateGroupPlays = (data: PlayApiCommonDetailed[]): GroupData[] =
     return { groups: acc.groups, active: { ...acc.active, plays: acc.active.plays.concat(curr) } };
   }, { groups: [] });
 
-  if(groupsReduced.active !== null && groupsReduced !== undefined) {
+  if(groupsReduced.active !== null && groupsReduced.active !== undefined) {
     return groupsReduced.groups.concat(groupsReduced.active);
   }
 

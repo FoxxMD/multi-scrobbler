@@ -56,7 +56,7 @@ export const VirtualizedListDynamic = (props: ActivityLogProps & Pick<UseInfinit
     return generateFlatItems(data);
   }, [data]);
 
-  const getItemKey = useCallback((index) => {
+  const getItemKey = useCallback((index: number) => {
     return items[index] !== undefined ? items[index].uid : index;
   },[items]);
 

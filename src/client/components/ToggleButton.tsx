@@ -7,7 +7,7 @@ interface ToggleButtonProps {
     onChange?: (val: boolean) => void
 }
 
-const noop = (_) => null;
+const noop = (_: boolean) => null;
 
 export const ToggleButtonVariant = (props: ToggleButtonProps & ComponentProps<typeof Button>) => {
 

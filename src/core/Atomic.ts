@@ -64,7 +64,7 @@ export interface TrackStringOptions<T = string> {
         track?: (t: string | undefined, data: AmbPlayObject, hasExistingParts?: boolean) => T | string
         time?: (t: Dayjs | undefined, i?: ScrobbleTsSOC) => T | string
         timeFromNow?: (t: Dayjs | undefined) => T | string | undefined
-        comment?: (c: string | undefined) => T | string
+        comment?: (c: string | undefined) => T | string | undefined
         platform?: (d: string | undefined, u: string | undefined, s: string | undefined) => T | string | undefined
         reducer?: (arr: (T | string | undefined)[]) => T //(acc: T, curr: T | string) => T
     }

@@ -137,7 +137,7 @@ export const CountIndicatorStreamable = (props: { data: Pick<ComponentCommonApiJ
             switch (payload.type) {
                 case 'scrobble':
                 case 'discovered':
-                    setStatsData({current: statsData.current + 1, total: statsData.total + 1});
+                    setStatsData({current: (statsData.current ?? 0) + 1, total: statsData.total + 1});
                     break;
             }
         }
@@ -219,7 +219,7 @@ export const DateIndicatorStreamable = (props: Omit<ComponentProps<typeof DateIn
             lastActiveAt,
             lastReadyAt,
             state
-        } = {},
+        },
     } = props;
 
         const useActive = state < 5
@@ -233,7 +233,7 @@ export const DateIndicatorStreamable = (props: Omit<ComponentProps<typeof DateIn
             }
         });
 
-        return <DateIndicator streamedDate={current} {...props}/>
+        return <DateIndicator streamedDate={current ?? undefined} {...props}/>
 }
 
 export const DateIndicator = (props: {
@@ -248,14 +248,14 @@ export const DateIndicator = (props: {
             lastActiveAt,
             lastReadyAt,
             state
-        } = {},
+        },
         streamable,
         as = 'stat',
         ...rest
     } = props;
 
     const useActive = state < 5;
-    let usedDate: string = props.streamedDate;
+    let usedDate: string | null | undefined = props.streamedDate;
     if(usedDate === undefined) {
         usedDate = useActive ? lastActiveAt : lastReadyAt;
     }

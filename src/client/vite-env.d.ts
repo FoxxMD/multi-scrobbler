@@ -8,3 +8,7 @@
 interface Window {
     __MS_RUNTIME__?: { basePath: string };
 }
+
+// untyped modules
+declare module 'react-use-timeout';
+declare module 'spotify-web-api-node/src/response-error.js';

@@ -1,9 +1,9 @@
 import React, { useLayoutEffect } from "react"
 import useResizeObserver from '@react-hook/resize-observer';
 
-const getTop = item => Math.round(item.getBoundingClientRect().top);
+const getTop = (item: Element) => Math.round(item.getBoundingClientRect().top);
 
-const getIsWrapped = (target: Element) => {
+const getIsWrapped = (target: Element | null) => {
     if(target === undefined || target === null || target.children === undefined || target.children === null) {
         return false;
     }
@@ -25,7 +25,7 @@ const getIsWrapped = (target: Element) => {
     return false;
 }
 
-export const useIsWrapped = (target: React.RefObject<Element>) => {
+export const useIsWrapped = (target: React.RefObject<Element | null>) => {
     const [isWrapped, setIsWrapped] = React.useState<boolean>(false);
 
     useLayoutEffect(() => {

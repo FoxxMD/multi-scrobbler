@@ -17,7 +17,7 @@ export const buildTrackStringReactOptions: TrackStringOptions<ReactElement> = {
             });
             const spacedFrags = allFrags.reduce((acc, curr, index) => {
                 return acc.concat([curr, <Fragment key={`${index} space`}> </Fragment>]);
-            }, []);
+            }, [] as (ReactElement | undefined)[]);
             return <Fragment>{spacedFrags}</Fragment>
         }
     }
@@ -49,7 +49,7 @@ export const isoToHuman = (iso?: string | null, opts?: DateFormatOptions) => {
     const {
         includeRelative = false,
         includeDate
-    } = opts;
+    } = opts ?? {};
 
     if(iso === undefined || iso === null) {
         return 'N/A';

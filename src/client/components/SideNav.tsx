@@ -73,8 +73,8 @@ export const SideNav = (props: SideNavProps) => {
               </Link>
             ) : (
               <RouterLink
-                to={{pathname: item.url!}}
-                aria-current={(currentUrl.length <= item.url.length ? currentUrl.startsWith(item.url) : currentUrl === item.url) ? "page" : undefined}
+                to={{pathname: item.url}}
+                aria-current={(currentUrl !== undefined && item.url !== undefined && (currentUrl.length <= item.url.length ? currentUrl.startsWith(item.url) : currentUrl === item.url)) ? "page" : undefined}
               >
                 {item.title}
                 {item.status && <StatusBadge>{item.status}</StatusBadge>}

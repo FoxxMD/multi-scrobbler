@@ -21,7 +21,7 @@ import { cardHeaderSeparator } from '../../utils/ComponentUtils.js';
 import { PlayStateBadge } from '../Badges.js';
 import { CalendarButton, RefreshButton } from '../icons/ChakraIcons.js';
 
-const noop = (_) => null;
+const noop = (_: unknown) => null;
 
 const SelectValue = () => {
     const select = useSelectContext()
@@ -107,7 +107,7 @@ export const PlayDateRangeFilter = (props: PlayDateRangeFilterProps & {container
         containerProps = {}
     } = props;
 
-    const parsedValues = useMemo<[ZonedDateTime, ZonedDateTime]>(() => {
+    const parsedValues = useMemo<[ZonedDateTime, ZonedDateTime] | undefined>(() => {
         if (values === undefined) {
             return undefined;
         }
@@ -121,7 +121,7 @@ export const PlayDateRangeFilter = (props: PlayDateRangeFilterProps & {container
         return [parseAbsolute(initialValues[0], tz), parseAbsolute(initialValues[1], tz)]
     }, [initialValues]);
 
-    const [stateVals, setStateVals] = useState<[DatePicker.DateValue, DatePicker.DateValue]>(parsedValues);
+    const [stateVals, setStateVals] = useState<[DatePicker.DateValue, DatePicker.DateValue] | undefined>(parsedValues);
 
 
     const onChangeCB = useCallback((e: DatePicker.ValueChangeDetails) => {

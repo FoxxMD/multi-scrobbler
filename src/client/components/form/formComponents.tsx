@@ -8,12 +8,12 @@ export const FormCheckbox = ({
   label,
   disabled
 }: {
-  field: FieldWithValue<boolean>
+  field: FieldWithValue<boolean | undefined>
   label: string | ReactNode
   disabled?: boolean
 }) => <Field.Root invalid={field.errors.length > 0} disabled={disabled}>
     <Checkbox.Root
-        checked={field.value}
+        checked={field.value ?? false}
         onCheckedChange={(details) => field.handleChange(!!details.checked)}
         onBlur={field.handleBlur}
     >
@@ -43,7 +43,7 @@ export const FormRadio = ({
     <Field.Label>{label}</Field.Label>
     <RadioGroup.Root
       value={field.value}
-      onValueChange={(details) => field.handleChange(details.value)}
+      onValueChange={(details) => details.value !== null && field.handleChange(details.value)}
       onBlur={field.handleBlur}
     >
       <HStack gap="6">

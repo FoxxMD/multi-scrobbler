@@ -40,8 +40,8 @@ export const MSComponentName = (props: {data?: Pick<ComponentCommonApiJson, 'nam
     if(props.data === undefined) {
         return <HStack><ComponentBackButton/><Skeleton width="5rem" height="5rem" /></HStack>;
     }
-    let subsonicPlaybackReporting: React.JSX.Element;
-    if('playbackReporting' in props.data) {
+    let subsonicPlaybackReporting: React.JSX.Element | null = null;
+    if(props.data.playbackReporting !== undefined) {
         subsonicPlaybackReporting = <PlaybackReportingServer playbackReporting={props.data.playbackReporting}/>
     }
     return <Heading truncate size="2xl"><ComponentBackButton/>{props.data.name}{subsonicPlaybackReporting}</Heading>;
@@ -129,16 +129,16 @@ const dialog = createOverlay<AuthDialogProps>((props) => {
     },[isSuccess, dialog])
 
     const authFailure = useMemo(() => {
-        for(const e of data.errors) {
+        for(const e of data.errors ?? []) {
             const authState = findAnyAuthError(e);
-            if(authState !== undefined) {
+            if(authState[0] !== undefined) {
                 return authState;
             }
         }
         return [undefined, false];
     },[data.errors]);
 
-    let content: React.JSX.Element;
+    let content: React.JSX.Element | null = null;
     if (authFailure[0] !== undefined && authFailure[1] === true) {
         content = (
             <>
@@ -276,7 +276,8 @@ const primaryActionProps: ComponentProps<typeof PowerOffButton> = {
     size: 'xs'
 }
 
-export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof ComponentStateBadge>, 'suffix' | 'data'> & {
+export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof ComponentStateBadge>, 'suffix' | 'data' | 'componentId'> & {
+    componentId: number,
     data: ComponentProps<typeof ComponentStateBadge>['data'] & Pick<ComponentsApiJson, 'synced' | 'type'>}) => {
     const {
         componentId,
@@ -297,7 +298,7 @@ export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof 
     });
 
     const authFailure = useMemo(() => {
-        for(const e of props.data.errors) {
+        for(const e of props.data.errors ?? []) {
             const authState = findAnyAuthError(e);
             if(authState !== undefined) {
                 return authState;
@@ -393,8 +394,8 @@ export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof 
     return <ComponentStateBadge size="lg" maxWidth="fit-content" {...badgeProps} loading={isPending} separator suffix={suffix} {...rest}/>;
 }
 
-export const ComponentDetailedDesktop = (props: {data?: ComponentsApiJson, live?: boolean}) => {
-    let sleepingRender: React.JSX.Element = null;
+export const ComponentDetailedDesktop = (props: {data: ComponentsApiJson, live?: boolean}) => {
+    let sleepingRender: React.JSX.Element | null = null;
     const {
         data,
         data: {
@@ -403,7 +404,7 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentsApiJson, live?
             authed,
             authType,
             syncError
-        } = {}
+        }
     } = props;
     if(syncError !== undefined && syncError !== null) {
         warnings.push(syncError);
@@ -439,7 +440,7 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentsApiJson, live?
             }
         }
     },[errors, authed]);
-    const target = React.useRef(null);
+    const target = React.useRef<HTMLDivElement>(null);
     const isWrapped = useIsWrapped(target);
     return (
         <MSErrorBoundary>

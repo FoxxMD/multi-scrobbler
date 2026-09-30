@@ -95,13 +95,13 @@ export const ChakraPlayer = (props: PlayerProps) => {
         // need to clear interval on the old id if props have changed
         // but cannot use interval id in useEffect or it causes circular dependencies since we set intervalId here too
         // so clear inside the set state function (bad) using the previous data argument, before returning new value
-        let interval;
+        let interval: number | undefined;
         if(!isNowPlaying && data.status?.calculated === 'playing' && data.position !== undefined && !data.status?.stale && !data.status?.orphaned) {
             // eslint-disable-next-line react-hooks/set-state-in-effect
             setProgressBuffer(data.position);
-            interval = setInterval(() => {
-                setProgressBuffer((oldPosition) => {
-                    if(data.play.data.duration !== undefined) {
+            interval = window.setInterval(() => {
+                setProgressBuffer((oldPosition = 0) => {
+                    if(data.play?.data.duration !== undefined) {
                         return Math.min(data.play.data.duration, oldPosition + 1);
                     }
                     return oldPosition + 1;
@@ -114,7 +114,7 @@ export const ChakraPlayer = (props: PlayerProps) => {
                 return interval;
             });
         } else if(isNowPlaying) {
-            interval = setInterval(() => {
+            interval = window.setInterval(() => {
                 // force now playing-only player to re-render
                 // so we can stop rendering it if it passes expiration date
                 setLastUpdated(dayjs().unix());
@@ -151,7 +151,7 @@ export const ChakraPlayer = (props: PlayerProps) => {
 
     const bufferTip = positionBuffer !== undefined ? <InfoTip positioning={{placement: "bottom-start"}} buttonProps={{height: 'var(--chakra-sizes-4)'}} content={bufferExplanation}/> : null;
 
-    let playbackReportingTip: React.JSX.Element;
+    let playbackReportingTip: React.JSX.Element | null = null;
     if(playbackReporting !== undefined) {
         playbackReportingTip = <PlaybackReportingPlayer playbackReporting={playbackReporting} hasFields={reported !== 'unknown' || data.position !== undefined}/>
     }
@@ -176,7 +176,7 @@ export const ChakraPlayer = (props: PlayerProps) => {
                         variant={indeterminate ? undefined : "buffer"}
                         
                         value={positionProgress}
-                        valueBuffer={Math.max(bufferProgress ?? positionProgress, positionProgress)}
+                        valueBuffer={positionProgress === undefined ? bufferProgress : Math.max(bufferProgress ?? positionProgress, positionProgress)}
                         />
                         </Box>
                         <Text textStyle="xs">{durationTimestamp}</Text>
@@ -285,12 +285,11 @@ export const usePlayerQuery = (componentId: number, platformId: string, opts: Us
         }
     });
 
-    const { isPending, isError, data, error } = useQuery({
+    // return the full query result (rather than a new object) so consumers keep discriminated union narrowing on isError/isPending
+    return useQuery({
         ...tanQueries.players.single(componentId, platformId),
         staleTime: Infinity,
     });
-
-    return { data, isPending, isError, error };
 }
 
 export const PlayersContainer = (props: { data: ComponentCommonApiJson, live?: boolean, nowPlaying?: boolean, stack?: ComponentProps<typeof Stack>, container?: ComponentProps<typeof Container> }) => {

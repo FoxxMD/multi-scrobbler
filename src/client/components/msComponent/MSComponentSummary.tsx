@@ -26,7 +26,7 @@ export const MSComponentSummary = (props: { data: ComponentsApiJson, fetchable?:
         data,
         fetchable
     } = props;
-    let sleepingRender: React.JSX.Element = null;
+    let sleepingRender: React.JSX.Element | null = null;
 
     const cardHeaderProps: Card.HeaderProps = {};
     const isClient = isComponentClientApiJson(data);

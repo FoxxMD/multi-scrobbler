@@ -45,7 +45,7 @@ export const SettingsContainer = () => {
         <VStack alignItems="flex-start">
             <Heading my="3">Appearance</Heading>
             <VStack>
-                <SegmentGroup.Root size="md" value={theme === 'system' ? 'system' : resolvedTheme} onValueChange={(val) => setThemeCB(val.value)}>
+                <SegmentGroup.Root size="md" value={theme === 'system' ? 'system' : resolvedTheme} onValueChange={(val) => val.value !== null && setThemeCB(val.value)}>
                     <SegmentGroup.Indicator />
                     <SegmentGroup.Item key="dark" value="dark">
                         <SegmentGroup.ItemText>Dark <DarkIcon/></SegmentGroup.ItemText>

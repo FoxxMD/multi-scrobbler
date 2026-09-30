@@ -79,7 +79,7 @@ export const SSEStatusElement = (props: SSEStatusProps) => {
             content = (
                 <Stack>
                     <Text>Live events connection is <strong>{status}</strong></Text>
-                    <ErrorAlert error={props.error}/>
+                    {props.error !== undefined ? <ErrorAlert error={props.error}/> : null}
                 </Stack>                
             );
             break;

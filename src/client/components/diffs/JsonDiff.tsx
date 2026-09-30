@@ -31,12 +31,11 @@ const JsonDiffPatchComponent = (props: JsonDiffProps) => {
         diffOpts = {},
     } = props;
 
-    if(rightVal === undefined && diff === undefined) {
-        throw new Error(`Must provide either 'right' or 'diff' props`);        
-    }
-
     let right = rightVal;
     if(right === undefined) {
+        if(diff === undefined) {
+            throw new Error(`Must provide either 'right' or 'diff' props`);
+        }
         right = patchObject(structuredClone(left), diff);
     }
 
