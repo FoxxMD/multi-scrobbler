@@ -117,7 +117,7 @@ const dialog = createOverlay<AuthDialogProps>((props) => {
         staleTime: Infinity,
         ...tanQueries.components.authUrl(data.id),
     });
-    const {mutate, isPending: mutateIsPending, isSuccess} = useMutation({
+    const {mutate, isPending: mutateIsPending, isSuccess, isError: mutateIsError, error: mutateError} = useMutation({
         mutationKey: ['authChange', data.id],
         mutationFn: () => ky.post(`api/components/${data.id}/auth`)
     });
@@ -178,6 +178,7 @@ const dialog = createOverlay<AuthDialogProps>((props) => {
             <Dialog.Body spaceY="4">
               {content}
               {isError && <ErrorAlert error={error}/>}
+              {mutateIsError && <ErrorAlert error={mutateError}/>}
             </Dialog.Body>
             <Dialog.Footer>
             <Dialog.ActionTrigger asChild>
@@ -498,12 +499,12 @@ export const ComponentDetailedFetchable = (props: { componentId: number }) => {
     });
 
     let rendered;
-    if (data === undefined) {
-        rendered = <ComponentDetailedSkeleton />
+    if (data !== undefined) {
+        rendered = <ComponentDetailedDesktop data={data} live />;
     } else if (isError) {
         rendered = <ErrorAlert error={error} />
     } else {
-        rendered = <ComponentDetailedDesktop data={data} live />;
+        rendered = <ComponentDetailedSkeleton />
     }
 
     const queryClient = useQueryClient();
@@ -512,7 +513,11 @@ export const ComponentDetailedFetchable = (props: { componentId: number }) => {
         if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === props.componentId) {
             switch (payload.type) {
                 case 'componentUpdate':
-                    queryClient.setQueryData(tanQueries.components.single(props.componentId).queryKey, (old: ComponentCommonApiJson) => {
+                    queryClient.setQueryData(tanQueries.components.single(props.componentId).queryKey, (old: ComponentCommonApiJson | undefined) => {
+                        if(old === undefined) {
+                            // don't create partial data if the full component hasn't been fetched yet
+                            return old;
+                        }
                         const componentData = payload.data as MsSseEventPayload<Partial<ComponentCommonApiJson>>;
                         return { ...old, ...componentData.data };
                     });

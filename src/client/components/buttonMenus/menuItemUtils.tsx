@@ -7,7 +7,7 @@ export const menuItem = (Icon: IconType, value: string, name?: string) => (props
     <Menu.Item key={value} value={value} {...props}><Box flex="1">{name ?? capitalize(value)}</Box><Icon /></Menu.Item>
 )
 
-export type MenuItemRender = (extra: MenuItemProps) => React.JSX.Element;
+export type MenuItemRender = (extra: Omit<MenuItemProps, 'value'>) => React.JSX.Element;
 
 export const primaryActionProps: IconButtonProps = {
     margin: "1px",

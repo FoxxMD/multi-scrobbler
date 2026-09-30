@@ -87,7 +87,6 @@ export const VirtualizedListDynamic = (props: ActivityLogProps & Pick<UseInfinit
       hasNextPage &&
       !isFetchingNextPage
     ) {
-      console.log('Invoke next fetch');
       fetchNextPage()
     }
   }, [

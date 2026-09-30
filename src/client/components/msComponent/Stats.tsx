@@ -1,4 +1,4 @@
-import { type ComponentProps, useState, useCallback, type ReactNode, type PropsWithChildren } from "react"
+import { type ComponentProps, useState, useCallback, useEffect, type ReactNode, type PropsWithChildren } from "react"
 import { Badge, Stat, HStack, type BadgeProps } from '@chakra-ui/react';
 import type {ComponentClientApiJson, ComponentCommonApiJson, MsSseEvent} from "../../../core/Api.js";
 import { TextMuted } from "../TextMuted.js";
@@ -66,8 +66,8 @@ export const Indicator = (props: {
     }, [setRecent]);
     const recentTimeout = useTimeout(resetRecent, timeoutProp ?? 10000);
 
+    // derived state is adjusted during render (allowed by React) but the timer side effect happens in the effect below
     if (lastCurrent !== current) {
-        recentTimeout.stop();
         if (lastCurrent > current) {
             if (recentDirection === 'up') {
                 setRecent(1);
@@ -84,8 +84,14 @@ export const Indicator = (props: {
             }
         }
         setLastCurrent(current);
-        recentTimeout.start();
     }
+
+    useEffect(() => {
+        if (recent !== 0) {
+            recentTimeout.restart();
+        }
+    // only (re)start the reset timer when current changes
+    }, [current]);
 
     let contextText: string | ReactNode;
     if(helpText !== undefined) {
@@ -130,6 +136,11 @@ export const CountIndicatorStreamable = (props: { data: Pick<ComponentCommonApiJ
         ...rest
     } = props;
     const [statsData, setStatsData] = useState({current: data.tracksDiscovered ?? data.tracksScrobbled, total: data.countLive});
+    // SSE events are tracked locally but re-sync to the server's values whenever the parent's data is refreshed
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setStatsData({current: data.tracksDiscovered ?? data.tracksScrobbled, total: data.countLive});
+    }, [data.tracksDiscovered, data.tracksScrobbled, data.countLive]);
 
     const client = useSSEContext<MsSseEvent>();
     useSSEAnyEvent(client, (payload) => {
@@ -137,7 +148,7 @@ export const CountIndicatorStreamable = (props: { data: Pick<ComponentCommonApiJ
             switch (payload.type) {
                 case 'scrobble':
                 case 'discovered':
-                    setStatsData({current: (statsData.current ?? 0) + 1, total: statsData.total + 1});
+                    setStatsData((old) => ({current: (old.current ?? 0) + 1, total: old.total + 1}));
                     break;
             }
         }
@@ -157,16 +168,20 @@ export const QueuedIndicatorStreamable = (props: { data: Pick<ComponentClientApi
         ...rest
     } = props;
     const [statsData, setStatsData] = useState({current: data.queued});
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setStatsData({current: data.queued});
+    }, [data.queued]);
 
     const client = useSSEContext<MsSseEvent>();
     useSSEAnyEvent(client, (payload) => {
         if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === data.id) {
             switch (payload.type) {
                 case 'playQueued':
-                    setStatsData({current: statsData.current + 1});
+                    setStatsData((old) => ({current: old.current + 1}));
                     break;
                 case 'playDequeued':
-                    setStatsData({current: statsData.current - 1});
+                    setStatsData((old) => ({current: old.current - 1}));
                     break;
             }
         }
@@ -186,23 +201,27 @@ export const DeadLetterIndicatorStreamable = (props: { data: Pick<ComponentClien
         ...rest
     } = props;
     const [statsData, setStatsData] = useState({current: data.deadLetterPlays, total: data.deadLetterPlaysTotal});
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setStatsData({current: data.deadLetterPlays, total: data.deadLetterPlaysTotal});
+    }, [data.deadLetterPlays, data.deadLetterPlaysTotal]);
 
     const client = useSSEContext<MsSseEvent>();
     useSSEAnyEvent(client, (payload) => {
         if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === data.id) {
             switch (payload.type) {
                 case 'deadLetter':
-                    setStatsData({current: statsData.current, total: statsData.total + 1});
+                    setStatsData((old) => ({current: old.current, total: old.total + 1}));
                     break;
                 case 'deadLetterRemoved':
                 case 'removeDeadLetter':
-                    setStatsData({current: statsData.current, total: statsData.total - 1});
+                    setStatsData((old) => ({current: old.current, total: old.total - 1}));
                     break;
                 case 'deadLetterDequeued':
-                    setStatsData({current: statsData.current - 1, total: statsData.total});
+                    setStatsData((old) => ({current: old.current - 1, total: old.total}));
                     break;
                 case 'deadQueued':
-                    setStatsData({current: statsData.current + 1, total: statsData.total});
+                    setStatsData((old) => ({current: old.current + 1, total: old.total}));
                     break;
             }
         }
@@ -224,6 +243,10 @@ export const DateIndicatorStreamable = (props: Omit<ComponentProps<typeof DateIn
 
         const useActive = state < 5
         const [current, setCurrent] = useState(useActive ? lastActiveAt : lastReadyAt);
+        useEffect(() => {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setCurrent(useActive ? lastActiveAt : lastReadyAt);
+        }, [useActive, lastActiveAt, lastReadyAt]);
 
         const client = useSSEContext<MsSseEvent>();
         useSSEAnyEvent(client, (payload) => {

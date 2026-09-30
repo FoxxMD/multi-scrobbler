@@ -348,9 +348,9 @@ const usePlayersQuery = (componentId: number, players?: ComponentCommonApiJson['
             switch(payload.type) {
                 case 'playerUpdate': {
                     const playerPayload = payload.data as MsSseEventPayload<SourcePlayerJson>;
-                    queryClient.setQueryData(tanQueries.players.list(componentId).queryKey, (old: Record<string, SourcePlayerJson>) => {
-                        if(old[playerPayload.data.platformId] === undefined || 'expiration' in playerPayload.data) {
-                            const newData: Record<string, SourcePlayerJson> = {...old};
+                    queryClient.setQueryData(tanQueries.players.list(componentId).queryKey, (old: Record<string, SourcePlayerJson> | undefined) => {
+                        if(old === undefined || old[playerPayload.data.platformId] === undefined || 'expiration' in playerPayload.data) {
+                            const newData: Record<string, SourcePlayerJson> = {...(old ?? {})};
                             newData[playerPayload.data.platformId] = playerPayload.data;
                             return newData;
                         }
@@ -359,8 +359,8 @@ const usePlayersQuery = (componentId: number, players?: ComponentCommonApiJson['
                     break;
                 case 'playerDelete':{
                     const playerPayload = payload.data as MsSseEventPayload<{platformId: string}>;
-                    queryClient.setQueryData(tanQueries.players.list(componentId).queryKey, (old: Record<string, SourcePlayerJson>) => {
-                        if(old[playerPayload.data.platformId] !== undefined) {
+                    queryClient.setQueryData(tanQueries.players.list(componentId).queryKey, (old: Record<string, SourcePlayerJson> | undefined) => {
+                        if(old !== undefined && old[playerPayload.data.platformId] !== undefined) {
                             const newData: Record<string, SourcePlayerJson> = {...old};
                             delete newData[playerPayload.data.platformId];
                             return newData;

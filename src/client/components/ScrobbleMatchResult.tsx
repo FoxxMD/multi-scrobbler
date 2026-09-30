@@ -47,7 +47,7 @@ export const ScrobbleMatchResult = (props: ScrobbleMatchResultProps) => {
                                     if (x !== null && x !== undefined && x.includes('Time Detail')) {
                                         const sub = x.substring(15).split('|');
                                         return (
-                                            <List.Root ps="5">
+                                            <List.Root key={index} ps="5">
                                                 {sub.map((y, index) => <List.Item key={index}>{y}</List.Item>)}
                                             </List.Root>
 

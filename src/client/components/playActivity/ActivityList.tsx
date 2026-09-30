@@ -2,14 +2,13 @@ import { Container, Stack, Heading, type MenuSelectionDetails, HStack, Dialog, P
 import { useSSEAnyEvent, useSSEContext } from '@flamefrontend/sse-runtime-react';
 import { type InfiniteData, useInfiniteQuery, type UseInfiniteQueryResult, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import doy from 'dayjs/plugin/dayOfYear.js';
 import { type ComponentProps, useCallback, useMemo, useState } from "react";
 import type {MsSseEvent, MsSseEventPayload, PaginatedResponse, PlayApiCommonDetailed, QueryPlaysOptsJson} from '../../../core/Api.js';
 import {actionContextSchema, type ComponentType, type QueueContext} from '../../../core/Atomic.js';
 import { fetchPlaysPage, type QueryPlaysOptsJsonRefreshable, tanQueries, useQueryWatcher } from '../../queries/index.js';
 import { ActivitySummarySkeleton } from '../ActivityDetail.js';
 import { ErrorAlert } from '../ErrorAlert.js';
-import { ListFilters, ListRefereshButton, todayRange } from './ListFilters.js';
+import { ListFilters, ListRefereshButton, getTodayRange } from './ListFilters.js';
 import { type ActivityLogProps } from './ListParts.js';
 import { NoPlayResults, VirtualizedListDynamic } from './VirtualListDynamic.js';
 import { menuItem, type MenuItemRender } from '../buttonMenus/menuItemUtils.js';
@@ -19,8 +18,6 @@ import ky from 'ky';
 import { formOptions, useForm } from '@tanstack/react-form';
 import { FormCheckbox, FormRadio, type RadioFormItem } from '../form/formComponents.js';
 import { queryPlayOptsRefreshableToJson } from '../../utils/ComponentUtils.js';
-
-dayjs.extend(doy);
 
 export const ActivityList = (props: ActivityLogProps & Pick<UseInfiniteQueryResult, 'hasNextPage' | 'isFetchingNextPage' | 'fetchNextPage'>) => {
 
@@ -93,14 +90,17 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
                   const componentData = payload.data as MsSseEventPayload<PlayApiCommonDetailed>;
                 console.debug(`[Insert Check ${componentData.data.uid}] Recieved playInsert for Component ${componentId}, checking if Play can be inserted...`);
                 if(playInWindow(componentData.data, queryJson)) {
-                  queryClient.setQueryData(tanQueries.activities.list(componentId, query).queryKey, (old: InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown>) => {
-                      return insertInfinitePlay(componentData.data, old);
+                  queryClient.setQueryData(tanQueries.activities.list(componentId, query).queryKey, (old: InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown> | undefined) => {
+                      return old === undefined ? old : insertInfinitePlay(componentData.data, old);
                   });
                 } 
               } break;
               case 'playDelete':
                 {
-                    queryClient.setQueryData(tanQueries.activities.list(componentId, query).queryKey, (old: InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown>) => {
+                    queryClient.setQueryData(tanQueries.activities.list(componentId, query).queryKey, (old: InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown> | undefined) => {
+                      if(old === undefined) {
+                        return old;
+                      }
                       const componentData = payload.data as MsSseEventPayload<Pick<PlayApiCommonDetailed, 'uid'>>;
                       // playDelete events don't happen outside of ui the except for retention cleanup
                       // and its unlikely the user would have fetched data during a retention cleanup event
@@ -109,7 +109,7 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
                       // for sure that any page actually has our uid
                       const newQueryData: InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown> = {
                         pages: [],
-                        pageParams: { ...old.pageParams }
+                        pageParams: [...old.pageParams]
                       };
                       for(const p of old.pages) {
                         const newPageData = p.data.filter(x => x.uid !== componentData.data.uid);
@@ -153,7 +153,7 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
 const insertInfinitePlay = (data: PlayApiCommonDetailed, queryData: InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown>): InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown> => {
   const newQueryData: InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown> = {
     pages: [],
-    pageParams: { ...queryData.pageParams }
+    pageParams: [...queryData.pageParams]
   };
   console.debug(`[Insert Page Index ${data.uid}] Trying to insert Play...`);
   const playedAt = dayjs(data.play.data.playDate);
@@ -173,8 +173,8 @@ const insertInfinitePlay = (data: PlayApiCommonDetailed, queryData: InfiniteData
     }
     if (beforeIndex === -1 || beforeIndex === undefined) {
       if (!inserted) {
-        const first = p.data[0].playedAt;
-        const last = p.data[p.data.length - 1].playedAt;
+        const first = p.data[0]?.playedAt;
+        const last = p.data[p.data.length - 1]?.playedAt;
         console.debug(`[Insert ${data.uid}] Play playedAt ${data.play.data.playDate} not between ranges on page ${pageIndex}: ${first} to ${last}`);
       }
       newQueryData.pages.push(p);
@@ -258,7 +258,6 @@ const RetryWithDialog = (props: { open: boolean, setOpen: (open: boolean) => voi
     const form = useForm({
         ...opts,
         onSubmit: ({ schemaOutputs }) => {
-            console.log(schemaOutputs[0]);
             props.onSubmit(schemaOutputs[0]);
             props.setOpen(false);
         }
@@ -335,11 +334,11 @@ const menuItems: MenuItemRender[] = [
   (extra) => <MenuRetryWith {...extra}/>
 ];
 
-// instanced so that todayRange is updated on component mount
+// instanced so that today's range is updated on component mount
 const defaultFilter = (): QueryPlaysOptsJsonRefreshable => ({
     playedAt: {
       type: 'between',
-      range: todayRange,
+      range: getTodayRange(),
       inclusive: true
     },
     order: 'desc',
@@ -348,7 +347,7 @@ const defaultFilter = (): QueryPlaysOptsJsonRefreshable => ({
 
 export const ListContainerFilterable = (props: { componentId: number, componentType: ComponentType }) => {
   const { componentType } = props;
-  const [filters, setFilter] = useState<QueryPlaysOptsJsonRefreshable>(defaultFilter());
+  const [filters, setFilter] = useState<QueryPlaysOptsJsonRefreshable>(defaultFilter);
   const primaryRefresh = <ListRefereshButton size="md" componentId={props.componentId} filters={filters} variant="subtle" />;
   const { isFetching: isListFetching } = useQueryWatcher(tanQueries.activities.list(props.componentId, filters).queryKey)
   const [retryOpen, setRetryOpen] = useState(false);
@@ -357,11 +356,13 @@ export const ListContainerFilterable = (props: { componentId: number, componentT
     mutationKey: ['retryBulk', props.componentId, filters],
     // eslint-disable-next-line arrow-body-style
     mutationFn: (data: { action: string, context?: QueueContext }) => {
-      return ky.post<{ filters: QueryPlaysOptsJsonRefreshable, context?: QueueContext }>(`api/components/${props.componentId}/plays/queue`, {
+      // server expects real query opts, not UI-only states like 'failed TBR' (same conversion used when listing plays)
+      const derived = queryPlayOptsRefreshableToJson(filters);
+      return ky.post<{ filters: QueryPlaysOptsJson, context?: QueueContext }>(`api/components/${props.componentId}/plays/queue`, {
         json: {
           filters: {
-            ...filters,
-            state: data.action === 'failures' ? ['failed'] : filters.state
+            ...derived,
+            state: data.action === 'failures' ? ['failed'] : derived.state
           },
           context: data.context
         }

@@ -11,7 +11,7 @@ import {
     today,
     toZoned
 } from "@internationalized/date";
-import { useQueryClient } from '@tanstack/react-query';
+import { useIsMutating, useQueryClient } from '@tanstack/react-query';
 import { type ComponentProps, useCallback, useMemo, useState } from "react";
 import type {CompareDateBetween, PlayStateUI} from '../../../core/Api.js';
 import { type ComponentType, isComponentTypeSource, PLAY_CLIENT_STATE, PLAY_SOURCE_STATE, type PlayState } from '../../../core/Atomic.js';
@@ -79,9 +79,6 @@ export const PlayStateFilter = (props: PlayStateFilterProps & {value?: PlayState
 }
 
 const tz = getLocalTimeZone()
-const now = today(tz)
-const yesterday = now.subtract({ days: 1 });
-const threeDays = now.subtract({ days: 3 });
 
 interface PlayDateRangeFilterProps {
     onChange?: (dates: [string, string]) => void
@@ -89,7 +86,7 @@ interface PlayDateRangeFilterProps {
     initialValues?: [string, string]
 }
 
-export const todayRange: [string, string] = [toZoned(toCalendarDateTime(today(tz), new Time(0, 0, 0, 0)), tz).toAbsoluteString(), toZoned(toCalendarDateTime(today(tz), new Time(23, 59, 59)), tz).toAbsoluteString()];
+export const getTodayRange = (): [string, string] => [toZoned(toCalendarDateTime(today(tz), new Time(0, 0, 0, 0)), tz).toAbsoluteString(), toZoned(toCalendarDateTime(today(tz), new Time(23, 59, 59)), tz).toAbsoluteString()];
 
 
 const format = (date: DateValue) => {
@@ -103,9 +100,16 @@ export const PlayDateRangeFilter = (props: PlayDateRangeFilterProps & {container
     const {
         onChange = noop,
         values,
-        initialValues = todayRange,
+        initialValues,
         containerProps = {}
     } = props;
+
+    // computed on mount (instead of module load) so presets/defaults are not stale if the app is left open past midnight
+    const presets = useMemo(() => {
+        const now = today(tz);
+        return {now, yesterday: now.subtract({ days: 1 }), threeDays: now.subtract({ days: 3 })};
+    }, []);
+    const { now, yesterday, threeDays } = presets;
 
     const parsedValues = useMemo<[ZonedDateTime, ZonedDateTime] | undefined>(() => {
         if (values === undefined) {
@@ -115,10 +119,8 @@ export const PlayDateRangeFilter = (props: PlayDateRangeFilterProps & {container
     }, [values]);
 
     const parsedInitialValues = useMemo(() => {
-        if (initialValues === undefined) {
-            return undefined;
-        }
-        return [parseAbsolute(initialValues[0], tz), parseAbsolute(initialValues[1], tz)]
+        const vals = initialValues ?? getTodayRange();
+        return [parseAbsolute(vals[0], tz), parseAbsolute(vals[1], tz)]
     }, [initialValues]);
 
     const [stateVals, setStateVals] = useState<[DatePicker.DateValue, DatePicker.DateValue] | undefined>(parsedValues);
@@ -127,7 +129,6 @@ export const PlayDateRangeFilter = (props: PlayDateRangeFilterProps & {container
     const onChangeCB = useCallback((e: DatePicker.ValueChangeDetails) => {
         const start = toZoned(toCalendarDateTime(e.value[0], new Time(0, 0, 0, 0)), tz).toAbsoluteString();
         const end = e.value[1] !== undefined ? toZoned(toCalendarDateTime(e.value[1], new Time(23, 59, 59)), tz).toAbsoluteString() : undefined;
-        console.log([start, end]);
         setStateVals([e.value[0],e.value[1]]);
         if(end !== undefined) {
             onChange([start, end]);
@@ -291,7 +292,6 @@ export const ListFilters = (props: {
             text,
             ...rest
         } = filters;
-        console.log(val);
         onChange({...rest, text: val});
     }, [onChange, filters]);
 
@@ -324,7 +324,8 @@ export const ListRefereshButton = (props: ComponentProps<typeof RefreshButton> &
     }, [componentId, filters]);
 
     const { isFetching } = useQueryWatcher(tanQueries.activities.list(componentId, filters).queryKey)
-    const { isFetching: isRetryFetching } = useQueryWatcher(['retryBulk', componentId, filters])
+    // retryBulk is a mutation so it must be watched with useIsMutating, a query observer never sees it
+    const isRetryFetching = useIsMutating({ mutationKey: ['retryBulk', componentId, filters] }) > 0;
 
     return <RefreshButton variant="ghost" size="sm" {...rest} loading={isFetching || isRetryFetching} onClick={(e) => onRefresh()}/>
 }

@@ -60,13 +60,12 @@ export const MSCollapsible = (props: MSCollapsibleProps) => {
         }
         const breaks: Record<string, boolean> = {};
         let found = false;
+        // disabled for every breakpoint below disableUntil
         for(const b of breakpoints) {
-            if(!found && disableUntil !== b) {
-                breaks[b] = true;
+            if(b === disableUntil) {
                 found = true;
-            } else {
-                breaks[b] = false;
             }
+            breaks[b] = !found;
         }
         return breaks;
     }, [disableUntil])
@@ -75,18 +74,6 @@ export const MSCollapsible = (props: MSCollapsibleProps) => {
         {
             '2xl': false,
             ...breakObj,
-        }, {
-        fallback: '2xl'
-    });
-
-        const currBreakpoint = useBreakpointValue(
-        {
-            base: "base",
-            sm: "sm",
-            md: "md",
-            lg: "lg",
-            xl: "xl",
-            ["2xl"]: "2xl"
         }, {
         fallback: '2xl'
     });

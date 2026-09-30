@@ -57,6 +57,8 @@ const ErrorBlock = (props: {data: ErrorData, cause?: boolean, messageProps?: Com
 }
 
 export const ErrorAlert = (props: ErrorAlertProps) => {
+    // hooks must be called before any early return
+    const collapsible = useCollapsible();
 
     if(!isErrorIsh(props.error)) {
         return null;
@@ -65,8 +67,6 @@ export const ErrorAlert = (props: ErrorAlertProps) => {
     if(isErrorIsh(props.error.cause)) {
         causes = walkError(props.error.cause);
     }
-
-    const collapsible = useCollapsible()
 
     return (
         <Alert.Root status={props.status ?? 'error'}>

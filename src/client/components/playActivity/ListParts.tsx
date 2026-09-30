@@ -1,14 +1,10 @@
 import { Box, Flex, Separator, Text } from '@chakra-ui/react';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import doy from 'dayjs/plugin/dayOfYear.js';
 import type {ComponentProps} from "react";
 import type {PlayApiCommonDetailed, QueryPlaysOptsJson, SortPlaysByProps} from '../../../core/Api.js';
 import type {ComponentType} from '../../../core/Atomic.js';
-import { getAllIndexes } from '../../../core/DataUtils.js';
 import { sortByNewestDate } from '../../../core/PlayUtils.js';
-
-dayjs.extend(doy);
 
 export interface GroupInfo {
   count: number
@@ -79,7 +75,7 @@ export const generateGroupPlays = (data: PlayApiCommonDetailed[]): GroupData[] =
     if (acc.active === undefined) {
       return { ...acc, active: { plays: [curr], date } };
     }
-    if (acc.active.date.dayOfYear() !== date.dayOfYear()) {
+    if (!acc.active.date.isSame(date, 'day')) {
       return { groups: [...acc.groups, acc.active], active: { plays: [curr], date } }
     }
 
@@ -97,26 +93,19 @@ export const generateFlatItems = (data: PlayApiCommonDetailed[]): (PlayApiCommon
     // ensure there are no duplicates
     // this may happen if a play is "bumped" from one "page" to another, based on offset,
     // when new plays are inserted out of order (playedAt)
-    const allIds: string[] = [];
-    const dupes: string[] = [];
-    for(const d of data) {
-      if(allIds.includes(d.uid)) {
+    // keep only the first one since its likely the freshest
+    // (filter into a new array so the caller's (query cache) data is not mutated)
+    const seenIds = new Set<string>();
+    const deduped = data.filter((d) => {
+      if(seenIds.has(d.uid)) {
         console.warn(`Duplicate ID detected ${d.uid}`);
-        dupes.push(d.uid);
-      } else {
-        allIds.push(d.uid);
+        return false;
       }
-    }
-    for(const uid of dupes) {
-      const indexes = getAllIndexes(data, (d) => d.uid === uid);
-      // keep only the first one since its likely the freshest
-      const oldIndexes = indexes.slice(1);
-      for(const old of oldIndexes) {
-        data.splice(old, 1);
-      }
-    }
+      seenIds.add(d.uid);
+      return true;
+    });
 
-    const groups = generateGroupPlays(data);
+    const groups = generateGroupPlays(deduped);
     groups.sort((a, b) => sortByNewestDate(a.date, b.date));
     return groups.map((x) => {
       x.plays.sort((a, b) => sortByNewestDate(a.playedAt, b.playedAt));

@@ -14,7 +14,7 @@ export const VersionNext = (props: ComponentProps<typeof TextMuted> = {}) => {
     });
 
     if (isError) {
-        return <TextMuted textStyle="xs" {...props}>error.message</TextMuted>;
+        return <TextMuted textStyle="xs" {...props}>{error.message}</TextMuted>;
     }
 
     if(!isPending) {

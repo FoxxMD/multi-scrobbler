@@ -188,10 +188,10 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
         titleLinks.push(<Link key="weblink" variant="underline" target="_blank" href={webUrl ?? originUrl}><Icon size="sm">{getMusicServiceIconElement(musicService ?? source)}</Icon></Link>);
     }
     if (brainz.track !== undefined) {
-        titleLinks.push(<MusicbrainzInfoIcon type="track" mbid={brainz.track} tooltip link showMbid={showMbid} />)
+        titleLinks.push(<MusicbrainzInfoIcon key="mbtrack" type="track" mbid={brainz.track} tooltip link showMbid={showMbid} />)
     }
     if (brainz.recording !== undefined) {
-        titleLinks.push(<MusicbrainzInfoIcon type="recording" mbid={brainz.recording} tooltip link showMbid={showMbid} />)
+        titleLinks.push(<MusicbrainzInfoIcon key="mbrecording" type="recording" mbid={brainz.recording} tooltip link showMbid={showMbid} />)
     }
 
     const titleElm = <HStack><Span>{track}</Span>{titleLinks}</HStack>
@@ -228,7 +228,7 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
                     <DataList.ItemValue>
                         <Stack gap="1">
                             <Text textStyle="xs">Track Length: {duration === undefined ? 'N/A' : timeToHumanTimestamp(dayjs.duration(duration, 's'))}</Text>
-                            {listenedFor !== undefined ? <Muted textStyle="xs">Listened For: {timeToHumanTimestamp(dayjs.duration(listenedFor, 's'))}{duration !== undefined ? ` (${formatNumber((listenedFor / duration) * 100)}%)` : null}</Muted> : null}
+                            {listenedFor !== undefined ? <Muted textStyle="xs">Listened For: {timeToHumanTimestamp(dayjs.duration(listenedFor, 's'))}{duration !== undefined && duration > 0 ? ` (${formatNumber((listenedFor / duration) * 100)}%)` : null}</Muted> : null}
                         </Stack>
                     </DataList.ItemValue>
                 </DataList.Item>

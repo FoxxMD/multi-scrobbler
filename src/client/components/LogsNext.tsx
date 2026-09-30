@@ -45,7 +45,7 @@ let list = createFixedList(50);
 
 export const Logs = (props: {logs: Readonly<LogLineProps[]>, ref?: React.Ref<HTMLDivElement>}) => {
     return <Box ref={props.ref} fontFamily="source-code-pro, Menlo, Monaco, Consolas,'Courier New',monospace;">
-        {props.logs.map(x => <LogLine message={x.message}/>)}
+        {props.logs.map((x, index) => <LogLine key={index} message={x.message}/>)}
     </Box>
 }
 
@@ -93,7 +93,8 @@ export const LogsFetchable = (props: {settings?: LogOutputConfig, streamable?: b
                 setLogLimit(variables.limit);
             }
             client.invalidateQueries({
-                queryKey: ['logs', { level: variables.level ?? logLevel, limit: variables.limit ?? logLimit }],
+                // must use the factory key, a hand-built ['logs', {...}] key does not match the factory's ['logs', 'list', ...] prefix
+                queryKey: tanQueries.logs.list(variables.level ?? logLevel, variables.limit ?? logLimit).queryKey,
                 refetchType: 'all'
             })
         }

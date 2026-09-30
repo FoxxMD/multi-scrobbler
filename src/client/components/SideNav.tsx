@@ -120,7 +120,8 @@ export const EXTERNAL_LINKS: SideNavProps = {
             },
             {
                 title: 'Docs (Self-Hosted)',
-                url: '/docs',
+                // backend serves docs at <basePath>/docs, basePath is '/' or '/subpath' (no trailing slash)
+                url: `${(window.__MS_RUNTIME__?.basePath ?? '/').replace(/\/$/, '')}/docs`,
                 external: true
             },
             {

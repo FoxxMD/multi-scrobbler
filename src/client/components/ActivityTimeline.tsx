@@ -151,7 +151,7 @@ const TransformsItem = (props: Pick<ActivityTimelineProps, 'activity' | 'collaps
             <Timeline.Title>
                 <MSCollapsible
                     triggerProps={indicatorProps}
-                    indicator={<TimelineItemSummaryText>{transformVerb} <Muted>using configured Rules</Muted> <Muted>for</Muted> {steps[0].hook} {transformResult}</TimelineItemSummaryText>}
+                    indicator={<TimelineItemSummaryText>{transformVerb} <Muted>using configured Rules</Muted> <Muted>for</Muted> {steps[0]?.hook} {transformResult}</TimelineItemSummaryText>}
                     unmountOnExit
                     defaultOpen={collapsibleOpen}
                     timeline>
@@ -232,10 +232,11 @@ const ScrobbleResponseItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpe
     const scrobbleIconProps: Record<string, any> = {
         color: 'green.focusRing'
     };
-    if (payload !== undefined) {
-        if (error !== undefined) {
-            scrobbleSummary = <TimelineItemSummaryText>Scrobble attempt <Muted>to {capitalizeWords(componentName)} resulted in</Muted> <Span color="red.solid">an error.</Span></TimelineItemSummaryText>
-        } else if (warnings.length > 0) {
+    // an error can occur before a payload is built so check error independently of payload
+    if (error !== undefined) {
+        scrobbleSummary = <TimelineItemSummaryText>Scrobble attempt <Muted>to {capitalizeWords(componentName)} resulted in</Muted> <Span color="red.solid">an error.</Span></TimelineItemSummaryText>
+    } else if (payload !== undefined) {
+        if (warnings.length > 0) {
             scrobbleSummary = <TimelineItemSummaryText>Scrobbled <Muted>to {capitalizeWords(componentName)} but response </Muted> <Span color="orange.solid">has warnings.</Span></TimelineItemSummaryText>
         } else {
             scrobbleSummary = <TimelineItemSummaryText>Scrobbled <Muted>to {capitalizeWords(componentName)}</Muted> successfully.</TimelineItemSummaryText>;
@@ -484,14 +485,14 @@ export const ActivityTimeline = (props: ActivityTimelineProps) => {
         play: original,
     } = input || {};
 
-    events.sort((a, b) => sortByNewestDate(b.createdAt, a.createdAt));
+    const sortedEvents = [...events].sort((a, b) => sortByNewestDate(b.createdAt, a.createdAt));
 
     const timelineElements: React.JSX.Element[] = [
         <NewItem key="newPlay" activity={activity} collapsibleOpen={collapsibleOpen} componentType={componentType}/>
     ];
 
     let lastTransformedPlay = original;
-    for(const event of events) {
+    for(const event of sortedEvents) {
         switch(event.eventName) {
             case 'transform': {
                 if(lastTransformedPlay === undefined) {

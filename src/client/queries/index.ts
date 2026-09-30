@@ -79,21 +79,26 @@ export const tanQueries = mergeQueryKeys(components, activities, players, logs);
 export const useQueryState = (queryKey: Readonly<unknown[]>) => {
   const queryClient = useQueryClient()
   const [state, setState] = useState(() => queryClient.getQueryState(queryKey))
+  // callers usually pass a freshly built key array each render so depend on its hash instead of its identity
+  const targetHash = hashKey(queryKey)
 
   useEffect(() => {
-    const targetHash = hashKey(queryKey)
+    setState(queryClient.getQueryState(queryKey))
     return queryClient.getQueryCache().subscribe((event) => {
       if (event.query.queryHash === targetHash) {
         setState(event.query.state)
       }
     })
-  }, [queryClient, queryKey])
+  }, [queryClient, targetHash])
 
   return state // { status, data, error, fetchStatus, ... }
 }
 
 export const useQueryWatcher = <T>(queryKey: Readonly<unknown[]>) => {
   const queryClient = useQueryClient()
+  // callers usually pass a freshly built key array each render so depend on its hash instead of its identity
+  // otherwise a new observer is created (and re-subscribed) on every render
+  const keyHash = hashKey(queryKey)
 
   const observer = useMemo(
     () =>
@@ -101,12 +106,14 @@ export const useQueryWatcher = <T>(queryKey: Readonly<unknown[]>) => {
         queryKey,
         enabled: false, // never triggers its own fetch
       }),
-    [queryClient, queryKey]
+    [queryClient, keyHash]
   )
 
   const [result, setResult] = useState(() => observer.getCurrentResult())
 
   useEffect(() => {
+    // sync result in case the observer changed (key changed) since initial state
+    setResult(observer.getCurrentResult())
     return observer.subscribe(setResult)
   }, [observer])
 

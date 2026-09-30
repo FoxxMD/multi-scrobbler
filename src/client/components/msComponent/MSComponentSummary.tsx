@@ -1,4 +1,4 @@
-import React, { type ComponentProps, Fragment, useEffect } from "react"
+import React, { type ComponentProps, Fragment } from "react"
 import { Stack, Heading, Separator, HStack, Flex, Badge, Card,  LinkOverlay, LinkBox } from '@chakra-ui/react';
 import { type ComponentClientApiJson, type ComponentCommonApiJson, type ComponentsApiJson, isComponentClientApiJson, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
 import { Link } from "react-router";
@@ -89,25 +89,22 @@ const QuickStatsSource = (props: { data: ComponentCommonApiJson, streamable?: bo
             </Fragment>
         )
 
-export const MSComponentSummaryFetchable = (props: {componentId: number, data: ComponentCommonApiJson}) => {
+export const MSComponentSummaryFetchable = (props: {componentId: number, data: ComponentsApiJson}) => {
     const {
         componentId,
         data: initData
     } = props;
     const queryClient = useQueryClient();
-    const qKey = ['components', componentId, 'summary'];
-    useEffect(() => {
-        if (initData !== undefined && queryClient.getQueryData(qKey) === undefined) {
-            queryClient.setQueryData(['components', componentId, 'summary'], initData);
-        }
-    }, [initData]);
 
     const client = useSSEContext<MsSseEvent>();
     useSSEAnyEvent(client, (payload) => {
         if('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === componentId) {
             switch(payload.type) {
                 case 'componentUpdate':
-                    queryClient.setQueryData(['components', componentId, 'summary'], (old: ComponentCommonApiJson) => {
+                    queryClient.setQueryData<ComponentsApiJson>(['components', componentId, 'summary'], (old) => {
+                        if(old === undefined) {
+                            return old;
+                        }
                         const componentData = payload.data as MsSseEventPayload<Partial<ComponentCommonApiJson>>;
                             return {...old, ...componentData.data};
                     });
@@ -118,6 +115,8 @@ export const MSComponentSummaryFetchable = (props: {componentId: number, data: C
     const { isPending, isError, data, error } = useQuery({
         queryKey: ['components', componentId, 'summary'],
         queryFn: queryFn,
+        // data comes from the parent list and is kept up to date by SSE events, never fetched
+        initialData: initData,
         structuralSharing: false,
         staleTime: Infinity,
     });
@@ -126,12 +125,11 @@ export const MSComponentSummaryFetchable = (props: {componentId: number, data: C
         return <ErrorAlert error={error} />
     }
 
-    if(!isPending) {
-        return <MSComponentSummary data={data} fetchable/>
-    }
+    return <MSComponentSummary data={data} fetchable/>
 }
 
 type ComponentSummaryQueryKey = ['components', number, 'summary'];
+// placeholder, never called: query always has initialData and staleTime is Infinity
 const queryFn = async (context: QueryFunctionContext<ComponentSummaryQueryKey>) => {
     return {} as ComponentsApiJson;
 }

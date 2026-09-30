@@ -3,7 +3,7 @@ import { useSSEContext, useSSEEvent } from "@flamefrontend/sse-runtime-react";
 import React, { type ComponentProps, type PropsWithChildren, type ReactNode, useCallback, useEffect, useState } from "react";
 import { useTimeout } from 'react-use-timeout';
 import { COMPONENT_STATE, type ComponentCommonApiJson, type ComponentsApiJson, componentStateToFriendly, type MsSseEvent, type PlayApiCommon } from "../../core/Api";
-import type {Second} from "../../core/Atomic";
+import type {Milliseconds} from "../../core/TimeUtils";
 import { capitalizeWords } from "../../core/StringUtils";
 import { TextTip } from "./ToggleTip";
 
@@ -42,13 +42,13 @@ const DEFAULT_EXPIRES = 10000;
 
 export const NewBadge = (props: ComponentProps<typeof Badge>) => <Badge variant="surface" colorPalette="blue" {...props}/>;
 
-export const EphemeralElement = (props: { expires?: Second | boolean, children: React.ReactNode }) => {
+export const EphemeralElement = (props: { expires?: Milliseconds | boolean, children: React.ReactNode }) => {
 
     const {
         expires = DEFAULT_EXPIRES,
         children
     } = props;
-    let expiresTime: Second | undefined;
+    let expiresTime: Milliseconds | undefined;
     if(expires === true) {
         expiresTime = DEFAULT_EXPIRES;
     } else if(expires !== false) {

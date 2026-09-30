@@ -184,7 +184,7 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                     </Timeline.Connector>
                     <Timeline.Content>
                         <Timeline.Title {...timelineTextFormatting}>
-                            Final Play<Span color="fg.muted">after all Transforms</Span>
+                            Final Play <Span color="fg.muted">after all Transforms</Span>
                         </Timeline.Title>
                         <PlayData play={original} final={finalPlay} dates={false} compareDefault="Final" />
                     </Timeline.Content>

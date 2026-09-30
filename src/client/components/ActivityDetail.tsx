@@ -1,11 +1,12 @@
-import { Accordion, Alert, Dialog, Checkbox, Box, Text, Group, Portal, Code, Collapsible, Flex, HStack, Separator, Menu, Skeleton, SkeletonText, Span, Stack, useAccordionItemContext, type BadgeProps, type MenuItemProps, type MenuSelectionDetails, useClipboard, CloseButton, Button } from '@chakra-ui/react';
+import { Accordion, Alert, Dialog, Box, Text, Group, Portal, Code, Collapsible, Flex, HStack, Separator, Menu, Skeleton, SkeletonText, Span, Stack, useAccordionItemContext, type BadgeProps, type MenuItemProps, type MenuSelectionDetails, useClipboard, CloseButton, Button } from '@chakra-ui/react';
 import { useSSEContext, useSSEEvent } from "@flamefrontend/sse-runtime-react";
 import { useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import React, { Fragment, useCallback, useEffect, useState, type ComponentProps } from "react";
 import { LuChevronRight } from "react-icons/lu";
 import type { MarkOptional } from "ts-essentials";
 import type { ComponentsApiJson, MsSseEvent, PaginatedResponse, PlayApiCommonDetailed, QueryPlaysOptsJson, SortPlaysByProps } from "../../core/Api";
-import { INGRESS_QUEUE, queueContextSchema, type ComponentType, type QueueContext, type Second } from "../../core/Atomic";
+import { INGRESS_QUEUE, queueContextSchema, type ComponentType, type QueueContext } from "../../core/Atomic";
+import type { Milliseconds } from "../../core/TimeUtils";
 import { tanQueries, useQueryWatcher } from "../queries";
 import { activityTimelineHasIssue } from "../utils/ComponentUtils";
 import { ActivityTimeline } from "./ActivityTimeline";
@@ -91,7 +92,7 @@ export interface ActivityDetailProps {
 }
 
 export interface ActivitySummaryProps extends SortPlaysByProps {
-    activity: PlayApiCommonDetailed & {isNew?: boolean | Second}
+    activity: PlayApiCommonDetailed & {isNew?: boolean | Milliseconds}
     componentType: ComponentType
 }
 
@@ -138,7 +139,7 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
 }
 
 export const ActivitySummaryFetchable = (props: MarkOptional<ActivitySummaryProps, 'activity'> & { componentId: number, activityUid: string, query: QueryPlaysOptsJson}) => {
-    const {isError, error, data: activity} = useActivityQuery(props.componentId, props.activityUid, {activity: props.activity});
+    const {isError, error, data: activity} = useActivityQuery(props.componentId, props.activityUid, {activity: props.activity, msQuery: props.query});
 
     if(isError) {
         return <ErrorAlert error={error}/>
@@ -215,6 +216,12 @@ export const ActivityErrorSummary = (props: {activity: ActivityDetailProps['acti
     return null;
 }
 
+// defined at module level so it isn't a new component type (remounted) on every ActivityDetails render
+const ExpandCollapseContext = (props: {onClick: (val: boolean) => void}) => {
+    const item = useAccordionItemContext();
+    return <ExpandCollapse hideBelow="sm" display={item?.expanded ? 'flex' : 'none'} onClick={props.onClick} />
+}
+
 export const ActivityDetails = (props: ActivityDetailProps) => {
     const {
         activity,
@@ -227,13 +234,6 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
             } = {}
         }
     } = props;
-
-    console.log(`Rendering ActivityDetails for ${activity.play.data.track}`);
-
-    const ExpandCollapseContext = () => {
-        const item = useAccordionItemContext();
-        return <ExpandCollapse hideBelow="sm" display={useAccordionItemContext()?.expanded ? 'flex' : 'none'} onClick={(val) => setCollapsibleOpen(val)} />
-    }
 
     const [collapsibleOpen, setCollapsibleOpen] = useState<boolean | undefined>(undefined);
 
@@ -272,7 +272,7 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
                         paddingInline: "var(--accordion-padding-x)"
                     }} justify="flex-start" alignItems="flex-end">
                     </Stack>
-                    <ExpandCollapseContext/>
+                    <ExpandCollapseContext onClick={setCollapsibleOpen}/>
                 </Flex>
                 <Accordion.ItemContent>
                     <Accordion.ItemBody>
@@ -324,7 +324,6 @@ const RetryWithDialog = (props: { open: boolean, setOpen: (open: boolean) => voi
     const form = useForm({
         ...opts,
         onSubmit: ({ schemaOutputs }) => {
-            console.log(schemaOutputs[0]);
             props.onSubmit(schemaOutputs[0]);
             props.setOpen(false);
         }
@@ -411,11 +410,15 @@ const DeleteDialog = (props: { open: boolean, setOpen: (open: boolean) => void, 
                             <Text>
                                 Are you sure you want to delete this Play?
                             </Text>
+                             {/* Placeholder until deleting child Plays is implemented. When re-enabling:
+                                 pass withChildren through mutate({action: 'delete', children}) -> ky.delete(..., {searchParams: {children}})
+                                 and implement child deletion in the backend (DELETE /api/components/:id/plays/:uid ignores `children`)
+                                 and re-add Checkbox to the @chakra-ui/react import
                              {props.source === true && <Checkbox.Root checked={children} onCheckedChange={(val) => setChildren(!!val.checked)}>
                                 <Checkbox.HiddenInput />
                                 <Checkbox.Control />
                                 <Checkbox.Label>and delete Play in Clients</Checkbox.Label>
-                            </Checkbox.Root>}
+                            </Checkbox.Root>} */}
                             </Stack>
                         </Dialog.Body>
                         <Dialog.Footer>
@@ -587,7 +590,7 @@ export const ActivityStateActionsFetchable = (props: ActivityDetailFetchableProp
     }
 }
 
-export const ActivityCollapsible = (props: ActivitySummaryProps & { key?: string, live?: boolean, componentId: number, query: QueryPlaysOptsJson }) => {
+export const ActivityCollapsible = (props: ActivitySummaryProps & { live?: boolean, componentId: number, query: QueryPlaysOptsJson }) => {
     const {
         activity: {
             play
@@ -597,7 +600,7 @@ export const ActivityCollapsible = (props: ActivitySummaryProps & { key?: string
         live = false
     } = props;
     return (
-        <Collapsible.Root key={props.key} unmountOnExit
+        <Collapsible.Root unmountOnExit
 
             lazyMount
             _open={{

@@ -28,7 +28,7 @@ export const MusicbrainzInfoIcon = (props: MusicbrainzInfoIconProps) => {
 
     let content: React.JSX.Element;
     if (link) {
-        content = <a target='__blank' href={`https://musicbrainz.org/${type}/${mbid}`}>{icon}</a>
+        content = <a target='_blank' rel='noreferrer' href={`https://musicbrainz.org/${type}/${mbid}`}>{icon}</a>
     } else {
         content = icon;
     }
