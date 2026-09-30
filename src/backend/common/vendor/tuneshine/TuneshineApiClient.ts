@@ -64,12 +64,22 @@ export class TuneshineApiClient extends AbstractApiClient {
 
     async sendNowPlaying(play: PlayObject) {
         let artUrl: string | undefined = undefined;
-        if (play.meta?.art?.track !== undefined) {
-            artUrl = play.meta?.art?.track;
-        } else if (play.meta?.art?.album !== undefined) {
-            artUrl = play.meta?.art?.album;
-        } else if (play.meta?.art?.artist !== undefined) {
-            artUrl = play.meta?.art?.artist;
+        if(play.meta?.art !== undefined && typeof play.meta.art === 'object' && play.meta.art !== null) {
+            const {
+                track,
+                album,
+                artist
+            } = play.meta.art
+            if(track !== undefined) {
+                artUrl = track;
+                this.logger.trace(`Using art from track: ${track}`);
+            } else if(album !== undefined) {
+                artUrl = album;
+                this.logger.trace(`Using art from album: ${album}`);
+            } else if(artist !== undefined) {
+                artUrl = artist;
+                this.logger.trace(`Using art from artist: ${artist}`);
+            }
         }
         if (artUrl === undefined) {
             throw new SimpleError('No art found on Play');

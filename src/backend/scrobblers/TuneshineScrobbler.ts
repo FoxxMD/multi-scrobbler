@@ -76,12 +76,22 @@ export default class TuneshineScrobbler extends AbstractScrobbleClient {
             return [true];
         }
         let artUrl: string | undefined = undefined;
-        if (data.play.meta?.art?.track !== undefined) {
-            artUrl = data.play.meta?.art?.track;
-        } else if (data.play.meta?.art?.album !== undefined) {
-            artUrl = data.play.meta?.art?.album;
-        } else if (data.play.meta?.art?.artist !== undefined) {
-            artUrl = data.play.meta?.art?.artist;
+        if(data.play.meta?.art !== undefined && typeof data.play.meta.art === 'object' && data.play.meta.art !== null) {
+            const {
+                track,
+                album,
+                artist
+            } = data.play.meta.art
+            if(track !== undefined) {
+                artUrl = track;
+                this.logger.trace(`Found track art`);
+            } else if(album !== undefined) {
+                artUrl = album;
+                this.logger.trace(`Found album art`);
+            } else if(artist !== undefined) {
+                artUrl = artist;
+                this.logger.trace(`Found artist art`);
+            }
         }
         if (artUrl === undefined) {
             return [false, 'Play does not contain artwork'];
