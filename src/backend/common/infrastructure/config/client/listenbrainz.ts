@@ -54,6 +54,11 @@ export const listenbrainzOptionsSchema = z.object({
      * @examples [{"iphone": "", "9f3ec2-iphone": "kitchen ipad"}]
      * */
     allowDeviceList: allowDeviceListSchema,
+    includePlayPosition: z.boolean().optional().meta({
+        description: `Include playback position as additional_info.position_ms for Now Playing payloads
+        
+(Currently) custom field not officially supported by LZ. Name is subject to change if/when standardized.`
+    }),
     ...commonClientOptionsSchema.shape,
     ...nowPlayingOptionsSchema.shape,
 });

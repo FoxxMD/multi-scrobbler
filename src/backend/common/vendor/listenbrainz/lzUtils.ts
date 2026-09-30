@@ -46,10 +46,11 @@ export interface PlayToListenPayloadOptions {
     version?: string
     /** See matchDeviceLabel */
     allowDeviceList?: AllowDeviceList
+    includePlayPosition?: boolean
 }
 
 export const playToListenPayload = (play: PlayObject, options: PlayToListenPayloadOptions = {}): ListenPayload => {
-    const { version, allowDeviceList } = options;
+    const { version, allowDeviceList, includePlayPosition = false } = options;
     const {
         data: {
             playDate,
@@ -93,6 +94,9 @@ export const playToListenPayload = (play: PlayObject, options: PlayToListenPaylo
         tracknumber: brainz.trackNumber ?? msAdditionalInfo.tracknumber,
         duration_played: play.data.listenedFor
     };
+    if(includePlayPosition && play.meta.trackProgressPosition !== undefined) {
+        addInfo.position_ms = play.meta.trackProgressPosition * 1000;
+    }
 
     if (Object.keys(spotify).length > 0) {
         if (spotify.track !== undefined) {
@@ -201,8 +205,8 @@ export const urlToMusicService = (url?: string): string | undefined => {
     return undefined;
 };
 export const playToSubmitPayload = (play: PlayObject, options: SubmitOptions = {}): SubmitPayload => {
-    const { listenType = 'single', allowDeviceList } = options;
-    const listenPayload: SubmitPayload = { listen_type: listenType, payload: [playToListenPayload(play, {allowDeviceList})] };
+    const { listenType = 'single', allowDeviceList, includePlayPosition } = options;
+    const listenPayload: SubmitPayload = { listen_type: listenType, payload: [playToListenPayload(play, {allowDeviceList, includePlayPosition})] };
     if (listenType === 'playing_now') {
         delete listenPayload.payload[0].listened_at;
     }
