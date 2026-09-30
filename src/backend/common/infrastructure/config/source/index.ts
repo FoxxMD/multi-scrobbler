@@ -138,7 +138,7 @@ export const commonSourceOptionsSchema = z.object({
      * @examples [true, false]
      * */
     scrobbleBacklog: z.boolean().optional().meta({
-        description: "If this source",
+        description: "If this source supports fetching listen history and this option is enabled then on startup MS will attempt to scrobble the recent listens from that history",
         default: true,
         examples: [true, false]
     }),

@@ -40,6 +40,7 @@ import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.ts";
 import { AuthError, SimpleError } from "../common/errors/MSErrors.ts";
+import { AsyncTask, SimpleIntervalJob } from "toad-scheduler";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
 const state = 'random';
@@ -675,6 +676,33 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
         }
 
         return true;
+    }
+
+    public override initTasks(opts: {deadDelay?: number} = {}) {
+        super.initTasks(opts);
+        if(!this.scheduler.existsById('reconcile') && (this.config.options?.scrobbleBacklog ?? true)) {
+            this.logger.info('Adding Backlog Reconcile Task');
+            this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
+                minutes: 15,
+                runImmediately: false
+            }, new AsyncTask(
+                'Reconcile',
+                (): Promise<any> => {
+                    if(this.isReady()) {
+                        return this.processBacklog(new AbortController().signal, 'Reconcile').then(() => null).catch((err) => {
+                            this.errors.push(err);
+                            this.logger.error(err);
+                        });
+                    }
+                    this.logger.info('Not running reconcile job because Source is not ready.');
+                    return Promise.resolve();
+                },
+                (err: Error) => {
+                    this.logger.error(err);
+                    this.errors.push(err);
+                }
+            ), {id: 'reconcile'}));
+        }
     }
 
     protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) => await this.getPlayHistory({formatted: true, ...options})

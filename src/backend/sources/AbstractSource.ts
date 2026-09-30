@@ -538,8 +538,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
         }
     }
 
-    protected processBacklog = async (signal: AbortSignal) => {
+    protected processBacklog = async (signal: AbortSignal, label?: string) => {
         if (this.canBacklog) {
+            const logger = label !== undefined ? childLogger(this.logger, label) : this.logger;
 
             const {
                 options: {
@@ -548,12 +549,12 @@ export default abstract class AbstractSource extends AbstractComponent implement
             } = this.config;
 
             if(scrobbleBacklog === false) {
-                this.logger.info('Source is able to scrobble backlog but was it disabled by user.');
+                logger.info('Source is able to scrobble backlog but was it disabled by user.');
                 this.setStatus('Not scrobbling backlog because it was disabled by user');
                 return;
             }
 
-            this.logger.info('Discovering backlogged tracks from recently played API...');
+            logger.info('Discovering backlogged tracks from recently played API...');
             this.setStatus('Discovering backlogged tracks from recently played API...');
             let backlogPlays: PlayObject[];
             const {
@@ -561,18 +562,18 @@ export default abstract class AbstractSource extends AbstractComponent implement
             } = this.config.options || {};
             let backlogLimit = scrobbleBacklogCount;
             if(backlogLimit > this.SCROBBLE_BACKLOG_COUNT) {
-                this.logger.warn(`scrobbleBacklogCount (${scrobbleBacklogCount}) cannot be greater than max API limit (${this.SCROBBLE_BACKLOG_COUNT}), reverting to max...`);
+                logger.warn(`scrobbleBacklogCount (${scrobbleBacklogCount}) cannot be greater than max API limit (${this.SCROBBLE_BACKLOG_COUNT}), reverting to max...`);
                 backlogLimit = this.SCROBBLE_BACKLOG_COUNT;
             }
             try {
-                this.logger.verbose(`Fetching the last ${backlogLimit}${backlogLimit === this.SCROBBLE_BACKLOG_COUNT ? ' (max) ' : ''} listens to check for backlogging...`);
+                logger.verbose(`Fetching the last ${backlogLimit}${backlogLimit === this.SCROBBLE_BACKLOG_COUNT ? ' (max) ' : ''} listens to check for backlogging...`);
                 backlogPlays = (await this.getBackloggedPlays({limit: backlogLimit})).map((x) => ({...x, meta: {...x.meta, parsedFrom: PARSED_FROM.backlog}}));
                 signal.throwIfAborted();
             } catch (e) {
                 throw new Error('Error occurred while fetching backlogged plays', {cause: e});
             }
             await this.queuePlay(backlogPlays);
-            this.logger.info('Backlog Plays added to discovery queue.');
+            logger.info('Backlog Plays added to discovery queue.');
         }
         return;
     }
@@ -630,7 +631,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
             fork(async (fSignal) => {
                 try {
-                    await this.processBacklog(fSignal);
+                    await this.processBacklog(fSignal, 'Startup');
                 } catch (e) {
                     throwIfAborted(fSignal);
                     await this.notify({

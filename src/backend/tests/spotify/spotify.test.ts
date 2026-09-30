@@ -4,21 +4,20 @@ import { expect } from 'chai';
 import EventEmitter from "events";
 import sinon from 'sinon';
 import clone from 'clone';
+import { SimpleIntervalJob } from 'toad-scheduler';
 import SpotifySource from "../../sources/SpotifySource.ts";
-import type { SpotifySourceConfig } from "../../common/infrastructure/config/source/spotify.ts";
+import { envSchemas, type SpotifySourceConfig } from "../../common/infrastructure/config/source/spotify.ts";
 import currentlyPlayingNoIsrcPayload from '../plays/spotifyCurrentlyPlayingNoIsrc.json' with { type: "json" };
 import playbackState from '../plays/spotifyCurrentPlaybackState.json' with { type: "json" };
 
-const createSpotifySource = (enrichIsrc?: boolean): SpotifySource => {
+const createSpotifySource = (options: SpotifySourceConfig['options'] = {}): SpotifySource => {
     const config = {
         id: `test-${Date.now()}-${Math.random()}`,
         data: {
             clientId: 'test-client',
             clientSecret: 'test-secret',
         },
-        options: {
-            enrichIsrc
-        }
+        options
     } as unknown as SpotifySourceConfig;
 
     return new SpotifySource('test', config, { localUrl: new URL('http://test'), configDir: 'test', logger: loggerTest, version: 'test' }, new EventEmitter());
@@ -70,7 +69,7 @@ describe('Spotify - ISRC Enrichment', function () {
         const payload = clone(currentlyPlayingNoIsrcPayload);
         payload.item.id = 'track-disabled';
 
-        const source = createSpotifySource(false);
+        const source = createSpotifySource({ enrichIsrc: false });
         const getTrackStub = sinon.stub();
         (source as any).spotifyApi = {
             getMyCurrentPlayingTrack: sinon.stub().resolves({ body: payload }),
@@ -117,3 +116,94 @@ describe('Spotify - ISRC Enrichment', function () {
         expect(play?.data.track).to.equal('The Sandpits Of Zonhoven');
     });
 });
+
+describe('Spotify - Backlog Reconcile Task', function () {
+
+    afterEach(function () {
+        sinon.restore();
+    });
+
+    it('adds reconcile task to scheduler by default with 15 minute interval', function () {
+        const source = createSpotifySource();
+        source.initTasks();
+
+        expect(source.scheduler.existsById('reconcile')).to.be.true;
+        const job = source.scheduler.getById('reconcile') as SimpleIntervalJob;
+        expect((job as any).schedule).to.deep.equal({ minutes: 15, runImmediately: false });
+    });
+
+    it('adds reconcile task when scrobbleBacklog is explicitly true', function () {
+        const source = createSpotifySource({ scrobbleBacklog: true });
+        source.initTasks();
+
+        expect(source.scheduler.existsById('reconcile')).to.be.true;
+    });
+
+    it('does not add reconcile task when scrobbleBacklog is false', function () {
+        const source = createSpotifySource({ scrobbleBacklog: false });
+        source.initTasks();
+
+        expect(source.scheduler.existsById('reconcile')).to.be.false;
+    });
+
+    it('does not add duplicate task if initTasks is called again', function () {
+        const source = createSpotifySource();
+        source.initTasks();
+        source.initTasks();
+
+        expect(source.scheduler.getAllJobs().filter(j => j.id === 'reconcile')).to.have.lengthOf(1);
+    });
+
+    it('reconcile task executes processBacklog with Reconcile label when source is ready', async function () {
+        const source = createSpotifySource();
+        const processStub = sinon.stub(source as any, 'processBacklog').resolves();
+        sinon.stub(source, 'isReady').returns(true);
+
+        source.initTasks();
+        const job = source.scheduler.getById('reconcile') as SimpleIntervalJob;
+        await (job as any).task.executeAsync();
+
+        expect(processStub.calledOnce).to.be.true;
+        expect(processStub.firstCall.args[1]).to.equal('Reconcile');
+    });
+
+    it('reconcile task does not execute processBacklog when source is not ready', async function () {
+        const source = createSpotifySource();
+        const processStub = sinon.stub(source as any, 'processBacklog').resolves();
+        sinon.stub(source, 'isReady').returns(false);
+
+        source.initTasks();
+        const job = source.scheduler.getById('reconcile') as SimpleIntervalJob;
+        await (job as any).task.executeAsync();
+
+        expect(processStub.called).to.be.false;
+    });
+
+    it('reconcile task pushes to errors when processBacklog fails', async function () {
+        const source = createSpotifySource();
+        const error = new Error('Spotify API error');
+        sinon.stub(source as any, 'processBacklog').rejects(error);
+        sinon.stub(source, 'isReady').returns(true);
+
+        source.initTasks();
+        const job = source.scheduler.getById('reconcile') as SimpleIntervalJob;
+        await (job as any).task.executeAsync();
+
+        expect(source.errors).to.include(error);
+    });
+});
+
+describe('Spotify - Configuration', function () {
+
+    it('Parses SPOTIFY_SCROBBLE_BACKLOG from ENV', function () {
+        const parsed = envSchemas.toConfig({
+            SPOTIFY_CLIENT_ID: 'cid',
+            SPOTIFY_CLIENT_SECRET: 'csec',
+            SPOTIFY_REDIRECT_URI: 'http://localhost/callback',
+            SPOTIFY_SCROBBLE_BACKLOG: false,
+        });
+
+        expect(parsed.options?.scrobbleBacklog).to.be.false;
+    });
+});
+
