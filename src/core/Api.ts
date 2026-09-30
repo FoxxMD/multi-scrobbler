@@ -414,3 +414,5 @@ export const artistSearchSimpleRequestQuerySchema = z.object({
     }),
 });
 export type ArtistSearchSimpleRequestQuery = z.infer<typeof artistSearchSimpleRequestQuerySchema>;
+
+export const EXTERNAL_ART_URL_REGEX = new RegExp(/api\/components\/\d+\/art/);

@@ -13,6 +13,7 @@ import { getRoot } from "../../../ioc.ts";
 import type { Cacheable } from "cacheable";
 import { nowPlayingExpirationDuration } from "../../../scrobblers/AbstractScrobbleClient.ts";
 import { UpstreamError } from "../../errors/UpstreamError.ts";
+import { EXTERNAL_ART_URL_REGEX } from "../../../../core/Api.ts";
 
 export class TuneshineApiClient extends AbstractApiClient {
 
@@ -131,14 +132,21 @@ export class TuneshineApiClient extends AbstractApiClient {
     }
 
     public async convertToWebp(opts: { url?: string, data?: SharpInput }) {
-        let input: SharpInput;
+        let usedUrl: string | undefined,
+        input: SharpInput;
         if (opts.data !== undefined) {
             input = opts.data;
         } else if (opts.url !== undefined) {
+            usedUrl = opts.url;
+            if(EXTERNAL_ART_URL_REGEX.test(opts.url)) {
+                const u = new URL(opts.url, getRoot().items.localUrl);
+                usedUrl = u.toString();
+                this.logger.trace(`Detected MS external art URL alias and converted for local use: ${usedUrl}`);
+            }
             try {
-                input = await ky.get(opts.url).arrayBuffer();
+                input = await ky.get(usedUrl).arrayBuffer();
             } catch (e) {
-                throw new UpstreamError(`Failed to get resource from art URL ${opts.url}`, { cause: e });
+                throw new UpstreamError(`Failed to get resource from art URL ${usedUrl}`, { cause: e });
             }
         } else {
             throw new SimpleError('Must pass either url or data');
@@ -149,7 +157,7 @@ export class TuneshineApiClient extends AbstractApiClient {
                 .webp({ nearLossless: true })
                 .toBuffer()
         } catch (e) {
-            throw new SimpleError(`Failed to convert ${opts.url !== undefined ? `resource from URL ${opts.url}` : 'image data'} to webp`, { cause: e });
+            throw new SimpleError(`Failed to convert ${usedUrl !== undefined ? `resource from URL ${usedUrl}` : 'image data'} to webp`, { cause: e });
         }
     }
 }
