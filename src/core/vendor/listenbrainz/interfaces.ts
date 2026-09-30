@@ -99,6 +99,7 @@ export const additionalTrackInfoSchema = z.object({
     duration: z.number().optional(),
 
     duration_ms: z.number().optional(),
+    duration_played: z.number().optional(),
     track_mbid: z.string().optional(),
     work_mbids: z.array(workMbidSchema).optional(),
 

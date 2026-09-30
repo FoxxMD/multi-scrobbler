@@ -640,6 +640,7 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
                     artist_mbids = [],
                     duration: aDuration,
                     duration_ms: aDurationMs,
+                    duration_played,
                     music_service_name,
                     music_service,
                     submission_client,
@@ -714,6 +715,10 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
                 playId,
                 deviceId: combinePartsToString([music_service_name ?? music_service, submission_client, submission_client_version])
             }
+        }
+
+        if(duration_played !== undefined) {
+            play.data.listenedFor = duration_played;
         }
         
         const brainzMeta = removeUndefinedKeys<BrainzMeta>({

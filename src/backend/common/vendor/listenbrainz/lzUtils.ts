@@ -90,7 +90,8 @@ export const playToListenPayload = (play: PlayObject, options: PlayToListenPaylo
         spotify_artist_ids: msAdditionalInfo.spotify_artist_ids,
         origin_url: msAdditionalInfo.origin_url,
         isrc: isrc ?? msAdditionalInfo.isrc,
-        tracknumber: brainz.trackNumber ?? msAdditionalInfo.tracknumber
+        tracknumber: brainz.trackNumber ?? msAdditionalInfo.tracknumber,
+        duration_played: play.data.listenedFor
     };
 
     if (Object.keys(spotify).length > 0) {
