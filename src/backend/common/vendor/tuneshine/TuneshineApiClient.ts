@@ -85,9 +85,9 @@ export class TuneshineApiClient extends AbstractApiClient {
         // }
 
         //const formData = new FormData();
-        let imageContents: string;
+        let imageContents: Blob;
         try {
-            imageContents = (await this.convertToWebp({ url: artUrl })).toString();
+            imageContents = new Blob([(await this.convertToWebp({ url: artUrl }))], {type: 'image/webp'});
             //formData.append('image', (await this.convertToWebp({ url: artUrl })).toString());
         } catch (e) {
             throw new Error('Failed to process art image before sending Now Playing data', {cause: e});
@@ -101,11 +101,12 @@ export class TuneshineApiClient extends AbstractApiClient {
                     const fd = new FormData();
                     for (const name in body) {
                         // @ts-expect-error not sure how to fix this but its fine
-                        fd.append(name, body[name] as string);
+                        fd.append(name, body[name]);
                     }
                     return fd;
                 },
                 body: {
+                    // @ts-expect-error blob is the correct type here
                     image: imageContents,
                     metadata: JSON.stringify(metadata)
                 },
