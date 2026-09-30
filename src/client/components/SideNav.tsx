@@ -11,7 +11,7 @@ import { Link as RouterLink } from "react-router";
 import { ExternalLinkIconRaw } from "./icons/ChakraIcons"
 
 interface SideNavItem {
-  title: React.ReactNode
+  title: string
   url: LinkProps["href"] | undefined
   external?: boolean
   status?: string
@@ -19,7 +19,7 @@ interface SideNavItem {
 
 interface SideNavProps {
   currentUrl?: string
-  title: React.ReactNode
+  title: string
   id: string
   status?: string
   items: Array<SideNavItem>

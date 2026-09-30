@@ -1,8 +1,9 @@
 import type { Card, IconProps, HTMLChakraProps} from '@chakra-ui/react';
 import { Span } from '@chakra-ui/react';
-import type {PlayApiCommonDetailed} from '../../core/Api';
-import { type LifecycleStep, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED } from '../../core/Atomic';
+import type {PlayApiCommonDetailed, QueryPlaysOptsJson} from '../../core/Api';
+import { INGRESS_QUEUE, isPlayState, type LifecycleStep, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED } from '../../core/Atomic';
 import { isErrorIsh, type ErrorIsh } from '../../core/ErrorUtils';
+import type { QueryPlaysOptsJsonRefreshable } from '../queries';
 
 export const cardHeaderSeparator: Card.HeaderProps = {
     borderBottomWidth: "1px",
@@ -121,4 +122,25 @@ export const findAnyAuthError = (e: ErrorIsh): [ErrorIsh, boolean] => {
         return [aCheckError, false];
     }
     return [undefined, false];
+}
+
+export const queryPlayOptsRefreshableToJson = (query: QueryPlaysOptsJsonRefreshable): QueryPlaysOptsJson => {
+    const {
+        nonce,
+        state,
+        ...rest
+    } = query;
+    const derived: QueryPlaysOptsJson = rest;
+    if (state !== undefined) {
+        derived.state = state.filter(x => isPlayState(x));
+
+        if (state.includes('failed TBR') && state.includes('queued')) {
+            derived.queues = [{ queueName: INGRESS_QUEUE, queueStatus: 'queued' }, { queueName: INGRESS_QUEUE, queueStatus: 'failed' }];
+            derived.state = Array.from(new Set([...derived.state, 'failed', 'queued']));
+        } else if (state.includes('failed TBR')) {
+            derived.queues = [{ queueName: INGRESS_QUEUE, queueStatus: 'failed' }];
+            derived.state = Array.from(new Set([...derived.state, 'failed']));
+        }
+    }
+    return derived;
 }

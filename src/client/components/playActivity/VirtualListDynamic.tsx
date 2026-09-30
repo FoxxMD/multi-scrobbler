@@ -4,7 +4,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import React, { type ComponentProps, useCallback, useMemo } from "react";
 import { LuCaptionsOff } from "react-icons/lu";
 import { ActivityCollapsible } from '../ActivityDetail.js';
-import { type ActivityLogProps, generateFlatItems, GroupHeader, isGroupInfo } from './ListParts.js';
+import { type ActivityLogProps, generateFlatItems, GroupHeader, type GroupInfo, isGroupHeader, isGroupInfo } from './ListParts.js';
+import type { PlayApiCommonDetailed } from '../../../core/Api.js';
 
 const itemContainerStyle: React.ComponentProps<"div"> = {
   style: {
@@ -154,7 +155,7 @@ export const VirtualizedListDynamic = (props: ActivityLogProps & Pick<UseInfinit
                       </VStack>
                       )
                       : <NoPlayResults type="additional"/>
-                    : <ItemContainer query={props.query} live={live} sortBy={sortBy} componentId={props.componentId} componentType={props.componentType} activity={item} paddingY="2" data={item}/>}
+                    : <ItemContainer query={props.query} live={live} sortBy={sortBy} componentId={props.componentId} componentType={props.componentType} activity={item as PlayApiCommonDetailed} paddingY="2" data={item as GroupInfo}/>}
             </Box>)
       })}
     </Box>

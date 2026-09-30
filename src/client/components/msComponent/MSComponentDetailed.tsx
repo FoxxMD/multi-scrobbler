@@ -462,7 +462,7 @@ export const ComponentDetailedDesktop = (props: {data?: ComponentsApiJson, live?
             {errors.length > 0 ? <>{errors.map(x => <ErrorAlert error={x}/>)}</> : undefined }
             {warnings.length > 0 ? <>{warnings.map(x => <ErrorAlert error={x} status="warning"/>)}</> : undefined }
             <MSErrorBoundary>{props.live ? <PlayersContainerFetchable nowPlaying={isSource ? undefined : true} data={data}/> : <PlayersContainer nowPlaying={isSource ? undefined : true} data={data} live={props.live}/>}</MSErrorBoundary>
-            <MSErrorBoundary><ListContainerFilterable render="virtDynamic" componentType={data.mode} componentId={data.id}/></MSErrorBoundary>
+            <MSErrorBoundary><ListContainerFilterable componentType={data.mode} componentId={data.id}/></MSErrorBoundary>
         </Flex>
         </MSErrorBoundary>
     )

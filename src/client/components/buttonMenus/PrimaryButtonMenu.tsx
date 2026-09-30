@@ -34,7 +34,7 @@ export const PrimaryButtonMenu = (props: PrimaryButtonMenuProps) => {
                                 if(React.isValidElement(x)) {
                                     return <React.Fragment key={i}>{x}</React.Fragment>;
                                 }
-                                return <React.Fragment key={i}>{x({ disabled: props.disabled })}</React.Fragment>
+                                return <React.Fragment key={i}>{(x as MenuItemRender)({ disabled: props.disabled, value: i.toString() })}</React.Fragment>
                             })}
                         </Menu.Content>
                     </Menu.Positioner>

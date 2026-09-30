@@ -1,26 +1,24 @@
-import { Accordion, Container, Stack, Heading, type MenuSelectionDetails, HStack, Dialog, Portal, CloseButton, Button, Text, RadioGroup } from '@chakra-ui/react';
+import { Container, Stack, Heading, type MenuSelectionDetails, HStack, Dialog, Portal, CloseButton, Button, Text } from '@chakra-ui/react';
 import { useSSEAnyEvent, useSSEContext } from '@flamefrontend/sse-runtime-react';
 import { type InfiniteData, useInfiniteQuery, type UseInfiniteQueryResult, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import doy from 'dayjs/plugin/dayOfYear.js';
-import { type ComponentProps, Fragment, useCallback, useMemo, useState } from "react";
+import { type ComponentProps, useCallback, useMemo, useState } from "react";
 import type {MsSseEvent, MsSseEventPayload, PaginatedResponse, PlayApiCommonDetailed, QueryPlaysOptsJson} from '../../../core/Api.js';
-import {actionContextSchema, queueContextSchema, type ComponentType, type QueueContext} from '../../../core/Atomic.js';
+import {actionContextSchema, type ComponentType, type QueueContext} from '../../../core/Atomic.js';
 import { type QueryPlaysOptsJsonRefreshable, tanQueries, useQueryWatcher } from '../../queries/index.js';
-import { ActivityDetailFetchable, ActivityDetails, ActivitySummary, ActivitySummaryFetchable, ActivitySummarySkeleton } from '../ActivityDetail.js';
+import { ActivitySummarySkeleton } from '../ActivityDetail.js';
 import { ErrorAlert } from '../ErrorAlert.js';
 import { ListFilters, ListRefereshButton, todayRange } from './ListFilters.js';
-import { type ActivityLogProps, generateGroupPlays, GroupHeader } from './ListParts.js';
+import { type ActivityLogProps } from './ListParts.js';
 import { NoPlayResults, VirtualizedListDynamic } from './VirtualListDynamic.js';
-import { VirtualizedListExp } from './VirtualListExperimental.js';
-import { VirtualizedListNormal } from './VirtualListNormal.js';
 import { menuItem, type MenuItemRender } from '../buttonMenus/menuItemUtils.js';
 import { RetryIcon } from '../icons/ChakraIcons.js';
 import { PrimaryButtonMenu } from '../buttonMenus/PrimaryButtonMenu.js';
 import ky from 'ky';
 import { formOptions, useForm } from '@tanstack/react-form';
-import z from 'zod';
 import { FormCheckbox, FormRadio, type RadioFormItem } from '../form/formComponents.js';
+import { queryPlayOptsRefreshableToJson } from '../../utils/ComponentUtils.js';
 
 dayjs.extend(doy);
 
@@ -29,60 +27,22 @@ export const ActivityList = (props: ActivityLogProps & Pick<UseInfiniteQueryResu
   const {
     data = [],
     sortBy = 'played',
-    render = 'accordian'
   } = props;
 
-  if (render === 'accordian') {
-    return <PlainAccordian data={data} sortBy={sortBy} {...props} />
-  }
-  if (render === 'virtNormal') {
-    return <VirtualizedListNormal data={data} sortBy={sortBy} {...props} />
-  }
-  if (render === 'virtDynamic') {
-    return <VirtualizedListDynamic data={data} sortBy={sortBy} {...props} />
-  }
-  if (render === 'virtExp') {
-    return <VirtualizedListExp data={data} sortBy={sortBy} {...props} />
-  }
-}
+  return <VirtualizedListDynamic data={data} sortBy={sortBy} {...props} />
 
-
-const PlainAccordian = (props: ActivityLogProps) => {
-  const {
-    data = [],
-    sortBy,
-    live = false
-  } = props;
-  const groups = generateGroupPlays(data);
-  return (
-    <Stack gap="2">
-      {groups.map((g) => {
-        return (
-          <Fragment key={g.date.valueOf()}>
-            <GroupHeader data={{ date: g.date, count: g.plays.length }} />
-            <Accordion.Root variant="enclosed" collapsible multiple lazyMount>
-              {g.plays.map((activity, index) => {
-                const { play } = activity;
-                return (
-                  <Accordion.Item key={index} value={index.toString()}>
-                    <Accordion.ItemTrigger truncate cursor="pointer">
-                      <Accordion.ItemIndicator />
-                      {live ? <ActivitySummaryFetchable activityUid={activity.uid} {...props} /> : <ActivitySummary componentType={props.componentType} activity={activity} sortBy={sortBy} />}
-                    </Accordion.ItemTrigger>
-                    <Accordion.ItemContent>
-                      <Accordion.ItemBody borderTopColor="gray.border" >
-                        {live ? <ActivityDetailFetchable componentId={props.componentId} componentType={props.componentType} uid={activity.uid} /> : <ActivityDetails activity={activity as PlayApiCommonDetailed} {...props} />}
-                      </Accordion.ItemBody>
-                    </Accordion.ItemContent>
-                  </Accordion.Item>
-                )
-              })}
-            </Accordion.Root>
-          </Fragment>
-        )
-      })}
-    </Stack>
-  );
+  // if (render === 'accordian') {
+  //   return <PlainAccordian data={data} sortBy={sortBy} {...props} />
+  // }
+  // if (render === 'virtNormal') {
+  //   return <VirtualizedListNormal data={data} sortBy={sortBy} {...props} />
+  // }
+  // if (render === 'virtDynamic') {
+  //   return <VirtualizedListDynamic data={data} sortBy={sortBy} {...props} />
+  // }
+  // if (render === 'virtExp') {
+  //   return <VirtualizedListExp data={data} sortBy={sortBy} {...props} />
+  // }
 }
 
 
@@ -90,7 +50,7 @@ export const ListContainer = (props?: ComponentProps<typeof ActivityList>) => {
   return <Container maxWidth="3xl"><ActivityList {...props} /></Container>
 }
 
-export const ListContainerFetchable = (props: { componentId: number, componentType: ComponentType, filters?: QueryPlaysOptsJsonRefreshable } & Pick<ComponentProps<typeof ActivityList>, 'render'>) => {
+export const ListContainerFetchable = (props: { componentId: number, componentType: ComponentType, filters?: QueryPlaysOptsJsonRefreshable }) => {
   const {
     componentId,
     filters = {}
@@ -117,6 +77,8 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
   },
   });
 
+  const queryJson = queryPlayOptsRefreshableToJson(query);
+
   const allPlays = useMemo(() => data === undefined ? [] : data.pages.flatMap(x => x.data).filter(x => x !== null && x !== undefined),[data]);
 
     const queryClient = useQueryClient();
@@ -128,7 +90,7 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
                 { 
                   const componentData = payload.data as MsSseEventPayload<PlayApiCommonDetailed>;
                 console.debug(`[Insert Check ${componentData.data.uid}] Recieved playInsert for Component ${componentId}, checking if Play can be inserted...`);
-                if(playInWindow(componentData.data, query)) {
+                if(playInWindow(componentData.data, queryJson)) {
                   queryClient.setQueryData(tanQueries.activities.list(componentId, query).queryKey, (old: InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown>) => {
                       return insertInfinitePlay(componentData.data, old);
                   });
@@ -175,12 +137,11 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
     hasNextPage={hasNextPage}
     fetchNextPage={fetchNextPage}
     isFetchingNextPage={isFetchingNextPage}
-    render="virtDynamic"
     data={allPlays}
     live
     {...props}
     sortBy="played"
-    query={query} />;
+    query={queryJson} />;
   }
 
   return rendered;
@@ -387,7 +348,7 @@ const defaultFilter = (): QueryPlaysOptsJsonRefreshable => ({
     sort: 'playedAt'
 });
 
-export const ListContainerFilterable = (props: { componentId: number, componentType: ComponentType } & Pick<ComponentProps<typeof ActivityList>, 'render'>) => {
+export const ListContainerFilterable = (props: { componentId: number, componentType: ComponentType }) => {
   const { componentType } = props;
   const [filters, setFilter] = useState<QueryPlaysOptsJsonRefreshable>(defaultFilter());
   const primaryRefresh = <ListRefereshButton size="md" componentId={props.componentId} filters={filters} variant="subtle" />;

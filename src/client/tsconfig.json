@@ -7,5 +7,19 @@
     "paths": {
       "@/*": ["./src/client/*"]
     }
-  }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "../core/**/*.ts"
+  ],
+  "exclude": [
+    "../../node_modules",
+    "../../coverage",
+
+    "../../_site",
+    "../../docsite",
+    "../../build",
+    "../stories"
+  ]
 }

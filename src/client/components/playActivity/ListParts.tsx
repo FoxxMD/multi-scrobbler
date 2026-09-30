@@ -1,10 +1,9 @@
-import { Box, Flex, IconButton, Separator, Text } from '@chakra-ui/react';
+import { Box, Flex, Separator, Text } from '@chakra-ui/react';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import doy from 'dayjs/plugin/dayOfYear.js';
 import type {ComponentProps} from "react";
-import { VscDebugRestart } from 'react-icons/vsc';
-import type {PlayApiCommon, PlayApiCommonDetailed, QueryPlaysOptsJson, SortPlaysByProps} from '../../../core/Api.js';
+import type {PlayApiCommonDetailed, QueryPlaysOptsJson, SortPlaysByProps} from '../../../core/Api.js';
 import type {ComponentType} from '../../../core/Atomic.js';
 import { getAllIndexes } from '../../../core/DataUtils.js';
 import { sortByNewestDate } from '../../../core/PlayUtils.js';
@@ -14,6 +13,7 @@ dayjs.extend(doy);
 export interface GroupInfo {
   count: number
   date: Dayjs
+  uid: string
 }
 
 export interface GroupData {
@@ -25,14 +25,17 @@ export interface ActivityLogProps extends SortPlaysByProps {
   data: PlayApiCommonDetailed[]
   componentId: number
   componentType: ComponentType
-  render?: 'virtNormal' | 'virtDynamic' | 'virtExp' | 'accordian'
+//  render?: 'virtNormal' | 'virtDynamic' | 'virtExp' | 'accordian'
   query: QueryPlaysOptsJson
   live?: boolean
   total?: number
 }
 
+export interface GroupHeaderProps {
+  data: GroupInfo 
+}
 
-export const GroupHeader = (props: { data: GroupInfo } & ComponentProps<typeof Box>) => {
+export const GroupHeader = (props: GroupHeaderProps & ComponentProps<typeof Box>) => {
     const {
         data,
         ...rest
@@ -64,7 +67,9 @@ export const GroupHeader = (props: { data: GroupInfo } & ComponentProps<typeof B
 
 export const isGroupInfo = (val: any): val is GroupInfo => val.date !== undefined;
 
-export const generateGroupPlays = (data: PlayApiCommon[]): GroupData[] => {
+export const isGroupHeader = (val: any): val is ComponentProps<typeof GroupHeader> => `data` in val && val.data.date !== undefined;
+
+export const generateGroupPlays = (data: PlayApiCommonDetailed[]): GroupData[] => {
 
   if(data.length === 0) {
     return [];
@@ -88,7 +93,7 @@ export const generateGroupPlays = (data: PlayApiCommon[]): GroupData[] => {
   return groupsReduced.groups;
 }
 
-export const generateFlatItems = (data: PlayApiCommonDetailed[]) => {
+export const generateFlatItems = (data: PlayApiCommonDetailed[]): (PlayApiCommonDetailed | GroupInfo)[] => {
     // ensure there are no duplicates
     // this may happen if a play is "bumped" from one "page" to another, based on offset,
     // when new plays are inserted out of order (playedAt)

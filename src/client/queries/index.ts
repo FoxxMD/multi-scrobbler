@@ -5,7 +5,8 @@ import ky from 'ky';
 import qs from 'qs';
 import { baseUrl } from "../utils";
 import type {ComponentsApiJson, PaginatedResponse, PlayApiCommonDetailed, PlayStateUI, QueryPlaysOptsJson} from "../../core/Api";
-import { INGRESS_QUEUE, isPlayState, type SourcePlayerJson } from "../../core/Atomic";
+import { type SourcePlayerJson } from "../../core/Atomic";
+import { queryPlayOptsRefreshableToJson } from "../utils/ComponentUtils";
 
 export type QueryPlaysOptsJsonRefreshable = Omit<QueryPlaysOptsJson, 'state'> & {nonce?: string, state?: PlayStateUI[]};
 
@@ -32,23 +33,7 @@ const activities = createQueryKeys('activities', {
     list: (componentId: number, filters: QueryPlaysOptsJsonRefreshable) => ({
         queryKey: ['components', componentId, 'plays', filters],
         queryFn: (ctx) => {
-            const {
-                nonce,
-                state,
-                ...rest
-            } = filters;
-            const derived: QueryPlaysOptsJson = rest;
-            if(state !== undefined) {
-              derived.state = state.filter(x => isPlayState(x));
-
-              if(state.includes('failed TBR') && state.includes('queued')) {
-                derived.queues = [{queueName: INGRESS_QUEUE, queueStatus: 'queued'},{queueName: INGRESS_QUEUE, queueStatus: 'failed'}];
-                derived.state = Array.from(new Set([...derived.state, 'failed', 'queued']));
-              } else if(state.includes('failed TBR')) {
-                  derived.queues = [{queueName: INGRESS_QUEUE, queueStatus: 'failed'}];
-                  derived.state = Array.from(new Set([...derived.state, 'failed']));
-              }
-          }
+            const derived: QueryPlaysOptsJson = queryPlayOptsRefreshableToJson(filters)
             return ky.get(`components/${componentId}/plays`, {
                 baseUrl: baseUrl,
                 searchParams: qs.stringify({...derived, offset: ctx.pageParam})

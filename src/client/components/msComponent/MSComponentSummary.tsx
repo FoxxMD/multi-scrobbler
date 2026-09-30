@@ -1,6 +1,6 @@
 import React, { type ComponentProps, Fragment, useEffect } from "react"
 import { Stack, Heading, Separator, HStack, Flex, Badge, Card,  LinkOverlay, LinkBox } from '@chakra-ui/react';
-import { type ComponentCommonApiJson, isComponentClientApiJson, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
+import { type ComponentClientApiJson, type ComponentCommonApiJson, type ComponentsApiJson, isComponentClientApiJson, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
 import { Link } from "react-router";
 import { TextMuted } from "../TextMuted.js";
 import { capitalize } from "../../../core/StringUtils.js";
@@ -21,7 +21,7 @@ const presentPlayersContainerProps: ComponentProps<typeof Stack> = {
 //borderTopWidth: '1px'
 };
 
-export const MSComponentSummary = (props: { data: ComponentCommonApiJson, fetchable?: boolean }) => {
+export const MSComponentSummary = (props: { data: ComponentsApiJson, fetchable?: boolean }) => {
         const {
         data,
         fetchable
@@ -133,5 +133,5 @@ export const MSComponentSummaryFetchable = (props: {componentId: number, data: C
 
 type ComponentSummaryQueryKey = ['components', number, 'summary'];
 const queryFn = async (context: QueryFunctionContext<ComponentSummaryQueryKey>) => {
-    return {} as ComponentCommonApiJson;
+    return {} as ComponentsApiJson;
 }
