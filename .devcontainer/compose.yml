@@ -16,6 +16,7 @@ services:
     volumes:
       # Update this to wherever you want VS Code to mount the folder of your project
       - ..:/workspaces:cached
+      - kasm_run:/run
     command: sleep infinity
 
   valkey:
@@ -23,3 +24,7 @@ services:
     env_file:
       - path: ./.env
         required: false
+
+volumes:
+  kasm_run:
+    name: kasm_run

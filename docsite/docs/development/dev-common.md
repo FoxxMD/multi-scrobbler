@@ -210,3 +210,24 @@ services:
       - NODE_ARGS=--inspect=0.0.0.0:9229 --heap-prof
 ```
 :::
+
+## Discord IPC Development
+
+The [Discord (App) Client](/configuration/clients/discord/discord-app/?discordType=container#discord-connection) can be run with a containerized version of Discord from [Kasm](https://kasm.com/), [`kasmweb/discord`](https://hub.docker.com/r/kasmweb/discord).
+
+The docs linked above show an example `docker-compose.yaml` with the `kasmcord` service for running this container.
+
+To develop MS *with [devcontainer](#vscode)* for the Discord IPC Client all that is needed is to run the example `kasmcord` service in its own compose stack. The multi-scrobbler [devcontainer `compose.yaml`](https://github.com/FoxxMD/multi-scrobbler/blob/master/.devcontainer/compose.yml) uses (or creates) the shared, **named** volume `kasm_run` that is already defined in the `kasmcord` example.
+
+If you are developing MS locally without the devcontainer then you will need to modify the `kasmcord` service's volume to instead bind-mount the `run` directory to your host and make sure permissions match, EX
+
+```yaml
+services:
+  kasmcord:
+    # ..
+    volumes:
+      # comment this out
+      # - kasm_run:/run/user/1000
+      # replace with this
+      - /host/dir/for/run:/run/user/1000
+```
