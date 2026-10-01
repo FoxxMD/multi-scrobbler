@@ -38,6 +38,7 @@ export interface SubmitOptions {
     listenType?: ListenType
     /** See matchDeviceLabel in lzUtils */
     allowDeviceList?: AllowDeviceList
+    includePlayPosition?: boolean
 }
 
 export interface ListensResponse {
@@ -61,11 +62,11 @@ export interface UserListensOptions {
 
 export class ListenbrainzApiClient extends AbstractApiClient implements PagelessTimeRangeListens {
 
-    declare config: ListenBrainzClientData & {allowDeviceList?: AllowDeviceList};
+    declare config: ListenBrainzClientData & {allowDeviceList?: AllowDeviceList, includePlayPosition?: boolean};
     url: URLData;
     userAgent: string
 
-    constructor(name: any, config: ListenBrainzClientData & {allowDeviceList?: AllowDeviceList}, options: AbstractApiOptions) {
+    constructor(name: any, config: ListenBrainzClientData & {allowDeviceList?: AllowDeviceList, includePlayPosition?: boolean}, options: AbstractApiOptions) {
         super('ListenBrainz', name, config, options);
         const {
             url = 'https://api.listenbrainz.org/'
@@ -227,7 +228,11 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
     }
 
     submitListen = async (play: PlayObject, options: SubmitOptions = {}): Promise<ScrobbleActionResult> => {
-        const listenPayload = playToSubmitPayload(play, {listenType: options.listenType, allowDeviceList: options.allowDeviceList ?? this.config.allowDeviceList});
+        const listenPayload = playToSubmitPayload(play, {
+            listenType: options.listenType,
+            allowDeviceList: options.allowDeviceList ?? this.config.allowDeviceList,
+            includePlayPosition: options.listenType === 'playing_now' && (options.includePlayPosition ?? this.config.includePlayPosition)
+        });
         const { log = false} = options;
         try {
             if(log) {
@@ -640,6 +645,7 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
                     artist_mbids = [],
                     duration: aDuration,
                     duration_ms: aDurationMs,
+                    duration_played,
                     music_service_name,
                     music_service,
                     submission_client,
@@ -714,6 +720,10 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
                 playId,
                 deviceId: combinePartsToString([music_service_name ?? music_service, submission_client, submission_client_version])
             }
+        }
+
+        if(duration_played !== undefined) {
+            play.data.listenedFor = duration_played;
         }
         
         const brainzMeta = removeUndefinedKeys<BrainzMeta>({

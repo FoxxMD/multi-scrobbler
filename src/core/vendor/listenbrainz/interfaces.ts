@@ -99,6 +99,7 @@ export const additionalTrackInfoSchema = z.object({
     duration: z.number().optional(),
 
     duration_ms: z.number().optional(),
+    duration_played: z.number().optional(),
     track_mbid: z.string().optional(),
     work_mbids: z.array(workMbidSchema).optional(),
 
@@ -148,7 +149,14 @@ export type MbidMapping = z.infer<typeof mbidMappingSchema>;
 //
 // data structures for submitting a listen
 //
-export const submitListenAdditionalTrackInfoSchema = additionalTrackInfoSchema;
+export const submitListenAdditionalTrackInfoSchema = z.object({
+    ...additionalTrackInfoSchema.shape,
+    position_ms: z.number().optional().meta({
+        description: `The millisecond position of the Player reporting Now Playing information.
+
+(Currently) custom field not officially supported by LZ. Name is subject to change if/when standardized.`
+    })
+});
 export type SubmitListenAdditionalTrackInfo = z.infer<typeof submitListenAdditionalTrackInfoSchema>;
 export const trackPayloadSchema = z.object({
     ...minimumTrackSchema.shape,

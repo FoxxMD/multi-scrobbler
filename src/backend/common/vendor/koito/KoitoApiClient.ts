@@ -23,16 +23,17 @@ interface SubmitOptions {
     listenType?: ListenType
     /** See matchDeviceLabel in lzUtils */
     allowDeviceList?: AllowDeviceList
+    includePlayPosition?: boolean
 }
 
 const KOITO_LZ_PATH: RegExp = new RegExp(/^\/apis\/listenbrainz(\/?1?\/?)?$/);
 
 export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRangeListens<number> {
 
-    declare config: KoitoData & {allowDeviceList?: AllowDeviceList};
+    declare config: KoitoData & {allowDeviceList?: AllowDeviceList, includePlayPosition?: boolean};
     url: URLData;
 
-    constructor(name: any, config: KoitoData & {allowDeviceList?: AllowDeviceList}, options: AbstractApiOptions) {
+    constructor(name: any, config: KoitoData & {allowDeviceList?: AllowDeviceList, includePlayPosition?: boolean}, options: AbstractApiOptions) {
         super('Koito', name, config, options);
 
         const {
@@ -197,7 +198,12 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
 
     submitListen = async (play: PlayObject, options: SubmitOptions = {}): Promise<ScrobbleActionResult> => {
         const { log = false, listenType = 'single', allowDeviceList = this.config.allowDeviceList } = options;
-        const listenPayload: SubmitPayload = { listen_type: listenType, payload: [playToListenPayload(play, {allowDeviceList})] };
+        const listenPayload: SubmitPayload = { listen_type: listenType, payload: [
+            playToListenPayload(play, {
+                allowDeviceList,
+                includePlayPosition: options.listenType === 'playing_now' && (options.includePlayPosition ?? this.config.includePlayPosition)
+            })
+        ] };
         try {
             if (listenType === 'playing_now') {
                 delete listenPayload.payload[0].listened_at;

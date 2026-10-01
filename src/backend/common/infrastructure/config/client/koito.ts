@@ -4,6 +4,7 @@ import {componentTypeSchema} from "../../../../../core/Atomic.ts";
 import {allowDeviceListEnvSchema, allowDeviceListSchema, requestRetryOptionsSchema} from "../common.ts";
 import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema, nowPlayingOptionsSchema, type EnvClientSchema} from "./index.ts";
 import { httpUrl } from "../../../../utils/ZodUtils.ts";
+import { listenbrainzOptionsSchema } from "./listenbrainz.ts";
 
 export interface ListensResponse {
     items: ListenObjectResponse[]
@@ -89,6 +90,7 @@ export const koitoOptionsSchema = z.object({
      * @examples [{"iphone": "", "9f3ec2-iphone": "kitchen ipad"}]
      * */
     allowDeviceList: allowDeviceListSchema,
+    includePlayPosition: listenbrainzOptionsSchema.shape.includePlayPosition.meta(listenbrainzOptionsSchema.shape.includePlayPosition.meta() ?? {}),
     ...commonClientOptionsSchema.shape,
     ...nowPlayingOptionsSchema.shape,
 });
