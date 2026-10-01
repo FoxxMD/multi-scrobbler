@@ -111,7 +111,7 @@ services:
   // highlight-start
   kasmcord:
     container_name: kasmcord
-    image: kasmweb/discord:1.14.0
+    image: kasmweb/discord:1.19.0
     ports:
       # VNC port to use in web browser
       - 6901:6901
@@ -124,7 +124,12 @@ services:
       - kasm_run:/run/user/1000
       - kasm_config:/home/kasm-user/.config
     user: "0"
-    entrypoint: sh -c "chmod 700 /run/user/1000 && chown -R kasm-user:kasm-user /run/user/1000 && chown -R kasm-user:kasm-user /home/kasm-user/.config && su kasm-user -c '/dockerstartup/kasm_default_profile.sh /dockerstartup/vnc_startup.sh /dockerstartup/kasm_startup.sh'"
+    entrypoint: >
+      sh -c "chmod 700 /run/user/1000 && 
+      chown -R kasm-user:kasm-user /run/user/1000 && 
+      chown -R kasm-user:kasm-user /home/kasm-user/.config && 
+      sed -i 's|/usr/share/discord/Discord|/usr/bin/discord|g' /dockerstartup/custom_startup.sh && 
+      su kasm-user -c '/dockerstartup/kasm_default_profile.sh /dockerstartup/vnc_startup.sh /dockerstartup/kasm_startup.sh'"
 
 volumes:
   kasm_run:
