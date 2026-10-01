@@ -140,6 +140,11 @@ export const DEFAULT_CLOSE_POSITION_ABSOLUTE = 12;
 export const DEFAULT_CLOSE_POSITION_PERCENT = 0.15;
 export const DEFAULT_DURATION_REPEAT_ABSOLUTE = 120;
 export const DEFAULT_DURATION_REPEAT_PERCENT = 0.50;
+/** Last known Position within X seconds or Y% of the end of a Play is considered to have reached the end of the Play */
+export const DEFAULT_COMPLETED_POSITION_ABSOLUTE = 10;
+export const DEFAULT_COMPLETED_POSITION_PERCENT = 0.10;
+/** A completed Play must come back to a Position within the first Y% of the Play to be considered restarted */
+export const DEFAULT_RESTART_POSITION_PERCENT = 0.50;
 export interface ScrobbleThresholdResult {
     passes: boolean
     duration: {
