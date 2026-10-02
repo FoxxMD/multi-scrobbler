@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import ky from 'ky';
 import qs from 'qs';
 import { baseUrl } from "../utils";
-import type {ArtistSearchResultResponse, ComponentsApiJson, PaginatedResponse, PlayApiCommonDetailed, PlayStateUI, QueryPlaysOptsJson} from "../../core/Api";
+import type {ArtistSearchResultResponse, ComponentsApiJson, PaginatedResponse, PlayApiCommonDetailed, PlayStateUI, QueryPlaysOptsJson, TrackSearchResultResponse} from "../../core/Api";
 import { type SourcePlayerJson } from "../../core/Atomic";
 import { queryPlayOptsRefreshableToJson } from "../utils/ComponentUtils";
 
@@ -83,6 +83,15 @@ const metadata = createQueryKeys('metadata', {
         q: query
       }
     }).json<ArtistSearchResultResponse>()
+  }),
+  track: (query: string) => ({
+    queryKey: ['metadata', 'tracks', query],
+    queryFn: (ctx) => ky.get(`tracks`, {
+      baseUrl,
+      searchParams: {
+        q: query
+      }
+    }).json<TrackSearchResultResponse>()
   })
 });
 

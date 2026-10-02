@@ -1,43 +1,95 @@
-import { Box, Combobox, useListCollection, Stack, Text, Avatar, Portal, HStack, Span, Spinner, Separator, Icon } from "@chakra-ui/react"
+import { Box, Combobox, useListCollection, Stack, Text, Avatar, Portal, HStack, Span, Spinner, StackSeparator, Icon } from "@chakra-ui/react"
 import { MSErrorBoundary } from '../ErrorBoundary.js';
 import { useDebouncedState } from '@tanstack/react-pacer'
 import { useQuery } from '@tanstack/react-query';
 import { tanQueries } from "../../queries/index.js";
-import type { ArtistSearchResult } from "../../../core/Api.js";
-import { MusicbrainzInfoIcon } from "../musicServices/Musicbrainz.js";
-import { useEffect, useState } from "react";
+import type { TrackSearchResult } from "../../../core/Api.js";
+import { MusicbrainzInfoIcon, type MusicbrainzInfoIconProps } from "../musicServices/Musicbrainz.js";
+import React, { useEffect, useState } from "react";
 import { getMusicServiceIconElement } from "../icons/ChakraIcons.js";
+import { ArtistCreditTags } from "../ArtistCreditDisplay.js";
 
-export const TrackSearchResultItem = (props: { data: ArtistSearchResult }) => (
-    <HStack gap="4">
-        {props.data.image !== undefined ? (
-            <Avatar.Root shape="square" size="xl">
-                <Avatar.Fallback name={props.data.name} />
-                <Avatar.Image src={props.data.image} />
-            </Avatar.Root>
-        ) : undefined}
-        <Stack gap="1">
-            <Text fontWeight="medium">
-                <HStack>
-                    {props.data.name} {props.data.mbid !== undefined ? <MusicbrainzInfoIcon type="artist" mbid={props.data.mbid} tooltip /> : null}
-                </HStack>
-            </Text>
-            <Text color="fg.muted" textStyle="sm">
-                <HStack>
-                    {props.data.score !== undefined ? <>Score {props.data.score}<Separator orientation="vertical" height="4" /></> : undefined} 
-                    From <Icon size="sm">{getMusicServiceIconElement(props.data.service)}</Icon>
-                </HStack>
-            </Text>
-        </Stack>
-    </HStack>
-)
+export const TrackSearchResultItem = (props: { data: TrackSearchResult }) => {
 
-export interface ArtistSearchProps {
-    initial?: string
-    onChange: (val: ArtistSearchResult) => void
+    const {
+        album,
+        albumCount,
+        service,
+        score,
+        name,
+        mbidRecording,
+        mbidTrack,
+        artists = []
+    } = props.data;
+
+    let artImage: string | undefined;
+    if (album?.image !== undefined) {
+        artImage = album.image;
+    } else {
+        artImage = artists.find(x => x.image !== undefined)?.image;
+    }
+    let mbidType: MusicbrainzInfoIconProps['type'] | undefined = undefined;
+    let mbid: string | undefined = undefined;
+    if (mbidRecording !== undefined) {
+        mbidType = 'recording';
+        mbid = mbidRecording;
+    } else if (mbidTrack !== undefined) {
+        mbidType = 'track';
+        mbid = mbidTrack;
+    }
+
+    let albumContent: React.JSX.Element | undefined = undefined;
+    if (album !== undefined) {
+        const andCount = albumCount !== undefined && albumCount > 1 ? (
+            <Text color="fg.subtle" textStyle="sm">
+                and {albumCount} more...
+            </Text>
+        ) : undefined;
+        albumContent = (<Text color="fg.muted" textStyle="sm">
+            <HStack>
+                {album.name} {album.type !== undefined ? `(${album.type})` : ''} {andCount}
+            </HStack>
+        </Text>)
+    }
+
+    let artistTags: React.JSX.Element | undefined = undefined;
+    if(artists.length > 0) {
+        artistTags = <ArtistCreditTags data={artists} />
+    }
+
+    return (
+        <HStack gap="4">
+            <Stack>
+            <HStack separator={<StackSeparator/>}>
+            <Icon size="sm">{getMusicServiceIconElement(service)}</Icon>
+            {score !== undefined ? <Text color="fg.subtle" textStyle="sm">{score}</Text> : undefined}
+            </HStack>
+            {artImage !== undefined ? (
+                <Avatar.Root shape="square" size="xl">
+                    <Avatar.Fallback name="Art" />
+                    <Avatar.Image src={artImage} />
+                </Avatar.Root>
+            ) : undefined}
+            </Stack>
+            <Stack gap="1">
+                <Text fontWeight="medium">
+                    <HStack>
+                        {name} {mbid !== undefined && mbidType !== undefined ? <MusicbrainzInfoIcon type={mbidType} mbid={mbid} tooltip /> : null}
+                    </HStack>
+                </Text>
+                {artistTags}
+                {albumContent}
+            </Stack>
+        </HStack>
+    )
 }
 
-export const ArtistSearch = (props: ArtistSearchProps) => {
+export interface TrackSearchProps {
+    initial?: string
+    onChange: (val: TrackSearchResult) => void
+}
+
+export const TrackSearch = (props: TrackSearchProps) => {
 
     const {
         initial = '',
@@ -49,10 +101,10 @@ export const ArtistSearch = (props: ArtistSearchProps) => {
 
     const query = useQuery({
         enabled: debouncedQuery !== '',
-        ...tanQueries.metadata.artists(debouncedQuery)
+        ...tanQueries.metadata.track(debouncedQuery)
     });
 
-    const { collection, set } = useListCollection<ArtistSearchResult>({
+    const { collection, set } = useListCollection<TrackSearchResult>({
         initialItems: query.data?.data ?? [],
         itemToString: (item) => item.name,
         itemToValue: (item) => item.id,
@@ -100,11 +152,10 @@ export const ArtistSearch = (props: ArtistSearchProps) => {
                         setDebouncedQuery(e.inputValue);
                         setRawInput(e.inputValue)
                     }}
-                    width="320px"
+                    
                 >
-                    {/* <Combobox.Label>Select framework</Combobox.Label> */}
                     <Combobox.Control>
-                        <Combobox.Input placeholder="Type to search for artists" />
+                        <Combobox.Input placeholder="Type to search for tracks" />
                         <Combobox.IndicatorGroup>
                             <Combobox.ClearTrigger />
                             <Combobox.Trigger />
@@ -125,7 +176,7 @@ export const ArtistSearch = (props: ArtistSearchProps) => {
                                 ) : (
                                     collection.items?.map((item, i) => (
                                         <Combobox.Item key={item.id} item={item.id}>
-                                            <ArtistSearchResultItem data={item}/>
+                                            <TrackSearchResultItem data={item}/>
                                             <Combobox.ItemIndicator />
                                         </Combobox.Item>
                                     ))
