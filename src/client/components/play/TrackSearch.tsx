@@ -8,7 +8,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { ArtistCreditTags } from "../ArtistCreditDisplay.js";
 import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, type MetadataPartials } from "./MetadataResults.js";
 import { MusicServiceIcons } from "../icons/ChakraIcons.js";
-import type { JsonPlayObject, PlayObjectMinimal } from "../../../core/Atomic.js";
+import { type ArtMeta, type PlayObjectMinimal } from "../../../core/Atomic.js";
 import { removeUndefinedKeys } from "../../../core/DataUtils.js";
 
 const trackPartials: MetadataPartials<TrackSearchResult> = {
@@ -86,12 +86,17 @@ const trackResultToPlay = (val: TrackSearchResult): PlayObjectMinimal<string> =>
         name,
         mbidTrack,
         mbidRecording,
-        spotifyId
+        spotifyId,
+        artists,
+        album,
+        image
     } = val;
 
-    return {
+    const play = removeUndefinedKeys<PlayObjectMinimal<string>>({
         data: {
             track: name,
+            artists: artists !== undefined && artists.length > 0 ? artists.map((x) => ({name: x.name, mbid: x.mbid, spotifyId: x.spotifyId})) : undefined,
+            album: album?.name,
             meta: removeUndefinedKeys({
                 brainz: removeUndefinedKeys({
                     track: mbidTrack,
@@ -103,7 +108,20 @@ const trackResultToPlay = (val: TrackSearchResult): PlayObjectMinimal<string> =>
             })
         },
         meta: {}
+    }, false);
+
+    const art = removeUndefinedKeys<ArtMeta>({
+        album: album?.image,
+        track: image,
+        artist: (artists ?? []).find(x => x.image !== undefined)?.image
+    });
+    if(art !== undefined) {
+        play.meta = {
+            art
+        }
     }
+
+    return play;
 }
 
 export const TrackSearch = (props: TrackSearchProps) => {
