@@ -1,15 +1,18 @@
-import { Box, Combobox, useListCollection, Stack, Text, Portal, HStack, Span, Spinner } from "@chakra-ui/react"
-import { MSErrorBoundary } from '../ErrorBoundary.tsx';
+import { Box, useListCollection, Stack, Text, HStack } from "@chakra-ui/react"
 import { useDebouncedState } from '@tanstack/react-pacer'
 import { useQuery } from '@tanstack/react-query';
 import { tanQueries } from "../../queries/index.ts";
 import type { AlbumSearchResult } from "../../../core/Api.ts";
 import { MusicbrainzInfoIcon, type MusicbrainzInfoIconProps } from "../musicServices/Musicbrainz.tsx";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { ArtistCreditTags } from "../ArtistCreditDisplay.tsx";
-import { LeftSideMetadataResultContent } from "./MetadataResults.tsx";
+import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, type MetadataPartials } from "./MetadataResults.tsx";
 
-export const AlbumSearchResultItem = (props: { data: AlbumSearchResult }) => {
+const albumPartials: MetadataPartials<AlbumSearchResult> = {
+    album: { label: 'Album only', pick: ({ artists, ...rest }) => rest },
+};
+
+export const AlbumSearchResultItem = (props: { data: AlbumSearchResult, onPick?: (val: AlbumSearchResult) => void }) => {
 
     const {
         name,
@@ -35,14 +38,15 @@ export const AlbumSearchResultItem = (props: { data: AlbumSearchResult }) => {
     }
 
     return (
-        <HStack gap="4">
+        <HStack gap="4" flexGrow="1">
             <Stack>
             <LeftSideMetadataResultContent {...props.data}/>
             </Stack>
-            <Stack gap="1">
+            <Stack gap="1" flexGrow="1">
                 <Text fontWeight="medium">
                     <HStack gap="1">
                         {name}{type !== undefined ? <Box>({type})</Box> : undefined}{mbid !== undefined && mbidType !== undefined ? <MusicbrainzInfoIcon type={mbidType} mbid={mbid} tooltip /> : null}
+                        <MetadataPickMenu data={props.data} partials={albumPartials} onPick={props.onPick} />
                     </HStack>
                 </Text>
                 {artistTags}
@@ -63,7 +67,6 @@ export const AlbumSearch = (props: AlbumSearchProps) => {
         onChange = (val) => console.log(val, 'Selected value for prop')
     } = props;
 
-    const [rawInput, setRawInput] = useState<string | undefined>(undefined);
     const [debouncedQuery, setDebouncedQuery] = useDebouncedState<string>(initial, { wait: 500 });
 
     const query = useQuery({
@@ -73,87 +76,25 @@ export const AlbumSearch = (props: AlbumSearchProps) => {
 
     const { collection, set } = useListCollection<AlbumSearchResult>({
         initialItems: query.data?.data ?? [],
-        itemToString: (item) => item.name,//`${item.name}${item.type !== undefined ? ` (${item.type})` : ''}`,
+        itemToString: (item) => item.name,
         itemToValue: (item) => item.id,
     });
 
     useEffect(() => {
-        if(query.isSuccess) {
+        if (query.isSuccess) {
             set(query.data.data);
         }
-    },[query, set])
+    }, [query, set])
 
     return (
-        <Box position="relative">
-            <MSErrorBoundary>
-                <Combobox.Root
-                    allowCustomValue
-                    onKeyDown={(e) => {
-                        if(e.key === 'Enter') {
-                            if(rawInput !== undefined) {
-                                console.log('enter and onChange rawInput');
-                                onChange({id: 'nonce', service: 'user', name: rawInput});
-                            } else {
-                                console.log('enter noop');
-                            }
-                        }
-                    }}
-                    collection={collection}
-                    onInteractOutside={(e) => {
-                        if(rawInput !== undefined) {
-                            console.log('outside interact and onChange rawInput');
-                            onChange({id: 'nonce', service: 'user', name: rawInput});
-                        } else {
-                            console.log('outside interact noop');
-                        }
-                    }}
-                    onValueChange={(val) => {
-                        console.log(val, 'value change');
-                        onChange(val.items[0]);
-                        setRawInput(undefined);
-                    }}
-                    onSelect={(val) => {
-                        console.log(val, 'select')
-                    }}
-                    onInputValueChange={(e) => {
-                        setDebouncedQuery(e.inputValue);
-                        setRawInput(e.inputValue)
-                    }}
-                    
-                >
-                    <Combobox.Control>
-                        <Combobox.Input placeholder="Type to search for albums" />
-                        <Combobox.IndicatorGroup>
-                            <Combobox.ClearTrigger />
-                            <Combobox.Trigger />
-                        </Combobox.IndicatorGroup>
-                    </Combobox.Control>
-                    <Portal>
-                        <Combobox.Positioner>
-                            <Combobox.Content>
-                                {query.isLoading ? (
-                                    <HStack p="2">
-                                        <Spinner size="xs" borderWidth="1px" />
-                                        <Span>Loading...</Span>
-                                    </HStack>
-                                ) : query.isError ? (
-                                    <Span p="2" color="fg.error">
-                                        Error fetching
-                                    </Span>
-                                ) : (
-                                    collection.items?.map((item, i) => (
-                                        <Combobox.Item key={item.id} item={item.id}>
-                                            <AlbumSearchResultItem data={item}/>
-                                            <Combobox.ItemIndicator />
-                                        </Combobox.Item>
-                                    ))
-                                )}
-                                <Combobox.Empty>No items found</Combobox.Empty>
-                            </Combobox.Content>
-                        </Combobox.Positioner>
-                    </Portal>
-                </Combobox.Root>
-            </MSErrorBoundary>
-        </Box>
+        <MetadataSearchCombobox
+            placeholder="Type to search for albums"
+            collection={collection}
+            isLoading={query.isLoading}
+            isError={query.isError}
+            onChange={onChange}
+            onQueryChange={setDebouncedQuery}
+            renderItem={(item, onPick) => <AlbumSearchResultItem data={item} onPick={onPick} />}
+        />
     );
 }
