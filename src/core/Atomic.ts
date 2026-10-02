@@ -94,6 +94,8 @@ export interface ListenRangeData extends ListenRangeDataAmb {
     end: PlayProgress
 }
 
+export const mbidSchema = z.stringFormat('mbid',/[a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{12}/);
+
 /** https://musicbrainz.org/doc/MusicBrainz_Database/Schema#Overview */
 export interface BrainzMeta {
     /**
@@ -130,10 +132,26 @@ export interface BrainzMeta {
     track?: string
 }
 
+export const brainzMetaSchema = z.object({
+    artists: mbidSchema.array().optional(),
+    albumArtists: mbidSchema.array().optional(),
+    album: mbidSchema.optional(),
+    recording: mbidSchema.optional(),
+    releaseGroup: mbidSchema.optional(),
+    trackNumber: z.int().positive().optional(),
+    track: mbidSchema.optional()
+})
+
 export interface ArtistCredit {
     name: string
     mbid?: string
 }
+
+export const artistCreditSchema = z.object({
+    name: z.string(),
+    mbid: mbidSchema.optional(),
+    spotifyId: z.string().optional()
+})
 
 export interface SpotifyMeta {
     artist?: string[]
@@ -142,10 +160,22 @@ export interface SpotifyMeta {
     track?: string
 }
 
+export const spotifyMeta = z.object({
+    artists: z.string().array().optional(),
+    albumArtist: z.string().array().optional(),
+    album: z.string().optional(),
+    track: z.string().optional()
+})
+
 export interface TrackMeta {
     brainz?: BrainzMeta
     spotify?: SpotifyMeta
 }
+
+export const trackMetaSchema = z.object({
+    brainz: brainzMetaSchema.optional(),
+    spotify: spotifyMeta.optional()
+})
 
 export interface TrackMetaIsrc extends TrackMeta {
     isrc?: string
@@ -170,6 +200,22 @@ export interface TrackData {
     isrc?: string
 }
 
+export const playTrackDataSchema = z.object({
+    track: z.string().optional(),
+    artists: artistCreditSchema.array().optional(),
+    albumArtists: artistCreditSchema.array().optional(),
+    album: z.string().optional(),
+    duration: z.int().nonnegative().optional(),
+    isrc: z.string().optional(),
+    meta: trackMetaSchema.optional()
+})
+
+export const playTrackStrictDataSchema = z.object({
+    ...playTrackDataSchema.shape,
+    track: z.string().nonempty(),
+    artists: artistCreditSchema.array().min(1)
+})
+
 export interface PlayData<D extends DateLike = Dayjs> extends TrackData {
     /**
      * The date the track was played at
@@ -182,11 +228,39 @@ export interface PlayData<D extends DateLike = Dayjs> extends TrackData {
     repeat?: boolean
 }
 
+export const playDataSchema = z.object({
+    ...playTrackDataSchema.shape,
+    playDate: z.string().optional(),
+    listenedFor: z.int().nonnegative().optional()
+});
+
+export const playDataStrictSchema = z.object({
+    ...playTrackStrictDataSchema.shape,
+    playDate: z.string().optional(),
+    listenedFor: z.int().nonnegative().optional()
+});
+
+
 export interface ArtMeta {
     album?: string
     track?: string
     artist?: string
 }
+
+export const artMetaSchema = z.object({
+    album: z.string().optional(),
+    track: z.string().optional(),
+    artist: z.string().optional()
+});
+
+export const playMetaUrlSchema = z.looseObject({
+    web: z.string().optional(),
+    origin: z.string().optional()
+})
+
+export const parsedFromSchema = z.enum(['backlog','now playing','player','history','ingress'])
+export type PARSED_FROM_TYPE = z.infer<typeof parsedFromSchema>;// 'backlog' | 'now playing' | 'player' | 'history' | 'ingress';
+export const PARSED_FROM = parsedFromSchema.enum;
 
 export type PlayMeta<D extends DateLike = Dayjs, T = {}> = Merge<PlayMetaBase<D>, T>;
 
@@ -279,6 +353,15 @@ export interface PlayMetaBase<D extends DateLike = Dayjs> {
 
     //[key: string]: any
 }
+
+export const playMetaSchema = z.looseObject({
+    source: z.string().optional(),
+    musicService: z.string().optional(),
+    trackId: z.string().optional(),
+    parsedFrom: parsedFromSchema.optional(),
+    url: playMetaUrlSchema.optional(),
+    art: artMetaSchema.optional()
+})
 
 export interface LifecycleInput {
     type: string, input: (object | string)
@@ -386,6 +469,17 @@ export interface ObjectPlayData extends PlayData {
     playDateCompleted?: Dayjs
 }
 
+
+export const playEditCreateSchema = z.object({
+    data: playDataSchema,
+    meta: playMetaSchema
+});
+
+export const playEditStrictCreateSchema = z.object({
+    data: playDataStrictSchema,
+    meta: playMetaSchema
+});
+
 export const logLevelStandaloneSchema = z.enum(['debug','error','verbose','info','silly','silent','log','trace','warn','fatal'])
 export type LogLevelStandalone = z.infer<typeof logLevelStandaloneSchema>;
 
@@ -486,15 +580,6 @@ export const SOURCE_SOT = {
     INGRESS: 'ingress'
 } as const satisfies Record<string, SOURCE_SOT_TYPES>
 export const sourceSotTypes: SOURCE_SOT_TYPES[] = ['player','history','ingress'];
-
-export type PARSED_FROM_TYPE = 'backlog' | 'now playing' | 'player' | 'history' | 'ingress';
-export const PARSED_FROM = {
-    backlog : 'backlog',
-    nowPlaying: 'now playing',
-    ingress: 'ingress',
-    player: 'player',
-    history: 'history'
-} as const satisfies Record<string, PARSED_FROM_TYPE>
 
 export interface URLData {
     url: URL

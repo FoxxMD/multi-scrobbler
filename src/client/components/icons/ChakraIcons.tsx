@@ -43,6 +43,7 @@ import type {IconBaseProps, IconType} from "react-icons/lib";
 // below are from https://selfh.st/icons/
 import LZ from "./custom/listenbrainz.svg?react";
 import Musicbrainz from "./custom/musicbrainz.svg?react";
+import Rocksky from "./custom/rocksky.svg?react";
 
 import { 
     SiSpotify,
@@ -233,6 +234,8 @@ export const getMusicServiceIcon = (service?: string): IconType => {
             return SiPlex;
         case 'listenbrainz':
             return LZ as unknown as IconType;
+        case 'rocksky':
+            return Rocksky as unknown as IconType;
         default:
             return LuExternalLink;
     }

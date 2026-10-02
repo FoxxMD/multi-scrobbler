@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
-import type {ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentHistoricalApi, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi} from "../../Api.ts";
-import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ComponentType, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes } from "../../Atomic.ts";
-import { generatePlay, normalizePlays } from "./PlayTestUtils.ts";
+import type {ArtistSearchResult, ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentHistoricalApi, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi} from "../../Api.ts";
+import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ComponentType, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes, type MBID } from "../../Atomic.ts";
+import { generateArtist, generateArtistCredit, generatePlay, normalizePlays } from "./PlayTestUtils.ts";
 import { generatePlayInput, generatePlayWithLifecycle, playWithLifecycleScrobble, randomPlayState } from "./fixtures.ts";
 import { asJsonPlayObject } from "../../PlayMarshalUtils.ts";
 import { generatePlayUid } from "../../StringUtils.ts";
@@ -15,6 +15,7 @@ import { REPORTED_PLAYER_STATUSES } from '../../Atomic.ts';
 import { generateArray } from "../../DataUtils.ts";
 import type {ErrorIsh} from "../../ErrorUtils.ts";
 import { serializeError } from "serialize-error";
+import { stripIndents } from "common-tags";
 
 export const generatePlayApiCommon = (commonData: Partial<PlayApiCommon> & {play?: JsonPlayObject | PlayObject } = {}, ...playOpts: Parameters<typeof generatePlay>): PlayApiCommon => {
     let play: JsonPlayObject | PlayObject;
@@ -517,4 +518,35 @@ export const generateNormalWSUrl = () => {
         () => `${faker.word.noun({length :1})}:${faker.helpers.arrayElement([443,80,faker.internet.port()])}`
     ])
     return g();
+}
+
+export const generateArtistSearchResult = (partial: Partial<ArtistSearchResult> = {}, opts: {mbidVal?: boolean | MBID} = {}): ArtistSearchResult => ({
+    ...generateArtistCredit(partial.name, opts.mbidVal),
+    id: faker.string.alphanumeric(7),
+    score: faker.number.int({min: 10, max: 100}),
+    service: faker.helpers.arrayElement(['spotify','musicbrainz','rocksky']),
+    image: placeholderImage([300])
+})
+
+export const generateArtistSearchResults = (opts: {query?: string, count?: number} = {}): ArtistSearchResult[] => {
+    const results: ArtistSearchResult[] = [];
+    if(opts.count === 0) {
+        return results;
+    }
+    const c = opts.count ?? faker.number.int({min: 2, max: 5});
+    if(opts.query !== undefined) {
+        results.push(generateArtistSearchResult({name: opts.query}))
+    }
+    while(results.length !== c) {
+        results.push(generateArtistSearchResult())
+    }
+    results.sort((a,b) => b.score - a.score);
+    return results;
+}
+
+const placeholderImage = (size: [number, number?], foregroundColor?: string, backgroundColor?: string) => {
+    const fore = foregroundColor ?? 'black';
+    const back = backgroundColor ?? faker.color.rgb().slice(1)
+    return stripIndents`
+https://placehold.co/${size[0]}${size[1] !== undefined ? `x${size[1]}` : ''}/${fore}/${back}`
 }
