@@ -6,7 +6,7 @@ import type React from "react";
 import { Muted } from "../Typography";
 
 export interface MusicbrainzInfoIconProps {
-    type: 'recording' | 'release' | 'track' | 'artist',
+    type: 'recording' | 'release' | 'track' | 'artist' | 'release-group',
     mbid: string,
     link?: boolean
     tooltip?: boolean

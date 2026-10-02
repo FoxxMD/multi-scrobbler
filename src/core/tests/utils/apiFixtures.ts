@@ -555,6 +555,7 @@ export const generateAlbumSearchResult = (partial: Partial<AlbumSearchResult> = 
     mbidReleaseGroup: faker.helpers.arrayElement([generateMbid(), undefined]),
     spotifyId: faker.helpers.arrayElement([faker.string.alphanumeric(4), undefined]),
     type: faker.helpers.arrayElement(['single','album','live','compilation',undefined]),
+    artists: generateArtistSearchResults({count: faker.number.int({min: 1, max: 3})}),
     ...partial
 });
 
