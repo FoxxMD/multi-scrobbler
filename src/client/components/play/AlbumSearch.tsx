@@ -1,4 +1,4 @@
-import { Box, Combobox, useListCollection, Stack, Text, Avatar, Portal, HStack, Span, Spinner, StackSeparator, Icon, AbsoluteCenter } from "@chakra-ui/react"
+import { Box, Combobox, useListCollection, Stack, Text, Portal, HStack, Span, Spinner } from "@chakra-ui/react"
 import { MSErrorBoundary } from '../ErrorBoundary.tsx';
 import { useDebouncedState } from '@tanstack/react-pacer'
 import { useQuery } from '@tanstack/react-query';
@@ -6,18 +6,15 @@ import { tanQueries } from "../../queries/index.ts";
 import type { AlbumSearchResult } from "../../../core/Api.ts";
 import { MusicbrainzInfoIcon, type MusicbrainzInfoIconProps } from "../musicServices/Musicbrainz.tsx";
 import React, { useEffect, useState } from "react";
-import { getMusicServiceIconElement } from "../icons/ChakraIcons.tsx";
 import { ArtistCreditTags } from "../ArtistCreditDisplay.tsx";
+import { LeftSideMetadataResultContent } from "./MetadataResults.tsx";
 
 export const AlbumSearchResultItem = (props: { data: AlbumSearchResult }) => {
 
     const {
-        service,
-        score,
         name,
         mbidRelease,
         mbidReleaseGroup,
-        image,
         type,
         artists = [],
     } = props.data;
@@ -37,32 +34,10 @@ export const AlbumSearchResultItem = (props: { data: AlbumSearchResult }) => {
         artistTags = <ArtistCreditTags data={artists} />
     }
 
-    const sourceContent = (
-        <HStack gap="1" separator={<StackSeparator />}>
-            <Icon size="sm">{getMusicServiceIconElement(service)}</Icon>
-            {score !== undefined ? <Text color="fg.subtle" textStyle="sm">{score}</Text> : undefined}
-        </HStack>
-    );
-
-    let leftContent: React.JSX.Element | undefined;
-    if(image !== undefined) {
-        leftContent = (
-            <Avatar.Root pos="relative" shape="square" size="2xl">
-                    <AbsoluteCenter paddingBottom="40px" axis="horizontal">{sourceContent}</AbsoluteCenter>
-                    <Avatar.Fallback name="Art" />
-                    <Avatar.Image src={image} />
-                    
-                </Avatar.Root>
-        );
-    } else {
-        leftContent = sourceContent;
-    }
-
-
     return (
         <HStack gap="4">
             <Stack>
-            {leftContent}
+            <LeftSideMetadataResultContent {...props.data}/>
             </Stack>
             <Stack gap="1">
                 <Text fontWeight="medium">

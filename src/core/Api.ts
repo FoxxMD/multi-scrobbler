@@ -6,6 +6,7 @@ import type { Dayjs } from "dayjs"
 import type { ErrorIsh } from "./ErrorUtils.ts"
 import type { PlayEvent } from "./PlayEvent.ts"
 import * as z from "zod"
+import { httpUrl } from "../backend/utils/ZodUtils.ts"
 
 export interface PlayApiCommon {
     uid: string
@@ -241,12 +242,28 @@ export const playStateBodySchema = z.object({
 
 export type PlayStateBody = z.infer<typeof playStateBodySchema>;
 
-export const artistSearchResultSchema = z.object({
-    ...artistCreditSchema.shape,
-    id: z.string(),
-    image: z.string().optional(),
+export const metadataResultBaseSchema = z.object({
+        id: z.string(),
+        name: z.string()
+});
+export type MetadataResultBase = z.infer<typeof metadataResultBaseSchema>;
+
+export const metadataResultServiceScoreSchema = z.object({
     service: z.string(),
     score: z.int().nonnegative().optional(),
+})
+export type MetadataResultServiceScore = z.infer<typeof metadataResultServiceScoreSchema>;
+
+export const metadataResultImageSchema = z.object({
+    image: httpUrl.optional()
+})
+export type MetadataResultImage = z.infer<typeof metadataResultImageSchema>;
+
+export const artistSearchResultSchema = z.object({
+    ...artistCreditSchema.shape,
+    ...metadataResultServiceScoreSchema.shape,
+    ...metadataResultBaseSchema.shape,
+    ...metadataResultImageSchema.shape,
 });
 export type ArtistSearchResult = z.infer<typeof artistSearchResultSchema>;
 
@@ -256,14 +273,12 @@ export const artistSearchResultResponseSchema = z.object({
 export type ArtistSearchResultResponse = z.infer<typeof artistSearchResultResponseSchema>;
 
 export const albumSearchResultSchema = z.object({
-    name: z.string(),
-    id: z.string(),
-    image: z.string().optional(),
-    service: z.string(),
+    ...metadataResultServiceScoreSchema.shape,
+    ...metadataResultBaseSchema.shape,
+    ...metadataResultImageSchema.shape,
     mbidRelease: z.string().optional(),
     mbidReleaseGroup: z.string().optional(),
     spotifyId: z.string().optional(),
-    score: z.int().nonnegative().optional(),
     type: z.string().optional(),
     artists: artistSearchResultSchema.array().optional(),
 });
@@ -275,11 +290,9 @@ export const albumSearchResultResponseSchema = z.object({
 export type AlbumSearchResultResponse = z.infer<typeof albumSearchResultResponseSchema>;
 
 export const trackSearchResultSchema = z.object({
-    name: z.string(),
-    id: z.string(),
-    image: z.string().optional(),
-    service: z.string(),
-    score: z.int().nonnegative().optional(),
+    ...metadataResultServiceScoreSchema.shape,
+    ...metadataResultBaseSchema.shape,
+    ...metadataResultImageSchema.shape,
     mbidRecording: z.string().optional(),
     mbidTrack: z.string().optional(),
     spotifyId: z.string().optional(),

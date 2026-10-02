@@ -1,4 +1,4 @@
-import { Box, Combobox, useListCollection, Stack, Text, Avatar, Portal, HStack, Span, Spinner, Separator, Icon } from "@chakra-ui/react"
+import { Box, Combobox, useListCollection, Stack, Text, Portal, HStack, Span, Spinner } from "@chakra-ui/react"
 import { MSErrorBoundary } from '../ErrorBoundary.js';
 import { useDebouncedState } from '@tanstack/react-pacer'
 import { useQuery } from '@tanstack/react-query';
@@ -6,31 +6,28 @@ import { tanQueries } from "../../queries/index.js";
 import type { ArtistSearchResult } from "../../../core/Api.js";
 import { MusicbrainzInfoIcon } from "../musicServices/Musicbrainz.js";
 import { useEffect, useState } from "react";
-import { getMusicServiceIconElement } from "../icons/ChakraIcons.js";
+import { LeftSideMetadataResultContent } from "./MetadataResults.js";
 
-export const ArtistSearchResultItem = (props: { data: ArtistSearchResult }) => (
+export const ArtistSearchResultItem = (props: { data: ArtistSearchResult }) => {
+
+    const {
+        name,
+        mbid
+    } = props.data;
+    
+    return (
     <HStack gap="4">
-        {props.data.image !== undefined ? (
-            <Avatar.Root shape="square" size="xl">
-                <Avatar.Fallback name={props.data.name} />
-                <Avatar.Image src={props.data.image} />
-            </Avatar.Root>
-        ) : undefined}
+        <LeftSideMetadataResultContent {...props.data}/>
         <Stack gap="1">
             <Text fontWeight="medium">
                 <HStack>
-                    {props.data.name} {props.data.mbid !== undefined ? <MusicbrainzInfoIcon type="artist" mbid={props.data.mbid} tooltip /> : null}
-                </HStack>
-            </Text>
-            <Text color="fg.muted" textStyle="sm">
-                <HStack>
-                    {props.data.score !== undefined ? <>Score {props.data.score}<Separator orientation="vertical" height="4" /></> : undefined} 
-                    From <Icon size="sm">{getMusicServiceIconElement(props.data.service)}</Icon>
+                    {name} {mbid !== undefined ? <MusicbrainzInfoIcon type="artist" mbid={mbid} tooltip /> : null}
                 </HStack>
             </Text>
         </Stack>
     </HStack>
 )
+}
 
 export interface ArtistSearchProps {
     initial?: string

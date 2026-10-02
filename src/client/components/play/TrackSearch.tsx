@@ -1,4 +1,4 @@
-import { Box, Combobox, useListCollection, Stack, Text, Avatar, Portal, HStack, Span, Spinner, StackSeparator, Icon } from "@chakra-ui/react"
+import { Box, Combobox, useListCollection, Stack, Text, Portal, HStack, Span, Spinner } from "@chakra-ui/react"
 import { MSErrorBoundary } from '../ErrorBoundary.js';
 import { useDebouncedState } from '@tanstack/react-pacer'
 import { useQuery } from '@tanstack/react-query';
@@ -6,28 +6,20 @@ import { tanQueries } from "../../queries/index.js";
 import type { TrackSearchResult } from "../../../core/Api.js";
 import { MusicbrainzInfoIcon, type MusicbrainzInfoIconProps } from "../musicServices/Musicbrainz.js";
 import React, { useEffect, useState } from "react";
-import { getMusicServiceIconElement } from "../icons/ChakraIcons.js";
 import { ArtistCreditTags } from "../ArtistCreditDisplay.js";
+import { LeftSideMetadataResultContent } from "./MetadataResults.js";
 
 export const TrackSearchResultItem = (props: { data: TrackSearchResult }) => {
 
     const {
         album,
         albumCount,
-        service,
-        score,
         name,
         mbidRecording,
         mbidTrack,
         artists = []
     } = props.data;
 
-    let artImage: string | undefined;
-    if (album?.image !== undefined) {
-        artImage = album.image;
-    } else {
-        artImage = artists.find(x => x.image !== undefined)?.image;
-    }
     let mbidType: MusicbrainzInfoIconProps['type'] | undefined = undefined;
     let mbid: string | undefined = undefined;
     if (mbidRecording !== undefined) {
@@ -59,18 +51,7 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult }) => {
 
     return (
         <HStack gap="4">
-            <Stack>
-            <HStack separator={<StackSeparator/>}>
-            <Icon size="sm">{getMusicServiceIconElement(service)}</Icon>
-            {score !== undefined ? <Text color="fg.subtle" textStyle="sm">{score}</Text> : undefined}
-            </HStack>
-            {artImage !== undefined ? (
-                <Avatar.Root shape="square" size="xl">
-                    <Avatar.Fallback name="Art" />
-                    <Avatar.Image src={artImage} />
-                </Avatar.Root>
-            ) : undefined}
-            </Stack>
+            <LeftSideMetadataResultContent {...props.data}/>
             <Stack gap="1">
                 <Text fontWeight="medium">
                     <HStack>
