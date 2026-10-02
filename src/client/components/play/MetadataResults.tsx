@@ -90,7 +90,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
     let input: React.JSX.Element;
     if(props.inputGroupContent !== undefined) {
         input = (
-            <InputGroup startElement={props.inputGroupContent}>
+            <InputGroup startAddon={props.inputGroupContent}>
                 {inputElm}
             </InputGroup>
         )

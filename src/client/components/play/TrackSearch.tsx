@@ -4,9 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { tanQueries } from "../../queries/index.js";
 import type { TrackSearchResult } from "../../../core/Api.js";
 import { MusicbrainzInfoIcon, type MusicbrainzInfoIconProps } from "../musicServices/Musicbrainz.js";
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ArtistCreditTags } from "../ArtistCreditDisplay.js";
 import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, type MetadataPartials } from "./MetadataResults.js";
+import { MusicServiceIcons } from "../icons/ChakraIcons.js";
 
 const trackPartials: MetadataPartials<TrackSearchResult> = {
     track: { label: 'Track only', pick: ({ artists, album, albumCount, ...rest }) => rest },
@@ -72,19 +73,21 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?:
     )
 }
 
+type MinimalResult = Pick<TrackSearchResult, 'name' | 'mbidTrack' | 'mbidRecording' | 'spotifyId'>
 export interface TrackSearchProps {
-    initial?: string
+    initial?: MinimalResult
     onChange: (val: TrackSearchResult) => void
 }
 
 export const TrackSearch = (props: TrackSearchProps) => {
 
     const {
-        initial = '',
+        initial,
         onChange = (val) => console.log(val, 'Selected value for prop')
     } = props;
 
-    const [debouncedQuery, setDebouncedQuery] = useDebouncedState<string>(initial, { wait: 500 });
+    const [selectedItem, setSelectedItem] = useState<MinimalResult>(initial ?? {name: ''});
+    const [debouncedQuery, setDebouncedQuery] = useDebouncedState<string>(initial?.name ?? '', { wait: 500 });
 
     const query = useQuery({
         enabled: debouncedQuery !== '',
@@ -103,13 +106,33 @@ export const TrackSearch = (props: TrackSearchProps) => {
         }
     }, [query, set])
 
+    const doChange = useCallback((val: TrackSearchResult) => {
+        setSelectedItem(val);
+        onChange(val);
+    },[setSelectedItem, onChange]);
+
+    const services: string[] = [];
+    let groupContent: React.JSX.Element | undefined = undefined;
+    if(selectedItem !== undefined) {
+        if(selectedItem.mbidTrack !== undefined || selectedItem.mbidRecording !== undefined) {
+            services.push('musicbrainz');
+        }
+        if(selectedItem.spotifyId !== undefined) {
+            services.push('spotify');
+        }
+    }
+    if(services.length > 0) {
+        groupContent = <MusicServiceIcons services={services} iconProps={{size: 'sm'}}/>
+    }
+
     return (
         <MetadataSearchCombobox
             placeholder="Type to search for tracks"
             collection={collection}
+            inputGroupContent={groupContent}
             isLoading={query.isLoading}
             isError={query.isError}
-            onChange={onChange}
+            onChange={doChange}
             onQueryChange={setDebouncedQuery}
             renderItem={(item, onPick) => <TrackSearchResultItem data={item} onPick={onPick} />}
         />

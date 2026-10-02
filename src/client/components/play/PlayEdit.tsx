@@ -54,7 +54,7 @@ export const PlayEdit = (props: PlayEditProps) => {
 
                     </HStack>
                 </Float>
-                <Tabs.Root size="sm" variant="outline" defaultValue={props.initialTab ?? 'edit'}>
+                {/* <Tabs.Root size="sm" variant="outline" defaultValue={props.initialTab ?? 'edit'}>
                     <Tabs.List>
                         <Tabs.Trigger value="edit">{props.context === 'create' ? 'Create' : 'Edit'}</Tabs.Trigger>
                         <Tabs.Trigger value="search">Search</Tabs.Trigger>
@@ -64,7 +64,8 @@ export const PlayEdit = (props: PlayEditProps) => {
                     <Tabs.Content value="search">
                         Search here
                     </Tabs.Content>
-                </Tabs.Root>
+                </Tabs.Root> */}
+                
             </MSErrorBoundary>
         </Box>
     );
