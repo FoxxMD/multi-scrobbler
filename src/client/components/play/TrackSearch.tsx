@@ -1,4 +1,4 @@
-import { Box, Combobox, useListCollection, Stack, Text, Portal, HStack, Span, Spinner } from "@chakra-ui/react"
+import { Box, Combobox, Menu, useListCollection, Stack, Text, Portal, HStack, Span, Spinner } from "@chakra-ui/react"
 import { MSErrorBoundary } from '../ErrorBoundary.js';
 import { useDebouncedState } from '@tanstack/react-pacer'
 import { useQuery } from '@tanstack/react-query';
@@ -8,8 +8,19 @@ import { MusicbrainzInfoIcon, type MusicbrainzInfoIconProps } from "../musicServ
 import React, { useEffect, useState } from "react";
 import { ArtistCreditTags } from "../ArtistCreditDisplay.js";
 import { LeftSideMetadataResultContent } from "./MetadataResults.js";
+import { EllipsisButtonMenu } from "../buttonMenus/ButtonMenu.js";
 
-export const TrackSearchResultItem = (props: { data: TrackSearchResult }) => {
+type TrackPartial = (data: TrackSearchResult) => TrackSearchResult;
+
+const trackPartials: Record<string, { label: string, pick: TrackPartial }> = {
+    track: { label: 'Track only', pick: ({ artists, album, albumCount, ...rest }) => rest },
+    artists: { label: 'Track + artists', pick: ({ album, albumCount, ...rest }) => rest },
+    album: { label: 'Track + album', pick: ({ artists, ...rest }) => rest },
+};
+
+export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?: (val: TrackSearchResult) => void }) => {
+
+    const { onPick } = props;
 
     const {
         album,
@@ -45,17 +56,32 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult }) => {
     }
 
     let artistTags: React.JSX.Element | undefined = undefined;
-    if(artists.length > 0) {
+    if (artists.length > 0) {
         artistTags = <ArtistCreditTags data={artists} />
     }
 
+    let pickMenu: React.JSX.Element | undefined = undefined;
+    if (onPick !== undefined) {
+        // menu content is portaled but still bubbles through the React tree
+        // stop it here so Combobox does not select the whole item or treat Enter as freetext
+        pickMenu = (
+            <Box marginLeft="auto" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                <EllipsisButtonMenu
+                    menuItems={Object.entries(trackPartials).map(([value, { label }]) => (
+                        <Menu.Item key={value} value={value}>{label}</Menu.Item>
+                    ))}
+                    menuCallback={(select) => onPick(trackPartials[select.value].pick(props.data))}
+                />
+            </Box>);
+    }
+
     return (
-        <HStack gap="4">
-            <LeftSideMetadataResultContent {...props.data}/>
-            <Stack gap="1">
-                <Text fontWeight="medium">
+        <HStack gap="4" flexGrow="1">
+            <LeftSideMetadataResultContent {...props.data} />
+            <Stack gap="1" flexGrow="1">
+                <Text fontWeight="medium" mb="1">
                     <HStack>
-                        {name} {mbid !== undefined && mbidType !== undefined ? <MusicbrainzInfoIcon type={mbidType} mbid={mbid} tooltip /> : null}
+                        {name} {mbid !== undefined && mbidType !== undefined ? <MusicbrainzInfoIcon type={mbidType} mbid={mbid} tooltip /> : null} {pickMenu}
                     </HStack>
                 </Text>
                 {artistTags}
@@ -92,10 +118,10 @@ export const TrackSearch = (props: TrackSearchProps) => {
     });
 
     useEffect(() => {
-        if(query.isSuccess) {
+        if (query.isSuccess) {
             set(query.data.data);
         }
-    },[query, set])
+    }, [query, set])
 
     return (
         <Box position="relative">
@@ -103,10 +129,11 @@ export const TrackSearch = (props: TrackSearchProps) => {
                 <Combobox.Root
                     allowCustomValue
                     onKeyDown={(e) => {
-                        if(e.key === 'Enter') {
-                            if(rawInput !== undefined) {
+                        // combobox prevents default when Enter selects a highlighted item
+                        if (e.key === 'Enter' && !e.defaultPrevented) {
+                            if (rawInput !== undefined) {
                                 console.log('enter and onChange rawInput');
-                                onChange({id: 'nonce', service: 'user', name: rawInput});
+                                onChange({ id: 'nonce', service: 'user', name: rawInput });
                             } else {
                                 console.log('enter noop');
                             }
@@ -114,9 +141,9 @@ export const TrackSearch = (props: TrackSearchProps) => {
                     }}
                     collection={collection}
                     onInteractOutside={(e) => {
-                        if(rawInput !== undefined) {
+                        if (rawInput !== undefined) {
                             console.log('outside interact and onChange rawInput');
-                            onChange({id: 'nonce', service: 'user', name: rawInput});
+                            onChange({ id: 'nonce', service: 'user', name: rawInput });
                         } else {
                             console.log('outside interact noop');
                         }
@@ -131,9 +158,11 @@ export const TrackSearch = (props: TrackSearchProps) => {
                     }}
                     onInputValueChange={(e) => {
                         setDebouncedQuery(e.inputValue);
-                        setRawInput(e.inputValue)
+                        // selecting an item rewrites the input, this is not freetext
+                        if (e.reason !== 'item-select') {
+                            setRawInput(e.inputValue);
+                        }
                     }}
-                    
                 >
                     <Combobox.Control>
                         <Combobox.Input placeholder="Type to search for tracks" />
@@ -155,12 +184,19 @@ export const TrackSearch = (props: TrackSearchProps) => {
                                         Error fetching
                                     </Span>
                                 ) : (
-                                    collection.items?.map((item, i) => (
-                                        <Combobox.Item key={item.id} item={item.id}>
-                                            <TrackSearchResultItem data={item}/>
-                                            <Combobox.ItemIndicator />
-                                        </Combobox.Item>
-                                    ))
+                                    <Combobox.Context>
+                                        {(combobox) => collection.items?.map((item) => (
+                                            <Combobox.Item key={item.id} item={item.id}>
+                                                <TrackSearchResultItem data={item} onPick={(val) => {
+                                                    onChange(val);
+                                                    setRawInput(undefined);
+                                                    combobox.setInputValue(val.name, 'item-select');
+                                                    combobox.setOpen(false);
+                                                }} />
+                                                <Combobox.ItemIndicator />
+                                            </Combobox.Item>
+                                        ))}
+                                    </Combobox.Context>
                                 )}
                                 <Combobox.Empty>No items found</Combobox.Empty>
                             </Combobox.Content>

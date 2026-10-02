@@ -5,6 +5,7 @@ import { TrackSearchResultItem } from "../../client/components/play/TrackSearch.
 import { Provider } from "../../client/components/Provider.js";
 import { Container } from '@chakra-ui/react';
 import { generateTrackSearchResult } from "../../core/tests/utils/apiFixtures.js";
+import type { TrackSearchResult } from "../../core/Api.js";
 
 type PropsAndCustomArgs = React.ComponentProps<typeof TrackSearchResultItem> & {
   initial?: string
@@ -24,6 +25,7 @@ const meta = preview.type<{ args: PropsAndCustomArgs }>().meta({
   ],
   args: {
     data: generateTrackSearchResult(),
+    onPick: (val: TrackSearchResult) => console.log(val),
   },
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });
