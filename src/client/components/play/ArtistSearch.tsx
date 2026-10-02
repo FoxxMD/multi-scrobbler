@@ -6,8 +6,9 @@ import type { ArtistSearchResult } from "../../../core/Api.js";
 import { MusicbrainzInfoIcon } from "../musicServices/Musicbrainz.js";
 import { useCallback, useEffect, useState } from "react";
 import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, type MetadataPartials } from "./MetadataResults.js";
-import type { ArtistCredit } from "../../../core/Atomic.js";
+import { type ArtistCredit, type PlayObjectMinimal } from "../../../core/Atomic.js";
 import { MusicServiceIcons } from "../icons/ChakraIcons.js";
+import { removeUndefinedKeys } from "../../../core/DataUtils.js";
 
 const artistPartials: MetadataPartials<ArtistSearchResult> = {
     name: { label: 'Name only', pick: ({ mbid, ...rest }) => rest },
@@ -34,6 +35,28 @@ export const ArtistSearchResultItem = (props: { data: ArtistSearchResult, onPick
     )
 }
 
+const artistResultToPlay = (val: ArtistSearchResult): PlayObjectMinimal<string> => {
+    const {
+        name,
+        mbid,
+        spotifyId,
+        image
+    } = val;
+
+    const play: PlayObjectMinimal<string> = {
+        data: {
+            artists: [{name, mbid}]
+        },
+        meta: {}
+    }
+    if(image !== undefined) {
+        play.meta.art = {
+            artist: image
+        }
+    }
+    return play;
+}
+
 export interface ArtistSearchProps {
     initial?: ArtistCredit
     onChange: (val: ArtistCredit) => void
@@ -42,11 +65,12 @@ export interface ArtistSearchProps {
 export const ArtistSearch = (props: ArtistSearchProps) => {
 
     const {
+        initial,
         onChange = (val) => console.log(val, 'Selected value for prop')
     } = props;
 
-    const [selectedItem, setSelectedItem] = useState<ArtistCredit>(props.initial ?? {name: ''});
-    const [debouncedQuery, setDebouncedQuery] = useDebouncedState<string>(props.initial?.name ?? '', { wait: 500 });
+    const [selectedItem, setSelectedItem] = useState<ArtistCredit>(initial ?? {name: ''});
+    const [debouncedQuery, setDebouncedQuery] = useDebouncedState<string>(initial?.name ?? '', { wait: 500 });
 
     const query = useQuery({
         enabled: debouncedQuery !== '',
@@ -86,6 +110,7 @@ export const ArtistSearch = (props: ArtistSearchProps) => {
             placeholder="Type to search for artists"
             collection={collection}
             inputGroupContent={groupContent}
+            initialInput={selectedItem?.name}
             isLoading={query.isLoading}
             isError={query.isError}
             onChange={doChange}

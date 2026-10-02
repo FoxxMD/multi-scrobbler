@@ -1,4 +1,4 @@
-import { AbsoluteCenter, Avatar, Box, Combobox, HStack, Icon, Menu, Portal, Span, Spinner, StackSeparator, Text, InputGroup, type ListCollection } from "@chakra-ui/react"
+import { AbsoluteCenter, Avatar, Box, Combobox, HStack, Icon, Menu, Portal, Span, Spinner, StackSeparator, Text, InputGroup, type ListCollection, Flex } from "@chakra-ui/react"
 import type { MetadataResultBase, MetadataResultImage, MetadataResultServiceScore } from "../../../core/Api"
 import { getMusicServiceIconElement } from "../icons/ChakraIcons"
 import React, { useState } from "react"
@@ -100,7 +100,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
     }
 
     return (
-        <Box width="100%">
+        <Flex flexGrow="1">
             <MSErrorBoundary>
                 <Combobox.Root
                 defaultInputValue={initialInput === '' ? undefined : initialInput}
@@ -181,6 +181,6 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                     </Portal>
                 </Combobox.Root>
             </MSErrorBoundary>
-        </Box>
+        </Flex>
     );
 }
