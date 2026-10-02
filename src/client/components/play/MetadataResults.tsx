@@ -1,4 +1,4 @@
-import { AbsoluteCenter, Avatar, Box, Combobox, HStack, Icon, Menu, Portal, Span, Spinner, StackSeparator, Text, type ListCollection } from "@chakra-ui/react"
+import { AbsoluteCenter, Avatar, Box, Combobox, HStack, Icon, Menu, Portal, Span, Spinner, StackSeparator, Text, InputGroup, type ListCollection } from "@chakra-ui/react"
 import type { MetadataResultBase, MetadataResultImage, MetadataResultServiceScore } from "../../../core/Api"
 import { getMusicServiceIconElement } from "../icons/ChakraIcons"
 import React, { useState } from "react"
@@ -72,6 +72,7 @@ export interface MetadataSearchComboboxProps<T extends MetadataSearchResult> {
     collection: ListCollection<T>
     isLoading: boolean
     isError: boolean
+    inputGroupContent?: React.JSX.Element
     onChange: (val: T) => void
     onQueryChange: (query: string) => void
     renderItem: (item: T, onPick: (val: T) => void) => React.JSX.Element
@@ -84,6 +85,18 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
 
     // every other property on a search result is optional
     const freetext = (name: string) => ({ id: 'nonce', service: 'user', name }) as T;
+
+    const inputElm = <Combobox.Input placeholder={placeholder} />;
+    let input: React.JSX.Element;
+    if(props.inputGroupContent !== undefined) {
+        input = (
+            <InputGroup startElement={props.inputGroupContent}>
+                {inputElm}
+            </InputGroup>
+        )
+    } else {
+        input = inputElm;
+    }
 
     return (
         <Box position="relative">
@@ -127,7 +140,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                     }}
                 >
                     <Combobox.Control>
-                        <Combobox.Input placeholder={placeholder} />
+                        {input}
                         <Combobox.IndicatorGroup>
                             <Combobox.ClearTrigger />
                             <Combobox.Trigger />

@@ -4,8 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { tanQueries } from "../../queries/index.js";
 import type { ArtistSearchResult } from "../../../core/Api.js";
 import { MusicbrainzInfoIcon } from "../musicServices/Musicbrainz.js";
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, type MetadataPartials } from "./MetadataResults.js";
+import type { ArtistCredit } from "../../../core/Atomic.js";
+import { MusicServiceIcons } from "../icons/ChakraIcons.js";
 
 const artistPartials: MetadataPartials<ArtistSearchResult> = {
     name: { label: 'Name only', pick: ({ mbid, ...rest }) => rest },
@@ -33,18 +35,18 @@ export const ArtistSearchResultItem = (props: { data: ArtistSearchResult, onPick
 }
 
 export interface ArtistSearchProps {
-    initial?: string
-    onChange: (val: ArtistSearchResult) => void
+    initial?: ArtistCredit
+    onChange: (val: ArtistCredit) => void
 }
 
 export const ArtistSearch = (props: ArtistSearchProps) => {
 
     const {
-        initial = '',
         onChange = (val) => console.log(val, 'Selected value for prop')
     } = props;
 
-    const [debouncedQuery, setDebouncedQuery] = useDebouncedState<string>(initial, { wait: 500 });
+    const [selectedItem, setSelectedItem] = useState<ArtistCredit>(props.initial ?? {name: ''});
+    const [debouncedQuery, setDebouncedQuery] = useDebouncedState<string>(props.initial?.name ?? '', { wait: 500 });
 
     const query = useQuery({
         enabled: debouncedQuery !== '',
@@ -63,13 +65,30 @@ export const ArtistSearch = (props: ArtistSearchProps) => {
         }
     }, [query, set])
 
+    const doChange = useCallback((val: ArtistCredit) => {
+        setSelectedItem(val);
+        onChange(val);
+    },[setSelectedItem, onChange]);
+
+    const services: string[] = [];
+    let groupContent: React.JSX.Element | undefined = undefined;
+    if(selectedItem !== undefined) {
+        if(selectedItem.mbid !== undefined) {
+            services.push('musicbrainz');
+        }
+    }
+    if(services.length > 0) {
+        groupContent = <MusicServiceIcons services={services} iconProps={{size: 'sm'}}/>
+    }
+
     return (
         <MetadataSearchCombobox
             placeholder="Type to search for artists"
             collection={collection}
+            inputGroupContent={groupContent}
             isLoading={query.isLoading}
             isError={query.isError}
-            onChange={onChange}
+            onChange={doChange}
             onQueryChange={setDebouncedQuery}
             renderItem={(item, onPick) => <ArtistSearchResultItem data={item} onPick={onPick} />}
         />

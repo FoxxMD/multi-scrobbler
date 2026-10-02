@@ -36,7 +36,7 @@ import { MdOutlineFiberNew } from "react-icons/md";
 import { RiZzzFill } from "react-icons/ri";
 import { SiGoogledocs } from "react-icons/si";
 import type { Clipboard, IconProps} from "@chakra-ui/react";
-import { IconButton, useClipboard, Spinner, Icon } from "@chakra-ui/react"
+import { IconButton, useClipboard, Spinner, Icon, StackSeparator, HStack } from "@chakra-ui/react"
 import type {ComponentProps, PropsWithChildren, ReactNode} from 'react';
 import type {IconBaseProps, IconType} from "react-icons/lib";
 
@@ -249,6 +249,27 @@ export const getMusicServiceIconElement = (service?: string): ReactNode => {
 export const getMusicServiceChakraIcon = (service: string) => {
     const ServiceIcon = getMusicServiceIcon(service);
     return (props: IconProps = {}) => <Icon {...props}><ServiceIcon/></Icon>;
+}
+
+export const MusicServiceIcons = (props: {
+    services?: string[],
+    iconProps?: IconProps,
+    seperator?: boolean
+} & Omit<ComponentProps<typeof HStack>, 'children'>) => {
+    const {
+        services = [],
+        seperator = false,
+        iconProps = {},
+        ...rest
+    } = props;
+    if (services.length === 0) {
+        return undefined;
+    }
+    return (
+        <HStack {...rest} separator={seperator === true ? <StackSeparator /> : undefined}>
+            {services.map((x, i) => <Icon key={i} {...iconProps}>{getMusicServiceIconElement(x)}</Icon>)}
+        </HStack>
+    )
 }
 
 export const StopIconRaw = HiMiniStop;
