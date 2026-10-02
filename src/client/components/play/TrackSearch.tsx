@@ -8,7 +8,7 @@ import { MusicbrainzInfoIcon } from "../musicServices/Musicbrainz.js";
 import { useEffect, useState } from "react";
 import { getMusicServiceIconElement } from "../icons/ChakraIcons.js";
 
-export const ArtistSearchResultItem = (props: { data: ArtistSearchResult }) => (
+export const TrackSearchResultItem = (props: { data: ArtistSearchResult }) => (
     <HStack gap="4">
         {props.data.image !== undefined ? (
             <Avatar.Root shape="square" size="xl">
@@ -44,12 +44,11 @@ export const ArtistSearch = (props: ArtistSearchProps) => {
         onChange = (val) => console.log(val, 'Selected value for prop')
     } = props;
 
-    const [rawInput, setRawInput] = useState<string | undefined>(initial);
-    const [hasFocused, setHasFocused] = useState<boolean>(false);
+    const [rawInput, setRawInput] = useState<string | undefined>(undefined);
     const [debouncedQuery, setDebouncedQuery] = useDebouncedState<string>(initial, { wait: 500 });
 
     const query = useQuery({
-        enabled: debouncedQuery !== '' && hasFocused,
+        enabled: debouncedQuery !== '',
         ...tanQueries.metadata.artists(debouncedQuery)
     });
 
@@ -69,7 +68,6 @@ export const ArtistSearch = (props: ArtistSearchProps) => {
         <Box position="relative">
             <MSErrorBoundary>
                 <Combobox.Root
-                    onFocus={(e) => hasFocused === false ? setHasFocused(true) : undefined}
                     allowCustomValue
                     onKeyDown={(e) => {
                         if(e.key === 'Enter') {

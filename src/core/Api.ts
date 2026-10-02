@@ -241,6 +241,24 @@ export const playStateBodySchema = z.object({
 
 export type PlayStateBody = z.infer<typeof playStateBodySchema>;
 
+export const albumSearchResultSchema = z.object({
+    name: z.string(),
+    id: z.string(),
+    image: z.string().optional(),
+    service: z.string(),
+    mbidRelease: z.string().optional(),
+    mbidReleaseGroup: z.string().optional(),
+    spotifyId: z.string().optional(),
+    score: z.int().nonnegative().optional(),
+    type: z.string().optional()
+});
+export type AlbumSearchResult = z.infer<typeof albumSearchResultSchema>;
+
+export const albumSearchResultResponseSchema = z.object({
+    data: albumSearchResultSchema.array()
+});
+export type AlbumSearchResultResponse = z.infer<typeof albumSearchResultResponseSchema>;
+
 export const artistSearchResultSchema = z.object({
     ...artistCreditSchema.shape,
     id: z.string(),
@@ -254,3 +272,24 @@ export const artistSearchResultResponseSchema = z.object({
     data: artistSearchResultSchema.array()
 });
 export type ArtistSearchResultResponse = z.infer<typeof artistSearchResultResponseSchema>;
+
+
+export const trackSearchResultSchema = z.object({
+    name: z.string(),
+    id: z.string(),
+    image: z.string().optional(),
+    service: z.string(),
+    score: z.int().nonnegative().optional(),
+    mbidRecording: z.string().optional(),
+    mbidTrack: z.string().optional(),
+    spotifyId: z.string().optional(),
+    artists: artistSearchResultSchema.array().optional(),
+    album: albumSearchResultSchema.optional(),
+    albumCount: z.int().positive().optional()
+});
+export type TrackSearchResult = z.infer<typeof trackSearchResultSchema>;
+
+export const trackSearchResultResponseSchema = z.object({
+    data: trackSearchResultSchema.array()
+});
+export type TrackSearchResultResponse = z.infer<typeof trackSearchResultResponseSchema>;

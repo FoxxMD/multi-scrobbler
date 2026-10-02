@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
-import type {ArtistSearchResult, ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentHistoricalApi, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi} from "../../Api.ts";
+import type {AlbumSearchResult, ArtistSearchResult, ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentHistoricalApi, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi, TrackSearchResult} from "../../Api.ts";
 import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ComponentType, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes, type MBID } from "../../Atomic.ts";
-import { generateArtist, generateArtistCredit, generatePlay, normalizePlays } from "./PlayTestUtils.ts";
+import { generateArtist, generateArtistCredit, generateMbid, generatePlay, normalizePlays } from "./PlayTestUtils.ts";
 import { generatePlayInput, generatePlayWithLifecycle, playWithLifecycleScrobble, randomPlayState } from "./fixtures.ts";
 import { asJsonPlayObject } from "../../PlayMarshalUtils.ts";
 import { generatePlayUid } from "../../StringUtils.ts";
@@ -521,11 +521,12 @@ export const generateNormalWSUrl = () => {
 }
 
 export const generateArtistSearchResult = (partial: Partial<ArtistSearchResult> = {}, opts: {mbidVal?: boolean | MBID} = {}): ArtistSearchResult => ({
-    ...generateArtistCredit(partial.name, opts.mbidVal),
     id: faker.string.alphanumeric(7),
     score: faker.number.int({min: 10, max: 100}),
     service: faker.helpers.arrayElement(['spotify','musicbrainz','rocksky']),
-    image: placeholderImage([300])
+    image: placeholderImage([300]),
+    ...generateArtistCredit(partial.name, opts.mbidVal),
+    ...partial
 })
 
 export const generateArtistSearchResults = (opts: {query?: string, count?: number} = {}): ArtistSearchResult[] => {
@@ -539,6 +540,66 @@ export const generateArtistSearchResults = (opts: {query?: string, count?: numbe
     }
     while(results.length !== c) {
         results.push(generateArtistSearchResult())
+    }
+    results.sort((a,b) => b.score - a.score);
+    return results;
+}
+
+export const generateAlbumSearchResult = (partial: Partial<AlbumSearchResult> = {}): AlbumSearchResult => ({
+    id: faker.string.alphanumeric(7),
+    score: faker.number.int({min: 10, max: 100}),
+    service: faker.helpers.arrayElement(['spotify','musicbrainz','rocksky']),
+    image: placeholderImage([300]),
+    name: faker.music.album(),
+    mbidRelease: faker.helpers.arrayElement([generateMbid(), undefined]),
+    mbidReleaseGroup: faker.helpers.arrayElement([generateMbid(), undefined]),
+    spotifyId: faker.helpers.arrayElement([faker.string.alphanumeric(4), undefined]),
+    type: faker.helpers.arrayElement(['single','album','live','compilation',undefined]),
+    ...partial
+});
+
+export const generateAlbumSearchResults = (opts: {query?: string, count?: number} = {}): AlbumSearchResult[] => {
+    const results: AlbumSearchResult[] = [];
+    if(opts.count === 0) {
+        return results;
+    }
+    const c = opts.count ?? faker.number.int({min: 2, max: 5});
+    if(opts.query !== undefined) {
+        results.push(generateAlbumSearchResult({name: opts.query}))
+    }
+    while(results.length !== c) {
+        results.push(generateAlbumSearchResult())
+    }
+    results.sort((a,b) => b.score - a.score);
+    return results;
+}
+
+export const generateTrackSearchResult = (partial: Partial<TrackSearchResult> = {}): TrackSearchResult => ({
+    id: faker.string.alphanumeric(7),
+    score: faker.number.int({min: 10, max: 100}),
+    service: faker.helpers.arrayElement(['spotify','musicbrainz','rocksky']),
+    image: placeholderImage([300]),
+    name: faker.music.album(),
+    mbidRecording: faker.helpers.arrayElement([generateMbid(), undefined]),
+    mbidTrack: faker.helpers.arrayElement([generateMbid(), undefined]),
+    spotifyId: faker.helpers.arrayElement([faker.string.alphanumeric(4), undefined]),
+    album: generateAlbumSearchResult(),
+    albumCount: faker.number.int({min: 1, max: 15}),
+    artists: generateArtistSearchResults({count: faker.number.int({min: 1, max: 3})}),
+    ...partial
+});
+
+export const generateTrackSearchResults = (opts: {query?: string, count?: number} = {}): TrackSearchResult[] => {
+    const results: TrackSearchResult[] = [];
+    if(opts.count === 0) {
+        return results;
+    }
+    const c = opts.count ?? faker.number.int({min: 2, max: 5});
+    if(opts.query !== undefined) {
+        results.push(generateTrackSearchResult({name: opts.query}))
+    }
+    while(results.length !== c) {
+        results.push(generateTrackSearchResult())
     }
     results.sort((a,b) => b.score - a.score);
     return results;
