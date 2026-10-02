@@ -73,15 +73,16 @@ export interface MetadataSearchComboboxProps<T extends MetadataSearchResult> {
     isLoading: boolean
     isError: boolean
     inputGroupContent?: React.JSX.Element
+    initialInput?: string
     onChange: (val: T) => void
     onQueryChange: (query: string) => void
     renderItem: (item: T, onPick: (val: T) => void) => React.JSX.Element
 }
 
 export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: MetadataSearchComboboxProps<T>) => {
-    const { placeholder, collection, isLoading, isError, onChange, onQueryChange, renderItem } = props;
+    const { placeholder, collection, isLoading, isError, onChange, onQueryChange, renderItem, initialInput = '' } = props;
 
-    const [rawInput, setRawInput] = useState<string | undefined>(undefined);
+    const [rawInput, setRawInput] = useState<string | undefined>(initialInput === '' ? undefined : initialInput);
 
     // every other property on a search result is optional
     const freetext = (name: string) => ({ id: 'nonce', service: 'user', name }) as T;
@@ -99,9 +100,10 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
     }
 
     return (
-        <Box position="relative">
+        <Box width="100%">
             <MSErrorBoundary>
                 <Combobox.Root
+                defaultInputValue={initialInput === '' ? undefined : initialInput}
                     allowCustomValue
                     onKeyDown={(e) => {
                         // combobox prevents default when Enter selects a highlighted item

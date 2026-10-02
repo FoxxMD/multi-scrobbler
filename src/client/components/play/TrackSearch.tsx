@@ -8,6 +8,8 @@ import React, { useCallback, useEffect, useState } from "react";
 import { ArtistCreditTags } from "../ArtistCreditDisplay.js";
 import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, type MetadataPartials } from "./MetadataResults.js";
 import { MusicServiceIcons } from "../icons/ChakraIcons.js";
+import type { JsonPlayObject, PlayObjectMinimal } from "../../../core/Atomic.js";
+import { removeUndefinedKeys } from "../../../core/DataUtils.js";
 
 const trackPartials: MetadataPartials<TrackSearchResult> = {
     track: { label: 'Track only', pick: ({ artists, album, albumCount, ...rest }) => rest },
@@ -75,8 +77,33 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?:
 
 type MinimalResult = Pick<TrackSearchResult, 'name' | 'mbidTrack' | 'mbidRecording' | 'spotifyId'>
 export interface TrackSearchProps {
-    initial?: MinimalResult
-    onChange: (val: TrackSearchResult) => void
+    initial?: PlayObjectMinimal<string>
+    onChange: (val: PlayObjectMinimal<string>) => void
+}
+
+const trackResultToPlay = (val: TrackSearchResult): PlayObjectMinimal<string> => {
+    const {
+        name,
+        mbidTrack,
+        mbidRecording,
+        spotifyId
+    } = val;
+
+    return {
+        data: {
+            track: name,
+            meta: removeUndefinedKeys({
+                brainz: removeUndefinedKeys({
+                    track: mbidTrack,
+                    recording: mbidRecording
+                }),
+                spotify: removeUndefinedKeys({
+                    track: spotifyId
+                })
+            })
+        },
+        meta: {}
+    }
 }
 
 export const TrackSearch = (props: TrackSearchProps) => {
@@ -86,8 +113,28 @@ export const TrackSearch = (props: TrackSearchProps) => {
         onChange = (val) => console.log(val, 'Selected value for prop')
     } = props;
 
-    const [selectedItem, setSelectedItem] = useState<MinimalResult>(initial ?? {name: ''});
-    const [debouncedQuery, setDebouncedQuery] = useDebouncedState<string>(initial?.name ?? '', { wait: 500 });
+    const {
+        data: {
+            track,
+            meta: {
+                brainz: {
+                    recording,
+                    track: mbidTrack
+                } = {},
+                spotify: {
+                    track: spotifyId
+                } = {}
+            } = {}
+        } = {},
+    } = initial ?? {};
+
+    const [selectedItem, setSelectedItem] = useState<MinimalResult>(removeUndefinedKeys({
+        name: track ?? '',
+        mbidTrack,
+        mbidRecording: recording,
+        spotifyId
+    }, false));
+    const [debouncedQuery, setDebouncedQuery] = useDebouncedState<string>(track ?? '', { wait: 500 });
 
     const query = useQuery({
         enabled: debouncedQuery !== '',
@@ -108,7 +155,7 @@ export const TrackSearch = (props: TrackSearchProps) => {
 
     const doChange = useCallback((val: TrackSearchResult) => {
         setSelectedItem(val);
-        onChange(val);
+        onChange(trackResultToPlay(val));
     },[setSelectedItem, onChange]);
 
     const services: string[] = [];
@@ -132,6 +179,7 @@ export const TrackSearch = (props: TrackSearchProps) => {
             inputGroupContent={groupContent}
             isLoading={query.isLoading}
             isError={query.isError}
+            initialInput={selectedItem?.name}
             onChange={doChange}
             onQueryChange={setDebouncedQuery}
             renderItem={(item, onPick) => <TrackSearchResultItem data={item} onPick={onPick} />}

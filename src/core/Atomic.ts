@@ -308,7 +308,6 @@ export interface PlayMetaBase<D extends DateLike = Dayjs> {
          * IE Frank Sinatra - My way FROM youtube.com <-- URL pointing to specific video
          */
         origin?: string
-        [key: string]: string | undefined
     }
     /**
      * Hot-linkable images for use with displaying art for this play
