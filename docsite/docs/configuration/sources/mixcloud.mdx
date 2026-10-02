@@ -1,0 +1,40 @@
+---
+title: Mixcloud
+description: Mixcloud (Source)
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import JsonConfig from '!!raw-loader!@site/../config/mixcloud.json.example';
+import ENVConfig from "@site/docs/configuration/sources/_env_configs/_mixcloud.md"
+
+[**Mixcloud**](https://www.mixcloud.com/) is a platform for DJ mixes, radio shows, and podcasts.
+
+This Source monitors the public [listening history](https://www.mixcloud.com/developers/#listens) of a Mixcloud user and scrobbles newly discovered listens to configured clients.
+
+:::info[Mixes, not Tracks]
+
+Mixcloud's public API does not expose tracklists for mixes so each listen is scrobbled as a **single play for the entire mix**:
+
+* **Track** is the name of the mix
+* **Artists** are the hosts credited on the mix, or the account that uploaded the mix if there are no credited hosts
+* **Duration** is the full length of the mix
+
+:::
+
+## Setup
+
+No authentication is required. Your Mixcloud listening history must be **public** (the default), which you can verify by visiting `https://www.mixcloud.com/YourUsername/listens/` while logged out.
+
+Your **username** is the last part of your profile URL IE `https://www.mixcloud.com/MyUsername/` => `MyUsername`
+
+Mixes are long, so this Source polls less frequently than others by default: every 60 seconds, backing off to at most 300 seconds when there is no activity.
+
+## Configuration
+
+<Config config="MixcloudSourceConfig" fileContent={JsonConfig} name="mixcloud">
+<ENVConfig/>
+</Config>

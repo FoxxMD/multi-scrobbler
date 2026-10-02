@@ -30,6 +30,7 @@ import type { RockskySourceAIOConfig, RockskySourceConfig} from "./rocksky.ts";
 import type { LibrefmSouceAIOConfig, LibrefmSourceConfig} from "./librefm.ts";
 import type { SonosSourceAIOConfig, SonosSourceConfig} from "./sonos.ts";
 import type { AppleMusicSourceAIOConfig, AppleMusicSourceConfig} from "./applemusic.ts";
+import type { MixcloudSourceAIOConfig, MixcloudSourceConfig} from "./mixcloud.ts";
 import type { SourceType } from "../../../../../core/Atomic.ts";
 import type { CommonSourceConfig } from "./index.ts";
 import type { SourceAIOConfig } from "./sources.ts";
@@ -66,6 +67,7 @@ export interface SourceTypeConfigMap extends Record<SourceType, [CommonSourceCon
     rocksky: [RockskySourceConfig, RockskySourceAIOConfig, Partial<Pick<RockskySourceConfig, 'data' | 'options'>>];
     sonos: [SonosSourceConfig, SonosSourceAIOConfig, Partial<Pick<SonosSourceConfig, 'data' | 'options'>>];
     applemusic: [AppleMusicSourceConfig, AppleMusicSourceAIOConfig, Partial<Pick<AppleMusicSourceConfig, 'data' | 'options'>>];
+    mixcloud: [MixcloudSourceConfig, MixcloudSourceAIOConfig, Partial<Pick<MixcloudSourceConfig, 'data' | 'options'>>];
 }
 
 export const sourceConfigSchemaMapAsync: { [K in keyof SourceTypeConfigMap]: () => Promise<[ZodType<SourceTypeConfigMap[K][0]>, ZodType<SourceTypeConfigMap[K][1]>, EnvSourceSchema<ZodObject, SourceTypeConfigMap[K][0]>]> } = {
@@ -188,6 +190,10 @@ export const sourceConfigSchemaMapAsync: { [K in keyof SourceTypeConfigMap]: () 
     applemusic: async () => {
         const {appleMusicSourceConfigSchema, appleMusicSourceAIOConfigSchema, envSchemas } = (await import('./applemusic.ts'));
         return [appleMusicSourceConfigSchema, appleMusicSourceAIOConfigSchema, envSchemas]
+    },
+    mixcloud: async () => {
+        const {mixcloudSourceConfigSchema, mixcloudSourceAIOConfigSchema, envSchemas } = (await import('./mixcloud.ts'));
+        return [mixcloudSourceConfigSchema, mixcloudSourceAIOConfigSchema, envSchemas]
     },
 };
 

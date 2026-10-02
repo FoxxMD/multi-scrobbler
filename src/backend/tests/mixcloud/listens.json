@@ -1,0 +1,55 @@
+{
+    "data": [
+        {
+            "key": "/SomeRadio/late-night-session-12/",
+            "url": "https://www.mixcloud.com/SomeRadio/late-night-session-12/",
+            "name": "Late Night Session #12",
+            "user": {
+                "key": "/SomeRadio/",
+                "url": "https://www.mixcloud.com/SomeRadio/",
+                "name": "Some Radio",
+                "username": "SomeRadio"
+            },
+            "hosts": [
+                {
+                    "key": "/DjOne/",
+                    "url": "https://www.mixcloud.com/DjOne/",
+                    "name": "DJ One",
+                    "username": "DjOne"
+                },
+                {
+                    "key": "/DjTwo/",
+                    "url": "https://www.mixcloud.com/DjTwo/",
+                    "name": "DJ Two",
+                    "username": "DjTwo"
+                }
+            ],
+            "pictures": {
+                "medium": "https://thumbnailer.mixcloud.com/unsafe/100x100/extaudio/a/b/c",
+                "large": "https://thumbnailer.mixcloud.com/unsafe/300x300/extaudio/a/b/c"
+            },
+            "audio_length": 7198,
+            "listen_time": "2026-06-15T13:38:24Z"
+        },
+        {
+            "key": "/SoloDj/deep-house-mix-2026/",
+            "url": "https://www.mixcloud.com/SoloDj/deep-house-mix-2026/",
+            "name": "Deep House Mix 2026",
+            "user": {
+                "key": "/SoloDj/",
+                "url": "https://www.mixcloud.com/SoloDj/",
+                "name": "Solo DJ",
+                "username": "SoloDj"
+            },
+            "hosts": [],
+            "pictures": {
+                "medium": "https://thumbnailer.mixcloud.com/unsafe/100x100/extaudio/d/e/f"
+            },
+            "audio_length": 3600,
+            "listen_time": "2026-06-10T20:50:36Z"
+        }
+    ],
+    "paging": {
+        "next": "https://api.mixcloud.com/TestUser/listens/?limit=2&until=2026-06-10+20%3A50%3A36"
+    }
+}

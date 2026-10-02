@@ -728,7 +728,8 @@ export type SourceType =
     'tealfm' |
     'rocksky' |
     'sonos' |
-    'applemusic';
+    'applemusic' |
+    'mixcloud';
 export const sourceTypes: SourceType[] = [
     'spotify',
     'plex',
@@ -759,7 +760,8 @@ export const sourceTypes: SourceType[] = [
     'tealfm',
     'rocksky',
     'sonos',
-    'applemusic'
+    'applemusic',
+    'mixcloud'
 ];
 export const isSourceType = (data: string): data is SourceType => {
     return sourceTypes.includes(data as SourceType);
