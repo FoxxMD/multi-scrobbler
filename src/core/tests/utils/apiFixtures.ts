@@ -541,7 +541,7 @@ export const generateArtistSearchResults = (opts: {query?: string, count?: numbe
     while(results.length !== c) {
         results.push(generateArtistSearchResult())
     }
-    results.sort((a,b) => b.score - a.score);
+    results.sort((a,b) => (b.score ?? 0) - (a.score ?? 0));
     return results;
 }
 
@@ -571,7 +571,7 @@ export const generateAlbumSearchResults = (opts: {query?: string, count?: number
     while(results.length !== c) {
         results.push(generateAlbumSearchResult())
     }
-    results.sort((a,b) => b.score - a.score);
+    results.sort((a,b) => (b.score ?? 0) - (a.score ?? 0));
     return results;
 }
 
@@ -602,7 +602,7 @@ export const generateTrackSearchResults = (opts: {query?: string, count?: number
     while(results.length !== c) {
         results.push(generateTrackSearchResult())
     }
-    results.sort((a,b) => b.score - a.score);
+    results.sort((a,b) => (b.score ?? 0) - (a.score ?? 0));
     return results;
 }
 
