@@ -8,6 +8,8 @@ import React, { useCallback, useEffect, useState } from "react";
 import { ArtistCreditTags } from "../ArtistCreditDisplay.tsx";
 import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, type MetadataPartials } from "./MetadataResults.tsx";
 import { MusicServiceIcons } from "../icons/ChakraIcons.tsx";
+import type { ArtistCredit, ArtMeta, BrainzMeta, SpotifyMeta, TrackMeta } from "../../../core/Atomic.ts";
+import { removeUndefinedKeys } from "../../../core/DataUtils.ts";
 
 const albumPartials: MetadataPartials<AlbumSearchResult> = {
     album: { label: 'Album only', pick: ({ artists, ...rest }) => rest },
@@ -58,9 +60,45 @@ export const AlbumSearchResultItem = (props: { data: AlbumSearchResult, onPick?:
 
 type MinimalResult = Pick<AlbumSearchResult, 'name' | 'mbidRelease' | 'mbidReleaseGroup' | 'spotifyId'>
 
+interface MinimalOnChange {
+    data: {
+        artists?: ArtistCredit[]
+        album: string
+        meta?: TrackMeta
+    }
+    meta: {
+        art?: ArtMeta
+    }
+}
+
+const albumSearchResultToOnChange = (val: AlbumSearchResult): MinimalOnChange => {
+    const playPartial: MinimalOnChange = {
+        data: {
+            album: val.name,
+            artists: val.artists !== undefined && val.artists.length > 0 ? val.artists.map((x) => ({name: x.name, mbid: x.mbid})) : undefined,
+            meta: removeUndefinedKeys<TrackMeta>({
+                brainz: removeUndefinedKeys<BrainzMeta>({
+                    album: val.mbidRelease,
+                    releaseGroup: val.mbidReleaseGroup
+                }),
+                spotify: removeUndefinedKeys<SpotifyMeta>({
+                    album: val.spotifyId
+                })
+            })
+        },
+        meta: {
+            art: removeUndefinedKeys<ArtMeta>({
+                album: val.image
+            })
+        }
+    }
+
+    return playPartial;
+}
+
 export interface AlbumSearchProps {
     initial?: MinimalResult
-    onChange: (val: AlbumSearchResult) => void
+    onChange: (val: MinimalOnChange) => void
 }
 
 export const AlbumSearch = (props: AlbumSearchProps) => {
@@ -92,7 +130,7 @@ export const AlbumSearch = (props: AlbumSearchProps) => {
 
     const doChange = useCallback((val: AlbumSearchResult) => {
         setSelectedItem(val);
-        onChange(val);
+        onChange(albumSearchResultToOnChange(val));
     },[setSelectedItem, onChange]);
 
     const services: string[] = [];
@@ -115,6 +153,8 @@ export const AlbumSearch = (props: AlbumSearchProps) => {
             collection={collection}
             inputGroupContent={groupContent}
             isLoading={query.isLoading}
+            key={selectedItem?.name}
+            initialInput={selectedItem?.name}
             isError={query.isError}
             onChange={doChange}
             onQueryChange={setDebouncedQuery}

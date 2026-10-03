@@ -1,7 +1,7 @@
 import { AbsoluteCenter, Avatar, Box, Combobox, HStack, Icon, Menu, Portal, Span, Spinner, StackSeparator, Text, InputGroup, type ListCollection, Flex } from "@chakra-ui/react"
 import type { MetadataResultBase, MetadataResultImage, MetadataResultServiceScore } from "../../../core/Api"
 import { getMusicServiceIconElement } from "../icons/ChakraIcons"
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { MSErrorBoundary } from "../ErrorBoundary"
 import { EllipsisButtonMenu } from "../buttonMenus/ButtonMenu"
 

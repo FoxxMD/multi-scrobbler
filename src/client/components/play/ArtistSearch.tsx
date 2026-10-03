@@ -45,7 +45,7 @@ const artistResultToPlay = (val: ArtistSearchResult): PlayObjectMinimal<string> 
 
     const play: PlayObjectMinimal<string> = {
         data: {
-            artists: [{name, mbid}]
+            artists: [{name, mbid}],
         },
         meta: {}
     }

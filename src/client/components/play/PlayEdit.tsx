@@ -7,6 +7,7 @@ import { deepmergeCustom } from "deepmerge-ts";
 import { ArtistSearch } from "./ArtistSearch.js";
 import { TrashIconButton } from "../icons/ChakraIcons.js";
 import { useState } from "react";
+import { AlbumSearch } from "./AlbumSearch.js";
 
 export interface PlayEditProps {
     initialPlay?: PlayObjectMinimal<string>
@@ -15,9 +16,7 @@ export interface PlayEditProps {
     onSubmit?: (vals: PlayObjectMinimal<string>) => void
 }
 
-const merge = deepmergeCustom({ mergeArrays: (values, utils, meta) => {
-    return values[0];
-} });
+const merge = deepmergeCustom({ mergeArrays: (values) => values.at(-1) });
 
 const logSubmit: PlayEditProps['onSubmit'] = (val) => console.log(val, 'Play Edit Submit');
 
@@ -36,6 +35,7 @@ export const PlayEdit = (props: PlayEditProps) => {
             data: {
                 track: '',
                 artists: [],
+                album: '',
                 ...data
             },
             meta: {
@@ -84,7 +84,7 @@ export const PlayEdit = (props: PlayEditProps) => {
                                     <Box width="100%">
                                         <TrackSearch initial={field.form.state.values}
                                             onChange={(val) => {
-                                                const merged = merge(val, field.form.state.values);
+                                                const merged = merge(field.form.state.values, val) as typeof field.form.state.values;
                                                 //field.form.state.values = merged;
                                                 field.form.setFieldValue('meta', merged.meta);
                                                 field.form.setFieldValue('data', merged.data);
@@ -132,6 +132,36 @@ export const PlayEdit = (props: PlayEditProps) => {
                                 </form.ArrayField>
                             </Fieldset.Content>
                         </Fieldset.Root>
+                        <form.Field
+                            name="data"
+                            children={(field) => (
+                                <Field.Root invalid={field.errors.length > 0}>
+                                    <Field.Label>Album</Field.Label>
+                                    <Box width="100%">
+                                        <AlbumSearch 
+                                        key={field.form.state.values.data.album ?? ''}
+                                        initial={{
+                                            name: field.form.state.values.data.album ?? '', 
+                                            mbidRelease: field.form.state.values.data.meta?.brainz?.album,
+                                            mbidReleaseGroup:field.form.state.values.data.meta?.brainz?.releaseGroup,
+                                            spotifyId:field.form.state.values.data.meta?.spotify?.album
+                                        }}
+                                            onChange={(val) => {
+                                                const merged = merge(field.form.state.values, val) as typeof field.form.state.values;
+                                                //field.form.state.values = merged;
+                                                field.form.setFieldValue('meta', merged.meta);
+                                                field.form.setFieldValue('data', merged.data);
+                                                setArtistsVersion(v => v + 1);
+                                            }} />
+                                        {field.errors.map((error) => (
+                                            <Field.ErrorText key={error.message}>
+                                                {error.message}
+                                            </Field.ErrorText>
+                                        ))}
+                                    </Box>
+                                </Field.Root>
+                            )}
+                        />
                     </Stack>
                 </form>
             </MSErrorBoundary>
