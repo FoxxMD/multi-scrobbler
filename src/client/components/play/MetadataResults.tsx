@@ -108,7 +108,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                     onKeyDown={(e) => {
                         // combobox prevents default when Enter selects a highlighted item
                         if (e.key === 'Enter' && !e.defaultPrevented) {
-                            if (rawInput !== undefined) {
+                            if (rawInput !== undefined && rawInput !== initialInput) {
                                 console.log('enter and onChange rawInput');
                                 onChange(freetext(rawInput));
                             } else {
@@ -118,7 +118,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                     }}
                     collection={collection}
                     onInteractOutside={(e) => {
-                        if (rawInput !== undefined) {
+                        if (rawInput !== undefined && rawInput !== initialInput) {
                             console.log('outside interact and onChange rawInput');
                             onChange(freetext(rawInput));
                         } else {

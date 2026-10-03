@@ -6,7 +6,7 @@ import { TrackSearch } from "./TrackSearch.js";
 import { deepmergeCustom } from "deepmerge-ts";
 import { ArtistSearch } from "./ArtistSearch.js";
 import { TrashIconButton } from "../icons/ChakraIcons.js";
-
+import { useState } from "react";
 
 export interface PlayEditProps {
     initialPlay?: PlayObjectMinimal<string>
@@ -15,7 +15,9 @@ export interface PlayEditProps {
     onSubmit?: (vals: PlayObjectMinimal<string>) => void
 }
 
-const merge = deepmergeCustom({ mergeArrays: false });
+const merge = deepmergeCustom({ mergeArrays: (values, utils, meta) => {
+    return values[0];
+} });
 
 const logSubmit: PlayEditProps['onSubmit'] = (val) => console.log(val, 'Play Edit Submit');
 
@@ -46,6 +48,9 @@ export const PlayEdit = (props: PlayEditProps) => {
         }],
     });
 
+    // ArrayField only re-renders on length/_arrayVersion change, so remount artists when TrackSearch replaces them
+    const [artistsVersion, setArtistsVersion] = useState(0);
+
     const form = useForm({
         ...opts,
         onSubmit: ({ schemaOutputs }) => {
@@ -57,6 +62,7 @@ export const PlayEdit = (props: PlayEditProps) => {
 
     return (
         <Box position="relative">
+            
             <MSErrorBoundary>
                 <Float placement="top-end" offsetX="6" offsetY="2" zIndex={100}>
                     <HStack>
@@ -78,9 +84,11 @@ export const PlayEdit = (props: PlayEditProps) => {
                                     <Box width="100%">
                                         <TrackSearch initial={field.form.state.values}
                                             onChange={(val) => {
-                                                const merged = merge(val, field.form.state.values)
+                                                const merged = merge(val, field.form.state.values);
+                                                //field.form.state.values = merged;
                                                 field.form.setFieldValue('meta', merged.meta);
                                                 field.form.setFieldValue('data', merged.data);
+                                                setArtistsVersion(v => v + 1);
                                             }} />
                                         {field.errors.map((error) => (
                                             <Field.ErrorText key={error.message}>
@@ -94,7 +102,7 @@ export const PlayEdit = (props: PlayEditProps) => {
                         <Fieldset.Root size="lg">
                             <Fieldset.Legend>Artists</Fieldset.Legend>
                             <Fieldset.Content>
-                                <form.ArrayField name="data.artists">
+                                <form.ArrayField key={artistsVersion} name="data.artists">
                                     {(array) => (
                                         <Stack>
                                             
