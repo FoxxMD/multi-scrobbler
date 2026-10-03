@@ -247,7 +247,7 @@
     "vite-plugin-svgr": "^5.2.0",
     "with-local-tmp-dir": "^7.0.1",
     "zocker": "^3.0.0",
-    "zod": "^4.4.3"
+    "zod": "^4.6.5"
   },
   "browserslist": {
     "production": [

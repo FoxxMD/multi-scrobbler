@@ -11,9 +11,9 @@ import { Muted } from './Typography.js';
 import { ArtistCreditTags } from './ArtistCreditDisplay.js';
 import { MSErrorBoundary } from './ErrorBoundary.js';
 import { EllipsisButton, EyeClosedIcon, EyeIcon, getMusicServiceIconElement } from './icons/ChakraIcons.js';
-import { MusicbrainzInfoIcon } from './musicServices/Musicbrainz.js';
 import type { IconType } from 'react-icons/lib';
 import { capitalize } from '../../core/StringUtils.js';
+import { MusicServiceIndicators, playMetaIdsToMusicServices } from './musicServices/MusicServiceIndicators.js';
 
 const EmptyPlayData = () => {
     return (
@@ -187,14 +187,8 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
     if (webUrl !== undefined || originUrl !== undefined) {
         titleLinks.push(<Link key="weblink" variant="underline" target="_blank" href={webUrl ?? originUrl}><Icon size="sm">{getMusicServiceIconElement(musicService ?? source)}</Icon></Link>);
     }
-    if (brainz.track !== undefined) {
-        titleLinks.push(<MusicbrainzInfoIcon key="mbtrack" type="track" mbid={brainz.track} tooltip link showMbid={showMbid} />)
-    }
-    if (brainz.recording !== undefined) {
-        titleLinks.push(<MusicbrainzInfoIcon key="mbrecording" type="recording" mbid={brainz.recording} tooltip link showMbid={showMbid} />)
-    }
 
-    const titleElm = <HStack><Span>{track}</Span>{titleLinks}</HStack>
+    const titleElm = <HStack><Span>{track}</Span>{titleLinks}<MusicServiceIndicators services={playMetaIdsToMusicServices(play, 'track')} showId={showMbid} link/></HStack>
 
     return (
         <Flex flexDirection="column" gap="4">
@@ -216,7 +210,7 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
                     <DataList.ItemValue>
                         <HStack>
                             {play.data.album}
-                            {brainz.album !== undefined ? <MusicbrainzInfoIcon type="release" mbid={brainz.album} link tooltip showMbid={showMbid} /> : null}
+                            <MusicServiceIndicators services={playMetaIdsToMusicServices(play, 'album')} showId={showMbid} link/>
                         </HStack>
                     </DataList.ItemValue>
                 </DataList.Item>

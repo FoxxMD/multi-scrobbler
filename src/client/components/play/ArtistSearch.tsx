@@ -3,16 +3,26 @@ import { useDebouncedState } from '@tanstack/react-pacer'
 import { useQuery } from '@tanstack/react-query';
 import { tanQueries } from "../../queries/index.js";
 import type { ArtistSearchResult } from "../../../core/Api.js";
-import { MusicbrainzInfoIcon } from "../musicServices/Musicbrainz.js";
 import { useCallback, useEffect, useState } from "react";
 import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, type MetadataPartials } from "./MetadataResults.js";
 import { type ArtistCredit, type PlayObjectMinimal } from "../../../core/Atomic.js";
-import { MusicServiceIcons } from "../icons/ChakraIcons.js";
-import { removeUndefinedKeys } from "../../../core/DataUtils.js";
+import type { MusicServicesAny } from "../musicServices/musicServiceTypes.js";
+import { MusicServiceIndicators } from "../musicServices/MusicServiceIndicators.js";
 
 const artistPartials: MetadataPartials<ArtistSearchResult> = {
     name: { label: 'Name only', pick: ({ mbid, ...rest }) => rest },
 };
+
+export const artistSearchResultToMusicServices = (val: ArtistCredit): MusicServicesAny[] => {
+    const musicServices: MusicServicesAny[] = [];
+    if (val.mbid) {
+        musicServices.push({ name: 'musicbrainz', id: val.mbid, idHint: 'artist' });
+    }
+    // } else if (val.spotifyId) {
+    //     musicServices.push({ name: 'spotify', id: val.spotifyId, idHint: 'artist' });
+    // }
+    return musicServices;
+}
 
 export const ArtistSearchResultItem = (props: { data: ArtistSearchResult, onPick?: (val: ArtistSearchResult) => void }) => {
 
@@ -27,7 +37,7 @@ export const ArtistSearchResultItem = (props: { data: ArtistSearchResult, onPick
             <Stack gap="1" flexGrow="1">
                 <Text fontWeight="medium">
                     <HStack>
-                        {name} {mbid !== undefined ? <MusicbrainzInfoIcon type="artist" mbid={mbid} tooltip /> : null} <MetadataPickMenu data={props.data} partials={artistPartials} onPick={props.onPick} />
+                        {name} <MusicServiceIndicators services={artistSearchResultToMusicServices(props.data)}/> <MetadataPickMenu data={props.data} partials={artistPartials} onPick={props.onPick} />
                     </HStack>
                 </Text>
             </Stack>
@@ -94,15 +104,10 @@ export const ArtistSearch = (props: ArtistSearchProps) => {
         onChange(val);
     },[setSelectedItem, onChange]);
 
-    const services: string[] = [];
+    const services = artistSearchResultToMusicServices(selectedItem);
     let groupContent: React.JSX.Element | undefined = undefined;
-    if(selectedItem !== undefined) {
-        if(selectedItem.mbid !== undefined) {
-            services.push('musicbrainz');
-        }
-    }
     if(services.length > 0) {
-        groupContent = <MusicServiceIcons services={services} iconProps={{size: 'sm'}}/>
+        groupContent = <MusicServiceIndicators services={services} link={false}/>
     }
 
     return (

@@ -2,7 +2,8 @@ import { Fragment } from 'react';
 import type { ArtistCredit as AC } from '../../core/Atomic';
 
 import { HStack, Tag } from "@chakra-ui/react";
-import { MusicbrainzInfoIcon } from './musicServices/Musicbrainz';
+import { MusicServiceIndicators } from './musicServices/MusicServiceIndicators';
+import type { MusicServicesAny } from './musicServices/musicServiceTypes';
 
 export const ArtistCredit = (props: { data: AC, showLinks?: boolean, showMbid?: boolean }) => {
 
@@ -16,12 +17,15 @@ export const ArtistCredit = (props: { data: AC, showLinks?: boolean, showMbid?: 
         return data.name;
     }
 
+    const musicServices: MusicServicesAny[] = [];
+    if(data.mbid) {
+        musicServices.push({name: 'musicbrainz', idHint: 'artist', id: data.mbid});
+    }
+
     return <Fragment>
         <HStack>
             {data.name}
-            <HStack style={{ userSelect: 'none' }}>
-                {data.mbid !== undefined ? <MusicbrainzInfoIcon type="artist" mbid={data.mbid} showMbid={showMbid} link tooltip /> : null}
-            </HStack>
+            <MusicServiceIndicators services={musicServices} showId={showMbid} link={showLinks} />
         </HStack>
     </Fragment>
 

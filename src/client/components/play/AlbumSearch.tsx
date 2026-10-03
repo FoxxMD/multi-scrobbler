@@ -3,37 +3,35 @@ import { useDebouncedState } from '@tanstack/react-pacer'
 import { useQuery } from '@tanstack/react-query';
 import { tanQueries } from "../../queries/index.ts";
 import type { AlbumSearchResult } from "../../../core/Api.ts";
-import { MusicbrainzInfoIcon, type MusicbrainzInfoIconProps } from "../musicServices/Musicbrainz.tsx";
 import React, { useCallback, useEffect, useState } from "react";
 import { ArtistCreditTags } from "../ArtistCreditDisplay.tsx";
 import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, type MetadataPartials } from "./MetadataResults.tsx";
-import { MusicServiceIcons } from "../icons/ChakraIcons.tsx";
 import type { ArtistCredit, ArtMeta, BrainzMeta, SpotifyMeta, TrackMeta } from "../../../core/Atomic.ts";
 import { removeUndefinedKeys } from "../../../core/DataUtils.ts";
+import type { MusicServicesAny } from "../musicServices/musicServiceTypes.tsx";
+import { MusicServiceIndicators } from "../musicServices/MusicServiceIndicators.tsx";
 
 const albumPartials: MetadataPartials<AlbumSearchResult> = {
     album: { label: 'Album only', pick: ({ artists, ...rest }) => rest },
 };
 
+export const albumSearchResultToMusicServices = (val: MinimalResult): MusicServicesAny[] => {
+    const musicServices: MusicServicesAny[] = [];
+    if (val.mbidRelease) {
+        musicServices.push({ name: 'musicbrainz', id: val.mbidRelease, idHint: 'release' });
+    } else if (val.mbidReleaseGroup) {
+        musicServices.push({ name: 'musicbrainz', id: val.mbidReleaseGroup, idHint: 'release-group' });
+    }
+    return musicServices;
+}
+
 export const AlbumSearchResultItem = (props: { data: AlbumSearchResult, onPick?: (val: AlbumSearchResult) => void }) => {
 
     const {
         name,
-        mbidRelease,
-        mbidReleaseGroup,
         type,
         artists = [],
     } = props.data;
-
-    let mbidType: MusicbrainzInfoIconProps['type'] | undefined = undefined;
-    let mbid: string | undefined = undefined;
-    if (mbidRelease !== undefined) {
-        mbidType = 'release';
-        mbid = mbidRelease;
-    } else if (mbidReleaseGroup !== undefined) {
-        mbidType = 'release-group';
-        mbid = mbidReleaseGroup;
-    }
 
     let artistTags: React.JSX.Element | undefined = undefined;
     if(artists.length > 0) {
@@ -48,7 +46,7 @@ export const AlbumSearchResultItem = (props: { data: AlbumSearchResult, onPick?:
             <Stack gap="1" flexGrow="1">
                 <Text fontWeight="medium">
                     <HStack gap="1">
-                        {name}{type !== undefined ? <Box>({type})</Box> : undefined}{mbid !== undefined && mbidType !== undefined ? <MusicbrainzInfoIcon type={mbidType} mbid={mbid} tooltip /> : null}
+                        {name}{type !== undefined ? <Box>({type})</Box> : undefined}<MusicServiceIndicators services={albumSearchResultToMusicServices(props.data)}/>
                         <MetadataPickMenu data={props.data} partials={albumPartials} onPick={props.onPick} />
                     </HStack>
                 </Text>
@@ -95,7 +93,6 @@ const albumSearchResultToOnChange = (val: AlbumSearchResult): MinimalOnChange =>
 
     return playPartial;
 }
-
 export interface AlbumSearchProps {
     initial?: MinimalResult
     onChange: (val: MinimalOnChange) => void
@@ -133,18 +130,10 @@ export const AlbumSearch = (props: AlbumSearchProps) => {
         onChange(albumSearchResultToOnChange(val));
     },[setSelectedItem, onChange]);
 
-    const services: string[] = [];
+    const services = albumSearchResultToMusicServices(selectedItem);
     let groupContent: React.JSX.Element | undefined = undefined;
-    if(selectedItem !== undefined) {
-        if(selectedItem.mbidRelease !== undefined || selectedItem.mbidReleaseGroup !== undefined) {
-            services.push('musicbrainz');
-        }
-        if(selectedItem.spotifyId !== undefined) {
-            services.push('spotify');
-        }
-    }
     if(services.length > 0) {
-        groupContent = <MusicServiceIcons services={services} iconProps={{size: 'sm'}}/>
+        groupContent = <MusicServiceIndicators services={services} link={false}/>
     }
 
     return (
