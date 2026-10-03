@@ -1,0 +1,10 @@
+[
+  {
+    "enable": true,
+    "id": "MyTuneshine",
+    "name": "MyCoolTuneshine",
+    "data": {
+      "host": "http://tuneshine-4064.local"
+    }
+  }
+]

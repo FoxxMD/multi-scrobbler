@@ -240,3 +240,5 @@ export const playStateBodySchema = z.object({
 });
 
 export type PlayStateBody = z.infer<typeof playStateBodySchema>;
+
+export const EXTERNAL_ART_URL_REGEX = new RegExp(/api\/components\/\d+\/art/);

@@ -1,7 +1,6 @@
 import dayjs, { type Dayjs, type ManipulateType } from "dayjs";
 import type {BrainzMeta, PlayObject, PlayObjectMinimal, ScrobbleActionResult, UnixTimestamp, URLData, Writeable} from "../../../core/Atomic.ts";
 import { artistNamesToCredits, artistNameToCredit, nonEmptyStringOrDefault, splitByFirstFound, truncateStringToLength } from "../../../core/StringUtils.ts";
-import { sleep } from "../../utils.ts";
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
 import { writeFile } from '../../utils/FSUtils.ts';
 import { objectIsEmpty, readJson } from '../../utils/DataUtils.ts';
@@ -755,6 +754,7 @@ export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectO
             mbid: artistMbid,
         },
         name: title,
+        image,
         album: {
             '#text': album,
             mbid: albumMbid,
@@ -811,6 +811,22 @@ export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectO
             brainz
         }
     }
+
+    const i = image ?? [];
+    let imageSizeNum: number = 0;
+    let imageUrl: string | undefined = undefined;
+    if(i !== undefined && i !== null && i.length > 0) {
+        for(const im of i) {
+            const res = lastfmImageSize.safeParse(im.size);
+            if(res.success && lastfmImageSizeMap[res.data] > imageSizeNum) {
+                imageSizeNum = lastfmImageSizeMap[res.data];
+                imageUrl = im["#text"];
+            }
+        }
+    }
+    if(imageUrl !== undefined) {
+        play.meta.art = {album: imageUrl}
+    }
     return baseFormatPlayObj(obj, play);
 }
 
@@ -846,6 +862,15 @@ type LastFMTrackScrobbleResponse = Readonly<{
 		};
 	};
 }>;
+
+const lastfmImageSize = z.enum(['small','medium','large','extralarge']);
+type LastFmImageSizes = z.infer<typeof lastfmImageSize>;
+const lastfmImageSizeMap: Record<LastFmImageSizes, number> = {
+    small: 1,
+    medium: 2,
+    large: 3,
+    extralarge: 4
+} as const;
 
 export type LastFMTrackObject = {
             artist: {

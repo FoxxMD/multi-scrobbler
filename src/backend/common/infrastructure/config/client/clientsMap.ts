@@ -6,6 +6,7 @@ import type { TealClientAIOConfig, TealClientConfig} from "./tealfm.ts";
 import type { RockSkyClientAIOConfig, RockSkyClientConfig} from "./rocksky.ts";
 import type { LibrefmClientAIOConfig, LibrefmClientConfig} from "./librefm.ts";
 import type { DiscordClientAIOConfig, DiscordClientConfig} from "./discord.ts";
+import type { TuneshineClientAIOConfig, TuneshineClientConfig} from "./tuneshine.ts";
 import type { ClientAIOConfig } from "./clients.ts";
 import type { CommonClientConfig, EnvClientSchema } from "./index.ts";
 import type {ZodType, ZodObject} from 'zod';
@@ -22,6 +23,7 @@ export interface ClientTypeConfigMap extends Record<ClientType, [CommonClientCon
     tealfm: [TealClientConfig,TealClientAIOConfig, Partial<Pick<TealClientConfig, 'data' | 'options'>>],
     rocksky: [RockSkyClientConfig,RockSkyClientAIOConfig, Partial<Pick<RockSkyClientConfig, 'data' | 'options'>>],
     discord: [DiscordClientConfig,DiscordClientAIOConfig, Partial<Pick<DiscordClientConfig, 'data' | 'options'>>]
+    tuneshine: [TuneshineClientConfig,TuneshineClientAIOConfig, Partial<Pick<TuneshineClientConfig, 'data' | 'options'>>]
 }
 
 export const clientConfigSchemaMapAsync: { [K in keyof ClientTypeConfigMap]:() => Promise<[ZodType<ClientTypeConfigMap[K][0]>,ZodType<ClientTypeConfigMap[K][1]>,EnvClientSchema<ZodObject, ClientTypeConfigMap[K][0]>]> } = {
@@ -56,6 +58,10 @@ export const clientConfigSchemaMapAsync: { [K in keyof ClientTypeConfigMap]:() =
     discord: async() => {
         const {discordClientConfigSchema, discordClientAIOConfigSchema, envSchemas} = (await import('./discord.ts'));
         return [discordClientConfigSchema,discordClientAIOConfigSchema,envSchemas]
+    },
+    tuneshine: async() => {
+        const {tuneshineClientConfigSchema, tuneshineClientAIOConfigSchema, envSchemas} = (await import('./tuneshine.ts'));
+        return [tuneshineClientConfigSchema,tuneshineClientAIOConfigSchema,envSchemas]
     }
 }
 

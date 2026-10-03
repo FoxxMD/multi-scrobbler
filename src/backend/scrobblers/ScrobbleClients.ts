@@ -359,6 +359,11 @@ export default class ScrobbleClients {
                     await this.instantiateClients('tealfm', strongConfigs, clientDefaults, TealScrobbler,
                         (config, options) => [config.name ?? config.id, { ...config, options }, this.internalConfig, this.emitter, this.logger]);
                 } break;
+                case 'tuneshine': {
+                    const TuneshineScrobbler = (await import('./TuneshineScrobbler.ts')).default;
+                    await this.instantiateClients('tuneshine', strongConfigs, clientDefaults, TuneshineScrobbler,
+                        (config, options) => [config.name ?? config.id, { ...config, options }, this.internalConfig, this.emitter, this.logger]);
+                } break;
             }
     }
 
