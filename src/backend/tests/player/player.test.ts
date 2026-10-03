@@ -447,6 +447,117 @@ describe('Player listen ranges', function () {
                 assert.isDefined(currNew);
                 assert.isFalse(currNew.data.repeat);
             });
+
+            // https://github.com/FoxxMD/multi-scrobbler/issues/691
+            // Based on listen ranges from the issue: track (194.307s) is played from `startPosition` to `lastPosition`, optionally Source then reports paused (closing the listen range),
+            // and the next update arrives `resumeAfter` seconds later with the player at `resumePosition`
+            //
+            // `paused: false` skips the paused update so the listen range is still open when `resumePosition` is seen
+            const playThenResume = (resumePosition: number, {startPosition = 28.351, lastPosition = 193.5, paused = true, resumeAfter = 31}: {startPosition?: number, lastPosition?: number, paused?: boolean, resumeAfter?: number} = {}) => {
+                const player = new TestPositionalPlayerState(logger, [NO_DEVICE, NO_USER]);
+                const start = dayjs();
+
+                const positioned = clone(newPlay);
+                positioned.data.duration = 194.307;
+
+                player.update(testState({play: positioned, position: startPosition, status: REPORTED_PLAYER_STATUSES.playing}), start);
+
+                for(const position of [startPosition + ((lastPosition - startPosition) / 2), lastPosition]) {
+                    player.currentListenRange!.rtPlayer.setPosition(position * 1000);
+                    player.update(testState({play: positioned, position, status: REPORTED_PLAYER_STATUSES.playing}), start.add(position - startPosition, 'seconds'));
+                }
+
+                const lastUpdate = start.add((lastPosition - startPosition) + 1, 'seconds');
+                if(paused) {
+                    // Source reports paused => listen range is closed
+                    player.update(testState({play: positioned, position: lastPosition, status: REPORTED_PLAYER_STATUSES.paused}), lastUpdate);
+                    assert.isUndefined(player.currentListenRange);
+                    assert.equal(player.listenRanges.length, 1);
+                }
+
+                return player.update(testState({play: positioned, position: resumePosition, status: REPORTED_PLAYER_STATUSES.playing}), lastUpdate.add(resumeAfter, 'seconds'));
+            }
+
+            it('Detects repeat when player paused at end of track and next update is within 15% of start', function () {
+                // control: 28.351s is 14.6% of track, taken from the one repeat that *was* detected in the issue
+                const [curr, prevPlay] = playThenResume(28.351);
+
+                assert.isDefined(prevPlay);
+                assert.isTrue(curr!.data.repeat);
+            });
+
+            describe('When Play was completed and then restarted', function () {
+
+                // listen range is closed (Source reported paused at end of track) or still open (repeat is seen as a backwards seek)
+                for(const paused of [true, false]) {
+                    const rangeHint = paused ? 'listen range closed' : 'listen range open';
+
+                    it(`Detects repeat when next update is a polling interval later, past 15% of start (${rangeHint})`, function () {
+                        // 29.297s is 15.08% of track, taken from the repeat that was *not* detected in the issue
+                        const [curr, prevPlay] = playThenResume(29.297, {paused});
+
+                        assert.isDefined(prevPlay, 'Repeat was not detected, listen range was appended to existing Play');
+                        assert.equal(prevPlay.data.listenedFor, 194.307 - 28.351);
+                        assert.isTrue(curr!.data.repeat);
+                        assert.isAtMost(curr!.data.listenedFor!, 194.307);
+                    });
+
+                    it(`Detects repeat regardless of time passed since end of track (${rangeHint})`, function () {
+                        // user manually seeked back right after track ended, or left the player paused for a long time before restarting
+                        for(const resumeAfter of [2, 300]) {
+                            const [curr, prevPlay] = playThenResume(29.297, {paused, resumeAfter});
+
+                            assert.isDefined(prevPlay, `Repeat was not detected after ${resumeAfter}s`);
+                            assert.isTrue(curr!.data.repeat);
+                        }
+                    });
+
+                    it(`Detects repeat when last position was within 10% of end of track (${rangeHint})`, function () {
+                        // Sources with infrequent position updates may never report a position closer to the end than this
+                        // 176s is 18.3s (9.4%) from end of track
+                        const [curr, prevPlay] = playThenResume(29.297, {paused, lastPosition: 176});
+
+                        assert.isDefined(prevPlay, 'Repeat was not detected, listen range was appended to existing Play');
+                        assert.isTrue(curr!.data.repeat);
+                    });
+
+                    it(`Detects repeat when restarted position is anywhere in first half of track (${rangeHint})`, function () {
+                        const [curr, prevPlay] = playThenResume(95, {paused});
+
+                        assert.isDefined(prevPlay, 'Repeat was not detected, listen range was appended to existing Play');
+                        assert.isTrue(curr!.data.repeat);
+                    });
+
+                    it(`Does not detect repeat when last position was not within 10% of end of track (${rangeHint})`, function () {
+                        // 170s is 24.3s (12.5%) from end of track so user seeked back mid-track
+                        const [curr, prevPlay] = playThenResume(29.297, {paused, lastPosition: 170});
+
+                        assert.isUndefined(prevPlay);
+                        assert.isFalse(curr!.data.repeat);
+                        assert.equal(curr!.data.listenRanges!.length, 2);
+                    });
+
+                    it(`Does not detect repeat when player is seeked back to second half of track (${rangeHint})`, function () {
+                        // user reached the end and seeked back to listen to a later section again
+                        for(const resumePosition of [98, 150, 185]) {
+                            const [curr, prevPlay] = playThenResume(resumePosition, {paused, resumeAfter: 2});
+
+                            assert.isUndefined(prevPlay, `Repeat was detected when seeked to ${resumePosition}`);
+                            assert.isFalse(curr!.data.repeat);
+                            assert.equal(curr!.data.listenRanges!.length, 2);
+                        }
+                    });
+
+                    it(`Does not detect repeat when only a small part of track was listened to (${rangeHint})`, function () {
+                        // only the last 23.5s (12%) was listened to before player went back, Play was not actually completed
+                        const [curr, prevPlay] = playThenResume(29.297, {paused, startPosition: 170});
+
+                        assert.isUndefined(prevPlay);
+                        assert.isFalse(curr!.data.repeat);
+                        assert.equal(curr!.data.listenRanges!.length, 2);
+                    });
+                }
+            });
         });
     });
 });

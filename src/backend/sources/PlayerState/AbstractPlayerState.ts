@@ -4,6 +4,9 @@ import { type PlayObject, type PlayProgress, type Second, SOURCE_SOT, type SOURC
 import { buildTrackString } from "../../../core/StringUtils.ts";
 import {
     asPlayerStateData,
+    DEFAULT_COMPLETED_POSITION_ABSOLUTE,
+    DEFAULT_COMPLETED_POSITION_PERCENT,
+    DEFAULT_RESTART_POSITION_PERCENT,
     type PlayerStateData,
     type PlayerStateDataMaybePlay,
 } from "../../common/infrastructure/Atomic.ts";
@@ -377,13 +380,30 @@ export abstract class AbstractPlayerState {
         const repeatHint = `New Position (${position})`;
         const trackDur = currentPlay.data.duration;
 
+        const playerDur = this.getListenDuration();
+        const [repeatDurationOk, repeatDurationHint] = repeatDurationPlayed(currentPlay, playerDur, {hintPrefix: false});
+
+        // Play was completed and then restarted
+        //
+        // the new position may NOT be close to start of Play if the Source was not updated/polled until well after the Play restarted
+        // so instead of proximity to start we require the new position only be in the first half of the Play
+        //
+        // doing this, and requiring a good chunk of the Play was listened to, prevents cutting off a Play
+        // when a user reaches the end and seeks back to re-listen to a later section
+        const completedLastPos = this.currentListenRange?.getPosition() ?? (this.listenRanges.length > 0 ? this.listenRanges[this.listenRanges.length - 1].getPosition() : undefined);
+        if (trackDur !== undefined && trackDur > 0 && completedLastPos !== undefined && repeatDurationOk && position < completedLastPos && position <= trackDur * DEFAULT_RESTART_POSITION_PERCENT) {
+            const [completed, completedHint] = closeToPlayEnd(currentPlay, completedLastPos, {absolute: DEFAULT_COMPLETED_POSITION_ABSOLUTE, percent: DEFAULT_COMPLETED_POSITION_PERCENT, hintPrefix: false});
+            if (completed) {
+                this.logger.verbose(`${repeatHint} is within first ${formatNumber(DEFAULT_RESTART_POSITION_PERCENT * 100, {toFixed: 0})}% of track and last position (${completedLastPos}s) ${completedHint} and listened ${repeatDurationHint}`);
+                return true;
+            }
+        }
+
         // new position is close to start of Play
         const [closeStart, closeStartHint] = closeToPlayStart(currentPlay, position, {hintPrefix: false});
         hints.push(closeStartHint);
 
         if (closeStart) {
-            const playerDur = this.getListenDuration();
-            const [repeatDurationOk, repeatDurationHint] = repeatDurationPlayed(currentPlay, playerDur, {hintPrefix: false});
 
             // user has played at least 2 minutes or 50% of track
             // and the current (new) listen range was close to the start
