@@ -148,7 +148,7 @@
     "vite-express": "^0.22.1",
     "vlc-client": "^1.1.1",
     "xml2js": "0.6.2",
-    "youtubei.js": "^15.0.1"
+    "youtubei.js": "^18.1.0"
   },
   "devDependencies": {
     "@atcute/lex-cli": "^3.1.0",
