@@ -224,7 +224,12 @@ export function creditToName(a: Credit | undefined): string | undefined {
     return a?.name;
 }
 export const creditsToNames = (a: Credit[] = []): string[] => a.map((x) => x.name);
-export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: TrackStringOptions<T> = {}): T => {
+
+export function buildTrackString(playObj: AmbPlayObject, options?: TrackStringOptions<string>): string;
+// eslint-disable-next-line no-redeclare
+export function buildTrackString<T>(playObj: AmbPlayObject, options: TrackStringOptions<T>): T;
+// eslint-disable-next-line no-redeclare
+export function buildTrackString<T = string>(playObj: AmbPlayObject, options: TrackStringOptions<T> = {}): T | string {
     const {
         include = ['time', 'artist', 'track'], transformers: {
             artists: artistsFunc = defaultBuildTrackStringTransformers.artists, album: albumFunc = defaultBuildTrackStringTransformers.album, track: trackFunc = defaultBuildTrackStringTransformers.track, time: timeFunc = defaultBuildTrackStringTransformers.time, timeFromNow = defaultBuildTrackStringTransformers.timeFromNow, comment: commentFunc = defaultBuildTrackStringTransformers.comment, platform: platformFunc = defaultBuildTrackStringTransformers.platform, reducer = (arr: any[]) => arr.join(' ') // (acc, curr) => `${acc} ${curr}`
@@ -281,7 +286,7 @@ export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: Tr
             strParts.push(cfn);
         }
     }
-    // @ts-ignore
+
     return reducer(strParts); //strParts.join(' ');
-};
+}
 
