@@ -1,5 +1,5 @@
 import { creditMbid, mbMeta } from "../../../../core/MusicMetadata.ts";
-import { nameToCredit } from "../../../../core/StringUtils.ts";
+import { nameToCredit } from "../../../../core/MusicMetadata.ts";
 import dayjs, { type Dayjs, type ManipulateType } from "dayjs";
 import {type PlayObject, type PlayObjectMinimal, type MBID, type ScrobbleActionResult, PARSED_FROM} from "../../../../core/Atomic.ts";
 import { getRoot } from "../../../ioc.ts";

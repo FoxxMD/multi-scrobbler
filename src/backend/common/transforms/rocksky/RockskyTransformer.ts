@@ -3,7 +3,7 @@ import { isWhenCondition, testWhenConditions } from "../../../utils/PlayTransfor
 import type {WebhookPayload} from "../../infrastructure/config/health/webhooks.ts";
 import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../../core/Transform.ts";
 import AtomicPartsTransformer, { artFromCredits, type ArtParts, type MetaParts } from "../AtomicPartsTransformer.ts";
-import { creditMbid, stripCredit } from "../../../../core/MusicMetadata.ts";
+import { creditMbid, creditsToNames, stripCredit } from "../../../../core/MusicMetadata.ts";
 import type {TransformerOptions} from "../AbstractTransformer.ts";
 import { DELIMITERS } from '../../../../core/Atomic.ts';
 import { MaybeLogger } from '../../MaybeLogger.ts';
@@ -12,7 +12,8 @@ import { type UsingTypes } from "../../vendor/musicbrainz/MusicbrainzApiClientPo
 import { difference } from "../../../utils.ts";
 import { SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../../errors/MSErrors.ts";
 import type { Cacheable } from "cacheable";
-import { creditsToNames, creditToName, splitByFirstRegexFound } from "../../../../core/StringUtils.ts";
+import { splitByFirstRegexFound } from "../../../../core/StringUtils.ts";
+import { creditToName } from "../../../../core/MusicMetadata.ts";
 import { nativeParse } from "../NativeTransformer.ts";
 import { hasRequiredScrobbleFields, hasScrobbleConfidenceFields, type SongViewDetailedMS, songViewToPlay } from "../../vendor/RockSkyApiClient.ts";
 import { RockskyError, type SongMatchView } from "@rocksky/sdk";

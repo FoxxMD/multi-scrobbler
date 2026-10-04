@@ -3,8 +3,8 @@ import { Em, Span, Stack, Spacer, Text, Image, Box, Heading, HStack, Flex, Cente
 import { TextMuted } from "../TextMuted";
 import { SOURCE_SOT, type SOURCE_SOT_TYPES, type SourcePlayerJson } from "../../../core/Atomic";
 import { timeToHumanTimestamp } from "../../../core/TimeUtils";
-import { capitalize, creditsToNames } from "../../../core/StringUtils";
-import { playImage } from "../../../core/MusicMetadata";
+import { capitalize } from "../../../core/StringUtils";
+import { playImage, creditsToNames } from "../../../core/MusicMetadata";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ErrorAlert } from "../ErrorAlert";
 import {

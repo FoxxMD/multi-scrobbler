@@ -7,16 +7,10 @@ import timezone from "dayjs/plugin/timezone.js";
 import utc from "dayjs/plugin/utc.js";
 import {
     type AmbPlayObject,
-    type Credit,
-    SCROBBLE_TS_SOC_END,
     SCROBBLE_TS_SOC_START,
-    type ScrobbleTsSOC,
-    type TrackStringOptions
-} from "./Atomic.ts";
+    type ScrobbleTsSOC} from "./Atomic.ts";
 import { DELIMETERS_REGEX, DELIMITERS } from './Atomic.ts';
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
-import { removeUndefinedKeys } from './DataUtils.ts';
-import { type MusicServices, withMetadata } from './MusicMetadata.ts';
 import { nanoid } from "nanoid";
 
 const {levenStrategy, diceStrategy} = strategies;
@@ -62,85 +56,6 @@ export const defaultBuildTrackStringTransformers = {
     comment: defaultCommentFunc,
     platform: defaultPlatformFunc
 }
-export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: TrackStringOptions<T> = {}): T => {
-    const {
-        include = ['time', 'artist', 'track'],
-        transformers: {
-            artists: artistsFunc = defaultBuildTrackStringTransformers.artists,
-            album: albumFunc = defaultBuildTrackStringTransformers.album,
-            track: trackFunc = defaultBuildTrackStringTransformers.track,
-            time: timeFunc = defaultBuildTrackStringTransformers.time,
-            timeFromNow = defaultBuildTrackStringTransformers.timeFromNow,
-            comment: commentFunc = defaultBuildTrackStringTransformers.comment,
-            platform: platformFunc = defaultBuildTrackStringTransformers.platform,
-            reducer = (arr: any[]) => arr.join(' ') // (acc, curr) => `${acc} ${curr}`
-        } = {},
-    } = options;
-    const {
-        data: {
-            artists,
-            album,
-            track,
-            playDate,
-            playDateCompleted
-        } = {},
-        meta: {
-            trackId,
-            scrobbleTsSOC = SCROBBLE_TS_SOC_START,
-            comment,
-            deviceId,
-            user,
-            sessionId
-        } = {},
-    } = playObj;
-
-    let pd: Dayjs | undefined;
-    let usedTsSOC: ScrobbleTsSOC = scrobbleTsSOC;
-    if(scrobbleTsSOC === SCROBBLE_TS_SOC_END && playDateCompleted !== undefined) {
-        pd = typeof playDateCompleted === 'string' ? dayjs(playDateCompleted) : playDateCompleted;
-    } else {
-        usedTsSOC = SCROBBLE_TS_SOC_START;
-        pd = typeof playDate === 'string' ? dayjs(playDate) : playDate;
-    }
-
-    const strParts: (T | string | undefined)[] = [];
-    if(include.includes('platform')) {
-        strParts.push(platformFunc(deviceId, user, include.includes('session') ? sessionId : undefined))
-    } else if(include.includes('session') && sessionId !== undefined) {
-        strParts.push(`(Session ${sessionId})`);
-    }
-    if (include.includes('trackId') && trackId !== undefined) {
-        strParts.push(`(${trackId})`);
-    }
-    if (include.includes('artist')) {
-        strParts.push(artistsFunc(creditsToNames(artists)))
-    }
-    if (include.includes('track')) {
-        strParts.push(trackFunc(creditToName(track), playObj, strParts.length > 0));
-    }
-    if (include.includes('album')) {
-        strParts.push(albumFunc(creditToName(album), playObj, strParts.length > 0));
-    }
-    if (include.includes('time')) {
-        strParts.push(timeFunc(pd, usedTsSOC));
-    }
-    if (include.includes('timeFromNow')) {
-        const tfn = timeFromNow(pd);
-        if (tfn !== undefined) {
-            strParts.push(tfn)
-        }
-
-    }
-    if (include.includes('comment')) {
-        const cfn = commentFunc(comment);
-        if(cfn !== undefined) {
-            strParts.push(cfn);
-        }
-    }
-    // @ts-ignore
-    return reducer(strParts); //strParts.join(' ');
-}
-
 export const slice = (str: string, index: number, count: number, add?: string): string => {
     // We cannot pass negative indexes directly to the 2nd slicing operation.
     if (index < 0) {
@@ -272,39 +187,6 @@ export const containsDelimiters = (str: string) => null !== str.match(/[,&/\\]+/
 
 const NUMBERS_REGEX = new RegExp(/^\s*\d+\s*$/);
 export const stringIsOnlyNumbers = (str: string) => NUMBERS_REGEX.test(str);
-
-export const namesToCredits = (names: (string | Partial<Credit>)[] | undefined): Credit[] => {
-    if(names === undefined) {
-        throw new Error('Must pass names');
-    }
-    return names.map(x => nameToCredit(x)!).filter(x => x !== undefined);
-};
-/** Build a Credit from a name, optionally with service metadata. Empty/undefined names return undefined. */
-// typing overloading here is ok
-export function nameToCredit(val: string, ...metadata: (MusicServices | undefined)[]): Credit;
-// eslint-disable-next-line no-redeclare
-export function nameToCredit(val: string | null | undefined | Partial<Credit>, ...metadata: (MusicServices | undefined)[]): Credit | undefined;
-// eslint-disable-next-line no-redeclare
-export function nameToCredit(val: string | null | undefined | Partial<Credit>, ...metadata: (MusicServices | undefined)[]): Credit | undefined {
-    if(val === undefined || val === null) {
-        return undefined;
-    }
-    if(typeof val === 'string') {
-        return withMetadata({name: val}, ...metadata);
-    }
-    if(val.name === undefined || val.name === null) {
-        return undefined;
-    }
-    return withMetadata(removeUndefinedKeys({...val}) as Credit, ...metadata);
-}
-export function creditToName(a: Credit): string;
-// eslint-disable-next-line no-redeclare
-export function creditToName(a: Credit | undefined): string | undefined;
-// eslint-disable-next-line no-redeclare
-export function creditToName(a: Credit | undefined): string | undefined {
-    return a?.name;
-}
-export const creditsToNames = (a: Credit[] = []): string[] => a.map((x) => x.name);
 
 export const generatePlayUid = () => nanoid(20);
 export interface StringNormalizationOptions {

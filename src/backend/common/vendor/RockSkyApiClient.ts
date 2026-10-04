@@ -1,7 +1,10 @@
-import { creditId, creditMbid, mbMeta, playImage, withAlbumArt } from "../../../core/MusicMetadata.ts";
+import { creditId, creditMbid, creditsToNames, mbMeta, playImage, withAlbumArt } from "../../../core/MusicMetadata.ts";
 import dayjs from "dayjs";
 import {rockskyRequiredFields, type Credit, type LifecycleInput, type PlayObject, type PlayObjectMinimal, type RockskyConfidenceField, type RockskyMissingField, type ScrobbleActionResult, type URLData} from "../../../core/Atomic.ts";
-import { creditsToNames, namesToCredits, nonEmptyStringOrDefault, nameToCredit, creditToName } from "../../../core/StringUtils.ts";
+import { nonEmptyStringOrDefault } from "../../../core/StringUtils.ts";
+import { creditToName } from "../../../core/MusicMetadata.ts";
+import { nameToCredit } from "../../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../../core/MusicMetadata.ts";
 import { UpstreamError } from "../errors/UpstreamError.ts";
 import type {AbstractApiOptions, FormatPlayObjectOptions} from "../infrastructure/Atomic.ts";
 import type {RockSkyClientData, RockSkyData, RockSkyOptions} from "../infrastructure/config/client/rocksky.ts";
@@ -11,7 +14,7 @@ import type {ListenResponse, ListenType} from '../../../core/vendor/listenbrainz
 import { getATProtoIdentifier, identifierToAtProtoHandle, isDID } from './atproto/atUtils.ts';
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
 import { AuthError, ScrobbleSubmitError, SimpleError } from "../errors/MSErrors.ts";
-import { type CreateScrobbleInput, RockskyClient, Agent, artistHash, type SongViewDetailed, type ScrobbleInput, type ScrobbleViewBasic, RockskyError, type ActorTrackView } from "@rocksky/sdk";
+import { type CreateScrobbleInput, RockskyClient, Agent, type SongViewDetailed, type ScrobbleInput, type ScrobbleViewBasic, RockskyError, type ActorTrackView } from "@rocksky/sdk";
 import { RockskyIndex } from "@rocksky/sdk/dedup";
 import { getRoot } from "../../ioc.ts";
 import type { MSCache } from "../Cache.ts";

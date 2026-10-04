@@ -17,12 +17,13 @@ import { ExpandCollapse } from "./ExpandCollapse";
 import { DebugIcon, EllipsisButton, ExclamationCircleIcon, ExclamationTriangleIcon, FinishIconRaw, InsertedIcon, type PowerOffButton, RetryButton, RetryIcon, StopButton, StopIconRaw, TrashIconRaw, UpdatedIcon } from "./icons/ChakraIcons";
 import { PlayData } from "./PlayData";
 import { TextMuted } from "./TextMuted";
-import { capitalize, creditsToNames } from '../../core/StringUtils';
+import { capitalize } from '../../core/StringUtils';
 import ky from 'ky';
 import type { IconType } from 'react-icons/lib';
 import { toaster } from "./Toaster"
 import { useForm, formOptions} from '@tanstack/react-form'
 import { FormCheckbox } from './form/formComponents';
+import { creditsToNames } from '../../core/MusicMetadata';
 
 type UseActivityQueryOptions = {
     msQuery?: QueryPlaysOptsJson

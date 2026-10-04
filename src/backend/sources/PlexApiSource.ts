@@ -1,7 +1,9 @@
 import { creditsWithIds, mbMeta, withImage, withMetadata } from "../../core/MusicMetadata.ts";
 import type EventEmitter from "events";
 import type {ComponentAuthType, PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
-import { namesToCredits, creditsToNames, combinePartsToString, truncateStringToLength, nameToCredit } from "../../core/StringUtils.ts";
+import { combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
+import { nameToCredit, creditsToNames } from "../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../core/MusicMetadata.ts";
 import {
     asPlayerStateDataMaybePlay,
     type FormatPlayObjectOptions,

@@ -20,7 +20,7 @@ import type {Logger} from "@foxxmd/logging";
 import type {PlayerStateOptions} from "./PlayerState/AbstractPlayerState.ts";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
-import { nameToCredit } from "../../core/StringUtils.ts";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
 
 interface WebScrobbleMeta {
     scrobbleAllowed?: boolean

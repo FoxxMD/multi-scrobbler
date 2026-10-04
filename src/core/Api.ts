@@ -7,7 +7,7 @@ import type { ErrorIsh } from "./ErrorUtils.ts"
 import type { PlayEvent } from "./PlayEvent.ts"
 import * as z from "zod"
 import { mbMeta, spotifyMeta, withImage } from "./MusicMetadata.ts"
-import { nameToCredit } from "./StringUtils.ts"
+import { nameToCredit } from "./MusicMetadata.ts"
 import { httpUrl } from "../backend/utils/ZodUtils.ts"
 
 export interface PlayApiCommon {

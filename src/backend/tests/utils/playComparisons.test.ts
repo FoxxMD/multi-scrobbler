@@ -4,7 +4,8 @@ import dayjs from "dayjs";
 import { describe, it } from 'mocha';
 import { existingScrobble, genericSourcePlayMatch, playsAreAddedOnly, playsAreBumpedOnly, playsAreSortConsistent } from "../../utils/PlayComparisonUtils.ts";
 import { generatePlay, generatePlays } from "../../../core/tests/utils/PlayTestUtils.ts";
-import { namesToCredits, nameToCredit } from "../../../core/StringUtils.ts";
+import { nameToCredit } from "../../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../../core/MusicMetadata.ts";
 import { SCROBBLE_TS_SOC_END, type PlayObject } from "../../../core/Atomic.ts";
 
 const newPlay = generatePlay();

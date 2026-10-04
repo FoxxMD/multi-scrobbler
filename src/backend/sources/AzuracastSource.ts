@@ -16,7 +16,8 @@ import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type {AzuracastSourceConfig, AzuraNowPlayingResponse, AzuraStationResponse} from "../common/infrastructure/config/source/azuracast.ts";
 import { isPortReachable, normalizeWSAddress } from "../utils/NetworkUtils.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
-import { namesToCredits, nameToCredit } from "../../core/StringUtils.ts";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../core/MusicMetadata.ts";
 
 
 export class AzuracastSource extends MemorySource {

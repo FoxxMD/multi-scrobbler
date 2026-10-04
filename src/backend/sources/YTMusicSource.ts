@@ -18,7 +18,10 @@ import {
     playsAreSortConsistent
 } from "../utils/PlayComparisonUtils.ts";
 import AbstractSource, { type RecentlyPlayedOptions } from "./AbstractSource.ts";
-import { namesToCredits, buildTrackString, truncateStringToLength, nameToCredit } from "../../core/StringUtils.ts";
+import { truncateStringToLength } from "../../core/StringUtils.ts";
+import { buildTrackString } from "../../core/MusicMetadata.ts";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../core/MusicMetadata.ts";
 import { joinedUrl } from "../utils/NetworkUtils.ts";
 import { todayAwareFormat } from "../../core/TimeUtils.ts";
 import { parseArrayFromMaybeString, parseArtistCredits } from "../utils/StringUtils.ts";

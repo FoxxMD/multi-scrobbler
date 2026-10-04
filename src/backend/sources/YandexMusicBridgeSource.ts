@@ -15,7 +15,7 @@ import type {YandexMusicBridgeSourceConfig} from "../common/infrastructure/confi
 import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import { UpstreamError } from "../common/errors/UpstreamError.ts";
-import { namesToCredits, nameToCredit, creditsToNames } from "../../core/StringUtils.ts";
+import { nameToCredit, creditsToNames, namesToCredits } from "../../core/MusicMetadata.ts";
 
 interface BridgeTrackData {
     title?: string

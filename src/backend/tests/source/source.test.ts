@@ -18,7 +18,7 @@ import { RT_TICK_DEFAULT, setRtTick } from "../../sources/PlayerState/RealtimePl
 import { sleep } from "../../utils.ts";
 import DeezerInternalSource from "../../sources/DeezerInternalSource.ts";
 import type {DeezerInternalSourceOptions} from "../../common/infrastructure/config/source/deezer.ts";
-import { creditsToNames, nameToCredit } from "../../../core/StringUtils.ts";
+import { nameToCredit, creditsToNames } from "../../../core/MusicMetadata.ts";
 import type { MarkOptional } from "ts-essentials";
 import { WildcardEmitter } from "../../common/WildcardEmitter.ts";
 import type { MSBackendEventMap } from "../../common/infrastructure/MSBackendEventMap.ts";

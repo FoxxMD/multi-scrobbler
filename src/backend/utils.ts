@@ -14,8 +14,7 @@ import {
     type RemoteIdentityParts,
     type ScrobbleThresholdResult } from "./common/infrastructure/Atomic.ts";
 import { NO_USER } from '../core/Atomic.ts';
-import { creditIds, creditMbid } from '../core/MusicMetadata.ts';
-import { creditsToNames } from '../core/StringUtils.ts';
+import { creditIds, creditMbid, creditsToNames } from '../core/MusicMetadata.ts';
 import { NO_DEVICE } from '../core/Atomic.ts';
 import type {PlayPlatformId} from '../core/Atomic.ts';
 import { genGroupIdStr } from '../core/PlayUtils.ts';

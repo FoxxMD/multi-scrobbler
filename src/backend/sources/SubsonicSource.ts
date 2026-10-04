@@ -20,7 +20,7 @@ import type {PlayerStateOptions} from './PlayerState/AbstractPlayerState.ts';
 import type {Logger} from '@foxxmd/logging';
 import { baseFormatPlayObj } from '../utils/PlayTransformUtils.ts';
 import { noRetryOnUpstreamError, tryApiCall } from '../utils/RequestUtils.ts';
-import { creditsToNames, nameToCredit } from '../../core/StringUtils.ts';
+import { nameToCredit, creditsToNames } from "../../core/MusicMetadata.ts";
 import { timeToHumanTimestamp, todayAwareFormat } from '../../core/TimeUtils.ts';
 import type { SubsonicSourceApiJson } from '../../core/Api.ts';
 import { isSuperAgentResponseError } from '../common/errors/ErrorUtils.ts';

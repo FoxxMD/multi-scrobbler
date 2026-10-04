@@ -1,5 +1,4 @@
-import { creditId, creditIds, spotifyMeta, withImage } from "../../../core/MusicMetadata.ts";
-import { nameToCredit, creditsToNames } from "../../../core/StringUtils.ts";
+import { creditId, creditIds, spotifyMeta, withImage, nameToCredit, creditsToNames  } from "../../../core/MusicMetadata.ts";
 import { loggerTest } from '@foxxmd/logging';
 import { Cacheable } from 'cacheable';
 import chai, { expect } from 'chai';

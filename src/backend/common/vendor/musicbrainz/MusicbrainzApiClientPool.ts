@@ -17,7 +17,7 @@ import { stripIndents } from "common-tags";
 import { SimpleError } from '../../errors/MSErrors.ts';
 import { baseFormatPlayObj } from '../../../utils/PlayTransformUtils.ts';
 import type {IRecordingMSList} from '../../transforms/MusicbrainzTransformer.ts';
-import { creditsToNames, creditToName, nameToCredit } from '../../../../core/StringUtils.ts';
+import { creditToName, nameToCredit, creditsToNames } from "../../../../core/MusicMetadata.ts";
 import { isrcNoHyphens } from '../../../../core/PlayUtils.ts';
 import {ProxyWithCircuitBreaker, type CircuitBreakerProxy} from '@foxxmd/load-balancer-proxy';
 import {ConsecutiveBreaker} from 'cockatiel';

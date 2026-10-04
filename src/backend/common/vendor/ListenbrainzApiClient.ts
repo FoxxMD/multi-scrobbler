@@ -3,7 +3,9 @@ import dayjs from "dayjs";
 import type { Request, Response } from 'superagent';
 import request from 'superagent';
 import type {BrainzMeta, Credit, PlayObject, PlayObjectMinimal, ScrobbleActionResult, UnixTimestamp, URLData} from "../../../core/Atomic.ts";
-import { namesToCredits, combinePartsToString, slice, nameToCredit } from "../../../core/StringUtils.ts";
+import { combinePartsToString, slice } from "../../../core/StringUtils.ts";
+import { nameToCredit } from "../../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../../core/MusicMetadata.ts";
 import {
     normalizeListenbrainzUrl,
     parseArtistCredits,

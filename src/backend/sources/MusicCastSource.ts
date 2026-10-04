@@ -12,7 +12,8 @@ import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../utils
 import { type DeviceInfoResponse, type DeviceStatusResponse, MusicCastResponseCodes, type MusicCastSourceConfig, playbackToReportedStatus, type PlayInfoCDResponse, type PlayInfoNetResponse } from "../common/infrastructure/config/source/musiccast.ts";
 import request from 'superagent';
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
-import { namesToCredits, nameToCredit } from "../../core/StringUtils.ts";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../core/MusicMetadata.ts";
 
 
 export class MusicCastSource extends MemoryPositionalSource {

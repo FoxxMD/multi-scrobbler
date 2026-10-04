@@ -6,7 +6,8 @@ import { DELIMITERS_NO_AMP } from '../../core/Atomic.ts';
 import { DELIMITERS } from '../../core/Atomic.ts';
 import { getPlatformIdFromData, parseBoolStrict } from "../utils.ts";
 import { genGroupIdStr } from '../../core/PlayUtils.ts';
-import { buildTrackString, compareNormalizedStrings, normalizeStr } from "../../core/StringUtils.ts";
+import { compareNormalizedStrings, normalizeStr } from "../../core/StringUtils.ts";
+import { buildTrackString } from "../../core/MusicMetadata.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 
 const {levenStrategy, diceStrategy} = strategies;

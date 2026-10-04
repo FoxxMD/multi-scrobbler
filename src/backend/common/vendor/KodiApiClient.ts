@@ -8,7 +8,8 @@ import type {AbstractApiOptions, FormatPlayObjectOptions} from "../infrastructur
 import type {KodiData} from "../infrastructure/config/source/kodi.ts";
 import AbstractApiClient from "./AbstractApiClient.ts";
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
-import { namesToCredits, nameToCredit } from "../../../core/StringUtils.ts";
+import { nameToCredit } from "../../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../../core/MusicMetadata.ts";
 import { AuthError } from "../errors/MSErrors.ts";
 
 interface KodiDuration {

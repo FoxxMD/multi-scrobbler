@@ -1,6 +1,9 @@
 import * as z from "zod";
-import type { Credit, TrackData } from "./Atomic.ts";
-import { compareNormalizedStrings } from "./StringUtils.ts";
+import { SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, type AmbPlayObject, type Credit, type ScrobbleTsSOC, type TrackData, type TrackStringOptions } from "./Atomic.ts";
+import { compareNormalizedStrings, defaultBuildTrackStringTransformers } from "./StringUtils.ts";
+import { removeUndefinedKeys } from "./DataUtils.ts";
+import type { Dayjs } from "dayjs";
+import dayjs from "dayjs";
 
 export const musicServiceName = z.enum(['spotify', 'musicbrainz', 'youtube', 'jellyfin', 'plex', 'listenbrainz', 'rocksky']);
 export type MusicServiceName = z.infer<typeof musicServiceName>;
@@ -185,4 +188,100 @@ export const stripCredits = <T extends Pick<TrackData, 'track' | 'album' | 'arti
         stripped.albumArtists = data.albumArtists.map(stripCredit);
     }
     return stripped;
+};
+
+export const namesToCredits = (names: (string | Partial<Credit>)[] | undefined): Credit[] => {
+    if (names === undefined) {
+        throw new Error('Must pass names');
+    }
+    return names.map(x => nameToCredit(x)!).filter(x => x !== undefined);
+};
+/** Build a Credit from a name, optionally with service metadata. Empty/undefined names return undefined. */
+// typing overloading here is ok
+
+export function nameToCredit(val: string, ...metadata: (MusicServices | undefined)[]): Credit;
+// eslint-disable-next-line no-redeclare
+export function nameToCredit(val: string | null | undefined | Partial<Credit>, ...metadata: (MusicServices | undefined)[]): Credit | undefined;
+// eslint-disable-next-line no-redeclare
+export function nameToCredit(val: string | null | undefined | Partial<Credit>, ...metadata: (MusicServices | undefined)[]): Credit | undefined {
+    if (val === undefined || val === null) {
+        return undefined;
+    }
+    if (typeof val === 'string') {
+        return withMetadata({ name: val }, ...metadata);
+    }
+    if (val.name === undefined || val.name === null) {
+        return undefined;
+    }
+    return withMetadata(removeUndefinedKeys({ ...val }) as Credit, ...metadata);
 }
+
+export function creditToName(a: Credit): string;
+// eslint-disable-next-line no-redeclare
+export function creditToName(a: Credit | undefined): string | undefined;
+// eslint-disable-next-line no-redeclare
+export function creditToName(a: Credit | undefined): string | undefined {
+    return a?.name;
+}
+export const creditsToNames = (a: Credit[] = []): string[] => a.map((x) => x.name);
+export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: TrackStringOptions<T> = {}): T => {
+    const {
+        include = ['time', 'artist', 'track'], transformers: {
+            artists: artistsFunc = defaultBuildTrackStringTransformers.artists, album: albumFunc = defaultBuildTrackStringTransformers.album, track: trackFunc = defaultBuildTrackStringTransformers.track, time: timeFunc = defaultBuildTrackStringTransformers.time, timeFromNow = defaultBuildTrackStringTransformers.timeFromNow, comment: commentFunc = defaultBuildTrackStringTransformers.comment, platform: platformFunc = defaultBuildTrackStringTransformers.platform, reducer = (arr: any[]) => arr.join(' ') // (acc, curr) => `${acc} ${curr}`
+        } = {},
+    } = options;
+    const {
+        data: {
+            artists, album, track, playDate, playDateCompleted
+        } = {}, meta: {
+            trackId, scrobbleTsSOC = SCROBBLE_TS_SOC_START, comment, deviceId, user, sessionId
+        } = {},
+    } = playObj;
+
+    let pd: Dayjs | undefined;
+    let usedTsSOC: ScrobbleTsSOC = scrobbleTsSOC;
+    if (scrobbleTsSOC === SCROBBLE_TS_SOC_END && playDateCompleted !== undefined) {
+        pd = typeof playDateCompleted === 'string' ? dayjs(playDateCompleted) : playDateCompleted;
+    } else {
+        usedTsSOC = SCROBBLE_TS_SOC_START;
+        pd = typeof playDate === 'string' ? dayjs(playDate) : playDate;
+    }
+
+    const strParts: (T | string | undefined)[] = [];
+    if (include.includes('platform')) {
+        strParts.push(platformFunc(deviceId, user, include.includes('session') ? sessionId : undefined));
+    } else if (include.includes('session') && sessionId !== undefined) {
+        strParts.push(`(Session ${sessionId})`);
+    }
+    if (include.includes('trackId') && trackId !== undefined) {
+        strParts.push(`(${trackId})`);
+    }
+    if (include.includes('artist')) {
+        strParts.push(artistsFunc(creditsToNames(artists)));
+    }
+    if (include.includes('track')) {
+        strParts.push(trackFunc(creditToName(track), playObj, strParts.length > 0));
+    }
+    if (include.includes('album')) {
+        strParts.push(albumFunc(creditToName(album), playObj, strParts.length > 0));
+    }
+    if (include.includes('time')) {
+        strParts.push(timeFunc(pd, usedTsSOC));
+    }
+    if (include.includes('timeFromNow')) {
+        const tfn = timeFromNow(pd);
+        if (tfn !== undefined) {
+            strParts.push(tfn);
+        }
+
+    }
+    if (include.includes('comment')) {
+        const cfn = commentFunc(comment);
+        if (cfn !== undefined) {
+            strParts.push(cfn);
+        }
+    }
+    // @ts-ignore
+    return reducer(strParts); //strParts.join(' ');
+};
+

@@ -10,7 +10,7 @@ import { DELIMITERS_NO_AMP } from '../../../core/Atomic.ts';
 import { asArray } from "../../utils/DataUtils.ts";
 import { MaybeLogger } from '../MaybeLogger.ts';
 import { childLogger } from "@foxxmd/logging";
-import { creditsToNames, nameToCredit } from "../../../core/StringUtils.ts";
+import { creditsToNames, nameToCredit } from "../../../core/MusicMetadata.ts";
 import { SimpleError } from "../errors/MSErrors.ts";
 
 export type ArtistParseSource = 'artists' | 'title'

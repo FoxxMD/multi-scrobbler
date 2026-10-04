@@ -1,4 +1,4 @@
-import { nameToCredit } from "../../../core/StringUtils.ts";
+import { nameToCredit } from "../../../core/MusicMetadata.ts";
 import { expect } from 'chai';
 import { components, plays } from '../../common/database/drizzle/schema/schema.ts';
 import dayjs from 'dayjs';

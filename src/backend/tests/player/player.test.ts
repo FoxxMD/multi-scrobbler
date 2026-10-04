@@ -1,4 +1,4 @@
-import { nameToCredit } from "../../../core/StringUtils.ts";
+import { nameToCredit } from "../../../core/MusicMetadata.ts";
 import { loggerTest } from "@foxxmd/logging";
 import { assert, expect } from 'chai';
 import clone from "clone";

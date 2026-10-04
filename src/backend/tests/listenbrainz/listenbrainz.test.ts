@@ -24,7 +24,7 @@ import slightlyDifferentNames from './correctlyMapped/trackNameSlightlyDifferent
 import incorrectMultiArtistsTrackName from './incorrectlyMapped/multiArtistsInTrackName.json' with { type: "json" };
 import veryWrong from './incorrectlyMapped/veryWrong.json' with { type: "json" };
 import { generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
-import { creditsToNames, namesToCredits, nameToCredit } from "../../../core/StringUtils.ts";
+import { nameToCredit, creditsToNames, namesToCredits } from "../../../core/MusicMetadata.ts";
 
 interface LZTestFixture {
     data: ListenResponse

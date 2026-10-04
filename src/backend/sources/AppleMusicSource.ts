@@ -6,7 +6,8 @@ import { COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type Play
 import type { InternalConfig } from "../common/infrastructure/Atomic.ts";
 import type { AppleMusicSourceConfig } from "../common/infrastructure/config/source/applemusic.ts";
 import AbstractSource, { type RecentlyPlayedOptions } from "./AbstractSource.ts";
-import { namesToCredits, nameToCredit } from "../../core/StringUtils.ts";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../core/MusicMetadata.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import {
     getPlaysDiff,

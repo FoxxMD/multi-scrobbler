@@ -2,7 +2,7 @@ import SpotifyWebApi from "spotify-web-api-node";
 import { RateLimiterMemory, RateLimiterQueue } from 'rate-limiter-flexible';
 import type { Cacheable } from "cacheable";
 import type { PlayObject, PlayObjectMinimal } from "../../../../core/Atomic.ts";
-import { nameToCredit } from "../../../../core/StringUtils.ts";
+import { nameToCredit } from "../../../../core/MusicMetadata.ts";
 import { spotifyMeta, withImage } from "../../../../core/MusicMetadata.ts";
 import { isrcNoHyphens } from "../../../../core/PlayUtils.ts";
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.ts";

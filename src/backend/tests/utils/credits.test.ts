@@ -1,7 +1,8 @@
 import { describe, it } from 'mocha';
 import { expect } from 'chai';
 import { creditMbid, mbMeta, mergeCreditsMetadata } from '../../../core/MusicMetadata.ts';
-import { nameToCredit, namesToCredits } from '../../../core/StringUtils.ts';
+import { nameToCredit } from "../../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../../core/MusicMetadata.ts";
 
 describe('#mergeCreditsMetadata', function () {
 

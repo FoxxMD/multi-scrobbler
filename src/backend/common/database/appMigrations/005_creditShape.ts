@@ -5,7 +5,7 @@ import { asc, eq } from 'drizzle-orm';
 import { PLAY_EVENT_TYPE } from '../../../../core/PlayEvent.ts';
 import type { Credit, LifecycleStep, PlayObject } from '../../../../core/Atomic.ts';
 import { creditsWithIds, mbMeta, spotifyMeta, withAlbumArt, withImage, withMetadata } from '../../../../core/MusicMetadata.ts';
-import { nameToCredit } from '../../../../core/StringUtils.ts';
+import { nameToCredit } from "../../../../core/MusicMetadata.ts";
 import { diffObjects, patchObject } from '../../../../core/DataUtils.ts';
 import { playContentBasicInvariantTransform, playMbidIdentifier } from '../../../utils/PlayComparisonUtils.ts';
 import { hashObject } from '../../../utils/StringUtils.ts';

@@ -18,7 +18,8 @@ import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import { isDebugMode } from "../utils.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
-import { namesToCredits, nameToCredit } from "../../core/StringUtils.ts";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../core/MusicMetadata.ts";
 import { AuthError } from "../common/errors/MSErrors.ts";
 
 const CLIENT_PLAYER_STATE: Record<PlayerState, ReportedPlayerStatus> = {

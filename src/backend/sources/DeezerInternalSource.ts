@@ -17,7 +17,8 @@ import type {TemporalPlayComparisonOptions} from "../utils/TimeUtils.ts";
 import { findAsync, findIndexAsync } from "../utils/AsyncUtils.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import { UpstreamError } from "../common/errors/UpstreamError.ts";
-import { namesToCredits, nameToCredit } from "../../core/StringUtils.ts";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../core/MusicMetadata.ts";
 
 interface DeezerHistoryResponse {
     errors: []

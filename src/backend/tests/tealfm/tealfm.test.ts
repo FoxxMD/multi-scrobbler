@@ -1,4 +1,4 @@
-import { creditIds, creditMbid } from "../../../core/MusicMetadata.ts";
+import { creditIds, creditMbid, creditsToNames } from "../../../core/MusicMetadata.ts";
 import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { before, describe, it } from 'mocha';
@@ -6,7 +6,6 @@ import { generateArtistCredits, generatePlay, generateTealPlayRecord, withBrainz
 import { listRecordToPlay } from "../../common/vendor/teal/TealApiClient.ts";
 import { playToRecord } from "../../common/vendor/teal/TealApiClient.ts";
 import dayjs from 'dayjs';
-import { creditsToNames } from '../../../core/StringUtils.ts';
 import TealScrobbler from '../../scrobblers/TealfmScrobbler.ts';
 import { EventEmitter } from "events";
 import path from 'node:path';

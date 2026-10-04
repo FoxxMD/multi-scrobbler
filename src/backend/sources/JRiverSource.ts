@@ -9,7 +9,8 @@ import { type Info, JRiverApiClient, PLAYER_STATE } from "../common/vendor/JRive
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
-import { namesToCredits, nameToCredit } from "../../core/StringUtils.ts";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../core/MusicMetadata.ts";
 
 export class JRiverSource extends MemoryPositionalSource {
     declare config: JRiverSourceConfig;

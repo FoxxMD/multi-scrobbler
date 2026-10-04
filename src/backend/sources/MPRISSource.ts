@@ -22,7 +22,8 @@ import type { Readable, Writable } from 'stream';
 import net from 'net';
 import pEvent from 'p-event';
 import { baseFormatPlayObj } from '../utils/PlayTransformUtils.ts';
-import { namesToCredits, nameToCredit } from '../../core/StringUtils.ts';
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../core/MusicMetadata.ts";
 
 
 export class MPRISSource extends MemorySource {

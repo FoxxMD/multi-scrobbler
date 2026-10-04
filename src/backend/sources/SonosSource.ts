@@ -23,7 +23,8 @@ import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybe
 import { isDebugMode, playObjDataMatch, sleep } from "../utils.ts";
 import dayjs, { type Dayjs } from "dayjs";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
-import { namesToCredits, nameToCredit } from "../../core/StringUtils.ts";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../core/MusicMetadata.ts";
 
 export interface DeviceState {
     device: SonosDevice

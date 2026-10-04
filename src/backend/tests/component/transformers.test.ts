@@ -18,7 +18,7 @@ import TransformerManager from "../../common/transforms/TransformerManager.ts";
 import { transientCache } from "../utils/TransientTestUtils.ts";
 import dayjs from "dayjs";
 import clone from "clone";
-import { creditsToNames, namesToCredits, nameToCredit } from "../../../core/StringUtils.ts";
+import { nameToCredit, creditsToNames, namesToCredits } from "../../../core/MusicMetadata.ts";
 import { COMPONENT_STATE, type ComponentState } from "../../../core/Api.ts";
 import type { PlayWith, PlaySelectWithQueueStates } from "../../common/database/drizzle/drizzleTypes.ts";
 import type { PlayProcessingResult } from "../../common/infrastructure/PlayProcessing.ts";

@@ -5,8 +5,7 @@ import { getScrobbleTsSOCDate } from "../../../utils/TimeUtils.ts";
 import type {SubmitOptions} from "../ListenbrainzApiClient.ts";
 import type {ListenPayload, MinimumTrack, SubmitListenAdditionalTrackInfo, SubmitPayload} from "../../../../core/vendor/listenbrainz/interfaces.ts";
 import {version as appVersion } from '../../../version.ts';
-import { creditsToNames } from "../../../../core/StringUtils.ts";
-import { creditId, creditIds, creditMbid } from "../../../../core/MusicMetadata.ts";
+import { creditId, creditIds, creditMbid, creditsToNames } from "../../../../core/MusicMetadata.ts";
 
 export type AllowDeviceList = Record<string, string>;
 /**

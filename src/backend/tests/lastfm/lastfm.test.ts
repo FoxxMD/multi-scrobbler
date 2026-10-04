@@ -5,7 +5,7 @@ import { describe, it } from 'mocha';
 import { generateLastfmTrackObject, generateMbid, generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
 
 import LastfmApiClient, { playToClientPayload, formatPlayObj } from '../../common/vendor/LastfmApiClient.ts';
-import { namesToCredits } from '../../../core/StringUtils.ts';
+import { namesToCredits } from "../../../core/MusicMetadata.ts";
 import { withRequestInterception } from '../utils/networking.ts';
 import { http, HttpResponse } from "msw";
 import { loggerDebug, loggerTest } from '@foxxmd/logging';

@@ -1,7 +1,8 @@
 import dayjs, { type Dayjs, type ManipulateType } from "dayjs";
 import type {PlayObject, PlayObjectMinimal, ScrobbleActionResult, UnixTimestamp, URLData, Writeable} from "../../../core/Atomic.ts";
-import { creditsToNames, namesToCredits, nameToCredit, nonEmptyStringOrDefault, splitByFirstFound, truncateStringToLength } from "../../../core/StringUtils.ts";
-import { sleep } from "../../utils.ts";
+import { nonEmptyStringOrDefault, splitByFirstFound, truncateStringToLength } from "../../../core/StringUtils.ts";
+import { creditsToNames, nameToCredit } from "../../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../../core/MusicMetadata.ts";
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
 import { writeFile } from '../../utils/FSUtils.ts';
 import { readJson } from '../../utils/DataUtils.ts';

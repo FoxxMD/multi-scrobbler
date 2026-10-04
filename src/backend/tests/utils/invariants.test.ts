@@ -4,7 +4,7 @@ import clone from 'clone';
 import type { PlayObject } from '../../../core/Atomic.ts';
 import { generateArtistCredits, generatePlay, withBrainz } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { spotifyMeta, stripCredits, withImage, withMetadata } from '../../../core/MusicMetadata.ts';
-import { nameToCredit } from '../../../core/StringUtils.ts';
+import { nameToCredit } from "../../../core/MusicMetadata.ts";
 import {
     metaInvariantTransform,
     playContentBasicInvariantTransform,

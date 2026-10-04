@@ -15,7 +15,8 @@ import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.ts";
 import { AuthError, ScrobbleSubmitError } from "../../errors/MSErrors.ts";
 import { tryApiCall } from "../../../utils/RequestUtils.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
-import { namesToCredits, nameToCredit } from "../../../../core/StringUtils.ts";
+import { nameToCredit } from "../../../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../../../core/MusicMetadata.ts";
 import { findCauseByFunc } from "../../../utils/ErrorUtils.ts";
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.ts";
 
