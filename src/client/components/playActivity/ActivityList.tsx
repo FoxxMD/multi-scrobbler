@@ -13,7 +13,7 @@ import { type ActivityLogProps } from './ListParts.js';
 import { NoPlayResults, VirtualizedListDynamic } from './VirtualListDynamic.js';
 import { menuItem, type MenuItemRender } from '../buttonMenus/menuItemUtils.js';
 import { RetryIcon } from '../icons/ChakraIcons.js';
-import { PrimaryButtonMenu } from '../buttonMenus/PrimaryButtonMenu.js';
+import { PrimaryButtonMenu } from '../buttonMenus/ButtonMenu.js';
 import ky from 'ky';
 import { formOptions, useForm } from '@tanstack/react-form';
 import { FormCheckbox, FormRadio, type RadioFormItem } from '../form/formComponents.js';

@@ -1,0 +1,85 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="38%" cy="26%" r="95%">
+      <stop offset="0%" stop-color="#2A1150"/>
+      <stop offset="45%" stop-color="#1B0A38"/>
+      <stop offset="100%" stop-color="#0E051F"/>
+    </radialGradient>
+    <linearGradient id="glow" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#A855F7" stop-opacity="0.30"/>
+      <stop offset="45%" stop-color="#22D3EE" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#22D3EE" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="note" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#E9E4FA"/>
+    </linearGradient>
+    <clipPath id="squircle">
+      <rect x="100" y="100" width="824" height="824" rx="184"/>
+    </clipPath>
+    <filter id="neon" x="-40%" y="-40%" width="180%" height="180%"
+            color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="14"/>
+    </filter>
+    <!-- feDropShadow expanded to primitives: Inkscape/librsvg/resvg drop the
+         whole filtered group when they meet feDropShadow, which erases the
+         white note and leaves only the neon halos -->
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%"
+            color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="26" result="blur"/>
+      <feOffset in="blur" dx="0" dy="14" result="shadowShape"/>
+      <feFlood flood-color="#000000" flood-opacity="0.35" result="shadowColor"/>
+      <feComposite in="shadowColor" in2="shadowShape" operator="in" result="shadow"/>
+      <feMerge>
+        <feMergeNode in="shadow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <g clip-path="url(#squircle)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#bg)"/>
+    <rect x="100" y="464" width="824" height="460" fill="url(#glow)"/>
+
+    <g fill="#FFFFFF">
+      <circle cx="252" cy="238" r="7" opacity="0.85"/>
+      <circle cx="410" cy="182" r="4" opacity="0.5"/>
+      <circle cx="608" cy="212" r="5" opacity="0.65"/>
+      <circle cx="796" cy="286" r="6" opacity="0.7"/>
+      <circle cx="716" cy="170" r="3.5" opacity="0.45"/>
+      <circle cx="182" cy="420" r="4" opacity="0.4"/>
+      <circle cx="852" cy="474" r="4" opacity="0.4"/>
+      <circle cx="330" cy="316" r="3" opacity="0.35"/>
+    </g>
+
+    <g transform="translate(-8,2)">
+    <!-- Apple-Music-style beamed eighth-note pair with the brand's neon
+         chromatic glow: blurred violet (up-left) and magenta (down-right)
+         halos under the white core -->
+    <g transform="translate(-20,-15)" fill="#6C2BEE" filter="url(#neon)" opacity="0.95">
+      <ellipse cx="392" cy="682" rx="86" ry="64" transform="rotate(-16 392 682)"/>
+      <ellipse cx="648" cy="650" rx="86" ry="64" transform="rotate(-16 648 650)"/>
+      <path d="M 432 672 L 432 330 L 470 326 L 470 668 Z"/>
+      <path d="M 688 640 L 688 300 L 726 296 L 726 636 Z"/>
+      <path d="M 432 306 L 726 272 L 726 366 L 432 400 Z"/>
+    </g>
+    <g transform="translate(20,15)" fill="#FF2D78" filter="url(#neon)" opacity="0.95">
+      <ellipse cx="392" cy="682" rx="86" ry="64" transform="rotate(-16 392 682)"/>
+      <ellipse cx="648" cy="650" rx="86" ry="64" transform="rotate(-16 648 650)"/>
+      <path d="M 432 672 L 432 330 L 470 326 L 470 668 Z"/>
+      <path d="M 688 640 L 688 300 L 726 296 L 726 636 Z"/>
+      <path d="M 432 306 L 726 272 L 726 366 L 432 400 Z"/>
+    </g>
+    <g fill="#FFFFFF" filter="url(#soft)">
+      <ellipse cx="392" cy="682" rx="86" ry="64" transform="rotate(-16 392 682)"/>
+      <ellipse cx="648" cy="650" rx="86" ry="64" transform="rotate(-16 648 650)"/>
+      <path d="M 432 672 L 432 330 L 470 326 L 470 668 Z"/>
+      <path d="M 688 640 L 688 300 L 726 296 L 726 636 Z"/>
+      <path d="M 432 306 L 726 272 L 726 366 L 432 400 Z"/>
+    </g>
+    </g>
+  </g>
+
+  <rect x="100" y="100" width="824" height="824" rx="184" fill="none"
+        stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
+</svg>

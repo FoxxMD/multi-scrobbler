@@ -1,0 +1,36 @@
+import preview from "../../../.storybook/preview.js";
+import React from 'react';
+
+import { TrackSearchResultItem } from "../../client/components/play/TrackSearch.js";
+import { Provider } from "../../client/components/Provider.js";
+import { Container } from '@chakra-ui/react';
+import { generateTrackSearchResult } from "../../core/tests/utils/apiFixtures.js";
+import type { TrackSearchResult } from "../../core/Api.js";
+
+type PropsAndCustomArgs = React.ComponentProps<typeof TrackSearchResultItem> & {
+  initial?: string
+};
+// More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
+const meta = preview.type<{ args: PropsAndCustomArgs }>().meta({
+  title: 'Plays/Search/Track Result',
+  component: TrackSearchResultItem,
+  parameters: {
+    // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
+    layout: 'padded',
+  },
+  // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
+  tags: ['autodocs'],
+  decorators: [
+    (Story) => (<Provider><Container maxWidth="md"><Story /></Container></Provider>),
+  ],
+  args: {
+    data: generateTrackSearchResult(),
+    onPick: (val: TrackSearchResult) => console.log(val),
+  },
+  // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
+});
+
+// More on writing stories with args: https://storybook.js.org/docs/writing-stories/args
+export const TrackResultStory = meta.story({
+  render: (args) => <TrackSearchResultItem {...args} />
+});

@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import ky from 'ky';
 import qs from 'qs';
 import { baseUrl } from "../utils";
-import type {ComponentsApiJson, PaginatedResponse, PlayApiCommonDetailed, PlayStateUI, QueryPlaysOptsJson} from "../../core/Api";
+import type {AlbumSearchResultResponse, ArtistSearchResultResponse, ComponentsApiJson, PaginatedResponse, PlayApiCommonDetailed, PlayStateUI, QueryPlaysOptsJson, TrackSearchResultResponse} from "../../core/Api";
 import { type SourcePlayerJson } from "../../core/Atomic";
 import { queryPlayOptsRefreshableToJson } from "../utils/ComponentUtils";
 
@@ -74,7 +74,37 @@ const logs = createQueryKeys('logs', {
   })
 })
 
-export const tanQueries = mergeQueryKeys(components, activities, players, logs);
+const metadata = createQueryKeys('metadata', {
+  artists: (query: string) => ({
+    queryKey: ['metadata', 'artists', query],
+    queryFn: (ctx) => ky.get(`artists`, {
+      baseUrl,
+      searchParams: {
+        q: query
+      }
+    }).json<ArtistSearchResultResponse>()
+  }),
+  track: (query: string) => ({
+    queryKey: ['metadata', 'tracks', query],
+    queryFn: (ctx) => ky.get(`tracks`, {
+      baseUrl,
+      searchParams: {
+        q: query
+      }
+    }).json<TrackSearchResultResponse>()
+  }),
+  album: (query: string) => ({
+    queryKey: ['metadata', 'albums', query],
+    queryFn: (ctx) => ky.get(`albums`, {
+      baseUrl,
+      searchParams: {
+        q: query
+      }
+    }).json<AlbumSearchResultResponse>()
+  })
+});
+
+export const tanQueries = mergeQueryKeys(components, activities, players, logs, metadata);
 
 export const useQueryState = (queryKey: Readonly<unknown[]>) => {
   const queryClient = useQueryClient()

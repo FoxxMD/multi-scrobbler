@@ -1,6 +1,6 @@
 import { type MenuSelectionDetails, Menu, Group, Portal, type IconButtonProps } from "@chakra-ui/react";
-import { EllipsisButton } from "../icons/ChakraIcons";
-import { primaryActionProps, type MenuItemRender } from "./menuItemUtils";
+import { EllipsisButton } from "../icons/ChakraIcons.tsx";
+import { primaryActionProps, type MenuItemRender } from "./menuItemUtils.tsx";
 import React from "react";
 
 export type menuCallback = (select: MenuSelectionDetails) => void;
@@ -46,4 +46,36 @@ export const PrimaryButtonMenu = (props: PrimaryButtonMenuProps) => {
     return (
         <>{content}</>
     )
+}
+
+export interface EllipsisButtonMenuProps {
+    menuCallback: menuCallback,
+    menuItems: (React.JSX.Element | MenuItemRender)[]
+    disabled?: boolean
+    menuButtonProps?: IconButtonProps
+}
+
+export const EllipsisButtonMenu = (props: EllipsisButtonMenuProps) => {
+    if (props.menuItems.length > 0) {
+        return (
+            <Menu.Root positioning={{ placement: "bottom-end" }} onSelect={props.menuCallback}>
+                <Menu.Trigger asChild>
+                        <EllipsisButton disabled={props.disabled} {...primaryActionProps} {...props.menuButtonProps} />
+                </Menu.Trigger>
+                <Portal>
+                    <Menu.Positioner>
+                        <Menu.Content>
+                            {props.menuItems.map((x, i) => {
+                                if(React.isValidElement(x)) {
+                                    return <React.Fragment key={i}>{x}</React.Fragment>;
+                                }
+                                return <React.Fragment key={i}>{(x as MenuItemRender)({ disabled: props.disabled })}</React.Fragment>
+                            })}
+                        </Menu.Content>
+                    </Menu.Positioner>
+                </Portal>
+            </Menu.Root>
+        );
+    }
+    return undefined;
 }

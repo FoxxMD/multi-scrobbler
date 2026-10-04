@@ -1,11 +1,12 @@
 import type { CompareOpKey, ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
-import type { ClientType, ComponentAuthType, DeepReplaceValue, MonitoringStatus, QueueContext } from "./Atomic.ts"
+import { artistCreditSchema, type ClientType, type ComponentAuthType, type DeepReplaceValue, type MonitoringStatus, type QueueContext } from "./Atomic.ts"
 import type { SourceType } from "./Atomic.ts"
 import type { ComponentType, DateLike, ErrorLike, JsonPlayObject, PlayState, QueueName, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.ts"
 import type { Dayjs } from "dayjs"
 import type { ErrorIsh } from "./ErrorUtils.ts"
 import type { PlayEvent } from "./PlayEvent.ts"
 import * as z from "zod"
+import { httpUrl } from "../backend/utils/ZodUtils.ts"
 
 export interface PlayApiCommon {
     uid: string
@@ -240,3 +241,68 @@ export const playStateBodySchema = z.object({
 });
 
 export type PlayStateBody = z.infer<typeof playStateBodySchema>;
+
+export const metadataResultBaseSchema = z.object({
+        id: z.string(),
+        name: z.string()
+});
+export type MetadataResultBase = z.infer<typeof metadataResultBaseSchema>;
+
+export const metadataResultServiceScoreSchema = z.object({
+    service: z.string(),
+    score: z.int().nonnegative().optional(),
+})
+export type MetadataResultServiceScore = z.infer<typeof metadataResultServiceScoreSchema>;
+
+export const metadataResultImageSchema = z.object({
+    image: httpUrl.optional()
+})
+export type MetadataResultImage = z.infer<typeof metadataResultImageSchema>;
+
+export const artistSearchResultSchema = z.object({
+    ...artistCreditSchema.shape,
+    ...metadataResultServiceScoreSchema.shape,
+    ...metadataResultBaseSchema.shape,
+    ...metadataResultImageSchema.shape,
+});
+export type ArtistSearchResult = z.infer<typeof artistSearchResultSchema>;
+
+export const artistSearchResultResponseSchema = z.object({
+    data: artistSearchResultSchema.array()
+});
+export type ArtistSearchResultResponse = z.infer<typeof artistSearchResultResponseSchema>;
+
+export const albumSearchResultSchema = z.object({
+    ...metadataResultServiceScoreSchema.shape,
+    ...metadataResultBaseSchema.shape,
+    ...metadataResultImageSchema.shape,
+    mbidRelease: z.string().optional(),
+    mbidReleaseGroup: z.string().optional(),
+    spotifyId: z.string().optional(),
+    type: z.string().optional(),
+    artists: artistSearchResultSchema.array().optional(),
+});
+export type AlbumSearchResult = z.infer<typeof albumSearchResultSchema>;
+
+export const albumSearchResultResponseSchema = z.object({
+    data: albumSearchResultSchema.array()
+});
+export type AlbumSearchResultResponse = z.infer<typeof albumSearchResultResponseSchema>;
+
+export const trackSearchResultSchema = z.object({
+    ...metadataResultServiceScoreSchema.shape,
+    ...metadataResultBaseSchema.shape,
+    ...metadataResultImageSchema.shape,
+    mbidRecording: z.string().optional(),
+    mbidTrack: z.string().optional(),
+    spotifyId: z.string().optional(),
+    artists: artistSearchResultSchema.array().optional(),
+    album: albumSearchResultSchema.optional(),
+    albumCount: z.int().positive().optional()
+});
+export type TrackSearchResult = z.infer<typeof trackSearchResultSchema>;
+
+export const trackSearchResultResponseSchema = z.object({
+    data: trackSearchResultSchema.array()
+});
+export type TrackSearchResultResponse = z.infer<typeof trackSearchResultResponseSchema>;
