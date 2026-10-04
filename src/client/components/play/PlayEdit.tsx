@@ -3,7 +3,6 @@ import { playEditStrictCreateSchema, type PlayObjectMinimal } from '../../../cor
 import { MSErrorBoundary } from '../ErrorBoundary.js';
 import { useForm, formOptions } from '@tanstack/react-form';
 import { TrackSearch } from "./TrackSearch.js";
-import { deepmergeCustom } from "deepmerge-ts";
 import { ArtistSearch } from "./ArtistSearch.js";
 import { TrashIconButton } from "../icons/ChakraIcons.js";
 import { useState } from "react";
@@ -15,8 +14,6 @@ export interface PlayEditProps {
     context?: 'create' | 'edit'
     onSubmit?: (vals: PlayObjectMinimal<string>) => void
 }
-
-const merge = deepmergeCustom({ mergeArrays: (values) => values.at(-1) });
 
 const logSubmit: PlayEditProps['onSubmit'] = (val) => console.log(val, 'Play Edit Submit');
 
@@ -33,9 +30,8 @@ export const PlayEdit = (props: PlayEditProps) => {
     const opts = formOptions.strictSchema(playEditStrictCreateSchema, {
         defaultValues: {
             data: {
-                track: '',
+                track: {name: ''},
                 artists: [],
-                album: '',
                 ...data
             },
             meta: {
@@ -82,12 +78,10 @@ export const PlayEdit = (props: PlayEditProps) => {
                                 <Field.Root invalid={field.errors.length > 0}>
                                     <Field.Label>Track (Title)</Field.Label>
                                     <Box width="100%">
-                                        <TrackSearch initial={field.form.state.values}
+                                        <TrackSearch initial={field.form.state.values.data.track}
                                             onChange={(val) => {
-                                                const merged = merge(field.form.state.values, val) as typeof field.form.state.values;
-                                                //field.form.state.values = merged;
-                                                field.form.setFieldValue('meta', merged.meta);
-                                                field.form.setFieldValue('data', merged.data);
+                                                // selected credits replace existing ones entirely so ids/images from a previous selection are not kept
+                                                field.form.setFieldValue('data', {...field.form.state.values.data, ...val});
                                                 setArtistsVersion(v => v + 1);
                                             }} />
                                         {field.errors.map((error) => (
@@ -139,18 +133,10 @@ export const PlayEdit = (props: PlayEditProps) => {
                                     <Field.Label>Album</Field.Label>
                                     <Box width="100%">
                                         <AlbumSearch 
-                                        key={field.form.state.values.data.album ?? ''}
-                                        initial={{
-                                            name: field.form.state.values.data.album ?? '', 
-                                            mbidRelease: field.form.state.values.data.meta?.brainz?.album,
-                                            mbidReleaseGroup:field.form.state.values.data.meta?.brainz?.releaseGroup,
-                                            spotifyId:field.form.state.values.data.meta?.spotify?.album
-                                        }}
+                                        key={field.form.state.values.data.album?.name ?? ''}
+                                        initial={field.form.state.values.data.album}
                                             onChange={(val) => {
-                                                const merged = merge(field.form.state.values, val) as typeof field.form.state.values;
-                                                //field.form.state.values = merged;
-                                                field.form.setFieldValue('meta', merged.meta);
-                                                field.form.setFieldValue('data', merged.data);
+                                                field.form.setFieldValue('data', {...field.form.state.values.data, ...val});
                                                 setArtistsVersion(v => v + 1);
                                             }} />
                                         {field.errors.map((error) => (

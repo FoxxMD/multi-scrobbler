@@ -6,8 +6,7 @@ import type { FlowControlTerm, TransformHook } from "./Transform.ts";
 import type {Changeset} from "json-diff-ts";
 import type {IParseBaseOptions} from 'qs';
 import * as z from "zod";
-import { musicServicesSchema, type MusicServicesAny } from "./MusicMetadata.ts";
-import { httpUrl } from "../backend/utils/ZodUtils.ts";
+import { musicServicesSchema } from "./MusicMetadata.ts";
 
 export const componentTypeClientSchema = z.literal('client');
 export type ComponentTypeClient = z.infer<typeof componentTypeClientSchema>;
@@ -98,91 +97,33 @@ export interface ListenRangeData extends ListenRangeDataAmb {
 
 export const mbidSchema = z.stringFormat('mbid',/[a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{12}/);
 
-/** https://musicbrainz.org/doc/MusicBrainz_Database/Schema#Overview */
+/** Non-id musicbrainz data for a track. MBIDs are stored in the `metadata` of the Credit they identify */
 export interface BrainzMeta {
-    /**
-     *  artist_mbids
-     * 
-     *  All artists, including ft guests etc... go here */
-    artist?: string[]
-    /**
-     * artists_mbid
-     * 
-     *  If multiple artists for track this is the "original" artist(s) who is releasing the single/album */
-    albumArtist?: string[]
-    /** 
-     * release_mbid
-     * 
-     * The unique release like --> 1984 US release of "The Wall" by "Pink Floyd", release on label "Columbia Records" with catalog number "C2K 36183"  
-     * */
-    album?: string
-    /** Unique track id, recording_mbid */
-    recording?: string
-    /**
-     * 
-     *  The "consolidated" album like -->  "The Wall" by "Pink Floyd" */
-    releaseGroup?: string
     additionalInfo?: AdditionalTrackInfoResponse
 
     /** Position of track within Release */
     trackNumber?: number
-
-    /** Track MBID (tid), not visible to end users and is only relevant in the context of a Release
-     * 
-     * Specifies the track on a specific Release. Not the same as the Recording MBID.
-     */
-    track?: string
 }
 
 export const brainzMetaSchema = z.object({
-    artists: mbidSchema.array().optional(),
-    albumArtists: mbidSchema.array().optional(),
-    album: mbidSchema.optional(),
-    recording: mbidSchema.optional(),
-    releaseGroup: mbidSchema.optional(),
     trackNumber: z.int().positive().optional(),
-    track: mbidSchema.optional()
 })
 
+/** A named thing (track, artist, album) with optional art and any number of ids from music services that identify it */
 export const creditSchema = z.object({
     name: z.string(),
-    image: httpUrl.optional(),
+    // not httpUrl because some sources (plex) use relative proxy urls
+    image: z.string().optional(),
     metadata: musicServicesSchema.array().optional()
 })
 export type Credit = z.infer<typeof creditSchema>;
-export interface ArtistCredit {
-    name: string
-    mbid?: string
-}
-
-export const artistCreditSchema = z.object({
-    name: z.string(),
-    mbid: mbidSchema.optional(),
-    spotifyId: z.string().optional()
-})
-
-export interface SpotifyMeta {
-    artist?: string[]
-    albumArtist?: string[]
-    album?: string
-    track?: string
-}
-
-export const spotifyMeta = z.object({
-    artists: z.string().array().optional(),
-    albumArtist: z.string().array().optional(),
-    album: z.string().optional(),
-    track: z.string().optional()
-})
 
 export interface TrackMeta {
     brainz?: BrainzMeta
-    spotify?: SpotifyMeta
 }
 
 export const trackMetaSchema = z.object({
     brainz: brainzMetaSchema.optional(),
-    spotify: spotifyMeta.optional()
 })
 
 export interface TrackMetaIsrc extends TrackMeta {
@@ -190,10 +131,10 @@ export interface TrackMetaIsrc extends TrackMeta {
 }
 
 export interface TrackData {
-    artists?: ArtistCredit[]
-    albumArtists?: ArtistCredit[]
-    album?: string
-    track?: string
+    artists?: Credit[]
+    albumArtists?: Credit[]
+    album?: Credit
+    track?: Credit
     /**
      * The length of the track, in seconds
      * */
@@ -209,10 +150,10 @@ export interface TrackData {
 }
 
 export const playTrackDataSchema = z.object({
-    track: z.string().optional(),
-    artists: artistCreditSchema.array().optional(),
-    albumArtists: artistCreditSchema.array().optional(),
-    album: z.string().optional(),
+    track: creditSchema.optional(),
+    artists: creditSchema.array().optional(),
+    albumArtists: creditSchema.array().optional(),
+    album: creditSchema.optional(),
     duration: z.int().nonnegative().optional(),
     isrc: z.string().optional(),
     meta: trackMetaSchema.optional()
@@ -220,8 +161,8 @@ export const playTrackDataSchema = z.object({
 
 export const playTrackStrictDataSchema = z.object({
     ...playTrackDataSchema.shape,
-    track: z.string().nonempty(),
-    artists: artistCreditSchema.array().min(1)
+    track: z.object({...creditSchema.shape, name: z.string().nonempty()}),
+    artists: creditSchema.array().min(1)
 })
 
 export interface PlayData<D extends DateLike = Dayjs> extends TrackData {
@@ -248,18 +189,6 @@ export const playDataStrictSchema = z.object({
     listenedFor: z.int().nonnegative().optional()
 });
 
-
-export interface ArtMeta {
-    album?: string
-    track?: string
-    artist?: string
-}
-
-export const artMetaSchema = z.object({
-    album: z.string().optional(),
-    track: z.string().optional(),
-    artist: z.string().optional()
-});
 
 export const playMetaUrlSchema = z.looseObject({
     web: z.string().optional(),
@@ -317,10 +246,6 @@ export interface PlayMetaBase<D extends DateLike = Dayjs> {
          */
         origin?: string
     }
-    /**
-     * Hot-linkable images for use with displaying art for this play
-     */
-    art?: ArtMeta
     user?: string
     mediaType?: string
     server?: string
@@ -366,8 +291,7 @@ export const playMetaSchema = z.looseObject({
     musicService: z.string().optional(),
     trackId: z.string().optional(),
     parsedFrom: parsedFromSchema.optional(),
-    url: playMetaUrlSchema.optional(),
-    art: artMetaSchema.optional()
+    url: playMetaUrlSchema.optional()
 })
 
 export interface LifecycleInput {

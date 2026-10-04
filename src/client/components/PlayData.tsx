@@ -13,7 +13,7 @@ import { MSErrorBoundary } from './ErrorBoundary.js';
 import { EllipsisButton, EyeClosedIcon, EyeIcon, getMusicServiceIconElement } from './icons/ChakraIcons.js';
 import type { IconType } from 'react-icons/lib';
 import { capitalize } from '../../core/StringUtils.js';
-import { MusicServiceIndicators, playMetaIdsToMusicServices } from './musicServices/MusicServiceIndicators.js';
+import { MusicServiceIndicators } from './musicServices/MusicServiceIndicators.js';
 
 const EmptyPlayData = () => {
     return (
@@ -169,9 +169,6 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
             listenedFor,
             duration,
             repeat,
-            meta: {
-                brainz = {}
-            } = {}
         } = {},
         meta: {
             url: {
@@ -188,7 +185,7 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
         titleLinks.push(<Link key="weblink" variant="underline" target="_blank" href={webUrl ?? originUrl}><Icon size="sm">{getMusicServiceIconElement(musicService ?? source)}</Icon></Link>);
     }
 
-    const titleElm = <HStack><Span>{track}</Span>{titleLinks}<MusicServiceIndicators services={playMetaIdsToMusicServices(play, 'track')} showId={showMbid} link/></HStack>
+    const titleElm = <HStack><Span>{track?.name}</Span>{titleLinks}<MusicServiceIndicators services={track?.metadata ?? []} showId={showMbid} link/></HStack>
 
     return (
         <Flex flexDirection="column" gap="4">
@@ -209,8 +206,8 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
                     <DataList.ItemLabel>Album</DataList.ItemLabel>
                     <DataList.ItemValue>
                         <HStack>
-                            {play.data.album}
-                            <MusicServiceIndicators services={playMetaIdsToMusicServices(play, 'album')} showId={showMbid} link/>
+                            {play.data.album?.name}
+                            <MusicServiceIndicators services={play.data.album?.metadata ?? []} showId={showMbid} link/>
                         </HStack>
                     </DataList.ItemValue>
                 </DataList.Item>

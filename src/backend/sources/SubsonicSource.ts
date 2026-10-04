@@ -20,7 +20,7 @@ import type {PlayerStateOptions} from './PlayerState/AbstractPlayerState.ts';
 import type {Logger} from '@foxxmd/logging';
 import { baseFormatPlayObj } from '../utils/PlayTransformUtils.ts';
 import { noRetryOnUpstreamError, tryApiCall } from '../utils/RequestUtils.ts';
-import { artistNameToCredit } from '../../core/StringUtils.ts';
+import { creditsToNames, nameToCredit } from '../../core/StringUtils.ts';
 import { timeToHumanTimestamp, todayAwareFormat } from '../../core/TimeUtils.ts';
 import type { SubsonicSourceApiJson } from '../../core/Api.ts';
 import { isSuperAgentResponseError } from '../common/errors/ErrorUtils.ts';
@@ -92,9 +92,9 @@ export class SubsonicSource extends MemoryPositionalSource {
 
         const play: PlayObjectMinimal = {
             data: {
-                artists: [artistNameToCredit(artist)],
-                album,
-                track: title,
+                artists: [nameToCredit(artist)],
+                album: nameToCredit(album),
+                track: nameToCredit(title),
                 duration,
                 // subsonic doesn't return an exact datetime, only how many whole minutes ago it was played
                 // so we need to force the time to be 0 seconds always so that when we compare against scrobbles from client the time isn't off
@@ -336,7 +336,7 @@ export class SubsonicSource extends MemoryPositionalSource {
             }
             const tolerance = getSubsonicNowPlayingTolerance(duration);
             const expiresAt = playDate.add(duration + tolerance, 'second');
-            this.logger.trace(`Ignoring Subsonic now-playing entry as inactive: '${artists.map(x => x.name).join(', ')} - ${track}'. Estimated start: ${todayAwareFormat(playDate)}; track duration: ${timeToHumanTimestamp(duration * 1000)}. The entry expired at ${todayAwareFormat(expiresAt)}.`);
+            this.logger.trace(`Ignoring Subsonic now-playing entry as inactive: '${creditsToNames(artists).join(', ')} - ${track?.name}'. Estimated start: ${todayAwareFormat(playDate)}; track duration: ${timeToHumanTimestamp(duration * 1000)}. The entry expired at ${todayAwareFormat(expiresAt)}.`);
             return false;
         });
     }

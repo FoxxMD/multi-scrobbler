@@ -212,7 +212,7 @@ const playInWindow = (data: PlayApiCommonDetailed, query: QueryPlaysOptsJson): b
   if (query.text !== undefined) {
     let someFound = false;
     for (const t of query.text) {
-      if (data.play.data.track?.toLocaleLowerCase().includes(t)) {
+      if (data.play.data.track?.name.toLocaleLowerCase().includes(t)) {
         someFound = true;
         break;
       }

@@ -1,6 +1,7 @@
+import { creditId, creditMbid, mbMeta, playImage, withAlbumArt } from "../../../core/MusicMetadata.ts";
 import dayjs from "dayjs";
-import {rockskyRequiredFields, type ArtistCredit, type LifecycleInput, type PlayObject, type PlayObjectMinimal, type RockskyConfidenceField, type RockskyMissingField, type ScrobbleActionResult, type URLData} from "../../../core/Atomic.ts";
-import { artistCreditsToNames, artistNamesToCredits, nonEmptyStringOrDefault } from "../../../core/StringUtils.ts";
+import {rockskyRequiredFields, type Credit, type LifecycleInput, type PlayObject, type PlayObjectMinimal, type RockskyConfidenceField, type RockskyMissingField, type ScrobbleActionResult, type URLData} from "../../../core/Atomic.ts";
+import { creditsToNames, namesToCredits, nonEmptyStringOrDefault, nameToCredit, creditToName } from "../../../core/StringUtils.ts";
 import { UpstreamError } from "../errors/UpstreamError.ts";
 import type {AbstractApiOptions, FormatPlayObjectOptions} from "../infrastructure/Atomic.ts";
 import type {RockSkyClientData, RockSkyData, RockSkyOptions} from "../infrastructure/config/client/rocksky.ts";
@@ -19,7 +20,8 @@ import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { removeUndefinedKeys } from "../../../core/DataUtils.ts";
 import { isrcNoHyphens } from '../../../core/PlayUtils.ts';
 import { findCauseByFunc } from "../../utils/ErrorUtils.ts";
-import { hashObject, normalizeStr } from "../../utils/StringUtils.ts";
+import { hashObject } from "../../utils/StringUtils.ts";
+import { normalizeStr } from "../../../core/StringUtils.ts";
 import { stringSameness } from "@foxxmd/string-sameness";
 import clone from "clone";
 import { difference } from "../../utils.ts";
@@ -311,13 +313,13 @@ interface RsMatchSongInput {
 export const hasRequiredScrobbleFields = (play: PlayObject): RockskyMissingField[] => {
     const found: RockskyMissingField[] = [];
 
-    if(play.data.track !== undefined && play.data.track.trim() !== '') {
+    if(play.data.track !== undefined && play.data.track.name.trim() !== '') {
         found.push('track');
     }
     if(play.data.artists !== undefined && play.data.artists.length > 0) {
         found.push('artists');
     }
-    if(play.data.album !== undefined && play.data.album.trim() !== '') {
+    if(play.data.album !== undefined && play.data.album.name.trim() !== '') {
         found.push('album');
     }
     return found;
@@ -329,10 +331,10 @@ export const hasScrobbleConfidenceFields = (play: PlayObject): RockskyConfidence
     if(play.data.isrc) {
         found.push('isrc');
     }
-    if(play.data.meta?.brainz?.recording) {
+    if(creditMbid(play.data.track, 'recording')) {
         found.push('mbid');
     }
-    if(play.data.meta?.spotify?.track) {
+    if(creditId(play.data.track, 'spotify', 'track')) {
         found.push('spotify');
     }
     return found;
@@ -340,10 +342,10 @@ export const hasScrobbleConfidenceFields = (play: PlayObject): RockskyConfidence
 
 const playToMatchSongInput = (play: PlayObject): RsMatchSongInput => ({
         title: requirePlayTrack(play),
-        artist: artistCreditsToNames(play.data.artists).join(', '),
-        mbId: play.data.meta?.brainz?.track ?? play.data.meta?.brainz?.recording,
+        artist: creditsToNames(play.data.artists).join(', '),
+        mbId: creditMbid(play.data.track, 'track') ?? creditMbid(play.data.track, 'recording'),
         isrc: play.data.isrc,
-        album: play.data.album
+        album: creditToName(play.data.album)
 })
 
 const mergeSongViewWithPlay = (song: SongViewDetailedMS, play: PlayObject): PlayObject => {
@@ -354,37 +356,24 @@ const mergeSongViewWithPlay = (song: SongViewDetailedMS, play: PlayObject): Play
             track: svPlay.data.track ?? play.data.track,
             album: svPlay.data.album ?? play.data.album,
             duration: svPlay.data.duration ?? play.data.duration,
-            isrc: svPlay.data.isrc ?? play.data.isrc
+            isrc: svPlay.data.isrc ?? play.data.isrc,
+            meta: { ...play.data.meta }
         },
         meta: {
             ...svPlay.meta,
             ...play.meta
         }
     };
-    if (svPlay.data.meta?.brainz?.recording !== undefined) {
-        const {
-            brainz,
-            ...rest
-        } = play.data.meta ?? {};
-        mergedPlay.data.meta = {
-            ...rest,
-            brainz: {
-                recording: svPlay.data.meta.brainz.recording
-            }
-        }
-    } else {
-        mergedPlay.data.meta = { ...play.data.meta };
-    }
 
     return mergedPlay;
 }
 
 export const songViewToPlay = (song: SongViewDetailedMS): PlayObject => {
 
-    let artists: ArtistCredit[] = [],
-    albumArtists: ArtistCredit[];
+    let artists: Credit[] = [],
+    albumArtists: Credit[];
     if(song.mbArtists !== undefined && song.mbArtists !== null && song.mbArtists.length > 0) {
-        artists = song.mbArtists.map(x => ({name: x.name, mbid: x.mbid}));
+        artists = song.mbArtists.map(x => nameToCredit(x.name, mbMeta(x.mbid, 'artist')));
     } else if(song.artists !== undefined && song.artists !== null && song.artists.length > 0) {
         artists = song.artists.flatMap(x => x.name !== undefined ? [{name: x.name}] : [])
     } else if(song.artist !== undefined && song.artist !== null) {
@@ -392,7 +381,7 @@ export const songViewToPlay = (song: SongViewDetailedMS): PlayObject => {
     }
 
     if(song.albumArtist !== undefined && song.albumArtist !== null) {
-        if(song.albumArtist === song.artist || stringSameness(song.albumArtist, artists.map(x => x.name).join(',')).highScore > 90) {
+        if(song.albumArtist === song.artist || stringSameness(song.albumArtist, creditsToNames(artists).join(',')).highScore > 90) {
             albumArtists = artists;
         } else {
             albumArtists = [{name: song.albumArtist}]
@@ -401,12 +390,15 @@ export const songViewToPlay = (song: SongViewDetailedMS): PlayObject => {
         albumArtists = artists;
     }
 
+    // api returns mbId but type says mbid
+    const mb = song.mbid ?? (song as any).mbId;
+
     const play: PlayObject = {
         data: {
-            track: song.title,
+            track: nameToCredit(song.title, mbMeta(mb, 'recording')),
             artists,
             albumArtists,
-            album: song.album !== '' ? song.album : undefined,
+            album: nameToCredit(song.album !== '' ? song.album : undefined),
             duration: song.duration !== undefined && song.duration !== 0 ? song.duration / 1000 : undefined,
             isrc: song.isrc
         },
@@ -418,16 +410,6 @@ export const songViewToPlay = (song: SongViewDetailedMS): PlayObject => {
             }
         }
     };
-    // api returns mbId but type says mbid
-    const mb = song.mbid ?? (song as any).mbId;
-    if(mb !== undefined) {
-        play.data.meta = {
-            brainz: {
-                recording: mb
-            }
-        }
-    }
-
     let albumArt = song.albumArt;
     if(albumArt === undefined) {
         const match = song.matches?.[0];
@@ -436,9 +418,7 @@ export const songViewToPlay = (song: SongViewDetailedMS): PlayObject => {
         }
     }
 
-    if(albumArt !== undefined) {
-        play.meta.art = {album: albumArt};
-    }
+    play.data = withAlbumArt(play.data, albumArt);
 
     return baseFormatPlayObj(song, play);
 }
@@ -451,10 +431,10 @@ export const rockskyScrobbleToPlay = (obj: RockskyScrobble, opts: {playId?: stri
     } = opts;
     const play: PlayObjectMinimal = {
         data: {
-            track: obj.title,
-            artists: artistNamesToCredits(obj.artist !== undefined && nonEmptyStringOrDefault(obj.artist) ? [obj.artist] : []),
-            albumArtists: artistNamesToCredits(obj.albumArtist !== undefined && nonEmptyStringOrDefault(obj.albumArtist) ? [obj.albumArtist] : []),
-            album: nonEmptyStringOrDefault(obj.album),
+            track: nameToCredit(obj.title),
+            artists: namesToCredits(obj.artist !== undefined && nonEmptyStringOrDefault(obj.artist) ? [obj.artist] : []),
+            albumArtists: namesToCredits(obj.albumArtist !== undefined && nonEmptyStringOrDefault(obj.albumArtist) ? [obj.albumArtist] : []),
+            album: nameToCredit(nonEmptyStringOrDefault(obj.album)),
             playDate: dayjs.utc(obj.createdAt).local()
         },
         meta: {
@@ -472,7 +452,7 @@ export const rockskyScrobbleToPlay = (obj: RockskyScrobble, opts: {playId?: stri
     //     play.meta.playId = obj.id as string;
     // }
     if('albumArt' in obj) {
-        play.meta.art = {album: obj.albumArt as string}
+        play.data = withAlbumArt(play.data, obj.albumArt as string);
     }
 
     if(obj.uri !== undefined) {
@@ -499,16 +479,16 @@ export const rockskyScrobbleToPlay = (obj: RockskyScrobble, opts: {playId?: stri
 type RealCreateScrobbleInput = CreateScrobbleInput & {albumArtist: string};
 
 export const playToRockskyClientRecord = (play: PlayObject): RealCreateScrobbleInput => {
-    const artistStr = artistCreditsToNames(play.data.artists).join(', ');
+    const artistStr = creditsToNames(play.data.artists).join(', ');
 
     const csi: RealCreateScrobbleInput = {
         title: requirePlayTrack(play),
         artist: artistStr,
         // albumArtist is a required field on rocksky server-side
         // tsiry's advice is that if there really is no album artists then just use the same value as artist
-        albumArtist: (play.data.albumArtists ?? []).length === 0 ? artistStr : artistCreditsToNames(play.data.albumArtists).join(', '),
-        album: play.data.album,
-        mbId: play.data.meta?.brainz?.recording,
+        albumArtist: (play.data.albumArtists ?? []).length === 0 ? artistStr : creditsToNames(play.data.albumArtists).join(', '),
+        album: creditToName(play.data.album),
+        mbId: creditMbid(play.data.track, 'recording'),
         isrc: play.data.isrc !== undefined ? isrcNoHyphens(play.data.isrc) : undefined,
         duration: play.data.duration !== undefined ? play.data.duration * 1000 : 0,
         spotifyLink: play.meta.source === 'spotify' && play.meta.url?.web !== undefined ? play.meta.url?.web : undefined,
@@ -518,7 +498,7 @@ export const playToRockskyClientRecord = (play: PlayObject): RealCreateScrobbleI
 }
 
 export const playToRockskyAgentRecord = (play: PlayObject): ScrobbleInput => {
-    const artistStr = artistCreditsToNames(play.data.artists).join(', ');
+    const artistStr = creditsToNames(play.data.artists).join(', ');
     const {album} = play.data;
     if(album === undefined) {
         throw new SimpleError('Play must have an album to be converted to a Rocksky record');
@@ -529,9 +509,9 @@ export const playToRockskyAgentRecord = (play: PlayObject): ScrobbleInput => {
         artist: artistStr,
         // albumArtist is a required field on rocksky server-side
         // tsiry's advice is that if there really is no album artists then just use the same value as artist
-        albumArtist: (play.data.albumArtists ?? []).length === 0 ? artistStr : artistCreditsToNames(play.data.albumArtists).join(', '),
-        album,
-        mbid: play.data.meta?.brainz?.recording,
+        albumArtist: (play.data.albumArtists ?? []).length === 0 ? artistStr : creditsToNames(play.data.albumArtists).join(', '),
+        album: album.name,
+        mbid: creditMbid(play.data.track, 'recording'),
         isrc: play.data.isrc !== undefined ? isrcNoHyphens(play.data.isrc) : undefined,
         duration: play.data.duration !== undefined ? play.data.duration * 1000 : 0,
         spotifyLink: play.meta.source === 'spotify' && play.meta.url?.web !== undefined ? play.meta.url?.web : undefined,
@@ -542,19 +522,19 @@ export const playToRockskyAgentRecord = (play: PlayObject): ScrobbleInput => {
 
 export const playToActorTrackView = (play: PlayObject): ActorTrackView => removeUndefinedKeys({
     name: requirePlayTrack(play),
-    artist: artistCreditsToNames(play.data.artists).join(', '),
-    album: play.data.album,
-    albumCoverUrl: play.meta.art?.track ?? play.meta.art?.album ?? play.meta.art?.artist,
+    artist: creditsToNames(play.data.artists).join(', '),
+    album: creditToName(play.data.album),
+    albumCoverUrl: playImage(play.data),
     durationMs: play.data.duration !== undefined ? Math.floor(play.data.duration * 1000) : undefined,
     source: play.meta.musicService,
-    recordingMbId: play.data.meta?.brainz?.recording
+    recordingMbId: creditMbid(play.data.track, 'recording')
  }, false)
 
 const requirePlayTrack = (play: PlayObject): string => {
     if(play.data.track === undefined) {
         throw new SimpleError('Play must have a track title to be converted to a Rocksky record');
     }
-    return play.data.track;
+    return play.data.track.name;
 }
 
 const ATPROTO_URI_REGEX = new RegExp(/at:\/\/(?<resource>(?<did>did.*?)\/app\.rocksky\.scrobble\/(?<tid>.*))/);

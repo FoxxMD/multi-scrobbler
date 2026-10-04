@@ -1,3 +1,4 @@
+import { mbMeta } from "../../../../core/MusicMetadata.ts";
 import dayjs from "dayjs";
 import type {PlayObject, PlayObjectMinimal, ScrobbleActionResult, URLData} from "../../../../core/Atomic.ts";
 import type {AbstractApiOptions, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens, PaginatedTimeRangeListensResult} from "../../infrastructure/Atomic.ts";
@@ -14,7 +15,7 @@ import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.ts";
 import { AuthError, ScrobbleSubmitError } from "../../errors/MSErrors.ts";
 import { tryApiCall } from "../../../utils/RequestUtils.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
-import { artistNamesToCredits } from "../../../../core/StringUtils.ts";
+import { namesToCredits, nameToCredit } from "../../../../core/StringUtils.ts";
 import { findCauseByFunc } from "../../../utils/ErrorUtils.ts";
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.ts";
 
@@ -230,8 +231,8 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
 export const listenObjectResponseToPlay = (obj: ListenObjectResponse, options: { newFromSource?: boolean, url?: URL } = {}): PlayObject => {
     const play: PlayObjectMinimal = {
         data: {
-            track: obj.track.title,
-            artists: artistNamesToCredits((obj.track.artists ?? []).map(x => x.name)),
+            track: nameToCredit(obj.track.title, mbMeta(obj.track.musicbrainz_id, 'recording')),
+            artists: namesToCredits((obj.track.artists ?? []).map(x => x.name)),
             duration: obj.track.duration,
             playDate: dayjs(obj.time)
         },
@@ -241,13 +242,6 @@ export const listenObjectResponseToPlay = (obj: ListenObjectResponse, options: {
             trackId: obj.track.id.toString(),
             url: {
                     web: options.url !== undefined ? joinedUrl(options.url, `/track/${obj.track.id.toString()}`).toString() : undefined
-            }
-        }
-    }
-    if (obj.track.musicbrainz_id !== null) {
-        play.data.meta = {
-            brainz: {
-                recording: obj.track.musicbrainz_id
             }
         }
     }

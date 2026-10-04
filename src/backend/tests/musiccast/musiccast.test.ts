@@ -105,8 +105,8 @@ describe('MusicCast State Handling', function() {
             await source.getRecentlyPlayed();
             expect(source.players.size).to.eq(1);
             const playerState = source.players.get(source.players.keys().next().value!)!.getApiState();
-            expect(playerState.play!.data.album).to.eq('Test Album');
-            expect(playerState.play!.data.track).to.eq('Cool Track');
+            expect(playerState.play!.data.album?.name).to.eq('Test Album');
+            expect(playerState.play!.data.track?.name).to.eq('Cool Track');
             expect(playerState.play!.data.duration).to.eq(60);
             expect(playerState.play!.meta.trackProgressPosition).to.eq(10);
             expect(playerState.play!.meta.deviceId).to.eq('av1');
@@ -148,8 +148,8 @@ describe('MusicCast State Handling', function() {
             await source.getRecentlyPlayed();
             expect(source.players.size).to.eq(1);
             const playerState = source.players.get(source.players.keys().next().value!)!.getApiState();
-            expect(playerState.play!.data.album).to.eq('Test Album');
-            expect(playerState.play!.data.track).to.eq('Cool Track');
+            expect(playerState.play!.data.album?.name).to.eq('Test Album');
+            expect(playerState.play!.data.track?.name).to.eq('Cool Track');
             expect(playerState.play!.data.duration).to.eq(60);
             expect(playerState.play!.meta.trackProgressPosition).to.eq(10);
             expect(playerState.status.reported).to.eq(REPORTED_PLAYER_STATUSES.playing);

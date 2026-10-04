@@ -4,7 +4,7 @@ import dayjs from "dayjs";
 import { describe, it } from 'mocha';
 import { existingScrobble, genericSourcePlayMatch, playsAreAddedOnly, playsAreBumpedOnly, playsAreSortConsistent } from "../../utils/PlayComparisonUtils.ts";
 import { generatePlay, generatePlays } from "../../../core/tests/utils/PlayTestUtils.ts";
-import { artistNamesToCredits } from "../../../core/StringUtils.ts";
+import { namesToCredits, nameToCredit } from "../../../core/StringUtils.ts";
 import { SCROBBLE_TS_SOC_END, type PlayObject } from "../../../core/Atomic.ts";
 
 const newPlay = generatePlay();
@@ -26,7 +26,7 @@ describe('Compare lists by order', function () {
         it('Non-identical lists with modifications are not equal', function () {
             const modified = [...existingList.map(x => clone(x))];
             modified.splice(2, 1, generatePlay());
-            modified[6].data.track = 'A CHANGE';
+            modified[6].data.track = nameToCredit('A CHANGE');
             modified.splice(8, 0, generatePlay());
             const modded = [...modified, generatePlay()];
             assert.isFalse(playsAreSortConsistent(existingList, modded));
@@ -291,8 +291,8 @@ describe('Compare lists by order', function () {
             const backlogTimestamp = start.add(223, 's'); // 13:22:21 -- inside duration window, outside listenedFor window, and not within 10s of matching duration exactly (diff from duration is 21s)
 
             const existingLiveTrackedPlay: PlayObject = generatePlay({
-                track: 'Empty Threat',
-                artists: artistNamesToCredits(['CHVRCHES']),
+                track: nameToCredit('Empty Threat'),
+                artists: namesToCredits(['CHVRCHES']),
                 duration: trackDuration,
                 playDate: start,
                 // finalized live plays are normalized to scrobbleTsSOC END with playDateCompleted set --
@@ -306,8 +306,8 @@ describe('Compare lists by order', function () {
             });
 
             const backlogCandidate: PlayObject = generatePlay({
-                track: 'Empty Threat',
-                artists: artistNamesToCredits(['CHVRCHES']),
+                track: nameToCredit('Empty Threat'),
+                artists: namesToCredits(['CHVRCHES']),
                 duration: trackDuration,
                 playDate: backlogTimestamp
             });
@@ -340,8 +340,8 @@ describe('Compare lists by order', function () {
                 const pausedBacklogTimestamp = dayjs('2026-09-08T04:05:50.420Z'); // after playDate + duration (04:04:30), still before playDateCompleted
 
                 const pausedLiveTrackedPlay: PlayObject = generatePlay({
-                    track: "weren't for the wind",
-                    artists: artistNamesToCredits(['Ella Langley']),
+                    track: nameToCredit("weren't for the wind"),
+                    artists: namesToCredits(['Ella Langley']),
                     duration: pausedDuration,
                     playDate: pausedStart,
                     playDateCompleted: pausedCompleted,
@@ -355,8 +355,8 @@ describe('Compare lists by order', function () {
                 });
 
                 const pausedBacklogCandidate: PlayObject = generatePlay({
-                    track: "weren't for the wind",
-                    artists: artistNamesToCredits(['Ella Langley']),
+                    track: nameToCredit("weren't for the wind"),
+                    artists: namesToCredits(['Ella Langley']),
                     duration: pausedDuration,
                     playDate: pausedBacklogTimestamp
                 });

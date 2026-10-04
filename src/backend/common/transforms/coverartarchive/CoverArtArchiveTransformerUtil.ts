@@ -73,13 +73,13 @@ export const PRESETS: Record<string, CoverArtArchiveTransformData> = {
 
 export const hasArtFields = (play: PlayObject): CAAMissingType[] => {
     const t: CAAMissingType[] = [];
-    if(play.meta.art?.album !== undefined) {
+    if(play.data.album?.image !== undefined) {
         t.push('album');
     }
-    // if(play.meta.art?.artist !== undefined) {
+    // if(play.data.artists?.[0]?.image !== undefined) {
     //     t.push('artist');
     // }
-    // if(play.meta.art?.track !== undefined) {
+    // if(play.data.track?.image !== undefined) {
     //     t.push('track');
     // }
     return t;

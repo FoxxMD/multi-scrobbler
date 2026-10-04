@@ -22,7 +22,7 @@ import type { Readable, Writable } from 'stream';
 import net from 'net';
 import pEvent from 'p-event';
 import { baseFormatPlayObj } from '../utils/PlayTransformUtils.ts';
-import { artistNamesToCredits } from '../../core/StringUtils.ts';
+import { namesToCredits, nameToCredit } from '../../core/StringUtils.ts';
 
 
 export class MPRISSource extends MemorySource {
@@ -76,10 +76,10 @@ export class MPRISSource extends MemorySource {
 
         const play: PlayObjectMinimal = {
             data: {
-                track: title,
-                album,
-                artists: artistNamesToCredits(artist),
-                albumArtists:artistNamesToCredits(actualAlbumArtists),
+                track: nameToCredit(title),
+                album: nameToCredit(album),
+                artists: namesToCredits(artist),
+                albumArtists:namesToCredits(actualAlbumArtists),
                 duration: length,
                 playDate: dayjs()
             },

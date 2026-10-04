@@ -18,7 +18,7 @@ import {
     playsAreSortConsistent
 } from "../utils/PlayComparisonUtils.ts";
 import AbstractSource, { type RecentlyPlayedOptions } from "./AbstractSource.ts";
-import { artistNamesToCredits, buildTrackString, truncateStringToLength } from "../../core/StringUtils.ts";
+import { namesToCredits, buildTrackString, truncateStringToLength, nameToCredit } from "../../core/StringUtils.ts";
 import { joinedUrl } from "../utils/NetworkUtils.ts";
 import { todayAwareFormat } from "../../core/TimeUtils.ts";
 import { parseArrayFromMaybeString, parseArtistCredits } from "../utils/StringUtils.ts";
@@ -446,10 +446,10 @@ Redirect URI  : ${this.redirectUri}`);
         }
         const play: PlayObjectMinimal = {
             data: {
-                artists: artistNamesToCredits(artists),
-                albumArtists: artistNamesToCredits(albumArtists),
-                album,
-                track: title,
+                artists: namesToCredits(artists),
+                albumArtists: namesToCredits(albumArtists),
+                album: nameToCredit(album),
+                track: nameToCredit(title),
                 duration,
                 // if object is new from source then we know we've picked it up AFTER we started polling so it can't be older than 1 minute (default polling interval)
                 playDate: newFromSource ? dayjs().startOf('minute') : undefined,

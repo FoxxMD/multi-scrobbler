@@ -1,3 +1,4 @@
+import { stripCredits } from "../../../../core/MusicMetadata.ts";
 import type { Media, MediaController, Result } from "@foxxmd/chromecast-client";
 import type {PlayObject} from "../../../../core/Atomic.ts";
 import { REPORTED_PLAYER_STATUSES } from '../../../../core/Atomic.ts';
@@ -72,5 +73,5 @@ export const genPlayHash = (play: PlayObject) => {
             }
         } = play;
 
-        return hashObject({artists, track, album, albumArtists, mediaType});
+        return hashObject({...stripCredits({artists, track, album, albumArtists}), mediaType});
 }

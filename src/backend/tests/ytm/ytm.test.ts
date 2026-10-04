@@ -194,7 +194,7 @@ describe('Handles interim tracks', function () {
         const prependedPlays = [firstPlay, ...interimPlays, ...plays];
         const prependResult = source.parseRecentAgainstResponse(prependedPlays);
         expect(prependResult.plays).length(1);
-        expect(prependResult.plays[prependResult.plays.length - 1].data.track).eq(firstPlay.data.track)
+        expect(prependResult.plays[prependResult.plays.length - 1].data.track?.name).eq(firstPlay.data.track?.name)
     });
 
     it(`Adds interim plays when discover time is plausible`, async function () {
@@ -221,6 +221,6 @@ describe('Handles interim tracks', function () {
         const prependedPlays = [firstPlay, ...interimPlays, ...plays];
         const prependResult = source.parseRecentAgainstResponse(prependedPlays);
         expect(prependResult.plays).length(1);
-        expect(prependResult.plays[prependResult.plays.length - 1].data.track).eq(firstPlay.data.track)
+        expect(prependResult.plays[prependResult.plays.length - 1].data.track?.name).eq(firstPlay.data.track?.name)
     });
 });

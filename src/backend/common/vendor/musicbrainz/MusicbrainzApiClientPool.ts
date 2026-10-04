@@ -1,5 +1,5 @@
 import type { Response } from 'superagent';
-import {type ArtistCredit, type OptionalCacheUsage, type PlayObject, type PlayObjectMinimal, type URLData} from "../../../../core/Atomic.ts";
+import {type Credit, type OptionalCacheUsage, type PlayObject, type PlayObjectMinimal, type URLData} from "../../../../core/Atomic.ts";
 import { DEVELOPER_CONTACT } from "../../infrastructure/Atomic.ts";
 import { type AbstractApiOptions, type FormatPlayObjectOptions, MUSICBRAINZ_URL, type MusicbrainzApiConfigData } from "../../infrastructure/Atomic.ts";
 import AbstractApiClient from "../AbstractApiClient.ts";
@@ -9,14 +9,15 @@ import { difference } from "../../../utils.ts";
 import type { Cacheable } from "cacheable";
 import { getRoot } from "../../../ioc.ts";
 import { hashObject } from "../../../utils/StringUtils.ts";
-import { playContentInvariantTransform } from "../../../utils/PlayComparisonUtils.ts";
+import { playContentCacheHash } from "../../../utils/PlayComparisonUtils.ts";
+import { creditIds, creditMbid, mbMeta } from "../../../../core/MusicMetadata.ts";
 import { AsyncLocalStorage } from "async_hooks";
 import { nanoid } from "nanoid";
 import { stripIndents } from "common-tags";
 import { SimpleError } from '../../errors/MSErrors.ts';
 import { baseFormatPlayObj } from '../../../utils/PlayTransformUtils.ts';
 import type {IRecordingMSList} from '../../transforms/MusicbrainzTransformer.ts';
-import { artistCreditsToNames } from '../../../../core/StringUtils.ts';
+import { creditsToNames, creditToName, nameToCredit } from '../../../../core/StringUtils.ts';
 import { isrcNoHyphens } from '../../../../core/PlayUtils.ts';
 import {ProxyWithCircuitBreaker, type CircuitBreakerProxy} from '@foxxmd/load-balancer-proxy';
 import {ConsecutiveBreaker} from 'cockatiel';
@@ -194,7 +195,7 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
             useCachedResult
         } = options || {};
 
-        const cacheKey = `mb-recSearch-${hashObject({...playContentInvariantTransform(play), using})}`;
+        const cacheKey = `mb-recSearch-${hashObject({play: playContentCacheHash(play), using})}`;
 
         this.logger.debug(`Starting search`);
         let q = '';
@@ -214,29 +215,33 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
             } = {
             };
 
-            if(play.data?.meta?.brainz?.recording !== undefined && using.includes('mbidrecording')) {
-                query.recording_mbid = play.data.meta.brainz.recording
+            const recordingMbid = creditMbid(play.data.track, 'recording'),
+                trackMbid = creditMbid(play.data.track, 'track'),
+                releaseMbid = creditMbid(play.data.album, 'release'),
+                artistMbids = creditIds(play.data.artists, 'musicbrainz', 'artist');
+            if(recordingMbid !== undefined && using.includes('mbidrecording')) {
+                query.recording_mbid = recordingMbid;
             }
-            if(play.data?.meta?.brainz?.track !== undefined && using.includes('mbidtrack')) {
-                query.track_mbid = play.data.meta.brainz.track
+            if(trackMbid !== undefined && using.includes('mbidtrack')) {
+                query.track_mbid = trackMbid;
             }
-            if(play.data?.meta?.brainz?.album !== undefined && using.includes('mbidrelease')) {
-                query.release_mbid = play.data.meta.brainz.album
+            if(releaseMbid !== undefined && using.includes('mbidrelease')) {
+                query.release_mbid = releaseMbid;
             }
-            if(play.data?.meta?.brainz?.artist !== undefined && play.data?.meta?.brainz?.artist.length > 0 && using.includes('mbidartist')) {
-                query.artist_mbids = play.data.meta.brainz.artist
+            if(artistMbids.length > 0 && using.includes('mbidartist')) {
+                query.artist_mbids = artistMbids;
             }
             if(play.data.isrc !== undefined && using.includes('isrc')) {
                 query.isrc = isrcNoHyphens(play.data.isrc);
             }
             if(using.includes('title')) {
-                query.recording = play.data.track;
+                query.recording = creditToName(play.data.track);
             }
             if(play.data.artists !== undefined && play.data.artists.length > 0 && using.includes('artist')) {
-                query.artist = artistCreditsToNames(play.data.artists);
+                query.artist = creditsToNames(play.data.artists);
             }
             if(play.data.album !== undefined && using.includes('album')) {
-                query.release = play.data.album;
+                query.release = creditToName(play.data.album);
             }
             if(escapeCharacters) {
                 for(const [k,v] of Object.entries(query)) {
@@ -359,41 +364,29 @@ export const recordingToPlay = (data: IRecording, options?: {ignoreVA?: boolean}
 
     let album: IRelease | undefined;
 
-    let albumArtists: ArtistCredit[] | undefined;
-    let albumArtistIds: string[] | undefined;
-    const artists = (data["artist-credit"] ?? []).map(x => ({ name: x.name, mbid: x.artist.id}));
+    let albumArtists: Credit[] | undefined;
+    const artists = (data["artist-credit"] ?? []).map(x => nameToCredit(x.name, mbMeta(x.artist.id, 'artist')));
     if(data.releases !== undefined && data.releases.length > 0) {
         album = data.releases[0];
         if(album["artist-credit"] !== undefined) {
             if(difference(album["artist-credit"].map(x => x.artist.id), (data["artist-credit"] ?? []).map(x => x.artist.id)).length > 0) {
-                albumArtists = album["artist-credit"].map(x => ({name: x.artist.name, mbid: x.artist.id}));
-                albumArtistIds = album["artist-credit"].map(x => x.artist.id);
+                albumArtists = album["artist-credit"].map(x => nameToCredit(x.artist.name, mbMeta(x.artist.id, 'artist')));
             }
-            if(albumArtists !== undefined && ignoreVA && albumArtists.map(x => x.name).includes('Various Artists')) {
+            if(albumArtists !== undefined && ignoreVA && creditsToNames(albumArtists).includes('Various Artists')) {
                 albumArtists = undefined;
-                albumArtistIds = undefined;
             }
         }
     }
 
     const play: PlayObjectMinimal = {
         data: {
-            track: data.title,
+            track: nameToCredit(data.title, mbMeta(data.id, 'recording')),
             artists,
-            album: album !== undefined ? album.title : undefined,
+            album: nameToCredit(album?.title, mbMeta(album?.id, 'release'), mbMeta(album?.["release-group"]?.id, 'release-group')),
             albumArtists,
             // recording length is in milliseconds
             duration: data.length !== undefined ? Math.round(data.length / 1000) : undefined,
             isrc: data.isrcs !== undefined && data.isrcs.length > 0 ? data.isrcs[0] : undefined,
-            meta: {
-                brainz: {
-                    recording: data.id,
-                    artist: data["artist-credit"] !== undefined ? data["artist-credit"].map(x => x.artist.id) : undefined,
-                    albumArtist: albumArtistIds,
-                    album: album !== undefined ? album.id : undefined,
-                    releaseGroup: album !== undefined ? album["release-group"]?.id : undefined
-                }
-            }
         },
         meta: {
             source: 'musicbrainz',

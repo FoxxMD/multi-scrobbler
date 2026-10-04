@@ -1,9 +1,11 @@
 import { getListDiff, type ListDiff } from "@donedeal0/superdiff";
-import { type AcceptableTemporalDuringReference, type ArtistCredit, type PlayMatchResult, type PlayObject, type PlayObjectMinimal, SOURCE_SOT, type SOURCE_SOT_TYPES, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy, type TrackStringOptions } from "../../core/Atomic.ts";
+import { type AcceptableTemporalDuringReference, type Credit, type PlayMatchResult, type PlayObject, type PlayObjectMinimal, SOURCE_SOT, type SOURCE_SOT_TYPES, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy, type TrackStringOptions } from "../../core/Atomic.ts";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
 import { comparingMultipleArtists, playObjDataMatch, setIntersection } from "../utils.ts";
 import { comparePlayTemporally, hasAcceptableTemporalAccuracy, temporalAccuracyToString, type TemporalPlayComparisonOptions, temporalPlayComparisonSummary } from "./TimeUtils.ts";
-import { compareNormalizedStrings, compareScrobbleArtistCredits, compareScrobbleArtists, compareScrobbleTracks, compareTracks, normalizeStr, type TrackSamenessResults } from "./StringUtils.ts";
+import { compareScrobbleArtistCredits, compareScrobbleArtists, compareScrobbleTracks, compareTracks, hashObject, type TrackSamenessResults } from "./StringUtils.ts";
+import { compareNormalizedStrings } from "../../core/StringUtils.ts";
+import { normalizeStr } from "../../core/StringUtils.ts";
 import { ARTIST_WEIGHT, DUP_SCORE_THRESHOLD, type ScrobbledPlayObject, TIME_WEIGHT, TITLE_WEIGHT } from "../common/infrastructure/Atomic.ts";
 import type {StringSamenessResult} from "@foxxmd/string-sameness";
 import type {Duration} from "dayjs/plugin/duration.js";
@@ -13,6 +15,7 @@ import { loggerNoop } from '../common/MaybeLogger.ts';
 import { statefulInvariantTransform } from "../../core/PlayUtils.ts";
 import { findAsyncSequential } from "./AsyncUtils.ts";
 import dayjs from "dayjs";
+import { creditMbid, stripCredits } from "../../core/MusicMetadata.ts";
 import { SimpleError } from "../common/errors/MSErrors.ts";
 
 
@@ -24,7 +27,7 @@ export const metaInvariantTransform = (play: PlayObject): PlayObjectMinimal => {
         data = {}
     } = play;
     return {
-        data,
+        data: stripCredits(data),
         meta: {
             trackId
         }
@@ -40,7 +43,7 @@ export const playDateInvariantTransform = (play: PlayObject): PlayObject => {
     return {
         ...play,
         data: {
-            ...play.data,
+            ...stripCredits(play.data),
             playDate: undefined
         }
     }
@@ -57,11 +60,21 @@ export const playContentInvariantTransform = (play: PlayObject): PlayObjectMinim
         }
     } = play;
     return {
-        data: {
-            ...rest
-        },
+        data: stripCredits(rest),
         meta: {}
     }
+}
+
+/**
+ * Hash of play content including credit metadata (service ids, images)
+ *
+ * Use for cache keys where the result depends on the ids a play has. For identifying a play by its surface-level values use the invariant transforms instead.
+ */
+export const playContentCacheHash = (play: PlayObject): string => hashObject([playContentInvariantTransform(play), playCreditMetadata(play)]);
+
+const playCreditMetadata = (play: PlayObject) => {
+    const {track, album, artists = [], albumArtists = []} = play.data;
+    return [track, album, ...artists, ...albumArtists].map(x => x === undefined ? undefined : [x.image, x.metadata]);
 }
 
 export const playContentBasicInvariantTransform = (play: PlayObject): PlayObjectMinimal => {
@@ -77,25 +90,15 @@ export const playContentBasicInvariantTransform = (play: PlayObject): PlayObject
         }
     } = play;
     return {
-        data: {
-            ...rest
-        },
+        data: stripCredits(rest),
         meta: {}
     }
 }
 
 export const playMbidIdentifier = (play: PlayObject): string | undefined => {
-    const {
-        data: {
-            meta: {
-                brainz: {
-                    recording,
-                    album,
-                    track
-                } = {}
-            } = {}
-        } = {}
-    } = play;
+    const track = creditMbid(play.data?.track, 'track'),
+        recording = creditMbid(play.data?.track, 'recording'),
+        album = creditMbid(play.data?.album, 'release');
 
     // track mbid is a unique combo of recording on release
     // so we only need it to identifier what should be track + album + artist
@@ -328,7 +331,7 @@ export const comparePlayArtistsNormalized = (existing: PlayObject, candidate: Pl
     return [Math.min(compareScrobbleArtists(existing, candidate)/100, 1), wholeMatches]
 }
 
-export const compareArtistCreditsNormalized = (existingArtists: ArtistCredit[], candidateArtists: ArtistCredit[]): [number, number] => {
+export const compareArtistCreditsNormalized = (existingArtists: Credit[], candidateArtists: Credit[]): [number, number] => {
     const normExisting = existingArtists.map(x => normalizeStr(x.name, {keepSingleWhitespace: true}));
     const candidateExisting = candidateArtists.map(x => normalizeStr(x.name, {keepSingleWhitespace: true}));
 
@@ -361,9 +364,9 @@ export const scoreTrackWeightedAndNormalized = (ref: string, candidate: string, 
 }
 
 export const comparePlayAlbumNormalized = (existing: PlayObject, candidate: PlayObject): [number,{result: StringSamenessResult, exact: boolean}]  => {
-    const sameness = compareNormalizedStrings(existing.data.album ?? '', candidate.data.album ?? '');
+    const sameness = compareNormalizedStrings(existing.data.album?.name ?? '', candidate.data.album?.name ?? '');
 
-    const exact = existing.data.album === candidate.data.album;
+    const exact = existing.data.album?.name === candidate.data.album?.name;
 
     return [Math.min(sameness.highScore/100, 1), {result: sameness, exact}];
 }

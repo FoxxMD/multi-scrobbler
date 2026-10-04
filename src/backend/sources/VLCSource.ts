@@ -18,7 +18,7 @@ import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import { isDebugMode } from "../utils.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
-import { artistNamesToCredits } from "../../core/StringUtils.ts";
+import { namesToCredits, nameToCredit } from "../../core/StringUtils.ts";
 import { AuthError } from "../common/errors/MSErrors.ts";
 
 const CLIENT_PLAYER_STATE: Record<PlayerState, ReportedPlayerStatus> = {
@@ -222,10 +222,10 @@ export class VLCSource extends MemoryPositionalSource {
 
         const play: PlayObjectMinimal = {
             data: {
-                artists: artistNamesToCredits(artists),
-                albumArtists: artistNamesToCredits(albumArtists),
-                album,
-                track: trackName,
+                artists: namesToCredits(artists),
+                albumArtists: namesToCredits(albumArtists),
+                album: nameToCredit(album),
+                track: nameToCredit(trackName),
                 duration: length
             },
             meta: {

@@ -21,8 +21,9 @@ import { getRoot } from "../ioc.ts";
 import { nanoid } from "nanoid";
 import { isDebugMode, sleep } from "../utils.ts";
 import { findCauseByFunc, findCauseByReference } from "../utils/ErrorUtils.ts";
-import { hashObject, normalizeStr, parseArrayFromMaybeString } from "../utils/StringUtils.ts";
-import { playContentInvariantTransform } from "../utils/PlayComparisonUtils.ts";
+import { hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.ts";
+import { normalizeStr } from "../../core/StringUtils.ts";
+import { playContentCacheHash } from "../utils/PlayComparisonUtils.ts";
 import type { MSCache } from "./Cache.ts";
 import { diffObjects, diffObjectsConsoleOutput, patchObject } from "../../core/DataUtils.ts";
 import clone from "clone";
@@ -368,7 +369,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
             const shouldLog = log ?? this.config.options?.playTransform?.log ?? isDebugMode();
 
-            const transformHash = `playTransform-${hashObject(hook)}-${hashObject(playContentInvariantTransform(play))}`;
+            const transformHash = `playTransform-${hashObject(hook)}-${playContentCacheHash(play)}`;
             const cachedSteps = useCachedResult ?  await this.cache.cacheTransform.get<LifecycleStep[]>(transformHash) : undefined;
             if(cachedSteps !== undefined) {
                 logger.trace(`Cache hit for Steps => ${transformHash}`);

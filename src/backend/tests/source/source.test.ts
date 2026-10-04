@@ -18,7 +18,7 @@ import { RT_TICK_DEFAULT, setRtTick } from "../../sources/PlayerState/RealtimePl
 import { sleep } from "../../utils.ts";
 import DeezerInternalSource from "../../sources/DeezerInternalSource.ts";
 import type {DeezerInternalSourceOptions} from "../../common/infrastructure/config/source/deezer.ts";
-import { artistCreditsToNames } from "../../../core/StringUtils.ts";
+import { creditsToNames, nameToCredit } from "../../../core/StringUtils.ts";
 import type { MarkOptional } from "ts-essentials";
 import { WildcardEmitter } from "../../common/WildcardEmitter.ts";
 import type { MSBackendEventMap } from "../../common/infrastructure/MSBackendEventMap.ts";
@@ -68,13 +68,13 @@ describe('Sources use transform plays correctly', function () {
         };
         await source.buildTransformRules();
         const newScrobble = generatePlay({
-            track: 'my cool track'
+            track: nameToCredit('my cool track')
         });
         await source.queuePlay([newScrobble]);
         await sleep(3);
         const discovered = await source.getRecentlyDiscoveredPlays();
         expect(discovered.length).eq(1);
-        expect(discovered[0].data.track).is.eq('my fun track');
+        expect(discovered[0].data.track?.name).is.eq('my fun track');
     });
 
     it('Transforms play on postCompare', async function() {
@@ -94,7 +94,7 @@ describe('Sources use transform plays correctly', function () {
         };
         await source.buildTransformRules();
         const newScrobble = generatePlay({
-            track: 'my cool track'
+            track: nameToCredit('my cool track')
         });
 
         const pAwaiter =  pEvent(source.emitter, 'discoveredToScrobble') as Promise<MSBackendEventMap['discoveredToScrobble'][0]>;
@@ -109,7 +109,7 @@ describe('Sources use transform plays correctly', function () {
         //await sleep(3);
         const discovered = await source.getRecentlyDiscoveredPlays();
         expect(discovered.length).eq(1);
-        expect(discovered[0].data.track).is.eq('my cool track');
+        expect(discovered[0].data.track?.name).is.eq('my cool track');
 
         //const pAwaiter =  pEvent(source.emitter, 'discoveredToScrobble') as Promise<MSBackendEventMap['discoveredToScrobble'][0]>;
         //source.handle(discovered);
@@ -117,7 +117,7 @@ describe('Sources use transform plays correctly', function () {
         expect(e).is.not.undefined;
         const res: PlayObject[] = !Array.isArray(e.data.data) ? [e.data.data] : e.data.data;
         expect(res.length).is.eq(1);
-        expect(res[0].data.track).is.eq('my fun track');
+        expect(res[0].data.track?.name).is.eq('my fun track');
     });
 
     // TODO need to rework these
@@ -145,7 +145,7 @@ describe('Sources use transform plays correctly', function () {
     //     });
     //     const discovered = await source.discover([newScrobble])
     //     expect(discovered.length).eq(1);
-    //     expect(discovered[0].data.track).is.eq('my hugely cool and very different track title');
+    //     expect(discovered[0].data.track?.name).is.eq('my hugely cool and very different track title');
 
     //     expect((await source.discover([newScrobble])).length).is.eq(1);
     // });
@@ -173,7 +173,7 @@ describe('Sources use transform plays correctly', function () {
     //     });
     //     const discovered = await source.discover([newScrobble])
     //     expect(discovered.length).eq(1);
-    //     expect(discovered[0].data.track).is.eq('my hugely cool and very different track title');
+    //     expect(discovered[0].data.track?.name).is.eq('my hugely cool and very different track title');
 
     //     expect((await source.discover([newScrobble])).length).is.eq(1);
     // });
@@ -186,28 +186,28 @@ describe('Sources correctly parse incoming payloads', function () {
         const noAAPayload = clone(spotifyPayload)
         noAAPayload.item.album.artists = [];
         const play = SpotifySource.formatPlayObj(noAAPayload as SpotifyApi.CurrentPlaybackResponse);
-        expect(play.data.track).eq('The Sandpits Of Zonhoven');
-        expect(play.data.album).eq('Bloodbags And Downtube Shifters');
-        expect(artistCreditsToNames(play.data.artists!)).eql(['Dubmood', 'MASTER BOOT RECORD']);
+        expect(play.data.track?.name).eq('The Sandpits Of Zonhoven');
+        expect(play.data.album?.name).eq('Bloodbags And Downtube Shifters');
+        expect(creditsToNames(play.data.artists!)).eql(['Dubmood', 'MASTER BOOT RECORD']);
         expect(play.data.albumArtists).to.be.empty;
     });
 
     it('Spotify parses payload with different album artists correctly', function() {
         const play = SpotifySource.formatPlayObj(spotifyPayload as SpotifyApi.CurrentPlaybackResponse);
-        expect(play.data.track).eq('The Sandpits Of Zonhoven');
-        expect(play.data.album).eq('Bloodbags And Downtube Shifters');
-        expect(artistCreditsToNames(play.data.artists!)).eql(['Dubmood', 'MASTER BOOT RECORD']);
-        expect(artistCreditsToNames(play.data.albumArtists!)).eql(['Dubmood']);
+        expect(play.data.track?.name).eq('The Sandpits Of Zonhoven');
+        expect(play.data.album?.name).eq('Bloodbags And Downtube Shifters');
+        expect(creditsToNames(play.data.artists!)).eql(['Dubmood', 'MASTER BOOT RECORD']);
+        expect(creditsToNames(play.data.albumArtists!)).eql(['Dubmood']);
     });
 
     it('Spotify parses payload with identical album artists correctly', function() {
         const identicalArtistsPayload = clone(spotifyPayload)
         identicalArtistsPayload.item.album.artists = identicalArtistsPayload.item.artists;
         const identicalArtistsPlay = SpotifySource.formatPlayObj(identicalArtistsPayload as SpotifyApi.CurrentPlaybackResponse);
-        expect(identicalArtistsPlay.data.track).eq('The Sandpits Of Zonhoven');
-        expect(identicalArtistsPlay.data.album).eq('Bloodbags And Downtube Shifters');
-        expect(artistCreditsToNames(identicalArtistsPlay.data.artists!)).eql(['Dubmood', 'MASTER BOOT RECORD']);
-        expect(artistCreditsToNames(identicalArtistsPlay.data.albumArtists!)).to.be.empty;
+        expect(identicalArtistsPlay.data.track?.name).eq('The Sandpits Of Zonhoven');
+        expect(identicalArtistsPlay.data.album?.name).eq('Bloodbags And Downtube Shifters');
+        expect(creditsToNames(identicalArtistsPlay.data.artists!)).eql(['Dubmood', 'MASTER BOOT RECORD']);
+        expect(creditsToNames(identicalArtistsPlay.data.albumArtists!)).to.be.empty;
     });
 });
 

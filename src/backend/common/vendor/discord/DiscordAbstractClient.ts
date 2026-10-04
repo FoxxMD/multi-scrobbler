@@ -1,3 +1,4 @@
+import { creditMbid } from "../../../../core/MusicMetadata.ts";
 import { isPlayObject } from "../../../../core/Atomic.ts";
 import { getRoot } from "../../../ioc.ts";
 import { isDebugMode } from "../../../utils.ts";
@@ -110,17 +111,19 @@ export class DiscordAbstractClient extends AbstractApiClient {
 
             if(art === artworkDefaultUrl) {
                 const play = isPlayObject(data) ? data : data.play;
-                if(play.data.meta?.brainz?.album !== undefined || play.data.meta?.brainz?.releaseGroup !== undefined) {
+                const releaseMbid = creditMbid(play.data.album, 'release'),
+                    releaseGroupMbid = creditMbid(play.data.album, 'release-group');
+                if(releaseMbid !== undefined || releaseGroupMbid !== undefined) {
                     let usedCAA = false;
-                    if(play.data.meta?.brainz?.album !== undefined) {
-                        const albumArt = await this.covertArtApi.getCoverThumb(play.data.meta?.brainz?.album, 'release', {size: 250});
+                    if(releaseMbid !== undefined) {
+                        const albumArt = await this.covertArtApi.getCoverThumb(releaseMbid, 'release', {size: 250});
                         if(albumArt !== undefined) {
                             art = albumArt;
                             usedCAA = true;
                         }
                     }
-                    if(!usedCAA && play.data.meta?.brainz?.releaseGroup !== undefined) {
-                        const albumArt = await this.covertArtApi.getCoverThumb(play.data.meta?.brainz?.releaseGroup, 'release-group', {size: 250});
+                    if(!usedCAA && releaseGroupMbid !== undefined) {
+                        const albumArt = await this.covertArtApi.getCoverThumb(releaseGroupMbid, 'release-group', {size: 250});
                         if(albumArt !== undefined) {
                             art = albumArt;
                             usedCAA = true;

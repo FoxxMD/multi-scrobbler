@@ -1,3 +1,4 @@
+import { nameToCredit } from "../../../../core/StringUtils.ts";
 import type { SqliteDatabase, Migration } from 'sqlite-up';
 import { DrizzlePlayRepository } from '../../../common/database/drizzle/repositories/PlayRepository.ts';
 import type {MigrateBaseContext} from '../../../common/database/appMigrator.ts';
@@ -20,7 +21,7 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
     while(more) {
       const batch = await repo.findPlays({with: ['input'], limit: 100, offset});
       for(const row of batch) {
-        repo.updateById(row.id, {play: {...row.play, data: {...row.play.data, track: 'foo'}}});
+        repo.updateById(row.id, {play: {...row.play, data: {...row.play.data, track: nameToCredit('foo')}}});
       }
       updated += batch.length;
       ctx.logger.verbose(`Updated ${updated} total`);

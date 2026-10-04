@@ -8,7 +8,7 @@ import type {AbstractApiOptions, FormatPlayObjectOptions} from "../infrastructur
 import type {KodiData} from "../infrastructure/config/source/kodi.ts";
 import AbstractApiClient from "./AbstractApiClient.ts";
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
-import { artistNamesToCredits } from "../../../core/StringUtils.ts";
+import { namesToCredits, nameToCredit } from "../../../core/StringUtils.ts";
 import { AuthError } from "../errors/MSErrors.ts";
 
 interface KodiDuration {
@@ -109,10 +109,10 @@ export class KodiApiClient extends AbstractApiClient {
 
         const play: PlayObjectMinimal = {
             data: {
-                track: title,
-                album: album,
-                albumArtists: artistNamesToCredits(albumartist),
-                artists: artistNamesToCredits(artistVal),
+                track: nameToCredit(title),
+                album: nameToCredit(album),
+                albumArtists: namesToCredits(albumartist),
+                artists: namesToCredits(artistVal),
                 duration,
                 playDate: dayjs()
             },

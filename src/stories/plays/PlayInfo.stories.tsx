@@ -44,7 +44,7 @@ export const PlayInfoStory = meta.story({
 
     if(args.defaultFinal && args.final === undefined) {
       const final = clone(args.play);
-      final.data.track = `${final.data.track} (Album Version)`;
+      final.data.track = {...final.data.track, name: `${final.data.track?.name} (Album Version)`};
       args.final = final;
     }
     

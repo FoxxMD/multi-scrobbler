@@ -1,3 +1,4 @@
+import { creditIds, creditMbid } from "../../../core/MusicMetadata.ts";
 import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { before, describe, it } from 'mocha';
@@ -5,7 +6,7 @@ import { generateArtistCredits, generatePlay, generateTealPlayRecord, withBrainz
 import { listRecordToPlay } from "../../common/vendor/teal/TealApiClient.ts";
 import { playToRecord } from "../../common/vendor/teal/TealApiClient.ts";
 import dayjs from 'dayjs';
-import { artistCreditsToNames } from '../../../core/StringUtils.ts';
+import { creditsToNames } from '../../../core/StringUtils.ts';
 import TealScrobbler from '../../scrobblers/TealfmScrobbler.ts';
 import { EventEmitter } from "events";
 import path from 'node:path';
@@ -22,11 +23,11 @@ describe('#tealfm Record to Play', function() {
         const [rec, {tid, did}] = generateTealPlayRecord();
         const play = listRecordToPlay(rec);
 
-        expect(play.data.track).eq(rec.value.trackName);
-        expect(play.data.album).eq(rec.value.releaseName);
+        expect(play.data.track?.name).eq(rec.value.trackName);
+        expect(play.data.album?.name).eq(rec.value.releaseName);
         expect(play.data.playDate!.unix()).eq(dayjs(rec.value.playedTime).unix());
         expect(play.data.duration).eq(rec.value.duration);
-        expect(artistCreditsToNames(play.data.artists!)).eql(rec.value.artists!.map(x => x.artistName));
+        expect(creditsToNames(play.data.artists!)).eql(rec.value.artists!.map(x => x.artistName));
         expect(play.meta.user).eq(`did:plc:${did}`);
         expect(play.meta.playId).eq(tid);
     });
@@ -36,29 +37,30 @@ describe('#tealfm Record to Play', function() {
         const [rec, {tid, did}] = generateTealPlayRecord();
         const play = listRecordToPlay(rec);
 
-        expect(play.data.meta!.brainz).to.not.be.undefined;
-        expect(play.data.meta!.brainz!.album).eq(rec.value.releaseMbId);
-        expect(play.data.meta!.brainz!.recording).eq(rec.value.recordingMbId);
-        expect(play.data.meta!.brainz!.artist).eql(rec.value.artists!.map(x => x.artistMbId));
+        expect(creditMbid(play.data.album, 'release')).eq(rec.value.releaseMbId);
+        expect(creditMbid(play.data.track, 'recording')).eq(rec.value.recordingMbId);
+        expect(creditIds(play.data.artists, 'musicbrainz', 'artist')).eql(rec.value.artists!.map(x => x.artistMbId));
         expect(play.data.isrc).eq(rec.value.isrc);
     });
 
-    it('Removes brainz if no mbids', function() {
+    it('Does not add credit metadata if no mbids', function() {
 
         const [rec, {tid, did}] = generateTealPlayRecord({ withMbids : false});
         const play = listRecordToPlay(rec);
 
-        expect(play.data.meta?.brainz).to.be.undefined;
+        expect(play.data.track!.metadata).to.be.undefined;
+        expect(play.data.album?.metadata).to.be.undefined;
+        expect(play.data.artists!.every(x => x.metadata === undefined)).to.be.true;
     });
 
-    it('Leaves brainz artists undefined if no artist mbids', function() {
+    it('Leaves artist mbids undefined if no artist mbids', function() {
 
         const [rec, {tid, did}] = generateTealPlayRecord();
         rec.value.artists = rec.value.artists!.map(x => ({artistName: x.artistName}));
         const play = listRecordToPlay(rec);
 
-        expect(play.data.meta?.brainz).to.not.be.undefined;
-        expect(play.data.meta?.brainz!.artist).to.be.undefined;
+        expect(creditMbid(play.data.track, 'recording')).to.not.be.undefined;
+        expect(creditIds(play.data.artists, 'musicbrainz', 'artist')).to.be.empty;
     });
 
     it('Parses production namespace records', function() {
@@ -90,11 +92,11 @@ describe('#tealfm Play To Record', function () {
         const record = playToRecord(play);
 
         expect(record.$type).to.eq('fm.teal.feed.play');
-        expect(record.recordingMbId).to.eq(`mbid:${play.data.meta!.brainz!.recording}`);
+        expect(record.recordingMbId).to.eq(`mbid:${creditMbid(play.data.track, 'recording')}`);
         expect(record.releaseMbId).is.undefined;
         expect(record.artists).length(2);
         expect(record.artists![0].artistName).eq(play.data.artists![0].name);
-        expect(record.artists![0].artistMbId).eq(`mbid:${play.data.artists![0].mbid}`);
+        expect(record.artists![0].artistMbId).eq(`mbid:${creditMbid(play.data.artists![0], 'artist')}`);
         expect(record.musicServiceUri).eq('https://spotify.com');
         expect(record.originUri).eq(play.meta.url!.origin);
     });
@@ -108,11 +110,11 @@ describe('#tealfm Play To Record', function () {
         const play = withBrainz(generatePlay({artists: generateArtistCredits(2)}), {include: ['recording']});
         const record = playToRecord(play);
 
-        expect(record.recordingMbId).to.eq(`mbid:${play.data.meta!.brainz!.recording}`);
+        expect(record.recordingMbId).to.eq(`mbid:${creditMbid(play.data.track, 'recording')}`);
         expect(record.releaseMbId).is.undefined;
         expect(record.artists).length(2);
         expect(record.artists![0].artistName).eq(play.data.artists![0].name);
-        expect(record.artists![0].artistMbId).eq(`mbid:${play.data.artists![0].mbid}`);
+        expect(record.artists![0].artistMbId).eq(`mbid:${creditMbid(play.data.artists![0], 'artist')}`);
     });
 
 });

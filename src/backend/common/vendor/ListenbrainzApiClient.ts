@@ -2,17 +2,18 @@ import { stringSameness } from '@foxxmd/string-sameness';
 import dayjs from "dayjs";
 import type { Request, Response } from 'superagent';
 import request from 'superagent';
-import type {BrainzMeta, PlayObject, PlayObjectMinimal, ScrobbleActionResult, UnixTimestamp, URLData} from "../../../core/Atomic.ts";
-import { artistNamesToCredits, combinePartsToString, slice } from "../../../core/StringUtils.ts";
+import type {BrainzMeta, Credit, PlayObject, PlayObjectMinimal, ScrobbleActionResult, UnixTimestamp, URLData} from "../../../core/Atomic.ts";
+import { namesToCredits, combinePartsToString, slice, nameToCredit } from "../../../core/StringUtils.ts";
 import {
     normalizeListenbrainzUrl,
-    normalizeStr,
     parseArtistCredits,
     parseCredits,
     parseTrackCredits,
     uniqueNormalizedStrArr,
 } from "../../utils/StringUtils.ts";
+import { normalizeStr } from "../../../core/StringUtils.ts";
 import { findDelimiters } from "../../../core/StringUtils.ts";
+import { creditsWithIds, mbMeta, mergeCredit, withMetadata } from "../../../core/MusicMetadata.ts";
 import { UpstreamError } from "../errors/UpstreamError.ts";
 import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type PagelessListensTimeRangeOptions, type PagelessTimeRangeListens, type PagelessTimeRangeListensResult } from "../infrastructure/Atomic.ts";
 import { DELIMITERS } from '../../../core/Atomic.ts';
@@ -257,10 +258,11 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
             const respPlay = {
                 ...playObj,
             };
+            const {release_name, track_name} = submitObj.payload[0].track_metadata ?? {};
             respPlay.data = {
                 ...playObj.data,
-                album: submitObj.payload[0].track_metadata?.release_name ?? playObj.data.album,
-                track: submitObj.payload[0].track_metadata?.track_name ?? playObj.data.album,
+                album: release_name !== undefined ? mergeCredit(playObj.data.album, nameToCredit(release_name)) : playObj.data.album,
+                track: track_name !== undefined ? mergeCredit(playObj.data.track, nameToCredit(track_name)) : playObj.data.track,
             };
             return respPlay;
         }
@@ -374,6 +376,7 @@ export const listenResponseToPlay = (listen: ListenResponse): PlayObject => {
         }
 
         const mappedArtists = artistMappings.length > 0 ? artistMappings.map(x => x.artist_credit_name) : [];
+        const mappedArtistCredit = (name: string): Credit => nameToCredit(name, mbMeta(artistMappings.find(y => y.artist_credit_name === name)?.artist_mbid, 'artist'));
 
         let normalTrackName: string = track_name;
         let primaryArtistHint: string | undefined;
@@ -567,13 +570,7 @@ export const listenResponseToPlay = (listen: ListenResponse): PlayObject => {
                     ...naivePlay,
                     data: {
                         ...naivePlay.data,
-                        artists: derivedArtists.map(x => {
-                            const mappedArtist = artistMappings.find(y => y.artist_credit_name === x);
-                            if(mappedArtist !== undefined) {
-                                return {name: mappedArtist.artist_credit_name, mbid: mappedArtist.artist_mbid}
-                            }
-                            return {name: x};
-                        })
+                        artists: derivedArtists.map(mappedArtistCredit)
                     }
                 };
             }
@@ -582,43 +579,26 @@ export const listenResponseToPlay = (listen: ListenResponse): PlayObject => {
             normalTrackName = recording_name;
         }
 
-        const brainzMetaRaw: BrainzMeta = {
-            ...(naivePlay.data.meta?.brainz ?? {}),
-            artist: artistMappings.map(x => x.artist_mbid),
-            album: release_mbid,
-            releaseGroup: release_group_mbid
-        }
-
+        let albumArtists = naivePlay.data.albumArtists;
         // this should always find an artist but to be safe...
         const primaryArtistMBMapping = artistMappings.find(x => x.artist_credit_name === primaryArtist);
-        if(primaryArtistMBMapping !== undefined) {
+        if(primaryArtistMBMapping !== undefined && albumArtists !== undefined) {
             // only include as primary if musicbrainz does not disagree with us
             if(release_artist_names.length === 0 || (release_artist_names.length > 0 && release_artist_names.includes(primaryArtistMBMapping.artist_credit_name))) {
-                brainzMetaRaw.albumArtist = [primaryArtistMBMapping.artist_mbid];
+                // the mbid belongs to the primary artist so only attach it to an album artist with the same name
+                albumArtists = albumArtists.map(x => x.name === primaryArtistMBMapping.artist_credit_name ? withMetadata(x, mbMeta(primaryArtistMBMapping.artist_mbid, 'artist')) : x);
             }
         }
-
-        const brainzMeta = removeUndefinedKeys(brainzMetaRaw);
 
         const play: PlayObject = {
             data: {
                 ...naivePlay.data,
-                track: normalTrackName,
-                artists: derivedArtists.map(x => {
-                    const mappedArtist = artistMappings.find(y => y.artist_credit_name === x);
-                    if(mappedArtist !== undefined) {
-                        return {name: mappedArtist.artist_credit_name, mbid: mappedArtist.artist_mbid}
-                    }
-                    return {name: x};
-                })
+                track: mergeCredit(naivePlay.data.track, nameToCredit(normalTrackName)),
+                album: withMetadata(naivePlay.data.album, mbMeta(release_mbid, 'release'), mbMeta(release_group_mbid, 'release-group')),
+                albumArtists,
+                artists: derivedArtists.map(mappedArtistCredit)
             },
             meta: naivePlay.meta
-        }
-
-        if(brainzMeta !== undefined) {
-            play.data.meta = {
-                brainz: brainzMeta
-            }
         }
 
         return baseFormatPlayObj(listen, play);
@@ -703,13 +683,15 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
         }
 
 
+        const artistMbids = artist_mbids.filter(x => x.trim() !== "");
+
         const play: PlayObjectMinimal = {
             data: {
                 playDate: dayjs.unix(listened_at),
-                track: normalTrackName,
-                artists: artistNamesToCredits(artists),
-                album: release_name,
-                albumArtists: albumArtists !== undefined ? artistNamesToCredits(albumArtists) : undefined,
+                track: nameToCredit(normalTrackName, mbMeta(trackId, 'recording')),
+                artists: creditsWithIds(namesToCredits(artists), artistMbids, 'musicbrainz', 'artist'),
+                album: nameToCredit(release_name, mbMeta(release_mbid, 'release'), mbMeta(release_group_mbid, 'release-group')),
+                albumArtists: albumArtists !== undefined ? namesToCredits(albumArtists) : undefined,
                 duration: dur,
                 isrc: isrc !== undefined ? isrcNoHyphens(isrc) : undefined,
                 meta: {
@@ -727,9 +709,6 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
         }
         
         const brainzMeta = removeUndefinedKeys<BrainzMeta>({
-            album: release_mbid,
-            releaseGroup: release_group_mbid,
-            recording: trackId,
             trackNumber: tracknumber
         }) ?? {};
 
@@ -737,9 +716,8 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
             brainzMeta.additionalInfo = additional_info;
             
         }
-        if(artist_mbids.filter(x => x.trim() !== "").length > 0) {
-            brainzMeta.artist = artist_mbids.filter(x => x.trim() !== "");
-            brainzMeta.additionalInfo = {...(brainzMeta.additionalInfo ?? {}), artist_mbids: brainzMeta.artist};
+        if(artistMbids.length > 0) {
+            brainzMeta.additionalInfo = {...(brainzMeta.additionalInfo ?? {}), artist_mbids: artistMbids};
         }
 
         if(Object.keys(brainzMeta).length > 0) {

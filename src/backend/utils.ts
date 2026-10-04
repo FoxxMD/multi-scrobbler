@@ -6,15 +6,16 @@ import utc from 'dayjs/plugin/utc.js';
 import type {Request} from "express";
 // https://github.com/jfromaniello/url-join#in-nodejs
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
-import { DEFAULT_MISSING_MBIDS_TYPES, type MissingMbidType, type PlayObject } from "../core/Atomic.ts";
+import { type MissingMbidType, type PlayObject } from "../core/Atomic.ts";
 import {
     asPlayerStateDataMaybePlay,
     type PlayerStateDataMaybePlay,
     type ProgressAwarePlayObject,
     type RemoteIdentityParts,
-    type ScrobbleThresholdResult,
-} from "./common/infrastructure/Atomic.ts";
+    type ScrobbleThresholdResult } from "./common/infrastructure/Atomic.ts";
 import { NO_USER } from '../core/Atomic.ts';
+import { creditIds, creditMbid } from '../core/MusicMetadata.ts';
+import { creditsToNames } from '../core/StringUtils.ts';
 import { NO_DEVICE } from '../core/Atomic.ts';
 import type {PlayPlatformId} from '../core/Atomic.ts';
 import { genGroupIdStr } from '../core/PlayUtils.ts';
@@ -88,25 +89,19 @@ export const playObjDataMatch = (a: PlayObject, b: PlayObject) => {
         data: {
             artists: aArtists = [],
             album: aAlbum,
-            track: aTrack,
-        } = {},
+            track: aTrack } = {},
         meta: {
             source: aSource,
-            trackId: atrackId,
-        } = {},
-    } = a;
+            trackId: atrackId } = {} } = a;
 
     const {
         data: {
             artists: bArtists = [],
             album: bAlbum,
-            track: bTrack,
-        } = {},
+            track: bTrack } = {},
         meta: {
             source: bSource,
-            trackId: btrackId,
-        } = {},
-    } = b;
+            trackId: btrackId } = {} } = b;
 
     // if sources are the same and both plays have source ids then we can just compare by id
     if(aSource === bSource && atrackId !== undefined && btrackId !== undefined) {
@@ -115,17 +110,19 @@ export const playObjDataMatch = (a: PlayObject, b: PlayObject) => {
         }
     }
 
-    if (aTrack !== bTrack) {
+    if (aTrack?.name !== bTrack?.name) {
         return false;
     }
-    if (aAlbum !== bAlbum) {
+    if (aAlbum?.name !== bAlbum?.name) {
         return false;
     }
     if (aArtists.length !== bArtists.length) {
         return false;
     }
     // check if every artist from either playObj matches (one way or another) with the artists from the other play obj
-    if (!aArtists.every((x: any) => bArtists.includes(x)) && bArtists.every((x: any) => aArtists.includes(x))) {
+    const aNames = creditsToNames(aArtists),
+        bNames = creditsToNames(bArtists);
+    if (!aNames.every((x) => bNames.includes(x)) && bNames.every((x) => aNames.includes(x))) {
         return false
     }
 
@@ -385,42 +382,32 @@ export const durationToTimestamp = (dur: Duration): string => {
 export const comparingMultipleArtists = (existing: PlayObject, candidate: PlayObject): boolean => {
     const {
         data: {
-            artists: eArtists = [],
-        } = {}
+            artists: eArtists = [] } = {}
     } = existing;
     const {
         data: {
-            artists: cArtists = [],
-        } = {}
+            artists: cArtists = [] } = {}
     } = candidate;
 
     return eArtists.length > 1 || cArtists.length > 1;
 }
 
 export const missingMbidTypes = (play: PlayObject): MissingMbidType[] => {
-    let missing: MissingMbidType[] = [];
+    const missing: MissingMbidType[] = [];
 
      if(play.data.duration === undefined) {
         missing.push('duration');
     }
 
-    if(play.data.meta?.brainz === undefined) {
-        missing = missing.concat(DEFAULT_MISSING_MBIDS_TYPES);
-        return missing;
-    }
-    const {
-        recording: track,
-        album,
-        artist
-    } = play.data.meta.brainz;
+    const {artists = []} = play.data;
 
-    if(track === undefined) {
+    if(creditMbid(play.data.track, 'recording') === undefined) {
         missing.push('title');
     }
-    if(album === undefined) {
+    if(creditMbid(play.data.album, 'release') === undefined) {
         missing.push('album');
     }
-    if(artist === undefined || (artist ?? []).length !== (play.data.artists ?? []).length) {
+    if(artists.length === 0 || creditIds(artists, 'musicbrainz', 'artist').length !== artists.length) {
         missing.push('artists')
     }
 

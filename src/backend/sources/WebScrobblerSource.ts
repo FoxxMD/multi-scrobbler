@@ -1,3 +1,4 @@
+import { mbMeta } from "../../core/MusicMetadata.ts";
 import dayjs, { type Dayjs } from "dayjs";
 import type EventEmitter from "events";
 import { PARSED_FROM, type PlayObjectMinimal, SOURCE_SOT } from "../../core/Atomic.ts";
@@ -19,7 +20,7 @@ import type {Logger} from "@foxxmd/logging";
 import type {PlayerStateOptions} from "./PlayerState/AbstractPlayerState.ts";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
-import { artistNameToCredit } from "../../core/StringUtils.ts";
+import { nameToCredit } from "../../core/StringUtils.ts";
 
 interface WebScrobbleMeta {
     scrobbleAllowed?: boolean
@@ -130,17 +131,12 @@ export class WebScrobblerSource extends MemorySource {
 
         const play: PlayObjectMinimal<Dayjs, WebScrobbleMeta> = {
             data: {
-                track,
-                artists: artist !== undefined ? [artistNameToCredit(artist)] : [],
-                album: album === null ? undefined : album,
-                albumArtists: albumArtist === null ? undefined : albumArtist === undefined ? undefined : [artistNameToCredit(albumArtist)],
+                track: nameToCredit(track),
+                artists: artist !== undefined ? [nameToCredit(artist)] : [],
+                album: nameToCredit(album, mbMeta(albumMbId, 'release')),
+                albumArtists: albumArtist === null ? undefined : albumArtist === undefined ? undefined : [nameToCredit(albumArtist)],
                 playDate: dayjs.unix(startTimestamp),
                 duration: duration === null ? undefined : duration,
-                meta: {
-                    brainz: {
-                        album: albumMbId
-                    }
-                }
             },
             meta: {
                 trackId: uniqueID ?? undefined,

@@ -14,7 +14,6 @@ import { Tooltip } from "../ChakraTooltip";
 import type React from "react";
 import { LuExternalLink } from "react-icons/lu";
 import type { ComponentProps } from "react";
-import type { JsonPlayObject } from "../../../core/Atomic";
 
 
 export interface MusicServiceInfoIconProps {
@@ -107,40 +106,4 @@ export const MusicServiceIndicators = (props: {
             {services.map((x, i) => <MusicServiceIndicator key={i} data={x} iconProps={iconProps} showId={showId} link={link} />)}
         </HStack>
     )
-}
-
-export const playMetaIdsToMusicServices = (play: JsonPlayObject, type: 'track' | 'album'): MusicServicesAny[] => {
-    const {
-        data: {
-            meta: {
-                brainz,
-                spotify
-            } = {}
-        } = {}
-    } = play;
-
-    const services: MusicServicesAny[] = [];
-    if(type === 'track') {
-        if(brainz?.track !== undefined) {
-            services.push({name: 'musicbrainz', idHint: 'track', id: brainz.track});
-        } else if(brainz?.recording !== undefined) {
-            services.push({name: 'musicbrainz', idHint: 'recording', id: brainz.recording});
-        }
-        if(spotify?.track !== undefined) {
-            services.push({name: 'spotify', idType: 'track', id: spotify.track});
-        }
-        return services;
-    }
-    if(type === 'album') {
-        if(brainz?.album !== undefined) {
-            services.push({name: 'musicbrainz', idHint: 'release', id: brainz.album});
-        } else if(brainz?.releaseGroup !== undefined) {
-            services.push({name: 'musicbrainz', idHint: 'release-group', id: brainz.releaseGroup});
-        }
-        if(spotify?.album !== undefined) {
-            services.push({name: 'spotify', idType: 'album', id: spotify.album});
-        }
-        return services;
-    }
-    return services;
 }

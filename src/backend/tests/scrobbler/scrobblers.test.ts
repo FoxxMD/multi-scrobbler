@@ -27,7 +27,7 @@ import { generateArray } from '../../../core/DataUtils.ts';
 import type {RepositoryCreatePlayOpts} from '../../common/database/drizzle/repositories/PlayRepository.ts';
 import { fixtureCreatePlay } from '../utils/databaseFixtures.ts';
 import { isAbortError } from 'abort-controller-x';
-import { artistNamesToCredits } from '../../../core/StringUtils.ts';
+import { namesToCredits, nameToCredit } from '../../../core/StringUtils.ts';
 import ScrobbleClients from '../../scrobblers/ScrobbleClients.ts';
 import { WildcardEmitter } from '../../common/WildcardEmitter.ts';
 import type { CommonClientConfig } from '../../common/infrastructure/config/client/index.ts';
@@ -153,8 +153,8 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
 
                 const uniquePlay = generatePlay({
-                    artists: artistNamesToCredits(["２８１４"]),
-                    track: "新宿ゴールデン街",
+                    artists: namesToCredits(["２８１４"]),
+                    track: nameToCredit("新宿ゴールデン街"),
                     duration: 130,
                     playDate: normalizedWithMixedDur[normalizedWithMixedDur.length - 3].data.playDate!.add(6, 'minutes')
                 });
@@ -173,7 +173,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
             const diffPlay = clone(normalizedWithMixedDur[1]);
             diffPlay.data.playDate = diffPlay.data.playDate!.add(9, 's');
-            diffPlay.data.track = 'A Totally Different Track'
+            diffPlay.data.track = nameToCredit('A Totally Different Track')
 
             assert.isFalse((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
         });
@@ -185,7 +185,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
             const diffPlay = clone(normalizedWithMixedDur[1]);
             diffPlay.data.playDate = diffPlay.data.playDate!.add(9, 's');
-            diffPlay.data.artists = artistNamesToCredits(['A Different Artist']);
+            diffPlay.data.artists = namesToCredits(['A Different Artist']);
 
             assert.isFalse((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
         });
@@ -232,22 +232,22 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
                 await using testScrobbler = await generateTestScrobbler();
                 testScrobbler.testRecentScrobbles = normalizedWithDur;
 
-                const brickPt1 = normalizedWithDur.find(x => x.data.track!.includes('Another Brick'));
+                const brickPt1 = normalizedWithDur.find(x => x.data.track!.name.includes('Another Brick'));
                 const brickPt2 = clone(brickPt1);
-                brickPt2!.data.track = 'Another Brick in the Wall, Pt. 2';
+                brickPt2!.data.track = nameToCredit('Another Brick in the Wall, Pt. 2');
                 brickPt2!.data.playDate = brickPt1!.data.playDate!.add(brickPt1!.data.duration! + 1, 'seconds');
                 assert.isFalse((await testScrobbler.alreadyScrobbled(brickPt2!))[0]);
 
-                const story1 = normalizedWithDur.find(x => x.data.track!.includes('Da Art of'));
+                const story1 = normalizedWithDur.find(x => x.data.track!.name.includes('Da Art of'));
                 const story2 = clone(story1);
-                story2!.data.track = `Da Art of Storytellin' (Pt. 2)`;
+                story2!.data.track = nameToCredit(`Da Art of Storytellin' (Pt. 2)`);
                 story2!.data.playDate = story2!.data.playDate!.add(story1!.data.duration! + 1, 'seconds');
 
                 assert.isFalse((await testScrobbler.alreadyScrobbled(story2!))[0]);
 
-                const ballad1 = normalizedWithDur.find(x => x.data.track!.includes('Ballade No. 1'));
+                const ballad1 = normalizedWithDur.find(x => x.data.track!.name.includes('Ballade No. 1'));
                 const ballad2 = clone(ballad1);
-                ballad2!.data.track = `Ballade No. 2 in G Minor, Op. 27`;
+                ballad2!.data.track = nameToCredit(`Ballade No. 2 in G Minor, Op. 27`);
                 ballad2!.data.playDate = ballad2!.data.playDate!.add(ballad1!.data.duration! + 1, 'seconds');
 
                 assert.isFalse((await testScrobbler.alreadyScrobbled(ballad2!))[0]);
@@ -274,8 +274,8 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             it('Is not detected as duplicate when play date matches fuzzy and play source SOT is history', async function () {
 
                 const play = generatePlay({
-                    artists: artistNamesToCredits(['Nejad']), 
-                    track: 'CODE', 
+                    artists: namesToCredits(['Nejad']), 
+                    track: nameToCredit('CODE'), 
                     album: undefined, 
                     playDate: dayjs().subtract(179, 's'),
                     duration: 179
@@ -311,13 +311,13 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             diffPlay.data.playDate = diffPlay.data.playDate!.add(9, 's');
 
 
-            diffPlay.data.track = ref.data.track!.toUpperCase();
+            diffPlay.data.track = nameToCredit(ref.data.track!.name.toUpperCase());
             assert.isTrue((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
 
-            diffPlay.data.track = `  ${ref.data.track} `;
+            diffPlay.data.track = nameToCredit(`  ${ref.data.track?.name} `);
             assert.isTrue((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
 
-            diffPlay.data.track = ref.data.track!.replaceAll(' ', '   ');
+            diffPlay.data.track = nameToCredit(ref.data.track!.name.replaceAll(' ', '   '));
             assert.isTrue((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
 
             diffPlay.data.artists = ref.data.artists!.map(x => ({...x, name: x.name.toUpperCase()}));
@@ -330,11 +330,11 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
         it('Is detected as duplicate when artist/title differences are from unicode normalization', async function () {
             await using testScrobbler = await generateTestScrobbler();
             testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
-            const ref = normalizedWithMixedDur.find(x => x.data.track === 'Jimbó');
+            const ref = normalizedWithMixedDur.find(x => x.data.track?.name === 'Jimbó');
 
             const diffPlay = clone(ref);
             diffPlay!.data.playDate = diffPlay!.data.playDate!.add(9, 's');
-            diffPlay!.data.track = 'Jimbo';
+            diffPlay!.data.track = nameToCredit('Jimbo');
             assert.isTrue((await testScrobbler.alreadyScrobbled(diffPlay!))[0]);
         });
 
@@ -353,7 +353,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             assert.isTrue((await testScrobbler.alreadyScrobbled(timeOffNeg))[0]);
 
             // 10 seconds fuzzy diff inclusive
-            const son = normalizedWithMixedDurOlder.find(x => x.data.track === 'Sonora')
+            const son = normalizedWithMixedDurOlder.find(x => x.data.track?.name === 'Sonora')
             son!.data.playDate = dayjs().subtract(1, 'hour').set('minute', 26).set('second', 20);
             son!.data.duration = 267;
             son!.data.listenedFor = undefined;
@@ -397,7 +397,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             assert.isTrue((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
 
 
-            const son = normalizedWithMixedDur.find(x => x.data.track === 'Sonora')
+            const son = normalizedWithMixedDur.find(x => x.data.track?.name === 'Sonora')
 
             const sonDiffPlay = clone(son);
             sonDiffPlay!.data.playDate = sonDiffPlay!.data.playDate!.subtract(son!.data.duration! + 1, 's');
@@ -405,12 +405,12 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
         });
 
         it('Is detected as duplicate when artists are included in joiner', async function () {
-            const ref = normalizedWithMixedDurOlder.find(x => x.data.track === 'Freeze Tag');
+            const ref = normalizedWithMixedDurOlder.find(x => x.data.track?.name === 'Freeze Tag');
             ref!.data.playDate = dayjs().subtract(1, 'hour').set('minute', 29).set('second', 26)
 
             const spotifyPlay: PlayObject = {
                 data: {
-                    artists: artistNamesToCredits([
+                    artists: namesToCredits([
                         "Terrace Martin",
                         "Robert Glasper",
                         "9th Wonder",
@@ -419,8 +419,8 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
                         "Cordae",
                         "Phoelix"
                     ]),
-                    album: "Dinner Party: Dessert",
-                    track: "Freeze Tag (feat. Cordae & Phoelix)",
+                    album: nameToCredit("Dinner Party: Dessert"),
+                    track: nameToCredit("Freeze Tag (feat. Cordae & Phoelix)"),
                     "duration": 191.375,
                     "playDate": dayjs().subtract(1, 'hour').set('minute', 29).set('second', 27)
                 },
@@ -658,7 +658,7 @@ describe('Scrobble client uses transform plays correctly', function() {
     //         track: 'my cool track'
     //     });
     //     testScrobbler.queuePlay(newScrobble, 'test');
-    //     expect(testScrobbler.queuedScrobbles[0].play.data.track).is.eq('my  track');
+    //     expect(testScrobbler.queuedScrobbles[0].play.data.track?.name).is.eq('my  track');
     // });
 
     it('Transforms play on scrobble when postCompare is present', async function() {
@@ -675,16 +675,16 @@ describe('Scrobble client uses transform plays correctly', function() {
         }
         await testScrobbler.buildTransformRules();
         const newScrobble = generatePlay({
-            track: 'my cool track'
+            track: nameToCredit('my cool track')
         });
         await testScrobbler.queuePlay(newScrobble);
         const queuedPlayedData = await testScrobbler.playRepoTest.getQueued(INGRESS_QUEUE);
-        expect(queuedPlayedData.data[0].play.data.track).is.eq('my cool track');
+        expect(queuedPlayedData.data[0].play.data.track?.name).is.eq('my cool track');
         testScrobbler.scrobbleSleep = 100;
         testScrobbler.initScrobbleMonitoring().catch(console.error);
 
         const e = (await pEvent(testScrobbler.emitter, 'scrobble')) as {data: {play: PlayObject }};
-        expect(e.data.play.data.track).is.eq('my  track');
+        expect(e.data.play.data.track?.name).is.eq('my  track');
     });
 
     it('Transforms candidate play on comparison', async function() {
@@ -702,7 +702,7 @@ describe('Scrobble client uses transform plays correctly', function() {
             }
         }
         const newScrobble = generatePlay({
-            track: 'my hugely cool and very different track title'
+            track: nameToCredit('my hugely cool and very different track title')
         });
 
         testScrobbler.testRecentScrobbles = normalizePlays([newScrobble, ...withDurPlays], {initialDate: firstPlayDate});
@@ -726,7 +726,7 @@ describe('Scrobble client uses transform plays correctly', function() {
             }
         }
         const newScrobble = generatePlay({
-            track: 'my hugely cool and very different track title'
+            track: nameToCredit('my hugely cool and very different track title')
         });
 
         testScrobbler.testRecentScrobbles = normalizePlays([newScrobble, ...withDurPlays], {initialDate: firstPlayDate});

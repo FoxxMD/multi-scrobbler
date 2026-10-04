@@ -16,7 +16,7 @@ import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type {AzuracastSourceConfig, AzuraNowPlayingResponse, AzuraStationResponse} from "../common/infrastructure/config/source/azuracast.ts";
 import { isPortReachable, normalizeWSAddress } from "../utils/NetworkUtils.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
-import { artistNamesToCredits } from "../../core/StringUtils.ts";
+import { namesToCredits, nameToCredit } from "../../core/StringUtils.ts";
 
 
 export class AzuracastSource extends MemorySource {
@@ -243,9 +243,9 @@ const formatPlayObj = (obj: AzuraNowPlayingResponse, options: FormatPlayObjectOp
 
     const play: PlayObjectMinimal = {
         data: {
-            artists: artistNamesToCredits(artist !== undefined && artist !== '' ? [artist] : []),
-            album: album !== '' ? album : undefined,
-            track,
+            artists: namesToCredits(artist !== undefined && artist !== '' ? [artist] : []),
+            album: nameToCredit(album !== '' ? album : undefined),
+            track: nameToCredit(track),
             duration
         },
         meta: {

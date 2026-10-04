@@ -1,3 +1,4 @@
+import { nameToCredit } from "../../../core/StringUtils.ts";
 import { expect } from 'chai';
 import { components, plays } from '../../common/database/drizzle/schema/schema.ts';
 import dayjs from 'dayjs';
@@ -35,7 +36,7 @@ describe('Repository Operations', function () {
         fullPlays.forEach((play, index) => {
             const ref = playData[index];
 
-            expect(play.play.data.track).eq(ref.play.data.track);
+            expect(play.play.data.track?.name).eq(ref.play.data.track?.name);
             expect(play.input).to.not.undefined;
             expect(objectsEqual(play.input.data!, ref.input.data!)).is.true;
         })
@@ -67,7 +68,7 @@ describe('Repository Operations', function () {
 
         const plays = await repo.findPlays({ state: ['discovered'] });
         expect(plays).length(1);
-        expect(plays[0].play.data.track).eq(discovered.play.data.track);
+        expect(plays[0].play.data.track?.name).eq(discovered.play.data.track?.name);
     });
 
     it('finds Plays by date range', async function () {
@@ -105,17 +106,17 @@ describe('Repository Operations', function () {
 
         const newerPlays = await repo.findPlays({ playedAt: { type: 'gt', date: dayjs().subtract(3, 'm') } });
         expect(newerPlays).length(1);
-        expect(newerPlays[0].play.data.track).eq(playData[0].play.data.track);
+        expect(newerPlays[0].play.data.track?.name).eq(playData[0].play.data.track?.name);
 
         const olderPlays = await repo.findPlays({ playedAt: { type: 'lt', date: dayjs().subtract(6, 'm').subtract(5, 's') } });
         expect(olderPlays).length(2);
-        expect(olderPlays[0].play.data.track).eq(playData[2].play.data.track);
-        expect(olderPlays[1].play.data.track).eq(playData[3].play.data.track);
+        expect(olderPlays[0].play.data.track?.name).eq(playData[2].play.data.track?.name);
+        expect(olderPlays[1].play.data.track?.name).eq(playData[3].play.data.track?.name);
 
         const bwPlays = await repo.findPlays({ playedAt: { type: 'between', range: [dayjs().subtract(9, 'm'), dayjs().subtract(3, 'm')] } });
         expect(bwPlays).length(2);
-        expect(bwPlays[0].play.data.track).eq(playData[1].play.data.track);
-        expect(bwPlays[1].play.data.track).eq(playData[2].play.data.track);
+        expect(bwPlays[0].play.data.track?.name).eq(playData[1].play.data.track?.name);
+        expect(bwPlays[1].play.data.track?.name).eq(playData[2].play.data.track?.name);
     });
 
     it('finds Plays by component', async function () {
@@ -153,12 +154,12 @@ describe('Repository Operations', function () {
 
         const plays = await repo.findPlays({ componentId: component3[0].id });
         expect(plays).length(2);
-        expect(plays[0].play.data.track).eq(playData[1].play.data.track);
-        expect(plays[1].play.data.track).eq(playData[2].play.data.track);
+        expect(plays[0].play.data.track?.name).eq(playData[1].play.data.track?.name);
+        expect(plays[1].play.data.track?.name).eq(playData[2].play.data.track?.name);
 
         const plays1 = await repo.findPlays({ componentId: component1[0].id });
         expect(plays1).length(1);
-        expect(plays1[0].play.data.track).eq(playData[0].play.data.track);
+        expect(plays1[0].play.data.track?.name).eq(playData[0].play.data.track?.name);
 
         const noPlays = await repo.findPlays({ componentId: component2[0].id });
         expect(noPlays).length(0);
@@ -257,7 +258,7 @@ describe('Repository Operations', function () {
             const repoB = new DrizzlePlayRepository(db, { componentId: componentB[0].id });
 
             const childPlay = clone(playDataA[1].play);
-            childPlay.data.track = `${childPlay.data.track} (transformed)`;
+            childPlay.data.track = nameToCredit(`${childPlay.data.track?.name} (transformed)`);
 
             const rowsB = await repoB.createPlays([{
                 ...fixtureCreatePlay({ play: childPlay }),
@@ -275,7 +276,7 @@ describe('Repository Operations', function () {
 
             expect(existing, 'checkExisting should return the client play whose parent the clone is based off of').to.not.be.undefined;
             expect(existing!.id).eq(rowsB[0].id);
-            expect(existing!.play.data.track).eq(childPlay.data.track);
+            expect(existing!.play.data.track?.name).eq(childPlay.data.track?.name);
         });
 
     });
@@ -290,8 +291,8 @@ describe('Repository Operations', function () {
             const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
             const playRows = await db.insert(plays).values([
-                fixtureCreatePlay({ componentId: component[0].id, play: generatePlay({track: 'foo'}, { source: 'test1' }) }),
-                fixtureCreatePlay({ componentId: component[0].id, play: generatePlay({track: 'bar'}, { source: 'test2' }) })
+                fixtureCreatePlay({ componentId: component[0].id, play: generatePlay({track: nameToCredit('foo')}, { source: 'test1' }) }),
+                fixtureCreatePlay({ componentId: component[0].id, play: generatePlay({track: nameToCredit('bar')}, { source: 'test2' }) })
             ]).returning();
 
             // https://github.com/drizzle-team/drizzle-orm/discussions/938#discussioncomment-6542336
@@ -301,7 +302,7 @@ describe('Repository Operations', function () {
                         {
                             OR: [
                                 {
-                                    RAW: (p) => sql`lower(json_extract(${p.play}, '$.data.track')) LIKE '%'|| ${playRows[0].play.data.track!.substring(0, 5).toLocaleLowerCase()} || '%'`
+                                    RAW: (p) => sql`lower(json_extract(${p.play}, '$.data.track.name')) LIKE '%'|| ${playRows[0].play.data.track!.name.substring(0, 5).toLocaleLowerCase()} || '%'`
                                 }
                             ]
                         }

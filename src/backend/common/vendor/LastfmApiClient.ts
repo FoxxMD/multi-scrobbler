@@ -1,10 +1,11 @@
 import dayjs, { type Dayjs, type ManipulateType } from "dayjs";
-import type {BrainzMeta, PlayObject, PlayObjectMinimal, ScrobbleActionResult, UnixTimestamp, URLData, Writeable} from "../../../core/Atomic.ts";
-import { artistNamesToCredits, artistNameToCredit, nonEmptyStringOrDefault, splitByFirstFound, truncateStringToLength } from "../../../core/StringUtils.ts";
+import type {PlayObject, PlayObjectMinimal, ScrobbleActionResult, UnixTimestamp, URLData, Writeable} from "../../../core/Atomic.ts";
+import { creditsToNames, namesToCredits, nameToCredit, nonEmptyStringOrDefault, splitByFirstFound, truncateStringToLength } from "../../../core/StringUtils.ts";
 import { sleep } from "../../utils.ts";
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
 import { writeFile } from '../../utils/FSUtils.ts';
-import { objectIsEmpty, readJson } from '../../utils/DataUtils.ts';
+import { readJson } from '../../utils/DataUtils.ts';
+import { creditMbid, creditsWithIds, mbMeta } from '../../../core/MusicMetadata.ts';
 import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../utils/NetworkUtils.ts";
 import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.ts";
 import { getNodeNetworkException, isNodeNetworkException } from "../errors/NodeErrors.ts";
@@ -12,7 +13,8 @@ import { UpstreamError } from "../errors/UpstreamError.ts";
 import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type InternalConfigOptional, type PaginatedListensTimeRangeOptions, type PaginatedTimeRangeListens, type PaginatedTimeRangeListensResult } from "../infrastructure/Atomic.ts";
 import type {LastfmData} from "../infrastructure/config/client/lastfm.ts";
 import AbstractApiClient from "./AbstractApiClient.ts";
-import { normalizeStr, parseArtistCredits } from "../../utils/StringUtils.ts";
+import { parseArtistCredits } from "../../utils/StringUtils.ts";
+import { normalizeStr } from "../../../core/StringUtils.ts";
 import { LastFMUser, LastFMAuth, LastFMTrack, type LastFMUserGetRecentTracksResponse, type LastFMBooleanNumber, type LastFMUpdateNowPlayingResponse, type LastFMUserGetInfoResponse, type LastFMUserGetRecentTracksParams, LastFMResponseError } from 'lastfm-ts-api';
 import clone from 'clone';
 import type { IncomingMessage } from "http";
@@ -569,10 +571,10 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
                 modifiedPlay.data.playDate = dayjs.unix(timestamp);
             }
             if(trackName !== undefined) {
-                modifiedPlay.data.track = trackName;
+                modifiedPlay.data.track = {...modifiedPlay.data.track, name: trackName};
             }
             if(albumName !== undefined) {
-                modifiedPlay.data.album = albumName;
+                modifiedPlay.data.album = {...modifiedPlay.data.album, name: albumName};
             }
 
             return {payload: scrobblePayload, response, mergedScrobble: modifiedPlay, createdAt: dayjs().toISOString()};
@@ -663,26 +665,18 @@ export const scrobblePayloadToPlay = (obj: LastFmSingleSubmitPayload): PlayObjec
 
     const play: PlayObjectMinimal = {
         data: {
-            track,
-            album: nonEmptyStringOrDefault(album),
-            albumArtists: typeof albumArtist === 'string' && nonEmptyStringOrDefault(albumArtist) !== undefined ? [artistNameToCredit(albumArtist)] : undefined,
+            track: nameToCredit(track, mbMeta(nonEmptyStringOrDefault(mbid), 'recording')),
+            album: nameToCredit(nonEmptyStringOrDefault(album)),
+            albumArtists: typeof albumArtist === 'string' && nonEmptyStringOrDefault(albumArtist) !== undefined ? [nameToCredit(albumArtist)] : undefined,
             duration: typeof duration === 'string' ? parseInt(duration, 10) : duration,
             playDate: ts,
-            artists: artistNamesToCredits(artists)
+            artists: namesToCredits(artists)
         },
         meta: {
             source: 'lastfm',
             nowPlaying: obj.method === 'track.updateNowPlaying'
         }
     };
-
-    if(nonEmptyStringOrDefault(mbid) !== undefined) {
-        play.data.meta = {
-            brainz: {
-                recording: mbid
-            }
-        };
-    }
 
     return baseFormatPlayObj(obj, play);
 }
@@ -696,13 +690,9 @@ export const playToClientPayload = (playObj: PlayObject): LastFMScrobblePayload 
                 track,
                 duration,
                 playDate,
-                meta: {
-                    brainz: {
-                        recording: mbid
-                    } = {},
-                } = {}
             } = {}
         } = playObj;
+        const mbid = creditMbid(track, 'recording');
 
         // LFM does not support multiple artists in scrobble payload
         // https://www.last.fm/api/show/track.scrobble
@@ -722,8 +712,8 @@ export const playToClientPayload = (playObj: PlayObject): LastFMScrobblePayload 
             artist: artist,
             // track is required by LFM, an empty value will be rejected upstream
             // but we don't throw here since this is also used to build payloads for logging failed scrobbles
-            track: track ?? '',
-            album,
+            track: track?.name ?? '',
+            album: album?.name,
             timestamp: getScrobbleTsSOCDate(playObj).unix(),
             mbid,
             ...additionalRichPayload
@@ -783,17 +773,12 @@ export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectO
             al = undefined;
         }
     }
-    const brainz = removeUndefinedKeys<BrainzMeta>({
-        album: nonEmptyStringOrDefault<undefined>(albumMbid),
-        artist: splitByFirstFound<undefined>(artistMbid, [',',';'], undefined),
-        recording: nonEmptyStringOrDefault<undefined>(mbid)
-    });
 
     const play: PlayObjectMinimal = {
         data: {
-            artists: artistNamesToCredits([...new Set(artistStrings)] as string[]),
-            track: title,
-            album: al,
+            artists: creditsWithIds(namesToCredits([...new Set(artistStrings)] as string[]), splitByFirstFound<undefined>(artistMbid, [',',';'], undefined), 'musicbrainz', 'artist'),
+            track: nameToCredit(title, mbMeta(mbid, 'recording')),
+            album: nameToCredit(al, mbMeta(albumMbid, 'release')),
             duration,
             playDate: time !== undefined ? dayjs.unix(typeof time === 'string' ? Number.parseInt(time, 10) : time) : undefined
         },
@@ -806,11 +791,6 @@ export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectO
         }
     }
 
-    if(brainz !== undefined && !objectIsEmpty(brainz)) {
-        play.data.meta = {
-            brainz
-        }
-    }
     return baseFormatPlayObj(obj, play);
 }
 
@@ -1040,19 +1020,19 @@ export const playToScrobbleApiResponseJson = (play: PlayObject) => {
                 scrobble: {
                     track: {
                         corrected: 0,
-                        '#text': play.data.track ?? ''
+                        '#text': play.data.track?.name ?? ''
                     },
                     artist: {
                         corrected: 0,
-                        '#text': play.data.artists?.join(',') as string
+                        '#text': creditsToNames(play.data.artists).join(',')
                     },
                     album: {
                         corrected: 0,
-                        '#text': play.data.album ?? ''
+                        '#text': play.data.album?.name ?? ''
                     },
                     albumArtist: {
                         corrected: 0,
-                        '#text': play.data.albumArtists?.join(',') as string
+                        '#text': creditsToNames(play.data.albumArtists).join(',')
                     },
                     timestamp: dayjs().unix(),
                     ignoredMessage: {
@@ -1070,19 +1050,19 @@ export const playToNowPlayingApiResponseJson = (play: PlayObject) => {
             nowplaying: {
                     track: {
                         corrected: 0,
-                        '#text': play.data.track ?? ''
+                        '#text': play.data.track?.name ?? ''
                     },
                     artist: {
                         corrected: 0,
-                        '#text': play.data.artists?.join(',')
+                        '#text': creditsToNames(play.data.artists).join(',')
                     },
                     album: {
                         corrected: 0,
-                        '#text': play.data.album ?? ''
+                        '#text': play.data.album?.name ?? ''
                     },
                     albumArtist: {
                         corrected: 0,
-                        '#text': play.data.albumArtists?.join(',')
+                        '#text': creditsToNames(play.data.albumArtists).join(',')
                     },
                     ignoredMessage: {
                         code: 0,
@@ -1103,19 +1083,19 @@ export const playToScrobbleApiResponseXml = (play: PlayObject) => {
                 scrobble: {
                     track: {
                         $: {corrected: 0},
-                        _: play.data.track ?? ''
+                        _: play.data.track?.name ?? ''
                     },
                     artist: {
                         $: {corrected: 0},
-                        _: play.data.artists?.join(',') ?? ''
+                        _: creditsToNames(play.data.artists).join(',')
                     },
                     album: {
                         $: {corrected: 0},
-                        _: play.data.album ?? ''
+                        _: play.data.album?.name ?? ''
                     },
                     albumArtist: {
                         $: {corrected: 0},
-                        _: play.data.albumArtists?.join(',') ?? ''
+                        _: creditsToNames(play.data.albumArtists).join(',')
                     },
                     timestamp: {
                         _: dayjs().unix(),
@@ -1138,19 +1118,19 @@ export const playToNowPlayingApiResponseXml = (play: PlayObject) => {
             nowplaying: {
                 track: {
                     $: { corrected: 0 },
-                    _: play.data.track ?? ''
+                    _: play.data.track?.name ?? ''
                 },
                 artist: {
                     $: { corrected: 0 },
-                    _: play.data.artists?.join(',') ?? ''
+                    _: creditsToNames(play.data.artists).join(',')
                 },
                 album: {
                     $: { corrected: 0 },
-                    _: play.data.album ?? ''
+                    _: play.data.album?.name ?? ''
                 },
                 albumArtist: {
                     $: { corrected: 0 },
-                    _: play.data.albumArtists?.join(',') ?? ''
+                    _: creditsToNames(play.data.albumArtists).join(',')
                 },
                 ignoredMessage: {
                     $: { code: 0 }

@@ -4,7 +4,7 @@
       "artists": [
         {"name": "Kaidi Tatham"}
       ],
-      "track": "Fricassee",
+      "track": {"name": "Fricassee"},
       "duration": 305,
       "listenedFor": 305,
       "playDate": "2023-09-20T14:32:39.000Z"
@@ -18,7 +18,7 @@
       "artists": [
         {"name": "Kuna Maze"}
       ],
-      "track": "Jimbó",
+      "track": {"name": "Jimbó"},
       "duration": 255,
       "listenedFor": 254,
       "playDate": "2023-09-20T14:46:00.000Z"
@@ -33,7 +33,7 @@
         {"name": "Norman Person"},
         {"name": "Shamek Farrah"}
       ],
-      "track": "Aisha",
+      "track": {"name": "Aisha"},
       "duration": 559,
       "listenedFor": 559,
       "playDate": "2023-09-20T15:10:09.000Z"
@@ -48,7 +48,7 @@
         {"name": "Frédéric Chopin"},
         {"name": "Krystian Zimerman"}
       ],
-      "track": "Ballade No. 4 in F Minor, Op. 52",
+      "track": {"name": "Ballade No. 4 in F Minor, Op. 52"},
       "duration": 575,
       "listenedFor": 550,
       "playDate": "2023-09-20T15:17:12.000Z"
@@ -63,7 +63,7 @@
         {"name": "Nidia Gongora"},
         {"name": "The Bongo Hop"}
       ],
-      "track": "Sonora",
+      "track": {"name": "Sonora"},
       "duration": 327,
       "listenedFor": 300,
       "playDate": "2023-09-27T20:02:17.000Z"
@@ -77,7 +77,7 @@
       "artists": [
         {"name": "Cheo Feliciano"}
       ],
-      "track": "Aprieta (Oye Cómo Va)",
+      "track": {"name": "Aprieta (Oye Cómo Va)"},
       "duration": 195,
       "listenedFor": 190,
       "playDate": "2023-09-20T15:38:12.000Z"
@@ -91,7 +91,7 @@
       "artists": [
         {"name": "Pink Floyd"}
       ],
-      "track": "Another Brick in the Wall, Pt. 1",
+      "track": {"name": "Another Brick in the Wall, Pt. 1"},
       "duration": 192,
       "listenedFor": 190,
       "playDate": "2023-09-20T15:39:12.000Z"
@@ -106,7 +106,7 @@
         {"name": "Frédéric Chopin"},
         {"name": "Krystian Zimerman"}
       ],
-      "track": "Ballade No. 1 in G Minor, Op. 23",
+      "track": {"name": "Ballade No. 1 in G Minor, Op. 23"},
       "duration": 575,
       "listenedFor": 560,
       "playDate": "2023-09-20T15:41:12.000Z"
@@ -122,7 +122,7 @@
         {"name": "Jazz Funk"},
         {"name": "Disco with Mehdi El"}
       ],
-      "track": "Aquil",
+      "track": {"name": "Aquil"},
       "duration": 230,
       "listenedFor": 200,
       "playDate": "2023-09-20T17:55:05.000Z"
@@ -136,7 +136,7 @@
       "artists": [
         {"name": "Outkast"}
       ],
-      "track": "Da Art of Storytellin' (Pt. 1)",
+      "track": {"name": "Da Art of Storytellin' (Pt. 1)"},
       "duration": 422,
       "listenedFor": 400,
       "playDate": "2023-09-20T15:39:12.000Z"

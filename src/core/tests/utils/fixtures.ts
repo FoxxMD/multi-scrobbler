@@ -1,7 +1,6 @@
-import { Traverse } from 'neotraverse/modern';
 import { faker } from '@faker-js/faker';
 import { type AmbPlayObject, type DateLike, type LifecycleInput, type LifecycleStep, type ObjectPlayData, PLAY_STATES, type PlayMatchResult, type PlayMeta, type PlayObject, type PlayOriginal, type PlayState, type ScrobbleResult } from '../../Atomic.ts';
-import { generateBrainz, generateMbid, generatePlay, type GeneratePlayOpts, generatePlays } from './PlayTestUtils.ts';
+import { generatePlay, type GeneratePlayOpts, generatePlays, withBrainz } from './PlayTestUtils.ts';
 import { statefulInvariantTransform } from '../../PlayUtils.ts';
 import clone from 'clone';
 import { diffObjects } from '../../DataUtils.ts';
@@ -165,7 +164,7 @@ export interface GenerateLifecycleOptions {
   inputCount?: number
 }
 
-const modifiableKeys: PropertyKey[] = ['track', 'album', 'albumArtists', 'artists', 'duration', 'meta','brainz'];
+const modifiableKeys = ['track', 'album', 'albumArtists', 'artists', 'duration'] as const;
 export const generateLifecycleStep = (play: PlayObject, opts: GenerateLifecycleOptions = {}): [LifecycleStep, PlayObject] => {
 
   const {
@@ -218,38 +217,22 @@ export const generateLifecycleStep = (play: PlayObject, opts: GenerateLifecycleO
     return [step, play];
   }
 
-  play.data.meta = {
-    ...(play.data?.meta ?? {}),
-    brainz: {
-      ...(play.data?.meta?.brainz ?? {})
-    }
-  }
-
   const modifiedPlay = clone(play);
   const randomPlay = generatePlay();
   let somethingModified = false;
   while (!somethingModified) {
-    new Traverse(modifiedPlay).forEach((ctx, x) => {
-      if (modifiableKeys.includes(ctx.key!)) {
-        if (faker.datatype.boolean(0.3)) {
-          if(ctx.key === 'meta' && (ctx.parent === undefined || ctx.parent.key !== 'data')) {
-            return;
-          }
-          somethingModified = true;
-          if(ctx.key === 'brainz' && Object.keys(x ?? {}).length === 0) {
-              ctx.update(generateBrainz(play, {include: ['album', 'artist', 'track','recording']}), true);
-          } else if (ctx.parent !== undefined && ctx.parent.key === 'brainz') {
-            if (Array.isArray(x)) {
-              ctx.update(faker.helpers.multiple(generateMbid, { count: { min: 1, max: 3 } }));
-            } else {
-              ctx.update(generateMbid());
-            }
-          } else {
-            ctx.update(randomPlay.data[ctx.key as keyof typeof randomPlay.data]);
-          }
-        }
+    for (const key of modifiableKeys) {
+      if (faker.datatype.boolean(0.3)) {
+        somethingModified = true;
+        (modifiedPlay.data as Record<string, unknown>)[key] = randomPlay.data[key];
       }
-    });
+    }
+    if (faker.datatype.boolean(0.3)) {
+      // adds mbids to any credits that don't already have them
+      const before = JSON.stringify(modifiedPlay.data);
+      withBrainz(modifiedPlay, {include: ['album', 'artist', 'track', 'recording']});
+      somethingModified = somethingModified || before !== JSON.stringify(modifiedPlay.data);
+    }
   }
 
   step.patch = diffObjects(play.data, modifiedPlay.data);// jdiff.diff(play, modifiedPlay);

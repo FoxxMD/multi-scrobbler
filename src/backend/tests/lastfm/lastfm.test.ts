@@ -1,10 +1,11 @@
+import { creditIds, creditMbid } from "../../../core/MusicMetadata.ts";
 import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { describe, it } from 'mocha';
 import { generateLastfmTrackObject, generateMbid, generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
 
 import LastfmApiClient, { playToClientPayload, formatPlayObj } from '../../common/vendor/LastfmApiClient.ts';
-import { artistNamesToCredits } from '../../../core/StringUtils.ts';
+import { namesToCredits } from '../../../core/StringUtils.ts';
 import { withRequestInterception } from '../utils/networking.ts';
 import { http, HttpResponse } from "msw";
 import { loggerDebug, loggerTest } from '@foxxmd/logging';
@@ -19,10 +20,10 @@ chai.use(asPromised);
 describe('#LFM Scrobble Payload Behavior', function () {
 
         it('Should remove VA from album artist', function() {
-            const play = generatePlay({albumArtists: artistNamesToCredits(['VA'])});
+            const play = generatePlay({albumArtists: namesToCredits(['VA'])});
             expect(playToClientPayload(play).albumArtist).to.be.undefined;
 
-            const okPlay = generatePlay({albumArtists: artistNamesToCredits(['My Dude'])});
+            const okPlay = generatePlay({albumArtists: namesToCredits(['My Dude'])});
             expect(playToClientPayload(okPlay).albumArtist).eq('My Dude');
         });
 });
@@ -34,24 +35,24 @@ describe('#LFM Track to Play', function() {
         const to = generateLastfmTrackObject();
         const play = formatPlayObj(to);
 
-        expect(play.data.meta?.brainz?.album).to.be.undefined;
-        expect(play.data.meta?.brainz?.artist).to.be.undefined;
-        expect(play.data.meta?.brainz?.recording).to.be.undefined;
+        expect(creditMbid(play.data.album, 'release')).to.be.undefined;
+        expect(creditIds(play.data.artists, 'musicbrainz', 'artist')).to.be.empty;
+        expect(creditMbid(play.data.track, 'recording')).to.be.undefined;
     });
 
-    it('Sets brainz if any mbid is not undefined', function() {
+    it('Sets mbids on credits if any mbid is not undefined', function() {
 
         const toAlbum = generateLastfmTrackObject();
         toAlbum.album.mbid = generateMbid();
-        expect(formatPlayObj(toAlbum).data.meta?.brainz?.album).to.not.be.undefined;
+        expect(creditMbid(formatPlayObj(toAlbum).data.album, 'release')).to.eq(toAlbum.album.mbid);
 
         const toArtist = generateLastfmTrackObject();
         toArtist.artist.mbid = generateMbid();
-        expect(formatPlayObj(toArtist).data.meta?.brainz?.artist).to.not.be.undefined;
+        expect(creditIds(formatPlayObj(toArtist).data.artists, 'musicbrainz', 'artist')).to.eql([toArtist.artist.mbid]);
 
         const toTrack = generateLastfmTrackObject();
         toTrack.mbid = generateMbid();
-        expect(formatPlayObj(toTrack).data.meta?.brainz?.recording).to.not.be.undefined;
+        expect(creditMbid(formatPlayObj(toTrack).data.track, 'recording')).to.eq(toTrack.mbid);
     });
 
         it('Sets artist correctly from #text or name', function() {

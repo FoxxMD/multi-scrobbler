@@ -176,7 +176,7 @@ describe('Subsonic playback reports', () => {
         }));
 
         expect(state.platformId).to.deep.equal(['player-id', 'user']);
-        expect(state.play!.data.track).to.equal('Track');
+        expect(state.play!.data.track?.name).to.equal('Track');
         expect(state.status).to.equal(REPORTED_PLAYER_STATUSES.playing);
         expect(state.position).to.equal(12.345);
         expect(state.play!.meta.trackProgressPosition).to.equal(12.345);

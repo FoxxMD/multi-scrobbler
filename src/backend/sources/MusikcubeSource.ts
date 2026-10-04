@@ -18,7 +18,7 @@ import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import { normalizeWSAddress } from "../utils/NetworkUtils.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
-import { artistNamesToCredits } from "../../core/StringUtils.ts";
+import { namesToCredits, nameToCredit } from "../../core/StringUtils.ts";
 import { AuthError } from "../common/errors/MSErrors.ts";
 
 const CLIENT_STATE = {
@@ -187,10 +187,10 @@ export class MusikcubeSource extends MemoryPositionalSource {
         }
         const play: PlayObjectMinimal = {
             data: {
-                artists: artistNamesToCredits(artists),
-                albumArtists: artistNamesToCredits(albumArtists),
-                album: album === '' ? undefined : album,
-                track: title === '' ? undefined: title,
+                artists: namesToCredits(artists),
+                albumArtists: namesToCredits(albumArtists),
+                album: nameToCredit(album === '' ? undefined : album),
+                track: nameToCredit(title === '' ? undefined: title),
                 duration: playing_duration
             },
             meta: {

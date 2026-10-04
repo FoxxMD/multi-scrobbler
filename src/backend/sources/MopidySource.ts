@@ -6,7 +6,7 @@ import normalizeUrl from 'normalize-url';
 import pEvent from 'p-event';
 import { URL } from "url";
 import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
-import { artistNamesToCredits, buildTrackString } from "../../core/StringUtils.ts";
+import { namesToCredits, buildTrackString, nameToCredit } from "../../core/StringUtils.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
@@ -162,10 +162,10 @@ export class MopidySource extends MemoryPositionalSource {
 
         const play: PlayObjectMinimal = {
             data: {
-                track: name,
-                album: albumName,
-                albumArtists: artistNamesToCredits(actualAlbumArtists.length > 0 ? actualAlbumArtists.map(x => x.name) : []),
-                artists: artistNamesToCredits(artists.length > 0 ? artists.map(x => x.name) : []),
+                track: nameToCredit(name),
+                album: nameToCredit(albumName),
+                albumArtists: namesToCredits(actualAlbumArtists.length > 0 ? actualAlbumArtists.map(x => x.name) : []),
+                artists: namesToCredits(artists.length > 0 ? artists.map(x => x.name) : []),
                 duration: length !== undefined ? Math.round(length / 1000) : undefined,
                 playDate: dayjs()
             },

@@ -1,10 +1,11 @@
 import { faker } from "@faker-js/faker";
 import type {AlbumSearchResult, ArtistSearchResult, ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentHistoricalApi, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi, TrackSearchResult} from "../../Api.ts";
 import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ComponentType, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes, type MBID } from "../../Atomic.ts";
-import { generateArtist, generateArtistCredit, generateMbid, generatePlay, normalizePlays } from "./PlayTestUtils.ts";
+import { generateArtist, generateMbid, generatePlay, normalizePlays } from "./PlayTestUtils.ts";
 import { generatePlayInput, generatePlayWithLifecycle, playWithLifecycleScrobble, randomPlayState } from "./fixtures.ts";
 import { asJsonPlayObject } from "../../PlayMarshalUtils.ts";
 import { generatePlayUid } from "../../StringUtils.ts";
+import { withAlbumArt } from "../../MusicMetadata.ts";
 import dayjs, { type Dayjs } from "dayjs";
 import { isSourceType } from "../../Atomic.ts";
 import { sourceTypes } from "../../Atomic.ts";
@@ -67,8 +68,7 @@ export const generatePlayInputApi = (inputData: Partial<PlayInputApi> = {}, ...a
         createdAt,
         data: res.data,
         play: res.play !== undefined ? asJsonPlayObject(res.play) : undefined,
-        ...inputData,
-    }
+        ...inputData }
 }
 
 export const generateQueueStateApi = (data: Partial<QueueStateApi>): QueueStateApi => {
@@ -92,8 +92,7 @@ export const generatePlayApiCommonDetailed = (opts: {
     const {
         playOpts = [],
         inputOpts = [],
-        queueOpts = [],
-    } =  opts;
+        queueOpts = [] } =  opts;
 
     const playCommon = generatePlayApiCommon(...playOpts);
     const inputRes = generatePlayInputApi(...inputOpts);
@@ -208,8 +207,7 @@ export const generateSourceApiJson = (data: Partial<ComponentSourceApi> = {}): C
         supportsUpstreamRecentlyPlayed = faker.datatype.boolean(),
         tracksDiscovered = faker.number.int({min: 1, max: 2000}),
         players = (data.players ?? {}),
-        sleeping = false,
-    } = data;
+        sleeping = false } = data;
     return {
         lastImport: undefined,
         lastImportSuccess: undefined,
@@ -239,8 +237,7 @@ export const generateClientApiJson = (data: Partial<ComponentClientApi> = {}): C
         ...rest
     });
     const {
-        players = (data.players ?? {}),
-    } = data;
+        players = (data.players ?? {}) } = data;
     return {
         lastImport: undefined,
         lastImportSuccess: undefined,
@@ -301,12 +298,8 @@ export const generateSourcePlayerJson = (data: Partial<SourcePlayerJson> = {}, o
     } = data;
 
     if(opts.art) {
-        play.meta = {
-            ...(play.meta),
-            art: {
-                album: 'https://placehold.co/400',
-                ...(play.meta?.art ?? {})
-            }
+        if(play.data.album?.image === undefined) {
+            play.data = withAlbumArt(play.data, 'https://placehold.co/400');
         }
     }
 
@@ -472,16 +465,14 @@ export function generateFakeError(depth: number = 0): Error {
     Object.defineProperty(error, 'name', {
       value: 'CustomError',
       writable: true,
-      enumerable: false,
-    });
+      enumerable: false });
  
     // Create a fake stack trace
     const stackTrace = `CustomError: ${message}\n${generateStackTrace(func)}`;
     Object.defineProperty(error, 'stack', {
       value: stackTrace,
       writable: true,
-      enumerable: false,
-    });
+      enumerable: false });
  
     // Add nested cause if depth allows
     if (currentDepth < depth) {
@@ -489,8 +480,7 @@ export function generateFakeError(depth: number = 0): Error {
       Object.defineProperty(error, 'cause', {
         value: causeError,
         writable: true,
-        enumerable: true,
-    })
+        enumerable: true })
     }
  
     return error;
@@ -525,7 +515,8 @@ export const generateArtistSearchResult = (partial: Partial<ArtistSearchResult> 
     score: faker.number.int({min: 10, max: 100}),
     service: faker.helpers.arrayElement(['spotify','musicbrainz','rocksky']),
     image: placeholderImage([300]),
-    ...generateArtistCredit(partial.name, opts.mbidVal),
+    name: faker.music.artist(),
+    mbid: opts.mbidVal === false ? undefined : (typeof opts.mbidVal === 'string' ? opts.mbidVal : generateMbid()),
     ...partial
 })
 

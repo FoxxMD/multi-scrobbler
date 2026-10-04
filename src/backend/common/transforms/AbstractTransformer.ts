@@ -7,7 +7,7 @@ import type { cacheFunctions} from "@foxxmd/regex-buddy-core";
 import {  parseToRegexOrLiteralSearch, testMaybeRegex, searchAndReplace} from "@foxxmd/regex-buddy-core";
 import type { Cacheable } from "cacheable";
 import { hashObject } from "../../utils/StringUtils.ts";
-import { playContentInvariantTransform } from "../../utils/PlayComparisonUtils.ts";
+import { playContentCacheHash } from "../../utils/PlayComparisonUtils.ts";
 import { SkipTransformStageError, StagePrerequisiteError } from "../errors/MSErrors.ts";
 import { capitalize } from "../../../core/StringUtils.ts";
 import type { StaggerOptions } from "../../utils/AsyncUtils.ts";
@@ -65,7 +65,7 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
         const {
             useCachedResult = true,
         } = (opts ?? {});
-        const cacheKey = `transformResult-${this.configHash}-${hashObject(data)}-${hashObject(playContentInvariantTransform(play))}`
+        const cacheKey = `transformResult-${this.configHash}-${hashObject(data)}-${playContentCacheHash(play)}`
         try {
             const cachedTransformData = useCachedResult ? await this.cache.get<T>(cacheKey) : undefined;
             if(cachedTransformData !== undefined) {

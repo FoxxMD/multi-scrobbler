@@ -8,7 +8,7 @@ import { Cacheable } from "cacheable";
 import { DEFAULT_ROCKSKY_MISSING_TYPES, type PlayObject } from "../../../core/Atomic.ts";
 import { getPathFromCWD } from '../../common/index.ts';
 import path from 'path';
-import { artistNamesToCredits } from '../../../core/StringUtils.ts';
+import { namesToCredits, nameToCredit } from '../../../core/StringUtils.ts';
 import type { RockskyApiClientConfig } from '../../common/vendor/rocksky/interfaces.ts';
 import type { MarkRequired } from 'ts-essentials';
 import RockskyTransformer, { DEFAULT_SEARCHTYPE_ORDER } from '../../common/transforms/rocksky/RockskyTransformer.ts';
@@ -47,9 +47,9 @@ describe('Rocksky API', function () {
 
             const play: PlayObject = {
                 data: {
-                    track: "Little Joe and Mary ii",
-                    artists: artistNamesToCredits(["Khruangbin"]),
-                    album: "The Universe Smiles Upon You ii"
+                    track: nameToCredit("Little Joe and Mary ii"),
+                    artists: namesToCredits(["Khruangbin"]),
+                    album: nameToCredit("The Universe Smiles Upon You ii")
                 },
                 meta: {
                     
@@ -72,7 +72,7 @@ describe('Rocksky API', function () {
         //     const play: PlayObject = {
         //         data: {
         //             track: "Come Together",
-        //             artists: artistNamesToCredits(["The Beatles"]),
+        //             artists: namesToCredits(["The Beatles"]),
         //             album: "Abbey Road",
         //             isrc: 'GBAHT1600302' // won't work
         //         },
@@ -96,9 +96,9 @@ describe('Rocksky API', function () {
 
             const play: PlayObject = {
                 data: {
-                    track: "JUST A TEST IT WON'T WORK",
-                    artists: artistNamesToCredits(["ASDNVLKUFDOSF"]),
-                    album: "FSDFDFDFDD"
+                    track: nameToCredit("JUST A TEST IT WON'T WORK"),
+                    artists: namesToCredits(["ASDNVLKUFDOSF"]),
+                    album: nameToCredit("FSDFDFDFDD")
                 },
                 meta: {
                     

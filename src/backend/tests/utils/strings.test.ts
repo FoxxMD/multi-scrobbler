@@ -1,9 +1,7 @@
 import { assert, expect } from 'chai';
 import { describe, it } from 'mocha';
-import {
-    compareNormalizedStrings,
-    normalizeStr,
-} from "../../utils/StringUtils.ts";
+import { compareNormalizedStrings } from "../../../core/StringUtils.ts";
+import { normalizeStr } from "../../../core/StringUtils.ts";
 import { replaceInterpolatedValues } from "../../utils/DataUtils.ts";
 import { splitByFirstFound } from '../../../core/StringUtils.ts';
 import { noCasePropObj } from '../../utils/DataUtils.ts';

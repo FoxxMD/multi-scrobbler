@@ -14,7 +14,7 @@ import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
 import { UpstreamError } from "../../errors/UpstreamError.ts";
 import { getMalojaResponseError, isMalojaAPIErrorBody, type MalojaResponseV3CommonData, type MalojaScrobbleData, type MalojaScrobbleV3RequestData, type MalojaScrobbleV3ResponseData, type MalojaScrobbleWarning } from "./interfaces.ts";
 import { getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext } from '../../../utils/TimeUtils.ts';
-import { artistCreditsToNames, artistNamesToCredits, buildTrackString } from '../../../../core/StringUtils.ts';
+import { creditsToNames, namesToCredits, buildTrackString, nameToCredit } from "../../../../core/StringUtils.ts";
 import { baseFormatPlayObj } from '../../../utils/PlayTransformUtils.ts';
 import { AuthError, ScrobbleSubmitError } from '../../errors/MSErrors.ts';
 import { NO_RETRY_HTTP_STATUS, tryApiCall } from '../../../utils/RequestUtils.ts';
@@ -276,8 +276,8 @@ export class MalojaApiClient extends AbstractApiClient implements PaginatedTimeR
                             album: malojaAlbum = {},
                         } = track;
                         trackResponse.track.album = {
-                            name: album,
-                            artists: artistCreditsToNames(albumArtists),
+                            name: album.name,
+                            artists: creditsToNames(albumArtists),
                             ...malojaAlbum,
                         }
                     }
@@ -417,9 +417,9 @@ export const formatPlayObj = (obj: MalojaScrobbleData, options: FormatPlayObject
     const urlParams = new URLSearchParams([['artist', artists[0]], ['title', title as string]]);
     const play: PlayObjectMinimal = {
         data: removeUndefinedKeys({
-            artists: artistNamesToCredits([...new Set(artistStrings)] as string[]),
-            track: title,
-            album,
+            artists: namesToCredits([...new Set(artistStrings)] as string[]),
+            track: nameToCredit(title),
+            album: nameToCredit(album),
             duration,
             listenedFor,
             playDate: dayjs.unix(time),
@@ -452,9 +452,9 @@ export const playToScrobblePayload = (playObj: PlayObject, apiKey?: string): Mal
     const scrobbleData: MalojaScrobbleV3RequestData = {
         // title is required by maloja, an empty value will be rejected upstream
         // but we don't throw here since this is also used to build payloads for logging failed scrobbles
-        title: track ?? '',
-        artists: artistCreditsToNames(artists),
-        album,
+        title: track?.name ?? '',
+        artists: creditsToNames(artists),
+        album: album?.name,
         key: apiKey,
         time: pd.unix(),
         // https://github.com/FoxxMD/multi-scrobbler/issues/42#issuecomment-1100184135
@@ -470,7 +470,7 @@ export const playToScrobblePayload = (playObj: PlayObject, apiKey?: string): Mal
     // https://github.com/krateng/maloja/blob/master/maloja/web/static/js/manualscrobble.js#L136
     // BUT this is not actually working!
     if (albumArtists.length > 0) {
-        scrobbleData.albumartists = artistCreditsToNames(albumArtists);
+        scrobbleData.albumartists = creditsToNames(albumArtists);
     }
     // see also https://github.com/krateng/maloja/issues/96#issuecomment-1490562761
     // https://github.com/FoxxMD/multi-scrobbler/issues/454#issuecomment-3806367420

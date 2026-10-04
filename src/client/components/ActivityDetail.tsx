@@ -17,7 +17,7 @@ import { ExpandCollapse } from "./ExpandCollapse";
 import { DebugIcon, EllipsisButton, ExclamationCircleIcon, ExclamationTriangleIcon, FinishIconRaw, InsertedIcon, type PowerOffButton, RetryButton, RetryIcon, StopButton, StopIconRaw, TrashIconRaw, UpdatedIcon } from "./icons/ChakraIcons";
 import { PlayData } from "./PlayData";
 import { TextMuted } from "./TextMuted";
-import { capitalize } from '../../core/StringUtils';
+import { capitalize, creditsToNames } from '../../core/StringUtils';
 import ky from 'ky';
 import type { IconType } from 'react-icons/lib';
 import { toaster } from "./Toaster"
@@ -125,10 +125,10 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
     return (
         <Flex direction="column" width="100%" truncate rowGap="0.5">
             <Flex width="100%" truncate>
-                <Span truncate marginEnd="auto"><HStack>{play.data.track}{ephemeralStatus}</HStack></Span>
+                <Span truncate marginEnd="auto"><HStack>{play.data.track?.name}{ephemeralStatus}</HStack></Span>
                 {/* <PlayStateBadge state={activity.state} /> */}
             </Flex>
-            <TextMuted textAlign="left" truncate>{(play.data.artists ?? []).map(x => x.name).join(' / ')}</TextMuted>
+            <TextMuted textAlign="left" truncate>{creditsToNames(play.data.artists).join(' / ')}</TextMuted>
             <HStack gap="1">
                 <ShortDateDisplay date={sortBy === 'played' ? play.data.playDate : play.meta?.seenAt} prefix={sortBy === 'played' ? 'Played' : 'Seen'} /><Separator orientation="vertical" height="4" />
                 <TextMuted>{play.meta?.source}</TextMuted>

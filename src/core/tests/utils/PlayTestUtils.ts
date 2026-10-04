@@ -5,7 +5,7 @@ import isBetween from "dayjs/plugin/isBetween.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
 import timezone from "dayjs/plugin/timezone.js";
 import utc from "dayjs/plugin/utc.js";
-import { type ArtistCredit, type BrainzMeta, FEAT, JOINERS, JOINERS_FINAL, type JsonPlayObject, type MBID, type ObjectPlayData, type PlayMeta, type PlayObject, type SourcePlayerObj } from "../../Atomic.ts";
+import { type Credit, FEAT, JOINERS, JOINERS_FINAL, type JsonPlayObject, type MBID, type ObjectPlayData, type PlayMeta, type PlayObject, type SourcePlayerObj } from "../../Atomic.ts";
 import { genGroupIdStr } from '../../PlayUtils.ts';
 import { sortByNewestPlayDate } from '../../PlayUtils.ts';
 import type { PlayerStateDataMaybePlay } from '../../../backend/common/infrastructure/Atomic.ts';
@@ -15,13 +15,13 @@ import { NO_DEVICE } from '../../Atomic.ts';
 import { CALCULATED_PLAYER_STATUSES } from '../../Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../Atomic.ts';
 import type {PlayPlatformId} from '../../Atomic.ts';
-import { arrayListAnd, artistNamesToCredits } from '../../StringUtils.ts';
+import { arrayListAnd, namesToCredits, nameToCredit } from '../../StringUtils.ts';
+import { creditMbid, mbMeta, type MBIdType, withMetadata } from '../../MusicMetadata.ts';
 import { findDelimiters } from "../../StringUtils.ts";
 import type {ListRecord} from '../../../backend/common/infrastructure/config/client/tealfm.ts';
 import { nanoid } from 'nanoid';
 import type {LastFMTrackObject} from '../../../backend/common/vendor/LastfmApiClient.ts';
 import clone from 'clone';
-import { removeUndefinedKeys } from '../../DataUtils.ts';
 import type { FmTealFeedPlay } from '../../../backend/common/vendor/teal/lexicons/index.ts';
 
 dayjs.extend(utc)
@@ -179,11 +179,11 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: PlayMeta = {}, opt
     const duration = faker.number.int({min: 30, max: 300});
     const play: PlayObject = {
         data: {
-            track: faker.music.songName(),
-            artists: artistNamesToCredits(faker.helpers.multiple(faker.music.artist, {count: {min: 1, max: 3}})),
+            track: nameToCredit(faker.music.songName()),
+            artists: namesToCredits(faker.helpers.multiple(faker.music.artist, {count: {min: 1, max: 3}})),
             duration,
             playDate: dayjs().subtract(faker.number.int({min: 1, max: 800})),
-            album: faker.music.album(),
+            album: nameToCredit(faker.music.album()),
             listenedFor: faker.number.int({min: duration * 0.5, max: duration}),
             ...data
         },
@@ -249,50 +249,30 @@ export const generateJsonPlays = (...args: Parameters<typeof generatePlays>): Js
 export interface WithBrainzOptions {
     include: ('track' | 'artist' | 'album' | 'recording' | 'releaseGroup')[]
 }
-export const generateBrainz = (play: PlayObject, opts: WithBrainzOptions): BrainzMeta => {
+/** Add generated MBIDs to the credits of a Play, for any that do not already have one */
+export const withBrainz = (play: PlayObject, opts: WithBrainzOptions): PlayObject => {
     const {include} = opts;
-    const brainz: BrainzMeta = {};
+    const {track, album, artists = []} = play.data;
+    const missing = (credit: Credit | undefined, idType: MBIdType) => creditMbid(credit, idType) === undefined ? mbMeta(generateMbid(), idType) : undefined;
     for(const i of include) {
         switch(i) {
             case 'track':
-                if(play.data.meta?.brainz?.track === undefined) {
-                    brainz.track = generateMbid();
-                }
+                play.data.track = withMetadata(play.data.track, missing(track, 'track'));
                 break;
             case 'recording':
-                if(play.data.meta?.brainz?.recording === undefined) {
-                    brainz.recording = generateMbid();
-                }
+                play.data.track = withMetadata(play.data.track, missing(track, 'recording'));
                 break;
             case 'album':
-                if(play.data.meta?.brainz?.album === undefined && play.data.album !== undefined) {
-                    brainz.album = generateMbid();
-                }
+                play.data.album = withMetadata(play.data.album, missing(album, 'release'));
                 break;
             case 'releaseGroup':
-                if(play.data.meta?.brainz?.releaseGroup === undefined) {
-                    brainz.releaseGroup = generateMbid();
-                }
+                play.data.album = withMetadata(play.data.album, missing(album, 'release-group'));
                 break;
             case 'artist':
-                if(play.data.meta?.brainz?.artist === undefined && (play.data.artists ?? []).length > 0) {
-                    const artistMbids = play.data.artists!.map(x => generateMbid());
-                    brainz.artist = artistMbids;
+                if(artists.length > 0) {
+                    play.data.artists = artists.map(x => withMetadata(x, missing(x, 'artist')));
                 }
                 break;
-        }
-    }
-
-    return brainz
-}
-
-export const withBrainz = (play: PlayObject, opts: WithBrainzOptions): PlayObject => {
-    const brainz = generateBrainz(play, opts);
-    play.data.meta = {
-        ...(play.data.meta ?? {}),
-        brainz : {
-            ...(play.data.meta?.brainz ?? {}),
-            ...brainz
         }
     }
     return play;
@@ -353,17 +333,17 @@ export const generateArtists = (num?: number, max: number = 3, opts: ArtistGener
     return artists;
 }
 
-export const generateArtistCredit = (name: string = faker.music.artist(), mbidVal: MBID | boolean = true): ArtistCredit => {
+export const generateArtistCredit = (name: string = faker.music.artist(), mbidVal: MBID | boolean = true): Credit => {
     let mbid: MBID | undefined;
     if(mbidVal === true) {
         mbid = generateMbid();
     } else if(typeof mbidVal === 'string') {
         mbid = mbidVal as MBID;
     }
-    return removeUndefinedKeys<ArtistCredit>({name, mbid})!;
+    return nameToCredit(name, mbMeta(mbid, 'artist'));
 }
 
-export const generateArtistCredits = (num?: number, max?: number, opts: ArtistGenerationOptions & {mbidVal?: boolean} = {}): ArtistCredit[] => {
+export const generateArtistCredits = (num?: number, max?: number, opts: ArtistGenerationOptions & {mbidVal?: boolean} = {}): Credit[] => {
     const artistNames = generateArtists(num, max, opts);
     return artistNames.map(x => generateArtistCredit(x, opts.mbidVal));
 }

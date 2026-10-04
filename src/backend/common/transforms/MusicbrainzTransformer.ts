@@ -1,4 +1,4 @@
-import { type ArtistCredit, DEFAULT_MISSING_TYPES, type LifecycleInput, type MissingMbidType, type OptionalCacheUsage, type PlayObject, type TrackMetaIsrc } from "../../../core/Atomic.ts";
+import { type Credit, DEFAULT_MISSING_TYPES, type LifecycleInput, type MissingMbidType, type OptionalCacheUsage, type PlayObject } from "../../../core/Atomic.ts";
 import { MB_RELEASE_GROUP_SECONDARY_TYPES, mBReleaseSecondaryGroupTypesSchema } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import { type MBReleaseGroupSecondaryType } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import { type MBReleaseGroupPrimaryType } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
@@ -8,7 +8,8 @@ import { mBReleaseStatusesSchema } from "../vendor/musicbrainz/MusicbrainzTypes.
 import { isWhenCondition, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";
 import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../core/Transform.ts";
-import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
+import AtomicPartsTransformer, { type MetaParts } from "./AtomicPartsTransformer.ts";
+import { creditIds, creditMbid, stripCredit } from "../../../core/MusicMetadata.ts";
 import type {TransformerOptions} from "./AbstractTransformer.ts";
 import { ARTIST_WEIGHT, TITLE_WEIGHT } from "../infrastructure/Atomic.ts";
 import { DELIMITERS } from '../../../core/Atomic.ts';
@@ -155,8 +156,7 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
         releaseCountryDeny: maybeStringLowerArrayFromString.parse(releaseCountryDeny),
         releaseCountryPriority: maybeStringLowerArrayFromString.parse(releaseCountryPriority),
         allowMusicVideo,
-        ...rest,
-    };
+        ...rest };
 
     if(searchWhenMissing !== undefined) {
         config.searchWhenMissing = searchWhenMissing.map(asMissingMbid);
@@ -319,11 +319,11 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         } = stageConfig;
 
         if(logPreMbid) {
-            const a = play.data.meta?.brainz?.artist;
+            const a = creditIds(play.data.artists, 'musicbrainz', 'artist');
             const parts: string[] = [
-                `Recording ${play.data.meta?.brainz?.recording ?? '(None)'}`,
-                `Release ${play.data.meta?.brainz?.album ?? '(None)'}`,
-                `Artists ${a === undefined || a.length === 0 ? '(None)' : a.join(', ')}`,
+                `Recording ${creditMbid(play.data.track, 'recording') ?? '(None)'}`,
+                `Release ${creditMbid(play.data.album, 'release') ?? '(None)'}`,
+                `Artists ${a.length === 0 ? '(None)' : a.join(', ')}`,
                 `ISRC ${play.data.isrc ?? '(None)'}`
             ];
             this.logger.debug(`Original MBIDS => ${parts.join(' | ')}`);
@@ -403,23 +403,17 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
     public async searchByBasicFieldsOrMBIDs(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList> {
         const using: UsingTypes[] = [];
-        const {
-            data: {
-                meta: {
-                    brainz = {}
-                } = {}
-            } = {}
-        } = play;
+        const {track, album, artists} = play.data;
 
-        if(brainz.recording !== undefined) {
+        if(creditMbid(track, 'recording') !== undefined) {
             using.push('mbidrecording');
-        } else if(brainz.track !== undefined) {
+        } else if(creditMbid(track, 'track') !== undefined) {
             using.push('mbidtrack');
         } else {
             using.push('title');
         }
-        using.push(brainz.album !== undefined ? 'mbidrelease' : 'album');
-        using.push((brainz.artist ?? []).length > 0 ? 'mbidartist' : 'artist');
+        using.push(creditMbid(album, 'release') !== undefined ? 'mbidrelease' : 'album');
+        using.push(creditIds(artists, 'musicbrainz', 'artist').length > 0 ? 'mbidartist' : 'artist');
 
         this.logger.debug({labels: ['Basic Or MBID Search']}, `Searching using ${using.join(', ')}}`);
         return await this.api.searchByRecording(play, {using, ...opts});
@@ -434,7 +428,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
     }
 
     public async searchByRecordingMbid(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList> {
-        if(play.data.meta?.brainz?.recording !== undefined) {
+        if(creditMbid(play.data.track, 'recording') !== undefined) {
             this.logger.debug({labels: ['MBID Search']},'Searching with Recording MBID');
             return await this.api.searchByRecording(play, {using: ['mbidrecording'], ...opts});
         }
@@ -460,8 +454,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
     public async searchByArtist(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList> {
         const {
-            searchArtistMethod = this.defaults.searchArtistMethod,
-        } = stageConfig;
+            searchArtistMethod = this.defaults.searchArtistMethod } = stageConfig;
         if(play.data.artists === undefined) {
             throw new SearchPrerequisiteError('Play does not have any artists');
         }
@@ -572,7 +565,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         return recordingPlay;
     }
 
-    protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<string | undefined> {
+    protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<Credit | undefined> {
         if (parts === false) {
             return play.data.track;
         }
@@ -585,9 +578,10 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             }
         }
 
-        return transformData.data.track;
+        // only the name, ids are applied by handleMeta
+        return transformData.data.track !== undefined ? stripCredit(transformData.data.track) : undefined;
     }
-    protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<ArtistCredit[] | undefined> {
+    protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<Credit[] | undefined> {
         if (parts === false) {
             return play.data.artists;
         }
@@ -600,9 +594,11 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             }
         }
 
-        return transformData.data.artists;
+        // only the names, ids are applied by handleMeta
+
+        return transformData.data.artists?.map(stripCredit);
     }
-    protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<ArtistCredit[] | undefined> {
+    protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<Credit[] | undefined> {
         if (parts === false) {
             return play.data.albumArtists;
         }
@@ -614,9 +610,10 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
                 }
             }
         }
-        return transformData.data.albumArtists;
+        // only the names, ids are applied by handleMeta
+        return transformData.data.albumArtists?.map(stripCredit);
     }
-    protected async handleAlbum(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<string | undefined> {
+    protected async handleAlbum(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<Credit | undefined> {
         if (parts === false) {
             return play.data.album;
         }
@@ -629,7 +626,8 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             }
         }
 
-        return transformData.data.album;
+        // only the name, ids are applied by handleMeta
+        return transformData.data.album !== undefined ? stripCredit(transformData.data.album) : undefined;
     }
     protected async handleDuration(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<number | undefined> {
         if (parts === false || transformData.data.duration === undefined) {
@@ -647,7 +645,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         return transformData.data.duration;
     }
 
-    protected async handleMeta(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<TrackMetaIsrc | undefined> {
+    protected async handleMeta(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<MetaParts | undefined> {
         if (parts === false) {
             return play.data.meta;
         }
@@ -659,7 +657,8 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
                 }
             }
         }
-        return removeUndefinedKeys<TrackMetaIsrc>({...transformData.data.meta, isrc: transformData.data.isrc});
+        const {track, album, artists, albumArtists, meta, isrc} = transformData.data;
+        return removeUndefinedKeys<MetaParts>({...meta, isrc, credits: {track, album, artists, albumArtists}});
     }
 
     public async notify(payload: WebhookPayload): Promise<void> {
@@ -768,7 +767,7 @@ export const filterByValidReleaseCountry = (list: IRecordingMatch[], stageConfig
 }
 
 export const filterByExplicitTrackMbid = (list: IRecordingMatch[], play: PlayObject): [IRecordingMatch[], boolean] => {
-    const trackMbid = play.data.meta?.brainz?.track;
+    const trackMbid = creditMbid(play.data.track, 'track');
     if (trackMbid === undefined) {
         return [list, false];
     }
@@ -803,7 +802,7 @@ export const filterByExplicitTrackMbid = (list: IRecordingMatch[], play: PlayObj
 }
 
 export const filterByExplicitReleaseMbid = (list: IRecordingMatch[], play: PlayObject): [IRecordingMatch[], boolean] => {
-    const albumMbid = play.data.meta?.brainz?.album;
+    const albumMbid = creditMbid(play.data.album, 'release');
     if (albumMbid === undefined) {
         return [list, false];
     }
@@ -857,7 +856,7 @@ export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: Mus
             const grpPAScore = groupPrimaryPriority.findIndex(x => x === a["release-group"]?.["primary-type"]?.toLocaleLowerCase()) + 1;
             const grpSAScore = (a["release-group"]?.["secondary-types"] ?? []).reduce((acc: number, curr: string) => acc + groupSecPriority.findIndex(x => x === (curr as MBReleaseGroupSecondaryType).toLocaleLowerCase()) + 1,0);
             const countryAScore = countryPriority.findIndex(x => a.country === undefined ? false : x === a.country.toLocaleLowerCase()) + 1;
-            const compareScore = scoreNormalizedStringsWeighted(play.data.album, a.title, albumWeight, albumWeight !== 0 ? 0.05 : 0);
+            const compareScore = scoreNormalizedStringsWeighted(play.data.album?.name, a.title, albumWeight, albumWeight !== 0 ? 0.05 : 0);
             return {
                 ...a,
                 albumScore: statAScore + grpPAScore + grpSAScore + countryAScore + compareScore,
@@ -869,7 +868,7 @@ export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: Mus
         if(releases.length > 0) {
             albumScore = releases[0].albumCompareScore;
         }
-        const titleScore = titleWeight === 0 ? 0 : scoreTrackWeightedAndNormalized(play.data.track ?? '', x.title, titleWeight, {exact: 0.05, naive: 0.03})[0];
+        const titleScore = titleWeight === 0 ? 0 : scoreTrackWeightedAndNormalized(play.data.track?.name ?? '', x.title, titleWeight, {exact: 0.05, naive: 0.03})[0];
 
         return {
             ...x,
