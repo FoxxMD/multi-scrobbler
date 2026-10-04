@@ -4,7 +4,8 @@ export const musicServiceName = z.enum(['spotify', 'musicbrainz', 'youtube', 'je
 export type MusicServiceName = z.infer<typeof musicServiceName>;
 
 export const musicServiceBaseSchema = z.object({
-    name: musicServiceName
+    name: musicServiceName,
+    image: z.string().optional()
 });
 export type MusicServiceBase = z.infer<typeof musicServiceBaseSchema>;
 
@@ -12,7 +13,6 @@ export const musicServiceIdBaseSchema = z.object({
     ...musicServiceBaseSchema.shape,
     id: z.string(),
     idType: z.string().optional(),
-    image: z.string().optional()
 });
 export type MusicServiceIdBase = z.infer<typeof musicServiceIdBaseSchema>;
 
