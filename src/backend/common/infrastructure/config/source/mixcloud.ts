@@ -8,13 +8,31 @@ export const mixcloudDataSchema = z.object({
     /**
      * Mixcloud username whose listening history should be monitored
      *
+     * Only required when clientId/clientSecret are not defined. When authenticating
+     * with an application the username is discovered from the authorized user's profile.
+     *
      * This is the last part of your profile URL IE https://www.mixcloud.com/MyUsername/ => MyUsername
      *
      * @examples ["MyUsername"]
      * */
-    username: z.string().meta({
-        description: "Mixcloud username whose listening history should be monitored",
+    username: z.string().optional().meta({
+        description: "Mixcloud username whose listening history should be monitored. Only required when clientId/clientSecret are not defined.",
         examples: ["MyUsername"]
+    }),
+    /**
+     * Client ID of a Mixcloud application, from https://www.mixcloud.com/developers/
+     *
+     * When defined (with clientSecret) the source authenticates with OAuth and can monitor
+     * private (pro account) listening histories. The username is then optional.
+     * */
+    clientId: z.string().optional().meta({
+        description: "Client ID of a Mixcloud application, from https://www.mixcloud.com/developers/. When defined (with clientSecret) the source authenticates with OAuth and can monitor private (pro account) listening histories."
+    }),
+    /**
+     * Client secret of a Mixcloud application, from https://www.mixcloud.com/developers/
+     * */
+    clientSecret: z.string().optional().meta({
+        description: "Client secret of a Mixcloud application, from https://www.mixcloud.com/developers/."
     }),
 });
 
@@ -30,6 +48,8 @@ export type MixcloudSourceConfig = z.infer<typeof mixcloudSourceConfigSchema>;
 
 const envDataSchema = z.object({
     MIXCLOUD_USERNAME: mixcloudDataSchema.shape.username,
+    MIXCLOUD_CLIENT_ID: mixcloudDataSchema.shape.clientId,
+    MIXCLOUD_CLIENT_SECRET: mixcloudDataSchema.shape.clientSecret,
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, MixcloudSourceConfig> = {
@@ -37,7 +57,9 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, MixcloudSourceCon
     prefix: 'MIXCLOUD',
     toConfig: (partial) => ({
         data: {
-            username: partial.MIXCLOUD_USERNAME
+            username: partial.MIXCLOUD_USERNAME,
+            clientId: partial.MIXCLOUD_CLIENT_ID,
+            clientSecret: partial.MIXCLOUD_CLIENT_SECRET
         }
     })
 };
