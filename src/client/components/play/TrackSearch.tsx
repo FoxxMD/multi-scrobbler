@@ -10,7 +10,7 @@ import { type ArtMeta, type PlayObjectMinimal } from "../../../core/Atomic.js";
 import { removeUndefinedKeys } from "../../../core/DataUtils.js";
 import { MusicServiceIndicators } from "../musicServices/MusicServiceIndicators.js";
 import { albumSearchResultToMusicServices } from "./AlbumSearch.js";
-import type { MusicServicesAny } from "../musicServices/musicServiceTypes.js";
+import type { MusicServicesAny } from '../../../core/MusicMetadata.js';
 
 const trackPartials: MetadataPartials<TrackSearchResult> = {
     track: { label: 'Track only', pick: ({ artists, album, albumCount, ...rest }) => rest },
@@ -26,7 +26,7 @@ export const trackSearchResultToMusicServices = (val: MinimalResult): MusicServi
         musicServices.push({ name: 'musicbrainz', id: val.mbidRecording, idHint: 'recording' });
     }
     if(val.spotifyId !== undefined) {
-        musicServices.push({ name: 'spotify', id: val.spotifyId, idHint: 'track' });
+        musicServices.push({ name: 'spotify', id: val.spotifyId, idType: 'track' });
     }
     return musicServices;
 }

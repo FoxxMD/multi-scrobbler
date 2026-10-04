@@ -3,7 +3,7 @@ import type { ArtistCredit as AC } from '../../core/Atomic';
 
 import { HStack, Tag } from "@chakra-ui/react";
 import { MusicServiceIndicators } from './musicServices/MusicServiceIndicators';
-import type { MusicServicesAny } from './musicServices/musicServiceTypes';
+import type { MusicServicesAny } from '../../core/MusicMetadata';
 
 export const ArtistCredit = (props: { data: AC, showLinks?: boolean, showMbid?: boolean }) => {
 

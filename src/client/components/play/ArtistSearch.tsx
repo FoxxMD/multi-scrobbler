@@ -6,7 +6,7 @@ import type { ArtistSearchResult } from "../../../core/Api.js";
 import { useCallback, useEffect, useState } from "react";
 import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, type MetadataPartials } from "./MetadataResults.js";
 import { type ArtistCredit, type PlayObjectMinimal } from "../../../core/Atomic.js";
-import type { MusicServicesAny } from "../musicServices/musicServiceTypes.js";
+import type { MusicServicesAny } from '../../../core/MusicMetadata.js';
 import { MusicServiceIndicators } from "../musicServices/MusicServiceIndicators.js";
 
 const artistPartials: MetadataPartials<ArtistSearchResult> = {

@@ -1,6 +1,6 @@
-import * as z from 'zod';
+import * as z from "zod";
 
-export const musicServiceName = z.enum(['spotify','musicbrainz','youtube','jellyfin','plex','listenbrainz','rocksky']);
+export const musicServiceName = z.enum(['spotify', 'musicbrainz', 'youtube', 'jellyfin', 'plex', 'listenbrainz', 'rocksky']);
 export type MusicServiceName = z.infer<typeof musicServiceName>;
 
 export const musicServiceBaseSchema = z.object({
@@ -11,24 +11,28 @@ export type MusicServiceBase = z.infer<typeof musicServiceBaseSchema>;
 export const musicServiceIdBaseSchema = z.object({
     ...musicServiceBaseSchema.shape,
     id: z.string(),
-    idHint: z.string().optional()
+    idType: z.string().optional(),
+    image: z.string().optional()
 });
 export type MusicServiceIdBase = z.infer<typeof musicServiceIdBaseSchema>;
 
 export const musicServiceMBSchema = z.object({
     ...musicServiceIdBaseSchema.shape,
     name: z.literal(musicServiceName.enum.musicbrainz),
-    idHint: z.enum(['recording','release','track','artist','release-group']).optional()
+    idHint: z.enum(['recording', 'release', 'track', 'artist', 'release-group']).optional()
 });
 export type MusicServiceMB = z.infer<typeof musicServiceMBSchema>;
-
 export const musicServiceNonMBSchema = z.object({
     ...musicServiceIdBaseSchema.shape,
     name: musicServiceName.exclude(['musicbrainz']),
 });
 export type MusicServiceNonMB = z.infer<typeof musicServiceNonMBSchema>;
-
 export const musicServicesSchema = z.discriminatedUnion('name', [musicServiceMBSchema, musicServiceNonMBSchema]);
-export type MusicServices = z.infer<typeof musicServicesSchema>;
 
+export type MusicServices = z.infer<typeof musicServicesSchema>;
 export type MusicServicesAny = (MusicServices | MusicServiceBase);
+
+export const hasMusicMetadata = (meta: MusicServicesAny[],  name: MusicServiceName, idType: string) => getMusicMetadata(meta, name, idType) !== undefined
+
+export const getMusicMetadata = (meta: MusicServicesAny[],  name: MusicServiceName, idType: string) => 
+    meta.find(x => x.name === name && (idType === undefined || ('idType' in x && x.idType === idType)))

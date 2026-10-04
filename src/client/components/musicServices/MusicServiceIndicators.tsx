@@ -1,6 +1,13 @@
 import { HStack, Icon, Separator, StackSeparator, type IconProps } from "@chakra-ui/react";
 import { getMusicServiceIconElement } from "../icons/ChakraIcons";
-import { musicServiceBaseSchema, musicServiceIdBaseSchema, musicServiceName, musicServicesSchema, type MusicServiceBase, type MusicServiceName, type MusicServices, type MusicServicesAny } from "./musicServiceTypes";
+import { type MusicServicesAny } from '../../../core/MusicMetadata';
+import { type MusicServices } from '../../../core/MusicMetadata';
+import { musicServicesSchema } from '../../../core/MusicMetadata';
+import { musicServiceIdBaseSchema } from '../../../core/MusicMetadata';
+import { type MusicServiceBase } from '../../../core/MusicMetadata';
+import { musicServiceBaseSchema } from '../../../core/MusicMetadata';
+import { type MusicServiceName } from '../../../core/MusicMetadata';
+import { musicServiceName } from '../../../core/MusicMetadata';
 import { capitalize } from "../../../core/StringUtils";
 import { Muted } from "../Typography";
 import { Tooltip } from "../ChakraTooltip";
@@ -63,10 +70,10 @@ export const MusicServiceIndicator = (props: { data: MusicServices | MusicServic
     if (musicServiceIdBaseSchema.validate(data)) {
         const res = musicServicesSchema.safeParse(data)
         if (res.success && res.data.name === musicServiceName.enum.musicbrainz) {
-            const link = data.idHint !== undefined && showLink ? `https://musicbrainz.org/${data.idHint}/${data.id}` : undefined;
-            return <MusicServiceInfoIcon type={data.name} tooltip idHint={data.idHint} id={data.id} link={link} {...rest} />
+            const link = data.idType !== undefined && showLink ? `https://musicbrainz.org/${data.idType}/${data.id}` : undefined;
+            return <MusicServiceInfoIcon type={data.name} tooltip idHint={data.idType} id={data.id} link={link} {...rest} />
         }
-        return <MusicServiceInfoIcon type={data.name} id={data.id} idHint={data.idHint} {...rest} tooltip/>
+        return <MusicServiceInfoIcon type={data.name} id={data.id} idHint={data.idType} {...rest} tooltip/>
     }
 
     if (musicServiceBaseSchema.validate(data)) {
@@ -120,7 +127,7 @@ export const playMetaIdsToMusicServices = (play: JsonPlayObject, type: 'track' |
             services.push({name: 'musicbrainz', idHint: 'recording', id: brainz.recording});
         }
         if(spotify?.track !== undefined) {
-            services.push({name: 'spotify', idHint: 'track', id: spotify.track});
+            services.push({name: 'spotify', idType: 'track', id: spotify.track});
         }
         return services;
     }
@@ -131,7 +138,7 @@ export const playMetaIdsToMusicServices = (play: JsonPlayObject, type: 'track' |
             services.push({name: 'musicbrainz', idHint: 'release-group', id: brainz.releaseGroup});
         }
         if(spotify?.album !== undefined) {
-            services.push({name: 'spotify', idHint: 'album', id: spotify.album});
+            services.push({name: 'spotify', idType: 'album', id: spotify.album});
         }
         return services;
     }

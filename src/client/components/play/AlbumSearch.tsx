@@ -8,7 +8,7 @@ import { ArtistCreditTags } from "../ArtistCreditDisplay.tsx";
 import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, type MetadataPartials } from "./MetadataResults.tsx";
 import type { ArtistCredit, ArtMeta, BrainzMeta, SpotifyMeta, TrackMeta } from "../../../core/Atomic.ts";
 import { removeUndefinedKeys } from "../../../core/DataUtils.ts";
-import type { MusicServicesAny } from "../musicServices/musicServiceTypes.tsx";
+import type { MusicServicesAny } from '../../../core/MusicMetadata.ts';
 import { MusicServiceIndicators } from "../musicServices/MusicServiceIndicators.tsx";
 
 const albumPartials: MetadataPartials<AlbumSearchResult> = {

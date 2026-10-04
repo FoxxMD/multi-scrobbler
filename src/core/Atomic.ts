@@ -6,6 +6,8 @@ import type { FlowControlTerm, TransformHook } from "./Transform.ts";
 import type {Changeset} from "json-diff-ts";
 import type {IParseBaseOptions} from 'qs';
 import * as z from "zod";
+import { musicServicesSchema, type MusicServicesAny } from "./MusicMetadata.ts";
+import { httpUrl } from "../backend/utils/ZodUtils.ts";
 
 export const componentTypeClientSchema = z.literal('client');
 export type ComponentTypeClient = z.infer<typeof componentTypeClientSchema>;
@@ -142,6 +144,12 @@ export const brainzMetaSchema = z.object({
     track: mbidSchema.optional()
 })
 
+export const creditSchema = z.object({
+    name: z.string(),
+    image: httpUrl.optional(),
+    metadata: musicServicesSchema.array().optional()
+})
+export type Credit = z.infer<typeof creditSchema>;
 export interface ArtistCredit {
     name: string
     mbid?: string
