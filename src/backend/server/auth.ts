@@ -3,6 +3,7 @@ import type {Logger} from "@foxxmd/logging";
 import type LastfmScrobbler from "../scrobblers/LastfmScrobbler.ts";
 import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
 import type LastfmSource from "../sources/LastfmSource.ts";
+import type MixcloudSource from "../sources/MixcloudSource.ts";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import type SpotifySource from "../sources/SpotifySource.ts";
 import type YTMusicSource from "../sources/YTMusicSource.ts";
@@ -29,6 +30,15 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
                     res.status(400).send('Spotify configuration is not valid');
                 } else {
                     logger.info('Redirecting to spotify authorization url');
+                    res.status(200).send(source.createAuthUrl());
+                }
+            } break;
+            case 'mixcloud': {
+                const source = req.component as MixcloudSource;
+                if (source.redirectUri === undefined) {
+                    res.status(400).send('Mixcloud configuration is not valid');
+                } else {
+                    logger.info('Redirecting to mixcloud authorization url');
                     res.status(200).send(source.createAuthUrl());
                 }
             } break;
@@ -113,6 +123,38 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
                 responseContent = result;
             }
             res.send(responseContent);
+            return;
+        } else if(req.url.includes('mixcloud')) {
+            logger.info({label: 'Mixcloud'}, 'Received auth code callback from Mixcloud');
+            // the redirect uri carries the source's own name (like ytmusic) so match on it as-is
+            const source = scrobbleSources.getByNameAndType(name as string, 'mixcloud') as MixcloudSource | undefined;
+            if(source === undefined) {
+                const e = new Error(`No Mixcloud source with name ${name} was found`);
+                logger.error(e);
+                res.status(404).send(e.message);
+                return;
+            }
+            try {
+                const tokenResult = await source.handleAuthCodeCallback(req.query);
+                if (tokenResult === true) {
+                    source.clearErrors({predicate: x => findAuthIssue(x) !== undefined});
+                    source.poll().catch((e) => logger.error(e));
+                } else {
+                    if (tokenResult instanceof Error) {
+                        source.replaceErrors(tokenResult, {predicate: (x) => x.message === tokenResult.message});
+                        source.logger.error(tokenResult);
+                    } else if (typeof tokenResult === 'string') {
+                        const e = new SimpleError(`Token result was unexpected: ${tokenResult}`);
+                        source.replaceErrors(e, {predicate: (x) => x.message === e.message});
+                        source.logger.error(e);
+                    }
+                }
+            } catch (e) {
+                const err = new SimpleError('Unexpected error while trying to authorize code, or save file', { cause: e });
+                source.replaceErrors(err, {predicate: (x) => err.message === x.message});
+                source.logger.error(err);
+            }
+            res.redirect('/');
             return;
         } else {
             // TODO right now all sources requiring source interaction are covered by logic branches (deezer above and spotify here)
