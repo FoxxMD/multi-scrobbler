@@ -1,15 +1,15 @@
-import { type Credit, DEFAULT_MISSING_TYPES, type LifecycleInput, type MissingMbidType, type OptionalCacheUsage, type PlayObject } from "../../../core/Atomic.ts";
+import { type Credit, DEFAULT_MISSING_TYPES, type LifecycleInput, type MissingMbidType, type OptionalCacheUsage, type PlayObject, type TrackMetaIsrc } from "../../../core/Atomic.ts";
 import { MB_RELEASE_GROUP_SECONDARY_TYPES, mBReleaseSecondaryGroupTypesSchema } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import { type MBReleaseGroupSecondaryType } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import { type MBReleaseGroupPrimaryType } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import { mBReleasePrimaryGroupTypesSchema } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import { type MBReleaseStatus } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import { mBReleaseStatusesSchema } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
-import { isWhenCondition, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
+import { isWhenCondition } from "../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";
 import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../core/Transform.ts";
-import AtomicPartsTransformer, { type MetaParts } from "./AtomicPartsTransformer.ts";
-import { creditIds, creditMbid, stripCredit } from "../../../core/MusicMetadata.ts";
+import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
+import { creditIds, creditMbid, type CreditRules, resolveCredit, resolveCredits } from "../../../core/MusicMetadata.ts";
 import type {TransformerOptions} from "./AbstractTransformer.ts";
 import { ARTIST_WEIGHT, TITLE_WEIGHT } from "../infrastructure/Atomic.ts";
 import { DELIMITERS } from '../../../core/Atomic.ts';
@@ -565,100 +565,26 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         return recordingPlay;
     }
 
-    protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<Credit | undefined> {
-        if (parts === false) {
-            return play.data.track;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for track not met, returning original track');
-                    return play.data.track;
-                }
-            }
-        }
+    protected override readonly hydratesCredits = true;
 
-        // only the name, ids are applied by handleMeta
-        return transformData.data.track !== undefined ? stripCredit(transformData.data.track) : undefined;
+    protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit | undefined> {
+        return resolveCredit(play.data.track, transformData.data.track, rules);
     }
-    protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<Credit[] | undefined> {
-        if (parts === false) {
-            return play.data.artists;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for artists not met, returning original artists');
-                    return play.data.artists;
-                }
-            }
-        }
-
-        // only the names, ids are applied by handleMeta
-
-        return transformData.data.artists?.map(stripCredit);
+    protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit[] | undefined> {
+        return resolveCredits(play.data.artists, transformData.data.artists, rules);
     }
-    protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<Credit[] | undefined> {
-        if (parts === false) {
-            return play.data.albumArtists;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for albumArtists not met, returning original artists');
-                    return play.data.albumArtists;
-                }
-            }
-        }
-        // only the names, ids are applied by handleMeta
-        return transformData.data.albumArtists?.map(stripCredit);
+    protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit[] | undefined> {
+        return resolveCredits(play.data.albumArtists, transformData.data.albumArtists, rules);
     }
-    protected async handleAlbum(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<Credit | undefined> {
-        if (parts === false) {
-            return play.data.album;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for album not met, returning original album');
-                    return play.data.album;
-                }
-            }
-        }
-
-        // only the name, ids are applied by handleMeta
-        return transformData.data.album !== undefined ? stripCredit(transformData.data.album) : undefined;
+    protected async handleAlbum(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit | undefined> {
+        return resolveCredit(play.data.album, transformData.data.album, rules);
     }
     protected async handleDuration(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<number | undefined> {
-        if (parts === false || transformData.data.duration === undefined) {
-            return play.data.duration;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for duration not met, returning original duration');
-                    return play.data.duration;
-                }
-            }
-        }
-
-        return transformData.data.duration;
+        return transformData.data.duration ?? play.data.duration;
     }
-
-    protected async handleMeta(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<MetaParts | undefined> {
-        if (parts === false) {
-            return play.data.meta;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for duration not met, returning original duration');
-                    return play.data.meta;
-                }
-            }
-        }
-        const {track, album, artists, albumArtists, meta, isrc} = transformData.data;
-        return removeUndefinedKeys<MetaParts>({...meta, isrc, credits: {track, album, artists, albumArtists}});
+    protected async handleMeta(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<TrackMetaIsrc | undefined> {
+        const {meta, isrc} = transformData.data;
+        return removeUndefinedKeys<TrackMetaIsrc>({...meta, isrc});
     }
 
     public async notify(payload: WebhookPayload): Promise<void> {

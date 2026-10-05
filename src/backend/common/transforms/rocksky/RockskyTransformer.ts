@@ -1,9 +1,9 @@
-import { type Credit, DEFAULT_ROCKSKY_MISSING_TYPES, type LifecycleInput, type OptionalCacheUsage, type PlayObject, type RockskyMissingField } from "../../../../core/Atomic.ts";
-import { isWhenCondition, testWhenConditions } from "../../../utils/PlayTransformUtils.ts";
+import { type Credit, DEFAULT_ROCKSKY_MISSING_TYPES, type LifecycleInput, type OptionalCacheUsage, type PlayObject, type RockskyMissingField, type TrackMetaIsrc } from "../../../../core/Atomic.ts";
+import { isWhenCondition } from "../../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../../infrastructure/config/health/webhooks.ts";
 import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../../core/Transform.ts";
-import AtomicPartsTransformer, { artFromCredits, type ArtParts, type MetaParts } from "../AtomicPartsTransformer.ts";
-import { creditMbid, creditsToNames, stripCredit } from "../../../../core/MusicMetadata.ts";
+import AtomicPartsTransformer from "../AtomicPartsTransformer.ts";
+import { creditMbid, type CreditRules, creditsToNames, resolveCredit, resolveCredits } from "../../../../core/MusicMetadata.ts";
 import type {TransformerOptions} from "../AbstractTransformer.ts";
 import { DELIMITERS } from '../../../../core/Atomic.ts';
 import { MaybeLogger } from '../../MaybeLogger.ts';
@@ -133,7 +133,7 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
             type: 'rocksky'
         }
 
-        for (const k of ['artists', 'albumArtists', 'title', 'album', 'meta', 'duration'] as const) {
+        for (const k of ['artists', 'albumArtists', 'title', 'album', 'meta', 'duration', 'art'] as const) {
             if (!(k in stage)) {
                 stage[k] = true;
                 continue;
@@ -447,61 +447,47 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         return songViewPlay;
     }
 
-    protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<Credit | undefined> {
-        if (parts === false) {
-            return play.data.track;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for track not met, returning original track');
-                    return play.data.track;
-                }
-            }
-        }
+    protected override readonly hydratesCredits = true;
 
+    /**
+     * rocksky only returns brainz recording mbid right now
+     * so check for loss of fidelity or known bad sources before using its metadata
+     */
+    protected metaTrusted(play: PlayObject): boolean {
+        const {track, album, artists = [], albumArtists = []} = play.data;
+        const existingMbidTypes = new Set([track, album, ...artists, ...albumArtists]
+            .flatMap(x => x?.metadata ?? [])
+            .filter(x => x.name === 'musicbrainz')
+            .map(x => x.idType));
+
+        // only one (or none) mbids from original so likely no loss of fidelity by only using
+        // recording mbid from rocksky
+        return play.meta.source === 'lastfm' || existingMbidTypes.size <= 1;
+    }
+
+    protected rockskyCreditRules(play: PlayObject, rules: CreditRules, name: boolean): CreditRules {
+        return {name: rules.name && name, meta: rules.meta && this.metaTrusted(play), art: rules.art};
+    }
+
+    protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit | undefined> {
         // metadata needs more development on the rocksky side
         // only use it if we have no track information here
-        if(play.data.track === undefined || play.data.track.name.trim() === '') {
-            // only the name, ids are applied by handleMeta
-            return transformData.data.track !== undefined ? stripCredit(transformData.data.track) : undefined;
-        }
-
-        return play.data.track;
+        const useName = play.data.track === undefined || play.data.track.name.trim() === '';
+        return resolveCredit(play.data.track, transformData.data.track, this.rockskyCreditRules(play, rules, useName));
     }
-    protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<Credit[] | undefined> {
-        if (parts === false) {
-            return play.data.artists;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for artists not met, returning original artists');
-                    return play.data.artists;
-                }
-            }
-        }
-
+    protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit[] | undefined> {
+        const existingCount = (play.data.artists ?? []).length;
         // artist data needs development on the rocksky side
         // only use it if we have no artist information here
         // or there is a clear imbalance of fidelity biased *towards* rocksky
-        if(['spotify','listenbrainz','koito','maloja','endpointlz'].includes(play.meta?.source as string))
-        {
-            return play.data.artists;
-        }
-        // source provides no artists so anything is better than nothing
-        if((play.data.artists ?? []).length === 0) {
-            // only the names, ids are applied by handleMeta
-            return transformData.data.artists?.map(stripCredit);
-        }
-        // source provided only one artist but rocksky has real, separated artists
-        if((play.data.artists ?? []).length === 1 && (transformData.data.artists ?? []).length > 1) {
-            // only the names, ids are applied by handleMeta
-            return transformData.data.artists?.map(stripCredit);
-        }
-
-        // otherwise use source
-        return play.data.artists;
+        const useNames = !['spotify','listenbrainz','koito','maloja','endpointlz'].includes(play.meta?.source as string)
+            && (
+                // source provides no artists so anything is better than nothing
+                existingCount === 0
+                // source provided only one artist but rocksky has real, separated artists
+                || (existingCount === 1 && (transformData.data.artists ?? []).length > 1)
+            );
+        return resolveCredits(play.data.artists, transformData.data.artists, this.rockskyCreditRules(play, rules, useNames));
 
         // // try to determine if new artist is a concatenated string of separate artists
         // // using the original artist data
@@ -527,107 +513,23 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
 
         // return transformData.data.artists;
     }
-    protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<Credit[] | undefined> {
-        if (parts === false) {
-            return play.data.albumArtists;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for albumArtists not met, returning original artists');
-                    return play.data.albumArtists;
-                }
-            }
-        }
-
+    protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit[] | undefined> {
         // metadata needs more development on the rocksky side
         // it does not separate albumArtists into individual entities at all, at the moment
-        // so don't use albumArtists at all, for now
-        return play.data.albumArtists;
+        // so don't use albumArtists names at all, for now
+        return resolveCredits(play.data.albumArtists, transformData.data.albumArtists, this.rockskyCreditRules(play, rules, false));
     }
-    protected async handleAlbum(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<Credit | undefined> {
-        if (parts === false) {
-            return play.data.album;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for album not met, returning original album');
-                    return play.data.album;
-                }
-            }
-        }
-
+    protected async handleAlbum(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit | undefined> {
         // metadata needs more development on the rocksky side
         // only use it if we have no album information here
-        if(play.data.album === undefined || play.data.album.name.trim() === '') {
-            // only the name, ids and art are applied by handleMeta/handleArt
-            return transformData.data.album !== undefined ? stripCredit(transformData.data.album) : undefined;
-        }
-
-        return play.data.album;
+        const useName = play.data.album === undefined || play.data.album.name.trim() === '';
+        return resolveCredit(play.data.album, transformData.data.album, this.rockskyCreditRules(play, rules, useName));
     }
     protected async handleDuration(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<number | undefined> {
-        if (parts === false || transformData.data.duration === undefined) {
-            return play.data.duration;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for duration not met, returning original duration');
-                    return play.data.duration;
-                }
-            }
-        }
-
-        return transformData.data.duration;
+        return transformData.data.duration ?? play.data.duration;
     }
-
-    protected async handleMeta(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<MetaParts | undefined> {
-        if (parts === false) {
-            return play.data.meta;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for duration not met, returning original duration');
-                    return play.data.meta;
-                }
-            }
-        }
-        // meta is okay to use but rocksky only returns brainz recording mbid right now
-        // so check for loss of fidelity or known bad sources before using it
-
-        const {track, album, artists = [], albumArtists = []} = play.data;
-        const existingMbidTypes = new Set([track, album, ...artists, ...albumArtists]
-            .flatMap(x => x?.metadata ?? [])
-            .filter(x => x.name === 'musicbrainz')
-            .map(x => x.idType));
-
-        if(play.meta.source === 'lastfm' || existingMbidTypes.size <= 1) {
-            // only one (or none) mbids from original so likely no loss of fidelity by only using
-            // recording mbid from rocksky
-            const {track: rsTrack, album: rsAlbum, artists: rsArtists, albumArtists: rsAlbumArtists} = transformData.data;
-            return {...transformData.data.meta, credits: {track: rsTrack, album: rsAlbum, artists: rsArtists, albumArtists: rsAlbumArtists}};
-        }
-
-        return play.data.meta;
-    }
-
-    protected async handleArt(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<ArtParts | undefined> {
-        if (parts === false) {
-            return undefined;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for duration not met, returning original duration');
-                    return undefined;
-                }
-            }
-        }
-
-        return artFromCredits(transformData.data);
+    protected async handleMeta(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<TrackMetaIsrc | undefined> {
+        return this.metaTrusted(play) ? transformData.data.meta : undefined;
     }
 
     public async notify(payload: WebhookPayload): Promise<void> {

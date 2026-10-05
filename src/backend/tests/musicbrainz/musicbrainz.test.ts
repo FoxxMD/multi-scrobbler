@@ -1,4 +1,4 @@
-import { creditMbid, mbMeta, withImage } from "../../../core/MusicMetadata.ts";
+import { creditId, creditMbid, mbMeta, spotifyMeta, withImage } from "../../../core/MusicMetadata.ts";
 import * as dotenv from 'dotenv';
 import { loggerTest } from "@foxxmd/logging";
 import chai, { expect, assert } from 'chai';
@@ -564,6 +564,77 @@ describe('Musicbrainz API', function () {
         })();
     });
 
+});
+
+describe('#MB Stage Rules', function () {
+
+    const play = generatePlay({
+        track: nameToCredit('My Song', spotifyMeta('sp-track', 'track')),
+        album: nameToCredit('My Album', spotifyMeta('sp-album', 'album')),
+        artists: [nameToCredit('Beyonce', spotifyMeta('sp-b', 'artist')), nameToCredit('jay z', spotifyMeta('sp-j', 'artist'))],
+    });
+    // what the stage found
+    const match = generatePlay({
+        track: nameToCredit('My Song (Remastered)', mbMeta('mb-rec', 'recording')),
+        album: nameToCredit('My Album', mbMeta('mb-rel', 'release')),
+        artists: [nameToCredit('Jay Z', mbMeta('mb-j', 'artist')), nameToCredit('Beyoncé', mbMeta('mb-b', 'artist'))],
+        meta: { brainz: { trackNumber: 4 } },
+        isrc: 'USRC17607839'
+    });
+
+    const applyRules = async (rules: Partial<MusicbrainzTransformerDataStage>): Promise<PlayObject> => {
+        const stage = mbTransformer.parseConfig({ type: 'musicbrainz', ...rules });
+        // @ts-expect-error protected, testing application of already found stage data
+        return await mbTransformer.doHandle(stage, play, match);
+    }
+
+    it('applies names and ids, keeping ids from other services, when all rules are used', async function () {
+        const { data } = await applyRules({});
+        expect(data.track?.name).eq('My Song (Remastered)');
+        expect(creditMbid(data.track, 'recording')).eq('mb-rec');
+        expect(creditId(data.track, 'spotify', 'track')).eq('sp-track');
+        expect(creditMbid(data.album, 'release')).eq('mb-rel');
+        expect(creditId(data.album, 'spotify', 'album')).eq('sp-album');
+        expect(data.artists?.map(x => x.name)).eql(['Jay Z', 'Beyoncé']);
+        expect(data.artists?.map(x => creditMbid(x, 'artist'))).eql(['mb-j', 'mb-b']);
+        expect(data.meta?.brainz?.trackNumber).eq(4);
+        expect(data.isrc).eq('USRC17607839');
+    });
+
+    it('only adds ids, matched to existing credits, when only meta is used', async function () {
+        const { data } = await applyRules({ title: false, artists: false, albumArtists: false, album: false, duration: false });
+        expect(data.track?.name).eq('My Song');
+        expect(creditMbid(data.track, 'recording')).eq('mb-rec');
+        expect(data.artists?.map(x => x.name)).eql(['Beyonce', 'jay z']);
+        expect(data.artists?.map(x => creditMbid(x, 'artist'))).eql(['mb-b', 'mb-j']);
+        expect(data.artists?.map(x => creditId(x, 'spotify', 'artist'))).eql(['sp-b', 'sp-j']);
+        expect(data.duration).eq(play.data.duration);
+        expect(data.meta?.brainz?.trackNumber).eq(4);
+    });
+
+    it('does not add ids, and drops ids of renamed credits, when meta is not used', async function () {
+        const { data } = await applyRules({ meta: false });
+        expect(data.track).eql({ name: 'My Song (Remastered)' });
+        // name did not change
+        expect(data.album).eql(play.data.album);
+        expect(data.artists).eql([{ name: 'Jay Z' }, { name: 'Beyoncé' }]);
+        expect(data.meta?.brainz).to.be.undefined;
+        expect(data.isrc).to.be.undefined;
+    });
+
+    it('applies ids to credits that are not renamed when meta and only some names are used', async function () {
+        const { data } = await applyRules({ artists: false, album: false });
+        expect(data.track?.name).eq('My Song (Remastered)');
+        expect(creditMbid(data.track, 'recording')).eq('mb-rec');
+        expect(data.artists?.map(x => x.name)).eql(['Beyonce', 'jay z']);
+        expect(data.artists?.map(x => creditMbid(x, 'artist'))).eql(['mb-b', 'mb-j']);
+    });
+
+    it('does not use a rule when its when condition is not met', async function () {
+        const { data } = await applyRules({ title: { when: [{ title: 'Something Else' }] } });
+        expect(data.track?.name).eq('My Song');
+        expect(creditMbid(data.track, 'recording')).eq('mb-rec');
+    });
 });
 
 describe('#MB Missing Types', function() {

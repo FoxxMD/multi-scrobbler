@@ -1,9 +1,9 @@
 import { type Credit, type LifecycleInput, type OptionalCacheUsage, type PlayObject } from "../../../../core/Atomic.ts";
-import { isWhenCondition, testWhenConditions } from "../../../utils/PlayTransformUtils.ts";
+import { isWhenCondition } from "../../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../../infrastructure/config/health/webhooks.ts";
 import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../../core/Transform.ts";
-import AtomicPartsTransformer, { type ArtParts } from "../AtomicPartsTransformer.ts";
-import { creditMbid } from "../../../../core/MusicMetadata.ts";
+import AtomicPartsTransformer from "../AtomicPartsTransformer.ts";
+import { creditMbid, type CreditRules, withImage } from "../../../../core/MusicMetadata.ts";
 import type {TransformerOptions} from "../AbstractTransformer.ts";
 import { MaybeLogger } from '../../MaybeLogger.ts';
 import { childLogger } from "@foxxmd/logging";
@@ -263,39 +263,19 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
         return {uri: artUrl, lifecycleInputs: transformData.lifecycleInputs, type: resultType}
     }
 
-    protected async handleTitle(play: PlayObject, parts: boolean | { when?: { title?: string; artists?: string; albumArtists?: string; album?: string; art?: string; }[]; }, transformData: ArtUriData): Promise<Credit | undefined> {
+    protected override readonly hydratesCredits = true;
+
+    protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, transformData: ArtUriData, rules: CreditRules): Promise<Credit | undefined> {
         return play.data.track;
     }
-    protected async handleArtists(play: PlayObject, parts: boolean | { when?: { title?: string; artists?: string; albumArtists?: string; album?: string; art?: string; }[]; }, transformData: ArtUriData): Promise<Credit[] | undefined> {
+    protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: ArtUriData, rules: CreditRules): Promise<Credit[] | undefined> {
         return play.data.artists;
     }
-    protected async handleAlbumArtists(play: PlayObject, parts: boolean | { when?: { title?: string; artists?: string; albumArtists?: string; album?: string; art?: string; }[]; }, transformData: ArtUriData): Promise<Credit[] | undefined> {
+    protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: ArtUriData, rules: CreditRules): Promise<Credit[] | undefined> {
         return play.data.albumArtists;
     }
-    protected async handleAlbum(play: PlayObject, parts: boolean | { when?: { title?: string; artists?: string; albumArtists?: string; album?: string; art?: string; }[]; }, transformData: ArtUriData): Promise<Credit | undefined> {
-        return play.data.album;
-    }
-
-    protected async handleArt(play: PlayObject, parts: ExternalMetadataTerm, transformData: ArtUriData): Promise<ArtParts | undefined> {
-        if (parts === false) {
-            return undefined;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for art not met, returning original art');
-                    return undefined;
-                }
-            }
-        }
-
-        const {
-            uri
-        } = transformData;
-
-        return {
-            album: uri
-        }
+    protected async handleAlbum(play: PlayObject, parts: ExternalMetadataTerm, transformData: ArtUriData, rules: CreditRules): Promise<Credit | undefined> {
+        return rules.art ? withImage(play.data.album, transformData.uri) : play.data.album;
     }
 
     public async notify(payload: WebhookPayload): Promise<void> {

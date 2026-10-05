@@ -18,7 +18,9 @@ import TransformerManager from "../../common/transforms/TransformerManager.ts";
 import { transientCache } from "../utils/TransientTestUtils.ts";
 import dayjs from "dayjs";
 import clone from "clone";
-import { nameToCredit, creditsToNames, namesToCredits } from "../../../core/MusicMetadata.ts";
+import { nameToCredit, creditsToNames, namesToCredits, mbMeta, creditMbid } from "../../../core/MusicMetadata.ts";
+import UserTransformer from "../../common/transforms/UserTransformer.ts";
+import { SkipTransformStageError } from "../../common/errors/MSErrors.ts";
 import { COMPONENT_STATE, type ComponentState } from "../../../core/Api.ts";
 import type { PlayWith, PlaySelectWithQueueStates } from "../../common/database/drizzle/drizzleTypes.ts";
 import type { PlayProcessingResult } from "../../common/infrastructure/PlayProcessing.ts";
@@ -728,6 +730,48 @@ describe('Play Transforms', function () {
             expect(cacheTransformed.data.track?.name).equal('My cool bar track');
             expect(creditsToNames(cacheTransformed.data.artists!)).eql(primaries.concat(secondaries));
             expect(cacheTransformed.data.playDate!.isSame(cachablePlay.data.playDate));
+        });
+
+        it('Skips again when a skipped stage is cached', async function () {
+            const t = new NativeTransformer({name: 'test', type: 'native'}, {logger: loggerTest, cache: memorycache()});
+            await t.initialize();
+            const stage = t.parseConfig({type: 'native', when: [{title: 'will not match'}]});
+            const play = generatePlay({track: nameToCredit('My Test')});
+
+            await expect(t.handle(stage, play)).to.be.rejectedWith(SkipTransformStageError);
+            await expect(t.handle(stage, play)).to.be.rejectedWith(SkipTransformStageError);
+        });
+
+    });
+
+    describe('Credit Metadata', function () {
+
+        it('User stage keeps ids for renamed credits', async function () {
+            const t = new UserTransformer({name: 'test', type: 'user'}, {logger: loggerTest, cache: memorycache()});
+            await t.initialize();
+            const play = generatePlay({
+                track: nameToCredit('My cool something track', mbMeta('mb-rec', 'recording')),
+                artists: [nameToCredit('Some Artist', mbMeta('mb-a', 'artist'))]
+            });
+
+            const transformed = await t.handle(t.parseConfig({type: 'user', title: [{search: 'something', replace: 'bar'}], artists: [{search: 'Some', replace: 'Any'}]}), play);
+            expect(transformed.data.track?.name).eq('My cool bar track');
+            expect(creditMbid(transformed.data.track, 'recording')).eq('mb-rec');
+            expect(transformed.data.artists?.[0].name).eq('Any Artist');
+            expect(creditMbid(transformed.data.artists?.[0], 'artist')).eq('mb-a');
+        });
+
+        it('Native stage keeps ids for artists that are not changed by parsing', async function () {
+            const t = new NativeTransformer({name: 'test', type: 'native'}, {logger: loggerTest, cache: memorycache()});
+            await t.initialize();
+            const play = generatePlay({
+                track: nameToCredit('My Test (feat. Guest Artist)'),
+                artists: [nameToCredit('Main Artist', mbMeta('mb-a', 'artist'))]
+            });
+
+            const transformed = await t.handle(t.parseConfig({type: 'native'}), play);
+            expect(creditsToNames(transformed.data.artists!)).eql(['Main Artist', 'Guest Artist']);
+            expect(creditMbid(transformed.data.artists?.[0], 'artist')).eq('mb-a');
         });
 
     });

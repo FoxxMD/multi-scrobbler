@@ -1013,6 +1013,12 @@ Use [Rules](#rules-and-hooks) to apply MusicBrainz match data selectively.
 
 If you know that your music collection is well organized and you do not want to change the artists/title/album etc... sent to a [Client](/configuration/clients), you can still benefit from matches by only applying MBIDs using `meta` so that any Client that supports Musicbrainz data ([Koito](/configuration/clients/koito), [Tealfm](/configuration/clients/tealfm), [Listenbrainz](/configuration/clients/listenbrainz), [Rocksky](/configuration/clients/rocksky)) can still get that data.
 
+:::note
+
+With these Rules IDs are added to the title, album, and artists your Play already has. See [how `meta` combines with other Rules](/configuration/transforms#stage-rules) to learn how IDs are matched to existing artists and what happens to existing IDs when `meta` is `false`.
+
+:::
+
 <details>
 
 <summary>Example</summary>

@@ -127,7 +127,7 @@ These are all also **optional** so you can use the Spotify Transform stage witho
 ]
 ```
 
-Each [**Stage Rule**](/configuration/transforms#stage-rules) (`title`/`artists`/`albumArtists`/`album`/`duration`/`meta`) works the same way as it does for the [Musicbrainz Stage](/configuration/transforms/musicbrainz#rules-and-hooks): either a boolean specifying whether the transformed data should be used for this field, or a [`when` condition](/configuration/transforms#conditional-modification).
+Each [**Stage Rule**](/configuration/transforms#stage-rules) (`title`/`artists`/`albumArtists`/`album`/`duration`/`meta`/`art`) works the same way as it does for the [Musicbrainz Stage](/configuration/transforms/musicbrainz#rules-and-hooks): either a boolean specifying whether the transformed data should be used for this field, or a [`when` condition](/configuration/transforms#conditional-modification).
 
 :::tip[Per Component Override]
 
@@ -422,6 +422,12 @@ You **should** setup [metadata caching](/configuration/transforms#caching) to re
 ### Using Partial Match
 
 Use [Rules](#rules-and-hooks) to apply Spotify match data selectively. This is useful if you don't want your scrobble's Artist/Title/Album modified but still want Spotify IDs or ISRC defined for [Clients](/configuration/clients) or other Stages to leverage them.
+
+:::note
+
+With these Rules IDs are added to the title, album, and artists your Play already has. See [how `meta` combines with other Rules](/configuration/transforms#stage-rules) to learn how IDs are matched to existing artists and what happens to existing IDs when `meta` is `false`.
+
+:::
 
 <details>
 

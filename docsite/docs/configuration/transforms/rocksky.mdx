@@ -314,6 +314,7 @@ Using [Rules for Play Data](https://docs.multi-scrobbler.app/configuration/trans
     "album": false, // will never apply changes to Play album
     //"duration": true, // always applies
     //"meta": true, // always applies
+    //"art": true, // always applies
 }
 ```
 
@@ -662,6 +663,8 @@ If you know that your music collection is well organized and you do not want to 
 :::note
 
 The result of using these Rules is gated by this Stage unless they meet prerequisites. See [**What Data Is Applied?**](#what-data-is-applied)
+
+IDs are added to the title, album, and artists your Play already has. See [how `meta` combines with other Rules](/configuration/transforms#stage-rules).
 
 :::
 

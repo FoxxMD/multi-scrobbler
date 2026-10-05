@@ -121,12 +121,6 @@ export const mergeCredit = (base: Credit | undefined, next: Credit): Credit => {
     return withImage(withMetadata({ ...base, name: next.name }, ...(next.metadata ?? [])), next.image);
 }
 
-/**
- * Replace a list of credits with a newer list, keeping metadata from any existing credit with the same name
- */
-export const mergeCredits = (base: Credit[] = [], next: Credit[]): Credit[] =>
-    next.map(x => mergeCredit(base.find(y => y.name === x.name), x));
-
 /** Minimum `compareNormalizedStrings` score for two credit names to be considered the same credit */
 const CREDIT_NAME_MATCH_SCORE = 90;
 
@@ -153,6 +147,73 @@ export const mergeCreditsMetadata = (base: Credit[], from: Credit[] = []): Credi
     });
     const byPosition = base.length === from.length && matches.every(x => x === undefined);
     return base.map((x, i) => withMetadata(x, ...((byPosition ? from[i] : matches[i])?.metadata ?? [])));
+}
+
+/** Which parts of an incoming credit should be applied to an existing credit */
+export interface CreditRules {
+    /** Use the incoming name */
+    name: boolean
+    /** Use the incoming metadata (service ids) */
+    meta: boolean
+    /** Use the incoming image */
+    art: boolean
+}
+
+/**
+ * Apply the allowed parts of an incoming credit to an existing credit
+ *
+ * * Existing metadata is kept unless the credit is renamed without `meta`, since the existing ids may not identify the new name
+ * * Incoming metadata replaces existing metadata for the same service + idType, metadata for other services is kept
+ * * Existing image is kept unless replaced by an incoming image
+ */
+export const resolveCredit = (existing: Credit | undefined, incoming: Credit | undefined, rules: CreditRules): Credit | undefined => {
+    const { name, meta, art } = rules;
+    if (incoming === undefined) {
+        return name ? undefined : existing;
+    }
+    if (existing === undefined && !name) {
+        // nothing to attach metadata or image to
+        return undefined;
+    }
+    const renamed = name && existing !== undefined && existing.name !== incoming.name;
+    let credit: Credit = { name: name ? incoming.name : existing!.name };
+    if ((meta || !renamed) && existing?.metadata !== undefined) {
+        credit.metadata = existing.metadata;
+    }
+    if (meta) {
+        credit = withMetadata(credit, ...(incoming.metadata ?? []));
+    }
+    return withImage(withImage(credit, existing?.image), art ? incoming.image : undefined);
+}
+
+/**
+ * Apply the allowed parts of incoming credits to existing credits
+ *
+ * * When names are not used, metadata is matched to existing credits using `mergeCreditsMetadata` and only the first credit takes an image
+ * * When names are used the incoming list replaces the existing list
+ *   * If the names are unchanged each credit is resolved against the existing credit in the same position
+ *   * Otherwise an existing credit with the same name keeps its image, and its metadata only if `meta` is used
+ */
+export const resolveCredits = (existing: Credit[] | undefined, incoming: Credit[] | undefined, rules: CreditRules): Credit[] | undefined => {
+    const { name, meta, art } = rules;
+    if (incoming === undefined) {
+        return name ? undefined : existing;
+    }
+    if (!name) {
+        if (existing === undefined) {
+            return undefined;
+        }
+        const credits = meta ? mergeCreditsMetadata(existing, incoming) : existing;
+        return art && credits.length > 0 ? [withImage(credits[0], incoming[0]?.image), ...credits.slice(1)] : credits;
+    }
+    const base = existing ?? [];
+    if (base.length === incoming.length && base.every((x, i) => x.name === incoming[i].name)) {
+        return incoming.map((x, i) => resolveCredit(base[i], x, rules)!);
+    }
+    return incoming.map(x => {
+        const match = base.find(y => y.name === x.name);
+        return resolveCredit(meta || match === undefined ? match : { name: match.name, image: match.image }, x, rules)!;
+    });
 }
 
 /** All images found on the track, album, and artists of a play */
