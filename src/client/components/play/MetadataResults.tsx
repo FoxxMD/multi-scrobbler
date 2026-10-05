@@ -1,7 +1,7 @@
 import { AbsoluteCenter, Avatar, Box, Combobox, HStack, Icon, Menu, Portal, Span, Spinner, StackSeparator, Text, InputGroup, type ListCollection, Flex } from "@chakra-ui/react"
 import type { MetadataResultBase, MetadataResultImage, MetadataResultServiceScore } from "../../../core/Api"
 import { getMusicServiceIconElement } from "../icons/ChakraIcons"
-import React, { useEffect, useState } from "react"
+import React, { useRef } from "react"
 import { MSErrorBoundary } from "../ErrorBoundary"
 import { EllipsisButtonMenu } from "../buttonMenus/ButtonMenu"
 
@@ -82,10 +82,17 @@ export interface MetadataSearchComboboxProps<T extends MetadataSearchResult> {
 export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: MetadataSearchComboboxProps<T>) => {
     const { placeholder, collection, isLoading, isError, onChange, onQueryChange, renderItem, initialInput = '' } = props;
 
-    const [rawInput, setRawInput] = useState<string | undefined>(initialInput === '' ? undefined : initialInput);
+    // a ref, not state: combobox captures onInteractOutside when the popup opens so state read there is stale
+    const rawInput = useRef<string | undefined>(initialInput === '' ? undefined : initialInput);
 
     // every other property on a search result is optional
     const freetext = (name: string) => ({ id: 'nonce', service: 'user', name }) as T;
+
+    const commitFreetext = () => {
+        if (rawInput.current !== undefined && rawInput.current !== initialInput) {
+            onChange(freetext(rawInput.current));
+        }
+    };
 
     const inputElm = <Combobox.Input placeholder={placeholder} />;
     let input: React.JSX.Element;
@@ -108,27 +115,15 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                     onKeyDown={(e) => {
                         // combobox prevents default when Enter selects a highlighted item
                         if (e.key === 'Enter' && !e.defaultPrevented) {
-                            if (rawInput !== undefined && rawInput !== initialInput) {
-                                console.log('enter and onChange rawInput');
-                                onChange(freetext(rawInput));
-                            } else {
-                                console.log('enter noop');
-                            }
+                            commitFreetext();
                         }
                     }}
                     collection={collection}
-                    onInteractOutside={(e) => {
-                        if (rawInput !== undefined && rawInput !== initialInput) {
-                            console.log('outside interact and onChange rawInput');
-                            onChange(freetext(rawInput));
-                        } else {
-                            console.log('outside interact noop');
-                        }
-                    }}
+                    onInteractOutside={commitFreetext}
                     onValueChange={(val) => {
                         console.log(val, 'value change');
                         onChange(val.items[0]);
-                        setRawInput(undefined);
+                        rawInput.current = undefined;
                     }}
                     onSelect={(val) => {
                         console.log(val, 'select')
@@ -137,7 +132,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                         onQueryChange(e.inputValue);
                         // selecting an item rewrites the input, this is not freetext
                         if (e.reason !== 'item-select') {
-                            setRawInput(e.inputValue);
+                            rawInput.current = e.inputValue;
                         }
                     }}
                 >
@@ -166,7 +161,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                                             <Combobox.Item key={item.id} item={item.id}>
                                                 {renderItem(item, (val) => {
                                                     onChange(val);
-                                                    setRawInput(undefined);
+                                                    rawInput.current = undefined;
                                                     combobox.setInputValue(val.name, 'item-select');
                                                     combobox.setOpen(false);
                                                 })}
