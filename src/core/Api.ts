@@ -8,7 +8,6 @@ import type { PlayEvent } from "./PlayEvent.ts"
 import * as z from "zod"
 import { mbMeta, spotifyMeta, withImage } from "./MusicMetadata.ts"
 import { nameToCredit } from "./MusicMetadata.ts"
-import { httpUrl } from "../backend/utils/ZodUtils.ts"
 
 export interface PlayApiCommon {
     uid: string
@@ -257,7 +256,7 @@ export const metadataResultServiceScoreSchema = z.object({
 export type MetadataResultServiceScore = z.infer<typeof metadataResultServiceScoreSchema>;
 
 export const metadataResultImageSchema = z.object({
-    image: httpUrl.optional()
+    image: z.string().optional()
 })
 export type MetadataResultImage = z.infer<typeof metadataResultImageSchema>;
 
