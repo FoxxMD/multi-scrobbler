@@ -51,15 +51,4 @@ export class DrizzleComponentRepository extends DrizzleBaseRepository<'component
             .returning({ countLive: components.countLive });
         return res[0].countLive;
     }
-
-    /**
-     * Raise the lifetime total to at least `atLeast`, never lower it. Returns the resulting total.
-     */
-    raiseCountLive = async (id: number, atLeast: number): Promise<number> => {
-        const res = await this.db.update(components)
-            .set({ countLive: sql`max(${components.countLive}, ${atLeast})` })
-            .where(eq(components.id, id))
-            .returning({ countLive: components.countLive });
-        return res[0].countLive;
-    }
 }

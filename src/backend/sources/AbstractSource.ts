@@ -337,9 +337,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         // this.playEventsRepo = new DrizzlePlayEventsRepository(this.db, {logger: this.logger});
         // this.playRepo.componentId = this.dbComponent.id;
         // this.queueRepo.componentId = this.dbComponent.id;
-        const counts = await this.playRepo.getComponentPlayCountByState();
-        const discoveredCount = counts.find(x => x.state === 'discovered');
-        this.tracksDiscoveredTotal = await this.restoreCountLive(discoveredCount?.['count(*)'] ?? 0);
+        this.tracksDiscoveredTotal = this.dbComponent.countLive ?? 0;
         await this.updateQueueStats([INGRESS_QUEUE, DEAD_QUEUE]);
     }
 

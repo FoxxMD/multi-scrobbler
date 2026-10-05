@@ -93,18 +93,6 @@ describe('Persisted Discovered/Scrobbled counts', function () {
             expect(restarted.getApiData().countLive).to.eq(4);
             expect(await readCountLive(restarted.componentId)).to.eq(4);
         });
-
-        it('Heals a stored count that is lower than the Plays still retained', async function () {
-            const id = `counts-client-heal-${Date.now()}`;
-            const first = await startScrobbler(id);
-            // 5 retained scrobbled Plays, but a stored count left at 1 by the old increment
-            await first.addScrobbled([generatePlay(), generatePlay(), generatePlay(), generatePlay(), generatePlay()]);
-            await sharedDb.update(components).set({ countLive: 1 }).where(eq(components.id, first.componentId));
-
-            const restarted = await startScrobbler(id);
-            expect(restarted.getApiData().countLive).to.eq(5);
-            expect(await readCountLive(restarted.componentId)).to.eq(5);
-        });
     });
 
     describe('Sources', function () {
@@ -113,7 +101,7 @@ describe('Persisted Discovered/Scrobbled counts', function () {
             const id = `counts-source-${Date.now()}`;
             const source = await startSource(id);
 
-            for (const play of [generatePlay({ track: 'first' }), generatePlay({ track: 'second' })]) {
+            for (const play of [generatePlay({ track: {name: 'first'} }), generatePlay({ track: {name: 'second'} })]) {
                 await Promise.all([
                     pEvent(source.emitter, 'discoveredToScrobble'),
                     source.queuePlay([play]),

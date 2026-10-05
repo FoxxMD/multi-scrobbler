@@ -392,9 +392,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.migrationRepo = new GenericRepository<'componentMigrations'>(this.db, 'componentMigrations', 'Component Migrations', {logger: this.logger});
         // this.playRepo.componentId = this.dbComponent.id;
         // this.queueRepo.componentId = this.dbComponent.id;
-        const counts = await this.playRepo.getComponentPlayCountByState();
-        const scrobbledCount = counts.find(x => x.state === 'scrobbled');
-        this.tracksScrobbledTotal = await this.restoreCountLive(scrobbledCount?.['count(*)'] ?? 0);
+        this.tracksScrobbledTotal = this.dbComponent.countLive ?? 0;
         await this.updateQueueStats([INGRESS_QUEUE, DEAD_QUEUE]);
     }
 

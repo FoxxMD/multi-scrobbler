@@ -166,18 +166,6 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         return this.dbComponent.countLive;
     }
 
-    /**
-     * The lifetime total to show on startup. Plays are deleted by retention, so the stored
-     * counter is the source of truth; retained Plays only raise it, which repairs counters
-     * left too low by the earlier read-then-write increment.
-     */
-    protected async restoreCountLive(retainedPlays: number): Promise<number> {
-        if (retainedPlays > this.dbComponent.countLive) {
-            this.dbComponent.countLive = await this.componentRepo.raiseCountLive(this.dbComponent.id, retainedPlays);
-        }
-        return this.dbComponent.countLive;
-    }
-
     protected async doBuildDatabase(): Promise<true | string | undefined> {
         await super.doBuildDatabase();
 
