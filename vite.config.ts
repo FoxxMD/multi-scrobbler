@@ -2,6 +2,7 @@ import react,{ reactCompilerPreset } from '@vitejs/plugin-react';
 import babel from '@rolldown/plugin-babel';
 import { defineConfig } from 'vite';
 import svgr from "vite-plugin-svgr";
+import { visualizer } from "rollup-plugin-visualizer";
 import { dirname, resolve } from 'node:path'
 
 // Relative base so the built assets work from any mount path (root or a
@@ -9,7 +10,7 @@ import { dirname, resolve } from 'node:path'
 //
 // the server picks the actual mount path/router mode at runtime, see
 // src/backend/server/index.ts and src/client/App.tsx.
-export default defineConfig(() => {
+export default defineConfig(({ mode }) => {
     return {
         server: {
             allowedHosts: (true as true),
@@ -26,7 +27,12 @@ export default defineConfig(() => {
                 babel({
                 presets: [reactCompilerPreset()]
     }),
-            svgr()
+            svgr(),
+            // only for `npm run frontend:analyze`, writes module reports next to the throwaway build output
+            ...(mode === 'analyze' ? [
+                visualizer({ filename: 'node_modules/.cache/frontend-analyze/treemap.html', template: 'treemap', open: true }),
+                //visualizer({ filename: 'node_modules/.cache/frontend-analyze/network.html', template: 'network'}),
+            ] : [])
         ],
         build: {
             sourcemap: false,
