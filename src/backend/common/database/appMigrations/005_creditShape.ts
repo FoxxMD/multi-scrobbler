@@ -9,7 +9,6 @@ import { nameToCredit } from "../../../../core/MusicMetadata.ts";
 import { diffObjects, patchObject } from '../../../../core/DataUtils.ts';
 import { playContentBasicInvariantTransform, playMbidIdentifier } from '../../../utils/PlayComparisonUtils.ts';
 import { hashObject } from '../../../utils/StringUtils.ts';
-import { runTransaction } from '../drizzle/drizzleUtils.ts';
 
 /**
  * Converts Plays stored before track/album/artists were Credit objects.
@@ -260,41 +259,38 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
                     // already converted, patches and events for this play are also already converted
                     continue;
                 }
-                // events and the play must be converted together, otherwise a failure part way through leaves
-                // already converted patches that would be replayed against legacy data on the next run
-                await runTransaction(ctx.db, async () => {
-                    const [input] = await ctx.db.select().from(playInputs).where(eq(playInputs.playId, row.id)).limit(1);
-                    const legacyInput = input?.play as unknown as LegacyPlay | undefined;
-                    if(play.lifecycle !== undefined && play.lifecycle.length > 0) {
-                        play.lifecycle = rebuildLifecycle(play.lifecycle, legacyInput, legacyPlay.meta?.art);
-                    }
 
-                    // Lifecycle steps, and results that include plays, are also stored as events
-                    const events = await ctx.db.select().from(playEvents).where(eq(playEvents.playId, row.id)).orderBy(asc(playEvents.id));
+                const [input] = await ctx.db.select().from(playInputs).where(eq(playInputs.playId, row.id)).limit(1);
+                const legacyInput = input?.play as unknown as LegacyPlay | undefined;
+                if(play.lifecycle !== undefined && play.lifecycle.length > 0) {
+                    play.lifecycle = rebuildLifecycle(play.lifecycle, legacyInput, legacyPlay.meta?.art);
+                }
 
-                    // steps from all transform events are one continuous chain of patches starting from input
-                    const transformEvents = events.filter(x => x.eventName === PLAY_EVENT_TYPE.transform && Array.isArray(x.data));
-                    const rebuiltSteps = rebuildLifecycle(transformEvents.flatMap(x => x.data as LifecycleStep[]), legacyInput, legacyPlay.meta?.art);
-                    for(const ev of transformEvents) {
-                        const data = rebuiltSteps.splice(0, (ev.data as LifecycleStep[]).length);
-                        await ctx.db.update(playEvents).set({ data }).where(eq(playEvents.id, ev.id));
+                // Lifecycle steps, and results that include plays, are also stored as events
+                const events = await ctx.db.select().from(playEvents).where(eq(playEvents.playId, row.id)).orderBy(asc(playEvents.id));
+
+                // steps from all transform events are one continuous chain of patches starting from input
+                const transformEvents = events.filter(x => x.eventName === PLAY_EVENT_TYPE.transform && Array.isArray(x.data));
+                const rebuiltSteps = rebuildLifecycle(transformEvents.flatMap(x => x.data as LifecycleStep[]), legacyInput, legacyPlay.meta?.art);
+                for(const ev of transformEvents) {
+                    const data = rebuiltSteps.splice(0, (ev.data as LifecycleStep[]).length);
+                    await ctx.db.update(playEvents).set({ data }).where(eq(playEvents.id, ev.id));
+                }
+                for(const ev of events) {
+                    if(ev.data === null || typeof ev.data !== 'object') {
+                        continue;
                     }
-                    for(const ev of events) {
-                        if(ev.data === null || typeof ev.data !== 'object') {
-                            continue;
-                        }
-                        if(ev.eventName === PLAY_EVENT_TYPE.dupeCheck) {
-                            await ctx.db.update(playEvents).set({ data: legacyMatchResultToCredits(ev.data) }).where(eq(playEvents.id, ev.id));
-                        } else if(ev.eventName === PLAY_EVENT_TYPE.scrobbleResult) {
-                            await ctx.db.update(playEvents).set({ data: legacyScrobbleResultToCredits(ev.data) }).where(eq(playEvents.id, ev.id));
-                        }
+                    if(ev.eventName === PLAY_EVENT_TYPE.dupeCheck) {
+                        await ctx.db.update(playEvents).set({ data: legacyMatchResultToCredits(ev.data) }).where(eq(playEvents.id, ev.id));
+                    } else if(ev.eventName === PLAY_EVENT_TYPE.scrobbleResult) {
+                        await ctx.db.update(playEvents).set({ data: legacyScrobbleResultToCredits(ev.data) }).where(eq(playEvents.id, ev.id));
                     }
-                    await ctx.db.update(drizzlePlays).set({
-                        play,
-                        playHash: hashObject(playContentBasicInvariantTransform(play).data),
-                        mbidIdentifier: playMbidIdentifier(play) ?? null
-                    }).where(eq(drizzlePlays.id, row.id));
-                });
+                }
+                await ctx.db.update(drizzlePlays).set({
+                    play,
+                    playHash: hashObject(playContentBasicInvariantTransform(play).data),
+                    mbidIdentifier: playMbidIdentifier(play) ?? null
+                }).where(eq(drizzlePlays.id, row.id));
                 updated++;
             } catch (e) {
                 ctx.logger.warn(new Error(`Failed to convert Play ${row.id} (${row.uid})`, { cause: e }));
