@@ -252,7 +252,7 @@ export interface WithBrainzOptions {
     include: ('track' | 'artist' | 'album' | 'recording' | 'releaseGroup')[]
 }
 /** Add generated MBIDs to the credits of a Play, for any that do not already have one */
-export const withBrainz = (play: PlayObject | JsonPlayObject, opts: WithBrainzOptions): PlayObject => {
+export const withBrainz = <T extends PlayObject | JsonPlayObject>(play: T, opts: WithBrainzOptions): T => {
     const {include} = opts;
     const {track, album, artists = []} = play.data;
     const missing = (credit: Credit | undefined, idType: MBIdType) => creditMbid(credit, idType) === undefined ? mbMeta(generateMbid(), idType) : undefined;
