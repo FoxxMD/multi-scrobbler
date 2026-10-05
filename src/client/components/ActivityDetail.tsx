@@ -15,7 +15,7 @@ import { ShortDateDisplay } from "./DateDisplay";
 import { ErrorAlert } from "./ErrorAlert";
 import { ExpandCollapse } from "./ExpandCollapse";
 import { DebugIcon, EllipsisButton, ExclamationCircleIcon, ExclamationTriangleIcon, FinishIconRaw, InsertedIcon, type PowerOffButton, RetryButton, RetryIcon, StopButton, StopIconRaw, TrashIconRaw, UpdatedIcon } from "./icons/ChakraIcons";
-import { PlayData } from "./PlayData";
+import { PlayData } from "./play/PlayData";
 import { TextMuted } from "./TextMuted";
 import { capitalize } from '../../core/StringUtils';
 import ky from 'ky';

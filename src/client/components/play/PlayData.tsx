@@ -1,19 +1,19 @@
 import React, { useCallback, useState, type ComponentProps, type PropsWithChildren } from 'react';
 import { EmptyState, DataList, HStack, Tabs, Box, Badge, Stack, Text, Separator, IconButton, Container, Float, Link, Span, Menu, Group, Portal, type MenuItemProps, type MenuSelectionDetails } from "@chakra-ui/react"
 import { LuCode, LuText } from "react-icons/lu"
-import type { JsonPlayObject, PlayObjectMinimal } from '../../core/Atomic.js';
-import { shortTodayAwareFormat, timeToHumanTimestamp } from '../../core/TimeUtils.js';
+import type { JsonPlayObject, PlayObjectMinimal } from '../../../core/Atomic.js';
+import { shortTodayAwareFormat, timeToHumanTimestamp } from '../../../core/TimeUtils.js';
 import dayjs from 'dayjs';
-import { ChakraCodeBlock } from './CodeBlock.js';
-import { TextMuted } from './TextMuted.js';
-import { formatNumber } from '../../core/DataUtils.js';
-import { Muted } from './Typography.js';
-import { ArtistCreditTags } from './ArtistCreditDisplay.js';
-import { MSErrorBoundary } from './ErrorBoundary.js';
-import { EllipsisButton, EyeClosedIcon, EyeIcon, hasMusicServiceIcon } from './icons/ChakraIcons.js';
+import { ChakraCodeBlock } from '../CodeBlock.js';
+import { TextMuted } from '../TextMuted.js';
+import { formatNumber } from '../../../core/DataUtils.js';
+import { Muted } from '../Typography.js';
+import { ArtistCreditTags } from '../ArtistCreditDisplay.js';
+import { MSErrorBoundary } from '../ErrorBoundary.js';
+import { EllipsisButton, EyeClosedIcon, EyeIcon, hasMusicServiceIcon } from '../icons/ChakraIcons.js';
 import type { IconType } from 'react-icons/lib';
-import { capitalize, capitalizeWords } from '../../core/StringUtils.js';
-import { getMusicServiceIconTooltip, MusicServiceIndicators } from './musicServices/MusicServiceIndicators.js';
+import { capitalize, capitalizeWords } from '../../../core/StringUtils.js';
+import { getMusicServiceIconTooltip, MusicServiceIndicators } from '../musicServices/MusicServiceIndicators.js';
 
 const EmptyPlayData = () => {
     return (

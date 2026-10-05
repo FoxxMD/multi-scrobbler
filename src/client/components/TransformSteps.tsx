@@ -9,7 +9,7 @@ import { timelineIconProps, timelineTextFormatting } from "../utils/ComponentUti
 import { ChakraCodeBlockShort } from "./CodeBlock";
 import { ErrorAlert } from "./ErrorAlert";
 import { MSCollapsible, type MSCollapsibleExternalProps } from "./MSCollapsible";
-import { PlayData } from "./PlayData";
+import { PlayData } from "./play/PlayData";
 import { Muted } from "./Typography";
 import { JsonDiffPatch } from "./diffs/JsonDiff";
 

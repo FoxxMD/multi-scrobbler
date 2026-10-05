@@ -18,7 +18,7 @@ import { ErrorAlert } from "./ErrorAlert";
 import { MSErrorBoundary } from "./ErrorBoundary";
 import { CheckIcon, ExclamationTriangleIcon, TimelineIndicatorIconQueued, XIcon } from "./icons/ChakraIcons";
 import { MSCollapsible } from "./MSCollapsible";
-import { PlayData } from "./PlayData";
+import { PlayData } from "./play/PlayData";
 import { ScrobbleActionResult } from "./ScrobbleActionResult";
 import { ScrobbleMatchResult } from "./ScrobbleMatchResult";
 import { TimelineErrorIcon } from "./timeline/TimelineIcon";
