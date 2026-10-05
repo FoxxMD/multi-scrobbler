@@ -5,7 +5,7 @@ import { getScrobbleTsSOCDate } from "../../../utils/TimeUtils.ts";
 import type {SubmitOptions} from "../ListenbrainzApiClient.ts";
 import type {ListenPayload, MinimumTrack, SubmitListenAdditionalTrackInfo, SubmitPayload} from "../../../../core/vendor/listenbrainz/interfaces.ts";
 import {version as appVersion } from '../../../version.ts';
-import { artistCreditsToNames, artistCreditToName } from "../../../../core/StringUtils.ts";
+import { creditId, creditIds, creditMbid, creditsToNames } from "../../../../core/MusicMetadata.ts";
 
 export type AllowDeviceList = Record<string, string>;
 /**
@@ -64,7 +64,6 @@ export const playToListenPayload = (play: PlayObject, options: PlayToListenPaylo
             duration, 
             meta: {
                 brainz = {}, 
-                spotify = {},
             } = {}
         }, meta: {
             mediaPlayerName, mediaPlayerVersion, musicService, source, deviceId
@@ -77,10 +76,10 @@ export const playToListenPayload = (play: PlayObject, options: PlayToListenPaylo
 
     let addInfo: SubmitListenAdditionalTrackInfo = {
         // primary artists
-        artist_names: Array.from(new Set([...artists.map(artistCreditToName)])),
+        artist_names: Array.from(new Set(creditsToNames(artists))),
         // primary artist
         release_artist_name: albumArtists.length === 1 ? albumArtists[0].name : undefined,
-        release_artist_names: albumArtists.length > 0 ? artistCreditsToNames(albumArtists) : undefined,
+        release_artist_names: albumArtists.length > 0 ? creditsToNames(albumArtists) : undefined,
         // use data from LZ response, if this Play was originally from LZ Source
         media_player: mediaPlayerName ?? msAdditionalInfo.media_player ?? matchDeviceLabel(deviceId, allowDeviceList),
         media_player_version: mediaPlayerVersion ?? msAdditionalInfo.media_player_version,
@@ -98,42 +97,48 @@ export const playToListenPayload = (play: PlayObject, options: PlayToListenPaylo
         addInfo.position_ms = play.meta.trackProgressPosition * 1000;
     }
 
-    if (Object.keys(spotify).length > 0) {
-        if (spotify.track !== undefined) {
-            const trackUrl = `https://open.spotify.com/track/${spotify.track}`;
-            if (addInfo.origin_url === undefined) {
-                addInfo.origin_url = trackUrl;
-            }
-            if (addInfo.spotify_id === undefined) {
-                addInfo.spotify_id = trackUrl;
-            }
+    const spotifyUrl = (type: 'track' | 'album' | 'artist', id: string) => `https://open.spotify.com/${type}/${id}`;
+    const spotifyTrack = creditId(track, 'spotify', 'track'),
+        spotifyAlbum = creditId(album, 'spotify', 'album'),
+        spotifyArtists = creditIds(artists, 'spotify', 'artist'),
+        spotifyAlbumArtists = creditIds(albumArtists, 'spotify', 'artist');
+
+    if (spotifyTrack !== undefined) {
+        const trackUrl = spotifyUrl('track', spotifyTrack);
+        if (addInfo.origin_url === undefined) {
+            addInfo.origin_url = trackUrl;
         }
-        if (isEmptyArrayOrUndefined(addInfo.spotify_artist_ids) && spotify.artist !== undefined && spotify.artist.length > 0) {
-            addInfo.spotify_artist_ids = spotify.artist.map(x => `https://open.spotify.com/artist/${x}`);
+        if (addInfo.spotify_id === undefined) {
+            addInfo.spotify_id = trackUrl;
         }
-        if (isEmptyArrayOrUndefined(addInfo.spotify_album_artist_ids) && spotify.albumArtist !== undefined && spotify.albumArtist.length > 0) {
-            addInfo.spotify_album_artist_ids = spotify.albumArtist.map(x => `https://open.spotify.com/artist/${x}`);
-        }
-        if (addInfo.spotify_album_id === undefined && spotify.album !== undefined) {
-            addInfo.spotify_album_id = `https://open.spotify.com/album/${spotify.album}`;
-        }
+    }
+    if (isEmptyArrayOrUndefined(addInfo.spotify_artist_ids) && spotifyArtists.length > 0) {
+        addInfo.spotify_artist_ids = spotifyArtists.map(x => spotifyUrl('artist', x));
+    }
+    if (isEmptyArrayOrUndefined(addInfo.spotify_album_artist_ids) && spotifyAlbumArtists.length > 0) {
+        addInfo.spotify_album_artist_ids = spotifyAlbumArtists.map(x => spotifyUrl('artist', x));
+    }
+    if (addInfo.spotify_album_id === undefined && spotifyAlbum !== undefined) {
+        addInfo.spotify_album_id = spotifyUrl('album', spotifyAlbum);
     }
 
     addInfo = removeUndefinedKeys(addInfo, false);
 
     // possible lastfm provides an empty album field when no album data is found
-    let al = album;
+    let al = album?.name;
     if (al !== undefined && al !== null) {
         if (al.trim() === '') {
             al = undefined;
         }
     }
+    // only mbids we know belong to an artist are attached to credits, fall back to the mbids LZ originally gave us (if any)
+    const artistMbids = creditIds(artists, 'musicbrainz', 'artist');
 
     const minTrackData = removeUndefinedKeys<MinimumTrack>({
-        artist_name: Array.from(new Set([...artists.map(artistCreditToName)])).join(', '),
+        artist_name: Array.from(new Set(creditsToNames(artists))).join(', '),
         // track name is required by LZ, an empty value will be rejected upstream
         // but we don't throw here since this is also used to build payloads for logging failed scrobbles
-        track_name: track ?? '',
+        track_name: track?.name ?? '',
         release_name: al,
     }, false);
 
@@ -143,11 +148,11 @@ export const playToListenPayload = (play: PlayObject, options: PlayToListenPaylo
             ...minTrackData,
             additional_info: {
                 duration: duration !== undefined ? Math.round(duration) : undefined,
-                track_mbid: brainz.track,
-                recording_mbid: brainz.recording,
-                artist_mbids: brainz.artist,
-                release_mbid: brainz.album,
-                release_group_mbid: brainz.releaseGroup,
+                track_mbid: creditMbid(track, 'track'),
+                recording_mbid: creditMbid(track, 'recording'),
+                artist_mbids: artistMbids.length > 0 ? artistMbids : msAdditionalInfo.artist_mbids,
+                release_mbid: creditMbid(album, 'release'),
+                release_group_mbid: creditMbid(album, 'release-group'),
                 submission_client: 'multi-scrobbler',
                 submission_client_version: version ?? appVersion,
                 ...addInfo

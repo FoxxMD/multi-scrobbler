@@ -1,21 +1,19 @@
-import { strategies, stringSameness, type StringSamenessResult } from "@foxxmd/string-sameness";
+import { strategies, type StringSamenessResult } from "@foxxmd/string-sameness";
 import { hasher } from 'node-object-hash';
-import type {ArtistCredit, PlayObject} from "../../core/Atomic.ts";
+import type {Credit, PlayObject} from "../../core/Atomic.ts";
 import { asPlayerStateData, type PlayerStateDataMaybePlay } from "../common/infrastructure/Atomic.ts";
 import { DELIMITERS_NO_AMP } from '../../core/Atomic.ts';
 import { DELIMITERS } from '../../core/Atomic.ts';
 import { getPlatformIdFromData, parseBoolStrict } from "../utils.ts";
 import { genGroupIdStr } from '../../core/PlayUtils.ts';
-import { buildTrackString } from "../../core/StringUtils.ts";
+import { compareNormalizedStrings, normalizeStr } from "../../core/StringUtils.ts";
+import { buildTrackString } from "../../core/MusicMetadata.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 
 const {levenStrategy, diceStrategy} = strategies;
 
 // cant use [^\w\s] because this also catches non-english characters
 export const SYMBOLS_WHITESPACE_REGEX = new RegExp(/[`=(){}<>;'’,.~!@#$%^&*_+|:"?\-\\[\]/\s]/g);
-export const SYMBOLS_REGEX = new RegExp(/[`=(){}<>;'’,.~!@#$%^&*_+|:"?\-\\[\]/]/g);
-
-export const MULTI_WHITESPACE_REGEX = new RegExp(/\s{2,}/g);
 export const uniqueNormalizedStrArr = (arr: string[]): string[] => arr.reduce((acc: string[], curr) => {
         const normalizedCurr = normalizeStr(curr)
         if (!acc.some(x => normalizeStr(x) === normalizedCurr)) {
@@ -23,46 +21,6 @@ export const uniqueNormalizedStrArr = (arr: string[]): string[] => arr.reduce((a
         }
         return acc;
     }, [])
-export interface StringNormalizationOptions {
-    keepSingleWhitespace?: boolean
-    removeWhitespace?: boolean
-    charCase?: 'lower' | 'upper' | false
-    removeSymbols?: boolean
-    normalizeUnicode?: boolean
-    removeDiacritics?: boolean
-}
-export const normalizeStr = (str: string, options: StringNormalizationOptions = {}): string => {
-    const {
-        keepSingleWhitespace = false,
-        removeWhitespace = true,
-        charCase = 'lower',
-        normalizeUnicode = true,
-        removeSymbols = true,
-        removeDiacritics = true
-    } = options
-    let normal: string = str;
-
-    // https://stackoverflow.com/a/37511463/1469797
-    if(normalizeUnicode) {
-        normal = normal.normalize('NFD');
-    }
-    // https://stackoverflow.com/a/37511463/1469797
-    if(removeDiacritics) {
-        normal = normal.replace(/[\u0300-\u036f]/g, "");
-    }
-    if(removeSymbols) {
-        normal = normal.replace(SYMBOLS_REGEX, '');
-    }
-    if(removeWhitespace) {
-        normal = keepSingleWhitespace ? normal.replace(MULTI_WHITESPACE_REGEX, ' ') : normal.replace(/\s/g, '')
-    }
-    if(charCase !== false) {
-        normal = charCase === 'lower' ? normal.toLocaleLowerCase() : normal.toLocaleUpperCase()
-    }
-
-    return normal.trim();
-}
-
 export interface PlayCredits {
     primary: string
     primaryComposite: string
@@ -296,7 +254,7 @@ export const compareScrobbleTracks = (existing: PlayObject, candidate: PlayObjec
         }
     } = candidate;
 
-    return compareTracks(existingTrack ?? '', candidateTrack ?? '');
+    return compareTracks(existingTrack?.name ?? '', candidateTrack?.name ?? '');
 }
 
 export const compareTracks = (existingTrack: string, candidateTrack: string): [StringSamenessResult, TrackSamenessResults] => {
@@ -334,93 +292,8 @@ export const compareScrobbleArtists = (existing: PlayObject, candidate: PlayObje
     return compareNormalizedStrings(existingArtists.reduce((acc, curr) => `${acc} ${curr.name}`, ''), candidateArtists.reduce((acc, curr) => `${acc} ${curr.name}`, '')).highScore;
 }
 
-export const compareScrobbleArtistCredits = (existingArtists: ArtistCredit[], candidateArtists: ArtistCredit[]): number => {
+export const compareScrobbleArtistCredits = (existingArtists: Credit[], candidateArtists: Credit[]): number => {
     return compareNormalizedStrings(existingArtists.reduce((acc, curr) => `${acc} ${curr.name}`, ''), candidateArtists.reduce((acc, curr) => `${acc} ${curr.name}`, '')).highScore;
-}
-
-/**
- * Compare the sameness of two strings after making them token-order independent
- *
- * Transform two strings before comparing in order to have as little difference between them as possible:
- *
- * * First, normalize (lower case, remove extraneous whitespace, remove punctuation, make all characters standard ANSI) strings and split into tokens
- * * Second, reorder tokens in the shorter list so that they mirror order of tokens in longer list as closely as possible
- * * Finally, concat back to strings and compare with sameness strategies
- *
- * */
-export const compareNormalizedStrings = (existing: string, candidate: string): StringSamenessResult => {
-
-    // there may be scenarios where a track differs in *ordering* of ancillary information between sources
-    // EX My Track (feat. Art1, Art2)  -- My Track (feat. Art2 Art1)
-
-    // first remove lower case, extraneous whitespace, punctuation, and replace non-ansi with ansi characters
-    const normalExisting = normalizeStr(existing, {keepSingleWhitespace: true});
-    const normalCandidate = normalizeStr(candidate, {keepSingleWhitespace: true});
-
-    // split by "token"
-    const eTokens = normalExisting.split(' ');
-    const cTokens = normalCandidate.split(' ');
-
-
-    let longerTokens: string[],
-        shorterTokens: string[];
-
-    if (eTokens.length > cTokens.length) {
-        longerTokens = eTokens;
-        shorterTokens = cTokens;
-    } else {
-        longerTokens = cTokens;
-        shorterTokens = eTokens;
-    }
-
-    // we will use longest string (token list) as the reducer and order the shorter list to match it
-    // so we don't have to deal with undefined positions in the shorter list
-
-    const orderedCandidateTokens = longerTokens.reduce((acc: { ordered: string[], remaining: string[] }, curr) => {
-        // if we've run out of tokens in the shorter list just return
-        if (acc.remaining.length === 0) {
-            return acc;
-        }
-
-        // on each iteration of tokens in the long list
-        // we iterate through remaining tokens from the shorter list and find the token with the most sameness
-
-        let highScore = 0;
-        let highIndex = 0;
-        let index = 0;
-        for (const token of acc.remaining) {
-            const result = stringSameness(curr, token);
-            if (result.highScoreWeighted > highScore) {
-                highScore = result.highScoreWeighted;
-                highIndex = index;
-            }
-            index++;
-        }
-
-        // then remove the most same token from the remaining short list tokens
-        const splicedRemaining = [...acc.remaining];
-        splicedRemaining.splice(highIndex, 1);
-
-        return {
-            // finally add the most same token to the ordered short list
-            ordered: acc.ordered.concat(acc.remaining[highIndex]),
-            // and return the remaining short list tokens
-            remaining: splicedRemaining
-        };
-    }, {
-        // "ordered" is the result of ordering tokens in the shorter list to match longer token order
-        ordered: [],
-        // remaining is the initial shorter list
-        remaining: shorterTokens
-    });
-
-    // since we have already "matched" up tokens by order we don't want to use cosine strat
-    // bc it only does comparisons between whole words in a sentence (instead of all letters in a string)
-    // which makes it inaccurate for small-n sentences and typos
-    return stringSameness(longerTokens.join(' '), orderedCandidateTokens.ordered.join(' '), {
-        transforms: [],
-        strategies: [levenStrategy, diceStrategy]
-    })
 }
 
 export const scoreNormalizedStringsWeighted = (reference: string | undefined, candidate: string | undefined, weight: number, exactBonus: number = 0): number => {

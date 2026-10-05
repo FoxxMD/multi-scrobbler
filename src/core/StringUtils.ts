@@ -1,3 +1,4 @@
+import { strategies, stringSameness, type StringSamenessResult } from "@foxxmd/string-sameness";
 import dayjs, { type Dayjs } from "dayjs";
 import duration from "dayjs/plugin/duration.js";
 import isBetween from "dayjs/plugin/isBetween.js";
@@ -6,17 +7,13 @@ import timezone from "dayjs/plugin/timezone.js";
 import utc from "dayjs/plugin/utc.js";
 import {
     type AmbPlayObject,
-    type ArtistCredit,
-    type PlayData,
-    SCROBBLE_TS_SOC_END,
     SCROBBLE_TS_SOC_START,
-    type ScrobbleTsSOC,
-    type TrackStringOptions
-} from "./Atomic.ts";
+    type ScrobbleTsSOC} from "./Atomic.ts";
 import { DELIMETERS_REGEX, DELIMITERS } from './Atomic.ts';
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
-import { removeUndefinedKeys } from './DataUtils.ts';
 import { nanoid } from "nanoid";
+
+const {levenStrategy, diceStrategy} = strategies;
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -59,126 +56,6 @@ export const defaultBuildTrackStringTransformers = {
     comment: defaultCommentFunc,
     platform: defaultPlatformFunc
 }
-export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: TrackStringOptions<T> = {}): T => {
-    const {
-        include = ['time', 'artist', 'track'],
-        transformers: {
-            artists: artistsFunc = defaultBuildTrackStringTransformers.artists,
-            album: albumFunc = defaultBuildTrackStringTransformers.album,
-            track: trackFunc = defaultBuildTrackStringTransformers.track,
-            time: timeFunc = defaultBuildTrackStringTransformers.time,
-            timeFromNow = defaultBuildTrackStringTransformers.timeFromNow,
-            comment: commentFunc = defaultBuildTrackStringTransformers.comment,
-            platform: platformFunc = defaultBuildTrackStringTransformers.platform,
-            reducer = (arr: any[]) => arr.join(' ') // (acc, curr) => `${acc} ${curr}`
-        } = {},
-    } = options;
-    const {
-        data: {
-            artists,
-            album,
-            track,
-            playDate,
-            playDateCompleted
-        } = {},
-        meta: {
-            trackId,
-            scrobbleTsSOC = SCROBBLE_TS_SOC_START,
-            comment,
-            deviceId,
-            user,
-            sessionId
-        } = {},
-    } = playObj;
-
-    let pd: Dayjs | undefined;
-    let usedTsSOC: ScrobbleTsSOC = scrobbleTsSOC;
-    if(scrobbleTsSOC === SCROBBLE_TS_SOC_END && playDateCompleted !== undefined) {
-        pd = typeof playDateCompleted === 'string' ? dayjs(playDateCompleted) : playDateCompleted;
-    } else {
-        usedTsSOC = SCROBBLE_TS_SOC_START;
-        pd = typeof playDate === 'string' ? dayjs(playDate) : playDate;
-    }
-
-    const strParts: (T | string | undefined)[] = [];
-    if(include.includes('platform')) {
-        strParts.push(platformFunc(deviceId, user, include.includes('session') ? sessionId : undefined))
-    } else if(include.includes('session') && sessionId !== undefined) {
-        strParts.push(`(Session ${sessionId})`);
-    }
-    if (include.includes('trackId') && trackId !== undefined) {
-        strParts.push(`(${trackId})`);
-    }
-    if (include.includes('artist')) {
-        strParts.push(artistsFunc(artistCreditsToNames(artists)))
-    }
-    if (include.includes('track')) {
-        strParts.push(trackFunc(track, playObj, strParts.length > 0));
-    }
-    if (include.includes('album')) {
-        strParts.push(albumFunc(album, playObj, strParts.length > 0));
-    }
-    if (include.includes('time')) {
-        strParts.push(timeFunc(pd, usedTsSOC));
-    }
-    if (include.includes('timeFromNow')) {
-        const tfn = timeFromNow(pd);
-        if (tfn !== undefined) {
-            strParts.push(tfn)
-        }
-
-    }
-    if (include.includes('comment')) {
-        const cfn = commentFunc(comment);
-        if(cfn !== undefined) {
-            strParts.push(cfn);
-        }
-    }
-    // @ts-ignore
-    return reducer(strParts); //strParts.join(' ');
-}
-
-export const buildPlayHumanDiffable = (play: PlayData, options?: {expandMeta?: boolean}): string => {
-    const {
-        expandMeta = false
-    } = options || {};
-
-    const meta: string[] = [];
-    if(play.meta !== undefined) {
-        for(const [metaType,metaObject] of Object.entries(play.meta)) {
-            for(const [metaKey, metaValue] of Object.entries(metaObject)) {
-                if(metaValue === undefined) {
-                    continue;
-                }
-                const id  = `${metaType}-${metaKey}`;
-                if(expandMeta) {
-                    meta.push(`${id}: ${metaValue}`);
-                } else {
-                    meta.push(id);
-                }
-            }
-        }
-    }
-    let metaStr = '(None)';
-    if(meta.length > 0) {
-        if(expandMeta) {
-            metaStr = `\n${meta.map(x => `* ${x}`).join('\n')}`;
-        } else {
-            metaStr = meta.join(', ');
-        }
-    }
-    const parts: string[] = [
-        `${'Title'.padEnd(13)}: ${play.track ?? '(None)'}`,
-        `${'Artists'.padEnd(13)}: ${play.artists === undefined || play.artists.length === 0 ? '(None)' : play.artists.join(', ')}`,
-        `${'Album Artists'.padEnd(13)}: ${play.albumArtists === undefined || play.albumArtists.length === 0 ? '(None)' : play.albumArtists.join(', ')}`,
-        `${'Album'.padEnd(13)}: ${play.album ?? '(None)'}`,
-        `${'Meta'.padEnd(13)}: ${metaStr}`
-    ];
-
-    const final = parts.join('\n');
-    return final;
-} 
-
 export const slice = (str: string, index: number, count: number, add?: string): string => {
     // We cannot pass negative indexes directly to the 2nd slicing operation.
     if (index < 0) {
@@ -311,32 +188,122 @@ export const containsDelimiters = (str: string) => null !== str.match(/[,&/\\]+/
 const NUMBERS_REGEX = new RegExp(/^\s*\d+\s*$/);
 export const stringIsOnlyNumbers = (str: string) => NUMBERS_REGEX.test(str);
 
-export const artistNamesToCredits = (names: (string | Partial<ArtistCredit>)[] | undefined): ArtistCredit[] => {
-    if(names === undefined) {
-        throw new Error('Must pass names');
-    }
-    return names.map(x => artistNameToCredit(x)!).filter(x => x !== undefined);
-};
-// typing overloading here is ok
-export function artistNameToCredit(val: string): ArtistCredit;
-// eslint-disable-next-line no-redeclare
-export function artistNameToCredit(val: string | undefined | Partial<ArtistCredit>): ArtistCredit | undefined;
-// eslint-disable-next-line no-redeclare
-export function artistNameToCredit(val: string | undefined | Partial<ArtistCredit>): ArtistCredit | undefined {
-    if(val === undefined) {
-        return undefined;
-    }
-    if(typeof val === 'string') {
-        return {name: val};
-    }
-    const {
-        name,
-        mbid,
-        ...rest
-    } = val;
-    return removeUndefinedKeys({name, mbid, ...rest}) as ArtistCredit;
-}
-export const artistCreditToName = (a: ArtistCredit): string => a.name;
-export const artistCreditsToNames = (a: ArtistCredit[] = []): string[] => a.map((x) => x.name);
-
 export const generatePlayUid = () => nanoid(20);
+export interface StringNormalizationOptions {
+    keepSingleWhitespace?: boolean;
+    removeWhitespace?: boolean;
+    charCase?: 'lower' | 'upper' | false;
+    removeSymbols?: boolean;
+    normalizeUnicode?: boolean;
+    removeDiacritics?: boolean;
+}
+export const normalizeStr = (str: string, options: StringNormalizationOptions = {}): string => {
+    const {
+        keepSingleWhitespace = false, removeWhitespace = true, charCase = 'lower', normalizeUnicode = true, removeSymbols = true, removeDiacritics = true
+    } = options;
+    let normal: string = str;
+
+    // https://stackoverflow.com/a/37511463/1469797
+    if (normalizeUnicode) {
+        normal = normal.normalize('NFD');
+    }
+    // https://stackoverflow.com/a/37511463/1469797
+    if (removeDiacritics) {
+        normal = normal.replace(/[\u0300-\u036f]/g, "");
+    }
+    if (removeSymbols) {
+        normal = normal.replace(SYMBOLS_REGEX, '');
+    }
+    if (removeWhitespace) {
+        normal = keepSingleWhitespace ? normal.replace(MULTI_WHITESPACE_REGEX, ' ') : normal.replace(/\s/g, '');
+    }
+    if (charCase !== false) {
+        normal = charCase === 'lower' ? normal.toLocaleLowerCase() : normal.toLocaleUpperCase();
+    }
+
+    return normal.trim();
+};
+
+export const SYMBOLS_REGEX = new RegExp(/[`=(){}<>;'’,.~!@#$%^&*_+|:"?\-\\[\]/]/g);export const MULTI_WHITESPACE_REGEX = new RegExp(/\s{2,}/g);
+/**
+ * Compare the sameness of two strings after making them token-order independent
+ *
+ * Transform two strings before comparing in order to have as little difference between them as possible:
+ *
+ * * First, normalize (lower case, remove extraneous whitespace, remove punctuation, make all characters standard ANSI) strings and split into tokens
+ * * Second, reorder tokens in the shorter list so that they mirror order of tokens in longer list as closely as possible
+ * * Finally, concat back to strings and compare with sameness strategies
+ *
+ * */
+
+export const compareNormalizedStrings = (existing: string, candidate: string): StringSamenessResult => {
+    // there may be scenarios where a track differs in *ordering* of ancillary information between sources
+    // EX My Track (feat. Art1, Art2)  -- My Track (feat. Art2 Art1)
+
+    // first remove lower case, extraneous whitespace, punctuation, and replace non-ansi with ansi characters
+    const normalExisting = normalizeStr(existing, { keepSingleWhitespace: true });
+    const normalCandidate = normalizeStr(candidate, { keepSingleWhitespace: true });
+
+    // split by "token"
+    const eTokens = normalExisting.split(' ');
+    const cTokens = normalCandidate.split(' ');
+
+
+    let longerTokens: string[], shorterTokens: string[];
+
+    if (eTokens.length > cTokens.length) {
+        longerTokens = eTokens;
+        shorterTokens = cTokens;
+    } else {
+        longerTokens = cTokens;
+        shorterTokens = eTokens;
+    }
+
+    // we will use longest string (token list) as the reducer and order the shorter list to match it
+    // so we don't have to deal with undefined positions in the shorter list
+    const orderedCandidateTokens = longerTokens.reduce((acc: { ordered: string[]; remaining: string[]; }, curr) => {
+        // if we've run out of tokens in the shorter list just return
+        if (acc.remaining.length === 0) {
+            return acc;
+        }
+
+        // on each iteration of tokens in the long list
+        // we iterate through remaining tokens from the shorter list and find the token with the most sameness
+        let highScore = 0;
+        let highIndex = 0;
+        let index = 0;
+        for (const token of acc.remaining) {
+            const result = stringSameness(curr, token);
+            if (result.highScoreWeighted > highScore) {
+                highScore = result.highScoreWeighted;
+                highIndex = index;
+            }
+            index++;
+        }
+
+        // then remove the most same token from the remaining short list tokens
+        const splicedRemaining = [...acc.remaining];
+        splicedRemaining.splice(highIndex, 1);
+
+        return {
+            // finally add the most same token to the ordered short list
+            ordered: acc.ordered.concat(acc.remaining[highIndex]),
+            // and return the remaining short list tokens
+            remaining: splicedRemaining
+        };
+    }, {
+        // "ordered" is the result of ordering tokens in the shorter list to match longer token order
+        ordered: [],
+        // remaining is the initial shorter list
+        remaining: shorterTokens
+    });
+
+    // since we have already "matched" up tokens by order we don't want to use cosine strat
+    // bc it only does comparisons between whole words in a sentence (instead of all letters in a string)
+    // which makes it inaccurate for small-n sentences and typos
+    return stringSameness(longerTokens.join(' '), orderedCandidateTokens.ordered.join(' '), {
+        transforms: [],
+        strategies: [levenStrategy, diceStrategy]
+    });
+};
+

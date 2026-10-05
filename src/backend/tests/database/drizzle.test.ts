@@ -484,7 +484,7 @@ describe('App Migrations', function() {
 
         const plays = await repo.findPlays({});
 
-        expect(plays[0].play.data.track).eq('foo')
+        expect(plays[0].play.data.track?.name).eq('foo')
     });
 
 });

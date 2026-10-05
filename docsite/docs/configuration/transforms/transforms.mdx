@@ -409,6 +409,28 @@ Generically, though, each property may be some value **or** an object combining 
 
 **If none of the properties are specified in the stage then it's assumed all transformed data should be used.**
 
+<DetailsAdmo type="info" summary="How meta and art Combine With Other Rules">
+
+IDs (MBIDs, Spotify IDs...) and art belong to a specific part of your Play: the title, the album, or an individual artist. So what `meta` and `art` do depends on whether the Stage is also allowed to change that part.
+
+| Rule for a part (EX `title`) | `meta`  | What happens to that part                                                                                          |
+| ---------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
+| `true`                       | `true`  | Name is replaced and IDs from the Stage are added. IDs the part already has from *other* services/stages are kept. |
+| `true`                       | `false` | Name is replaced and no IDs are added. If the name actually changed, the IDs the part already had are **removed**. |
+| `false`                      | `true`  | Name is not changed. IDs from the Stage are added to the existing part.                                            |
+| `false`                      | `false` | Nothing is changed.                                                                                                |
+
+:::note
+
+The behavior for when `artists`/`albumArtists` is `false`, and `meta` is `true`, is slightly different than the above:
+
+* The Stage needs to work out which ID belongs to which of your existing artists. It matches them by name first.
+* If none of the names match, and the Stage found the same number of artists as your Play has, they are matched by position. IDs that cannot be matched to an artist are not added.
+
+:::
+
+</DetailsAdmo>
+
 :::note
 
 Specifying these Rules is **not** the same as [configuring the Stage](#configuring-stages). Rules only determine if the *result* of the transformation should be used (replace) the existing Play Data.

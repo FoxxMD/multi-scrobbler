@@ -266,7 +266,7 @@ export const ListLiveUpdates = meta.story({
                 newState = randomPlayState();
               }
               liveUpdateData[index].state = newState;
-              liveUpdateData[index].play.data.track = faker.music.songName();
+              liveUpdateData[index].play.data.track = {name: faker.music.songName()};
               liveUpdateData[index].updatedAt = dayjs().toISOString();
 
               client.send({

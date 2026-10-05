@@ -1,3 +1,4 @@
+import { withAlbumArt } from "../../core/MusicMetadata.ts";
 import type { EventEmitter } from "events";
 import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
 import {
@@ -22,7 +23,8 @@ import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybe
 import { isDebugMode, playObjDataMatch, sleep } from "../utils.ts";
 import dayjs, { type Dayjs } from "dayjs";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
-import { artistNamesToCredits } from "../../core/StringUtils.ts";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../core/MusicMetadata.ts";
 
 export interface DeviceState {
     device: SonosDevice
@@ -374,20 +376,17 @@ export const formatPlayObj = (obj: SonosState, options: FormatPlayObjectOptions 
     }
 
     const play: PlayObjectMinimal = {
-        data: {
-            track: titleStr,
-            album: Album,
-            artists: Artist === undefined ? undefined : artistNamesToCredits([Artist]),
+        data: withAlbumArt({
+            track: nameToCredit(titleStr),
+            album: nameToCredit(Album),
+            artists: Artist === undefined ? undefined : namesToCredits([Artist]),
             duration: dur,
-        },
+        }, AlbumArtUri),
         meta: {
             user: NO_USER,
             deviceId: Name === undefined ? NO_DEVICE : `${Name}-${GroupName ?? 'NoGroup'}`,
             sessionId: Uuid,
             trackProgressPosition: progress,
-            art: {
-                album: AlbumArtUri
-            },
             source: 'Sonos'
         }
     }

@@ -6,7 +6,9 @@ import { Client as CastClient } from 'castv2';
 import dayjs from "dayjs";
 import type { EventEmitter } from "events";
 import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
-import { artistNamesToCredits, buildTrackString } from "../../core/StringUtils.ts";
+import { buildTrackString } from "../../core/MusicMetadata.ts";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../core/MusicMetadata.ts";
 import { NETWORK_ERROR_FAILURE_CODES } from "../common/errors/NodeErrors.ts";
 import {
     type FormatPlayObjectOptions,
@@ -718,10 +720,10 @@ export class ChromecastSource extends MemoryPositionalSource {
 
         const play: PlayObjectMinimal = {
             data: {
-                track,
-                album,
-                albumArtists: artistNamesToCredits(albumArtists),
-                artists: artistNamesToCredits(artists),
+                track: nameToCredit(track),
+                album: nameToCredit(album),
+                albumArtists: namesToCredits(albumArtists),
+                artists: namesToCredits(artists),
                 duration,
                 playDate: dayjs()
             },

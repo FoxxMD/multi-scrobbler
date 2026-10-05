@@ -1,8 +1,9 @@
-import { type ArtistCredit, DEFAULT_ROCKSKY_MISSING_TYPES, type LifecycleInput, type OptionalCacheUsage, type PlayObject, type RockskyMissingField, type ArtMeta, type TrackMetaIsrc } from "../../../../core/Atomic.ts";
-import { isWhenCondition, testWhenConditions } from "../../../utils/PlayTransformUtils.ts";
+import { type Credit, DEFAULT_ROCKSKY_MISSING_TYPES, type LifecycleInput, type OptionalCacheUsage, type PlayObject, type RockskyMissingField, type TrackMetaIsrc } from "../../../../core/Atomic.ts";
+import { isWhenCondition } from "../../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../../infrastructure/config/health/webhooks.ts";
 import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../../core/Transform.ts";
 import AtomicPartsTransformer from "../AtomicPartsTransformer.ts";
+import { creditMbid, type CreditRules, creditsToNames, resolveCredit, resolveCredits } from "../../../../core/MusicMetadata.ts";
 import type {TransformerOptions} from "../AbstractTransformer.ts";
 import { DELIMITERS } from '../../../../core/Atomic.ts';
 import { MaybeLogger } from '../../MaybeLogger.ts';
@@ -11,7 +12,8 @@ import { type UsingTypes } from "../../vendor/musicbrainz/MusicbrainzApiClientPo
 import { difference } from "../../../utils.ts";
 import { SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../../errors/MSErrors.ts";
 import type { Cacheable } from "cacheable";
-import { artistCreditsToNames, splitByFirstRegexFound } from "../../../../core/StringUtils.ts";
+import { splitByFirstRegexFound } from "../../../../core/StringUtils.ts";
+import { creditToName } from "../../../../core/MusicMetadata.ts";
 import { nativeParse } from "../NativeTransformer.ts";
 import { hasRequiredScrobbleFields, hasScrobbleConfidenceFields, type SongViewDetailedMS, songViewToPlay } from "../../vendor/RockSkyApiClient.ts";
 import { RockskyError, type SongMatchView } from "@rocksky/sdk";
@@ -131,7 +133,7 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
             type: 'rocksky'
         }
 
-        for (const k of ['artists', 'albumArtists', 'title', 'album', 'meta', 'duration'] as const) {
+        for (const k of ['artists', 'albumArtists', 'title', 'album', 'meta', 'duration', 'art'] as const) {
             if (!(k in stage)) {
                 stage[k] = true;
                 continue;
@@ -241,12 +243,12 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
     public async searchByBasicFields(play: PlayObject, stageConfig: RockskyTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<SongViewDetailedMS> {
         this.logger.debug({ labels: ['Basic Search'] }, 'Searching by artist/album/track');
         const requestQuery = JSON.stringify({
-            title: play.data.track,
-            artitst: artistCreditsToNames(play.data.artists).join(', '),
-            album: play.data.album
+            title: creditToName(play.data.track),
+            artitst: creditsToNames(play.data.artists).join(', '),
+            album: creditToName(play.data.album)
         });
         try {
-            const res = await this.api.rsProxy.matchSong(requireTrack(play), artistCreditsToNames(play.data.artists).join(', '), undefined, undefined, play.data.album);
+            const res = await this.api.rsProxy.matchSong(requireTrack(play), creditsToNames(play.data.artists).join(', '), undefined, undefined, creditToName(play.data.album));
             return {
                 requestQuery,
                 ...res
@@ -259,15 +261,9 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
 
     public async searchByBasicFieldsOrIDs(play: PlayObject, stageConfig: RockskyTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<SongViewDetailedMS> {
         const using: UsingTypes[] = [];
-        const {
-            data: {
-                meta: {
-                    brainz = {}
-                } = {}
-            } = {}
-        } = play;
+        const recordingMbid = creditMbid(play.data.track, 'recording');
 
-        if(brainz.recording !== undefined) {
+        if(recordingMbid !== undefined) {
             using.push('mbidrecording');
         } else {
             using.push('title');
@@ -280,13 +276,13 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
 
         this.logger.debug({labels: ['Basic Or MBID Search']}, `Searching using ${using.join(', ')}}`);
         const requestQuery = JSON.stringify({
-            title: play.data.track,
-            artitst: artistCreditsToNames(play.data.artists).join(', '),
-            album: play.data.album,
-            mbid: brainz.recording
+            title: creditToName(play.data.track),
+            artitst: creditsToNames(play.data.artists).join(', '),
+            album: creditToName(play.data.album),
+            mbid: recordingMbid
         });
         try {
-            const res = await this.api.rsProxy.matchSong(requireTrack(play), artistCreditsToNames(play.data.artists).join(', '), brainz.recording, play.data.isrc, play.data.album);
+            const res = await this.api.rsProxy.matchSong(requireTrack(play), creditsToNames(play.data.artists).join(', '), recordingMbid, play.data.isrc, creditToName(play.data.album));
             return {
                 requestQuery,
                 ...res
@@ -301,12 +297,12 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         if(play.data.isrc !== undefined) {
             this.logger.debug({labels: ['ISRC Search']},'Searching with ISRC');
             const requestQuery =JSON.stringify({
-                title: play.data.track,
-                artitst: artistCreditsToNames(play.data.artists).join(', '),
+                title: creditToName(play.data.track),
+                artitst: creditsToNames(play.data.artists).join(', '),
                 isrc: play.data.isrc
             });
             try{
-                const res = await this.api.rsProxy.matchSong(requireTrack(play), artistCreditsToNames(play.data.artists).join(', '), undefined, play.data.isrc);
+                const res = await this.api.rsProxy.matchSong(requireTrack(play), creditsToNames(play.data.artists).join(', '), undefined, play.data.isrc);
                 return {
                     requestQuery,
                     ...res
@@ -320,15 +316,16 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
     }
 
     public async searchByRecordingMbid(play: PlayObject, stageConfig: RockskyTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<SongViewDetailedMS> {
-        if(play.data.meta?.brainz?.recording !== undefined) {
+        const recordingMbid = creditMbid(play.data.track, 'recording');
+        if(recordingMbid !== undefined) {
             this.logger.debug({labels: ['MBID Search']},'Searching with Recording MBID');
             const requestQuery = JSON.stringify({
-                title: play.data.track,
-                artitst: artistCreditsToNames(play.data.artists).join(', '),
-                mbid: play.data.meta?.brainz?.recording
+                title: creditToName(play.data.track),
+                artitst: creditsToNames(play.data.artists).join(', '),
+                mbid: recordingMbid
             });
             try {
-                const res = await this.api.rsProxy.matchSong(requireTrack(play), artistCreditsToNames(play.data.artists).join(', '), play.data.meta?.brainz?.recording, undefined, undefined);
+                const res = await this.api.rsProxy.matchSong(requireTrack(play), creditsToNames(play.data.artists).join(', '), recordingMbid, undefined, undefined);
                 return {
                     requestQuery,
                     ...res
@@ -364,7 +361,7 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
             if(naiveSplit.length > 1) {
                 this.logger.debug({labels: ['Parsed Artist Search']},'Searching with track + first value from artist string split');
                 const requestQuery = JSON.stringify({
-                    title: play.data.track,
+                    title: creditToName(play.data.track),
                     artitst: naiveSplit[0],
                 });
                 try {
@@ -392,11 +389,11 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
             const nativePlay = nativeParse(play, {titleClean: true, delimiters: DELIMITERS});
             this.logger.debug({labels: ['Parsed Artist Search']},'Searching with aggressive native parsing');
             const requestQuery = JSON.stringify({
-                title: nativePlay.data.track,
-                artitst: artistCreditsToNames(nativePlay.data.artists).join(', '),
+                title: creditToName(nativePlay.data.track),
+                artitst: creditsToNames(nativePlay.data.artists).join(', '),
             });
             try {
-                const res = await this.api.rsProxy.matchSong(requireTrack(nativePlay), artistCreditsToNames(nativePlay.data.artists).join(', '));
+                const res = await this.api.rsProxy.matchSong(requireTrack(nativePlay), creditsToNames(nativePlay.data.artists).join(', '));
                 return {
                     requestQuery,
                     ...res
@@ -450,58 +447,47 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         return songViewPlay;
     }
 
-    protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<string | undefined> {
-        if (parts === false) {
-            return play.data.track;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for track not met, returning original track');
-                    return play.data.track;
-                }
-            }
-        }
+    protected override readonly hydratesCredits = true;
 
+    /**
+     * rocksky only returns brainz recording mbid right now
+     * so check for loss of fidelity or known bad sources before using its metadata
+     */
+    protected metaTrusted(play: PlayObject): boolean {
+        const {track, album, artists = [], albumArtists = []} = play.data;
+        const existingMbidTypes = new Set([track, album, ...artists, ...albumArtists]
+            .flatMap(x => x?.metadata ?? [])
+            .filter(x => x.name === 'musicbrainz')
+            .map(x => x.idType));
+
+        // only one (or none) mbids from original so likely no loss of fidelity by only using
+        // recording mbid from rocksky
+        return play.meta.source === 'lastfm' || existingMbidTypes.size <= 1;
+    }
+
+    protected rockskyCreditRules(play: PlayObject, rules: CreditRules, name: boolean): CreditRules {
+        return {name: rules.name && name, meta: rules.meta && this.metaTrusted(play), art: rules.art};
+    }
+
+    protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit | undefined> {
         // metadata needs more development on the rocksky side
         // only use it if we have no track information here
-        if(play.data.track === undefined || play.data.track.trim() === '') {
-            return transformData.data.track;
-        }
-
-        return play.data.track;
+        const useName = play.data.track === undefined || play.data.track.name.trim() === '';
+        return resolveCredit(play.data.track, transformData.data.track, this.rockskyCreditRules(play, rules, useName));
     }
-    protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<ArtistCredit[] | undefined> {
-        if (parts === false) {
-            return play.data.artists;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for artists not met, returning original artists');
-                    return play.data.artists;
-                }
-            }
-        }
-
+    protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit[] | undefined> {
+        const existingCount = (play.data.artists ?? []).length;
         // artist data needs development on the rocksky side
         // only use it if we have no artist information here
         // or there is a clear imbalance of fidelity biased *towards* rocksky
-        if(['spotify','listenbrainz','koito','maloja','endpointlz'].includes(play.meta?.source as string))
-        {
-            return play.data.artists;
-        }
-        // source provides no artists so anything is better than nothing
-        if((play.data.artists ?? []).length === 0) {
-            return transformData.data.artists;
-        }
-        // source provided only one artist but rocksky has real, separated artists
-        if((play.data.artists ?? []).length === 1 && (transformData.data.artists ?? []).length > 1) {
-            return transformData.data.artists;
-        }
-
-        // otherwise use source
-        return play.data.artists;
+        const useNames = !['spotify','listenbrainz','koito','maloja','endpointlz'].includes(play.meta?.source as string)
+            && (
+                // source provides no artists so anything is better than nothing
+                existingCount === 0
+                // source provided only one artist but rocksky has real, separated artists
+                || (existingCount === 1 && (transformData.data.artists ?? []).length > 1)
+            );
+        return resolveCredits(play.data.artists, transformData.data.artists, this.rockskyCreditRules(play, rules, useNames));
 
         // // try to determine if new artist is a concatenated string of separate artists
         // // using the original artist data
@@ -513,7 +499,7 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         //     // since we aren't using MB mappings we should be conservative and assume artist string with & are proper names (not joiner)
         //     const parsed = parseArtistCredits(transformData.data.artists[0].name, [',', '/', '\\']);
         //     if(parsed !== undefined) {
-        //         let parsedCredits: ArtistCredit[] = [{name: parsed.primary}];
+        //         let parsedCredits: Credit[] = [{name: parsed.primary}];
         //         if(parsed.secondary !== undefined) {
         //             parsedCredits = parsedCredits.concat(parsed.secondary.map(x => ({name: x})));
         //         }
@@ -527,106 +513,23 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
 
         // return transformData.data.artists;
     }
-    protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<ArtistCredit[] | undefined> {
-        if (parts === false) {
-            return play.data.albumArtists;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for albumArtists not met, returning original artists');
-                    return play.data.albumArtists;
-                }
-            }
-        }
-
+    protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit[] | undefined> {
         // metadata needs more development on the rocksky side
         // it does not separate albumArtists into individual entities at all, at the moment
-        // so don't use albumArtists at all, for now
-        return play.data.albumArtists;
+        // so don't use albumArtists names at all, for now
+        return resolveCredits(play.data.albumArtists, transformData.data.albumArtists, this.rockskyCreditRules(play, rules, false));
     }
-    protected async handleAlbum(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<string | undefined> {
-        if (parts === false) {
-            return play.data.album;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for album not met, returning original album');
-                    return play.data.album;
-                }
-            }
-        }
-
+    protected async handleAlbum(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit | undefined> {
         // metadata needs more development on the rocksky side
         // only use it if we have no album information here
-        if(play.data.album === undefined || play.data.album.trim() === '') {
-            return transformData.data.album;
-        }
-
-        return play.data.album;
+        const useName = play.data.album === undefined || play.data.album.name.trim() === '';
+        return resolveCredit(play.data.album, transformData.data.album, this.rockskyCreditRules(play, rules, useName));
     }
     protected async handleDuration(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<number | undefined> {
-        if (parts === false || transformData.data.duration === undefined) {
-            return play.data.duration;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for duration not met, returning original duration');
-                    return play.data.duration;
-                }
-            }
-        }
-
-        return transformData.data.duration;
+        return transformData.data.duration ?? play.data.duration;
     }
-
     protected async handleMeta(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<TrackMetaIsrc | undefined> {
-        if (parts === false) {
-            return play.data.meta;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for duration not met, returning original duration');
-                    return play.data.meta;
-                }
-            }
-        }
-        // meta is okay to use but rocksky only returns brainz recording mbid right now
-        // so check for loss of fidelity or known bad sources before using it
-
-        if(play.meta.source === 'lastfm') {
-            return transformData.data.meta;
-        }
-        if(Object.keys(play.data.meta?.brainz ?? {}).length <= 1) {
-            // only one (or none) mbids from original so likely no loss of fidelity by only using
-            // recording mbid from rocksky
-            return transformData.data.meta;
-        }
-
-        return play.data.meta;
-    }
-
-    protected async handleArt(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<ArtMeta | undefined> {
-        if (parts === false) {
-            return play.meta.art;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for duration not met, returning original duration');
-                    return play.meta.art;
-                }
-            }
-        }
-
-        if(transformData.meta?.art !== undefined && Object.keys(transformData.meta?.art).length > 0) {
-            return transformData.meta?.art;
-        }
-
-        return play.meta.art
+        return this.metaTrusted(play) ? transformData.data.meta : undefined;
     }
 
     public async notify(payload: WebhookPayload): Promise<void> {
@@ -679,5 +582,5 @@ const requireTrack = (play: PlayObject): string => {
     if(play.data.track === undefined) {
         throw new SearchPrerequisiteError('Play does not have a track title');
     }
-    return play.data.track;
+    return play.data.track.name;
 }

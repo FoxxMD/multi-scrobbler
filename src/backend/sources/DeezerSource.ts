@@ -1,3 +1,5 @@
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../core/MusicMetadata.ts";
 import dayjs from "dayjs";
 import type EventEmitter from "events";
 import passport from "passport";
@@ -75,9 +77,9 @@ export default class DeezerSource extends AbstractSource {
         } = obj;
         const play: PlayObjectMinimal = {
             data: {
-                artists: [artistName],
-                album: albumName,
-                track: name,
+                artists: namesToCredits([artistName]),
+                album: nameToCredit(albumName),
+                track: nameToCredit(name),
                 duration,
                 playDate: dayjs(timestamp * 1000),
             },

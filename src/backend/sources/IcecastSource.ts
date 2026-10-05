@@ -16,7 +16,8 @@ import IcecastMetadataStats from "icecast-metadata-stats";
 import { parseArtistCredits, parseTrackCredits } from "../utils/StringUtils.ts";
 import { isDebugMode, sleep } from "../utils.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
-import { artistNamesToCredits } from "../../core/StringUtils.ts";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../core/MusicMetadata.ts";
 
 
 export class IcecastSource extends MemorySource {
@@ -213,8 +214,8 @@ const formatPlayObj = (obj: IcecastMetadata, options: FormatPlayObjectOptions = 
 
     const play: PlayObjectMinimal = {
         data: {
-            track,
-            artists: artistNamesToCredits(artists)
+            track: nameToCredit(track),
+            artists: namesToCredits(artists)
         },
         meta: {
             source: 'icecast',

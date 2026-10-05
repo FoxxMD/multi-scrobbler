@@ -1,8 +1,9 @@
-import { type ArtistCredit, type LifecycleInput, type OptionalCacheUsage, type PlayObject, type ArtMeta } from "../../../../core/Atomic.ts";
-import { isWhenCondition, testWhenConditions } from "../../../utils/PlayTransformUtils.ts";
+import { type Credit, type LifecycleInput, type OptionalCacheUsage, type PlayObject } from "../../../../core/Atomic.ts";
+import { isWhenCondition } from "../../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../../infrastructure/config/health/webhooks.ts";
 import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../../core/Transform.ts";
 import AtomicPartsTransformer from "../AtomicPartsTransformer.ts";
+import { creditMbid, type CreditRules, withImage } from "../../../../core/MusicMetadata.ts";
 import type {TransformerOptions} from "../AbstractTransformer.ts";
 import { MaybeLogger } from '../../MaybeLogger.ts';
 import { childLogger } from "@foxxmd/logging";
@@ -181,7 +182,7 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
     }
 
     public async searchByMbid(play: PlayObject, mbidType: 'album' | 'releaseGroup', stageConfig: CoverArtArchiveTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<MSCoverArtReleaseResponse> {
-        const mbid = play.data.meta?.brainz?.[mbidType];
+        const mbid = creditMbid(play.data.album, mbidType === 'album' ? 'release' : 'release-group');
         if(mbid === undefined) {
             throw new SearchPrerequisiteError(`Play does not have ${mbidType} MBID`);
         }
@@ -262,42 +263,19 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
         return {uri: artUrl, lifecycleInputs: transformData.lifecycleInputs, type: resultType}
     }
 
-    protected async handleTitle(play: PlayObject, parts: boolean | { when?: { title?: string; artists?: string; albumArtists?: string; album?: string; art?: string; }[]; }, transformData: ArtUriData): Promise<string | undefined> {
+    protected override readonly hydratesCredits = true;
+
+    protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, transformData: ArtUriData, rules: CreditRules): Promise<Credit | undefined> {
         return play.data.track;
     }
-    protected async handleArtists(play: PlayObject, parts: boolean | { when?: { title?: string; artists?: string; albumArtists?: string; album?: string; art?: string; }[]; }, transformData: ArtUriData): Promise<ArtistCredit[] | undefined> {
+    protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: ArtUriData, rules: CreditRules): Promise<Credit[] | undefined> {
         return play.data.artists;
     }
-    protected async handleAlbumArtists(play: PlayObject, parts: boolean | { when?: { title?: string; artists?: string; albumArtists?: string; album?: string; art?: string; }[]; }, transformData: ArtUriData): Promise<ArtistCredit[] | undefined> {
+    protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: ArtUriData, rules: CreditRules): Promise<Credit[] | undefined> {
         return play.data.albumArtists;
     }
-    protected async handleAlbum(play: PlayObject, parts: boolean | { when?: { title?: string; artists?: string; albumArtists?: string; album?: string; art?: string; }[]; }, transformData: ArtUriData): Promise<string | undefined> {
-        return play.data.album;
-    }
-
-    protected async handleArt(play: PlayObject, parts: ExternalMetadataTerm, transformData: ArtUriData): Promise<ArtMeta | undefined> {
-        if (parts === false) {
-            return play.meta.art;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for art not met, returning original art');
-                    return play.meta.art;
-                }
-            }
-        }
-
-        const {
-            uri
-        } = transformData;
-
-        const existing = play.meta?.art ?? {};
-
-        return {
-            ...existing,
-            album: uri
-        }
+    protected async handleAlbum(play: PlayObject, parts: ExternalMetadataTerm, transformData: ArtUriData, rules: CreditRules): Promise<Credit | undefined> {
+        return rules.art ? withImage(play.data.album, transformData.uri) : play.data.album;
     }
 
     public async notify(payload: WebhookPayload): Promise<void> {

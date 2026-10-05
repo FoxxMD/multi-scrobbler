@@ -1,13 +1,19 @@
-import { HStack, Icon, Separator, StackSeparator, type IconProps } from "@chakra-ui/react";
-import { getMusicServiceIconElement } from "../icons/ChakraIcons";
-import { musicServiceBaseSchema, musicServiceIdBaseSchema, musicServiceName, musicServicesSchema, type MusicServiceBase, type MusicServiceName, type MusicServices, type MusicServicesAny } from "./musicServiceTypes";
+import { HStack, Icon, Separator, StackSeparator, type IconProps, Span } from "@chakra-ui/react";
+import { getMusicServiceIcon, getMusicServiceIconElement } from "../icons/ChakraIcons";
+import { type MusicServicesAny } from '../../../core/MusicMetadata';
+import { type MusicServices } from '../../../core/MusicMetadata';
+import { musicServicesSchema } from '../../../core/MusicMetadata';
+import { musicServiceIdBaseSchema } from '../../../core/MusicMetadata';
+import { type MusicServiceBase } from '../../../core/MusicMetadata';
+import { musicServiceBaseSchema } from '../../../core/MusicMetadata';
+import { type MusicServiceName } from '../../../core/MusicMetadata';
+import { musicServiceName } from '../../../core/MusicMetadata';
 import { capitalize } from "../../../core/StringUtils";
 import { Muted } from "../Typography";
 import { Tooltip } from "../ChakraTooltip";
 import type React from "react";
 import { LuExternalLink } from "react-icons/lu";
 import type { ComponentProps } from "react";
-import type { JsonPlayObject } from "../../../core/Atomic";
 
 
 export interface MusicServiceInfoIconProps {
@@ -41,7 +47,7 @@ export const MusicServiceInfoIcon = (props: MusicServiceInfoIconProps) => {
     }
     let visibleId: React.JSX.Element | null = null;
     if (showId && id !== undefined) {
-        visibleId = <><Separator orientation="vertical" height="4" /><Muted textStyle="xs">{`${capitalize(type)}`} {id}</Muted></>
+        visibleId = <><Separator orientation="vertical" height="4" /><Muted textStyle="xs">{`${capitalize(type)}`}{idHint !== undefined ? ` ${capitalize(idHint)}` : ''} <Span userSelect="all">{id}</Span></Muted></>
     }
 
     if (tooltip) {
@@ -63,10 +69,10 @@ export const MusicServiceIndicator = (props: { data: MusicServices | MusicServic
     if (musicServiceIdBaseSchema.validate(data)) {
         const res = musicServicesSchema.safeParse(data)
         if (res.success && res.data.name === musicServiceName.enum.musicbrainz) {
-            const link = data.idHint !== undefined && showLink ? `https://musicbrainz.org/${data.idHint}/${data.id}` : undefined;
-            return <MusicServiceInfoIcon type={data.name} tooltip idHint={data.idHint} id={data.id} link={link} {...rest} />
+            const link = data.idType !== undefined && showLink ? `https://musicbrainz.org/${data.idType}/${data.id}` : undefined;
+            return <MusicServiceInfoIcon type={data.name} tooltip idHint={data.idType} id={data.id} link={link} {...rest} />
         }
-        return <MusicServiceInfoIcon type={data.name} id={data.id} idHint={data.idHint} {...rest} tooltip/>
+        return <MusicServiceInfoIcon type={data.name} id={data.id} idHint={data.idType} {...rest} tooltip/>
     }
 
     if (musicServiceBaseSchema.validate(data)) {
@@ -102,38 +108,11 @@ export const MusicServiceIndicators = (props: {
     )
 }
 
-export const playMetaIdsToMusicServices = (play: JsonPlayObject, type: 'track' | 'album'): MusicServicesAny[] => {
-    const {
-        data: {
-            meta: {
-                brainz,
-                spotify
-            } = {}
-        } = {}
-    } = play;
-
-    const services: MusicServicesAny[] = [];
-    if(type === 'track') {
-        if(brainz?.track !== undefined) {
-            services.push({name: 'musicbrainz', idHint: 'track', id: brainz.track});
-        } else if(brainz?.recording !== undefined) {
-            services.push({name: 'musicbrainz', idHint: 'recording', id: brainz.recording});
-        }
-        if(spotify?.track !== undefined) {
-            services.push({name: 'spotify', idHint: 'track', id: spotify.track});
-        }
-        return services;
-    }
-    if(type === 'album') {
-        if(brainz?.album !== undefined) {
-            services.push({name: 'musicbrainz', idHint: 'release', id: brainz.album});
-        } else if(brainz?.releaseGroup !== undefined) {
-            services.push({name: 'musicbrainz', idHint: 'release-group', id: brainz.releaseGroup});
-        }
-        if(spotify?.album !== undefined) {
-            services.push({name: 'spotify', idHint: 'album', id: spotify.album});
-        }
-        return services;
-    }
-    return services;
+export const getMusicServiceIconTooltip = (service: string) => {
+    const ServiceIcon = getMusicServiceIcon(service);
+    return (props: IconProps = {}) => (
+        <Tooltip content={service} interactive>
+            <Icon {...props}><ServiceIcon /></Icon>
+        </Tooltip>
+    );
 }

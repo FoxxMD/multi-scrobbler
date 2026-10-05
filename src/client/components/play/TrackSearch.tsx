@@ -2,34 +2,18 @@ import { useListCollection, Stack, Text, HStack } from "@chakra-ui/react"
 import { useDebouncedState } from '@tanstack/react-pacer'
 import { useQuery } from '@tanstack/react-query';
 import { tanQueries } from "../../queries/index.js";
-import type { TrackSearchResult } from "../../../core/Api.js";
+import { albumSearchResultToCredit, artistSearchResultToCredit, trackSearchResultToCredit, type TrackSearchResult } from "../../../core/Api.js";
 import React, { useCallback, useEffect, useState } from "react";
 import { ArtistCreditTags } from "../ArtistCreditDisplay.js";
 import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, type MetadataPartials } from "./MetadataResults.js";
-import { type ArtMeta, type PlayObjectMinimal } from "../../../core/Atomic.js";
-import { removeUndefinedKeys } from "../../../core/DataUtils.js";
+import type { Credit } from "../../../core/Atomic.js";
 import { MusicServiceIndicators } from "../musicServices/MusicServiceIndicators.js";
-import { albumSearchResultToMusicServices } from "./AlbumSearch.js";
-import type { MusicServicesAny } from "../musicServices/musicServiceTypes.js";
 
 const trackPartials: MetadataPartials<TrackSearchResult> = {
     track: { label: 'Track only', pick: ({ artists, album, albumCount, ...rest }) => rest },
     artists: { label: 'Track + artists', pick: ({ album, albumCount, ...rest }) => rest },
     album: { label: 'Track + album', pick: ({ artists, ...rest }) => rest },
 };
-
-export const trackSearchResultToMusicServices = (val: MinimalResult): MusicServicesAny[] => {
-    const musicServices: MusicServicesAny[] = [];
-    if (val.mbidTrack) {
-        musicServices.push({ name: 'musicbrainz', id: val.mbidTrack, idHint: 'track' });
-    } else if (val.mbidRecording) {
-        musicServices.push({ name: 'musicbrainz', id: val.mbidRecording, idHint: 'recording' });
-    }
-    if(val.spotifyId !== undefined) {
-        musicServices.push({ name: 'spotify', id: val.spotifyId, idHint: 'track' });
-    }
-    return musicServices;
-}
 
 export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?: (val: TrackSearchResult) => void }) => {
 
@@ -51,14 +35,14 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?:
         ) : undefined;
         albumContent = (<Text color="fg.muted" textStyle="sm">
             <HStack>
-                {album.name} {album.type !== undefined ? `(${album.type})` : ''}<MusicServiceIndicators services={albumSearchResultToMusicServices(album)}/> {andCount}
+                {album.name} {album.type !== undefined ? `(${album.type})` : ''}<MusicServiceIndicators services={albumSearchResultToCredit(album).metadata ?? []}/> {andCount}
             </HStack>
         </Text>)
     }
 
     let artistTags: React.JSX.Element | undefined = undefined;
     if (artists.length > 0) {
-        artistTags = <ArtistCreditTags data={artists} />
+        artistTags = <ArtistCreditTags data={artists.map(artistSearchResultToCredit)} />
     }
 
     return (
@@ -67,7 +51,7 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?:
             <Stack gap="1" flexGrow="1">
                 <Text fontWeight="medium" mb="1">
                     <HStack>
-                        {name} <MusicServiceIndicators services={trackSearchResultToMusicServices(props.data)}/> <MetadataPickMenu data={props.data} partials={trackPartials} onPick={onPick} />
+                        {name} <MusicServiceIndicators services={trackSearchResultToCredit(props.data).metadata ?? []}/> <MetadataPickMenu data={props.data} partials={trackPartials} onPick={onPick} />
                     </HStack>
                 </Text>
                 {artistTags}
@@ -77,55 +61,27 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?:
     )
 }
 
-type MinimalResult = Pick<TrackSearchResult, 'name' | 'mbidTrack' | 'mbidRecording' | 'spotifyId'>
-export interface TrackSearchProps {
-    initial?: PlayObjectMinimal<string>
-    onChange: (val: PlayObjectMinimal<string>) => void
+/** Play data to change when a track is selected. Artists and album are only included if the selected track has them. */
+export interface TrackOnChange {
+    track: Credit
+    artists?: Credit[]
+    album?: Credit
 }
 
-const trackResultToPlay = (val: TrackSearchResult): PlayObjectMinimal<string> => {
-    const {
-        name,
-        mbidTrack,
-        mbidRecording,
-        spotifyId,
-        artists,
-        album,
-        image
-    } = val;
+export interface TrackSearchProps {
+    initial?: Credit
+    onChange: (val: TrackOnChange) => void
+}
 
-    const play = removeUndefinedKeys<PlayObjectMinimal<string>>({
-        data: {
-            track: name,
-            artists: artists !== undefined && artists.length > 0 ? artists.map((x) => ({name: x.name, mbid: x.mbid, spotifyId: x.spotifyId})) : undefined,
-            album: album?.name,
-            meta: removeUndefinedKeys({
-                brainz: removeUndefinedKeys({
-                    track: mbidTrack,
-                    recording: mbidRecording,
-                    album: album?.mbidRelease,
-                    releaseGroup: album?.mbidReleaseGroup
-                }),
-                spotify: removeUndefinedKeys({
-                    track: spotifyId
-                })
-            })
-        },
-        meta: {}
-    }, false);
-
-    const art = removeUndefinedKeys<ArtMeta>({
-        album: album?.image,
-        track: image,
-        artist: (artists ?? []).find(x => x.image !== undefined)?.image
-    });
-    if(art !== undefined) {
-        play.meta = {
-            art
-        }
+const trackSearchResultToOnChange = (val: TrackSearchResult): TrackOnChange => {
+    const change: TrackOnChange = { track: trackSearchResultToCredit(val) };
+    if (val.artists !== undefined && val.artists.length > 0) {
+        change.artists = val.artists.map(artistSearchResultToCredit);
     }
-
-    return play;
+    if (val.album !== undefined) {
+        change.album = albumSearchResultToCredit(val.album);
+    }
+    return change;
 }
 
 export const TrackSearch = (props: TrackSearchProps) => {
@@ -135,28 +91,8 @@ export const TrackSearch = (props: TrackSearchProps) => {
         onChange = (val) => console.log(val, 'Selected value for prop')
     } = props;
 
-    const {
-        data: {
-            track,
-            meta: {
-                brainz: {
-                    recording,
-                    track: mbidTrack
-                } = {},
-                spotify: {
-                    track: spotifyId
-                } = {}
-            } = {}
-        } = {},
-    } = initial ?? {};
-
-    const [selectedItem, setSelectedItem] = useState<MinimalResult>(removeUndefinedKeys({
-        name: track ?? '',
-        mbidTrack,
-        mbidRecording: recording,
-        spotifyId
-    }, false));
-    const [debouncedQuery, setDebouncedQuery] = useDebouncedState<string>(track ?? '', { wait: 500 });
+    const [selectedItem, setSelectedItem] = useState<Credit>(initial ?? {name: ''});
+    const [debouncedQuery, setDebouncedQuery] = useDebouncedState<string>(initial?.name ?? '', { wait: 500 });
 
     const query = useQuery({
         enabled: debouncedQuery !== '',
@@ -176,11 +112,11 @@ export const TrackSearch = (props: TrackSearchProps) => {
     }, [query, set])
 
     const doChange = useCallback((val: TrackSearchResult) => {
-        setSelectedItem(val);
-        onChange(trackResultToPlay(val));
+        setSelectedItem(trackSearchResultToCredit(val));
+        onChange(trackSearchResultToOnChange(val));
     },[setSelectedItem, onChange]);
 
-    const services = trackSearchResultToMusicServices(selectedItem);
+    const services = selectedItem.metadata ?? [];
     let groupContent: React.JSX.Element | undefined = undefined;
     if(services.length > 0) {
         groupContent = <MusicServiceIndicators services={services} link={false}/>

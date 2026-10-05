@@ -4,7 +4,8 @@ import {
 } from "@foxxmd/regex-buddy-core";
 import type EventEmitter from "events";
 import {COMPONENT_TYPE_CLIENT, DEAD_LETTER_RETRIES_DEFAULT, DEAD_QUEUE, INGRESS_QUEUE, isPlayObject, MONITORING_ORIGIN_SYSTEM, MONITORING_ORIGIN_USER, QUEUE_STATUS_COMPLETED, type ComponentType, type LifecycleInput, type LifecycleStep, type PlayData, type PlayObject} from "../../core/Atomic.ts";
-import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
+import { capitalize } from "../../core/StringUtils.ts";
+import { buildTrackString } from "../../core/MusicMetadata.ts";
 import type {CommonClientConfig} from "./infrastructure/config/client/index.ts";
 import type {CommonSourceConfig} from "./infrastructure/config/source/index.ts";
 import { generateLoggableAbortReason, mergeSimpleError, SimpleError, SkipTransformStageError, StageChangeError, StagePrerequisiteError, StageTransformError, TransformRulesError } from "./errors/MSErrors.ts";
@@ -21,8 +22,9 @@ import { getRoot } from "../ioc.ts";
 import { nanoid } from "nanoid";
 import { isDebugMode, sleep } from "../utils.ts";
 import { findCauseByFunc, findCauseByReference } from "../utils/ErrorUtils.ts";
-import { hashObject, normalizeStr, parseArrayFromMaybeString } from "../utils/StringUtils.ts";
-import { playContentInvariantTransform } from "../utils/PlayComparisonUtils.ts";
+import { hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.ts";
+import { normalizeStr } from "../../core/StringUtils.ts";
+import { playContentCacheHash } from "../utils/PlayComparisonUtils.ts";
 import type { MSCache } from "./Cache.ts";
 import { diffObjects, diffObjectsConsoleOutput, patchObject } from "../../core/DataUtils.ts";
 import clone from "clone";
@@ -368,7 +370,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
             const shouldLog = log ?? this.config.options?.playTransform?.log ?? isDebugMode();
 
-            const transformHash = `playTransform-${hashObject(hook)}-${hashObject(playContentInvariantTransform(play))}`;
+            const transformHash = `playTransform-${hashObject(hook)}-${playContentCacheHash(play)}`;
             const cachedSteps = useCachedResult ?  await this.cache.cacheTransform.get<LifecycleStep[]>(transformHash) : undefined;
             if(cachedSteps !== undefined) {
                 logger.trace(`Cache hit for Steps => ${transformHash}`);

@@ -1,3 +1,4 @@
+import { creditId, creditIds, spotifyMeta, withImage, nameToCredit, creditsToNames  } from "../../../core/MusicMetadata.ts";
 import { loggerTest } from '@foxxmd/logging';
 import { Cacheable } from 'cacheable';
 import chai, { expect } from 'chai';
@@ -20,9 +21,9 @@ chai.use(asPromised);
 
 const basePlay = (data: Partial<PlayObject['data']> = {}, meta: Partial<PlayObject['meta']> = {}): PlayObject => ({
     data: {
-        track: 'My Track',
+        track: nameToCredit('My Track'),
         artists: [{ name: 'My Artist' }],
-        album: 'My Album',
+        album: nameToCredit('My Album'),
         isrc: '1234',
         duration: 180,
         ...data,
@@ -127,15 +128,21 @@ describe('Spotify Transformer', function () {
         });
 
         it('returns empty when all missing types are present', function () {
-            const play = basePlay({}, {art: {album: 'https://example.com'}});
-            play.data.meta = { spotify: { track: 't1', album: 'a1', artist: ['ar1'] } };
+            const play = basePlay({
+                track: nameToCredit('My Track', spotifyMeta('t1', 'track')),
+                album: withImage(nameToCredit('My Album', spotifyMeta('a1', 'album')), 'https://example.com'),
+                artists: [nameToCredit('My Artist', spotifyMeta('ar1', 'artist'))]
+            });
             const missing = missingSpotifyTypes(play);
             expect(missing).to.be.empty;
         });
 
         it('flags artists as missing when spotify artist id count does not match play artist count', function () {
-            const play = basePlay({ artists: [{ name: 'One' }, { name: 'Two' }] });
-            play.data.meta = { spotify: { track: 't1', album: 'a1', artist: ['ar1'] } };
+            const play = basePlay({
+                track: nameToCredit('My Track', spotifyMeta('t1', 'track')),
+                album: nameToCredit('My Album', spotifyMeta('a1', 'album')),
+                artists: [nameToCredit('One', spotifyMeta('ar1', 'artist')), nameToCredit('Two')]
+            });
             const missing = missingSpotifyTypes(play);
             expect(missing).to.include('ids');
         });
@@ -146,14 +153,15 @@ describe('Spotify Transformer', function () {
         it('maps core fields and does not duplicate album artists that match track artists', function () {
             const track = fakeTrack();
             const play = trackToPlay(track);
-            expect(play.data.track).to.equal('My Track');
-            expect(play.data.album).to.equal('My Album');
+            expect(play.data.track?.name).to.equal('My Track');
+            expect(play.data.album?.name).to.equal('My Album');
             expect(play.data.isrc).to.equal('USRC17607839');
             expect(play.data.duration).to.equal(180);
-            expect(play.data.artists).to.deep.equal([{ name: 'My Artist' }]);
+            expect(creditsToNames(play.data.artists)).to.deep.equal(['My Artist']);
+            expect(creditIds(play.data.artists, 'spotify', 'artist')).to.deep.equal(['artist1']);
             expect(play.data.albumArtists).to.deep.equal([]);
-            expect(play.data.meta!.spotify!.track).to.equal('track1');
-            expect(play.data.meta!.spotify!.album).to.equal('album1');
+            expect(creditId(play.data.track, 'spotify', 'track')).to.equal('track1');
+            expect(creditId(play.data.album, 'spotify', 'album')).to.equal('album1');
         });
 
         it('includes album artists when they differ from track artists', function () {
@@ -162,7 +170,7 @@ describe('Spotify Transformer', function () {
                 albumArtists: [artist('artist2', 'Various Artists')],
             });
             const play = trackToPlay(track);
-            expect(play.data.albumArtists).to.deep.equal([{ name: 'Various Artists' }]);
+            expect(creditsToNames(play.data.albumArtists)).to.deep.equal(['Various Artists']);
         });
     });
 
@@ -178,7 +186,7 @@ describe('Spotify Transformer', function () {
         const stageConfig = { type: 'spotify' } as SpotifyTransformerDataStage;
 
         it('ranks the candidate closest to the original scrobble highest', function () {
-            const play = basePlay({ track: 'Little Joe and Mary', artists: [{ name: 'Khruangbin' }], album: 'The Universe Smiles Upon You' });
+            const play = basePlay({ track: nameToCredit('Little Joe and Mary'), artists: [{ name: 'Khruangbin' }], album: nameToCredit('The Universe Smiles Upon You') });
 
             const goodMatch = fakeTrack({
                 id: 'good',
@@ -199,7 +207,7 @@ describe('Spotify Transformer', function () {
         });
 
         it('deprioritizes compilation matches when configured', function () {
-            const play = basePlay({ track: 'Little Joe and Mary', artists: [{ name: 'Khruangbin' }], album: 'The Universe Smiles Upon You' });
+            const play = basePlay({ track: nameToCredit('Little Joe and Mary'), artists: [{ name: 'Khruangbin' }], album: nameToCredit('The Universe Smiles Upon You') });
 
             // identical text match on both candidates -- only the compilation flag differs
             const compilationMatch = fakeTrack({ id: 'comp', albumType: 'compilation' });
@@ -229,27 +237,27 @@ describe('Spotify Transformer', function () {
         it('uses an ISRC match even when its title/artist text scores below the minimum threshold', async function () {
             // scrobble source title is drastically different from the Spotify catalog title (localized/theatrical
             // edition naming) but the ISRC identifies it as the same recording
-            const play = basePlay({ track: 'KAISEI:Movie Edition from Project SEKAI', artists: [{ name: 'Project SEKAI' }], isrc: 'JPPO02201234' });
+            const play = basePlay({ track: nameToCredit('KAISEI:Movie Edition from Project SEKAI'), artists: [{ name: 'Project SEKAI' }], isrc: 'JPPO02201234' });
             const track = fakeTrack({ name: '快晴「劇場版プロジェクトセカイ」ver.', artists: [artist('a1', 'Project SEKAI')], isrc: 'JPPO02201234' });
 
             const result = await transformer.handlePostFetch(play, { tracks: [track], requestQueries: [], searchType: 'isrc' }, stageConfig);
-            expect(result.data.track).to.equal('快晴「劇場版プロジェクトセカイ」ver.');
+            expect(result.data.track?.name).to.equal('快晴「劇場版プロジェクトセカイ」ver.');
         });
 
         it('still filters a basic-search match by the minimum score threshold', async function () {
-            const play = basePlay({ track: 'KAISEI:Movie Edition from Project SEKAI', artists: [{ name: 'Project SEKAI' }], album: 'Original Soundtrack' });
+            const play = basePlay({ track: nameToCredit('KAISEI:Movie Edition from Project SEKAI'), artists: [{ name: 'Project SEKAI' }], album: nameToCredit('Original Soundtrack') });
             const track = fakeTrack({ name: '快晴「劇場版プロジェクトセカイ」ver.', artists: [artist('a1', 'Project SEKAI')], albumName: 'Theatrical Edition Single' });
 
             await expect(transformer.handlePostFetch(play, { tracks: [track], requestQueries: [], searchType: 'basic' }, stageConfig)).to.be.rejected;
         });
 
         it('picks the best-matching candidate by fuzzy score when an ISRC returns more than one album', async function () {
-            const play = basePlay({ track: 'My Track', artists: [{ name: 'My Artist' }], album: 'The Real Album', isrc: 'USRC17607839' });
+            const play = basePlay({ track: nameToCredit('My Track'), artists: [{ name: 'My Artist' }], album: nameToCredit('The Real Album'), isrc: 'USRC17607839' });
             const wrongAlbum = fakeTrack({ id: 'wrong', albumName: 'Some Compilation', isrc: 'USRC17607839' });
             const rightAlbum = fakeTrack({ id: 'right', albumName: 'The Real Album', isrc: 'USRC17607839' });
 
             const result = await transformer.handlePostFetch(play, { tracks: [wrongAlbum, rightAlbum], requestQueries: [], searchType: 'isrc' }, stageConfig);
-            expect(result.data.meta!.spotify!.track).to.equal('right');
+            expect(creditId(result.data.track, 'spotify', 'track')).to.equal('right');
         });
     });
 });

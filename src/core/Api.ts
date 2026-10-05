@@ -1,12 +1,13 @@
 import type { CompareOpKey, ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
-import { artistCreditSchema, type ClientType, type ComponentAuthType, type DeepReplaceValue, type MonitoringStatus, type QueueContext } from "./Atomic.ts"
+import { mbidSchema, type Credit, type ClientType, type ComponentAuthType, type DeepReplaceValue, type MonitoringStatus, type QueueContext } from "./Atomic.ts"
 import type { SourceType } from "./Atomic.ts"
 import type { ComponentType, DateLike, ErrorLike, JsonPlayObject, PlayState, QueueName, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.ts"
 import type { Dayjs } from "dayjs"
 import type { ErrorIsh } from "./ErrorUtils.ts"
 import type { PlayEvent } from "./PlayEvent.ts"
 import * as z from "zod"
-import { httpUrl } from "../backend/utils/ZodUtils.ts"
+import { mbMeta, spotifyMeta, withImage } from "./MusicMetadata.ts"
+import { nameToCredit } from "./MusicMetadata.ts"
 
 export interface PlayApiCommon {
     uid: string
@@ -255,12 +256,13 @@ export const metadataResultServiceScoreSchema = z.object({
 export type MetadataResultServiceScore = z.infer<typeof metadataResultServiceScoreSchema>;
 
 export const metadataResultImageSchema = z.object({
-    image: httpUrl.optional()
+    image: z.string().optional()
 })
 export type MetadataResultImage = z.infer<typeof metadataResultImageSchema>;
 
 export const artistSearchResultSchema = z.object({
-    ...artistCreditSchema.shape,
+    mbid: mbidSchema.optional(),
+    spotifyId: z.string().optional(),
     ...metadataResultServiceScoreSchema.shape,
     ...metadataResultBaseSchema.shape,
     ...metadataResultImageSchema.shape,
@@ -306,3 +308,12 @@ export const trackSearchResultResponseSchema = z.object({
     data: trackSearchResultSchema.array()
 });
 export type TrackSearchResultResponse = z.infer<typeof trackSearchResultResponseSchema>;
+
+export const artistSearchResultToCredit = (val: Pick<ArtistSearchResult, 'name' | 'mbid' | 'spotifyId' | 'image'>): Credit =>
+    withImage(nameToCredit(val.name, mbMeta(val.mbid, 'artist'), spotifyMeta(val.spotifyId, 'artist')), val.image);
+
+export const albumSearchResultToCredit = (val: Pick<AlbumSearchResult, 'name' | 'mbidRelease' | 'mbidReleaseGroup' | 'spotifyId' | 'image'>): Credit =>
+    withImage(nameToCredit(val.name, mbMeta(val.mbidRelease, 'release'), mbMeta(val.mbidReleaseGroup, 'release-group'), spotifyMeta(val.spotifyId, 'album')), val.image);
+
+export const trackSearchResultToCredit = (val: Pick<TrackSearchResult, 'name' | 'mbidTrack' | 'mbidRecording' | 'spotifyId' | 'image'>): Credit =>
+    withImage(nameToCredit(val.name, mbMeta(val.mbidTrack, 'track'), mbMeta(val.mbidRecording, 'recording'), spotifyMeta(val.spotifyId, 'track')), val.image);

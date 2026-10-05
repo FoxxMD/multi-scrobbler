@@ -12,7 +12,8 @@ import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../utils
 import { type DeviceInfoResponse, type DeviceStatusResponse, MusicCastResponseCodes, type MusicCastSourceConfig, playbackToReportedStatus, type PlayInfoCDResponse, type PlayInfoNetResponse } from "../common/infrastructure/config/source/musiccast.ts";
 import request from 'superagent';
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
-import { artistNamesToCredits } from "../../core/StringUtils.ts";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../core/MusicMetadata.ts";
 
 
 export class MusicCastSource extends MemoryPositionalSource {
@@ -150,9 +151,9 @@ const formatPlayObj = (obj: PlayInfoCDResponse | PlayInfoNetResponse, options: F
 
     const play: PlayObjectMinimal = {
         data: {
-            artists: artistNamesToCredits(artist !== undefined && artist !== '' ? [artist] : []),
-            album: album !== '' ? album : undefined,
-            track,
+            artists: namesToCredits(artist !== undefined && artist !== '' ? [artist] : []),
+            album: nameToCredit(album !== '' ? album : undefined),
+            track: nameToCredit(track),
             // we should treat 0 time as the same as not being provided
             duration: total_time === 0 ? undefined : total_time
         },

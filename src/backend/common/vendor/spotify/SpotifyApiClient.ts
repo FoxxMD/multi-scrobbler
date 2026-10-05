@@ -2,7 +2,8 @@ import SpotifyWebApi from "spotify-web-api-node";
 import { RateLimiterMemory, RateLimiterQueue } from 'rate-limiter-flexible';
 import type { Cacheable } from "cacheable";
 import type { PlayObject, PlayObjectMinimal } from "../../../../core/Atomic.ts";
-import { artistNameToCredit } from "../../../../core/StringUtils.ts";
+import { nameToCredit } from "../../../../core/MusicMetadata.ts";
+import { spotifyMeta, withImage } from "../../../../core/MusicMetadata.ts";
 import { isrcNoHyphens } from "../../../../core/PlayUtils.ts";
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.ts";
 import { hashObject } from "../../../utils/StringUtils.ts";
@@ -104,7 +105,7 @@ export class SpotifyApiClient extends AbstractApiClient {
 
         const parts: string[] = [];
         if (play.data.track !== undefined) {
-            parts.push(`track:${luceneQuoteIfNeeded(play.data.track)}`);
+            parts.push(`track:${luceneQuoteIfNeeded(play.data.track.name)}`);
         }
         if (play.data.artists !== undefined && play.data.artists.length > 0) {
             // use only the primary artist because Spotify's search does not support matching multiple artist filters well
@@ -189,20 +190,12 @@ export const trackToPlay = (track: SpotifyApi.TrackObjectFull): PlayObject => {
 
     const play: PlayObjectMinimal = {
         data: {
-            track: name,
-            artists: artists.map(x => artistNameToCredit(x.name)),
-            albumArtists: actualAlbumArtists.map(x => artistNameToCredit(x.name)),
-            album: album?.name,
+            track: nameToCredit(name, spotifyMeta(id, 'track')),
+            artists: artists.map(x => nameToCredit(x.name, spotifyMeta(x.id, 'artist'))),
+            albumArtists: actualAlbumArtists.map(x => nameToCredit(x.name, spotifyMeta(x.id, 'artist'))),
+            album: nameToCredit(album?.name, spotifyMeta(album?.id, 'album')),
             duration: duration_ms !== undefined ? Math.round(duration_ms / 1000) : undefined,
             isrc,
-            meta: {
-                spotify: {
-                    track: id,
-                    artist: artists.map(x => x.id),
-                    albumArtist: actualAlbumArtists.map(x => x.id),
-                    album: album?.id
-                }
-            }
         },
         meta: {
             source: 'spotify',
@@ -211,9 +204,7 @@ export const trackToPlay = (track: SpotifyApi.TrackObjectFull): PlayObject => {
     }
 
     if((album?.images ?? []).length > 0) {
-        play.meta.art = {
-            album: chooseImageByResolution(album.images, {fallbackBest: true}).url
-        }
+        play.data.album = withImage(play.data.album, chooseImageByResolution(album.images, {fallbackBest: true}).url);
     }
 
     return baseFormatPlayObj(track, play);

@@ -1,6 +1,9 @@
+import { creditsWithIds, mbMeta, withImage, withMetadata } from "../../core/MusicMetadata.ts";
 import type EventEmitter from "events";
-import type {BrainzMeta, ComponentAuthType, PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
-import { artistNamesToCredits, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
+import type {ComponentAuthType, PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
+import { combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
+import { nameToCredit, creditsToNames } from "../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../core/MusicMetadata.ts";
 import {
     asPlayerStateDataMaybePlay,
     type FormatPlayObjectOptions,
@@ -336,15 +339,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
         if(thumb !== undefined) {
             const res = parseRegexSingle(THUMB_REGEX, thumb)
             if(res !== undefined) {
-                return {
-                    ...play,
-                    meta: {
-                        ...play.meta,
-                        art: {
-                            track: `/api/components/${this.componentId}/art?ratingKey=${res.named.ratingkey}`
-                        }
-                    }
-                }
+                play.data.track = withImage(play.data.track, `/api/components/${this.componentId}/art?ratingKey=${res.named.ratingkey}`);
             }
         }
 
@@ -390,10 +385,10 @@ export default class PlexApiSource extends MemoryPositionalSource {
 
         const play: PlayObjectMinimal = {
             data: {
-                artists: artistNamesToCredits(realArtists),
-                albumArtists: artistNamesToCredits(albumArtists),
-                album,
-                track,
+                artists: namesToCredits(realArtists),
+                albumArtists: namesToCredits(albumArtists),
+                album: nameToCredit(album),
+                track: nameToCredit(track),
                 // albumArtists: AlbumArtists !== undefined ? AlbumArtists.map(x => x.Name) : undefined,
                 duration: duration !== undefined ? duration / 1000 : undefined
             },
@@ -435,16 +430,12 @@ export default class PlexApiSource extends MemoryPositionalSource {
                     this.getMusicBrainzId(sessionData[1].grandparentRatingKey),
                 ]);
 
-                const playMeta = sessionPlay.data.meta ?? {};
-                sessionPlay.data.meta = playMeta;
                 const playArtists = sessionPlay.data.artists ?? [];
                 const playAlbumArtists = sessionPlay.data.albumArtists ?? [];
+                const albumArtistNames = creditsToNames(playAlbumArtists);
 
-                const computedBrainz: BrainzMeta = {
-                    ...(playMeta.brainz ?? {}),
-                    track: trackMbId ?? playMeta.brainz?.track,
-                    album: albumMbId ?? playMeta.brainz?.album,
-                }
+                sessionPlay.data.track = withMetadata(sessionPlay.data.track, mbMeta(trackMbId, 'track'));
+                sessionPlay.data.album = withMetadata(sessionPlay.data.album, mbMeta(albumMbId, 'release'));
                 // Plex doesn't store MBIDs for track artists, so we use the
                 // album artist MBID instead BUT ONLY if
                 // * album artists aren't populated 
@@ -455,27 +446,17 @@ export default class PlexApiSource extends MemoryPositionalSource {
                 if(albumArtistMbId !== undefined 
                     && albumArtistMbId !== MBID_VARIOUS_ARTISTS 
                     && (playAlbumArtists.length === 0 
-                        || playArtists.every(y => playAlbumArtists.includes(y)))) {
-                    computedBrainz.artist = [...new Set([...(computedBrainz.artist ?? []), albumArtistMbId])];
-
+                        || playArtists.every(y => albumArtistNames.includes(y.name)))) {
                     // since we don't get artist and mbid at the same time we only be sure these are actually associated
                     // if there is only one of each
-                    if(computedBrainz.artist.length === 1 && playArtists.length === 1) {
-                        playArtists[0].mbid = computedBrainz.artist[0];
-                    }
+                    sessionPlay.data.artists = creditsWithIds(playArtists, [albumArtistMbId], 'musicbrainz', 'artist');
                 }
 
                 if(albumArtistMbId !== undefined) {
-                    computedBrainz.albumArtist = [...new Set([...(computedBrainz.albumArtist ?? []), albumArtistMbId])];
-
                     // since we don't get albumartist and mbid at the same time we only be sure these are actually associated
                     // if there is only one of each
-                    if(computedBrainz.albumArtist.length === 1 && playAlbumArtists.length === 1) {
-                        playAlbumArtists[0].mbid = computedBrainz.albumArtist[0];
-                    }
+                    sessionPlay.data.albumArtists = creditsWithIds(playAlbumArtists, [albumArtistMbId], 'musicbrainz', 'artist');
                 }
-
-                playMeta.brainz = computedBrainz;
 
                 // need to add this to original object since lifecycle has already been set in sessionToPlayerState
                 //sessionData[0].play.meta.lifecycle.original = clone(sessionData[0].play);

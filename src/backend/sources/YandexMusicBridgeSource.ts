@@ -1,3 +1,4 @@
+import { withAlbumArt } from "../../core/MusicMetadata.ts";
 import type { EventEmitter } from "events";
 import request from 'superagent';
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
@@ -14,7 +15,7 @@ import type {YandexMusicBridgeSourceConfig} from "../common/infrastructure/confi
 import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import { UpstreamError } from "../common/errors/UpstreamError.ts";
-import { artistNamesToCredits } from "../../core/StringUtils.ts";
+import { nameToCredit, creditsToNames, namesToCredits } from "../../core/MusicMetadata.ts";
 
 interface BridgeTrackData {
     title?: string
@@ -202,13 +203,13 @@ export default class YandexMusicBridgeSource extends MemoryPositionalSource {
     private getSyntheticKey(bridgeData: BridgeTrackData, play: PlayObject): string {
         const artists = Array.isArray(bridgeData.artists_list) && bridgeData.artists_list.length > 0
             ? bridgeData.artists_list.join(',')
-            : (bridgeData.artists ?? play.data.artists?.join(',') ?? '');
+            : (bridgeData.artists ?? creditsToNames(play.data.artists).join(','));
         return [
             this.getPlayerId(bridgeData),
             bridgeData.track_id ?? '',
-            bridgeData.title ?? play.data.track ?? '',
+            bridgeData.title ?? play.data.track?.name ?? '',
             artists,
-            bridgeData.album ?? play.data.album ?? '',
+            bridgeData.album ?? play.data.album?.name ?? '',
         ].join('::');
     }
 
@@ -375,7 +376,7 @@ export default class YandexMusicBridgeSource extends MemoryPositionalSource {
 
             if (this.shouldFinalizeSyntheticTrack(playerId, nowMs)) {
                 const durationSec = this.syntheticPlaybackByPlayer.get(playerId)?.durationSec ?? play.data.duration ?? 0;
-                this.logger.info(`Synthetic playback exceeded track duration for player ${playerId} '${play.data.artists?.join(', ') ?? 'Unknown'} - ${play.data.track ?? 'Unknown'}'; emitting STOP after ${this.postEndStopGraceSec}s past track end at ${durationSec.toFixed(0)}s.`);
+                this.logger.info(`Synthetic playback exceeded track duration for player ${playerId} '${creditsToNames(play.data.artists).join(', ') || 'Unknown'} - ${play.data.track?.name ?? 'Unknown'}'; emitting STOP after ${this.postEndStopGraceSec}s past track end at ${durationSec.toFixed(0)}s.`);
                 const stoppedState = this.buildStoppedState(playerId);
                 this.removePlayerState(playerId);
                 if (stoppedState !== undefined) {
@@ -408,7 +409,7 @@ export default class YandexMusicBridgeSource extends MemoryPositionalSource {
 
                 if (this.shouldFinalizeSyntheticTrack(playerId, nowMs)) {
                     const durationSec = this.syntheticPlaybackByPlayer.get(playerId)?.durationSec ?? lastPlay.data.duration ?? 0;
-                    this.logger.info(`Synthetic keepalive exceeded track duration for player ${playerId} '${lastPlay.data.artists?.join(', ') ?? 'Unknown'} - ${lastPlay.data.track ?? 'Unknown'}'; emitting STOP after ${this.postEndStopGraceSec}s past track end at ${durationSec.toFixed(0)}s.`);
+                    this.logger.info(`Synthetic keepalive exceeded track duration for player ${playerId} '${creditsToNames(lastPlay.data.artists).join(', ') || 'Unknown'} - ${lastPlay.data.track?.name ?? 'Unknown'}'; emitting STOP after ${this.postEndStopGraceSec}s past track end at ${durationSec.toFixed(0)}s.`);
                     const stoppedState = this.buildStoppedState(playerId);
                     this.removePlayerState(playerId);
                     if (stoppedState !== undefined) {
@@ -417,7 +418,7 @@ export default class YandexMusicBridgeSource extends MemoryPositionalSource {
                     continue;
                 }
 
-                this.logger.trace(`Bridge returned no current track for player ${playerId}; keeping synthetic playback alive for ${lastPlay.data.artists?.join(', ') ?? 'Unknown'} - ${lastPlay.data.track ?? 'Unknown'}`);
+                this.logger.trace(`Bridge returned no current track for player ${playerId}; keeping synthetic playback alive for ${creditsToNames(lastPlay.data.artists).join(', ') || 'Unknown'} - ${lastPlay.data.track?.name ?? 'Unknown'}`);
                 states.push({
                     platformId: [playerId, NO_USER],
                     sessionId: bridgeDataForKeepAlive.queue_id ?? bridgeDataForKeepAlive.track_id ?? playerId,
@@ -441,21 +442,20 @@ const formatPlayObj = (obj: BridgeTrackData, playerId: string): PlayObject => {
         : (obj.artists ? obj.artists.split(/\s*,\s*/).filter(x => x.trim() !== '') : []);
 
     const play: PlayObjectMinimal = {
-        data: {
-            artists: artistNamesToCredits(artists),
-            album: obj.album ?? undefined,
-            track: obj.title ?? undefined,
+        data: withAlbumArt({
+            artists: namesToCredits(artists),
+            album: nameToCredit(obj.album),
+            track: nameToCredit(obj.title),
             duration: obj.duration_ms !== undefined && obj.duration_ms !== null
                 ? obj.duration_ms / 1000
                 : undefined,
-        },
+        }, obj.cover),
         meta: {
             trackProgressPosition: getSafePositionSec(obj),
             deviceId: playerId || NO_DEVICE,
             mediaPlayerName: obj.device_name ?? (obj.source === 'station-local' ? 'Yandex Station' : 'Yandex Music'),
             mediaPlayerVersion: obj.platform ?? (obj.source === 'station-local' ? 'station-local' : 'bridge'),
             comment: obj.track_id !== undefined ? `Yandex Track ${obj.track_id}` : undefined,
-            art: obj.cover !== undefined && obj.cover !== null && obj.cover !== '' ? { album: obj.cover } : undefined,
         }
     }
 

@@ -4,6 +4,7 @@ import { TextMuted } from "../TextMuted";
 import { SOURCE_SOT, type SOURCE_SOT_TYPES, type SourcePlayerJson } from "../../../core/Atomic";
 import { timeToHumanTimestamp } from "../../../core/TimeUtils";
 import { capitalize } from "../../../core/StringUtils";
+import { playImage, creditsToNames } from "../../../core/MusicMetadata";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ErrorAlert } from "../ErrorAlert";
 import {
@@ -47,13 +48,11 @@ export const ChakraPlayer = (props: PlayerProps) => {
     const {
         play: {
             data: {
-                track = '???',
+                track,
+                album,
                 artists = [{ name: '???' }],
                 duration = 0
             } = {},
-            meta: {
-                art = {},
-            } = {}
         } = {},
         play,
         listenedDuration = 0,
@@ -70,7 +69,7 @@ export const ChakraPlayer = (props: PlayerProps) => {
     const [positionBuffer, setProgressBuffer] = useState<undefined | number>(undefined);
     const [intervalId, setIntervalId] = useState<undefined | number>(undefined);
     const [lastUpdated, setLastUpdated] = useState<undefined | number>(undefined);
-    const playArt = art.track ?? art.album ?? art.artist ?? undefined;
+    const playArt = playImage({track, album, artists});
 
     const isNowPlaying = nowPlaying || nowPlayingMode;
 
@@ -164,8 +163,8 @@ export const ChakraPlayer = (props: PlayerProps) => {
                         {playArt !== undefined ? <Image minWidth="48px" flex="0" height="100%" width="100%" src={playArt}></Image> : null}
                         <Center flex="1">
                             <Stack textAlign="center">
-                                <Heading textWrap="balance" size="md">{calculated !== 'stopped' ? track : '-'}</Heading>
-                                <TextMuted>{calculated !== 'stopped' ? artists.map(x => x.name).join(' / ') : '-'}</TextMuted>
+                                <Heading textWrap="balance" size="md">{calculated !== 'stopped' ? (track?.name ?? '???') : '-'}</Heading>
+                                <TextMuted>{calculated !== 'stopped' ? creditsToNames(artists).join(' / ') : '-'}</TextMuted>
                             </Stack>
                         </Center>
                     </Flex>
@@ -207,12 +206,8 @@ export const ClientNowPlaying = (props: PlayerProps) => {
         data: {
             play: {
                 data: {
-                    track = '???',
+                    track,
                     artists = [{ name: '???' }],
-                    duration = 0
-                } = {},
-                meta: {
-                    art = {},
                 } = {},
             } = {},
             expiration
@@ -230,7 +225,7 @@ export const ClientNowPlaying = (props: PlayerProps) => {
                 <Status.Indicator colorPalette="green" style={{animation: 'icon-fade-half 3s infinite linear'}}/>
             </Status.Root>
             </HStack>
-            <Span truncate>{artists.map(x => x.name).join('/')} - {track}</Span>
+            <Span truncate>{creditsToNames(artists).join('/')} - {track?.name ?? '???'}</Span>
         </Stack>
     )
 }

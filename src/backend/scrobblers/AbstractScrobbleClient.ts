@@ -16,7 +16,8 @@ import {
     DEAD_LETTER_RETRIES_DEFAULT,
     PARSED_FROM
 } from "../../core/Atomic.ts";
-import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.ts";
+import { truncateStringToLength } from "../../core/StringUtils.ts";
+import { buildTrackString } from "../../core/MusicMetadata.ts";
 import AbstractComponent from "../common/AbstractComponent.ts";
 import { hasUpstreamError } from "../common/errors/UpstreamError.ts";
 import {

@@ -1,3 +1,4 @@
+import { creditMbid, playImage } from "../../../core/MusicMetadata.ts";
 import { loggerTest } from "@foxxmd/logging";
 import { expect } from 'chai';
 import EventEmitter from "events";
@@ -115,6 +116,8 @@ describe("Jellyfin API Source", function() {
     describe('Parses and replaces frontendUrlOverride correctly if set', function () {
 
         const item: BaseItemDto = {
+            Name: 'A Track',
+            Album: 'An Album',
             AlbumId: '123',
             AlbumPrimaryImageTag: 'Primary',
             ParentId: '456',
@@ -130,7 +133,7 @@ describe("Jellyfin API Source", function() {
             jf.api = jf.client.createApi(jf.address);
             jf.imageApi = getImageApi(jf.api);
 
-            expect(jf.formatPlayObjAware(item).meta.art!.album).to.be.eql(`${sourceUrl}/Items/123/Images/Primary?maxHeight=500`);
+            expect(playImage(jf.formatPlayObjAware(item).data, ['album', 'track'])).to.be.eql(`${sourceUrl}/Items/123/Images/Primary?maxHeight=500`);
             expect(jf.formatPlayObjAware(item).meta.url!.web).to.be.eql(`${sourceUrl}/web/#/details?id=456&serviceId=789`);
 
             await jf.destroy();
@@ -143,7 +146,7 @@ describe("Jellyfin API Source", function() {
             jf.api = jf.client.createApi(jf.address);
             jf.imageApi = getImageApi(jf.api);
 
-            expect(jf.formatPlayObjAware(item).meta.art!.album).to.be.eql(`${frontendUrlOverride}/Items/123/Images/Primary?maxHeight=500`);
+            expect(playImage(jf.formatPlayObjAware(item).data, ['album', 'track'])).to.be.eql(`${frontendUrlOverride}/Items/123/Images/Primary?maxHeight=500`);
             expect(jf.formatPlayObjAware(item).meta.url!.web).to.be.eql(`${frontendUrlOverride}/web/#/details?id=456&serviceId=789`);
 
             await jf.destroy();
@@ -498,8 +501,8 @@ describe("Jellyfin API Source", function() {
 
             const playStr = JellyfinApiSource.formatPlayObj(itemStr);
 
-            expect(playStr.data.artists![0].mbid).eq(itemStr.ProviderIds!.MusicBrainzArtist);
-            expect(playStr.data.albumArtists![0].mbid).eq(itemStr.ProviderIds!.MusicBrainzAlbumArtist);
+            expect(creditMbid(playStr.data.artists![0], 'artist')).eq(itemStr.ProviderIds!.MusicBrainzArtist);
+            expect(creditMbid(playStr.data.albumArtists![0], 'artist')).eq(itemStr.ProviderIds!.MusicBrainzAlbumArtist);
         });
 
         it('Does not add mbids to artist props if there are multiple artists', async function () {
@@ -515,8 +518,8 @@ describe("Jellyfin API Source", function() {
 
             const playStr = JellyfinApiSource.formatPlayObj(itemStr);
 
-            expect(playStr.data.artists![0].mbid).is.undefined;
-            expect(playStr.data.albumArtists![0].mbid).is.undefined;
+            expect(creditMbid(playStr.data.artists![0], 'artist')).is.undefined;
+            expect(creditMbid(playStr.data.albumArtists![0], 'artist')).is.undefined;
         });
 
     });

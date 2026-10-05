@@ -26,7 +26,7 @@ const meta = preview.type<{args: PropsAndCustomArgs}>().meta({
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],
 decorators: [
-    (Story) => (<Provider><Container maxWidth="2xl"><Story/></Container></Provider>),
+    (Story) => (<Provider><Container><Story/></Container></Provider>),
   ],
 args: {
     play: generateJsonPlay(),
@@ -44,7 +44,7 @@ export const PlayInfoStory = meta.story({
 
     if(args.defaultFinal && args.final === undefined) {
       const final = clone(args.play);
-      final.data.track = `${final.data.track} (Album Version)`;
+      final.data.track = {...final.data.track, name: `${final.data.track?.name} (Album Version)`};
       args.final = final;
     }
     
@@ -61,5 +61,15 @@ export const PlayInfoStory = meta.story({
       args.play = asJsonPlayObject(withBrainz(args.play, {include: ['album','recording','track','artist']}));
     }
     return (<PlayData {...args}/>) 
+  }
+});
+
+export const PlayInfoDenseStory = meta.story({
+  render: (args) => {
+    const bigPlay = asJsonPlayObject(withBrainz(generateJsonPlay({
+      artists: generateArtistCredits(4,4, {mbidVal: true}),
+      albumArtists: generateArtistCredits(undefined, 2, {mbidVal: true})
+    }), {include: ['album','recording','track','artist']}));
+    return (<PlayData {...args} play={bigPlay}/>) 
   }
 });

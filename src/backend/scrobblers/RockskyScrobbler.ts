@@ -1,7 +1,8 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import type EventEmitter from "events";
 import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type QueueContext, type SourcePlayerObj} from "../../core/Atomic.ts";
-import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
+import { capitalize } from "../../core/StringUtils.ts";
+import { buildTrackString } from "../../core/MusicMetadata.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import type {FormatPlayObjectOptions, InternalConfigOptional} from "../common/infrastructure/Atomic.ts";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.ts";

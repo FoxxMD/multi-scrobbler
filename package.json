@@ -28,7 +28,7 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "atproto:lex:tealfm": "npm exec -- lex-cli pull -c src/backend/common/vendor/teal/lex.config.ts && npm exec -- lex-cli generate -c src/backend/common/vendor/teal/lex.config.ts",
-    "frontend:analyze": "npx esbuild src/client/index-next.tsx --bundle --format=esm --platform=node --metafile=meta.json --outfile=/dev/null"
+    "frontend:analyze": "vite build --mode analyze --outDir node_modules/.cache/frontend-analyze"
   },
   "exports": {
     ".": {
@@ -139,7 +139,7 @@
     "react-use-timeout": "^1.0.0",
     "serialize-error": "^13.0.1",
     "spotify-web-api-node": "^5.0.2",
-    "sqlite-up": "^0.5.0",
+    "sqlite-up": "^0.6.0",
     "superagent": "^8.0.9",
     "toad-scheduler": "^3.0.0",
     "tough-cookie": "^5.1.2",
@@ -233,6 +233,7 @@
     "react-error-boundary": "^6.1.1",
     "react-icons": "^5.7.0",
     "react-router-dom": "^7.15.0",
+    "rollup-plugin-visualizer": "^7.1.1",
     "shiki": "^4.0.2",
     "sinon": "^21.0.2",
     "storybook": "^10.4.3",

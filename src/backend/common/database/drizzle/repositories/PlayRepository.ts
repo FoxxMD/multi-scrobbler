@@ -1111,9 +1111,9 @@ export const buildPlayWhere = (args: PlayWhereOpts): WhereClause<'plays'> => {
         ];
         const textWhere: typeof where.RAW[] = [];
         for(const t of args.text) {
-            textWhere.push((p) => sql`lower(json_extract(${p.play}, '$.data.track')) LIKE '%' || ${t.toLocaleLowerCase()} || '%'`)
+            textWhere.push((p) => sql`lower(json_extract(${p.play}, '$.data.track.name')) LIKE '%' || ${t.toLocaleLowerCase()} || '%'`)
             textWhere.push((p) => sql`lower(json_extract(${p.play}, '$.data.artists')) LIKE '%' || ${t.toLocaleLowerCase()} || '%'`)
-            textWhere.push((p) => sql`lower(json_extract(${p.play}, '$.data.album')) LIKE '%' || ${t.toLocaleLowerCase()} || '%'`)
+            textWhere.push((p) => sql`lower(json_extract(${p.play}, '$.data.album.name')) LIKE '%' || ${t.toLocaleLowerCase()} || '%'`)
         }
         where.AND = [
             {

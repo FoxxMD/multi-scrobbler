@@ -47,18 +47,6 @@ export const diffElements = (original: JsonPlayObject, steps: LifecycleStep[]): 
             continue;
         }
         const left: JsonPlayObject = structuredClone(currentPlay); // JSON.parse(JSON.stringify(currentPlay));
-        left.data.meta = {
-            ...(left.data.meta ?? {}),
-            brainz: {
-                ...(left.data.meta?.brainz ?? {})
-            }
-        }
-        currentPlay.data.meta = {
-            ...(currentPlay.data.meta ?? {}),
-            brainz: {
-                ...(currentPlay.data.meta?.brainz ?? {})
-            }
-        }
 
         try {
             currentPlay.data = patchObject(currentPlay.data, patch)// jdiff.patch(currentPlay, patch) as JsonPlayObject;

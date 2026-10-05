@@ -3,7 +3,8 @@ import dayjs, { type Dayjs } from "dayjs";
 import type { EventEmitter } from "events";
 import type { FixedSizeList } from "fixed-size-list";
 import { DEAD_LETTER_RETRIES_DEFAULT, DEAD_QUEUE, INGRESS_QUEUE, PARSED_FROM, type PlayMatchResult, type PlayObject, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, SOURCE_SOT } from "../../core/Atomic.ts";
-import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
+import { capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
+import { buildTrackString } from "../../core/MusicMetadata.ts";
 import AbstractComponent from "../common/AbstractComponent.ts";
 import {
     type Authenticatable,

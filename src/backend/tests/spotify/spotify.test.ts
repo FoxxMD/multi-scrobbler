@@ -113,7 +113,7 @@ describe('Spotify - ISRC Enrichment', function () {
 
         expect(play).to.not.be.undefined;
         expect(play?.data.isrc).to.be.undefined;
-        expect(play?.data.track).to.equal('The Sandpits Of Zonhoven');
+        expect(play?.data.track?.name).to.equal('The Sandpits Of Zonhoven');
     });
 });
 

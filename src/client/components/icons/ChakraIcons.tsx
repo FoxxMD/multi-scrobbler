@@ -219,6 +219,8 @@ export const UnlockIconRaw = LuLockOpen;
 export const UnlockIcon = makeChakraIcon(LuLockOpen);
 export const UnlockButton = makeIconButton(LuLockOpen);
 
+export const availableMusicServiceIcons = ['spotify','musicbrainz','youtube','jellyfin','plex','listenbrainz','rocksky'];
+
 export const getMusicServiceIcon = (service?: string): IconType => {
     const lower = service === undefined ? undefined : service.toLocaleLowerCase();
     switch(lower) {
@@ -240,6 +242,8 @@ export const getMusicServiceIcon = (service?: string): IconType => {
             return LuExternalLink;
     }
 }
+
+export const hasMusicServiceIcon = (service?: string): boolean => service === undefined ? false : availableMusicServiceIcons.includes(service.toLocaleLowerCase());
 
 export const getMusicServiceIconElement = (service?: string): ReactNode => {
     const ServiceIcon = getMusicServiceIcon(service);

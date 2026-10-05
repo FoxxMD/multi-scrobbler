@@ -9,7 +9,8 @@ import { type Info, JRiverApiClient, PLAYER_STATE } from "../common/vendor/JRive
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
-import { artistNamesToCredits } from "../../core/StringUtils.ts";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../core/MusicMetadata.ts";
 
 export class JRiverSource extends MemoryPositionalSource {
     declare config: JRiverSourceConfig;
@@ -104,9 +105,9 @@ export class JRiverSource extends MemoryPositionalSource {
 
         const play: PlayObjectMinimal = {
             data: {
-                track: Name,
-                album: album,
-                artists: artistNamesToCredits(artists),
+                track: nameToCredit(Name),
+                album: nameToCredit(album),
+                artists: namesToCredits(artists),
                 duration: Math.round(length),
                 playDate: dayjs()
             },

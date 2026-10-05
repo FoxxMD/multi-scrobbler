@@ -1,3 +1,4 @@
+import { creditId, creditMbid, mbMeta, spotifyMeta, withImage } from "../../../core/MusicMetadata.ts";
 import * as dotenv from 'dotenv';
 import { loggerTest } from "@foxxmd/logging";
 import chai, { expect, assert } from 'chai';
@@ -16,7 +17,8 @@ import { http, HttpResponse, delay } from "msw";
 import { generatePlay, withBrainz } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { intersect, missingMbidTypes, sleep } from '../../utils.ts';
 import { CoverArtApiClient } from '../../common/vendor/musicbrainz/CoverArtApiClient.ts';
-import { artistNamesToCredits, artistNameToCredit } from '../../../core/StringUtils.ts';
+import { nameToCredit } from "../../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../../core/MusicMetadata.ts";
 import dayjs from 'dayjs';
 import { MusicbrainzApiWrapped } from '../../common/vendor/musicbrainz/MusicbrainzApi.ts';
 import { AsyncLocalStorage } from 'async_hooks';
@@ -68,9 +70,9 @@ describe('Musicbrainz API', function () {
 
             const play: PlayObject = {
                 data: {
-                    track: "Little Joe and Mary ii",
-                    artists: artistNamesToCredits(["Khruangbin"]),
-                    album: "The Universe Smiles Upon You ii"
+                    track: nameToCredit("Little Joe and Mary ii"),
+                    artists: namesToCredits(["Khruangbin"]),
+                    album: nameToCredit("The Universe Smiles Upon You ii")
                 },
                 meta: {
                     
@@ -93,10 +95,10 @@ describe('Musicbrainz API', function () {
 
             const play: PlayObject = {
                 data: {
-                    track: 'Cyber Space (CrossWorlds Remix): Final Lap (No Chants)',
-                    album: "Sonic Racing: CrossWorlds Original Soundtrack - Echoes of Dimensions",
+                    track: nameToCredit('Cyber Space (CrossWorlds Remix): Final Lap (No Chants)'),
+                    album: nameToCredit("Sonic Racing: CrossWorlds Original Soundtrack - Echoes of Dimensions"),
                     artists: [
-                        artistNameToCredit("Kanon Oguni")!
+                        nameToCredit("Kanon Oguni")!
                     ]
                 },
                 meta: {
@@ -124,14 +126,9 @@ describe('Musicbrainz API', function () {
 
             const play: PlayObject = {
                 data: {
-                    track: "Fake",
-                    artists: artistNamesToCredits(["Fake"]),
-                    album: "Fake",
-                    meta: {
-                        brainz: {
-                            recording: '026fa041-3917-4c73-9079-ed16e36f20f8'
-                        }
-                    }
+                    track: nameToCredit("Fake", mbMeta('026fa041-3917-4c73-9079-ed16e36f20f8', 'recording')),
+                    artists: namesToCredits(["Fake"]),
+                    album: nameToCredit("Fake"),
                 },
                 meta: {
                     
@@ -157,9 +154,9 @@ describe('Musicbrainz API', function () {
 
             const play: PlayObject = {
                 data: {
-                    track: "Fake",
-                    artists: artistNamesToCredits(["Fake"]),
-                    album: "Fake",
+                    track: nameToCredit("Fake"),
+                    artists: namesToCredits(["Fake"]),
+                    album: nameToCredit("Fake"),
                     isrc: 'GBAHT1600302'
                 },
                 meta: {
@@ -183,15 +180,10 @@ describe('Musicbrainz API', function () {
 
             const play: PlayObject = {
                 data: {
-                    track: "Berghain",
-                    artists: artistNamesToCredits(["ROSALÍA", "Björk", "Yves Tumor"]),
-                    albumArtists: artistNamesToCredits(["ROSALÍA"]),
-                    album: "LUX",
-                    meta: {
-                        brainz: {
-                            track: '47d5358a-d9eb-48db-babb-56284da8056b'
-                        }
-                    }
+                    track: nameToCredit("Berghain", mbMeta('47d5358a-d9eb-48db-babb-56284da8056b', 'track')),
+                    artists: namesToCredits(["ROSALÍA", "Björk", "Yves Tumor"]),
+                    albumArtists: namesToCredits(["ROSALÍA"]),
+                    album: nameToCredit("LUX"),
                 },
                 meta: {
                     
@@ -209,7 +201,7 @@ describe('Musicbrainz API', function () {
             expect(res.recordings).to.exist;
             expect(res.recordings).to.not.be.empty;
             const postFetch = await mbTransformer.handlePostFetch(play, res, stageConfig);
-            expect(postFetch.data.meta!.brainz!.album).to.eq('e5913eac-3d74-47af-a3f2-7aa6618f140a');
+            expect(creditMbid(postFetch.data.album, 'release')).to.eq('e5913eac-3d74-47af-a3f2-7aa6618f140a');
         });
 
         it('uses correct release if release mbid is explict', async function (){
@@ -217,15 +209,10 @@ describe('Musicbrainz API', function () {
 
             const play: PlayObject = {
                 data: {
-                    track: "Berghain",
-                    artists: artistNamesToCredits(["ROSALÍA", "Björk", "Yves Tumor"]),
-                    albumArtists: artistNamesToCredits(["ROSALÍA"]),
-                    album: "LUX",
-                    meta: {
-                        brainz: {
-                            album: 'e5913eac-3d74-47af-a3f2-7aa6618f140a'
-                        }
-                    }
+                    track: nameToCredit("Berghain"),
+                    artists: namesToCredits(["ROSALÍA", "Björk", "Yves Tumor"]),
+                    albumArtists: namesToCredits(["ROSALÍA"]),
+                    album: nameToCredit("LUX", mbMeta('e5913eac-3d74-47af-a3f2-7aa6618f140a', 'release')),
                 },
                 meta: {
                     
@@ -243,7 +230,7 @@ describe('Musicbrainz API', function () {
             expect(res.recordings).to.exist;
             expect(res.recordings).to.not.be.empty;
             const postFetch = await mbTransformer.handlePostFetch(play, res, stageConfig);
-            expect(postFetch.data.meta!.brainz!.album).to.eq('e5913eac-3d74-47af-a3f2-7aa6618f140a');
+            expect(creditMbid(postFetch.data.album, 'release')).to.eq('e5913eac-3d74-47af-a3f2-7aa6618f140a');
         });
 
         it('tries second query using only track and album', async function () {
@@ -252,9 +239,9 @@ describe('Musicbrainz API', function () {
 
             const play: PlayObject = {
                 data: {
-                    track: "Roulette Road (CrossWorlds Remix)",
-                    artists: artistNamesToCredits(["Takahiro Kai, SEGA GAME MUSIC & SEGA SOUND TEAM"]),
-                    album: "Sonic Racing: CrossWorlds Original Soundtrack - Echoes of Dimensions"
+                    track: nameToCredit("Roulette Road (CrossWorlds Remix)"),
+                    artists: namesToCredits(["Takahiro Kai, SEGA GAME MUSIC & SEGA SOUND TEAM"]),
+                    album: nameToCredit("Sonic Racing: CrossWorlds Original Soundtrack - Echoes of Dimensions")
                 },
                 meta: {
                     
@@ -277,8 +264,8 @@ describe('Musicbrainz API', function () {
 
             const play: PlayObject = {
                 data: {
-                    track: "Undefeatable (feat. Kellin Quinn)",
-                    artists: artistNamesToCredits(["SEGA Sound Team / Tomoya Ohtani"]),
+                    track: nameToCredit("Undefeatable (feat. Kellin Quinn)"),
+                    artists: namesToCredits(["SEGA Sound Team / Tomoya Ohtani"]),
                 },
                 meta: {
                     
@@ -302,9 +289,9 @@ describe('Musicbrainz API', function () {
 
             const play: PlayObject = {
                 data: {
-                    track: "Bad Apple!! feat.SEKAI",
-                    artists: artistNamesToCredits(["、ナイトコードで。"]),
-                    album: "25時、ナイトコードで。 SEKAI ALBUM Vol.3"
+                    track: nameToCredit("Bad Apple!! feat.SEKAI"),
+                    artists: namesToCredits(["、ナイトコードで。"]),
+                    album: nameToCredit("25時、ナイトコードで。 SEKAI ALBUM Vol.3")
                 },
                 meta: {
                     
@@ -327,9 +314,9 @@ describe('Musicbrainz API', function () {
 
             const play: PlayObject = {
                 data: {
-                    track: "HIBANA - Reloaded - (feat. 星乃一歌 & Hatsune Miku)",
-                    artists: artistNamesToCredits(["Leo/need"]),
-                    album: "Leo / need SEKAI ALBUM Vol.1"
+                    track: nameToCredit("HIBANA - Reloaded - (feat. 星乃一歌 & Hatsune Miku)"),
+                    artists: namesToCredits(["Leo/need"]),
+                    album: nameToCredit("Leo / need SEKAI ALBUM Vol.1")
                 },
                 meta: {
                     
@@ -356,9 +343,9 @@ describe('Musicbrainz API', function () {
 
             const play: PlayObject = {
                 data: {
-                    track: "Price",
-                    artists: artistNamesToCredits(["ATLUS Sound Team"]),
-                    album: "PERSONA5 ORIGINAL SOUNDTRACK",
+                    track: nameToCredit("Price"),
+                    artists: namesToCredits(["ATLUS Sound Team"]),
+                    album: nameToCredit("PERSONA5 ORIGINAL SOUNDTRACK"),
                     isrc: 'JPK651601515'
                 },
                 meta: {
@@ -382,7 +369,7 @@ describe('Musicbrainz API', function () {
                 titleWeight: 0.3,
                 artistWeight: 0.3,
             });
-            expect(chosenPlay.data.meta!.brainz!.album).to.eq("82de33b1-1cd6-4236-b116-561d0ecc8acf")
+            expect(creditMbid(chosenPlay.data.album, 'release')).to.eq("82de33b1-1cd6-4236-b116-561d0ecc8acf")
         });
 
         it('records prerequisite failures', async function () {
@@ -391,9 +378,9 @@ describe('Musicbrainz API', function () {
 
             const play: PlayObject = {
                 data: {
-                    track: "Hopes And Dreams (10th Anniversary Arrangement)",
-                    artists: artistNamesToCredits(["KrakenPower"]),
-                    album: "Hopes And Dreams (10th Anniversary Arrangement) - Single",
+                    track: nameToCredit("Hopes And Dreams (10th Anniversary Arrangement)"),
+                    artists: namesToCredits(["KrakenPower"]),
+                    album: nameToCredit("Hopes And Dreams (10th Anniversary Arrangement) - Single"),
                     duration: 278
                 },
                 meta: {
@@ -436,28 +423,11 @@ describe('Musicbrainz API', function () {
 
             const play: PlayObject = {
                 "data": {
-                    "artists": [
-                        {
-                            "name": "Au5",
-                            "mbid": "3569c2ed-2315-40d9-b041-3c48dae1be43"
-                        }
-                    ],
+                    "artists": [nameToCredit("Au5", mbMeta("3569c2ed-2315-40d9-b041-3c48dae1be43", 'artist'))],
                     "albumArtists": [],
-                    "album": "Inverse",
-                    "track": "Scission",
+                    "album": nameToCredit("Inverse", mbMeta("cbc89dff-3555-498c-bb1e-2ff983b13e59", 'release')),
+                    "track": withImage(nameToCredit("Scission", mbMeta("c63b7e96-928c-48dd-b558-a181cb245cb6", 'track')), "/api/source/art?name=PlexBox&type=plex&data=84389"),
                     "duration": 214.125,
-                    "meta": {
-                        "brainz": {
-                            "track": "c63b7e96-928c-48dd-b558-a181cb245cb6",
-                            "album": "cbc89dff-3555-498c-bb1e-2ff983b13e59",
-                            "artist": [
-                                "3569c2ed-2315-40d9-b041-3c48dae1be43"
-                            ],
-                            "albumArtist": [
-                                "3569c2ed-2315-40d9-b041-3c48dae1be43"
-                            ]
-                        }
-                    },
                     "playDate": dayjs(),
                     "listenedFor": 209.601,
                     "listenRanges": [],
@@ -471,10 +441,7 @@ describe('Musicbrainz API', function () {
                     "library": "Music",
                     "deviceId": "sonos-0116-Plex for Sonos",
                     "sessionId": "106",
-                    "trackProgressPosition": 214.125,
-                    "art": {
-                        "track": "/api/source/art?name=PlexBox&type=plex&data=84389"
-                    }
+                    "trackProgressPosition": 214.125
                 },
             };
 
@@ -515,9 +482,9 @@ describe('Musicbrainz API', function () {
 
                 const play: PlayObject = {
                     data: {
-                        track: "Little Joe and Mary ii",
-                        artists: artistNamesToCredits(["Khruangbin"]),
-                        album: "The Universe Smiles Upon You ii"
+                        track: nameToCredit("Little Joe and Mary ii"),
+                        artists: namesToCredits(["Khruangbin"]),
+                        album: nameToCredit("The Universe Smiles Upon You ii")
                     },
                     meta: {
                         
@@ -549,9 +516,9 @@ describe('Musicbrainz API', function () {
 
                 const play: PlayObject = {
                     data: {
-                        track: "Little Joe and Mary ii",
-                        artists: artistNamesToCredits(["Khruangbin"]),
-                        album: "The Universe Smiles Upon You ii"
+                        track: nameToCredit("Little Joe and Mary ii"),
+                        artists: namesToCredits(["Khruangbin"]),
+                        album: nameToCredit("The Universe Smiles Upon You ii")
                     },
                     meta: {
                         
@@ -599,6 +566,77 @@ describe('Musicbrainz API', function () {
 
 });
 
+describe('#MB Stage Rules', function () {
+
+    const play = generatePlay({
+        track: nameToCredit('My Song', spotifyMeta('sp-track', 'track')),
+        album: nameToCredit('My Album', spotifyMeta('sp-album', 'album')),
+        artists: [nameToCredit('Beyonce', spotifyMeta('sp-b', 'artist')), nameToCredit('jay z', spotifyMeta('sp-j', 'artist'))],
+    });
+    // what the stage found
+    const match = generatePlay({
+        track: nameToCredit('My Song (Remastered)', mbMeta('mb-rec', 'recording')),
+        album: nameToCredit('My Album', mbMeta('mb-rel', 'release')),
+        artists: [nameToCredit('Jay Z', mbMeta('mb-j', 'artist')), nameToCredit('Beyoncé', mbMeta('mb-b', 'artist'))],
+        meta: { brainz: { trackNumber: 4 } },
+        isrc: 'USRC17607839'
+    });
+
+    const applyRules = async (rules: Partial<MusicbrainzTransformerDataStage>): Promise<PlayObject> => {
+        const stage = mbTransformer.parseConfig({ type: 'musicbrainz', ...rules });
+        // @ts-expect-error protected, testing application of already found stage data
+        return await mbTransformer.doHandle(stage, play, match);
+    }
+
+    it('applies names and ids, keeping ids from other services, when all rules are used', async function () {
+        const { data } = await applyRules({});
+        expect(data.track?.name).eq('My Song (Remastered)');
+        expect(creditMbid(data.track, 'recording')).eq('mb-rec');
+        expect(creditId(data.track, 'spotify', 'track')).eq('sp-track');
+        expect(creditMbid(data.album, 'release')).eq('mb-rel');
+        expect(creditId(data.album, 'spotify', 'album')).eq('sp-album');
+        expect(data.artists?.map(x => x.name)).eql(['Jay Z', 'Beyoncé']);
+        expect(data.artists?.map(x => creditMbid(x, 'artist'))).eql(['mb-j', 'mb-b']);
+        expect(data.meta?.brainz?.trackNumber).eq(4);
+        expect(data.isrc).eq('USRC17607839');
+    });
+
+    it('only adds ids, matched to existing credits, when only meta is used', async function () {
+        const { data } = await applyRules({ title: false, artists: false, albumArtists: false, album: false, duration: false });
+        expect(data.track?.name).eq('My Song');
+        expect(creditMbid(data.track, 'recording')).eq('mb-rec');
+        expect(data.artists?.map(x => x.name)).eql(['Beyonce', 'jay z']);
+        expect(data.artists?.map(x => creditMbid(x, 'artist'))).eql(['mb-b', 'mb-j']);
+        expect(data.artists?.map(x => creditId(x, 'spotify', 'artist'))).eql(['sp-b', 'sp-j']);
+        expect(data.duration).eq(play.data.duration);
+        expect(data.meta?.brainz?.trackNumber).eq(4);
+    });
+
+    it('does not add ids, and drops ids of renamed credits, when meta is not used', async function () {
+        const { data } = await applyRules({ meta: false });
+        expect(data.track).eql({ name: 'My Song (Remastered)' });
+        // name did not change
+        expect(data.album).eql(play.data.album);
+        expect(data.artists).eql([{ name: 'Jay Z' }, { name: 'Beyoncé' }]);
+        expect(data.meta?.brainz).to.be.undefined;
+        expect(data.isrc).to.be.undefined;
+    });
+
+    it('applies ids to credits that are not renamed when meta and only some names are used', async function () {
+        const { data } = await applyRules({ artists: false, album: false });
+        expect(data.track?.name).eq('My Song (Remastered)');
+        expect(creditMbid(data.track, 'recording')).eq('mb-rec');
+        expect(data.artists?.map(x => x.name)).eql(['Beyonce', 'jay z']);
+        expect(data.artists?.map(x => creditMbid(x, 'artist'))).eql(['mb-b', 'mb-j']);
+    });
+
+    it('does not use a rule when its when condition is not met', async function () {
+        const { data } = await applyRules({ title: { when: [{ title: 'Something Else' }] } });
+        expect(data.track?.name).eq('My Song');
+        expect(creditMbid(data.track, 'recording')).eq('mb-rec');
+    });
+});
+
 describe('#MB Missing Types', function() {
 
     it('Finds none missing when all mbids are defined', function() {
@@ -624,10 +662,10 @@ describe('#MB Missing Types', function() {
         expect(missing[0]).eq('duration');
     });
 
-    it('Finds brainz missing when fields are undefined', function() {
+    it('Finds brainz missing when credits have no mbids', function() {
 
         const play = generatePlay();
-        play.data.meta = {brainz: {}};
+        play.data.track = {...play.data.track!, metadata: []};
         const missing = missingMbidTypes(play);
         expect(missing).to.have.members(['title','album','artists']);
     });

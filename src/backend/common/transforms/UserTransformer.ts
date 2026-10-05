@@ -1,5 +1,5 @@
 import { searchAndReplace } from "@foxxmd/regex-buddy-core";
-import type {ArtistCredit, PlayObject} from "../../../core/Atomic.ts";
+import type {Credit, PlayObject} from "../../../core/Atomic.ts";
 import { configValToSearchReplace, isSearchAndReplaceTerm, isUserStage, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";
 import type {ConditionalSearchAndReplaceRegExp, PlayTransformUserStage} from "../../../core/Transform.ts";
@@ -66,18 +66,18 @@ export default class UserTransformer extends AtomicPartsTransformer<ConditionalS
         };
     }
 
-    protected async handleTitle(play: PlayObject, parts: ConditionalSearchAndReplaceRegExp[], _transformData: undefined): Promise<string | undefined> {
+    protected async handleTitle(play: PlayObject, parts: ConditionalSearchAndReplaceRegExp[], _transformData: undefined): Promise<Credit | undefined> {
         if (play.data.track === undefined) {
             return undefined;
         }
         const mapper = this.generateMapper(play);
-        const result = searchAndReplace(play.data.track, parts.map(mapper));
+        const result = searchAndReplace(play.data.track.name, parts.map(mapper));
         if(result.trim() === '') {
             return undefined;
         }
-        return result.trim();
+        return {...play.data.track, name: result.trim()};
     }
-    protected async handleArtists(play: PlayObject, parts: ConditionalSearchAndReplaceRegExp[], _transformData: undefined): Promise<ArtistCredit[] | undefined> {
+    protected async handleArtists(play: PlayObject, parts: ConditionalSearchAndReplaceRegExp[], _transformData: undefined): Promise<Credit[] | undefined> {
         if(play.data.artists === undefined || play.data.artists.length === 0) {
             return play.data.artists;
         }
@@ -91,7 +91,7 @@ export default class UserTransformer extends AtomicPartsTransformer<ConditionalS
         }
         return transformedArtists;
     }
-    protected async handleAlbumArtists(play: PlayObject, parts: ConditionalSearchAndReplaceRegExp[], _transformData: undefined): Promise<ArtistCredit[] | undefined> {
+    protected async handleAlbumArtists(play: PlayObject, parts: ConditionalSearchAndReplaceRegExp[], _transformData: undefined): Promise<Credit[] | undefined> {
         if(play.data.albumArtists === undefined || play.data.albumArtists.length === 0) {
             return play.data.albumArtists;
         }
@@ -105,16 +105,16 @@ export default class UserTransformer extends AtomicPartsTransformer<ConditionalS
         }
         return transformedArtists;
     }
-    protected async handleAlbum(play: PlayObject, parts: ConditionalSearchAndReplaceRegExp[], _transformData: undefined): Promise<string | undefined> {
+    protected async handleAlbum(play: PlayObject, parts: ConditionalSearchAndReplaceRegExp[], _transformData: undefined): Promise<Credit | undefined> {
         if (play.data.album === undefined) {
             return undefined;
         }
         const mapper = this.generateMapper(play);
-        const result = searchAndReplace(play.data.album, parts.map(mapper));
+        const result = searchAndReplace(play.data.album.name, parts.map(mapper));
         if(result.trim() === '') {
             return undefined;
         }
-        return result.trim();
+        return {...play.data.album, name: result.trim()};
     }
 
     public async notify(payload: WebhookPayload): Promise<void> {

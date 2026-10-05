@@ -11,7 +11,8 @@ import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import { isPortReachable, normalizeWebAddress } from "../utils/NetworkUtils.ts";
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
-import { artistNamesToCredits } from "../../core/StringUtils.ts";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../core/MusicMetadata.ts";
 import { AuthError } from "../common/errors/MSErrors.ts";
 import MemorySource from "./MemorySource.ts";
 import type { CoolPlayerSourceConfig } from "../common/infrastructure/config/source/example.ts";
@@ -106,15 +107,17 @@ export class CoolPlayerSource extends MemorySource {
 
         const play: PlayObjectMinimal = {
             // data includes all of the essential properties for scrobbling
-            // plus a `meta` object for metaservice ids like musicbrainz MBIDs or spotify track id
+            //
+            // track, album, and artists are Credits: a name with (optionally) an image and ids from music services like musicbrainz MBIDs or spotify ids
+            // use nameToCredit/namesToCredits to build them, with mbMeta()/serviceMeta()/withImage() from core/MusicMetadata.ts if the Source provides ids or art
             data: {
-                artists: artistNamesToCredits(obj.data.track_artists),
-                album: obj.data.track_album,
-                track: obj.data.track_name,
+                artists: namesToCredits(obj.data.track_artists),
+                album: nameToCredit(obj.data.track_album),
+                track: nameToCredit(obj.data.track_name),
                 duration: obj.data.length,
             },
             // meta is data that is optional or used only for MS processing
-            // like device id, unique track id (for comparing duplicates), album art, etc...
+            // like device id, unique track id (for comparing duplicates), etc...
             meta: {
                 // this is the only "essential" property that you need to include in meta
                 // if this Source is a history or ingress based Source this need to be set to be set appropriately

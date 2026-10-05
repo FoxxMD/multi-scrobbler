@@ -6,7 +6,8 @@ import { COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type Play
 import type { InternalConfig } from "../common/infrastructure/Atomic.ts";
 import type { AppleMusicSourceConfig } from "../common/infrastructure/config/source/applemusic.ts";
 import AbstractSource, { type RecentlyPlayedOptions } from "./AbstractSource.ts";
-import { artistNamesToCredits } from "../../core/StringUtils.ts";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../core/MusicMetadata.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import {
     getPlaysDiff,
@@ -131,9 +132,9 @@ export default class AppleMusicSource extends AbstractSource {
 
         const play: PlayObjectMinimal = {
             data: {
-                artists: artistNamesToCredits([track.artistName]),
-                album: albumName,
-                track: track.name,
+                artists: namesToCredits([track.artistName]),
+                album: nameToCredit(albumName),
+                track: nameToCredit(track.name),
                 duration: track.durationInMillis ? Math.round(track.durationInMillis / 1000) : undefined,
                 isrc: track.isrc
             },

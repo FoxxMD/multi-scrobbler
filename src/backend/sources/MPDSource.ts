@@ -1,13 +1,13 @@
+import { creditsWithIds, mbMeta } from "../../core/MusicMetadata.ts";
 import dayjs from "dayjs";
 import type { EventEmitter } from "events";
 import path from 'path';
 import {MPC, type Status, type Song, type PlaylistItem} from 'mpc-js';
-import type {BrainzMeta, ComponentAuthType, PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
+import type {ComponentAuthType, PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
 import {
     type FormatPlayObjectOptions,
     type InternalConfig,
-    type PlayerStateDataMaybePlay,
-} from "../common/infrastructure/Atomic.ts";
+    type PlayerStateDataMaybePlay } from "../common/infrastructure/Atomic.ts";
 import { COMPONENT_AUTH_TYPE, SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type {ReportedPlayerStatus} from '../../core/Atomic.ts';
@@ -17,14 +17,14 @@ import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import { isDebugMode, sleep } from "../utils.ts";
-import { artistNamesToCredits } from "../../core/StringUtils.ts";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../core/MusicMetadata.ts";
 import { AuthError } from "../common/errors/MSErrors.ts";
 
 const CLIENT_PLAYER_STATE: Record<PlayerState, ReportedPlayerStatus> = {
     'play': REPORTED_PLAYER_STATUSES.playing,
     'pause': REPORTED_PLAYER_STATUSES.paused,
-    'stop': REPORTED_PLAYER_STATUSES.stopped,
-}
+    'stop': REPORTED_PLAYER_STATUSES.stopped }
 
 export class MPDSource extends MemoryPositionalSource {
     declare config: MPDSourceConfig;
@@ -66,8 +66,7 @@ export class MPDSource extends MemoryPositionalSource {
         const {
             data: {
                 url,
-                path,
-            } = {}
+                path } = {}
         } = this.config;
 
         if(path === undefined) {
@@ -159,7 +158,7 @@ export class MPDSource extends MemoryPositionalSource {
         albumArtists: string[] | undefined = [],
         duration: number | undefined,
         position: number | undefined,
-        brainz: BrainzMeta = {};
+        brainz: {albumArtist?: string[], album?: string, recording?: string, artist?: string[]} = {};
 
         const {
             state: {
@@ -184,8 +183,7 @@ export class MPDSource extends MemoryPositionalSource {
                 musicBrainzAlbumId: musicbrainz_albumid,
                 musicBrainzArtistId: musicbrainz_artistid,
                 musicBrainzReleaseTrackId: musicbrainz_releasetrackid,
-                musicBrainzTrackId: musicbrainz_trackid,
-            } = obj;
+                musicBrainzTrackId: musicbrainz_trackid } = obj;
 
             trackName = title;
             if(trackName === undefined && name !== undefined) {
@@ -262,15 +260,12 @@ export class MPDSource extends MemoryPositionalSource {
 
         const play: PlayObjectMinimal = {
             data: {
-                artists: artists !== undefined ? artistNamesToCredits(artists) : [],
-                albumArtists: albumArtists !== undefined ? artistNamesToCredits(albumArtists) : [],
-                album,
-                track: trackName,
-                duration,
-                meta: {
-                    brainz
-                }
-            },
+                // mpd only gives us one artist mbid so we only know which artist it belongs to if there is only one artist
+                artists: creditsWithIds(artists !== undefined ? namesToCredits(artists) : [], brainz.artist, 'musicbrainz', 'artist'),
+                albumArtists: creditsWithIds(albumArtists !== undefined ? namesToCredits(albumArtists) : [], brainz.albumArtist, 'musicbrainz', 'artist'),
+                album: nameToCredit(album, mbMeta(brainz.album, 'release')),
+                track: nameToCredit(trackName, mbMeta(brainz.recording, 'recording')),
+                duration },
             meta: {
                 trackProgressPosition: position,
                 mediaPlayerName: 'mpd'

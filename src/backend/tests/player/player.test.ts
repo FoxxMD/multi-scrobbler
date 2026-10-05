@@ -1,3 +1,4 @@
+import { nameToCredit } from "../../../core/MusicMetadata.ts";
 import { loggerTest } from "@foxxmd/logging";
 import { assert, expect } from 'chai';
 import clone from "clone";
@@ -271,7 +272,7 @@ describe('Player listen ranges', function () {
             player.update(testState({play: positioned, position: 20, status: REPORTED_PLAYER_STATUSES.playing}), dayjs().add(20, 'seconds'));
 
             const otherPlay = clone(positioned);
-            otherPlay.data.track = "A New Track";
+            otherPlay.data.track = nameToCredit("A New Track");
             player.currentListenRange!.rtPlayer.setPosition(30000);
             const [currPlay, prevPlay] = player.update(testState({play: otherPlay, position: 2, status: REPORTED_PLAYER_STATUSES.playing}), dayjs().add(30, 'seconds'));
 

@@ -1,3 +1,4 @@
+import { creditsWithIds, mbMeta, withAlbumArt } from "../../core/MusicMetadata.ts";
 import { WS } from "iso-websocket";
 import type { Api } from "@jellyfin/sdk";
 import { Jellyfin } from "@jellyfin/sdk/lib/jellyfin.js";
@@ -25,9 +26,12 @@ import {
 import dayjs from "dayjs";
 import type EventEmitter from "events";
 import { FixedSizeList } from "fixed-size-list";
-import type {ArtistCredit, BrainzMeta, ComponentAuthType, PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
+import type {Credit, ComponentAuthType, PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
 import { genGroupIdStr } from '../../core/PlayUtils.ts';
-import { artistNameToCredit, buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
+import { combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
+import { buildTrackString, creditsToNames } from "../../core/MusicMetadata.ts";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../core/MusicMetadata.ts";
 import type {FormatPlayObjectOptions, InternalConfig, PlayerStateDataMaybePlay} from "../common/infrastructure/Atomic.ts";
 import { COMPONENT_AUTH_TYPE, NO_DEVICE, NO_USER, REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type {JellyApiSourceConfig} from "../common/infrastructure/config/source/jellyfin.ts";
@@ -390,9 +394,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
 
 
         if(typeof AlbumId === 'string' && AlbumPrimaryImageTag !== undefined) {
-            const existingArt = play.meta?.art || {};
-            existingArt.album = this.replaceUrlIfNeeded(this.imageApi.getItemImageUrlById(AlbumId, undefined, {maxHeight: 500}));
-            play.meta.art = existingArt;
+            play.data = withAlbumArt(play.data, this.replaceUrlIfNeeded(this.imageApi.getItemImageUrlById(AlbumId, undefined, {maxHeight: 500})));
         }
         if(typeof ParentId === 'string') {
             const u = joinedUrl(new URL(this.address), '/web/#/details')
@@ -436,60 +438,33 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
             MusicBrainzAlbumArtist
         } = ProviderIds ?? {};
 
-        const meta: BrainzMeta = {};
-
-        if(typeof MusicBrainzAlbum === 'string') {
-            meta.album = MusicBrainzAlbum;
-        }
-        // jellyfin can return both the Track MBID and Recording MBID
-        // https://github.com/jellyfin/jellyfin/blob/0a0aaefad55ed16f88d3a3d61549331342e52377/MediaBrowser.Providers/MediaInfo/AudioFileProber.cs#L421
-        if(typeof MusicBrainzTrack === 'string') {
-            meta.track = MusicBrainzTrack;
-        }
-        if(typeof MusicBrainzRecording === 'string') {
-            meta.recording = MusicBrainzRecording;
-        }
-        if(typeof MusicBrainzArtist === 'string') {
-            meta.artist = [MusicBrainzArtist];
-        }
-        if(typeof MusicBrainzAlbumArtist === 'string') {
-            meta.albumArtist = [MusicBrainzAlbumArtist];
-        }
-
         // artists may be strings or objects with (differently cased) name/id props
-        const toCredits = (list: unknown[] | null | undefined): ArtistCredit[] => (list ?? [])
-            .map(x => typeof x === 'string' ? artistNameToCredit(x) : artistNameToCredit(noCasePropObj(x as object) as Partial<ArtistCredit>))
-            .filter((x): x is ArtistCredit => x !== undefined);
+        const toCredits = (list: unknown[] | null | undefined): Credit[] => (list ?? [])
+            .map(x => nameToCredit(typeof x === 'string' ? x : (noCasePropObj(x as object) as {name?: string}).name))
+            .filter((x): x is Credit => x !== undefined);
 
-        let normalizedArtists: ArtistCredit[] = [];
+        let normalizedArtists: Credit[] = [];
         if((Artists ?? []).length > 0) {
             normalizedArtists = toCredits(Artists);
         } else if((ArtistItems ?? []).length > 0) {
             normalizedArtists = toCredits(ArtistItems);
         }
-        let playArtists: ArtistCredit[] = [];
-        if(normalizedArtists.length === 1 && meta.artist !== undefined) {
-            playArtists.push({...normalizedArtists[0], mbid: meta.artist[0]});
-        } else {
-            playArtists = normalizedArtists;
-        }
+        // jellyfin only gives us one artist mbid so we only know which artist it belongs to if there is only one artist
+        const playArtists = creditsWithIds(normalizedArtists, typeof MusicBrainzArtist === 'string' ? [MusicBrainzArtist] : undefined, 'musicbrainz', 'artist');
         let normalizedAlbumArtists = toCredits(AlbumArtists);
         if(typeof AlbumArtist === 'string') {
             normalizedAlbumArtists.push({name: AlbumArtist});
-            normalizedAlbumArtists = Array.from(new Set(normalizedAlbumArtists.map(x => x.name))).map(x => ({name: x}))
+            normalizedAlbumArtists = namesToCredits(Array.from(new Set(creditsToNames(normalizedAlbumArtists))));
         }
-        let playAlbumArtists: ArtistCredit[] = [];
-        if(normalizedAlbumArtists.length === 1 && meta.albumArtist !== undefined) {
-            playAlbumArtists.push({...normalizedAlbumArtists[0], mbid: meta.albumArtist[0]});
-        } else {
-            playAlbumArtists = normalizedAlbumArtists;
-        }
+        const playAlbumArtists = creditsWithIds(normalizedAlbumArtists, typeof MusicBrainzAlbumArtist === 'string' ? [MusicBrainzAlbumArtist] : undefined, 'musicbrainz', 'artist');
 
         const play: PlayObjectMinimal = {
             data: {
                 artists: playArtists,
-                album: Album ?? undefined,
-                track: Name ?? undefined,
+                album: nameToCredit(Album, mbMeta(MusicBrainzAlbum, 'release')),
+                // jellyfin can return both the Track MBID and Recording MBID
+                // https://github.com/jellyfin/jellyfin/blob/0a0aaefad55ed16f88d3a3d61549331342e52377/MediaBrowser.Providers/MediaInfo/AudioFileProber.cs#L421
+                track: nameToCredit(Name, mbMeta(MusicBrainzTrack, 'track'), mbMeta(MusicBrainzRecording, 'recording')),
                 albumArtists: playAlbumArtists,
                 playDate: UserData !== undefined ? dayjs(UserData.LastPlayedDate) : undefined,
                 duration: typeof RunTimeTicks === 'number' ? ticksToSeconds(RunTimeTicks) : undefined
@@ -500,9 +475,6 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
                 mediaType: md,
                 source: 'Jellyfin',
             }
-        }
-        if(Object.keys(meta).length > 0) {
-            play.data.meta = { brainz: meta };
         }
         return baseFormatPlayObj(obj,play);
     }

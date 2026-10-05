@@ -3,7 +3,9 @@ import type EventEmitter from "events";
 import SpotifyWebApi from "spotify-web-api-node";
 import request from 'superagent';
 import { type BrainzMeta, COMPONENT_AUTH_TYPE, type PlayObject, type PlayObjectMinimal, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, type ScrobbleTsSOC } from "../../core/Atomic.ts";
-import { artistNameToCredit, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
+import { combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { spotifyMeta, withImage } from "../../core/MusicMetadata.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.ts";
 import {
@@ -215,22 +217,14 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
 
         const play: PlayObjectMinimal = {
             data: {
-                artists: artists.map(x => artistNameToCredit(x.name)),
-                albumArtists: actualAlbumArtists.map(x => artistNameToCredit(x.name)),
-                album: albumName,
-                track: name,
+                artists: artists.map(x => nameToCredit(x.name, spotifyMeta(x.id, 'artist'))),
+                albumArtists: actualAlbumArtists.map(x => nameToCredit(x.name, spotifyMeta(x.id, 'artist'))),
+                album: withImage(nameToCredit(albumName, spotifyMeta(albumId, 'album')), imageData?.url),
+                track: nameToCredit(name, spotifyMeta(id, 'track')),
                 duration: duration_ms / 1000,
                 playDate: played_at,
                 playDateCompleted,
                 isrc: isrcString,
-                meta: {
-                    spotify: {
-                        track: id,
-                        artist: artists.map(x => x.id),
-                        albumArtist: actualAlbumArtists.map(x => x.id),
-                        album: albumId
-                    }
-                }
             },
             meta: {
                 deviceId: deviceId ?? `${NO_DEVICE}`,
@@ -253,10 +247,6 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
         }
         if(Object.keys(brainz).length > 0) {
             play.data.meta = {...play.data.meta, brainz};
-        }
-
-        if(imageData !== undefined) {
-            play.meta.art = {album: imageData.url};
         }
 
         return baseFormatPlayObj(obj, play);

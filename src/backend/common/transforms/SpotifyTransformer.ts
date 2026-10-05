@@ -2,17 +2,14 @@ import { childLogger } from "@foxxmd/logging";
 import type { Cacheable } from "cacheable";
 import type { WebhookPayload } from "../infrastructure/config/health/webhooks.ts";
 import {
-    type ArtistCredit,
-    type ArtMeta,
+    type Credit,
     type LifecycleInput,
     type OptionalCacheUsage,
-    type PlayObject,
-    type TrackMetaIsrc,
-} from "../../../core/Atomic.ts";
+    type PlayObject, type TrackMetaIsrc } from "../../../core/Atomic.ts";
 import { ARTIST_WEIGHT, TITLE_WEIGHT } from "../infrastructure/Atomic.ts";
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
 import type { ExternalMetadataTerm, PlayTransformMetadataStage } from "../../../core/Transform.ts";
-import { isWhenCondition, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
+import { isWhenCondition } from "../../utils/PlayTransformUtils.ts";
 import { parseArrayFromMaybeString } from "../../utils/StringUtils.ts";
 import { scorePlaySameness } from "../../utils/PlayComparisonUtils.ts";
 import { intersect } from "../../utils.ts";
@@ -20,6 +17,7 @@ import { isCompilation, SpotifyApiClient, trackToPlay } from "../vendor/spotify/
 import { MaybeLogger } from '../MaybeLogger.ts';
 import { SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../errors/MSErrors.ts";
 import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
+import { creditId, creditIds, type CreditRules, resolveCredit, resolveCredits } from "../../../core/MusicMetadata.ts";
 import type { TransformerOptions } from "./AbstractTransformer.ts";
 import { SearchPrerequisiteError } from "./MusicbrainzTransformer.ts";
 import {
@@ -30,8 +28,7 @@ import {
     type SpotifyMissingType,
     type SpotifySearchType,
     type SpotifyTransformerConfig,
-    type SpotifyTransformerData,
-} from "./spotify/SpotifyTransformerUtil.ts";
+    type SpotifyTransformerData } from "./spotify/SpotifyTransformerUtil.ts";
 
 /** How much to subtract from a candidate's match score when it belongs to a compilation album and deprioritizeCompilations is enabled */
 export const COMPILATION_PENALTY = 0.15;
@@ -81,8 +78,7 @@ export const parseStageConfig = (data: SpotifyTransformerData | undefined = {}, 
     const config: SpotifyTransformerDataStrong = {
         searchWhenMissing: DEFAULT_SPOTIFY_MISSING_TYPES,
         score: 0.6,
-        ...rest,
-    };
+        ...rest };
 
     if (searchWhenMissing !== undefined) {
         config.searchWhenMissing = searchWhenMissing.map((x) => spotifyMissingTypes.parse(x.toLocaleLowerCase().trim()));
@@ -113,7 +109,7 @@ export const parseStageConfig = (data: SpotifyTransformerData | undefined = {}, 
 
 /** Analogous to musicbrainz's missingMbidTypes but checks the presence of Spotify IDs on the Play instead of MBIDs */
 export const missingSpotifyTypes = (play: PlayObject): SpotifyMissingType[] => {
-    let missing: SpotifyMissingType[] = [];
+    const missing: SpotifyMissingType[] = [];
 
     const {
         track,
@@ -123,26 +119,14 @@ export const missingSpotifyTypes = (play: PlayObject): SpotifyMissingType[] => {
         isrc
     } = play.data;
 
-    const {
-        art: {
-            album: albumArt
-        } = {}
-    }  = play.meta ?? {};
+    const albumArt = album?.image;
 
-    if (play.data.meta?.spotify === undefined) {
-        missing = missing.concat('ids');
-    } else {
-        const {
-            track,
-            album,
-            artist
-        } = play.data.meta.spotify; 
-        if (track === undefined || album === undefined || artist === undefined) {
-            missing.push('ids');
-        }
-        if(artist !== undefined && dataArtists !== undefined && artist.length !== dataArtists.length) {
-            missing.push('ids');
-        }
+    const artistIds = creditIds(dataArtists, 'spotify', 'artist');
+    if (creditId(track, 'spotify', 'track') === undefined
+        || creditId(album, 'spotify', 'album') === undefined
+        || artistIds.length === 0
+        || artistIds.length !== (dataArtists ?? []).length) {
+        missing.push('ids');
     }
 
     if (track === undefined) {
@@ -179,8 +163,7 @@ export const rankTracksBySimilarity = (tracks: SpotifyApi.TrackObjectFull[], pla
         titleWeight = TITLE_WEIGHT,
         artistWeight = ARTIST_WEIGHT,
         albumWeight = 0.3,
-        deprioritizeCompilations = false,
-    } = stageConfig;
+        deprioritizeCompilations = false } = stageConfig;
 
     const ranked = tracks.map((track) => {
         const candidate = trackToPlay(track);
@@ -274,8 +257,7 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
     public async handlePreFetch(play: PlayObject, stageConfig: SpotifyTransformerDataStage): Promise<void> {
         const {
             searchWhenMissing = this.defaults.searchWhenMissing,
-            forceSearch = this.defaults.forceSearch ?? false,
-        } = stageConfig;
+            forceSearch = this.defaults.forceSearch ?? false } = stageConfig;
 
         const missing = missingSpotifyTypes(play);
         if (intersect(searchWhenMissing, missing).length > 0) {
@@ -306,7 +288,7 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
                         tracks = await this.searchByBasicFields(play, stageConfig, opts);
                         break;
                 }
-                queries.push({ type: `spotifyQuery-${searchType}${tracks.length === 0 ? '-empty' : ''}`, input: `${searchType} search for '${play.data.track}'` });
+                queries.push({ type: `spotifyQuery-${searchType}${tracks.length === 0 ? '-empty' : ''}`, input: `${searchType} search for '${play.data.track?.name}'` });
                 if (tracks.length === 0) {
                     this.logger.debug(`'${searchType}' search type returned no matches`);
                 } else {
@@ -392,110 +374,26 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
         return spotifyPlay;
     }
 
-    protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<string | undefined> {
-        if (parts === false) {
-            return play.data.track;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for track not met, returning original track');
-                    return play.data.track;
-                }
-            }
-        }
-        return transformData.data.track;
-    }
+    protected override readonly hydratesCredits = true;
 
-    protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<ArtistCredit[] | undefined> {
-        if (parts === false) {
-            return play.data.artists;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for artists not met, returning original artists');
-                    return play.data.artists;
-                }
-            }
-        }
-        return transformData.data.artists;
+    protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit | undefined> {
+        return resolveCredit(play.data.track, transformData.data.track, rules);
     }
-
-    protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<ArtistCredit[] | undefined> {
-        if (parts === false) {
-            return play.data.albumArtists;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for albumArtists not met, returning original artists');
-                    return play.data.albumArtists;
-                }
-            }
-        }
-        return transformData.data.albumArtists;
+    protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit[] | undefined> {
+        return resolveCredits(play.data.artists, transformData.data.artists, rules);
     }
-
-    protected async handleAlbum(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<string | undefined> {
-        if (parts === false) {
-            return play.data.album;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for album not met, returning original album');
-                    return play.data.album;
-                }
-            }
-        }
-        return transformData.data.album;
+    protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit[] | undefined> {
+        return resolveCredits(play.data.albumArtists, transformData.data.albumArtists, rules);
     }
-
+    protected async handleAlbum(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit | undefined> {
+        return resolveCredit(play.data.album, transformData.data.album, rules);
+    }
     protected async handleDuration(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<number | undefined> {
-        if (parts === false || transformData.data.duration === undefined) {
-            return play.data.duration;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for duration not met, returning original duration');
-                    return play.data.duration;
-                }
-            }
-        }
-        return transformData.data.duration;
+        return transformData.data.duration ?? play.data.duration;
     }
-
     protected async handleMeta(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<TrackMetaIsrc | undefined> {
-        if (parts === false) {
-            return play.data.meta;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for meta not met, returning original meta');
-                    return play.data.meta;
-                }
-            }
-        }
-        return removeUndefinedKeys<TrackMetaIsrc>({...transformData.data.meta, isrc: transformData.data.isrc});
-    }
-
-    protected async handleArt(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<ArtMeta | undefined> {
-        if (parts === false) {
-            return play.meta.art;
-        }
-        if (typeof parts === 'object') {
-            if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                    this.logger.debug('When condition for duration not met, returning original duration');
-                    return play.meta.art;
-                }
-            }
-        }
-
-        return transformData.meta.art;
+        const {meta, isrc} = transformData.data;
+        return removeUndefinedKeys<TrackMetaIsrc>({...meta, isrc});
     }
 
     public async notify(payload: WebhookPayload): Promise<void> {

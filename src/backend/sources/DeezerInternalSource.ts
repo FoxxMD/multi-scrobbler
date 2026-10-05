@@ -1,3 +1,4 @@
+import { withAlbumArt } from "../../core/MusicMetadata.ts";
 import dayjs from "dayjs";
 import type EventEmitter from "events";
 import type { Request } from 'superagent';
@@ -16,7 +17,8 @@ import type {TemporalPlayComparisonOptions} from "../utils/TimeUtils.ts";
 import { findAsync, findIndexAsync } from "../utils/AsyncUtils.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import { UpstreamError } from "../common/errors/UpstreamError.ts";
-import { artistNamesToCredits } from "../../core/StringUtils.ts";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { namesToCredits } from "../../core/MusicMetadata.ts";
 
 interface DeezerHistoryResponse {
     errors: []
@@ -116,9 +118,9 @@ export default class DeezerInternalSource extends MemorySource {
         const {newFromSource = false} = options;
         const play: PlayObjectMinimal = {
             data: {
-                artists: artistNamesToCredits([obj.ART_NAME]),
-                album: obj.ALB_TITLE,
-                track: obj.SNG_TITLE,
+                artists: namesToCredits([obj.ART_NAME]),
+                album: nameToCredit(obj.ALB_TITLE),
+                track: nameToCredit(obj.SNG_TITLE),
                 duration: obj.DURATION,
                 playDate: dayjs(obj.TS * 1000),
             },
@@ -133,9 +135,7 @@ export default class DeezerInternalSource extends MemorySource {
             }
         };
         if(obj.ALB_PICTURE !== undefined && obj.ALB_PICTURE !== '') {
-            play.meta.art = {
-                album: `https://cdn-images.dzcdn.net/images/cover/${obj.ALB_PICTURE}/500x500-000000-80-0-0.jpg`
-            }
+            play.data = withAlbumArt(play.data, `https://cdn-images.dzcdn.net/images/cover/${obj.ALB_PICTURE}/500x500-000000-80-0-0.jpg`);
         }
         return baseFormatPlayObj(obj, play);
     }

@@ -1,5 +1,7 @@
+import { creditMbid, mbMeta } from "../../../../core/MusicMetadata.ts";
+import { nameToCredit } from "../../../../core/MusicMetadata.ts";
 import dayjs, { type Dayjs, type ManipulateType } from "dayjs";
-import {type PlayObject, type PlayObjectMinimal, type BrainzMeta, type MBID, type ScrobbleActionResult, PARSED_FROM} from "../../../../core/Atomic.ts";
+import {type PlayObject, type PlayObjectMinimal, type MBID, type ScrobbleActionResult, PARSED_FROM} from "../../../../core/Atomic.ts";
 import { getRoot } from "../../../ioc.ts";
 import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.ts";
@@ -165,11 +167,11 @@ export const recordToPlay = (record: TealPlayRecord, options: RecordOptions = {}
 
     const play: PlayObjectMinimal = {
         data: {
-            track: record.trackName,
-            artists: artists.filter(x => x.artistName !== undefined).map(x => ({ name: x.artistName, mbid: x.artistMbId })),
+            track: nameToCredit(record.trackName, mbMeta(record.recordingMbId, 'recording')),
+            artists: artists.filter(x => x.artistName !== undefined).map(x => nameToCredit(x.artistName, mbMeta(x.artistMbId, 'artist'))),
             duration: record.duration,
             playDate: dayjs(record.playedTime),
-            album: record.releaseName,
+            album: nameToCredit(record.releaseName, mbMeta(record.releaseMbId, 'release')),
             isrc: record.isrc
         },
         meta: {
@@ -184,17 +186,6 @@ export const recordToPlay = (record: TealPlayRecord, options: RecordOptions = {}
             user: options.user
         }
     };
-
-    const artistMbids = artists.flatMap(x => x.artistMbId !== undefined ? [x.artistMbId] : []);
-    const brainz = removeUndefinedKeys<BrainzMeta>({
-        recording: record.recordingMbId,
-        album: record.releaseMbId,
-        artist: artistMbids.length > 0 ? artistMbids : undefined
-    });
-
-    if (brainz !== undefined) {
-        play.data.meta = { brainz };
-    }
 
     return baseFormatPlayObj(record, play);
 }
@@ -254,18 +245,18 @@ export const playToRecord = (play: PlayObject): FmTealFeedPlay.Main => {
     }
     const record: FmTealFeedPlay.Main = {
         $type: "fm.teal.feed.play",
-        trackName: play.data.track,
-        artists: (play.data.artists ?? []).map(x => removeUndefinedKeys({ artistName: x.name, artistMbId: mbidUriOrUndefined(x.mbid as MBID) }, false)),
+        trackName: play.data.track.name,
+        artists: (play.data.artists ?? []).map(x => removeUndefinedKeys({ artistName: x.name, artistMbId: mbidUriOrUndefined(creditMbid(x, 'artist') as MBID) }, false)),
         duration: play.data.duration !== undefined ? Math.round(play.data.duration) : undefined,
         playedTime: getScrobbleTsSOCDateWithContext(play)[0].toISOString(),
-        releaseName: play.data.album,
+        releaseName: play.data.album?.name,
         submissionClientAgent: `multi-scrobbler/${getRoot().items.version}`,
         musicServiceUri: asMusicServiceUri(musicService),
         originUri: isGenericUri(play.meta.url?.origin) ? play.meta.url?.origin : undefined,
         isrc: play.data.isrc !== undefined ? isrcNoHyphens(play.data.isrc) : undefined,
-        trackMbId: mbidUriOrUndefined(play.data.meta?.brainz?.track as MBID),
-        recordingMbId: mbidUriOrUndefined(play.data.meta?.brainz?.recording as MBID),
-        releaseMbId: mbidUriOrUndefined(play.data.meta?.brainz?.album as MBID)
+        trackMbId: mbidUriOrUndefined(creditMbid(play.data.track, 'track') as MBID),
+        recordingMbId: mbidUriOrUndefined(creditMbid(play.data.track, 'recording') as MBID),
+        releaseMbId: mbidUriOrUndefined(creditMbid(play.data.album, 'release') as MBID)
     };
 
     return record;

@@ -1,6 +1,6 @@
-import React, { useCallback, useState, type ComponentProps } from 'react';
-import { EmptyState, DataList, HStack, Tabs, Box, Flex, Stack, Text, Separator, IconButton, Container, Float, Icon, Link, Span, Menu, Group, Portal, type MenuItemProps, type MenuSelectionDetails } from "@chakra-ui/react"
-import { LuCode, LuText, LuCheck, LuX } from "react-icons/lu"
+import React, { useCallback, useState, type ComponentProps, type PropsWithChildren } from 'react';
+import { EmptyState, DataList, HStack, Tabs, Box, Badge, Stack, Text, Separator, IconButton, Container, Float, Link, Span, Menu, Group, Portal, type MenuItemProps, type MenuSelectionDetails } from "@chakra-ui/react"
+import { LuCode, LuText } from "react-icons/lu"
 import type { JsonPlayObject, PlayObjectMinimal } from '../../core/Atomic.js';
 import { shortTodayAwareFormat, timeToHumanTimestamp } from '../../core/TimeUtils.js';
 import dayjs from 'dayjs';
@@ -10,10 +10,10 @@ import { formatNumber } from '../../core/DataUtils.js';
 import { Muted } from './Typography.js';
 import { ArtistCreditTags } from './ArtistCreditDisplay.js';
 import { MSErrorBoundary } from './ErrorBoundary.js';
-import { EllipsisButton, EyeClosedIcon, EyeIcon, getMusicServiceIconElement } from './icons/ChakraIcons.js';
+import { EllipsisButton, EyeClosedIcon, EyeIcon, hasMusicServiceIcon } from './icons/ChakraIcons.js';
 import type { IconType } from 'react-icons/lib';
-import { capitalize } from '../../core/StringUtils.js';
-import { MusicServiceIndicators, playMetaIdsToMusicServices } from './musicServices/MusicServiceIndicators.js';
+import { capitalize, capitalizeWords } from '../../core/StringUtils.js';
+import { getMusicServiceIconTooltip, MusicServiceIndicators } from './musicServices/MusicServiceIndicators.js';
 
 const EmptyPlayData = () => {
     return (
@@ -47,8 +47,8 @@ const primaryActionProps: ComponentProps<typeof EllipsisButton> = {
 
 const menuItem = (Icon: IconType, value: string, name?: string) => (props: Pick<MenuItemProps, 'disabled'> = {}) => (<Menu.Item key={value} value={value} {...props}><Icon /><Box flex="1">{name ?? capitalize(value)}</Box></Menu.Item>)
 
-const MenuMbidShow = menuItem(EyeIcon, 'mbidShow', 'Show MBIDs');
-const MenuMbidHide = menuItem(EyeClosedIcon, 'mbidHide', 'Hide MBIDs');
+const MenuMbidShow = menuItem(EyeIcon, 'mbidShow', 'Show IDs');
+const MenuMbidHide = menuItem(EyeClosedIcon, 'mbidHide', 'Hide IDs');
 
 export const PlayData = (props?: PlayInfoProps) => {
     const {
@@ -140,6 +140,13 @@ export const PlayData = (props?: PlayInfoProps) => {
     );
 }
 
+const SourceMaybeLink = (props: PropsWithChildren<{link?: string}>) => {
+    if(props.link === undefined) {
+        return props.children;
+    }
+    return <Link key="weblink" variant="underline" target="_blank" href={props.link}>{props.children}</Link>
+}
+
 export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDates, showMbid?: boolean }) => {
 
     const {
@@ -153,10 +160,10 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
 
     if (play.data.albumArtists !== undefined && play.data.albumArtists.length > 0) {
         albumArtistElm = (
-            <DataList.Item flexGrow="1">
+            <DataList.Item>
                 <DataList.ItemLabel>Album Artists</DataList.ItemLabel>
-                <DataList.ItemValue>
-                    <ArtistCreditTags data={play.data.albumArtists} />
+                <DataList.ItemValue alignItems="flex-start">
+                    <ArtistCreditTags data={play.data.albumArtists} showMbid={showMbid} />
                 </DataList.ItemValue>
             </DataList.Item>
         );
@@ -169,9 +176,6 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
             listenedFor,
             duration,
             repeat,
-            meta: {
-                brainz = {}
-            } = {}
         } = {},
         meta: {
             url: {
@@ -183,21 +187,22 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
         } = {}
     } = play;
 
-    const titleLinks: React.JSX.Element[] = [];
-    if (webUrl !== undefined || originUrl !== undefined) {
-        titleLinks.push(<Link key="weblink" variant="underline" target="_blank" href={webUrl ?? originUrl}><Icon size="sm">{getMusicServiceIconElement(musicService ?? source)}</Icon></Link>);
+    let sourceElm: React.JSX.Element | undefined = undefined;
+    if(musicService !== undefined && musicService !== source && source !== undefined) {
+        sourceElm = <Span><SourceMaybeLink link={webUrl ?? originUrl}>{hasMusicServiceIcon(musicService) ? getMusicServiceIconTooltip(musicService)({size: 'md'}) : capitalizeWords(musicService)}</SourceMaybeLink> via {capitalizeWords(source)}</Span>
+    } else if(source !== undefined) {
+        sourceElm = <SourceMaybeLink link={webUrl ?? originUrl}>{hasMusicServiceIcon(source) ? getMusicServiceIconTooltip(source)({size: 'md'}) : capitalizeWords(source)}</SourceMaybeLink>
     }
 
-    const titleElm = <HStack><Span>{track}</Span>{titleLinks}<MusicServiceIndicators services={playMetaIdsToMusicServices(play, 'track')} showId={showMbid} link/></HStack>
+    const titleElm = <HStack><Span>{track?.name}</Span><MusicServiceIndicators services={track?.metadata ?? []} showId={showMbid} link/></HStack>
 
     return (
-        <Flex flexDirection="column" gap="4">
-            <DataList.Root flexWrap="wrap" flexDirection="row">
-                <DataList.Item flexGrow="1">
-                    <DataList.ItemLabel flexShrink="1">Title</DataList.ItemLabel>
-                    <DataList.ItemValue>{titleElm}</DataList.ItemValue>
+            <DataList.Root className='playDataGrid'>
+                <DataList.Item>
+                    <DataList.ItemLabel>Title</DataList.ItemLabel>
+                    <DataList.ItemValue alignItems="flex-start">{titleElm}</DataList.ItemValue>
                 </DataList.Item>
-                <DataList.Item flexGrow="1">
+                <DataList.Item>
                     <DataList.ItemLabel>Artists</DataList.ItemLabel>
                     <DataList.ItemValue>
                         {artists.length === 0 ? <Text color="fg.muted">(No Artists)</Text> :
@@ -205,19 +210,17 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
                     </DataList.ItemValue>
                 </DataList.Item>
                 {albumArtistElm}
-                <DataList.Item flexGrow="1">
-                    <DataList.ItemLabel>Album</DataList.ItemLabel>
-                    <DataList.ItemValue>
+                <DataList.Item >
+                    <DataList.ItemLabel alignItems="flex-start">Album</DataList.ItemLabel>
+                    <DataList.ItemValue alignItems="flex-start">
                         <HStack>
-                            {play.data.album}
-                            <MusicServiceIndicators services={playMetaIdsToMusicServices(play, 'album')} showId={showMbid} link/>
+                            {play.data.album?.name}
+                            <MusicServiceIndicators services={play.data.album?.metadata ?? []} showId={showMbid} link/>
                         </HStack>
                     </DataList.ItemValue>
                 </DataList.Item>
-            </DataList.Root>
-            <DataList.Root flexWrap="wrap" flexDirection="row">
                 <PlayDatesStack play={play} dates={dates} />
-                <DataList.Item flexGrow="1" hideBelow="sm">
+                <DataList.Item>
                     <DataList.ItemLabel>Duration</DataList.ItemLabel>
                     <DataList.ItemValue>
                         <Stack gap="1">
@@ -226,12 +229,11 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
                         </Stack>
                     </DataList.ItemValue>
                 </DataList.Item>
-                <DataList.Item flexGrow="1" hideBelow="sm">
-                    <DataList.ItemLabel>Repeat?</DataList.ItemLabel>
-                    <DataList.ItemValue><Icon>{repeat ? <LuCheck /> : <LuX />}</Icon></DataList.ItemValue>
-                </DataList.Item>
+                {sourceElm !== undefined ? (<DataList.Item>
+                    <DataList.ItemLabel>Source</DataList.ItemLabel>
+                    <DataList.ItemValue alignItems="flex-start">{sourceElm}</DataList.ItemValue>
+                </DataList.Item>) : undefined}
             </DataList.Root>
-        </Flex>
     )
 }
 
@@ -242,6 +244,11 @@ export const PlayInfoContainer = (props?: PlayInfoProps) => {
 export const PlayDatesStack = (props: { play: JsonPlayObject, dates: DisplayDates }) => {
     const {
         play,
+        play: {
+            data: {
+                repeat = false,
+            } = {}
+        } = {},
         dates
     } = props;
 
@@ -251,7 +258,7 @@ export const PlayDatesStack = (props: { play: JsonPlayObject, dates: DisplayDate
     } else {
         const dateElements = [];
         if (dates.includes('played') || dates.includes('all')) {
-            dateElements.push((<Text textStyle="xs" key="playDate">{`Played ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</Text>));
+            dateElements.push((<HStack><Text textStyle="xs" key="playDate">{`Played ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</Text>{repeat ? <Badge>Repeat</Badge> : null}</HStack>));
             if (play.data.playDateCompleted !== undefined) {
                 dateElements.push((<TextMuted key="playDateCompleted">{`Played Until ${shortTodayAwareFormat(dayjs(play.data.playDateCompleted))}`}</TextMuted>));
             }
@@ -260,7 +267,7 @@ export const PlayDatesStack = (props: { play: JsonPlayObject, dates: DisplayDate
             dateElements.push((<TextMuted key="seen">{`Seen ${shortTodayAwareFormat(dayjs(play.meta.seenAt))}`}</TextMuted>));
         }
         datesItem = (
-            <DataList.Item flexGrow="1">
+            <DataList.Item>
                 <DataList.ItemLabel>Dates</DataList.ItemLabel>
                 <DataList.ItemValue>
                     <Stack gap="1">

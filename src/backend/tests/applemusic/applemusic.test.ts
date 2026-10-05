@@ -84,8 +84,8 @@ describe('Apple Music - History Consistency & Deduplication', function () {
         expect(reboundResult.plays).to.have.length(2);
         
         // Oldest first, newest last
-        expect(reboundResult.plays[0].data.track).to.equal(interimPlay.data.track);
-        expect(reboundResult.plays[1].data.track).to.equal(plays[0].data.track);
+        expect(reboundResult.plays[0].data.track?.name).to.equal(interimPlay.data.track?.name);
+        expect(reboundResult.plays[1].data.track?.name).to.equal(plays[0].data.track?.name);
     });
 
     it(`Ignores top-rebound when recoverUnchangedTopHistory is false`, async function () {
@@ -296,11 +296,11 @@ describe('Apple Music - Format Play Object', function () {
         const playLowercase = AppleMusicSource.formatPlayObj(trackLowercase, formatOptions);
 
         // Assert the suffixes are removed
-        expect(playEP.data.album).to.equal('ALBUM A');
-        expect(playSingle.data.album).to.equal('ALBUM B');
-        expect(playLowercase.data.album).to.equal('album d');
+        expect(playEP.data.album?.name).to.equal('ALBUM A');
+        expect(playSingle.data.album?.name).to.equal('ALBUM B');
+        expect(playLowercase.data.album?.name).to.equal('album d');
 
         // Assert normal album names are untouched
-        expect(playNormal.data.album).to.equal(trackNormal.albumName);
+        expect(playNormal.data.album?.name).to.equal(trackNormal.albumName);
     });
 });
