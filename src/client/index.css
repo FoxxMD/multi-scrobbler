@@ -96,3 +96,12 @@
 .logline code span:first-child {
       color: var(--chakra-colors-gray-500);
 }
+
+.playDataGrid {
+      display: grid;
+      --gap: 1rem;
+      --max-columns: 3;
+      gap: var(--gap);
+      grid-template-columns: repeat(auto-fill,
+                  minmax(min(100%, max(10rem, (100% - (var(--max-columns) - 1) * var(--gap)) / var(--max-columns))), 1fr));
+}

@@ -29,10 +29,10 @@ export const Credit = (props: { data: AC, showLinks?: boolean, showMbid?: boolea
 }
 
 export const ArtistCreditTags = (props: { data: AC[], showLinks?: boolean, showMbid?: boolean }) => (
-    <HStack>
+    <HStack flexWrap="wrap">
         {props.data.map((x, index) => (
             <Tag.Root key={index}>
-                <Tag.Label userSelect="all"><Credit data={x} showLinks={props.showLinks} showMbid={props.showMbid} /></Tag.Label>
+                <Tag.Label userSelect="text"><Credit data={x} showLinks={props.showLinks} showMbid={props.showMbid} /></Tag.Label>
             </Tag.Root>
         ))}
     </HStack>

@@ -1,4 +1,4 @@
-import { HStack, Icon, Separator, StackSeparator, type IconProps } from "@chakra-ui/react";
+import { HStack, Icon, Separator, StackSeparator, type IconProps, Span } from "@chakra-ui/react";
 import { getMusicServiceIcon, getMusicServiceIconElement } from "../icons/ChakraIcons";
 import { type MusicServicesAny } from '../../../core/MusicMetadata';
 import { type MusicServices } from '../../../core/MusicMetadata';
@@ -47,7 +47,7 @@ export const MusicServiceInfoIcon = (props: MusicServiceInfoIconProps) => {
     }
     let visibleId: React.JSX.Element | null = null;
     if (showId && id !== undefined) {
-        visibleId = <><Separator orientation="vertical" height="4" /><Muted textStyle="xs">{`${capitalize(type)}`} {id}</Muted></>
+        visibleId = <><Separator orientation="vertical" height="4" /><Muted textStyle="xs">{`${capitalize(type)}`}{idHint !== undefined ? ` ${capitalize(idHint)}` : ''} <Span userSelect="all">{id}</Span></Muted></>
     }
 
     if (tooltip) {
