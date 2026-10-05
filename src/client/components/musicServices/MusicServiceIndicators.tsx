@@ -1,5 +1,5 @@
 import { HStack, Icon, Separator, StackSeparator, type IconProps } from "@chakra-ui/react";
-import { getMusicServiceIconElement } from "../icons/ChakraIcons";
+import { getMusicServiceIcon, getMusicServiceIconElement } from "../icons/ChakraIcons";
 import { type MusicServicesAny } from '../../../core/MusicMetadata';
 import { type MusicServices } from '../../../core/MusicMetadata';
 import { musicServicesSchema } from '../../../core/MusicMetadata';
@@ -106,4 +106,13 @@ export const MusicServiceIndicators = (props: {
             {services.map((x, i) => <MusicServiceIndicator key={i} data={x} iconProps={iconProps} showId={showId} link={link} />)}
         </HStack>
     )
+}
+
+export const getMusicServiceIconTooltip = (service: string) => {
+    const ServiceIcon = getMusicServiceIcon(service);
+    return (props: IconProps = {}) => (
+        <Tooltip content={service} interactive>
+            <Icon {...props}><ServiceIcon /></Icon>
+        </Tooltip>
+    );
 }
