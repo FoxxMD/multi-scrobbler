@@ -31,7 +31,7 @@ export const PlayEdit = (props: PlayEditProps) => {
     const opts = formOptions.strictSchema(playEditStrictCreateSchema, {
         defaultValues: {
             data: {
-                track: {name: ''},
+                track: { name: '' },
                 artists: [],
                 ...data
             },
@@ -59,7 +59,7 @@ export const PlayEdit = (props: PlayEditProps) => {
 
     return (
         <Box position="relative">
-            
+
             <MSErrorBoundary>
                 <form
                     onSubmit={(e) => {
@@ -81,7 +81,7 @@ export const PlayEdit = (props: PlayEditProps) => {
                                         <TrackSearch initial={field.form.state.values.data.track}
                                             onChange={(val) => {
                                                 // selected credits replace existing ones entirely so ids/images from a previous selection are not kept
-                                                field.form.setFieldValue('data', {...field.form.state.values.data, ...val});
+                                                field.form.setFieldValue('data', { ...field.form.state.values.data, ...val });
                                                 setArtistsVersion(v => v + 1);
                                             }} />
                                         {field.errors.map((error) => (
@@ -99,9 +99,9 @@ export const PlayEdit = (props: PlayEditProps) => {
                                 <form.ArrayField key={artistsVersion} name="data.artists">
                                     {(array) => (
                                         <Stack>
-                                            
-                                            {array.value.map((artist, i) => 
-                                            <form.Field
+
+                                            {array.value.map((artist, i) =>
+                                                <form.Field
                                                     key={i}
                                                     name={`data.artists[${i}]`}
                                                     // schema issues are reported on descendants (.name), route them to this field
@@ -109,18 +109,18 @@ export const PlayEdit = (props: PlayEditProps) => {
                                                     children={(field) => (
                                                         <Field.Root invalid={field.errors.length > 0}>
                                                             <Stack width="100%" flexGrow="1">
-                                                            <HStack width="100%" flexGrow="1">
-                                                                <ArtistSearch initial={field.value}
-                                                                    onChange={(val) => {
-                                                                        field.handleChange(val);
-                                                                    }} />
-                                                                {i !== 0 ? <TrashIconButton colorPalette="red" onClick={() => array.removeValue(i)} /> : undefined}
-                                                            </HStack>
-                                                            {field.errors.map((error) => (
-                                                                <Field.ErrorText key={error.message}>
-                                                                    {error.message}
-                                                                </Field.ErrorText>
-                                                            ))}
+                                                                <HStack width="100%" flexGrow="1">
+                                                                    <ArtistSearch initial={field.value}
+                                                                        onChange={(val) => {
+                                                                            field.handleChange(val);
+                                                                        }} />
+                                                                    {i !== 0 ? <TrashIconButton colorPalette="red" onClick={() => array.removeValue(i)} /> : undefined}
+                                                                </HStack>
+                                                                {field.errors.map((error) => (
+                                                                    <Field.ErrorText key={error.message}>
+                                                                        {error.message}
+                                                                    </Field.ErrorText>
+                                                                ))}
                                                             </Stack>
                                                         </Field.Root>
                                                     )}
@@ -132,7 +132,7 @@ export const PlayEdit = (props: PlayEditProps) => {
                                                     </Field.ErrorText>
                                                 ))}
                                             </Field.Root>
-                                            <Button variant="subtle" maxW="400px" onClick={() => array.pushValue({name: ''})}>Add Artist</Button>
+                                            <Button variant="subtle" maxW="400px" onClick={() => array.pushValue({ name: '' })}>Add Artist</Button>
                                         </Stack>
                                     )}
                                 </form.ArrayField>
@@ -145,11 +145,11 @@ export const PlayEdit = (props: PlayEditProps) => {
                                 <Field.Root invalid={field.errors.length > 0}>
                                     <Field.Label>Album</Field.Label>
                                     <Box width="100%">
-                                        <AlbumSearch 
-                                        key={field.form.state.values.data.album?.name ?? ''}
-                                        initial={field.form.state.values.data.album}
+                                        <AlbumSearch
+                                            key={field.form.state.values.data.album?.name ?? ''}
+                                            initial={field.form.state.values.data.album}
                                             onChange={(val) => {
-                                                field.form.setFieldValue('data', {...field.form.state.values.data, ...val});
+                                                field.form.setFieldValue('data', { ...field.form.state.values.data, ...val });
                                                 setArtistsVersion(v => v + 1);
                                             }} />
                                         {field.errors.map((error) => (
@@ -162,57 +162,57 @@ export const PlayEdit = (props: PlayEditProps) => {
                             )}
                         />
                         <HStack wrap="wrap" gap="5">
-                        <form.Field
-                            name="data.duration"
-                            errorBoundary
-                            children={(field) => (
-                                <Field.Root invalid={field.errors.length > 0} width="fit-content">
-                                    <Field.Label>Duration</Field.Label>
-                                    <HStack width="100%">
-                                        <DurationSepEditable
-                                        CopyIcon={CopyToRight}
-                                        copyTooltip="Copy Duration to Listened For"
-                                        onCopyVal={(seconds) => field.form.setFieldValue('data.listenedFor', seconds)}
-                                        allowMouseWheel
-                                        size="sm"
-                                        seconds={field.value}
-                                            onChange={(val: number) => {
-                                                field.handleChange(val);
-                                            }} />
-                                        {field.errors.map((error) => (
-                                            <Field.ErrorText key={error.message}>
-                                                {error.message}
-                                            </Field.ErrorText>
-                                        ))}
-                                    </HStack>
-                                     <Field.HelperText>The length of the song</Field.HelperText>
-                                </Field.Root>
-                            )}
-                        />
-                        <form.Field
-                            name="data.listenedFor"
-                            errorBoundary
-                            children={(field) => (
-                                <Field.Root invalid={field.errors.length > 0} width="fit-content">
-                                    <Field.Label>Listened For</Field.Label>
-                                    <Box width="100%">
-                                        <DurationSepEditable
-                                        allowMouseWheel
-                                        size="sm"
-                                        seconds={field.value}
-                                            onChange={(val: number) => {
-                                                field.handleChange(val);
-                                            }} />
-                                        {field.errors.map((error) => (
-                                            <Field.ErrorText key={error.message}>
-                                                {error.message}
-                                            </Field.ErrorText>
-                                        ))}
-                                    </Box>
-                                     <Field.HelperText>The amount of time you listened to this song for</Field.HelperText>
-                                </Field.Root>
-                            )}
-                        />
+                            <form.Field
+                                name="data.duration"
+                                errorBoundary
+                                children={(field) => (
+                                    <Field.Root invalid={field.errors.length > 0} width="fit-content">
+                                        <Field.Label>Duration</Field.Label>
+                                        <HStack width="100%">
+                                            <DurationSepEditable
+                                                CopyIcon={CopyToRight}
+                                                copyTooltip="Copy Duration to Listened For"
+                                                onCopyVal={(seconds) => field.form.setFieldValue('data.listenedFor', seconds)}
+                                                allowMouseWheel
+                                                size="sm"
+                                                seconds={field.value}
+                                                onChange={(val: number) => {
+                                                    field.handleChange(val);
+                                                }} />
+                                            {field.errors.map((error) => (
+                                                <Field.ErrorText key={error.message}>
+                                                    {error.message}
+                                                </Field.ErrorText>
+                                            ))}
+                                        </HStack>
+                                        <Field.HelperText>The length of the song</Field.HelperText>
+                                    </Field.Root>
+                                )}
+                            />
+                            <form.Field
+                                name="data.listenedFor"
+                                errorBoundary
+                                children={(field) => (
+                                    <Field.Root invalid={field.errors.length > 0} width="fit-content">
+                                        <Field.Label>Listened For</Field.Label>
+                                        <Box width="100%">
+                                            <DurationSepEditable
+                                                allowMouseWheel
+                                                size="sm"
+                                                seconds={field.value}
+                                                onChange={(val: number) => {
+                                                    field.handleChange(val);
+                                                }} />
+                                            {field.errors.map((error) => (
+                                                <Field.ErrorText key={error.message}>
+                                                    {error.message}
+                                                </Field.ErrorText>
+                                            ))}
+                                        </Box>
+                                        <Field.HelperText>The amount of time you listened to this song for</Field.HelperText>
+                                    </Field.Root>
+                                )}
+                            />
                         </HStack>
                     </Stack>
                 </form>

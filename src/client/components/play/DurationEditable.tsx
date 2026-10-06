@@ -67,16 +67,16 @@ export const DurationSepEditable = (props: DurationEditableProps) => {
     const mobile = useBreakpointValue({ base: true, md: false }, { fallback: 'md' });
 
     let copyButton: React.JSX.Element | undefined = undefined;
-    if(onCopyVal !== undefined) {
-        if(copyTooltip !== undefined) {
-            copyButton = <Tooltip content={copyTooltip}><IconButton variant="outline" size="sm" onClick={() => onCopyVal(total)}><CopyIcon/></IconButton></Tooltip>
+    if (onCopyVal !== undefined) {
+        if (copyTooltip !== undefined) {
+            copyButton = <Tooltip content={copyTooltip}><IconButton variant="outline" size="sm" onClick={() => onCopyVal(total)}><CopyIcon /></IconButton></Tooltip>
         } else {
-            copyButton = <IconButton variant="outline" size="sm" onClick={() => onCopyVal(total)}><CopyIcon/></IconButton>;
+            copyButton = <IconButton variant="outline" size="sm" onClick={() => onCopyVal(total)}><CopyIcon /></IconButton>;
         }
     }
 
     return (
-        <HStack wrap="wrap" gapX={{mdDown:"4", mdTo2xl: "1"}}>
+        <HStack wrap="wrap" gapX={{ mdDown: "4", mdTo2xl: "1" }}>
             {units.map(({ name, label, size }) => (
                 <HStack key={name} gap="1">
                     <NumberInput.Root
