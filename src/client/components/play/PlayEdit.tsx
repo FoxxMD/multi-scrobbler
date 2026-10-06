@@ -85,6 +85,13 @@ export const PlayEdit = (props: PlayEditProps) => {
                     <HStack justify="flex-end">
                         <Button type="submit" variant="subtle" colorPalette="blue">{context === 'edit' ? 'Save' : 'Create'}</Button>
                         <Button variant="subtle" colorPalette="red">Cancel</Button>
+                        <form.Subscribe
+                            selector={(state) => state.isDirty && !state.isDefaultValue}
+                            children={(canReset) => canReset ? <Button variant="subtle" onClick={() => {
+                                form.reset();
+                                setArtistsVersion(v => v + 1);
+                            }}>Reset</Button> : undefined}
+                        />
                     </HStack>
                     <Stack>
                         <form.Field
