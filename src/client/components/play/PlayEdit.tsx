@@ -1,4 +1,4 @@
-import { HStack, Box, Field, Stack, Fieldset, Button, IconButton } from "@chakra-ui/react"
+import { HStack, Box, Field, Stack, Fieldset, Button, IconButton, DateInput, DatePicker, Portal } from "@chakra-ui/react"
 import { playEditStrictCreateSchema, type PlayObjectMinimal } from '../../../core/Atomic.js';
 import { MSErrorBoundary } from '../ErrorBoundary.js';
 import { useForm, formOptions } from '@tanstack/react-form';
@@ -10,6 +10,8 @@ import { AlbumSearch } from "./AlbumSearch.js";
 import { DurationSepEditable } from "./DurationEditable.js";
 import { Tooltip } from "../ToggleTip.js";
 import { hashObject } from "../../../core/StringUtils.js";
+import { LuCalendar } from "react-icons/lu";
+import { parseAbsoluteToLocal, today, getLocalTimeZone, toZoned, DateFormatter } from '@internationalized/date';
 
 export interface PlayEditProps {
     initialPlay?: PlayObjectMinimal<string>
@@ -22,15 +24,27 @@ export interface PlayEditProps {
 const logSubmit: PlayEditProps['onSubmit'] = (val) => console.log(val, 'Play Edit Submit');
 const cancelNoop = () => console.log('Clicked cancel');
 
+const tz = getLocalTimeZone();
+
+const formatter = new DateFormatter("en-US", {
+    day: "2-digit",
+    month: '2-digit',
+    year: 'numeric',
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    hour12: false,
+})
+
 // structural type so it accepts a field of any value type without spelling out ReactFieldApi's generics
-const ResetButton = ({ field, onClickAdditional }: { field: { meta: { isDefaultValue: boolean }, reset: () => void }, onClickAdditional?: () => void  }) => {
-    if(!field.meta.isDefaultValue) {
+const ResetButton = ({ field, onClickAdditional }: { field: { meta: { isDefaultValue: boolean }, reset: () => void }, onClickAdditional?: () => void }) => {
+    if (!field.meta.isDefaultValue) {
         return <Tooltip content="Reset"><IconButton variant="subtle" onClick={() => {
             field.reset();
-            if(onClickAdditional !== undefined) {
+            if (onClickAdditional !== undefined) {
                 onClickAdditional();
             }
-        }}><ResetIconRaw/></IconButton></Tooltip>
+        }}><ResetIconRaw /></IconButton></Tooltip>
     }
     return undefined;
 }
@@ -92,12 +106,12 @@ export const PlayEdit = (props: PlayEditProps) => {
                         <Button disabled={isSubmitting} variant="subtle" colorPalette="red" onClick={() => onCancel()}>Cancel</Button>
                         <form.Subscribe
                             selector={(state) => state.isDirty && !state.isDefaultValue}
-                            children={(canReset) => canReset ? <Button 
+                            children={(canReset) => canReset ? <Button
                                 disabled={isSubmitting}
                                 variant="subtle" onClick={() => {
-                                form.reset();
-                                setArtistsVersion(v => v + 1);
-                            }}>Reset</Button> : undefined}
+                                    form.reset();
+                                    setArtistsVersion(v => v + 1);
+                                }}>Reset</Button> : undefined}
                         />
                     </HStack>
                     <Stack>
@@ -118,7 +132,7 @@ export const PlayEdit = (props: PlayEditProps) => {
                                                     field.form.setFieldValue('data', { ...field.form.state.values.data, ...val });
                                                     setArtistsVersion(v => v + 1);
                                                 }} />
-                                                <ResetButton field={field}/>
+                                            <ResetButton field={field} />
                                         </HStack>
                                         {field.errors.map((error) => (
                                             <Field.ErrorText key={error.message}>
@@ -151,7 +165,7 @@ export const PlayEdit = (props: PlayEditProps) => {
                                                                             field.handleChange(val);
                                                                         }} />
                                                                     <HStack gapX="4">
-                                                                        <ResetButton field={field} onClickAdditional={() => setArtistsVersion(v => v + 1)}/>
+                                                                        <ResetButton field={field} onClickAdditional={() => setArtistsVersion(v => v + 1)} />
                                                                         {i !== 0 ? <TrashIconButton colorPalette="red" onClick={() => array.removeValue(i)} /> : undefined}
                                                                     </HStack>
                                                                 </HStack>
@@ -185,15 +199,15 @@ export const PlayEdit = (props: PlayEditProps) => {
                                     <Field.Label>Album</Field.Label>
                                     <Stack width="100%" flexGrow="1">
                                         <HStack width="100%" flexGrow="1">
-                                        <AlbumSearch
-                                            key={hashObject(field.form.state.values.data.album ?? {})}
-                                            initial={field.form.state.values.data.album}
-                                            onChange={(val) => {
-                                                field.form.setFieldValue('data', { ...field.form.state.values.data, ...val });
-                                                setArtistsVersion(v => v + 1);
-                                            }} />
+                                            <AlbumSearch
+                                                key={hashObject(field.form.state.values.data.album ?? {})}
+                                                initial={field.form.state.values.data.album}
+                                                onChange={(val) => {
+                                                    field.form.setFieldValue('data', { ...field.form.state.values.data, ...val });
+                                                    setArtistsVersion(v => v + 1);
+                                                }} />
                                             <ResetButton field={field} />
-                                            </HStack>
+                                        </HStack>
                                         {field.errors.map((error) => (
                                             <Field.ErrorText key={error.message}>
                                                 {error.message}
@@ -220,17 +234,17 @@ export const PlayEdit = (props: PlayEditProps) => {
                                                     onChange={(val: number) => {
                                                         field.handleChange(val);
                                                     }} />
-                                                    
-                                                    <ResetButton field={field} />
-                                                    <Tooltip content="Copy Duration to Listened For">
-                                                        <IconButton variant="outline" onClick={() => field.form.setFieldValue('data.listenedFor', field.value)}>
-                                                            <CopyToRight /></IconButton>
-                                                        </Tooltip>
+
+                                                <ResetButton field={field} />
+                                                <Tooltip content="Copy Duration to Listened For">
+                                                    <IconButton variant="outline" onClick={() => field.form.setFieldValue('data.listenedFor', field.value)}>
+                                                        <CopyToRight /></IconButton>
+                                                </Tooltip>
                                             </HStack>
                                             {field.errors.map((error) => (
-                                                    <Field.ErrorText key={error.message}>
-                                                        {error.message}
-                                                    </Field.ErrorText>
+                                                <Field.ErrorText key={error.message}>
+                                                    {error.message}
+                                                </Field.ErrorText>
                                             ))}
                                         </Stack>
                                     </Field.Root>
@@ -252,18 +266,84 @@ export const PlayEdit = (props: PlayEditProps) => {
                                                     onChange={(val: number) => {
                                                         field.handleChange(val);
                                                     }} />
-                                                    <ResetButton field={field} />
+                                                <ResetButton field={field} />
                                             </HStack>
                                             {field.errors.map((error) => (
-                                                    <Field.ErrorText key={error.message}>
-                                                        {error.message}
-                                                    </Field.ErrorText>
+                                                <Field.ErrorText key={error.message}>
+                                                    {error.message}
+                                                </Field.ErrorText>
                                             ))}
                                         </Stack>
                                     </Field.Root>
                                 )}
                             />
                         </HStack>
+                        <form.Field
+                            name="data.playDate"
+                            errorBoundary
+                            // eslint-disable-next-line arrow-body-style
+                            children={(field) => {
+                                return (
+                                    <Field.Root invalid={field.errors.length > 0} width="100%">
+                                        <Field.Label>Played At</Field.Label>
+                                        <Field.HelperText>The date-time you listened to this song at</Field.HelperText>
+                                        <Stack>
+                                            <HStack wrap="wrap" width="100%">
+                                                <DatePicker.Root
+                                                    width="100%"
+                                                    value={[field.value !== undefined ? parseAbsoluteToLocal(field.value) : today(tz)]}
+                                                    onValueChange={(e) => field.handleChange(toZoned(e.value[0], tz).toAbsoluteString())}
+                                                >
+                                                    <DateInput.Root
+                                                        width="100%"
+                                                        value={[field.value !== undefined ? parseAbsoluteToLocal(field.value) : today(tz)]}
+                                                        onValueChange={(e) => field.handleChange(toZoned(e.value[0], tz).toAbsoluteString())}
+                                                        granularity="second"
+                                                        formatter={formatter}>
+                                                        <DatePicker.Control>
+                                                            <DateInput.Control> {/* minW="270px" */}
+                                                                <DateInput.Segments /> {/*paddingRight="0" */}
+                                                            </DateInput.Control>
+                                                            <DatePicker.IndicatorGroup>
+                                                                <DatePicker.Trigger>
+                                                                    <LuCalendar />
+                                                                </DatePicker.Trigger>
+                                                            </DatePicker.IndicatorGroup>
+                                                        </DatePicker.Control>
+                                                        <DateInput.HiddenInput />
+                                                    </DateInput.Root>
+
+                                                    <Portal>
+                                                        <DatePicker.Positioner>
+                                                            <DatePicker.Content>
+                                                                <DatePicker.View view="day">
+                                                                    <DatePicker.Header />
+                                                                    <DatePicker.DayTable />
+                                                                </DatePicker.View>
+                                                                <DatePicker.View view="month">
+                                                                    <DatePicker.Header />
+                                                                    <DatePicker.MonthTable />
+                                                                </DatePicker.View>
+                                                                <DatePicker.View view="year">
+                                                                    <DatePicker.Header />
+                                                                    <DatePicker.YearTable />
+                                                                </DatePicker.View>
+                                                            </DatePicker.Content>
+                                                        </DatePicker.Positioner>
+                                                    </Portal>
+                                                </DatePicker.Root>
+                                                <ResetButton field={field} />
+                                            </HStack>
+                                            {field.errors.map((error) => (
+                                                <Field.ErrorText key={error.message}>
+                                                    {error.message}
+                                                </Field.ErrorText>
+                                            ))}
+                                        </Stack>
+                                    </Field.Root>
+                                )
+                            }}
+                        />
                     </Stack>
                 </form>
             </MSErrorBoundary>
