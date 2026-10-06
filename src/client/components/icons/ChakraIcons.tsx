@@ -27,7 +27,9 @@ import {
     LuClock,
     LuSparkles,
     LuLockOpen,
-    LuCopyPlus
+    LuCopyPlus,
+    LuClipboardPaste,
+    LuClipboardCopy
 } from "react-icons/lu"
 import { VscDebugRestart } from 'react-icons/vsc';
 import { HiMiniStop } from "react-icons/hi2";
@@ -204,8 +206,17 @@ export const InsertedIcon = makeChakraIcon(MdOutlineFiberNew);
 
 export const UpdatedIcon = makeChakraIcon(LuCircleArrowUp);
 
+export const CopyIconRaw = LuCopy;
 export const CopyIcon = makeChakraIcon(LuCopy);
 export const CopyIconButton = makeIconButton(LuCopy);
+
+export const CopyToRight = LuClipboardPaste;
+export const CopyToRightIcon = makeChakraIcon(LuClipboardPaste);
+export const CopyToRightButton = makeIconButton(LuClipboardPaste);
+
+export const CopyToLeft = LuClipboardCopy;
+export const CopyToLeftIcon = makeChakraIcon(LuClipboardCopy);
+export const CopyToLeftButton = makeIconButton(LuClipboardCopy);
 
 export const ExclamationCircleIcon = makeChakraIcon(LuCircleAlert);
 

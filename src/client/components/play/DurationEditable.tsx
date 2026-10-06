@@ -1,9 +1,12 @@
-import { HStack, IconButton, NumberInput, Text, useBreakpointValue, Box } from "@chakra-ui/react";
+import { HStack, IconButton, NumberInput, Text, useBreakpointValue } from "@chakra-ui/react";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration.js";
-import { useId, useState } from "react";
+import React, { useId, useState } from "react";
 import { LuMinus, LuPlus } from "react-icons/lu";
 import { durationToNormalizedTime } from "../../../core/TimeUtils.js";
+import type { IconType } from "react-icons/lib";
+import { CopyIconRaw } from "../icons/ChakraIcons.js";
+import { Tooltip } from "../ToggleTip.js";
 
 dayjs.extend(duration);
 
@@ -13,6 +16,9 @@ export interface DurationEditableProps extends Omit<NumberInput.RootProps, 'valu
     /** Duration in seconds. Inputs update whenever this changes */
     seconds?: number
     onChange?: (seconds: number) => void
+    onCopyVal?: (seconds: number) => void
+    copyTooltip?: string | React.ReactNode
+    CopyIcon?: IconType
 }
 
 const units = [
@@ -32,6 +38,9 @@ export const DurationSepEditable = (props: DurationEditableProps) => {
     const {
         seconds = 0,
         onChange,
+        onCopyVal,
+        copyTooltip,
+        CopyIcon = CopyIconRaw,
         ...rest
     } = props;
 
@@ -56,6 +65,15 @@ export const DurationSepEditable = (props: DurationEditableProps) => {
     const parts = durationToNormalizedTime(dayjs.duration(total, 'seconds'));
     const id = useId();
     const mobile = useBreakpointValue({ base: true, md: false }, { fallback: 'md' });
+
+    let copyButton: React.JSX.Element | undefined = undefined;
+    if(onCopyVal !== undefined) {
+        if(copyTooltip !== undefined) {
+            copyButton = <Tooltip content={copyTooltip}><IconButton variant="outline" size="sm" onClick={() => onCopyVal(total)}><CopyIcon/></IconButton></Tooltip>
+        } else {
+            copyButton = <IconButton variant="outline" size="sm" onClick={() => onCopyVal(total)}><CopyIcon/></IconButton>;
+        }
+    }
 
     return (
         <HStack wrap="wrap" gapX={{mdDown:"4", mdTo2xl: "1"}}>
@@ -114,6 +132,7 @@ export const DurationSepEditable = (props: DurationEditableProps) => {
                     <Text textStyle="sm" color="fg.muted">{label}</Text>
                 </HStack>
             ))}
+            {copyButton}
         </HStack>
     );
 }

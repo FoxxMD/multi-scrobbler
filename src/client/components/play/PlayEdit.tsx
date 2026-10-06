@@ -4,7 +4,7 @@ import { MSErrorBoundary } from '../ErrorBoundary.js';
 import { useForm, formOptions } from '@tanstack/react-form';
 import { TrackSearch } from "./TrackSearch.js";
 import { ArtistSearch } from "./ArtistSearch.js";
-import { TrashIconButton } from "../icons/ChakraIcons.js";
+import { CopyToRight, TrashIconButton } from "../icons/ChakraIcons.js";
 import { useState } from "react";
 import { AlbumSearch } from "./AlbumSearch.js";
 import { DurationSepEditable } from "./DurationEditable.js";
@@ -161,11 +161,39 @@ export const PlayEdit = (props: PlayEditProps) => {
                                 </Field.Root>
                             )}
                         />
+                        <HStack wrap="wrap" gap="5">
+                        <form.Field
+                            name="data.duration"
+                            errorBoundary
+                            children={(field) => (
+                                <Field.Root invalid={field.errors.length > 0} width="fit-content">
+                                    <Field.Label>Duration</Field.Label>
+                                    <HStack width="100%">
+                                        <DurationSepEditable
+                                        CopyIcon={CopyToRight}
+                                        copyTooltip="Copy Duration to Listened For"
+                                        onCopyVal={(seconds) => field.form.setFieldValue('data.listenedFor', seconds)}
+                                        allowMouseWheel
+                                        size="sm"
+                                        seconds={field.value}
+                                            onChange={(val: number) => {
+                                                field.handleChange(val);
+                                            }} />
+                                        {field.errors.map((error) => (
+                                            <Field.ErrorText key={error.message}>
+                                                {error.message}
+                                            </Field.ErrorText>
+                                        ))}
+                                    </HStack>
+                                     <Field.HelperText>The length of the song</Field.HelperText>
+                                </Field.Root>
+                            )}
+                        />
                         <form.Field
                             name="data.listenedFor"
                             errorBoundary
                             children={(field) => (
-                                <Field.Root invalid={field.errors.length > 0}>
+                                <Field.Root invalid={field.errors.length > 0} width="fit-content">
                                     <Field.Label>Listened For</Field.Label>
                                     <Box width="100%">
                                         <DurationSepEditable
@@ -185,6 +213,7 @@ export const PlayEdit = (props: PlayEditProps) => {
                                 </Field.Root>
                             )}
                         />
+                        </HStack>
                     </Stack>
                 </form>
             </MSErrorBoundary>

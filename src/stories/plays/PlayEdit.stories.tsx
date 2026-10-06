@@ -39,7 +39,7 @@ const meta = preview.type<{args: PropsAndCustomArgs}>().meta({
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],
 decorators: [
-    (Story) => (<Provider><Container maxWidth="2xl"><Story/></Container></Provider>),
+    (Story) => (<Provider><Container maxWidth="6xl"><Story/></Container></Provider>),
   ],
 args: {
     initialPlay: generateJsonPlay(),
