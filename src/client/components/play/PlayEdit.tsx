@@ -26,7 +26,8 @@ const cancelNoop = () => console.log('Clicked cancel');
 
 const tz = getLocalTimeZone();
 
-const formatter = new DateFormatter("en-US", {
+// segment order and separators come from the formatter locale, en-ZA is the english locale that formats as YYYY/MM/DD
+const formatter = new DateFormatter("en-ZA", {
     day: "2-digit",
     month: '2-digit',
     year: 'numeric',
