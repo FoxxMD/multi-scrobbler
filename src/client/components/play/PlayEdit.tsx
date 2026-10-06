@@ -1,4 +1,4 @@
-import { HStack, Box, Flex, Field, Stack, Fieldset, Button } from "@chakra-ui/react"
+import { HStack, Box, Field, Stack, Fieldset, Button } from "@chakra-ui/react"
 import { playEditStrictCreateSchema, type PlayObjectMinimal } from '../../../core/Atomic.js';
 import { MSErrorBoundary } from '../ErrorBoundary.js';
 import { useForm, formOptions } from '@tanstack/react-form';
@@ -7,6 +7,7 @@ import { ArtistSearch } from "./ArtistSearch.js";
 import { TrashIconButton } from "../icons/ChakraIcons.js";
 import { useState } from "react";
 import { AlbumSearch } from "./AlbumSearch.js";
+import { DurationSepEditable } from "./DurationEditable.js";
 
 export interface PlayEditProps {
     initialPlay?: PlayObjectMinimal<string>
@@ -138,7 +139,8 @@ export const PlayEdit = (props: PlayEditProps) => {
                             </Fieldset.Content>
                         </Fieldset.Root>
                         <form.Field
-                            name="data.album.name"
+                            name="data.album"
+                            errorBoundary
                             children={(field) => (
                                 <Field.Root invalid={field.errors.length > 0}>
                                     <Field.Label>Album</Field.Label>
@@ -156,6 +158,30 @@ export const PlayEdit = (props: PlayEditProps) => {
                                             </Field.ErrorText>
                                         ))}
                                     </Box>
+                                </Field.Root>
+                            )}
+                        />
+                        <form.Field
+                            name="data.listenedFor"
+                            errorBoundary
+                            children={(field) => (
+                                <Field.Root invalid={field.errors.length > 0}>
+                                    <Field.Label>Listened For</Field.Label>
+                                    <Box width="100%">
+                                        <DurationSepEditable
+                                        allowMouseWheel
+                                        size="sm"
+                                        seconds={field.value}
+                                            onChange={(val: number) => {
+                                                field.handleChange(val);
+                                            }} />
+                                        {field.errors.map((error) => (
+                                            <Field.ErrorText key={error.message}>
+                                                {error.message}
+                                            </Field.ErrorText>
+                                        ))}
+                                    </Box>
+                                     <Field.HelperText>The amount of time you listened to this song for</Field.HelperText>
                                 </Field.Root>
                             )}
                         />
