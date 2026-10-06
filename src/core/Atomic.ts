@@ -162,7 +162,8 @@ export const playTrackDataSchema = z.object({
 export const playTrackStrictDataSchema = z.object({
     ...playTrackDataSchema.shape,
     track: z.object({...creditSchema.shape, name: z.string().nonempty()}),
-    artists: creditSchema.array().min(1)
+    artists: z.object({...creditSchema.shape, name: z.string().nonempty()}).array().min(1),
+    albumArtists: z.object({...creditSchema.shape, name: z.string().nonempty()}).array().optional()
 })
 
 export interface PlayData<D extends DateLike = Dayjs> extends TrackData {

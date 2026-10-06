@@ -1,4 +1,4 @@
-import { HStack, Box, Float, Field, Stack, Fieldset, Button } from "@chakra-ui/react"
+import { HStack, Box, Flex, Field, Stack, Fieldset, Button } from "@chakra-ui/react"
 import { playEditStrictCreateSchema, type PlayObjectMinimal } from '../../../core/Atomic.js';
 import { MSErrorBoundary } from '../ErrorBoundary.js';
 import { useForm, formOptions } from '@tanstack/react-form';
@@ -10,7 +10,6 @@ import { AlbumSearch } from "./AlbumSearch.js";
 
 export interface PlayEditProps {
     initialPlay?: PlayObjectMinimal<string>
-    initialTab?: 'edit' | 'search'
     context?: 'create' | 'edit'
     onSubmit?: (vals: PlayObjectMinimal<string>) => void
 }
@@ -20,6 +19,7 @@ const logSubmit: PlayEditProps['onSubmit'] = (val) => console.log(val, 'Play Edi
 export const PlayEdit = (props: PlayEditProps) => {
 
     const {
+        context = 'edit',
         initialPlay: {
             data = {},
             meta = {}
@@ -60,20 +60,19 @@ export const PlayEdit = (props: PlayEditProps) => {
         <Box position="relative">
             
             <MSErrorBoundary>
-                <Float placement="top-end" offsetX="6" offsetY="2" zIndex={100}>
-                    <HStack>
-
-                    </HStack>
-                </Float>
                 <form
                     onSubmit={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
                         form.handleSubmit()
                     }}>
+                    <HStack justify="flex-end">
+                        <Button type="submit" variant="subtle" colorPalette="blue">{context === 'edit' ? 'Save' : 'Create'}</Button>
+                        <Button variant="subtle" colorPalette="red">Cancel</Button>
+                    </HStack>
                     <Stack>
                         <form.Field
-                            name="data"
+                            name="data.track.name"
                             children={(field) => (
                                 <Field.Root invalid={field.errors.length > 0}>
                                     <Field.Label>Track (Title)</Field.Label>
@@ -100,26 +99,38 @@ export const PlayEdit = (props: PlayEditProps) => {
                                     {(array) => (
                                         <Stack>
                                             
-                                            {array.value.map((artist, i) => <form.Field
+                                            {array.value.map((artist, i) => 
+                                            <form.Field
                                                     key={i}
                                                     name={`data.artists[${i}]`}
+                                                    // schema issues are reported on descendants (.name), route them to this field
+                                                    errorBoundary
                                                     children={(field) => (
                                                         <Field.Root invalid={field.errors.length > 0}>
+                                                            <Stack width="100%" flexGrow="1">
                                                             <HStack width="100%" flexGrow="1">
                                                                 <ArtistSearch initial={field.value}
                                                                     onChange={(val) => {
                                                                         field.handleChange(val);
                                                                     }} />
-                                                                {field.errors.map((error) => (
-                                                                    <Field.ErrorText key={error.message}>
-                                                                        {error.message}
-                                                                    </Field.ErrorText>
-                                                                ))}
                                                                 {i !== 0 ? <TrashIconButton colorPalette="red" onClick={() => array.removeValue(i)} /> : undefined}
                                                             </HStack>
+                                                            {field.errors.map((error) => (
+                                                                <Field.ErrorText key={error.message}>
+                                                                    {error.message}
+                                                                </Field.ErrorText>
+                                                            ))}
+                                                            </Stack>
                                                         </Field.Root>
                                                     )}
                                                 />)}
+                                            <Field.Root invalid={array.errors.length > 0}>
+                                                {array.errors.map((error) => (
+                                                    <Field.ErrorText key={error.message}>
+                                                        {error.message}
+                                                    </Field.ErrorText>
+                                                ))}
+                                            </Field.Root>
                                             <Button variant="subtle" maxW="400px" onClick={() => array.pushValue({name: ''})}>Add Artist</Button>
                                         </Stack>
                                     )}
@@ -127,7 +138,7 @@ export const PlayEdit = (props: PlayEditProps) => {
                             </Fieldset.Content>
                         </Fieldset.Root>
                         <form.Field
-                            name="data"
+                            name="data.album.name"
                             children={(field) => (
                                 <Field.Root invalid={field.errors.length > 0}>
                                     <Field.Label>Album</Field.Label>
