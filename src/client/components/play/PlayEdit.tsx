@@ -288,21 +288,19 @@ export const PlayEdit = (props: PlayEditProps) => {
                                         <Field.Label>Played At</Field.Label>
                                         <Field.HelperText>The date-time you listened to this song at</Field.HelperText>
                                         <Stack>
-                                            <HStack wrap="wrap" width="100%">
+                                            <HStack >
                                                 <DatePicker.Root
-                                                    width="100%"
                                                     value={[field.value !== undefined ? parseAbsoluteToLocal(field.value) : today(tz)]}
                                                     onValueChange={(e) => field.handleChange(toZoned(e.value[0], tz).toAbsoluteString())}
                                                 >
                                                     <DateInput.Root
-                                                        width="100%"
                                                         value={[field.value !== undefined ? parseAbsoluteToLocal(field.value) : today(tz)]}
                                                         onValueChange={(e) => field.handleChange(toZoned(e.value[0], tz).toAbsoluteString())}
                                                         granularity="second"
                                                         formatter={formatter}>
                                                         <DatePicker.Control>
-                                                            <DateInput.Control> {/* minW="270px" */}
-                                                                <DateInput.Segments /> {/*paddingRight="0" */}
+                                                            <DateInput.Control>
+                                                                <DateInput.Segments pe="10" />
                                                             </DateInput.Control>
                                                             <DatePicker.IndicatorGroup>
                                                                 <DatePicker.Trigger>
