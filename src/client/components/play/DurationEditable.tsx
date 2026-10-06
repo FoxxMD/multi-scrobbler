@@ -1,4 +1,4 @@
-import { HStack, IconButton, NumberInput, Text, useBreakpointValue } from "@chakra-ui/react";
+import { HStack, IconButton, NumberInput, Text, useBreakpointValue, Box } from "@chakra-ui/react";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration.js";
 import React, { useId, useState } from "react";
@@ -80,7 +80,7 @@ export const DurationSepEditable = (props: DurationEditableProps) => {
             {units.map(({ name, label, size }) => (
                 <HStack key={name} gap="1">
                     <NumberInput.Root
-                        width={mobile ? undefined : '20'}
+                        width={mobile ? undefined : '16'}
                         formatOptions={formatOptions}
                         {...rest}
                         unstyled={mobile}
@@ -132,7 +132,7 @@ export const DurationSepEditable = (props: DurationEditableProps) => {
                     <Text textStyle="sm" color="fg.muted">{label}</Text>
                 </HStack>
             ))}
-            {copyButton}
+            {copyButton !== undefined ? <Box ml={mobile ? '0' : '2'}>{copyButton}</Box> : undefined}
         </HStack>
     );
 }
