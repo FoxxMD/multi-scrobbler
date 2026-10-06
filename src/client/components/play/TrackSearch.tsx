@@ -1,4 +1,4 @@
-import { useListCollection, Stack, Text, HStack } from "@chakra-ui/react"
+import { useListCollection, Stack, Text, HStack, Span } from "@chakra-ui/react"
 import { useDebouncedState } from '@tanstack/react-pacer'
 import { useQuery } from '@tanstack/react-query';
 import { tanQueries } from "../../queries/index.js";
@@ -8,11 +8,12 @@ import { ArtistCreditTags } from "../ArtistCreditDisplay.js";
 import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, type MetadataPartials } from "./MetadataResults.js";
 import type { Credit } from "../../../core/Atomic.js";
 import { MusicServiceIndicators } from "../musicServices/MusicServiceIndicators.js";
+import { timeToHumanTimestamp } from "../../../core/TimeUtils.js";
 
 const trackPartials: MetadataPartials<TrackSearchResult> = {
-    track: { label: 'Track only', pick: ({ artists, album, albumCount, ...rest }) => rest },
-    artists: { label: 'Track + artists', pick: ({ album, albumCount, ...rest }) => rest },
-    album: { label: 'Track + album', pick: ({ artists, ...rest }) => rest },
+    track: { label: 'Track + duration only', pick: ({ artists, album, albumCount, ...rest }) => rest },
+    artists: { label: 'Track + duration + artists', pick: ({ album, albumCount, ...rest }) => rest },
+    album: { label: 'Track + duration + album', pick: ({ artists, ...rest }) => rest },
 };
 
 export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?: (val: TrackSearchResult) => void }) => {
@@ -23,6 +24,7 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?:
         album,
         albumCount,
         name,
+        duration,
         artists = []
     } = props.data;
 
@@ -42,7 +44,7 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?:
 
     let artistTags: React.JSX.Element | undefined = undefined;
     if (artists.length > 0) {
-        artistTags = <ArtistCreditTags data={artists.map(artistSearchResultToCredit)} />
+        artistTags = <ArtistCreditTags data={artists.map((x) => artistSearchResultToCredit(x))} />
     }
 
     return (
@@ -51,7 +53,10 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?:
             <Stack gap="1" flexGrow="1">
                 <Text fontWeight="medium" mb="1">
                     <HStack>
-                        {name} <MusicServiceIndicators services={trackSearchResultToCredit(props.data).metadata ?? []}/> <MetadataPickMenu data={props.data} partials={trackPartials} onPick={onPick} />
+                        {name}
+                        <MusicServiceIndicators services={trackSearchResultToCredit(props.data).metadata ?? []}/> 
+                        {duration !== undefined ? <Span>({timeToHumanTimestamp(duration * 1000)})</Span> : undefined}
+                        <MetadataPickMenu data={props.data} partials={trackPartials} onPick={onPick} />
                     </HStack>
                 </Text>
                 {artistTags}
@@ -66,6 +71,7 @@ export interface TrackOnChange {
     track: Credit
     artists?: Credit[]
     album?: Credit
+    duration?: number
 }
 
 export interface TrackSearchProps {
@@ -76,10 +82,13 @@ export interface TrackSearchProps {
 const trackSearchResultToOnChange = (val: TrackSearchResult): TrackOnChange => {
     const change: TrackOnChange = { track: trackSearchResultToCredit(val) };
     if (val.artists !== undefined && val.artists.length > 0) {
-        change.artists = val.artists.map(artistSearchResultToCredit);
+        change.artists = val.artists.map((x) => artistSearchResultToCredit(x));
     }
     if (val.album !== undefined) {
         change.album = albumSearchResultToCredit(val.album);
+    }
+    if(val.duration !== undefined) {
+        change.duration = val.duration;
     }
     return change;
 }

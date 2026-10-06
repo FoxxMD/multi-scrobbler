@@ -300,7 +300,8 @@ export const trackSearchResultSchema = z.object({
     spotifyId: z.string().optional(),
     artists: artistSearchResultSchema.array().optional(),
     album: albumSearchResultSchema.optional(),
-    albumCount: z.int().positive().optional()
+    albumCount: z.int().positive().optional(),
+    duration: z.int().positive().optional()
 });
 export type TrackSearchResult = z.infer<typeof trackSearchResultSchema>;
 

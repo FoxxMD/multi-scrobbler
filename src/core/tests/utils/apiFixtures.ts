@@ -576,6 +576,7 @@ export const generateTrackSearchResult = (partial: Partial<TrackSearchResult> = 
     mbidTrack: faker.helpers.arrayElement([generateMbid(), undefined]),
     spotifyId: faker.helpers.arrayElement([faker.string.alphanumeric(4), undefined]),
     album: generateAlbumSearchResult(),
+    duration: faker.number.int({min: 10, max: 305}),
     albumCount: faker.number.int({min: 1, max: 15}),
     artists: generateArtistSearchResults({count: faker.number.int({min: 1, max: 3})}),
     ...partial
