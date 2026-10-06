@@ -1,13 +1,14 @@
-import { HStack, Box, Field, Stack, Fieldset, Button } from "@chakra-ui/react"
+import { HStack, Box, Field, Stack, Fieldset, Button, IconButton } from "@chakra-ui/react"
 import { playEditStrictCreateSchema, type PlayObjectMinimal } from '../../../core/Atomic.js';
 import { MSErrorBoundary } from '../ErrorBoundary.js';
 import { useForm, formOptions } from '@tanstack/react-form';
 import { TrackSearch } from "./TrackSearch.js";
 import { ArtistSearch } from "./ArtistSearch.js";
-import { CopyToRight, TrashIconButton } from "../icons/ChakraIcons.js";
+import { CopyToRight, ResetIconRaw, TrashIconButton } from "../icons/ChakraIcons.js";
 import { useState } from "react";
 import { AlbumSearch } from "./AlbumSearch.js";
 import { DurationSepEditable } from "./DurationEditable.js";
+import { Tooltip } from "../ToggleTip.js";
 
 export interface PlayEditProps {
     initialPlay?: PlayObjectMinimal<string>
@@ -16,6 +17,19 @@ export interface PlayEditProps {
 }
 
 const logSubmit: PlayEditProps['onSubmit'] = (val) => console.log(val, 'Play Edit Submit');
+
+// structural type so it accepts a field of any value type without spelling out ReactFieldApi's generics
+const ResetButton = ({ field, onClickAdditional }: { field: { meta: { isDefaultValue: boolean }, reset: () => void }, onClickAdditional?: () => void  }) => {
+    if(!field.meta.isDefaultValue) {
+        return <Tooltip content="Reset"><IconButton variant="ghost" onClick={() => {
+            field.reset();
+            if(onClickAdditional !== undefined) {
+                onClickAdditional();
+            }
+        }}><ResetIconRaw/></IconButton></Tooltip>
+    }
+    return undefined;
+}
 
 export const PlayEdit = (props: PlayEditProps) => {
 
@@ -73,23 +87,27 @@ export const PlayEdit = (props: PlayEditProps) => {
                     </HStack>
                     <Stack>
                         <form.Field
-                            name="data.track.name"
+                            name="data.track"
+                            errorBoundary
                             children={(field) => (
                                 <Field.Root invalid={field.errors.length > 0}>
                                     <Field.Label>Track (Title)</Field.Label>
-                                    <Box width="100%">
-                                        <TrackSearch initial={field.form.state.values.data.track}
-                                            onChange={(val) => {
-                                                // selected credits replace existing ones entirely so ids/images from a previous selection are not kept
-                                                field.form.setFieldValue('data', { ...field.form.state.values.data, ...val });
-                                                setArtistsVersion(v => v + 1);
-                                            }} />
+                                    <Stack width="100%" flexGrow="1">
+                                        <HStack width="100%" flexGrow="1">
+                                            <TrackSearch initial={field.form.state.values.data.track}
+                                                onChange={(val) => {
+                                                    // selected credits replace existing ones entirely so ids/images from a previous selection are not kept
+                                                    field.form.setFieldValue('data', { ...field.form.state.values.data, ...val });
+                                                    setArtistsVersion(v => v + 1);
+                                                }} />
+                                                <ResetButton field={field}/>
+                                        </HStack>
                                         {field.errors.map((error) => (
                                             <Field.ErrorText key={error.message}>
                                                 {error.message}
                                             </Field.ErrorText>
                                         ))}
-                                    </Box>
+                                    </Stack>
                                 </Field.Root>
                             )}
                         />
@@ -114,7 +132,10 @@ export const PlayEdit = (props: PlayEditProps) => {
                                                                         onChange={(val) => {
                                                                             field.handleChange(val);
                                                                         }} />
-                                                                    {i !== 0 ? <TrashIconButton colorPalette="red" onClick={() => array.removeValue(i)} /> : undefined}
+                                                                    <HStack gapX="4">
+                                                                        <ResetButton field={field} onClickAdditional={() => setArtistsVersion(v => v + 1)}/>
+                                                                        {i !== 0 ? <TrashIconButton colorPalette="red" onClick={() => array.removeValue(i)} /> : undefined}
+                                                                    </HStack>
                                                                 </HStack>
                                                                 {field.errors.map((error) => (
                                                                     <Field.ErrorText key={error.message}>
@@ -144,7 +165,8 @@ export const PlayEdit = (props: PlayEditProps) => {
                             children={(field) => (
                                 <Field.Root invalid={field.errors.length > 0}>
                                     <Field.Label>Album</Field.Label>
-                                    <Box width="100%">
+                                    <Stack width="100%" flexGrow="1">
+                                        <HStack width="100%" flexGrow="1">
                                         <AlbumSearch
                                             key={field.form.state.values.data.album?.name ?? ''}
                                             initial={field.form.state.values.data.album}
@@ -152,12 +174,14 @@ export const PlayEdit = (props: PlayEditProps) => {
                                                 field.form.setFieldValue('data', { ...field.form.state.values.data, ...val });
                                                 setArtistsVersion(v => v + 1);
                                             }} />
+                                            <ResetButton field={field} />
+                                            </HStack>
                                         {field.errors.map((error) => (
                                             <Field.ErrorText key={error.message}>
                                                 {error.message}
                                             </Field.ErrorText>
                                         ))}
-                                    </Box>
+                                    </Stack>
                                 </Field.Root>
                             )}
                         />
