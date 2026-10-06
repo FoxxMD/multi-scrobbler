@@ -1,7 +1,7 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import type AbstractTransformer from "./AbstractTransformer.ts";
 import type {OptionalCacheUsage, TransformerCommon, TransformerCommonConfig} from "../../../core/Atomic.ts";
-import {DEFAULT_TRANSFORMER_ENV_NAME, DEFAULT_TRANSFORMER_NAME, type StageConfig} from "../../../core/Transform.ts";
+import {DEFAULT_TRANSFORMER_ENV_NAME, DEFAULT_TRANSFORMER_NAME, type MetadataProviderStageType, type StageConfig} from "../../../core/Transform.ts";
 import type {PlayObject} from "../../../core/Atomic.ts";
 import { isStageTyped } from "../../utils/PlayTransformUtils.ts";
 import type { MSCache } from "../Cache.ts";
@@ -14,6 +14,9 @@ import { configFromEnv as caaConfigFromEnv } from "./coverartarchive/CoverArtArc
 import { type RockskyTransformerConfig } from "../vendor/rocksky/interfaces.ts";
 import { configFromEnv as spotifyConfigFromEnv, type SpotifyTransformerConfig } from "./spotify/SpotifyTransformerUtil.ts";
 import type { CovertArtArchiveTransformerConfig } from "./coverartarchive/CoverArtArchiveTransformerUtil.ts";
+import { asMetadataProvider, type AggregateMetadataResponse, type MetadataProvider } from "../metadataProviders/MetadataProviderUtils.ts";
+import type { AlbumSearchResult, ArtistSearchResult, TrackSearchResult } from "../../../core/Api.ts";
+import {pPropsAllSettled} from 'p-props';
 
 type TransformNamedMap = Map<string, AbstractTransformer>;
 type TransformTypedMap = Map<string,TransformNamedMap>;
@@ -26,6 +29,9 @@ export default class TransformerManager {
     protected asyncStore: AsyncLocalStorage<string>;
 
     protected transformerConfigs: TransformerCommon[] = [];
+
+    protected transformMetadataProviders: Partial<Record<MetadataProviderStageType, string>> = {};
+    protected transformMetadataPreferredProviders: Partial<Record<MetadataProviderStageType, true | string>> | undefined;
 
     public constructor(logger: Logger, cache: MSCache) {
         this.logger = childLogger(logger, 'Transformer Manager');
@@ -189,6 +195,57 @@ export default class TransformerManager {
                     }
                     try {
                         await transformer.initialize({ force: false, notify: true, notifyTitle: 'Could not initialize automatically' });
+
+                        if(asMetadataProvider(transformer)) {
+                            const t = transformer.transformType as MetadataProviderStageType;
+                            if(this.transformMetadataPreferredProviders !== undefined) {
+                                // only use transformers user prefers and don't add any they don't explicitly set
+                                if(this.transformMetadataPreferredProviders[t] !== undefined) {
+                                    
+                                    if(this.transformMetadataPreferredProviders[t] === transformer.name) {
+                                        // use transformer if defined by name
+                                        this.transformMetadataProviders[t] = transformer.name;
+                                        this.logger.debug(`Using preferred named ${t} transformer '${transformer.name}' as metadata provider.`);
+                                    } else if(this.transformMetadataPreferredProviders[t] === true) {
+                                        // or user has set `true` to indicate any
+                                        if(this.transformMetadataProviders[t] === undefined) {
+                                            // use this one if none is already set
+                                            this.transformMetadataProviders[t] = transformer.name;
+                                            this.logger.debug(`Using preferred ${t} transformer with priorities. Not set yet so using '${transformer.name}' as metadata provider.`);
+                                        } else {
+                                            // otherwise set based on priority
+                                            const p = getTransformByPriority([this.transformers.get(t)?.get(this.transformMetadataProviders[t]) as AbstractTransformer, transformer]);
+                                            if(p.nonDefaultMany !== true) {
+                                                const old = this.transformMetadataProviders[t];
+                                                this.transformMetadataProviders[t] = p.nonDefault?.name ?? p.env?.name ?? p.default?.name;
+                                                this.logger.debug(`Using preferred ${t} transformer with priorities, a new transformer had higher priority. Replaced '${old}' with ${this.transformMetadataProviders[t]}`);
+                                            } else {
+                                                this.logger.debug(`Using preferred ${t} transformer with priorities and a non-default was already set, skipping '${transformer.name}' as metadata provider.`);
+                                            }
+                                            // if both are non default then use the one that was already set
+                                        }
+                                    }
+                                    // otherwise do not add
+                                } else {
+                                    this.logger.debug(`Preferred named metadata providers are defined but type ${t} is not set, skipping adding ${transformer.name}`);
+                                }
+                                // not explicitly set, don't add any
+                            } else {
+                                // otherwise set all that can be used and set based on priority
+                                // when more than one is available
+                                if(this.transformMetadataProviders[t] === undefined) {
+                                    this.logger.debug(`No preferred metadata providers and none already set for ${t}, using '${transformer.name}' as metadata provider.`);
+                                    this.transformMetadataProviders[t] = transformer.name;
+                                } else {
+                                    const p = getTransformByPriority([this.transformers.get(t)?.get(this.transformMetadataProviders[t]) as AbstractTransformer, transformer]);
+                                    if(p.nonDefaultMany !== true) {
+                                        const old = this.transformMetadataProviders[t];
+                                        this.transformMetadataProviders[t] = p.nonDefault?.name ?? p.env?.name ?? p.default?.name;
+                                        this.logger.debug(`No preferred metadata providers, a new transformer for ${t} had higher priority. Replaced ${old} with ${this.transformMetadataProviders[t]}`);
+                                    }
+                                }
+                            }
+                        }
                     } catch (e) {
                         transformer.logger.error(new Error('Could not initialize source automatically', { cause: e }));
                     }
@@ -309,6 +366,46 @@ export default class TransformerManager {
             return [transformedPlay, t.name];
         } catch (e) {
             throw new StageTransformError(t.name, 'Stage processing stopped early', {cause: e});
+        }
+    }
+
+    public async getTrackResults(query: string): Promise<AggregateMetadataResponse<TrackSearchResult>> {
+        const readyMps: Record<string, Promise<Awaited<ReturnType<MetadataProvider['getTrackResults']>>>> = {};
+        for(const [type, name] of Object.entries(this.transformMetadataProviders)) {
+            const t = this.transformers.get(type)?.get(name.toLocaleLowerCase()) as unknown as MetadataProvider & AbstractTransformer;
+            if(t !== undefined && t.isReady()) {
+                readyMps[type] = t.getTrackResults(query);
+            }
+        }
+        const all = await pPropsAllSettled(readyMps);
+        const res: AggregateMetadataResponse<TrackSearchResult> = {
+            data: [],
+            errors: []
+        }
+        for(const [name, r] of Object.entries(all)) {
+            if(r.status === 'fulfilled') {
+                if(r.value === false) {
+                    res.errors.push({service: name, error: {message: 'Not Ready'}});
+                } else {
+                    res.data = res.data.concat(r.value)
+                }
+            } else {
+                res.errors.push({service: name, error: r.reason});
+            }
+        }
+        res.data.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+        return res;
+    }
+    public async getArtistResults(query: string): Promise<AggregateMetadataResponse<ArtistSearchResult>> {
+        return {
+            data: [],
+            errors: []
+        }
+    }
+    public async getAlbumResults(query: string): Promise<AggregateMetadataResponse<AlbumSearchResult>> {
+        return {
+            data: [],
+            errors: []
         }
     }
 }

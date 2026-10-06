@@ -638,6 +638,25 @@ Note: this is only supported by some components.`
         }
     });
 
+    router.get('/api/tracks', {
+        tags: ['Metdata'],
+        summary: 'Get Track Metadata from Providers',
+        querySchema: z.object({
+            q: z.string().meta({
+            description: `the track name to search for`
+        })}),
+        description: 'Gets track results from all metadata providers'
+    }, async (req, res, next) => {
+        const {
+            query: {
+                q
+            }
+        } = req;
+
+        const results = await root.items.transformerManager.getTrackResults(q);
+        return res.json(results);
+    });
+
     router.get('/health', {hidden: true}, async (req, res) => res.redirect(307, `/api/${req.url.slice(1)}`));
     router.get('/api/health', {querySchema: z.object({
         type: z.string().optional().meta({description: 'Only report status for components of this type'}),

@@ -23,6 +23,8 @@ export interface PlayTransformPartsAtomic<T> {
 export const STAGE_TYPES_USER: StageTypeUser[] = ['user'];
 export const STAGE_TYPES_METADATA: StageTypeMetadata[] = ['musicbrainz','native','rocksky','coverartarchive','spotify'];
 export const STAGE_TYPES: StageType[] = [...STAGE_TYPES_METADATA, ...STAGE_TYPES_USER];
+export const META_PROVIDER_STAGE_TYPES = z.enum(['musicbrainz','rocksky','spotify']);
+export type MetadataProviderStageType = z.infer<typeof META_PROVIDER_STAGE_TYPES>;
 
 export interface StageTyped {
     type: StageType

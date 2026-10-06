@@ -297,6 +297,7 @@ export const trackSearchResultSchema = z.object({
     ...metadataResultImageSchema.shape,
     mbidRecording: z.string().optional(),
     mbidTrack: z.string().optional(),
+    isrc: z.string().optional(),
     spotifyId: z.string().optional(),
     artists: artistSearchResultSchema.array().optional(),
     album: albumSearchResultSchema.optional(),

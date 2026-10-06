@@ -129,6 +129,7 @@
     "ntfy": "^1.15.2",
     "p-event": "^4.2.0",
     "p-map": "^7.0.4",
+    "p-props": "^6.1.0",
     "p-retry": "^7.1.1",
     "passport": "^0.6.0",
     "passport-deezer": "^0.2.0",

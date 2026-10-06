@@ -16,7 +16,7 @@ import { DELIMITERS } from '../../../core/Atomic.ts';
 import { MaybeLogger } from '../MaybeLogger.ts';
 import { childLogger } from "@foxxmd/logging";
 import { MusicbrainzApiClientPool, recordingToPlay, type UsingTypes } from "../vendor/musicbrainz/MusicbrainzApiClientPool.ts";
-import type {IRecordingList, IRecordingMatch} from "musicbrainz-api";
+import type {IArtist, IRecordingList, IRecordingMatch, IRelease} from "musicbrainz-api";
 import { intersect, missingMbidTypes } from "../../utils.ts";
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
 import { SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../errors/MSErrors.ts";
@@ -28,6 +28,8 @@ import { nativeParse } from "./NativeTransformer.ts";
 import { comparePlayArtistsNormalized, scoreTrackWeightedAndNormalized } from "../../utils/PlayComparisonUtils.ts";
 import type { MusicbrainzTransformerConfig, MusicbrainzTransformerData, SearchType } from "./musicbrainz/MusicbrainzTransformerUtil.ts";
 import { maybeStringLowerArrayFromString } from "../../utils/ZodUtils.ts";
+import type { MetadataProvider } from "../metadataProviders/MetadataProviderUtils.ts";
+import type { TrackSearchResult, ArtistSearchResult, AlbumSearchResult } from "../../../core/Api.ts";
 
 export const asMissingMbid = (str: string): MissingMbidType => {
     const clean = str.trim().toLocaleLowerCase();
@@ -252,7 +254,7 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
     return config;
 }
 
-export default class MusicbrainzTransformer extends AtomicPartsTransformer<ExternalMetadataTerm, PlayObject, MusicbrainzTransformerDataStage> {
+export default class MusicbrainzTransformer extends AtomicPartsTransformer<ExternalMetadataTerm, PlayObject, MusicbrainzTransformerDataStage> implements MetadataProvider {
 
     declare config: MusicbrainzTransformerConfig;
 
@@ -503,7 +505,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         return results;
     }
 
-    public async handlePostFetch(play: PlayObject, transformData: IRecordingMSList, stageConfig: MusicbrainzTransformerDataStage): Promise<PlayObject> {
+    public async handlePostFetchRecordings(play: PlayObject, transformData: IRecordingMSList, stageConfig: MusicbrainzTransformerDataStage): Promise<RecordingRankedMatched[]> {
         // if all searches fail prereqs then no recording lists are assigned to results
         if(transformData.recordings === undefined) {
             throw new StagePrerequisiteError('All search prerequisites failed, Musicbrainz API could not be searched with the given searchOrder options',
@@ -527,12 +529,12 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         [explicitList, filtered] = filterByExplicitTrackMbid(transformData.recordings, play);
         if(filtered) {
             this.logger.debug(`Found exact release using track MBID`);
-            return recordingToPlay(explicitList[0], {ignoreVA: stageConfig.ignoreVA});
+            return explicitList;
         }
         [explicitList, filtered] = filterByExplicitReleaseMbid(transformData.recordings, play);
         if(filtered) {
             this.logger.debug(`Found exact release using release MBID`);
-            return recordingToPlay(explicitList[0], {ignoreVA: stageConfig.ignoreVA});
+            return explicitList;
         }
 
         let filteredList: RecordingRankedMatched[] = transformData.recordings.filter(x => x.score >= score);
@@ -560,8 +562,14 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
         this.logger.debug(`${filteredList.length} of ${transformData.count} were valid, filtered matches. Using match with best score of ${filteredList[0].score}`);
 
-        const recordingPlay = recordingToPlay(filteredList[0], {ignoreVA: stageConfig.ignoreVA});
-        recordingPlay.meta.lifecycleInputs = [...(recordingPlay.meta.lifecycleInputs ?? []), ...(transformData.requestQueries ?? []), {type: 'mbRecording', input: filteredList[0]}];
+        return filteredList;
+    }
+
+    public async handlePostFetch(play: PlayObject, transformData: IRecordingMSList, stageConfig: MusicbrainzTransformerDataStage): Promise<PlayObject> {
+        const recordings = await this.handlePostFetchRecordings(play, transformData, stageConfig);
+        this.logger.debug(`${recordings.length} of ${transformData.count} were valid, filtered matches. Using match with best score of ${recordings[0].score}`);
+        const recordingPlay = recordingToPlay(recordings[0], {ignoreVA: stageConfig.ignoreVA});
+        recordingPlay.meta.lifecycleInputs = [...(recordingPlay.meta.lifecycleInputs ?? []), ...(transformData.requestQueries ?? []), {type: 'mbRecording', input: recordings[0]}];
         return recordingPlay;
     }
 
@@ -590,7 +598,59 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
     public async notify(payload: WebhookPayload): Promise<void> {
     }
 
+    async getTrackResults(query: string): Promise<TrackSearchResult[] | false> {
+        const surrogatePlay: PlayObject = {data: {track: {name: query}}, meta: {}};
+        const res = await this.api.searchByRecording(surrogatePlay, {using: ['title']});
+        if(res.recordings.length === 0) {
+            return [];
+        }
+        const recordings = await this.handlePostFetchRecordings(surrogatePlay, res, {type: 'musicbrainz', ...this.defaults});
+
+        const results = recordings.slice(0, 5).map((x) => ({
+            ...rankedRecordingToTrackSearchResult(x),
+            albumCount: (x.releases ??[]).length
+        }));
+
+        return results;
+
+    }
+    async getArtistResults(query: string): Promise<ArtistSearchResult[] | false> {
+        return [];
+    }
+    async getAlbumResults(query: string): Promise<AlbumSearchResult[] | false> {
+        return [];
+    }
 }
+
+const rankedRecordingToTrackSearchResult = (val: RecordingRankedMatched): TrackSearchResult => ({
+    service: 'musicbrainz',
+    name: val.title,
+    mbidRecording: val.id,
+    isrc: val.isrcs !== undefined ? val.isrcs[0] : undefined,
+    id: val.id,
+    score: val.score,
+    album: val.releases !== undefined ? releaseToAlbumSearchResult(val.releases[0]) : undefined,
+    artists: val["artist-credit"] !== undefined ? val["artist-credit"].map((x) => artistToArtistSearchResult(x.artist)) : undefined,
+    duration: val.length
+});
+
+const releaseToAlbumSearchResult = (val: IRelease): AlbumSearchResult => ({
+    service: 'musicbrainz',
+    name: val.title,
+    id: val.id,
+    mbidRelease: val.id,
+    mbidReleaseGroup: val["release-group"]?.id,
+    type: val["release-group"]?.["primary-type"] ?? val["release-group"]?.["secondary-types"]?.[0],
+    artists: val["release-group"]?.["artist-credit"] !== undefined ? val["release-group"]?.["artist-credit"].map((x) => artistToArtistSearchResult(x.artist)) : undefined
+});
+
+const artistToArtistSearchResult = (val: IArtist): ArtistSearchResult => ({
+    service: 'musicbrainz',
+    name: val.name,
+    id: val.id,
+    mbid: val.id
+});
+
 
 export const filterByValidReleaseStatus = <T extends IRecordingMatch[]>(list: T, stageConfig: MusicbrainzTransformerDataStage, logger: MaybeLogger = new MaybeLogger()) => {
     const {
