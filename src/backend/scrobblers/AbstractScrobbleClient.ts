@@ -392,11 +392,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.migrationRepo = new GenericRepository<'componentMigrations'>(this.db, 'componentMigrations', 'Component Migrations', {logger: this.logger});
         // this.playRepo.componentId = this.dbComponent.id;
         // this.queueRepo.componentId = this.dbComponent.id;
-        const counts = await this.playRepo.getComponentPlayCountByState();
-        const scrobbledCount = counts.find(x => x.state === 'scrobbled');
-        if(scrobbledCount !== undefined) {
-            this.tracksScrobbledTotal = scrobbledCount['count(*)'];
-        }
+        this.tracksScrobbledTotal = this.dbComponent.countLive ?? 0;
         await this.updateQueueStats([INGRESS_QUEUE, DEAD_QUEUE]);
     }
 
@@ -745,7 +741,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     addScrobbledTrack = async (playObj: PlayObject) => {
         this.emitEvent('scrobble', { play: playObj });
         try {
-            await this.componentRepo.updateById(this.dbComponent.id, {countLive: this.dbComponent.countLive + 1});
+            await this.incrementCountLive();
         } catch (e) {
             this.logger.warn(new Error('Unable to update scrobble count', {cause: e}));
         }

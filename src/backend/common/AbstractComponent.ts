@@ -153,10 +153,23 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         this.componentRepo.updateById(this.dbComponent.id, {lastReadyAt: dayjs()});
     }
 
+    protected async getDatabase(): Promise<DbConcrete> {
+        return getRoot().items.db();
+    }
+
+    /**
+     * Add to this component's lifetime Discovered/Scrobbled total, in the database and on
+     * the in-memory row, and return the new total.
+     */
+    protected async incrementCountLive(by: number = 1): Promise<number> {
+        this.dbComponent.countLive = await this.componentRepo.incrementCountLive(this.dbComponent.id, by);
+        return this.dbComponent.countLive;
+    }
+
     protected async doBuildDatabase(): Promise<true | string | undefined> {
         await super.doBuildDatabase();
 
-        this.db = await getRoot().items.db();
+        this.db = await this.getDatabase();
         this.componentRepo = new DrizzleComponentRepository(this.db, {logger: this.logger});
         this.dbComponent = await this.componentRepo.findOrInsert({
             mode: this.componentType,
