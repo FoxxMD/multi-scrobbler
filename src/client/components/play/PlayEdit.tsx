@@ -22,7 +22,7 @@ const logSubmit: PlayEditProps['onSubmit'] = (val) => console.log(val, 'Play Edi
 // structural type so it accepts a field of any value type without spelling out ReactFieldApi's generics
 const ResetButton = ({ field, onClickAdditional }: { field: { meta: { isDefaultValue: boolean }, reset: () => void }, onClickAdditional?: () => void  }) => {
     if(!field.meta.isDefaultValue) {
-        return <Tooltip content="Reset"><IconButton variant="ghost" onClick={() => {
+        return <Tooltip content="Reset"><IconButton variant="subtle" onClick={() => {
             field.reset();
             if(onClickAdditional !== undefined) {
                 onClickAdditional();
@@ -196,24 +196,29 @@ export const PlayEdit = (props: PlayEditProps) => {
                                 children={(field) => (
                                     <Field.Root invalid={field.errors.length > 0} width="fit-content">
                                         <Field.Label>Duration</Field.Label>
-                                        <HStack width="100%">
-                                            <DurationSepEditable
-                                                CopyIcon={CopyToRight}
-                                                copyTooltip="Copy Duration to Listened For"
-                                                onCopyVal={(seconds) => field.form.setFieldValue('data.listenedFor', seconds)}
-                                                allowMouseWheel
-                                                size="sm"
-                                                seconds={field.value}
-                                                onChange={(val: number) => {
-                                                    field.handleChange(val);
-                                                }} />
-                                            {field.errors.map((error) => (
-                                                <Field.ErrorText key={error.message}>
-                                                    {error.message}
-                                                </Field.ErrorText>
-                                            ))}
-                                        </HStack>
                                         <Field.HelperText>The length of the song</Field.HelperText>
+                                        <Stack>
+                                            <HStack wrap="wrap" width="100%">
+                                                <DurationSepEditable
+                                                    allowMouseWheel
+                                                    size="sm"
+                                                    seconds={field.value}
+                                                    onChange={(val: number) => {
+                                                        field.handleChange(val);
+                                                    }} />
+                                                    
+                                                    <ResetButton field={field} />
+                                                    <Tooltip content="Copy Duration to Listened For">
+                                                        <IconButton variant="outline" onClick={() => field.form.setFieldValue('data.listenedFor', field.value)}>
+                                                            <CopyToRight /></IconButton>
+                                                        </Tooltip>
+                                            </HStack>
+                                            {field.errors.map((error) => (
+                                                    <Field.ErrorText key={error.message}>
+                                                        {error.message}
+                                                    </Field.ErrorText>
+                                            ))}
+                                        </Stack>
                                     </Field.Root>
                                 )}
                             />
@@ -223,21 +228,24 @@ export const PlayEdit = (props: PlayEditProps) => {
                                 children={(field) => (
                                     <Field.Root invalid={field.errors.length > 0} width="fit-content">
                                         <Field.Label>Listened For</Field.Label>
-                                        <Box width="100%">
-                                            <DurationSepEditable
-                                                allowMouseWheel
-                                                size="sm"
-                                                seconds={field.value}
-                                                onChange={(val: number) => {
-                                                    field.handleChange(val);
-                                                }} />
-                                            {field.errors.map((error) => (
-                                                <Field.ErrorText key={error.message}>
-                                                    {error.message}
-                                                </Field.ErrorText>
-                                            ))}
-                                        </Box>
                                         <Field.HelperText>The amount of time you listened to this song for</Field.HelperText>
+                                        <Stack>
+                                            <HStack wrap="wrap" width="100%">
+                                                <DurationSepEditable
+                                                    allowMouseWheel
+                                                    size="sm"
+                                                    seconds={field.value}
+                                                    onChange={(val: number) => {
+                                                        field.handleChange(val);
+                                                    }} />
+                                                    <ResetButton field={field} />
+                                            </HStack>
+                                            {field.errors.map((error) => (
+                                                    <Field.ErrorText key={error.message}>
+                                                        {error.message}
+                                                    </Field.ErrorText>
+                                            ))}
+                                        </Stack>
                                     </Field.Root>
                                 )}
                             />
