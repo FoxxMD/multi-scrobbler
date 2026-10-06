@@ -2,7 +2,7 @@ import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
 import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
 
-export const innertubeOptionsSchema = z.object({
+export const innertubeOptionsSchema = z.looseObject({
     /**
      * Proof of Origin token
      *
@@ -41,6 +41,7 @@ export const innertubeOptionsSchema = z.object({
     device_category: z.string().optional(),
     client_type: z.string().optional(),
     timezone: z.string().optional(),
+    on_behalf_of_user: z.string().optional()
 });
 
 export type InnertubeOptions = z.infer<typeof innertubeOptionsSchema>;
