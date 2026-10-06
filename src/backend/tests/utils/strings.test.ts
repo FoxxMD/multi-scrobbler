@@ -4,6 +4,8 @@ import { compareNormalizedStrings } from "../../../core/StringUtils.ts";
 import { normalizeStr } from "../../../core/StringUtils.ts";
 import { replaceInterpolatedValues } from "../../utils/DataUtils.ts";
 import { splitByFirstFound } from '../../../core/StringUtils.ts';
+import { hashObject as coreHashObject } from '../../../core/StringUtils.ts';
+import { hashObject } from '../../utils/StringUtils.ts';
 import { noCasePropObj } from '../../utils/DataUtils.ts';
 import { isrcNoHyphens, isrcWithHyphens, REGEX_ISRC_HYPHENS, REGEX_ISRC_NO_HYPHENS } from '../../../core/PlayUtils.ts';
 
@@ -253,5 +255,24 @@ describe('ISRC Parsing', function() {
                 }
             });
         });
+    });
+});
+
+describe('Object Hashing', function () {
+
+    const track = { name: 'Foo', metadata: [{ service: 'musicbrainz', id: '1' }] };
+
+    it('core hash ignores property order', function () {
+        expect(coreHashObject(track)).to.eq(coreHashObject({ metadata: [{ id: '1', service: 'musicbrainz' }], name: 'Foo' }));
+    });
+
+    it('core hash differs when nested data differs', function () {
+        expect(coreHashObject(track)).to.not.eq(coreHashObject({ ...track, metadata: [{ service: 'musicbrainz', id: '2' }] }));
+        expect(coreHashObject(track)).to.not.eq(coreHashObject({ name: 'Foo' }));
+    });
+
+    it('backend hash is still sha256', function () {
+        expect(hashObject(track)).to.match(/^[a-f0-9]{64}$/);
+        expect(hashObject(track)).to.not.eq(coreHashObject(track));
     });
 });

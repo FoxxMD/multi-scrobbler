@@ -6,7 +6,7 @@ import { DELIMITERS_NO_AMP } from '../../core/Atomic.ts';
 import { DELIMITERS } from '../../core/Atomic.ts';
 import { getPlatformIdFromData, parseBoolStrict } from "../utils.ts";
 import { genGroupIdStr } from '../../core/PlayUtils.ts';
-import { compareNormalizedStrings, normalizeStr } from "../../core/StringUtils.ts";
+import { compareNormalizedStrings, normalizeStr, hashObject as coreHashObject, type HashFunction } from "../../core/StringUtils.ts";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 
@@ -370,10 +370,10 @@ export const normalizeListenbrainzUrl = (urlVal: string): string | undefined => 
     return undefined;
 }
 
-type HashFunction = (obj: object) => string;
 const defaultHasher = hasher();
 const defaultHashFunc: HashFunction = (obj) => defaultHasher.hash(obj);
-export const hashObject = (obj: object, h: HashFunction = defaultHashFunc): string => h(obj);
+// same as core hashObject but defaults to sha256, these hashes are persisted
+export const hashObject = (obj: object, h: HashFunction = defaultHashFunc): string => coreHashObject(obj, h);
 
 const NON_ALPHANUMWHITESPACE_CHARS: RegExp = new RegExp(/[^a-zA-Z\d\s]/);
 export const hasNonAlphanumericChars = (str: string): boolean => {

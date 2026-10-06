@@ -9,6 +9,7 @@ import { useState } from "react";
 import { AlbumSearch } from "./AlbumSearch.js";
 import { DurationSepEditable } from "./DurationEditable.js";
 import { Tooltip } from "../ToggleTip.js";
+import { hashObject } from "../../../core/StringUtils.js";
 
 export interface PlayEditProps {
     initialPlay?: PlayObjectMinimal<string>
@@ -94,7 +95,10 @@ export const PlayEdit = (props: PlayEditProps) => {
                                     <Field.Label>Track (Title)</Field.Label>
                                     <Stack width="100%" flexGrow="1">
                                         <HStack width="100%" flexGrow="1">
-                                            <TrackSearch initial={field.form.state.values.data.track}
+                                            <TrackSearch
+                                                // TrackSearch only reads initial on mount, remount so a reset (or any outside change) shows in the input
+                                                key={hashObject(field.form.state.values.data.track ?? {})}
+                                                initial={field.form.state.values.data.track}
                                                 onChange={(val) => {
                                                     // selected credits replace existing ones entirely so ids/images from a previous selection are not kept
                                                     field.form.setFieldValue('data', { ...field.form.state.values.data, ...val });
@@ -168,7 +172,7 @@ export const PlayEdit = (props: PlayEditProps) => {
                                     <Stack width="100%" flexGrow="1">
                                         <HStack width="100%" flexGrow="1">
                                         <AlbumSearch
-                                            key={field.form.state.values.data.album?.name ?? ''}
+                                            key={hashObject(field.form.state.values.data.album ?? {})}
                                             initial={field.form.state.values.data.album}
                                             onChange={(val) => {
                                                 field.form.setFieldValue('data', { ...field.form.state.values.data, ...val });

@@ -5,6 +5,8 @@ import isBetween from "dayjs/plugin/isBetween.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
 import timezone from "dayjs/plugin/timezone.js";
 import utc from "dayjs/plugin/utc.js";
+// deep import so the browser bundle does not pull in the package entrypoint, which requires node crypto
+import { objectSorter } from "node-object-hash/dist/objectSorter.js";
 import {
     type AmbPlayObject,
     SCROBBLE_TS_SOC_START,
@@ -307,3 +309,35 @@ export const compareNormalizedStrings = (existing: string, candidate: string): S
     });
 };
 
+const sortObject = objectSorter();
+
+/**
+ * Fast non-cryptographic 53-bit string hash (cyrb53).
+ *
+ * Not for security or for hashes that are persisted/compared with backend hashes.
+ * 
+ * This is used solely for synchronous hashing in the browser on things like React keys
+ * derived from plain objects in non-critical functionality.
+ * Can't use browser built-in crypto since its async and would be a headache to get it to work 
+ * with React rendering just for a single hash
+ */
+export const cheapHash = (str: string, seed = 0): string => {
+    let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+    for (let i = 0; i < str.length; i++) {
+        const ch = str.charCodeAt(i);
+        h1 = Math.imul(h1 ^ ch, 2654435761);
+        h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
+};
+
+export type HashFunction = (obj: object) => string;
+const cheapHashFunc: HashFunction = (obj) => cheapHash(sortObject(obj));
+/**
+ * Hash an object, independent of property order.
+ *
+ * Browser-safe. Defaults to a cheap non-cryptographic hash, backend code should use hashObject from backend StringUtils (sha256).
+ */
+export const hashObject = (obj: object, h: HashFunction = cheapHashFunc): string => h(obj);
