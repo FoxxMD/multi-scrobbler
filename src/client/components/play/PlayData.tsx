@@ -10,7 +10,7 @@ import { formatNumber } from '../../../core/DataUtils.js';
 import { Muted } from '../Typography.js';
 import { ArtistCreditTags } from '../ArtistCreditDisplay.js';
 import { MSErrorBoundary } from '../ErrorBoundary.js';
-import { EllipsisButton, EyeClosedIcon, EyeIcon, hasMusicServiceIcon } from '../icons/ChakraIcons.js';
+import { EditIconRaw, EllipsisButton, EyeClosedIcon, EyeIcon, hasMusicServiceIcon } from '../icons/ChakraIcons.js';
 import type { IconType } from 'react-icons/lib';
 import { capitalize, capitalizeWords } from '../../../core/StringUtils.js';
 import { getMusicServiceIconTooltip, MusicServiceIndicators } from '../musicServices/MusicServiceIndicators.js';
@@ -37,6 +37,8 @@ export interface PlayInfoProps {
     showCompare?: boolean
     compareDefault?: 'Initial' | 'Final'
     dates?: false | 'all' | 'played' | 'seen'
+    editable?: boolean
+    onEditClick?: () => void
 }
 
 const primaryActionProps: ComponentProps<typeof EllipsisButton> = {
@@ -49,6 +51,8 @@ const menuItem = (Icon: IconType, value: string, name?: string) => (props: Pick<
 
 const MenuMbidShow = menuItem(EyeIcon, 'mbidShow', 'Show IDs');
 const MenuMbidHide = menuItem(EyeClosedIcon, 'mbidHide', 'Hide IDs');
+const MenuTextMode = menuItem(LuText, 'code', 'Show Text');
+const MenuCodeMode = menuItem(LuCode, 'code', 'Show Code');
 
 export const PlayData = (props?: PlayInfoProps) => {
     const {
@@ -57,7 +61,9 @@ export const PlayData = (props?: PlayInfoProps) => {
         showCodeToggle = true,
         showCompare = true,
         compareDefault = 'Initial',
-        dates = 'all'
+        dates = 'all',
+        editable = false,
+        onEditClick
     } = props ?? {};
 
 
@@ -69,13 +75,15 @@ export const PlayData = (props?: PlayInfoProps) => {
             setShowMBid(true);
         } else if (select.value === 'mbidHide') {
             setShowMBid(false);
+        } else if(select.value === 'code') {
+            setCodeMode((old) => !old);
         }
-    }, [setShowMBid])
+    }, [setShowMBid, setCodeMode])
 
     if (play === undefined) {
         return <EmptyPlayData />
     }
-    let code: React.JSX.Element | null = null;
+    let primary: React.JSX.Element | null = null;
 
     const comparable = showCompare && final !== undefined;
 
@@ -83,8 +91,17 @@ export const PlayData = (props?: PlayInfoProps) => {
         showMbid ? <MenuMbidHide /> : <MenuMbidShow />
     ];
 
-    if (showCodeToggle) {
-        code = (
+    if(editable && onEditClick !== undefined) {
+        primary = (
+            <IconButton variant="outline" size="xs" {...primaryActionProps} onClick={() => onEditClick()}>
+                <EditIconRaw/>
+            </IconButton>
+        );
+        if(showCodeToggle) {
+            menuItems.push(codeMode ? <MenuTextMode/> : <MenuCodeMode/>);
+        }
+    } else if (showCodeToggle) {
+        primary = (
             <IconButton hideBelow="sm" variant="outline" size="xs" {...primaryActionProps} onClick={() => setCodeMode(!codeMode)}>
                 {codeMode ? <LuText /> : <LuCode />}
             </IconButton>
@@ -119,7 +136,7 @@ export const PlayData = (props?: PlayInfoProps) => {
                     <HStack>
                         <Menu.Root positioning={{ placement: "bottom-end" }} onSelect={menuCb}>
                             <Group attached>
-                                {code}
+                                {primary}
                                 <Menu.Trigger asChild>
                                     <EllipsisButton {...primaryActionProps} />
                                 </Menu.Trigger>

@@ -13,11 +13,14 @@ import { hashObject } from "../../../core/StringUtils.js";
 
 export interface PlayEditProps {
     initialPlay?: PlayObjectMinimal<string>
-    context?: 'create' | 'edit'
+    context?: 'create' | 'edit',
+    isSubmitting?: boolean,
     onSubmit?: (vals: PlayObjectMinimal<string>) => void
+    onCancel?: () => void
 }
 
 const logSubmit: PlayEditProps['onSubmit'] = (val) => console.log(val, 'Play Edit Submit');
+const cancelNoop = () => console.log('Clicked cancel');
 
 // structural type so it accepts a field of any value type without spelling out ReactFieldApi's generics
 const ResetButton = ({ field, onClickAdditional }: { field: { meta: { isDefaultValue: boolean }, reset: () => void }, onClickAdditional?: () => void  }) => {
@@ -40,7 +43,9 @@ export const PlayEdit = (props: PlayEditProps) => {
             data = {},
             meta = {}
         } = {},
-        onSubmit = logSubmit
+        isSubmitting = false,
+        onSubmit = logSubmit,
+        onCancel = cancelNoop
     } = props;
 
     const opts = formOptions.strictSchema(playEditStrictCreateSchema, {
@@ -83,11 +88,13 @@ export const PlayEdit = (props: PlayEditProps) => {
                         form.handleSubmit()
                     }}>
                     <HStack justify="flex-end">
-                        <Button type="submit" variant="subtle" colorPalette="blue">{context === 'edit' ? 'Save' : 'Create'}</Button>
-                        <Button variant="subtle" colorPalette="red">Cancel</Button>
+                        <Button loading={isSubmitting} type="submit" variant="subtle" colorPalette="blue">{context === 'edit' ? 'Save' : 'Create'}</Button>
+                        <Button disabled={isSubmitting} variant="subtle" colorPalette="red" onClick={() => onCancel()}>Cancel</Button>
                         <form.Subscribe
                             selector={(state) => state.isDirty && !state.isDefaultValue}
-                            children={(canReset) => canReset ? <Button variant="subtle" onClick={() => {
+                            children={(canReset) => canReset ? <Button 
+                                disabled={isSubmitting}
+                                variant="subtle" onClick={() => {
                                 form.reset();
                                 setArtistsVersion(v => v + 1);
                             }}>Reset</Button> : undefined}

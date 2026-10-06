@@ -30,7 +30,8 @@ import {
     LuCopyPlus,
     LuClipboardPaste,
     LuClipboardCopy,
-    LuTimerReset
+    LuTimerReset,
+    LuPencil
 } from "react-icons/lu"
 import { VscDebugRestart } from 'react-icons/vsc';
 import { HiMiniStop } from "react-icons/hi2";
@@ -307,3 +308,7 @@ export const SyncPlayButton = makeIconButton(LuCopyPlus);
 export const ResetIconRaw = LuTimerReset;
 export const ResetIcon = makeChakraIcon(LuTimerReset);
 export const ResetButton = makeIconButton(LuTimerReset);
+
+export const EditIconRaw = LuPencil;
+export const EditIcon = makeChakraIcon(LuPencil);
+export const EditButton = makeIconButton(LuPencil);

@@ -33,7 +33,8 @@ args: {
     includeAlbumArtists: false,
     showCodeToggle: true,
     defaultFinal: true,
-    brainz: false
+    brainz: false,
+    editable: false
   },
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });
@@ -59,6 +60,10 @@ export const PlayInfoStory = meta.story({
     if(args.brainz) {
       // @ts-ignore
       args.play = asJsonPlayObject(withBrainz(args.play, {include: ['album','recording','track','artist']}));
+    }
+
+    if(args.editable) {
+      args.onEditClick = () => console.log('Clicked edit')
     }
     return (<PlayData {...args}/>) 
   }
