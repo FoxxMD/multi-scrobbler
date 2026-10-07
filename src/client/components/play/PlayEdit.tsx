@@ -1,4 +1,4 @@
-import { HStack, Box, Field, Stack, Fieldset, Button, IconButton, DateInput, DatePicker, Portal } from "@chakra-ui/react"
+import { HStack, Box, Field, Stack, Fieldset, Button, IconButton, DateInput, DatePicker, Portal, EmptyState } from "@chakra-ui/react"
 import { playEditStrictCreateSchema, type PlayObjectMinimal, type TrackData } from '../../../core/Atomic.js';
 import { MSErrorBoundary } from '../ErrorBoundary.js';
 import { useForm, formOptions } from '@tanstack/react-form';
@@ -13,6 +13,7 @@ import { hashObject } from "../../../core/StringUtils.js";
 import { dedupAlbumArtists } from "../../../core/MusicMetadata.js";
 import { LuCalendar } from "react-icons/lu";
 import { parseAbsoluteToLocal, today, getLocalTimeZone, toZoned, DateFormatter } from '@internationalized/date';
+import { TextMuted } from "../TextMuted.js";
 
 export interface PlayEditProps {
     initialPlay?: PlayObjectMinimal<string>
@@ -104,9 +105,9 @@ export const PlayEdit = (props: PlayEditProps) => {
 
     // track artists and album artists are edited the same way, album artists can be empty
     const artistsField = (name: 'data.artists' | 'data.albumArtists', legend: string, minRows: number) => (
-        <Fieldset.Root size="lg">
+        <Fieldset.Root size="md">
             <Fieldset.Legend>{legend}</Fieldset.Legend>
-            <Fieldset.Content>
+            <Fieldset.Content mt="2">
                 <form.ArrayField key={artistsVersion} name={name}>
                     {(array) => (
                         <Stack>
@@ -145,6 +146,11 @@ export const PlayEdit = (props: PlayEditProps) => {
                                     </Field.ErrorText>
                                 ))}
                             </Field.Root>
+                            {(array.value ?? []).length === 0 ? (
+                                <TextMuted textStyle="md">
+                                    No Album Artists yet!
+                                </TextMuted>
+                            ) : undefined}
                             <Button variant="subtle" maxW="400px" onClick={() => array.pushValue({ name: '' })}>Add {minRows === 0 ? 'Album Artist' : 'Artist'}</Button>
                         </Stack>
                     )}
