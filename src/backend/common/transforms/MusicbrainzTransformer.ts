@@ -9,14 +9,14 @@ import { isWhenCondition } from "../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";
 import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../core/Transform.ts";
 import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
-import { creditIds, creditMbid, type CreditRules, resolveCredit, resolveCredits } from "../../../core/MusicMetadata.ts";
+import { creditIds, creditMbid, type CreditRules, mbMeta, nameToCredit, resolveCredit, resolveCredits, withImage } from "../../../core/MusicMetadata.ts";
 import type {TransformerOptions} from "./AbstractTransformer.ts";
 import { ARTIST_WEIGHT, TITLE_WEIGHT } from "../infrastructure/Atomic.ts";
 import { DELIMITERS } from '../../../core/Atomic.ts';
 import { MaybeLogger } from '../MaybeLogger.ts';
 import { childLogger } from "@foxxmd/logging";
 import { MusicbrainzApiClientPool, recordingToPlay, type UsingTypes } from "../vendor/musicbrainz/MusicbrainzApiClientPool.ts";
-import type {IRecordingList, IRecordingMatch} from "musicbrainz-api";
+import type {IRecordingList, IRecordingMatch, IRelease} from "musicbrainz-api";
 import { intersect, missingMbidTypes } from "../../utils.ts";
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
 import { SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../errors/MSErrors.ts";
@@ -548,17 +548,17 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         }
 
         const mergedConfig = Object.assign({}, removeUndefinedKeys({...this.defaults}), removeUndefinedKeys({...stageConfig}));
-        filteredList = filterByValidReleaseStatus(filteredList, mergedConfig);
-        filteredList = filterByValidReleaseGroupPrimary(filteredList, mergedConfig);
-        filteredList = filterByValidReleaseGroupSecondary(filteredList, mergedConfig);
-        filteredList = filterByValidReleaseCountry(filteredList, mergedConfig);
+        filteredList = filterRecordingsByValidReleaseStatus(filteredList, mergedConfig);
+        filteredList = filterRecordingsByValidReleaseGroupPrimary(filteredList, mergedConfig);
+        filteredList = filterRecordingsByValidReleaseGroupSecondary(filteredList, mergedConfig);
+        filteredList = filterRecordingsByValidReleaseCountry(filteredList, mergedConfig);
 
 
         if(filteredList.length === 0) {
             throw new StagePrerequisiteError(`All ${transformData.count} recordings were filtered out by allow/deny release config${hadMusicVideo ? ' and music video filter' : ''}`, {shortStack: true});
         }
 
-        filteredList = rankReleasesByPriority(filteredList, mergedConfig, play);
+        filteredList = rankRecordingsReleasesByPriority(filteredList, mergedConfig, play);
 
         this.logger.debug(`${filteredList.length} of ${transformData.count} were valid, filtered matches. Using match with best score of ${filteredList[0].score}`);
 
@@ -632,11 +632,51 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         return results;
     }
     async getAlbumResults(query: string): Promise<AlbumSearchResult[] | false> {
-        return [];
+        const res = await this.api.searchByRelease({album: {name: query}});
+        const scoreThreshold = this.defaults.score ?? 90;
+        let filteredList = res.releases.filter((x) => x.score >= scoreThreshold);
+        filteredList = filterReleasesByValidStatus(filteredList, this.defaults);
+        filteredList = filterReleasesByValidGroupPrimary(filteredList, this.defaults);
+        filteredList = filterReleasesByValidGroupSecondary(filteredList, this.defaults);
+        filteredList = filterReleasesByValidCountry(filteredList, this.defaults);
+
+        if(filteredList.length === 0) {
+            return []
+        }
+
+        filteredList = rankReleases(filteredList, this.defaults, query);
+
+        return filteredList.slice(0, 10).map((x) => {
+            const result: AlbumSearchResult = {
+                id: x.id,
+                score: x.score,
+                service: 'musicbrainz',
+                ...nameToCredit(x.title, mbMeta(x.id, 'release'))
+            }
+            if(x["artist-credit"] !== undefined) {
+                result.artists = x["artist-credit"]
+                .filter(y => this.defaults.ignoreVA === false || y.name !== 'Various Artists')
+                .map((y) => nameToCredit(y.name, mbMeta(x.id, 'artist')))
+            }
+            return result;
+        });
     }
 }
 
-export const filterByValidReleaseStatus = <T extends IRecordingMatch[]>(list: T, stageConfig: MusicbrainzTransformerDataStage, logger: MaybeLogger = new MaybeLogger()) => {
+export const filterReleasesByValidStatus = <T extends IRelease>(releases: T[], stageConfig: MusicbrainzTransformerDataStrong): T[] => {
+    const {
+        releaseStatusAllow = [],
+        releaseStatusDeny = [],
+    } = stageConfig;
+    return releases.filter(y => {
+        if(releaseStatusAllow.length > 0) {
+            return releaseStatusAllow.includes(y.status?.toLocaleLowerCase() as MBReleaseStatus)
+        }
+        return !releaseStatusDeny.includes(y.status?.toLocaleLowerCase() as MBReleaseStatus)
+    });
+}
+
+export const filterRecordingsByValidReleaseStatus = <T extends IRecordingMatch[]>(list: T, stageConfig: MusicbrainzTransformerDataStage, logger: MaybeLogger = new MaybeLogger()) => {
     const {
         releaseStatusAllow = [],
         releaseStatusDeny = [],
@@ -647,12 +687,7 @@ export const filterByValidReleaseStatus = <T extends IRecordingMatch[]>(list: T,
     }
     const releaseFiltered = list.map(x => ({
             ...x,
-            releases: x.releases === undefined ? [] : x.releases.filter(y => {
-                if(releaseStatusAllow.length > 0) {
-                    return releaseStatusAllow.includes(y.status?.toLocaleLowerCase() as MBReleaseStatus)
-                }
-                 return !releaseStatusDeny.includes(y.status?.toLocaleLowerCase() as MBReleaseStatus)
-            })
+            releases: filterReleasesByValidStatus(x.releases ?? [], stageConfig)
         }));
     return releaseFiltered.filter(x => (
         (list.find(y => y.id === x.id)?.releases ?? []).length === 0 
@@ -661,23 +696,31 @@ export const filterByValidReleaseStatus = <T extends IRecordingMatch[]>(list: T,
     || x.releases.length > 0);
 }
 
-export const filterByValidReleaseGroupPrimary = <T extends IRecordingMatch[]>(list: T, stageConfig: MusicbrainzTransformerDataStage, logger: MaybeLogger = new MaybeLogger()) => {
+export const filterReleasesByValidGroupPrimary = <T extends IRelease>(releases: T[], stageConfig: MusicbrainzTransformerDataStrong): T[] => {
+    const {
+        releaseGroupPrimaryTypeAllow = [],
+        releaseGroupPrimaryTypeDeny = [],
+    } = stageConfig;
+    return releases.filter(y => {
+        if(releaseGroupPrimaryTypeAllow.length > 0) {
+            return releaseGroupPrimaryTypeAllow.includes(y["release-group"]?.["primary-type"]?.toLocaleLowerCase() as MBReleaseGroupPrimaryType)
+        }
+        return !releaseGroupPrimaryTypeDeny.includes(y["release-group"]?.["primary-type"]?.toLocaleLowerCase() as MBReleaseGroupPrimaryType)
+    });
+}
+
+export const filterRecordingsByValidReleaseGroupPrimary = <T extends IRecordingMatch[]>(list: T, stageConfig: MusicbrainzTransformerDataStage, logger: MaybeLogger = new MaybeLogger()) => {
     const {
         releaseGroupPrimaryTypeAllow = [],
         releaseGroupPrimaryTypeDeny = [],
         releaseAllowEmpty
     } = stageConfig;
-    if(releaseGroupPrimaryTypeAllow.length === 0 && releaseGroupPrimaryTypeAllow.length === 0) {
+    if(releaseGroupPrimaryTypeAllow.length === 0 && releaseGroupPrimaryTypeDeny.length === 0) {
         return list;
     }
     const releaseFiltered = list.map(x => ({
             ...x,
-            releases: x.releases === undefined ? [] : x.releases.filter(y => {
-                if(releaseGroupPrimaryTypeAllow.length > 0) {
-                    return releaseGroupPrimaryTypeAllow.includes(y["release-group"]?.["primary-type"]?.toLocaleLowerCase() as MBReleaseGroupPrimaryType)
-                }
-                 return !releaseGroupPrimaryTypeDeny.includes(y["release-group"]?.["primary-type"]?.toLocaleLowerCase() as MBReleaseGroupPrimaryType)
-            })
+            releases: filterReleasesByValidGroupPrimary(x.releases ?? [], stageConfig)
         }));
     return releaseFiltered.filter(x => (
         (list.find(y => y.id === x.id)?.releases ?? []).length === 0 
@@ -686,7 +729,20 @@ export const filterByValidReleaseGroupPrimary = <T extends IRecordingMatch[]>(li
     || x.releases.length > 0);
 }
 
-export const filterByValidReleaseGroupSecondary = (list: IRecordingMatch[], stageConfig: MusicbrainzTransformerDataStage, logger: MaybeLogger = new MaybeLogger()) => {
+export const filterReleasesByValidGroupSecondary = <T extends IRelease>(releases: T[], stageConfig: MusicbrainzTransformerDataStrong): T[] => {
+    const {
+        releaseGroupSecondaryTypeAllow = [],
+        releaseGroupSecondaryTypeDeny = [],
+    } = stageConfig;
+    return releases.filter(y => {
+        if(releaseGroupSecondaryTypeAllow.length > 0) {
+            return intersect(releaseGroupSecondaryTypeAllow, (y["release-group"]?.["secondary-types"] ?? []).map(x => x.toLocaleLowerCase()) as MBReleaseGroupSecondaryType[]).length > 0;
+        }
+        return intersect(releaseGroupSecondaryTypeDeny, (y["release-group"]?.["secondary-types"] ?? []).map(x => x.toLocaleLowerCase()) as MBReleaseGroupSecondaryType[]).length === 0;
+    });
+}
+
+export const filterRecordingsByValidReleaseGroupSecondary = (list: IRecordingMatch[], stageConfig: MusicbrainzTransformerDataStage, logger: MaybeLogger = new MaybeLogger()) => {
     const {
         releaseGroupSecondaryTypeAllow = [],
         releaseGroupSecondaryTypeDeny = [],
@@ -697,12 +753,7 @@ export const filterByValidReleaseGroupSecondary = (list: IRecordingMatch[], stag
     }
     const releaseFiltered = list.map(x => ({
             ...x,
-            releases: x.releases === undefined ? [] : x.releases.filter(y => {
-                if(releaseGroupSecondaryTypeAllow.length > 0) {
-                    return intersect(releaseGroupSecondaryTypeAllow, (y["release-group"]?.["secondary-types"] ?? []).map(x => x.toLocaleLowerCase()) as MBReleaseGroupSecondaryType[]).length > 0;
-                }
-                  return intersect(releaseGroupSecondaryTypeDeny, (y["release-group"]?.["secondary-types"] ?? []).map(x => x.toLocaleLowerCase()) as MBReleaseGroupSecondaryType[]).length === 0;
-            })
+            releases: filterReleasesByValidGroupSecondary(x.releases ?? [], stageConfig)
         }));
     return releaseFiltered.filter(x => (
         (list.find(y => y.id === x.id)?.releases ?? []).length === 0 
@@ -711,7 +762,20 @@ export const filterByValidReleaseGroupSecondary = (list: IRecordingMatch[], stag
     || x.releases.length > 0);
 }
 
-export const filterByValidReleaseCountry = (list: IRecordingMatch[], stageConfig: MusicbrainzTransformerDataStage, logger: MaybeLogger = new MaybeLogger()) => {
+export const filterReleasesByValidCountry = <T extends IRelease>(releases: T[], stageConfig: MusicbrainzTransformerDataStrong): T[] => {
+    const {
+        releaseCountryAllow = [],
+        releaseCountryDeny = [],
+    } = stageConfig;
+    return releases.filter(y => {
+        if(releaseCountryAllow.length > 0) {
+            return releaseCountryAllow.includes(y.country?.toLocaleLowerCase())
+        }
+        return !releaseCountryDeny.includes(y.country?.toLocaleLowerCase())
+    });
+}
+
+export const filterRecordingsByValidReleaseCountry = (list: IRecordingMatch[], stageConfig: MusicbrainzTransformerDataStage, logger: MaybeLogger = new MaybeLogger()) => {
     const {
         releaseCountryAllow = [],
         releaseCountryDeny = [],
@@ -722,12 +786,7 @@ export const filterByValidReleaseCountry = (list: IRecordingMatch[], stageConfig
     }
     const releaseFiltered = list.map(x => ({
             ...x,
-            releases: x.releases === undefined ? [] : x.releases.filter(y => {
-                if(releaseCountryAllow.length > 0) {
-                    return releaseCountryAllow.includes(y.country?.toLocaleLowerCase())
-                }
-                 return !releaseCountryDeny.includes(y.country?.toLocaleLowerCase())
-            })
+            releases: filterReleasesByValidCountry(x.releases ?? [], stageConfig)
         }));
     return releaseFiltered.filter(x => (
         (list.find(y => y.id === x.id)?.releases ?? []).length === 0 
@@ -797,15 +856,14 @@ export const filterByExplicitReleaseMbid = (list: IRecordingMatch[], play: PlayO
     return [list, false];
 }
 
-export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: MusicbrainzTransformerDataStage, play: PlayObject, logger: MaybeLogger = new MaybeLogger()): RecordingRankedMatched[] => {
-        const {
+/** Scores and sorts (best first) releases by priority config and similarity to albumName. Does not mutate the given list. */
+export const rankReleases = <T extends IRelease>(releases: T[], stageConfig: MusicbrainzTransformerDataStrong, albumName?: string): (T & {albumScore: number, albumCompareScore: number})[] => {
+    const {
         releaseStatusPriority = [],
         releaseGroupPrimaryTypePriority = [],
         releaseGroupSecondaryTypePriority = [],
         releaseCountryPriority = [],
         albumWeight = 0,
-        titleWeight = 0,
-        artistWeight = 0
     } = stageConfig;
 
     // reverse order so that "highest" priority (first in user list) ends up with the highest index, that we use as score
@@ -814,6 +872,28 @@ export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: Mus
     countryPriority = [...releaseCountryPriority].reverse(),
     statusPriority = [...releaseStatusPriority].reverse();
 
+    const ranked = releases.map((a) => {
+        const statAScore = statusPriority.findIndex(x => a.status !== undefined && x === a.status.toLocaleLowerCase()) + 1;
+        const grpPAScore = groupPrimaryPriority.findIndex(x => x === a["release-group"]?.["primary-type"]?.toLocaleLowerCase()) + 1;
+        const grpSAScore = (a["release-group"]?.["secondary-types"] ?? []).reduce((acc: number, curr: string) => acc + groupSecPriority.findIndex(x => x === (curr as MBReleaseGroupSecondaryType).toLocaleLowerCase()) + 1,0);
+        const countryAScore = countryPriority.findIndex(x => a.country === undefined ? false : x === a.country.toLocaleLowerCase()) + 1;
+        const compareScore = scoreNormalizedStringsWeighted(albumName, a.title, albumWeight, albumWeight !== 0 ? 0.05 : 0);
+        return {
+            ...a,
+            albumScore: statAScore + grpPAScore + grpSAScore + countryAScore + compareScore,
+            albumCompareScore: compareScore
+        };
+    });
+    ranked.sort((a, b) => b.albumScore - a.albumScore);
+    return ranked;
+}
+
+export const rankRecordingsReleasesByPriority = (list: IRecordingMatch[], stageConfig: MusicbrainzTransformerDataStage, play: PlayObject, logger: MaybeLogger = new MaybeLogger()): RecordingRankedMatched[] => {
+    const {
+        titleWeight = 0,
+        artistWeight = 0
+    } = stageConfig;
+
     const cList = clone(list) as RecordingRankedMatched[];
     const rankedList = cList.map((x) => {
         let artistScore = 0;
@@ -821,19 +901,7 @@ export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: Mus
             const artistRes = comparePlayArtistsNormalized(play, recordingToPlay(x));
             artistScore = artistRes[0] * (artistWeight + (artistRes[1] > 0 ? 0.05 : 0));
         }
-        const releases = (x.releases ?? []).map((a) => {
-            const statAScore = statusPriority.findIndex(x => a.status !== undefined && x === a.status.toLocaleLowerCase()) + 1;
-            const grpPAScore = groupPrimaryPriority.findIndex(x => x === a["release-group"]?.["primary-type"]?.toLocaleLowerCase()) + 1;
-            const grpSAScore = (a["release-group"]?.["secondary-types"] ?? []).reduce((acc: number, curr: string) => acc + groupSecPriority.findIndex(x => x === (curr as MBReleaseGroupSecondaryType).toLocaleLowerCase()) + 1,0);
-            const countryAScore = countryPriority.findIndex(x => a.country === undefined ? false : x === a.country.toLocaleLowerCase()) + 1;
-            const compareScore = scoreNormalizedStringsWeighted(play.data.album?.name, a.title, albumWeight, albumWeight !== 0 ? 0.05 : 0);
-            return {
-                ...a,
-                albumScore: statAScore + grpPAScore + grpSAScore + countryAScore + compareScore,
-                albumCompareScore: compareScore
-            };
-        });
-        releases.sort((a, b) => b.albumScore - a.albumScore);
+        const releases = rankReleases(x.releases ?? [], stageConfig, play.data.album?.name);
         let albumScore = 0;
         if(releases.length > 0) {
             albumScore = releases[0].albumCompareScore;
