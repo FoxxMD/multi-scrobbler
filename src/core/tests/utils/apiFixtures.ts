@@ -547,7 +547,10 @@ export const generateAlbumSearchResult = (partial: Partial<AlbumSearchResult> = 
     service: faker.helpers.arrayElement(['spotify','musicbrainz','rocksky']),
     ...generateAlbumCredit(),
     albumType: faker.helpers.arrayElement(['single','album','live','compilation',undefined]),
+    albumTypeHint: faker.helpers.arrayElement(['remastered', undefined]),
     artists: generateArtistCredits(undefined, 3, {mbidVal: true}),
+    country: faker.location.countryCode(),
+    date: dayjs(faker.date.past({years: 10})).toISOString(),
     ...partial
 });
 
@@ -580,6 +583,7 @@ export const generateTrackSearchResult = (partial: Partial<TrackSearchResult> = 
     album: generateAlbumCredit(),
     albumType: faker.helpers.arrayElement(['single','album','live','compilation',undefined]),
     albumArtists: faker.helpers.arrayElement([generateArtistCredits(1, 1, {mbidVal: true}), undefined]),
+    albumTypeHint: faker.helpers.arrayElement(['remastered', undefined]),
     duration: faker.number.int({min: 10, max: 305}),
     albumCount: faker.number.int({min: 1, max: 15}),
     artists: generateArtistCredits(undefined, 3, {mbidVal: true}),

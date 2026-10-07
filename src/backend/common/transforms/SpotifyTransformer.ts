@@ -350,9 +350,9 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
         if(filtered.length === 0) {
             return []
         }
-        const results = filtered.slice(0, 10).map((x) => ({
+        const results = filtered.slice(0, 5).map((x) => ({
             service: 'spotify',
-            score: x.matchScore,
+            score: x.matchScore  * 100,
             albumCount: 1,
             albumType: x.track.album.album_type,
             ...trackToPlay(x.track).data,
@@ -366,10 +366,10 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
         const surrogateArtist: Credit = {name: query};
         const scoreThreshold = this.defaults.score ?? 0.6;
         const res = await this.api.searchArtists({name: query}, this.defaults);
-        const ranked = res.map((x) => ({...x, score: compareArtistCreditsNormalized([surrogateArtist], [{name: x.name}])[0]}))
+        const ranked = res.map((x) => ({...x, score: compareArtistCreditsNormalized([surrogateArtist], [{name: x.name}])[0] * 100}))
         .sort((a, b) => b.score - a.score)
         .filter(x => x.score >= scoreThreshold);
-        const results: ArtistSearchResult[] = ranked.slice(0, 10).map((x) => ({
+        const results: ArtistSearchResult[] = ranked.slice(0, 5).map((x) => ({
             ...withImage(nameToCredit(x.name, spotifyMeta(x.id, 'artist')), chooseImageByResolution(x.images, {fallbackBest: true}).url),
             score: x.score,
             service: 'spotify',
@@ -387,9 +387,10 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
         })
         .sort((a, b) => b.score - a.score)
         .filter(x => x.score >= scoreThreshold);
-        const results: AlbumSearchResult[] = ranked.slice(0, 10).map((x) => ({
+        const results: AlbumSearchResult[] = ranked.slice(0, 5).map((x) => ({
             ...withImage(nameToCredit(x.name, spotifyMeta(x.id, 'album')), chooseImageByResolution(x.images, {fallbackBest: true}).url),
             albumType: x.album_type,
+            date: x.release_date,
             artists: (x.artists ?? []).length === 0 ? undefined : x.artists.map((y) => nameToCredit(y.name, spotifyMeta(y.id, 'artist'))),
             score: x.score,
             service: 'spotify',

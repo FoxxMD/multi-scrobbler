@@ -615,6 +615,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
                 id: x.id,
                 score: x.score,
                 albumType: releaseGroup?.["primary-type"] ?? releaseGroup?.["secondary-types"]?.[0],
+                albumTypeHint: x.disambiguation,
                 albumCount: (x.releases ?? []).length
             };
         });
@@ -623,7 +624,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         const surrogateArtist: Credit = {name: query};
         const res = await this.api.searchByArtist({artists: [surrogateArtist]});
         const scoreThreshold = this.defaults.score ?? 90;
-        const results: ArtistSearchResult[] = res.artists.filter(x => x.score >= scoreThreshold).slice(0, 10).map((x) => ({
+        const results: ArtistSearchResult[] = res.artists.filter(x => x.score >= scoreThreshold).slice(0, 5).map((x) => ({
             ...nameToCredit(x.name, mbMeta(x.id, 'artist')),
             score: x.score,
             service: 'musicbrainz',
@@ -646,17 +647,22 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
         filteredList = rankReleases(filteredList, this.defaults, query);
 
-        return filteredList.slice(0, 10).map((x) => {
+        return filteredList.slice(0, 5).map((x) => {
+            const releaseGroup = x["release-group"];
             const result: AlbumSearchResult = {
                 id: x.id,
                 score: x.score,
                 service: 'musicbrainz',
+                albumType: releaseGroup?.["primary-type"] ?? releaseGroup?.["secondary-types"]?.[0],
+                albumTypeHint: x.disambiguation,
+                country: x.country,
+                date: x.date,
                 ...nameToCredit(x.title, mbMeta(x.id, 'release'))
             }
             if(x["artist-credit"] !== undefined) {
                 result.artists = x["artist-credit"]
                 .filter(y => this.defaults.ignoreVA === false || y.name !== 'Various Artists')
-                .map((y) => nameToCredit(y.name, mbMeta(x.id, 'artist')))
+                .map((y) => nameToCredit(y.name, mbMeta(y.artist.id, 'artist')))
             }
             return result;
         });

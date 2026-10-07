@@ -638,7 +638,7 @@ Note: this is only supported by some components.`
         }
     });
 
-    router.get('/api/tracks', {
+    router.get('/api/metadata/search/tracks', {
         tags: ['Metdata'],
         summary: 'Get Track Metadata from Providers',
         querySchema: z.object({
@@ -654,6 +654,44 @@ Note: this is only supported by some components.`
         } = req;
 
         const results = await root.items.transformerManager.getTrackResults(q);
+        return res.json(results);
+    });
+
+    router.get('/api/metadata/search/albums', {
+        tags: ['Metdata'],
+        summary: 'Get Album Metadata from Providers',
+        querySchema: z.object({
+            q: z.string().meta({
+            description: `the album name to search for`
+        })}),
+        description: 'Gets album results from all metadata providers'
+    }, async (req, res, next) => {
+        const {
+            query: {
+                q
+            }
+        } = req;
+
+        const results = await root.items.transformerManager.getAlbumResults(q);
+        return res.json(results);
+    });
+
+    router.get('/api/metadata/search/artists', {
+        tags: ['Metdata'],
+        summary: 'Get Artist Metadata from Providers',
+        querySchema: z.object({
+            q: z.string().meta({
+            description: `the artist name to search for`
+        })}),
+        description: 'Gets artist results from all metadata providers'
+    }, async (req, res, next) => {
+        const {
+            query: {
+                q
+            }
+        } = req;
+
+        const results = await root.items.transformerManager.getArtistResults(q);
         return res.json(results);
     });
 

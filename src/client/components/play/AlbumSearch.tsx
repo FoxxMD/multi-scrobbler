@@ -18,9 +18,17 @@ export const AlbumSearchResultItem = (props: { data: AlbumSearchResult, onPick?:
     const {
         name,
         albumType,
+        albumTypeHint,
         metadata = [],
         artists = [],
     } = props.data;
+    const albumHints: string[] = [];
+    if(albumType !== undefined) {
+        albumHints.push(albumType);
+    }
+    if(albumTypeHint !== undefined) {
+        albumHints.push(albumTypeHint);
+    }
 
     let artistTags: React.JSX.Element | undefined = undefined;
     if(artists.length > 0) {
@@ -35,7 +43,7 @@ export const AlbumSearchResultItem = (props: { data: AlbumSearchResult, onPick?:
             <Stack gap="1" flexGrow="1">
                 <Text fontWeight="medium">
                     <HStack gap="1">
-                        {name}{albumType !== undefined ? <Box>({albumType})</Box> : undefined}<MusicServiceIndicators services={metadata}/>
+                        {name}{albumHints.length > 0? <Box>({albumHints.join(' -- ')})</Box> : undefined}<MusicServiceIndicators services={metadata}/>
                         <MetadataPickMenu data={props.data} partials={albumPartials} onPick={props.onPick} />
                     </HStack>
                 </Text>

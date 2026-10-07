@@ -25,6 +25,7 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?:
         track,
         album,
         albumType,
+        albumTypeHint,
         albumCount,
         duration,
         artists = []
@@ -32,6 +33,13 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?:
 
     let albumContent: React.JSX.Element | undefined = undefined;
     if (album !== undefined) {
+        const albumHints: string[] = [];
+        if(albumType !== undefined) {
+            albumHints.push(albumType);
+        }
+        if(albumTypeHint !== undefined) {
+            albumHints.push(albumTypeHint);
+        }
         const andCount = albumCount !== undefined && albumCount > 1 ? (
             <Text color="fg.subtle" textStyle="sm">
                 and {albumCount} more...
@@ -39,7 +47,7 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?:
         ) : undefined;
         albumContent = (<Text color="fg.muted" textStyle="sm">
             <HStack>
-                {album.name} {albumType !== undefined ? `(${albumType})` : ''}<MusicServiceIndicators services={album.metadata ?? []}/> {andCount}
+                {album.name} {albumHints.length > 0 ? `(${albumHints.join(' -- ')})` : ''}<MusicServiceIndicators services={album.metadata ?? []}/> {andCount}
             </HStack>
         </Text>)
     }

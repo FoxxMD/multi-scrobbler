@@ -259,7 +259,8 @@ export type MetadataResultImage = z.infer<typeof metadataResultImageSchema>;
 
 export const metadataResultAlbumTypeSchema = z.object({
     /** The kind of release the album is (album, single, ep...) */
-    albumType: z.string().optional()
+    albumType: z.string().optional(),
+    albumTypeHint: z.string().optional()
 })
 
 /** A Credit for an artist with the service it was found on */
@@ -281,6 +282,8 @@ export const albumSearchResultSchema = z.object({
     ...metadataResultBaseSchema.shape,
     ...metadataResultServiceScoreSchema.shape,
     ...metadataResultAlbumTypeSchema.shape,
+    date: z.string().optional(),
+    country: z.string().optional(),
     artists: creditSchema.array().optional(),
 });
 export type AlbumSearchResult = z.infer<typeof albumSearchResultSchema>;
