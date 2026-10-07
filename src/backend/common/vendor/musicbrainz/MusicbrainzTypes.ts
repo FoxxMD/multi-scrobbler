@@ -18,6 +18,31 @@ export type MBReleaseGroupSecondaryType = z.infer<typeof MB_RELEASE_GROUP_SECOND
 export const mBReleaseSecondaryGroupTypeSchema = z.string().transform(x => x.trim().toLocaleLowerCase()).pipe(MB_RELEASE_GROUP_SECONDARY_TYPES);
 export const mBReleaseSecondaryGroupTypesSchema = maybeArrayFromStringSchemaCreate(MB_RELEASE_GROUP_SECONDARY_TYPES, { lower: true });
 
+/** based on the Search Fields table of the Track section in the Musicbrainz Seach API docs
+ * 
+ * @see https://wiki.musicbrainz.org/MusicBrainz_API/Search#Search_Fields_9
+ */
+export const trackSearchQueryOpts = z.object({
+    /** the recording's MBID  */
+    rid: z.string().optional(),
+    /**  	the MBID of a track connected to this recording  */
+    tid: z.string().optional(),
+    /** the MBID of any release including this recording  */
+    reid: z.string().optional(),
+    /** the MBID of any of the recording artists  */
+    arid: z.string().array().optional(),
+    /** any ISRC associated to the recording */
+    isrc: z.string().optional(),
+    /** (part of) the recording's name, or the name of a track connected to this recording (diacritics are ignored) */
+    recording: z.string().optional(),
+    /** (part of) the combined credited artist name for the recording, including join phrases (e.g. "Artist X feat.") */
+    artist: z.string().array().optional(),
+    /** (part of) the name of any release including this recording */
+    release: z.string().optional()
+});
+
+export type TrackSearchQueryOpts = z.infer<typeof trackSearchQueryOpts>;
+
 /** based on the Search Fields table of the Release section in the Musicbrainz Seach API docs
  * 
  * @see https://wiki.musicbrainz.org/MusicBrainz_API/Search#Search_Fields_11

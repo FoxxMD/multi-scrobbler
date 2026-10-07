@@ -23,7 +23,7 @@ import {ProxyWithCircuitBreaker, type CircuitBreakerProxy} from '@foxxmd/load-ba
 import {ConsecutiveBreaker} from 'cockatiel';
 import { MusicbrainzApiWrapped } from './MusicbrainzApi.ts';
 import { formatNumber } from '../../../../core/DataUtils.ts';
-import type { ArtistSearchQueryOpts, ReleaseSearchQueryOpts } from './MusicbrainzTypes.ts';
+import type { ArtistSearchQueryOpts, ReleaseSearchQueryOpts, TrackSearchQueryOpts } from './MusicbrainzTypes.ts';
 export interface SubmitResponse {
     payload?: {
         ignored_listens: number
@@ -204,16 +204,7 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
         // https://wiki.musicbrainz.org/MusicBrainz_API/Search#Recording
         // https://beta.musicbrainz.org/doc/MusicBrainz_API/Search
         const res = await this.callApiPool<IRecordingList>((mb) => {
-            const query: {
-                recording_mbid?: string
-                track_mbid?: string
-                release_mbid?: string
-                artist_mbids?: string[]
-                isrc?: string
-                recording?: string
-                artist?: string[]
-                release?: string
-            } = {
+            const query: TrackSearchQueryOpts = {
             };
 
             const recordingMbid = creditMbid(play.data.track, 'recording'),
@@ -221,16 +212,16 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
                 releaseMbid = creditMbid(play.data.album, 'release'),
                 artistMbids = creditIds(play.data.artists, 'musicbrainz', 'artist');
             if(recordingMbid !== undefined && using.includes('mbidrecording')) {
-                query.recording_mbid = recordingMbid;
+                query.rid = recordingMbid;
             }
             if(trackMbid !== undefined && using.includes('mbidtrack')) {
-                query.track_mbid = trackMbid;
+                query.tid = trackMbid;
             }
             if(releaseMbid !== undefined && using.includes('mbidrelease')) {
-                query.release_mbid = releaseMbid;
+                query.reid = releaseMbid;
             }
             if(artistMbids.length > 0 && using.includes('mbidartist')) {
-                query.artist_mbids = artistMbids;
+                query.arid = artistMbids;
             }
             if(play.data.isrc !== undefined && using.includes('isrc')) {
                 query.isrc = isrcNoHyphens(play.data.isrc);
@@ -291,29 +282,29 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
                     }
                     q+= `isrc:${query.isrc}`;
                 }
-                if(query.recording_mbid !== undefined) {
+                if(query.rid !== undefined) {
                     if(q !== '') {
                         q += ' AND ';
                     }
-                    q += `rid:"${query.recording_mbid}"`
+                    q += `rid:"${query.rid}"`
                 }
-                if(query.track_mbid !== undefined) {
+                if(query.tid !== undefined) {
                     if(q !== '') {
                         q += ' AND ';
                     }
-                    q += `tid:"${query.track_mbid}"`
+                    q += `tid:"${query.tid}"`
                 }
-                if(query.artist_mbids !== undefined) {
+                if(query.arid !== undefined) {
                     if(q !== '') {
                         q += ' AND ';
                     }
-                    q += `(arid:(${query.artist_mbids.map(x => `"${x}"`).join(' AND ')}) OR arid:(${query.artist_mbids.map(x => `"${x}"`).join(' OR ')}))`
+                    q += `(arid:(${query.arid.map(x => `"${x}"`).join(' AND ')}) OR arid:(${query.arid.map(x => `"${x}"`).join(' OR ')}))`
                 }
-                if(query.release_mbid !== undefined) {
+                if(query.reid !== undefined) {
                     if(q !== '') {
                         q += ' AND ';
                     }
-                    q += `reid:"${query.release_mbid}"`
+                    q += `reid:"${query.reid}"`
                 }
             }
 
