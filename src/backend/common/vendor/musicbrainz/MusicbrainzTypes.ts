@@ -34,3 +34,19 @@ export const releaseSearchQueryOpts = z.object({
 });
 
 export type ReleaseSearchQueryOpts = z.infer<typeof releaseSearchQueryOpts>;
+
+/** based on the Search Fields table of the Artist section in the Musicbrainz Seach API docs
+ * 
+ * @see https://wiki.musicbrainz.org/MusicBrainz_API/Search#Artist
+ * @see https://wiki.musicbrainz.org/MusicBrainz_API/Search#Search_Fields_3
+ */
+export const artistSearchQueryOpts = z.object({
+    /** (part of) the artist's name (diacritics are ignored) */
+    artist: z.string().array().optional(),
+    /** (part of) any primary alias attached to the artist (diacritics are ignored)  */
+    primary_alias: z.string().array().optional(),
+    /** the artist's MBID */
+    arid: z.string().array().optional(),
+});
+
+export type ArtistSearchQueryOpts = z.infer<typeof artistSearchQueryOpts>;

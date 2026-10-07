@@ -4,7 +4,7 @@ import { DEVELOPER_CONTACT } from "../../infrastructure/Atomic.ts";
 import { type AbstractApiOptions, type FormatPlayObjectOptions, MUSICBRAINZ_URL, type MusicbrainzApiConfigData } from "../../infrastructure/Atomic.ts";
 import AbstractApiClient from "../AbstractApiClient.ts";
 import { isPortReachableConnect, maxRequestsPerSecond, normalizeWebAddress } from '../../../utils/NetworkUtils.ts';
-import type { MusicBrainzApi, IRecording, IRecordingList, IRelease, IReleaseList } from 'musicbrainz-api';
+import type { MusicBrainzApi, IRecording, IRecordingList, IRelease, IReleaseList, IArtistList } from 'musicbrainz-api';
 import { difference } from "../../../utils.ts";
 import type { Cacheable } from "cacheable";
 import { getRoot } from "../../../ioc.ts";
@@ -23,7 +23,7 @@ import {ProxyWithCircuitBreaker, type CircuitBreakerProxy} from '@foxxmd/load-ba
 import {ConsecutiveBreaker} from 'cockatiel';
 import { MusicbrainzApiWrapped } from './MusicbrainzApi.ts';
 import { formatNumber } from '../../../../core/DataUtils.ts';
-import type { ReleaseSearchQueryOpts } from './MusicbrainzTypes.ts';
+import type { ArtistSearchQueryOpts, ReleaseSearchQueryOpts } from './MusicbrainzTypes.ts';
 export interface SubmitResponse {
     payload?: {
         ignored_listens: number
@@ -434,6 +434,86 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
             this.logger.debug(res);
             await this.cache.delete(cacheKey);
             throw new Error('results returned but no releases list in response data, something handled incorrectly?');
+        }
+
+        return res;
+    }
+
+    searchByArtist = async(data: Pick<TrackData, 'artists'>, options?: SearchOptions & OptionalCacheUsage): Promise<IArtistList> => {
+        const {
+            escapeCharacters = true,
+            removeCharacters = false,
+            freetext,
+            useCachedResult
+        } = options || {};
+
+        const cacheKey = `mb-artistSearch-${hashObject({play: hashObject(data)})}`;
+
+        this.logger.debug(`Starting search`);
+        let q = '';
+        // https://github.com/Borewit/musicbrainz-api?tab=readme-ov-file#search-function
+        // https://wiki.musicbrainz.org/MusicBrainz_API/Search#Search_Fields_3
+        // https://beta.musicbrainz.org/doc/MusicBrainz_API/Search
+        const res = await this.callApiPool<IArtistList>((mb) => {
+            const query: ArtistSearchQueryOpts = {
+            };
+
+            // only names are cleaned, MBIDs are used verbatim
+            const clean = (str: string): string => {
+                let cleaned = escapeCharacters ? escapeLuceneSpecialChars(str) : str;
+                if(removeCharacters) {
+                    cleaned = removeNonWordCharacters(cleaned);
+                }
+                return cleaned;
+            }
+
+            const artistMbids = creditIds(data.artists, 'musicbrainz', 'artist');
+            if(artistMbids.length > 0) {
+                query.arid = artistMbids;
+            }
+            if(data.artists !== undefined && data.artists.length > 0) {
+                query.artist = creditsToNames(data.artists).map(clean);
+                query.primary_alias = query.artist;
+            }
+
+            if(freetext) {
+                q = (query.artist ?? []).join(' ');
+            } else {
+                // each result is a single artist so clauses are OR'd, a result only needs to match one of the given artists
+                const anyOf = (vals: string[]) => `(${vals.map(x => `"${x}"`).join(' OR ')})`;
+                const parts: string[] = [];
+                if(query.artist !== undefined) {
+                    parts.push(`artist:${anyOf(query.artist)}`);
+                }
+                if(query.primary_alias !== undefined) {
+                    parts.push(`primary_alias:${anyOf(query.primary_alias)}`);
+                }
+                if(query.arid !== undefined) {
+                    parts.push(`arid:${anyOf(query.arid)}`);
+                }
+                q = parts.join(' OR ');
+            }
+
+            this.logger.debug(`Search Query => ${q}`);
+            this.cache.set(`${cacheKey}-qs`, q);
+
+            return mb.search('artist', {
+                query: q
+            });
+        }, {
+            cacheKey,
+            useCachedResult
+        });
+
+        if(res === undefined) {
+            await this.cache.delete(cacheKey);
+            throw new Error('results were unexpectedly undefined! API should have thrown...');
+        }
+
+        if(res.artists === undefined) {
+            this.logger.debug(res);
+            await this.cache.delete(cacheKey);
+            throw new Error('results returned but no artists list in response data, something handled incorrectly?');
         }
 
         return res;
