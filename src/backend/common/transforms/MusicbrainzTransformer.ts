@@ -620,7 +620,16 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         });
     }
     async getArtistResults(query: string): Promise<ArtistSearchResult[] | false> {
-        return [];
+        const surrogateArtist: Credit = {name: query};
+        const res = await this.api.searchByArtist({artists: [surrogateArtist]});
+        const scoreThreshold = this.defaults.score ?? 90;
+        const results: ArtistSearchResult[] = res.artists.filter(x => x.score >= scoreThreshold).slice(0, 10).map((x) => ({
+            ...nameToCredit(x.name, mbMeta(x.id, 'artist')),
+            score: x.score,
+            service: 'musicbrainz',
+            id: x.id,
+        }))
+        return results;
     }
     async getAlbumResults(query: string): Promise<AlbumSearchResult[] | false> {
         return [];
