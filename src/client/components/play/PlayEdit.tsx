@@ -1,5 +1,5 @@
 import { HStack, Box, Field, Stack, Fieldset, Button, IconButton, DateInput, DatePicker, Portal } from "@chakra-ui/react"
-import { playEditStrictCreateSchema, type PlayObjectMinimal } from '../../../core/Atomic.js';
+import { playEditStrictCreateSchema, type PlayObjectMinimal, type TrackData } from '../../../core/Atomic.js';
 import { MSErrorBoundary } from '../ErrorBoundary.js';
 import { useForm, formOptions } from '@tanstack/react-form';
 import { TrackSearch } from "./TrackSearch.js";
@@ -51,6 +51,12 @@ const ResetButton = ({ field, onClickAdditional }: { field: { meta: { isDefaultV
     return undefined;
 }
 
+/** Apply a search selection to form data. Album artists stay an array because ArrayField can't render undefined, an empty list is removed on submit. */
+const mergeData = <T extends Pick<TrackData, 'albumArtists'>>(data: T, change: Partial<T>) => {
+    const merged = { ...data, ...change };
+    return { ...merged, albumArtists: merged.albumArtists ?? [] };
+}
+
 export const PlayEdit = (props: PlayEditProps) => {
 
     const {
@@ -69,7 +75,9 @@ export const PlayEdit = (props: PlayEditProps) => {
             data: {
                 track: { name: '' },
                 artists: [],
-                ...data
+                ...data,
+                // ArrayField needs an array, an empty list is removed on submit
+                albumArtists: data.albumArtists ?? []
             },
             meta: {
                 ...meta
@@ -102,7 +110,6 @@ export const PlayEdit = (props: PlayEditProps) => {
                 <form.ArrayField key={artistsVersion} name={name}>
                     {(array) => (
                         <Stack>
-
                             {(array.value ?? []).map((artist, i) =>
                                 <form.Field
                                     key={i}
@@ -184,7 +191,7 @@ export const PlayEdit = (props: PlayEditProps) => {
                                                 initial={field.form.state.values.data.track}
                                                 onChange={(val) => {
                                                     // selected credits replace existing ones entirely so ids/images from a previous selection are not kept
-                                                    field.form.setFieldValue('data', { ...field.form.state.values.data, ...val });
+                                                    field.form.setFieldValue('data', mergeData(field.form.state.values.data, val));
                                                     setArtistsVersion(v => v + 1);
                                                 }} />
                                             <ResetButton field={field} />
@@ -211,7 +218,7 @@ export const PlayEdit = (props: PlayEditProps) => {
                                                 key={hashObject(field.form.state.values.data.album ?? {})}
                                                 initial={field.form.state.values.data.album}
                                                 onChange={(val) => {
-                                                    field.form.setFieldValue('data', { ...field.form.state.values.data, ...val });
+                                                    field.form.setFieldValue('data', mergeData(field.form.state.values.data, val));
                                                     setArtistsVersion(v => v + 1);
                                                 }} />
                                             <ResetButton field={field} />
