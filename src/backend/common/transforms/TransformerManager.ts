@@ -397,16 +397,58 @@ export default class TransformerManager {
         return res;
     }
     public async getArtistResults(query: string): Promise<AggregateMetadataResponse<ArtistSearchResult>> {
-        return {
+        const readyMps: Record<string, Promise<Awaited<ReturnType<MetadataProvider['getArtistResults']>>>> = {};
+        for(const [type, name] of Object.entries(this.transformMetadataProviders)) {
+            const t = this.transformers.get(type)?.get(name.toLocaleLowerCase()) as unknown as MetadataProvider & AbstractTransformer;
+            if(t !== undefined && t.isReady()) {
+                readyMps[type] = t.getArtistResults(query);
+            }
+        }
+        const all = await pPropsAllSettled(readyMps);
+        const res: AggregateMetadataResponse<ArtistSearchResult> = {
             data: [],
             errors: []
         }
+        for(const [name, r] of Object.entries(all)) {
+            if(r.status === 'fulfilled') {
+                if(r.value === false) {
+                    res.errors.push({service: name, error: {message: 'Not Ready'}});
+                } else {
+                    res.data = res.data.concat(r.value)
+                }
+            } else {
+                res.errors.push({service: name, error: r.reason});
+            }
+        }
+        res.data.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+        return res;
     }
     public async getAlbumResults(query: string): Promise<AggregateMetadataResponse<AlbumSearchResult>> {
-        return {
+        const readyMps: Record<string, Promise<Awaited<ReturnType<MetadataProvider['getAlbumResults']>>>> = {};
+        for(const [type, name] of Object.entries(this.transformMetadataProviders)) {
+            const t = this.transformers.get(type)?.get(name.toLocaleLowerCase()) as unknown as MetadataProvider & AbstractTransformer;
+            if(t !== undefined && t.isReady()) {
+                readyMps[type] = t.getAlbumResults(query);
+            }
+        }
+        const all = await pPropsAllSettled(readyMps);
+        const res: AggregateMetadataResponse<AlbumSearchResult> = {
             data: [],
             errors: []
         }
+        for(const [name, r] of Object.entries(all)) {
+            if(r.status === 'fulfilled') {
+                if(r.value === false) {
+                    res.errors.push({service: name, error: {message: 'Not Ready'}});
+                } else {
+                    res.data = res.data.concat(r.value)
+                }
+            } else {
+                res.errors.push({service: name, error: r.reason});
+            }
+        }
+        res.data.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+        return res;
     }
 }
 

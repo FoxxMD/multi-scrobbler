@@ -11,13 +11,13 @@ import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
 import type { ExternalMetadataTerm, PlayTransformMetadataStage } from "../../../core/Transform.ts";
 import { isWhenCondition } from "../../utils/PlayTransformUtils.ts";
 import { parseArrayFromMaybeString } from "../../utils/StringUtils.ts";
-import { scorePlaySameness } from "../../utils/PlayComparisonUtils.ts";
+import { compareArtistCreditsNormalized, scorePlaySameness, type ScoreParts } from "../../utils/PlayComparisonUtils.ts";
 import { intersect } from "../../utils.ts";
-import { isCompilation, SpotifyApiClient, trackToPlay } from "../vendor/spotify/SpotifyApiClient.ts";
+import { chooseImageByResolution, isCompilation, SpotifyApiClient, trackToPlay } from "../vendor/spotify/SpotifyApiClient.ts";
 import { MaybeLogger } from '../MaybeLogger.ts';
 import { SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../errors/MSErrors.ts";
 import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
-import { creditId, creditIds, type CreditRules, resolveCredit, resolveCredits } from "../../../core/MusicMetadata.ts";
+import { creditId, creditIds, type CreditRules, nameToCredit, resolveCredit, resolveCredits, spotifyMeta, withImage } from "../../../core/MusicMetadata.ts";
 import type { TransformerOptions } from "./AbstractTransformer.ts";
 import { SearchPrerequisiteError } from "./MusicbrainzTransformer.ts";
 import {
@@ -29,6 +29,9 @@ import {
     type SpotifySearchType,
     type SpotifyTransformerConfig,
     type SpotifyTransformerData } from "./spotify/SpotifyTransformerUtil.ts";
+import type { AlbumSearchResult, ArtistSearchResult, TrackSearchResult } from "../../../core/Api.ts";
+import { x } from "tinyexec";
+import { compareNormalizedStrings } from "../../../core/StringUtils.ts";
 
 /** How much to subtract from a candidate's match score when it belongs to a compilation album and deprioritizeCompilations is enabled */
 export const COMPILATION_PENALTY = 0.15;
@@ -158,7 +161,7 @@ export const missingSpotifyTypes = (play: PlayObject): SpotifyMissingType[] => {
  * used to both disambiguate results (EX an ISRC present on more than one album) and to determine whether a match
  * is confident enough to use at all.
  */
-export const rankTracksBySimilarity = (tracks: SpotifyApi.TrackObjectFull[], play: PlayObject, stageConfig: SpotifyTransformerDataStage): RankedSpotifyTrack[] => {
+export const rankTracksBySimilarity = (tracks: SpotifyApi.TrackObjectFull[], play: PlayObject, stageConfig: SpotifyTransformerDataStage & {parts?: ScoreParts[]}): RankedSpotifyTrack[] => {
     const {
         titleWeight = TITLE_WEIGHT,
         artistWeight = ARTIST_WEIGHT,
@@ -167,12 +170,13 @@ export const rankTracksBySimilarity = (tracks: SpotifyApi.TrackObjectFull[], pla
 
     const ranked = tracks.map((track) => {
         const candidate = trackToPlay(track);
-        let matchScore = scorePlaySameness(play, candidate, {
+        let [matchScore] = scorePlaySameness(play, candidate, {
             weights: {
                 track: titleWeight,
                 artist: artistWeight,
                 album: albumWeight
-            }
+            },
+            parts: stageConfig.parts
         });
 
         if (deprioritizeCompilations && isCompilation(track)) {
@@ -318,7 +322,7 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
             market = this.defaults.market,
             locale = this.defaults.locale
         } = stageConfig;
-        return await this.api.searchByIsrc(play.data.isrc, { market, locale, useCachedResult: opts.useCachedResult });
+        return await this.api.searchTracksByIsrc(play.data.isrc, { market, locale, useCachedResult: opts.useCachedResult });
     }
 
     public async searchByBasicFields(play: PlayObject, stageConfig: SpotifyTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<SpotifyApi.TrackObjectFull[]> {
@@ -330,7 +334,68 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
             market = this.defaults.market,
             locale = this.defaults.locale
         } = stageConfig;
-        return await this.api.searchByFields(play, { market, locale, useCachedResult: opts.useCachedResult });
+        return await this.api.searchTracksByFields(play, { market, locale, useCachedResult: opts.useCachedResult });
+    }
+
+    async getTrackResults(query: string): Promise<TrackSearchResult[] | false> {
+        const surrogatePlay: PlayObject = {data: {track: {name: query}}, meta:{}};
+        const res = await this.searchByBasicFields(surrogatePlay, {type: 'spotify',  ...this.defaults});
+        const filtered = this.rankTrackMatches(surrogatePlay, {tracks: res, searchType: 'basic', requestQueries: []}, {
+            type: 'spotify',
+            ...this.defaults,
+            parts: ['track'],
+            titleWeight: 1 // only comparing track at this point (only thing being queried for) so it should be out of 100
+        });
+
+        if(filtered.length === 0) {
+            return []
+        }
+        const results = filtered.slice(0, 10).map((x) => ({
+            service: 'spotify',
+            score: x.matchScore,
+            albumCount: 1,
+            albumType: x.track.album.album_type,
+            ...trackToPlay(x.track).data,
+            id: x.track.id.toString(),
+        }));
+        results.sort((a, b) => b.score - a.score);
+        return results;
+    }
+
+    async getArtistResults(query: string): Promise<ArtistSearchResult[] | false> {
+        const surrogateArtist: Credit = {name: query};
+        const scoreThreshold = this.defaults.score ?? 0.6;
+        const res = await this.api.searchArtists({name: query}, this.defaults);
+        const ranked = res.map((x) => ({...x, score: compareArtistCreditsNormalized([surrogateArtist], [{name: x.name}])[0]}))
+        .sort((a, b) => b.score - a.score)
+        .filter(x => x.score >= scoreThreshold);
+        const results: ArtistSearchResult[] = ranked.slice(0, 10).map((x) => ({
+            ...withImage(nameToCredit(x.name, spotifyMeta(x.id, 'artist')), chooseImageByResolution(x.images, {fallbackBest: true}).url),
+            score: x.score,
+            service: 'spotify',
+            id: x.id
+        }));
+        return results;
+    }
+    async getAlbumResults(query: string): Promise<AlbumSearchResult[] | false> {
+        const surrogateArtist: Credit = {name: query};
+        const scoreThreshold = this.defaults.score ?? 0.6;
+        const res = await this.api.searchAlbums({album: {name: query}}, this.defaults);
+        const ranked = res.map((x) => { 
+            const sameness = compareNormalizedStrings(query, x.name);
+            return {...x, score: Math.min(sameness.highScore, 100)}
+        })
+        .sort((a, b) => b.score - a.score)
+        .filter(x => x.score >= scoreThreshold);
+        const results: AlbumSearchResult[] = ranked.slice(0, 10).map((x) => ({
+            ...withImage(nameToCredit(x.name, spotifyMeta(x.id, 'album')), chooseImageByResolution(x.images, {fallbackBest: true}).url),
+            albumType: x.album_type,
+            artists: (x.artists ?? []).length === 0 ? undefined : x.artists.map((y) => nameToCredit(y.name, spotifyMeta(y.id, 'artist'))),
+            score: x.score,
+            service: 'spotify',
+            id: x.id
+        }));
+        return results;
     }
 
     public async handlePostFetch(play: PlayObject, transformData: SpotifyTrackSearchResult, stageConfig: SpotifyTransformerDataStage): Promise<PlayObject> {
@@ -353,6 +418,37 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
 
         const ranked = rankTracksBySimilarity(tracks, play, mergedConfig);
 
+        let filtered = this.rankTrackMatches(play, transformData, stageConfig);
+        if (searchType !== 'isrc') {
+            filtered = ranked.filter(x => x.matchScore >= score);
+            if (filtered.length === 0) {
+                throw new StagePrerequisiteError(`All ${tracks.length} fetched matches had a score < ${score}, best match was ${ranked[0]?.matchScore.toFixed(3)}`, { shortStack: true, inputs: requestQueries });
+            }
+            this.logger.debug(`${filtered.length} of ${tracks.length} fetched matches were valid. Using match with best score of ${filtered[0].matchScore.toFixed(3)}`);
+        }
+        const spotifyPlay = trackToPlay(filtered[0].track);
+        spotifyPlay.meta.lifecycleInputs = [...(spotifyPlay.meta.lifecycleInputs ?? []), ...requestQueries, { type: 'spotifyTrack', input: filtered[0].track.id }];
+        return spotifyPlay;
+    }
+
+    protected rankTrackMatches(play: PlayObject,transformData: SpotifyTrackSearchResult, stageConfig: SpotifyTransformerDataStage & {parts?: ScoreParts[]}): RankedSpotifyTrack[] {
+        const {
+            tracks = [],
+            searchType
+        } = transformData ?? {};
+
+        if (tracks.length === 0) {
+            return [];
+        }
+
+        const {
+            score = this.defaults.score ?? 0.6
+        } = stageConfig;
+
+        const mergedConfig = Object.assign({}, removeUndefinedKeys({ ...this.defaults }), removeUndefinedKeys({ ...stageConfig }));
+
+        const ranked = rankTracksBySimilarity(tracks, play, {...mergedConfig, parts: stageConfig.parts});
+
         let filtered: RankedSpotifyTrack[];
         if (searchType === 'isrc') {
             // an ISRC match already identifies the exact recording -- fuzzy scoring here is only used to pick
@@ -363,15 +459,9 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
             this.logger.debug(`Using ISRC-confirmed match, skipping score threshold. Best match score of ${ranked[0].matchScore.toFixed(3)} from ${tracks.length} candidate(s)`);
         } else {
             filtered = ranked.filter(x => x.matchScore >= score);
-            if (filtered.length === 0) {
-                throw new StagePrerequisiteError(`All ${tracks.length} fetched matches had a score < ${score}, best match was ${ranked[0]?.matchScore.toFixed(3)}`, { shortStack: true, inputs: requestQueries });
-            }
-            this.logger.debug(`${filtered.length} of ${tracks.length} fetched matches were valid. Using match with best score of ${filtered[0].matchScore.toFixed(3)}`);
         }
 
-        const spotifyPlay = trackToPlay(filtered[0].track);
-        spotifyPlay.meta.lifecycleInputs = [...(spotifyPlay.meta.lifecycleInputs ?? []), ...requestQueries, { type: 'spotifyTrack', input: filtered[0].track.id }];
-        return spotifyPlay;
+        return filtered;
     }
 
     protected override readonly hydratesCredits = true;

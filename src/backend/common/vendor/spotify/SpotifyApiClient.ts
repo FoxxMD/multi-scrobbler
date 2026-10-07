@@ -1,7 +1,7 @@
 import SpotifyWebApi from "spotify-web-api-node";
 import { RateLimiterMemory, RateLimiterQueue } from 'rate-limiter-flexible';
 import type { Cacheable } from "cacheable";
-import type { PlayObject, PlayObjectMinimal } from "../../../../core/Atomic.ts";
+import type { Credit, PlayObject, PlayObjectMinimal } from "../../../../core/Atomic.ts";
 import { nameToCredit } from "../../../../core/MusicMetadata.ts";
 import { spotifyMeta, withImage } from "../../../../core/MusicMetadata.ts";
 import { isrcNoHyphens } from "../../../../core/PlayUtils.ts";
@@ -91,16 +91,16 @@ export class SpotifyApiClient extends AbstractApiClient {
         }
     }
 
-    searchByIsrc = async (isrc: string, opts: SpotifySearchOptions = {}): Promise<SpotifyApi.TrackObjectFull[]> => {
+    searchTracksByIsrc = async (isrc: string, opts: SpotifySearchOptions = {}): Promise<SpotifyApi.TrackObjectFull[]> => {
         const { limit = 50, market, locale, useCachedResult } = opts;
         const q = `isrc:${isrcNoHyphens(isrc)}`;
         const cacheKey = `spotify-search-${hashObject({ q, limit, market, locale })}`;
-        this.logger.debug({ labels: ['ISRC Search'] }, `Search Query => ${q} | market: ${market ?? '(none)'} | locale: ${locale ?? '(none)'}`);
+        this.logger.trace({ labels: ['ISRC Search'] }, `Search Query => ${q} | market: ${market ?? '(none)'} | locale: ${locale ?? '(none)'}`);
         const res = await this.callApi((api) => api.searchTracks(q, removeUndefinedKeys({ limit, market })), { cacheKey, useCachedResult });
         return res.body.tracks?.items ?? [];
     }
 
-    searchByFields = async (play: PlayObject, opts: SpotifySearchOptions = {}): Promise<SpotifyApi.TrackObjectFull[]> => {
+    searchTracksByFields = async (play: PlayObject, opts: SpotifySearchOptions = {}): Promise<SpotifyApi.TrackObjectFull[]> => {
         const { limit = 50, market, locale, useCachedResult } = opts;
 
         const parts: string[] = [];
@@ -118,10 +118,34 @@ export class SpotifyApiClient extends AbstractApiClient {
         // happens afterwards via fuzzy ranking instead.
 
         const q = parts.join(' ');
-        const cacheKey = `spotify-search-${hashObject({ q, limit, market, locale })}`;
-        this.logger.debug({ labels: ['Basic Search'] }, `Search Query => ${q} | market: ${market ?? '(none)'} | locale: ${locale ?? '(none)'}`);
+        const cacheKey = `spotify-search-track-${hashObject({ q, limit, market, locale })}`;
+        this.logger.trace({ labels: ['Basic Search'] }, `Search Query => ${q} | market: ${market ?? '(none)'} | locale: ${locale ?? '(none)'}`);
         const res = await this.callApi((api) => api.searchTracks(q, removeUndefinedKeys({ limit, market })), { cacheKey, useCachedResult });
         return res.body.tracks?.items ?? [];
+    }
+
+    searchArtists = async (credit: Credit, opts: SpotifySearchOptions = {}): Promise<SpotifyApi.ArtistObjectFull[]> => {
+        const { limit = 50, market, locale, useCachedResult } = opts;
+
+        const q = `artist:${luceneQuoteIfNeeded(credit.name)}`;
+        const cacheKey = `spotify-search-artist-${hashObject({ q, limit, market, locale })}`;
+        this.logger.trace({ labels: ['Basic Search Artist'] }, `Search Query => ${q} | market: ${market ?? '(none)'} | locale: ${locale ?? '(none)'}`);
+        const res = await this.callApi((api) => api.searchArtists(q, removeUndefinedKeys({ limit, market })), { cacheKey, useCachedResult });
+        return res.body.artists?.items ?? [];
+    }
+
+    searchAlbums = async (data: {album: Credit, artists?: Credit[]}, opts: SpotifySearchOptions = {}): Promise<SpotifyApi.AlbumObjectSimplified[]> => {
+        const { limit = 50, market, locale, useCachedResult } = opts;
+
+        let q = `album:${luceneQuoteIfNeeded(data.album.name)}`;
+        const artists = data.artists ?? [];
+        if(artists.length > 0) {
+            q += ` artist:${luceneQuoteIfNeeded(artists[0].name)}`
+        }
+        const cacheKey = `spotify-search-album-${hashObject({ q, limit, market, locale })}`;
+        this.logger.trace({ labels: ['Basic Search Album'] }, `Search Query => ${q} | market: ${market ?? '(none)'} | locale: ${locale ?? '(none)'}`);
+        const res = await this.callApi((api) => api.searchAlbums(q, removeUndefinedKeys({ limit, market })), { cacheKey, useCachedResult });
+        return res.body.albums?.items ?? [];
     }
 
     static formatPlayObj(obj: SpotifyApi.TrackObjectFull, options: FormatPlayObjectOptions = {}): PlayObject {

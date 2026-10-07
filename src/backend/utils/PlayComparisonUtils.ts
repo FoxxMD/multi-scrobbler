@@ -388,9 +388,12 @@ export interface SamenessScoreOptions {
             exact?: number
             naive?: number
         }
-    }
+    },
+    parts?: ScoreParts[]
 }
-export const scorePlaySameness = (ref: PlayObject, candidate: PlayObject, options: SamenessScoreOptions = {}) => {
+export type ScoreParts = 'track' | 'artist' | 'album';
+export type ScoreBreakdown = {type: ScoreParts, score: number};
+export const scorePlaySameness = (ref: PlayObject, candidate: PlayObject, options: SamenessScoreOptions = {}): [number, ScoreBreakdown[]] => {
 
     const {
         weights: {
@@ -407,34 +410,52 @@ export const scorePlaySameness = (ref: PlayObject, candidate: PlayObject, option
             albumBonuses: {
                 exact: alExact = 0.05,
             } =  {}
-        } = {}
+        } = {},
+        parts = ['album','track','artist']
     } = options;
 
-    const [trackHigh, trackRes] = comparePlayTracksNormalized(ref, candidate);
-    const [artistHigh, artistRes] = comparePlayArtistsNormalized(ref, candidate);
-    const [albumHigh, albumRes] = comparePlayAlbumNormalized(ref, candidate);
+    const scores: ScoreBreakdown[] = [];
 
-    let trackBonus = 0;
-    if(trackRes.exact) {
-        trackBonus = tExact;
-    } else if(trackRes.naive.highScore > trackRes.cleaned.highScore) {
-        trackBonus = tNaive;
+    for(const partType of parts) {
+        switch(partType.toLocaleLowerCase()) {
+            case 'track':{
+                const [trackHigh, trackRes] = comparePlayTracksNormalized(ref, candidate);
+                let trackBonus = 0;
+                if(trackRes.exact) {
+                    trackBonus = tExact;
+                } else if(trackRes.naive.highScore > trackRes.cleaned.highScore) {
+                    trackBonus = tNaive;
+                }
+                const trackScore = trackHigh * (trackWeight + trackBonus);
+                scores.push({type: 'track', score: trackScore});
+            } break;
+            case 'artist': {
+                const [artistHigh, artistRes] = comparePlayArtistsNormalized(ref, candidate);
+                let artistBonus = 0;
+                if(artistRes > 0) {
+                    artistBonus = arExact;
+                }
+                const artistScore = artistHigh * (artistWeight + artistBonus);
+                scores.push({type: 'artist', score: artistScore});
+            } break;
+            case 'album': {
+                const [albumHigh, albumRes] = comparePlayAlbumNormalized(ref, candidate);
+                let albumBonus = 0;
+                if(albumRes.exact) {
+                    albumBonus = alExact;
+                }
+                const albumScore = albumHigh * (albumWeight + albumBonus);
+                scores.push({type: 'album', score: albumScore});
+            }
+        }
     }
-    const trackScore = trackHigh * (trackWeight + trackBonus);
 
-    let artistBonus = 0;
-    if(artistRes > 0) {
-        artistBonus = arExact;
+    
+    if(scores.length === 0) {
+        return [0, []];
     }
-    const artistScore = artistHigh * (artistWeight + artistBonus);
-
-    let albumBonus = 0;
-    if(albumRes.exact) {
-        albumBonus = alExact;
-    }
-    const albumScore = albumHigh * (albumWeight + albumBonus);
-
-    return trackScore + artistScore + albumScore;
+    const total = scores.reduce((acc, curr) => acc + curr.score, 0);
+    return [total, scores];
 }
 
 export const playDateWithinDurationOfAny = (play: PlayObject, plays:  PlayObject[], dur: Duration): PlayObject | undefined => {
