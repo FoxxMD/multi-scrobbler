@@ -1,13 +1,11 @@
 import type { CompareOpKey, ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
-import { mbidSchema, type Credit, type ClientType, type ComponentAuthType, type DeepReplaceValue, type MonitoringStatus, type QueueContext } from "./Atomic.ts"
+import { creditSchema, playTrackDataSchema, type ClientType, type ComponentAuthType, type DeepReplaceValue, type MonitoringStatus, type QueueContext } from "./Atomic.ts"
 import type { SourceType } from "./Atomic.ts"
 import type { ComponentType, DateLike, ErrorLike, JsonPlayObject, PlayState, QueueName, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.ts"
 import type { Dayjs } from "dayjs"
 import type { ErrorIsh } from "./ErrorUtils.ts"
 import type { PlayEvent } from "./PlayEvent.ts"
 import * as z from "zod"
-import { mbMeta, spotifyMeta, withImage } from "./MusicMetadata.ts"
-import { nameToCredit } from "./MusicMetadata.ts"
 
 export interface PlayApiCommon {
     uid: string
@@ -244,8 +242,7 @@ export const playStateBodySchema = z.object({
 export type PlayStateBody = z.infer<typeof playStateBodySchema>;
 
 export const metadataResultBaseSchema = z.object({
-        id: z.string(),
-        name: z.string()
+        id: z.string()
 });
 export type MetadataResultBase = z.infer<typeof metadataResultBaseSchema>;
 
@@ -260,12 +257,16 @@ export const metadataResultImageSchema = z.object({
 })
 export type MetadataResultImage = z.infer<typeof metadataResultImageSchema>;
 
+export const metadataResultAlbumTypeSchema = z.object({
+    /** The kind of release the album is (album, single, ep...) */
+    albumType: z.string().optional()
+})
+
+/** A Credit for an artist with the service it was found on */
 export const artistSearchResultSchema = z.object({
-    mbid: mbidSchema.optional(),
-    spotifyId: z.string().optional(),
-    ...metadataResultServiceScoreSchema.shape,
+    ...creditSchema.shape,
     ...metadataResultBaseSchema.shape,
-    ...metadataResultImageSchema.shape,
+    ...metadataResultServiceScoreSchema.shape,
 });
 export type ArtistSearchResult = z.infer<typeof artistSearchResultSchema>;
 
@@ -274,15 +275,13 @@ export const artistSearchResultResponseSchema = z.object({
 });
 export type ArtistSearchResultResponse = z.infer<typeof artistSearchResultResponseSchema>;
 
+/** A Credit for an album with the service it was found on */
 export const albumSearchResultSchema = z.object({
-    ...metadataResultServiceScoreSchema.shape,
+    ...creditSchema.shape,
     ...metadataResultBaseSchema.shape,
-    ...metadataResultImageSchema.shape,
-    mbidRelease: z.string().optional(),
-    mbidReleaseGroup: z.string().optional(),
-    spotifyId: z.string().optional(),
-    type: z.string().optional(),
-    artists: artistSearchResultSchema.array().optional(),
+    ...metadataResultServiceScoreSchema.shape,
+    ...metadataResultAlbumTypeSchema.shape,
+    artists: creditSchema.array().optional(),
 });
 export type AlbumSearchResult = z.infer<typeof albumSearchResultSchema>;
 
@@ -291,18 +290,14 @@ export const albumSearchResultResponseSchema = z.object({
 });
 export type AlbumSearchResultResponse = z.infer<typeof albumSearchResultResponseSchema>;
 
+/** TrackData with the service it was found on */
 export const trackSearchResultSchema = z.object({
-    ...metadataResultServiceScoreSchema.shape,
+    ...playTrackDataSchema.shape,
     ...metadataResultBaseSchema.shape,
-    ...metadataResultImageSchema.shape,
-    mbidRecording: z.string().optional(),
-    mbidTrack: z.string().optional(),
-    isrc: z.string().optional(),
-    spotifyId: z.string().optional(),
-    artists: artistSearchResultSchema.array().optional(),
-    album: albumSearchResultSchema.optional(),
-    albumCount: z.int().positive().optional(),
-    duration: z.int().positive().optional()
+    ...metadataResultServiceScoreSchema.shape,
+    ...metadataResultAlbumTypeSchema.shape,
+    /** Number of albums the track was found on */
+    albumCount: z.int().nonnegative().optional(),
 });
 export type TrackSearchResult = z.infer<typeof trackSearchResultSchema>;
 
@@ -310,12 +305,3 @@ export const trackSearchResultResponseSchema = z.object({
     data: trackSearchResultSchema.array()
 });
 export type TrackSearchResultResponse = z.infer<typeof trackSearchResultResponseSchema>;
-
-export const artistSearchResultToCredit = (val: Pick<ArtistSearchResult, 'name' | 'mbid' | 'spotifyId' | 'image'>): Credit =>
-    withImage(nameToCredit(val.name, mbMeta(val.mbid, 'artist'), spotifyMeta(val.spotifyId, 'artist')), val.image);
-
-export const albumSearchResultToCredit = (val: Pick<AlbumSearchResult, 'name' | 'mbidRelease' | 'mbidReleaseGroup' | 'spotifyId' | 'image'>): Credit =>
-    withImage(nameToCredit(val.name, mbMeta(val.mbidRelease, 'release'), mbMeta(val.mbidReleaseGroup, 'release-group'), spotifyMeta(val.spotifyId, 'album')), val.image);
-
-export const trackSearchResultToCredit = (val: Pick<TrackSearchResult, 'name' | 'mbidTrack' | 'mbidRecording' | 'spotifyId' | 'image'>): Credit =>
-    withImage(nameToCredit(val.name, mbMeta(val.mbidTrack, 'track'), mbMeta(val.mbidRecording, 'recording'), spotifyMeta(val.spotifyId, 'track')), val.image);

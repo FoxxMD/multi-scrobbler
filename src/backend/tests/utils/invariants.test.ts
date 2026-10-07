@@ -3,7 +3,9 @@ import { expect } from 'chai';
 import clone from 'clone';
 import type { PlayObject } from '../../../core/Atomic.ts';
 import { generateArtistCredits, generatePlay, withBrainz } from '../../../core/tests/utils/PlayTestUtils.ts';
-import { spotifyMeta, stripCredits, withImage, withMetadata } from '../../../core/MusicMetadata.ts';
+import { dedupAlbumArtists, spotifyMeta, stripCredits, withImage, withMetadata } from '../../../core/MusicMetadata.ts';
+import { albumSearchResultSchema, artistSearchResultSchema, trackSearchResultSchema } from '../../../core/Api.ts';
+import { generateAlbumSearchResult, generateArtistSearchResult, generateTrackSearchResult } from '../../../core/tests/utils/apiFixtures.ts';
 import { nameToCredit } from "../../../core/MusicMetadata.ts";
 import {
     metaInvariantTransform,
@@ -91,5 +93,34 @@ describe('#Play Invariant Transforms', function () {
             later.data.playDate = rich.data.playDate!.add(10, 'm');
             expect(playContentCacheHash(later)).to.eq(playContentCacheHash(rich));
         });
+    });
+});
+
+describe('#Album Artists Dedup', function () {
+
+    const artists = [nameToCredit('Artist A'), nameToCredit('Artist B')];
+
+    it('removes album artists that are all track artists', function () {
+        expect(dedupAlbumArtists({ artists, albumArtists: [nameToCredit(' artist a')] })).to.not.have.property('albumArtists');
+        expect(dedupAlbumArtists({ artists, albumArtists: [...artists] })).to.not.have.property('albumArtists');
+    });
+
+    it('removes empty album artists', function () {
+        expect(dedupAlbumArtists({ artists, albumArtists: [] })).to.not.have.property('albumArtists');
+    });
+
+    it('keeps album artists when any is not a track artist', function () {
+        const albumArtists = [nameToCredit('Artist A'), nameToCredit('Various Artists')];
+        expect(dedupAlbumArtists({ artists, albumArtists }).albumArtists).to.eql(albumArtists);
+        expect(dedupAlbumArtists({ albumArtists }).albumArtists).to.eql(albumArtists);
+    });
+});
+
+describe('#Metadata Search Results', function () {
+
+    it('are Credit and TrackData shapes', function () {
+        expect(() => trackSearchResultSchema.parse(generateTrackSearchResult())).to.not.throw();
+        expect(() => albumSearchResultSchema.parse(generateAlbumSearchResult())).to.not.throw();
+        expect(() => artistSearchResultSchema.parse(generateArtistSearchResult())).to.not.throw();
     });
 });

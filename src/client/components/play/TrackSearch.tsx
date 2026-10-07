@@ -2,17 +2,18 @@ import { useListCollection, Stack, Text, HStack, Span } from "@chakra-ui/react"
 import { useDebouncedState } from '@tanstack/react-pacer'
 import { useQuery } from '@tanstack/react-query';
 import { tanQueries } from "../../queries/index.js";
-import { albumSearchResultToCredit, artistSearchResultToCredit, trackSearchResultToCredit, type TrackSearchResult } from "../../../core/Api.js";
+import { type TrackSearchResult } from "../../../core/Api.js";
 import React, { useCallback, useEffect, useState } from "react";
 import { ArtistCreditTags } from "../ArtistCreditDisplay.js";
 import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, type MetadataPartials } from "./MetadataResults.js";
-import type { Credit } from "../../../core/Atomic.js";
+import { playTrackDataSchema, type Credit, type TrackData } from "../../../core/Atomic.js";
+import { playImage } from "../../../core/MusicMetadata.js";
 import { MusicServiceIndicators } from "../musicServices/MusicServiceIndicators.js";
 import { timeToHumanTimestamp } from "../../../core/TimeUtils.js";
 
 const trackPartials: MetadataPartials<TrackSearchResult> = {
-    track: { label: 'Track + duration only', pick: ({ artists, album, albumCount, ...rest }) => rest },
-    artists: { label: 'Track + duration + artists', pick: ({ album, albumCount, ...rest }) => rest },
+    track: { label: 'Track + duration only', pick: ({ artists, album, albumArtists, albumType, albumCount, ...rest }) => rest },
+    artists: { label: 'Track + duration + artists', pick: ({ album, albumArtists, albumType, albumCount, ...rest }) => rest },
     album: { label: 'Track + duration + album', pick: ({ artists, ...rest }) => rest },
 };
 
@@ -21,9 +22,10 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?:
     const { onPick } = props;
 
     const {
+        track,
         album,
+        albumType,
         albumCount,
-        name,
         duration,
         artists = []
     } = props.data;
@@ -37,24 +39,24 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?:
         ) : undefined;
         albumContent = (<Text color="fg.muted" textStyle="sm">
             <HStack>
-                {album.name} {album.type !== undefined ? `(${album.type})` : ''}<MusicServiceIndicators services={albumSearchResultToCredit(album).metadata ?? []}/> {andCount}
+                {album.name} {albumType !== undefined ? `(${albumType})` : ''}<MusicServiceIndicators services={album.metadata ?? []}/> {andCount}
             </HStack>
         </Text>)
     }
 
     let artistTags: React.JSX.Element | undefined = undefined;
     if (artists.length > 0) {
-        artistTags = <ArtistCreditTags data={artists.map((x) => artistSearchResultToCredit(x))} />
+        artistTags = <ArtistCreditTags data={artists} />
     }
 
     return (
         <HStack gap="4" flexGrow="1">
-            <LeftSideMetadataResultContent {...props.data} />
+            <LeftSideMetadataResultContent {...props.data} image={playImage(props.data)} />
             <Stack gap="1" flexGrow="1">
                 <Text fontWeight="medium" mb="1">
                     <HStack>
-                        {name}
-                        <MusicServiceIndicators services={trackSearchResultToCredit(props.data).metadata ?? []}/> 
+                        {track?.name}
+                        <MusicServiceIndicators services={track?.metadata ?? []}/> 
                         {duration !== undefined ? <Span>({timeToHumanTimestamp(duration * 1000)})</Span> : undefined}
                         <MetadataPickMenu data={props.data} partials={trackPartials} onPick={onPick} />
                     </HStack>
@@ -67,30 +69,18 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?:
 }
 
 /** Play data to change when a track is selected. Artists and album are only included if the selected track has them. */
-export interface TrackOnChange {
-    track: Credit
-    artists?: Credit[]
-    album?: Credit
-    duration?: number
-}
+export type TrackOnChange = Pick<TrackData, 'track' | 'artists' | 'album' | 'albumArtists' | 'duration' | 'isrc'>;
 
 export interface TrackSearchProps {
     initial?: Credit
     onChange: (val: TrackOnChange) => void
 }
 
-const trackSearchResultToOnChange = (val: TrackSearchResult): TrackOnChange => {
-    const change: TrackOnChange = { track: trackSearchResultToCredit(val) };
-    if (val.artists !== undefined && val.artists.length > 0) {
-        change.artists = val.artists.map((x) => artistSearchResultToCredit(x));
-    }
-    if (val.album !== undefined) {
-        change.album = albumSearchResultToCredit(val.album);
-    }
-    if(val.duration !== undefined) {
-        change.duration = val.duration;
-    }
-    return change;
+const trackSearchResultToOnChange = (val: TrackOnChange): TrackOnChange => {
+    // drops the search-only properties of a result
+    const { meta, ...change } = playTrackDataSchema.parse(val);
+    // an album always replaces album artists, even when it has none, so artists from a previous album are not kept
+    return change.album !== undefined ? { ...change, albumArtists: change.albumArtists } : change;
 }
 
 export const TrackSearch = (props: TrackSearchProps) => {
@@ -110,7 +100,7 @@ export const TrackSearch = (props: TrackSearchProps) => {
 
     const { collection, set } = useListCollection<TrackSearchResult>({
         initialItems: query.data?.data ?? [],
-        itemToString: (item) => item.name,
+        itemToString: (item) => item.track?.name ?? '',
         itemToValue: (item) => item.id,
     });
 
@@ -120,9 +110,10 @@ export const TrackSearch = (props: TrackSearchProps) => {
         }
     }, [query, set])
 
-    const doChange = useCallback((val: TrackSearchResult) => {
-        setSelectedItem(trackSearchResultToCredit(val));
-        onChange(trackSearchResultToOnChange(val));
+    const doChange = useCallback((val: TrackOnChange) => {
+        const change = trackSearchResultToOnChange(val);
+        setSelectedItem(change.track ?? {name: ''});
+        onChange(change);
     },[setSelectedItem, onChange]);
 
     const services = selectedItem.metadata ?? [];
@@ -140,6 +131,7 @@ export const TrackSearch = (props: TrackSearchProps) => {
             isError={query.isError}
             initialInput={selectedItem?.name}
             onChange={doChange}
+            onFreetext={(name) => doChange({ track: { name } })}
             onQueryChange={setDebouncedQuery}
             renderItem={(item, onPick) => <TrackSearchResultItem data={item} onPick={onPick} />}
         />

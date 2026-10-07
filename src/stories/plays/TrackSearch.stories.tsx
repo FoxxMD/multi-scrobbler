@@ -6,7 +6,6 @@ import { Container } from '@chakra-ui/react';
 import { http, HttpResponse } from 'msw';
 import { generateTrackSearchResults } from "../../core/tests/utils/apiFixtures.js";
 import { TrackSearch } from "../../client/components/play/TrackSearch.js";
-import type { TrackSearchResult } from "../../core/Api.js";
 
 type PropsAndCustomArgs = React.ComponentProps<typeof TrackSearch>;
 
@@ -32,7 +31,7 @@ const meta = preview.type<{ args: PropsAndCustomArgs }>().meta({
   ],
   args: {
     initial: undefined,
-    onSubmit: (val: TrackSearchResult) => console.log(val)
+    onChange: (val) => console.log(val)
   },
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });

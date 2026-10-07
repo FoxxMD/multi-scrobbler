@@ -2,19 +2,19 @@ import { useListCollection, Stack, Text, HStack } from "@chakra-ui/react"
 import { useDebouncedState } from '@tanstack/react-pacer'
 import { useQuery } from '@tanstack/react-query';
 import { tanQueries } from "../../queries/index.js";
-import { artistSearchResultToCredit, type ArtistSearchResult } from "../../../core/Api.js";
+import { type ArtistSearchResult } from "../../../core/Api.js";
 import { useCallback, useEffect, useState } from "react";
 import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, type MetadataPartials } from "./MetadataResults.js";
-import { type Credit } from "../../../core/Atomic.js";
+import { creditSchema, type Credit } from "../../../core/Atomic.js";
 import { MusicServiceIndicators } from "../musicServices/MusicServiceIndicators.js";
 
 const artistPartials: MetadataPartials<ArtistSearchResult> = {
-    name: { label: 'Name only', pick: ({ mbid, ...rest }) => rest },
+    name: { label: 'Name only', pick: ({ image, metadata, ...rest }) => rest },
 };
 
 export const ArtistSearchResultItem = (props: { data: ArtistSearchResult, onPick?: (val: ArtistSearchResult) => void }) => {
 
-    const { name } = props.data;
+    const { name, metadata = [] } = props.data;
 
     return (
         <HStack gap="4" flexGrow="1">
@@ -22,7 +22,7 @@ export const ArtistSearchResultItem = (props: { data: ArtistSearchResult, onPick
             <Stack gap="1" flexGrow="1">
                 <Text fontWeight="medium">
                     <HStack>
-                        {name} <MusicServiceIndicators services={artistSearchResultToCredit(props.data).metadata ?? []}/> <MetadataPickMenu data={props.data} partials={artistPartials} onPick={props.onPick} />
+                        {name} <MusicServiceIndicators services={metadata}/> <MetadataPickMenu data={props.data} partials={artistPartials} onPick={props.onPick} />
                     </HStack>
                 </Text>
             </Stack>
@@ -62,8 +62,9 @@ export const ArtistSearch = (props: ArtistSearchProps) => {
         }
     }, [query, set])
 
-    const doChange = useCallback((val: ArtistSearchResult) => {
-        const credit = artistSearchResultToCredit(val);
+    const doChange = useCallback((val: Credit) => {
+        // drops the search-only properties of a result
+        const credit = creditSchema.parse(val);
         setSelectedItem(credit);
         onChange(credit);
     },[setSelectedItem, onChange]);
@@ -83,6 +84,7 @@ export const ArtistSearch = (props: ArtistSearchProps) => {
             isLoading={query.isLoading}
             isError={query.isError}
             onChange={doChange}
+            onFreetext={(name) => doChange({ name })}
             onQueryChange={setDebouncedQuery}
             renderItem={(item, onPick) => <ArtistSearchResultItem data={item} onPick={onPick} />}
         />

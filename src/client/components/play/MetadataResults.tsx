@@ -75,22 +75,21 @@ export interface MetadataSearchComboboxProps<T extends MetadataSearchResult> {
     inputGroupContent?: React.JSX.Element
     initialInput?: string
     onChange: (val: T) => void
+    /** Called with the typed text when the user commits it without selecting a result */
+    onFreetext: (name: string) => void
     onQueryChange: (query: string) => void
     renderItem: (item: T, onPick: (val: T) => void) => React.JSX.Element
 }
 
 export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: MetadataSearchComboboxProps<T>) => {
-    const { placeholder, collection, isLoading, isError, onChange, onQueryChange, renderItem, initialInput = '' } = props;
+    const { placeholder, collection, isLoading, isError, onChange, onFreetext, onQueryChange, renderItem, initialInput = '' } = props;
 
     // a ref, not state: combobox captures onInteractOutside when the popup opens so state read there is stale
     const rawInput = useRef<string | undefined>(initialInput === '' ? undefined : initialInput);
 
-    // every other property on a search result is optional
-    const freetext = (name: string) => ({ id: 'nonce', service: 'user', name }) as T;
-
     const commitFreetext = () => {
         if (rawInput.current !== undefined && rawInput.current !== initialInput) {
-            onChange(freetext(rawInput.current));
+            onFreetext(rawInput.current);
         }
     };
 
@@ -162,7 +161,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                                                 {renderItem(item, (val) => {
                                                     onChange(val);
                                                     rawInput.current = undefined;
-                                                    combobox.setInputValue(val.name, 'item-select');
+                                                    combobox.setInputValue(collection.stringifyItem(val) ?? '', 'item-select');
                                                     combobox.setOpen(false);
                                                 })}
                                                 <Combobox.ItemIndicator />

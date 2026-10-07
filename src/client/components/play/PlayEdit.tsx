@@ -10,6 +10,7 @@ import { AlbumSearch } from "./AlbumSearch.js";
 import { DurationSepEditable } from "./DurationEditable.js";
 import { Tooltip } from "../ToggleTip.js";
 import { hashObject } from "../../../core/StringUtils.js";
+import { dedupAlbumArtists } from "../../../core/MusicMetadata.js";
 import { LuCalendar } from "react-icons/lu";
 import { parseAbsoluteToLocal, today, getLocalTimeZone, toZoned, DateFormatter } from '@internationalized/date';
 
@@ -80,17 +81,70 @@ export const PlayEdit = (props: PlayEditProps) => {
         }],
     });
 
-    // ArrayField only re-renders on length/_arrayVersion change, so remount artists when TrackSearch replaces them
+    // ArrayField only re-renders on length/_arrayVersion change, so remount artists and album artists when a search replaces them
     const [artistsVersion, setArtistsVersion] = useState(0);
 
     const form = useForm({
         ...opts,
         onSubmit: ({ schemaOutputs }) => {
-            onSubmit(schemaOutputs[0]);
+            const [play] = schemaOutputs;
+            onSubmit({ ...play, data: dedupAlbumArtists(play.data) });
             //props.setOpen(false);
         }
     });
 
+
+    // track artists and album artists are edited the same way, album artists can be empty
+    const artistsField = (name: 'data.artists' | 'data.albumArtists', legend: string, minRows: number) => (
+        <Fieldset.Root size="lg">
+            <Fieldset.Legend>{legend}</Fieldset.Legend>
+            <Fieldset.Content>
+                <form.ArrayField key={artistsVersion} name={name}>
+                    {(array) => (
+                        <Stack>
+
+                            {(array.value ?? []).map((artist, i) =>
+                                <form.Field
+                                    key={i}
+                                    name={`${name}[${i}]`}
+                                    // schema issues are reported on descendants (.name), route them to this field
+                                    errorBoundary
+                                    children={(field) => (
+                                        <Field.Root invalid={field.errors.length > 0}>
+                                            <Stack width="100%" flexGrow="1">
+                                                <HStack width="100%" flexGrow="1">
+                                                    <ArtistSearch initial={field.value}
+                                                        onChange={(val) => {
+                                                            field.handleChange(val);
+                                                        }} />
+                                                    <HStack gapX="4">
+                                                        <ResetButton field={field} onClickAdditional={() => setArtistsVersion(v => v + 1)} />
+                                                        {i >= minRows ? <TrashIconButton colorPalette="red" onClick={() => array.removeValue(i)} /> : undefined}
+                                                    </HStack>
+                                                </HStack>
+                                                {field.errors.map((error) => (
+                                                    <Field.ErrorText key={error.message}>
+                                                        {error.message}
+                                                    </Field.ErrorText>
+                                                ))}
+                                            </Stack>
+                                        </Field.Root>
+                                    )}
+                                />)}
+                            <Field.Root invalid={array.errors.length > 0}>
+                                {array.errors.map((error) => (
+                                    <Field.ErrorText key={error.message}>
+                                        {error.message}
+                                    </Field.ErrorText>
+                                ))}
+                            </Field.Root>
+                            <Button variant="subtle" maxW="400px" onClick={() => array.pushValue({ name: '' })}>Add {minRows === 0 ? 'Album Artist' : 'Artist'}</Button>
+                        </Stack>
+                    )}
+                </form.ArrayField>
+            </Fieldset.Content>
+        </Fieldset.Root>
+    );
 
     return (
         <Box position="relative">
@@ -144,54 +198,7 @@ export const PlayEdit = (props: PlayEditProps) => {
                                 </Field.Root>
                             )}
                         />
-                        <Fieldset.Root size="lg">
-                            <Fieldset.Legend>Artists</Fieldset.Legend>
-                            <Fieldset.Content>
-                                <form.ArrayField key={artistsVersion} name="data.artists">
-                                    {(array) => (
-                                        <Stack>
-
-                                            {array.value.map((artist, i) =>
-                                                <form.Field
-                                                    key={i}
-                                                    name={`data.artists[${i}]`}
-                                                    // schema issues are reported on descendants (.name), route them to this field
-                                                    errorBoundary
-                                                    children={(field) => (
-                                                        <Field.Root invalid={field.errors.length > 0}>
-                                                            <Stack width="100%" flexGrow="1">
-                                                                <HStack width="100%" flexGrow="1">
-                                                                    <ArtistSearch initial={field.value}
-                                                                        onChange={(val) => {
-                                                                            field.handleChange(val);
-                                                                        }} />
-                                                                    <HStack gapX="4">
-                                                                        <ResetButton field={field} onClickAdditional={() => setArtistsVersion(v => v + 1)} />
-                                                                        {i !== 0 ? <TrashIconButton colorPalette="red" onClick={() => array.removeValue(i)} /> : undefined}
-                                                                    </HStack>
-                                                                </HStack>
-                                                                {field.errors.map((error) => (
-                                                                    <Field.ErrorText key={error.message}>
-                                                                        {error.message}
-                                                                    </Field.ErrorText>
-                                                                ))}
-                                                            </Stack>
-                                                        </Field.Root>
-                                                    )}
-                                                />)}
-                                            <Field.Root invalid={array.errors.length > 0}>
-                                                {array.errors.map((error) => (
-                                                    <Field.ErrorText key={error.message}>
-                                                        {error.message}
-                                                    </Field.ErrorText>
-                                                ))}
-                                            </Field.Root>
-                                            <Button variant="subtle" maxW="400px" onClick={() => array.pushValue({ name: '' })}>Add Artist</Button>
-                                        </Stack>
-                                    )}
-                                </form.ArrayField>
-                            </Fieldset.Content>
-                        </Fieldset.Root>
+                        {artistsField('data.artists', 'Artists', 1)}
                         <form.Field
                             name="data.album"
                             errorBoundary
@@ -218,6 +225,7 @@ export const PlayEdit = (props: PlayEditProps) => {
                                 </Field.Root>
                             )}
                         />
+                        {artistsField('data.albumArtists', 'Album Artists', 0)}
                         <HStack wrap="wrap" gap="5">
                             <form.Field
                                 name="data.duration"

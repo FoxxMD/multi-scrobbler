@@ -2,11 +2,11 @@ import { Box, useListCollection, Stack, Text, HStack } from "@chakra-ui/react"
 import { useDebouncedState } from '@tanstack/react-pacer'
 import { useQuery } from '@tanstack/react-query';
 import { tanQueries } from "../../queries/index.ts";
-import { albumSearchResultToCredit, artistSearchResultToCredit, type AlbumSearchResult } from "../../../core/Api.ts";
+import { type AlbumSearchResult } from "../../../core/Api.ts";
 import React, { useCallback, useEffect, useState } from "react";
 import { ArtistCreditTags } from "../ArtistCreditDisplay.tsx";
 import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, type MetadataPartials } from "./MetadataResults.tsx";
-import type { Credit } from "../../../core/Atomic.ts";
+import { creditSchema, type Credit } from "../../../core/Atomic.ts";
 import { MusicServiceIndicators } from "../musicServices/MusicServiceIndicators.tsx";
 
 const albumPartials: MetadataPartials<AlbumSearchResult> = {
@@ -17,13 +17,14 @@ export const AlbumSearchResultItem = (props: { data: AlbumSearchResult, onPick?:
 
     const {
         name,
-        type,
+        albumType,
+        metadata = [],
         artists = [],
     } = props.data;
 
     let artistTags: React.JSX.Element | undefined = undefined;
     if(artists.length > 0) {
-        artistTags = <ArtistCreditTags data={artists.map(artistSearchResultToCredit)} />
+        artistTags = <ArtistCreditTags data={artists} />
     }
 
     return (
@@ -34,7 +35,7 @@ export const AlbumSearchResultItem = (props: { data: AlbumSearchResult, onPick?:
             <Stack gap="1" flexGrow="1">
                 <Text fontWeight="medium">
                     <HStack gap="1">
-                        {name}{type !== undefined ? <Box>({type})</Box> : undefined}<MusicServiceIndicators services={albumSearchResultToCredit(props.data).metadata ?? []}/>
+                        {name}{albumType !== undefined ? <Box>({albumType})</Box> : undefined}<MusicServiceIndicators services={metadata}/>
                         <MetadataPickMenu data={props.data} partials={albumPartials} onPick={props.onPick} />
                     </HStack>
                 </Text>
@@ -44,18 +45,10 @@ export const AlbumSearchResultItem = (props: { data: AlbumSearchResult, onPick?:
     )
 }
 
-/** Play data to change when an album is selected. Artists are only included if the selected album has them. */
+/** Play data to change when an album is selected. Album artists are always replaced, even when the selected album has none, so artists from a previous album are not kept. */
 export interface AlbumOnChange {
     album: Credit
-    artists?: Credit[]
-}
-
-const albumSearchResultToOnChange = (val: AlbumSearchResult): AlbumOnChange => {
-    const change: AlbumOnChange = { album: albumSearchResultToCredit(val) };
-    if (val.artists !== undefined && val.artists.length > 0) {
-        change.artists = val.artists.map(artistSearchResultToCredit);
-    }
-    return change;
+    albumArtists: Credit[] | undefined
 }
 
 export interface AlbumSearchProps {
@@ -90,9 +83,11 @@ export const AlbumSearch = (props: AlbumSearchProps) => {
         }
     }, [query, set])
 
-    const doChange = useCallback((val: AlbumSearchResult) => {
-        setSelectedItem(albumSearchResultToCredit(val));
-        onChange(albumSearchResultToOnChange(val));
+    const doChange = useCallback((val: Credit & Pick<AlbumSearchResult, 'artists'>) => {
+        // drops the search-only properties of a result
+        const album = creditSchema.parse(val);
+        setSelectedItem(album);
+        onChange({ album, albumArtists: val.artists });
     },[setSelectedItem, onChange]);
 
     const services = selectedItem.metadata ?? [];
@@ -111,6 +106,7 @@ export const AlbumSearch = (props: AlbumSearchProps) => {
             initialInput={selectedItem?.name}
             isError={query.isError}
             onChange={doChange}
+            onFreetext={(name) => doChange({ name })}
             onQueryChange={setDebouncedQuery}
             renderItem={(item, onPick) => <AlbumSearchResultItem data={item} onPick={onPick} />}
         />

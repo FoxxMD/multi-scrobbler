@@ -230,6 +230,17 @@ export const playImage = (data: Pick<TrackData, 'track' | 'album' | 'artists'>, 
     return order.map(x => images[x]).find(x => x !== undefined);
 }
 
+/** Remove albumArtists when every album artist is also a track artist (by name) so identical credits are not kept in both lists */
+export const dedupAlbumArtists = <T extends Pick<TrackData, 'artists' | 'albumArtists'>>(data: T): T => {
+    const { albumArtists, ...rest } = data;
+    if (albumArtists === undefined) {
+        return data;
+    }
+    const clean = (x: Credit) => x.name.trim().toLocaleLowerCase();
+    const names = (data.artists ?? []).map(clean);
+    return albumArtists.every(x => names.includes(clean(x))) ? rest as T : data;
+}
+
 /** Credit with only the name -- no image or metadata */
 export const stripCredit = (credit: Credit): Credit => ({ name: credit.name });
 

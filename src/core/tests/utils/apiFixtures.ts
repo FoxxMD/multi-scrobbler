@@ -1,11 +1,11 @@
 import { faker } from "@faker-js/faker";
 import type {AlbumSearchResult, ArtistSearchResult, ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentHistoricalApi, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi, TrackSearchResult} from "../../Api.ts";
-import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ComponentType, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes, type MBID } from "../../Atomic.ts";
-import { generateArtist, generateMbid, generatePlay, normalizePlays } from "./PlayTestUtils.ts";
+import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ComponentType, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes, type MBID, type Credit } from "../../Atomic.ts";
+import { generateArtist, generateArtistCredits, generateMbid, generatePlay, normalizePlays } from "./PlayTestUtils.ts";
 import { generatePlayInput, generatePlayWithLifecycle, playWithLifecycleScrobble, randomPlayState } from "./fixtures.ts";
 import { asJsonPlayObject } from "../../PlayMarshalUtils.ts";
 import { generatePlayUid } from "../../StringUtils.ts";
-import { withAlbumArt } from "../../MusicMetadata.ts";
+import { mbMeta, nameToCredit, spotifyMeta, withAlbumArt, withImage } from "../../MusicMetadata.ts";
 import dayjs, { type Dayjs } from "dayjs";
 import { isSourceType } from "../../Atomic.ts";
 import { sourceTypes } from "../../Atomic.ts";
@@ -514,9 +514,7 @@ export const generateArtistSearchResult = (partial: Partial<ArtistSearchResult> 
     id: faker.string.alphanumeric(7),
     score: faker.number.int({min: 10, max: 100}),
     service: faker.helpers.arrayElement(['spotify','musicbrainz','rocksky']),
-    image: placeholderImage([300]),
-    name: faker.music.artist(),
-    mbid: opts.mbidVal === false ? undefined : (typeof opts.mbidVal === 'string' ? opts.mbidVal : generateMbid()),
+    ...withImage(nameToCredit(faker.music.artist(), mbMeta(opts.mbidVal === false ? undefined : (typeof opts.mbidVal === 'string' ? opts.mbidVal : generateMbid()), 'artist')), placeholderImage([300])),
     ...partial
 })
 
@@ -536,17 +534,20 @@ export const generateArtistSearchResults = (opts: {query?: string, count?: numbe
     return results;
 }
 
+const generateAlbumCredit = (): Credit => withImage(nameToCredit(
+    faker.music.album(),
+    mbMeta(faker.helpers.arrayElement([generateMbid(), undefined]), 'release'),
+    mbMeta(faker.helpers.arrayElement([generateMbid(), undefined]), 'release-group'),
+    spotifyMeta(faker.helpers.arrayElement([faker.string.alphanumeric(4), undefined]), 'album')
+), placeholderImage([300]));
+
 export const generateAlbumSearchResult = (partial: Partial<AlbumSearchResult> = {}): AlbumSearchResult => ({
     id: faker.string.alphanumeric(7),
     score: faker.number.int({min: 10, max: 100}),
     service: faker.helpers.arrayElement(['spotify','musicbrainz','rocksky']),
-    image: placeholderImage([300]),
-    name: faker.music.album(),
-    mbidRelease: faker.helpers.arrayElement([generateMbid(), undefined]),
-    mbidReleaseGroup: faker.helpers.arrayElement([generateMbid(), undefined]),
-    spotifyId: faker.helpers.arrayElement([faker.string.alphanumeric(4), undefined]),
-    type: faker.helpers.arrayElement(['single','album','live','compilation',undefined]),
-    artists: generateArtistSearchResults({count: faker.number.int({min: 1, max: 3})}),
+    ...generateAlbumCredit(),
+    albumType: faker.helpers.arrayElement(['single','album','live','compilation',undefined]),
+    artists: generateArtistCredits(undefined, 3, {mbidVal: true}),
     ...partial
 });
 
@@ -570,15 +571,18 @@ export const generateTrackSearchResult = (partial: Partial<TrackSearchResult> = 
     id: faker.string.alphanumeric(7),
     score: faker.number.int({min: 10, max: 100}),
     service: faker.helpers.arrayElement(['spotify','musicbrainz','rocksky']),
-    image: placeholderImage([300]),
-    name: faker.music.album(),
-    mbidRecording: faker.helpers.arrayElement([generateMbid(), undefined]),
-    mbidTrack: faker.helpers.arrayElement([generateMbid(), undefined]),
-    spotifyId: faker.helpers.arrayElement([faker.string.alphanumeric(4), undefined]),
-    album: generateAlbumSearchResult(),
+    track: nameToCredit(
+        faker.music.songName(),
+        mbMeta(faker.helpers.arrayElement([generateMbid(), undefined]), 'recording'),
+        mbMeta(faker.helpers.arrayElement([generateMbid(), undefined]), 'track'),
+        spotifyMeta(faker.helpers.arrayElement([faker.string.alphanumeric(4), undefined]), 'track')
+    ),
+    album: generateAlbumCredit(),
+    albumType: faker.helpers.arrayElement(['single','album','live','compilation',undefined]),
+    albumArtists: faker.helpers.arrayElement([generateArtistCredits(1, 1, {mbidVal: true}), undefined]),
     duration: faker.number.int({min: 10, max: 305}),
     albumCount: faker.number.int({min: 1, max: 15}),
-    artists: generateArtistSearchResults({count: faker.number.int({min: 1, max: 3})}),
+    artists: generateArtistCredits(undefined, 3, {mbidVal: true}),
     ...partial
 });
 
@@ -589,7 +593,7 @@ export const generateTrackSearchResults = (opts: {query?: string, count?: number
     }
     const c = opts.count ?? faker.number.int({min: 2, max: 5});
     if(opts.query !== undefined) {
-        results.push(generateTrackSearchResult({name: opts.query}))
+        results.push(generateTrackSearchResult({track: {name: opts.query}}))
     }
     while(results.length !== c) {
         results.push(generateTrackSearchResult())
