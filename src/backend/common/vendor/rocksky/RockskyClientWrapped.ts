@@ -49,6 +49,14 @@ export class RockskyClientWrapped extends RockskyClient {
 
         return super.matchSong(...args);
     }
+
+    async search(...args: Parameters<RockskyClient['search']>): ReturnType<RockskyClient['search']> {
+
+        const remainingTokens = await this.rateLimiterQueue.removeTokens(1);
+        this.logger.trace(`Rate Tokens => Used 1 | Remaining ${remainingTokens}`);
+
+        return super.search(...args);
+    }
 }
 
 export type RockskySingletonMap = Map<string, RockskyClientWrapped>;

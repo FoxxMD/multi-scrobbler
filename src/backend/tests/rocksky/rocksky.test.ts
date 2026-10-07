@@ -12,6 +12,7 @@ import { nameToCredit } from "../../../core/MusicMetadata.ts";
 import { namesToCredits } from "../../../core/MusicMetadata.ts";
 import type { RockskyApiClientConfig } from '../../common/vendor/rocksky/interfaces.ts';
 import type { MarkRequired } from 'ts-essentials';
+import type { AlbumSearchResult, ArtistSearchResult, TrackSearchResult } from '../../../core/Api.ts';
 import RockskyTransformer, { DEFAULT_SEARCHTYPE_ORDER } from '../../common/transforms/rocksky/RockskyTransformer.ts';
 
 chai.use(asPromised);
@@ -114,6 +115,32 @@ describe('Rocksky API', function () {
             });
             expect(res).to.exist;
             expect(res.matches).to.not.exist;
+        });
+
+    });
+
+    describe('Metadata Results', function () {
+
+        it('returns track, artist, and album results', async function () {
+
+            this.timeout(350000);
+
+            await rsTransformer.initialize();
+
+            const tracks = await rsTransformer.getTrackResults('One More Time') as TrackSearchResult[];
+            expect(tracks).to.be.an('array').that.is.not.empty;
+            expect(tracks[0].track?.name).to.eq('One More Time');
+            expect(tracks[0].artists).to.not.be.empty;
+
+            const artists = await rsTransformer.getArtistResults('Daft Punk') as ArtistSearchResult[];
+            expect(artists).to.be.an('array').that.is.not.empty;
+            expect(artists[0].name).to.eq('Daft Punk');
+
+            const albums = await rsTransformer.getAlbumResults('Discovery') as AlbumSearchResult[];
+            expect(albums).to.be.an('array').that.is.not.empty;
+            expect(albums[0].name).to.eq('Discovery');
+
+            expect(await rsTransformer.getTrackResults('zzqqxxjjkkww')).to.be.empty;
         });
 
     });

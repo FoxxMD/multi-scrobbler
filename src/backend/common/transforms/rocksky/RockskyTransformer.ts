@@ -3,7 +3,7 @@ import { isWhenCondition } from "../../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../../infrastructure/config/health/webhooks.ts";
 import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../../core/Transform.ts";
 import AtomicPartsTransformer from "../AtomicPartsTransformer.ts";
-import { creditMbid, type CreditRules, creditsToNames, resolveCredit, resolveCredits } from "../../../../core/MusicMetadata.ts";
+import { creditMbid, type CreditRules, creditsToNames, nameToCredit, resolveCredit, resolveCredits, serviceMeta, withImage } from "../../../../core/MusicMetadata.ts";
 import type {TransformerOptions} from "../AbstractTransformer.ts";
 import { DELIMITERS } from '../../../../core/Atomic.ts';
 import { MaybeLogger } from '../../MaybeLogger.ts';
@@ -12,14 +12,16 @@ import { type UsingTypes } from "../../vendor/musicbrainz/MusicbrainzApiClientPo
 import { difference } from "../../../utils.ts";
 import { SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../../errors/MSErrors.ts";
 import type { Cacheable } from "cacheable";
-import { splitByFirstRegexFound } from "../../../../core/StringUtils.ts";
+import { compareNormalizedStrings, splitByFirstRegexFound } from "../../../../core/StringUtils.ts";
 import { creditToName } from "../../../../core/MusicMetadata.ts";
 import { nativeParse } from "../NativeTransformer.ts";
 import { hasRequiredScrobbleFields, hasScrobbleConfidenceFields, type SongViewDetailedMS, songViewToPlay } from "../../vendor/RockSkyApiClient.ts";
-import { RockskyError, type SongMatchView } from "@rocksky/sdk";
+import { type AlbumViewBasic, type ArtistViewBasic, RockskyError, type SongMatchView } from "@rocksky/sdk";
 import { RockskyClientPool } from "../../vendor/rocksky/RockskyClientWrapped.ts";
 import type { RockskyTransformerConfig, RockskyTransformerData } from "../../vendor/rocksky/interfaces.ts";
 import { DEFAULT_ROCKSKY_SEARCH_ORDER, type SearchType, searchType } from "./RockskyTransformerUtil.ts";
+import type { MetadataProvider } from "../../metadataProviders/MetadataProviderUtils.ts";
+import type { AlbumSearchResult, ArtistSearchResult, TrackSearchResult } from "../../../../core/Api.ts";
 
 export const DEFAULT_SEARCHTYPE_ORDER: SearchType[] = ['isrc','basic'];
 
@@ -91,7 +93,7 @@ export const parseStageConfig = (data: RockskyTransformerData | undefined = {}, 
     return config;
 }
 
-export default class RockskyTransformer extends AtomicPartsTransformer<ExternalMetadataTerm, PlayObject, RockskyTransformerDataStage> {
+export default class RockskyTransformer extends AtomicPartsTransformer<ExternalMetadataTerm, PlayObject, RockskyTransformerDataStage> implements MetadataProvider {
 
     declare config: RockskyTransformerConfig;
 
@@ -224,7 +226,7 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
                     queries.push({type: `rsQuery-${searchType}-prereqFailure`, input: `Search type ${searchType} did not meet prerequesites: ${e.message}`});
                     this.logger.debug(`Search type ${searchType} did not meet prerequesites: ${e.message}`);
                 } else {
-                    if(e instanceof RockskyError && e.status === 500) {
+                    if(isNoMatchError(e)) {
                         // thrown when there is no match? don't like that
                         queries.push({type: `rsQuery-${searchType}-empty`, input: 'requestQuery' in e ? (e.requestQuery as string) : ''});
                         continue;
@@ -406,7 +408,8 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         throw new SearchPrerequisiteError(`Unknown searchArtistMethod '${searchArtistMethod}'`);
     }
 
-    public async handlePostFetch(play: PlayObject, transformData: SongViewDetailedMS, stageConfig: RockskyTransformerDataStage): Promise<PlayObject> {
+    /** Returns candidate matches with a valid score. An empty list is only returned if the song view has no candidates and allowNoMatch is true */
+    public async handlePostFetchMatches(transformData: SongViewDetailedMS, stageConfig: RockskyTransformerDataStage): Promise<SongMatchView[]> {
         const {
             score = this.defaults.score ?? 90,
             allowNoMatch = true,
@@ -415,36 +418,98 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         if(transformData === undefined) {
             throw new StagePrerequisiteError('All search prerequisites failed, Rocksky API could not be searched with the given searchOrder options', {shortStack: true});
         }
-        let mergedSongView: SongViewDetailedMS = transformData;
         const matches = transformData.matches ?? [];
         if(matches.length === 0) {
             if(!allowNoMatch) {
                 throw new StagePrerequisiteError('No matches returned from Rocksky API', {shortStack: true, inputs: transformData.requestQueries});
             }
-        } else {
-            const filteredList: SongMatchView[] = matches.filter(x => x.score !== undefined && x.score >= score);
-            if(filteredList.length === 0) {
-                throw new StagePrerequisiteError(`All ${matches.length} candidate matches associated with this match had a score < ${score}, best match was ${matches[0].score}`, {shortStack: true});
-            }
-            //const mergedConfig = Object.assign({}, removeUndefinedKeys({...this.defaults}), removeUndefinedKeys({...stageConfig}));
-            //filteredList = rankSongMatchesByPriority(filteredList, mergedConfig, play);
-
-            this.logger.debug(`${filteredList.length} of ${matches.length} were valid, filtered matches. Using match with best score of ${filteredList[0].score}`);
-            mergedSongView = {
-                ...transformData,
-                title: filteredList[0].title ?? transformData.title,
-                artist: filteredList[0].artist ?? transformData.artist,
-                album: filteredList[0].album ?? transformData.album,
-                isrc: filteredList[0].isrc ?? transformData.isrc
-            };
+            return [];
         }
-        if((transformData.matches ?? []).length === 0 && !allowNoMatch) {
-            throw new StagePrerequisiteError('No matches returned from Rocksky API', {shortStack: true, inputs: transformData.requestQueries});
+        const filteredList: SongMatchView[] = matches.filter(x => x.score !== undefined && x.score >= score);
+        if(filteredList.length === 0) {
+            throw new StagePrerequisiteError(`All ${matches.length} candidate matches associated with this match had a score < ${score}, best match was ${matches[0].score}`, {shortStack: true});
+        }
+        //const mergedConfig = Object.assign({}, removeUndefinedKeys({...this.defaults}), removeUndefinedKeys({...stageConfig}));
+        //filteredList = rankSongMatchesByPriority(filteredList, mergedConfig, play);
+
+        return filteredList;
+    }
+
+    public async handlePostFetch(play: PlayObject, transformData: SongViewDetailedMS, stageConfig: RockskyTransformerDataStage): Promise<PlayObject> {
+        const matches = await this.handlePostFetchMatches(transformData, stageConfig);
+        let mergedSongView: SongViewDetailedMS = transformData;
+        if(matches.length > 0) {
+            this.logger.debug(`${matches.length} of ${(transformData.matches ?? []).length} were valid, filtered matches. Using match with best score of ${matches[0].score}`);
+            mergedSongView = mergeSongMatch(transformData, matches[0]);
         }
 
         const songViewPlay = songViewToPlay(mergedSongView);
         songViewPlay.meta.lifecycleInputs = [...(songViewPlay.meta.lifecycleInputs ?? []), ...(transformData.requestQueries ?? []), {type: 'rockskySongView', input: transformData}];
         return songViewPlay;
+    }
+
+    async getTrackResults(query: string): Promise<TrackSearchResult[] | false> {
+        let res: SongViewDetailedMS;
+        try {
+            // matchSong requires an artist and the sdk drops empty strings, a blank one matches on title only
+            res = {requestQuery: query, ...(await this.api.rsProxy.matchSong(query, ' '))};
+        } catch (e) {
+            // thrown when there is no match
+            if(isNoMatchError(e)) {
+                return [];
+            }
+            throw e;
+        }
+        // match scores are computed against title *and* artist, with no artist given even exact title matches
+        // score well below the transform threshold, so rank by score instead of filtering by it
+        const matches = await this.handlePostFetchMatches(res, {type: 'rocksky', ...this.defaults, score: 0});
+
+        return matches.slice(0, 5).map((x, index): TrackSearchResult => {
+            // the song view only has full metadata (mbids, album artist) for the best match, same as a transform would use
+            const view: SongViewDetailedMS = x === res.matches?.[0]
+                ? mergeSongMatch(res, x)
+                : {requestQuery: query, title: x.title, artist: x.artist, album: x.album, albumArt: x.albumArt, isrc: x.isrc, duration: x.durationMs};
+            return {
+                ...songViewToPlay(view).data,
+                service: 'rocksky',
+                id: String(x.id ?? index),
+                score: Math.round(x.score ?? 0)
+            };
+        });
+    }
+
+    async getArtistResults(query: string): Promise<ArtistSearchResult[] | false> {
+        const hits = await this.searchIndex<ArtistViewBasic>(query, 'artists', x => x.name);
+        return hits.map((x): ArtistSearchResult => ({
+            ...withImage(nameToCredit(x.name as string, serviceMeta('rocksky', x.id, 'artist')), x.picture),
+            score: x.score,
+            service: 'rocksky',
+            id: x.id as string
+        }));
+    }
+
+    async getAlbumResults(query: string): Promise<AlbumSearchResult[] | false> {
+        const hits = await this.searchIndex<AlbumViewBasic>(query, 'albums', x => x.title);
+        return hits.map((x): AlbumSearchResult => ({
+            ...withImage(nameToCredit(x.title as string, serviceMeta('rocksky', x.id, 'album')), x.albumArt),
+            date: x.releaseDate ?? x.year?.toString(),
+            artists: x.artist === undefined ? undefined : [nameToCredit(x.artist)],
+            score: x.score,
+            service: 'rocksky',
+            id: x.id as string
+        }));
+    }
+
+    /** Rocksky search is one query across all entity types and hits have no score, so keep only hits from the given index and rank by name similarity to the query */
+    protected async searchIndex<T extends {id?: string}>(query: string, index: 'artists' | 'albums', getName: (hit: T) => string | undefined): Promise<(T & {score: number})[]> {
+        const res = await this.api.rsProxy.search(query);
+        // sdk types hits as a union of views but it is a mixed list tagged with the index each hit came from
+        const hits = (res.hits ?? []) as unknown as (T & {_federation?: {indexUid?: string}})[];
+        return hits
+            .filter(x => x._federation?.indexUid === index && x.id !== undefined && getName(x) !== undefined)
+            .map(x => ({...x, score: Math.round(Math.min(compareNormalizedStrings(query, getName(x) as string).highScore, 100))}))
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 5);
     }
 
     protected override readonly hydratesCredits = true;
@@ -577,6 +642,17 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
 export class SearchPrerequisiteError extends SimpleError {
     name = 'Search Prerequistie Failure';
 }
+
+// api has signalled no match with a 500 and, more recently, a 400 NotFound
+const isNoMatchError = (e: unknown): e is RockskyError => e instanceof RockskyError && (e.status === 500 || e.kind === 'NotFound');
+
+const mergeSongMatch = (view: SongViewDetailedMS, match: SongMatchView): SongViewDetailedMS => ({
+    ...view,
+    title: match.title ?? view.title,
+    artist: match.artist ?? view.artist,
+    album: match.album ?? view.album,
+    isrc: match.isrc ?? view.isrc
+});
 
 const requireTrack = (play: PlayObject): string => {
     if(play.data.track === undefined) {
