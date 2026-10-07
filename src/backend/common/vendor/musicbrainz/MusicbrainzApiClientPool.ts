@@ -23,6 +23,7 @@ import {ProxyWithCircuitBreaker, type CircuitBreakerProxy} from '@foxxmd/load-ba
 import {ConsecutiveBreaker} from 'cockatiel';
 import { MusicbrainzApiWrapped } from './MusicbrainzApi.ts';
 import { formatNumber } from '../../../../core/DataUtils.ts';
+import { buildFreetextQuery, buildLuceneQuery, cleanLuceneFields } from './LuceneUtils.ts';
 import type { ArtistSearchQueryOpts, ReleaseSearchQueryOpts, TrackSearchQueryOpts } from './MusicbrainzTypes.ts';
 export interface SubmitResponse {
     payload?: {
@@ -211,21 +212,7 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
                 trackMbid = creditMbid(play.data.track, 'track'),
                 releaseMbid = creditMbid(play.data.album, 'release'),
                 artistMbids = creditIds(play.data.artists, 'musicbrainz', 'artist');
-            if(recordingMbid !== undefined && using.includes('mbidrecording')) {
-                query.rid = recordingMbid;
-            }
-            if(trackMbid !== undefined && using.includes('mbidtrack')) {
-                query.tid = trackMbid;
-            }
-            if(releaseMbid !== undefined && using.includes('mbidrelease')) {
-                query.reid = releaseMbid;
-            }
-            if(artistMbids.length > 0 && using.includes('mbidartist')) {
-                query.arid = artistMbids;
-            }
-            if(play.data.isrc !== undefined && using.includes('isrc')) {
-                query.isrc = isrcNoHyphens(play.data.isrc);
-            }
+            // output order of fields in the query string follows the order they are added here
             if(using.includes('title')) {
                 query.recording = creditToName(play.data.track);
             }
@@ -235,79 +222,26 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
             if(play.data.album !== undefined && using.includes('album')) {
                 query.release = creditToName(play.data.album);
             }
+            if(play.data.isrc !== undefined && using.includes('isrc')) {
+                query.isrc = isrcNoHyphens(play.data.isrc);
+            }
+            if(recordingMbid !== undefined && using.includes('mbidrecording')) {
+                query.rid = recordingMbid;
+            }
+            if(trackMbid !== undefined && using.includes('mbidtrack')) {
+                query.tid = trackMbid;
+            }
+            if(artistMbids.length > 0 && using.includes('mbidartist')) {
+                query.arid = artistMbids;
+            }
+            if(releaseMbid !== undefined && using.includes('mbidrelease')) {
+                query.reid = releaseMbid;
+            }
+
             // only names are cleaned, MBIDs and ISRC are used verbatim
-            const nameEntries = () => Object.entries({recording: query.recording, artist: query.artist, release: query.release}).filter(([,v]) => v !== undefined);
-            if(escapeCharacters) {
-                for(const [k,v] of nameEntries()) {
-                    (query as any)[k] = Array.isArray(v) ? v.map(escapeLuceneSpecialChars) : escapeLuceneSpecialChars(v);
-                }
-            }
-            if(removeCharacters) {
-                 for(const [k,v] of nameEntries()) {
-                    (query as any)[k] = Array.isArray(v) ? v.map(removeNonWordCharacters) : removeNonWordCharacters(v);
-                }
-            }
-
-            if(freetext) {
-
-                q += `${query.recording ?? ''} `;
-                if(query.artist !== undefined) {
-                    q += `${(Array.isArray(query.artist) ? query.artist : [query.artist]).join(' ')} `;
-                }
-                q += `${query.release ?? ''}`
-                
-            } else {
-                if(query.recording !== undefined) {
-                    q += `recording:"${query.recording}"`;
-                }
-                if(query.artist !== undefined) {
-                    if(q !== '') {
-                        q += ' AND ';
-                    }
-                    if(Array.isArray(query.artist) && query.artist.length > 1) {
-                        q += `(artist:(${query.artist.map(x => `"${x}"`).join(' AND ')}) OR artist:(${query.artist.map(x => `"${x}"`).join(' OR ')}))`
-                    } else if(query.artist !== undefined) {
-                        q += `artist:"${Array.isArray(query.artist) ? query.artist[0] : query.artist}"`;
-                    }
-                }
-                if(query.release !== undefined) {
-                    if(q !== '') {
-                        q += ' AND ';
-                    }
-                    q += `release:"${query.release}"`
-                }
-                if(query.isrc !== undefined) {
-                    if(q !== '') {
-                        q += ' AND ';
-                    }
-                    q+= `isrc:${query.isrc}`;
-                }
-                if(query.rid !== undefined) {
-                    if(q !== '') {
-                        q += ' AND ';
-                    }
-                    q += `rid:"${query.rid}"`
-                }
-                if(query.tid !== undefined) {
-                    if(q !== '') {
-                        q += ' AND ';
-                    }
-                    q += `tid:"${query.tid}"`
-                }
-                if(query.arid !== undefined) {
-                    if(q !== '') {
-                        q += ' AND ';
-                    }
-                    q += `(arid:(${query.arid.map(x => `"${x}"`).join(' AND ')}) OR arid:(${query.arid.map(x => `"${x}"`).join(' OR ')}))`
-                }
-                if(query.reid !== undefined) {
-                    if(q !== '') {
-                        q += ' AND ';
-                    }
-                    q += `reid:"${query.reid}"`
-                }
-            }
-
+            const nameFields: (keyof TrackSearchQueryOpts)[] = ['recording', 'artist', 'release'];
+            const cleaned = cleanLuceneFields(query, nameFields, {escapeCharacters, removeCharacters});
+            q = freetext ? buildFreetextQuery(cleaned, nameFields) : buildLuceneQuery(cleaned, {preferAll: ['artist', 'arid']});
 
             this.logger.debug(`Search Query => ${q}`);
             this.cache.set(`${cacheKey}-qs`, q);
@@ -357,53 +291,26 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
             const query: ReleaseSearchQueryOpts = {
             };
 
-            // only names are cleaned, MBIDs are used verbatim
-            const clean = (str: string): string => {
-                let cleaned = escapeCharacters ? escapeLuceneSpecialChars(str) : str;
-                if(removeCharacters) {
-                    cleaned = removeNonWordCharacters(cleaned);
-                }
-                return cleaned;
-            }
-
             const releaseMbid = creditMbid(data.album, 'release'),
                 releaseGroupMbid = creditMbid(data.album, 'release-group');
+            // output order of fields in the query string follows the order they are added here
+            if(data.album !== undefined && using.includes('album')) {
+                query.release = creditToName(data.album);
+            }
+            if(data.artists !== undefined && data.artists.length > 0 && using.includes('artist')) {
+                query.artistname = creditsToNames(data.artists);
+            }
             if(using.includes('mbidrelease')) {
                 if(releaseMbid !== undefined) {
                     query.reid = [releaseMbid];
                 }
                 query.rgid = releaseGroupMbid;
             }
-            if(data.album !== undefined && using.includes('album')) {
-                query.release = clean(creditToName(data.album));
-            }
-            if(data.artists !== undefined && data.artists.length > 0 && using.includes('artist')) {
-                query.artistname = creditsToNames(data.artists).map(clean);
-            }
 
-            if(freetext) {
-                q = [query.release, ...(query.artistname ?? [])].filter(x => x !== undefined).join(' ');
-            } else {
-                const quoted = (vals: string[]) => vals.map(x => `"${x}"`);
-                const parts: string[] = [];
-                if(query.release !== undefined) {
-                    parts.push(`release:"${query.release}"`);
-                }
-                if(query.artistname !== undefined) {
-                    if(query.artistname.length > 1) {
-                        parts.push(`(artistname:(${quoted(query.artistname).join(' AND ')}) OR artistname:(${quoted(query.artistname).join(' OR ')}))`);
-                    } else {
-                        parts.push(`artistname:"${query.artistname[0]}"`);
-                    }
-                }
-                if(query.reid !== undefined) {
-                    parts.push(`reid:(${quoted(query.reid).join(' OR ')})`);
-                }
-                if(query.rgid !== undefined) {
-                    parts.push(`rgid:"${query.rgid}"`);
-                }
-                q = parts.join(' AND ');
-            }
+            // only names are cleaned, MBIDs are used verbatim
+            const nameFields: (keyof ReleaseSearchQueryOpts)[] = ['release', 'artistname'];
+            const cleaned = cleanLuceneFields(query, nameFields, {escapeCharacters, removeCharacters});
+            q = freetext ? buildFreetextQuery(cleaned, nameFields) : buildLuceneQuery(cleaned, {preferAll: ['artistname']});
 
             this.logger.debug(`Search Query => ${q}`);
             this.cache.set(`${cacheKey}-qs`, q);
@@ -449,41 +356,20 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
             const query: ArtistSearchQueryOpts = {
             };
 
-            // only names are cleaned, MBIDs are used verbatim
-            const clean = (str: string): string => {
-                let cleaned = escapeCharacters ? escapeLuceneSpecialChars(str) : str;
-                if(removeCharacters) {
-                    cleaned = removeNonWordCharacters(cleaned);
-                }
-                return cleaned;
-            }
-
             const artistMbids = creditIds(data.artists, 'musicbrainz', 'artist');
+            // output order of fields in the query string follows the order they are added here
+            if(data.artists !== undefined && data.artists.length > 0) {
+                query.artist = creditsToNames(data.artists);
+                query.primary_alias = query.artist;
+            }
             if(artistMbids.length > 0) {
                 query.arid = artistMbids;
             }
-            if(data.artists !== undefined && data.artists.length > 0) {
-                query.artist = creditsToNames(data.artists).map(clean);
-                query.primary_alias = query.artist;
-            }
 
-            if(freetext) {
-                q = (query.artist ?? []).join(' ');
-            } else {
-                // each result is a single artist so clauses are OR'd, a result only needs to match one of the given artists
-                const anyOf = (vals: string[]) => `(${vals.map(x => `"${x}"`).join(' OR ')})`;
-                const parts: string[] = [];
-                if(query.artist !== undefined) {
-                    parts.push(`artist:${anyOf(query.artist)}`);
-                }
-                if(query.primary_alias !== undefined) {
-                    parts.push(`primary_alias:${anyOf(query.primary_alias)}`);
-                }
-                if(query.arid !== undefined) {
-                    parts.push(`arid:${anyOf(query.arid)}`);
-                }
-                q = parts.join(' OR ');
-            }
+            // only names are cleaned, MBIDs are used verbatim
+            const cleaned = cleanLuceneFields(query, ['artist', 'primary_alias'], {escapeCharacters, removeCharacters});
+            // each result is a single artist so fields are OR'd, a result only needs to match one of the given artists
+            q = freetext ? buildFreetextQuery(cleaned, ['artist']) : buildLuceneQuery(cleaned, {operator: 'OR'});
 
             this.logger.debug(`Search Query => ${q}`);
             this.cache.set(`${cacheKey}-qs`, q);
@@ -566,31 +452,4 @@ export const recordingToPlay = (data: IRecording, options?: {ignoreVA?: boolean}
     }
 
     return baseFormatPlayObj(data, play);
-}
-
-
-export const LUCENE_SPECIAL_CHARACTER_REGEX: string[] = ['\\','+','-','&&','||','!','(',')','{','}','[',']','^','"','~','*','?',':','/'];
-/** 
- * https://lucene.apache.org/core/7_7_2/queryparser/org/apache/lucene/queryparser/classic/package-summary.html#package.description 
- * https://beta.musicbrainz.org/doc/MusicBrainz_API/Search
- * */
-export const escapeLuceneSpecialChars = (str: string): string => {
-    let cleaned = str;
-    for(const char of LUCENE_SPECIAL_CHARACTER_REGEX) {
-        cleaned = cleaned.replaceAll(char, `\\$&`);
-    }
-    return cleaned;
-}
-
-const NON_WORD_ADJACENT_BOUNDARY_REGEX: RegExp = new RegExp(/\w([^a-zA-Z\d\s])\w/g);
-const NON_WORDWHITESPACE_REGEX: RegExp = new RegExp(/[^a-zA-Z\d\s]/g);
-export const removeNonWordCharacters = (str: string): string => {
-    // replace any non-alphanumeric, non-whitespace characters that are surrounded by non-whitespace characters
-    // with a whitespace EX "My Cool-Fun Title" => "My Cool Fun Title"
-    let cleaned = str.replaceAll(NON_WORD_ADJACENT_BOUNDARY_REGEX, ' ');
-
-    // remove any non-alphanumeric, non-whitespace characters
-    // with a whitespace EX "My Cool (Title)" => "My Cool Title"
-    cleaned = cleaned.replaceAll(NON_WORDWHITESPACE_REGEX, '');
-    return cleaned;
 }
