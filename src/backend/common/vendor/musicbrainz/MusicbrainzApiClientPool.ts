@@ -244,13 +244,15 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
             if(play.data.album !== undefined && using.includes('album')) {
                 query.release = creditToName(play.data.album);
             }
+            // only names are cleaned, MBIDs and ISRC are used verbatim
+            const nameEntries = () => Object.entries({recording: query.recording, artist: query.artist, release: query.release}).filter(([,v]) => v !== undefined);
             if(escapeCharacters) {
-                for(const [k,v] of Object.entries(query)) {
+                for(const [k,v] of nameEntries()) {
                     (query as any)[k] = Array.isArray(v) ? v.map(escapeLuceneSpecialChars) : escapeLuceneSpecialChars(v);
                 }
             }
             if(removeCharacters) {
-                 for(const [k,v] of Object.entries(query)) {
+                 for(const [k,v] of nameEntries()) {
                     (query as any)[k] = Array.isArray(v) ? v.map(removeNonWordCharacters) : removeNonWordCharacters(v);
                 }
             }
@@ -302,6 +304,9 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
                     q += `tid:"${query.track_mbid}"`
                 }
                 if(query.artist_mbids !== undefined) {
+                    if(q !== '') {
+                        q += ' AND ';
+                    }
                     q += `(arid:(${query.artist_mbids.map(x => `"${x}"`).join(' AND ')}) OR arid:(${query.artist_mbids.map(x => `"${x}"`).join(' OR ')}))`
                 }
                 if(query.release_mbid !== undefined) {
@@ -345,7 +350,7 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
         const {
             escapeCharacters = true,
             removeCharacters = false,
-            using = ['album','artist','title'],
+            using = ['album','artist'],
             freetext,
             useCachedResult
         } = options || {};
@@ -361,6 +366,53 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
             const query: ReleaseSearchQueryOpts = {
             };
 
+            // only names are cleaned, MBIDs are used verbatim
+            const clean = (str: string): string => {
+                let cleaned = escapeCharacters ? escapeLuceneSpecialChars(str) : str;
+                if(removeCharacters) {
+                    cleaned = removeNonWordCharacters(cleaned);
+                }
+                return cleaned;
+            }
+
+            const releaseMbid = creditMbid(data.album, 'release'),
+                releaseGroupMbid = creditMbid(data.album, 'release-group');
+            if(using.includes('mbidrelease')) {
+                if(releaseMbid !== undefined) {
+                    query.reid = [releaseMbid];
+                }
+                query.rgid = releaseGroupMbid;
+            }
+            if(data.album !== undefined && using.includes('album')) {
+                query.release = clean(creditToName(data.album));
+            }
+            if(data.artists !== undefined && data.artists.length > 0 && using.includes('artist')) {
+                query.artistname = creditsToNames(data.artists).map(clean);
+            }
+
+            if(freetext) {
+                q = [query.release, ...(query.artistname ?? [])].filter(x => x !== undefined).join(' ');
+            } else {
+                const quoted = (vals: string[]) => vals.map(x => `"${x}"`);
+                const parts: string[] = [];
+                if(query.release !== undefined) {
+                    parts.push(`release:"${query.release}"`);
+                }
+                if(query.artistname !== undefined) {
+                    if(query.artistname.length > 1) {
+                        parts.push(`(artistname:(${quoted(query.artistname).join(' AND ')}) OR artistname:(${quoted(query.artistname).join(' OR ')}))`);
+                    } else {
+                        parts.push(`artistname:"${query.artistname[0]}"`);
+                    }
+                }
+                if(query.reid !== undefined) {
+                    parts.push(`reid:(${quoted(query.reid).join(' OR ')})`);
+                }
+                if(query.rgid !== undefined) {
+                    parts.push(`rgid:"${query.rgid}"`);
+                }
+                q = parts.join(' AND ');
+            }
 
             this.logger.debug(`Search Query => ${q}`);
             this.cache.set(`${cacheKey}-qs`, q);
@@ -378,7 +430,13 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
             throw new Error('results were unexpectedly undefined! API should have thrown...');
         }
 
-        return {releases: []} as any;
+        if(res.releases === undefined) {
+            this.logger.debug(res);
+            await this.cache.delete(cacheKey);
+            throw new Error('results returned but no releases list in response data, something handled incorrectly?');
+        }
+
+        return res;
     }
 
     testConnection = async () => {
