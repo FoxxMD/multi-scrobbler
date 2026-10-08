@@ -194,6 +194,7 @@ export const PlayEdit = (props: PlayEditProps) => {
                                             <TrackSearch
                                                 // TrackSearch only reads initial on mount, remount so a reset (or any outside change) shows in the input
                                                 key={hashObject(field.form.state.values.data.track ?? {})}
+                                                contextData={{album: field.form.state.values.data.album, artists: field.form.state.values.data.artists}}
                                                 initial={field.form.state.values.data.track}
                                                 onChange={(val) => {
                                                     // selected credits replace existing ones entirely so ids/images from a previous selection are not kept
@@ -223,6 +224,7 @@ export const PlayEdit = (props: PlayEditProps) => {
                                             <AlbumSearch
                                                 key={hashObject(field.form.state.values.data.album ?? {})}
                                                 initial={field.form.state.values.data.album}
+                                                contextData={{artists: field.form.state.values.data.artists}}
                                                 onChange={(val) => {
                                                     field.form.setFieldValue('data', mergeData(field.form.state.values.data, val));
                                                     setArtistsVersion(v => v + 1);

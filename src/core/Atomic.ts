@@ -47,7 +47,7 @@ export const prefixSearchToMusicService = (typeHint: 'artist' | 'album' | 'track
 
     const prefix = res.groups[0].trim().toLocaleLowerCase();
     const val = res.groups[1].trim();
-    const mbType = searchPrefixMbidTypeMap[prefix];
+    const mbType = searchPrefixMbidTypeMap[prefix as SearchPrefixMbid];
     if (mbType !== undefined) {
         if (mbType === 'mbid') {
             switch (typeHint) {
