@@ -9,9 +9,7 @@ import {
     type LogOutputConfig,
     queueContextSchema,
     logLevelStandaloneSchema,
-    trackSearchHash,
     trackSearchToMusicService,
-    albumSearchHash,
     albumSearchToMusicService,
     artistSearchToMusicService,
 } from "../../core/Atomic.ts";
@@ -32,8 +30,8 @@ import { findAuthIssue, SimpleError } from "../common/errors/MSErrors.ts";
 import { DrizzlePlayRepository, type QueryPlaysOpts, type QueryPlaysOptsJson } from "../common/database/drizzle/repositories/PlayRepository.ts";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.ts";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
-import {componentStateBodySchema, playStateBodySchema, type ComponentClientApiJson, type ComponentSourceApiJson, asSerializablePlaySelect, trackDataCreditBaseSchema } from "../../core/Api.ts";
-import { asDayjsHydratedObject, removeUndefinedKeys } from "../../core/DataUtils.ts";
+import {componentStateBodySchema, playStateBodySchema, type ComponentClientApiJson, type ComponentSourceApiJson, asSerializablePlaySelect, trackDataCreditBaseSchema, trackSearchSimpleRequestQuerySchema, albumSearchSimpleRequestQuerySchema, artistSearchSimpleRequestQuerySchema } from "../../core/Api.ts";
+import { asDayjsHydratedObject } from "../../core/DataUtils.ts";
 import type {Dayjs} from "dayjs";
 import { serializeError } from "serialize-error";
 import { z } from 'zod';
@@ -646,19 +644,7 @@ Note: this is only supported by some components.`
     router.get('/api/metadata/search/tracks', {
         tags: ['Metadata'],
         summary: 'Get Track Metadata from Providers',
-        querySchema: z.object(
-            {
-                track: z.union([trackSearchHash, z.string()]).meta({
-                    description: `the track name or prefix:id to search for`
-                }),
-                artists: z.string().array().optional().meta({
-                    description: 'a list of plain artist strings associated with the track'
-                }),
-                album: z.string().optional().meta({
-                    description: 'a plain album name string associated with the track'
-                })
-            }
-        ),
+        querySchema: trackSearchSimpleRequestQuerySchema,
         description: 'Gets track results from all metadata providers'
     }, async (req, res, next) => {
         const {
@@ -698,17 +684,7 @@ Note: this is only supported by some components.`
     router.get('/api/metadata/search/albums', {
         tags: ['Metadata'],
         summary: 'Get Album Metadata from Providers',
-        querySchema: z.object(
-            {                
-                album: z.union([albumSearchHash, z.string()]).meta({
-                    description: 'the album name or prefix:id to search for'
-                }),
-                artists: z.string().array().optional().meta({
-                    description: 'a list of plain artist strings associated with the album'
-                }),
-
-            }
-        ),
+        querySchema: albumSearchSimpleRequestQuerySchema,
         description: 'Gets album results from all metadata providers'
     }, async (req, res, next) => {
         const {
@@ -747,11 +723,7 @@ Note: this is only supported by some components.`
     router.get('/api/metadata/search/artists', {
         tags: ['Metadata'],
         summary: 'Get Artist Metadata from Providers',
-        querySchema: z.object({
-            artist: z.string().meta({
-            description: 'a plain artist name or prefix:id to search for'
-                }),
-            }),
+        querySchema: artistSearchSimpleRequestQuerySchema,
         description: 'Gets artist results from all metadata providers'
     }, async (req, res, next) => {
         const {

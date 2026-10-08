@@ -25,15 +25,27 @@ const meta = preview.type<{args: PropsAndCustomArgs}>().meta({
     layout: 'padded',
         msw: {
       handlers: [
-        http.get<{ query: string }>('/api/artists', async ({ params }) => {
+        http.get<{ query: string }>('/api/metadata/search/artists', async ({ params }) => {
           await delay();
           return HttpResponse.json({data: generateArtistSearchResults()});
         }),
-        http.get<{ query: string }>('/api/albums', async ({ params }) => {
+        http.post<{ query: string }>('/api/metadata/search/artists', async ({ params }) => {
+          await delay();
+          return HttpResponse.json({data: generateArtistSearchResults()});
+        }),
+        http.get<{ query: string }>('/api/metadata/search/albums', async ({ params }) => {
           await delay();
           return HttpResponse.json({data: generateAlbumSearchResults()});
         }),
-        http.get<{ query: string }>('/api/tracks', async ({ params }) => {
+        http.post<{ query: string }>('/api/metadata/search/albums', async ({ params }) => {
+          await delay();
+          return HttpResponse.json({data: generateAlbumSearchResults()});
+        }),
+        http.get<{ query: string }>('/api/metadata/search/tracks', async ({ params }) => {
+          await delay();
+          return HttpResponse.json({data: generateTrackSearchResults()});
+        }),
+        http.post<{ query: string }>('/api/metadata/search/tracks', async ({ params }) => {
           await delay();
           return HttpResponse.json({data: generateTrackSearchResults()});
         }),

@@ -1,12 +1,12 @@
-import { Box, useListCollection, Stack, Text, HStack, Badge, Span } from "@chakra-ui/react"
-import { useDebouncedState } from '@tanstack/react-pacer'
+import { Box, useListCollection, Stack, HStack, Badge, Span } from "@chakra-ui/react"
+import { useDebouncedCallback } from '@tanstack/react-pacer'
 import { useQuery } from '@tanstack/react-query';
 import { tanQueries } from "../../queries/index.ts";
-import { type AlbumSearchResult } from "../../../core/Api.ts";
+import { type AlbumSearchResult, type AlbumSearchSimpleRequestQuery, type TrackDataCreditBase } from "../../../core/Api.ts";
 import React, { useCallback, useEffect, useState } from "react";
 import { ArtistCreditTags } from "../ArtistCreditDisplay.tsx";
 import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, MetadataServiceScore, type MetadataPartials } from "./MetadataResults.tsx";
-import { creditSchema, type Credit } from "../../../core/Atomic.ts";
+import { albumSearchToMusicService, creditSchema, type Credit } from "../../../core/Atomic.ts";
 import { MusicServiceIndicators } from "../musicServices/MusicServiceIndicators.tsx";
 import { CountryFlag } from "../Country.tsx";
 import dayjs from "dayjs";
@@ -77,6 +77,7 @@ export interface AlbumOnChange {
 export interface AlbumSearchProps {
     initial?: Credit
     onChange: (val: AlbumOnChange) => void
+    contextData?: TrackDataCreditBase
 }
 
 export const AlbumSearch = (props: AlbumSearchProps) => {
@@ -87,11 +88,24 @@ export const AlbumSearch = (props: AlbumSearchProps) => {
     } = props;
 
     const [selectedItem, setSelectedItem] = useState<Credit>(initial ?? {name: ''});
-    const [debouncedQuery, setDebouncedQuery] = useDebouncedState<string>(initial?.name ?? '', { wait: 500 });
+    const [searchQuery, setSearchQuery] = useState<AlbumSearchSimpleRequestQuery | TrackDataCreditBase>({album: initial?.name ?? ''});
+        const debouncedSearchQuery = useDebouncedCallback(
+        (query: string, context: boolean) => {
+            const musicService = albumSearchToMusicService(query);
+            if(musicService !== undefined) {
+                setSearchQuery({album: query});
+            } else if(context) {
+                setSearchQuery({...(props.contextData), album: {name: query}})
+            } else {
+                setSearchQuery({album: query});
+            }
+        },
+        { wait: 500 },
+        );
 
     const query = useQuery({
-        enabled: debouncedQuery !== '',
-        ...tanQueries.metadata.album(debouncedQuery)
+        enabled: (`album` in searchQuery && searchQuery.album !== '') || `album` in searchQuery && typeof searchQuery.album === 'object' && (searchQuery.album?.name ?? '') !== '',
+        ...tanQueries.metadata.album(searchQuery)
     });
 
     const { collection, set } = useListCollection<AlbumSearchResult>({
@@ -130,7 +144,7 @@ export const AlbumSearch = (props: AlbumSearchProps) => {
             isError={query.isError}
             onChange={doChange}
             onFreetext={(name) => doChange({ name })}
-            onQueryChange={setDebouncedQuery}
+            onQueryChange={(query, context) => debouncedSearchQuery(query,context)}
             renderItem={(item, onPick) => <AlbumSearchResultItem data={item} onPick={onPick} />}
         />
     );

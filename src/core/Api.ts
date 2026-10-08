@@ -1,5 +1,5 @@
 import type { CompareOpKey, ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
-import { creditSchema, playTrackDataSchema, type ClientType, type ComponentAuthType, type MonitoringStatus, type QueueContext, type MusicServices, type Replace, creditBaseSchema } from "./Atomic.ts"
+import { creditSchema, playTrackDataSchema, type ClientType, type ComponentAuthType, type MonitoringStatus, type QueueContext, type MusicServices, type Replace, creditBaseSchema, trackSearchHash, albumSearchHash, artistSearchHash } from "./Atomic.ts"
 import type { SourceType } from "./Atomic.ts"
 import type { ComponentType, DateLike, ErrorLike, JsonPlayObject, PlayState, QueueName, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.ts"
 import type { Dayjs } from "dayjs"
@@ -355,3 +355,39 @@ export const trackDataCreditBaseSchema = z.object({
     })
 })
 export type TrackDataCreditBase = z.infer<typeof trackDataCreditBaseSchema>;
+
+export const trackSearchSimpleRequestQuerySchema = z.object(
+    {
+        track: z.union([trackSearchHash, z.string()]).meta({
+            description: `the track name or prefix:id to search for`
+        }),
+        artists: z.string().array().optional().meta({
+            description: 'a list of plain artist strings associated with the track'
+        }),
+        album: z.string().optional().meta({
+            description: 'a plain album name string associated with the track'
+        })
+    }
+);
+export type TrackSearchSimpleRequestQuery = z.infer<typeof trackSearchSimpleRequestQuerySchema>;
+
+export const albumSearchSimpleRequestQuerySchema = z.object(
+    {                
+        album: z.union([albumSearchHash, z.string()]).meta({
+            description: 'the album name or prefix:id to search for'
+        }),
+        artists: z.string().array().optional().meta({
+            description: 'a list of plain artist strings associated with the album'
+        }),
+
+    }
+);
+
+export type AlbumSearchSimpleRequestQuery = z.infer<typeof albumSearchSimpleRequestQuerySchema>;
+
+export const artistSearchSimpleRequestQuerySchema = z.object({
+    artist: z.union([artistSearchHash, z.string()]).meta({
+        description: 'a plain artist name or prefix:id to search for'
+    }),
+});
+export type ArtistSearchSimpleRequestQuery = z.infer<typeof artistSearchSimpleRequestQuerySchema>;

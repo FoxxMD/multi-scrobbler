@@ -1,11 +1,11 @@
 import { useListCollection, Stack, Text, HStack, Badge, Box } from "@chakra-ui/react"
-import { useDebouncedState } from '@tanstack/react-pacer'
+import {  useDebouncedCallback } from '@tanstack/react-pacer'
 import { useQuery } from '@tanstack/react-query';
 import { tanQueries } from "../../queries/index.js";
-import { type ArtistSearchResult } from "../../../core/Api.js";
+import { type ArtistSearchResult, type ArtistSearchSimpleRequestQuery, type TrackDataCreditBase } from "../../../core/Api.js";
 import { useCallback, useEffect, useState } from "react";
 import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, MetadataServiceScore, type MetadataPartials } from "./MetadataResults.js";
-import { creditSchema, type Credit } from "../../../core/Atomic.js";
+import { artistSearchToMusicService, creditSchema, type Credit } from "../../../core/Atomic.js";
 import { MusicServiceIndicators } from "../musicServices/MusicServiceIndicators.js";
 
 const artistPartials: MetadataPartials<ArtistSearchResult> = {
@@ -36,6 +36,7 @@ export const ArtistSearchResultItem = (props: { data: ArtistSearchResult, onPick
 export interface ArtistSearchProps {
     initial?: Credit
     onChange: (val: Credit) => void
+    contextData?: TrackDataCreditBase
 }
 
 export const ArtistSearch = (props: ArtistSearchProps) => {
@@ -46,11 +47,25 @@ export const ArtistSearch = (props: ArtistSearchProps) => {
     } = props;
 
     const [selectedItem, setSelectedItem] = useState<Credit>(initial ?? {name: ''});
-    const [debouncedQuery, setDebouncedQuery] = useDebouncedState<string>(initial?.name ?? '', { wait: 500 });
+    const [searchQuery, setSearchQuery] = useState<ArtistSearchSimpleRequestQuery | TrackDataCreditBase>({artist: initial?.name ?? ''});
+    const debouncedSearchQuery = useDebouncedCallback(
+    (query: string, context: boolean) => {
+        const musicService = artistSearchToMusicService(query);
+        if(musicService !== undefined) {
+            setSearchQuery({artist: query});
+        } else if(context) {
+            setSearchQuery({...(props.contextData), artists: [{name: query}]})
+        } else {
+            setSearchQuery({artist: query});
+        }
+    },
+    { wait: 500 },
+    );
+    //const [debouncedQuery, setDebouncedQuery] = useDebouncedState<{query: string, context: boolean}>({query: initial?.name ?? '', context: props.context ?? false}, { wait: 500 });
 
     const query = useQuery({
-        enabled: debouncedQuery !== '',
-        ...tanQueries.metadata.artists(debouncedQuery)
+        enabled: (`artist` in searchQuery && searchQuery.artist !== '') || `artists` in searchQuery && (searchQuery.artists ?? []).length > 0,
+        ...tanQueries.metadata.artists(searchQuery)
     });
 
     const { collection, set } = useListCollection<ArtistSearchResult>({
@@ -88,7 +103,7 @@ export const ArtistSearch = (props: ArtistSearchProps) => {
             isError={query.isError}
             onChange={doChange}
             onFreetext={(name) => doChange({ name })}
-            onQueryChange={setDebouncedQuery}
+            onQueryChange={(query, context) => debouncedSearchQuery(query, context)}
             renderItem={(item, onPick) => <ArtistSearchResultItem data={item} onPick={onPick} />}
         />
     );

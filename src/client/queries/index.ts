@@ -1,10 +1,10 @@
 import { createQueryKeys, mergeQueryKeys } from "@lukemorales/query-key-factory";
 import { useQueryClient, hashKey, QueryObserver } from '@tanstack/react-query'
 import { useEffect, useState, useMemo } from 'react';
-import ky from 'ky';
+import ky, { type Options } from 'ky';
 import qs from 'qs';
 import { baseUrl } from "../utils";
-import type {AlbumSearchResultResponse, ArtistSearchResultResponse, ComponentsApiJson, PaginatedResponse, PlayApiCommonDetailed, QueryPlaysOptsJson, TrackSearchResultResponse, QueryPlaysOptsJsonRefreshable } from "../../core/Api";
+import {type AlbumSearchResultResponse, type ArtistSearchResultResponse, type ComponentsApiJson, type PaginatedResponse, type PlayApiCommonDetailed, type QueryPlaysOptsJson, type TrackSearchResultResponse, type QueryPlaysOptsJsonRefreshable, type TrackDataCreditBase, type ArtistSearchSimpleRequestQuery, artistSearchSimpleRequestQuerySchema, trackDataCreditBaseSchema, type TrackSearchSimpleRequestQuery, trackSearchSimpleRequestQuerySchema, type AlbumSearchSimpleRequestQuery, albumSearchSimpleRequestQuerySchema } from "../../core/Api";
 import { type SourcePlayerJson } from "../../core/Atomic";
 import { queryPlayOptsRefreshableToJson } from "../utils/ComponentUtils";
 const components = createQueryKeys('components', {
@@ -72,32 +72,62 @@ const logs = createQueryKeys('logs', {
 })
 
 const metadata = createQueryKeys('metadata', {
-  artists: (query: string) => ({
+  artists: (query: ArtistSearchSimpleRequestQuery | TrackDataCreditBase) => ({
     queryKey: ['metadata', 'artists', query],
-    queryFn: (ctx) => ky.get(`artists`, {
-      baseUrl,
-      searchParams: {
-        q: query
+    queryFn: (ctx) => {
+      if (artistSearchSimpleRequestQuerySchema.validate(query)) {
+        return ky.get(`metadata/search/artists`, {
+          baseUrl,
+          searchParams: query
+        }).json<ArtistSearchResultResponse>()
       }
-    }).json<ArtistSearchResultResponse>()
+      if (trackDataCreditBaseSchema.validate(query)) {
+        return ky.post(`metadata/search/artists`, {
+          baseUrl,
+          json: query
+        }).json<ArtistSearchResultResponse>()
+      }
+      throw new Error('Could not validate input');
+
+    }
   }),
-  track: (query: string) => ({
+  track: (query: TrackSearchSimpleRequestQuery | TrackDataCreditBase) => ({
     queryKey: ['metadata', 'tracks', query],
-    queryFn: (ctx) => ky.get(`tracks`, {
-      baseUrl,
-      searchParams: {
-        q: query
+    queryFn: (ctx) => {
+      if (trackSearchSimpleRequestQuerySchema.validate(query)) {
+        return ky.get(`metadata/search/tracks`, {
+          baseUrl,
+          searchParams: qs.stringify(query)
+        }).json<TrackSearchResultResponse>()
       }
-    }).json<TrackSearchResultResponse>()
+      if (trackDataCreditBaseSchema.validate(query)) {
+        return ky.post(`metadata/search/tracks`, {
+          baseUrl,
+          json: query
+        }).json<TrackSearchResultResponse>()
+      }
+      throw new Error('Could not validate input');
+
+    }
   }),
-  album: (query: string) => ({
+  album: (query: AlbumSearchSimpleRequestQuery | TrackDataCreditBase) => ({
     queryKey: ['metadata', 'albums', query],
-    queryFn: (ctx) => ky.get(`albums`, {
-      baseUrl,
-      searchParams: {
-        q: query
+    queryFn: (ctx) => {
+      if (albumSearchSimpleRequestQuerySchema.validate(query)) {
+        return ky.get(`metadata/search/albums`, {
+          baseUrl,
+          searchParams: qs.stringify(query)
+        }).json<AlbumSearchResultResponse>()
       }
-    }).json<AlbumSearchResultResponse>()
+      if (trackDataCreditBaseSchema.validate(query)) {
+        return ky.post(`metadata/search/albums`, {
+          baseUrl,
+          json: query
+        }).json<AlbumSearchResultResponse>()
+      }
+      throw new Error('Could not validate input');
+
+    }
   })
 });
 

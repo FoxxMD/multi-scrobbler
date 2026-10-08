@@ -1,7 +1,7 @@
 import { AbsoluteCenter, Avatar, Box, Combobox, HStack, Icon, Menu, Portal, Span, Spinner, Switch, StackSeparator, Text, InputGroup, type ListCollection, Flex } from "@chakra-ui/react"
 import type { MetadataResultBase, MetadataResultImage, MetadataResultServiceScore } from "../../../core/Api"
-import { BracesIcon, CheckIcon, getMusicServiceIconElement, TextIcon, XIcon } from "../icons/ChakraIcons"
-import React, { useId, useRef } from "react"
+import { BracesIcon, getMusicServiceIconElement, TextIcon } from "../icons/ChakraIcons"
+import React, { useId, useRef, useState } from "react"
 import { MSErrorBoundary } from "../ErrorBoundary"
 import { EllipsisButtonMenu } from "../buttonMenus/ButtonMenu"
 
@@ -75,10 +75,11 @@ export interface MetadataSearchComboboxProps<T extends MetadataSearchResult> {
     inputGroupContent?: React.JSX.Element
     initialInput?: string
     defaultOpen?: boolean
+    searchContext?: boolean
     onChange: (val: T) => void
     /** Called with the typed text when the user commits it without selecting a result */
     onFreetext: (name: string) => void
-    onQueryChange: (query: string) => void
+    onQueryChange: (query: string, contextMode: boolean) => void
     renderItem: (item: T, onPick: (val: T) => void) => React.JSX.Element
 }
 
@@ -87,6 +88,8 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
 
     // a ref, not state: combobox captures onInteractOutside when the popup opens so state read there is stale
     const rawInput = useRef<string | undefined>(initialInput === '' ? undefined : initialInput);
+
+    const [contextMode, setContextMode] = useState<boolean>(props.searchContext ?? false);
 
     const commitFreetext = () => {
         if (rawInput.current !== undefined && rawInput.current !== initialInput) {
@@ -109,7 +112,11 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
     // inside a Field the switch inherits the field's control id, same as Combobox.Input, so its label would target the text input instead
     const switchInputId = useId();
     const contextSwitch = (
-    <Switch.Root ids={{ hiddenInput: switchInputId }} mr="2">
+    <Switch.Root 
+    ids={{ hiddenInput: switchInputId }}
+    checked={contextMode}
+    onCheckedChange={(e) => {setContextMode(e.checked)}}
+    mr="2">
         <Switch.HiddenInput />
         <Switch.Control>
             <Switch.Thumb>
@@ -145,7 +152,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                         console.log(val, 'select')
                     }}
                     onInputValueChange={(e) => {
-                        onQueryChange(e.inputValue);
+                        onQueryChange(e.inputValue, contextMode);
                         // selecting an item rewrites the input, this is not freetext
                         if (e.reason !== 'item-select') {
                             rawInput.current = e.inputValue;

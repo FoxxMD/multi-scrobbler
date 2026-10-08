@@ -1,12 +1,12 @@
 import { useListCollection, Stack, Text, HStack, Span, Badge, Box, Flex } from "@chakra-ui/react"
-import { useDebouncedState } from '@tanstack/react-pacer'
+import { useDebouncedCallback } from '@tanstack/react-pacer'
 import { useQuery } from '@tanstack/react-query';
 import { tanQueries } from "../../queries/index.js";
-import { type TrackSearchResult } from "../../../core/Api.js";
+import { type TrackDataCreditBase, type TrackSearchResult, type TrackSearchSimpleRequestQuery } from "../../../core/Api.js";
 import React, { useCallback, useEffect, useState } from "react";
 import { ArtistCreditTags } from "../ArtistCreditDisplay.js";
 import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, MetadataServiceScore, type MetadataPartials } from "./MetadataResults.js";
-import { playTrackDataSchema, type Credit, type TrackData } from "../../../core/Atomic.js";
+import { playTrackDataSchema, trackSearchToMusicService, type Credit, type TrackData } from "../../../core/Atomic.js";
 import { playImage } from "../../../core/MusicMetadata.js";
 import { MusicServiceIndicators } from "../musicServices/MusicServiceIndicators.js";
 import { timeToHumanTimestamp } from "../../../core/TimeUtils.js";
@@ -102,6 +102,7 @@ export type TrackOnChange = Pick<TrackData, 'track' | 'artists' | 'album' | 'alb
 export interface TrackSearchProps {
     initial?: Credit
     onChange: (val: TrackOnChange) => void
+    contextData?: TrackDataCreditBase
 }
 
 const trackSearchResultToOnChange = (val: TrackOnChange): TrackOnChange => {
@@ -119,11 +120,24 @@ export const TrackSearch = (props: TrackSearchProps) => {
     } = props;
 
     const [selectedItem, setSelectedItem] = useState<Credit>(initial ?? {name: ''});
-    const [debouncedQuery, setDebouncedQuery] = useDebouncedState<string>(initial?.name ?? '', { wait: 500 });
+    const [searchQuery, setSearchQuery] = useState<TrackSearchSimpleRequestQuery | TrackDataCreditBase>({track: initial?.name ?? ''});
+    const debouncedSearchQuery = useDebouncedCallback(
+    (query: string, context: boolean) => {
+        const musicService = trackSearchToMusicService(query);
+        if(musicService !== undefined) {
+            setSearchQuery({track: query});
+        } else if(context) {
+            setSearchQuery({...(props.contextData), track: {name: query}})
+        } else {
+            setSearchQuery({track: query});
+        }
+    },
+    { wait: 500 },
+    );
 
     const query = useQuery({
-        enabled: debouncedQuery !== '',
-        ...tanQueries.metadata.track(debouncedQuery)
+        enabled: (`track` in searchQuery && searchQuery.track !== '') || `track` in searchQuery && typeof searchQuery.track === 'object' && (searchQuery.track?.name ?? '') !== '',
+        ...tanQueries.metadata.track(searchQuery)
     });
 
     const { collection, set } = useListCollection<TrackSearchResult>({
@@ -161,7 +175,7 @@ export const TrackSearch = (props: TrackSearchProps) => {
             initialInput={selectedItem?.name}
             onChange={doChange}
             onFreetext={(name) => doChange({ track: { name } })}
-            onQueryChange={setDebouncedQuery}
+            onQueryChange={(query, context) => debouncedSearchQuery(query, context)}
             renderItem={(item, onPick) => <TrackSearchResultItem data={item} onPick={onPick} />}
         />
     );

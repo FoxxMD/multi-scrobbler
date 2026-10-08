@@ -29,6 +29,8 @@ export const searchPrefixMbidTypeMap = {
 export const searchPrefixIsrc = z.literal('isrc');
 export const searchPrefixSpotify = z.literal('spotify');
 
+export const searchPrefixAll = z.enum([...searchPrefixMbid.options, searchPrefixIsrc.value, searchPrefixSpotify.value]);
+
 export const trackSearchPrefix = z.enum([...searchPrefixMbid.extract(['reid','tid','mbid']).options, searchPrefixIsrc.value, searchPrefixSpotify.value]);
 export const trackSearchHash = z.templateLiteral([trackSearchPrefix, ':', z.string()]);
 export const albumSearchPrefix = z.enum([...searchPrefixMbid.extract(['rid','rgid','mbid']).options, searchPrefixSpotify.value]);
@@ -945,22 +947,3 @@ export type EmittedMSEvent<T = Record<string, any>, K = Record<string, any>,Y = 
 export interface OptionalCacheUsage {
     useCachedResult?: boolean
 }
-
-type Builtin =
-  | string | number | boolean | bigint | symbol | null | undefined
-  | Date | RegExp | Error | Function;
-
-export type DeepExclude<T, K extends PropertyKey> =
-  T extends Builtin
-    ? T
-    : T extends Map<infer MK, infer MV>
-      ? Map<DeepExclude<MK, K>, DeepExclude<MV, K>>
-      : T extends Set<infer S>
-        ? Set<DeepExclude<S, K>>
-        : T extends Promise<infer P>
-          ? Promise<DeepExclude<P, K>>
-          : T extends readonly unknown[]
-            ? { [I in keyof T]: DeepExclude<T[I], K> } // keeps arrays, tuples and readonly
-            : {
-                [P in keyof T as P extends K ? never : P]: DeepExclude<T[P], K>;
-              };
