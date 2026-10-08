@@ -1,0 +1,54 @@
+---
+title: Mixcloud
+description: Mixcloud (Source)
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import JsonConfig from '!!raw-loader!@site/../config/mixcloud.json.example';
+import ENVConfig from "@site/docs/configuration/sources/_env_configs/_mixcloud.md"
+
+[**Mixcloud**](https://www.mixcloud.com/) is a platform for DJ mixes, radio shows, and podcasts.
+
+This Source monitors the [listening history](https://www.mixcloud.com/developers/#listens) of a Mixcloud user and scrobbles newly discovered listens to configured clients.
+
+:::info[Mixes, not Tracks]
+
+Mixcloud's public API does not expose tracklists for mixes so each listen is scrobbled as a **single play for the entire mix**:
+
+* **Track** is the name of the mix
+* **Artists** are the hosts credited on the mix, or the account that uploaded the mix if there are no credited hosts
+* **Duration** is the full length of the mix
+
+:::
+
+## Setup
+
+There are two ways to configure this Source:
+
+### Public history with a username
+
+No authentication is required. Your Mixcloud listening history must be **public** (the default), which you can verify by visiting `https://www.mixcloud.com/YourUsername/listens/` while logged out.
+
+Your **username** is the last part of your profile URL IE `https://www.mixcloud.com/MyUsername/` => `MyUsername`
+
+### Your own history with an application (including pro accounts)
+
+If your listening history is private, or you have a pro account, authenticate with a Mixcloud application instead:
+
+1. [Create an application](https://www.mixcloud.com/developers/) to get a **clientId** and **clientSecret**
+2. Set them in the source configuration -- `username` is not needed, the authorized user's listens are monitored
+3. Start multi-scrobbler and use the **Authorize** button/link for this Source to complete sign-in at Mixcloud
+
+The authorize flow redirects to `/api/mixcloud/callback` on the address the multi-scrobbler web UI is served from (default `http://localhost:9078`) -- if multi-scrobbler is behind a reverse proxy, complete sign-in from that address. The access token is stored on your machine and used for future restarts, sign-in is only needed once.
+
+Mixes are long, so this Source polls less frequently than others by default: every 60 seconds, backing off to at most 300 seconds when there is no activity.
+
+## Configuration
+
+<Config config="MixcloudSourceConfig" fileContent={JsonConfig} name="mixcloud">
+<ENVConfig/>
+</Config>
