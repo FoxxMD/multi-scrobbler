@@ -284,7 +284,7 @@ export const albumSearchResultSchema = z.object({
     ...metadataResultAlbumTypeSchema.shape,
     date: z.string().optional(),
     country: z.string().optional(),
-    artists: creditSchema.array().optional(),
+    artists: artistSearchResultSchema.array().optional(),
 });
 export type AlbumSearchResult = z.infer<typeof albumSearchResultSchema>;
 
@@ -293,12 +293,14 @@ export const albumSearchResultResponseSchema = z.object({
 });
 export type AlbumSearchResultResponse = z.infer<typeof albumSearchResultResponseSchema>;
 
-/** TrackData with the service it was found on */
+/** TrackData with the service it was found on. Artists and album are results from the same service. */
 export const trackSearchResultSchema = z.object({
     ...playTrackDataSchema.shape,
     ...metadataResultBaseSchema.shape,
     ...metadataResultServiceScoreSchema.shape,
-    ...metadataResultAlbumTypeSchema.shape,
+    artists: artistSearchResultSchema.array().optional(),
+    albumArtists: artistSearchResultSchema.array().optional(),
+    album: albumSearchResultSchema.optional(),
     /** Number of albums the track was found on */
     albumCount: z.int().nonnegative().optional(),
 });

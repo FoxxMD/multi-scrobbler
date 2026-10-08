@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import type {AlbumSearchResult, ArtistSearchResult, ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentHistoricalApi, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi, TrackSearchResult} from "../../Api.ts";
 import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ComponentType, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes, type MBID, type Credit } from "../../Atomic.ts";
-import { generateArtist, generateArtistCredits, generateMbid, generatePlay, normalizePlays } from "./PlayTestUtils.ts";
+import { generateArtist, generateMbid, generatePlay, normalizePlays } from "./PlayTestUtils.ts";
 import { generatePlayInput, generatePlayWithLifecycle, playWithLifecycleScrobble, randomPlayState } from "./fixtures.ts";
 import { asJsonPlayObject } from "../../PlayMarshalUtils.ts";
 import { generatePlayUid } from "../../StringUtils.ts";
@@ -534,6 +534,10 @@ export const generateArtistSearchResults = (opts: {query?: string, count?: numbe
     return results;
 }
 
+/** Artists as they appear nested in an album or track result, without a score */
+const generateNestedArtistResults = (max: number, service: string): ArtistSearchResult[] =>
+    generateArtistSearchResults({count: faker.number.int({min: 1, max})}).map((x) => ({...x, service, score: undefined}));
+
 const generateAlbumCredit = (): Credit => withImage(nameToCredit(
     faker.music.album(),
     mbMeta(faker.helpers.arrayElement([generateMbid(), undefined]), 'release'),
@@ -541,18 +545,21 @@ const generateAlbumCredit = (): Credit => withImage(nameToCredit(
     spotifyMeta(faker.helpers.arrayElement([faker.string.alphanumeric(4), undefined]), 'album')
 ), placeholderImage([300]));
 
-export const generateAlbumSearchResult = (partial: Partial<AlbumSearchResult> = {}): AlbumSearchResult => ({
-    id: faker.string.alphanumeric(7),
-    score: faker.number.int({min: 10, max: 100}),
-    service: faker.helpers.arrayElement(['spotify','musicbrainz','rocksky']),
-    ...generateAlbumCredit(),
-    albumType: faker.helpers.arrayElement(['single','album','live','compilation',undefined]),
-    albumTypeHint: faker.helpers.arrayElement(['remastered', undefined]),
-    artists: generateArtistCredits(undefined, 3, {mbidVal: true}),
-    country: faker.location.countryCode(),
-    date: dayjs(faker.date.past({years: 10})).toISOString(),
-    ...partial
-});
+export const generateAlbumSearchResult = (partial: Partial<AlbumSearchResult> = {}): AlbumSearchResult => {
+    const service = partial.service ?? faker.helpers.arrayElement(['spotify','musicbrainz','rocksky']);
+    return {
+        id: faker.string.alphanumeric(7),
+        score: faker.number.int({min: 10, max: 100}),
+        service,
+        ...generateAlbumCredit(),
+        albumType: faker.helpers.arrayElement(['single','album','live','compilation',undefined]),
+        albumTypeHint: faker.helpers.arrayElement(['remastered', undefined]),
+        artists: generateNestedArtistResults(3, service),
+        country: faker.location.countryCode(),
+        date: dayjs(faker.date.past({years: 10})).toISOString(),
+        ...partial
+    };
+};
 
 export const generateAlbumSearchResults = (opts: {query?: string, count?: number} = {}): AlbumSearchResult[] => {
     const results: AlbumSearchResult[] = [];
@@ -570,25 +577,27 @@ export const generateAlbumSearchResults = (opts: {query?: string, count?: number
     return results;
 }
 
-export const generateTrackSearchResult = (partial: Partial<TrackSearchResult> = {}): TrackSearchResult => ({
-    id: faker.string.alphanumeric(7),
-    score: faker.number.int({min: 10, max: 100}),
-    service: faker.helpers.arrayElement(['spotify','musicbrainz','rocksky']),
-    track: nameToCredit(
-        faker.music.songName(),
-        mbMeta(faker.helpers.arrayElement([generateMbid(), undefined]), 'recording'),
-        mbMeta(faker.helpers.arrayElement([generateMbid(), undefined]), 'track'),
-        spotifyMeta(faker.helpers.arrayElement([faker.string.alphanumeric(4), undefined]), 'track')
-    ),
-    album: generateAlbumCredit(),
-    albumType: faker.helpers.arrayElement(['single','album','live','compilation',undefined]),
-    albumArtists: faker.helpers.arrayElement([generateArtistCredits(1, 1, {mbidVal: true}), undefined]),
-    albumTypeHint: faker.helpers.arrayElement(['remastered', undefined]),
-    duration: faker.number.int({min: 10, max: 305}),
-    albumCount: faker.number.int({min: 1, max: 15}),
-    artists: generateArtistCredits(undefined, 3, {mbidVal: true}),
-    ...partial
-});
+export const generateTrackSearchResult = (partial: Partial<TrackSearchResult> = {}): TrackSearchResult => {
+    const service = partial.service ?? faker.helpers.arrayElement(['spotify','musicbrainz','rocksky']);
+    return {
+        id: faker.string.alphanumeric(7),
+        score: faker.number.int({min: 10, max: 100}),
+        service,
+        track: nameToCredit(
+            faker.music.songName(),
+            mbMeta(faker.helpers.arrayElement([generateMbid(), undefined]), 'recording'),
+            mbMeta(faker.helpers.arrayElement([generateMbid(), undefined]), 'track'),
+            spotifyMeta(faker.helpers.arrayElement([faker.string.alphanumeric(4), undefined]), 'track')
+        ),
+        // nested results have no score, a nested album has no artists of its own
+        album: generateAlbumSearchResult({service, score: undefined, artists: undefined}),
+        albumArtists: faker.helpers.arrayElement([generateNestedArtistResults(1, service), undefined]),
+        duration: faker.number.int({min: 10, max: 305}),
+        albumCount: faker.number.int({min: 1, max: 15}),
+        artists: generateNestedArtistResults(3, service),
+        ...partial
+    };
+};
 
 export const generateTrackSearchResults = (opts: {query?: string, count?: number} = {}): TrackSearchResult[] => {
     const results: TrackSearchResult[] = [];

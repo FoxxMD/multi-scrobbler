@@ -1,4 +1,4 @@
-import { useListCollection, Stack, Text, HStack, Span } from "@chakra-ui/react"
+import { useListCollection, Stack, Text, HStack, Span, Badge } from "@chakra-ui/react"
 import { useDebouncedState } from '@tanstack/react-pacer'
 import { useQuery } from '@tanstack/react-query';
 import { tanQueries } from "../../queries/index.js";
@@ -10,10 +10,12 @@ import { playTrackDataSchema, type Credit, type TrackData } from "../../../core/
 import { playImage } from "../../../core/MusicMetadata.js";
 import { MusicServiceIndicators } from "../musicServices/MusicServiceIndicators.js";
 import { timeToHumanTimestamp } from "../../../core/TimeUtils.js";
+import { CountryFlag } from "../Country.js";
+import dayjs from "dayjs";
 
 const trackPartials: MetadataPartials<TrackSearchResult> = {
-    track: { label: 'Track + duration only', pick: ({ artists, album, albumArtists, albumType, albumCount, ...rest }) => rest },
-    artists: { label: 'Track + duration + artists', pick: ({ album, albumArtists, albumType, albumCount, ...rest }) => rest },
+    track: { label: 'Track + duration only', pick: ({ artists, album, albumArtists, albumCount, ...rest }) => rest },
+    artists: { label: 'Track + duration + artists', pick: ({ album, albumArtists, albumCount, ...rest }) => rest },
     album: { label: 'Track + duration + album', pick: ({ artists, ...rest }) => rest },
 };
 
@@ -24,8 +26,6 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?:
     const {
         track,
         album,
-        albumType,
-        albumTypeHint,
         albumCount,
         duration,
         artists = []
@@ -33,6 +33,22 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?:
 
     let albumContent: React.JSX.Element | undefined = undefined;
     if (album !== undefined) {
+        const {
+            albumType,
+            albumTypeHint,
+            country,
+            date,
+            name: albumName,
+            metadata: albumMetadata
+        } = album;
+
+        const countryElm: React.JSX.Element | undefined = country !== undefined ? <CountryFlag iso={country} tooltip={(val) => `Released in ${val}`}/> : undefined;
+        let locationDateInfo: React.JSX.Element | undefined = undefined;
+        if(countryElm !== undefined && date === undefined) {
+            locationDateInfo = countryElm;
+        } else if(countryElm !== undefined && date !== undefined) {
+            locationDateInfo = <Badge variant="outline">{countryElm}<Span>{dayjs(date).format('YYYY')}</Span></Badge>
+        }
         const albumHints: string[] = [];
         if(albumType !== undefined) {
             albumHints.push(albumType);
@@ -42,12 +58,12 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?:
         }
         const andCount = albumCount !== undefined && albumCount > 1 ? (
             <Text color="fg.subtle" textStyle="sm">
-                and {albumCount} more...
+                and {albumCount} more albums...
             </Text>
         ) : undefined;
         albumContent = (<Text color="fg.muted" textStyle="sm">
             <HStack>
-                {album.name} {albumHints.length > 0 ? `(${albumHints.join(' -- ')})` : ''}<MusicServiceIndicators services={album.metadata ?? []}/> {andCount}
+                {albumName} {albumHints.length > 0 ? `(${albumHints.join(' -- ')})` : ''}{locationDateInfo}<MusicServiceIndicators services={album.metadata ?? []}/> {andCount}
             </HStack>
         </Text>)
     }
@@ -85,7 +101,7 @@ export interface TrackSearchProps {
 }
 
 const trackSearchResultToOnChange = (val: TrackOnChange): TrackOnChange => {
-    // drops the search-only properties of a result
+    // drops the search-only properties of a result and of the results nested in it
     const { meta, ...change } = playTrackDataSchema.parse(val);
     // an album always replaces album artists, even when it has none, so artists from a previous album are not kept
     return change.album !== undefined ? { ...change, albumArtists: change.albumArtists } : change;

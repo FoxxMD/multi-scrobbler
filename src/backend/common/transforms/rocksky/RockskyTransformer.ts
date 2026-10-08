@@ -20,7 +20,7 @@ import { type AlbumViewBasic, type ArtistViewBasic, RockskyError, type SongMatch
 import { RockskyClientPool } from "../../vendor/rocksky/RockskyClientWrapped.ts";
 import type { RockskyTransformerConfig, RockskyTransformerData } from "../../vendor/rocksky/interfaces.ts";
 import { DEFAULT_ROCKSKY_SEARCH_ORDER, type SearchType, searchType } from "./RockskyTransformerUtil.ts";
-import type { MetadataProvider } from "../../metadataProviders/MetadataProviderUtils.ts";
+import { creditToResult, trackDataToResult, type MetadataProvider } from "../../metadataProviders/MetadataProviderUtils.ts";
 import type { AlbumSearchResult, ArtistSearchResult, TrackSearchResult } from "../../../../core/Api.ts";
 
 export const DEFAULT_SEARCHTYPE_ORDER: SearchType[] = ['isrc','basic'];
@@ -469,12 +469,11 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
             const view: SongViewDetailedMS = x === res.matches?.[0]
                 ? mergeSongMatch(res, x)
                 : {requestQuery: query, title: x.title, artist: x.artist, album: x.album, albumArt: x.albumArt, isrc: x.isrc, duration: x.durationMs};
-            return {
-                ...songViewToPlay(view).data,
+            return trackDataToResult(songViewToPlay(view).data, {
                 service: 'rocksky',
                 id: String(x.id ?? index),
                 score: Math.round(x.score ?? 0)
-            };
+            });
         });
     }
 
@@ -493,7 +492,7 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         return hits.map((x): AlbumSearchResult => ({
             ...withImage(nameToCredit(x.title as string, serviceMeta('rocksky', x.id, 'album')), x.albumArt),
             date: x.releaseDate ?? x.year?.toString(),
-            artists: x.artist === undefined ? undefined : [nameToCredit(x.artist)],
+            artists: x.artist === undefined ? undefined : [creditToResult(nameToCredit(x.artist), 'rocksky')],
             score: x.score,
             service: 'rocksky',
             id: x.id as string

@@ -4,6 +4,7 @@ import clone from 'clone';
 import type { PlayObject } from '../../../core/Atomic.ts';
 import { generateArtistCredits, generatePlay, withBrainz } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { dedupAlbumArtists, spotifyMeta, stripCredits, withImage, withMetadata } from '../../../core/MusicMetadata.ts';
+import { trackDataToResult } from '../../common/metadataProviders/MetadataProviderUtils.ts';
 import { albumSearchResultSchema, artistSearchResultSchema, trackSearchResultSchema } from '../../../core/Api.ts';
 import { generateAlbumSearchResult, generateArtistSearchResult, generateTrackSearchResult } from '../../../core/tests/utils/apiFixtures.ts';
 import { nameToCredit } from "../../../core/MusicMetadata.ts";
@@ -122,5 +123,18 @@ describe('#Metadata Search Results', function () {
         expect(() => trackSearchResultSchema.parse(generateTrackSearchResult())).to.not.throw();
         expect(() => albumSearchResultSchema.parse(generateAlbumSearchResult())).to.not.throw();
         expect(() => artistSearchResultSchema.parse(generateArtistSearchResult())).to.not.throw();
+    });
+
+    it('nests artists and album as results from the same service', function () {
+        const artist = nameToCredit('Artist A', spotifyMeta('ar1', 'artist'));
+        const result = trackDataToResult(
+            { track: nameToCredit('Track'), artists: [artist, nameToCredit('Artist B')], album: nameToCredit('Album', spotifyMeta('al1', 'album')) },
+            { id: 't1', service: 'spotify', score: 90, albumCount: 1 },
+            { albumType: 'single' }
+        );
+        expect(result.artists).to.eql([{ ...artist, service: 'spotify', id: 'ar1' }, { name: 'Artist B', service: 'spotify', id: 'Artist B' }]);
+        expect(result.album).to.include({ name: 'Album', service: 'spotify', id: 'al1', albumType: 'single' });
+        expect(result).to.not.have.property('albumType');
+        expect(() => trackSearchResultSchema.parse(result)).to.not.throw();
     });
 });

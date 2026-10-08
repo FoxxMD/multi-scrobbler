@@ -28,7 +28,7 @@ import { nativeParse } from "./NativeTransformer.ts";
 import { comparePlayArtistsNormalized, scoreTrackWeightedAndNormalized } from "../../utils/PlayComparisonUtils.ts";
 import type { MusicbrainzTransformerConfig, MusicbrainzTransformerData, SearchType } from "./musicbrainz/MusicbrainzTransformerUtil.ts";
 import { maybeStringLowerArrayFromString } from "../../utils/ZodUtils.ts";
-import type { MetadataProvider } from "../metadataProviders/MetadataProviderUtils.ts";
+import { creditToResult, trackDataToResult, type MetadataProvider } from "../metadataProviders/MetadataProviderUtils.ts";
 import type { TrackSearchResult, ArtistSearchResult, AlbumSearchResult } from "../../../core/Api.ts";
 
 export const asMissingMbid = (str: string): MissingMbidType => {
@@ -607,17 +607,21 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         const recordings = await this.handlePostFetchRecordings(surrogatePlay, res, {type: 'musicbrainz', ...this.defaults});
 
         return recordings.slice(0, 5).map((x): TrackSearchResult => {
-            const releaseGroup = x.releases?.[0]?.["release-group"];
-            return {
-                // same credits a transform using this recording would produce
-                ...recordingToPlay(x).data,
+            const release = x.releases?.[0];
+            const releaseGroup = release?.["release-group"];
+            // same credits a transform using this recording would produce
+            return trackDataToResult(recordingToPlay(x).data, {
                 service: 'musicbrainz',
                 id: x.id,
                 score: x.score,
+                albumCount: (x.releases ?? []).length
+            }, {
                 albumType: releaseGroup?.["primary-type"] ?? releaseGroup?.["secondary-types"]?.[0],
                 albumTypeHint: x.disambiguation,
-                albumCount: (x.releases ?? []).length
-            };
+                country: release?.country,
+                date: release?.date,
+                score: x.rankScore
+            });
         });
     }
     async getArtistResults(query: string): Promise<ArtistSearchResult[] | false> {
@@ -662,7 +666,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             if(x["artist-credit"] !== undefined) {
                 result.artists = x["artist-credit"]
                 .filter(y => this.defaults.ignoreVA === false || y.name !== 'Various Artists')
-                .map((y) => nameToCredit(y.name, mbMeta(y.artist.id, 'artist')))
+                .map((y) => creditToResult(nameToCredit(y.name, mbMeta(y.artist.id, 'artist')), 'musicbrainz'))
             }
             return result;
         });
