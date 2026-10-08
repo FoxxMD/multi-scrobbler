@@ -1,6 +1,6 @@
 import type { CompareOpKey, ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
-import { creditSchema, playTrackDataSchema, type ClientType, type ComponentAuthType, type MonitoringStatus, type QueueContext, type MusicServices, type Replace } from "./Atomic.ts"
-import type { DeepExclude, SourceType, TrackData } from "./Atomic.ts"
+import { creditSchema, playTrackDataSchema, type ClientType, type ComponentAuthType, type MonitoringStatus, type QueueContext, type MusicServices, type Replace, creditBaseSchema } from "./Atomic.ts"
+import type { SourceType } from "./Atomic.ts"
 import type { ComponentType, DateLike, ErrorLike, JsonPlayObject, PlayState, QueueName, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.ts"
 import type { Dayjs } from "dayjs"
 import type { ErrorIsh } from "./ErrorUtils.ts"
@@ -343,6 +343,15 @@ export const trackSearchResultResponseSchema = z.object({
 });
 export type TrackSearchResultResponse = z.infer<typeof trackSearchResultResponseSchema>;
 
-export type SearchQueryTrackData = DeepExclude<Pick<TrackData, 'track' | 'artists' |'album'>, 'image'>;
-export type SearchQueryMusicService = DeepExclude<MusicServices , 'image'>
-export type MetadataSearchQuery =  SearchQueryTrackData | SearchQueryMusicService;
+export const trackDataCreditBaseSchema = z.object({
+    track: creditBaseSchema.optional().meta({
+        description: `a track credit to search by`
+    }),
+    artists: creditBaseSchema.array().optional().meta({
+        description: 'a list of artist Credits'
+    }),
+    album: creditBaseSchema.optional().meta({
+        description: 'an album credit'
+    })
+})
+export type TrackDataCreditBase = z.infer<typeof trackDataCreditBaseSchema>;

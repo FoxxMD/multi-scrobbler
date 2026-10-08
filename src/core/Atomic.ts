@@ -6,9 +6,69 @@ import type { FlowControlTerm, TransformHook } from "./Transform.ts";
 import type {Changeset} from "json-diff-ts";
 import type {IParseBaseOptions} from 'qs';
 import * as z from "zod";
+import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 
 export const musicServiceName = z.enum(['spotify', 'musicbrainz', 'youtube', 'jellyfin', 'plex', 'listenbrainz', 'rocksky', 'isrc']);
 export type MusicServiceName = z.infer<typeof musicServiceName>;
+
+export const mbidType = z.enum(['recording','release','track','artist','release-group']);
+export type MBIdType = z.infer<typeof mbidType>;
+
+export const searchPrefixMbid = z.enum(['rid','reid','tid','rgid','arid','mbid']);
+export type SearchPrefixMbid = z.infer<typeof searchPrefixMbid>;
+export const searchPrefixMbidTypeMapSchema = z.record(searchPrefixMbid, mbidType);
+export const searchPrefixMbidTypeMap = {
+    [searchPrefixMbid.enum.reid]: mbidType.enum.recording,
+    [searchPrefixMbid.enum.tid]: mbidType.enum.track,
+    [searchPrefixMbid.enum.rid]: mbidType.enum.release,
+    [searchPrefixMbid.enum.arid]: mbidType.enum.artist,
+    [searchPrefixMbid.enum.rgid]: mbidType.enum["release-group"],
+    [searchPrefixMbid.enum.mbid]: 'mbid',
+} as const satisfies Record<SearchPrefixMbid,MBIdType | 'mbid'>;
+
+export const searchPrefixIsrc = z.literal('isrc');
+export const searchPrefixSpotify = z.literal('spotify');
+
+export const trackSearchPrefix = z.enum([...searchPrefixMbid.extract(['reid','tid','mbid']).options, searchPrefixIsrc.value, searchPrefixSpotify.value]);
+export const trackSearchHash = z.templateLiteral([trackSearchPrefix, ':', z.string()]);
+export const albumSearchPrefix = z.enum([...searchPrefixMbid.extract(['rid','rgid','mbid']).options, searchPrefixSpotify.value]);
+export const albumSearchHash = z.templateLiteral([albumSearchPrefix, ':', z.string()]);
+export const artistSearchPrefix = z.enum([...searchPrefixMbid.extract(['arid']).options, searchPrefixSpotify.value]);
+export const artistSearchHash = z.templateLiteral([artistSearchPrefix, ':', z.string()]);
+export const SEARCH_HASH_REGEX = new RegExp(/^([^\s\r\n]+):([^\s\r\n]+)$/);
+
+export const prefixSearchToMusicService = (typeHint: 'artist' | 'album' | 'track') => (input: string): MusicServicesBase | undefined => {
+    const res = parseRegexSingle(SEARCH_HASH_REGEX, input);
+    if (res === undefined || res.groups === undefined) {
+        return undefined;
+    }
+
+    const prefix = res.groups[0].trim().toLocaleLowerCase();
+    const val = res.groups[1].trim();
+    const mbType = searchPrefixMbidTypeMap[prefix];
+    if (mbType !== undefined) {
+        if (mbType === 'mbid') {
+            switch (typeHint) {
+                case 'artist':
+                    return { name: 'musicbrainz', id: val, idType: 'artist' };
+                case 'album':
+                    return { name: 'musicbrainz', id: val, idType: 'release' };
+                case 'track':
+                    return { name: 'musicbrainz', id: val, idType: 'recording' };
+            }
+        } else {
+            return { name: 'musicbrainz', id: val, idType: mbType };
+        }
+    } else if (musicServiceName.enum.spotify === prefix) {
+        return { name: 'spotify', id: val };
+    } else if (musicServiceName.enum.isrc === prefix) {
+        return { name: 'isrc', id: val };
+    }
+    return undefined;
+}
+export const trackSearchToMusicService = prefixSearchToMusicService('track');
+export const artistSearchToMusicService = prefixSearchToMusicService('artist');
+export const albumSearchToMusicService = prefixSearchToMusicService('album');
 
 export const musicServiceBaseSchema = z.object({
     name: musicServiceName,
@@ -26,7 +86,7 @@ export type MusicServiceIdBase = z.infer<typeof musicServiceIdBaseSchema>;
 export const musicServiceMBSchema = z.object({
     ...musicServiceIdBaseSchema.shape,
     name: z.literal(musicServiceName.enum.musicbrainz),
-    idHint: z.enum(['recording', 'release', 'track', 'artist', 'release-group']).optional()
+    idType: z.enum(['recording', 'release', 'track', 'artist', 'release-group']).optional()
 });
 export type MusicServiceMB = z.infer<typeof musicServiceMBSchema>;
 export const musicServiceNonMBSchema = z.object({
@@ -35,6 +95,7 @@ export const musicServiceNonMBSchema = z.object({
 });
 export type MusicServiceNonMB = z.infer<typeof musicServiceNonMBSchema>;
 export const musicServicesBaseSchema = z.discriminatedUnion('name', [musicServiceMBSchema.omit({image: true}), musicServiceNonMBSchema.omit({image: true})]);
+export type MusicServicesBase = z.infer<typeof musicServicesBaseSchema>;
 export const musicServicesSchema = z.discriminatedUnion('name', [musicServiceMBSchema, musicServiceNonMBSchema]);
 
 export type MusicServices = z.infer<typeof musicServicesSchema>;

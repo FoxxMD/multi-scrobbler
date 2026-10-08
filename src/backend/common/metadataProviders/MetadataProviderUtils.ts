@@ -1,11 +1,11 @@
-import type { AlbumSearchResult, ArtistSearchResult, MetadataResultServiceScore, TrackSearchResult } from "../../../core/Api.ts";
-import type { Credit, TrackData } from "../../../core/Atomic.ts";
+import type { AlbumSearchResult, ArtistSearchResult, MetadataResultServiceScore, TrackDataCreditBase, TrackSearchResult } from "../../../core/Api.ts";
+import type { Credit, MusicServices, MusicServicesBase, TrackData } from "../../../core/Atomic.ts";
 import type { ErrorIsh } from "../../../core/ErrorUtils.ts";
 
 export interface MetadataProvider {
-    getTrackResults: (query: string) => Promise<TrackSearchResult[] | false>
-    getArtistResults: (query: string) => Promise<ArtistSearchResult[] | false>
-    getAlbumResults: (query: string) => Promise<AlbumSearchResult[] | false>
+    getTrackResults: (query: TrackDataCreditBase | MusicServicesBase) => Promise<TrackSearchResult[] | false>
+    getArtistResults: (query: TrackDataCreditBase | MusicServicesBase) => Promise<ArtistSearchResult[] | false>
+    getAlbumResults: (query: TrackDataCreditBase | MusicServicesBase) => Promise<AlbumSearchResult[] | false>
 }
 
 export interface AggregateMetadataResponse<T extends (TrackSearchResult | ArtistSearchResult | AlbumSearchResult)> {

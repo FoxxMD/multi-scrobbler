@@ -1,4 +1,4 @@
-import { type Credit, DEFAULT_MISSING_TYPES, type LifecycleInput, type MissingMbidType, type OptionalCacheUsage, type PlayObject, type TrackMetaIsrc } from "../../../core/Atomic.ts";
+import { type Credit, DEFAULT_MISSING_TYPES, type LifecycleInput, type MissingMbidType, type MusicServices, type MusicServicesBase, musicServicesBaseSchema, type OptionalCacheUsage, type PlayObject, type TrackMetaIsrc } from "../../../core/Atomic.ts";
 import { MB_RELEASE_GROUP_SECONDARY_TYPES, mBReleaseSecondaryGroupTypesSchema, type RecordingRankedMatched, type IRecordingMSList } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import { type MBReleaseGroupSecondaryType } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import { type MBReleaseGroupPrimaryType } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
@@ -16,7 +16,7 @@ import { DELIMITERS } from '../../../core/Atomic.ts';
 import { MaybeLogger } from '../MaybeLogger.ts';
 import { childLogger } from "@foxxmd/logging";
 import { MusicbrainzApiClientPool, recordingToPlay, type UsingTypes } from "../vendor/musicbrainz/MusicbrainzApiClientPool.ts";
-import type {IRecordingMatch, IRelease} from "musicbrainz-api";
+import type {IArtistList, IRecordingMatch, IRelease, IReleaseList} from "musicbrainz-api";
 import { intersect, missingMbidTypes } from "../../utils.ts";
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
 import { SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../errors/MSErrors.ts";
@@ -29,7 +29,8 @@ import { comparePlayArtistsNormalized, scoreTrackWeightedAndNormalized } from ".
 import type { MusicbrainzTransformerConfig, MusicbrainzTransformerData, SearchType } from "./musicbrainz/MusicbrainzTransformerUtil.ts";
 import { maybeStringLowerArrayFromString } from "../../utils/ZodUtils.ts";
 import { creditToResult, trackDataToResult, type MetadataProvider } from "../metadataProviders/MetadataProviderUtils.ts";
-import type { TrackSearchResult, ArtistSearchResult, AlbumSearchResult } from "../../../core/Api.ts";
+import { type TrackSearchResult, type ArtistSearchResult, type AlbumSearchResult, type TrackDataCreditBase, trackDataCreditBaseSchema } from "../../../core/Api.ts";
+import dayjs from "dayjs";
 
 export const asMissingMbid = (str: string): MissingMbidType => {
     const clean = str.trim().toLocaleLowerCase();
@@ -427,6 +428,13 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         }
         throw new SearchPrerequisiteError('Play does not have recording MBID');
     }
+    public async searchByTrackMbid(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList> {
+        if(creditMbid(play.data.track, 'track') !== undefined) {
+            this.logger.debug({labels: ['MBID Search']},'Searching with Track MBID');
+            return await this.api.searchByRecording(play, {using: ['mbidtrack'], ...opts});
+        }
+        throw new SearchPrerequisiteError('Play does not have track MBID');
+    }
 
     public async searchByAlbum(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList> {
         // possibly the artist is incorrect (may be combined as one string)
@@ -589,9 +597,47 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
     public async notify(payload: WebhookPayload): Promise<void> {
     }
 
-    async getTrackResults(query: string): Promise<TrackSearchResult[] | false> {
-        const surrogatePlay: PlayObject = {data: {track: {name: query}}, meta: {}};
-        const res = await this.api.searchByRecording(surrogatePlay, {using: ['title']});
+    async getTrackResults(query: TrackDataCreditBase | MusicServicesBase): Promise<TrackSearchResult[] | false> {
+        let res: IRecordingMSList | undefined = undefined;
+        const data = trackDataCreditBaseSchema.required({track: true}).safeParse(query);
+        let surrogatePlay: PlayObject;
+        if(data.success) {
+            if(data.data.track === undefined) {
+                throw new SimpleError(`Must include 'track' credit`);
+            }
+            surrogatePlay = {data: {...data.data, playDate: dayjs()}, meta: {}};
+            const isrc = creditId(data.data.track, 'isrc');
+            if(isrc !== undefined) {
+                try {
+                    res = await this.searchByIsrc(surrogatePlay, {type: 'musicbrainz', ...this.defaults});
+                } catch (e) {
+                    this.logger.warn(new SimpleError('could not search metadata results by isrc', {cause: e}));
+                }
+            }
+            if(res === undefined || res.recordings === undefined || res.recordings.length === 0) {
+                res = await this.searchByBasicFieldsOrMBIDs(surrogatePlay, {type: 'musicbrainz', ...this.defaults});
+            }
+        } else {
+            const metadata = musicServicesBaseSchema.safeParse(query);
+            if(metadata.success) {
+                surrogatePlay = {data: {track: {name: '', metadata: [metadata.data]}, playDate: dayjs()}, meta: {}};
+                if(metadata.data.idType === 'track') {
+                    res = await this.searchByTrackMbid(surrogatePlay, {type: 'musicbrainz', ...this.defaults});
+                } else if(metadata.data.idType === 'recording') {
+                    res = await this.searchByRecordingMbid(surrogatePlay, {type: 'musicbrainz', ...this.defaults});
+                } else if(metadata.data.name === 'isrc') {
+                    res = await this.searchByIsrc(surrogatePlay, {type: 'musicbrainz', ...this.defaults});
+                } else {
+                    if(metadata.data.name !== 'musicbrainz') {
+                        // service type was not applicable
+                        return [];
+                    }
+                    throw new SimpleError(`Metadata type not valid as a search parameter '${metadata.data.idType}'`)
+                }
+            } else {
+                throw new AggregateError([data.error, metadata.error],'query was not a TrackDataCreditBase or MusicServicesBase type');
+            }
+        }
         if(res.recordings.length === 0) {
             return [];
         }
@@ -615,9 +661,29 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             });
         });
     }
-    async getArtistResults(query: string): Promise<ArtistSearchResult[] | false> {
-        const surrogateArtist: Credit = {name: query};
-        const res = await this.api.searchByArtist({artists: [surrogateArtist]});
+    async getArtistResults(query: TrackDataCreditBase | MusicServicesBase): Promise<ArtistSearchResult[] | false> {
+        let res: IArtistList | undefined;
+        const data = trackDataCreditBaseSchema.required({artists: true}).safeParse(query);
+        if(data.success) {
+            if(data.data.artists === undefined) {
+                throw new SimpleError(`Must include 'artist' credit`);
+            }
+            res = await this.api.searchByArtist(data.data)
+        } else {
+            const metadata = musicServicesBaseSchema.safeParse(query);
+            if(metadata.success) {
+                if(metadata.data.idType === 'artist') {
+                    res = await this.api.searchByArtist({artists: [{name: '', metadata: [metadata.data]}]})
+                } else if(metadata.data.name !== 'musicbrainz') {
+                    // service type was not applicable
+                    return [];
+                } else {
+                    throw new SimpleError(`Metadata type not valid as a search parameter '${metadata.data.idType}'`)
+                }
+            } else {
+                throw new AggregateError([data.error, metadata.error],'query was not a TrackDataCreditBase or MusicServicesBase type');
+            }
+        }
         const scoreThreshold = this.defaults.score ?? 90;
         const results: ArtistSearchResult[] = res.artists.filter(x => x.score >= scoreThreshold).slice(0, 5).map((x) => ({
             ...nameToCredit(x.name, mbMeta(x.id, 'artist')),
@@ -627,8 +693,29 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         }))
         return results;
     }
-    async getAlbumResults(query: string): Promise<AlbumSearchResult[] | false> {
-        const res = await this.api.searchByRelease({album: {name: query}});
+    async getAlbumResults(query: TrackDataCreditBase | MusicServicesBase): Promise<AlbumSearchResult[] | false> {
+        let res: IReleaseList | undefined;
+        const data = trackDataCreditBaseSchema.required({album: true}).safeParse(query);
+        if(data.success) {
+            if(data.data.album === undefined) {
+                throw new SimpleError(`Must include 'album' credit`);
+            }
+            res = await this.api.searchByRelease(data.data)
+        } else {
+            const metadata = musicServicesBaseSchema.safeParse(query);
+            if(metadata.success) {
+                if(metadata.data.idType !== undefined && ['release','release-group'].includes(metadata.data.idType)) {
+                    res = await this.api.searchByRelease({album: {name: '', metadata: [metadata.data]}})
+                } else if(metadata.data.name !== 'musicbrainz') {
+                    // service type was not applicable
+                    return [];
+                } else {
+                    throw new SimpleError(`Metadata type not valid as a search parameter '${metadata.data.idType}'`)
+                }
+            } else {
+                throw new AggregateError([data.error, metadata.error],'query was not a TrackDataCreditBase or MusicServicesBase type');
+            }
+        }
         const scoreThreshold = this.defaults.score ?? 90;
         let filteredList = res.releases.filter((x) => x.score >= scoreThreshold);
         filteredList = filterReleasesByValidStatus(filteredList, this.defaults);
@@ -640,8 +727,10 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             return []
         }
 
-        filteredList = rankReleases(filteredList, this.defaults, query);
-
+        if(data.success) {
+            filteredList = rankReleases(filteredList, this.defaults, data.data.album?.name);
+        }
+        
         return filteredList.slice(0, 5).map((x) => {
             const releaseGroup = x["release-group"];
             const result: AlbumSearchResult = {

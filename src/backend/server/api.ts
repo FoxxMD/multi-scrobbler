@@ -9,6 +9,11 @@ import {
     type LogOutputConfig,
     queueContextSchema,
     logLevelStandaloneSchema,
+    trackSearchHash,
+    trackSearchToMusicService,
+    albumSearchHash,
+    albumSearchToMusicService,
+    artistSearchToMusicService,
 } from "../../core/Atomic.ts";
 import type {LeveledLogData} from "../common/infrastructure/Atomic.ts";
 import { getRoot } from "../ioc.ts";
@@ -27,8 +32,8 @@ import { findAuthIssue, SimpleError } from "../common/errors/MSErrors.ts";
 import { DrizzlePlayRepository, type QueryPlaysOpts, type QueryPlaysOptsJson } from "../common/database/drizzle/repositories/PlayRepository.ts";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.ts";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
-import {componentStateBodySchema, playStateBodySchema, type ComponentClientApiJson, type ComponentSourceApiJson, asSerializablePlaySelect } from "../../core/Api.ts";
-import { asDayjsHydratedObject } from "../../core/DataUtils.ts";
+import {componentStateBodySchema, playStateBodySchema, type ComponentClientApiJson, type ComponentSourceApiJson, asSerializablePlaySelect, trackDataCreditBaseSchema } from "../../core/Api.ts";
+import { asDayjsHydratedObject, removeUndefinedKeys } from "../../core/DataUtils.ts";
 import type {Dayjs} from "dayjs";
 import { serializeError } from "serialize-error";
 import { z } from 'zod';
@@ -37,6 +42,7 @@ import { hasMetricRepositories, registerMetrics, setMetricRepositories } from ".
 import pMap from "p-map";
 import type { PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
 import { stripIndents } from "common-tags";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -638,17 +644,17 @@ Note: this is only supported by some components.`
     });
 
     router.get('/api/metadata/search/tracks', {
-        tags: ['Metdata'],
+        tags: ['Metadata'],
         summary: 'Get Track Metadata from Providers',
         querySchema: z.object(
             {
-                track: z.string().meta({
-                    description: `the track name to search for`
+                track: z.union([trackSearchHash, z.string()]).meta({
+                    description: `the track name or prefix:id to search for`
                 }),
                 artists: z.string().array().optional().meta({
                     description: 'a list of plain artist strings associated with the track'
                 }),
-                album: z.string().array().optional().meta({
+                album: z.string().optional().meta({
                     description: 'a plain album name string associated with the track'
                 })
             }
@@ -657,76 +663,125 @@ Note: this is only supported by some components.`
     }, async (req, res, next) => {
         const {
             query: {
-                q
+                track,
+                artists = [],
+                album
             }
         } = req;
 
-        const results = await root.items.transformerManager.getTrackResults(q);
+        const musicServiceMeta = trackSearchToMusicService(track);
+        if(musicServiceMeta !== undefined) {
+            const results = await root.items.transformerManager.getTrackResults(musicServiceMeta);
+            return res.json(results);
+        }
+        const results = await root.items.transformerManager.getTrackResults({
+            track: nameToCredit(track),
+            artists: artists.length === 0 ? undefined : artists.map((x) => nameToCredit(x)),
+            album: nameToCredit(album)
+        });
         return res.json(results);
     });
     router.post('/api/metadata/search/tracks', {
-        tags: ['Metdata'],
+        tags: ['Metadata'],
+        middleware: [jsonParser],
         summary: 'Get Track Metadata from Providers (Advanced)',
-        querySchema: z.object(
-            {
-                track: z.string().meta({
-                    description: `the track name to search for`
-                }),
-                artists: z.string().array().optional().meta({
-                    description: 'a list of plain artist strings associated with the track'
-                }),
-                album: z.string().array().optional().meta({
-                    description: 'a plain album name string associated with the track'
-                })
-            }
-        ),
-        description: 'Gets track results from all metadata providers'
+        bodySchema: trackDataCreditBaseSchema.required({track: true}),
+        description: 'Gets track results from all metadata providers using Credits with metadata'
     }, async (req, res, next) => {
         const {
-            query: {
-                q
-            }
+            body
         } = req;
-
-        const results = await root.items.transformerManager.getTrackResults(q);
+        const results = await root.items.transformerManager.getTrackResults(body);
         return res.json(results);
     });
 
     router.get('/api/metadata/search/albums', {
-        tags: ['Metdata'],
+        tags: ['Metadata'],
         summary: 'Get Album Metadata from Providers',
-        querySchema: z.object({
-            q: z.string().meta({
-            description: `the album name to search for`
-        })}),
+        querySchema: z.object(
+            {                
+                album: z.union([albumSearchHash, z.string()]).meta({
+                    description: 'the album name or prefix:id to search for'
+                }),
+                artists: z.string().array().optional().meta({
+                    description: 'a list of plain artist strings associated with the album'
+                }),
+
+            }
+        ),
         description: 'Gets album results from all metadata providers'
     }, async (req, res, next) => {
         const {
             query: {
-                q
+                album,
+                artists = []
             }
         } = req;
 
-        const results = await root.items.transformerManager.getAlbumResults(q);
+        const musicServiceMeta = albumSearchToMusicService(album);
+        if(musicServiceMeta !== undefined) {
+            const results = await root.items.transformerManager.getAlbumResults(musicServiceMeta);
+            return res.json(results);
+        }
+        const results = await root.items.transformerManager.getAlbumResults({
+            artists: artists.length === 0 ? undefined : artists.map((x) => nameToCredit(x)),
+            album: nameToCredit(album)
+        });
+
+        return res.json(results);
+    });
+    router.post('/api/metadata/search/albums', {
+        tags: ['Metadata'],
+        middleware: [jsonParser],
+        summary: 'Get Album Metadata from Providers (Advanced)',
+        bodySchema: trackDataCreditBaseSchema.required({album: true}).omit({track: true}),
+        description: 'Gets album results from all metadata providers using Credits with metadata'
+    }, async (req, res, next) => {
+        const {
+            body
+        } = req;
+        const results = await root.items.transformerManager.getAlbumResults(body);
         return res.json(results);
     });
 
     router.get('/api/metadata/search/artists', {
-        tags: ['Metdata'],
+        tags: ['Metadata'],
         summary: 'Get Artist Metadata from Providers',
         querySchema: z.object({
-            q: z.string().meta({
-            description: `the artist name to search for`
-        })}),
+            artist: z.string().meta({
+            description: 'a plain artist name or prefix:id to search for'
+                }),
+            }),
         description: 'Gets artist results from all metadata providers'
     }, async (req, res, next) => {
         const {
             query: {
-                q
+                artist
             }
         } = req;
 
-        const results = await root.items.transformerManager.getArtistResults(q);
+        const musicServiceMeta = artistSearchToMusicService(artist);
+        if(musicServiceMeta !== undefined) {
+            const results = await root.items.transformerManager.getArtistResults(musicServiceMeta);
+            return res.json(results);
+        }
+
+        const results = await root.items.transformerManager.getArtistResults({
+            artists: [nameToCredit(artist)],
+        });
+        return res.json(results);
+    });
+    router.post('/api/metadata/search/artists', {
+        tags: ['Metadata'],
+        middleware: [jsonParser],
+        summary: 'Get Artist Metadata from Providers (Advanced)',
+        bodySchema: trackDataCreditBaseSchema.required({artists: true}).omit({track: true, album: true}),
+        description: 'Gets artist results from all metadata providers using Credits with metadata'
+    }, async (req, res, next) => {
+        const {
+            body
+        } = req;
+        const results = await root.items.transformerManager.getArtistResults(body);
         return res.json(results);
     });
 

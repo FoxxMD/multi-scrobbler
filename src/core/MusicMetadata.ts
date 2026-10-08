@@ -1,4 +1,4 @@
-import { SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, type AmbPlayObject, type Credit, type ScrobbleTsSOC, type TrackData, type TrackStringOptions, type MusicServiceName, type MusicServices, type MusicServicesAny } from "./Atomic.ts";
+import { SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, type AmbPlayObject, type Credit, type ScrobbleTsSOC, type TrackData, type TrackStringOptions, type MusicServiceName, type MusicServices, type MusicServicesAny, type MBIdType } from "./Atomic.ts";
 import { compareNormalizedStrings, defaultBuildTrackStringTransformers } from "./StringUtils.ts";
 import { removeUndefinedKeys } from "./DataUtils.ts";
 import type { Dayjs } from "dayjs";
@@ -8,8 +8,6 @@ export const hasMusicMetadata = (meta: MusicServicesAny[] | undefined, name: Mus
 
 export const getMusicMetadata = (meta: MusicServicesAny[] = [], name: MusicServiceName, idType?: string) =>
     meta.find(x => x.name === name && (idType === undefined || ('idType' in x && x.idType === idType)))
-
-export type MBIdType = 'recording' | 'release' | 'track' | 'artist' | 'release-group';
 
 /** Build a metadata entry for a service id. Returns undefined if there is no id so it can be passed straight to `withMetadata` */
 export const serviceMeta = (name: MusicServiceName, id: string | null | undefined, idType?: string): MusicServices | undefined => {

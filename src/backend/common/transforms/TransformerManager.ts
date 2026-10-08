@@ -1,6 +1,6 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import type AbstractTransformer from "./AbstractTransformer.ts";
-import type {OptionalCacheUsage, TransformerCommon, TransformerCommonConfig} from "../../../core/Atomic.ts";
+import type {MusicServices, MusicServicesBase, OptionalCacheUsage, TransformerCommon, TransformerCommonConfig} from "../../../core/Atomic.ts";
 import {DEFAULT_TRANSFORMER_ENV_NAME, DEFAULT_TRANSFORMER_NAME, type MetadataProviderStageType, type StageConfig} from "../../../core/Transform.ts";
 import type {PlayObject} from "../../../core/Atomic.ts";
 import { isStageTyped } from "../../utils/PlayTransformUtils.ts";
@@ -15,7 +15,7 @@ import { type RockskyTransformerConfig } from "../vendor/rocksky/interfaces.ts";
 import { configFromEnv as spotifyConfigFromEnv, type SpotifyTransformerConfig } from "./spotify/SpotifyTransformerUtil.ts";
 import type { CovertArtArchiveTransformerConfig } from "./coverartarchive/CoverArtArchiveTransformerUtil.ts";
 import { asMetadataProvider, type AggregateMetadataResponse, type MetadataProvider } from "../metadataProviders/MetadataProviderUtils.ts";
-import type { AlbumSearchResult, ArtistSearchResult, TrackSearchResult } from "../../../core/Api.ts";
+import type { AlbumSearchResult, ArtistSearchResult, TrackDataCreditBase, TrackSearchResult } from "../../../core/Api.ts";
 import {pPropsAllSettled} from 'p-props';
 
 type TransformNamedMap = Map<string, AbstractTransformer>;
@@ -31,7 +31,7 @@ export default class TransformerManager {
     protected transformerConfigs: TransformerCommon[] = [];
 
     protected transformMetadataProviders: Partial<Record<MetadataProviderStageType, string>> = {};
-    protected transformMetadataPreferredProviders: Partial<Record<MetadataProviderStageType, true | string>> | undefined;
+    protected transformMetadataPreferredProviders: Partial<Record<MetadataProviderStageType, true | string>> | undefined = {musicbrainz: true};
 
     public constructor(logger: Logger, cache: MSCache) {
         this.logger = childLogger(logger, 'Transformer Manager');
@@ -369,7 +369,7 @@ export default class TransformerManager {
         }
     }
 
-    public async getTrackResults(query: string): Promise<AggregateMetadataResponse<TrackSearchResult>> {
+    public async getTrackResults(query:TrackDataCreditBase | MusicServicesBase): Promise<AggregateMetadataResponse<TrackSearchResult>> {
         const readyMps: Record<string, Promise<Awaited<ReturnType<MetadataProvider['getTrackResults']>>>> = {};
         for(const [type, name] of Object.entries(this.transformMetadataProviders)) {
             const t = this.transformers.get(type)?.get(name.toLocaleLowerCase()) as unknown as MetadataProvider & AbstractTransformer;
@@ -396,7 +396,7 @@ export default class TransformerManager {
         res.data.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
         return res;
     }
-    public async getArtistResults(query: string): Promise<AggregateMetadataResponse<ArtistSearchResult>> {
+    public async getArtistResults(query: TrackDataCreditBase | MusicServicesBase): Promise<AggregateMetadataResponse<ArtistSearchResult>> {
         const readyMps: Record<string, Promise<Awaited<ReturnType<MetadataProvider['getArtistResults']>>>> = {};
         for(const [type, name] of Object.entries(this.transformMetadataProviders)) {
             const t = this.transformers.get(type)?.get(name.toLocaleLowerCase()) as unknown as MetadataProvider & AbstractTransformer;
@@ -423,7 +423,7 @@ export default class TransformerManager {
         res.data.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
         return res;
     }
-    public async getAlbumResults(query: string): Promise<AggregateMetadataResponse<AlbumSearchResult>> {
+    public async getAlbumResults(query: TrackDataCreditBase | MusicServicesBase): Promise<AggregateMetadataResponse<AlbumSearchResult>> {
         const readyMps: Record<string, Promise<Awaited<ReturnType<MetadataProvider['getAlbumResults']>>>> = {};
         for(const [type, name] of Object.entries(this.transformMetadataProviders)) {
             const t = this.transformers.get(type)?.get(name.toLocaleLowerCase()) as unknown as MetadataProvider & AbstractTransformer;

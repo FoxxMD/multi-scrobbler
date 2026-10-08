@@ -359,8 +359,12 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
             const artistMbids = creditIds(data.artists, 'musicbrainz', 'artist');
             // output order of fields in the query string follows the order they are added here
             if(data.artists !== undefined && data.artists.length > 0) {
-                query.artist = creditsToNames(data.artists);
-                query.primary_alias = query.artist;
+                const artistNames = (creditsToNames(data.artists) ?? []).filter(x => x.trim() !== '');
+                if(artistNames.length > 0) {
+                    query.artist = artistNames;
+                    query.primary_alias = query.artist;
+                }
+
             }
             if(artistMbids.length > 0) {
                 query.arid = artistMbids;
