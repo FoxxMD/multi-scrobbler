@@ -7,7 +7,7 @@
     "schema": "npm run -s schema:docs",
     "schema:docs": "node src/backend/utils/SchemaDocsStaticUtils.ts",
     "openapi:docs": "node src/backend/utils/OpenApiUtils.ts",
-    "circular": "madge --circular --extensions ts src/index.ts",
+    "circular": "npx madge --circular --extensions ts src/backend/index.ts",
     "test": "npm run -s test:backend",
     "test:backend": "mocha --reporter spec",
     "dev": "node src/backend/index.ts",
