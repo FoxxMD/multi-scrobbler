@@ -149,7 +149,7 @@ export type CreditBase = z.infer<typeof creditBaseSchema>;
 
 /** A named thing (track, artist, album) with optional art and any number of ids from music services that identify it */
 export const creditSchema = z.object({
-    ...creditBaseSchema,
+    ...creditBaseSchema.shape,
     // not httpUrl because some sources (plex) use relative proxy urls
     image: z.string().optional(),
     metadata: musicServicesSchema.array().optional()
