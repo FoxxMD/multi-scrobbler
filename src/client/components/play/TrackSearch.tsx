@@ -63,7 +63,7 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?:
         ) : undefined;
         albumContent = (<Text color="fg.muted" textStyle="sm">
             <HStack>
-                {albumName} {albumHints.length > 0 ? `(${albumHints.join(' -- ')})` : ''}{locationDateInfo}<MusicServiceIndicators services={album.metadata ?? []}/> {andCount}
+                {albumName} {albumHints.length > 0 ? `(${albumHints.join(' -- ')})` : ''}{locationDateInfo}<MusicServiceIndicators services={albumMetadata ?? []}/> {andCount}
             </HStack>
         </Text>)
     }

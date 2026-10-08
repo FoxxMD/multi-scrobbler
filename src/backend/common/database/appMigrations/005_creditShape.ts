@@ -4,7 +4,7 @@ import { playEvents, playInputs, plays as drizzlePlays, playsHistorical } from '
 import { asc, eq } from 'drizzle-orm';
 import { PLAY_EVENT_TYPE } from '../../../../core/PlayEvent.ts';
 import type { Credit, LifecycleStep, PlayObject } from '../../../../core/Atomic.ts';
-import { creditsWithIds, mbMeta, spotifyMeta, withAlbumArt, withImage, withMetadata } from '../../../../core/MusicMetadata.ts';
+import { creditsWithIds, isrcMeta, mbMeta, spotifyMeta, withAlbumArt, withImage, withMetadata } from '../../../../core/MusicMetadata.ts';
 import { nameToCredit } from "../../../../core/MusicMetadata.ts";
 import { diffObjects, patchObject } from '../../../../core/DataUtils.ts';
 import { playContentBasicInvariantTransform, playMbidIdentifier } from '../../../utils/PlayComparisonUtils.ts';
@@ -54,6 +54,7 @@ interface LegacyData {
             track?: string
         }
     }
+    isrc?: string
     [key: string]: unknown
 }
 
@@ -67,6 +68,7 @@ export const isLegacyData = (data: LegacyData = {}): boolean =>
     || (data.artists ?? []).some(isLegacyArtist)
     || (data.albumArtists ?? []).some(isLegacyArtist)
     || data.meta?.spotify !== undefined
+    || data.isrc !== undefined
     || LEGACY_BRAINZ_ID_KEYS.some(x => x in (data.meta?.brainz ?? {}));
 
 const legacyArtistsToCredits = (artists: LegacyData['artists'], mbids?: string[], spotifyIds?: string[]): Credit[] | undefined => {
@@ -101,6 +103,7 @@ export const legacyDataToCredits = <T extends LegacyData>(data: T, art: LegacyAr
         album,
         artists,
         albumArtists,
+        isrc,
         meta: {
             brainz: {
                 artist: mbArtists,
@@ -125,7 +128,7 @@ export const legacyDataToCredits = <T extends LegacyData>(data: T, art: LegacyAr
     const converted: Record<string, unknown> = {
         ...rest,
         ...withAlbumArt({
-            track: withImage(withMetadata(legacyToCredit(track), mbMeta(mbTrack, 'track'), mbMeta(mbRecording, 'recording'), spotifyMeta(spotify.track, 'track')), art.track),
+            track: withImage(withMetadata(legacyToCredit(track), mbMeta(mbTrack, 'track'), mbMeta(mbRecording, 'recording'), spotifyMeta(spotify.track, 'track'), isrcMeta(isrc)), art.track),
             album: withMetadata(legacyToCredit(album), mbMeta(mbRelease, 'release'), mbMeta(mbReleaseGroup, 'release-group'), spotifyMeta(spotify.album, 'album')),
         }, art.album),
         artists: artistCredits,

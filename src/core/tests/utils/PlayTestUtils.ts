@@ -32,6 +32,13 @@ dayjs.extend(relativeTime);
 dayjs.extend(duration);
 dayjs.extend(timezone);
 
+/** Generates an ISRC code in the way spotify does IE no dashes 
+ * 
+ * @example QZ7B82500483
+ * @see https://isrc.ifpi.org/
+ */
+export const generateISRC = () => `${faker.string.alphanumeric(5)}${faker.number.int({min: 0, max: 99}).toString().padStart(2, '0')}${faker.number.int({min: 1, max: 99999}).toString().padStart(5, '0')}`.toUpperCase();
+
 export const normalizePlays = (plays: PlayObject[],
                                options?: {
                                    //sortFunc?: (a: PlayObject, b: PlayObject) => 0 | 1 | -1

@@ -9,6 +9,7 @@ import SpotifySource from "../../sources/SpotifySource.ts";
 import { envSchemas, type SpotifySourceConfig } from "../../common/infrastructure/config/source/spotify.ts";
 import currentlyPlayingNoIsrcPayload from '../plays/spotifyCurrentlyPlayingNoIsrc.json' with { type: "json" };
 import playbackState from '../plays/spotifyCurrentPlaybackState.json' with { type: "json" };
+import { creditIsrc } from '../../../core/MusicMetadata.ts';
 
 const createSpotifySource = (options: SpotifySourceConfig['options'] = {}): SpotifySource => {
     const config = {
@@ -42,7 +43,7 @@ describe('Spotify - ISRC Enrichment', function () {
 
         const play = await source.getNowPlaying();
 
-        expect(play?.data.isrc).to.equal('USRC17607839');
+        expect(creditIsrc(play?.data.track)).to.equal('USRC17607839');
         expect(getTrackStub.calledOnceWith('track-backfill')).to.be.true;
     });
 
@@ -60,8 +61,8 @@ describe('Spotify - ISRC Enrichment', function () {
         const first = await source.getNowPlaying();
         const second = await source.getNowPlaying();
 
-        expect(first?.data.isrc).to.equal('USRC17607840');
-        expect(second?.data.isrc).to.equal('USRC17607840');
+        expect(creditIsrc(first?.data.track)).to.equal('USRC17607840');
+        expect(creditIsrc(second?.data.track)).to.equal('USRC17607840');
         expect(getTrackStub.callCount).to.equal(1);
     });
 
@@ -78,7 +79,7 @@ describe('Spotify - ISRC Enrichment', function () {
 
         const play = await source.getNowPlaying();
 
-        expect(play?.data.isrc).to.be.undefined;
+        expect(creditIsrc(play?.data.track)).to.be.undefined;
         expect(getTrackStub.called).to.be.false;
     });
 
@@ -95,7 +96,7 @@ describe('Spotify - ISRC Enrichment', function () {
 
         const play = await source.getNowPlaying();
 
-        expect(play?.data.isrc).to.equal('FR9W12915571');
+        expect(creditIsrc(play?.data.track)).to.equal('FR9W12915571');
         expect(getTrackStub.called).to.be.false;
     });
 
@@ -112,7 +113,7 @@ describe('Spotify - ISRC Enrichment', function () {
         const play = await source.getNowPlaying();
 
         expect(play).to.not.be.undefined;
-        expect(play?.data.isrc).to.be.undefined;
+        expect(creditIsrc(play?.data.track)).to.be.undefined;
         expect(play?.data.track?.name).to.equal('The Sandpits Of Zonhoven');
     });
 });

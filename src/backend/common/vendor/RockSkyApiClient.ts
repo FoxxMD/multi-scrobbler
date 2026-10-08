@@ -1,4 +1,4 @@
-import { creditId, creditMbid, creditsToNames, mbMeta, playImage, withAlbumArt } from "../../../core/MusicMetadata.ts";
+import { creditId, creditIsrc, creditMbid, creditsToNames, isrcMeta, mbMeta, playImage, withAlbumArt } from "../../../core/MusicMetadata.ts";
 import dayjs from "dayjs";
 import {rockskyRequiredFields, type Credit, type LifecycleInput, type PlayObject, type PlayObjectMinimal, type RockskyConfidenceField, type RockskyMissingField, type ScrobbleActionResult, type URLData} from "../../../core/Atomic.ts";
 import { nonEmptyStringOrDefault } from "../../../core/StringUtils.ts";
@@ -331,7 +331,7 @@ export const hasRequiredScrobbleFields = (play: PlayObject): RockskyMissingField
 export const hasScrobbleConfidenceFields = (play: PlayObject): RockskyConfidenceField[] => {
     const found: RockskyConfidenceField[] = [];
 
-    if(play.data.isrc) {
+    if(creditIsrc(play.data.track)) {
         found.push('isrc');
     }
     if(creditMbid(play.data.track, 'recording')) {
@@ -347,7 +347,7 @@ const playToMatchSongInput = (play: PlayObject): RsMatchSongInput => ({
         title: requirePlayTrack(play),
         artist: creditsToNames(play.data.artists).join(', '),
         mbId: creditMbid(play.data.track, 'track') ?? creditMbid(play.data.track, 'recording'),
-        isrc: play.data.isrc,
+        isrc: creditIsrc(play.data.track),
         album: creditToName(play.data.album)
 })
 
@@ -359,7 +359,6 @@ const mergeSongViewWithPlay = (song: SongViewDetailedMS, play: PlayObject): Play
             track: svPlay.data.track ?? play.data.track,
             album: svPlay.data.album ?? play.data.album,
             duration: svPlay.data.duration ?? play.data.duration,
-            isrc: svPlay.data.isrc ?? play.data.isrc,
             meta: { ...play.data.meta }
         },
         meta: {
@@ -398,12 +397,11 @@ export const songViewToPlay = (song: SongViewDetailedMS): PlayObject => {
 
     const play: PlayObject = {
         data: {
-            track: nameToCredit(song.title, mbMeta(mb, 'recording')),
+            track: nameToCredit(song.title, mbMeta(mb, 'recording'), isrcMeta(song.isrc)),
             artists,
             albumArtists,
             album: nameToCredit(song.album !== '' ? song.album : undefined),
             duration: song.duration !== undefined && song.duration !== 0 ? song.duration / 1000 : undefined,
-            isrc: song.isrc
         },
         meta: {
             trackId: song.id,
@@ -484,6 +482,7 @@ type RealCreateScrobbleInput = CreateScrobbleInput & {albumArtist: string};
 export const playToRockskyClientRecord = (play: PlayObject): RealCreateScrobbleInput => {
     const artistStr = creditsToNames(play.data.artists).join(', ');
 
+    const isrc = creditIsrc(play.data.track);
     const csi: RealCreateScrobbleInput = {
         title: requirePlayTrack(play),
         artist: artistStr,
@@ -492,7 +491,7 @@ export const playToRockskyClientRecord = (play: PlayObject): RealCreateScrobbleI
         albumArtist: (play.data.albumArtists ?? []).length === 0 ? artistStr : creditsToNames(play.data.albumArtists).join(', '),
         album: creditToName(play.data.album),
         mbId: creditMbid(play.data.track, 'recording'),
-        isrc: play.data.isrc !== undefined ? isrcNoHyphens(play.data.isrc) : undefined,
+        isrc: isrc !== undefined ? isrcNoHyphens(isrc) : undefined,
         duration: play.data.duration !== undefined ? play.data.duration * 1000 : 0,
         spotifyLink: play.meta.source === 'spotify' && play.meta.url?.web !== undefined ? play.meta.url?.web : undefined,
         timestamp: getScrobbleTsSOCDate(play).unix()
@@ -507,6 +506,7 @@ export const playToRockskyAgentRecord = (play: PlayObject): ScrobbleInput => {
         throw new SimpleError('Play must have an album to be converted to a Rocksky record');
     }
 
+    const isrc = creditIsrc(play.data.track);
     const csi: ScrobbleInput = {
         title: requirePlayTrack(play),
         artist: artistStr,
@@ -515,7 +515,7 @@ export const playToRockskyAgentRecord = (play: PlayObject): ScrobbleInput => {
         albumArtist: (play.data.albumArtists ?? []).length === 0 ? artistStr : creditsToNames(play.data.albumArtists).join(', '),
         album: album.name,
         mbid: creditMbid(play.data.track, 'recording'),
-        isrc: play.data.isrc !== undefined ? isrcNoHyphens(play.data.isrc) : undefined,
+        isrc: isrc !== undefined ? isrcNoHyphens(isrc) : undefined,
         duration: play.data.duration !== undefined ? play.data.duration * 1000 : 0,
         spotifyLink: play.meta.source === 'spotify' && play.meta.url?.web !== undefined ? play.meta.url?.web : undefined,
         createdAt: getScrobbleTsSOCDate(play).toISOString()

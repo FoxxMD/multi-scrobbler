@@ -10,7 +10,7 @@ import type { Cacheable } from "cacheable";
 import { getRoot } from "../../../ioc.ts";
 import { hashObject } from "../../../utils/StringUtils.ts";
 import { playContentCacheHash } from "../../../utils/PlayComparisonUtils.ts";
-import { creditIds, creditMbid, mbMeta } from "../../../../core/MusicMetadata.ts";
+import { creditIds, creditIsrc, creditMbid, isrcMeta, mbMeta } from "../../../../core/MusicMetadata.ts";
 import { AsyncLocalStorage } from "async_hooks";
 import { nanoid } from "nanoid";
 import { stripIndents } from "common-tags";
@@ -222,8 +222,9 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
             if(play.data.album !== undefined && using.includes('album')) {
                 query.release = creditToName(play.data.album);
             }
-            if(play.data.isrc !== undefined && using.includes('isrc')) {
-                query.isrc = isrcNoHyphens(play.data.isrc);
+            const isrc = creditIsrc(play.data.track);
+            if(isrc !== undefined && using.includes('isrc')) {
+                query.isrc = isrcNoHyphens(isrc);
             }
             if(recordingMbid !== undefined && using.includes('mbidrecording')) {
                 query.rid = recordingMbid;
@@ -437,13 +438,12 @@ export const recordingToPlay = (data: IRecording, options?: {ignoreVA?: boolean}
 
     const play: PlayObjectMinimal = {
         data: {
-            track: nameToCredit(data.title, mbMeta(data.id, 'recording')),
+            track: nameToCredit(data.title, mbMeta(data.id, 'recording'), isrcMeta(data.isrcs !== undefined && data.isrcs.length > 0 ? data.isrcs[0] : undefined)),
             artists,
             album: nameToCredit(album?.title, mbMeta(album?.id, 'release'), mbMeta(album?.["release-group"]?.id, 'release-group')),
             albumArtists,
             // recording length is in milliseconds
             duration: data.length !== undefined ? Math.round(data.length / 1000) : undefined,
-            isrc: data.isrcs !== undefined && data.isrcs.length > 0 ? data.isrcs[0] : undefined,
         },
         meta: {
             source: 'musicbrainz',

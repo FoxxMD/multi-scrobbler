@@ -4,7 +4,7 @@ import type { Request, Response } from 'superagent';
 import request from 'superagent';
 import type {BrainzMeta, Credit, PlayObject, PlayObjectMinimal, ScrobbleActionResult, UnixTimestamp, URLData} from "../../../core/Atomic.ts";
 import { combinePartsToString, slice } from "../../../core/StringUtils.ts";
-import { nameToCredit } from "../../../core/MusicMetadata.ts";
+import { isrcMeta, nameToCredit } from "../../../core/MusicMetadata.ts";
 import { namesToCredits } from "../../../core/MusicMetadata.ts";
 import {
     normalizeListenbrainzUrl,
@@ -690,12 +690,11 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
         const play: PlayObjectMinimal = {
             data: {
                 playDate: dayjs.unix(listened_at),
-                track: nameToCredit(normalTrackName, mbMeta(trackId, 'recording')),
+                track: nameToCredit(normalTrackName, mbMeta(trackId, 'recording'), isrcMeta(isrc !== undefined ? isrcNoHyphens(isrc) : undefined)),
                 artists: creditsWithIds(namesToCredits(artists), artistMbids, 'musicbrainz', 'artist'),
                 album: nameToCredit(release_name, mbMeta(release_mbid, 'release'), mbMeta(release_group_mbid, 'release-group')),
                 albumArtists: albumArtists !== undefined ? namesToCredits(albumArtists) : undefined,
                 duration: dur,
-                isrc: isrc !== undefined ? isrcNoHyphens(isrc) : undefined,
                 meta: {
                 }
             },

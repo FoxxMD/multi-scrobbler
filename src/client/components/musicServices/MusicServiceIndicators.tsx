@@ -1,4 +1,4 @@
-import { HStack, Icon, Separator, StackSeparator, type IconProps, Span } from "@chakra-ui/react";
+import { HStack, Icon, Separator, StackSeparator, type IconProps, Span, Badge } from "@chakra-ui/react";
 import { getMusicServiceIcon, getMusicServiceIconElement } from "../icons/ChakraIcons";
 import { type MusicServicesAny } from '../../../core/MusicMetadata';
 import { type MusicServices } from '../../../core/MusicMetadata';
@@ -37,7 +37,14 @@ export const MusicServiceInfoIcon = (props: MusicServiceInfoIconProps) => {
         showId = false,
     } = props;
 
-    const icon = <Icon size="sm" {...iconProps}>{getMusicServiceIconElement(type)}</Icon>;
+    let icon: React.JSX.Element;
+    if(type === 'isrc') {
+        icon = <Badge marginX="0" colorPalette="purple" size="xs" variant="subtle">ISRC</Badge>
+    } else {
+        icon = <Icon size="sm" {...iconProps}>{getMusicServiceIconElement(type)}</Icon>;
+    }
+
+    const cappedType = type === 'isrc' ? 'ISRC' : capitalize(type);
 
     let content: React.JSX.Element | string;
     if (link !== undefined) {
@@ -47,14 +54,14 @@ export const MusicServiceInfoIcon = (props: MusicServiceInfoIconProps) => {
     }
     let visibleId: React.JSX.Element | null = null;
     if (showId && id !== undefined) {
-        visibleId = <><Separator orientation="vertical" height="4" /><Muted textStyle="xs">{`${capitalize(type)}`}{idHint !== undefined ? ` ${capitalize(idHint)}` : ''} <Span userSelect="all">{id}</Span></Muted></>
+        visibleId = <><Separator orientation="vertical" height="4" /><Muted textStyle="xs">{`${cappedType}`}{idHint !== undefined ? ` ${capitalize(idHint)}` : ''} <Span userSelect="all">{id}</Span></Muted></>
     }
 
     if (tooltip) {
         if(id !== undefined) {
-            return <Tooltip content={`${capitalize(type)}${idHint !== undefined ? ` ${capitalize(idHint)} ` : ''}${id}`} interactive><HStack>{visibleId}{content}</HStack></Tooltip>;
+            return <Tooltip content={`${cappedType}${idHint !== undefined ? ` ${capitalize(idHint)} ` : ' '}${id}`} interactive><HStack>{visibleId}{content}</HStack></Tooltip>;
         }
-        return <Tooltip content={`Has ${capitalize(type)}${idHint !== undefined ? ` ${capitalize(idHint)} ` : ' ID '}`} interactive><HStack>{visibleId}{content}</HStack></Tooltip>;
+        return <Tooltip content={`Has ${cappedType}${idHint !== undefined ? ` ${capitalize(idHint)} ` : ' ID '}`} interactive><HStack>{visibleId}{content}</HStack></Tooltip>;
     }
     return <HStack>{visibleId}{content}</HStack>;
 }

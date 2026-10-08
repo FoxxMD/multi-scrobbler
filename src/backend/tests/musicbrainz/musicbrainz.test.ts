@@ -1,4 +1,4 @@
-import { creditId, creditMbid, mbMeta, spotifyMeta, withImage } from "../../../core/MusicMetadata.ts";
+import { creditId, creditIsrc, creditMbid, isrcMeta, mbMeta, spotifyMeta, withImage } from "../../../core/MusicMetadata.ts";
 import * as dotenv from 'dotenv';
 import { loggerTest } from "@foxxmd/logging";
 import chai, { expect, assert } from 'chai';
@@ -154,10 +154,9 @@ describe('Musicbrainz API', function () {
 
             const play: PlayObject = {
                 data: {
-                    track: nameToCredit("Fake"),
+                    track: nameToCredit("Fake", isrcMeta('GBAHT1600302')),
                     artists: namesToCredits(["Fake"]),
                     album: nameToCredit("Fake"),
-                    isrc: 'GBAHT1600302'
                 },
                 meta: {
                     
@@ -343,10 +342,9 @@ describe('Musicbrainz API', function () {
 
             const play: PlayObject = {
                 data: {
-                    track: nameToCredit("Price"),
+                    track: nameToCredit("Price", isrcMeta('JPK651601515')),
                     artists: namesToCredits(["ATLUS Sound Team"]),
                     album: nameToCredit("PERSONA5 ORIGINAL SOUNDTRACK"),
-                    isrc: 'JPK651601515'
                 },
                 meta: {
                     
@@ -575,11 +573,10 @@ describe('#MB Stage Rules', function () {
     });
     // what the stage found
     const match = generatePlay({
-        track: nameToCredit('My Song (Remastered)', mbMeta('mb-rec', 'recording')),
+        track: nameToCredit('My Song (Remastered)', mbMeta('mb-rec', 'recording'), isrcMeta('USRC17607839')),
         album: nameToCredit('My Album', mbMeta('mb-rel', 'release')),
         artists: [nameToCredit('Jay Z', mbMeta('mb-j', 'artist')), nameToCredit('Beyoncé', mbMeta('mb-b', 'artist'))],
         meta: { brainz: { trackNumber: 4 } },
-        isrc: 'USRC17607839'
     });
 
     const applyRules = async (rules: Partial<MusicbrainzTransformerDataStage>): Promise<PlayObject> => {
@@ -598,7 +595,7 @@ describe('#MB Stage Rules', function () {
         expect(data.artists?.map(x => x.name)).eql(['Jay Z', 'Beyoncé']);
         expect(data.artists?.map(x => creditMbid(x, 'artist'))).eql(['mb-j', 'mb-b']);
         expect(data.meta?.brainz?.trackNumber).eq(4);
-        expect(data.isrc).eq('USRC17607839');
+        expect(creditIsrc(data.track)).eq('USRC17607839');
     });
 
     it('only adds ids, matched to existing credits, when only meta is used', async function () {
@@ -619,7 +616,7 @@ describe('#MB Stage Rules', function () {
         expect(data.album).eql(play.data.album);
         expect(data.artists).eql([{ name: 'Jay Z' }, { name: 'Beyoncé' }]);
         expect(data.meta?.brainz).to.be.undefined;
-        expect(data.isrc).to.be.undefined;
+        expect(creditIsrc(data.track)).to.be.undefined;
     });
 
     it('applies ids to credits that are not renamed when meta and only some names are used', async function () {

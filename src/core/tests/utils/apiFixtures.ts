@@ -1,11 +1,11 @@
 import { faker } from "@faker-js/faker";
 import type {AlbumSearchResult, ArtistSearchResult, ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentHistoricalApi, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi, TrackSearchResult} from "../../Api.ts";
 import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ComponentType, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes, type MBID, type Credit } from "../../Atomic.ts";
-import { generateArtist, generateMbid, generatePlay, normalizePlays } from "./PlayTestUtils.ts";
+import { generateArtist, generateISRC, generateMbid, generatePlay, normalizePlays } from "./PlayTestUtils.ts";
 import { generatePlayInput, generatePlayWithLifecycle, playWithLifecycleScrobble, randomPlayState } from "./fixtures.ts";
 import { asJsonPlayObject } from "../../PlayMarshalUtils.ts";
 import { generatePlayUid } from "../../StringUtils.ts";
-import { mbMeta, nameToCredit, spotifyMeta, withAlbumArt, withImage } from "../../MusicMetadata.ts";
+import { isrcMeta, mbMeta, nameToCredit, spotifyMeta, withAlbumArt, withImage } from "../../MusicMetadata.ts";
 import dayjs, { type Dayjs } from "dayjs";
 import { isSourceType } from "../../Atomic.ts";
 import { sourceTypes } from "../../Atomic.ts";
@@ -587,6 +587,7 @@ export const generateTrackSearchResult = (partial: Partial<TrackSearchResult> = 
             faker.music.songName(),
             mbMeta(faker.helpers.arrayElement([generateMbid(), undefined]), 'recording'),
             mbMeta(faker.helpers.arrayElement([generateMbid(), undefined]), 'track'),
+            isrcMeta(faker.helpers.arrayElement([generateISRC(), undefined])),
             spotifyMeta(faker.helpers.arrayElement([faker.string.alphanumeric(4), undefined]), 'track')
         ),
         // nested results have no score, a nested album has no artists of its own

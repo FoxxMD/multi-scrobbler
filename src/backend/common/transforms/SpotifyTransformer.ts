@@ -17,7 +17,7 @@ import { chooseImageByResolution, isCompilation, SpotifyApiClient, trackToPlay }
 import { MaybeLogger } from '../MaybeLogger.ts';
 import { SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../errors/MSErrors.ts";
 import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
-import { creditId, creditIds, type CreditRules, nameToCredit, resolveCredit, resolveCredits, spotifyMeta, withImage } from "../../../core/MusicMetadata.ts";
+import { creditId, creditIds, creditIsrc, type CreditRules, nameToCredit, resolveCredit, resolveCredits, spotifyMeta, withImage } from "../../../core/MusicMetadata.ts";
 import type { TransformerOptions } from "./AbstractTransformer.ts";
 import { SearchPrerequisiteError } from "./MusicbrainzTransformer.ts";
 import {
@@ -118,8 +118,7 @@ export const missingSpotifyTypes = (play: PlayObject): SpotifyMissingType[] => {
         track,
         album,
         artists: dataArtists,
-        duration,
-        isrc
+        duration
     } = play.data;
 
     const albumArt = album?.image;
@@ -144,7 +143,7 @@ export const missingSpotifyTypes = (play: PlayObject): SpotifyMissingType[] => {
     if(duration === undefined) {
         missing.push('duration');
     }
-    if(isrc === undefined) {
+    if(creditIsrc(play.data.track) === undefined) {
         missing.push('isrc');
     }
     if(albumArt === undefined) {
@@ -314,7 +313,8 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
     }
 
     public async searchByIsrc(play: PlayObject, stageConfig: SpotifyTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<SpotifyApi.TrackObjectFull[]> {
-        if (play.data.isrc === undefined) {
+        const isrc = creditIsrc(play.data.track);
+        if (isrc === undefined) {
             throw new SearchPrerequisiteError('Play does not have ISRC');
         }
         this.logger.debug({ labels: ['ISRC Search'] }, 'Searching with ISRC');
@@ -322,7 +322,7 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
             market = this.defaults.market,
             locale = this.defaults.locale
         } = stageConfig;
-        return await this.api.searchTracksByIsrc(play.data.isrc, { market, locale, useCachedResult: opts.useCachedResult });
+        return await this.api.searchTracksByIsrc(isrc, { market, locale, useCachedResult: opts.useCachedResult });
     }
 
     public async searchByBasicFields(play: PlayObject, stageConfig: SpotifyTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<SpotifyApi.TrackObjectFull[]> {
@@ -483,8 +483,8 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
         return transformData.data.duration ?? play.data.duration;
     }
     protected async handleMeta(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<TrackMetaIsrc | undefined> {
-        const {meta, isrc} = transformData.data;
-        return removeUndefinedKeys<TrackMetaIsrc>({...meta, isrc});
+        const {meta} = transformData.data;
+        return removeUndefinedKeys<TrackMetaIsrc>({...meta});
     }
 
     public async notify(payload: WebhookPayload): Promise<void> {

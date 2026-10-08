@@ -1,4 +1,4 @@
-import { creditMbid, mbMeta } from "../../../../core/MusicMetadata.ts";
+import { creditIsrc, creditMbid, isrcMeta, mbMeta } from "../../../../core/MusicMetadata.ts";
 import { nameToCredit } from "../../../../core/MusicMetadata.ts";
 import dayjs, { type Dayjs, type ManipulateType } from "dayjs";
 import {type PlayObject, type PlayObjectMinimal, type MBID, type ScrobbleActionResult, PARSED_FROM} from "../../../../core/Atomic.ts";
@@ -167,12 +167,11 @@ export const recordToPlay = (record: TealPlayRecord, options: RecordOptions = {}
 
     const play: PlayObjectMinimal = {
         data: {
-            track: nameToCredit(record.trackName, mbMeta(record.recordingMbId, 'recording')),
+            track: nameToCredit(record.trackName, mbMeta(record.recordingMbId, 'recording'), isrcMeta(record.isrc)),
             artists: artists.filter(x => x.artistName !== undefined).map(x => nameToCredit(x.artistName, mbMeta(x.artistMbId, 'artist'))),
             duration: record.duration,
             playDate: dayjs(record.playedTime),
             album: nameToCredit(record.releaseName, mbMeta(record.releaseMbId, 'release')),
-            isrc: record.isrc
         },
         meta: {
             source: 'tealfm',
@@ -243,6 +242,7 @@ export const playToRecord = (play: PlayObject): FmTealFeedPlay.Main => {
     if(play.data.track === undefined) {
         throw new SimpleError('Play must have a track title to be converted to a teal.fm record');
     }
+    const isrc = creditIsrc(play.data.track);
     const record: FmTealFeedPlay.Main = {
         $type: "fm.teal.feed.play",
         trackName: play.data.track.name,
@@ -253,7 +253,7 @@ export const playToRecord = (play: PlayObject): FmTealFeedPlay.Main => {
         submissionClientAgent: `multi-scrobbler/${getRoot().items.version}`,
         musicServiceUri: asMusicServiceUri(musicService),
         originUri: isGenericUri(play.meta.url?.origin) ? play.meta.url?.origin : undefined,
-        isrc: play.data.isrc !== undefined ? isrcNoHyphens(play.data.isrc) : undefined,
+        isrc: isrc !== undefined ? isrcNoHyphens(isrc) : undefined,
         trackMbId: mbidUriOrUndefined(creditMbid(play.data.track, 'track') as MBID),
         recordingMbId: mbidUriOrUndefined(creditMbid(play.data.track, 'recording') as MBID),
         releaseMbId: mbidUriOrUndefined(creditMbid(play.data.album, 'release') as MBID)

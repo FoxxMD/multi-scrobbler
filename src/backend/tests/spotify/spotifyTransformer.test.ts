@@ -1,4 +1,4 @@
-import { creditId, creditIds, spotifyMeta, withImage, nameToCredit, creditsToNames  } from "../../../core/MusicMetadata.ts";
+import { creditId, creditIds, spotifyMeta, withImage, nameToCredit, creditsToNames, isrcMeta, creditIsrc  } from "../../../core/MusicMetadata.ts";
 import { loggerTest } from '@foxxmd/logging';
 import { Cacheable } from 'cacheable';
 import chai, { expect } from 'chai';
@@ -21,10 +21,9 @@ chai.use(asPromised);
 
 const basePlay = (data: Partial<PlayObject['data']> = {}, meta: Partial<PlayObject['meta']> = {}): PlayObject => ({
     data: {
-        track: nameToCredit('My Track'),
+        track: nameToCredit('My Track', isrcMeta('1234')),
         artists: [{ name: 'My Artist' }],
         album: nameToCredit('My Album'),
-        isrc: '1234',
         duration: 180,
         ...data,
     },
@@ -129,7 +128,7 @@ describe('Spotify Transformer', function () {
 
         it('returns empty when all missing types are present', function () {
             const play = basePlay({
-                track: nameToCredit('My Track', spotifyMeta('t1', 'track')),
+                track: nameToCredit('My Track', spotifyMeta('t1', 'track'), isrcMeta('1234')),
                 album: withImage(nameToCredit('My Album', spotifyMeta('a1', 'album')), 'https://example.com'),
                 artists: [nameToCredit('My Artist', spotifyMeta('ar1', 'artist'))]
             });
@@ -155,7 +154,7 @@ describe('Spotify Transformer', function () {
             const play = trackToPlay(track);
             expect(play.data.track?.name).to.equal('My Track');
             expect(play.data.album?.name).to.equal('My Album');
-            expect(play.data.isrc).to.equal('USRC17607839');
+            expect(creditIsrc(play.data.track)).to.equal('USRC17607839');
             expect(play.data.duration).to.equal(180);
             expect(creditsToNames(play.data.artists)).to.deep.equal(['My Artist']);
             expect(creditIds(play.data.artists, 'spotify', 'artist')).to.deep.equal(['artist1']);
@@ -237,7 +236,7 @@ describe('Spotify Transformer', function () {
         it('uses an ISRC match even when its title/artist text scores below the minimum threshold', async function () {
             // scrobble source title is drastically different from the Spotify catalog title (localized/theatrical
             // edition naming) but the ISRC identifies it as the same recording
-            const play = basePlay({ track: nameToCredit('KAISEI:Movie Edition from Project SEKAI'), artists: [{ name: 'Project SEKAI' }], isrc: 'JPPO02201234' });
+            const play = basePlay({ track: nameToCredit('KAISEI:Movie Edition from Project SEKAI', isrcMeta('JPPO02201234')), artists: [{ name: 'Project SEKAI' }] });
             const track = fakeTrack({ name: '快晴「劇場版プロジェクトセカイ」ver.', artists: [artist('a1', 'Project SEKAI')], isrc: 'JPPO02201234' });
 
             const result = await transformer.handlePostFetch(play, { tracks: [track], requestQueries: [], searchType: 'isrc' }, stageConfig);
@@ -252,7 +251,7 @@ describe('Spotify Transformer', function () {
         });
 
         it('picks the best-matching candidate by fuzzy score when an ISRC returns more than one album', async function () {
-            const play = basePlay({ track: nameToCredit('My Track'), artists: [{ name: 'My Artist' }], album: nameToCredit('The Real Album'), isrc: 'USRC17607839' });
+            const play = basePlay({ track: nameToCredit('My Track', isrcMeta('USRC17607839')), artists: [{ name: 'My Artist' }], album: nameToCredit('The Real Album') });
             const wrongAlbum = fakeTrack({ id: 'wrong', albumName: 'Some Compilation', isrc: 'USRC17607839' });
             const rightAlbum = fakeTrack({ id: 'right', albumName: 'The Real Album', isrc: 'USRC17607839' });
 

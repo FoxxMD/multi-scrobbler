@@ -108,9 +108,9 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
                         }
                     }
                     transformedPlayData.meta = mergedMeta as TrackMeta;
-                    if (isrc !== undefined) {
-                        transformedPlayData.isrc = isrc;
-                    }
+                    // if (isrc !== undefined) {
+                    //     transformedPlayData.isrc = isrc;
+                    // }
                 });
             }
 

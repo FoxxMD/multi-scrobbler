@@ -1,4 +1,4 @@
-import { creditIds, creditMbid, creditsToNames } from "../../../core/MusicMetadata.ts";
+import { creditIds, creditIsrc, creditMbid, creditsToNames } from "../../../core/MusicMetadata.ts";
 import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { before, describe, it } from 'mocha';
@@ -39,12 +39,12 @@ describe('#tealfm Record to Play', function() {
         expect(creditMbid(play.data.album, 'release')).eq(rec.value.releaseMbId);
         expect(creditMbid(play.data.track, 'recording')).eq(rec.value.recordingMbId);
         expect(creditIds(play.data.artists, 'musicbrainz', 'artist')).eql(rec.value.artists!.map(x => x.artistMbId));
-        expect(play.data.isrc).eq(rec.value.isrc);
+        expect(creditIsrc(play?.data.track)).eq(rec.value.isrc);
     });
 
-    it('Does not add credit metadata if no mbids', function() {
+    it('Does not add credit metadata if no metadata ids', function() {
 
-        const [rec, {tid, did}] = generateTealPlayRecord({ withMbids : false});
+        const [rec, {tid, did}] = generateTealPlayRecord({ withMbids : false, withIsrc: false});
         const play = listRecordToPlay(rec);
 
         expect(play.data.track!.metadata).to.be.undefined;

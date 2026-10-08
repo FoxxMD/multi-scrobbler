@@ -5,7 +5,7 @@ import { getScrobbleTsSOCDate } from "../../../utils/TimeUtils.ts";
 import type {SubmitOptions} from "../ListenbrainzApiClient.ts";
 import type {ListenPayload, MinimumTrack, SubmitListenAdditionalTrackInfo, SubmitPayload} from "../../../../core/vendor/listenbrainz/interfaces.ts";
 import {version as appVersion } from '../../../version.ts';
-import { creditId, creditIds, creditMbid, creditsToNames } from "../../../../core/MusicMetadata.ts";
+import { creditId, creditIds, creditIsrc, creditMbid, creditsToNames } from "../../../../core/MusicMetadata.ts";
 
 export type AllowDeviceList = Record<string, string>;
 /**
@@ -60,7 +60,6 @@ export const playToListenPayload = (play: PlayObject, options: PlayToListenPaylo
             albumArtists = [],
             album, 
             track, 
-            isrc, 
             duration, 
             meta: {
                 brainz = {}, 
@@ -89,7 +88,7 @@ export const playToListenPayload = (play: PlayObject, options: PlayToListenPaylo
         spotify_album_id: msAdditionalInfo.spotify_album_id,
         spotify_artist_ids: msAdditionalInfo.spotify_artist_ids,
         origin_url: msAdditionalInfo.origin_url,
-        isrc: isrc ?? msAdditionalInfo.isrc,
+        isrc: creditIsrc(play.data.track) ?? msAdditionalInfo.isrc,
         tracknumber: brainz.trackNumber ?? msAdditionalInfo.tracknumber,
         duration_played: play.data.listenedFor !== undefined ? Math.floor(play.data.listenedFor) : undefined
     };

@@ -9,7 +9,7 @@ import { isWhenCondition } from "../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";
 import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../core/Transform.ts";
 import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
-import { creditIds, creditMbid, type CreditRules, mbMeta, nameToCredit, resolveCredit, resolveCredits, withImage } from "../../../core/MusicMetadata.ts";
+import { creditId, creditIds, creditIsrc, creditMbid, type CreditRules, mbMeta, nameToCredit, resolveCredit, resolveCredits, withImage } from "../../../core/MusicMetadata.ts";
 import type {TransformerOptions} from "./AbstractTransformer.ts";
 import { ARTIST_WEIGHT, TITLE_WEIGHT } from "../infrastructure/Atomic.ts";
 import { DELIMITERS } from '../../../core/Atomic.ts';
@@ -326,7 +326,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
                 `Recording ${creditMbid(play.data.track, 'recording') ?? '(None)'}`,
                 `Release ${creditMbid(play.data.album, 'release') ?? '(None)'}`,
                 `Artists ${a.length === 0 ? '(None)' : a.join(', ')}`,
-                `ISRC ${play.data.isrc ?? '(None)'}`
+                `ISRC ${creditId(play.data.track, 'isrc') ?? '(None)'}`
             ];
             this.logger.debug(`Original MBIDS => ${parts.join(' | ')}`);
         }
@@ -422,7 +422,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
     }
 
     public async searchByIsrc(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<IRecordingMSList> {
-        if(play.data.isrc !== undefined) {
+        if(creditIsrc(play.data.track) !== undefined) {
             this.logger.debug({labels: ['ISRC Search']},'Searching with ISRC');
             return await this.api.searchByRecording(play, {using: ['isrc'], ...opts});
         }
@@ -591,8 +591,8 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         return transformData.data.duration ?? play.data.duration;
     }
     protected async handleMeta(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<TrackMetaIsrc | undefined> {
-        const {meta, isrc} = transformData.data;
-        return removeUndefinedKeys<TrackMetaIsrc>({...meta, isrc});
+        const { meta } = transformData.data;
+        return removeUndefinedKeys<TrackMetaIsrc>({...meta});
     }
 
     public async notify(payload: WebhookPayload): Promise<void> {

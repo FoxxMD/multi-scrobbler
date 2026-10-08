@@ -146,7 +146,7 @@ export interface TrackData {
      * 
      * https://musicbrainz.org/doc/ISRC
      */
-    isrc?: string
+    //isrc?: string
 }
 
 export const playTrackDataSchema = z.object({

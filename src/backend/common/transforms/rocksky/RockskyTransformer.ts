@@ -3,7 +3,7 @@ import { isWhenCondition } from "../../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../../infrastructure/config/health/webhooks.ts";
 import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../../core/Transform.ts";
 import AtomicPartsTransformer from "../AtomicPartsTransformer.ts";
-import { creditMbid, type CreditRules, creditsToNames, nameToCredit, resolveCredit, resolveCredits, serviceMeta, withImage } from "../../../../core/MusicMetadata.ts";
+import { creditId, creditMbid, type CreditRules, creditsToNames, nameToCredit, resolveCredit, resolveCredits, serviceMeta, withImage } from "../../../../core/MusicMetadata.ts";
 import type {TransformerOptions} from "../AbstractTransformer.ts";
 import { DELIMITERS } from '../../../../core/Atomic.ts';
 import { MaybeLogger } from '../../MaybeLogger.ts';
@@ -272,7 +272,8 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         }
         using.push('album');
         using.push('artist');
-        if(play.data.isrc) {
+        const isrc = creditId(play.data.track, 'isrc');
+        if(isrc) {
             using.push('isrc');
         }
 
@@ -284,7 +285,7 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
             mbid: recordingMbid
         });
         try {
-            const res = await this.api.rsProxy.matchSong(requireTrack(play), creditsToNames(play.data.artists).join(', '), recordingMbid, play.data.isrc, creditToName(play.data.album));
+            const res = await this.api.rsProxy.matchSong(requireTrack(play), creditsToNames(play.data.artists).join(', '), recordingMbid, isrc, creditToName(play.data.album));
             return {
                 requestQuery,
                 ...res
@@ -296,15 +297,16 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
     }
 
     public async searchByIsrc(play: PlayObject, stageConfig: RockskyTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<SongViewDetailedMS> {
-        if(play.data.isrc !== undefined) {
+        const isrc = creditId(play.data.track, 'isrc');
+        if(isrc !== undefined) {
             this.logger.debug({labels: ['ISRC Search']},'Searching with ISRC');
             const requestQuery =JSON.stringify({
                 title: creditToName(play.data.track),
                 artitst: creditsToNames(play.data.artists).join(', '),
-                isrc: play.data.isrc
+                isrc: isrc
             });
             try{
-                const res = await this.api.rsProxy.matchSong(requireTrack(play), creditsToNames(play.data.artists).join(', '), undefined, play.data.isrc);
+                const res = await this.api.rsProxy.matchSong(requireTrack(play), creditsToNames(play.data.artists).join(', '), undefined, isrc);
                 return {
                     requestQuery,
                     ...res

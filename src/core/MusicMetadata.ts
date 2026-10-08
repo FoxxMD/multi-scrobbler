@@ -5,7 +5,7 @@ import { removeUndefinedKeys } from "./DataUtils.ts";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 
-export const musicServiceName = z.enum(['spotify', 'musicbrainz', 'youtube', 'jellyfin', 'plex', 'listenbrainz', 'rocksky']);
+export const musicServiceName = z.enum(['spotify', 'musicbrainz', 'youtube', 'jellyfin', 'plex', 'listenbrainz', 'rocksky', 'isrc']);
 export type MusicServiceName = z.infer<typeof musicServiceName>;
 
 export const musicServiceBaseSchema = z.object({
@@ -53,6 +53,7 @@ export const serviceMeta = (name: MusicServiceName, id: string | null | undefine
 }
 export const mbMeta = (id: string | null | undefined, idType: MBIdType) => serviceMeta('musicbrainz', id, idType);
 export const spotifyMeta = (id: string | null | undefined, idType: 'track' | 'album' | 'artist') => serviceMeta('spotify', id, idType);
+export const isrcMeta = (id: string | null | undefined) => serviceMeta('isrc', id);
 
 const sameMeta = (a: MusicServices, b: MusicServices) => a.name === b.name && a.idType === b.idType;
 
@@ -96,6 +97,7 @@ export const creditId = (credit: Credit | undefined, name: MusicServiceName, idT
     return m !== undefined && 'id' in m ? m.id : undefined;
 }
 export const creditMbid = (credit: Credit | undefined, idType: MBIdType) => creditId(credit, 'musicbrainz', idType);
+export const creditIsrc = (credit: Credit | undefined) => creditId(credit, 'isrc');
 
 /** Get the ids for a service from all credits that have one */
 export const creditIds = (credits: Credit[] = [], name: MusicServiceName, idType?: string): string[] =>

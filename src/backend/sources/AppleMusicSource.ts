@@ -6,7 +6,7 @@ import { COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type Play
 import type { InternalConfig } from "../common/infrastructure/Atomic.ts";
 import type { AppleMusicSourceConfig } from "../common/infrastructure/config/source/applemusic.ts";
 import AbstractSource, { type RecentlyPlayedOptions } from "./AbstractSource.ts";
-import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { creditIsrc, isrcMeta, nameToCredit, withMetadata } from "../../core/MusicMetadata.ts";
 import { namesToCredits } from "../../core/MusicMetadata.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import {
@@ -134,9 +134,8 @@ export default class AppleMusicSource extends AbstractSource {
             data: {
                 artists: namesToCredits([track.artistName]),
                 album: nameToCredit(albumName),
-                track: nameToCredit(track.name),
+                track: nameToCredit(track.name, isrcMeta(track.isrc)),
                 duration: track.durationInMillis ? Math.round(track.durationInMillis / 1000) : undefined,
-                isrc: track.isrc
             },
             meta: {
                 source: 'AppleMusic',
@@ -185,7 +184,7 @@ export default class AppleMusicSource extends AbstractSource {
      * `/catalog/{storefront}/songs/{catalogId}` to backfill and cache the ISRC from the catalog counterpart.
      */
     protected enrichIsrc = async (play: PlayObject, track: Song): Promise<PlayObject> => {
-        if (this.config.options?.enrichIsrc === false || play.data.isrc !== undefined) {
+        if (this.config.options?.enrichIsrc === false || creditIsrc(play.data.track) !== undefined) {
             return play;
         }
 
@@ -208,8 +207,8 @@ export default class AppleMusicSource extends AbstractSource {
                 isrc = (!res.error && res.data && res.data.length > 0) ? (res.data[0].isrc ?? null) : null;
                 await this.cache.cacheApi.set(cacheKey, isrc, '3h');
             }
-            if (isrc !== null) {
-                play.data.isrc = isrc;
+            if (isrc !== null && isrc !== undefined) {
+                play.data.track = withMetadata(play.data.track, isrcMeta(isrc));
             }
         } catch (e) {
             this.logger.warn(new SimpleError(`Failed to backfill ISRC for Apple Music track ${catalogId} from catalog endpoint`, { cause: e }));

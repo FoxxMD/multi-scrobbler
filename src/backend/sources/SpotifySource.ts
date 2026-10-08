@@ -4,7 +4,7 @@ import SpotifyWebApi from "spotify-web-api-node";
 import request from 'superagent';
 import { type BrainzMeta, COMPONENT_AUTH_TYPE, type PlayObject, type PlayObjectMinimal, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, type ScrobbleTsSOC } from "../../core/Atomic.ts";
 import { combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
-import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { creditIsrc, isrcMeta, nameToCredit, withMetadata } from "../../core/MusicMetadata.ts";
 import { spotifyMeta, withImage } from "../../core/MusicMetadata.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.ts";
@@ -220,11 +220,10 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
                 artists: artists.map(x => nameToCredit(x.name, spotifyMeta(x.id, 'artist'))),
                 albumArtists: actualAlbumArtists.map(x => nameToCredit(x.name, spotifyMeta(x.id, 'artist'))),
                 album: withImage(nameToCredit(albumName, spotifyMeta(albumId, 'album')), imageData?.url),
-                track: nameToCredit(name, spotifyMeta(id, 'track')),
+                track: nameToCredit(name, spotifyMeta(id, 'track'), isrcMeta(isrcString)),
                 duration: duration_ms / 1000,
                 playDate: played_at,
                 playDateCompleted,
-                isrc: isrcString,
             },
             meta: {
                 deviceId: deviceId ?? `${NO_DEVICE}`,
@@ -496,7 +495,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
      * this makes one extra call to `tracks/{id}` to backfill and cache it
      */
     protected enrichIsrc = async (play: PlayObject, trackId: string | undefined): Promise<PlayObject> => {
-        if (this.config.options?.enrichIsrc === false || play.data.isrc !== undefined || trackId === undefined) {
+        if (this.config.options?.enrichIsrc === false || creditIsrc(play.data.track) !== undefined || trackId === undefined) {
             return play;
         }
 
@@ -511,7 +510,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
                 await this.cache.cacheApi.set(cacheKey, isrc, '10m');
             }
             if (isrc !== null) {
-                play.data.isrc = isrc;
+                play.data.track = withMetadata(play.data.track, isrcMeta(isrc));
             }
         } catch (e) {
             this.logger.debug(new Error(`Failed to backfill ISRC for track ${trackId} from Spotify tracks endpoint`, {cause: e}));

@@ -2,7 +2,7 @@ import SpotifyWebApi from "spotify-web-api-node";
 import { RateLimiterMemory, RateLimiterQueue } from 'rate-limiter-flexible';
 import type { Cacheable } from "cacheable";
 import type { Credit, PlayObject, PlayObjectMinimal } from "../../../../core/Atomic.ts";
-import { nameToCredit } from "../../../../core/MusicMetadata.ts";
+import { isrcMeta, nameToCredit } from "../../../../core/MusicMetadata.ts";
 import { spotifyMeta, withImage } from "../../../../core/MusicMetadata.ts";
 import { isrcNoHyphens } from "../../../../core/PlayUtils.ts";
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.ts";
@@ -214,12 +214,11 @@ export const trackToPlay = (track: SpotifyApi.TrackObjectFull): PlayObject => {
 
     const play: PlayObjectMinimal = {
         data: {
-            track: nameToCredit(name, spotifyMeta(id, 'track')),
+            track: nameToCredit(name, spotifyMeta(id, 'track'), isrcMeta(isrc)),
             artists: artists.map(x => nameToCredit(x.name, spotifyMeta(x.id, 'artist'))),
             albumArtists: actualAlbumArtists.map(x => nameToCredit(x.name, spotifyMeta(x.id, 'artist'))),
             album: nameToCredit(album?.name, spotifyMeta(album?.id, 'album')),
             duration: duration_ms !== undefined ? Math.round(duration_ms / 1000) : undefined,
-            isrc,
         },
         meta: {
             source: 'spotify',
