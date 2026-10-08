@@ -1,6 +1,6 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import type AbstractTransformer from "./AbstractTransformer.ts";
-import type {MusicServices, MusicServicesBase, OptionalCacheUsage, TransformerCommon, TransformerCommonConfig} from "../../../core/Atomic.ts";
+import type {MusicServicesBase, OptionalCacheUsage, TransformerCommon, TransformerCommonConfig} from "../../../core/Atomic.ts";
 import {DEFAULT_TRANSFORMER_ENV_NAME, DEFAULT_TRANSFORMER_NAME, type MetadataProviderStageType, type StageConfig} from "../../../core/Transform.ts";
 import type {PlayObject} from "../../../core/Atomic.ts";
 import { isStageTyped } from "../../utils/PlayTransformUtils.ts";
@@ -31,7 +31,7 @@ export default class TransformerManager {
     protected transformerConfigs: TransformerCommon[] = [];
 
     protected transformMetadataProviders: Partial<Record<MetadataProviderStageType, string>> = {};
-    protected transformMetadataPreferredProviders: Partial<Record<MetadataProviderStageType, true | string>> | undefined = {musicbrainz: true};
+    protected transformMetadataPreferredProviders: Partial<Record<MetadataProviderStageType, true | string>> | undefined;
 
     public constructor(logger: Logger, cache: MSCache) {
         this.logger = childLogger(logger, 'Transformer Manager');

@@ -1,5 +1,5 @@
 import type { AlbumSearchResult, ArtistSearchResult, MetadataResultServiceScore, TrackDataCreditBase, TrackSearchResult } from "../../../core/Api.ts";
-import type { Credit, MusicServices, MusicServicesBase, TrackData } from "../../../core/Atomic.ts";
+import type { Credit, MusicServicesBase, TrackData } from "../../../core/Atomic.ts";
 import type { ErrorIsh } from "../../../core/ErrorUtils.ts";
 
 export interface MetadataProvider {

@@ -148,6 +148,46 @@ export class SpotifyApiClient extends AbstractApiClient {
         return res.body.albums?.items ?? [];
     }
 
+    /** Direct lookups respond with 404 (unknown id) or 400 (malformed id) instead of an empty result like search does */
+    protected lookup = async <T>(func: (api: SpotifyWebApi) => Promise<T>, cacheKey: string, opts: SpotifySearchOptions = {}): Promise<T | undefined> => {
+        try {
+            return await this.callApi(func, { cacheKey, useCachedResult: opts.useCachedResult });
+        } catch (e) {
+            const status = ((e as Error).cause as { statusCode?: number } | undefined)?.statusCode;
+            if (status === 404 || status === 400) {
+                return undefined;
+            }
+            throw e;
+        }
+    }
+
+    getTrack = async (id: string, opts: SpotifySearchOptions = {}): Promise<SpotifyApi.TrackObjectFull | undefined> => {
+        const { market } = opts;
+        this.logger.trace({ labels: ['Track Lookup'] }, `ID => ${id} | market: ${market ?? '(none)'}`);
+        const res = await this.lookup((api) => api.getTrack(id, removeUndefinedKeys({ market })), `spotify-track-${hashObject({ id, market })}`, opts);
+        return res?.body;
+    }
+
+    getAlbum = async (id: string, opts: SpotifySearchOptions = {}): Promise<SpotifyApi.AlbumObjectFull | undefined> => {
+        const { market } = opts;
+        this.logger.trace({ labels: ['Album Lookup'] }, `ID => ${id} | market: ${market ?? '(none)'}`);
+        const res = await this.lookup((api) => api.getAlbum(id, removeUndefinedKeys({ market })), `spotify-album-${hashObject({ id, market })}`, opts);
+        return res?.body;
+    }
+
+    getArtist = async (id: string, opts: SpotifySearchOptions = {}): Promise<SpotifyApi.ArtistObjectFull | undefined> => {
+        this.logger.trace({ labels: ['Artist Lookup'] }, `ID => ${id}`);
+        const res = await this.lookup((api) => api.getArtist(id), `spotify-artist-${id}`, opts);
+        return res?.body;
+    }
+
+    getArtists = async (ids: string[], opts: SpotifySearchOptions = {}): Promise<SpotifyApi.ArtistObjectFull[]> => {
+        this.logger.trace({ labels: ['Artist Lookup'] }, `IDs => ${ids.join(', ')}`);
+        const res = await this.lookup((api) => api.getArtists(ids), `spotify-artists-${hashObject({ ids })}`, opts);
+        // unknown ids are returned as null
+        return (res?.body.artists ?? []).filter(x => x !== null);
+    }
+
     static formatPlayObj(obj: SpotifyApi.TrackObjectFull, options: FormatPlayObjectOptions = {}): PlayObject {
         return trackToPlay(obj);
     }

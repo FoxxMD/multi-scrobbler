@@ -1,4 +1,4 @@
-import { type Credit, DEFAULT_ROCKSKY_MISSING_TYPES, type LifecycleInput, type OptionalCacheUsage, type PlayObject, type RockskyMissingField, type TrackMetaIsrc } from "../../../../core/Atomic.ts";
+import { type Credit, DEFAULT_ROCKSKY_MISSING_TYPES, type LifecycleInput, type MusicServicesBase, musicServicesBaseSchema, type OptionalCacheUsage, type PlayObject, type RockskyMissingField, type TrackMetaIsrc } from "../../../../core/Atomic.ts";
 import { isWhenCondition } from "../../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../../infrastructure/config/health/webhooks.ts";
 import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../../core/Transform.ts";
@@ -20,9 +20,10 @@ import { type AlbumViewBasic, type ArtistViewBasic, RockskyError, type SongMatch
 import type { RockskyTransformerConfig, RockskyTransformerData } from "../../vendor/rocksky/interfaces.ts";
 import { DEFAULT_ROCKSKY_SEARCH_ORDER } from "./RockskyTransformerUtil.ts";
 import { creditToResult, trackDataToResult, type MetadataProvider } from "../../metadataProviders/MetadataProviderUtils.ts";
-import type { AlbumSearchResult, ArtistSearchResult, TrackSearchResult } from "../../../../core/Api.ts";
+import { type AlbumSearchResult, type ArtistSearchResult, type TrackDataCreditBase, trackDataCreditBaseSchema, type TrackSearchResult } from "../../../../core/Api.ts";
 import { type SearchType, searchType } from "../../vendor/rocksky/interfaces.ts";
 import { RockskyClientPool } from "../../vendor/rocksky/RockskyClientPool.ts";
+import type { RockskyClientWrapped } from "../../vendor/rocksky/RockskyClientWrapped.ts";
 
 export const DEFAULT_SEARCHTYPE_ORDER: SearchType[] = ['isrc','basic'];
 
@@ -451,11 +452,55 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         return songViewPlay;
     }
 
-    async getTrackResults(query: string): Promise<TrackSearchResult[] | false> {
+    async getTrackResults(query: TrackDataCreditBase | MusicServicesBase): Promise<TrackSearchResult[] | false> {
+        const data = trackDataCreditBaseSchema.required({track: true}).safeParse(query);
+        if(!data.success) {
+            const metadata = musicServicesBaseSchema.safeParse(query);
+            if(!metadata.success) {
+                throw new AggregateError([data.error, metadata.error],'query was not a TrackDataCreditBase or MusicServicesBase type');
+            }
+            const {name, id, idType} = metadata.data;
+            let songOpts: Parameters<RockskyClientWrapped['song']>[0];
+            if(name === 'musicbrainz' && idType === 'recording') {
+                songOpts = {mbid: id};
+            } else if(name === 'isrc') {
+                songOpts = {isrc: id};
+            } else if(name === 'spotify' && (idType === undefined || idType === 'track')) {
+                songOpts = {spotifyId: id};
+            } else {
+                // service type was not applicable
+                return [];
+            }
+            try {
+                const view = await this.api.rsProxy.song(songOpts);
+                return [trackDataToResult(songViewToPlay({requestQuery: JSON.stringify(songOpts), ...view}).data, {
+                    service: 'rocksky',
+                    id: String(view.id ?? id),
+                    // id identifies the exact song so there is nothing to score against
+                    score: 100
+                })];
+            } catch (e) {
+                // thrown when there is no match
+                if(isNoMatchError(e)) {
+                    return [];
+                }
+                throw e;
+            }
+        }
+
+        const {track, artists, album} = data.data;
+        if(track === undefined) {
+            throw new SimpleError(`Must include 'track' credit`);
+        }
+        const requestQuery = JSON.stringify({
+            title: track.name,
+            artist: creditsToNames(artists).join(', '),
+            album: creditToName(album)
+        });
         let res: SongViewDetailedMS;
         try {
             // matchSong requires an artist and the sdk drops empty strings, a blank one matches on title only
-            res = {requestQuery: query, ...(await this.api.rsProxy.matchSong(query, ' '))};
+            res = {requestQuery, ...(await this.api.rsProxy.matchSong(track.name, creditsToNames(artists).join(', ') || ' ', creditMbid(track, 'recording'), creditId(track, 'isrc'), creditToName(album)))};
         } catch (e) {
             // thrown when there is no match
             if(isNoMatchError(e)) {
@@ -471,7 +516,7 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
             // the song view only has full metadata (mbids, album artist) for the best match, same as a transform would use
             const view: SongViewDetailedMS = x === res.matches?.[0]
                 ? mergeSongMatch(res, x)
-                : {requestQuery: query, title: x.title, artist: x.artist, album: x.album, albumArt: x.albumArt, isrc: x.isrc, duration: x.durationMs};
+                : {requestQuery, title: x.title, artist: x.artist, album: x.album, albumArt: x.albumArt, isrc: x.isrc, duration: x.durationMs};
             return trackDataToResult(songViewToPlay(view).data, {
                 service: 'rocksky',
                 id: String(x.id ?? index),
@@ -480,8 +525,22 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         });
     }
 
-    async getArtistResults(query: string): Promise<ArtistSearchResult[] | false> {
-        const hits = await this.searchIndex<ArtistViewBasic>(query, 'artists', x => x.name);
+    async getArtistResults(query: TrackDataCreditBase | MusicServicesBase): Promise<ArtistSearchResult[] | false> {
+        const data = trackDataCreditBaseSchema.required({artists: true}).safeParse(query);
+        if(!data.success) {
+            const metadata = musicServicesBaseSchema.safeParse(query);
+            if(!metadata.success) {
+                throw new AggregateError([data.error, metadata.error],'query was not a TrackDataCreditBase or MusicServicesBase type');
+            }
+            // rocksky cannot look up artists by any service id
+            return [];
+        }
+        // rocksky search only takes one string so only the first artist is used
+        const name = data.data.artists?.[0]?.name ?? '';
+        if(name.trim() === '') {
+            throw new SimpleError(`Must include 'artist' credit`);
+        }
+        const hits = await this.searchIndex<ArtistViewBasic>(name, 'artists', x => x.name);
         return hits.map((x): ArtistSearchResult => ({
             ...withImage(nameToCredit(x.name as string, serviceMeta('rocksky', x.id, 'artist')), x.picture),
             score: x.score,
@@ -490,8 +549,21 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         }));
     }
 
-    async getAlbumResults(query: string): Promise<AlbumSearchResult[] | false> {
-        const hits = await this.searchIndex<AlbumViewBasic>(query, 'albums', x => x.title);
+    async getAlbumResults(query: TrackDataCreditBase | MusicServicesBase): Promise<AlbumSearchResult[] | false> {
+        const data = trackDataCreditBaseSchema.required({album: true}).safeParse(query);
+        if(!data.success) {
+            const metadata = musicServicesBaseSchema.safeParse(query);
+            if(!metadata.success) {
+                throw new AggregateError([data.error, metadata.error],'query was not a TrackDataCreditBase or MusicServicesBase type');
+            }
+            // rocksky cannot look up albums by any service id
+            return [];
+        }
+        const name = data.data.album?.name ?? '';
+        if(name.trim() === '') {
+            throw new SimpleError(`Must include 'album' credit`);
+        }
+        const hits = await this.searchIndex<AlbumViewBasic>(name, 'albums', x => x.title);
         return hits.map((x): AlbumSearchResult => ({
             ...withImage(nameToCredit(x.title as string, serviceMeta('rocksky', x.id, 'album')), x.albumArt),
             date: x.releaseDate ?? x.year?.toString(),
