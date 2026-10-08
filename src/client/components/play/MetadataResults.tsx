@@ -1,7 +1,7 @@
-import { AbsoluteCenter, Avatar, Box, Combobox, HStack, Icon, Menu, Portal, Span, Spinner, StackSeparator, Text, InputGroup, type ListCollection, Flex } from "@chakra-ui/react"
+import { AbsoluteCenter, Avatar, Box, Combobox, HStack, Icon, Menu, Portal, Span, Spinner, Switch, StackSeparator, Text, InputGroup, type ListCollection, Flex } from "@chakra-ui/react"
 import type { MetadataResultBase, MetadataResultImage, MetadataResultServiceScore } from "../../../core/Api"
-import { getMusicServiceIconElement } from "../icons/ChakraIcons"
-import React, { useRef } from "react"
+import { BracesIcon, CheckIcon, getMusicServiceIconElement, TextIcon, XIcon } from "../icons/ChakraIcons"
+import React, { useId, useRef } from "react"
 import { MSErrorBoundary } from "../ErrorBoundary"
 import { EllipsisButtonMenu } from "../buttonMenus/ButtonMenu"
 
@@ -106,6 +106,21 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
         input = inputElm;
     }
 
+    // inside a Field the switch inherits the field's control id, same as Combobox.Input, so its label would target the text input instead
+    const switchInputId = useId();
+    const contextSwitch = (
+    <Switch.Root ids={{ hiddenInput: switchInputId }} mr="2">
+        <Switch.HiddenInput />
+        <Switch.Control>
+            <Switch.Thumb>
+            <Switch.ThumbIndicator fallback={<TextIcon color="black" />}>
+                <BracesIcon />
+            </Switch.ThumbIndicator>
+            </Switch.Thumb>
+        </Switch.Control>
+        </Switch.Root>
+    )
+
     return (
         <Flex flexGrow="1">
             <MSErrorBoundary>
@@ -140,6 +155,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                     <Combobox.Control>
                         {input}
                         <Combobox.IndicatorGroup>
+                            {contextSwitch}
                             <Combobox.ClearTrigger />
                             <Combobox.Trigger />
                         </Combobox.IndicatorGroup>
