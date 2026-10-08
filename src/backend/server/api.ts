@@ -27,10 +27,9 @@ import { findAuthIssue, SimpleError } from "../common/errors/MSErrors.ts";
 import { DrizzlePlayRepository, type QueryPlaysOpts, type QueryPlaysOptsJson } from "../common/database/drizzle/repositories/PlayRepository.ts";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.ts";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
-import {componentStateBodySchema, playStateBodySchema, type ComponentClientApiJson, type ComponentSourceApiJson} from "../../core/Api.ts";
+import {componentStateBodySchema, playStateBodySchema, type ComponentClientApiJson, type ComponentSourceApiJson, asSerializablePlaySelect } from "../../core/Api.ts";
 import { asDayjsHydratedObject } from "../../core/DataUtils.ts";
 import type {Dayjs} from "dayjs";
-import { asSerializablePlaySelect } from "../../core/PlayMarshalUtils.ts";
 import { serializeError } from "serialize-error";
 import { z } from 'zod';
 import type { createTypedRouter, TypedMiddleware } from "@minisylar/express-typed-router";
@@ -641,10 +640,46 @@ Note: this is only supported by some components.`
     router.get('/api/metadata/search/tracks', {
         tags: ['Metdata'],
         summary: 'Get Track Metadata from Providers',
-        querySchema: z.object({
-            q: z.string().meta({
-            description: `the track name to search for`
-        })}),
+        querySchema: z.object(
+            {
+                track: z.string().meta({
+                    description: `the track name to search for`
+                }),
+                artists: z.string().array().optional().meta({
+                    description: 'a list of plain artist strings associated with the track'
+                }),
+                album: z.string().array().optional().meta({
+                    description: 'a plain album name string associated with the track'
+                })
+            }
+        ),
+        description: 'Gets track results from all metadata providers'
+    }, async (req, res, next) => {
+        const {
+            query: {
+                q
+            }
+        } = req;
+
+        const results = await root.items.transformerManager.getTrackResults(q);
+        return res.json(results);
+    });
+    router.post('/api/metadata/search/tracks', {
+        tags: ['Metdata'],
+        summary: 'Get Track Metadata from Providers (Advanced)',
+        querySchema: z.object(
+            {
+                track: z.string().meta({
+                    description: `the track name to search for`
+                }),
+                artists: z.string().array().optional().meta({
+                    description: 'a list of plain artist strings associated with the track'
+                }),
+                album: z.string().array().optional().meta({
+                    description: 'a plain album name string associated with the track'
+                })
+            }
+        ),
         description: 'Gets track results from all metadata providers'
     }, async (req, res, next) => {
         const {

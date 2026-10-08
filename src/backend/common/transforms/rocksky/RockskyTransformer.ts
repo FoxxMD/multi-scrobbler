@@ -17,11 +17,12 @@ import { creditToName } from "../../../../core/MusicMetadata.ts";
 import { nativeParse } from "../NativeTransformer.ts";
 import { hasRequiredScrobbleFields, hasScrobbleConfidenceFields, type SongViewDetailedMS, songViewToPlay } from "../../vendor/RockSkyApiClient.ts";
 import { type AlbumViewBasic, type ArtistViewBasic, RockskyError, type SongMatchView } from "@rocksky/sdk";
-import { RockskyClientPool } from "../../vendor/rocksky/RockskyClientWrapped.ts";
 import type { RockskyTransformerConfig, RockskyTransformerData } from "../../vendor/rocksky/interfaces.ts";
-import { DEFAULT_ROCKSKY_SEARCH_ORDER, type SearchType, searchType } from "./RockskyTransformerUtil.ts";
+import { DEFAULT_ROCKSKY_SEARCH_ORDER } from "./RockskyTransformerUtil.ts";
 import { creditToResult, trackDataToResult, type MetadataProvider } from "../../metadataProviders/MetadataProviderUtils.ts";
 import type { AlbumSearchResult, ArtistSearchResult, TrackSearchResult } from "../../../../core/Api.ts";
+import { type SearchType, searchType } from "../../vendor/rocksky/interfaces.ts";
+import { RockskyClientPool } from "../../vendor/rocksky/RockskyClientPool.ts";
 
 export const DEFAULT_SEARCHTYPE_ORDER: SearchType[] = ['isrc','basic'];
 

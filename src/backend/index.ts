@@ -20,12 +20,13 @@ import { readJson } from './utils/DataUtils.ts';
 import ScrobbleClients from './scrobblers/ScrobbleClients.ts';
 import ScrobbleSources from './sources/ScrobbleSources.ts';
 import { Notifiers } from './notifier/Notifiers.ts';
-import { type DbConcrete, getMigratedDb } from './common/database/drizzle/drizzleUtils.ts';
+import { type DbConcrete } from './common/database/drizzle/drizzleUtils.ts';
 import { getDbPath } from './common/database/Database.ts';
 import { createRetentionCleanupTask } from './tasks/retentionCleanup.ts';
 import { parseUserConfig } from './common/Cache.ts';
 import { nonEmptyStringOrDefault } from '../core/StringUtils.ts';
 import { createDir, fileExists } from './utils/FSUtils.ts';
+import { getMigratedDb } from "./common/database/appMigrator.ts";
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);

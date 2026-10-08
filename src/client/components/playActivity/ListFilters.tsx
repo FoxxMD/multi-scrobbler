@@ -13,10 +13,10 @@ import {
 } from "@internationalized/date";
 import { useIsMutating, useQueryClient } from '@tanstack/react-query';
 import { type ComponentProps, useCallback, useMemo, useState } from "react";
-import type {CompareDateBetween, PlayStateUI} from '../../../core/Api.js';
+import type {CompareDateBetween, PlayStateUI, QueryPlaysOptsJsonRefreshable } from '../../../core/Api.js';
 import { type ComponentType, isComponentTypeSource, PLAY_CLIENT_STATE, PLAY_SOURCE_STATE, type PlayState } from '../../../core/Atomic.js';
 import { capitalizeWords } from '../../../core/StringUtils.js';
-import { type QueryPlaysOptsJsonRefreshable, tanQueries, useQueryWatcher } from '../../queries/index.js';
+import { tanQueries, useQueryWatcher } from '../../queries/index.js';
 import { cardHeaderSeparator } from '../../utils/ComponentUtils.js';
 import { PlayStateBadge } from '../Badges.js';
 import { CalendarButton, RefreshButton } from '../icons/ChakraIcons.js';

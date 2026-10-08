@@ -1,12 +1,14 @@
 import type { CompareOpKey, ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
-import { creditSchema, playTrackDataSchema, type ClientType, type ComponentAuthType, type MonitoringStatus, type QueueContext } from "./Atomic.ts"
+import { creditSchema, playTrackDataSchema, type ClientType, type ComponentAuthType, type MonitoringStatus, type QueueContext, type MusicServices, type Replace } from "./Atomic.ts"
 import type { DeepExclude, SourceType, TrackData } from "./Atomic.ts"
 import type { ComponentType, DateLike, ErrorLike, JsonPlayObject, PlayState, QueueName, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.ts"
 import type { Dayjs } from "dayjs"
 import type { ErrorIsh } from "./ErrorUtils.ts"
 import type { PlayEvent } from "./PlayEvent.ts"
 import * as z from "zod"
-import type { MusicServices } from "./MusicMetadata.ts"
+import type { ElementOf, MarkOptional } from "ts-essentials";
+import type { ErrorObject } from "serialize-error";
+import { serializeError } from "serialize-error";
 
 export interface PlayApiCommon {
     uid: string
@@ -44,6 +46,33 @@ export interface PlayApiCommonDetailed extends PlayApiCommon {
     input?: PlayInputApi
     queueStates: QueueStateApi[]
     events: PlayEvent<string>[]
+}
+
+export type SerializablePlaySelect = Replace<MarkOptional<PlayApiCommonDetailed, 'queueStates'>, 'error', ErrorObject> & {queueStates?: Replace<ElementOf<PlayApiCommonDetailed['queueStates']>, 'error', ErrorObject | undefined>[]};
+export const asSerializablePlaySelect = (data: MarkOptional<PlayApiCommonDetailed, 'queueStates'>): SerializablePlaySelect => {
+  const {
+    error,
+    queueStates = [],
+    ...rest
+  } = data;
+
+  const qMapped = queueStates.map((x) => {
+    const {
+      error: e,
+      ...restQ
+    } = x;
+    return {
+      ...restQ,
+      error: e instanceof Error ? serializeError(e) : e
+    }
+  });
+
+  return {
+    ...rest,
+    // @ts-expect-error
+    error: error instanceof Error ? serializeError(error) : error,
+    queueStates: qMapped
+  }
 }
 
 export type ComponentState = 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -172,6 +201,8 @@ export interface SortPlaysByProps {
 }
 
 export type PlayStateUI = PlayState | 'failed TBR';
+export type QueryPlaysOptsJsonRefreshable = Omit<QueryPlaysOptsJson, 'state'> & {nonce?: string, state?: PlayStateUI[]};
+
 
 export type QueryPlaysOptsJson = {
     sort?: "playedAt" | "seenAt";

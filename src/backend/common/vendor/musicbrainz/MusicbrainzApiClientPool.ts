@@ -7,7 +7,7 @@ import { isPortReachableConnect, maxRequestsPerSecond, normalizeWebAddress } fro
 import type { MusicBrainzApi, IRecording, IRecordingList, IRelease, IReleaseList, IArtistList } from 'musicbrainz-api';
 import { difference } from "../../../utils.ts";
 import type { Cacheable } from "cacheable";
-import { getRoot } from "../../../ioc.ts";
+import { getRootCommon } from "../../../iocCommon.ts";
 import { hashObject } from "../../../utils/StringUtils.ts";
 import { playContentCacheHash } from "../../../utils/PlayComparisonUtils.ts";
 import { creditIds, creditIsrc, creditMbid, isrcMeta, mbMeta } from "../../../../core/MusicMetadata.ts";
@@ -16,7 +16,6 @@ import { nanoid } from "nanoid";
 import { stripIndents } from "common-tags";
 import { SimpleError } from '../../errors/MSErrors.ts';
 import { baseFormatPlayObj } from '../../../utils/PlayTransformUtils.ts';
-import type {IRecordingMSList} from '../../transforms/MusicbrainzTransformer.ts';
 import { creditToName, nameToCredit, creditsToNames } from "../../../../core/MusicMetadata.ts";
 import { isrcNoHyphens } from '../../../../core/PlayUtils.ts';
 import {ProxyWithCircuitBreaker, type CircuitBreakerProxy} from '@foxxmd/load-balancer-proxy';
@@ -24,7 +23,7 @@ import {ConsecutiveBreaker} from 'cockatiel';
 import { MusicbrainzApiWrapped } from './MusicbrainzApi.ts';
 import { formatNumber } from '../../../../core/DataUtils.ts';
 import { buildFreetextQuery, buildLuceneQuery, cleanLuceneFields } from './LuceneUtils.ts';
-import type { ArtistSearchQueryOpts, ReleaseSearchQueryOpts, TrackSearchQueryOpts } from './MusicbrainzTypes.ts';
+import type { ArtistSearchQueryOpts, ReleaseSearchQueryOpts, TrackSearchQueryOpts, IRecordingMSList } from './MusicbrainzTypes.ts';
 export interface SubmitResponse {
     payload?: {
         ignored_listens: number
@@ -58,8 +57,8 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
         super('Musicbrainz', name, config, options);
 
         this.asyncStore = new AsyncLocalStorage();
-        this.cache = options.cache ?? getRoot().items.cache().cacheApi;
-        const mbMap = getRoot().items.mbMap();
+        this.cache = options.cache ?? getRootCommon().cache().cacheApi;
+        const mbMap = getRootCommon().mbMap();
         const apis: MusicbrainzApiWrapped[] = [];
         for(const mbConfig of this.config.apis) {
             if((mbConfig.enable ?? true) === false) {
@@ -103,7 +102,7 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
                 }
                 const api = new MusicbrainzApiWrapped({
                     appName: 'multi-scrobbler',
-                    appVersion: getRoot().items.version,
+                    appVersion: getRootCommon().version,
                     appContactInfo: mbConfig.contact ?? DEVELOPER_CONTACT,
                     baseUrl: u.url.toString(),
                     preRequest: (method, url, headers) => {

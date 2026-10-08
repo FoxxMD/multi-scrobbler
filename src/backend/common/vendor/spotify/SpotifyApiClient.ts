@@ -10,7 +10,7 @@ import { hashObject } from "../../../utils/StringUtils.ts";
 import { UpstreamError } from "../../errors/UpstreamError.ts";
 import AbstractApiClient from "../AbstractApiClient.ts";
 import type { AbstractApiOptions, FormatPlayObjectOptions } from "../../infrastructure/Atomic.ts";
-import { getRoot } from "../../../ioc.ts";
+import { getRootCommon } from "../../../iocCommon.ts";
 import type { SpotifyTransformerApiConfigData } from "./SpotifyTypes.ts";
 import { removeUndefinedKeys } from "../../../../core/DataUtils.ts";
 
@@ -38,7 +38,7 @@ export class SpotifyApiClient extends AbstractApiClient {
 
     constructor(name: any, config: SpotifyTransformerApiConfigData, options: AbstractApiOptions & { cache?: Cacheable }) {
         super('Spotify', name, config, options);
-        this.cache = options.cache ?? getRoot().items.cache().cacheApi;
+        this.cache = options.cache ?? getRootCommon().cache().cacheApi;
 
         const {
             requests = 10,

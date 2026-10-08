@@ -1,5 +1,5 @@
 import { type Credit, DEFAULT_MISSING_TYPES, type LifecycleInput, type MissingMbidType, type OptionalCacheUsage, type PlayObject, type TrackMetaIsrc } from "../../../core/Atomic.ts";
-import { MB_RELEASE_GROUP_SECONDARY_TYPES, mBReleaseSecondaryGroupTypesSchema } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
+import { MB_RELEASE_GROUP_SECONDARY_TYPES, mBReleaseSecondaryGroupTypesSchema, type RecordingRankedMatched, type IRecordingMSList } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import { type MBReleaseGroupSecondaryType } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import { type MBReleaseGroupPrimaryType } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import { mBReleasePrimaryGroupTypesSchema } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
@@ -16,7 +16,7 @@ import { DELIMITERS } from '../../../core/Atomic.ts';
 import { MaybeLogger } from '../MaybeLogger.ts';
 import { childLogger } from "@foxxmd/logging";
 import { MusicbrainzApiClientPool, recordingToPlay, type UsingTypes } from "../vendor/musicbrainz/MusicbrainzApiClientPool.ts";
-import type {IRecordingList, IRecordingMatch, IRelease} from "musicbrainz-api";
+import type {IRecordingMatch, IRelease} from "musicbrainz-api";
 import { intersect, missingMbidTypes } from "../../utils.ts";
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
 import { SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../errors/MSErrors.ts";
@@ -95,15 +95,6 @@ export interface MusicbrainzTransformerDataStage extends MusicbrainzTransformerD
 }
 
 export type MusicbrainzBestMatch = {play: PlayObject, score: number};
-
-export type RecordingRankedMatched = IRecordingMatch & {rankScore?: number, artistScore?: number, titleScore?: number, albumScore?: number}
-
-export interface IRecordingMSList extends IRecordingList {
-    recordings: RecordingRankedMatched[]
-    freeText?: boolean
-    requestQuery: string
-    requestQueries?: LifecycleInput[]
-}
 
 export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = {}, logger: MaybeLogger = new MaybeLogger()): MusicbrainzTransformerDataStrong => {
 

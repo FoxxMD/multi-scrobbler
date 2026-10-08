@@ -1,42 +1,8 @@
-import * as z from "zod";
-import { SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, type AmbPlayObject, type Credit, type ScrobbleTsSOC, type TrackData, type TrackStringOptions } from "./Atomic.ts";
+import { SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, type AmbPlayObject, type Credit, type ScrobbleTsSOC, type TrackData, type TrackStringOptions, type MusicServiceName, type MusicServices, type MusicServicesAny } from "./Atomic.ts";
 import { compareNormalizedStrings, defaultBuildTrackStringTransformers } from "./StringUtils.ts";
 import { removeUndefinedKeys } from "./DataUtils.ts";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
-
-export const musicServiceName = z.enum(['spotify', 'musicbrainz', 'youtube', 'jellyfin', 'plex', 'listenbrainz', 'rocksky', 'isrc']);
-export type MusicServiceName = z.infer<typeof musicServiceName>;
-
-export const musicServiceBaseSchema = z.object({
-    name: musicServiceName,
-    image: z.string().optional()
-});
-export type MusicServiceBase = z.infer<typeof musicServiceBaseSchema>;
-
-export const musicServiceIdBaseSchema = z.object({
-    ...musicServiceBaseSchema.shape,
-    id: z.string(),
-    idType: z.string().optional(),
-});
-export type MusicServiceIdBase = z.infer<typeof musicServiceIdBaseSchema>;
-
-export const musicServiceMBSchema = z.object({
-    ...musicServiceIdBaseSchema.shape,
-    name: z.literal(musicServiceName.enum.musicbrainz),
-    idHint: z.enum(['recording', 'release', 'track', 'artist', 'release-group']).optional()
-});
-export type MusicServiceMB = z.infer<typeof musicServiceMBSchema>;
-export const musicServiceNonMBSchema = z.object({
-    ...musicServiceIdBaseSchema.shape,
-    name: musicServiceName.exclude(['musicbrainz']),
-});
-export type MusicServiceNonMB = z.infer<typeof musicServiceNonMBSchema>;
-export const musicServicesBaseSchema = z.discriminatedUnion('name', [musicServiceMBSchema.omit({image: true}), musicServiceNonMBSchema.omit({image: true})]);
-export const musicServicesSchema = z.discriminatedUnion('name', [musicServiceMBSchema, musicServiceNonMBSchema]);
-
-export type MusicServices = z.infer<typeof musicServicesSchema>;
-export type MusicServicesAny = (MusicServices | MusicServiceBase);
 
 export const hasMusicMetadata = (meta: MusicServicesAny[] | undefined, name: MusicServiceName, idType?: string) => getMusicMetadata(meta, name, idType) !== undefined
 

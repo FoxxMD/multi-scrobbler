@@ -1,9 +1,8 @@
 import type { Card, IconProps, HTMLChakraProps} from '@chakra-ui/react';
 import { Span } from '@chakra-ui/react';
-import type {PlayApiCommonDetailed, QueryPlaysOptsJson} from '../../core/Api';
+import type {PlayApiCommonDetailed, QueryPlaysOptsJson, QueryPlaysOptsJsonRefreshable} from '../../core/Api';
 import { INGRESS_QUEUE, isPlayState, type LifecycleStep, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED } from '../../core/Atomic';
 import { isErrorIsh, type ErrorIsh } from '../../core/ErrorUtils';
-import type { QueryPlaysOptsJsonRefreshable } from '../queries';
 
 export const cardHeaderSeparator: Card.HeaderProps = {
     borderBottomWidth: "1px",

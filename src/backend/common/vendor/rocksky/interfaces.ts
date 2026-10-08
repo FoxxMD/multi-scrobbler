@@ -1,6 +1,8 @@
 import * as z from 'zod';
 import type { RockskyMissingField, TransformerCommon, TransformOptions } from '../../../../core/Atomic.ts';
-import type { SearchType } from "../../transforms/rocksky/RockskyTransformerUtil.ts";
+
+export const searchType = z.enum(['basic', 'basicorids', 'mbid', 'isrc', 'artist']);
+export type SearchType = z.infer<typeof searchType>;
 
 const rockskyApiConfig = z.object({
     /**

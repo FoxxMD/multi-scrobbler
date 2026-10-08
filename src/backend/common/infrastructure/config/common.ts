@@ -1,14 +1,8 @@
 import { stripIndents } from "common-tags";
 import * as z from "zod";
-import { type PlayTransformHooks, type ExternalMetadataTerm } from "../../../../core/Transform.ts";
-import type { CommonClientOptions } from "./client/index.ts";
 import type { MarkRequired } from "ts-essentials";
 import type { ClientType, SourceType } from "../../../../core/Atomic.ts";
 import { capitalize } from "../../../../core/StringUtils.ts";
-import type { CommonSourceOptions } from "./source/index.ts";
-import type { Logger } from "@foxxmd/logging";
-import { loggerNoop } from "../../MaybeLogger.ts";
-
 export const commonConfigPrimitivesSchema = z.object({
     name: z.string().optional(),
     id: z.string().optional(),
@@ -194,50 +188,6 @@ export const generateConfigLocation = (configType: string, config: UnparsedConfi
     }
     return `${capitalize(configType)} ${config.type}${identifiers.length > 0 ? ` (${identifiers.join(',')})` : ''} from ENV`;
 }
-
-export const transformPresetEnv = <T extends CommonClientOptions | CommonSourceOptions>(prefix: string, existing: T | undefined = undefined, logger: Logger = loggerNoop): undefined | T => {
-
-    const env = process.env[`${prefix}_TRANSFORMS`];
-    if (env === undefined || env.trim() === '') {
-        return existing;
-    }
-
-    const preCompare: NonNullable<PlayTransformHooks<ExternalMetadataTerm>['preCompare']> = [];
-    const popts: PlayTransformHooks<ExternalMetadataTerm> = {
-        preCompare
-    };
-    const transformTypes = env.split(',').map(x => x.trim().toLocaleLowerCase());
-    for (const p of transformTypes) {
-        switch (p) {
-            case 'native':
-                preCompare.push({ type: 'native'});
-                break;
-            case 'musicbrainz':
-                preCompare.push({ type: 'musicbrainz' });
-                break;
-            case 'rocksky':
-                preCompare.push({ type: 'rocksky' });
-                break;
-            case 'spotify':
-                preCompare.push({ type: 'spotify'});
-                break;
-            case 'coverartarchive':
-                preCompare.push({type: 'coverartarchive'});
-                break;
-            default:
-                logger.warn(`Unrecognized transformer type '${p} in env ${env}'`);
-                break;
-        }
-    }
-
-    // @ts-expect-error T is fine
-    return {
-        ...(existing || {}),
-        playTransform: popts
-    };
-};
-
-
 export type CommonComponentEnvShape<T extends string> = {
     [K in `${T}_ID`]: z.ZodString
 } & {

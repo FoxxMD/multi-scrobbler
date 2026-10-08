@@ -1,20 +1,12 @@
 import { HStack, Icon, Separator, StackSeparator, type IconProps, Span, Badge } from "@chakra-ui/react";
 import { getMusicServiceIcon, getMusicServiceIconElement } from "../icons/ChakraIcons";
-import { type MusicServicesAny } from '../../../core/MusicMetadata';
-import { type MusicServices } from '../../../core/MusicMetadata';
-import { musicServicesSchema } from '../../../core/MusicMetadata';
-import { musicServiceIdBaseSchema } from '../../../core/MusicMetadata';
-import { type MusicServiceBase } from '../../../core/MusicMetadata';
-import { musicServiceBaseSchema } from '../../../core/MusicMetadata';
-import { type MusicServiceName } from '../../../core/MusicMetadata';
-import { musicServiceName } from '../../../core/MusicMetadata';
+import { musicServicesSchema, musicServiceIdBaseSchema, musicServiceBaseSchema, musicServiceName, type MusicServicesAny, type MusicServices, type MusicServiceBase, type MusicServiceName } from '../../../core/Atomic';
 import { capitalize } from "../../../core/StringUtils";
 import { Muted } from "../Typography";
 import { Tooltip } from "../ChakraTooltip";
 import type React from "react";
 import { LuExternalLink } from "react-icons/lu";
 import type { ComponentProps } from "react";
-
 
 export interface MusicServiceInfoIconProps {
     id?: string,

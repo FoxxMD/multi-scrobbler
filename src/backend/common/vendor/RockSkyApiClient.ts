@@ -16,7 +16,7 @@ import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
 import { AuthError, ScrobbleSubmitError, SimpleError } from "../errors/MSErrors.ts";
 import { type CreateScrobbleInput, RockskyClient, Agent, type SongViewDetailed, type ScrobbleInput, type ScrobbleViewBasic, RockskyError, type ActorTrackView } from "@rocksky/sdk";
 import { RockskyIndex } from "@rocksky/sdk/dedup";
-import { getRoot } from "../../ioc.ts";
+import { getRootCommon } from "../../iocCommon.ts";
 import type { MSCache } from "../Cache.ts";
 import type {ATProtoUserIdentifierData, HandleData} from "../infrastructure/config/client/atproto.ts";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
@@ -28,12 +28,12 @@ import { normalizeStr } from "../../../core/StringUtils.ts";
 import { stringSameness } from "@foxxmd/string-sameness";
 import clone from "clone";
 import { difference } from "../../utils.ts";
-import { RockskyClientPool } from "./rocksky/RockskyClientWrapped.ts";
 import path from "node:path";
 import { ATProtoUnauthenticatedApiClient } from "./atproto/ATProtoUnauthenticatedApiClient.ts";
 import fsPromise from 'node:fs/promises';
 import { getDataDir } from "../index.ts";
 import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.ts";
+import { RockskyClientPool } from "./rocksky/RockskyClientPool.ts";
 
 interface SubmitOptions {
     log?: boolean
@@ -77,7 +77,7 @@ export class RockSkyApiClient extends AbstractApiClient {
         } = config;
 
         this.configDir = options.configDir;
-        this.cache = getRoot().items.cache();
+        this.cache = getRootCommon().cache();
         this.apiUrl = normalizeWebAddress(apiUrl ?? 'https://api.rocksky.app/xrpc');
 
         this.logger.verbose(`API URL: '${apiUrl ?? '(None Given)'}' => Normalized: '${this.apiUrl.url}'`);

@@ -4,12 +4,9 @@ import { useEffect, useState, useMemo } from 'react';
 import ky from 'ky';
 import qs from 'qs';
 import { baseUrl } from "../utils";
-import type {AlbumSearchResultResponse, ArtistSearchResultResponse, ComponentsApiJson, PaginatedResponse, PlayApiCommonDetailed, PlayStateUI, QueryPlaysOptsJson, TrackSearchResultResponse} from "../../core/Api";
+import type {AlbumSearchResultResponse, ArtistSearchResultResponse, ComponentsApiJson, PaginatedResponse, PlayApiCommonDetailed, QueryPlaysOptsJson, TrackSearchResultResponse, QueryPlaysOptsJsonRefreshable } from "../../core/Api";
 import { type SourcePlayerJson } from "../../core/Atomic";
 import { queryPlayOptsRefreshableToJson } from "../utils/ComponentUtils";
-
-export type QueryPlaysOptsJsonRefreshable = Omit<QueryPlaysOptsJson, 'state'> & {nonce?: string, state?: PlayStateUI[]};
-
 const components = createQueryKeys('components', {
     list: () => ({
         queryKey: ['components'],
