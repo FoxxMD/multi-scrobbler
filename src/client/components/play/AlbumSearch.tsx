@@ -5,7 +5,7 @@ import { tanQueries } from "../../queries/index.ts";
 import { type AlbumSearchResult } from "../../../core/Api.ts";
 import React, { useCallback, useEffect, useState } from "react";
 import { ArtistCreditTags } from "../ArtistCreditDisplay.tsx";
-import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, type MetadataPartials } from "./MetadataResults.tsx";
+import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, MetadataServiceScore, type MetadataPartials } from "./MetadataResults.tsx";
 import { creditSchema, type Credit } from "../../../core/Atomic.ts";
 import { MusicServiceIndicators } from "../musicServices/MusicServiceIndicators.tsx";
 import { CountryFlag } from "../Country.tsx";
@@ -47,18 +47,21 @@ export const AlbumSearchResultItem = (props: { data: AlbumSearchResult, onPick?:
         locationDateInfo = <Badge variant="outline">{countryElm}<Span>{dayjs(date).format('YYYY')}</Span></Badge>
     }
 
+    const smallMetadataServiceScore = <Badge hideFrom="sm" variant="subtle" size="sm"><MetadataServiceScore {...props.data}/></Badge>
+
     return (
         <HStack gap="4" flexGrow="1">
-            <Stack>
-            <LeftSideMetadataResultContent {...props.data}/>
-            </Stack>
+            <Box hideBelow="sm"><LeftSideMetadataResultContent {...props.data}/></Box>
             <Stack gap="1" flexGrow="1">
-                <Text fontWeight="medium">
-                    <HStack gap="1">
-                        {name}{albumHints.length > 0? <Box>({albumHints.join(' -- ')})</Box> : undefined}{locationDateInfo}<MusicServiceIndicators services={metadata}/>
+                {smallMetadataServiceScore}
+                <Box display="flow-root">
+                     <Box float="right" marginStart="2">
                         <MetadataPickMenu data={props.data} partials={albumPartials} onPick={props.onPick} />
-                    </HStack>
-                </Text>
+                     </Box>
+                     <HStack wrap="wrap">
+                     {name}{albumHints.length > 0? <Box>({albumHints.join(' -- ')})</Box> : undefined}{locationDateInfo}<MusicServiceIndicators services={metadata}/>
+                     </HStack>
+                </Box>
                 {artistTags}
             </Stack>
         </HStack>

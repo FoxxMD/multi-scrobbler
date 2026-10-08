@@ -1,10 +1,10 @@
-import { useListCollection, Stack, Text, HStack } from "@chakra-ui/react"
+import { useListCollection, Stack, Text, HStack, Badge, Box } from "@chakra-ui/react"
 import { useDebouncedState } from '@tanstack/react-pacer'
 import { useQuery } from '@tanstack/react-query';
 import { tanQueries } from "../../queries/index.js";
 import { type ArtistSearchResult } from "../../../core/Api.js";
 import { useCallback, useEffect, useState } from "react";
-import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, type MetadataPartials } from "./MetadataResults.js";
+import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, MetadataServiceScore, type MetadataPartials } from "./MetadataResults.js";
 import { creditSchema, type Credit } from "../../../core/Atomic.js";
 import { MusicServiceIndicators } from "../musicServices/MusicServiceIndicators.js";
 
@@ -16,10 +16,13 @@ export const ArtistSearchResultItem = (props: { data: ArtistSearchResult, onPick
 
     const { name, metadata = [] } = props.data;
 
+     const smallMetadataServiceScore = <Badge hideFrom="sm" variant="subtle" size="sm"><MetadataServiceScore {...props.data}/></Badge>
+
     return (
         <HStack gap="4" flexGrow="1">
-            <LeftSideMetadataResultContent {...props.data} />
+            <Box hideBelow="sm"><LeftSideMetadataResultContent {...props.data} /></Box>
             <Stack gap="1" flexGrow="1">
+                {smallMetadataServiceScore}
                 <Text fontWeight="medium">
                     <HStack>
                         {name} <MusicServiceIndicators services={metadata}/> <MetadataPickMenu data={props.data} partials={artistPartials} onPick={props.onPick} />

@@ -74,6 +74,7 @@ export interface MetadataSearchComboboxProps<T extends MetadataSearchResult> {
     isError: boolean
     inputGroupContent?: React.JSX.Element
     initialInput?: string
+    defaultOpen?: boolean
     onChange: (val: T) => void
     /** Called with the typed text when the user commits it without selecting a result */
     onFreetext: (name: string) => void
@@ -109,6 +110,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
         <Flex flexGrow="1">
             <MSErrorBoundary>
                 <Combobox.Root
+                defaultOpen={props.defaultOpen}
                 defaultInputValue={initialInput === '' ? undefined : initialInput}
                     allowCustomValue
                     onKeyDown={(e) => {

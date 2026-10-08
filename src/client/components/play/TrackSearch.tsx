@@ -1,11 +1,11 @@
-import { useListCollection, Stack, Text, HStack, Span, Badge } from "@chakra-ui/react"
+import { useListCollection, Stack, Text, HStack, Span, Badge, Box, Flex } from "@chakra-ui/react"
 import { useDebouncedState } from '@tanstack/react-pacer'
 import { useQuery } from '@tanstack/react-query';
 import { tanQueries } from "../../queries/index.js";
 import { type TrackSearchResult } from "../../../core/Api.js";
 import React, { useCallback, useEffect, useState } from "react";
 import { ArtistCreditTags } from "../ArtistCreditDisplay.js";
-import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, type MetadataPartials } from "./MetadataResults.js";
+import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, MetadataServiceScore, type MetadataPartials } from "./MetadataResults.js";
 import { playTrackDataSchema, type Credit, type TrackData } from "../../../core/Atomic.js";
 import { playImage } from "../../../core/MusicMetadata.js";
 import { MusicServiceIndicators } from "../musicServices/MusicServiceIndicators.js";
@@ -57,14 +57,14 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?:
             albumHints.push(albumTypeHint);
         }
         const andCount = albumCount !== undefined && albumCount > 1 ? (
-            <Text color="fg.subtle" textStyle="sm">
+            <Text hideBelow="md" color="fg.subtle" textStyle="sm">
                 and {albumCount} more albums...
             </Text>
         ) : undefined;
         albumContent = (<Text color="fg.muted" textStyle="sm">
-            <HStack>
+            <Flex wrap="wrap" flexDirection="row" columnGap="2">
                 {albumName} {albumHints.length > 0 ? `(${albumHints.join(' -- ')})` : ''}{locationDateInfo}<MusicServiceIndicators services={albumMetadata ?? []}/> {andCount}
-            </HStack>
+            </Flex>
         </Text>)
     }
 
@@ -73,18 +73,22 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?:
         artistTags = <ArtistCreditTags data={artists} />
     }
 
+    const smallMetadataServiceScore = <Badge hideFrom="sm" variant="subtle" size="sm"><MetadataServiceScore {...props.data}/></Badge>
+
     return (
         <HStack gap="4" flexGrow="1">
-            <LeftSideMetadataResultContent {...props.data} image={playImage(props.data)} />
+            <Box hideBelow="sm"><LeftSideMetadataResultContent {...props.data} image={playImage(props.data)} /></Box>
             <Stack gap="1" flexGrow="1">
-                <Text fontWeight="medium" mb="1">
-                    <HStack>
-                        {track?.name}
-                        <MusicServiceIndicators services={track?.metadata ?? []}/> 
-                        {duration !== undefined ? <Span>({timeToHumanTimestamp(duration * 1000)})</Span> : undefined}
-                        <MetadataPickMenu data={props.data} partials={trackPartials} onPick={onPick} />
-                    </HStack>
-                </Text>
+                    {smallMetadataServiceScore}
+                    <Box display="flow-root">
+                        {/* floated and first in DOM so the rest flows around it */}
+                        <Box float="right" marginStart="2">
+                            <MetadataPickMenu data={props.data} partials={trackPartials} onPick={onPick} />
+                        </Box>
+                        {track?.name}{' '}
+                        {duration !== undefined ? <Span>({timeToHumanTimestamp(duration * 1000)}) </Span> : undefined}
+                        <MusicServiceIndicators display="inline-flex" verticalAlign="middle" services={track?.metadata ?? []}/>
+                    </Box>
                 {artistTags}
                 {albumContent}
             </Stack>
@@ -93,7 +97,7 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?:
 }
 
 /** Play data to change when a track is selected. Artists and album are only included if the selected track has them. */
-export type TrackOnChange = Pick<TrackData, 'track' | 'artists' | 'album' | 'albumArtists' | 'duration' | 'isrc'>;
+export type TrackOnChange = Pick<TrackData, 'track' | 'artists' | 'album' | 'albumArtists' | 'duration'>;
 
 export interface TrackSearchProps {
     initial?: Credit
@@ -148,6 +152,7 @@ export const TrackSearch = (props: TrackSearchProps) => {
 
     return (
         <MetadataSearchCombobox
+        defaultOpen
             placeholder="Type to search for tracks"
             collection={collection}
             inputGroupContent={groupContent}
