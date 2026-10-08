@@ -6,7 +6,7 @@ import type { FlowControlTerm, TransformHook } from "./Transform.ts";
 import type {Changeset} from "json-diff-ts";
 import type {IParseBaseOptions} from 'qs';
 import * as z from "zod";
-import { musicServicesSchema } from "./MusicMetadata.ts";
+import { musicServicesBaseSchema, musicServicesSchema } from "./MusicMetadata.ts";
 
 export const componentTypeClientSchema = z.literal('client');
 export type ComponentTypeClient = z.infer<typeof componentTypeClientSchema>;
@@ -109,9 +109,15 @@ export const brainzMetaSchema = z.object({
     trackNumber: z.int().positive().optional(),
 })
 
+export const creditBaseSchema = z.object({
+    name: z.string(),
+    metadata: musicServicesBaseSchema.array().optional()
+})
+export type CreditBase = z.infer<typeof creditBaseSchema>;
+
 /** A named thing (track, artist, album) with optional art and any number of ids from music services that identify it */
 export const creditSchema = z.object({
-    name: z.string(),
+    ...creditBaseSchema,
     // not httpUrl because some sources (plex) use relative proxy urls
     image: z.string().optional(),
     metadata: musicServicesSchema.array().optional()
@@ -846,3 +852,22 @@ export type EmittedMSEvent<T = Record<string, any>, K = Record<string, any>,Y = 
 export interface OptionalCacheUsage {
     useCachedResult?: boolean
 }
+
+type Builtin =
+  | string | number | boolean | bigint | symbol | null | undefined
+  | Date | RegExp | Error | Function;
+
+export type DeepExclude<T, K extends PropertyKey> =
+  T extends Builtin
+    ? T
+    : T extends Map<infer MK, infer MV>
+      ? Map<DeepExclude<MK, K>, DeepExclude<MV, K>>
+      : T extends Set<infer S>
+        ? Set<DeepExclude<S, K>>
+        : T extends Promise<infer P>
+          ? Promise<DeepExclude<P, K>>
+          : T extends readonly unknown[]
+            ? { [I in keyof T]: DeepExclude<T[I], K> } // keeps arrays, tuples and readonly
+            : {
+                [P in keyof T as P extends K ? never : P]: DeepExclude<T[P], K>;
+              };

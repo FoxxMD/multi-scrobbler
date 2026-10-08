@@ -32,6 +32,7 @@ export const musicServiceNonMBSchema = z.object({
     name: musicServiceName.exclude(['musicbrainz']),
 });
 export type MusicServiceNonMB = z.infer<typeof musicServiceNonMBSchema>;
+export const musicServicesBaseSchema = z.discriminatedUnion('name', [musicServiceMBSchema.omit({image: true}), musicServiceNonMBSchema.omit({image: true})]);
 export const musicServicesSchema = z.discriminatedUnion('name', [musicServiceMBSchema, musicServiceNonMBSchema]);
 
 export type MusicServices = z.infer<typeof musicServicesSchema>;
