@@ -161,6 +161,7 @@ export const IdleIcon = (props: {animated?: boolean} & ComponentProps<typeof RiZ
 };
 
 export const EllipsisIcon = LuEllipsis;
+export const EllipsisChakraIcon = makeChakraIcon(LuEllipsis);
 export const EllipsisButton = makeIconButton(EllipsisIcon);
 export const EllipsisVerticalIcon = LuEllipsisVertical;
 export const EllipsisVerticalButton = makeIconButton(EllipsisVerticalIcon);
