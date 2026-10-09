@@ -119,7 +119,7 @@ export const TrackSearch = (props: TrackSearchProps) => {
     } = props;
 
     const [selectedItem, setSelectedItem] = useState<Credit>(initial ?? {name: ''});
-    const [searchQuery, setSearchQuery] = useState<TrackSearchSimpleRequestQuery | TrackDataCreditBase>({track: initial?.name ?? ''});
+    const [searchQuery, setSearchQuery] = useState<TrackSearchSimpleRequestQuery | TrackDataCreditBase>({track: ''});
     const search = (query: string, context: boolean) => {
         const musicService = trackSearchToMusicService(query);
         if(musicService !== undefined) {
@@ -162,7 +162,6 @@ export const TrackSearch = (props: TrackSearchProps) => {
 
     return (
         <MetadataSearchCombobox
-        defaultOpen
             placeholder="Type to search for tracks"
             collection={collection}
             inputGroupContent={groupContent}

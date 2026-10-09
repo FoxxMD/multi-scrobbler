@@ -87,7 +87,7 @@ export const AlbumSearch = (props: AlbumSearchProps) => {
     } = props;
 
     const [selectedItem, setSelectedItem] = useState<Credit>(initial ?? {name: ''});
-    const [searchQuery, setSearchQuery] = useState<AlbumSearchSimpleRequestQuery | TrackDataCreditBase>({album: initial?.name ?? ''});
+    const [searchQuery, setSearchQuery] = useState<AlbumSearchSimpleRequestQuery | TrackDataCreditBase>({album: ''});
         const search = (query: string, context: boolean) => {
             const musicService = albumSearchToMusicService(query);
             if(musicService !== undefined) {

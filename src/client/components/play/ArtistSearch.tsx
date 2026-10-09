@@ -46,7 +46,7 @@ export const ArtistSearch = (props: ArtistSearchProps) => {
     } = props;
 
     const [selectedItem, setSelectedItem] = useState<Credit>(initial ?? {name: ''});
-    const [searchQuery, setSearchQuery] = useState<ArtistSearchSimpleRequestQuery | TrackDataCreditBase>({artist: initial?.name ?? ''});
+    const [searchQuery, setSearchQuery] = useState<ArtistSearchSimpleRequestQuery | TrackDataCreditBase>({artist: ''});
     const search = (query: string, context: boolean) => {
         const musicService = artistSearchToMusicService(query);
         if(musicService !== undefined) {
