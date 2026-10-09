@@ -482,6 +482,24 @@ Note: this is only supported by some components.`
         return res.sendStatus(200);
     });
 
+    router.put('/api/components/:id/plays/:uid/play', {
+        middleware: [componentAwareMiddle,jsonParser],
+        tags: ['Plays'],
+        summary: 'Update Play'
+    }, async (req, res, next) => {
+        const {
+            component,
+            params: {
+                uid: playUid
+            }
+        } = req;
+
+        const playRes = await component.getPlayApiResponse(playUid as string);
+        //PlayApiCommonDetailed
+        // plus paginatioon
+        return res.json(asSerializablePlaySelect(playRes));
+    });
+
     router.post('/api/components/:id/plays/queue', {
         middleware: [componentAwareMiddle,jsonParser],
         bodySchema: z.object({

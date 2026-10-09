@@ -1,9 +1,11 @@
 import type { Dayjs } from "dayjs";
-import type { DateLike, ErrorLike, LifecycleStep, PlayMatchResult, PlayState, QueueContext, QueueStatus, ScrobbleResult } from "./Atomic.ts";
+import type { DateLike, ErrorLike, LifecycleStep, PlayMatchResult, PlayObject, PlayState, QueueContext, QueueStatus, ScrobbleResult } from "./Atomic.ts";
+import type { Changeset } from "json-diff-ts";
 
-export type PlayEventType = 'transform' | 'queueStateChange' | 'playStateChange' | 'dupeCheck' | 'scrobbleResult';
+export type PlayEventType = 'transform' | 'queueStateChange' | 'playStateChange' | 'dupeCheck' | 'scrobbleResult' | 'updatePlay';
 export const PLAY_EVENT_TYPE = {
     transform: 'transform',
+    updatePlay: 'updatePlay',
     queueStateChange: 'queueStateChange',
     playStateChange: 'playStateChange',
     dupeCheck: 'dupeCheck',
@@ -44,8 +46,12 @@ export type PlayEventDupeCheck<D extends DateLike = Dayjs> = BasePlayEvent<'dupe
 export type PlayEventScrobbleResultData<D extends DateLike = Dayjs> = ScrobbleResult<D>;
 export type PlayEventScrobbleResult<D extends DateLike = Dayjs> = BasePlayEvent<'scrobbleResult', PlayEventScrobbleResultData<D>, D>;
 
+export type PlayEventUpdatePlayData = {input: Partial<PlayObject>, patch: Changeset};
+export type PlayEventUpdatePlay<D extends DateLike = Dayjs> = BasePlayEvent<'updatePlay', PlayEventUpdatePlayData, D>;
+
 export type PlayEvent<D extends DateLike = Dayjs> = PlayEventTransform<D>
     | PlayEventQueueStateChange<D>
     | PlayEventPlayStateChange<D>
     | PlayEventDupeCheck<D>
-    | PlayEventScrobbleResult<D>;
+    | PlayEventScrobbleResult<D>
+    | PlayEventUpdatePlay<D>;

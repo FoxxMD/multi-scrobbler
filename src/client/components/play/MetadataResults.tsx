@@ -4,6 +4,7 @@ import { BracesIcon, getMusicServiceIconElement, TextIcon } from "../icons/Chakr
 import React, { useId, useRef, useState } from "react"
 import { MSErrorBoundary } from "../ErrorBoundary"
 import { EllipsisButtonMenu } from "../buttonMenus/ButtonMenu"
+import { formatNumber } from "../../../core/DataUtils"
 
 export const LeftSideMetadataResultContent = (props: MetadataResultServiceScore & MetadataResultImage) => {
     if (props.image === undefined) {
@@ -19,7 +20,7 @@ export const LeftSideMetadataResultContent = (props: MetadataResultServiceScore 
 export const MetadataServiceScore = (props: MetadataResultServiceScore) => (
     <HStack gap="1" separator={<StackSeparator />}>
         <Icon size="sm">{getMusicServiceIconElement(props.service)}</Icon>
-        {props.score !== undefined ? <Text color="fg.subtle" textStyle="sm">{props.score}</Text> : undefined}
+        {props.score !== undefined ? <Text color="fg.subtle" textStyle="sm">{formatNumber(props.score, {minimumFractionDigits: 0, maximumFractionDigits: 1})}</Text> : undefined}
     </HStack>
 )
 

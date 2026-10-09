@@ -50,7 +50,13 @@ export const diffObjectsConsoleOutput = (a: object, b: object, showUnchanged: bo
 
 export const formatNumber = (val: number | string, options?: numberFormatOptions) => {
     const {
-        toFixed = 2, defaultVal = null, prefix = '', suffix = '', round,
+        toFixed = 2,
+        defaultVal = null,
+        prefix = '',
+        suffix = '',
+        round,
+        minimumFractionDigits = toFixed,
+        maximumFractionDigits = toFixed
     } = options || {};
     let parsedVal = typeof val === 'number' ? val : Number.parseFloat(val);
     if (Number.isNaN(parsedVal)) {
@@ -77,8 +83,8 @@ export const formatNumber = (val: number | string, options?: numberFormatOptions
         }
     }
     const localeString = parsedVal.toLocaleString(undefined, {
-        minimumFractionDigits: toFixed,
-        maximumFractionDigits: toFixed,
+        minimumFractionDigits,
+        maximumFractionDigits,
     });
     return `${prefixStr}${localeString}${suffix}`;
 };

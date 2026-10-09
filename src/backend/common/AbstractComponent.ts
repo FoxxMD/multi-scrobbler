@@ -34,8 +34,8 @@ import type {RetentionOptions} from "./infrastructure/config/database.ts";
 import { getRetentionCompactAfterFromEnv, getRetentionDeleteAfterFromEnv, isCompactableProperty, parseRetentionOptions, parseRetentionOptionsDurations } from "./database/Database.ts";
 import type {DbConcrete} from "./database/drizzle/drizzleUtils.ts";
 import type {ComponentSelect, PlayEventNew, PlayEventSelect, PlaySelect, PlaySelectWithQueueStates, PlayWith, QueueStateSelect} from "./database/drizzle/drizzleTypes.ts";
-import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts } from "./database/drizzle/repositories/PlayRepository.ts";
-import type {ClientType, MonitoringStatus, OptionalCacheUsage, PlayMatchResult, QueueContext} from "../../core/Atomic.ts";
+import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, type WithPlayRelation } from "./database/drizzle/repositories/PlayRepository.ts";
+import type {ClientType, MonitoringStatus, OptionalCacheUsage, PlayMatchResult, QueueContext, TrackData} from "../../core/Atomic.ts";
 import type {SourceType} from "../../core/Atomic.ts";
 import { DrizzleComponentRepository } from "./database/drizzle/repositories/ComponentRepository.ts";
 import dayjs, { type Dayjs } from "dayjs";
@@ -45,7 +45,7 @@ import type { ElementOf, MarkRequired } from "ts-essentials";
 import { serializeError } from "serialize-error";
 import { DrizzleQueueRepository } from "./database/drizzle/repositories/QueueRepository.ts";
 import { DrizzlePlayEventsRepository } from "./database/drizzle/repositories/PlayEventsRepository.ts";
-import { entityIsPlayEntity, queueCompletionStateToPlayEvent, queueStateToPlayEvent, stateChangeToPlayEvent } from "./database/drizzle/entityUtils.ts";
+import { entityIsPlayEntity, playUpdateToEvent, queueCompletionStateToPlayEvent, queueStateToPlayEvent, stateChangeToPlayEvent } from "./database/drizzle/entityUtils.ts";
 import pMap from "p-map";
 import type { Gauge } from 'prom-client';
 import type { PlayProcessingResult } from "./infrastructure/PlayProcessing.ts";
@@ -1115,4 +1115,23 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     }
 
     abstract processPlay(playEntity: PlaySelectWithQueueStates, signal?: AbortSignal): Promise<PlayProcessingResult>
+
+    public async updatePlay(uid: string, data: Partial<TrackData>): Promise<PlayApiCommonDetailed> {
+        const playRow = await this.playRepo.findByUidWith<'events'>(uid, ['events']);
+        if(playRow === undefined) {
+            throw new SimpleError(`No play exists with uid ${uid}`);
+        }
+        const original = JSON.parse(JSON.stringify(playRow.play));
+        playRow.play.data = {
+            ...data
+        };
+        const modified = JSON.parse(JSON.stringify(playRow.play));
+        const patch = diffObjects(original, modified);
+        const event = playUpdateToEvent({input: {data}, patch});
+        await this.playRepo.updateById(playRow.id, {play: playRow.play});
+        const createdEvent = await this.playEventsRepo.create({...event, playId: playRow.id});
+        // @ts-expect-error this should be fine
+        playRow.events.push(createdEvent);
+        return playRow as unknown as PlayApiCommonDetailed;
+    }
 }

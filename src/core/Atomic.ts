@@ -525,19 +525,31 @@ export interface LogOutputConfig {
 export type PlayPlatformIdStr = string;
 
 export interface SourcePlayerObj<D extends DateLike = Dayjs> {
+    /** unique tuple identifying user and device */
     platformId: PlayPlatformIdStr,
+    /** full play/scrobble object information */
     play?: AmbPlayObject<D>,
     playFirstSeenAt?: string,
+    /** last time play was updated in MS */
     playLastUpdatedAt?: string,
+    /** last time player self-reported it was updated at */
     playerLastUpdatedAt: string
+    /** when this specific play/player was created */
     createdAt?: number
+    /** player poisition */
     position?: Second
     listenedDuration: Second
+    /** if player is mirroring generic now-playing (from upstream LZ/LFM client) */
     nowPlayingMode?: boolean
+    /** status of player */
     status: {
+        /** what player reported: paused, playing, stopped, unknown  */
         reported: string
+        /** what MS has derived from watching player behavior: paused, playing, stopped, unknown  */
         calculated: string
+        /** When player has not reported any new updates for N seconds */
         stale: boolean
+        /** When player has not reported any new updates for N * 2 seconds */
         orphaned: boolean
     }
 }
@@ -694,7 +706,9 @@ export type Writeable<T> = { -readonly [P in keyof T]: T[P] };
 export const SHORT_CALENDAR_NOTZ_FORMAT = 'MMM D HH:mm:ss';
 export const SHORT_TODAY_NOTZ_FORMAT = 'HH:mm:ss';
 export interface numberFormatOptions {
-    toFixed: number;
+    toFixed?: number;
+    minimumFractionDigits?: number,
+    maximumFractionDigits?: number
     defaultVal?: any;
     prefix?: string;
     suffix?: string;

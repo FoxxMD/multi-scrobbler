@@ -39,6 +39,7 @@ export interface PlayInfoProps {
     dates?: false | 'all' | 'played' | 'seen'
     editable?: boolean
     onEditClick?: () => void
+    codeContent?: React.JSX.Element
 }
 
 const primaryActionProps: ComponentProps<typeof EllipsisButton> = {
@@ -58,6 +59,7 @@ export const PlayData = (props?: PlayInfoProps) => {
     const {
         play,
         final,
+        codeContent,
         showCodeToggle = true,
         showCompare = true,
         compareDefault = 'Initial',
@@ -111,7 +113,7 @@ export const PlayData = (props?: PlayInfoProps) => {
     let content: React.JSX.Element;
 
     if (!comparable) {
-        content = codeMode ? <ChakraCodeBlock code={play} /> : <PlayDataDataList play={play} dates={dates} showMbid={showMbid} />;
+        content = codeMode ? codeContent ?? <ChakraCodeBlock code={play} /> : <PlayDataDataList play={play} dates={dates} showMbid={showMbid} />;
     } else {
         content = (
             <Tabs.Root size="sm" variant="outline" defaultValue={compareDefault}>

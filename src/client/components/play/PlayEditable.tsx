@@ -21,7 +21,7 @@ export const PlayEditable = (props: PlayEditableProps) => {
     return <PlayEdit onCancel={() => setMode('view')} context={props.context ?? 'edit'} initialPlay={props.final ?? props.play} {...props}/>
 }
 
-export const PlayEditableMutable = (props: PlayEditableProps & {uid: string, componentId: string}) => {
+export const PlayEditableMutable = (props: PlayEditableProps & {uid: string, componentId: number}) => {
 
     const [mode, setMode] = useState<'view' | 'edit'>(props.defaultView ?? 'view');
 

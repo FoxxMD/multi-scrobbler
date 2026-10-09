@@ -33,7 +33,8 @@ import {
     LuTimerReset,
     LuPencil,
     LuBraces,
-    LuText
+    LuText,
+    LuCode,
 } from "react-icons/lu"
 import { VscDebugRestart } from 'react-icons/vsc';
 import { HiMiniStop } from "react-icons/hi2";
@@ -322,3 +323,7 @@ export const BracesButton = makeIconButton(LuBraces);
 export const TextIconRaw = LuText;
 export const TextIcon = makeChakraIcon(LuText);
 export const TextButton = makeIconButton(LuText);
+
+export const CodeIconRaw = LuCode;
+export const CodeIcon = makeChakraIcon(LuCode);
+export const CodeButton = makeIconButton(LuCode);

@@ -22,10 +22,11 @@ import { PlayData } from "./play/PlayData";
 import { ScrobbleActionResult } from "./ScrobbleActionResult";
 import { ScrobbleMatchResult } from "./ScrobbleMatchResult";
 import { TimelineErrorIcon } from "./timeline/TimelineIcon";
-import { diffElements, TransformSteps } from "./TransformSteps";
+import { diffElement, diffElements, TransformSteps } from "./TransformSteps";
 import { Muted } from "./Typography";
-import type { PlayEventPlayStateChange, PlayEventQueueStateChange } from '../../core/PlayEvent';
+import type { PlayEventPlayStateChange, PlayEventQueueStateChange, PlayEventUpdatePlay } from '../../core/PlayEvent';
 import { FaInfo } from "react-icons/fa6";
+import { patchObject } from '../../core/DataUtils';
 
 
 interface ActivityTimelineProps {
@@ -158,6 +159,51 @@ const TransformsItem = (props: Pick<ActivityTimelineProps, 'activity' | 'collaps
                     <Card.Root bgColor="bg.muted" size="sm">
                         <Card.Body textStyle="sm">
                             <TransformSteps steps={steps} original={original} collapsibleOpen={collapsibleOpen} />
+                        </Card.Body>
+                    </Card.Root>
+                </MSCollapsible>
+            </Timeline.Title>
+        </Timeline.Content>
+    </Timeline.Item>
+    )
+}
+
+const UpdatePlayItem = (props: Pick<ActivityTimelineProps, 'activity' | 'collapsibleOpen'> & { event: PlayEventUpdatePlay<string>, original: JsonPlayObject }) => {
+    const {
+        event,
+        collapsibleOpen,
+        original
+    } = props;
+    const transformVerb: string = 'Updated Play';
+    
+    const {patch, input, diff, error, final} = diffElement({original, patch: event.data.patch, input: event.data.input});
+    let playContent: React.JSX.Element;
+    if(error !== undefined) {
+        playContent = error;
+    } else {
+        playContent = <PlayData play={original} final={final} compareDefault="Final" codeContent={<Stack gapY="2">{input}{diff ?? patch}</Stack>}/>
+    }
+
+    return (<Timeline.Item>
+        <Timeline.Connector>
+            <Timeline.Separator />
+            <Timeline.Indicator>
+                <Icon {...timelineIconProps}>
+                    <BiWrench />
+                </Icon>
+            </Timeline.Indicator>
+        </Timeline.Connector>
+        <Timeline.Content>
+            <Timeline.Title>
+                <MSCollapsible
+                    triggerProps={indicatorProps}
+                    indicator={<TimelineItemSummaryText>{transformVerb}</TimelineItemSummaryText>}
+                    unmountOnExit
+                    defaultOpen={collapsibleOpen}
+                    timeline>
+                    <Card.Root bgColor="bg.muted" size="sm">
+                        <Card.Body textStyle="sm">
+                            {playContent}
                         </Card.Body>
                     </Card.Root>
                 </MSCollapsible>
@@ -514,7 +560,17 @@ export const ActivityTimeline = (props: ActivityTimelineProps) => {
                 timelineElements.push(<ScrobbleResponseItem key={event.id} scrobble={event.data} componentName={componentName} collapsibleOpen={collapsibleOpen}/>);
                 break;
             case 'playStateChange':
-                timelineElements.push(<StateChangeItem key={event.id} event={event} collapsibleOpen={collapsibleOpen}/>)
+                timelineElements.push(<StateChangeItem key={event.id} event={event} collapsibleOpen={collapsibleOpen}/>);
+                break;
+            case 'updatePlay': {
+                timelineElements.push(<UpdatePlayItem original={lastTransformedPlay ?? activity.play} key={event.id} event={event} collapsibleOpen={collapsibleOpen}/>);
+                try {
+                    const patched = patchObject(structuredClone(lastTransformedPlay), event.data.patch);
+                    lastTransformedPlay = patched;
+                } catch (e) {
+                    // swallow this error as we should get the error in jsx form in the UpdatePlayItem
+                }
+            } break;
         }
     }
 

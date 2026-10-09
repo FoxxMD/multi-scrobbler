@@ -4,12 +4,11 @@ import type {PlayInputNew} from "./drizzleTypes.ts";
 import type {QueueStateNew} from "./drizzleTypes.ts";
 import type {ComponentNew} from "./drizzleTypes.ts";
 import type { MarkOptional, MarkRequired } from "ts-essentials";
-import { DEAD_QUEUE, type DeadLetterScrobble, type ErrorLike, type LifecycleStep, type PlayObject } from "../../../../core/Atomic.ts";
+import { type ErrorLike, type LifecycleStep, type PlayObject } from "../../../../core/Atomic.ts";
 import dayjs from "dayjs";
 import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../utils/PlayComparisonUtils.ts";
 import { hashObject } from "../../../utils/StringUtils.ts";
-import { serializeError } from "serialize-error";
-import { PLAY_EVENT_TYPE, type PlayEventDupeCheck, type PlayEventDupeCheckData, type PlayEventPlayStateChange, type PlayEventPlayStateChangeData, type PlayEventQueueStateChange, type PlayEventQueueStateChangeData, type PlayEventScrobbleResult, type PlayEventScrobbleResultData, type PlayEventTransform } from "../../../../core/PlayEvent.ts";
+import { PLAY_EVENT_TYPE, type PlayEventDupeCheck, type PlayEventDupeCheckData, type PlayEventPlayStateChange, type PlayEventPlayStateChangeData, type PlayEventQueueStateChange, type PlayEventQueueStateChangeData, type PlayEventScrobbleResult, type PlayEventScrobbleResultData, type PlayEventTransform, type PlayEventUpdatePlay, type PlayEventUpdatePlayData } from "../../../../core/PlayEvent.ts";
 
 export const generateComponentEntity = (data: MarkOptional<ComponentNew, 'uid'>): ComponentNew => {
     assert(data.name !== undefined, 'Must provide name');
@@ -171,3 +170,8 @@ export const scrobbleToPlayEvent = (data: PlayEventScrobbleResultData): Omit<Pla
 
 export const entityIsPlayEntity = (obj: object): obj is PlaySelectWithQueueStates => `play` in obj && typeof obj.play === 'object'
     && `componentId` in obj && typeof obj.componentId === 'number'
+
+export const playUpdateToEvent = (data: PlayEventUpdatePlayData): Omit<PlayEventUpdatePlay, 'playId'> => ({
+    eventName: PLAY_EVENT_TYPE.updatePlay,
+    data
+});
