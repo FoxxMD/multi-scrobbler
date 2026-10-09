@@ -1,5 +1,4 @@
 import { Box, useListCollection, Stack, HStack, Badge, Span } from "@chakra-ui/react"
-import { useDebouncedCallback } from '@tanstack/react-pacer'
 import { useQuery } from '@tanstack/react-query';
 import { tanQueries } from "../../queries/index.ts";
 import { type AlbumSearchResult, type AlbumSearchSimpleRequestQuery, type TrackDataCreditBase } from "../../../core/Api.ts";
@@ -89,8 +88,7 @@ export const AlbumSearch = (props: AlbumSearchProps) => {
 
     const [selectedItem, setSelectedItem] = useState<Credit>(initial ?? {name: ''});
     const [searchQuery, setSearchQuery] = useState<AlbumSearchSimpleRequestQuery | TrackDataCreditBase>({album: initial?.name ?? ''});
-        const debouncedSearchQuery = useDebouncedCallback(
-        (query: string, context: boolean) => {
+        const search = (query: string, context: boolean) => {
             const musicService = albumSearchToMusicService(query);
             if(musicService !== undefined) {
                 setSearchQuery({album: query});
@@ -99,9 +97,7 @@ export const AlbumSearch = (props: AlbumSearchProps) => {
             } else {
                 setSearchQuery({album: query});
             }
-        },
-        { wait: 500 },
-        );
+        };
 
     const query = useQuery({
         enabled: (`album` in searchQuery && searchQuery.album !== '') || `album` in searchQuery && typeof searchQuery.album === 'object' && (searchQuery.album?.name ?? '') !== '',
@@ -144,7 +140,7 @@ export const AlbumSearch = (props: AlbumSearchProps) => {
             isError={query.isError}
             onChange={doChange}
             onFreetext={(name) => doChange({ name })}
-            onQueryChange={(query, context) => debouncedSearchQuery(query,context)}
+            onQueryChange={search}
             renderItem={(item, onPick) => <AlbumSearchResultItem data={item} onPick={onPick} />}
         />
     );

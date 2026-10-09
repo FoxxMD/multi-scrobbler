@@ -2,6 +2,7 @@ import { AbsoluteCenter, Avatar, Box, Combobox, HStack, Icon, Menu, Portal, Span
 import type { MetadataResultBase, MetadataResultImage, MetadataResultServiceScore } from "../../../core/Api"
 import { BracesIcon, getMusicServiceIconElement, TextIcon } from "../icons/ChakraIcons"
 import React, { useId, useRef, useState } from "react"
+import { useDebouncer } from "@tanstack/react-pacer"
 import { MSErrorBoundary } from "../ErrorBoundary"
 import { EllipsisButtonMenu } from "../buttonMenus/ButtonMenu"
 import { formatNumber } from "../../../core/DataUtils"
@@ -81,6 +82,7 @@ export interface MetadataSearchComboboxProps<T extends MetadataSearchResult> {
     onChange: (val: T) => void
     /** Called with the typed text when the user commits it without selecting a result */
     onFreetext: (name: string) => void
+    /** Called when a search should run. Typing is debounced here, a context mode switch is not */
     onQueryChange: (query: string, contextMode: boolean) => void
     renderItem: (item: T, onPick: (val: T) => void) => React.JSX.Element
 }
@@ -93,6 +95,9 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
 
     const [contextMode, setContextMode] = useState<boolean>(props.searchContext ?? false);
     const [open, setOpen] = useState<boolean>(false);
+    // typing would otherwise search on every keystroke
+    // flush on unmount: a parent may remount this after a selection and still wants the search for the selected text
+    const typedQuery = useDebouncer(onQueryChange, { wait: 500, onUnmount: (d) => d.flush() });
     // true while the current query was triggered by the mode switch item rather than typing, decides which loading UI is shown
     const [modeSwitched, setModeSwitched] = useState<boolean>(false);
 
@@ -124,6 +129,8 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                 e.stopPropagation();
                 setModeSwitched(true);
                 setContextMode(!contextMode);
+                // a pending typed search would run after this one with the old mode
+                typedQuery.cancel();
                 onQueryChange(rawInput.current ?? initialInput, !contextMode);
             }}>
             <HStack>Switch to {contextMode ? 'text-only' : 'context'} {modeIconElm} search mode {isLoading ? <Spinner size="xs" borderWidth="1px" /> : undefined}</HStack>
@@ -157,7 +164,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                     }}
                     onInputValueChange={(e) => {
                         setModeSwitched(false);
-                        onQueryChange(e.inputValue, contextMode);
+                        typedQuery.maybeExecute(e.inputValue, contextMode);
                         // selecting an item rewrites the input, this is not freetext
                         if (e.reason !== 'item-select') {
                             rawInput.current = e.inputValue;

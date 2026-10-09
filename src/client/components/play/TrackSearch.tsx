@@ -1,5 +1,4 @@
 import { useListCollection, Stack, Text, HStack, Span, Badge, Box, Flex } from "@chakra-ui/react"
-import { useDebouncedCallback } from '@tanstack/react-pacer'
 import { useQuery } from '@tanstack/react-query';
 import { tanQueries } from "../../queries/index.js";
 import { type TrackDataCreditBase, type TrackSearchResult, type TrackSearchSimpleRequestQuery } from "../../../core/Api.js";
@@ -121,8 +120,7 @@ export const TrackSearch = (props: TrackSearchProps) => {
 
     const [selectedItem, setSelectedItem] = useState<Credit>(initial ?? {name: ''});
     const [searchQuery, setSearchQuery] = useState<TrackSearchSimpleRequestQuery | TrackDataCreditBase>({track: initial?.name ?? ''});
-    const debouncedSearchQuery = useDebouncedCallback(
-    (query: string, context: boolean) => {
+    const search = (query: string, context: boolean) => {
         const musicService = trackSearchToMusicService(query);
         if(musicService !== undefined) {
             setSearchQuery({track: query});
@@ -131,9 +129,7 @@ export const TrackSearch = (props: TrackSearchProps) => {
         } else {
             setSearchQuery({track: query});
         }
-    },
-    { wait: 500 },
-    );
+    };
 
     const query = useQuery({
         enabled: (`track` in searchQuery && searchQuery.track !== '') || `track` in searchQuery && typeof searchQuery.track === 'object' && (searchQuery.track?.name ?? '') !== '',
@@ -175,7 +171,7 @@ export const TrackSearch = (props: TrackSearchProps) => {
             initialInput={selectedItem?.name}
             onChange={doChange}
             onFreetext={(name) => doChange({ track: { name } })}
-            onQueryChange={(query, context) => debouncedSearchQuery(query, context)}
+            onQueryChange={search}
             renderItem={(item, onPick) => <TrackSearchResultItem data={item} onPick={onPick} />}
         />
     );
