@@ -255,7 +255,7 @@ export const playTrackDataSchema = z.object({
     artists: creditSchema.array().optional(),
     albumArtists: creditSchema.array().optional(),
     album: creditSchema.optional(),
-    duration: z.int().nonnegative().optional(),
+    duration: z.number().nonnegative().optional(),
     isrc: z.string().optional(),
     meta: trackMetaSchema.optional()
 })
@@ -282,13 +282,15 @@ export interface PlayData<D extends DateLike = Dayjs> extends TrackData {
 export const playDataSchema = z.object({
     ...playTrackDataSchema.shape,
     playDate: z.string().optional(),
-    listenedFor: z.int().nonnegative().optional()
+    playDateCompleted: z.string().optional(),
+    listenedFor: z.number().nonnegative().optional(),
+    repeat: z.boolean().optional()
 });
 
 export const playDataStrictSchema = z.object({
     ...playTrackStrictDataSchema.shape,
     playDate: z.string().optional(),
-    listenedFor: z.int().nonnegative().optional()
+    listenedFor: z.number().nonnegative().optional()
 });
 
 
