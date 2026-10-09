@@ -1,4 +1,4 @@
-import { Heading, Icon, Span, Stack, Text, Timeline} from '@chakra-ui/react';
+import { Heading, Box, Icon, Span, Stack, Text, Timeline, Tabs} from '@chakra-ui/react';
 import React, { Fragment, useMemo } from "react";
 import { BsExclamationTriangle, BsSkipForward, BsStoplights } from "react-icons/bs";
 import { MdMusicNote } from "react-icons/md";
@@ -112,6 +112,8 @@ export const diffElements = (original: JsonPlayObject, steps: LifecycleStep[]): 
             }
         } else if (patchElm !== undefined) {
             diffElements.push(patchElm);
+        } else {
+            diffElements.push(null);
         }
     }
 
@@ -176,6 +178,19 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                         }
                     }
                 }
+
+                let inputsElm: React.JSX.Element | undefined = undefined;
+                if(inputs !== undefined && inputs.length > 0) {
+                    inputsElm = (
+                        <Stack gap="1">
+                            {inputs.map((y, inputsIndex) => <ChakraCodeBlockShort key={`inputs-${inputsIndex}`} code={y.input} title={y.type} />)}
+                        </Stack>
+                    );
+                }
+                let diffElm: React.JSX.Element | undefined = undefined;
+                if(diffs[index] !== null) {
+                    diffElm = <MSCollapsible collapsedHeight="200px" title="Diff" overlay>{diffs[index]}</MSCollapsible>
+                }
                 
                 return <Timeline.Item key={index}>
                     <Timeline.Connector>
@@ -194,22 +209,19 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                                 disableUntil="md"
                                 unmountOnExit
                                 timeline>
-                                {error !== undefined && error !== null ? <ErrorAlert status={alertStatus} error={error}/> : null}
-                            <Stack gap="2">
-                                {diffs[index] !== null ? (
-                                    <Fragment>
-                                    <Heading size="sm">Diff</Heading>
-                                {diffs[index]}</Fragment>
-                            ) : null}
-                                {inputs !== undefined && inputs.length > 0 ? (
-                                    <Fragment>
-                                        <Heading size="sm">Inputs</Heading>
-                                        <Stack gap="1">
-                                            {inputs.map((y, inputsIndex) => {
-                                                return <ChakraCodeBlockShort key={`inputs-${inputsIndex}`} code={y.input} title={y.type} />
-                                            })}
-                                        </Stack></Fragment>) : null}
-                            </Stack>
+                                {error !== undefined && error !== null ? <Box mb="3"><ErrorAlert status={alertStatus} error={error}/></Box> : null}
+                            <Tabs.Root size="sm" variant="outline" defaultValue="Inputs">
+                                <Tabs.List>
+                                    <Tabs.Trigger value="Inputs">Inputs</Tabs.Trigger>
+                                    <Tabs.Trigger value="Diff">Diff</Tabs.Trigger>
+                                </Tabs.List>
+                                <Tabs.Content value="Inputs">
+                                    {inputsElm ?? <Text>No Inputs recorded</Text>}
+                                </Tabs.Content>
+                                <Tabs.Content value="Diff">
+                                    {diffElm ?? <Text>No diff recorded or Play was identical after transform</Text>}
+                                </Tabs.Content>
+                            </Tabs.Root>
                             </MSCollapsible>
                         </Timeline.Title>
                     </Timeline.Content>
