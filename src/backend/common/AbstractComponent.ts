@@ -35,7 +35,7 @@ import { getRetentionCompactAfterFromEnv, getRetentionDeleteAfterFromEnv, isComp
 import type {DbConcrete} from "./database/drizzle/drizzleUtils.ts";
 import type {ComponentSelect, PlayEventNew, PlayEventSelect, PlaySelect, PlaySelectWithQueueStates, PlayWith, QueueStateSelect} from "./database/drizzle/drizzleTypes.ts";
 import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, type WithPlayRelation } from "./database/drizzle/repositories/PlayRepository.ts";
-import type {ClientType, MonitoringStatus, OptionalCacheUsage, PlayMatchResult, QueueContext, TrackData} from "../../core/Atomic.ts";
+import type {ClientType, JsonPlayObject, MonitoringStatus, OptionalCacheUsage, PlayMatchResult, QueueContext, TrackData} from "../../core/Atomic.ts";
 import type {SourceType} from "../../core/Atomic.ts";
 import { DrizzleComponentRepository } from "./database/drizzle/repositories/ComponentRepository.ts";
 import dayjs, { type Dayjs } from "dayjs";
@@ -1132,6 +1132,11 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         const createdEvent = await this.playEventsRepo.create({...event, playId: playRow.id});
         // @ts-expect-error this should be fine
         playRow.events.push(createdEvent);
+        this.emitPlayUpdate({
+            uid,
+            events: playRow.events as unknown as PlayEvent<string>[],
+            play: playRow.play as unknown as JsonPlayObject
+        })
         return playRow as unknown as PlayApiCommonDetailed;
     }
 }

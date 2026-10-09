@@ -12,6 +12,7 @@ import {
     trackSearchToMusicService,
     albumSearchToMusicService,
     artistSearchToMusicService,
+    playEditStrictCreateSchema,
 } from "../../core/Atomic.ts";
 import type {LeveledLogData} from "../common/infrastructure/Atomic.ts";
 import { getRoot } from "../ioc.ts";
@@ -485,16 +486,18 @@ Note: this is only supported by some components.`
     router.put('/api/components/:id/plays/:uid/play', {
         middleware: [componentAwareMiddle,jsonParser],
         tags: ['Plays'],
-        summary: 'Update Play'
+        summary: 'Update Play',
+        bodySchema: playEditStrictCreateSchema
     }, async (req, res, next) => {
         const {
             component,
             params: {
                 uid: playUid
-            }
+            },
+            body
         } = req;
 
-        const playRes = await component.getPlayApiResponse(playUid as string);
+        const playRes = await component.updatePlay(playUid as string, body.data);
         //PlayApiCommonDetailed
         // plus paginatioon
         return res.json(asSerializablePlaySelect(playRes));
