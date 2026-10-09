@@ -5,6 +5,7 @@ import React, { useId, useRef, useState } from "react"
 import { MSErrorBoundary } from "../ErrorBoundary"
 import { EllipsisButtonMenu } from "../buttonMenus/ButtonMenu"
 import { formatNumber } from "../../../core/DataUtils"
+import { TextMuted } from "../TextMuted"
 
 export const LeftSideMetadataResultContent = (props: MetadataResultServiceScore & MetadataResultImage) => {
     if (props.image === undefined) {
@@ -91,6 +92,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
     const rawInput = useRef<string | undefined>(initialInput === '' ? undefined : initialInput);
 
     const [contextMode, setContextMode] = useState<boolean>(props.searchContext ?? false);
+    const [open, setOpen] = useState<boolean>(false);
 
     const commitFreetext = () => {
         if (rawInput.current !== undefined && rawInput.current !== initialInput) {
@@ -129,10 +131,25 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
         </Switch.Root>
     )
 
+    const ModeIconSwitchHint = !contextMode ? BracesIcon : TextIcon;
+    const ModeIconHint = contextMode ? BracesIcon : TextIcon;
+    const modeIconElm = <Box padding="0.5" rounded="md" backgroundColor="bg.emphasized"><ModeIconSwitchHint/></Box>
+    const switchModeItem = (<Combobox.Item key="switch-mode" item="switch-mode" onClick={(e) => 
+        {
+            e.preventDefault();
+            setContextMode(!contextMode);
+            onQueryChange(rawInput.current ?? initialInput, !contextMode);
+        }}>
+                                <HStack>Switch to {contextMode ? 'text-only' : 'context'} {modeIconElm} search mode</HStack>
+                            </Combobox.Item>)
+
     return (
         <Flex flexGrow="1">
             <MSErrorBoundary>
                 <Combobox.Root
+                openOnChange={false}
+                onOpenChange={(e) => setOpen(e.open)}
+                inputBehavior="autohighlight"
                 defaultOpen={props.defaultOpen}
                 defaultInputValue={initialInput === '' ? undefined : initialInput}
                     allowCustomValue
@@ -163,7 +180,9 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                     <Combobox.Control>
                         {input}
                         <Combobox.IndicatorGroup>
-                            {contextSwitch}
+                            {!isLoading ? <TextMuted textStyle="xs" hideBelow="sm">{collection.size} Matches</TextMuted> : undefined}
+                            {!open && isLoading ? <Spinner size="xs" borderWidth="1px" /> : undefined}
+                            <ModeIconHint/>
                             <Combobox.ClearTrigger />
                             <Combobox.Trigger />
                         </Combobox.IndicatorGroup>
@@ -182,7 +201,8 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                                     </Span>
                                 ) : (
                                     <Combobox.Context>
-                                        {(combobox) => collection.items?.map((item) => (
+                                        {(combobox) => {
+                                            return [switchModeItem].concat(collection.items?.map((item) => (
                                             <Combobox.Item key={item.id} item={item.id}>
                                                 {renderItem(item, (val) => {
                                                     onChange(val);
@@ -192,7 +212,8 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                                                 })}
                                                 <Combobox.ItemIndicator />
                                             </Combobox.Item>
-                                        ))}
+                                        )))}
+                                        }
                                     </Combobox.Context>
                                 )}
                                 <Combobox.Empty>No items found</Combobox.Empty>
