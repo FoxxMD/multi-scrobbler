@@ -181,7 +181,13 @@ const UpdatePlayItem = (props: Pick<ActivityTimelineProps, 'activity' | 'collaps
     if(error !== undefined) {
         playContent = error;
     } else {
-        playContent = <PlayData play={original} final={final} compareDefault="Final" codeContent={<Stack gapY="2">{input}{diff ?? patch}</Stack>}/>
+        const codeContent = (
+            <Stack gapY="2">
+                {input}
+                <MSCollapsible collapsedHeight="200px" overlay indicator="Diff">{diff ?? patch}</MSCollapsible>
+            </Stack>
+        )
+        playContent = <PlayData play={original} final={final} compareDefault="Final" codeContent={codeContent}/>
     }
 
     return (<Timeline.Item>
