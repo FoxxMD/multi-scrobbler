@@ -1116,15 +1116,27 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     abstract processPlay(playEntity: PlaySelectWithQueueStates, signal?: AbortSignal): Promise<PlayProcessingResult>
 
-    public async updatePlay(uid: string, data: Partial<TrackData>): Promise<PlayApiCommonDetailed> {
+    public async updatePlay(uid: string, data: Partial<PlayData>): Promise<PlayApiCommonDetailed> {
         const playRow = await this.playRepo.findByUidWith<'events'>(uid, ['events']);
         if(playRow === undefined) {
             throw new SimpleError(`No play exists with uid ${uid}`);
         }
         const original = JSON.parse(JSON.stringify(playRow.play));
-        playRow.play.data = {
-            ...data
+        const merged: PlayData = {
+            ...playRow.play.data,
+            ...data,
+            repeat: playRow.play.data.repeat
         };
+        const samePlayDate = data.playDate?.isSame(playRow.play.data.playDate);
+
+        if(playRow.play.data.listenRanges !== undefined && samePlayDate) {
+            merged.listenRanges = playRow.play.data.listenRanges
+            merged.playDateCompleted = playRow.play.data.playDateCompleted;
+        } else if(data.listenedFor !== undefined) {
+            merged.playDateCompleted = data.playDate?.add(data.listenedFor, 's')
+        }
+
+        playRow.play.data = merged;
         const modified = JSON.parse(JSON.stringify(playRow.play));
         const patch = diffObjects(original, modified);
         const event = playUpdateToEvent({input: {data}, patch});

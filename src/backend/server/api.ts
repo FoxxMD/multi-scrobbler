@@ -13,6 +13,7 @@ import {
     albumSearchToMusicService,
     artistSearchToMusicService,
     playEditStrictCreateSchema,
+    type PlayObject,
 } from "../../core/Atomic.ts";
 import type {LeveledLogData} from "../common/infrastructure/Atomic.ts";
 import { getRoot } from "../ioc.ts";
@@ -42,6 +43,7 @@ import pMap from "p-map";
 import type { PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
 import { stripIndents } from "common-tags";
 import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { asPlayCheap } from "../../core/PlayMarshalUtils.ts";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -497,9 +499,9 @@ Note: this is only supported by some components.`
             body
         } = req;
 
-        const playRes = await component.updatePlay(playUid as string, body.data);
-        //PlayApiCommonDetailed
-        // plus paginatioon
+        const play: PlayObject = asPlayCheap(body);
+
+        const playRes = await component.updatePlay(playUid as string, play.data);
         return res.json(asSerializablePlaySelect(playRes));
     });
 
