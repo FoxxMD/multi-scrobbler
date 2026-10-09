@@ -93,6 +93,8 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
 
     const [contextMode, setContextMode] = useState<boolean>(props.searchContext ?? false);
     const [open, setOpen] = useState<boolean>(false);
+    // true while the current query was triggered by the mode switch item rather than typing, decides which loading UI is shown
+    const [modeSwitched, setModeSwitched] = useState<boolean>(false);
 
     const commitFreetext = () => {
         if (rawInput.current !== undefined && rawInput.current !== initialInput) {
@@ -112,36 +114,20 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
         input = inputElm;
     }
 
-    // inside a Field the switch inherits the field's control id, same as Combobox.Input, so its label would target the text input instead
-    const switchInputId = useId();
-    const contextSwitch = (
-    <Switch.Root 
-    ids={{ hiddenInput: switchInputId }}
-    checked={contextMode}
-    onCheckedChange={(e) => {setContextMode(e.checked)}}
-    mr="2">
-        <Switch.HiddenInput />
-        <Switch.Control>
-            <Switch.Thumb>
-            <Switch.ThumbIndicator fallback={<TextIcon color="black" />}>
-                <BracesIcon />
-            </Switch.ThumbIndicator>
-            </Switch.Thumb>
-        </Switch.Control>
-        </Switch.Root>
-    )
-
     const ModeIconSwitchHint = !contextMode ? BracesIcon : TextIcon;
     const ModeIconHint = contextMode ? BracesIcon : TextIcon;
     const modeIconElm = <Box padding="0.5" rounded="md" backgroundColor="bg.emphasized"><ModeIconSwitchHint/></Box>
-    const switchModeItem = (<Combobox.Item key="switch-mode" item="switch-mode" onClick={(e) => 
-        {
-            e.preventDefault();
-            setContextMode(!contextMode);
-            onQueryChange(rawInput.current ?? initialInput, !contextMode);
-        }}>
-                                <HStack>Switch to {contextMode ? 'text-only' : 'context'} {modeIconElm} search mode</HStack>
-                            </Combobox.Item>)
+    // capture + stopPropagation so the combobox's own item click never runs, it would select this item and close the popup
+    const switchModeItem = (
+        <Combobox.Item key="switch-mode" item="switch-mode" onClickCapture={(e) => 
+            {
+                e.stopPropagation();
+                setModeSwitched(true);
+                setContextMode(!contextMode);
+                onQueryChange(rawInput.current ?? initialInput, !contextMode);
+            }}>
+            <HStack>Switch to {contextMode ? 'text-only' : 'context'} {modeIconElm} search mode {isLoading ? <Spinner size="xs" borderWidth="1px" /> : undefined}</HStack>
+        </Combobox.Item>)
 
     return (
         <Flex flexGrow="1">
@@ -170,6 +156,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                         console.log(val, 'select')
                     }}
                     onInputValueChange={(e) => {
+                        setModeSwitched(false);
                         onQueryChange(e.inputValue, contextMode);
                         // selecting an item rewrites the input, this is not freetext
                         if (e.reason !== 'item-select') {
@@ -190,7 +177,8 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                     <Portal>
                         <Combobox.Positioner>
                             <Combobox.Content>
-                                {isLoading ? (
+                                {!isLoading || modeSwitched ? switchModeItem : undefined}
+                                {isLoading ? modeSwitched ? undefined : (
                                     <HStack p="2">
                                         <Spinner size="xs" borderWidth="1px" />
                                         <Span>Loading...</Span>
@@ -202,7 +190,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                                 ) : (
                                     <Combobox.Context>
                                         {(combobox) => {
-                                            return [switchModeItem].concat(collection.items?.map((item) => (
+                                            return collection.items?.map((item) => (
                                             <Combobox.Item key={item.id} item={item.id}>
                                                 {renderItem(item, (val) => {
                                                     onChange(val);
@@ -212,7 +200,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                                                 })}
                                                 <Combobox.ItemIndicator />
                                             </Combobox.Item>
-                                        )))}
+                                        ))}
                                         }
                                     </Combobox.Context>
                                 )}
