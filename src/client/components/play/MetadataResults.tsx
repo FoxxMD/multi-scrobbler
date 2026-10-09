@@ -93,7 +93,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
     // a ref, not state: combobox captures onInteractOutside when the popup opens so state read there is stale
     const rawInput = useRef<string | undefined>(initialInput === '' ? undefined : initialInput);
 
-    const [contextMode, setContextMode] = useState<boolean>(props.searchContext ?? false);
+    const [contextMode, setContextMode] = useState<boolean>(props.searchContext ?? true);
     const [open, setOpen] = useState<boolean>(false);
     // typing would otherwise search on every keystroke
     // flush on unmount: a parent may remount this after a selection and still wants the search for the selected text
