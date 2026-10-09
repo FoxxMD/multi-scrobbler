@@ -113,7 +113,7 @@ export const PlayData = (props?: PlayInfoProps) => {
     let content: React.JSX.Element;
 
     if (!comparable) {
-        content = codeMode ? codeContent ?? <ChakraCodeBlock code={play} /> : <PlayDataDataList play={play} dates={dates} showMbid={showMbid} />;
+        content = codeMode ? (codeContent ?? <ChakraCodeBlock code={play} />) : <PlayDataDataList play={play} dates={dates} showMbid={showMbid} />;
     } else {
         content = (
             <Tabs.Root size="sm" variant="outline" defaultValue={compareDefault}>
@@ -122,10 +122,10 @@ export const PlayData = (props?: PlayInfoProps) => {
                     <Tabs.Trigger value="Final">Final</Tabs.Trigger>
                 </Tabs.List>
                 <Tabs.Content value="Initial">
-                    {codeMode ? <ChakraCodeBlock code={play} /> : <PlayDataDataList play={play} dates={dates} showMbid={showMbid} />}
+                    {codeMode ? (codeContent ?? <ChakraCodeBlock code={play} />) : <PlayDataDataList play={play} dates={dates} showMbid={showMbid} />}
                 </Tabs.Content>
                 <Tabs.Content value="Final">
-                    {codeMode ? <ChakraCodeBlock code={final} /> : <PlayDataDataList play={final} dates={dates} showMbid={showMbid} />}
+                    {codeMode ? (codeContent ?? <ChakraCodeBlock code={final} />) : <PlayDataDataList play={final} dates={dates} showMbid={showMbid} />}
                 </Tabs.Content>
             </Tabs.Root>
         )
