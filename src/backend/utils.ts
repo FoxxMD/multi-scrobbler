@@ -325,21 +325,6 @@ export const pollingBackoff = (attempt: number, scaleFactor: number = 1): number
     return Math.round(backoffStrat(attempt + 1) / 1000);
 }
 
-export const intersect = (a: Array<any>, b: Array<any>) => {
-    const setA = new Set(a);
-    const setB = new Set(b);
-    const intersection = new Set([...setA].filter(x => setB.has(x)));
-    return Array.from(intersection);
-}
-
-/** Return an array of elements from array a (first arg) that are not in array b (second arg) */
-export const difference = (a: Array<any>, b: Array<any>) => {
-    const setA = new Set(a);
-    const setB = new Set(b);
-    const diff = new Set([...setA].filter(x => !setB.has(x)));
-    return Array.from(diff);
-}
-
 /**
  * https://github.com/Mw3y/Text-ProgressBar/blob/master/ProgressBar.js
  * */

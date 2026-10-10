@@ -9,7 +9,7 @@ import { DELIMITERS } from '../../../../core/Atomic.ts';
 import { MaybeLogger } from '../../MaybeLogger.ts';
 import { childLogger } from "@foxxmd/logging";
 import { type UsingTypes } from "../../vendor/musicbrainz/MusicbrainzApiClientPool.ts";
-import { difference } from "../../../utils.ts";
+import { difference } from '../../../../core/DataUtils.ts';
 import { SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../../errors/MSErrors.ts";
 import type { Cacheable } from "cacheable";
 import { compareNormalizedStrings, splitByFirstRegexFound } from "../../../../core/StringUtils.ts";

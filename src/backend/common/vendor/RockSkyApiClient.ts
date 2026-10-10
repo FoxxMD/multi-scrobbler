@@ -27,7 +27,7 @@ import { hashObject } from "../../utils/StringUtils.ts";
 import { normalizeStr } from "../../../core/StringUtils.ts";
 import { stringSameness } from "@foxxmd/string-sameness";
 import clone from "clone";
-import { difference } from "../../utils.ts";
+import { difference } from '../../../core/DataUtils.ts';
 import path from "node:path";
 import { ATProtoUnauthenticatedApiClient } from "./atproto/ATProtoUnauthenticatedApiClient.ts";
 import fsPromise from 'node:fs/promises';

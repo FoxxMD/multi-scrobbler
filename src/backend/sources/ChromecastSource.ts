@@ -28,7 +28,8 @@ import {
     getMediaStatus,
 } from "../common/vendor/chromecast/ChromecastClientUtils.ts";
 import type {PlatformApplication, PlatformApplicationWithContext, PlatformType} from "../common/vendor/chromecast/interfaces.ts";
-import { difference, isDebugMode, parseBool } from "../utils.ts";
+import { isDebugMode, parseBool } from "../utils.ts";
+import { difference } from '../../core/DataUtils.ts';
 import { genGroupIdStr } from '../../core/PlayUtils.ts';
 import { findCauseByReference } from "../utils/ErrorUtils.ts";
 import { discoveryAvahi, discoveryNative } from "../utils/MDNSUtils.ts";

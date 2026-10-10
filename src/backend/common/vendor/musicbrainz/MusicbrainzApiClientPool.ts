@@ -5,7 +5,7 @@ import { type AbstractApiOptions, type FormatPlayObjectOptions, MUSICBRAINZ_URL,
 import AbstractApiClient from "../AbstractApiClient.ts";
 import { isPortReachableConnect, maxRequestsPerSecond, normalizeWebAddress } from '../../../utils/NetworkUtils.ts';
 import type { MusicBrainzApi, IRecording, IRecordingList, IRelease, IReleaseList, IArtistList } from 'musicbrainz-api';
-import { difference } from "../../../utils.ts";
+import { difference } from '../../../../core/DataUtils.ts';
 import type { Cacheable } from "cacheable";
 import { getRootCommon } from "../../../iocCommon.ts";
 import { hashObject } from "../../../utils/StringUtils.ts";

@@ -14,7 +14,7 @@ import type { ExternalMetadataTerm, PlayTransformMetadataStage } from "../../../
 import { isWhenCondition } from "../../utils/PlayTransformUtils.ts";
 import { parseArrayFromMaybeString } from "../../utils/StringUtils.ts";
 import { compareArtistCreditsNormalized, scorePlaySameness, type ScoreParts } from "../../utils/PlayComparisonUtils.ts";
-import { intersect } from "../../utils.ts";
+import { intersect } from '../../../core/DataUtils.ts';
 import { chooseImageByResolution, isCompilation, SpotifyApiClient, trackToPlay } from "../vendor/spotify/SpotifyApiClient.ts";
 import { MaybeLogger } from '../MaybeLogger.ts';
 import { SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../errors/MSErrors.ts";

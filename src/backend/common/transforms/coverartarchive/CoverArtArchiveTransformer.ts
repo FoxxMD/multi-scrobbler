@@ -7,7 +7,8 @@ import { creditMbid, type CreditRules, withImage } from "../../../../core/MusicM
 import type {TransformerOptions} from "../AbstractTransformer.ts";
 import { MaybeLogger } from '../../MaybeLogger.ts';
 import { childLogger } from "@foxxmd/logging";
-import { difference, intersect } from "../../../utils.ts";
+import { difference } from '../../../../core/DataUtils.ts';
+import { intersect } from '../../../../core/DataUtils.ts';
 import { SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../../errors/MSErrors.ts";
 import type { Cacheable } from "cacheable";
 import { hasArtFields, type CAAMissingType, type CoverArtArchiveTransformData, type CovertArtArchiveTransformerConfig } from "./CoverArtArchiveTransformerUtil.ts";

@@ -15,7 +15,8 @@ import type {MusicbrainzApiConfigData} from '../../common/infrastructure/Atomic.
 import { MockNetworkError, withRequestInterception } from '../utils/networking.ts';
 import { http, HttpResponse, delay } from "msw";
 import { generatePlay, withBrainz } from '../../../core/tests/utils/PlayTestUtils.ts';
-import { intersect, missingMbidTypes, sleep } from '../../utils.ts';
+import { missingMbidTypes, sleep } from '../../utils.ts';
+import { intersect } from '../../../core/DataUtils.ts';
 import { CoverArtApiClient } from '../../common/vendor/musicbrainz/CoverArtApiClient.ts';
 import { nameToCredit } from "../../../core/MusicMetadata.ts";
 import { namesToCredits } from "../../../core/MusicMetadata.ts";
