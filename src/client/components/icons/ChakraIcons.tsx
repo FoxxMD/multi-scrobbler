@@ -31,7 +31,11 @@ import {
     LuClipboardPaste,
     LuClipboardCopy,
     LuTimerReset,
-    LuPencil
+    LuPencil,
+    LuBraces,
+    LuText,
+    LuCode,
+    LuPlus
 } from "react-icons/lu"
 import { VscDebugRestart } from 'react-icons/vsc';
 import { HiMiniStop } from "react-icons/hi2";
@@ -158,6 +162,7 @@ export const IdleIcon = (props: {animated?: boolean} & ComponentProps<typeof RiZ
 };
 
 export const EllipsisIcon = LuEllipsis;
+export const EllipsisChakraIcon = makeChakraIcon(LuEllipsis);
 export const EllipsisButton = makeIconButton(EllipsisIcon);
 export const EllipsisVerticalIcon = LuEllipsisVertical;
 export const EllipsisVerticalButton = makeIconButton(EllipsisVerticalIcon);
@@ -312,3 +317,19 @@ export const ResetButton = makeIconButton(LuTimerReset);
 export const EditIconRaw = LuPencil;
 export const EditIcon = makeChakraIcon(LuPencil);
 export const EditButton = makeIconButton(LuPencil);
+
+export const BracesIconRaw = LuBraces;
+export const BracesIcon = makeChakraIcon(LuBraces);
+export const BracesButton = makeIconButton(LuBraces);
+
+export const TextIconRaw = LuText;
+export const TextIcon = makeChakraIcon(LuText);
+export const TextButton = makeIconButton(LuText);
+
+export const CodeIconRaw = LuCode;
+export const CodeIcon = makeChakraIcon(LuCode);
+export const CodeButton = makeIconButton(LuCode);
+
+export const PlusIconRaw = LuPlus;
+export const PlusIcon = makeChakraIcon(LuPlus);
+export const PlusButton = makeIconButton(LuPlus);

@@ -9,6 +9,11 @@ import {
     type LogOutputConfig,
     queueContextSchema,
     logLevelStandaloneSchema,
+    trackSearchToMusicService,
+    albumSearchToMusicService,
+    artistSearchToMusicService,
+    playEditStrictCreateSchema,
+    type PlayObject,
 } from "../../core/Atomic.ts";
 import type {LeveledLogData} from "../common/infrastructure/Atomic.ts";
 import { getRoot } from "../ioc.ts";
@@ -27,10 +32,9 @@ import { findAuthIssue, SimpleError } from "../common/errors/MSErrors.ts";
 import { DrizzlePlayRepository, type QueryPlaysOpts, type QueryPlaysOptsJson } from "../common/database/drizzle/repositories/PlayRepository.ts";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.ts";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
-import {componentStateBodySchema, playStateBodySchema, type ComponentClientApiJson, type ComponentSourceApiJson} from "../../core/Api.ts";
+import {componentStateBodySchema, playStateBodySchema, type ComponentClientApiJson, type ComponentSourceApiJson, asSerializablePlaySelect, trackDataCreditBaseSchema, trackSearchSimpleRequestQuerySchema, albumSearchSimpleRequestQuerySchema, artistSearchSimpleRequestQuerySchema } from "../../core/Api.ts";
 import { asDayjsHydratedObject } from "../../core/DataUtils.ts";
 import type {Dayjs} from "dayjs";
-import { asSerializablePlaySelect } from "../../core/PlayMarshalUtils.ts";
 import { serializeError } from "serialize-error";
 import { z } from 'zod';
 import type { createTypedRouter, TypedMiddleware } from "@minisylar/express-typed-router";
@@ -38,6 +42,8 @@ import { hasMetricRepositories, registerMetrics, setMetricRepositories } from ".
 import pMap from "p-map";
 import type { PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
 import { stripIndents } from "common-tags";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { asPlayCheap } from "../../core/PlayMarshalUtils.ts";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -479,6 +485,26 @@ Note: this is only supported by some components.`
         return res.sendStatus(200);
     });
 
+    router.put('/api/components/:id/plays/:uid/play', {
+        middleware: [componentAwareMiddle,jsonParser],
+        tags: ['Plays'],
+        summary: 'Update Play',
+        bodySchema: playEditStrictCreateSchema
+    }, async (req, res, next) => {
+        const {
+            component,
+            params: {
+                uid: playUid
+            },
+            body
+        } = req;
+
+        const play: PlayObject = asPlayCheap(body);
+
+        const playRes = await component.updatePlay(playUid as string, play.data);
+        return res.json(asSerializablePlaySelect(playRes));
+    });
+
     router.post('/api/components/:id/plays/queue', {
         middleware: [componentAwareMiddle,jsonParser],
         bodySchema: z.object({
@@ -639,59 +665,118 @@ Note: this is only supported by some components.`
     });
 
     router.get('/api/metadata/search/tracks', {
-        tags: ['Metdata'],
+        tags: ['Metadata'],
         summary: 'Get Track Metadata from Providers',
-        querySchema: z.object({
-            q: z.string().meta({
-            description: `the track name to search for`
-        })}),
+        querySchema: trackSearchSimpleRequestQuerySchema,
         description: 'Gets track results from all metadata providers'
     }, async (req, res, next) => {
         const {
             query: {
-                q
+                track,
+                artists = [],
+                album
             }
         } = req;
 
-        const results = await root.items.transformerManager.getTrackResults(q);
+        const musicServiceMeta = trackSearchToMusicService(track);
+        if(musicServiceMeta !== undefined) {
+            const results = await root.items.transformerManager.getTrackResults(musicServiceMeta);
+            return res.json(results);
+        }
+        const results = await root.items.transformerManager.getTrackResults({
+            track: nameToCredit(track),
+            artists: artists.length === 0 ? undefined : artists.map((x) => nameToCredit(x)),
+            album: nameToCredit(album)
+        });
+        return res.json(results);
+    });
+    router.post('/api/metadata/search/tracks', {
+        tags: ['Metadata'],
+        middleware: [jsonParser],
+        summary: 'Get Track Metadata from Providers (Advanced)',
+        bodySchema: trackDataCreditBaseSchema.required({track: true}),
+        description: 'Gets track results from all metadata providers using Credits with metadata'
+    }, async (req, res, next) => {
+        const {
+            body
+        } = req;
+        const results = await root.items.transformerManager.getTrackResults(body);
         return res.json(results);
     });
 
     router.get('/api/metadata/search/albums', {
-        tags: ['Metdata'],
+        tags: ['Metadata'],
         summary: 'Get Album Metadata from Providers',
-        querySchema: z.object({
-            q: z.string().meta({
-            description: `the album name to search for`
-        })}),
+        querySchema: albumSearchSimpleRequestQuerySchema,
         description: 'Gets album results from all metadata providers'
     }, async (req, res, next) => {
         const {
             query: {
-                q
+                album,
+                artists = []
             }
         } = req;
 
-        const results = await root.items.transformerManager.getAlbumResults(q);
+        const musicServiceMeta = albumSearchToMusicService(album);
+        if(musicServiceMeta !== undefined) {
+            const results = await root.items.transformerManager.getAlbumResults(musicServiceMeta);
+            return res.json(results);
+        }
+        const results = await root.items.transformerManager.getAlbumResults({
+            artists: artists.length === 0 ? undefined : artists.map((x) => nameToCredit(x)),
+            album: nameToCredit(album)
+        });
+
+        return res.json(results);
+    });
+    router.post('/api/metadata/search/albums', {
+        tags: ['Metadata'],
+        middleware: [jsonParser],
+        summary: 'Get Album Metadata from Providers (Advanced)',
+        bodySchema: trackDataCreditBaseSchema.required({album: true}).omit({track: true}),
+        description: 'Gets album results from all metadata providers using Credits with metadata'
+    }, async (req, res, next) => {
+        const {
+            body
+        } = req;
+        const results = await root.items.transformerManager.getAlbumResults(body);
         return res.json(results);
     });
 
     router.get('/api/metadata/search/artists', {
-        tags: ['Metdata'],
+        tags: ['Metadata'],
         summary: 'Get Artist Metadata from Providers',
-        querySchema: z.object({
-            q: z.string().meta({
-            description: `the artist name to search for`
-        })}),
+        querySchema: artistSearchSimpleRequestQuerySchema,
         description: 'Gets artist results from all metadata providers'
     }, async (req, res, next) => {
         const {
             query: {
-                q
+                artist
             }
         } = req;
 
-        const results = await root.items.transformerManager.getArtistResults(q);
+        const musicServiceMeta = artistSearchToMusicService(artist);
+        if(musicServiceMeta !== undefined) {
+            const results = await root.items.transformerManager.getArtistResults(musicServiceMeta);
+            return res.json(results);
+        }
+
+        const results = await root.items.transformerManager.getArtistResults({
+            artists: [nameToCredit(artist)],
+        });
+        return res.json(results);
+    });
+    router.post('/api/metadata/search/artists', {
+        tags: ['Metadata'],
+        middleware: [jsonParser],
+        summary: 'Get Artist Metadata from Providers (Advanced)',
+        bodySchema: trackDataCreditBaseSchema.required({artists: true}).omit({track: true, album: true}),
+        description: 'Gets artist results from all metadata providers using Credits with metadata'
+    }, async (req, res, next) => {
+        const {
+            body
+        } = req;
+        const results = await root.items.transformerManager.getArtistResults(body);
         return res.json(results);
     });
 

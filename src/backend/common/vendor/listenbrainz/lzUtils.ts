@@ -2,10 +2,19 @@ import {NO_DEVICE, type PlayObject} from "../../../../core/Atomic.ts";
 import { isEmptyArrayOrUndefined } from "../../../utils.ts";
 import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
 import { getScrobbleTsSOCDate } from "../../../utils/TimeUtils.ts";
-import type {SubmitOptions} from "../ListenbrainzApiClient.ts";
-import type {ListenPayload, MinimumTrack, SubmitListenAdditionalTrackInfo, SubmitPayload} from "../../../../core/vendor/listenbrainz/interfaces.ts";
+import type {ListenPayload, MinimumTrack, SubmitListenAdditionalTrackInfo, SubmitPayload, ListenType } from "../../../../core/vendor/listenbrainz/interfaces.ts";
 import {version as appVersion } from '../../../version.ts';
 import { creditId, creditIds, creditIsrc, creditMbid, creditsToNames } from "../../../../core/MusicMetadata.ts";
+
+export interface SubmitOptions {
+    log?: boolean
+    listenType?: ListenType
+    /** See matchDeviceLabel in lzUtils */
+    allowDeviceList?: AllowDeviceList
+    includePlayPosition?: boolean
+}
+
+
 
 export type AllowDeviceList = Record<string, string>;
 /**

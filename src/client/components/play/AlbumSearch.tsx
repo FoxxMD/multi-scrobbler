@@ -1,12 +1,11 @@
-import { Box, useListCollection, Stack, Text, HStack, Badge, Span } from "@chakra-ui/react"
-import { useDebouncedState } from '@tanstack/react-pacer'
+import { Box, useListCollection, Stack, HStack, Badge, Span } from "@chakra-ui/react"
 import { useQuery } from '@tanstack/react-query';
 import { tanQueries } from "../../queries/index.ts";
-import { type AlbumSearchResult } from "../../../core/Api.ts";
+import { type AlbumSearchResult, type AlbumSearchSimpleRequestQuery, type TrackDataCreditBase } from "../../../core/Api.ts";
 import React, { useCallback, useEffect, useState } from "react";
 import { ArtistCreditTags } from "../ArtistCreditDisplay.tsx";
-import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, type MetadataPartials } from "./MetadataResults.tsx";
-import { creditSchema, type Credit } from "../../../core/Atomic.ts";
+import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, MetadataServiceScore, type MetadataPartials } from "./MetadataResults.tsx";
+import { albumSearchToMusicService, creditSchema, type Credit } from "../../../core/Atomic.ts";
 import { MusicServiceIndicators } from "../musicServices/MusicServiceIndicators.tsx";
 import { CountryFlag } from "../Country.tsx";
 import dayjs from "dayjs";
@@ -47,18 +46,21 @@ export const AlbumSearchResultItem = (props: { data: AlbumSearchResult, onPick?:
         locationDateInfo = <Badge variant="outline">{countryElm}<Span>{dayjs(date).format('YYYY')}</Span></Badge>
     }
 
+    const smallMetadataServiceScore = <Badge hideFrom="sm" variant="subtle" size="sm"><MetadataServiceScore {...props.data}/></Badge>
+
     return (
         <HStack gap="4" flexGrow="1">
-            <Stack>
-            <LeftSideMetadataResultContent {...props.data}/>
-            </Stack>
+            <Box hideBelow="sm"><LeftSideMetadataResultContent {...props.data}/></Box>
             <Stack gap="1" flexGrow="1">
-                <Text fontWeight="medium">
-                    <HStack gap="1">
-                        {name}{albumHints.length > 0? <Box>({albumHints.join(' -- ')})</Box> : undefined}{locationDateInfo}<MusicServiceIndicators services={metadata}/>
+                {smallMetadataServiceScore}
+                <Box display="flow-root">
+                     <Box float="right" marginStart="2">
                         <MetadataPickMenu data={props.data} partials={albumPartials} onPick={props.onPick} />
-                    </HStack>
-                </Text>
+                     </Box>
+                     <HStack wrap="wrap">
+                     {name}{albumHints.length > 0? <Box>({albumHints.join(' -- ')})</Box> : undefined}{locationDateInfo}<MusicServiceIndicators services={metadata}/>
+                     </HStack>
+                </Box>
                 {artistTags}
             </Stack>
         </HStack>
@@ -74,6 +76,7 @@ export interface AlbumOnChange {
 export interface AlbumSearchProps {
     initial?: Credit
     onChange: (val: AlbumOnChange) => void
+    contextData?: TrackDataCreditBase
 }
 
 export const AlbumSearch = (props: AlbumSearchProps) => {
@@ -84,11 +87,21 @@ export const AlbumSearch = (props: AlbumSearchProps) => {
     } = props;
 
     const [selectedItem, setSelectedItem] = useState<Credit>(initial ?? {name: ''});
-    const [debouncedQuery, setDebouncedQuery] = useDebouncedState<string>(initial?.name ?? '', { wait: 500 });
+    const [searchQuery, setSearchQuery] = useState<AlbumSearchSimpleRequestQuery | TrackDataCreditBase>({album: ''});
+        const search = (query: string, context: boolean) => {
+            const musicService = albumSearchToMusicService(query);
+            if(musicService !== undefined) {
+                setSearchQuery({album: query});
+            } else if(context) {
+                setSearchQuery({...(props.contextData), album: {name: query}})
+            } else {
+                setSearchQuery({album: query});
+            }
+        };
 
     const query = useQuery({
-        enabled: debouncedQuery !== '',
-        ...tanQueries.metadata.album(debouncedQuery)
+        enabled: (`album` in searchQuery && searchQuery.album !== '') || `album` in searchQuery && typeof searchQuery.album === 'object' && (searchQuery.album?.name ?? '') !== '',
+        ...tanQueries.metadata.album(searchQuery)
     });
 
     const { collection, set } = useListCollection<AlbumSearchResult>({
@@ -127,7 +140,7 @@ export const AlbumSearch = (props: AlbumSearchProps) => {
             isError={query.isError}
             onChange={doChange}
             onFreetext={(name) => doChange({ name })}
-            onQueryChange={setDebouncedQuery}
+            onQueryChange={search}
             renderItem={(item, onPick) => <AlbumSearchResultItem data={item} onPick={onPick} />}
         />
     );

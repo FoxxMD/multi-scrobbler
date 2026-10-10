@@ -105,3 +105,16 @@
       grid-template-columns: repeat(auto-fill,
                   minmax(min(100%, max(10rem, (100% - (var(--max-columns) - 1) * var(--gap)) / var(--max-columns))), 1fr));
 }
+
+.chakra-select__itemGroupLabel {
+  padding-inline: var(--chakra-spacing-2);
+  padding-block: var(--chakra-spacing-1);
+  font-size: var(--chakra-font-sizes-xs);
+  font-weight: var(--chakra-font-weights-semibold);
+  text-transform: uppercase;
+  color: var(--chakra-colors-fg-muted);
+}
+
+.chakra-select__itemGroup .chakra-select__item {
+      padding-inline: var(--chakra-spacing-3)
+}

@@ -1,14 +1,14 @@
-import { HStack, Box, Field, Stack, Fieldset, Button, IconButton, DateInput, DatePicker, Portal, EmptyState } from "@chakra-ui/react"
+import { HStack, Box, Field, Stack, Fieldset, Button, IconButton, DateInput, DatePicker, Portal, Text, Kbd, Span } from "@chakra-ui/react"
 import { playEditStrictCreateSchema, type PlayObjectMinimal, type TrackData } from '../../../core/Atomic.js';
 import { MSErrorBoundary } from '../ErrorBoundary.js';
 import { useForm, formOptions } from '@tanstack/react-form';
 import { TrackSearch } from "./TrackSearch.js";
 import { ArtistSearch } from "./ArtistSearch.js";
-import { CopyToRight, ResetIconRaw, TrashIconButton } from "../icons/ChakraIcons.js";
-import { useState } from "react";
+import { BracesIcon, CopyToRight, EllipsisChakraIcon, ResetIconRaw, TextIcon, TrashIconButton } from "../icons/ChakraIcons.js";
+import { useState, type ReactNode } from "react";
 import { AlbumSearch } from "./AlbumSearch.js";
 import { DurationSepEditable } from "./DurationEditable.js";
-import { Tooltip } from "../ToggleTip.js";
+import { InfoPopover, Tooltip } from "../ToggleTip.js";
 import { hashObject } from "../../../core/StringUtils.js";
 import { dedupAlbumArtists } from "../../../core/MusicMetadata.js";
 import { LuCalendar } from "react-icons/lu";
@@ -22,6 +22,20 @@ export interface PlayEditProps {
     onSubmit?: (vals: PlayObjectMinimal<string>) => void
     onCancel?: () => void
 }
+
+const IconWrapper = (props: {children: ReactNode}) => <Box paddingX="1" marginX="1" display="inline-block" rounded="md" backgroundColor="bg.emphasized">{props.children}</Box>
+
+const editPopoverContent = (
+    <Stack mt="4" gap="2">
+        <Span>The fields of your Play data are both <strong>plain text</strong> and <strong>search fields.</strong></Span>
+        <Span>Apply plain text to a field with <Kbd>Enter</Kbd> or selecting outside the field at any time.</Span>
+        <Span>The contents of the field are also used to <strong>search</strong> for rich data. Use <Kbd>Down Arrow</Kbd> or the field arrow to access results.</Span>
+        <Span>Select a result to apply <strong>all</strong> shown parts (album, artists, meta ids, etc...) or use the <IconWrapper><EllipsisChakraIcon size="md"/></IconWrapper> menu to apply only some parts.</Span>
+        <Text fontWeight="bold" my="2">Search Mode</Text>
+        <HStack><Span><strong>Context</strong><IconWrapper><BracesIcon size="md"/></IconWrapper>mode will search for results using your text and <i>all</i> filled fields + ids as hints/restrictions.</Span></HStack>
+        <HStack><Span><strong>Text</strong><IconWrapper><TextIcon size="md"/></IconWrapper>mode will search for results using <i>only</i> the text in the field.</Span></HStack>
+    </Stack>
+);
 
 const logSubmit: PlayEditProps['onSubmit'] = (val) => console.log(val, 'Play Edit Submit');
 const cancelNoop = () => console.log('Clicked cancel');
@@ -161,7 +175,6 @@ export const PlayEdit = (props: PlayEditProps) => {
 
     return (
         <Box position="relative">
-
             <MSErrorBoundary>
                 <form
                     onSubmit={(e) => {
@@ -169,7 +182,15 @@ export const PlayEdit = (props: PlayEditProps) => {
                         e.stopPropagation()
                         form.handleSubmit()
                     }}>
+                        
                     <HStack justify="flex-end">
+                        <Box marginRight="auto">
+                            <InfoPopover question 
+                            iconProps={{size: 'xl'}}
+                            buttonProps={{size: 'md'}}
+                            title={<Text fontWeight="bold" textStyle="lg">Editing and Searching</Text>}
+                            positioning={{ placement: "top-end" }}>{editPopoverContent}</InfoPopover>
+                        </Box>
                         <Button loading={isSubmitting} type="submit" variant="subtle" colorPalette="blue">{context === 'edit' ? 'Save' : 'Create'}</Button>
                         <Button disabled={isSubmitting} variant="subtle" colorPalette="red" onClick={() => onCancel()}>Cancel</Button>
                         <form.Subscribe
@@ -194,6 +215,7 @@ export const PlayEdit = (props: PlayEditProps) => {
                                             <TrackSearch
                                                 // TrackSearch only reads initial on mount, remount so a reset (or any outside change) shows in the input
                                                 key={hashObject(field.form.state.values.data.track ?? {})}
+                                                contextData={{album: field.form.state.values.data.album, artists: field.form.state.values.data.artists}}
                                                 initial={field.form.state.values.data.track}
                                                 onChange={(val) => {
                                                     // selected credits replace existing ones entirely so ids/images from a previous selection are not kept
@@ -223,6 +245,7 @@ export const PlayEdit = (props: PlayEditProps) => {
                                             <AlbumSearch
                                                 key={hashObject(field.form.state.values.data.album ?? {})}
                                                 initial={field.form.state.values.data.album}
+                                                contextData={{artists: field.form.state.values.data.artists}}
                                                 onChange={(val) => {
                                                     field.form.setFieldValue('data', mergeData(field.form.state.values.data, val));
                                                     setArtistsVersion(v => v + 1);

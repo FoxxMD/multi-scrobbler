@@ -4,6 +4,8 @@ import type { WebhookPayload } from "../infrastructure/config/health/webhooks.ts
 import {
     type Credit,
     type LifecycleInput,
+    type MusicServicesBase,
+    musicServicesBaseSchema,
     type OptionalCacheUsage,
     type PlayObject, type TrackMetaIsrc } from "../../../core/Atomic.ts";
 import { ARTIST_WEIGHT, TITLE_WEIGHT } from "../infrastructure/Atomic.ts";
@@ -12,10 +14,10 @@ import type { ExternalMetadataTerm, PlayTransformMetadataStage } from "../../../
 import { isWhenCondition } from "../../utils/PlayTransformUtils.ts";
 import { parseArrayFromMaybeString } from "../../utils/StringUtils.ts";
 import { compareArtistCreditsNormalized, scorePlaySameness, type ScoreParts } from "../../utils/PlayComparisonUtils.ts";
-import { intersect } from "../../utils.ts";
+import { intersect } from '../../../core/DataUtils.ts';
 import { chooseImageByResolution, isCompilation, SpotifyApiClient, trackToPlay } from "../vendor/spotify/SpotifyApiClient.ts";
 import { MaybeLogger } from '../MaybeLogger.ts';
-import { SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../errors/MSErrors.ts";
+import { SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../errors/MSErrors.ts";
 import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
 import { creditId, creditIds, creditIsrc, type CreditRules, nameToCredit, resolveCredit, resolveCredits, spotifyMeta, withImage } from "../../../core/MusicMetadata.ts";
 import type { TransformerOptions } from "./AbstractTransformer.ts";
@@ -29,7 +31,7 @@ import {
     type SpotifySearchType,
     type SpotifyTransformerConfig,
     type SpotifyTransformerData } from "./spotify/SpotifyTransformerUtil.ts";
-import type { AlbumSearchResult, ArtistSearchResult, TrackSearchResult } from "../../../core/Api.ts";
+import { type AlbumSearchResult, type ArtistSearchResult, type TrackDataCreditBase, trackDataCreditBaseSchema, type TrackSearchResult } from "../../../core/Api.ts";
 import { creditToResult, trackDataToResult } from "../metadataProviders/MetadataProviderUtils.ts";
 import { compareNormalizedStrings } from "../../../core/StringUtils.ts";
 
@@ -189,6 +191,17 @@ export const rankTracksBySimilarity = (tracks: SpotifyApi.TrackObjectFull[], pla
     return ranked;
 }
 
+/** Returns the id when metadata is a spotify id usable as the given type, or undefined when it is for a service spotify cannot look up */
+const spotifyIdFor = (meta: MusicServicesBase, type: 'track' | 'album' | 'artist'): string | undefined => {
+    if(meta.name !== 'spotify') {
+        return undefined;
+    }
+    if(meta.idType !== undefined && meta.idType !== type) {
+        throw new SimpleError(`Metadata type not valid as a search parameter '${meta.idType}'`);
+    }
+    return meta.id;
+}
+
 export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalMetadataTerm, PlayObject, SpotifyTransformerDataStage> {
 
     declare config: SpotifyTransformerConfig;
@@ -337,20 +350,79 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
         return await this.api.searchTracksByFields(play, { market, locale, useCachedResult: opts.useCachedResult });
     }
 
-    async getTrackResults(query: string): Promise<TrackSearchResult[] | false> {
-        const surrogatePlay: PlayObject = {data: {track: {name: query}}, meta:{}};
-        const res = await this.searchByBasicFields(surrogatePlay, {type: 'spotify',  ...this.defaults});
-        const filtered = this.rankTrackMatches(surrogatePlay, {tracks: res, searchType: 'basic', requestQueries: []}, {
-            type: 'spotify',
-            ...this.defaults,
-            parts: ['track'],
-            titleWeight: 1 // only comparing track at this point (only thing being queried for) so it should be out of 100
-        });
+    async getTrackResults(query: TrackDataCreditBase | MusicServicesBase): Promise<TrackSearchResult[] | false> {
+        let ranked: RankedSpotifyTrack[] = [];
+        const data = trackDataCreditBaseSchema.required({track: true}).safeParse(query);
+        if(data.success) {
+            const surrogatePlay: PlayObject = {data: data.data, meta: {}};
+            const {track, artists = [], album} = surrogatePlay.data;
 
-        if(filtered.length === 0) {
-            return []
+            const spotifyId = creditId(track, 'spotify');
+            if(spotifyId !== undefined) {
+                const found = await this.api.getTrack(spotifyId, this.defaults);
+                if(found !== undefined) {
+                    ranked = [{track: found, matchScore: 1}];
+                }
+            }
+            if(ranked.length === 0) {
+                let tracks: SpotifyApi.TrackObjectFull[] = [];
+                let searchType: SpotifySearchType = 'isrc';
+                if(creditIsrc(track) !== undefined) {
+                    try {
+                        tracks = await this.searchByIsrc(surrogatePlay, {type: 'spotify', ...this.defaults});
+                    } catch (e) {
+                        this.logger.warn(new SimpleError('could not search metadata results by isrc', {cause: e}));
+                    }
+                }
+                if(tracks.length === 0 && track !== undefined && track.name.trim() !== '') {
+                    searchType = 'basic';
+                    tracks = await this.searchByBasicFields(surrogatePlay, {type: 'spotify', ...this.defaults});
+                }
+
+                // only score against what was queried for, with weights scaled so a perfect match is still out of 100
+                const weights: [ScoreParts, number][] = [['track', this.defaults.titleWeight ?? TITLE_WEIGHT]];
+                if(artists.length > 0) {
+                    weights.push(['artist', this.defaults.artistWeight ?? ARTIST_WEIGHT]);
+                }
+                if(album !== undefined) {
+                    weights.push(['album', this.defaults.albumWeight ?? 0.3]);
+                }
+                const total = weights.reduce((acc, [, w]) => acc + w, 0);
+                const scaled = Object.fromEntries(weights.map(([part, w]) => [part, total === 0 ? 1 : w / total]));
+
+                ranked = this.rankTrackMatches(surrogatePlay, {tracks, searchType, requestQueries: []}, {
+                    type: 'spotify',
+                    ...this.defaults,
+                    parts: weights.map(([part]) => part),
+                    titleWeight: scaled.track,
+                    artistWeight: scaled.artist,
+                    albumWeight: scaled.album
+                });
+            }
+        } else {
+            const metadata = musicServicesBaseSchema.safeParse(query);
+            if(!metadata.success) {
+                throw new AggregateError([data.error, metadata.error],'query was not a TrackDataCreditBase or MusicServicesBase type');
+            }
+            let tracks: SpotifyApi.TrackObjectFull[] = [];
+            if(metadata.data.name === 'isrc') {
+                tracks = await this.api.searchTracksByIsrc(metadata.data.id, this.defaults);
+            } else {
+                const spotifyId = spotifyIdFor(metadata.data, 'track');
+                if(spotifyId === undefined) {
+                    // service type was not applicable
+                    return [];
+                }
+                const found = await this.api.getTrack(spotifyId, this.defaults);
+                if(found !== undefined) {
+                    tracks = [found];
+                }
+            }
+            // id identifies the exact track so there is nothing to score against
+            ranked = tracks.map((x) => ({track: x, matchScore: 1}));
         }
-        const results = filtered.slice(0, 5).map((x) => trackDataToResult(trackToPlay(x.track).data, {
+
+        const results = ranked.slice(0, 5).map((x) => trackDataToResult(trackToPlay(x.track).data, {
             service: 'spotify',
             score: x.matchScore  * 100,
             albumCount: 1,
@@ -363,13 +435,42 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
         return results;
     }
 
-    async getArtistResults(query: string): Promise<ArtistSearchResult[] | false> {
-        const surrogateArtist: Credit = {name: query};
-        const scoreThreshold = this.defaults.score ?? 0.6;
-        const res = await this.api.searchArtists({name: query}, this.defaults);
-        const ranked = res.map((x) => ({...x, score: compareArtistCreditsNormalized([surrogateArtist], [{name: x.name}])[0] * 100}))
-        .sort((a, b) => b.score - a.score)
-        .filter(x => x.score >= scoreThreshold);
+    async getArtistResults(query: TrackDataCreditBase | MusicServicesBase): Promise<ArtistSearchResult[] | false> {
+        let ranked: (SpotifyApi.ArtistObjectFull & {score: number})[] = [];
+        const data = trackDataCreditBaseSchema.required({artists: true}).safeParse(query);
+        if(data.success) {
+            const {artists = []} = data.data;
+            if(artists.length === 0) {
+                throw new SimpleError(`Must include 'artist' credit`);
+            }
+            const spotifyIds = creditIds(artists, 'spotify');
+            if(spotifyIds.length > 0) {
+                ranked = (await this.api.getArtists(spotifyIds, this.defaults)).map((x) => ({...x, score: 100}));
+            }
+            // spotify search only takes one artist so only the first is used
+            const surrogateArtist: Credit = artists[0];
+            if(ranked.length === 0 && surrogateArtist.name.trim() !== '') {
+                const scoreThreshold = this.defaults.score ?? 0.6;
+                const res = await this.api.searchArtists(surrogateArtist, this.defaults);
+                ranked = res.map((x) => ({...x, score: compareArtistCreditsNormalized([surrogateArtist], [{name: x.name}])[0] * 100}))
+                .sort((a, b) => b.score - a.score)
+                .filter(x => x.score >= scoreThreshold);
+            }
+        } else {
+            const metadata = musicServicesBaseSchema.safeParse(query);
+            if(!metadata.success) {
+                throw new AggregateError([data.error, metadata.error],'query was not a TrackDataCreditBase or MusicServicesBase type');
+            }
+            const spotifyId = spotifyIdFor(metadata.data, 'artist');
+            if(spotifyId === undefined) {
+                // service type was not applicable
+                return [];
+            }
+            const found = await this.api.getArtist(spotifyId, this.defaults);
+            if(found !== undefined) {
+                ranked = [{...found, score: 100}];
+            }
+        }
         const results: ArtistSearchResult[] = ranked.slice(0, 5).map((x) => ({
             ...withImage(nameToCredit(x.name, spotifyMeta(x.id, 'artist')), chooseImageByResolution(x.images, {fallbackBest: true}).url),
             score: x.score,
@@ -378,15 +479,46 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
         }));
         return results;
     }
-    async getAlbumResults(query: string): Promise<AlbumSearchResult[] | false> {
-        const scoreThreshold = this.defaults.score ?? 0.6;
-        const res = await this.api.searchAlbums({album: {name: query}}, this.defaults);
-        const ranked = res.map((x) => { 
-            const sameness = compareNormalizedStrings(query, x.name);
-            return {...x, score: Math.min(sameness.highScore, 100)}
-        })
-        .sort((a, b) => b.score - a.score)
-        .filter(x => x.score >= scoreThreshold);
+    async getAlbumResults(query: TrackDataCreditBase | MusicServicesBase): Promise<AlbumSearchResult[] | false> {
+        let ranked: (SpotifyApi.AlbumObjectSimplified & {score: number})[] = [];
+        const data = trackDataCreditBaseSchema.required({album: true}).safeParse(query);
+        if(data.success) {
+            const {album, artists} = data.data;
+            if(album === undefined) {
+                throw new SimpleError(`Must include 'album' credit`);
+            }
+            const spotifyId = creditId(album, 'spotify');
+            if(spotifyId !== undefined) {
+                const found = await this.api.getAlbum(spotifyId, this.defaults);
+                if(found !== undefined) {
+                    ranked = [{...found, score: 100}];
+                }
+            }
+            if(ranked.length === 0 && album.name.trim() !== '') {
+                const scoreThreshold = this.defaults.score ?? 0.6;
+                const res = await this.api.searchAlbums({album, artists}, this.defaults);
+                ranked = res.map((x) => {
+                    const sameness = compareNormalizedStrings(album.name, x.name);
+                    return {...x, score: Math.min(sameness.highScore, 100)}
+                })
+                .sort((a, b) => b.score - a.score)
+                .filter(x => x.score >= scoreThreshold);
+            }
+        } else {
+            const metadata = musicServicesBaseSchema.safeParse(query);
+            if(!metadata.success) {
+                throw new AggregateError([data.error, metadata.error],'query was not a TrackDataCreditBase or MusicServicesBase type');
+            }
+            const spotifyId = spotifyIdFor(metadata.data, 'album');
+            if(spotifyId === undefined) {
+                // service type was not applicable
+                return [];
+            }
+            const found = await this.api.getAlbum(spotifyId, this.defaults);
+            if(found !== undefined) {
+                ranked = [{...found, score: 100}];
+            }
+        }
         const results: AlbumSearchResult[] = ranked.slice(0, 5).map((x) => ({
             ...withImage(nameToCredit(x.name, spotifyMeta(x.id, 'album')), chooseImageByResolution(x.images, {fallbackBest: true}).url),
             albumType: x.album_type,

@@ -3,9 +3,9 @@ import { useSSEAnyEvent, useSSEContext } from '@flamefrontend/sse-runtime-react'
 import { type InfiniteData, useInfiniteQuery, type UseInfiniteQueryResult, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { type ComponentProps, useCallback, useMemo, useState } from "react";
-import type {MsSseEvent, MsSseEventPayload, PaginatedResponse, PlayApiCommonDetailed, QueryPlaysOptsJson} from '../../../core/Api.js';
+import type {MsSseEvent, MsSseEventPayload, PaginatedResponse, PlayApiCommonDetailed, QueryPlaysOptsJson, QueryPlaysOptsJsonRefreshable } from '../../../core/Api.js';
 import {actionContextSchema, type ComponentType, type QueueContext} from '../../../core/Atomic.js';
-import { fetchPlaysPage, type QueryPlaysOptsJsonRefreshable, tanQueries, useQueryWatcher } from '../../queries/index.js';
+import { fetchPlaysPage, tanQueries, useQueryWatcher } from '../../queries/index.js';
 import { ActivitySummarySkeleton } from '../ActivityDetail.js';
 import { ErrorAlert } from '../ErrorAlert.js';
 import { ListFilters, ListRefereshButton, getTodayRange } from './ListFilters.js';

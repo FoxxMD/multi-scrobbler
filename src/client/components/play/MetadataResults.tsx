@@ -1,9 +1,12 @@
-import { AbsoluteCenter, Avatar, Box, Combobox, HStack, Icon, Menu, Portal, Span, Spinner, StackSeparator, Text, InputGroup, type ListCollection, Flex } from "@chakra-ui/react"
+import { AbsoluteCenter, Avatar, Box, Combobox, HStack, Icon, Menu, Portal, Span, Spinner, Switch, StackSeparator, Text, InputGroup, type ListCollection, Flex } from "@chakra-ui/react"
 import type { MetadataResultBase, MetadataResultImage, MetadataResultServiceScore } from "../../../core/Api"
-import { getMusicServiceIconElement } from "../icons/ChakraIcons"
-import React, { useRef } from "react"
+import { BracesIcon, getMusicServiceIconElement, TextIcon } from "../icons/ChakraIcons"
+import React, { useRef, useState } from "react"
+import { useDebouncer } from "@tanstack/react-pacer"
 import { MSErrorBoundary } from "../ErrorBoundary"
 import { EllipsisButtonMenu } from "../buttonMenus/ButtonMenu"
+import { formatNumber } from "../../../core/DataUtils"
+import { TextMuted } from "../TextMuted"
 
 export const LeftSideMetadataResultContent = (props: MetadataResultServiceScore & MetadataResultImage) => {
     if (props.image === undefined) {
@@ -19,7 +22,7 @@ export const LeftSideMetadataResultContent = (props: MetadataResultServiceScore 
 export const MetadataServiceScore = (props: MetadataResultServiceScore) => (
     <HStack gap="1" separator={<StackSeparator />}>
         <Icon size="sm">{getMusicServiceIconElement(props.service)}</Icon>
-        {props.score !== undefined ? <Text color="fg.subtle" textStyle="sm">{props.score}</Text> : undefined}
+        {props.score !== undefined ? <Text color="fg.subtle" textStyle="sm">{formatNumber(props.score, {minimumFractionDigits: 0, maximumFractionDigits: 1})}</Text> : undefined}
     </HStack>
 )
 
@@ -74,10 +77,12 @@ export interface MetadataSearchComboboxProps<T extends MetadataSearchResult> {
     isError: boolean
     inputGroupContent?: React.JSX.Element
     initialInput?: string
+    searchContext?: boolean
     onChange: (val: T) => void
     /** Called with the typed text when the user commits it without selecting a result */
     onFreetext: (name: string) => void
-    onQueryChange: (query: string) => void
+    /** Called when a search should run. Typing is debounced here, a context mode switch is not */
+    onQueryChange: (query: string, contextMode: boolean) => void
     renderItem: (item: T, onPick: (val: T) => void) => React.JSX.Element
 }
 
@@ -86,6 +91,22 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
 
     // a ref, not state: combobox captures onInteractOutside when the popup opens so state read there is stale
     const rawInput = useRef<string | undefined>(initialInput === '' ? undefined : initialInput);
+
+    const [contextMode, setContextMode] = useState<boolean>(props.searchContext ?? true);
+    const [open, setOpen] = useState<boolean>(false);
+    // typing would otherwise search on every keystroke
+    // flush on unmount: a parent may remount this after a selection and still wants the search for the selected text
+    // state, not the searched ref below: this is read during render and only flips when a search is actually sent, not when one is pending
+    const [hasSearched, setHasSearched] = useState<boolean>(false);
+    const runQuery = (query: string, mode: boolean) => {
+        setHasSearched(true);
+        onQueryChange(query, mode);
+    };
+    const typedQuery = useDebouncer(runQuery, { wait: 500, onUnmount: (d) => d.flush() });
+    // true while the current query was triggered by the mode switch item rather than typing, decides which loading UI is shown
+    const [modeSwitched, setModeSwitched] = useState<boolean>(false);
+    // parents do not search for the initial value on mount, the first open does it unless a search was already requested
+    const searched = useRef<boolean>(false);
 
     const commitFreetext = () => {
         if (rawInput.current !== undefined && rawInput.current !== initialInput) {
@@ -105,10 +126,37 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
         input = inputElm;
     }
 
+    const ModeIconSwitchHint = !contextMode ? BracesIcon : TextIcon;
+    const ModeIconHint = contextMode ? BracesIcon : TextIcon;
+    const modeIconElm = <Box padding="0.5" rounded="md" backgroundColor="bg.emphasized"><ModeIconSwitchHint/></Box>
+    // capture + stopPropagation so the combobox's own item click never runs, it would select this item and close the popup
+    const switchModeItem = (
+        <Combobox.Item key="switch-mode" item="switch-mode" onClickCapture={(e) => 
+            {
+                e.stopPropagation();
+                searched.current = true;
+                setModeSwitched(true);
+                setContextMode(!contextMode);
+                // a pending typed search would run after this one with the old mode
+                typedQuery.cancel();
+                runQuery(rawInput.current ?? initialInput, !contextMode);
+            }}>
+            <HStack>Switch to {contextMode ? 'text-only' : 'context'} {modeIconElm} search mode {isLoading ? <Spinner size="xs" borderWidth="1px" /> : undefined}</HStack>
+        </Combobox.Item>);
+
     return (
         <Flex flexGrow="1">
             <MSErrorBoundary>
                 <Combobox.Root
+                openOnChange={false}
+                onOpenChange={(e) => {
+                    setOpen(e.open);
+                    if (e.open && !searched.current && initialInput !== '') {
+                        searched.current = true;
+                        runQuery(initialInput, contextMode);
+                    }
+                }}
+                inputBehavior="autohighlight"
                 defaultInputValue={initialInput === '' ? undefined : initialInput}
                     allowCustomValue
                     onKeyDown={(e) => {
@@ -128,7 +176,9 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                         console.log(val, 'select')
                     }}
                     onInputValueChange={(e) => {
-                        onQueryChange(e.inputValue);
+                        setModeSwitched(false);
+                        searched.current = true;
+                        typedQuery.maybeExecute(e.inputValue, contextMode);
                         // selecting an item rewrites the input, this is not freetext
                         if (e.reason !== 'item-select') {
                             rawInput.current = e.inputValue;
@@ -138,6 +188,9 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                     <Combobox.Control>
                         {input}
                         <Combobox.IndicatorGroup>
+                            {hasSearched && !isLoading ? <TextMuted textStyle="xs" hideBelow="sm">{collection.size} Matches</TextMuted> : undefined}
+                            {!open && isLoading ? <Spinner size="xs" borderWidth="1px" /> : undefined}
+                            <ModeIconHint/>
                             <Combobox.ClearTrigger />
                             <Combobox.Trigger />
                         </Combobox.IndicatorGroup>
@@ -145,7 +198,8 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                     <Portal>
                         <Combobox.Positioner>
                             <Combobox.Content>
-                                {isLoading ? (
+                                {!isLoading || modeSwitched ? switchModeItem : undefined}
+                                {isLoading ? modeSwitched ? undefined : (
                                     <HStack p="2">
                                         <Spinner size="xs" borderWidth="1px" />
                                         <Span>Loading...</Span>
@@ -156,7 +210,8 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                                     </Span>
                                 ) : (
                                     <Combobox.Context>
-                                        {(combobox) => collection.items?.map((item) => (
+                                        {(combobox) => {
+                                            return collection.items?.map((item) => (
                                             <Combobox.Item key={item.id} item={item.id}>
                                                 {renderItem(item, (val) => {
                                                     onChange(val);
@@ -167,6 +222,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                                                 <Combobox.ItemIndicator />
                                             </Combobox.Item>
                                         ))}
+                                        }
                                     </Combobox.Context>
                                 )}
                                 <Combobox.Empty>No items found</Combobox.Empty>

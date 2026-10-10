@@ -6,8 +6,9 @@ import {
   Tooltip as ChakraTooltip,
   Span,
 } from "@chakra-ui/react"
-import * as React from "react"
-import { HiOutlineInformationCircle } from "react-icons/hi"
+import * as React from "react";
+import { BsQuestionCircle, BsExclamationCircle } from "react-icons/bs";
+import type { IconBaseProps } from "react-icons/lib";
 
 export interface ToggleTipProps extends ChakraPopover.RootProps {
   showArrow?: boolean
@@ -67,10 +68,12 @@ export const ToggleTip = React.forwardRef<HTMLDivElement, ToggleTipProps>(
 
 export interface InfoTipProps extends Partial<ToggleTipProps> {
   buttonProps?: IconButtonProps | undefined
+  iconProps?: IconBaseProps
+  question?: boolean
 }
 
 export const InfoTip = React.forwardRef<HTMLDivElement, InfoTipProps>(
-  function InfoTip(props, ref) {
+  (props, ref) => {
     const { children, buttonProps, ...rest } = props
     return (
       <ToggleTip content={children} {...rest} ref={ref}>
@@ -81,9 +84,52 @@ export const InfoTip = React.forwardRef<HTMLDivElement, InfoTipProps>(
           colorPalette="gray"
           {...buttonProps}
         >
-          <HiOutlineInformationCircle />
+          {props.question ? <BsQuestionCircle {...props.iconProps}/> : <BsExclamationCircle />}
         </IconButton>
       </ToggleTip>
+    )
+  },
+)
+
+export interface InfoPopoverProps extends ChakraPopover.RootProps {
+  buttonProps?: IconButtonProps | undefined
+  iconProps?: IconBaseProps
+  question?: boolean
+  title?: string | React.JSX.Element
+}
+
+export const InfoPopover = React.forwardRef<HTMLDivElement, InfoPopoverProps>(
+  (props, ref) => {
+    const { children, buttonProps, ...rest } = props
+    return (
+    <ChakraPopover.Root {...rest}>
+      <ChakraPopover.Trigger asChild>
+        <IconButton
+          variant="ghost"
+          aria-label="info"
+          size="2xs"
+          colorPalette="gray"
+          {...buttonProps}
+        >
+          {props.question ? <BsQuestionCircle {...props.iconProps}/> : <BsExclamationCircle />}
+        </IconButton>
+      </ChakraPopover.Trigger>
+      <Portal>
+        <ChakraPopover.Positioner>
+          <ChakraPopover.Content width="max-content" maxWidth="90vw">
+            <ChakraPopover.Arrow />
+            <ChakraPopover.Body>
+              {props.title ? (
+                <ChakraPopover.Title fontWeight="medium">
+                      {props.title}
+                  </ChakraPopover.Title>
+              ) : undefined}
+             {children}
+            </ChakraPopover.Body>
+          </ChakraPopover.Content>
+        </ChakraPopover.Positioner>
+      </Portal>
+    </ChakraPopover.Root>
     )
   },
 )

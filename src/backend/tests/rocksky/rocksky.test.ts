@@ -127,20 +127,28 @@ describe('Rocksky API', function () {
 
             await rsTransformer.initialize();
 
-            const tracks = await rsTransformer.getTrackResults('One More Time') as TrackSearchResult[];
+            const tracks = await rsTransformer.getTrackResults({track: nameToCredit('One More Time')}) as TrackSearchResult[];
             expect(tracks).to.be.an('array').that.is.not.empty;
             expect(tracks[0].track?.name).to.eq('One More Time');
             expect(tracks[0].artists).to.not.be.empty;
 
-            const artists = await rsTransformer.getArtistResults('Daft Punk') as ArtistSearchResult[];
+            const artists = await rsTransformer.getArtistResults({artists: [nameToCredit('Daft Punk')]}) as ArtistSearchResult[];
             expect(artists).to.be.an('array').that.is.not.empty;
             expect(artists[0].name).to.eq('Daft Punk');
 
-            const albums = await rsTransformer.getAlbumResults('Discovery') as AlbumSearchResult[];
+            const albums = await rsTransformer.getAlbumResults({album: nameToCredit('Discovery')}) as AlbumSearchResult[];
             expect(albums).to.be.an('array').that.is.not.empty;
             expect(albums[0].name).to.eq('Discovery');
 
-            expect(await rsTransformer.getTrackResults('zzqqxxjjkkww')).to.be.empty;
+            expect(await rsTransformer.getTrackResults({track: nameToCredit('zzqqxxjjkkww')})).to.be.empty;
+        });
+
+        it('returns no results for service ids it cannot look up', async function () {
+            await rsTransformer.initialize();
+
+            expect(await rsTransformer.getTrackResults({name: 'musicbrainz', id: 'abc', idType: 'release'})).to.be.empty;
+            expect(await rsTransformer.getArtistResults({name: 'spotify', id: 'abc'})).to.be.empty;
+            expect(await rsTransformer.getAlbumResults({name: 'musicbrainz', id: 'abc', idType: 'release'})).to.be.empty;
         });
 
     });

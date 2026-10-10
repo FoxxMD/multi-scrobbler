@@ -24,6 +24,7 @@ import { toaster } from "./Toaster"
 import { useForm, formOptions} from '@tanstack/react-form'
 import { FormCheckbox } from './form/formComponents';
 import { creditsToNames } from '../../core/MusicMetadata';
+import { PlayEditableMutable } from './play/PlayEditable';
 
 type UseActivityQueryOptions = {
     msQuery?: QueryPlaysOptsJson
@@ -258,7 +259,7 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
                 </Accordion.ItemTrigger>
                 <Accordion.ItemContent>
                     <Accordion.ItemBody>
-                        <PlayData compareDefault='Final' play={original ?? activity.play} final={activity.play} />
+                        <PlayEditableMutable editable uid={activity.uid} componentId={activity.componentId} compareDefault='Final' play={original ?? activity.play} final={activity.play} />
                     </Accordion.ItemBody>
                 </Accordion.ItemContent>
             </Accordion.Item>

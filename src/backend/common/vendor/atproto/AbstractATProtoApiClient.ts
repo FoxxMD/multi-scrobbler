@@ -1,4 +1,4 @@
-import { getRoot } from "../../../ioc.ts";
+import { getRootCommon } from "../../../iocCommon.ts";
 import type {AbstractApiOptions} from "../../infrastructure/Atomic.ts";
 import AbstractApiClient from "../AbstractApiClient.ts";
 import type { MSCache } from "../../Cache.ts";
@@ -34,7 +34,7 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
 
     constructor(name: any, config: ATProtoUserIdentifierData & {handleData?: HandleData}, options: AbstractApiOptions) {
         super('atproto', name, config, options);
-        this.cache = getRoot().items.cache();
+        this.cache = getRootCommon().cache();
 
         if(config.handleData !== undefined) {
             this.userData = config.handleData;

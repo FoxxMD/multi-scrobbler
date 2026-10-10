@@ -12,11 +12,12 @@ import type AbstractSource from "./AbstractSource.ts";
 import { nonEmptyStringOrDefault } from '../../core/StringUtils.ts';
 import type {CommonSourceConfig} from '../common/infrastructure/config/source/index.ts';
 import { prettifyError, ZodError } from 'zod';
-import { commonComponentEnvConfigToConfigPrimitives, generateCommonComponentEnvConfigSchema, generateConfigLocation, transformPresetEnv, type CommonConfigPrimitives, type UnparsedConfig } from '../common/infrastructure/config/common.ts';
+import { commonComponentEnvConfigToConfigPrimitives, generateCommonComponentEnvConfigSchema, generateConfigLocation, type CommonConfigPrimitives, type UnparsedConfig } from '../common/infrastructure/config/common.ts';
 import { getSourceEnvSchema, validateSourceAIOJson, validateSourceJson } from '../common/infrastructure/config/source/sourcesMap.ts';
 import type { SourceTypeConfigMap } from "../common/infrastructure/config/source/sourcesMap.ts";
 import { stripIndents } from 'common-tags';
 import type { MSBackendEventMap } from '../common/infrastructure/MSBackendEventMap.ts';
+import { transformPresetEnv } from "../utils/PlayTransformUtils.ts";
 
 type UnparsedSourceConfig = UnparsedConfig<SourceType>;
 
