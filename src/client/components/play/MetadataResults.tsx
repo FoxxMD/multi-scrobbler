@@ -117,7 +117,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
         }
     };
 
-    const inputElm = <Combobox.Input placeholder={placeholder} />;
+    const inputElm = <Combobox.Input placeholder={placeholder} paddingInlineEnd={onInputSwitch === undefined ? undefined : 'calc(var(--combobox-input-height) * 2)'} />;
     let input: React.JSX.Element;
     if(props.inputGroupContent !== undefined) {
         input = (

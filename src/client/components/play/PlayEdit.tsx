@@ -132,7 +132,7 @@ export const PlayEdit = (props: PlayEditProps) => {
 
     // track artists and album artists are edited the same way, album artists can be empty
     const artistsField = (name: 'data.artists' | 'data.albumArtists', legend: string, minRows: number) => (
-        <Fieldset.Root size="md">
+        <Fieldset.Root size="md" minW="0">
             <Fieldset.Legend>{legend}</Fieldset.Legend>
             <Fieldset.Content mt="2">
                 <form.ArrayField key={artistsVersion} name={name}>
