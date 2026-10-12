@@ -1,4 +1,4 @@
-import { SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, type AmbPlayObject, type Credit, type ScrobbleTsSOC, type TrackData, type TrackStringOptions, type MusicServiceName, type MusicServices, type MusicServicesAny, type MBIdType } from "./Atomic.ts";
+import { SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, type AmbPlayObject, type Credit, type ScrobbleTsSOC, type TrackData, type TrackStringOptions, type MusicServiceName, type MusicServices, type MusicServicesAny, type MBIdType, type MusicServiceIdBase, musicServiceIdBaseSchema, musicServicesSchema, musicServiceName } from "./Atomic.ts";
 import { compareNormalizedStrings, defaultBuildTrackStringTransformers } from "./StringUtils.ts";
 import { removeUndefinedKeys } from "./DataUtils.ts";
 import type { Dayjs } from "dayjs";
@@ -114,6 +114,16 @@ export const mergeCreditsMetadata = (base: Credit[], from: Credit[] = []): Credi
     });
     const byPosition = base.length === from.length && matches.every(x => x === undefined);
     return base.map((x, i) => withMetadata(x, ...((byPosition ? from[i] : matches[i])?.metadata ?? [])));
+}
+
+export const linkFromMusicService = (val: MusicServicesAny): string => {
+    if (musicServiceIdBaseSchema.validate(val)) {
+        const res = musicServicesSchema.safeParse(val)
+        if (res.success && res.data.name === musicServiceName.enum.musicbrainz) {
+            return val.idType !== undefined ? `https://musicbrainz.org/${val.idType}/${val.id}` : undefined;
+        }
+    }
+    return undefined;
 }
 
 /** Which parts of an incoming credit should be applied to an existing credit */

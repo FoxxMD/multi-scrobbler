@@ -1,11 +1,11 @@
 import { faker } from "@faker-js/faker";
 import type {AlbumSearchResult, ArtistSearchResult, ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentHistoricalApi, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi, TrackSearchResult} from "../../Api.ts";
-import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ComponentType, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes, type MBID, type Credit } from "../../Atomic.ts";
+import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ComponentType, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes, type MBID, type Credit, type MusicServices, musicServiceName } from "../../Atomic.ts";
 import { generateArtist, generateISRC, generateMbid, generatePlay, normalizePlays } from "./PlayTestUtils.ts";
 import { generatePlayInput, generatePlayWithLifecycle, playWithLifecycleScrobble, randomPlayState } from "./fixtures.ts";
 import { asJsonPlayObject } from "../../PlayMarshalUtils.ts";
 import { generatePlayUid } from "../../StringUtils.ts";
-import { isrcMeta, mbMeta, nameToCredit, spotifyMeta, withAlbumArt, withImage } from "../../MusicMetadata.ts";
+import { isrcMeta, mbMeta, nameToCredit, serviceMeta, spotifyMeta, withAlbumArt, withImage } from "../../MusicMetadata.ts";
 import dayjs, { type Dayjs } from "dayjs";
 import { isSourceType } from "../../Atomic.ts";
 import { sourceTypes } from "../../Atomic.ts";
@@ -17,6 +17,7 @@ import { generateArray } from "../../DataUtils.ts";
 import type {ErrorIsh} from "../../ErrorUtils.ts";
 import { serializeError } from "serialize-error";
 import { stripIndents } from "common-tags";
+import { SimpleError } from "../../../backend/common/errors/MSErrors.ts";
 
 export const generatePlayApiCommon = (commonData: Partial<PlayApiCommon> & {play?: JsonPlayObject | PlayObject } = {}, ...playOpts: Parameters<typeof generatePlay>): PlayApiCommon => {
     let play: JsonPlayObject | PlayObject;
@@ -508,6 +509,36 @@ export const generateNormalWSUrl = () => {
         () => `${faker.word.noun({length :1})}:${faker.helpers.arrayElement([443,80,faker.internet.port()])}`
     ])
     return g();
+}
+
+export const generateMusicService = (partial: Partial<MusicServices> = {}): MusicServices => {
+    const name = partial.name ?? faker.helpers.arrayElement(musicServiceName.options);
+    if(musicServiceName.validate(name)) {
+        // casts because spreading a partial of the union makes name/id optional, the generated service always sets both
+        switch(name) {
+            case musicServiceName.enum.musicbrainz:
+                return {
+                    ...mbMeta(generateMbid(), 'recording'),
+                    ...partial
+                } as MusicServices;
+            case musicServiceName.enum.isrc:
+                return {
+                    ...isrcMeta(generateISRC()),
+                    ...partial
+                } as MusicServices
+            case musicServiceName.enum.spotify:
+                return {
+                    ...spotifyMeta(faker.string.alphanumeric(4), 'track'),
+                    ...partial
+                } as MusicServices
+            default:
+                return {
+                    ...serviceMeta(name, faker.string.alphanumeric(8)),
+                    ...partial
+                } as MusicServices
+        }
+    }
+    throw new SimpleError('Not a valid music sevice name');
 }
 
 export const generateArtistSearchResult = (partial: Partial<ArtistSearchResult> = {}, opts: {mbidVal?: boolean | MBID} = {}): ArtistSearchResult => ({

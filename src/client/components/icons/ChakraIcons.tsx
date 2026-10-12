@@ -316,7 +316,7 @@ export const ResetButton = makeIconButton(LuTimerReset);
 
 export const EditIconRaw = LuPencil;
 export const EditIcon = makeChakraIcon(LuPencil);
-export const EditButton = makeIconButton(LuPencil);
+export const EditButton = makeChakraIconButton(LuPencil);
 
 export const BracesIconRaw = LuBraces;
 export const BracesIcon = makeChakraIcon(LuBraces);
