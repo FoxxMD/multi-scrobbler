@@ -23,7 +23,7 @@ export interface PlayEditProps {
     onSubmit?: (vals: PlayObjectMinimal<string>) => void
     onCancel?: () => void
 }
-// <Text fontWeight="bold" textStyle="lg">Editing and Searching</Text>
+
 const IconWrapper = (props: {children: ReactNode}) => <Box paddingX="1" marginX="1" display="inline-block" rounded="md" backgroundColor="bg.emphasized">{props.children}</Box>
 
 const editPopoverContent = (

@@ -157,7 +157,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
         <Flex flexGrow="1">
             <MSErrorBoundary>
                 <Combobox.Root
-                openOnChange={false}
+                openOnClick
                 onOpenChange={(e) => {
                     setOpen(e.open);
                     if (e.open && !searched.current && initialInput !== '') {
