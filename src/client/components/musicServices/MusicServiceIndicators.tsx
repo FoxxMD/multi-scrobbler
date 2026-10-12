@@ -136,7 +136,7 @@ export const MusicServiceIndicator = (props: MusicServiceIndicatorProps) => {
 
     if (editable && musicServicesSchema.validate(data)) {
         if (editing) {
-            return <MusicServiceInput value={data} useWith={useWith} onSubmit={(newVals) => onChange(newVals)} onCancel={() => setEditing(false)} />
+            return <MusicServiceInput value={data} useWith={useWith} onSubmit={(newVals) => { onChange(newVals); setEditing(false); }} onCancel={() => setEditing(false)} />
         }
         return <MusicServiceInfoDisplay editable={editable} tooltip onEdit={() => setEditing(true)} onRemove={() => onRemove()} data={data} {...rest} />
     }

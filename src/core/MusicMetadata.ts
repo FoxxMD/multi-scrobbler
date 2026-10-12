@@ -116,7 +116,7 @@ export const mergeCreditsMetadata = (base: Credit[], from: Credit[] = []): Credi
     return base.map((x, i) => withMetadata(x, ...((byPosition ? from[i] : matches[i])?.metadata ?? [])));
 }
 
-export const linkFromMusicService = (val: MusicServicesAny): string => {
+export const linkFromMusicService = (val: MusicServicesAny): string | undefined => {
     if (musicServiceIdBaseSchema.validate(val)) {
         const res = musicServicesSchema.safeParse(val)
         if (res.success && res.data.name === musicServiceName.enum.musicbrainz) {

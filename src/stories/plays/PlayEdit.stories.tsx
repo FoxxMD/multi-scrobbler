@@ -7,9 +7,11 @@ import {Provider} from "../../client/components/Provider.js";
 import { Container } from '@chakra-ui/react';
 import { generateArtistCredits, generateJsonPlay, withBrainz } from "../../core/tests/utils/PlayTestUtils.js"
 import { asJsonPlayObject } from '../../core/PlayMarshalUtils.js';
-import type {PlayObjectMinimal} from "../../core/Atomic.js";
+import type {Credit, PlayObjectMinimal} from "../../core/Atomic.js";
 import { http, HttpResponse, delay } from 'msw';
-import { generateAlbumSearchResults, generateArtistSearchResults, generateTrackSearchResults } from "../../core/tests/utils/apiFixtures.js";
+import { generateAlbumSearchResults, generateArtistSearchResults, generateMusicService, generateTrackSearchResults } from "../../core/tests/utils/apiFixtures.js";
+import { CreditInput } from "../../client/components/play/CreditInput.js";
+import { nameToCredit } from "../../core/MusicMetadata.js";
 
 type PropsAndCustomArgs = React.ComponentProps<typeof PlayEdit> & {
   includeAlbumArtists?: boolean;
@@ -117,5 +119,12 @@ export const PlayEditableMutateStory = meta.story({
     }
     const {initialPlay, ...rest} = args;
     return (<PlayEditableMutable componentId="1" uid="1234" editable play={initialPlay} {...rest}/>) 
+  }
+});
+
+export const PlayCreditEditStory = meta.story({
+  render: (args) => {
+    const onChange = (val: Credit) => console.log(val, 'credit input onchange')
+    return (<CreditInput value={nameToCredit('test',generateMusicService({name: 'musicbrainz'}))} onChange={onChange}/>) 
   }
 });
