@@ -47,7 +47,7 @@ import { MdOutlineFiberNew } from "react-icons/md";
 import { RiZzzFill } from "react-icons/ri";
 import { SiGoogledocs } from "react-icons/si";
 import type { Clipboard, IconProps} from "@chakra-ui/react";
-import { IconButton, useClipboard, Spinner, Icon, StackSeparator, HStack } from "@chakra-ui/react"
+import { IconButton, useClipboard, Spinner, Icon, StackSeparator, HStack, Badge } from "@chakra-ui/react"
 import type {ComponentProps, PropsWithChildren, ReactNode} from 'react';
 import type {IconBaseProps, IconType} from "react-icons/lib";
 
@@ -273,7 +273,14 @@ export const getMusicServiceIconElement = (service?: string): ReactNode => {
 
 export const getMusicServiceChakraIcon = (service: string) => {
     const ServiceIcon = getMusicServiceIcon(service);
-    return (props: IconProps = {}) => <Icon {...props}><ServiceIcon/></Icon>;
+    return (props: IconProps = {}) => {
+        if (service === 'isrc') {
+            return <Badge marginX="0" colorPalette="purple"
+                // @ts-expect-error its fine
+                size={props.size ?? 'xs'} variant="subtle">ISRC</Badge>;
+        }
+        return <Icon {...props}><ServiceIcon /></Icon>
+    };
 }
 
 export const MusicServiceIcons = (props: {

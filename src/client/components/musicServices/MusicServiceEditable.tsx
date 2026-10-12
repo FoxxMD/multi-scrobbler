@@ -1,8 +1,8 @@
-import { Input, InputGroup, Group, createListCollection, Select, Portal, Field } from "@chakra-ui/react"
+import { Input, InputGroup, Group, createListCollection, Select, Portal, Field, HStack } from "@chakra-ui/react"
 import * as z from "zod";
 import { useForm, formOptions } from '@tanstack/react-form';
 import { musicServiceName, type MusicServiceIdBase, type MusicServices } from "../../../core/Atomic"
-import { CheckButton, XButton } from "../icons/ChakraIcons";
+import { CheckButton, getMusicServiceChakraIcon, XButton } from "../icons/ChakraIcons";
 import { intersect } from "../../../core/DataUtils";
 
 // musicServicesSchema accepts an empty id and reports a missing name as a generic union error
@@ -21,6 +21,10 @@ const musicServiceColl = createListCollection<MusicServiceSelectItem>({
         { label: "ISRC", value: { name: 'isrc' }, useWith: ['track'] },
         { label: "Spotify", value: { name: 'spotify' } },
         { label: "Rocksky", value: { name: 'rocksky' } },
+        { label: "Listenbrainz", value: { name: 'listenbrainz' }, useWith: ['track'] },
+        { label: "Plex", value: { name: 'plex' }, useWith: ['track'] },
+        { label: "Youtube", value: { name: 'youtube' }, useWith: ['track'] },
+        { label: "Jellyfin", value: { name: 'jellyfin' }, useWith: ['track'] },
         { label: "Release", value: { name: 'musicbrainz', idType: 'release' }, category: 'Brainz', useWith: ['album'] },
         { label: "Release Group", value: { name: 'musicbrainz', idType: 'release-group' }, category: 'Brainz', useWith: ['album'] },
         { label: "Recording", value: { name: 'musicbrainz', idType: 'recording' }, category: 'Brainz', useWith: ['track'] },
@@ -52,7 +56,7 @@ const MusicServiceIdSelect = (props: MusicServiceIdTypeSelectProps) => {
     const serviceVal = value !== undefined ? [`${value.name}${value.idType ?? ''}`] : [];
 
     return (
-        <Select.Root collection={musicServiceColl} size="xs" width="90px" rounded="none" invalid={invalid} value={serviceVal} onValueChange={(e) => onChange(e.items[0].value)}>
+        <Select.Root collection={musicServiceColl} size="xs" width="100px" rounded="none" invalid={invalid} value={serviceVal} onValueChange={(e) => onChange(e.items[0].value)}>
             <Select.HiddenSelect />
             <Select.Control>
                 <Select.Trigger>
@@ -63,15 +67,15 @@ const MusicServiceIdSelect = (props: MusicServiceIdTypeSelectProps) => {
                 </Select.IndicatorGroup>
             </Select.Control>
             <Portal>
-                <Select.Positioner>
-                    <Select.Content>
+                <Select.Positioner >
+                    <Select.Content overflowX="hidden">
                         {(categoryItems.none ?? []).map((x) => {
                             if (x.useWith !== undefined && useWith !== undefined && intersect(useWith, x.useWith).length === 0) {
                                 return undefined;
                             }
                             return (
                                 <Select.Item item={x} key={x.label}>
-                                    {x.label}
+                                    <HStack>{getMusicServiceChakraIcon(x.value.name)({size: 'xs'})} {x.value.name === 'isrc' ? '' : x.label}</HStack>
                                     <Select.ItemIndicator />
                                 </Select.Item>
                             );
@@ -92,7 +96,7 @@ const MusicServiceIdSelect = (props: MusicServiceIdTypeSelectProps) => {
                                     <Select.ItemGroupLabel>{category}</Select.ItemGroupLabel>
                                     {usableItems.map((item) => (
                                         <Select.Item item={item} key={item.label}>
-                                            {item.label}
+                                            <HStack>{getMusicServiceChakraIcon(item.value.name)({size: 'xs'})} {item.label}</HStack>
                                             <Select.ItemIndicator />
                                         </Select.Item>
                                     ))}
