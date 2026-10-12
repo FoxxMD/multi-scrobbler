@@ -101,6 +101,7 @@ export type TrackOnChange = Pick<TrackData, 'track' | 'artists' | 'album' | 'alb
 export interface TrackSearchProps {
     initial?: Credit
     onChange: (val: TrackOnChange) => void
+    onInputSwitch?: () => void
     contextData?: TrackDataCreditBase
 }
 
@@ -169,6 +170,7 @@ export const TrackSearch = (props: TrackSearchProps) => {
             isError={query.isError}
             initialInput={selectedItem?.name}
             onChange={doChange}
+            onInputSwitch={props.onInputSwitch}
             onFreetext={(name) => doChange({ track: { name } })}
             onQueryChange={search}
             renderItem={(item, onPick) => <TrackSearchResultItem data={item} onPick={onPick} />}

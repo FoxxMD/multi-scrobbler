@@ -1,12 +1,13 @@
 import { AbsoluteCenter, Avatar, Box, Combobox, HStack, Icon, Menu, Portal, Span, Spinner, Switch, StackSeparator, Text, InputGroup, type ListCollection, Flex } from "@chakra-ui/react"
 import type { MetadataResultBase, MetadataResultImage, MetadataResultServiceScore } from "../../../core/Api"
-import { BracesIcon, getMusicServiceIconElement, TextIcon } from "../icons/ChakraIcons"
+import { BracesIcon, getMusicServiceIconElement, LettersButton, TextIcon } from "../icons/ChakraIcons"
 import React, { useRef, useState } from "react"
 import { useDebouncer } from "@tanstack/react-pacer"
 import { MSErrorBoundary } from "../ErrorBoundary"
 import { EllipsisButtonMenu } from "../buttonMenus/ButtonMenu"
 import { formatNumber } from "../../../core/DataUtils"
 import { TextMuted } from "../TextMuted"
+import { Tooltip } from "../ToggleTip"
 
 export const LeftSideMetadataResultContent = (props: MetadataResultServiceScore & MetadataResultImage) => {
     if (props.image === undefined) {
@@ -83,11 +84,12 @@ export interface MetadataSearchComboboxProps<T extends MetadataSearchResult> {
     onFreetext: (name: string) => void
     /** Called when a search should run. Typing is debounced here, a context mode switch is not */
     onQueryChange: (query: string, contextMode: boolean) => void
+    onInputSwitch?: () => void,
     renderItem: (item: T, onPick: (val: T) => void) => React.JSX.Element
 }
 
 export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: MetadataSearchComboboxProps<T>) => {
-    const { placeholder, collection, isLoading, isError, onChange, onFreetext, onQueryChange, renderItem, initialInput = '' } = props;
+    const { placeholder, collection, isLoading, isError, onChange, onFreetext, onQueryChange, renderItem, initialInput = '', onInputSwitch } = props;
 
     // a ref, not state: combobox captures onInteractOutside when the popup opens so state read there is stale
     const rawInput = useRef<string | undefined>(initialInput === '' ? undefined : initialInput);
@@ -144,6 +146,11 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
             <HStack>Switch to {contextMode ? 'text-only' : 'context'} {modeIconElm} search mode {isLoading ? <Spinner size="xs" borderWidth="1px" /> : undefined}</HStack>
         </Combobox.Item>);
 
+    let plainInputSwitch: React.JSX.Element | undefined = undefined;
+    if(onInputSwitch !== undefined) {
+        plainInputSwitch = <Tooltip content="Switch to plain text input mode."><LettersButton variant="ghost" onClick={() => onInputSwitch()}/></Tooltip>
+    }
+
     return (
         <Flex flexGrow="1">
             <MSErrorBoundary>
@@ -190,6 +197,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                         <Combobox.IndicatorGroup>
                             {hasSearched && !isLoading ? <TextMuted textStyle="xs" hideBelow="sm">{collection.size} Matches</TextMuted> : undefined}
                             {!open && isLoading ? <Spinner size="xs" borderWidth="1px" /> : undefined}
+                            {plainInputSwitch}
                             <ModeIconHint/>
                             <Combobox.ClearTrigger />
                             <Combobox.Trigger />

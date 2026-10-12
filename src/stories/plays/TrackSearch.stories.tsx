@@ -31,7 +31,8 @@ const meta = preview.type<{ args: PropsAndCustomArgs }>().meta({
   ],
   args: {
     initial: undefined,
-    onChange: (val) => console.log(val)
+    onChange: (val) => console.log(val),
+    onInputSwitch: () => console.log('changing input')
   },
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });

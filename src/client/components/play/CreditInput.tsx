@@ -1,8 +1,8 @@
-import { Field, HStack, Input, Stack } from "@chakra-ui/react";
+import { Field, HStack, Input, InputGroup, Stack } from "@chakra-ui/react";
 import type { FieldWithValue } from "@tanstack/react-form";
 import { useState, type ReactNode } from "react";
 import type { Credit, MusicServices } from "../../../core/Atomic"
-import { PlusButton } from "../icons/ChakraIcons";
+import { PlusButton, SearchButton, SearchIcon } from "../icons/ChakraIcons";
 import { MusicServiceInput } from "../musicServices/MusicServiceEditable";
 import { MusicServiceIndicator } from "../musicServices/MusicServiceIndicators";
 
@@ -11,6 +11,7 @@ export interface CreditInputProps {
     value?: Credit
     onChange: (val: Credit) => void
     onBlur?: () => void
+    onInputSwitch?: () =>  void
     placeholder?: string
     /** Limits the music service types that can be chosen EX ['track'] */
     useWith?: string[]
@@ -21,6 +22,7 @@ export const CreditInput = (props: CreditInputProps) => {
         value = { name: '' },
         onChange,
         onBlur,
+        onInputSwitch,
         placeholder,
         useWith
     } = props;
@@ -38,11 +40,13 @@ export const CreditInput = (props: CreditInputProps) => {
 
     return (
         <Stack width="100%" gap="2">
-            <Input
-                value={value.name}
-                placeholder={placeholder}
-                onBlur={onBlur}
-                onChange={(e) => onChange({ ...value, name: e.currentTarget.value })} />
+            <InputGroup endElement={onInputSwitch !== undefined ? <SearchButton variant="ghost" size="xs" onClick={() => onInputSwitch()}/> : undefined}>
+                <Input
+                    value={value.name}
+                    placeholder={placeholder}
+                    onBlur={onBlur}
+                    onChange={(e) => onChange({ ...value, name: e.currentTarget.value })} />
+            </InputGroup>
             <HStack wrap="wrap" alignItems="normal">
                 {metadata.map((x, i) => (
                     <MusicServiceIndicator

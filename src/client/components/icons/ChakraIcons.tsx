@@ -35,7 +35,10 @@ import {
     LuBraces,
     LuText,
     LuCode,
-    LuPlus
+    LuPlus,
+    LuSearch,
+    LuTextCursor,
+    LuCaseUpper
 } from "react-icons/lu"
 import { VscDebugRestart } from 'react-icons/vsc';
 import { HiMiniStop } from "react-icons/hi2";
@@ -333,3 +336,15 @@ export const CodeButton = makeIconButton(LuCode);
 export const PlusIconRaw = LuPlus;
 export const PlusIcon = makeChakraIcon(LuPlus);
 export const PlusButton = makeIconButton(LuPlus);
+
+export const SearchIconRaw = LuSearch;
+export const SearchIcon = makeChakraIcon(LuSearch);
+export const SearchButton = makeIconButton(LuSearch);
+
+export const CursorIconRaw = LuTextCursor;
+export const CursorIcon = makeChakraIcon(LuTextCursor);
+export const CursorButton = makeIconButton(LuTextCursor);
+
+export const LettersIconRaw = LuCaseUpper;
+export const LettersIcon = makeChakraIcon(LuCaseUpper);
+export const LettersButton = makeIconButton(LuCaseUpper);
