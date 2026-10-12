@@ -2,7 +2,7 @@ import { Input, InputGroup, Group, createListCollection, Select, Portal, Field }
 import * as z from "zod";
 import { useForm, formOptions } from '@tanstack/react-form';
 import { musicServiceName, type MusicServiceIdBase, type MusicServices } from "../../../core/Atomic"
-import { PlusButton } from "../icons/ChakraIcons";
+import { CheckButton, XButton } from "../icons/ChakraIcons";
 import { intersect } from "../../../core/DataUtils";
 
 // musicServicesSchema accepts an empty id and reports a missing name as a generic union error
@@ -110,6 +110,7 @@ const MusicServiceIdSelect = (props: MusicServiceIdTypeSelectProps) => {
 export interface MusicServiceIdSelectProps {
     useWith?: string[]
     onSubmit?: (obj: MusicServices) => void
+    onCancel?: () => void
     /** Omit for a new, blank music service */
     value?: MusicServices
 }
@@ -120,6 +121,7 @@ export const MusicServiceInput = (props: MusicServiceIdSelectProps) => {
     const {
         useWith,
         onSubmit = logSubmit,
+        onCancel,
         value
     } = props;
 
@@ -178,7 +180,8 @@ export const MusicServiceInput = (props: MusicServiceIdSelectProps) => {
                                     }>
                                     <Input
                                         size="xs"
-                                        placeholder="1234-5678"
+                                        truncate
+                                        placeholder="19a8b6e5-f753-36c6-a3c6-189390d09935"
                                         value={idField.value}
                                         onChange={(e) => idField.handleChange(e.currentTarget.value)}
                                         onKeyDown={(e) => {
@@ -188,7 +191,10 @@ export const MusicServiceInput = (props: MusicServiceIdSelectProps) => {
                                             }
                                         }} />
                                 </InputGroup>
-                                <PlusButton size="xs" bg="bg.subtle" variant="outline" onClick={submit} />
+                                <Group attached>
+                                    <XButton size="xs" bg="bg.subtle" variant="outline" onClick={onCancel !== undefined ? onCancel : () => null} />
+                                    <CheckButton size="xs" bg="bg.subtle" variant="outline" onClick={submit} />
+                                </Group>
                             </Group>
                             {[...nameField.errors, ...idField.errors].map((error) => (
                                 <Field.ErrorText key={error.message}>
