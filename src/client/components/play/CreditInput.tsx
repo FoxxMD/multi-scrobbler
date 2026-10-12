@@ -2,9 +2,10 @@ import { Field, HStack, Input, InputGroup, Stack } from "@chakra-ui/react";
 import type { FieldWithValue } from "@tanstack/react-form";
 import { useState, type ReactNode } from "react";
 import type { Credit, MusicServices } from "../../../core/Atomic"
-import { PlusButton, SearchButton, SearchIcon } from "../icons/ChakraIcons";
+import { LettersButton, PlusButton, SearchButton, SearchIcon } from "../icons/ChakraIcons";
 import { MusicServiceInput } from "../musicServices/MusicServiceEditable";
 import { MusicServiceIndicator } from "../musicServices/MusicServiceIndicators";
+import { Tooltip } from "../ToggleTip";
 
 export interface CreditInputProps {
     /** Controlled, omit for a new, blank credit */
@@ -38,9 +39,14 @@ export const CreditInput = (props: CreditInputProps) => {
         onChange({ ...value, metadata: next.filter((x, i) => i === index || x.name !== service.name || x.idType !== service.idType) });
     };
 
+    let inputSwitch: React.JSX.Element | undefined = undefined;
+    if(onInputSwitch !== undefined) {
+        inputSwitch = <Tooltip content="Click to switch to search mode."><LettersButton variant="ghost" size="xs" onClick={() => onInputSwitch()}/></Tooltip>
+    }
+
     return (
         <Stack width="100%" gap="2">
-            <InputGroup endElement={onInputSwitch !== undefined ? <SearchButton variant="ghost" size="xs" onClick={() => onInputSwitch()}/> : undefined}>
+            <InputGroup endElement={inputSwitch}>
                 <Input
                     value={value.name}
                     placeholder={placeholder}

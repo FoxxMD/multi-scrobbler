@@ -171,7 +171,6 @@ export const TrackSearch = (props: TrackSearchProps) => {
             initialInput={selectedItem?.name}
             onChange={doChange}
             onInputSwitch={props.onInputSwitch}
-            onFreetext={(name) => doChange({ track: { name } })}
             onQueryChange={search}
             renderItem={(item, onPick) => <TrackSearchResultItem data={item} onPick={onPick} />}
         />

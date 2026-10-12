@@ -76,6 +76,7 @@ export interface AlbumOnChange {
 export interface AlbumSearchProps {
     initial?: Credit
     onChange: (val: AlbumOnChange) => void
+    onInputSwitch?: () => void
     contextData?: TrackDataCreditBase
 }
 
@@ -139,7 +140,7 @@ export const AlbumSearch = (props: AlbumSearchProps) => {
             initialInput={selectedItem?.name}
             isError={query.isError}
             onChange={doChange}
-            onFreetext={(name) => doChange({ name })}
+            onInputSwitch={props.onInputSwitch}
             onQueryChange={search}
             renderItem={(item, onPick) => <AlbumSearchResultItem data={item} onPick={onPick} />}
         />

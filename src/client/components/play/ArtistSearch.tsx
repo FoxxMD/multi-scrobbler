@@ -35,6 +35,7 @@ export const ArtistSearchResultItem = (props: { data: ArtistSearchResult, onPick
 export interface ArtistSearchProps {
     initial?: Credit
     onChange: (val: Credit) => void
+    onInputSwitch?: () => void
     contextData?: TrackDataCreditBase
 }
 
@@ -98,7 +99,7 @@ export const ArtistSearch = (props: ArtistSearchProps) => {
             isLoading={query.isLoading}
             isError={query.isError}
             onChange={doChange}
-            onFreetext={(name) => doChange({ name })}
+            onInputSwitch={props.onInputSwitch}
             onQueryChange={search}
             renderItem={(item, onPick) => <ArtistSearchResultItem data={item} onPick={onPick} />}
         />
