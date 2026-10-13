@@ -129,6 +129,7 @@ const dataDir = getDataDir();
             logging = {},
             debugMode,
             cache,
+            metadata,
         } = (config || {}) as AIOConfig;
 
         if (process.env.DEBUG_MODE === undefined && debugMode !== undefined) {
@@ -158,6 +159,7 @@ const dataDir = getDataDir();
             ...config,
             cache: parseUserConfig(cache, logger),
             logger,
+            metadata,
             loggingConfig: logging,
             loggerStream: appLoggerStream,
             db
@@ -188,7 +190,7 @@ const dataDir = getDataDir();
         const notifiers = new Notifiers(root.get('notifierEmitter'), root.get('clientEmitter'), root.get('sourceEmitter'), root.get('logger')); //root.get('notifiers');
         await notifiers.buildWebhooks(webhooks);
 
-        await root.items.transformerManager.registerFromEnv();
+        await root.items.transformerManager.parseFromEnv();
 
         /*
         * setup clients

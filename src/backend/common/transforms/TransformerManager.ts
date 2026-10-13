@@ -1,7 +1,7 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import type AbstractTransformer from "./AbstractTransformer.ts";
 import type {MusicServicesBase, OptionalCacheUsage, TransformerCommon, TransformerCommonConfig} from "../../../core/Atomic.ts";
-import {DEFAULT_TRANSFORMER_ENV_NAME, DEFAULT_TRANSFORMER_NAME, META_PROVIDER_STAGE_TYPES, type MetadataProviderStageType, type StageConfig} from "../../../core/Transform.ts";
+import {DEFAULT_TRANSFORMER_ENV_NAME, DEFAULT_TRANSFORMER_NAME, META_PROVIDER_STAGE_TYPES, metadataPreferredProviderSchema, type MetadataPreferredProviders, type MetadataProviderStageType, type StageConfig} from "../../../core/Transform.ts";
 import type {PlayObject} from "../../../core/Atomic.ts";
 import { isStageTyped } from "../../utils/PlayTransformUtils.ts";
 import type { MSCache } from "../Cache.ts";
@@ -25,7 +25,7 @@ type TransformNamedMap = Map<string, AbstractTransformer>;
 type TransformTypedMap = Map<string,TransformNamedMap>;
 export default class TransformerManager {
 
-    protected logger: Logger;
+    public logger: Logger;
     protected parentLogger: Logger;
     protected transformers: TransformTypedMap = new Map();
     protected cache: MSCache;
@@ -34,7 +34,7 @@ export default class TransformerManager {
     protected transformerConfigs: TransformerCommon[] = [];
 
     protected transformMetadataProviders: Partial<Record<MetadataProviderStageType, string>> = {};
-    protected transformMetadataPreferredProviders: Partial<Record<MetadataProviderStageType, true | string>> | undefined;
+    protected transformMetadataPreferredProviders: MetadataPreferredProviders | undefined;
 
     /** One register + initialize attempt per transformer, keyed by type and name */
     protected ready: Map<string, Promise<AbstractTransformer>> = new Map();
@@ -71,6 +71,21 @@ export default class TransformerManager {
 
     public hasTransformerConfigByType(type: string) {
         return this.transformerConfigs.some(x => x.type === type.toLocaleLowerCase().trim());
+    }
+
+    public setPreferredProviders(val: MetadataPreferredProviders | Record<string, string | true | undefined>) {
+        const res = metadataPreferredProviderSchema.safeParse(val);
+        if(res.success) {
+            this.transformMetadataPreferredProviders = res.data;
+            let providerOrder: string = 'none enabled';
+            const ent = Object.entries(this.transformMetadataPreferredProviders);
+            if(ent.length !== 0) {
+                providerOrder = ent.map(([key, val]) => `${key}:${val}`).join(' | ');
+            }
+            this.logger.verbose(`Preferred metadata providers set. Will only use these providers: ${providerOrder}`)
+        } else {
+            this.logger.warn(new SimpleError('Failed to set preferred providers because the config is not valid. Will fallback to using any available.', {cause: res.error}));
+        }
     }
 
     public async register(config: TransformerCommon): Promise<AbstractTransformer> {
@@ -164,7 +179,7 @@ export default class TransformerManager {
         return transformer;
     }
 
-    public async registerFromEnv() {
+    public async parseFromEnv() {
         try {
             const mbConfig = configFromEnv(this.logger);
             if(mbConfig !== undefined) {

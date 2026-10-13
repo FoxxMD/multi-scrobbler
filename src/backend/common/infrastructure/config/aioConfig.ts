@@ -5,6 +5,7 @@ import {webhookConfigSchema} from "./health/webhooks.ts";
 import {commonSourceOptionsSchema, fileLogOptionsSchema, logLevelSchema, sourceRetryOptionsSchema} from "./source/index.ts";
 import {cacheConfigUserSchema} from "../Atomic.ts";
 import {retentionConfigDurationValueSchema} from "./database.ts";
+import { metadataPreferredProviderSchema } from "../../../../core/Transform.ts";
 
 export const sourceDefaultsSchema = z.object({
     ...commonSourceOptionsSchema.shape,
@@ -36,6 +37,11 @@ const transformerCommonConfigSchema = z.object({
     name: z.string().optional(),
     options: transformOptionsSchema.optional(),
 });
+
+export const metadaConfigSchema = z.object({
+    preferred: metadataPreferredProviderSchema.optional()
+});
+export type MetadataConfig = z.infer<typeof metadaConfigSchema>;
 
 export const aioConfigSchema = z.object({
     sourceDefaults: sourceDefaultsSchema.optional(),
@@ -109,6 +115,7 @@ export const aioConfigSchema = z.object({
     cache: cacheConfigUserSchema.optional().meta({description: 'Configuration for Caching'}),
 
     transformers: z.array(transformerCommonConfigSchema).optional(),
+    metadata: metadaConfigSchema.optional(),
 
     database: z.object({
         retention: retentionConfigDurationValueSchema.optional(),
