@@ -17,6 +17,22 @@ import type { CovertArtArchiveTransformerConfig } from "./coverartarchive/CoverA
 import { asMetadataProvider, type AggregateMetadataResponse, type MetadataProvider } from "../metadataProviders/MetadataProviderUtils.ts";
 import type { AlbumSearchResult, ArtistSearchResult, MetadataSearchStreamLine, TrackDataCreditBase, TrackSearchResult } from "../../../core/Api.ts";
 import { serializeError } from "serialize-error";
+import { maybeStringArrayFromString } from "../../utils/ZodUtils.ts";
+
+/**
+ * Parses a comma-delimited string (or array of strings) of `provider` or `provider:value` into preferred providers
+ *
+ * A provider with no value, or the value `true`, is cast to boolean `true`
+ *
+ * @example `musicbrainz:foo,spotify:true,rocksky` => `{musicbrainz: 'foo', spotify: true, rocksky: true}`
+ */
+export const metadataPreferredProviderFromStringSchema = maybeStringArrayFromString
+    .transform(arr => arr === undefined ? undefined : Object.fromEntries(arr.map(x => {
+        const [key, ...rest] = x.split(':');
+        const val = rest.join(':').trim();
+        return [key.trim(), rest.length === 0 || val === 'true' ? true : val];
+    })))
+    .pipe(metadataPreferredProviderSchema.optional());
 
 /** A stream line that carries a single provider's outcome */
 export type MetadataProviderLine<T> = Exclude<MetadataSearchStreamLine<T>, {type: 'done'}>;
@@ -80,7 +96,7 @@ export default class TransformerManager {
             let providerOrder: string = 'none enabled';
             const ent = Object.entries(this.transformMetadataPreferredProviders);
             if(ent.length !== 0) {
-                providerOrder = ent.map(([key, val]) => `${key}:${val}`).join(' | ');
+                providerOrder = ent.map(([key, val]) => `${key} => ${val}`).join(' | ');
             }
             this.logger.verbose(`Preferred metadata providers set. Will only use these providers: ${providerOrder}`)
         } else {
@@ -231,6 +247,20 @@ export default class TransformerManager {
                 this.logger.error(`Unable to build Cover Art Archive Transformer from ENV: ${e.message}`);
             }
             this.logger.error(new Error('Unable to build Cover Art Archive Transformer from ENV', {cause: e}));
+        }
+        
+        const mProvidersVal = (process.env.METADATA_PREFERRED_PROVIDERS ?? '');
+        if(mProvidersVal.trim() !== '') {
+            if(this.transformMetadataPreferredProviders !== undefined) {
+                this.logger.warn('Not parsing ENV METADATA_PREFERRED_PROVIDERS since providers were already set from file');
+            } else {
+                const metaEnvRes = metadataPreferredProviderFromStringSchema.safeParse(mProvidersVal);
+                if(metaEnvRes.success && metaEnvRes.data !== undefined) {
+                    this.setPreferredProviders(metaEnvRes.data);
+                } else {
+                    this.logger.warn(new SimpleError(`Failed to parse ENV METADATA_PREFERRED_PROVIDERS to valid preferred providers. Given: '${mProvidersVal}'`, {cause: metaEnvRes.error}))
+                }
+            }
         }
     }
 
