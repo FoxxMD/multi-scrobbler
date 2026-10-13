@@ -656,7 +656,6 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
         if(artist_names.length > 0) {
             artists = artist_names;
         } else if(typeof artist_name === 'string') {
-            artists = [artist_name];
 
             // since we aren't using MB mappings we should be conservative and assume artist string with & are proper names (not joiner)
             const parsedArtists = parseCredits(artist_name, [',', '/', '\\']);
@@ -672,6 +671,10 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
                 // if we found "ft. something" in track string then we now have a "real" track name and more artists
                 normalTrackName = parsedTrackArtists.primary;
                 artists = artists.concat(parsedTrackArtists.secondary ?? [])
+            }
+            if(artists.length === 0) {
+                // fallback to original artist_name string if we weren't able to parse anything from artists/track credits
+                artists.push(artist_name);
             }
             artists = uniqueNormalizedStrArr(artists);
         }
