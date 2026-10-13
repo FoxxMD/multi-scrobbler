@@ -20,6 +20,7 @@ import { UpstreamError } from "../common/errors/UpstreamError.ts";
 
 export class CoolPlayerSource extends MemorySource {
     // must explicitly declare this here so we override the base config type
+    // @ts-expect-error its not included as an actual Source because its an example
     declare config: CoolPlayerSourceConfig;
 
     // this source actively makes requests to an external service to parse
