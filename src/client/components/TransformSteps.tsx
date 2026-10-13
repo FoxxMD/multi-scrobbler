@@ -1,8 +1,8 @@
-import { Heading, Icon, Span, Stack, Text, Timeline} from '@chakra-ui/react';
+import { Heading, Box, Icon, Span, Stack, Text, Timeline, Tabs} from '@chakra-ui/react';
 import React, { Fragment, useMemo } from "react";
 import { BsExclamationTriangle, BsSkipForward, BsStoplights } from "react-icons/bs";
 import { MdMusicNote } from "react-icons/md";
-import type {JsonPlayObject, LifecycleStep} from "../../core/Atomic";
+import type {ErrorLike, JsonPlayObject, LifecycleStep} from "../../core/Atomic";
 import { patchObject } from "../../core/DataUtils";
 import { isErrorIsh } from "../../core/ErrorUtils";
 import { timelineIconProps, timelineTextFormatting } from "../utils/ComponentUtils";
@@ -12,10 +12,70 @@ import { MSCollapsible, type MSCollapsibleExternalProps } from "./MSCollapsible"
 import { PlayData } from "./play/PlayData";
 import { Muted } from "./Typography";
 import { JsonDiffPatch } from "./diffs/JsonDiff";
+import type { Changeset } from 'json-diff-ts';
 
 export interface LifeycleStepsTimelineProps extends MSCollapsibleExternalProps {
     steps: LifecycleStep[]
     original: JsonPlayObject
+}
+
+export interface DiffElementData<T> {
+    input?: object
+    original: T
+    patch?: Changeset
+    patchFailed?: boolean
+    error?: ErrorLike
+    indexKey?: string | number
+}
+
+export interface DiffElementResult<T> {
+    input?: React.JSX.Element,
+    diff?: React.JSX.Element,
+    patch?: React.JSX.Element,
+    identical?: boolean,
+    final?: T
+    error?: React.JSX.Element
+    indexKey?: string}
+
+export const diffElement = <T extends object,>(data: DiffElementData<T>): DiffElementResult<T> => {
+
+    const {
+        input,
+        original,
+        patch,
+        patchFailed: patchFailedInitial,
+        error,
+        indexKey = ''
+    } = data;
+
+    const inputCode = input !== undefined ? <ChakraCodeBlockShort key={`input${indexKey}`} title="Update Data" code={input} /> : undefined;
+    const patchCode = patch !== undefined ? <ChakraCodeBlockShort key={`patch${indexKey}`} title="Diff Patch" code={patch} /> : undefined;
+
+    const baseResult: Partial<DiffElementResult<T>> = {
+        input: inputCode,
+        patch: patchCode
+    }
+
+    if (patch === undefined) {
+        if (error !== undefined) {
+            return { ...baseResult }
+        }
+        return { ...baseResult, final: original, identical: true, patch: <Text>Data was identical after patching.</Text> }
+    }
+
+    if (patchFailedInitial) {
+        return { ...baseResult, patch: undefined, final: original }
+    }
+
+    try {
+        const current = structuredClone(original);
+        const right: T = patchObject(structuredClone(current), patch);
+        const diff = <JsonDiffPatch key={`diff${indexKey}`} left={current} right={right} />;
+        return { ...baseResult, diff, final: right };
+    } catch (e) {
+        const error = <ErrorAlert key={`error${indexKey}`} error={isErrorIsh(e) ? e : new Error(String(e))} codeContent={<Stack gapY="2">{inputCode}{patchCode}</Stack>} />;
+        return { ...baseResult, final: original, error };
+    }
 }
 
 export const diffElements = (original: JsonPlayObject, steps: LifecycleStep[]): [(React.JSX.Element | null)[], JsonPlayObject?] => {
@@ -33,31 +93,28 @@ export const diffElements = (original: JsonPlayObject, steps: LifecycleStep[]): 
             error
         } = step;
 
-        if (patch === undefined) {
-            if (error !== undefined) {
-                diffElements.push(null);
-            } else {
-                diffElements.push(<Text>Play was identical after Transform.</Text>);
-            }
-            continue;
-        }
+        const diffElementResults = diffElement({original: structuredClone(currentPlay.data), patch, patchFailed, error, indexKey: index});
 
-        if (patchFailed) {
-            diffElements.push(<ChakraCodeBlockShort key={`diffblockfallback-${index}`} title="Diff Patch" code={patch} />);
-            continue;
-        }
-        const left: JsonPlayObject = structuredClone(currentPlay); // JSON.parse(JSON.stringify(currentPlay));
+        const {
+            patch: patchElm,
+            diff,
+            error: errorElm,
+            final,
+        } = diffElementResults
 
-        try {
-            currentPlay.data = patchObject(currentPlay.data, patch)// jdiff.patch(currentPlay, patch) as JsonPlayObject;
-            diffElements.push(
-                <JsonDiffPatch left={left.data} right={currentPlay.data}/>
-            )
-        } catch (e) {
-            diffElements.push(<Fragment><ErrorAlert error={isErrorIsh(e) ? e : new Error(String(e))} /><ChakraCodeBlockShort title="Diff Patch" key={`diffblockfallback-${index}`} code={patch} /></Fragment>);
+        if(errorElm !== undefined) {
             patchFailed = true;
+            diffElements.push(errorElm);
+        } else if(diff !== undefined) {
+            diffElements.push(diff);
+            if(final !== undefined) {
+                currentPlay.data = final;
+            }
+        } else if (patchElm !== undefined) {
+            diffElements.push(patchElm);
+        } else {
+            diffElements.push(null);
         }
-
     }
 
     return [diffElements, !patchFailed ? currentPlay : undefined]
@@ -121,6 +178,19 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                         }
                     }
                 }
+
+                let inputsElm: React.JSX.Element | undefined = undefined;
+                if(inputs !== undefined && inputs.length > 0) {
+                    inputsElm = (
+                        <Stack gap="1">
+                            {inputs.map((y, inputsIndex) => <ChakraCodeBlockShort key={`inputs-${inputsIndex}`} code={y.input} title={y.type} />)}
+                        </Stack>
+                    );
+                }
+                let diffElm: React.JSX.Element | undefined = undefined;
+                if(diffs[index] !== null) {
+                    diffElm = <MSCollapsible collapsedHeight="200px" title="Diff" overlay>{diffs[index]}</MSCollapsible>
+                }
                 
                 return <Timeline.Item key={index}>
                     <Timeline.Connector>
@@ -139,22 +209,19 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                                 disableUntil="md"
                                 unmountOnExit
                                 timeline>
-                                {error !== undefined && error !== null ? <ErrorAlert status={alertStatus} error={error}/> : null}
-                            <Stack gap="2">
-                                {diffs[index] !== null ? (
-                                    <Fragment>
-                                    <Heading size="sm">Diff</Heading>
-                                {diffs[index]}</Fragment>
-                            ) : null}
-                                {inputs !== undefined && inputs.length > 0 ? (
-                                    <Fragment>
-                                        <Heading size="sm">Inputs</Heading>
-                                        <Stack gap="1">
-                                            {inputs.map((y, inputsIndex) => {
-                                                return <ChakraCodeBlockShort key={`inputs-${inputsIndex}`} code={y.input} title={y.type} />
-                                            })}
-                                        </Stack></Fragment>) : null}
-                            </Stack>
+                                {error !== undefined && error !== null ? <Box mb="3"><ErrorAlert status={alertStatus} error={error}/></Box> : null}
+                            <Tabs.Root size="sm" variant="outline" defaultValue="Inputs">
+                                <Tabs.List>
+                                    <Tabs.Trigger value="Inputs">Inputs</Tabs.Trigger>
+                                    <Tabs.Trigger value="Diff">Diff</Tabs.Trigger>
+                                </Tabs.List>
+                                <Tabs.Content value="Inputs">
+                                    {inputsElm ?? <Text>No Inputs recorded</Text>}
+                                </Tabs.Content>
+                                <Tabs.Content value="Diff">
+                                    {diffElm ?? <Text>No diff recorded or Play was identical after transform</Text>}
+                                </Tabs.Content>
+                            </Tabs.Root>
                             </MSCollapsible>
                         </Timeline.Title>
                     </Timeline.Content>

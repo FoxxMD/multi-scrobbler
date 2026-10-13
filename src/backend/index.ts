@@ -20,12 +20,13 @@ import { readJson } from './utils/DataUtils.ts';
 import ScrobbleClients from './scrobblers/ScrobbleClients.ts';
 import ScrobbleSources from './sources/ScrobbleSources.ts';
 import { Notifiers } from './notifier/Notifiers.ts';
-import { type DbConcrete, getMigratedDb } from './common/database/drizzle/drizzleUtils.ts';
+import { type DbConcrete } from './common/database/drizzle/drizzleUtils.ts';
 import { getDbPath } from './common/database/Database.ts';
 import { createRetentionCleanupTask } from './tasks/retentionCleanup.ts';
 import { parseUserConfig } from './common/Cache.ts';
 import { nonEmptyStringOrDefault } from '../core/StringUtils.ts';
 import { createDir, fileExists } from './utils/FSUtils.ts';
+import { getMigratedDb } from "./common/database/appMigrator.ts";
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -128,6 +129,7 @@ const dataDir = getDataDir();
             logging = {},
             debugMode,
             cache,
+            metadata,
         } = (config || {}) as AIOConfig;
 
         if (process.env.DEBUG_MODE === undefined && debugMode !== undefined) {
@@ -157,6 +159,7 @@ const dataDir = getDataDir();
             ...config,
             cache: parseUserConfig(cache, logger),
             logger,
+            metadata,
             loggingConfig: logging,
             loggerStream: appLoggerStream,
             db
@@ -187,7 +190,7 @@ const dataDir = getDataDir();
         const notifiers = new Notifiers(root.get('notifierEmitter'), root.get('clientEmitter'), root.get('sourceEmitter'), root.get('logger')); //root.get('notifiers');
         await notifiers.buildWebhooks(webhooks);
 
-        await root.items.transformerManager.registerFromEnv();
+        await root.items.transformerManager.parseFromEnv();
 
         /*
         * setup clients

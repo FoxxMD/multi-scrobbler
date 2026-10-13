@@ -1,0 +1,121 @@
+---
+sidebar_position: 4
+title: Editing Scrobbles
+description: Editing Scrobbles and using Metadata Search
+toc_max_heading_level: 4
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Editing Scrobbles and Plays
+
+Any **Multi-Scrobbler** data, for Sources or Clients, can be edited and replayed/retried to fix submissions errors downstream or generally correct your existing data.
+
+:::important
+
+It's important to recognize the data you are editing is **only** the data that Multi-Scrobbler stores in its own database. MS does not have the ability to modify external data like existing scrobbles in your Last.fm account.
+
+:::
+
+Use the <kbd>Pencil</kbd> button on a Play to switch to **Plain Text** Edit mode.
+
+<img src={require('/img/play_edit_button.jpg').default} height="200"/>
+
+In **Plain Text** Edit mode you can modify the values for your Play/Scrobble data as well as add/modify/delete any related metadata IDs, like [Muiscbrainz MBIDs](/configuration/transforms/musicbrainz).
+
+<img src={require('/img/play_edit.jpg').default} align="center" height="600"/>
+
+Clicking on the <kbd>AB</kbd> button in a field switches that field to **Search** Edit Mode. In this mode you can search metadata providers, like Musicbrainz and Spotify, for rich results which can automatically fill in metadata IDs and other fields like Album/Artist.
+
+<img src={require('/img/search_edit.jpg').default} align="center" height="600"/>
+
+Return to **Plain Text** Edit mode using the <kbd>🔍</kbd> button in the field to fine tune your applied selection.
+
+There are additional Search options available that are explained using the <kbd>?</kbd> popup at the top of the Edit Mode card.
+
+## Search Providers
+
+These providers are available to use for Search in edit mode:
+
+* [Musicbrainz](/configuration/transforms/musicbrainz/)
+* [Rocksky](/configuration/transforms/rocksky/)
+* [Spotify](/configuration/transforms/spotify/)
+
+### Setup
+
+All configuration of search providers is done using the **same configuration** as the respective docs for each of the above [Scrobble Enhancement Stages](/configuration/transforms/).
+
+* **Musicbrainz** and **Rocksky** providers are built-in and **already configured.** You do not need to do anything to use these immediately.
+* **Spotify** requires API setup found in the [Spotify Stage](/configuration/transforms/spotify/#api-setup) docs
+
+The same [default stage selection logic](/configuration/transforms/#stage-names-and-default-stages) also applies to metadata providers.
+
+Basically, if you setup a Stage for any of the above you **automatically** use it as a metadata provider as well. This also applies to any `defaults` you setup in [stage configuration](/configuration/transforms/#configuring-stages) IE if you configure [Musicbrainz release sorting](/configuration/transforms/musicbrainz/#sorting) then search results will reflect this sorting as well.
+
+### Preferred Providers
+
+You can *optionally* use specific (or additional) transformer configs by defining which to use for metadata providers in your configuration.
+
+:::important
+
+If you define *any* preferred providers then Multi-Scrobbler will **only** use providers you have explicitly defined there. If you want to use any available, do not define this configuration.
+
+This also means you can **disable** specific providers by omitted them entirely from your configuration here.
+
+:::
+
+For a preferred provider configuration you can only define **one** of each type of [Search Provider](#search-providers). In other words, you cannot have two Spotify providers.
+
+The value for each provider type can be either:
+
+* a `string` name of the `transformer` to use (this can be a default stage like `MSDefault` or `MSEnv` or your own named transformer)
+* the boolean value `true`. MS will use the [configured stage order found here](/configuration/transforms/#stage-names-and-default-stages) to determine which to use
+
+<Tabs groupId="configType" queryString>
+<TabItem value="env" label="ENV">
+
+Use the ENV key `METADATA_PREFERRED_PROVIDERS` with a comma-delimited list of `key:value` options.
+
+EX:
+
+To use:
+
+* rocksky provider with named transformer `coolsky`
+* musicbrainz provider with any [configured stage](/configuration/transforms/#stage-names-and-default-stages)
+* do not use spotify
+
+Your ENV would look like
+
+```
+METADATA_PREFERRED_PROVIDERS=rocksky:coolsky,musicbrainz:true
+```
+
+</TabItem>
+<TabItem value="aio" label="AIO">
+
+Set the `preferred` object on the top-level `metadata` object with a `"key": "value"` for each provider type and transformer to use.
+
+EX:
+
+To use:
+
+* rocksky provider with named transformer `coolsky`
+* musicbrainz provider with any [configured stage](/configuration/transforms/#stage-names-and-default-stages)
+* do not use spotify
+
+Your config would contain this:
+
+```json5 title="config.json"
+{
+  // ...
+  "metadata": {
+    "preferred": {
+      "rocksky": "coolsky",
+      "musicbrainz": true
+    }
+  } 
+}
+```
+
+</TabItem>
+</Tabs>

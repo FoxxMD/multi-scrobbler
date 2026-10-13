@@ -6,7 +6,102 @@ import type { FlowControlTerm, TransformHook } from "./Transform.ts";
 import type {Changeset} from "json-diff-ts";
 import type {IParseBaseOptions} from 'qs';
 import * as z from "zod";
-import { musicServicesSchema } from "./MusicMetadata.ts";
+import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
+
+export const musicServiceName = z.enum(['spotify', 'musicbrainz', 'youtube', 'jellyfin', 'plex', 'listenbrainz', 'rocksky', 'isrc']);
+export type MusicServiceName = z.infer<typeof musicServiceName>;
+
+export const mbidType = z.enum(['recording','release','track','artist','release-group']);
+export type MBIdType = z.infer<typeof mbidType>;
+
+export const searchPrefixMbid = z.enum(['rid','reid','tid','rgid','arid','mbid']);
+export type SearchPrefixMbid = z.infer<typeof searchPrefixMbid>;
+export const searchPrefixMbidTypeMapSchema = z.record(searchPrefixMbid, mbidType);
+export const searchPrefixMbidTypeMap = {
+    [searchPrefixMbid.enum.reid]: mbidType.enum.recording,
+    [searchPrefixMbid.enum.tid]: mbidType.enum.track,
+    [searchPrefixMbid.enum.rid]: mbidType.enum.release,
+    [searchPrefixMbid.enum.arid]: mbidType.enum.artist,
+    [searchPrefixMbid.enum.rgid]: mbidType.enum["release-group"],
+    [searchPrefixMbid.enum.mbid]: 'mbid',
+} as const satisfies Record<SearchPrefixMbid,MBIdType | 'mbid'>;
+
+export const searchPrefixIsrc = z.literal('isrc');
+export const searchPrefixSpotify = z.literal('spotify');
+
+export const searchPrefixAll = z.enum([...searchPrefixMbid.options, searchPrefixIsrc.value, searchPrefixSpotify.value]);
+
+export const trackSearchPrefix = z.enum([...searchPrefixMbid.extract(['reid','tid','mbid']).options, searchPrefixIsrc.value, searchPrefixSpotify.value]);
+export const trackSearchHash = z.templateLiteral([trackSearchPrefix, ':', z.string()]);
+export const albumSearchPrefix = z.enum([...searchPrefixMbid.extract(['rid','rgid','mbid']).options, searchPrefixSpotify.value]);
+export const albumSearchHash = z.templateLiteral([albumSearchPrefix, ':', z.string()]);
+export const artistSearchPrefix = z.enum([...searchPrefixMbid.extract(['arid']).options, searchPrefixSpotify.value]);
+export const artistSearchHash = z.templateLiteral([artistSearchPrefix, ':', z.string()]);
+export const SEARCH_HASH_REGEX = new RegExp(/^([^\s\r\n]+):([^\s\r\n]+)$/);
+
+export const prefixSearchToMusicService = (typeHint: 'artist' | 'album' | 'track') => (input: string): MusicServicesBase | undefined => {
+    const res = parseRegexSingle(SEARCH_HASH_REGEX, input);
+    if (res === undefined || res.groups === undefined) {
+        return undefined;
+    }
+
+    const prefix = res.groups[0].trim().toLocaleLowerCase();
+    const val = res.groups[1].trim();
+    const mbType = searchPrefixMbidTypeMap[prefix as SearchPrefixMbid];
+    if (mbType !== undefined) {
+        if (mbType === 'mbid') {
+            switch (typeHint) {
+                case 'artist':
+                    return { name: 'musicbrainz', id: val, idType: 'artist' };
+                case 'album':
+                    return { name: 'musicbrainz', id: val, idType: 'release' };
+                case 'track':
+                    return { name: 'musicbrainz', id: val, idType: 'recording' };
+            }
+        } else {
+            return { name: 'musicbrainz', id: val, idType: mbType };
+        }
+    } else if (musicServiceName.enum.spotify === prefix) {
+        return { name: 'spotify', id: val };
+    } else if (musicServiceName.enum.isrc === prefix) {
+        return { name: 'isrc', id: val };
+    }
+    return undefined;
+}
+export const trackSearchToMusicService = prefixSearchToMusicService('track');
+export const artistSearchToMusicService = prefixSearchToMusicService('artist');
+export const albumSearchToMusicService = prefixSearchToMusicService('album');
+
+export const musicServiceBaseSchema = z.object({
+    name: musicServiceName,
+    image: z.string().optional()
+});
+export type MusicServiceBase = z.infer<typeof musicServiceBaseSchema>;
+
+export const musicServiceIdBaseSchema = z.object({
+    ...musicServiceBaseSchema.shape,
+    id: z.string(),
+    idType: z.string().optional(),
+});
+export type MusicServiceIdBase = z.infer<typeof musicServiceIdBaseSchema>;
+
+export const musicServiceMBSchema = z.object({
+    ...musicServiceIdBaseSchema.shape,
+    name: z.literal(musicServiceName.enum.musicbrainz),
+    idType: z.enum(['recording', 'release', 'track', 'artist', 'release-group']).optional()
+});
+export type MusicServiceMB = z.infer<typeof musicServiceMBSchema>;
+export const musicServiceNonMBSchema = z.object({
+    ...musicServiceIdBaseSchema.shape,
+    name: musicServiceName.exclude(['musicbrainz']),
+});
+export type MusicServiceNonMB = z.infer<typeof musicServiceNonMBSchema>;
+export const musicServicesBaseSchema = z.discriminatedUnion('name', [musicServiceMBSchema.omit({image: true}), musicServiceNonMBSchema.omit({image: true})]);
+export type MusicServicesBase = z.infer<typeof musicServicesBaseSchema>;
+export const musicServicesSchema = z.discriminatedUnion('name', [musicServiceMBSchema, musicServiceNonMBSchema]);
+
+export type MusicServices = z.infer<typeof musicServicesSchema>;
+export type MusicServicesAny = (MusicServices | MusicServiceBase);
 
 export const componentTypeClientSchema = z.literal('client');
 export type ComponentTypeClient = z.infer<typeof componentTypeClientSchema>;
@@ -109,9 +204,15 @@ export const brainzMetaSchema = z.object({
     trackNumber: z.int().positive().optional(),
 })
 
+export const creditBaseSchema = z.object({
+    name: z.string(),
+    metadata: musicServicesBaseSchema.array().optional()
+})
+export type CreditBase = z.infer<typeof creditBaseSchema>;
+
 /** A named thing (track, artist, album) with optional art and any number of ids from music services that identify it */
 export const creditSchema = z.object({
-    name: z.string(),
+    ...creditBaseSchema.shape,
     // not httpUrl because some sources (plex) use relative proxy urls
     image: z.string().optional(),
     metadata: musicServicesSchema.array().optional()
@@ -154,7 +255,7 @@ export const playTrackDataSchema = z.object({
     artists: creditSchema.array().optional(),
     albumArtists: creditSchema.array().optional(),
     album: creditSchema.optional(),
-    duration: z.int().nonnegative().optional(),
+    duration: z.number().nonnegative().optional(),
     isrc: z.string().optional(),
     meta: trackMetaSchema.optional()
 })
@@ -181,13 +282,15 @@ export interface PlayData<D extends DateLike = Dayjs> extends TrackData {
 export const playDataSchema = z.object({
     ...playTrackDataSchema.shape,
     playDate: z.string().optional(),
-    listenedFor: z.int().nonnegative().optional()
+    playDateCompleted: z.string().optional(),
+    listenedFor: z.number().nonnegative().optional(),
+    repeat: z.boolean().optional()
 });
 
 export const playDataStrictSchema = z.object({
     ...playTrackStrictDataSchema.shape,
     playDate: z.string().optional(),
-    listenedFor: z.int().nonnegative().optional()
+    listenedFor: z.number().nonnegative().optional()
 });
 
 
@@ -424,19 +527,31 @@ export interface LogOutputConfig {
 export type PlayPlatformIdStr = string;
 
 export interface SourcePlayerObj<D extends DateLike = Dayjs> {
+    /** unique tuple identifying user and device */
     platformId: PlayPlatformIdStr,
+    /** full play/scrobble object information */
     play?: AmbPlayObject<D>,
     playFirstSeenAt?: string,
+    /** last time play was updated in MS */
     playLastUpdatedAt?: string,
+    /** last time player self-reported it was updated at */
     playerLastUpdatedAt: string
+    /** when this specific play/player was created */
     createdAt?: number
+    /** player poisition */
     position?: Second
     listenedDuration: Second
+    /** if player is mirroring generic now-playing (from upstream LZ/LFM client) */
     nowPlayingMode?: boolean
+    /** status of player */
     status: {
+        /** what player reported: paused, playing, stopped, unknown  */
         reported: string
+        /** what MS has derived from watching player behavior: paused, playing, stopped, unknown  */
         calculated: string
+        /** When player has not reported any new updates for N seconds */
         stale: boolean
+        /** When player has not reported any new updates for N * 2 seconds */
         orphaned: boolean
     }
 }
@@ -593,7 +708,9 @@ export type Writeable<T> = { -readonly [P in keyof T]: T[P] };
 export const SHORT_CALENDAR_NOTZ_FORMAT = 'MMM D HH:mm:ss';
 export const SHORT_TODAY_NOTZ_FORMAT = 'HH:mm:ss';
 export interface numberFormatOptions {
-    toFixed: number;
+    toFixed?: number;
+    minimumFractionDigits?: number,
+    maximumFractionDigits?: number
     defaultVal?: any;
     prefix?: string;
     suffix?: string;

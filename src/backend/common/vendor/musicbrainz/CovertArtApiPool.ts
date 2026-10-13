@@ -1,15 +1,13 @@
 import AbstractApiClient from "../AbstractApiClient.ts";
 import type { Cacheable } from "cacheable";
 import type { AbstractApiOptions } from "../../infrastructure/Atomic.ts";
-import { getRoot } from "../../../ioc.ts";
+import { getRootCommon } from "../../../iocCommon.ts";
 import { type CircuitBreakerProxy, ProxyWithCircuitBreaker } from "@foxxmd/load-balancer-proxy";
 import { normalizeWebAddress } from "../../../utils/NetworkUtils.ts";
 import { ConsecutiveBreaker } from "cockatiel";
 import { SimpleError } from "../../errors/MSErrors.ts";
 import { CoverArtApiClient } from "./CoverArtApiClient.ts";
 import { DEFAULT_CAA_URL, type CovertArtApiClientConfig } from "./CoverArtApiTypes.ts";
-
-export type CovertArtSingletonMap = Map<string, CoverArtApiClient>;
 
 export class CoverArtClientPool extends AbstractApiClient {
     declare config: CovertArtApiClientConfig;
@@ -19,9 +17,9 @@ export class CoverArtClientPool extends AbstractApiClient {
     constructor(name: any, config: CovertArtApiClientConfig, options: AbstractApiOptions & { cache?: Cacheable }) {
         const {apis = [{enable: true}]} = config;
         super('CAA Pool', name, {...config, apis}, options);
-        this.cache = options.cache ?? getRoot().items.cache().cacheApi;
+        this.cache = options.cache ?? getRootCommon().cache().cacheApi;
 
-        const caMap = getRoot().items.caMap();
+        const caMap = getRootCommon().caMap();
 
         const usedApis: CoverArtApiClient[] = [];
         const hosts: string[] = [];

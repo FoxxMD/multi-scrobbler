@@ -4,7 +4,7 @@ import { describe, it } from 'mocha';
 import { generateArtistsStr, } from "../../../core/tests/utils/PlayTestUtils.ts";
 import { parseArtistCredits, parseCredits, parseTrackCredits, uniqueNormalizedStrArr } from "../../utils/StringUtils.ts";
 import testData from '../utils/playTestData.json' with { type: "json" };
-import { intersect } from "../../utils.ts";
+import { intersect } from '../../../core/DataUtils.ts';
 import type {ExpectedResults} from "../utils/interfaces.ts";
 
 interface PlayTestFixture {

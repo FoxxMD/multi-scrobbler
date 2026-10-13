@@ -3,7 +3,8 @@ import { loggerTest } from '@foxxmd/logging';
 import { Cacheable } from 'cacheable';
 import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
-import { before, describe, it } from 'mocha';
+import { before, beforeEach, describe, it } from 'mocha';
+import type { TrackSearchResult } from '../../../core/Api.ts';
 import dayjs from 'dayjs';
 import type { PlayObject } from '../../../core/Atomic.ts';
 import { initMemoryCache } from '../../common/Cache.ts';
@@ -257,6 +258,55 @@ describe('Spotify Transformer', function () {
 
             const result = await transformer.handlePostFetch(play, { tracks: [wrongAlbum, rightAlbum], requestQueries: [], searchType: 'isrc' }, stageConfig);
             expect(creditId(result.data.track, 'spotify', 'track')).to.equal('right');
+        });
+    });
+
+    describe('Metadata Results', function () {
+
+        let transformer: SpotifyTransformer;
+        let lookedUp: string[];
+
+        before(async function () {
+            transformer = createSpotifyTransformer();
+            await transformer.initialize();
+            (transformer as any).api = {
+                getTrack: async (id: string) => {
+                    lookedUp.push(id);
+                    return id === 'missing' ? undefined : fakeTrack({ id });
+                },
+                searchTracksByFields: async () => [fakeTrack({ id: 'searched' }), fakeTrack({ id: 'other', name: 'Something Else Entirely' })],
+            };
+        });
+
+        beforeEach(function () {
+            lookedUp = [];
+        });
+
+        it('looks up a track by spotify id', async function () {
+            const res = await transformer.getTrackResults({ name: 'spotify', id: 'abc' }) as TrackSearchResult[];
+            expect(lookedUp).to.eql(['abc']);
+            expect(res).to.have.length(1);
+            expect(res[0].id).to.equal('abc');
+            expect(res[0].score).to.equal(100);
+        });
+
+        it('returns no results for an unknown spotify id or a non-applicable service', async function () {
+            expect(await transformer.getTrackResults({ name: 'spotify', id: 'missing' })).to.be.empty;
+            expect(await transformer.getTrackResults({ name: 'musicbrainz', id: 'abc', idType: 'recording' })).to.be.empty;
+            expect(await transformer.getAlbumResults({ name: 'musicbrainz', id: 'abc', idType: 'release' })).to.be.empty;
+            expect(await transformer.getArtistResults({ name: 'isrc', id: 'abc' })).to.be.empty;
+        });
+
+        it('rejects a spotify id of the wrong type', async function () {
+            await expect(transformer.getTrackResults({ name: 'spotify', id: 'abc', idType: 'album' })).to.be.rejected;
+        });
+
+        it('searches and scores by the credits given', async function () {
+            const res = await transformer.getTrackResults({ track: nameToCredit('My Track'), artists: [nameToCredit('My Artist')] }) as TrackSearchResult[];
+            expect(lookedUp).to.be.empty;
+            expect(res[0].id).to.equal('searched');
+            expect(res[0].score).to.be.at.least(100);
+            expect(res.some(x => x.id === 'other')).to.be.false;
         });
     });
 });

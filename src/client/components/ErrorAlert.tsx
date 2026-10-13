@@ -1,13 +1,14 @@
-import { Alert, Box, Code, Collapsible, HStack, Span, Stack, Text, useCollapsible, type UseCollapsibleReturn } from '@chakra-ui/react';
+import { Alert, Box, Code, Collapsible, HStack, Span, Stack, Text, useCollapsible, Group, type UseCollapsibleReturn } from '@chakra-ui/react';
 import { Fragment, useEffect, useState, type ComponentProps } from 'react';
 import { isErrorIsh, type ErrorIsh } from '../../core/ErrorUtils';
 import { ChakraClip } from './ChakraClipboard';
 import { ChakraCodeBlock } from './CodeBlock';
-import { EllipsisButton, FatArrowRight } from './icons/ChakraIcons';
+import { CodeButton, EllipsisButton, FatArrowRight, TextButton } from './icons/ChakraIcons';
 import { walkError, type ErrorData } from '../utils/ComponentUtils';
 
 export interface ErrorAlertProps {
     error: ErrorIsh
+    codeContent?: React.JSX.Element
     status?: "error" | "info" | "warning" | "success" | "neutral"
 }
 
@@ -59,6 +60,7 @@ const ErrorBlock = (props: {data: ErrorData, cause?: boolean, messageProps?: Com
 export const ErrorAlert = (props: ErrorAlertProps) => {
     // hooks must be called before any early return
     const collapsible = useCollapsible();
+    const [showCode, setShowCode] = useState<boolean>(false);
 
     if(!isErrorIsh(props.error)) {
         return null;
@@ -71,7 +73,8 @@ export const ErrorAlert = (props: ErrorAlertProps) => {
     return (
         <Alert.Root status={props.status ?? 'error'}>
             <Alert.Indicator />
-            <Alert.Content>
+            {!showCode ? 
+            (<Alert.Content>
                 <Alert.Title>{props.error.name ?? 'Error'}<EllipsisButton hideBelow="md" marginLeft="2" size="2xs" onClick={() => collapsible.setOpen(!collapsible.open)}/></Alert.Title>
                 <Alert.Description>
                     <Stack gap="0.5">
@@ -83,8 +86,13 @@ export const ErrorAlert = (props: ErrorAlertProps) => {
                         ))}
                     </Stack>
                 </Alert.Description>
-            </Alert.Content>
-            <ChakraClip value={props.error}/>
+            </Alert.Content>) : (
+                props.codeContent
+            )}
+            <Group>
+            {props.codeContent !== undefined ? (!showCode ? <CodeButton onClick={() => setShowCode(!showCode)}/> : <TextButton onClick={() => setShowCode(!showCode)}/>) : undefined}
+            {!showCode ? <ChakraClip value={props.error}/> : undefined}
+            </Group>
         </Alert.Root>
     )
 }

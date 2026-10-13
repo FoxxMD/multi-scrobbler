@@ -12,10 +12,56 @@ import {
     STAGE_TYPES,
     type StageTypedConfig,
     type WhenConditionsConfig,
-    type WhenParts
-} from "../../core/Transform.ts";
+    type WhenParts, type PlayTransformHooks } from "../../core/Transform.ts";
 import dayjs from "dayjs";
 import { playImages } from "../../core/MusicMetadata.ts";
+import type { CommonClientOptions } from "../common/infrastructure/config/client/index.ts";
+import type { CommonSourceOptions } from "../common/infrastructure/config/source/index.ts";
+import { loggerNoop } from "../common/MaybeLogger.ts";
+
+export const transformPresetEnv = <T extends CommonClientOptions | CommonSourceOptions>(prefix: string, existing: T | undefined = undefined, logger: Logger = loggerNoop): undefined | T => {
+
+    const env = process.env[`${prefix}_TRANSFORMS`];
+    if (env === undefined || env.trim() === '') {
+        return existing;
+    }
+
+    const preCompare: NonNullable<PlayTransformHooks<ExternalMetadataTerm>['preCompare']> = [];
+    const popts: PlayTransformHooks<ExternalMetadataTerm> = {
+        preCompare
+    };
+    const transformTypes = env.split(',').map(x => x.trim().toLocaleLowerCase());
+    for (const p of transformTypes) {
+        switch (p) {
+            case 'native':
+                preCompare.push({ type: 'native'});
+                break;
+            case 'musicbrainz':
+                preCompare.push({ type: 'musicbrainz' });
+                break;
+            case 'rocksky':
+                preCompare.push({ type: 'rocksky' });
+                break;
+            case 'spotify':
+                preCompare.push({ type: 'spotify'});
+                break;
+            case 'coverartarchive':
+                preCompare.push({type: 'coverartarchive'});
+                break;
+            default:
+                logger.warn(`Unrecognized transformer type '${p} in env ${env}'`);
+                break;
+        }
+    }
+
+    // @ts-expect-error T is fine
+    return {
+        ...(existing || {}),
+        playTransform: popts
+    };
+};
+
+
 
 export const isWhenCondition = (val: unknown): val is WhenParts<string> => {
     if (val !== null && typeof val === 'object') {

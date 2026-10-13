@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { getDb, migrateDb, getDbMigrationStatus, getMigratedDb, type DbConcrete } from '../../common/database/drizzle/drizzleUtils.ts';
+import { getDb, migrateDb, getDbMigrationStatus, type DbConcrete } from '../../common/database/drizzle/drizzleUtils.ts';
 import withLocalTmpDir from 'with-local-tmp-dir';
 import { components, playInputs, plays, queueStates } from '../../common/database/drizzle/schema/schema.ts';
 import dayjs from 'dayjs';
@@ -17,7 +17,7 @@ import { loggerDebug } from '@foxxmd/logging';
 import { transientDb } from '../utils/TransientTestUtils.ts';
 import { getRoot } from '../../ioc.ts';
 import { after } from 'mocha';
-import { migrateApp } from '../../common/database/appMigrator.ts';
+import { migrateApp, getMigratedDb } from '../../common/database/appMigrator.ts';
 import { projectRootDir } from "../../common/infrastructure/Atomic.ts";
 
 // would be great to push migrations directly from schema but doesn't seem supported in newest beta

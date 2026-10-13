@@ -25,24 +25,15 @@ import AbstractApiClient from "./AbstractApiClient.ts";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.ts';
 import { unique } from '../../utils.ts';
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
-import type {ListenPayload, ListenResponse, ListenType, SubmitPayload} from '../../../core/vendor/listenbrainz/interfaces.ts';
+import type {ListenPayload, ListenResponse, SubmitPayload} from '../../../core/vendor/listenbrainz/interfaces.ts';
 import { baseFormatPlayObj } from '../../utils/PlayTransformUtils.ts';
 import { AuthError, ScrobbleSubmitError, SimpleError } from '../errors/MSErrors.ts';
 import pRetry from 'p-retry';
 import { findCauseByFunc } from '../../utils/ErrorUtils.ts';
 import { isSuperAgentResponseError } from '../errors/ErrorUtils.ts';
-import { playToSubmitPayload, type AllowDeviceList } from './listenbrainz/lzUtils.ts';
+import { playToSubmitPayload, type AllowDeviceList, type SubmitOptions } from './listenbrainz/lzUtils.ts';
 import { isrcNoHyphens } from '../../../core/PlayUtils.ts';
 import { getRoot } from '../../ioc.ts';
-
-
-export interface SubmitOptions {
-    log?: boolean
-    listenType?: ListenType
-    /** See matchDeviceLabel in lzUtils */
-    allowDeviceList?: AllowDeviceList
-    includePlayPosition?: boolean
-}
 
 export interface ListensResponse {
     count: number;

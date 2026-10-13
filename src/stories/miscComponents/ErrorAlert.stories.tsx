@@ -6,6 +6,8 @@ import { ErrorAlert } from "../../client/components/ErrorAlert.js";
 import {Provider} from "../../client/components/Provider.js";
 import type {ErrorLike} from "../../core/Atomic.js";
 import { serializeError } from "serialize-error";
+import { ChakraCodeBlockShort } from "../../client/components/CodeBlock.js";
+import { generateRandomObj } from "../../core/tests/utils/fixtures.js";
 
 const stack = "Scrobble Submit Error: Failed to submit to Listenbrainz (listen_type single)\n    at ListenbrainzApiClient.submitListen (/app/src/backend/common/vendor/ListenbrainzApiClient.ts:246:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async ListenbrainzScrobbler.doScrobble (/app/src/backend/scrobblers/ListenbrainzScrobbler.ts:87:28)\n    at async ListenbrainzScrobbler.scrobble (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:679:28)\n    at async ListenbrainzScrobbler.processDeadLetterScrobble (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:920:39)\n    at async ListenbrainzScrobbler.processDeadLetterQueue (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:894:43)\n    at async PromisePoolExecutor.handler (/app/src/backend/tasks/heartbeatClients.ts:35:21)\n    at async PromisePoolExecutor.waitForActiveTaskToFinish (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:375:9)\n    at async PromisePoolExecutor.waitForProcessingSlot (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:368:13)\n    at async PromisePoolExecutor.process (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:354:13)";
 const anotherNested = serializeError(new Error('another nested error'));
@@ -52,5 +54,11 @@ args: {
 export const ErrorAlertStory = meta.story({
   render: function Render(args) {
     return (<ErrorAlert {...args}/>) 
+  }
+});
+
+export const ErrorAlertCodeStory = meta.story({
+  render: function Render(args) {
+    return (<ErrorAlert {...args} codeContent={<ChakraCodeBlockShort code={generateRandomObj()} title="Context Stuff"/>}/>) 
   }
 });

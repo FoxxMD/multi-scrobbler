@@ -1,16 +1,15 @@
-import type { AlbumSearchResult, ArtistSearchResult, MetadataResultServiceScore, TrackSearchResult } from "../../../core/Api.ts";
-import type { Credit, TrackData } from "../../../core/Atomic.ts";
-import type { ErrorIsh } from "../../../core/ErrorUtils.ts";
+import type { AlbumSearchResult, ArtistSearchResult, MetadataResultServiceScore, MetadataSearchError, TrackDataCreditBase, TrackSearchResult } from "../../../core/Api.ts";
+import type { Credit, MusicServicesBase, TrackData } from "../../../core/Atomic.ts";
 
 export interface MetadataProvider {
-    getTrackResults: (query: string) => Promise<TrackSearchResult[] | false>
-    getArtistResults: (query: string) => Promise<ArtistSearchResult[] | false>
-    getAlbumResults: (query: string) => Promise<AlbumSearchResult[] | false>
+    getTrackResults: (query: TrackDataCreditBase | MusicServicesBase) => Promise<TrackSearchResult[] | false>
+    getArtistResults: (query: TrackDataCreditBase | MusicServicesBase) => Promise<ArtistSearchResult[] | false>
+    getAlbumResults: (query: TrackDataCreditBase | MusicServicesBase) => Promise<AlbumSearchResult[] | false>
 }
 
 export interface AggregateMetadataResponse<T extends (TrackSearchResult | ArtistSearchResult | AlbumSearchResult)> {
     data: T[]
-    errors: {service: string, error: ErrorIsh}[]
+    errors: MetadataSearchError[]
 }
 
 export const asMetadataProvider = (val: object): val is MetadataProvider => 

@@ -1,6 +1,22 @@
 import * as z from "zod";
 import { maybeArrayFromStringSchemaCreate } from "../../../utils/ZodUtils.ts";
 import type { MusicbrainzApiWrapped } from "./MusicbrainzApi.ts";
+import type { LifecycleInput } from "../../../../core/Atomic.ts";
+import type { IRecordingList, IRecordingMatch } from "musicbrainz-api";
+import type { CoverArtApiClient } from "./CoverArtApiClient.ts";
+
+export type CovertArtSingletonMap = Map<string, CoverArtApiClient>;
+
+export type RecordingRankedMatched = IRecordingMatch & {rankScore?: number, artistScore?: number, titleScore?: number, albumScore?: number}
+
+export interface IRecordingMSList extends IRecordingList {
+    recordings: RecordingRankedMatched[]
+    freeText?: boolean
+    requestQuery: string
+    requestQueries?: LifecycleInput[]
+}
+
+
 
 export type MusicBrainzSingletonMap = Map<string, MusicbrainzApiWrapped>;
 

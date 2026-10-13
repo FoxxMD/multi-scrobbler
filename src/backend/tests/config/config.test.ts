@@ -12,7 +12,7 @@ import {loggerTest} from '@foxxmd/logging';
 import { clientTypes } from "../../../core/Atomic.ts";
 import { projectRootDir } from "../../common/infrastructure/Atomic.ts";
 import { sourceTypes } from "../../../core/Atomic.ts";
-import { difference } from '../../utils.ts';
+import { difference } from '../../../core/DataUtils.ts';
 import { getSourceEnvSchema, validateSourceJson } from '../../common/infrastructure/config/source/sourcesMap.ts';
 import { readJson } from '../../utils/DataUtils.ts';
 import { prettifyError, ZodError } from 'zod';

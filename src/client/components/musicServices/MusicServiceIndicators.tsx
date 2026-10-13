@@ -1,92 +1,151 @@
-import { HStack, Icon, Separator, StackSeparator, type IconProps, Span, Badge } from "@chakra-ui/react";
-import { getMusicServiceIcon, getMusicServiceIconElement } from "../icons/ChakraIcons";
-import { type MusicServicesAny } from '../../../core/MusicMetadata';
-import { type MusicServices } from '../../../core/MusicMetadata';
-import { musicServicesSchema } from '../../../core/MusicMetadata';
-import { musicServiceIdBaseSchema } from '../../../core/MusicMetadata';
-import { type MusicServiceBase } from '../../../core/MusicMetadata';
-import { musicServiceBaseSchema } from '../../../core/MusicMetadata';
-import { type MusicServiceName } from '../../../core/MusicMetadata';
-import { musicServiceName } from '../../../core/MusicMetadata';
+import { HStack, Icon, Separator, StackSeparator, type IconProps, Span, Badge, Tag } from "@chakra-ui/react";
+import { EditButton, EditIcon, EditIconRaw, getMusicServiceIcon, getMusicServiceIconElement, XButton, XIcon } from "../icons/ChakraIcons";
+import { musicServicesSchema, musicServiceIdBaseSchema, musicServiceBaseSchema, musicServiceName, type MusicServicesAny, type MusicServices, type MusicServiceBase, type MusicServiceName, type MusicServiceIdBase } from '../../../core/Atomic';
 import { capitalize } from "../../../core/StringUtils";
 import { Muted } from "../Typography";
 import { Tooltip } from "../ChakraTooltip";
 import type React from "react";
 import { LuExternalLink } from "react-icons/lu";
-import type { ComponentProps } from "react";
+import { useState, type ComponentProps } from "react";
+import { linkFromMusicService } from "../../../core/MusicMetadata";
+import { MusicServiceInput } from "./MusicServiceEditable";
 
+const getMusicServiceLinkFromProps = (link: boolean | string, val: MusicServicesAny): string | undefined => {
+    if (typeof link === 'string') {
+        return link;
+    }
+    if (link === false) {
+        return undefined;
+    }
+    return linkFromMusicService(val);
+}
 
 export interface MusicServiceInfoIconProps {
-    id?: string,
-    link?: string
-    idHint?: string
+    link?: boolean | string
     tooltip?: boolean
     iconProps?: IconProps
-    showId?: boolean
-    type: MusicServiceName
+    data: MusicServices | MusicServiceIdBase | MusicServiceBase
 }
 export const MusicServiceInfoIcon = (props: MusicServiceInfoIconProps) => {
 
     const {
         iconProps = {},
-        link,
-        id,
-        idHint,
+        link = true,
         tooltip,
-        type,
-        showId = false,
+        data,
     } = props;
 
     let icon: React.JSX.Element;
-    if(type === 'isrc') {
+    if (data.name === 'isrc') {
         icon = <Badge marginX="0" colorPalette="purple" size="xs" variant="subtle">ISRC</Badge>
     } else {
-        icon = <Icon size="sm" {...iconProps}>{getMusicServiceIconElement(type)}</Icon>;
+        icon = <Icon size="sm" {...iconProps}>{getMusicServiceIconElement(data.name)}</Icon>;
     }
 
-    const cappedType = type === 'isrc' ? 'ISRC' : capitalize(type);
+    const cappedType = data.name === 'isrc' ? 'ISRC' : capitalize(data.name);
 
     let content: React.JSX.Element | string;
-    if (link !== undefined) {
-        content = <a target='_blank' rel='noreferrer' href={link}>{icon}</a>
+    const derivedLink = link === undefined ? undefined : getMusicServiceLinkFromProps(link, data);
+    if (derivedLink !== undefined) {
+        content = <a target='_blank' rel='noreferrer' href={derivedLink}>{icon}</a>
     } else {
         content = icon;
     }
-    let visibleId: React.JSX.Element | null = null;
-    if (showId && id !== undefined) {
-        visibleId = <><Separator orientation="vertical" height="4" /><Muted textStyle="xs">{`${cappedType}`}{idHint !== undefined ? ` ${capitalize(idHint)}` : ''} <Span userSelect="all">{id}</Span></Muted></>
-    }
 
+    let toolTipContent: string | React.JSX.Element;
     if (tooltip) {
-        if(id !== undefined) {
-            return <Tooltip content={`${cappedType}${idHint !== undefined ? ` ${capitalize(idHint)} ` : ' '}${id}`} interactive><HStack>{visibleId}{content}</HStack></Tooltip>;
+        if (('id' in data)) {
+            toolTipContent = data.id !== undefined ?
+                `${cappedType}${data.idType !== undefined ? ` ${capitalize(data.idType)} ` : ' '}${data.id}` :
+                `Has ${cappedType}${data.idType !== undefined ? ` ${capitalize(data.idType)} ` : ' ID '}`;
+        } else {
+            toolTipContent = data.name;
         }
-        return <Tooltip content={`Has ${cappedType}${idHint !== undefined ? ` ${capitalize(idHint)} ` : ' ID '}`} interactive><HStack>{visibleId}{content}</HStack></Tooltip>;
+        return <Tooltip content={toolTipContent} interactive><HStack>{content}</HStack></Tooltip>
     }
-    return <HStack>{visibleId}{content}</HStack>;
+    return content;
 }
 
-export const MusicServiceIndicator = (props: { data: MusicServices | MusicServiceBase, iconProps?: IconProps, showId?: boolean, link?: boolean }) => {
+export interface MusicServiceInfoDisplayProps {
+    link?: boolean | string
+    tooltip?: boolean
+    iconProps?: IconProps
+    data: MusicServices
+    editable?: boolean
+    onEdit?: () => void
+    onRemove?: () => void
+}
+
+export const MusicServiceInfoDisplay = (props: MusicServiceInfoDisplayProps) => {
+
     const {
         data,
-        link: showLink = false,
+        onEdit = () => console.log(data, 'triggered edit'),
+        onRemove = () => console.log(data, 'triggered remove'),
+        editable,
+    } = props;
+
+    const icon = <MusicServiceInfoIcon iconProps={{ verticalAlign: 'baseline' }} {...props} tooltip />
+
+    const idHintContent = data.idType !== undefined ? capitalize(data.idType) : '';
+
+    return (<Tag.Root size="lg" variant="outline">
+        <Tag.StartElement width="fit-content">
+            {icon}
+        </Tag.StartElement>
+        <Tag.Label>
+            <HStack>
+                <Muted textStyle="xs">{idHintContent}</Muted>
+                <Tooltip interactive contentProps={{ userSelect: "all" }} closeDelay={300} content={data.id}><Span userSelect="all" maxW="200px" truncate>{data.id}</Span></Tooltip>
+            </HStack>
+        </Tag.Label>
+        {editable === true ? (
+            <Tag.EndElement width="fit-content">
+                <HStack gapX="3">
+                    <EditIcon size="sm" cursor="pointer" onClick={() => onEdit()} />
+                    <XIcon cursor="pointer" onClick={() => onRemove()} />
+                </HStack>
+            </Tag.EndElement>
+        ) : undefined}
+    </Tag.Root>);
+}
+
+export interface MusicServiceIndicatorProps {
+    data: MusicServices | MusicServiceBase,
+    iconProps?: IconProps,
+    showId?: boolean,
+    link?: string | boolean
+    editable?: boolean
+    onChange?: (val: MusicServices) => void
+    onRemove?: () => void
+    useWith?: string[]
+    tooltip?: boolean
+}
+
+export const MusicServiceIndicator = (props: MusicServiceIndicatorProps) => {
+    const {
+        editable = false,
+        useWith,
+        data,
+        onRemove = () => console.log(data, 'Triggered remove'),
+        onChange = () => console.log(data, 'Triggered onchange'),
         ...rest
     } = props;
 
-    if (musicServiceIdBaseSchema.validate(data)) {
-        const res = musicServicesSchema.safeParse(data)
-        if (res.success && res.data.name === musicServiceName.enum.musicbrainz) {
-            const link = data.idType !== undefined && showLink ? `https://musicbrainz.org/${data.idType}/${data.id}` : undefined;
-            return <MusicServiceInfoIcon type={data.name} tooltip idHint={data.idType} id={data.id} link={link} {...rest} />
+    const [editing, setEditing] = useState<boolean>(false);
+
+    if (editable && musicServicesSchema.validate(data)) {
+        if (editing) {
+            return <MusicServiceInput value={data} useWith={useWith} onSubmit={(newVals) => { onChange(newVals); setEditing(false); }} onCancel={() => setEditing(false)} />
         }
-        return <MusicServiceInfoIcon type={data.name} id={data.id} idHint={data.idType} {...rest} tooltip/>
+        return <MusicServiceInfoDisplay editable={editable} tooltip onEdit={() => setEditing(true)} onRemove={() => onRemove()} data={data} {...rest} />
     }
 
     if (musicServiceBaseSchema.validate(data)) {
-        return <MusicServiceInfoIcon type={data.name} tooltip {...rest} />
+        return <MusicServiceInfoIcon tooltip {...props} />
     }
 
-    return <Icon {...rest}><LuExternalLink /></Icon>
+    return <Icon tooltip {...rest}><LuExternalLink /></Icon>
 }
 
 export const MusicServiceIndicators = (props: {

@@ -7,7 +7,7 @@ import { WildcardEmitter } from "./common/WildcardEmitter.ts";
 import { generateBaseURL } from "./utils/NetworkUtils.ts";
 import type { PassThrough } from "stream";
 import type {CacheConfigOptions} from "./common/infrastructure/Atomic.ts";
-import type { MusicBrainzSingletonMap } from './common/vendor/musicbrainz/MusicbrainzTypes.ts';
+import type { MusicBrainzSingletonMap, CovertArtSingletonMap } from './common/vendor/musicbrainz/MusicbrainzTypes.ts';
 import { MSCache } from "./common/Cache.ts";
 import TransformerManager from "./common/transforms/TransformerManager.ts";
 import type {TransformerCommonConfig} from "../core/Atomic.ts";
@@ -16,9 +16,9 @@ import { CoverArtApiClient } from "./common/vendor/musicbrainz/CoverArtApiClient
 import { version, stable } from "./version.ts";
 import type {DbConcrete} from "./common/database/drizzle/drizzleUtils.ts";
 import type { MSBackendEventMap } from "./common/infrastructure/MSBackendEventMap.ts";
+import { setRootCommon } from "./iocCommon.ts";
 import type { RockskySingletonMap } from "./common/vendor/rocksky/RockskyClientWrapped.ts";
-import type { CovertArtSingletonMap } from "./common/vendor/musicbrainz/CovertArtApiPool.ts";
-
+import type { MetadataConfig } from "./common/infrastructure/config/aioConfig.ts";
 let root: ReturnType<typeof createRoot>;
 export interface RootOptions {
     baseUrl?: string,
@@ -32,6 +32,7 @@ export interface RootOptions {
     rsMap?: RockskySingletonMap | (() => RockskySingletonMap)
     caMap?: CovertArtSingletonMap | (() => CovertArtSingletonMap)
     transformers?: TransformerCommonConfig[]
+    metadata?: MetadataConfig
     db?: DbConcrete | (() => Promise<DbConcrete>)
 }
 
@@ -79,6 +80,7 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         rsMap,
         caMap,
         db,
+        metadata,
         transformers = []
     } = options || {};
     let disableWeb = dw;
@@ -153,7 +155,12 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         transformerManager.addTransformerConfig(c);
     }
     if(transformers.length === 0) {
-        logger.debug('No user-supplied transformer configs were found.');
+        logger.debug('No user-supplied transformer configs from file were found.');
+    }
+    if(metadata !== undefined && metadata.preferred !== undefined) {
+        transformerManager.setPreferredProviders(metadata.preferred);
+    } else {
+        transformerManager.logger.debug('No preferred metadata providers configured, will use any available.');
     }
 
     const cacheApi = (maybeSingletonCache !== undefined ? maybeSingletonCache : cacheFunc()).cacheApi;
@@ -216,6 +223,13 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
 export const getRoot = (options?: RootOptions) => {
     if(root === undefined) {
         root = createRoot(options);
+        setRootCommon({
+            version: root.items.version,
+            cache: () => root.items.cache(),
+            mbMap: () => root.items.mbMap(),
+            rsMap: () => root.items.rsMap(),
+            caMap: () => root.items.caMap(),
+        });
     }
     return root;
 }

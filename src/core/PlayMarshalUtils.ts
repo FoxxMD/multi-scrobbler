@@ -1,10 +1,7 @@
 import clone from 'clone';
 import dayjs from 'dayjs';
 import { Traverse, type TraverseContext } from 'neotraverse/modern';
-import { type AmbPlayObject, type DateLike, type JsonPlayObject, type PlayObject, REGEX_ISO8601_LOOSE, type Replace } from './Atomic.ts';
-import type { ElementOf, MarkOptional } from 'ts-essentials';
-import { type ErrorObject, serializeError } from 'serialize-error';
-import type { PlayApiCommonDetailed } from './Api.ts';
+import { type AmbPlayObject, type DateLike, type JsonPlayObject, type PlayObject, REGEX_ISO8601_LOOSE } from './Atomic.ts';
 
 interface BlockPath { key: string, parent: string };
 type BlockPaths = BlockPath[];
@@ -54,34 +51,6 @@ export const asJsonPlayObject = (play: AmbPlayObject<DateLike>): JsonPlayObject 
   });
   return cloned as unknown as JsonPlayObject;
 };
-
-export type SerializablePlaySelect = Replace<MarkOptional<PlayApiCommonDetailed, 'queueStates'>, 'error', ErrorObject> & {queueStates?: Replace<ElementOf<PlayApiCommonDetailed['queueStates']>, 'error', ErrorObject | undefined>[]};
-export const asSerializablePlaySelect = (data: MarkOptional<PlayApiCommonDetailed, 'queueStates'>): SerializablePlaySelect => {
-  const {
-    error,
-    queueStates = [],
-    ...rest
-  } = data;
-
-  const qMapped = queueStates.map((x) => {
-    const {
-      error: e,
-      ...restQ
-    } = x;
-    return {
-      ...restQ,
-      error: e instanceof Error ? serializeError(e) : e
-    }
-  });
-
-  return {
-    ...rest,
-    // @ts-expect-error
-    error: error instanceof Error ? serializeError(error) : error,
-    queueStates: qMapped
-  }
-}
-
 export const asPlay = (data: JsonPlayObject | PlayObject): PlayObject => {
   const cloned = clone(data);
   new Traverse(cloned).forEach((ctx, x) => {

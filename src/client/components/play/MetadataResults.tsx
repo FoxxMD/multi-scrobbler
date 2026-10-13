@@ -1,9 +1,20 @@
-import { AbsoluteCenter, Avatar, Box, Combobox, HStack, Icon, Menu, Portal, Span, Spinner, StackSeparator, Text, InputGroup, type ListCollection, Flex } from "@chakra-ui/react"
+import { AbsoluteCenter, Avatar, Box, Combobox, HStack, Icon, Menu, Portal, Span, Spinner, Switch, StackSeparator, Text, InputGroup, type ListCollection, Flex } from "@chakra-ui/react"
 import type { MetadataResultBase, MetadataResultImage, MetadataResultServiceScore } from "../../../core/Api"
-import { getMusicServiceIconElement } from "../icons/ChakraIcons"
-import React, { useRef } from "react"
+import { BracesIcon, getMusicServiceIconElement, LettersButton, SearchButton, TextIcon } from "../icons/ChakraIcons"
+import React, { useRef, useState, type ComponentProps } from "react"
+import { useDebouncer } from "@tanstack/react-pacer"
 import { MSErrorBoundary } from "../ErrorBoundary"
 import { EllipsisButtonMenu } from "../buttonMenus/ButtonMenu"
+import { formatNumber } from "../../../core/DataUtils"
+import { TextMuted } from "../TextMuted"
+import { Tooltip } from "../ToggleTip"
+
+const overlayProps: Partial<ComponentProps<typeof HStack>> = {
+    backdropFilter: 'auto',
+    backdropBlur: 'sm',
+    backdropBrightness: '75%',
+    padding: '0.5',
+}
 
 export const LeftSideMetadataResultContent = (props: MetadataResultServiceScore & MetadataResultImage) => {
     if (props.image === undefined) {
@@ -11,15 +22,15 @@ export const LeftSideMetadataResultContent = (props: MetadataResultServiceScore 
     }
     return (
         <ArtworkAvatar
-            overlay={<MetadataServiceScore {...props} />}
+            overlay={<MetadataServiceScore overlay {...props} />}
             {...props} />
     )
 }
 
-export const MetadataServiceScore = (props: MetadataResultServiceScore) => (
-    <HStack gap="1" separator={<StackSeparator />}>
+export const MetadataServiceScore = (props: MetadataResultServiceScore & {overlay?: boolean}) => (
+    <HStack gap="1" {...(props.overlay ? overlayProps : undefined)} separator={<StackSeparator />}>
         <Icon size="sm">{getMusicServiceIconElement(props.service)}</Icon>
-        {props.score !== undefined ? <Text color="fg.subtle" textStyle="sm">{props.score}</Text> : undefined}
+        {props.score !== undefined ? <Text color={props.overlay ? 'white' : 'fg.muted'} textStyle="sm">{formatNumber(props.score, {minimumFractionDigits: 0, maximumFractionDigits: 1})}</Text> : undefined}
     </HStack>
 )
 
@@ -52,7 +63,7 @@ export const MetadataPickMenu = <T,>(props: MetadataPickMenuProps<T>) => {
         return undefined;
     }
     // menu content is portaled but still bubbles through the React tree
-    // stop it here so Combobox does not select the whole item or treat Enter as freetext
+    // stop it here so Combobox does not select the whole item
     return (
         <Box marginLeft="auto" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
             <EllipsisButtonMenu
@@ -71,29 +82,52 @@ export interface MetadataSearchComboboxProps<T extends MetadataSearchResult> {
     placeholder: string
     collection: ListCollection<T>
     isLoading: boolean
+    /** True while results may still be arriving, including after the first ones are shown */
+    isFetching?: boolean
     isError: boolean
     inputGroupContent?: React.JSX.Element
     initialInput?: string
+    searchContext?: boolean
+    /** Only called when a result is selected, typed text that is not selected is dropped */
     onChange: (val: T) => void
-    /** Called with the typed text when the user commits it without selecting a result */
-    onFreetext: (name: string) => void
-    onQueryChange: (query: string) => void
+    /** Called when a search should run. Typing is debounced here, a context mode switch is not */
+    onQueryChange: (query: string, contextMode: boolean) => void
+    onInputSwitch?: () => void,
     renderItem: (item: T, onPick: (val: T) => void) => React.JSX.Element
 }
 
 export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: MetadataSearchComboboxProps<T>) => {
-    const { placeholder, collection, isLoading, isError, onChange, onFreetext, onQueryChange, renderItem, initialInput = '' } = props;
+    const { placeholder, collection, isLoading, isFetching = false, isError, onChange, onQueryChange, renderItem, initialInput = '', onInputSwitch } = props;
 
-    // a ref, not state: combobox captures onInteractOutside when the popup opens so state read there is stale
-    const rawInput = useRef<string | undefined>(initialInput === '' ? undefined : initialInput);
+    const [inputValue, setInputValue] = useState<string>(initialInput);
+    const isBusy = isLoading || isFetching;
 
-    const commitFreetext = () => {
-        if (rawInput.current !== undefined && rawInput.current !== initialInput) {
-            onFreetext(rawInput.current);
+    const [contextMode, setContextMode] = useState<boolean>(props.searchContext ?? true);
+    const [open, setOpen] = useState<boolean>(false);
+    // typing would otherwise search on every keystroke
+    // flush on unmount: a parent may remount this after a selection and still wants the search for the selected text
+    // state, not the searched ref below: this is read during render and only flips when a search is actually sent, not when one is pending
+    const [hasSearched, setHasSearched] = useState<boolean>(false);
+    const runQuery = (query: string, mode: boolean) => {
+        setHasSearched(true);
+        onQueryChange(query, mode);
+    };
+    const typedQuery = useDebouncer(runQuery, { wait: 500, onUnmount: (d) => d.flush() });
+    // true while the current query was triggered by the mode switch item rather than typing, decides which loading UI is shown
+    const [modeSwitched, setModeSwitched] = useState<boolean>(false);
+    // parents do not search for the initial value on mount, the first open does it unless a search was already requested
+    const searched = useRef<boolean>(false);
+
+    // text that was typed but not selected is dropped, show what the parent has and search for it on the next open
+    const revertInput = () => {
+        if (inputValue !== initialInput) {
+            typedQuery.cancel();
+            searched.current = false;
+            setInputValue(initialInput);
         }
     };
 
-    const inputElm = <Combobox.Input placeholder={placeholder} />;
+    const inputElm = <Combobox.Input placeholder={placeholder} paddingInlineEnd={onInputSwitch === undefined ? undefined : 'calc(var(--combobox-input-height) * 2)'} />;
     let input: React.JSX.Element;
     if(props.inputGroupContent !== undefined) {
         input = (
@@ -105,39 +139,80 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
         input = inputElm;
     }
 
+    const ModeIconSwitchHint = !contextMode ? BracesIcon : TextIcon;
+    const ModeIconHint = contextMode ? BracesIcon : TextIcon;
+    const modeTooltipContent = contextMode? <Span>Search for results using your text and <i>all other</i> filled fields + ids as hints/restrictions.</Span> : <Span>Search for results using <i>only</i> the text you provide.</Span>;
+    const modeIconElm = <Box padding="0.5" rounded="md" backgroundColor="bg.emphasized"><ModeIconSwitchHint/></Box>
+    // capture + stopPropagation so the combobox's own item click never runs, it would select this item and close the popup
+    const switchModeItem = (
+        <Combobox.Item key="switch-mode" item="switch-mode" onClickCapture={(e) => 
+            {
+                e.stopPropagation();
+                searched.current = true;
+                setModeSwitched(true);
+                setContextMode(!contextMode);
+                // a pending typed search would run after this one with the old mode
+                typedQuery.cancel();
+                runQuery(inputValue, !contextMode);
+            }}>
+            <HStack>Switch to {contextMode ? 'text-only' : 'context'} {modeIconElm} search mode {isBusy ? <Spinner size="xs" borderWidth="1px" /> : undefined}</HStack>
+        </Combobox.Item>);
+
+    let plainInputSwitch: React.JSX.Element | undefined = undefined;
+    if(onInputSwitch !== undefined) {
+        plainInputSwitch = <Tooltip content="Click to switch to plain text input mode."><SearchButton variant="ghost" onClick={() => onInputSwitch()}/></Tooltip>
+    }
+
     return (
         <Flex flexGrow="1">
             <MSErrorBoundary>
                 <Combobox.Root
-                defaultInputValue={initialInput === '' ? undefined : initialInput}
-                    allowCustomValue
-                    onKeyDown={(e) => {
-                        // combobox prevents default when Enter selects a highlighted item
-                        if (e.key === 'Enter' && !e.defaultPrevented) {
-                            commitFreetext();
+                openOnClick
+                onOpenChange={(e) => {
+                    setOpen(e.open);
+                    if (e.open && !searched.current && initialInput !== '') {
+                        searched.current = true;
+                        runQuery(initialInput, contextMode);
+                    }
+                }}
+                inputBehavior="autohighlight"
+                inputValue={inputValue}
+                    onBlur={(e) => {
+                        // focus moving to the triggers in the control is not leaving
+                        if (!e.currentTarget.contains(e.relatedTarget)) {
+                            revertInput();
                         }
                     }}
                     collection={collection}
-                    onInteractOutside={commitFreetext}
                     onValueChange={(val) => {
                         console.log(val, 'value change');
-                        onChange(val.items[0]);
-                        rawInput.current = undefined;
+                        // empty when the selection is cleared
+                        if (val.items[0] !== undefined) {
+                            onChange(val.items[0]);
+                        }
                     }}
                     onSelect={(val) => {
                         console.log(val, 'select')
                     }}
                     onInputValueChange={(e) => {
-                        onQueryChange(e.inputValue);
-                        // selecting an item rewrites the input, this is not freetext
-                        if (e.reason !== 'item-select') {
-                            rawInput.current = e.inputValue;
+                        // closing without a selection (outside click, escape) makes the combobox blank the input
+                        if (e.reason !== 'input-change' && e.reason !== 'item-select' && e.reason !== 'clear-trigger') {
+                            revertInput();
+                            return;
                         }
+                        setInputValue(e.inputValue);
+                        setModeSwitched(false);
+                        searched.current = true;
+                        typedQuery.maybeExecute(e.inputValue, contextMode);
                     }}
                 >
                     <Combobox.Control>
                         {input}
                         <Combobox.IndicatorGroup>
+                            {hasSearched && !isBusy ? <TextMuted textStyle="xs" hideBelow="sm">{collection.size} Matches</TextMuted> : undefined}
+                            {!open && isBusy ? <Spinner size="xs" borderWidth="1px" /> : undefined}
+                            {plainInputSwitch}
+                            <Tooltip content={modeTooltipContent}><ModeIconHint/></Tooltip>
                             <Combobox.ClearTrigger />
                             <Combobox.Trigger />
                         </Combobox.IndicatorGroup>
@@ -145,7 +220,8 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                     <Portal>
                         <Combobox.Positioner>
                             <Combobox.Content>
-                                {isLoading ? (
+                                {!isLoading || modeSwitched ? switchModeItem : undefined}
+                                {isLoading ? modeSwitched ? undefined : (
                                     <HStack p="2">
                                         <Spinner size="xs" borderWidth="1px" />
                                         <Span>Loading...</Span>
@@ -156,17 +232,18 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                                     </Span>
                                 ) : (
                                     <Combobox.Context>
-                                        {(combobox) => collection.items?.map((item) => (
-                                            <Combobox.Item key={item.id} item={item.id}>
+                                        {(combobox) => {
+                                            return collection.items?.map((item) => (
+                                            <Combobox.Item key={item.id} item={item.id} marginY={{smDown: '1.5'}}>
                                                 {renderItem(item, (val) => {
                                                     onChange(val);
-                                                    rawInput.current = undefined;
                                                     combobox.setInputValue(collection.stringifyItem(val) ?? '', 'item-select');
                                                     combobox.setOpen(false);
                                                 })}
                                                 <Combobox.ItemIndicator />
                                             </Combobox.Item>
                                         ))}
+                                        }
                                     </Combobox.Context>
                                 )}
                                 <Combobox.Empty>No items found</Combobox.Empty>

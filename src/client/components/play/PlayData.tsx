@@ -39,6 +39,7 @@ export interface PlayInfoProps {
     dates?: false | 'all' | 'played' | 'seen'
     editable?: boolean
     onEditClick?: () => void
+    codeContent?: React.JSX.Element
 }
 
 const primaryActionProps: ComponentProps<typeof EllipsisButton> = {
@@ -49,8 +50,6 @@ const primaryActionProps: ComponentProps<typeof EllipsisButton> = {
 
 const menuItem = (Icon: IconType, value: string, name?: string) => (props: Pick<MenuItemProps, 'disabled'> = {}) => (<Menu.Item key={value} value={value} {...props}><Icon /><Box flex="1">{name ?? capitalize(value)}</Box></Menu.Item>)
 
-const MenuMbidShow = menuItem(EyeIcon, 'mbidShow', 'Show IDs');
-const MenuMbidHide = menuItem(EyeClosedIcon, 'mbidHide', 'Hide IDs');
 const MenuTextMode = menuItem(LuText, 'code', 'Show Text');
 const MenuCodeMode = menuItem(LuCode, 'code', 'Show Code');
 
@@ -58,6 +57,7 @@ export const PlayData = (props?: PlayInfoProps) => {
     const {
         play,
         final,
+        codeContent,
         showCodeToggle = true,
         showCompare = true,
         compareDefault = 'Initial',
@@ -68,17 +68,12 @@ export const PlayData = (props?: PlayInfoProps) => {
 
 
     const [codeMode, setCodeMode] = useState(false);
-    const [showMbid, setShowMBid] = useState(false);
 
     const menuCb = useCallback((select: MenuSelectionDetails) => {
-        if (select.value === 'mbidShow') {
-            setShowMBid(true);
-        } else if (select.value === 'mbidHide') {
-            setShowMBid(false);
-        } else if(select.value === 'code') {
+        if(select.value === 'code') {
             setCodeMode((old) => !old);
         }
-    }, [setShowMBid, setCodeMode])
+    }, [setCodeMode])
 
     if (play === undefined) {
         return <EmptyPlayData />
@@ -88,7 +83,6 @@ export const PlayData = (props?: PlayInfoProps) => {
     const comparable = showCompare && final !== undefined;
 
     const menuItems: React.JSX.Element[] = [
-        showMbid ? <MenuMbidHide /> : <MenuMbidShow />
     ];
 
     if(editable && onEditClick !== undefined) {
@@ -111,7 +105,7 @@ export const PlayData = (props?: PlayInfoProps) => {
     let content: React.JSX.Element;
 
     if (!comparable) {
-        content = codeMode ? <ChakraCodeBlock code={play} /> : <PlayDataDataList play={play} dates={dates} showMbid={showMbid} />;
+        content = codeMode ? (codeContent ?? <ChakraCodeBlock code={play} />) : <PlayDataDataList play={play} dates={dates}/>;
     } else {
         content = (
             <Tabs.Root size="sm" variant="outline" defaultValue={compareDefault}>
@@ -120,10 +114,10 @@ export const PlayData = (props?: PlayInfoProps) => {
                     <Tabs.Trigger value="Final">Final</Tabs.Trigger>
                 </Tabs.List>
                 <Tabs.Content value="Initial">
-                    {codeMode ? <ChakraCodeBlock code={play} /> : <PlayDataDataList play={play} dates={dates} showMbid={showMbid} />}
+                    {codeMode ? (codeContent ?? <ChakraCodeBlock code={play} />) : <PlayDataDataList play={play} dates={dates} />}
                 </Tabs.Content>
                 <Tabs.Content value="Final">
-                    {codeMode ? <ChakraCodeBlock code={final} /> : <PlayDataDataList play={final} dates={dates} showMbid={showMbid} />}
+                    {codeMode ? (codeContent ?? <ChakraCodeBlock code={final} />) : <PlayDataDataList play={final} dates={dates} />}
                 </Tabs.Content>
             </Tabs.Root>
         )

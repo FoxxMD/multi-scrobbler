@@ -31,7 +31,14 @@ import {
     LuClipboardPaste,
     LuClipboardCopy,
     LuTimerReset,
-    LuPencil
+    LuPencil,
+    LuBraces,
+    LuText,
+    LuCode,
+    LuPlus,
+    LuSearch,
+    LuTextCursor,
+    LuCaseUpper
 } from "react-icons/lu"
 import { VscDebugRestart } from 'react-icons/vsc';
 import { HiMiniStop } from "react-icons/hi2";
@@ -40,7 +47,7 @@ import { MdOutlineFiberNew } from "react-icons/md";
 import { RiZzzFill } from "react-icons/ri";
 import { SiGoogledocs } from "react-icons/si";
 import type { Clipboard, IconProps} from "@chakra-ui/react";
-import { IconButton, useClipboard, Spinner, Icon, StackSeparator, HStack } from "@chakra-ui/react"
+import { IconButton, useClipboard, Spinner, Icon, StackSeparator, HStack, Badge } from "@chakra-ui/react"
 import type {ComponentProps, PropsWithChildren, ReactNode} from 'react';
 import type {IconBaseProps, IconType} from "react-icons/lib";
 
@@ -158,6 +165,7 @@ export const IdleIcon = (props: {animated?: boolean} & ComponentProps<typeof RiZ
 };
 
 export const EllipsisIcon = LuEllipsis;
+export const EllipsisChakraIcon = makeChakraIcon(LuEllipsis);
 export const EllipsisButton = makeIconButton(EllipsisIcon);
 export const EllipsisVerticalIcon = LuEllipsisVertical;
 export const EllipsisVerticalButton = makeIconButton(EllipsisVerticalIcon);
@@ -265,7 +273,14 @@ export const getMusicServiceIconElement = (service?: string): ReactNode => {
 
 export const getMusicServiceChakraIcon = (service: string) => {
     const ServiceIcon = getMusicServiceIcon(service);
-    return (props: IconProps = {}) => <Icon {...props}><ServiceIcon/></Icon>;
+    return (props: IconProps = {}) => {
+        if (service === 'isrc') {
+            return <Badge marginX="0" colorPalette="purple"
+                // @ts-expect-error its fine
+                size={props.size ?? 'xs'} variant="subtle">ISRC</Badge>;
+        }
+        return <Icon {...props}><ServiceIcon /></Icon>
+    };
 }
 
 export const MusicServiceIcons = (props: {
@@ -311,4 +326,32 @@ export const ResetButton = makeIconButton(LuTimerReset);
 
 export const EditIconRaw = LuPencil;
 export const EditIcon = makeChakraIcon(LuPencil);
-export const EditButton = makeIconButton(LuPencil);
+export const EditButton = makeChakraIconButton(LuPencil);
+
+export const BracesIconRaw = LuBraces;
+export const BracesIcon = makeChakraIcon(LuBraces);
+export const BracesButton = makeIconButton(LuBraces);
+
+export const TextIconRaw = LuText;
+export const TextIcon = makeChakraIcon(LuText);
+export const TextButton = makeIconButton(LuText);
+
+export const CodeIconRaw = LuCode;
+export const CodeIcon = makeChakraIcon(LuCode);
+export const CodeButton = makeIconButton(LuCode);
+
+export const PlusIconRaw = LuPlus;
+export const PlusIcon = makeChakraIcon(LuPlus);
+export const PlusButton = makeIconButton(LuPlus);
+
+export const SearchIconRaw = LuSearch;
+export const SearchIcon = makeChakraIcon(LuSearch);
+export const SearchButton = makeIconButton(LuSearch);
+
+export const CursorIconRaw = LuTextCursor;
+export const CursorIcon = makeChakraIcon(LuTextCursor);
+export const CursorButton = makeIconButton(LuTextCursor);
+
+export const LettersIconRaw = LuCaseUpper;
+export const LettersIcon = makeChakraIcon(LuCaseUpper);
+export const LettersButton = makeIconButton(LuCaseUpper);

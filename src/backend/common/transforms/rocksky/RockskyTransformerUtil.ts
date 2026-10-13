@@ -1,6 +1,5 @@
-import * as z from "zod";
 import { MaybeLogger } from "../../MaybeLogger.ts";
-import type { RockskyTransformerConfig, RockskyTransformerData } from "../../vendor/rocksky/interfaces.ts";
+import type { RockskyTransformerConfig, RockskyTransformerData, SearchType } from "../../vendor/rocksky/interfaces.ts";
 import { DEFAULT_TRANSFORMER_ENV_NAME } from "../../../../core/Transform.ts";
 
 export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
@@ -73,5 +72,3 @@ export const PRESETS: Record<string, RockskyTransformerData> = {
     native: DEFAULTS_NATIVE,
     'id': DEFAULTS_ID
 };
-export const searchType = z.enum(['basic', 'basicorids', 'mbid', 'isrc', 'artist']);export type SearchType = z.infer<typeof searchType>;
-

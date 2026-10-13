@@ -1,9 +1,8 @@
 import { Fragment } from 'react';
-import type { Credit as AC } from '../../core/Atomic';
+import type { Credit as AC, MusicServicesAny } from '../../core/Atomic';
 
 import { HStack, Tag } from "@chakra-ui/react";
 import { MusicServiceIndicators } from './musicServices/MusicServiceIndicators';
-import type { MusicServicesAny } from '../../core/MusicMetadata';
 
 export const Credit = (props: { data: AC, showLinks?: boolean, showMbid?: boolean }) => {
 

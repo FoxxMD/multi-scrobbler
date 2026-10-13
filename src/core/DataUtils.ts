@@ -50,7 +50,13 @@ export const diffObjectsConsoleOutput = (a: object, b: object, showUnchanged: bo
 
 export const formatNumber = (val: number | string, options?: numberFormatOptions) => {
     const {
-        toFixed = 2, defaultVal = null, prefix = '', suffix = '', round,
+        toFixed = 2,
+        defaultVal = null,
+        prefix = '',
+        suffix = '',
+        round,
+        minimumFractionDigits = toFixed,
+        maximumFractionDigits = toFixed
     } = options || {};
     let parsedVal = typeof val === 'number' ? val : Number.parseFloat(val);
     if (Number.isNaN(parsedVal)) {
@@ -77,8 +83,8 @@ export const formatNumber = (val: number | string, options?: numberFormatOptions
         }
     }
     const localeString = parsedVal.toLocaleString(undefined, {
-        minimumFractionDigits: toFixed,
-        maximumFractionDigits: toFixed,
+        minimumFractionDigits,
+        maximumFractionDigits,
     });
     return `${prefixStr}${localeString}${suffix}`;
 };
@@ -175,3 +181,17 @@ export const pick = <T extends {}, K extends keyof T>(obj: T, ...keys: K[]) => (
     .map(key => [key, obj[key]])
   ) as Pick<T, K>
 );
+export const intersect = (a: Array<any>, b: Array<any>) => {
+    const setA = new Set(a);
+    const setB = new Set(b);
+    const intersection = new Set([...setA].filter(x => setB.has(x)));
+    return Array.from(intersection);
+};/** Return an array of elements from array a (first arg) that are not in array b (second arg) */
+
+export const difference = (a: Array<any>, b: Array<any>) => {
+    const setA = new Set(a);
+    const setB = new Set(b);
+    const diff = new Set([...setA].filter(x => !setB.has(x)));
+    return Array.from(diff);
+};
+

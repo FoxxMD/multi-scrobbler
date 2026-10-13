@@ -4,7 +4,7 @@ import asPromised from 'chai-as-promised';
 import { describe, it } from 'mocha';
 import AbstractComponent, { type AbstractComponentConfig } from "../../common/AbstractComponent.ts";
 
-import { type ConditionalSearchAndReplaceRegExp, type StageTypeMetadata, TRANSFORM_HOOK } from "../../../core/Transform.ts";
+import { type ConditionalSearchAndReplaceRegExp, DEFAULT_TRANSFORMER_NAME, type MetadataProviderStageType, type StageTypeMetadata, TRANSFORM_HOOK } from "../../../core/Transform.ts";
 
 import { isConditionalSearchAndReplace } from "../../utils/PlayTransformUtils.ts";
 import { generateArtistsStr, generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
@@ -15,17 +15,37 @@ import { initMemoryCache } from "../../common/Cache.ts";
 import { Cacheable } from "cacheable";
 import type {PlayMatchResult, PlayObject, QueueContext, TransformerCommon, TransformerCommonConfig} from "../../../core/Atomic.ts";
 import TransformerManager from "../../common/transforms/TransformerManager.ts";
+import type AbstractTransformer from "../../common/transforms/AbstractTransformer.ts";
 import { transientCache } from "../utils/TransientTestUtils.ts";
 import dayjs from "dayjs";
 import clone from "clone";
 import { nameToCredit, creditsToNames, namesToCredits, mbMeta, creditMbid } from "../../../core/MusicMetadata.ts";
 import UserTransformer from "../../common/transforms/UserTransformer.ts";
 import { SkipTransformStageError } from "../../common/errors/MSErrors.ts";
-import { COMPONENT_STATE, type ComponentState } from "../../../core/Api.ts";
+import { COMPONENT_STATE, type ComponentState, type TrackSearchResult } from "../../../core/Api.ts";
 import type { PlayWith, PlaySelectWithQueueStates } from "../../common/database/drizzle/drizzleTypes.ts";
 import type { PlayProcessingResult } from "../../common/infrastructure/PlayProcessing.ts";
 
 chai.use(asPromised);
+
+class TestTransformerManager extends TransformerManager {
+    public hanging: string[] = [];
+    public setPreferredProviders(preferred: TransformerManager['transformMetadataPreferredProviders']) {
+        this.transformMetadataPreferredProviders = preferred;
+    }
+    public getProviders() {
+        return this.transformMetadataProviders;
+    }
+    public initProviders() {
+        return this.initMetadataProviders();
+    }
+    protected async initTransformer(transformer: AbstractTransformer): Promise<AbstractTransformer> {
+        if(this.hanging.includes(transformer.name)) {
+            return new Promise(() => {});
+        }
+        return super.initTransformer(transformer);
+    }
+}
 
 const componentId = () => `test-${Date.now()}`; 
 class TestComponent extends AbstractComponent {
@@ -944,6 +964,113 @@ describe('Play Transforms', function () {
             expect(multiTransformComponent.transformRules.preCompare).to.exist;
             expect(multiTransformComponent.transformRules.preCompare![0].name).eq('MYFOOCONFIG')
             expect(multiTransformComponent.transformRules.preCompare![1].name).eq('mybarconfig')
+        });
+
+        it('Registers metadata providers without any stage usage', async function() {
+            const tmanager = new TestTransformerManager(loggerTest, transientCache());
+            expect(tmanager.hasTransformerType('musicbrainz')).is.false;
+
+            await tmanager.initProviders();
+
+            expect(tmanager.getProviders()).to.have.all.keys('musicbrainz', 'rocksky');
+            expect(tmanager.getTransformerType('musicbrainz')?.get('msdefault')?.isReady()).is.true;
+            expect(tmanager.getTransformerType('rocksky')?.get('msdefault')?.isReady()).is.true;
+        });
+
+        it('Registers only preferred metadata providers', async function() {
+            const tmanager = new TestTransformerManager(loggerTest, transientCache());
+            tmanager.setPreferredProviders({musicbrainz: true});
+
+            await tmanager.initProviders();
+
+            expect(tmanager.getProviders()).to.have.all.keys('musicbrainz');
+            expect(tmanager.hasTransformerType('rocksky')).is.false;
+        });
+
+        it('Registers a transformer once when requested concurrently', async function() {
+            const tmanager = new TransformerManager(loggerTest, transientCache());
+            const [a, b] = await Promise.all([
+                tmanager.getTransformerByStage({type: 'user'}),
+                tmanager.getTransformerByStage({type: 'user'})
+            ]);
+            expect(a).eq(b);
+            expect(a.isReady()).is.true;
+        });
+
+        it('Does not wait on other transformers initializing', async function() {
+            const tmanager = new TestTransformerManager(loggerTest, transientCache());
+            tmanager.addTransformerConfig({type: 'user', name: 'slow'});
+            tmanager.addTransformerConfig({type: 'user', name: 'fast'});
+            tmanager.hanging.push('slow');
+
+            void tmanager.getTransformerByStage({type: 'user', name: 'slow'});
+            const fast = await tmanager.getTransformerByStage({type: 'user', name: 'fast'});
+
+            expect(fast.name).eq('fast');
+            expect(fast.isReady()).is.true;
+        });
+
+        it('Uses highest priority config for unnamed stage regardless of what is registered', async function() {
+            const tmanager = new TransformerManager(loggerTest, transientCache());
+            tmanager.addTransformerConfig({type: 'user', name: 'mine'});
+
+            const def = await tmanager.getTransformerByStage({type: 'user', name: DEFAULT_TRANSFORMER_NAME});
+            expect(def.name).eq(DEFAULT_TRANSFORMER_NAME);
+
+            const unnamed = await tmanager.getTransformerByStage({type: 'user'});
+            expect(unnamed.name).eq('mine');
+        });
+    });
+
+    describe('Metadata Provider Search', function() {
+
+        const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+        /** Skips real provider registration so searches run against the given fakes */
+        class FakeProviderManager extends TransformerManager {
+            constructor(providers: Record<string, () => Promise<TrackSearchResult[] | false>>) {
+                super(loggerTest, transientCache());
+                this.metadataInit = Promise.resolve();
+                for(const [type, getTrackResults] of Object.entries(providers)) {
+                    this.transformMetadataProviders[type as MetadataProviderStageType] = type;
+                    this.transformers.set(type, new Map([[type, {isReady: () => true, getTrackResults} as unknown as AbstractTransformer]]));
+                }
+            }
+        }
+
+        const result = (service: string, score: number): TrackSearchResult => ({id: `${service}-${score}`, service, score, track: {name: 'Track'}});
+
+        const buildManager = () => new FakeProviderManager({
+            musicbrainz: async () => { await sleep(40); return [result('musicbrainz', 90), result('musicbrainz', 10)]; },
+            spotify: async () => { await sleep(5); return [result('spotify', 50)]; },
+            rocksky: async () => { await sleep(20); throw new Error('rocksky is down'); },
+        });
+
+        it('Streams each provider as soon as it settles', async function() {
+            const lines = [];
+            for await (const line of buildManager().streamTrackResults({track: {name: 'Track'}})) {
+                lines.push(line);
+            }
+            expect(lines.map(x => x.service)).eql(['spotify', 'rocksky', 'musicbrainz']);
+            expect(lines.map(x => x.type)).eql(['result', 'error', 'result']);
+            const errorLine = lines[1];
+            expect(errorLine.type === 'error' && errorLine.error.message).eq('rocksky is down');
+            // survives being written to a response, a raw Error would become {}
+            expect(JSON.parse(JSON.stringify(errorLine)).error.message).eq('rocksky is down');
+        });
+
+        it('Reports a provider that is not ready as an error', async function() {
+            const tmanager = new FakeProviderManager({spotify: async () => false});
+            const res = await tmanager.getTrackResults({track: {name: 'Track'}});
+            expect(res.data).eql([]);
+            expect(res.errors).eql([{service: 'spotify', error: {message: 'Not Ready'}}]);
+        });
+
+        it('Aggregates all providers sorted by score with errors', async function() {
+            const res = await buildManager().getTrackResults({track: {name: 'Track'}});
+            expect(res.data.map(x => x.score)).eql([90, 50, 10]);
+            expect(res.errors.map(x => x.service)).eql(['rocksky']);
+            expect(res.errors[0].error.message).eq('rocksky is down');
         });
     });
 

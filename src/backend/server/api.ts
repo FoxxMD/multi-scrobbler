@@ -1,5 +1,5 @@
 import {loggerTest, type LogDataPretty, type Logger, type LogLevel} from "@foxxmd/logging";
-import type {Express} from 'express';
+import type {Express, Request, Response} from 'express';
 import bsseDef from 'better-sse';
 import bodyParser from "body-parser";
 import { FixedSizeList } from 'fixed-size-list';
@@ -9,6 +9,12 @@ import {
     type LogOutputConfig,
     queueContextSchema,
     logLevelStandaloneSchema,
+    trackSearchToMusicService,
+    albumSearchToMusicService,
+    artistSearchToMusicService,
+    playEditStrictCreateSchema,
+    type PlayObject,
+    type MusicServicesBase,
 } from "../../core/Atomic.ts";
 import type {LeveledLogData} from "../common/infrastructure/Atomic.ts";
 import { getRoot } from "../ioc.ts";
@@ -27,10 +33,9 @@ import { findAuthIssue, SimpleError } from "../common/errors/MSErrors.ts";
 import { DrizzlePlayRepository, type QueryPlaysOpts, type QueryPlaysOptsJson } from "../common/database/drizzle/repositories/PlayRepository.ts";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.ts";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
-import {componentStateBodySchema, playStateBodySchema, type ComponentClientApiJson, type ComponentSourceApiJson} from "../../core/Api.ts";
+import {componentStateBodySchema, playStateBodySchema, type ComponentClientApiJson, type ComponentSourceApiJson, asSerializablePlaySelect, trackDataCreditBaseSchema, type TrackDataCreditBase, NDJSON_MEDIA_TYPE, trackSearchSimpleRequestQuerySchema, albumSearchSimpleRequestQuerySchema, artistSearchSimpleRequestQuerySchema } from "../../core/Api.ts";
 import { asDayjsHydratedObject } from "../../core/DataUtils.ts";
 import type {Dayjs} from "dayjs";
-import { asSerializablePlaySelect } from "../../core/PlayMarshalUtils.ts";
 import { serializeError } from "serialize-error";
 import { z } from 'zod';
 import type { createTypedRouter, TypedMiddleware } from "@minisylar/express-typed-router";
@@ -38,6 +43,8 @@ import { hasMetricRepositories, registerMetrics, setMetricRepositories } from ".
 import pMap from "p-map";
 import type { PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
 import { stripIndents } from "common-tags";
+import { nameToCredit } from "../../core/MusicMetadata.ts";
+import { asPlayCheap } from "../../core/PlayMarshalUtils.ts";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -479,6 +486,26 @@ Note: this is only supported by some components.`
         return res.sendStatus(200);
     });
 
+    router.put('/api/components/:id/plays/:uid/play', {
+        middleware: [componentAwareMiddle,jsonParser],
+        tags: ['Plays'],
+        summary: 'Update Play',
+        bodySchema: playEditStrictCreateSchema
+    }, async (req, res, next) => {
+        const {
+            component,
+            params: {
+                uid: playUid
+            },
+            body
+        } = req;
+
+        const play: PlayObject = asPlayCheap(body);
+
+        const playRes = await component.updatePlay(playUid as string, play.data);
+        return res.json(asSerializablePlaySelect(playRes));
+    });
+
     router.post('/api/components/:id/plays/queue', {
         middleware: [componentAwareMiddle,jsonParser],
         bodySchema: z.object({
@@ -638,61 +665,141 @@ Note: this is only supported by some components.`
         }
     });
 
+    const streamDescription = `Send the header \`Accept: ${NDJSON_MEDIA_TYPE}\` to get results as newline-delimited JSON, one line per provider as soon as it finishes: \`{"type":"result","service":"...","data":[...]}\` or \`{"type":"error","service":"...","error":{...}}\`, followed by a final \`{"type":"done"}\` line.`;
+
+    /** Responds with plain JSON once all providers finish or, if the client asks for NDJSON, with a line per provider as each one finishes */
+    const sendSearchResults = async (req: Pick<Request, 'accepts'>, res: Response, kind: 'Track' | 'Album' | 'Artist', query: TrackDataCreditBase | MusicServicesBase) => {
+        const tm = root.items.transformerManager;
+        if(req.accepts(['json', NDJSON_MEDIA_TYPE]) !== NDJSON_MEDIA_TYPE) {
+            return res.json(await tm[`get${kind}Results`](query));
+        }
+        res.set({
+            'Content-Type': NDJSON_MEDIA_TYPE,
+            'Cache-Control': 'no-cache, no-transform',
+            // nginx buffers proxied responses unless told not to
+            'X-Accel-Buffering': 'no'
+        });
+        res.flushHeaders();
+        try {
+            for await (const line of tm[`stream${kind}Results`](query)) {
+                if(res.destroyed) {
+                    // client went away
+                    return;
+                }
+                res.write(`${JSON.stringify(line)}\n`);
+            }
+            res.write(`${JSON.stringify({type: 'done'})}\n`);
+        } catch (e) {
+            // headers are already sent so the missing 'done' line is what tells the client this failed
+            logger.error(new Error(`Metadata search stream failed`, {cause: e}));
+        }
+        return res.end();
+    }
+
     router.get('/api/metadata/search/tracks', {
-        tags: ['Metdata'],
+        tags: ['Metadata'],
         summary: 'Get Track Metadata from Providers',
-        querySchema: z.object({
-            q: z.string().meta({
-            description: `the track name to search for`
-        })}),
-        description: 'Gets track results from all metadata providers'
+        querySchema: trackSearchSimpleRequestQuerySchema,
+        description: `Gets track results from all metadata providers. ${streamDescription}`
     }, async (req, res, next) => {
         const {
             query: {
-                q
+                track,
+                artists = [],
+                album
             }
         } = req;
 
-        const results = await root.items.transformerManager.getTrackResults(q);
-        return res.json(results);
+        const musicServiceMeta = trackSearchToMusicService(track);
+        if(musicServiceMeta !== undefined) {
+            return sendSearchResults(req, res, 'Track', musicServiceMeta);
+        }
+        return sendSearchResults(req, res, 'Track', {
+            track: nameToCredit(track),
+            artists: artists.length === 0 ? undefined : artists.map((x) => nameToCredit(x)),
+            album: nameToCredit(album)
+        });
+    });
+    router.post('/api/metadata/search/tracks', {
+        tags: ['Metadata'],
+        middleware: [jsonParser],
+        summary: 'Get Track Metadata from Providers (Advanced)',
+        bodySchema: trackDataCreditBaseSchema.required({track: true}),
+        description: `Gets track results from all metadata providers using Credits with metadata. ${streamDescription}`
+    }, async (req, res, next) => {
+        const {
+            body
+        } = req;
+        return sendSearchResults(req, res, 'Track', body);
     });
 
     router.get('/api/metadata/search/albums', {
-        tags: ['Metdata'],
+        tags: ['Metadata'],
         summary: 'Get Album Metadata from Providers',
-        querySchema: z.object({
-            q: z.string().meta({
-            description: `the album name to search for`
-        })}),
-        description: 'Gets album results from all metadata providers'
+        querySchema: albumSearchSimpleRequestQuerySchema,
+        description: `Gets album results from all metadata providers. ${streamDescription}`
     }, async (req, res, next) => {
         const {
             query: {
-                q
+                album,
+                artists = []
             }
         } = req;
 
-        const results = await root.items.transformerManager.getAlbumResults(q);
-        return res.json(results);
+        const musicServiceMeta = albumSearchToMusicService(album);
+        if(musicServiceMeta !== undefined) {
+            return sendSearchResults(req, res, 'Album', musicServiceMeta);
+        }
+        return sendSearchResults(req, res, 'Album', {
+            artists: artists.length === 0 ? undefined : artists.map((x) => nameToCredit(x)),
+            album: nameToCredit(album)
+        });
+    });
+    router.post('/api/metadata/search/albums', {
+        tags: ['Metadata'],
+        middleware: [jsonParser],
+        summary: 'Get Album Metadata from Providers (Advanced)',
+        bodySchema: trackDataCreditBaseSchema.required({album: true}).omit({track: true}),
+        description: `Gets album results from all metadata providers using Credits with metadata. ${streamDescription}`
+    }, async (req, res, next) => {
+        const {
+            body
+        } = req;
+        return sendSearchResults(req, res, 'Album', body);
     });
 
     router.get('/api/metadata/search/artists', {
-        tags: ['Metdata'],
+        tags: ['Metadata'],
         summary: 'Get Artist Metadata from Providers',
-        querySchema: z.object({
-            q: z.string().meta({
-            description: `the artist name to search for`
-        })}),
-        description: 'Gets artist results from all metadata providers'
+        querySchema: artistSearchSimpleRequestQuerySchema,
+        description: `Gets artist results from all metadata providers. ${streamDescription}`
     }, async (req, res, next) => {
         const {
             query: {
-                q
+                artist
             }
         } = req;
 
-        const results = await root.items.transformerManager.getArtistResults(q);
-        return res.json(results);
+        const musicServiceMeta = artistSearchToMusicService(artist);
+        if(musicServiceMeta !== undefined) {
+            return sendSearchResults(req, res, 'Artist', musicServiceMeta);
+        }
+
+        return sendSearchResults(req, res, 'Artist', {
+            artists: [nameToCredit(artist)],
+        });
+    });
+    router.post('/api/metadata/search/artists', {
+        tags: ['Metadata'],
+        middleware: [jsonParser],
+        summary: 'Get Artist Metadata from Providers (Advanced)',
+        bodySchema: trackDataCreditBaseSchema.required({artists: true}).omit({track: true, album: true}),
+        description: `Gets artist results from all metadata providers using Credits with metadata. ${streamDescription}`
+    }, async (req, res, next) => {
+        const {
+            body
+        } = req;
+        return sendSearchResults(req, res, 'Artist', body);
     });
 
     router.get('/health', {hidden: true}, async (req, res) => res.redirect(307, `/api/${req.url.slice(1)}`));

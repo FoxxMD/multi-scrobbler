@@ -25,6 +25,8 @@ export const STAGE_TYPES_METADATA: StageTypeMetadata[] = ['musicbrainz','native'
 export const STAGE_TYPES: StageType[] = [...STAGE_TYPES_METADATA, ...STAGE_TYPES_USER];
 export const META_PROVIDER_STAGE_TYPES = z.enum(['musicbrainz','rocksky','spotify']);
 export type MetadataProviderStageType = z.infer<typeof META_PROVIDER_STAGE_TYPES>;
+export const metadataPreferredProviderSchema = z.partialRecord(META_PROVIDER_STAGE_TYPES, z.union([z.string(), z.literal(true)])).meta({title: 'Metadata Preferred Providers'});
+export type MetadataPreferredProviders = z.infer<typeof metadataPreferredProviderSchema>;
 
 export interface StageTyped {
     type: StageType

@@ -1,15 +1,12 @@
 import { createQueryKeys, mergeQueryKeys } from "@lukemorales/query-key-factory";
-import { useQueryClient, hashKey, QueryObserver } from '@tanstack/react-query'
+import { useQueryClient, hashKey, QueryObserver, experimental_streamedQuery as streamedQuery } from '@tanstack/react-query'
 import { useEffect, useState, useMemo } from 'react';
-import ky from 'ky';
+import ky, { type Options } from 'ky';
 import qs from 'qs';
 import { baseUrl } from "../utils";
-import type {AlbumSearchResultResponse, ArtistSearchResultResponse, ComponentsApiJson, PaginatedResponse, PlayApiCommonDetailed, PlayStateUI, QueryPlaysOptsJson, TrackSearchResultResponse} from "../../core/Api";
+import {type AlbumSearchResult, type ArtistSearchResult, type TrackSearchResult, type MetadataSearchStreamLine, type MetadataSearchError, type MetadataResultServiceScore, NDJSON_MEDIA_TYPE, type ComponentsApiJson, type PaginatedResponse, type PlayApiCommonDetailed, type QueryPlaysOptsJson, type QueryPlaysOptsJsonRefreshable, type TrackDataCreditBase, type ArtistSearchSimpleRequestQuery, artistSearchSimpleRequestQuerySchema, trackDataCreditBaseSchema, type TrackSearchSimpleRequestQuery, trackSearchSimpleRequestQuerySchema, type AlbumSearchSimpleRequestQuery, albumSearchSimpleRequestQuerySchema } from "../../core/Api";
 import { type SourcePlayerJson } from "../../core/Atomic";
 import { queryPlayOptsRefreshableToJson } from "../utils/ComponentUtils";
-
-export type QueryPlaysOptsJsonRefreshable = Omit<QueryPlaysOptsJson, 'state'> & {nonce?: string, state?: PlayStateUI[]};
-
 const components = createQueryKeys('components', {
     list: () => ({
         queryKey: ['components'],
@@ -74,33 +71,78 @@ const logs = createQueryKeys('logs', {
   })
 })
 
+/** Reads a streamed metadata search response one line at a time. Throws if the stream ends before the server says it is done. */
+async function* searchStreamLines<T>(response: Response): AsyncGenerator<MetadataSearchStreamLine<T>> {
+  // read with a reader: not every browser can iterate a ReadableStream directly
+  if (response.body === null) {
+    throw new Error('Search response has no body');
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    // the last piece is an incomplete line until more data arrives
+    buffer = lines.pop() ?? '';
+    for (const text of lines) {
+      if (text.trim() === '') {
+        continue;
+      }
+      const line = JSON.parse(text) as MetadataSearchStreamLine<T>;
+      if (line.type === 'done') {
+        return;
+      }
+      yield line;
+    }
+  }
+  throw new Error('Search results ended before all providers responded');
+}
+
+type MetadataSearchData<T> = { data: T[], errors: MetadataSearchError[] };
+
+/** Results are added to query data, sorted by score, as each provider responds instead of after all of them have */
+const metadataSearchQueryFn = <T extends MetadataResultServiceScore>(path: string, simpleSchema: { validate: (val: unknown) => boolean }, query: object) => streamedQuery<MetadataSearchStreamLine<T>, MetadataSearchData<T>>({
+  streamFn: async (ctx) => {
+    const opts: Options = { baseUrl, signal: ctx.signal, headers: { Accept: NDJSON_MEDIA_TYPE } };
+    if (simpleSchema.validate(query)) {
+      return searchStreamLines<T>(await ky.get(path, { ...opts, searchParams: qs.stringify(query) }));
+    }
+    if (trackDataCreditBaseSchema.validate(query)) {
+      return searchStreamLines<T>(await ky.post(path, { ...opts, json: query }));
+    }
+    throw new Error('Could not validate input');
+  },
+  // a background refetch swaps in the new results when it finishes instead of emptying a list the user may have open
+  refetchMode: 'replace',
+  initialValue: { data: [], errors: [] },
+  reducer: (acc, line) => {
+    if (line.type === 'result') {
+      return { ...acc, data: acc.data.concat(line.data).sort((a, b) => (b.score ?? 0) - (a.score ?? 0)) };
+    }
+    if (line.type === 'error') {
+      return { ...acc, errors: acc.errors.concat({ service: line.service, error: line.error }) };
+    }
+    return acc;
+  }
+});
+
 const metadata = createQueryKeys('metadata', {
-  artists: (query: string) => ({
+  artists: (query: ArtistSearchSimpleRequestQuery | TrackDataCreditBase) => ({
     queryKey: ['metadata', 'artists', query],
-    queryFn: (ctx) => ky.get(`artists`, {
-      baseUrl,
-      searchParams: {
-        q: query
-      }
-    }).json<ArtistSearchResultResponse>()
+    queryFn: metadataSearchQueryFn<ArtistSearchResult>(`metadata/search/artists`, artistSearchSimpleRequestQuerySchema, query)
   }),
-  track: (query: string) => ({
+  track: (query: TrackSearchSimpleRequestQuery | TrackDataCreditBase) => ({
     queryKey: ['metadata', 'tracks', query],
-    queryFn: (ctx) => ky.get(`tracks`, {
-      baseUrl,
-      searchParams: {
-        q: query
-      }
-    }).json<TrackSearchResultResponse>()
+    queryFn: metadataSearchQueryFn<TrackSearchResult>(`metadata/search/tracks`, trackSearchSimpleRequestQuerySchema, query)
   }),
-  album: (query: string) => ({
+  album: (query: AlbumSearchSimpleRequestQuery | TrackDataCreditBase) => ({
     queryKey: ['metadata', 'albums', query],
-    queryFn: (ctx) => ky.get(`albums`, {
-      baseUrl,
-      searchParams: {
-        q: query
-      }
-    }).json<AlbumSearchResultResponse>()
+    queryFn: metadataSearchQueryFn<AlbumSearchResult>(`metadata/search/albums`, albumSearchSimpleRequestQuerySchema, query)
   })
 });
 
