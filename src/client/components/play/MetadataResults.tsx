@@ -1,7 +1,7 @@
 import { AbsoluteCenter, Avatar, Box, Combobox, HStack, Icon, Menu, Portal, Span, Spinner, Switch, StackSeparator, Text, InputGroup, type ListCollection, Flex } from "@chakra-ui/react"
 import type { MetadataResultBase, MetadataResultImage, MetadataResultServiceScore } from "../../../core/Api"
 import { BracesIcon, getMusicServiceIconElement, LettersButton, SearchButton, TextIcon } from "../icons/ChakraIcons"
-import React, { useRef, useState } from "react"
+import React, { useRef, useState, type ComponentProps } from "react"
 import { useDebouncer } from "@tanstack/react-pacer"
 import { MSErrorBoundary } from "../ErrorBoundary"
 import { EllipsisButtonMenu } from "../buttonMenus/ButtonMenu"
@@ -9,21 +9,28 @@ import { formatNumber } from "../../../core/DataUtils"
 import { TextMuted } from "../TextMuted"
 import { Tooltip } from "../ToggleTip"
 
+const overlayProps: Partial<ComponentProps<typeof HStack>> = {
+    backdropFilter: 'auto',
+    backdropBlur: 'sm',
+    backdropBrightness: '75%',
+    padding: '0.5',
+}
+
 export const LeftSideMetadataResultContent = (props: MetadataResultServiceScore & MetadataResultImage) => {
     if (props.image === undefined) {
         return <MetadataServiceScore {...props} />
     }
     return (
         <ArtworkAvatar
-            overlay={<MetadataServiceScore {...props} />}
+            overlay={<MetadataServiceScore overlay {...props} />}
             {...props} />
     )
 }
 
-export const MetadataServiceScore = (props: MetadataResultServiceScore) => (
-    <HStack gap="1" separator={<StackSeparator />}>
+export const MetadataServiceScore = (props: MetadataResultServiceScore & {overlay?: boolean}) => (
+    <HStack gap="1" {...(props.overlay ? overlayProps : undefined)} separator={<StackSeparator />}>
         <Icon size="sm">{getMusicServiceIconElement(props.service)}</Icon>
-        {props.score !== undefined ? <Text color="fg.subtle" textStyle="sm">{formatNumber(props.score, {minimumFractionDigits: 0, maximumFractionDigits: 1})}</Text> : undefined}
+        {props.score !== undefined ? <Text color={props.overlay ? 'white' : 'fg.muted'} textStyle="sm">{formatNumber(props.score, {minimumFractionDigits: 0, maximumFractionDigits: 1})}</Text> : undefined}
     </HStack>
 )
 
