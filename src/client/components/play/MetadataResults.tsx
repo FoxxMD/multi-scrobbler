@@ -234,7 +234,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                                     <Combobox.Context>
                                         {(combobox) => {
                                             return collection.items?.map((item) => (
-                                            <Combobox.Item key={item.id} item={item.id}>
+                                            <Combobox.Item key={item.id} item={item.id} marginY={{smDown: '1.5'}}>
                                                 {renderItem(item, (val) => {
                                                     onChange(val);
                                                     combobox.setInputValue(collection.stringifyItem(val) ?? '', 'item-select');

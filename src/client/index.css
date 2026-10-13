@@ -118,3 +118,8 @@
 .chakra-select__itemGroup .chakra-select__item {
       padding-inline: var(--chakra-spacing-3)
 }
+
+.chakra-combobox__item:nth-child(odd):not([data-highlighted=""]) {
+      --mix-subtle-background: color-mix(in srgb, var(--chakra-colors-bg-muted) 60%, transparent);
+      background: var(--mix-subtle-background)
+}
