@@ -77,7 +77,7 @@ export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof cr
 
         try {
             for (const source of validSources) {
-                await source.handle(playerStates);
+                await source.handle(playStateFromRequest(req.body as unknown as SubmitPayload, {extractArtists: source.config.options?.extractArtists}));
             }
         } catch (e) {
             const submitListenError = new Error('Unexpected error occurred while processing submit-listens request', {cause: e});

@@ -1,5 +1,6 @@
 import * as z from "zod";
-import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
+import { envMetaNormalize } from "../../../../utils/ZodUtils.ts";
 
 export const listenbrainzEndpointDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -40,12 +41,27 @@ export const listenbrainzEndpointDataSchema = z.object({
     }),
 });
 
+export const listenbrainzEndpointOptionsSchema = z.object({
+    extractArtists: z.boolean().optional().default(true).meta({
+        description: 'Tries to extract and match artists from listen data. Set to `false` to use listen data as-is (will likely lose fidelity!)'
+    }),
+    ...commonSourceOptionsSchema.shape,
+});
+
+export const listenbrainzEndpointSourceConfigSchema = z.object({
+    ...commonSourceConfigSchema.shape,
+    data: listenbrainzEndpointDataSchema.optional(),
+    options: listenbrainzEndpointOptionsSchema.optional()
+});
+
+
 export type ListenbrainzEndpointData = z.infer<typeof listenbrainzEndpointDataSchema>;
 
 const envDataSchema = z.object({
     LZE_SLUG: listenbrainzEndpointDataSchema.shape.slug,
     LZE_TOKEN: listenbrainzEndpointDataSchema.shape.token,
     LZE_USERNAME: listenbrainzEndpointDataSchema.shape.username,
+    LZE_EXTRACT_ARTISTS: z.stringbool().optional().default(true).meta(envMetaNormalize(listenbrainzEndpointOptionsSchema.shape.extractArtists.meta()))
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, ListenbrainzEndpointSourceConfig> = {
@@ -56,14 +72,12 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, ListenbrainzEndpo
                 slug: partial.LZE_SLUG,
                 token: partial.LZE_TOKEN,
                 username: partial.LZE_USERNAME
+            },
+            options: {
+                extractArtists: partial.LZE_EXTRACT_ARTISTS
             }
     })
 };
-
-export const listenbrainzEndpointSourceConfigSchema = z.object({
-    ...commonSourceConfigSchema.shape,
-    data: listenbrainzEndpointDataSchema.optional(),
-});
 
 export type ListenbrainzEndpointSourceConfig = z.infer<typeof listenbrainzEndpointSourceConfigSchema>;
 
