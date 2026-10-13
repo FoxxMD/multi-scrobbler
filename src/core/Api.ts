@@ -295,6 +295,26 @@ export const metadataResultAlbumTypeSchema = z.object({
     albumTypeHint: z.string().optional()
 })
 
+/** An error from a single metadata provider, serialized with serializeError */
+export const metadataSearchErrorSchema = z.object({
+    service: z.string(),
+    error: z.looseObject({
+        name: z.string().optional(),
+        message: z.string().optional(),
+        stack: z.string().optional(),
+    })
+});
+export type MetadataSearchError = {service: string, error: ErrorObject};
+
+/** Media type a client sends in the Accept header to get metadata search results as a stream of lines instead of one JSON response */
+export const NDJSON_MEDIA_TYPE = 'application/x-ndjson';
+
+/** One line of a streamed metadata search response. A stream that ends without a 'done' line was cut short. */
+export type MetadataSearchStreamLine<T> =
+    | {type: 'result', service: string, data: T[]}
+    | ({type: 'error'} & MetadataSearchError)
+    | {type: 'done'};
+
 /** A Credit for an artist with the service it was found on */
 export const artistSearchResultSchema = z.object({
     ...creditSchema.shape,
@@ -304,7 +324,8 @@ export const artistSearchResultSchema = z.object({
 export type ArtistSearchResult = z.infer<typeof artistSearchResultSchema>;
 
 export const artistSearchResultResponseSchema = z.object({
-    data: artistSearchResultSchema.array()
+    data: artistSearchResultSchema.array(),
+    errors: metadataSearchErrorSchema.array()
 });
 export type ArtistSearchResultResponse = z.infer<typeof artistSearchResultResponseSchema>;
 
@@ -321,7 +342,8 @@ export const albumSearchResultSchema = z.object({
 export type AlbumSearchResult = z.infer<typeof albumSearchResultSchema>;
 
 export const albumSearchResultResponseSchema = z.object({
-    data: albumSearchResultSchema.array()
+    data: albumSearchResultSchema.array(),
+    errors: metadataSearchErrorSchema.array()
 });
 export type AlbumSearchResultResponse = z.infer<typeof albumSearchResultResponseSchema>;
 
@@ -339,7 +361,8 @@ export const trackSearchResultSchema = z.object({
 export type TrackSearchResult = z.infer<typeof trackSearchResultSchema>;
 
 export const trackSearchResultResponseSchema = z.object({
-    data: trackSearchResultSchema.array()
+    data: trackSearchResultSchema.array(),
+    errors: metadataSearchErrorSchema.array()
 });
 export type TrackSearchResultResponse = z.infer<typeof trackSearchResultResponseSchema>;
 

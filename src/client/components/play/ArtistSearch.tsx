@@ -97,6 +97,7 @@ export const ArtistSearch = (props: ArtistSearchProps) => {
             inputGroupContent={groupContent}
             initialInput={selectedItem?.name}
             isLoading={query.isLoading}
+            isFetching={query.isFetching}
             isError={query.isError}
             onChange={doChange}
             onInputSwitch={props.onInputSwitch}

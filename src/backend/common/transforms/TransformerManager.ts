@@ -15,8 +15,11 @@ import { type RockskyTransformerConfig } from "../vendor/rocksky/interfaces.ts";
 import { configFromEnv as spotifyConfigFromEnv, type SpotifyTransformerConfig } from "./spotify/SpotifyTransformerUtil.ts";
 import type { CovertArtArchiveTransformerConfig } from "./coverartarchive/CoverArtArchiveTransformerUtil.ts";
 import { asMetadataProvider, type AggregateMetadataResponse, type MetadataProvider } from "../metadataProviders/MetadataProviderUtils.ts";
-import type { AlbumSearchResult, ArtistSearchResult, TrackDataCreditBase, TrackSearchResult } from "../../../core/Api.ts";
-import {pPropsAllSettled} from 'p-props';
+import type { AlbumSearchResult, ArtistSearchResult, MetadataSearchStreamLine, TrackDataCreditBase, TrackSearchResult } from "../../../core/Api.ts";
+import { serializeError } from "serialize-error";
+
+/** A stream line that carries a single provider's outcome */
+export type MetadataProviderLine<T> = Exclude<MetadataSearchStreamLine<T>, {type: 'done'}>;
 
 type TransformNamedMap = Map<string, AbstractTransformer>;
 type TransformTypedMap = Map<string,TransformNamedMap>;
@@ -326,29 +329,38 @@ export default class TransformerManager {
         }
     }
 
-    protected async aggregateResults<T extends TrackSearchResult | ArtistSearchResult | AlbumSearchResult>(method: keyof MetadataProvider, query: TrackDataCreditBase | MusicServicesBase): Promise<AggregateMetadataResponse<T>> {
+    /** Yields each ready metadata provider's results, or its error, as soon as that provider settles */
+    protected async *streamResults<T extends TrackSearchResult | ArtistSearchResult | AlbumSearchResult>(method: keyof MetadataProvider, query: TrackDataCreditBase | MusicServicesBase): AsyncGenerator<MetadataProviderLine<T>> {
         await this.initMetadataProviders();
-        const readyMps: Record<string, Promise<T[] | false>> = {};
+        const pending = new Map<string, Promise<MetadataProviderLine<T>>>();
         for(const [type, name] of Object.entries(this.transformMetadataProviders)) {
             const t = this.transformers.get(type)?.get(name.toLocaleLowerCase()) as unknown as MetadataProvider & AbstractTransformer;
             if(t !== undefined && t.isReady()) {
-                readyMps[type] = t[method](query) as Promise<T[] | false>;
+                pending.set(type, (t[method](query) as Promise<T[] | false>).then(
+                    (data): MetadataProviderLine<T> => data === false
+                        ? {type: 'error', service: type, error: {message: 'Not Ready'}}
+                        : {type: 'result', service: type, data},
+                    (e): MetadataProviderLine<T> => ({type: 'error', service: type, error: serializeError(e)})
+                ));
             }
         }
-        const all = await pPropsAllSettled(readyMps);
+        while(pending.size > 0) {
+            const line = await Promise.race(pending.values());
+            pending.delete(line.service);
+            yield line;
+        }
+    }
+
+    protected async aggregateResults<T extends TrackSearchResult | ArtistSearchResult | AlbumSearchResult>(method: keyof MetadataProvider, query: TrackDataCreditBase | MusicServicesBase): Promise<AggregateMetadataResponse<T>> {
         const res: AggregateMetadataResponse<T> = {
             data: [],
             errors: []
         }
-        for(const [name, r] of Object.entries(all)) {
-            if(r.status === 'fulfilled') {
-                if(r.value === false) {
-                    res.errors.push({service: name, error: {message: 'Not Ready'}});
-                } else {
-                    res.data = res.data.concat(r.value)
-                }
+        for await (const line of this.streamResults<T>(method, query)) {
+            if(line.type === 'result') {
+                res.data = res.data.concat(line.data);
             } else {
-                res.errors.push({service: name, error: r.reason});
+                res.errors.push({service: line.service, error: line.error});
             }
         }
         res.data.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
@@ -363,6 +375,16 @@ export default class TransformerManager {
     }
     public async getAlbumResults(query: TrackDataCreditBase | MusicServicesBase): Promise<AggregateMetadataResponse<AlbumSearchResult>> {
         return this.aggregateResults<AlbumSearchResult>('getAlbumResults', query);
+    }
+
+    public streamTrackResults(query: TrackDataCreditBase | MusicServicesBase): AsyncGenerator<MetadataProviderLine<TrackSearchResult>> {
+        return this.streamResults<TrackSearchResult>('getTrackResults', query);
+    }
+    public streamArtistResults(query: TrackDataCreditBase | MusicServicesBase): AsyncGenerator<MetadataProviderLine<ArtistSearchResult>> {
+        return this.streamResults<ArtistSearchResult>('getArtistResults', query);
+    }
+    public streamAlbumResults(query: TrackDataCreditBase | MusicServicesBase): AsyncGenerator<MetadataProviderLine<AlbumSearchResult>> {
+        return this.streamResults<AlbumSearchResult>('getAlbumResults', query);
     }
 }
 

@@ -136,6 +136,7 @@ export const AlbumSearch = (props: AlbumSearchProps) => {
             collection={collection}
             inputGroupContent={groupContent}
             isLoading={query.isLoading}
+            isFetching={query.isFetching}
             key={selectedItem?.name}
             initialInput={selectedItem?.name}
             isError={query.isError}

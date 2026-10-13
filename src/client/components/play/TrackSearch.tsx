@@ -167,6 +167,7 @@ export const TrackSearch = (props: TrackSearchProps) => {
             collection={collection}
             inputGroupContent={groupContent}
             isLoading={query.isLoading}
+            isFetching={query.isFetching}
             isError={query.isError}
             initialInput={selectedItem?.name}
             onChange={doChange}

@@ -1,6 +1,5 @@
-import type { AlbumSearchResult, ArtistSearchResult, MetadataResultServiceScore, TrackDataCreditBase, TrackSearchResult } from "../../../core/Api.ts";
+import type { AlbumSearchResult, ArtistSearchResult, MetadataResultServiceScore, MetadataSearchError, TrackDataCreditBase, TrackSearchResult } from "../../../core/Api.ts";
 import type { Credit, MusicServicesBase, TrackData } from "../../../core/Atomic.ts";
-import type { ErrorIsh } from "../../../core/ErrorUtils.ts";
 
 export interface MetadataProvider {
     getTrackResults: (query: TrackDataCreditBase | MusicServicesBase) => Promise<TrackSearchResult[] | false>
@@ -10,7 +9,7 @@ export interface MetadataProvider {
 
 export interface AggregateMetadataResponse<T extends (TrackSearchResult | ArtistSearchResult | AlbumSearchResult)> {
     data: T[]
-    errors: {service: string, error: ErrorIsh}[]
+    errors: MetadataSearchError[]
 }
 
 export const asMetadataProvider = (val: object): val is MetadataProvider => 

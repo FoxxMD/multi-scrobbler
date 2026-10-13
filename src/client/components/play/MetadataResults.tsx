@@ -75,6 +75,8 @@ export interface MetadataSearchComboboxProps<T extends MetadataSearchResult> {
     placeholder: string
     collection: ListCollection<T>
     isLoading: boolean
+    /** True while results may still be arriving, including after the first ones are shown */
+    isFetching?: boolean
     isError: boolean
     inputGroupContent?: React.JSX.Element
     initialInput?: string
@@ -88,9 +90,10 @@ export interface MetadataSearchComboboxProps<T extends MetadataSearchResult> {
 }
 
 export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: MetadataSearchComboboxProps<T>) => {
-    const { placeholder, collection, isLoading, isError, onChange, onQueryChange, renderItem, initialInput = '', onInputSwitch } = props;
+    const { placeholder, collection, isLoading, isFetching = false, isError, onChange, onQueryChange, renderItem, initialInput = '', onInputSwitch } = props;
 
     const [inputValue, setInputValue] = useState<string>(initialInput);
+    const isBusy = isLoading || isFetching;
 
     const [contextMode, setContextMode] = useState<boolean>(props.searchContext ?? true);
     const [open, setOpen] = useState<boolean>(false);
@@ -145,7 +148,7 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                 typedQuery.cancel();
                 runQuery(inputValue, !contextMode);
             }}>
-            <HStack>Switch to {contextMode ? 'text-only' : 'context'} {modeIconElm} search mode {isLoading ? <Spinner size="xs" borderWidth="1px" /> : undefined}</HStack>
+            <HStack>Switch to {contextMode ? 'text-only' : 'context'} {modeIconElm} search mode {isBusy ? <Spinner size="xs" borderWidth="1px" /> : undefined}</HStack>
         </Combobox.Item>);
 
     let plainInputSwitch: React.JSX.Element | undefined = undefined;
@@ -199,8 +202,8 @@ export const MetadataSearchCombobox = <T extends MetadataSearchResult>(props: Me
                     <Combobox.Control>
                         {input}
                         <Combobox.IndicatorGroup>
-                            {hasSearched && !isLoading ? <TextMuted textStyle="xs" hideBelow="sm">{collection.size} Matches</TextMuted> : undefined}
-                            {!open && isLoading ? <Spinner size="xs" borderWidth="1px" /> : undefined}
+                            {hasSearched && !isBusy ? <TextMuted textStyle="xs" hideBelow="sm">{collection.size} Matches</TextMuted> : undefined}
+                            {!open && isBusy ? <Spinner size="xs" borderWidth="1px" /> : undefined}
                             {plainInputSwitch}
                             <Tooltip content={modeTooltipContent}><ModeIconHint/></Tooltip>
                             <Combobox.ClearTrigger />
