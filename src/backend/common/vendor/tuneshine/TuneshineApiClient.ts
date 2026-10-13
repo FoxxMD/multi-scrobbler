@@ -64,22 +64,13 @@ export class TuneshineApiClient extends AbstractApiClient {
     }
 
     async sendNowPlaying(play: PlayObject) {
-        let artUrl: string | undefined = undefined;
-        if(play.meta?.art !== undefined && typeof play.meta.art === 'object' && play.meta.art !== null) {
-            const {
-                track,
-                album,
-                artist
-            } = play.meta.art
-            if(track !== undefined) {
-                artUrl = track;
-                this.logger.trace(`Using art from track: ${track}`);
-            } else if(album !== undefined) {
-                artUrl = album;
-                this.logger.trace(`Using art from album: ${album}`);
-            } else if(artist !== undefined) {
-                artUrl = artist;
-                this.logger.trace(`Using art from artist: ${artist}`);
+        let artUrl: string | undefined = play.data.track?.image ?? play.data.album?.image;
+        if(artUrl === undefined) {
+            for(const a of (play.data.artists ?? [])) {
+                if(a.image !== undefined) {
+                    artUrl = a.image;
+                    break;
+                }
             }
         }
         if (artUrl === undefined) {
@@ -162,13 +153,24 @@ export class TuneshineApiClient extends AbstractApiClient {
     }
 }
 
-export const playToPostImageMetadata = (play: PlayObject): components['schemas']['ImageUrlRequest'] => ({
-    timeoutMs: nowPlayingExpirationDuration({ play, position: play.meta.trackProgressPosition }).asMilliseconds(),
-    trackName: play.data.track,
-    artistName: play.data.artists === undefined ? undefined : play.data.artists.map(x => x.name).join(' / '),
-    albumName: play.data.album,
-    serviceName: play.meta.musicService ?? play.meta.source,
-    itemId: play.meta.trackId ?? play.uid,
-    imageUrl: play.meta?.art?.track ?? play.meta?.art?.album ?? play.meta?.art?.artist,
-    contentType: 'track'
-});
+export const playToPostImageMetadata = (play: PlayObject): components['schemas']['ImageUrlRequest'] => {
+    let artUrl: string | undefined = play.data.track?.image ?? play.data.album?.image;
+    if(artUrl === undefined) {
+        for(const a of (play.data.artists ?? [])) {
+            if(a.image !== undefined) {
+                artUrl = a.image;
+                break;
+            }
+        }
+    }
+    return {
+        timeoutMs: nowPlayingExpirationDuration({ play, position: play.meta.trackProgressPosition }).asMilliseconds(),
+        trackName: play.data.track?.name,
+        artistName: play.data.artists === undefined ? undefined : play.data.artists.map(x => x.name).join(' / '),
+        albumName: play.data.album?.name,
+        serviceName: play.meta.musicService ?? play.meta.source,
+        itemId: play.meta.trackId ?? play.uid,
+        imageUrl: artUrl,
+        contentType: 'track'
+    }
+};

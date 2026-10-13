@@ -75,22 +75,13 @@ export default class TuneshineScrobbler extends AbstractScrobbleClient {
         if(data === undefined || data.play === undefined) {
             return [true];
         }
-        let artUrl: string | undefined = undefined;
-        if(data.play.meta?.art !== undefined && typeof data.play.meta.art === 'object' && data.play.meta.art !== null) {
-            const {
-                track,
-                album,
-                artist
-            } = data.play.meta.art
-            if(track !== undefined) {
-                artUrl = track;
-                this.logger.trace(`Found track art`);
-            } else if(album !== undefined) {
-                artUrl = album;
-                this.logger.trace(`Found album art`);
-            } else if(artist !== undefined) {
-                artUrl = artist;
-                this.logger.trace(`Found artist art`);
+        let artUrl: string | undefined = data.play.data.track?.image ?? data.play.data.album?.image;
+        if(artUrl === undefined) {
+            for(const a of (data.play.data.artists ?? [])) {
+                if(a.image !== undefined) {
+                    artUrl = a.image;
+                    break;
+                }
             }
         }
         if (artUrl === undefined) {

@@ -10,7 +10,6 @@ import path from 'path';
 import { withRequestInterception } from '../utils/networking.ts';
 import { http, HttpResponse } from "msw";
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
-import { faker } from '@faker-js/faker';
 import { TuneshineApiClient } from '../../common/vendor/tuneshine/TuneshineApiClient.ts';
 import fs from 'node:fs/promises';
 
@@ -32,7 +31,7 @@ describe('Tuneshine API', function () {
             const client = new TuneshineApiClient('test', {data: {host: 'https://test.local'}}, {cache: memorycache(), logger: loggerTest});
             await client.buildData();
 
-            const play = generatePlay(undefined, {art: {album: 'https://test.image/01.png'}});
+            const play = generatePlay({album: {name: 'whatever', image: 'https://test.image/01.png'}});
 
             await withRequestInterception(
                 [
