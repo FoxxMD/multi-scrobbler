@@ -424,7 +424,7 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ExternalM
 
         const results = ranked.slice(0, 5).map((x) => trackDataToResult(trackToPlay(x.track).data, {
             service: 'spotify',
-            score: x.matchScore  * 100,
+            score: Math.min(x.matchScore  * 100, 100),
             albumCount: 1,
             id: x.track.id.toString(),
         }, {
