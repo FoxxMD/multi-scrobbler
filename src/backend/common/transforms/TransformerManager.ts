@@ -1,7 +1,7 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import type AbstractTransformer from "./AbstractTransformer.ts";
 import type {MusicServicesBase, OptionalCacheUsage, TransformerCommon, TransformerCommonConfig} from "../../../core/Atomic.ts";
-import {DEFAULT_TRANSFORMER_ENV_NAME, DEFAULT_TRANSFORMER_NAME, type MetadataProviderStageType, type StageConfig} from "../../../core/Transform.ts";
+import {DEFAULT_TRANSFORMER_ENV_NAME, DEFAULT_TRANSFORMER_NAME, META_PROVIDER_STAGE_TYPES, type MetadataProviderStageType, type StageConfig} from "../../../core/Transform.ts";
 import type {PlayObject} from "../../../core/Atomic.ts";
 import { isStageTyped } from "../../utils/PlayTransformUtils.ts";
 import type { MSCache } from "../Cache.ts";
@@ -32,6 +32,10 @@ export default class TransformerManager {
 
     protected transformMetadataProviders: Partial<Record<MetadataProviderStageType, string>> = {};
     protected transformMetadataPreferredProviders: Partial<Record<MetadataProviderStageType, true | string>> | undefined;
+
+    /** One register + initialize attempt per transformer, keyed by type and name */
+    protected ready: Map<string, Promise<AbstractTransformer>> = new Map();
+    protected metadataInit?: Promise<void>;
 
     public constructor(logger: Logger, cache: MSCache) {
         this.logger = childLogger(logger, 'Transformer Manager');
@@ -66,21 +70,7 @@ export default class TransformerManager {
         return this.transformerConfigs.some(x => x.type === type.toLocaleLowerCase().trim());
     }
 
-    public async registerByIdentifiers(type: string, name: string = DEFAULT_TRANSFORMER_NAME) {
-        const transformers = this.transformers.get(type.toLocaleLowerCase().trim());
-        if(transformers !== undefined && transformers.has(name.toLocaleLowerCase().trim())) {
-            this.logger.debug(`Transformer type ${type} with name ${name} already registered`);
-            return;
-        }
-        const config = this.transformerConfigs.find(x => x.name.toLocaleLowerCase().trim() === name.toLocaleLowerCase().trim() && x.type === type.toLocaleLowerCase().trim());
-        if(config === undefined) {
-            throw new Error(`No existing configuration for transformer of type ${type} with name ${name} exists`);
-        }
-        this.logger.debug(`Registering transform type ${type} with name ${name}`);
-        await this.register(config);
-    }
-
-    public async register(config: TransformerCommon): Promise<void> {
+    public async register(config: TransformerCommon): Promise<AbstractTransformer> {
         // TODO replace with getOrInsert in node 26+
         let namedTransformerMap = this.transformers.get(config.type.toLocaleLowerCase().trim());
         if(namedTransformerMap === undefined) {
@@ -90,6 +80,10 @@ export default class TransformerManager {
 
         if (namedTransformerMap.has(config.name.toLocaleLowerCase().trim())) {
             throw new Error(`Cannot register ${config.type} transformer with name '${config.name}' because an existing transformer already has that name`);
+        }
+
+        if(!this.hasTransformerConfigByIdentifiers(config.type, config.name)) {
+            this.transformerConfigs.push({...config, type: config.type.toLocaleLowerCase().trim()});
         }
 
         this.logger.verbose(`Registering ${config.type} transformer with name '${config.name}'`);
@@ -128,6 +122,43 @@ export default class TransformerManager {
 
         this.transformers.get(config.type.toLocaleLowerCase().trim())!.set(config.name.toLocaleLowerCase().trim(), t);
         this.logger.verbose(`${config.type} transformer with name '${config.name}' registered`);
+        return t;
+    }
+
+    protected transformerKey(config: TransformerCommon): string {
+        return `${config.type}:${config.name}`.toLocaleLowerCase().trim();
+    }
+
+    /**
+     * Register (if needed) and initialize a single transformer, once.
+     *
+     * Callers only wait on the transformer they asked for. A failed initialization is logged and the (not ready) transformer is still returned.
+     * */
+    protected ensure(config: TransformerCommon): Promise<AbstractTransformer> {
+        const key = this.transformerKey(config);
+        let p = this.ready.get(key);
+        if(p === undefined) {
+            const existing = this.transformers.get(config.type.toLocaleLowerCase().trim())?.get(config.name.toLocaleLowerCase().trim());
+            p = (existing !== undefined ? Promise.resolve(existing) : this.register(config)).then(t => this.initTransformer(t));
+            // only a failed registration rejects, let it be tried again
+            p.catch(() => this.ready.delete(key));
+            this.ready.set(key, p);
+        }
+        return p;
+    }
+
+    protected async initTransformer(transformer: AbstractTransformer): Promise<AbstractTransformer> {
+        if (!transformer.isReady() && !transformer.initializing) {
+            if (!transformer.canAuthUnattended()) {
+                transformer.logger.warn({ label: 'Heartbeat' }, 'Transformer is not ready but will not try to initialize because auth state is not good and cannot be correct unattended.');
+            }
+            try {
+                await transformer.initialize({ force: false, notify: true, notifyTitle: 'Could not initialize automatically' });
+            } catch (e) {
+                transformer.logger.error(new Error('Could not initialize source automatically', { cause: e }));
+            }
+        }
+        return transformer;
     }
 
     public async registerFromEnv() {
@@ -185,74 +216,50 @@ export default class TransformerManager {
         }
     }
 
-    public async initTransformers() {
-        this.logger.verbose('Initializing transformers...');
-        for (const list of this.transformers.values()) {
-            for (const transformer of list.values()) {
-                if (!transformer.isReady() && !transformer.initializing) {
-                    if (!transformer.canAuthUnattended()) {
-                        transformer.logger.warn({ label: 'Heartbeat' }, 'Transformer is not ready but will not try to initialize because auth state is not good and cannot be correct unattended.');
-                    }
-                    try {
-                        await transformer.initialize({ force: false, notify: true, notifyTitle: 'Could not initialize automatically' });
+    protected configByPriority(type: string): TransformPriorityObj<TransformerCommon> {
+        return getTransformByPriority(this.transformerConfigs.filter(x => x.type === type));
+    }
 
-                        if(asMetadataProvider(transformer)) {
-                            const t = transformer.transformType as MetadataProviderStageType;
-                            if(this.transformMetadataPreferredProviders !== undefined) {
-                                // only use transformers user prefers and don't add any they don't explicitly set
-                                if(this.transformMetadataPreferredProviders[t] !== undefined) {
-                                    
-                                    if(this.transformMetadataPreferredProviders[t] === transformer.name) {
-                                        // use transformer if defined by name
-                                        this.transformMetadataProviders[t] = transformer.name;
-                                        this.logger.debug(`Using preferred named ${t} transformer '${transformer.name}' as metadata provider.`);
-                                    } else if(this.transformMetadataPreferredProviders[t] === true) {
-                                        // or user has set `true` to indicate any
-                                        if(this.transformMetadataProviders[t] === undefined) {
-                                            // use this one if none is already set
-                                            this.transformMetadataProviders[t] = transformer.name;
-                                            this.logger.debug(`Using preferred ${t} transformer with priorities. Not set yet so using '${transformer.name}' as metadata provider.`);
-                                        } else {
-                                            // otherwise set based on priority
-                                            const p = getTransformByPriority([this.transformers.get(t)?.get(this.transformMetadataProviders[t]) as AbstractTransformer, transformer]);
-                                            if(p.nonDefaultMany !== true) {
-                                                const old = this.transformMetadataProviders[t];
-                                                this.transformMetadataProviders[t] = p.nonDefault?.name ?? p.env?.name ?? p.default?.name;
-                                                this.logger.debug(`Using preferred ${t} transformer with priorities, a new transformer had higher priority. Replaced '${old}' with ${this.transformMetadataProviders[t]}`);
-                                            } else {
-                                                this.logger.debug(`Using preferred ${t} transformer with priorities and a non-default was already set, skipping '${transformer.name}' as metadata provider.`);
-                                            }
-                                            // if both are non default then use the one that was already set
-                                        }
-                                    }
-                                    // otherwise do not add
-                                } else {
-                                    this.logger.debug(`Preferred named metadata providers are defined but type ${t} is not set, skipping adding ${transformer.name}`);
-                                }
-                                // not explicitly set, don't add any
-                            } else {
-                                // otherwise set all that can be used and set based on priority
-                                // when more than one is available
-                                if(this.transformMetadataProviders[t] === undefined) {
-                                    this.logger.debug(`No preferred metadata providers and none already set for ${t}, using '${transformer.name}' as metadata provider.`);
-                                    this.transformMetadataProviders[t] = transformer.name;
-                                } else {
-                                    const p = getTransformByPriority([this.transformers.get(t)?.get(this.transformMetadataProviders[t]) as AbstractTransformer, transformer]);
-                                    if(p.nonDefaultMany !== true) {
-                                        const old = this.transformMetadataProviders[t];
-                                        this.transformMetadataProviders[t] = p.nonDefault?.name ?? p.env?.name ?? p.default?.name;
-                                        this.logger.debug(`No preferred metadata providers, a new transformer for ${t} had higher priority. Replaced ${old} with ${this.transformMetadataProviders[t]}`);
-                                    }
-                                }
-                            }
-                        }
-                    } catch (e) {
-                        transformer.logger.error(new Error('Could not initialize source automatically', { cause: e }));
-                    }
+    /**
+     * Register and initialize the transformers used as metadata providers, once, on first use
+     * */
+    protected initMetadataProviders(): Promise<void> {
+        return this.metadataInit ??= (async () => {
+            const preferred = this.transformMetadataPreferredProviders;
+            const configs: TransformerCommon[] = [];
+            for(const t of META_PROVIDER_STAGE_TYPES.options) {
+                const pref = preferred?.[t];
+                if(preferred !== undefined && pref === undefined) {
+                    // only use transformers user prefers and don't add any they don't explicitly set
+                    this.logger.debug(`Preferred metadata providers are defined but type ${t} is not set, skipping`);
+                    continue;
                 }
+                let config: TransformerCommon | undefined;
+                if(typeof pref === 'string') {
+                    config = this.transformerConfigs.find(x => x.type === t && x.name.toLocaleLowerCase() === pref.toLocaleLowerCase().trim());
+                } else {
+                    const p = this.configByPriority(t);
+                    config = p.nonDefault ?? p.env ?? p.default;
+                }
+                if(config === undefined) {
+                    this.logger.debug(`No usable ${t} transformer config for metadata provider`);
+                    continue;
+                }
+                this.logger.debug(`Using ${t} transformer '${config.name}' as metadata provider.`);
+                this.transformMetadataProviders[t] = config.name;
+                configs.push(config);
             }
-        }
-        this.logger.verbose('Done initializing transformers');
+            const results = await Promise.allSettled(configs.map(x => this.ensure(x)));
+            results.forEach((r, i) => {
+                const config = configs[i];
+                if(r.status === 'rejected') {
+                    this.logger.error(new Error(`Could not register ${config.type} transformer '${config.name}' as metadata provider`, {cause: r.reason}));
+                    delete this.transformMetadataProviders[config.type as MetadataProviderStageType];
+                } else if(!asMetadataProvider(r.value)) {
+                    delete this.transformMetadataProviders[config.type as MetadataProviderStageType];
+                }
+            });
+        })();
     }
 
     public hasTransformerType(type: string): boolean {
@@ -265,86 +272,36 @@ export default class TransformerManager {
 
     public async getTransformerByStage(data: StageConfig): Promise<AbstractTransformer> {
         const transformType: string = data.type.toLocaleLowerCase().trim();
-        let configName: string | undefined = data.name;
 
-        let namedMap = this.transformers.get(transformType);
-        if (namedMap === undefined || namedMap.size === 0) {
-            if(!this.hasTransformerConfigByType(transformType)) {
+        if(!this.hasTransformerConfigByType(transformType)) {
+            throw new Error(`No transformer configurations of type '${transformType}' exist.`);
+        }
+
+        let config: TransformerCommon | undefined;
+        if(data.name !== undefined) {
+            const configName = data.name.toLocaleLowerCase().trim();
+            config = this.transformerConfigs.find(x => x.type === transformType && x.name.toLocaleLowerCase() === configName);
+            if(config === undefined) {
+                throw new Error(`No transformer configuration of type '${transformType}' with name '${data.name}' exists.`);
+            }
+        } else {
+            // otherwise we try to get *any* transform of this type, starting with non-default, then env, then default
+            const configs = this.configByPriority(transformType);
+            config = configs.nonDefault ?? configs.env ?? configs.default;
+            if(config === undefined) {
+                // shouldn't happen at this point but covering strict ts
                 throw new Error(`No transformer configurations of type '${transformType}' exist.`);
             }
-            if(configName !== undefined) {
-                // if name for transform was specific then try to init and use that specific one
-                if(this.hasTransformerConfigByIdentifiers(transformType, configName)) {
-                    await this.registerByIdentifiers(transformType, configName);
-
-                    await this.initTransformers();
-                    namedMap = this.transformers.get(transformType)
+            if(!this.ready.has(this.transformerKey(config))) {
+                if(configs.nonDefaultMany) {
+                    this.logger.warn(`No config name specified and more than one non-default exists. Using the first found non-default (${config.name})`);
                 } else {
-                    throw new Error(`No transformer configuration of type '${transformType}' with name '${configName}' exists.`);
+                    this.logger.verbose(`No config name specified, using ${config.name}`);
                 }
-            } else {
-                // otherwise we try to get *any* transform of this type, starting with non-default, then env, then default
-                let anyExistingConfig: TransformerCommonConfig | undefined = undefined;
-                const configs = getTransformByPriority(this.transformerConfigs.filter(x => x.type === transformType));
-                if(configs.nonDefault !== undefined) {
-                    if(configs.nonDefaultMany) {
-                        this.logger.warn(`No config name specified and more than one non-default exists. Using the first found non-default (${configs.nonDefault.name})`);
-                    } else {
-                        this.logger.verbose(`No config name specified, using the first found non-default config (${configs.nonDefault.name})`);
-                    }
-                    anyExistingConfig = configs.nonDefault;
-                } else if(configs.env !== undefined) {
-                    this.logger.verbose(`No config name specified, using found ENV config since no non-default configs exist (${configs.env.name})`);
-                    anyExistingConfig = configs.env;
-                } else if(configs.default !== undefined) {
-                    this.logger.verbose(`No config name specified and no non-default or ENV configs exist, using default (${configs.default.name})`);
-                    anyExistingConfig = configs.default;
-                }
-
-                if(anyExistingConfig === undefined) {
-                    throw new Error(`No transformer configurations of type '${transformType}' exist.`);
-                }
-                await this.registerByIdentifiers(anyExistingConfig.type, anyExistingConfig.name);
-                await this.initTransformers();
-                configName = anyExistingConfig.name;
-                namedMap = this.transformers.get(transformType)
             }
         }
 
-        if (namedMap === undefined || namedMap.size === 0) {
-            throw new Error(`No transformers of type '${transformType}' could be registered.`);
-        }
-
-        if(configName === undefined) {
-            const transformers = getTransformByPriority(namedMap.values().toArray());
-            if(transformers.nonDefault !== undefined) {
-                return transformers.nonDefault;
-            }
-            if(transformers.env !== undefined) {
-                return transformers.env;
-            }
-            if(transformers.default !== undefined) {
-                return transformers.default;
-            }
-            // shouldn't happen at this point but covering strict ts
-            throw new Error(`No transformers of type '${transformType}' could be found`);       
-        }
-
-        let namedTransformer = namedMap.get(configName.toLocaleLowerCase().trim());
-        if(namedTransformer === undefined) {
-            if(this.hasTransformerConfigByIdentifiers(data.type, data.name)) {
-                await this.registerByIdentifiers(data.type, data.name);
-                await this.initTransformers();
-                namedTransformer = this.transformers.get(data.type)?.get(configName.toLocaleLowerCase().trim());
-                if(namedTransformer === undefined) {
-                    // this shouldn't really happen but just covering bases
-                    throw new SimpleError(`Component wanted transformer type ${data.type} with name ${data.name}. Transforms of this type are registered but none have this name.`);
-                }
-                return namedTransformer;
-            }
-            throw new SimpleError(`Component wanted transformer type ${data.type} with name ${data.name}. Transforms of this type are registered but none have this name.`);
-        }
-        return namedTransformer;
+        return await this.ensure(config);
     }
 
     public async parseTransformerConfig(data: any) {
@@ -369,16 +326,17 @@ export default class TransformerManager {
         }
     }
 
-    public async getTrackResults(query:TrackDataCreditBase | MusicServicesBase): Promise<AggregateMetadataResponse<TrackSearchResult>> {
-        const readyMps: Record<string, Promise<Awaited<ReturnType<MetadataProvider['getTrackResults']>>>> = {};
+    protected async aggregateResults<T extends TrackSearchResult | ArtistSearchResult | AlbumSearchResult>(method: keyof MetadataProvider, query: TrackDataCreditBase | MusicServicesBase): Promise<AggregateMetadataResponse<T>> {
+        await this.initMetadataProviders();
+        const readyMps: Record<string, Promise<T[] | false>> = {};
         for(const [type, name] of Object.entries(this.transformMetadataProviders)) {
             const t = this.transformers.get(type)?.get(name.toLocaleLowerCase()) as unknown as MetadataProvider & AbstractTransformer;
             if(t !== undefined && t.isReady()) {
-                readyMps[type] = t.getTrackResults(query);
+                readyMps[type] = t[method](query) as Promise<T[] | false>;
             }
         }
         const all = await pPropsAllSettled(readyMps);
-        const res: AggregateMetadataResponse<TrackSearchResult> = {
+        const res: AggregateMetadataResponse<T> = {
             data: [],
             errors: []
         }
@@ -395,60 +353,16 @@ export default class TransformerManager {
         }
         res.data.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
         return res;
+    }
+
+    public async getTrackResults(query:TrackDataCreditBase | MusicServicesBase): Promise<AggregateMetadataResponse<TrackSearchResult>> {
+        return this.aggregateResults<TrackSearchResult>('getTrackResults', query);
     }
     public async getArtistResults(query: TrackDataCreditBase | MusicServicesBase): Promise<AggregateMetadataResponse<ArtistSearchResult>> {
-        const readyMps: Record<string, Promise<Awaited<ReturnType<MetadataProvider['getArtistResults']>>>> = {};
-        for(const [type, name] of Object.entries(this.transformMetadataProviders)) {
-            const t = this.transformers.get(type)?.get(name.toLocaleLowerCase()) as unknown as MetadataProvider & AbstractTransformer;
-            if(t !== undefined && t.isReady()) {
-                readyMps[type] = t.getArtistResults(query);
-            }
-        }
-        const all = await pPropsAllSettled(readyMps);
-        const res: AggregateMetadataResponse<ArtistSearchResult> = {
-            data: [],
-            errors: []
-        }
-        for(const [name, r] of Object.entries(all)) {
-            if(r.status === 'fulfilled') {
-                if(r.value === false) {
-                    res.errors.push({service: name, error: {message: 'Not Ready'}});
-                } else {
-                    res.data = res.data.concat(r.value)
-                }
-            } else {
-                res.errors.push({service: name, error: r.reason});
-            }
-        }
-        res.data.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-        return res;
+        return this.aggregateResults<ArtistSearchResult>('getArtistResults', query);
     }
     public async getAlbumResults(query: TrackDataCreditBase | MusicServicesBase): Promise<AggregateMetadataResponse<AlbumSearchResult>> {
-        const readyMps: Record<string, Promise<Awaited<ReturnType<MetadataProvider['getAlbumResults']>>>> = {};
-        for(const [type, name] of Object.entries(this.transformMetadataProviders)) {
-            const t = this.transformers.get(type)?.get(name.toLocaleLowerCase()) as unknown as MetadataProvider & AbstractTransformer;
-            if(t !== undefined && t.isReady()) {
-                readyMps[type] = t.getAlbumResults(query);
-            }
-        }
-        const all = await pPropsAllSettled(readyMps);
-        const res: AggregateMetadataResponse<AlbumSearchResult> = {
-            data: [],
-            errors: []
-        }
-        for(const [name, r] of Object.entries(all)) {
-            if(r.status === 'fulfilled') {
-                if(r.value === false) {
-                    res.errors.push({service: name, error: {message: 'Not Ready'}});
-                } else {
-                    res.data = res.data.concat(r.value)
-                }
-            } else {
-                res.errors.push({service: name, error: r.reason});
-            }
-        }
-        res.data.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-        return res;
+        return this.aggregateResults<AlbumSearchResult>('getAlbumResults', query);
     }
 }
 

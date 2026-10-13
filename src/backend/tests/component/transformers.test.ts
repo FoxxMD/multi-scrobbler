@@ -4,7 +4,7 @@ import asPromised from 'chai-as-promised';
 import { describe, it } from 'mocha';
 import AbstractComponent, { type AbstractComponentConfig } from "../../common/AbstractComponent.ts";
 
-import { type ConditionalSearchAndReplaceRegExp, type StageTypeMetadata, TRANSFORM_HOOK } from "../../../core/Transform.ts";
+import { type ConditionalSearchAndReplaceRegExp, DEFAULT_TRANSFORMER_NAME, type StageTypeMetadata, TRANSFORM_HOOK } from "../../../core/Transform.ts";
 
 import { isConditionalSearchAndReplace } from "../../utils/PlayTransformUtils.ts";
 import { generateArtistsStr, generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
@@ -15,6 +15,7 @@ import { initMemoryCache } from "../../common/Cache.ts";
 import { Cacheable } from "cacheable";
 import type {PlayMatchResult, PlayObject, QueueContext, TransformerCommon, TransformerCommonConfig} from "../../../core/Atomic.ts";
 import TransformerManager from "../../common/transforms/TransformerManager.ts";
+import type AbstractTransformer from "../../common/transforms/AbstractTransformer.ts";
 import { transientCache } from "../utils/TransientTestUtils.ts";
 import dayjs from "dayjs";
 import clone from "clone";
@@ -26,6 +27,25 @@ import type { PlayWith, PlaySelectWithQueueStates } from "../../common/database/
 import type { PlayProcessingResult } from "../../common/infrastructure/PlayProcessing.ts";
 
 chai.use(asPromised);
+
+class TestTransformerManager extends TransformerManager {
+    public hanging: string[] = [];
+    public setPreferredProviders(preferred: TransformerManager['transformMetadataPreferredProviders']) {
+        this.transformMetadataPreferredProviders = preferred;
+    }
+    public getProviders() {
+        return this.transformMetadataProviders;
+    }
+    public initProviders() {
+        return this.initMetadataProviders();
+    }
+    protected async initTransformer(transformer: AbstractTransformer): Promise<AbstractTransformer> {
+        if(this.hanging.includes(transformer.name)) {
+            return new Promise(() => {});
+        }
+        return super.initTransformer(transformer);
+    }
+}
 
 const componentId = () => `test-${Date.now()}`; 
 class TestComponent extends AbstractComponent {
@@ -944,6 +964,61 @@ describe('Play Transforms', function () {
             expect(multiTransformComponent.transformRules.preCompare).to.exist;
             expect(multiTransformComponent.transformRules.preCompare![0].name).eq('MYFOOCONFIG')
             expect(multiTransformComponent.transformRules.preCompare![1].name).eq('mybarconfig')
+        });
+
+        it('Registers metadata providers without any stage usage', async function() {
+            const tmanager = new TestTransformerManager(loggerTest, transientCache());
+            expect(tmanager.hasTransformerType('musicbrainz')).is.false;
+
+            await tmanager.initProviders();
+
+            expect(tmanager.getProviders()).to.have.all.keys('musicbrainz', 'rocksky');
+            expect(tmanager.getTransformerType('musicbrainz')?.get('msdefault')?.isReady()).is.true;
+            expect(tmanager.getTransformerType('rocksky')?.get('msdefault')?.isReady()).is.true;
+        });
+
+        it('Registers only preferred metadata providers', async function() {
+            const tmanager = new TestTransformerManager(loggerTest, transientCache());
+            tmanager.setPreferredProviders({musicbrainz: true});
+
+            await tmanager.initProviders();
+
+            expect(tmanager.getProviders()).to.have.all.keys('musicbrainz');
+            expect(tmanager.hasTransformerType('rocksky')).is.false;
+        });
+
+        it('Registers a transformer once when requested concurrently', async function() {
+            const tmanager = new TransformerManager(loggerTest, transientCache());
+            const [a, b] = await Promise.all([
+                tmanager.getTransformerByStage({type: 'user'}),
+                tmanager.getTransformerByStage({type: 'user'})
+            ]);
+            expect(a).eq(b);
+            expect(a.isReady()).is.true;
+        });
+
+        it('Does not wait on other transformers initializing', async function() {
+            const tmanager = new TestTransformerManager(loggerTest, transientCache());
+            tmanager.addTransformerConfig({type: 'user', name: 'slow'});
+            tmanager.addTransformerConfig({type: 'user', name: 'fast'});
+            tmanager.hanging.push('slow');
+
+            void tmanager.getTransformerByStage({type: 'user', name: 'slow'});
+            const fast = await tmanager.getTransformerByStage({type: 'user', name: 'fast'});
+
+            expect(fast.name).eq('fast');
+            expect(fast.isReady()).is.true;
+        });
+
+        it('Uses highest priority config for unnamed stage regardless of what is registered', async function() {
+            const tmanager = new TransformerManager(loggerTest, transientCache());
+            tmanager.addTransformerConfig({type: 'user', name: 'mine'});
+
+            const def = await tmanager.getTransformerByStage({type: 'user', name: DEFAULT_TRANSFORMER_NAME});
+            expect(def.name).eq(DEFAULT_TRANSFORMER_NAME);
+
+            const unnamed = await tmanager.getTransformerByStage({type: 'user'});
+            expect(unnamed.name).eq('mine');
         });
     });
 
