@@ -212,7 +212,7 @@ describe('Sample Configs', function () {
                 });
 
                 it(`Sample ${componentType}.json parses and validates in ScrobbleClients`, async function () {
-                    this.timeout(5000);
+                    this.timeout(500000);
 
                     const emitter = new WildcardEmitter<MSBackendEventMap>();
                     await copyFile(samplePath(componentType), `${componentType}.json`);

@@ -1,7 +1,7 @@
 import dayjs, { type Dayjs, type ManipulateType } from "dayjs";
 import type {PlayObject, PlayObjectMinimal, ScrobbleActionResult, UnixTimestamp, URLData, Writeable} from "../../../core/Atomic.ts";
 import { nonEmptyStringOrDefault, splitByFirstFound, truncateStringToLength } from "../../../core/StringUtils.ts";
-import { creditsToNames, nameToCredit } from "../../../core/MusicMetadata.ts";
+import { creditsToNames, nameToCredit, withImage } from "../../../core/MusicMetadata.ts";
 import { namesToCredits } from "../../../core/MusicMetadata.ts";
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
 import { writeFile } from '../../utils/FSUtils.ts';
@@ -746,6 +746,7 @@ export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectO
             mbid: artistMbid,
         },
         name: title,
+        image,
         album: {
             '#text': album,
             mbid: albumMbid,
@@ -775,11 +776,24 @@ export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectO
         }
     }
 
+        const i = image ?? [];
+    let imageSizeNum: number = 0;
+    let imageUrl: string | undefined = undefined;
+    if(i !== undefined && i !== null && i.length > 0) {
+        for(const im of i) {
+            const res = lastfmImageSize.safeParse(im.size);
+            if(res.success && lastfmImageSizeMap[res.data] > imageSizeNum) {
+                imageSizeNum = lastfmImageSizeMap[res.data];
+                imageUrl = im["#text"];
+            }
+        }
+    }
+
     const play: PlayObjectMinimal = {
         data: {
             artists: creditsWithIds(namesToCredits([...new Set(artistStrings)] as string[]), splitByFirstFound<undefined>(artistMbid, [',',';'], undefined), 'musicbrainz', 'artist'),
             track: nameToCredit(title, mbMeta(mbid, 'recording')),
-            album: nameToCredit(al, mbMeta(albumMbid, 'release')),
+            album: withImage(nameToCredit(al, mbMeta(albumMbid, 'release')), imageUrl),
             duration,
             playDate: time !== undefined ? dayjs.unix(typeof time === 'string' ? Number.parseInt(time, 10) : time) : undefined
         },
@@ -827,6 +841,15 @@ type LastFMTrackScrobbleResponse = Readonly<{
 		};
 	};
 }>;
+
+const lastfmImageSize = z.enum(['small','medium','large','extralarge']);
+type LastFmImageSizes = z.infer<typeof lastfmImageSize>;
+const lastfmImageSizeMap: Record<LastFmImageSizes, number> = {
+    small: 1,
+    medium: 2,
+    large: 3,
+    extralarge: 4
+} as const;
 
 export type LastFMTrackObject = {
             artist: {

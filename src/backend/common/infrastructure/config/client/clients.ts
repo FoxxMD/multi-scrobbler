@@ -7,6 +7,7 @@ import {tealClientAIOConfigSchema, tealClientConfigSchema} from "./tealfm.ts";
 import {rockSkyClientAIOConfigSchema, rockSkyClientConfigSchema} from "./rocksky.ts";
 import {librefmClientAIOConfigSchema, librefmClientConfigSchema} from "./librefm.ts";
 import {discordClientAIOConfigSchema, discordClientConfigSchema} from "./discord.ts";
+import {tuneshineClientAIOConfigSchema, tuneshineClientConfigSchema} from './tuneshine.ts';
 
 export const clientConfigSchema = z.union([
     malojaClientConfigSchema,
@@ -17,6 +18,7 @@ export const clientConfigSchema = z.union([
     tealClientConfigSchema,
     rockSkyClientConfigSchema,
     discordClientConfigSchema,
+    tuneshineClientConfigSchema
 ]);
 
 export type ClientConfig = z.infer<typeof clientConfigSchema>;
@@ -30,6 +32,7 @@ export const clientAIOConfigSchema = z.union([
     tealClientAIOConfigSchema,
     rockSkyClientAIOConfigSchema,
     discordClientAIOConfigSchema,
+    tuneshineClientAIOConfigSchema
 ]);
 
 export type ClientAIOConfig = z.infer<typeof clientAIOConfigSchema>;
