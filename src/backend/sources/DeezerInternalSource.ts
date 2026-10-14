@@ -1,4 +1,4 @@
-import { withAlbumArt } from "../../core/MusicMetadata.ts";
+import { isrcMeta, withAlbumArt } from "../../core/MusicMetadata.ts";
 import dayjs from "dayjs";
 import type EventEmitter from "events";
 import type { Request } from 'superagent';
@@ -7,7 +7,7 @@ import { COMPONENT_AUTH_TYPE, type ComponentAuthType, PARSED_FROM, type PlayMatc
 import { DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.ts";
 import type {DeezerInternalSourceConfig, DeezerInternalTrackData} from "../common/infrastructure/config/source/deezer.ts";
 import { TRANSFORM_HOOK } from "../../core/Transform.ts";
-import { parseRetryAfterSecsFromObj, playObjDataMatch, sleep, sortByOldestPlayDate} from "../utils.ts";
+import { getNonEmptyString, parseRetryAfterSecsFromObj, playObjDataMatch, sleep, sortByOldestPlayDate} from "../utils.ts";
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import { CookieJar } from 'tough-cookie';
 import { MixedCookieAgent } from 'http-cookie-agent/http';
@@ -114,13 +114,21 @@ export default class DeezerInternalSource extends MemorySource {
         this.agent = request.agent().use((req) => req.agent(mixedAgent));
     }
 
-    static formatPlayObj(obj: DeezerInternalTrackData, options: FormatPlayObjectOptions = {}): PlayObject {
+    static formatPlayObj(obj: DeezerInternalTrackData, options: FormatPlayObjectOptions & {variant?: boolean} = {}): PlayObject {
         const {newFromSource = false} = options;
+        const trackParts: string[] = [obj.SNG_TITLE];
+        if(options.variant === true) {
+            const v = getNonEmptyString(obj.VERSION);
+            if(v !== undefined) {
+                trackParts.push(v);
+            }
+        }
+        
         const play: PlayObjectMinimal = {
             data: {
                 artists: namesToCredits([obj.ART_NAME]),
                 album: nameToCredit(obj.ALB_TITLE),
-                track: nameToCredit(obj.SNG_TITLE),
+                track: nameToCredit(trackParts.join(' '), isrcMeta(getNonEmptyString(obj.ISRC))),
                 duration: obj.DURATION,
                 playDate: dayjs(obj.TS * 1000),
             },
