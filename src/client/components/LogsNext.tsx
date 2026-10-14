@@ -2,13 +2,15 @@ import { Box, HStack, SegmentGroup, Separator, Span, Stack, Text, FloatingPanel,
 import {
     useWindowSize,
 } from '@react-hook/window-size';
-import { useSSE } from "@flamefrontend/sse-runtime-react";
+import { useSSEContext, useSSEEvent, useSSEStatus } from "@flamefrontend/sse-runtime-react";
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as AnsiImport from "ansi-to-react";
 import { FixedSizeList } from "fixed-size-list";
 import ky from 'ky';
 import React, { useCallback, useEffect, useRef, useState, type ComponentProps } from 'react';
 import type {LogLevelStandalone, LogOutputConfig} from '../../core/Atomic';
+import type { MsSseEvent } from '../../core/Api';
+import { sseTabId } from '../sseTab';
 import { tanQueries } from '../queries';
 import { ChakraClipDynamic } from './ChakraClipboard';
 import { TerminalButton, XButton } from './icons/ChakraIcons';
@@ -43,6 +45,14 @@ const createFixedList = (size: number, initialList: MinLogInfo[] = []): FixedSiz
 
 let list = createFixedList(50);
 
+// number of mounted, streaming LogsFetchable in this tab. Logs are only pushed by the server while > 0
+let logViewers = 0;
+// chained so a fast unmount/remount can't have its enable/disable arrive out of order
+let logEventsQueue: Promise<unknown> = Promise.resolve();
+const setLogEvents = (enabled: boolean) => {
+    logEventsQueue = logEventsQueue.then(() => ky.put(`api/events/${sseTabId}/logs`, {json: {enabled}})).catch(() => undefined);
+};
+
 export const Logs = (props: {logs: Readonly<LogLineProps[]>, ref?: React.Ref<HTMLDivElement>}) => {
     return <Box ref={props.ref} fontFamily="source-code-pro, Menlo, Monaco, Consolas,'Courier New',monospace;">
         {props.logs.map((x, index) => <LogLine key={index} message={x.message}/>)}
@@ -69,17 +79,28 @@ export const LogsFetchable = (props: {settings?: LogOutputConfig, streamable?: b
         staleTime: Infinity
     });
 
-    const connection = useSSE<{stream: MinLogInfo}>({
-        key: ['stream'],
-        url: "api/logs/stream",
-        enabled: streamable,
-        events: {
-            stream: (data) => {
-                if(!isPending) {
-                    list.add(data);
-                    setLogList(Array.from(list.data));
-                }
+    const sse = useSSEContext<MsSseEvent>();
+    const { status: sseStatus } = useSSEStatus(sse);
+
+    // re-runs on reconnect since server forgets opt-in when the connection closes
+    useEffect(() => {
+        if(!streamable || sseStatus !== 'open') {
+            return;
+        }
+        logViewers++;
+        setLogEvents(true);
+        return () => {
+            logViewers--;
+            if(logViewers === 0) {
+                setLogEvents(false);
             }
+        };
+    }, [streamable, sseStatus]);
+
+    useSSEEvent(sse, 'log', (data) => {
+        if(streamable && !isPending) {
+            list.add({...data, id: ''});
+            setLogList(Array.from(list.data));
         }
     });
 

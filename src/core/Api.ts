@@ -1,6 +1,6 @@
 import type { CompareOpKey, ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
 import { creditSchema, playTrackDataSchema, type ClientType, type ComponentAuthType, type MonitoringStatus, type QueueContext, type MusicServices, type Replace, creditBaseSchema, trackSearchHash, albumSearchHash, artistSearchHash } from "./Atomic.ts"
-import type { SourceType } from "./Atomic.ts"
+import type { LogEvent, SourceType } from "./Atomic.ts"
 import type { ComponentType, DateLike, ErrorLike, JsonPlayObject, PlayState, QueueName, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.ts"
 import type { Dayjs } from "dayjs"
 import type { ErrorIsh } from "./ErrorUtils.ts"
@@ -193,6 +193,7 @@ export type MsSseEvent<T extends object = Record<string, any>> = {
     componentUpdate: MsSseEventPayload<ComponentCommonApiJson>
     playInsert: MsSseEventPayload<PlayApiCommonDetailed>
     playUpdate: MsSseEventPayload<Partial<PlayApiCommonDetailed>>
+    log: LogEvent
 }
 
 export type SortPlaysBy = 'played' | 'seen';

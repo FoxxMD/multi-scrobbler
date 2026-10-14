@@ -524,6 +524,12 @@ export interface LogOutputConfig {
     limit: number
 }
 
+export interface LogEvent {
+    message: string
+    level: number
+    levelLabel: string
+}
+
 export type PlayPlatformIdStr = string;
 
 export interface SourcePlayerObj<D extends DateLike = Dayjs> {

@@ -1,11 +1,11 @@
 import {loggerTest, type LogDataPretty, type Logger, type LogLevel} from "@foxxmd/logging";
 import type {Express, Request, Response} from 'express';
-import bsseDef from 'better-sse';
+import bsseDef, { type Session } from 'better-sse';
 import bodyParser from "body-parser";
 import { FixedSizeList } from 'fixed-size-list';
 import { PassThrough } from "node:stream";
-import { Transform } from "stream";
 import {
+    type LogEvent,
     type LogOutputConfig,
     queueContextSchema,
     logLevelStandaloneSchema,
@@ -114,25 +114,12 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         limit: 50,
     }
 
-    let logObjectStream: Transform;
-    try {
-        logObjectStream = new Transform({
-            transform: (chunk, e, cb) => {
-                cb(null, chunk)
-            },
-            objectMode: true,
-            allowHalfOpen: true
-        })
-    } catch (e) {
-        console.log(e);
-    }
+    appLoggerStream.on('data', addToLogBuffer);
+    // one data listener per open /api/events connection
+    appLoggerStream.setMaxListeners(0);
 
-    appLoggerStream.on('data', (log: LogDataPretty) => {
-        addToLogBuffer(log);
-        if(log.level >= logger.levels.values[logConfig.level]) {
-            logObjectStream.write({message: log.line, level: log.level, levelLabel: logger.levels.labels[log.level]});
-        }
-    });
+    // keyed by client-generated per-tab id so logs are only pushed to tabs actually rendering them
+    const eventSessions = new Map<string, {session: Session, logs: boolean}>();
 
     const componentAwareMiddle = makeComponentMiddle(scrobbleSources, scrobbleClients);
 
@@ -149,11 +136,6 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         }
         next();
     }
-
-    router.get('/api/logs/stream', {middleware: [setLogWebSettings], tags: ['Events'], summary: 'SSE Logs'}, async (req, res) => {
-        const session = await bsseDef.createSession(req, res);
-        await session.stream(logObjectStream);
-    });
 
     router.get('/api/logs', {middleware: [setLogWebSettings], tags: ['Events'], summary: 'Get Logs'}, async (req, res) => {
         const slicedLog = getLogs(logger.levels.values[logConfig.level], logConfig.limit + 1, logConfig.sort === 'ascending' ? 'asc' : 'desc');
@@ -180,18 +162,29 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     });
 
     router.get('/api/events', {querySchema: z.object({
-        next: z.literal('true').optional().meta({description: 'When used events are sent in new ui format'})
-    }), tags: ['Events'], summary: 'SSE Events'}, async (req, res) => {
+        next: z.literal('true').optional().meta({description: 'When used events are sent in new ui format'}),
+        tab: z.string().optional().meta({description: 'Client-generated connection id. Required to opt in to log events via PUT /api/events/:tab/logs'})
+    }), middleware: [setLogWebSettings], tags: ['Events'], summary: 'SSE Events'}, async (req, res) => {
         const {
             query: {
-                next: nextQs
+                next: nextQs,
+                tab
             }
         } = req;
 
         const isNextapi = nextQs === 'true';
 
         const session = await bsseDef.createSession(req, res);
-        scrobbleSources.emitter.onAny((eventName: string, payload: any) => {
+        if(tab !== undefined) {
+            eventSessions.set(tab, {session, logs: false});
+        }
+        const onLog = (log: LogDataPretty) => {
+            if(tab !== undefined && eventSessions.get(tab)?.logs && log.level >= logger.levels.values[logConfig.level]) {
+                session.push({message: log.line, level: log.level, levelLabel: logger.levels.labels[log.level]} satisfies LogEvent, 'log');
+            }
+        };
+        appLoggerStream.on('data', onLog);
+        const unsubSources = scrobbleSources.emitter.onAny((eventName: string, payload: any) => {
             if(payload !== undefined && payload.from !== undefined) {
                 if(isNextapi) {
                     session.push({event: eventName, ...payload}, eventName);
@@ -200,7 +193,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
                 }
             }
         });
-        scrobbleClients.emitter.onAny((eventName: string, payload: any) => {
+        const unsubClients = scrobbleClients.emitter.onAny((eventName: string, payload: any) => {
             if(payload !== undefined && payload.from !== undefined) {
                 if(isNextapi) {
                     session.push({event: eventName, ...payload}, eventName);
@@ -209,6 +202,32 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
                 }
             }
         });
+        session.once('disconnected', () => {
+            appLoggerStream.off('data', onLog);
+            unsubSources();
+            unsubClients();
+            // a stale connection may close after the same tab has already reconnected
+            if(tab !== undefined && eventSessions.get(tab)?.session === session) {
+                eventSessions.delete(tab);
+            }
+        });
+    });
+
+    router.put('/api/events/:tab/logs', {
+        middleware: [jsonParser],
+        bodySchema: z.object({
+            enabled: z.boolean()
+        }),
+        tags: ['Events'],
+        summary: 'Toggle Log Events',
+        description: 'Enable or disable log events for the /api/events connection opened with this tab id'
+    }, async (req, res) => {
+        const entry = eventSessions.get(req.params.tab);
+        if(entry === undefined) {
+            return res.sendStatus(404);
+        }
+        entry.logs = req.body.enabled;
+        return res.sendStatus(200);
     });
 
     setupDeezerRoutes(app, logger, scrobbleSources);

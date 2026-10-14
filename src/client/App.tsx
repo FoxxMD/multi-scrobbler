@@ -7,6 +7,7 @@ import {
     RouterProvider, useLocation
 } from "react-router-dom";
 import type {MsSseEvent} from '../core/Api';
+import { sseTabId } from './sseTab';
 import { AppHeader } from './components/AppHeader';
 import { MSErrorBoundary } from './components/ErrorBoundary';
 import { ComponentDetailedRoutable } from './components/msComponent/MSComponentDetailed';
@@ -104,7 +105,7 @@ const router = createBrowserRouter(routesNested, { basename: window.__MS_RUNTIME
 
 export const sseProviderOptions = {
     key: ['events'],
-    url: 'api/events?next=true'
+    url: `api/events?next=true&tab=${sseTabId}`
 }
 
 function App() {
