@@ -184,12 +184,11 @@ export type MsSseEventPayload<T extends object = Record<string, any>> = {
     event: string
 }
 
-export type MsSseEvent<T extends object = Record<string, any>> = {
+export type MsSseEvent = {
     playerUpdate: MsSseEventPayload<SourcePlayerJson>
     discovered: MsSseEventPayload
     scrobbleQueued: MsSseEventPayload
     scrobbleDequeued: MsSseEventPayload
-    client: T
     componentUpdate: MsSseEventPayload<ComponentCommonApiJson>
     playInsert: MsSseEventPayload<PlayApiCommonDetailed>
     playUpdate: MsSseEventPayload<Partial<PlayApiCommonDetailed>>

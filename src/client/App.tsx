@@ -105,7 +105,9 @@ const router = createBrowserRouter(routesNested, { basename: window.__MS_RUNTIME
 
 export const sseProviderOptions = {
     key: ['events'],
-    url: `api/events?next=true&tab=${sseTabId}`
+    url: `api/events?tab=${sseTabId}`,
+    // share one connection across tabs when the browser supports it (requires secure context for Web Locks)
+    coordination: {enabled: true}
 }
 
 function App() {

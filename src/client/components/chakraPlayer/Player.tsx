@@ -273,7 +273,7 @@ export const usePlayerQuery = (componentId: number, platformId: string, opts: Us
         }
     }, [initData, componentId, platformId]);
 
-    const client = useSSEContext<MsSseEvent<MsSseEventPayload<SourcePlayerJson>>>();
+    const client = useSSEContext<MsSseEvent>();
     useSSEEvent(client, "playerUpdate", (payload) => {
         if (payload.componentId === componentId && payload.data.platformId === platformId) {
             queryClient.setQueryData(tanQueries.players.single(componentId, platformId).queryKey, payload.data);
