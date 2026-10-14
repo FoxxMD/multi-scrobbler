@@ -2,6 +2,113 @@
 title: Help
 ---
 
+## Writing File/AIO Configuration
+
+The **Configuration** section for File/AIO for each [Client](/configuration/clients/) and [Source](/configuration/sources/) contain tools to help you write a valid configuration for that Client/Source.
+
+The left-hand (or top) **Config Structure** is an interactive tree of the config's property names, what kind of value can be used, a description of it, if it is required, and examples.
+
+<details>
+<summary>Example</summary>
+
+<img src={require('/img/config_structure.jpg').default}/>
+
+This is the **Config Structure** for a Client. It indicates that each object representing one config for this Client, in an array, *can* contain:
+
+* a string property named `name`
+* a boolean property named `enable`
+
+and it **must** contain (based on `required` indicator):
+
+* a string property name `id`
+* an object named `data`
+
+A JSON object representing this structure (and thus a valid config) would look like this:
+
+```json
+[
+  {
+    "name": "MyClientName",
+    "id": "aUnqiueId",
+    "data": {}
+  }
+]
+```
+
+:::tip[AIO]
+
+When using AIO you will need to manually select the **type** for the `source` or `clients` property in order to get the correct structure.
+
+<details>
+
+<summary>Example</summary>
+
+Select the dropdown for the component you are configuring (Source or Client)
+
+<img src={require('/img/aio_type_preopen.jpg').default}/>
+
+Find the component type from the dropdown list
+
+<img src={require('/img/aio_type_open.jpg').default}/>
+
+**Click** the component name (`sources` or `clients`) after selecting to open the structure for it.
+
+<img src={require('/img/aio_type_selected.jpg').default}/>
+
+</details>
+
+:::
+
+</details>
+
+The right-hand (or bottom) **Config Example** is a *valid* example of the Source/Client config that matches what is shown in the Config Structure.
+
+You can use this as a starting point for your configuration. Use the **Interative** mode to edit the example in-place.
+
+<details>
+
+<summary>Example</summary>
+
+<img src={require('/img/config_example.jpg').default}/>
+
+<kbd>(1)</kbd> shows the name of the file this example content would go in. <kbd>(2)</kbd> Is the example config that is valid based on the Config Structure. Use <kbd>(3)</kbd> to switch between interactive and plain example mode.
+
+</details>
+
+### Config Playground
+
+The [**Config Playground**](/playground) contains the same **Config Structure** for AIO config seen any all Sources/Clients but it has a "full" config example loaded into the **Config Example** component. You can use this page to edit and build your AIO config in the browser.
+
+:::tip[AIO]
+
+When using AIO you will need to manually select the **type** for the `source` or `clients` property in order to get the correct structure.
+
+<details>
+
+<summary>Example</summary>
+
+Select the dropdown for the component you are configuring (Source or Client)
+
+<img src={require('/img/aio_type_preopen.jpg').default}/>
+
+Find the component type from the dropdown list
+
+<img src={require('/img/aio_type_open.jpg').default}/>
+
+**Click** the component name (`sources` or `clients`) after selecting to open the structure for it.
+
+<img src={require('/img/aio_type_selected.jpg').default}/>
+
+</details>
+
+:::
+
+### Getting Configuration Help
+
+If you need help with writing a configuration (other than basic JSON questions), feel free to start a [**Q&A** discussion](https://github.com/FoxxMD/multi-scrobbler/discussions/new/choose) to get help!
+
+Alternatively, **ask an LLM (AI).** This documentation site is well-indexed by all search engines and with the thorough documentation here, most LLMs can write a good starting point configuration file for you if you just ask and point them to the main URL.
+
 ## Getting Useful Data
 
 ### Logs
@@ -63,7 +170,6 @@ Include this in your issue using the code blocks, like shown in the Debug Data s
   "name": "Authentication Check",
   "message": "Authentication test failed!",
   "stack": "Authentication Check: Authentication test failed!\n..."
-  }
 }
 ```
 
