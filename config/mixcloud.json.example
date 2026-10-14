@@ -1,0 +1,23 @@
+[
+  {
+    "id": "myMixcloud",
+    "name": "MyMixcloud",
+    "enable": true,
+    "clients": [],
+    "data": {
+      // Option 1: monitor a user's public listening history (no authentication needed)
+      "username": "MyUsername",
+
+      // Option 2: authenticate with a Mixcloud application to monitor your own
+      // listening history, including private (pro account) history.
+      // Create an application at https://www.mixcloud.com/developers/ to get
+      // these, then use the Authorize button on the source to complete sign-in.
+      // When used, `username` is optional.
+      // "clientId": "...",
+      // "clientSecret": "...",
+
+      // optional: polling interval in seconds (default 60)
+      "interval": 60
+    }
+  }
+]

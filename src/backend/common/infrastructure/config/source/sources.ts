@@ -29,6 +29,7 @@ import {rockskySourceAIOConfigSchema, rockskySourceConfigSchema} from "./rocksky
 import {librefmSouceAIOConfigSchema, librefmSourceConfigSchema} from "./librefm.ts";
 import {sonosSourceAIOConfigSchema, sonosSourceConfigSchema} from "./sonos.ts";
 import {appleMusicSourceAIOConfigSchema, appleMusicSourceConfigSchema} from "./applemusic.ts";
+import {mixcloudSourceAIOConfigSchema, mixcloudSourceConfigSchema} from "./mixcloud.ts";
 
 export const sourceConfigSchema = z.union([
     spotifySourceConfigSchema,
@@ -61,6 +62,7 @@ export const sourceConfigSchema = z.union([
     rockskySourceConfigSchema,
     sonosSourceConfigSchema,
     appleMusicSourceConfigSchema,
+    mixcloudSourceConfigSchema,
 ]);
 
 export type SourceConfig = z.infer<typeof sourceConfigSchema>;
@@ -96,6 +98,7 @@ export const sourceAIOConfigSchema = z.union([
     rockskySourceAIOConfigSchema,
     sonosSourceAIOConfigSchema,
     appleMusicSourceAIOConfigSchema,
+    mixcloudSourceAIOConfigSchema,
 ]);
 
 export type SourceAIOConfig = z.infer<typeof sourceAIOConfigSchema>;
