@@ -83,7 +83,7 @@ export type DeezerInternalData = z.infer<typeof deezerInternalDataSchema>;
 export const deezerInternalSourceOptionsSchema = z.object({
     variant: z.boolean().optional().meta({
         description: 'Add the reported title variant, like `(Remastered)`, to the title name.',
-    }).default(false),
+    }),
     /**
      * Set the heuristic level of duplicate/repeated track pruning from listening history.
      * 
@@ -121,7 +121,7 @@ const envDataSchema = z.object({
     DEEZER_ARL: deezerInternalDataSchema.shape.arl,
     DEEZER_ACCOUNT_ID: deezerInternalDataSchema.shape.accountId,
     DEEZER_USER_AGENT: deezerInternalDataSchema.shape.userAgent,
-    DEEZER_TRACK_VARIANT: z.stringbool().optional().meta(envMetaNormalize(deezerInternalSourceOptionsSchema.shape.variant.meta())).default(false)
+    DEEZER_TRACK_VARIANT: z.stringbool().optional().meta(envMetaNormalize(deezerInternalSourceOptionsSchema.shape.variant.meta()))
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, DeezerInternalSourceConfig> = {
