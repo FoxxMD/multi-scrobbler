@@ -29,23 +29,35 @@ Mixcloud's public API does not expose tracklists for mixes so each listen is scr
 
 There are two ways to configure this Source:
 
-### Public history with a username
+* **Username** is easier and works for all **free** accounts.
+* **Oauth** works for **all** accounts, including **Pro**. You will need to use this if your listening history is private.
 
-No authentication is required. Your Mixcloud listening history must be **public** (the default), which you can verify by visiting `https://www.mixcloud.com/YourUsername/listens/` while logged out.
+<Tabs groupId="mixAccountType" queryString>
+<TabItem value="username" label="Username (Recommended)">
+
+Only your **username** is required to use this method. No authentication is required.
+
+Your Mixcloud listening history must be **public** (the default), which you can verify by visiting `https://www.mixcloud.com/YourUsername/listens/` while logged out.
 
 Your **username** is the last part of your profile URL IE `https://www.mixcloud.com/MyUsername/` => `MyUsername`
 
-### Your own history with an application (including pro accounts)
+Use this with `MIXCLOUD_USERNAME` ENV or `username` File/AIO properties in configuration below.
+
+</TabItem>
+<TabItem value="oauth" label="OAuth">
 
 If your listening history is private, or you have a pro account, authenticate with a Mixcloud application instead:
 
 1. [Create an application](https://www.mixcloud.com/developers/) to get a **clientId** and **clientSecret**
-2. Set them in the source configuration -- `username` is not needed, the authorized user's listens are monitored
+2. Set these in your configuration below
 3. Start multi-scrobbler and use the **Authorize** button/link for this Source to complete sign-in at Mixcloud
 
-The authorize flow redirects to `/api/mixcloud/callback` on the address the multi-scrobbler web UI is served from (default `http://localhost:9078`) -- if multi-scrobbler is behind a reverse proxy, complete sign-in from that address. The access token is stored on your machine and used for future restarts, sign-in is only needed once.
+The user who completes the sign-in will be the monitored user for this Source.
 
-Mixes are long, so this Source polls less frequently than others by default: every 60 seconds, backing off to at most 300 seconds when there is no activity.
+The authorize flow redirects to `/api/mixcloud/callback` on the address the multi-scrobbler web UI is served from (default `http://localhost:9078`). If multi-scrobbler is behind a reverse proxy, complete sign-in from that address.
+
+</TabItem>
+</Tabs>
 
 ## Configuration
 
