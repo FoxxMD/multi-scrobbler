@@ -3,7 +3,6 @@ import type EventEmitter from "events";
 import request from 'superagent';
 import { COMPONENT_AUTH_TYPE, PARSED_FROM, type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
 import type { ComponentAuthType } from "../../core/Atomic.ts";
-import { artistNamesToCredits } from "../../core/StringUtils.ts";
 import { AuthError, SimpleError } from "../common/errors/MSErrors.ts";
 import type { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.ts";
 import type { MixcloudListen, MixcloudSourceConfig } from "../common/infrastructure/config/source/mixcloud.ts";
@@ -13,6 +12,7 @@ import { joinedUrl } from "../utils/NetworkUtils.ts";
 import { sortByOldestPlayDate } from "../utils.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
 import AbstractSource, { type RecentlyPlayedOptions } from "./AbstractSource.ts";
+import { namesToCredits, nameToCredit, withImage } from "../../core/MusicMetadata.ts";
 
 export default class MixcloudSource extends AbstractSource {
 
@@ -89,21 +89,19 @@ export default class MixcloudSource extends AbstractSource {
 
         const play: PlayObjectMinimal = {
             data: {
-                artists: artistNamesToCredits(artists),
-                track: name,
+                artists: namesToCredits(artists),
+                track: withImage(nameToCredit(name), pictures.large ?? pictures.medium),
                 duration: audio_length,
                 playDate: dayjs(listen_time),
             },
             meta: {
+                parsedFrom: PARSED_FROM.history,
                 source: 'Mixcloud',
                 musicService: 'Mixcloud',
                 trackId: key,
                 newFromSource,
                 url: {
                     web: url
-                },
-                art: {
-                    track: pictures.large ?? pictures.medium
                 }
             }
         }
