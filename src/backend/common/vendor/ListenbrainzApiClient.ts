@@ -316,8 +316,16 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
     }
 }
 
-export const listenPayloadToPlay = (payload: ListenPayload, nowPlaying: boolean = false): PlayObject => {
+export interface ListenPayloadParseOptions {
+    extractArtists?: boolean
+    nowPlaying?: boolean
+}
 
+export const listenPayloadToPlay = (payload: ListenPayload, opts: ListenPayloadParseOptions = {}): PlayObject => {
+
+        const {
+            nowPlaying = false
+        } = opts;
         const listened = payload.listened_at ?? dayjs().unix();
         const listenedAt = typeof listened === 'number' ? dayjs.unix(listened) : dayjs(listened);
 
@@ -334,14 +342,14 @@ export const listenPayloadToPlay = (payload: ListenPayload, nowPlaying: boolean 
                 additional_info,
             }, 
             listened_at: listenedAt.unix()
-        });
+        }, opts);
 
         play.meta.nowPlaying = nowPlaying;
 
         return play;
     }
 
-export const listenResponseToPlay = (listen: ListenResponse): PlayObject => {
+export const listenResponseToPlay = (listen: ListenResponse, opts?: ListenPayloadParseOptions): PlayObject => {
         const {
             listened_at,
             track_metadata: {
@@ -360,11 +368,15 @@ export const listenResponseToPlay = (listen: ListenResponse): PlayObject => {
             } = {}
         } = listen;
 
-        const naivePlay = listenToNaivePlay(listen);
+        const naivePlay = listenToNaivePlay(listen, opts);
 
         if(artistMappings.length === 0 || track_name === undefined || artist_name === undefined) {
             // if there are no artist mappings its likely MB doesn't have info on this track so just use our internally derived attempt
             // (and track/artist name are required by LZ so without them we can't do any better than naive)
+            return naivePlay;
+        }
+        if(opts?.extractArtists === false) {
+            // user wants data as-is
             return naivePlay;
         }
 
@@ -600,7 +612,7 @@ export const listenResponseToPlay = (listen: ListenResponse): PlayObject => {
 /**
  * Try to parse true artists and track name without using MB information
  * */
-export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
+export const listenToNaivePlay = (listen: ListenResponse, opts?: ListenPayloadParseOptions): PlayObject => {
         const {
             listened_at,
             recording_msid,
@@ -634,6 +646,10 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
             } = {}
         } = listen;
 
+        const {
+            extractArtists = true
+        } = opts ?? {};
+
         const playId = recording_msid ?? aRecordingMsid;
         const trackId = aRecordingMbid ?? mRecordingMbid;
         let dur = aDuration;
@@ -647,22 +663,26 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
         if(artist_names.length > 0) {
             artists = artist_names;
         } else if(typeof artist_name === 'string') {
-            artists = [artist_name];
-
-            // since we aren't using MB mappings we should be conservative and assume artist string with & are proper names (not joiner)
-            const parsedArtists = parseCredits(artist_name, [',', '/', '\\']);
-            if (parsedArtists !== undefined) {
-                if (parsedArtists.primary !== undefined) {
-                    artists.push(parsedArtists.primary);
+            if(extractArtists) {
+                // since we aren't using MB mappings we should be conservative and assume artist string with & are proper names (not joiner)
+                const parsedArtists = parseCredits(artist_name, [',', '/', '\\']);
+                if (parsedArtists !== undefined) {
+                    if (parsedArtists.primary !== undefined) {
+                        artists.push(parsedArtists.primary);
+                    }
+                    artists = artists.concat(parsedArtists.secondary ?? []);
                 }
-                artists = artists.concat(parsedArtists.secondary ?? []);
+                // use all delimiters when trying to find artists in track name
+                const parsedTrackArtists = track_name !== undefined ? parseCredits(track_name) : undefined;
+                if (parsedTrackArtists !== undefined) {
+                    // if we found "ft. something" in track string then we now have a "real" track name and more artists
+                    normalTrackName = parsedTrackArtists.primary;
+                    artists = artists.concat(parsedTrackArtists.secondary ?? [])
+                }
             }
-            // use all delimiters when trying to find artists in track name
-            const parsedTrackArtists = track_name !== undefined ? parseCredits(track_name) : undefined;
-            if (parsedTrackArtists !== undefined) {
-                // if we found "ft. something" in track string then we now have a "real" track name and more artists
-                normalTrackName = parsedTrackArtists.primary;
-                artists = artists.concat(parsedTrackArtists.secondary ?? [])
+            if(artists.length === 0) {
+                // fallback to original artist_name string if we weren't able to parse anything from artists/track credits
+                artists.push(artist_name);
             }
             artists = uniqueNormalizedStrArr(artists);
         }

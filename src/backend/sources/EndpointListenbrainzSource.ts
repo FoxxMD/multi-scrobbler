@@ -11,7 +11,7 @@ import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type {ReportedPlayerStatus} from '../../core/Atomic.ts';
 import type {PlayPlatformId} from '../../core/Atomic.ts';
 import type {ListenbrainzEndpointSourceConfig} from "../common/infrastructure/config/source/endpointlz.ts";
-import { listenPayloadToPlay } from "../common/vendor/ListenbrainzApiClient.ts";
+import { listenPayloadToPlay, type ListenPayloadParseOptions } from "../common/vendor/ListenbrainzApiClient.ts";
 import type {SubmitPayload} from '../../core/vendor/listenbrainz/interfaces.ts';
 import type {ListenPayload} from '../../core/vendor/listenbrainz/interfaces.ts';
 import MemorySource from "./MemorySource.ts";
@@ -82,7 +82,7 @@ export class EndpointListenbrainzSource extends MemorySource {
     static formatPlayObj(obj: ListenPayload, options: FormatPlayObjectOptions & {
         nowPlaying?: boolean
     } = {}): PlayObject {
-        const play = listenPayloadToPlay(obj, options.nowPlaying);
+        const play = listenPayloadToPlay(obj, {nowPlaying: options.nowPlaying});
         play.meta.newFromSource = true;
         return play;
     }
@@ -127,14 +127,14 @@ export class EndpointListenbrainzSource extends MemorySource {
     getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new NowPlayingPlayerState(logger,  id, opts);
 }
 
-export const playStateFromRequest = (obj: SubmitPayload): PlayerStateData[] => {
+export const playStateFromRequest = (obj: SubmitPayload, opts?: ListenPayloadParseOptions): PlayerStateData[] => {
     const {
         listen_type,
         payload,
     } = obj;
 
     const playStates: PlayerStateData[] = payload.map((x) => {
-        const play = listenPayloadToPlay(x, listen_type === 'playing_now');
+        const play = listenPayloadToPlay(x, {nowPlaying: listen_type === 'playing_now', ...opts});
         play.meta.sourceSOT = SOURCE_SOT.INGRESS;
         return {
             platformId: [play.meta.deviceId ?? NO_DEVICE, NO_USER],

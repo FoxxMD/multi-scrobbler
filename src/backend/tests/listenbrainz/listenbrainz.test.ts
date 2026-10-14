@@ -25,6 +25,7 @@ import incorrectMultiArtistsTrackName from './incorrectlyMapped/multiArtistsInTr
 import veryWrong from './incorrectlyMapped/veryWrong.json' with { type: "json" };
 import { generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
 import { nameToCredit, creditsToNames, namesToCredits } from "../../../core/MusicMetadata.ts";
+import { playStateFromRequest } from "../../sources/EndpointListenbrainzSource.ts";
 
 interface LZTestFixture {
     data: ListenResponse
@@ -370,6 +371,32 @@ describe('Listenbrainz Endpoint Behavior', function() {
         expect(creditsToNames(playFromPayload.data.artists!)).to.be.eql(submit.track_metadata.additional_info!.artist_names);
 
     });
+
+    it('does not include artist_name if artists were extracted from string', function() {
+        const payload = {
+            "listened_at": 1791895981,
+            "track_metadata": {
+                "artist_name": "Alohaii feat. Rachie",
+                "track_name": "Heart Of Glass",
+                "release_name": "SUMMERTIDE",
+                "additional_info": {
+                    "artist_mbids": [
+                        "a611433b-c2bb-4ba2-be28-775a079e93c6",
+                        "745a0c93-a487-4650-ab05-07c4eb9234a2"
+                    ],
+                    "release_mbid": "560db4c2-5af5-4ef0-a9e0-b56fca3d8bea",
+                    "release_group_mbid": "e5a74679-1883-45cb-b776-8b7aee879760",
+                    "recording_mbid": "3d4a73ff-3956-4d6b-b423-b1c079775dcf",
+                    "duration_ms": 217433,
+                    "track_mbid": "c3fda34b-31e1-4e9a-af76-85e3dd08b09f",
+                    "tracknumber": 4
+                }
+            }
+        }
+        const state = playStateFromRequest({listen_type: 'single', payload: [payload]});
+        expect(state[0].play.data.artists?.some(x => x.name === 'Alohaii')).is.true;
+        expect(state[0].play.data.artists?.some(x => x.name === 'Rachie')).is.true;
+    })
 
 });
 
