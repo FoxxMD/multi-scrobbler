@@ -462,3 +462,82 @@ When parsing these ENVs MS will resolve relative directories but *not* bash expa
       </Tabs>
     </TabItem>
 </Tabs>
+
+## Reverse Proxy Recommended
+
+Multi-Scrobbler's UI performs best when it is behind a reverse proxy, like NGINX (NPM) Traefik or Caddy.
+
+<details>
+
+<summary>Why: Security</summary>
+
+Most reverse proxies have easy ways to set up basic authentication [which a necessity](/configuration/security/) if you plan on running Multi-Scrobbler on a machine directly exposed to the internet.
+
+</details>
+
+<details>
+
+<summary>Why: Connection Pooling and Live Events</summary>
+
+For connections to domains using HTTP/1.1 (non-TLS `http:` addresses like `http://192.168.0.101`) all major browsers use a [shared connection pool per domain](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Connection_management_in_HTTP_1.x#domain_sharding), that is used across *all* tabs. **This connection pool is limited to 6 concurrent connections.**
+
+For non-TLS connections Multi-Scrobbler uses one, always-open [SSE connection](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) **per tab** to send live updates and logs to your browser.
+
+So, with HTTP/1.1, if you open more than 5 tabs of multi-scrobbler you will not be able to communciate to the server through your browser.
+
+Using TLS (like `https://ms.mydomain.com`), which reverse proxies make easy, removes this connection limit for the pool.
+
+Additionally, using TLS unlocks the ability for Multi-Scrobbler to share a *single* SSE connection between *all* tabs which reduces the bandwidth used by all tabs signficantly.
+
+</details>
+
+<DetailsAdmo type="tip" summary="Disable Buffering for Searches">
+
+When Multi-Scrobbler performs [metadata searches](/configuration/editing/#search-providers) for your Play data it streams results from providers as soon as they arrive, rather than waiting for all providers to respond. This can significantly speed up how soon you see search results in your browser.
+
+Some reverse proxies automatically enable *buffering* for requests which is usually a good thing but in this scenario prevents you from benefiting streaming results because buffering waits for the entire response before forwarding it to your browser.
+
+Use one of the common methods below to disable buffering for search-related routes. Note: these are not complete solutions, just examples as a jumping off point:
+
+<Tabs groupId="rp" queryString>
+<TabItem value="caddy" label="Caddy">
+
+Set [`flush_interval -1`](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy#streaming) to disable response buffering.
+
+```Caddyfile
+multi-scrobbler.domain.tld {
+  reverse_proxy multi-scrobbler:9078
+
+  @search {
+    method POST GET
+    path /api/metadata/search/*
+  }
+
+  reverse_proxy @search multi-scrobbler:9078 {
+    flush_interval -1
+  }
+
+}
+```
+
+</TabItem>
+<TabItem value="NPM/NGINX" label="nginx">
+
+<h3>NGINX</h3>
+
+```nginx
+location /your-route {
+    proxy_pass http://your_backend;
+    proxy_buffering off;
+}
+```
+
+</TabItem>
+<TabItem value="traefik" label="Traefik">
+
+Traefik does not automatically enable buffering. If you use the [Buffering middleware](https://doc.traefik.io/traefik/reference/routing-configuration/http/middlewares/buffering/) then responses are automatically buffered and cannot be disabled, [yet.](https://github.com/traefik/traefik/issues/12869)
+
+</TabItem>
+</Tabs>
+
+</DetailsAdmo>
