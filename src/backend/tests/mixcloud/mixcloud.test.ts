@@ -7,11 +7,11 @@ import { join } from "path";
 import { describe, it } from 'mocha';
 import { http, HttpResponse } from "msw";
 import { COMPONENT_AUTH_TYPE, PARSED_FROM } from "../../../core/Atomic.ts";
-import { artistCreditsToNames } from "../../../core/StringUtils.ts";
 import type { MixcloudData, MixcloudListen } from "../../common/infrastructure/config/source/mixcloud.ts";
 import MixcloudSource from "../../sources/MixcloudSource.ts";
 import { withRequestInterception } from "../utils/networking.ts";
 import listensResponse from './listens.json' with { type: "json" };
+import { creditsToNames } from "../../../core/MusicMetadata.ts";
 
 // Mixcloud serves JSON with a text/javascript content-type
 const mixcloudJson = (body: object, init: ResponseInit = {}) => new HttpResponse(JSON.stringify(body), {
@@ -47,24 +47,24 @@ describe('Mixcloud Source', function () {
         it('Parses a listen as a single play for the entire mix', function () {
             const play = MixcloudSource.formatPlayObj(listens[0]);
 
-            assert.equal(play.data.track, 'Late Night Session #12');
+            assert.equal(play.data.track?.name, 'Late Night Session #12');
             assert.equal(play.data.duration, 7198);
             assert.isUndefined(play.data.album);
             assert.equal(play.data.playDate!.toISOString(), '2026-06-15T13:38:24.000Z');
             assert.equal(play.meta.trackId, '/SomeRadio/late-night-session-12/');
             assert.equal(play.meta.url!.web, 'https://www.mixcloud.com/SomeRadio/late-night-session-12/');
-            assert.equal(play.meta.art!.track, 'https://thumbnailer.mixcloud.com/unsafe/300x300/extaudio/a/b/c');
+            assert.equal(play.data.track?.image, 'https://thumbnailer.mixcloud.com/unsafe/300x300/extaudio/a/b/c');
         });
 
         it('Uses credited hosts as artists', function () {
             const play = MixcloudSource.formatPlayObj(listens[0]);
-            assert.sameOrderedMembers(artistCreditsToNames(play.data.artists!), ['DJ One', 'DJ Two']);
+            assert.sameOrderedMembers(creditsToNames(play.data.artists!), ['DJ One', 'DJ Two']);
         });
 
         it('Falls back to the uploader as artist when there are no hosts', function () {
             const play = MixcloudSource.formatPlayObj(listens[1]);
-            assert.sameOrderedMembers(artistCreditsToNames(play.data.artists!), ['Solo DJ']);
-            assert.equal(play.meta.art!.track, 'https://thumbnailer.mixcloud.com/unsafe/100x100/extaudio/d/e/f');
+            assert.sameOrderedMembers(creditsToNames(play.data.artists!), ['Solo DJ']);
+            assert.equal(play.data.track?.image, 'https://thumbnailer.mixcloud.com/unsafe/100x100/extaudio/d/e/f');
         });
     });
 
@@ -259,8 +259,8 @@ describe('Mixcloud Source', function () {
                 const plays = await source.getRecentlyPlayed();
 
                 expect(plays).to.have.length(2);
-                assert.equal(plays[0].data.track, 'Deep House Mix 2026');
-                assert.equal(plays[1].data.track, 'Late Night Session #12');
+                assert.equal(plays[0].data.track?.name, 'Deep House Mix 2026');
+                assert.equal(plays[1].data.track?.name, 'Late Night Session #12');
                 for (const play of plays) {
                     assert.equal(play.meta.parsedFrom, PARSED_FROM.history);
                 }
@@ -299,7 +299,7 @@ describe('Mixcloud Source', function () {
                     source.accessToken = 'tok123';
                     const plays = await source.getRecentlyPlayed();
                     expect(plays).to.have.length(2);
-                    assert.equal(plays[0].data.track, 'Deep House Mix 2026');
+                    assert.equal(plays[0].data.track?.name, 'Deep House Mix 2026');
                 } finally {
                     cleanup();
                 }
