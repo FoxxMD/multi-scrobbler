@@ -252,7 +252,7 @@ export default class DeezerInternalSource extends MemorySource {
                 this.logger.debug(`Ignoring ${nonSong.length} entries in history with types of ${nonSongTypes.join(',')}`);
             }
             return resp.results.data.filter(x => x.__TYPE__ === 'song').map(x => {
-                const play = DeezerInternalSource.formatPlayObj(x);
+                const play = DeezerInternalSource.formatPlayObj(x, {variant: this.config.options?.variant});
                 play.meta.parsedFrom = PARSED_FROM.history;
                 return play;
             }).sort(sortByOldestPlayDate);
