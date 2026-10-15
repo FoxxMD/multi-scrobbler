@@ -2,6 +2,7 @@ import * as z from "zod";
 import type {Second} from "../../../../../core/Atomic.ts";
 import {pollingOptionsSchema} from "../common.ts";
 import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
+import { envMetaNormalize } from "../../../../utils/ZodUtils.ts";
 
 export const deezerDataSchema = z.object({
     ...commonSourceDataSchema.shape,
@@ -80,7 +81,9 @@ export const deezerInternalDataSchema = z.object({
 export type DeezerInternalData = z.infer<typeof deezerInternalDataSchema>;
 
 export const deezerInternalSourceOptionsSchema = z.object({
-    ...commonSourceOptionsSchema.shape,
+    variant: z.boolean().optional().meta({
+        description: 'Add the reported title variant, like `(Remastered)`, to the title name.',
+    }),
     /**
      * Set the heuristic level of duplicate/repeated track pruning from listening history.
      * 
@@ -90,6 +93,7 @@ export const deezerInternalSourceOptionsSchema = z.object({
      * * `aggressive` => above AND check for plays during previous play times that occurred during the track (50% +/- duration plus playedAt date)
      */
     fuzzyDiscoveryIgnore: z.union([z.boolean(), z.literal('aggressive')]).optional(),
+    ...commonSourceOptionsSchema.shape,
 });
 
 export type DeezerInternalSourceOptions = z.infer<typeof deezerInternalSourceOptionsSchema>;
@@ -116,7 +120,8 @@ export type DeezerCompatConfig = z.infer<typeof deezerCompatConfigSchema>;
 const envDataSchema = z.object({
     DEEZER_ARL: deezerInternalDataSchema.shape.arl,
     DEEZER_ACCOUNT_ID: deezerInternalDataSchema.shape.accountId,
-    DEEZER_USER_AGENT: deezerInternalDataSchema.shape.userAgent
+    DEEZER_USER_AGENT: deezerInternalDataSchema.shape.userAgent,
+    DEEZER_TRACK_VARIANT: z.stringbool().optional().meta(envMetaNormalize(deezerInternalSourceOptionsSchema.shape.variant.meta()))
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, DeezerInternalSourceConfig> = {
@@ -154,6 +159,12 @@ export interface DeezerInternalTrackData {
     SNG_TITLE: string
     /** Time listened to track in seconds */
     DURATION: Second
+    /** The variant of the Song Title
+     * 
+     * @example (Remastered)
+     */
+    VERSION?: string
+    ISRC?: string
 
     __TYPE__: 'song' | string
 }
