@@ -107,11 +107,11 @@ Only one of these methods needs to be used.
 
         Now, start MS and during the YTMusic startup it will log something like this:
 
-        ```
+        ```text placeholder="YOUR_MS_DOMAIN"
         Will use custom OAuth Client:
         Client ID: ...
         Client Secret: ...
-        Redirect URI: http://localhost:9078/api/ytmusic/callback?name=MyYTM
+        Redirect URI: http://YOUR_MS_DOMAIN/api/ytmusic/callback?name=MyYTM
         ```
 
         If the beginning of the Redirect URI (before `api`) is EXACTLY how you would reach the MS dashboard from your browser (EX `http://localhost:9078`) then edit your google oauth client section for `Authorized redirect URIs` and add the URL MS has displayed.
@@ -130,7 +130,7 @@ Only one of these methods needs to be used.
 
                 Remember to add your custom URL to the `Authorized redirect URIs`  section in the google oauth client!
 
-                ```json
+                ```json placeholder="YOUR_MS_DOMAIN"
                 {
                     "type": "ytmusic",
                     "enable": true,
@@ -138,7 +138,7 @@ Only one of these methods needs to be used.
                     "data": {
                         "clientId": "8910....6jqupl.apps.googleusercontent.com",
                         "clientSecret": "GOCSPX-WGXL6BSuQ343...",
-                        "redirectUri": "http://my.custom.domain/api/ytmusic/callback?name=MyYTM"
+                        "redirectUri": "http://YOUR_MS_DOMAIN/api/ytmusic/callback?name=MyYTM"
                     },
                     "options": {
                         "logAuthUpdateChanges": true,

@@ -117,14 +117,14 @@ services:
 <TabItem value="subpath" label="Deploying MS with a Subpath">
 When deploying MS to a domain where it will be served under a **subpath**, like `http://mydomain.com/multiscrobbler`, you **must** define `BASE_URL`:
 
-```yaml title="docker-compose.yml"
+```yaml title="docker-compose.yml" placeholder="YOUR_MS_DOMAIN"
 services:
   multi-scrobbler:
     # ...
     environment:
       # [!code highlight:2]
       # multi-scrobbler served under this subpath
-      - BASE_URL=https://mydomain.com/multiscrobbler
+      - BASE_URL=https://YOUR_MS_DOMAIN/multiscrobbler
 ```
 
 This is **not required** when the root path is `/`, like `https://my-scrobbler.com` or `scrobbler.mydomain.com`.
@@ -139,7 +139,7 @@ This build step is *optional* and not required for MS to run with a subpath, you
 
 To build MS with self-hosted docs, provide the same `BASE_URL` used above as a build arg:
 
-```yaml title="docker-compose.yml"
+```yaml title="docker-compose.yml" placeholder="YOUR_MS_DOMAIN"
 services:
   multi-scrobbler:
   # [!code highlight:7]
@@ -149,13 +149,13 @@ services:
     build:
       context: https://github.com/FoxxMD/multi-scrobbler.git
       args:
-        - BASE_URL=https://mydomain.com/multiscrobbler
+        - BASE_URL=https://YOUR_MS_DOMAIN/multiscrobbler
   # ...
     environment:
         # ...
         # [!code highlight:2]
         # multi-scrobbler served under this subpath
-        - BASE_URL=https://mydomain.com/multiscrobbler
+        - BASE_URL=https://YOUR_MS_DOMAIN/multiscrobbler
 ```
 
 </DetailsAdmo>
@@ -249,7 +249,7 @@ The example scenario:
 
 See [`docker-compose.yml`](#docker) sample above for more options and annotations.
 
-```yaml title="docker-compose.yml"
+```yaml title="docker-compose.yml" placeholder="YOUR_MS_DOMAIN"
 services:
   multi-scrobbler:
     image: foxxmd/multi-scrobbler
@@ -259,7 +259,7 @@ services:
       - JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56bd6540c
       - JELLYFIN_URL=192.168.0.101:8096
       - JELLYFIN_USER=MyUser
-      - BASE_URL=http://192.168.0.100:9078
+      - BASE_URL=http://YOUR_MS_DOMAIN
       - MALOJA_URL=http://domain.tld:42010
       - MALOJA_API_KEY=1234
       - PUID=1000

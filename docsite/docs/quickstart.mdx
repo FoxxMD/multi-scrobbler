@@ -23,14 +23,14 @@ If the multi-scrobbler container is on the same machine you will be viewing the 
 
 Create a new folder for multi-scrobbler related data and then create `docker-compose.yml` with this content:
 
-```yaml title="~/msData/docker-compose.yml"
+```yaml title="~/msData/docker-compose.yml" placeholder="YOUR_MS_DOMAIN"
 services:
   multi-scrobbler:
     image: foxxmd/multi-scrobbler
     container_name: multi-scrobbler
     environment:
       - TZ=Etc/GMT # Specify timezone from TZ Database name found here https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
-      - BASE_URL=http://192.168.0.100:9078
+      - BASE_URL=http://YOUR_MS_DOMAIN
       # all Environmental Variables in below examples go here!
 
     volumes:
@@ -65,10 +65,10 @@ services:
 
         Assuming you used the **HTTPS** method for your **Redirect URI** from the instructions above...after the application is created add these values to the `environment` section in the [`docker-compose.yml` you created.](#create-docker-compose-file)
 
-        ```yaml title="~/msData/docker-compose.yml"
+        ```yaml title="~/msData/docker-compose.yml" placeholder="YOUR_MS_DOMAIN"
         - SPOTIFY_CLIENT_ID=yourClientId
         - SPOTIFY_CLIENT_SECRET=yourClientSecret
-        - SPOTIFY_REDIRECT_URI=https://multi-scrobbler.mydomain.com/callback
+        - SPOTIFY_REDIRECT_URI=https://YOUR_MS_DOMAIN/callback
         - SPOTIFY_ID=mySpotify
         ```
 
@@ -94,8 +94,8 @@ services:
 
         Set the [**ListenBrainz.BaseURL**](https://www.navidrome.org/docs/usage/configuration-options/#advanced-configuration) (env `ND_LISTENBRAINZ_BASEURL`) to `http://myMultiScrobblerIP:9078/1/` in your Navidrome installation. Assuming you are using the [docker installation](https://www.navidrome.org/docs/installation/docker/), modify `environment` to add:
 
-        ```yaml title="docker-compose.yml"
-        - ND_LISTENBRAINZ_BASEURL=http://192.168.0.100:9078/1/
+        ```yaml title="docker-compose.yml" placeholder="YOUR_MS_DOMAIN"
+        - ND_LISTENBRAINZ_BASEURL=http://YOUR_MS_DOMAIN/1/
         ```
 
         Restart Navidrome after making this change. Then, [follow the directions for enabling Listenbrainz scrobbling in Navidrome](https://www.navidrome.org/docs/usage/scrobbling/#listenbrainz). The **Listenbrainz user token** is the token you created for `LZE_TOKEN` earlier.
@@ -124,18 +124,18 @@ services:
 
         Use the following for **Callback URL**:
 
-        ```
-        http://192.168.0.100:9078/lastfm/callback
+        ```text placeholder="YOUR_MS_DOMAIN"
+        http://YOUR_MS_DOMAIN/lastfm/callback
         ```
 
         After account creation make note of the **Api Key** and **Secret** that are displayed.
 
         Add these values to the `environment` section in the [`docker-compose.yml` you created.](#create-docker-compose-file)
 
-        ```yaml title="~/msData/docker-compose.yml"
+        ```yaml title="~/msData/docker-compose.yml" placeholder="YOUR_MS_DOMAIN"
         - SOURCE_LASTFM_API_KEY=MY_API_KEY_PLACEDHOLDER
         - SOURCE_LASTFM_SECRET=MY_SECRET_PLACEHOLDER
-        - SOURCE_LASTFM_REDIRECT_URI=http://192.168.0.100:9078/lastfm/callback
+        - SOURCE_LASTFM_REDIRECT_URI=http://YOUR_MS_DOMAIN/lastfm/callback
         - SOURCE_LASTFM_ID=myLFMSource
         ```
 
@@ -201,7 +201,7 @@ Add this value to the `environment` section in the [`docker-compose.yml` you cre
 <TabItem value="lastfm" label="Last.fm">
 Modify the `lastfm.json` file you created in the [Setup Sources](#setup-sources) step to add the highlighted section in the example below. The comma at the top highlighted section is important!
 
-```json title="~/msData/config/lastfm.json"
+```json title="~/msData/config/lastfm.json" placeholder="YOUR_MS_DOMAIN"
 [
   {
     "name": "myLastFmSource",
@@ -209,7 +209,7 @@ Modify the `lastfm.json` file you created in the [Setup Sources](#setup-sources)
     "data": {
       "apiKey": "MY_API_KEY_PLACEDHOLDER",
       "secret": "MY_SECRET_PLACEHOLDER",
-      "redirectUri": "http://192.168.0.100:9078/lastfm/callback"
+      "redirectUri": "http://YOUR_MS_DOMAIN/lastfm/callback"
     // [!code highlight:8]
     },
     "options": {
@@ -266,8 +266,8 @@ Modify the `lastfm.json` file you created in the [Setup Sources](#setup-sources)
 
         Use the following for **Callback URL**:
 
-        ```
-        http://192.168.0.100:9078/lastfm/callback
+        ```text placeholder="YOUR_MS_DOMAIN"
+        http://YOUR_MS_DOMAIN/lastfm/callback
         ```
 
         After account creation use the displayed information and add these values to the `environment` section in the [`docker-compose.yml` you created for multi-scrobbler earlier.](#create-docker-compose-file)

@@ -238,7 +238,7 @@ Multi-scrobbler will look for patterns in text fields within _all_ of your json 
 
 Given this [Last.fm](/configuration/clients/lastfm#configuration) [File](./?configType=file#configuration-types) config:
 
-```json title="lastfm.json"
+```json title="lastfm.json" placeholder="YOUR_MS_DOMAIN"
 [
   {
     "name": "myLastFmClient",
@@ -246,7 +246,7 @@ Given this [Last.fm](/configuration/clients/lastfm#configuration) [File](./?conf
     "data": {
       "apiKey": "[[MY_APIKEY]]",
       "secret": "[[MY_SECRET]]",
-      "redirectUri": "http://localhost:9078/lastfm/callback"
+      "redirectUri": "http://YOUR_MS_DOMAIN/lastfm/callback"
     }
   }
 ]
@@ -261,7 +261,7 @@ MY_SECRET=ec42e09d5ae0ee0f0816ca151008412a
 
 The resulting json multi-scrobbler would use:
 
-```json title="lastfm.json"
+```json title="lastfm.json" placeholder="YOUR_MS_DOMAIN"
 [
   {
     "name": "myLastFmClient",
@@ -269,7 +269,7 @@ The resulting json multi-scrobbler would use:
     "data": {
       "apiKey": "a89cba1569901a0671d5a9875fed4be1",
       "secret": "ec42e09d5ae0ee0f0816ca151008412a",
-      "redirectUri": "http://localhost:9078/lastfm/callback"
+      "redirectUri": "http://YOUR_MS_DOMAIN/lastfm/callback"
     }
   }
 ]
@@ -975,7 +975,7 @@ Additionally, general process metrics like cpu and memory usage can be enabled w
 
 Update your [Prometheus Configuration file](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#configuration-file) (usually at `/etc/prometheus.yml`) to add a job to the `scrape_configs`[section](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config) like this:
 
-```yaml
+```yaml placeholder="YOUR_MS_DOMAIN"
 scrape_configs:
   #
   # ...your other jobs are here
@@ -984,7 +984,7 @@ scrape_configs:
     scrape_interval: 30s
     metrics_path: '/api/metrics'
     static_configs:
-      - targets: ['myMultiscrobblerIp:9078']
+      - targets: ['YOUR_MS_DOMAIN']
 ```
 
 
