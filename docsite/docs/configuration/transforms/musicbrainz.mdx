@@ -1172,9 +1172,11 @@ Using the config shown in [Sensible Default](#sensible-default) with File/AIO co
 
 <summary>Example</summary>
 
-Your [AIO Config](/configuration?configType=aio#configuration-types):
+* Using your [AIO Config](/configuration?configType=aio#configuration-types)
+* Using a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types)
 
-```json5 title="config.json"
+:::code-tabs
+```json label="config" title="config.json"
 {
   // ...
   "transformers": [
@@ -1192,10 +1194,7 @@ Your [AIO Config](/configuration?configType=aio#configuration-types):
   ]
 }
 ```
-
-In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
-
-```json5 title="subsonic.json"
+```json label="sub" title="subsonic.json"
 [
   { 
     "name": "MySubsonic",
@@ -1213,6 +1212,7 @@ In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?co
   }
 ]
 ```
+:::
 </details>
 
 ### Add Metadata Only (No Scrobble Modification)

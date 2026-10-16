@@ -5,7 +5,8 @@
 // which transpiles Shiki's lazy theme/grammar import()s to CJS and breaks them.
 import { createHash } from 'node:crypto';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import rehypeExpressiveCode, { createRenderer } from 'rehype-expressive-code';
+import rehypeExpressiveCode, { createRenderer, MetaOptions } from 'rehype-expressive-code';
+import { bundledLanguagesInfo } from 'shiki/langs';
 import { pluginCodeblocks } from 'starlight-codeblocks/expressive-code';
 
 export const ecOptions = {
@@ -33,6 +34,60 @@ const rehypeEcExplicitJsx = () => (tree) => {
   };
   mark(tree, false);
 };
+
+// Port of starlight-codeblocks' `:::code-tabs` transform (src/satteri/index.ts `codeTabs()`), which
+// it only wires up inside its Astro integration. Docusaurus already parses directives (remark-directive).
+// Wraps the fences in a `.scb-tabs` div and gives each the `scbTabs` meta that pluginCodeTabs() reads.
+const languageName = (lang) => {
+  if (!lang) return 'Plain text';
+  return bundledLanguagesInfo.find((info) => info.id === lang || info.aliases?.includes(lang))?.name ?? lang;
+};
+// `diff lang="py"` renders as Python
+const fenceLanguage = (code) => (code.lang === 'diff' && new MetaOptions(code.meta ?? '').getString('lang')) || code.lang;
+
+const remarkCodeTabs = () => (tree, file) => {
+  const visit = (node) => {
+    node.children?.forEach((child, i) => {
+      if (child.type === 'containerDirective' && child.name === 'code-tabs') node.children[i] = codeTabs(child, file.path);
+      else visit(child);
+    });
+  };
+  visit(tree);
+};
+
+function codeTabs(node, path) {
+  const codes = node.children;
+  if (codes.length === 0 || codes.some((child) => child.type !== 'code')) {
+    throw new Error(`${path}: \`:::code-tabs\` can contain only fenced code blocks, and needs at least one.`);
+  }
+  const labels = codes.map((code) => new MetaOptions(code.meta ?? '').getString('label') ?? languageName(fenceLanguage(code)));
+  const repeated = labels.find((label, i) => labels.indexOf(label) !== i);
+  if (repeated !== undefined) {
+    throw new Error(`${path}: two variants in a \`:::code-tabs\` have the label "${repeated}". Give each variant a different \`label="…"\`.`);
+  }
+  const control = node.attributes?.control ?? 'tabs';
+  if (control !== 'tabs' && control !== 'menu') {
+    throw new Error(`${path}: \`:::code-tabs\` has \`control="${control}"\`. Use \`control="tabs"\` or \`control="menu"\`.`);
+  }
+  return {
+    type: 'paragraph',
+    data: {
+      hName: 'div',
+      hProperties: {
+        className: ['scb-tabs'],
+        dataScbCodeTabs: node.attributes?.sync ?? '',
+        dataScbControl: control,
+        dataScbLabels: JSON.stringify(labels),
+      },
+    },
+    children: codes.map((code, index) => ({
+      ...code,
+      meta: `${code.meta ?? ''} scbTabs="${encodeURIComponent(JSON.stringify({ index, labels, control }))}"`.trim(),
+    })),
+  };
+}
+
+export const remarkPlugins = [remarkCodeTabs];
 
 export const rehypePlugins = [
   [rehypeExpressiveCode, {
