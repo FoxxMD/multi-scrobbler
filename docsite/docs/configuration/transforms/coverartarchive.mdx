@@ -252,17 +252,15 @@ services:
     container_name: multi-scrobbler
     environment:
       - MB_PRESETS=default
-      // highlight-start
+      # [!code highlight:2]
        # allow any type of art, not only front covers
       - CAA_PRESETS=any
-      // highlight-end
       - JELLYFIN_URL=192.168.0.110:8096
       - JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56b
       - JELLYFIN_USER=MyUser
-      // highlight-start
+      # [!code highlight:2]
        # adds MBIDs with Musicbrainz Stage, then finds art with Cover Art Archive Stage
       - JELLYFIN_TRANSFORMS=musicbrainz,coverartarchive
-      // highlight-end
       - MALOJA_URL=http://domain.tld:42010
       - MALOJA_API_KEY=1234
 
@@ -457,10 +455,9 @@ services:
     environment:
        # ... your source ENVs go here
        #
-      // highlight-start
+      # [!code highlight:2]
        # applies Cover Art Archive Stage to preCompare of Jellyfin Source
       - JELLYFIN_TRANSFORMS=coverartarchive
-      // highlight-end
 
     volumes:
       - "./config:/config"

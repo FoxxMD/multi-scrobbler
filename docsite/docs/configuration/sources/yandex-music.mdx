@@ -28,10 +28,9 @@ services:
       # ...your other sources/clients here
 
       # add for yandex music
-      // highlight-start
+      # [!code highlight:2]
       - YMBRIDGE_URL=http://yandex-music-bridge:9980
       - YMBRIDGE_API_KEY=change-me
-      // highlight-end
 
     volumes:
       - "./config:/config"
@@ -39,7 +38,7 @@ services:
       - "9078:9078"
     restart: unless-stopped
 
-  // highlight-start
+  # [!code highlight:15]
   yandex-music-bridge:
     image: ghcr.io/druidblack/yandex-music-bridge:latest
     environment:
@@ -55,7 +54,6 @@ services:
     ports:
       - "9980:9980"
     restart: unless-stopped
-   // highlight-end
 ```
 
 You will need to acquire your own token for `YM_TOKEN` used in [`yandex-music-bridge`](https://github.com/Druidblack/yandex-music-bridge) using the instructions provided there.

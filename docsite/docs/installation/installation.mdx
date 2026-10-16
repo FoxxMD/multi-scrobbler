@@ -48,10 +48,9 @@ You **should** bind a host directory into the container for storing configuratio
 services:
   multi-scrobbler:
   # ...
-  // highlight-start
+  # [!code highlight:2]
   volumes:
     - "./config:/config"
-  // highlight-end
 ```
 
 Optionally, use a separate directory for data (database, cache, etc...) by mounting an additional directory and setting the `DATA_DIR` ENV to the directory that should be used inside the container:
@@ -62,14 +61,12 @@ services:
   # ...
   environment:
     # ...
-    // highlight-start
+    # [!code highlight]
     - DATA_DIR=/msData
-    // highlight-end
   volumes:
     - "./config:/config" # used for config files
-  // highlight-start
+  # [!code highlight]
     - "./my/host/folder:/msData" # used for data files
-  // highlight-end
 ```
 
 </TabItem>
@@ -80,10 +77,9 @@ If you are using a [bridge network](https://www.appsdeveloperblog.com/docker-net
 services:
   multi-scrobbler:
   # ...
-  // highlight-start
+  # [!code highlight:2]
   ports:
     - "9078:9078"
-  // highlight-end
 ```
 
 :::important
@@ -114,9 +110,8 @@ services:
   multi-scrobbler:
   # ...
   environment:
-    // highlight-start
+    # [!code highlight]
     - BASE_URL=http://hostMachineIP
-    // highlight-end
 ```
 </TabItem>
 <TabItem value="subpath" label="Deploying MS with a Subpath">
@@ -127,10 +122,9 @@ services:
   multi-scrobbler:
     # ...
     environment:
-      // highlight-start
+      # [!code highlight:2]
       # multi-scrobbler served under this subpath
       - BASE_URL=https://mydomain.com/multiscrobbler
-      // highlight-end
 ```
 
 This is **not required** when the root path is `/`, like `https://my-scrobbler.com` or `scrobbler.mydomain.com`.
@@ -148,7 +142,7 @@ To build MS with self-hosted docs, provide the same `BASE_URL` used above as a b
 ```yaml title="docker-compose.yml"
 services:
   multi-scrobbler:
-  // highlight-start
+  # [!code highlight:7]
   ## remove/comment out official image
   # image: docker.io/foxxmd/multi-scrobbler:latest
   ## add build spec
@@ -156,14 +150,12 @@ services:
       context: https://github.com/FoxxMD/multi-scrobbler.git
       args:
         - BASE_URL=https://mydomain.com/multiscrobbler
-  // highlight-end
   # ...
     environment:
         # ...
-        // highlight-start
+        # [!code highlight:2]
         # multi-scrobbler served under this subpath
         - BASE_URL=https://mydomain.com/multiscrobbler
-        // highlight-end
 ```
 
 </DetailsAdmo>
@@ -180,9 +172,8 @@ services:
   # ...
   environment:
     # Specify timezone from TZ Database name found here https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
-    // highlight-start
+    # [!code highlight]
     - TZ=America/New_York
-    // highlight-end
 ```
 
 </TabItem>
@@ -202,12 +193,11 @@ services:
   multi-scrobbler:
     image: foxxmd/multi-scrobbler
     # ...
-    // highlight-start
+    # [!code highlight:4]
     read_only: true
     tmpfs:
       - /run:exec
       - /tmp:noexec    
-    // highlight-end    
 ```
 
 </TabItem>
@@ -221,12 +211,11 @@ services:
     # ...
     environment:
       # ...
-      // highlight-start
+      # [!code highlight]
       CACHE_VALKEY=redis://valkey:6379
-      // highlight-end
     # ...
 
-  // highlight-start
+  # [!code highlight:8]
   valkey:
     image: valkey/valkey
     volumes:
@@ -235,7 +224,6 @@ services:
 volumes:
   valkeydata:
     driver: local
-  // highlight-end
 ```
 
 </TabItem>

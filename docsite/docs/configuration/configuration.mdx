@@ -136,7 +136,7 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
                   "apiKey": "c9fae8756fbf481ebd9c5bb56bd6540c"
                 }
               },
-              // highlight-start
+              # [!code highlight:9]
               {
                 "name": "Foo's JF Server",
                 "id": "fooJf",
@@ -146,7 +146,6 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
                   "apiKey": "9c5bb56bd6540c756fbf481ebd9c5c40"
                 }
               }
-              // highlight-end
             ]
             ```
 
@@ -197,9 +196,8 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
           "sources": [
             {
               "name": "Foxx JF Server",
-              // highlight-start
+              # [!code highlight]
               "type: "jellyfin",
-              // highlight-end
               "id": "foxxJf",
               "data": {
                 "url": "http://localhost:8096",
@@ -382,9 +380,8 @@ services:
   multi-scrobbler:
   # ...
   environment:
-  // highlight-start
+  # [!code highlight]
     - CACHE_AUTH=valkey
-  // highlight-end
     # ...
 ```
 
@@ -432,7 +429,7 @@ A valkey container can be added to the [multi-scrobbler docker compose stack](/i
 services:
   multi-scrobbler:
   # ...
-  // highlight-start
+  # [!code highlight:8]
   valkey:
     image: valkey/valkey
     volumes:
@@ -441,7 +438,6 @@ services:
 volumes:
   valkeydata:
     driver: local
-  // highlight-end
 ```
 
 </TabItem>
@@ -451,12 +447,11 @@ volumes:
 services:
   multi-scrobbler:
   # ...
-  // highlight-start
+  # [!code highlight:4]
   valkey:
     image: valkey/valkey
     volumes:
       - ./valkeyData:/data
-  // highlight-end
 ```
 
 </TabItem>
@@ -482,9 +477,8 @@ services:
   multi-scrobbler:
   # ...
   environment:
-  // highlight-start
+  # [!code highlight]
     - CACHE_VALKEY=redis://192.168.0.120:6379
-  // highlight-end
     # ...
 ```
 

@@ -203,11 +203,10 @@ Here is an example of creating a User Stage to only strip suffixes for a specifi
     "data": {
       // ...
     },
-    // highlight-start
+    // [!code highlight:3]
     "options": {
       "normalizeAlbum": false
     }
-    // highlight-end
   }
 }
 ```
@@ -224,7 +223,7 @@ Here is an example of creating a User Stage to only strip suffixes for a specifi
       "secret": "ec42e09d5ae0ee0f0816ca151008412a",
       "redirectUri": "http://localhost:9078/lastfm/callback"
     },
-    // highlight-start
+    // [!code highlight:10]
     "options": {
       "playTransform": {
         "preCompare": [
@@ -235,7 +234,6 @@ Here is an example of creating a User Stage to only strip suffixes for a specifi
         ]
       }
     }
-    // highlight-end
   }
 ]
 ```

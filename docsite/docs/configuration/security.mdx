@@ -48,12 +48,11 @@ If running MS in a [Docker container](/installation#docker), you can run MS **he
 services:
   multi-scrobbler:
   # ...
-  // highlight-start
+  # [!code highlight:4]
   # comment out ports section
   #
   # ports:
   #  - 9078:9078
-  // highlight-end
 ```
 
 Alternatively, lock the exposed port to a specific IP address:
@@ -62,11 +61,10 @@ Alternatively, lock the exposed port to a specific IP address:
 services:
   multi-scrobbler:
   # ...
-  // highlight-start
+  # [!code highlight:3]
    ports:
     # only accessible from private ip or tailscale ip
     - 192.168.0.101:9078:9078
-  // highlight-end
 ```
 
 #### Disable Web

@@ -343,18 +343,16 @@ services:
     image: foxxmd/multi-scrobbler
     container_name: multi-scrobbler
     environment:
-      // highlight-start
+      # [!code highlight:3]
        # searches with sensible release sorting with the searchOrder
        # isrc => basic => artist (native mode)
       - MB_PRESETS=default,sensible,native
-      // highlight-end
       - JELLYFIN_URL=192.168.0.110:8096
       - JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56b
       - JELLYFIN_USER=MyUser
-      // highlight-start
+      # [!code highlight:2]
        # applies musicbrainz Stage to preTransform of Jellyfin source
       - JELLYFIN_TRANSFORMS=musicbrainz
-      // highlight-end
 
       # maloja receives enhanced scrobble from Jellyfin
       - MALOJA_URL=http://192.168.0.100:42010
@@ -1074,9 +1072,8 @@ In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?co
     "data": { /* ... */},
     "options": {
       "playTransform": {
-        // highlight-start
+        // [!code highlight]
         "log": "all",
-        // highlight-end
         "preCompare": [
           {
             "type": "musicbrainz",

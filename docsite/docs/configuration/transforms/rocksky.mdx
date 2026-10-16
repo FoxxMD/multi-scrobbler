@@ -265,21 +265,19 @@ services:
     image: foxxmd/multi-scrobbler
     container_name: multi-scrobbler
     environment:
-      // highlight-start
+      # [!code highlight:3]
        # searches with the searchOrder
        # isrc => basic
       - RS_PRESETS=default
-      // highlight-end
       - JELLYFIN_URL=192.168.0.110:8096
       - JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56b
       - JELLYFIN_USER=MyUser
       - ROCKSKY_ID=Rocky
       - ROCKSKY_HANDLE=alice.bsky.social
       - ROCKSKY_APP_PW=1234567
-      // highlight-start
+      # [!code highlight:2]
        # applies Rocksky Stage to preTransform of Rocksky Client
       - ROCKSKY_TRANSFORMS=rocksky
-      // highlight-end
 
 
     volumes:
@@ -736,20 +734,18 @@ services:
   multi-scrobbler:
     image: foxxmd/multi-scrobbler
     environment:
-      // highlight-start
+      # [!code highlight:3]
        # searches with the searchOrder
        # isrc => basic
       - RS_PRESETS=default
-      // highlight-end
        # ... your source ENVs go here
        #
       - ROCKSKY_ID=Rocky
       - ROCKSKY_HANDLE=alice.bsky.social
       - ROCKSKY_APP_PW=1234567
-      // highlight-start
+      # [!code highlight:2]
        # applies Rocksky Stage to preTransform of Rocksky Client
       - ROCKSKY_TRANSFORMS=rocksky
-      // highlight-end
 
 
     volumes:

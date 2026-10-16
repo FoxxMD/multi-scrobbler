@@ -84,9 +84,8 @@ In [`sources.ts`](https://github.com/FoxxMD/multi-scrobbler/blob/master/src/back
 export const sourceConfigSchema = z.union([
     // ...
     appleMusicSourceConfigSchema,
-    // highlight-start
+    // [!code highlight]
     coolPlaySourceConfigSchema
-    // highlight-end
 ]);
 
 export type SourceConfig = z.infer<typeof sourceConfigSchema>;
@@ -94,9 +93,8 @@ export type SourceConfig = z.infer<typeof sourceConfigSchema>;
 export const sourceAIOConfigSchema = z.union([
     // ...
     appleMusicSourceAIOConfigSchema,
-    // highlight-start
+    // [!code highlight]
     coolPlayerSourceAIOConfigSchema
-    // highlight-end
 ]);
 ```
 
@@ -106,21 +104,19 @@ In [`sourcesMap.ts`](https://github.com/FoxxMD/multi-scrobbler/blob/master/src/b
 // ...
 export interface SourceTypeConfigMap extends Record<SourceType, [CommonSourceConfig, SourceAIOConfig, Partial<Pick<CommonSourceConfig, 'data' | 'options'>>]> {
   // ...
-  // highlight-start
+  // [!code highlight]
   coolplayer: [CoolPlayerSourceConfig, CoolPlayerSourceAIOConfig, Partial<Pick<CoolPlayerSourceConfig, 'data' | 'options'>>];
-  // highlight-end
 }
 
 // ...
 
 export const sourceConfigSchemaMapAsync: { [K in keyof SourceTypeConfigMap]: () => Promise<[ZodType<SourceTypeConfigMap[K][0]>, ZodType<SourceTypeConfigMap[K][1]>, EnvSourceSchema<ZodObject, SourceTypeConfigMap[K][0]>]> } = {
     // ...
-    // highlight-start
+    // [!code highlight:4]
     coolplayer: async () => {
         const {coolPlayerSourceConfigSchema, coolPlayerSourceAIOConfigSchema, envSchemas } = (await import('./coolplayer.ts'));
         return [coolPlayerSourceConfigSchema, coolPlayerSourceAIOConfigSchema, envSchemas]
     },
-    // highlight-end
 }
 ```
 
@@ -240,13 +236,12 @@ export default class ScrobbleSources {
           case 'spotify':
           // ...
           //
-          // highlight-start
+          // [!code highlight:5]
           // add a dynamic import for CoolPlayersource
           case 'coolplayer': {
               const CoolPlayerSource = (await import('./CoolPlayerSource.ts')).default;
               await this.instantiateSources('coolplayer', strongConfigs, defaults, CoolPlayerSource);
           } break;
-          // highlight-end
           default:
               break;
       }
