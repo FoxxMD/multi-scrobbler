@@ -4,7 +4,12 @@ import * as themes from 'prism-react-renderer';
 import * as Renderers from './lib/socialCard/ImageRenderers.js';
 import path from 'node:path';
 import type * as OpenApiPlugin from "docusaurus-plugin-openapi-docs";
+import { createRequire } from 'node:module';
 //import sidebars from './sidebars';
+
+// Docusaurus loads this config with jiti, which breaks Shiki's lazy import()s.
+// A real Node require (require(esm) is supported in Node >= 22) loads expressive-code natively.
+const { rehypePlugins: ecRehypePlugins, expressiveCodePlugin, ecStaticDir } = createRequire(import.meta.url)('./plugins/expressive-code/index.mjs');
 
 let baseSite: string = 'https://foxxmd.github.io';
 
@@ -80,6 +85,7 @@ const config: Config = {
         docs: {
           sidebarPath: './sidebars.ts',
           docItemComponent: "@theme/ApiItem",
+          rehypePlugins: ecRehypePlugins,
           routeBasePath: '/',
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
@@ -135,7 +141,10 @@ const config: Config = {
     'docusaurus-theme-github-codeblock',
     "docusaurus-theme-openapi-docs"
   ],
+  // ecStaticDir holds expressive-code's generated, content-hashed CSS/JS
+  staticDirectories: ['static', ecStaticDir],
   plugins: [
+    expressiveCodePlugin,
     'docusaurus-plugin-sass',
     [
       '@docusaurus/plugin-client-redirects',
