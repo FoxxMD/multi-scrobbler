@@ -37,15 +37,13 @@ services:
   environment:
     - KOTIO_TOKEN=...
     # ...more koito config
-  // highlight-start
+  # [!code highlight]
     - KOITO_ID=myKoitoID
-  // highlight-end
 
     - JELLYFIN_URL=...
     # ...more jellyin config
-  // highlight-start
+  # [!code highlight]
     - JELLYFIN_ID=myJellyfinID
-  // highlight-end    
 ```
 
 </TabItem>
@@ -58,9 +56,8 @@ Add an `id` to the top-level for each Source/Client configuration, next to `data
   {
     "name": "koito-source",
     "configureAs": "source",
-    // highlight-start
+    // [!code highlight]
     "id": "myKoitoID",
-    // highlight-end   
     "data": {
       "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",
       "username": "admin",
@@ -82,9 +79,8 @@ Add an `id` to the top-level for each Source/Client configuration, next to `data
       "name": "koito-source",
       "configureAs": "source",
       "type": "koito",
-      // highlight-start
+      // [!code highlight]
       "id": "myKoitoID",
-      // highlight-end    
       "data": {
         "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",
         "username": "admin",
@@ -241,16 +237,14 @@ services:
     - KOTIO_TOKEN=...
     # ...
     - KOITO_ID=myKoitoID
-  // highlight-start
+  # [!code highlight]
     - KOITO_NAME=Koito A
-  // highlight-end
 
     - JELLYFIN_URL=...
     # ..
     - JELLYFIN_ID=myJellyfinID
-  // highlight-start
+  # [!code highlight]
     - JELLYFIN_NAME=Foxx Jelly
-  // highlight-end    
 ```
 
 :::important

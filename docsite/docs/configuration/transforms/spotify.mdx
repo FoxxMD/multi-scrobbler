@@ -64,12 +64,11 @@ This Stage uses Spotify's API to search/lookup the Spotify catalog. This does **
   "data": {
     "clientId": "787c921a2a2ab42320831aba0c8f2fc2",
     "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a",
-    // highlight-start
+    // [!code highlight:4]
     "rate": {
       "requests": 10,
       "perTime": 1
     }
-    // highlight-end
   },
 }
 ```
@@ -93,12 +92,11 @@ These are all also **optional** so you can use the Spotify Transform stage witho
         "clientId": "787c921a2a2ab42320831aba0c8f2fc2",
         "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a"
       },
-      // highlight-start
+      // [!code highlight:4]
       "defaults": {
         "score": 0.6,
         "deprioritizeCompilations": true
       }
-      // highlight-end
     }
   ]
 }
@@ -167,11 +165,10 @@ services:
       # ...
       - SPOTIFY_CLIENT_ID=787c921a2a2ab42320831aba0c8f2fc2
       - SPOTIFY_CLIENT_SECRET=ec42e09d5ae0ee0f0816ca151008412a
-      // highlight-start
+      # [!code highlight:3]
       # only runs transform if album, artists, title, duration, or art are missing in data
       # and only searches by isrc
       - SPOTIFY_TRANSFORMS_PRESETS=missingArt,missingFields,searchIsrc
-      // highlight-end
     # ...
 ```
 
@@ -194,20 +191,18 @@ services:
     image: foxxmd/multi-scrobbler
     container_name: multi-scrobbler
     environment:
-      // highlight-start
+      # [!code highlight:5]
       # only runs transform if art or fields are missing in data
       # and only searches by isrc
       - SPOTIFY_TRANSFORMS_PRESETS=missingArt,missingFields,searchIsrc
       - SPOTIFY_CLIENT_ID=787c921a2a2ab42320831aba0c8f2fc2
       - SPOTIFY_CLIENT_SECRET=ec42e09d5ae0ee0f0816ca151008412a
-      // highlight-end
       - JELLYFIN_URL=192.168.0.110:8096
       - JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56b
       - JELLYFIN_USER=MyUser
-      // highlight-start
+      # [!code highlight:2]
       # applies spotify Stage to preCompare of Jellyfin source
       - JELLYFIN_TRANSFORMS=spotify
-      // highlight-end
 
       # maloja receives enhanced scrobble from Jellyfin
       - MALOJA_URL=http://192.168.0.100:42010

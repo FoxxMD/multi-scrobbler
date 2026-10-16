@@ -136,7 +136,7 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
                   "apiKey": "c9fae8756fbf481ebd9c5bb56bd6540c"
                 }
               },
-              // highlight-start
+              # [!code highlight:9]
               {
                 "name": "Foo's JF Server",
                 "id": "fooJf",
@@ -146,7 +146,6 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
                   "apiKey": "9c5bb56bd6540c756fbf481ebd9c5c40"
                 }
               }
-              // highlight-end
             ]
             ```
 
@@ -197,9 +196,8 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
           "sources": [
             {
               "name": "Foxx JF Server",
-              // highlight-start
+              # [!code highlight]
               "type: "jellyfin",
-              // highlight-end
               "id": "foxxJf",
               "data": {
                 "url": "http://localhost:8096",
@@ -240,7 +238,7 @@ Multi-scrobbler will look for patterns in text fields within _all_ of your json 
 
 Given this [Last.fm](/configuration/clients/lastfm#configuration) [File](./?configType=file#configuration-types) config:
 
-```json title="lastfm.json"
+```json title="lastfm.json" placeholder="YOUR_MS_DOMAIN"
 [
   {
     "name": "myLastFmClient",
@@ -248,7 +246,7 @@ Given this [Last.fm](/configuration/clients/lastfm#configuration) [File](./?conf
     "data": {
       "apiKey": "[[MY_APIKEY]]",
       "secret": "[[MY_SECRET]]",
-      "redirectUri": "http://localhost:9078/lastfm/callback"
+      "redirectUri": "http://YOUR_MS_DOMAIN/lastfm/callback"
     }
   }
 ]
@@ -263,7 +261,7 @@ MY_SECRET=ec42e09d5ae0ee0f0816ca151008412a
 
 The resulting json multi-scrobbler would use:
 
-```json title="lastfm.json"
+```json title="lastfm.json" placeholder="YOUR_MS_DOMAIN"
 [
   {
     "name": "myLastFmClient",
@@ -271,7 +269,7 @@ The resulting json multi-scrobbler would use:
     "data": {
       "apiKey": "a89cba1569901a0671d5a9875fed4be1",
       "secret": "ec42e09d5ae0ee0f0816ca151008412a",
-      "redirectUri": "http://localhost:9078/lastfm/callback"
+      "redirectUri": "http://YOUR_MS_DOMAIN/lastfm/callback"
     }
   }
 ]
@@ -382,9 +380,8 @@ services:
   multi-scrobbler:
   # ...
   environment:
-  // highlight-start
+  # [!code highlight]
     - CACHE_AUTH=valkey
-  // highlight-end
     # ...
 ```
 
@@ -432,7 +429,7 @@ A valkey container can be added to the [multi-scrobbler docker compose stack](/i
 services:
   multi-scrobbler:
   # ...
-  // highlight-start
+  # [!code highlight:8]
   valkey:
     image: valkey/valkey
     volumes:
@@ -441,7 +438,6 @@ services:
 volumes:
   valkeydata:
     driver: local
-  // highlight-end
 ```
 
 </TabItem>
@@ -451,12 +447,11 @@ volumes:
 services:
   multi-scrobbler:
   # ...
-  // highlight-start
+  # [!code highlight:4]
   valkey:
     image: valkey/valkey
     volumes:
       - ./valkeyData:/data
-  // highlight-end
 ```
 
 </TabItem>
@@ -482,9 +477,8 @@ services:
   multi-scrobbler:
   # ...
   environment:
-  // highlight-start
+  # [!code highlight]
     - CACHE_VALKEY=redis://192.168.0.120:6379
-  // highlight-end
     # ...
 ```
 
@@ -981,7 +975,7 @@ Additionally, general process metrics like cpu and memory usage can be enabled w
 
 Update your [Prometheus Configuration file](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#configuration-file) (usually at `/etc/prometheus.yml`) to add a job to the `scrape_configs`[section](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config) like this:
 
-```yaml
+```yaml placeholder="YOUR_MS_DOMAIN"
 scrape_configs:
   #
   # ...your other jobs are here
@@ -990,7 +984,7 @@ scrape_configs:
     scrape_interval: 30s
     metrics_path: '/api/metrics'
     static_configs:
-      - targets: ['myMultiscrobblerIp:9078']
+      - targets: ['YOUR_MS_DOMAIN']
 ```
 
 

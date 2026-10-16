@@ -6,7 +6,7 @@ import TabItem from '@theme/TabItem';
 
 Using [ENV Config](/configuration/?configType=env#configuration-types)
 
-```yaml title="compose.yaml"
+```yaml title="compose.yaml" placeholder="YOUR_MS_DOMAIN"
 services:
   multi-scrobbler:
     image: foxxmd/multi-scrobbler
@@ -22,7 +22,7 @@ services:
       - SPOTIFY_ID=foxxSpotify
       - SPOTIFY_CLIENT_ID=H2UvGv8okrFlv2OUoc1lAtK7Xe5EGDgs
       - SPOTIFY_CLIENT_SECRET=HvoFE5Ce2hdblNE6vaFBEx6dRVcDdo43
-      - SPOTIFY_REDIRECT_URI=https://multiscrobbler.example.com/callback
+      - SPOTIFY_REDIRECT_URI=https://YOUR_MS_DOMAIN/callback
 
       # navidrome listenbrainz endpoint
       - LZE_ID=myLzNavidrome
@@ -34,7 +34,7 @@ services:
       - LASTFM_ID=myLFM
       - LASTFM_API_KEY=myApiKey
       - LASTFM_SECRET=mySecret
-      - LASTFM_REDIRECT_URI=https://multiscrobbler.example.com/lastfm/callback
+      - LASTFM_REDIRECT_URI=https://YOUR_MS_DOMAIN/lastfm/callback
 
     volumes:
       - "./config:/config"
@@ -83,7 +83,7 @@ For non-ENV config, [Musicbrainz Transformer](/configuration/transforms/musicbra
 }
 ```
 
-```json5 title="CONFIG_DIR/spotify.json"
+```json5 title="CONFIG_DIR/spotify.json" placeholder="YOUR_MS_DOMAIN"
 [
   {
     "id": "foxxSpotify",
@@ -91,7 +91,7 @@ For non-ENV config, [Musicbrainz Transformer](/configuration/transforms/musicbra
     "data": {
       "clientId": "a89cba1569901a0671d5a9875fed4be1",
       "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a",
-      "redirectUri": "http://localhost:9078/callback",
+      "redirectUri": "http://YOUR_MS_DOMAIN/callback",
       "interval": 60
     }
   }
@@ -121,7 +121,7 @@ For non-ENV config, [Musicbrainz Transformer](/configuration/transforms/musicbra
 ```
 
 
-```json5 title="CONFIG_DIR/lastfm.json"
+```json5 title="CONFIG_DIR/lastfm.json" placeholder="YOUR_MS_DOMAIN"
 [
   {
     "id": "myLFM",
@@ -130,7 +130,7 @@ For non-ENV config, [Musicbrainz Transformer](/configuration/transforms/musicbra
     "data": {
       "apiKey": "myApiKey",
       "secret": "mySecret",
-      "redirectUri": "http://localhost:9078/lastfm/callback"
+      "redirectUri": "http://YOUR_MS_DOMAIN/lastfm/callback"
     }
   }
 ]
@@ -144,7 +144,7 @@ Using [AIO Config](/configuration/?configType=aio#configuration-types)
 
 This configuration uses the [sensible defaults](/configuration/transforms/musicbrainz/#sensible-default) in the `defaults` property. This is a suggestion and can be removed if not desired.
 
-```json5 title="CONFIG_DIR/config.json"
+```json5 title="CONFIG_DIR/config.json" placeholder="YOUR_MS_DOMAIN"
 {
   "transformers": [
     {
@@ -182,7 +182,7 @@ This configuration uses the [sensible defaults](/configuration/transforms/musicb
       "data": {
         "clientId": "a89cba1569901a0671d5a9875fed4be1",
         "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a",
-        "redirectUri": "http://localhost:9078/callback",
+        "redirectUri": "http://YOUR_MS_DOMAIN/callback",
         "interval": 60
       }
     },
@@ -214,7 +214,7 @@ This configuration uses the [sensible defaults](/configuration/transforms/musicb
       "data": {
         "apiKey": "myApiKey",
         "secret": "mySecret",
-        "redirectUri": "http://localhost:9078/lastfm/callback"
+        "redirectUri": "http://YOUR_MS_DOMAIN/lastfm/callback"
       }
     }
   ]

@@ -96,19 +96,17 @@ services:
       # ...
       - DISCORD_APPLICATION_ID=12345678
       # add below line
-      // highlight-start
+      # [!code highlight]
       - DISCORD_IPC_LOCATIONS=/run/discord-ipc-0
-      // highlight-end
     volumes:
       # ...
       # add below line
-      // highlight-start
+      # [!code highlight]
       - kasm_run:/run
-      // highlight-end
     # ...
 
   # .. add discord service below
-  // highlight-start
+  # [!code highlight:27]
   kasmcord:
     container_name: kasmcord
     image: kasmweb/discord:1.19.0
@@ -136,7 +134,6 @@ volumes:
     name: kasm_run
   kasm_config:
     name: kasm_config
-  // highlight-end
 ```
 
 </details>
