@@ -9,16 +9,22 @@ import rehypeExpressiveCode, { createRenderer, MetaOptions } from 'rehype-expres
 import { bundledLanguagesInfo } from 'shiki/langs';
 import { pluginCodeblocks } from 'starlight-codeblocks/expressive-code';
 
+// Same options as starlight-codeblocks' `codeblocks({...})`, e.g. `expandable: { lines: 12, auto: 30 }`.
+// See https://ewels.github.io/starlight-codeblocks/reference/configuration/
+const codeblocksOptions = {
+  // allow `// [!code ...]` notation in plain json blocks
+  notation: { comments: { json: ['//'] } },
+};
+
+// Expressive Code's own options (defaultProps, styleOverrides, frames, ...) go here.
+// See https://expressive-code.com/reference/configuration/
 export const ecOptions = {
   // match the Prism themes used previously (github / dracula)
   themes: ['dracula', 'github-light'],
   // follow Docusaurus' <html data-theme="dark|light"> instead of prefers-color-scheme
   themeCssSelector: (theme) => `[data-theme='${theme.type}']`,
   useDarkModeMediaQuery: false,
-  plugins: pluginCodeblocks({
-    // allow `// [!code ...]` notation in plain json blocks
-    notation: { comments: { json: ['//'] } },
-  }),
+  plugins: pluginCodeblocks(codeblocksOptions),
 };
 
 // One renderer for the whole site. Its page-level CSS/JS are written once as static files
@@ -65,7 +71,7 @@ function codeTabs(node, path) {
   if (repeated !== undefined) {
     throw new Error(`${path}: two variants in a \`:::code-tabs\` have the label "${repeated}". Give each variant a different \`label="…"\`.`);
   }
-  const control = node.attributes?.control ?? 'tabs';
+  const control = node.attributes?.control ?? codeblocksOptions.codeTabs?.control ?? 'tabs';
   if (control !== 'tabs' && control !== 'menu') {
     throw new Error(`${path}: \`:::code-tabs\` has \`control="${control}"\`. Use \`control="tabs"\` or \`control="menu"\`.`);
   }
