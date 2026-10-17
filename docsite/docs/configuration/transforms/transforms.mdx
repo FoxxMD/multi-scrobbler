@@ -50,7 +50,7 @@ These points, during both Source and Client processes, are when you can hook int
 
 In more concrete terms this is the structure of hooks within a configuration (can be used in any **Source** or **Client**):
 
-```json5 title="lastfm.json" {10-14}
+```json5 title="lastfm.json" {10-14} brackets
 [
   {
     "name": "myLastFm",
@@ -105,7 +105,7 @@ For example, to modify the track so it's the same anywhere it is processed in mu
 
 The `compare` [hook](#hook) is slightly different than `preCompare` and `postCompare`. It consists of an object where you define which side(s) of the comparison should be modified. It also **does not modify downstream data!** Instead, the modifications are made only for use in the comparison.
 
-```json5 title="lastfm.json"
+```json5 title="lastfm.json" brackets
 [
   {
     "name": "myLastFm",
@@ -141,7 +141,7 @@ Each Stage in a Hook receives Play data from the previous Stage.
 
 Within a hook, each Stage minimally consists of a `type` to identify what Stage it is along with any other data specific to that stage:
 
-```json5
+```jsonc
 {
   "type": "native"
   // optional, stage specific data here...
@@ -165,39 +165,40 @@ Each Stage consists of:
 
 Your [AIO Config](/configuration?configType=aio#configuration-types):
 
-```json5 title="config.json"
+:::code-tabs
+```jsonc label="config" title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "native",
       "name": "MyNativeTransformer",
       "defaults": {
-        // default delimiters when this Stage is used in a hook
+        // [!ref] default delimiters when this Stage is used in a hook
         "delimiters": [
           "•"
         ],
-        // default delimiters when this Stage is used in a hook
+        // [!ref] default artistsParseFrom when this Stage is used in a hook
         "artistsParseFrom": ["artists"]
       }
     }
   ]
 }
 ```
-
-In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
-
-```json5 title="subsonic.json"
+```jsonc label="subsonic" title="subsonic.json" brackets
 [
   { 
     "name": "MySubsonic",
     "data": { /* ... */},
+    // [!code focus:11]
     "options": {
       "playTransform": {
         "preCompare": [
           {
-            "type": "native"
-            "name": "MyNativeTransformer" // when "name" is not defined, uses first found "native" transformer
+            "type": "native",
+            // [!ref] when `"name"` is not defined, uses first found `native` transformer
+            "name": "MyNativeTransformer"
           }
         ]
       }
@@ -205,6 +206,7 @@ In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?co
   }
 ]
 ```
+:::
 
 </details>
 
