@@ -51,9 +51,10 @@ Use `url` to define the base URL of the Rocksky server to use. If `url` is not d
 
 Example of multiple servers:
 
-```json5 title="config.json"
+```json5 title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "rocksky",
@@ -61,13 +62,12 @@ Example of multiple servers:
       "data": {
         "apis": [
           {
-            "enable": true
-            // uses default Rocksky server https://api.rocksky.app
+            "enable": true // [!ref] uses default Rocksky server https://api.rocksky.app
           },
-          // additional server
+          // [!ref] additional server
           {
             "enable": true,
-            "url": "https://my.rs.mirror.domain.com"
+            "url": "https://my.rs.mirror.domain.com" // [!code highlight]
           }
         ]
       },
@@ -89,9 +89,10 @@ These constraints apply:
 
 Example of configuring rate limit:
 
-```json5 title="config.json"
+```json5 title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "rocksky",
@@ -99,18 +100,16 @@ Example of configuring rate limit:
       "data": {
         "apis": [
           {
-            "enable": true
-            // uses default Rocksky server https://api.rocksky.app
-            // hard-limited to 1000 req / 30s
+            "enable": true // [!ref] uses default Rocksky server https://api.rocksky.app, hard-limited to 1000 req / 30s
           },
-          // additional server
+          // [!ref] additional server
           {
             "enable": true,
             "url": "https://my.rs.mirror.domain.com",
-            "rate": {
-              // IE 6 req/s
-              "requests": 6, // maximum of 6 requests
-              "perTime": 1 // can be made within 1 second
+            // [!code highlight:4]
+            "rate": { // [!ref] IE 6 req/s
+              "requests": 6, // [!ref] maximum of 6 requests
+              "perTime": 1 // [!ref] can be made within 1 second
             }
           }
         ]
@@ -128,15 +127,17 @@ All of the properties found in [**Matching with Rocksky**](#matching-with-rocksk
 
 Example:
 
-```json5 title="config.json"
+```json5 title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "rocksky",
       "name": "MyRocksky",
+      // [!code highlight:4]
       "defaults": {
-        "searchWhenMissing": ['duration','mbid']
+        "searchWhenMissing": ['duration','mbid'],
         "allowNoMatch": false
       }
     }
@@ -148,12 +149,16 @@ Example:
 
 [Add your Stage](/configuration/transforms/#stage) to a Source or Client by specifying it in a [Hook](/configuration/transforms/#hook):
 
-```json5 title="rocksky.json"
+```json5 title="rocksky.json" brackets
 [
   { 
+    // [!link /Rocksky/ /configuration/clients/rocksky]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Rocksky File Config
     "name": "Rocky",
     "configureAs": "client",
     "data": { /* ... */},
+    // [!code focus:10]
     "options": {
       "playTransform": {
         "preCompare": [
@@ -174,25 +179,30 @@ Each [**Stage Rule**](/configuration/transforms#stage-rules) should be either a 
 
 <summary>Example</summary>
 
-```json5 title="rocksky.json"
+```json5 title="rocksky.json" brackets
 [
   { 
+    // [!link /Rocksky/ /configuration/clients/rocksky]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Rocksky File Config
     "name": "Rocky",
     "configureAs": "client",
     "data": { /* ... */},
+    // [!code focus:17]
     "options": {
       "playTransform": {
         "preCompare": [
           {
             "type": "rocksky",
-            "name": "MSDefault"
+            "name": "MSDefault",
             // ...
-            "title": false, // will not apply any changes to Play title
+            "title": false, // [!ref] will not apply any changes to Play title
             "album": {
-              "when": {/* ... */}, // will only apply changes to Play artists if "when" is satisfied
+              // [!link /when/ /configuration/transforms#conditional-modification]
+              "when": {/* ... */}, // [!ref] will only apply changes to Play album if `"when"` is satisfied
             /* ... */
             },
-            "meta": true // adds MusicBrainz MBIDs to scrobble data
+            "meta": true // [!ref] adds MusicBrainz MBIDs to scrobble data
           }
         ]
       }
@@ -211,19 +221,23 @@ The `defaults` you set in [Stage Configuration](#stage-configuration) [can be ov
 
 <summary>Example</summary>
 
-```json5 title="rocksky.json"
+```json5 title="rocksky.json" brackets
 [
   { 
+    // [!link /Rocksky/ /configuration/clients/rocksky]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Rocksky File Config
     "name": "Rocky",
     "configureAs": "client",
     "data": { /* ... */},
+    // [!code focus:11]
     "options": {
       "playTransform": {
         "preCompare": [
           {
             "type": "rocksky",
             "name": "MSDefault",
-            "searchWhenMissing": ['duration','mbid'], // override from defaults
+            "searchWhenMissing": ['duration','mbid'], // [!code highlight] [!ref] overrides `"searchWhenMissing"` from `"defaults"`
           }
         ]
       }
@@ -259,15 +273,13 @@ The `*` stands for the prefix used for each Source/Client's ENV keys. Refer to t
 
 Using [Jellyfin](/quickstart#create-docker-compose-file) example from Quickstart with Rocksky and the Rocksky Stage:
 
-```yaml
+```yaml title="docker-compose.yml"
 services:
   multi-scrobbler:
     image: foxxmd/multi-scrobbler
     container_name: multi-scrobbler
     environment:
-      # [!code highlight:3]
-       # searches with the searchOrder
-       # isrc => basic
+      # [!code highlight] [!ref] searches with the searchOrder `isrc` => `basic`
       - RS_PRESETS=default
       - JELLYFIN_URL=192.168.0.110:8096
       - JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56b
@@ -275,8 +287,7 @@ services:
       - ROCKSKY_ID=Rocky
       - ROCKSKY_HANDLE=alice.bsky.social
       - ROCKSKY_APP_PW=1234567
-      # [!code highlight:2]
-       # applies Rocksky Stage to preTransform of Rocksky Client
+      # [!code highlight] [!ref] applies Rocksky Stage to preTransform of Rocksky Client
       - ROCKSKY_TRANSFORMS=rocksky
 
 
@@ -301,15 +312,15 @@ Using [Rules for Play Data](https://docs.multi-scrobbler.app/configuration/trans
 
 <summary>Example</summary>
 
-```json5
-// all properties *not* explicitly set default to true
+```json5 brackets
+// [!ref] all properties *not* explicitly set default to true
 {
-    "type": "musicbrainz",
+    "type": "rocksky",
     // ...
-    "title": false, // will not apply musicbrainz changes to Play title
+    "title": false, // [!ref] will not apply rocksky changes to Play title
     //"albumArtists": true, // always applies
     //"artists": true // always applies
-    "album": false, // will never apply changes to Play album
+    "album": false, // [!ref] will never apply changes to Play album
     //"duration": true, // always applies
     //"meta": true, // always applies
     //"art": true, // always applies
@@ -366,15 +377,14 @@ Define which data types are required using:
 
 <summary>Example</summary>
 
-[Stage Configuration](/configuration/transforms#configuring-stages) example:
-
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
-    // only search if duration or recording MBID is missing
-    "searchWithMissing": ["duration", "mbid"]
+    // [!ref] only search if duration or recording MBID is missing
+    "searchWhenMissing": ["duration", "mbid"],
 
-    // uncomment to make the stage always search, even if above data is present
+    // [!ref] uncomment to make the stage always search, even if above data is present
     //forceSearch: true
   }
 ```
@@ -396,10 +406,11 @@ All search methods will be run in the order they were defined until one method r
 
 To set search methods and their order use the `searchOrder` option in your [Stage Configuration](/configuration/transforms#configuring-stages):
 
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
-    // only searches using these methods, in the order they are listed here
+    // [!ref] only searches using these methods, in the order they are listed here
     "searchOrder": ["isrc", "basic", "artist"]
   }
 ```
@@ -418,12 +429,11 @@ If `searchOrder` is undefined then Multi-scrobbler will default to using `isrc` 
 
 If your Scrobble data contains an [ISRC](https://musicbrainz.org/doc/ISRC) (usually from Spotify) then Multi-scrobbler can search using this ID, title, and artist only.
 
-[Stage Configuration](/configuration/transforms#configuring-stages) example:
-
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
-    // will only search using isrc
+    // [!ref] will only search using isrc
     "searchOrder": ["isrc"]
   }
 ```
@@ -436,13 +446,12 @@ If your Scrobble data contains an [ISRC](https://musicbrainz.org/doc/ISRC) (usua
 
 If your Scrobble data contains a [Recording MBID](https://musicbrainz.org/doc/Recording) then Multi-scrobbler can search using this MBID, title, and artist only.
 
-[Stage Configuration](/configuration/transforms#configuring-stages) example:
-
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
-  // will only search using recording mbid
-    "searchOrder": ["mbidrecording"]
+  // [!ref] will only search using recording mbid
+    "searchOrder": ["mbid"]
   }
 ```
 
@@ -454,12 +463,11 @@ If your Scrobble data contains a [Recording MBID](https://musicbrainz.org/doc/Re
 
 Will search Musicbrainz using any/all available text fields from your scrobble: Album, Artists(s), and Title. Does not leverage any existing MBIDs.
 
-[Stage Configuration](/configuration/transforms#configuring-stages) example:
-
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
-    // will only search using album, artist(s), and title
+    // [!ref] will only search using album, artist(s), and title
     "searchOrder": ["basic"]
   }
 ```
@@ -472,13 +480,12 @@ Will search Musicbrainz using any/all available text fields from your scrobble: 
 
 This is the same as the above **Album, Artist, and Title Fields** search except that if the scrobble data contains a recording MBID it will use those as well as the plain text field.
 
-[Stage Configuration](/configuration/transforms#configuring-stages) example:
-
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
-    // will only search using album, artist(s), and title
-    "searchOrder": ["basicOrIds"]
+    // [!ref] will only search using album, artist(s), and title
+    "searchOrder": ["basicorids"]
   }
 ```
 
@@ -492,12 +499,11 @@ If your scrobble data contains only **one** artist string then Multi-scrobbler c
 
 Use `artist` with `searchOrder` and optionally specify the extraction mode with `searchArtistMethod`:
 
-[Stage Configuration](/configuration/transforms#configuring-stages) example:
-
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
-    // will only search using title/album + extracted artists
+    // [!ref] will only search using title/album + extracted artists
     "searchOrder": ["artist"],
     //searchArtistMethod: 'native' // optional
   }
@@ -543,12 +549,11 @@ Use `artist` with `searchOrder` and optionally specify the extraction mode with 
 
     </details>
 
-    [Stage Configuration](/configuration/transforms#configuring-stages) example:
-
-    ```json5
-    // ...
+    ```json5 brackets
+    // [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+    // ...your Stage Configuration
     "defaults": {
-      // will only search using title/album + native extracted artists
+      // [!ref] will only search using title/album + native extracted artists
       "searchOrder": ["artist"],
       "searchArtistMethod": "native"
       }
@@ -582,12 +587,11 @@ Use `artist` with `searchOrder` and optionally specify the extraction mode with 
     ```
     </details>
 
-    [Stage Configuration](/configuration/transforms#configuring-stages) example:
-
-    ```json5
-    // ...
+    ```json5 brackets
+    // [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+    // ...your Stage Configuration
     "defaults": {
-      // will only search using title/album + naive extracted artists
+      // [!ref] will only search using title/album + naive extracted artists
       "searchOrder": ["artist"],
       "searchArtistMethod": "naive"
       }
@@ -613,7 +617,7 @@ Each match returned by Rocksky can contain a list of matched external provider e
 ```json5
 {
   // ...
-  "score": 90 // external provider entries must score 90 or higher to be considered
+  "score": 90 // [!ref] external provider entries must score 90 or higher to be considered
 }
 ```
 
@@ -626,7 +630,7 @@ You can configure whether a match is still considered valid when no entries are 
 ```json5
 {
   // ...
-  "allowNoMatch": false // consider a match invalid if not associated with an external provider
+  "allowNoMatch": false // [!ref] consider a match invalid if not associated with an external provider
 }
 ```
 
@@ -670,18 +674,23 @@ IDs are added to the title, album, and artists your Play already has. See [how `
 
 <summary>Example</summary>
 
-```json5 title="rocksky.json"
+```json5 title="rocksky.json" brackets
 [
   { 
+    // [!link /Rocksky/ /configuration/clients/rocksky]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Rocksky File Config
     "name": "Rocky",
     "configureAs": "client",
     "data": { /* ... */},
+    // [!code focus:15]
     "options": {
       "playTransform": {
         "preCompare": [
           {
             "type": "rocksky",
             "name": "MSDefault",
+            // [!code highlight:5]
             "title": false,
             "artists": false,
             "album": false,
@@ -705,14 +714,16 @@ IDs are added to the title, album, and artists your Play already has. See [how `
 
 <summary>Example</summary>
 
-In a [Rocksky Client](/configuration/clients/rocksky) [File Config](/configuration?configType=file#configuration-types):
-
-```json5 title="rocksky.json"
+```json5 title="rocksky.json" brackets
 [
   { 
+    // [!link /Rocksky/ /configuration/clients/rocksky]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Rocksky File Config
     "name": "Rocky",
     "configureAs": "client",
     "data": { /* ... */},
+    // [!code focus:10]
     "options": {
       "playTransform": {
         "preCompare": [
@@ -729,22 +740,19 @@ In a [Rocksky Client](/configuration/clients/rocksky) [File Config](/configurati
 
 Or using a [Rocksky Client](/configuration/clients/rocksky) with [ENV Config](/configuration?configType=env#configuration-types):
 
-```yaml
+```yaml title="docker-compose.yml"
 services:
   multi-scrobbler:
     image: foxxmd/multi-scrobbler
     environment:
-      # [!code highlight:3]
-       # searches with the searchOrder
-       # isrc => basic
+      # [!code highlight] [!ref] searches with the searchOrder `isrc` => `basic`
       - RS_PRESETS=default
        # ... your source ENVs go here
        #
       - ROCKSKY_ID=Rocky
       - ROCKSKY_HANDLE=alice.bsky.social
       - ROCKSKY_APP_PW=1234567
-      # [!code highlight:2]
-       # applies Rocksky Stage to preTransform of Rocksky Client
+      # [!code highlight] [!ref] applies Rocksky Stage to preTransform of Rocksky Client
       - ROCKSKY_TRANSFORMS=rocksky
 
 
@@ -765,24 +773,27 @@ If you do not want your scrobble data to be modified (artists/album/title) but s
 
 <summary>Example</summary>
 
-In a [Jellyfin](/configuration/sources/jellyfin) [File Config](/configuration?configType=file#configuration-types):
-
-```json5 title="jellyfin.json"
+```json5 title="jellyfin.json" brackets
 [
   { 
+    // [!link /Jellyfin/ /configuration/sources/jellyfin]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Jellyfin File Config
     "name": "MyJellyfin",
     "data": { /* ... */},
+    // [!code focus:15]
     "options": {
       "playTransform": {
         "preCompare": [
           {
             "type": "rocksky",
             "name": "MSDefault",
+            // [!code highlight:4]
             "title": false,
             "artists": false,
             "album": false,
             "albumArtists": false,
-            "meta": true // only update scrobble metadata with MBIDs
+            "meta": true // [!code highlight] [!ref] only update scrobble metadata with MBIDs
           }
         ]
       }
@@ -805,21 +816,25 @@ Use [**Per Component Overrides**](#rules-and-hooks) to specify different search 
 
 <summary>Example</summary>
 
-```json5 title="lastfm.json"
+:::code-tabs
+```json5 label="lastfm" title="lastfm.json" brackets
 [
   { 
+    // [!link /Last.fm/ /configuration/sources/lastfm-source]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Last.fm File Config
     "name": "MyLFM",
-    "configureAs": "source"
+    "configureAs": "source",
     "data": { /* ... */},
+    // [!code focus:12]
     "options": {
       "playTransform": {
         "preCompare": [
           {
             "type": "rocksky",
             "name": "MSDefault",
-            "searchArtistMethod": "native"
-            // does not use any ID searches
-            "searchOrder": ["basic", "artist"]
+            "searchArtistMethod": "native",
+            "searchOrder": ["basic", "artist"] // [!code highlight] [!ref] does not use any ID searches
           }
         ]
       }
@@ -827,20 +842,22 @@ Use [**Per Component Overrides**](#rules-and-hooks) to specify different search 
   }
 ]
 ```
-
-```json5 title="spotify.json"
+```json5 label="spotify" title="spotify.json" brackets
 [
   { 
+    // [!link /Spotify/ /configuration/sources/spotify]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Spotify File Config
     "name": "MySpotify",
     "data": { /* ... */},
+    // [!code focus:11]
     "options": {
       "playTransform": {
         "preCompare": [
           {
             "type": "rocksky",
             "name": "MSDefault",
-            // use ISRC as first search, then tries searching with title/artist/album/mbid
-            "searchOrder": ["isrc", "basicorids"]
+            "searchOrder": ["isrc", "basicorids"] // [!code highlight] [!ref] use ISRC as first search, then tries searching with title/artist/album/mbid
           }
         ]
       }
@@ -848,6 +865,7 @@ Use [**Per Component Overrides**](#rules-and-hooks) to specify different search 
   }
 ]
 ```
+:::
 
 </details>
 
@@ -869,13 +887,15 @@ The [Discord](/configuration/clients/discord) Client can fetch album art images 
     ```
     </TabItem>
     <TabItem value="file" label="File">
-    In your [Discord](/configuration/clients/discord) [File Config](/configuration?configType=file#configuration-types):
-
-    ```json5 title="discord.json"
+    ```json5 title="discord.json" brackets
     [
       { 
+        // [!link /Discord/ /configuration/clients/discord]
+        // [!link /File Config/ /configuration?configType=file#configuration-types]
+        // ...your Discord File Config
         "name": "MS",
         "data": { /* ... */},
+        // [!code focus:10]
         "options": {
           "playTransform": {
             "preCompare": [
@@ -893,10 +913,11 @@ The [Discord](/configuration/clients/discord) Client can fetch album art images 
     <TabItem value="aio" label="AIO">
     Your [AIO Config](/configuration?configType=aio#configuration-types):
 
-    ```json5 title="config.json"
+    ```json5 title="config.json" brackets
     {
-      // ...
-      "sources": [
+      // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+      // ...your AIO Config
+      "clients": [
         { 
           "name": "MS",
           "type": "discord",

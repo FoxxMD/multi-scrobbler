@@ -21,23 +21,22 @@ A non-exhaustive list of heuristics:
 
 A practical example of what the Native Stage will do to Play data:
 
-This Scrobble from [Subsonic](/configuration/sources/subsonic)
+This Scrobble from [Subsonic](/configuration/sources/subsonic) is transformed:
 
-```json
+:::code-tabs
+```json label="Before"
 {
-    "title": "Endless Possibility (feat. Wheatus)",
-    "artists": ["Bowling For Soup & Punk Rock Factory"]
+    "title": "Endless Possibility (feat. Wheatus)", // [!info /(feat. Wheatus)/] Artist extracted from title
+    "artists": ["Bowling For Soup & Punk Rock Factory"] // [!info /Bowling For Soup & Punk Rock Factory/] Artists split on delimiter
 }
 ```
-
-Will be transformed into this
-
-```json
+```json label="After"
 {
     "title": "Endless Possibility",
     "artists": ["Bowling For Soup", "Punk Rock Factory", "Wheatus"]
 }
 ```
+:::
 
 To use the [default Stage](/configuration/transforms/#stage-names-and-default-stages) either omit `name` or specify it as `"name": "MSDefault"`.
 
@@ -80,16 +79,17 @@ Config => extracted artists
 
 Each [Rule](/configuration/transforms#stage-rules) should be either a boolean, specifying if the transformed data should be used for this field, or a [`when` condition.](/configuration/transforms#conditional-modification):
 
-```json5
+```json5 brackets
 {
     "type": "native",
     // ...
-    "title": false, // will not apply any changes to Play title
+    "title": false, // [!ref] will not apply any changes to Play title
     "artists": {
-      "when": {/* ... */}, // will only apply changes to Play artists if "when" is satisfied
+      // [!link /when/ /configuration/transforms#conditional-modification]
+      "when": {/* ... */}, // [!ref] will only apply changes to Play artists if `"when"` is satisfied
     /* ... */
     },
-    "album": true // will always apply changes to Play album
+    "album": true // [!ref] will always apply changes to Play album
 }
 ```
 
@@ -105,19 +105,20 @@ This can be used by omitting the `name` in your [modification Stage](/configurat
 
 <summary>Example</summary>
 
-In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
-
-```json5 title="subsonic.json"
+```json5 title="subsonic.json" brackets
 [
   { 
+    // [!link /Subsonic/ /configuration/sources/subsonic]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Subsonic File Config
     "name": "MySubsonic",
     "data": { /* ... */},
+    // [!code focus:9]
     "options": {
       "playTransform": {
         "preCompare": [
           {
-            "type": "native",
-            // do not include name, the default native stage will be used
+            "type": "native", // [!callout /native/] do not include `name`, the default native stage will be used
           }
         ]
       }
@@ -144,7 +145,7 @@ The `*` stands for the prefix used for each Source/Client's ENV keys. Refer to t
 
 Using [Jellyfin + Maloja](/quickstart#create-docker-compose-file) example from Quickstart:
 
-```yaml
+```yaml title="docker-compose.yml"
 services:
   multi-scrobbler:
     image: foxxmd/multi-scrobbler
@@ -153,9 +154,9 @@ services:
       - JELLYFIN_URL=192.168.0.110:8096
       - JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56b
       - JELLYFIN_USER=MyUser
-      - JELLYFIN_TRANSFORMS=native # applies native Stage to preTransform of Jellyfin source
+      - JELLYFIN_TRANSFORMS=native # [!code highlight] [!ref] applies native Stage to preTransform of Jellyfin source
 
-      - MALOJA_URL=http://192.168.0.100:42010 # maloja receives enhanced scrobble from Jellyfin
+      - MALOJA_URL=http://192.168.0.100:42010 # [!ref] maloja receives enhanced scrobble from Jellyfin
       - MALOJA_API_KEY=myApiKey
 
 
@@ -178,33 +179,36 @@ services:
 
 Your [AIO Config](/configuration?configType=aio#configuration-types):
 
-```json5 title="config.json"
+:::code-tabs
+```json5 label="config" title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "native",
       "name": "MyNativeTransformer",
       "defaults": {
-        // default delimiters when this Stage is used in a hook
+        // [!ref] default delimiters when this Stage is used in a hook
         "delimiters": [
           "•"
         ],
-        // default delimiters when this Stage is used in a hook
+        // [!ref] default artistsParseFrom when this Stage is used in a hook
         "artistsParseFrom": ["artists"]
       }
     }
   ]
 }
 ```
-
-In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
-
-```json5 title="subsonic.json"
+```json5 label="subsonic" title="subsonic.json" brackets
 [
   { 
+    // [!link /Subsonic/ /configuration/sources/subsonic]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Subsonic File Config
     "name": "MySubsonic",
     "data": { /* ... */},
+    // [!code focus:10]
     "options": {
       "playTransform": {
         "preCompare": [
@@ -218,6 +222,7 @@ In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?co
   }
 ]
 ```
+:::
 </details>
 
 ### Don't parse specific artists
@@ -228,14 +233,17 @@ In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?co
 
 Your [AIO Config](/configuration?configType=aio#configuration-types):
 
-```json5 title="config.json"
+:::code-tabs
+```json5 label="config" title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "native",
       "name": "MyNativeTransformer",
       "defaults": {
+        // [!code highlight:4]
         "artistsIgnore": [
             "Crosby, Stills, Nash & Young",
             "Polo & Pan"
@@ -245,14 +253,15 @@ Your [AIO Config](/configuration?configType=aio#configuration-types):
   ]
 }
 ```
-
-In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
-
-```json5 title="subsonic.json"
+```json5 label="subsonic" title="subsonic.json" brackets
 [
   { 
+    // [!link /Subsonic/ /configuration/sources/subsonic]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Subsonic File Config
     "name": "MySubsonic",
     "data": { /* ... */},
+    // [!code focus:10]
     "options": {
       "playTransform": {
         "preCompare": [
@@ -266,6 +275,7 @@ In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?co
   }
 ]
 ```
+:::
 </details>
 
 ### Extract Artists from Title but do not modify Title
@@ -278,19 +288,21 @@ In the scenario where you want to extract Artists from Track titles with joiners
 
 No additional [stage configuration](#configuration) is required so we can use the [default Stage](#default-stage).
 
-In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
-
-```json5 title="subsonic.json"
+```json5 title="subsonic.json" brackets
 [
   { 
+    // [!link /Subsonic/ /configuration/sources/subsonic]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Subsonic File Config
     "name": "MySubsonic",
     "data": { /* ... */},
+    // [!code focus:10]
     "options": {
       "playTransform": {
         "preCompare": [
           {
             "type": "native",
-            "title": false // do not modify title
+            "title": false // [!code highlight] [!ref] do not modify title
           }
         ]
       }

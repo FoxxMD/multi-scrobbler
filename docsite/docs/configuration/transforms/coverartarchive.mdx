@@ -51,9 +51,10 @@ Use `url` to define the base URL of the Cover Art Archive server to use. If `url
 
 Example of multiple servers:
 
-```json5 title="config.json"
+```json5 title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "coverartarchive",
@@ -61,13 +62,12 @@ Example of multiple servers:
       "data": {
         "apis": [
           {
-            "enable": true
-            // uses default Cover Art Archive server https://coverartarchive.org
+            "enable": true // [!ref] uses default Cover Art Archive server https://coverartarchive.org
           },
-          // additional server
+          // [!ref] additional server
           {
             "enable": true,
-            "url": "https://my.caa.mirror.domain.com"
+            "url": "https://my.caa.mirror.domain.com" // [!code highlight]
           }
         ]
       },
@@ -84,9 +84,10 @@ Rate limiting is defined by **max number of requests** within **timespan of N se
 
 Example of configuring rate limit:
 
-```json5 title="config.json"
+```json5 title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "coverartarchive",
@@ -95,10 +96,10 @@ Example of configuring rate limit:
         "apis": [
           {
             "enable": true,
-            "rate": {
-              // IE 10 req/s
-              "requests": 10, // maximum of 10 requests
-              "perTime": 1 // can be made within 1 second
+            // [!code highlight:4]
+            "rate": { // [!ref] IE 10 req/s
+              "requests": 10, // [!ref] maximum of 10 requests
+              "perTime": 1 // [!ref] can be made within 1 second
             }
           }
         ]
@@ -116,13 +117,15 @@ All of the properties found in the [**Finding Art**](#finding-art) section are c
 
 Example:
 
-```json5 title="config.json"
+```json5 title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "coverartarchive",
       "name": "MyCAA",
+      // [!code highlight:4]
       "defaults": {
         "allowedTypes": ["any"],
         "preferredSizes": ["500"]
@@ -136,11 +139,15 @@ Example:
 
 [Add your Stage](/configuration/transforms/#stage) to a Source or Client by specifying it in a [Hook](/configuration/transforms/#hook):
 
-```json5 title="discord.json"
+```json5 title="discord.json" brackets
 [
   { 
+    // [!link /Discord/ /configuration/clients/discord]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Discord File Config
     "name": "MyDiscord",
     "data": { /* ... */},
+    // [!code focus:10]
     "options": {
       "playTransform": {
         "preCompare": [
@@ -161,11 +168,15 @@ This Stage only has one [**Stage Rule**](/configuration/transforms#stage-rules):
 
 <summary>Example</summary>
 
-```json5 title="discord.json"
+```json5 title="discord.json" brackets
 [
   { 
+    // [!link /Discord/ /configuration/clients/discord]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Discord File Config
     "name": "MyDiscord",
     "data": { /* ... */},
+    // [!code focus:13]
     "options": {
       "playTransform": {
         "preCompare": [
@@ -173,7 +184,8 @@ This Stage only has one [**Stage Rule**](/configuration/transforms#stage-rules):
             "type": "coverartarchive",
             "name": "MSDefault",
             "art": {
-              "when": {/* ... */}, // will only apply art to Play if "when" is satisfied
+              // [!link /when/ /configuration/transforms#conditional-modification]
+              "when": {/* ... */}, // [!ref] will only apply art to Play if `"when"` is satisfied
             }
           }
         ]
@@ -193,18 +205,22 @@ The `defaults` you set in [Stage Configuration](#stage-configuration) [can be ov
 
 <summary>Example</summary>
 
-```json5 title="discord.json"
+```json5 title="discord.json" brackets
 [
   { 
+    // [!link /Discord/ /configuration/clients/discord]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Discord File Config
     "name": "MyDiscord",
     "data": { /* ... */},
+    // [!code focus:11]
     "options": {
       "playTransform": {
         "preCompare": [
           {
             "type": "coverartarchive",
             "name": "MSDefault",
-            "allowedTypes": ["any"], // override from defaults
+            "allowedTypes": ["any"], // [!code highlight] [!ref] overrides `"allowedTypes"` from `"defaults"`
           }
         ]
       }
@@ -245,21 +261,19 @@ Stages in `*_TRANSFORMS` run in the order they are written. To [get MBIDs first]
 
 Using [Jellyfin](/quickstart#create-docker-compose-file) example from Quickstart with the Musicbrainz Stage and the Cover Art Archive Stage:
 
-```yaml
+```yaml title="docker-compose.yml"
 services:
   multi-scrobbler:
     image: foxxmd/multi-scrobbler
     container_name: multi-scrobbler
     environment:
       - MB_PRESETS=default
-      # [!code highlight:2]
-       # allow any type of art, not only front covers
+      # [!code highlight] [!ref] allow any type of art, not only front covers
       - CAA_PRESETS=any
       - JELLYFIN_URL=192.168.0.110:8096
       - JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56b
       - JELLYFIN_USER=MyUser
-      # [!code highlight:2]
-       # adds MBIDs with Musicbrainz Stage, then finds art with Cover Art Archive Stage
+      # [!code highlight] [!ref] adds MBIDs with Musicbrainz Stage, then finds art with Cover Art Archive Stage
       - JELLYFIN_TRANSFORMS=musicbrainz,coverartarchive
       - MALOJA_URL=http://domain.tld:42010
       - MALOJA_API_KEY=1234
@@ -295,12 +309,11 @@ Use these options to change when MS searches:
 
 <summary>Example</summary>
 
-[Stage Configuration](/configuration/transforms#configuring-stages) example:
-
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
-    // uncomment to make the stage always search, even if album art is present
+    // [!ref] uncomment to make the stage always search, even if album art is present
     //"forceSearch": true
   }
 ```
@@ -341,11 +354,11 @@ If you list more than one type then an image must be labeled with **all** of the
 
 :::
 
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
-    // allow any image
-    "allowedTypes": ["any"]
+    "allowedTypes": ["any"] // [!ref] allow any image
   }
 ```
 
@@ -362,13 +375,12 @@ There are two options for sizes:
 * `allowedSizes` (default `["any"]`) - Only use images that are available in these sizes. An image must be available in **at least one** size you list, or use `any` to allow any image.
 * `preferredSizes` (default `["250", "500", "1200"]`) - The sizes you want, in order. MS uses the first size in your list that is available. If none are available, MS uses any size the image has.
 
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
-    // allow art with either 1200 or 500 sizes
-    "allowedSizes": ["1200","500"],
-    // prefer the largest size first
-    "preferredSizes": ["1200", "500"]
+    "allowedSizes": ["1200","500"], // [!ref] allow art with either 1200 or 500 sizes
+    "preferredSizes": ["1200", "500"] // [!ref] prefer the largest size first
   }
 ```
 
@@ -388,25 +400,28 @@ Set [`failureReturnPartial: true`](/configuration/transforms/#flow-control) on t
 
 <summary>Example</summary>
 
-```json5 title="jellyfin.json"
+```json5 title="jellyfin.json" brackets
 [
   { 
+    // [!link /Jellyfin/ /configuration/sources/jellyfin]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Jellyfin File Config
     "name": "MyJellyfin",
     "data": { /* ... */},
+    // [!code focus:15]
     "options": {
       "playTransform": {
         "preCompare": [
           {
-            // adds MBIDs to the Play
-            "type": "musicbrainz",
+            // [!link /musicbrainz/ /configuration/transforms/musicbrainz]
+            "type": "musicbrainz", // [!ref] adds MBIDs to the Play
             "name": "MSDefault"
           },
           {
-            // uses the MBIDs to find art
-            "type": "coverartarchive",
+            "type": "coverartarchive", // [!ref] uses the MBIDs to find art
             "name": "MSDefault",
-            // keep Musicbrainz changes even if no art is found
-            "failureReturnPartial": true
+            // [!link /failureReturnPartial/ /configuration/transforms/#flow-control]
+            "failureReturnPartial": true // [!code highlight] [!ref] keep Musicbrainz changes even if no art is found
           }
         ]
       }
@@ -425,13 +440,15 @@ Set [`failureReturnPartial: true`](/configuration/transforms/#flow-control) on t
 
 <summary>Example</summary>
 
-In a [Jellyfin Source](/configuration/sources/jellyfin) [File Config](/configuration?configType=file#configuration-types):
-
-```json5 title="jellyfin.json"
+```json5 title="jellyfin.json" brackets
 [
   { 
+    // [!link /Jellyfin/ /configuration/sources/jellyfin]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Jellyfin File Config
     "name": "MyJellyfin",
     "data": { /* ... */},
+    // [!code focus:10]
     "options": {
       "playTransform": {
         "preCompare": [
@@ -448,15 +465,14 @@ In a [Jellyfin Source](/configuration/sources/jellyfin) [File Config](/configura
 
 Or using a [Jellyfin Source](/configuration/sources/jellyfin) with [ENV Config](/configuration?configType=env#configuration-types):
 
-```yaml
+```yaml title="docker-compose.yml"
 services:
   multi-scrobbler:
     image: foxxmd/multi-scrobbler
     environment:
        # ... your source ENVs go here
        #
-      # [!code highlight:2]
-       # applies Cover Art Archive Stage to preCompare of Jellyfin Source
+      # [!code highlight] [!ref] applies Cover Art Archive Stage to preCompare of Jellyfin Source
       - JELLYFIN_TRANSFORMS=coverartarchive
 
     volumes:
@@ -486,13 +502,15 @@ The [Discord](/configuration/clients/discord) Client shows album art when your P
     ```
     </TabItem>
     <TabItem value="file" label="File">
-    In your [Discord](/configuration/clients/discord) [File Config](/configuration?configType=file#configuration-types):
-
-    ```json5 title="discord.json"
+    ```json5 title="discord.json" brackets
     [
       { 
+        // [!link /Discord/ /configuration/clients/discord]
+        // [!link /File Config/ /configuration?configType=file#configuration-types]
+        // ...your Discord File Config
         "name": "MyDiscord",
         "data": { /* ... */},
+        // [!code focus:15]
         "options": {
           "playTransform": {
             "preCompare": [
@@ -515,9 +533,10 @@ The [Discord](/configuration/clients/discord) Client shows album art when your P
     <TabItem value="aio" label="AIO">
     Your [AIO Config](/configuration?configType=aio#configuration-types):
 
-    ```json5 title="config.json"
+    ```json5 title="config.json" brackets
     {
-      // ...
+      // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+      // ...your AIO Config
       "clients": [
         { 
           "name": "MyDiscord",
