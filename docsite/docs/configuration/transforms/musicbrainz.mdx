@@ -65,9 +65,10 @@ Use `url` to define the base URL of the Musicbrainz server to use. If `url` is n
 
 Example of multiple servers:
 
-```json5 title="config.json"
+```json5 title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "musicbrainz",
@@ -75,13 +76,12 @@ Example of multiple servers:
       "data": {
         "apis": [
           {
-            "enable": true
-            // uses default Musicbrainz server https://musicbrainz.org
+            "enable": true // [!ref] uses default Musicbrainz server https://musicbrainz.org
           },
-          // additional server
+          // [!ref] additional server
           {
             "enable": true,
-            "url": "https://my.mb.mirror.domain.com"
+            "url": "https://my.mb.mirror.domain.com" // [!code highlight]
           }
         ]
       },
@@ -104,9 +104,10 @@ These constraints apply:
 
 Example of configuring rate limit:
 
-```json5 title="config.json"
+```json5 title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "musicbrainz",
@@ -114,18 +115,16 @@ Example of configuring rate limit:
       "data": {
         "apis": [
           {
-            "enable": true
-            // uses default Musicbrainz server https://musicbrainz.org
-            // hard-limited to 1req/s
+            "enable": true // [!ref] uses default Musicbrainz server https://musicbrainz.org, hard-limited to 1req/s
           },
-          // additional server
+          // [!ref] additional server
           {
             "enable": true,
             "url": "https://my.mb.mirror.domain.com",
-            "rate": {
-              // IE 6 req/s
-              "requests": 6, // maximum of 6 requests
-              "perTime": 1 // can be made within 1 second
+            // [!code highlight:4]
+            "rate": { // [!ref] IE 6 req/s
+              "requests": 6, // [!ref] maximum of 6 requests
+              "perTime": 1 // [!ref] can be made within 1 second
             }
           }
         ]
@@ -156,9 +155,10 @@ There are pros and cons to using this service. Read these carefully before using
 
 If these trade-offs are acceptable to you, add BrainzMash to your Musicbrainz config like this:
 
-```json5 title="config.json"
+```json5 title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "musicbrainz",
@@ -166,12 +166,11 @@ If these trade-offs are acceptable to you, add BrainzMash to your Musicbrainz co
       "data": {
         "apis": [
           {
-            "enable": true
-            // uses default Musicbrainz server https://musicbrainz.org
+            "enable": true // [!ref] uses default Musicbrainz server https://musicbrainz.org
           },
           {
             "enable": true,
-            "url": "https://api.brainzmash.cc"
+            "url": "https://api.brainzmash.cc" // [!code highlight]
           }
         ]
       },
@@ -202,13 +201,15 @@ All of the properties found in [**Matching with Musicbrainz**](#matching-with-mu
 
 Example:
 
-```json5 title="config.json"
+```json5 title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "musicbrainz",
       "name": "MyMB",
+      // [!code highlight:4]
       "defaults": {
         "releaseStatusPriority": ["official"],
         "releaseAllowEmpty": true
@@ -222,11 +223,15 @@ Example:
 
 [Add your Stage](/configuration/transforms/#stage) to a Source or Client by specifying it in a [Hook](/configuration/transforms/#hook):
 
-```json5 title="subsonic.json"
+```json5 title="subsonic.json" brackets
 [
   { 
+    // [!link /Subsonic/ /configuration/sources/subsonic]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Subsonic File Config
     "name": "MySubsonic",
     "data": { /* ... */},
+    // [!code focus:10]
     "options": {
       "playTransform": {
         "preCompare": [
@@ -247,25 +252,30 @@ Each [**Stage Rule**](/configuration/transforms#stage-rules) should be either a 
 
 <summary>Example</summary>
 
-```json5 title="subsonic.json"
+```json5 title="subsonic.json" brackets
 [
   { 
+    // [!link /Subsonic/ /configuration/sources/subsonic]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Subsonic File Config
     "name": "MySubsonic",
     "data": { /* ... */},
+    // [!code focus:18]
     "options": {
       "playTransform": {
         "preCompare": [
           {
             "type": "musicbrainz",
-            "name": "MyMB"
+            "name": "MyMB",
             // ...
-            "title": false, // will not apply any changes to Play title
+            "title": false, // [!ref] will not apply any changes to Play title
             "artists": {
-              "when": {/* ... */}, // will only apply changes to Play artists if "when" is satisfied
+              // [!link /when/ /configuration/transforms#conditional-modification]
+              "when": {/* ... */}, // [!ref] will only apply changes to Play artists if `"when"` is satisfied
             /* ... */
             },
-            "album": true // will always apply changes to Play album
-            "meta": true // adds MusicBrainz MBIDs to scrobble data
+            "album": true, // [!ref] will always apply changes to Play album
+            "meta": true // [!ref] adds MusicBrainz MBIDs to scrobble data
           }
         ]
       }
@@ -284,19 +294,23 @@ The `defaults` you set in [Stage Configuration](#stage-configuration) [can be ov
 
 <summary>Example</summary>
 
-```json5 title="subsonic.json"
+```json5 title="subsonic.json" brackets
 [
   { 
+    // [!link /Subsonic/ /configuration/sources/subsonic]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Subsonic File Config
     "name": "MySubsonic",
     "data": { /* ... */},
+    // [!code focus:12]
     "options": {
       "playTransform": {
         "preCompare": [
           {
             "type": "musicbrainz",
             "name": "MyMB",
-            "releaseStatusPriority": ["psuedo-release"], // override from defaults
-            "searchOrder": ["freetext"] // add new property, combined with defaults
+            "releaseStatusPriority": ["psuedo-release"], // [!code highlight] [!ref] overrides `"releaseStatusPriority"` from `"defaults"`
+            "searchOrder": ["freetext"] // [!code highlight] [!ref] adds new property, combined with `"defaults"`
           }
         ]
       }
@@ -337,28 +351,24 @@ The `*` stands for the prefix used for each Source/Client's ENV keys. Refer to t
 
 Using [Jellyfin + Maloja](/quickstart#create-docker-compose-file) example from Quickstart:
 
-```yaml
+```yaml title="docker-compose.yml"
 services:
   multi-scrobbler:
     image: foxxmd/multi-scrobbler
     container_name: multi-scrobbler
+    # [!code focus:9]
     environment:
-      # [!code highlight:3]
-       # searches with sensible release sorting with the searchOrder
-       # isrc => basic => artist (native mode)
+      # [!code highlight] [!ref] searches with sensible release sorting with the searchOrder `isrc` => `basic` => `artist` (native mode)
       - MB_PRESETS=default,sensible,native
       - JELLYFIN_URL=192.168.0.110:8096
       - JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56b
       - JELLYFIN_USER=MyUser
-      # [!code highlight:2]
-       # applies musicbrainz Stage to preTransform of Jellyfin source
+      # [!code highlight] [!ref] applies musicbrainz Stage to preTransform of Jellyfin source
       - JELLYFIN_TRANSFORMS=musicbrainz
 
-      # maloja receives enhanced scrobble from Jellyfin
+      # [!ref] maloja receives enhanced scrobble from Jellyfin
       - MALOJA_URL=http://192.168.0.100:42010
       - MALOJA_API_KEY=myApiKey
-
-
     volumes:
       - "./config:/config"
     ports:
@@ -407,15 +417,13 @@ Define which data types are required using:
 
 <summary>Example</summary>
 
-[Stage Configuration](/configuration/transforms#configuring-stages) example:
-
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
-    // only search if MBIDs for artists or album is missing
-    "searchWithMissing": ["artists", "album"]
-
-    // uncomment to make the stage always search, even if above data is present
+    // [!ref] only search if MBIDs for artists or album is missing
+    "searchWhenMissing": ["artists", "album"],
+    // [!ref] uncomment to make the stage always search, even if above data is present
     //forceSearch: true
   }
 ```
@@ -437,10 +445,11 @@ All search methods will be run in the order they were defined until one method r
 
 To set search methods and their order use the `searchOrder` option in your [Stage Configuration](/configuration/transforms#configuring-stages):
 
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
-    // only searches using these methods, in the order they are listed here
+    // [!ref] only searches using these methods, in the order they are listed here
     "searchOrder": ["isrc", "mbidrecording", "basic","freetext"]
   }
 ```
@@ -459,12 +468,11 @@ If `searchOrder` is undefined then Multi-scrobbler will default to using `isrc` 
 
 If your Scrobble data contains an [ISRC](https://musicbrainz.org/doc/ISRC) (usually from Spotify) then Multi-scrobbler can search using this ID, only.
 
-[Stage Configuration](/configuration/transforms#configuring-stages) example:
-
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
-    // will only search using isrc
+    // [!ref] will only search using isrc
     "searchOrder": ["isrc"]
   }
 ```
@@ -477,12 +485,11 @@ If your Scrobble data contains an [ISRC](https://musicbrainz.org/doc/ISRC) (usua
 
 If your Scrobble data contains an [Track (Recording) MBID](https://musicbrainz.org/doc/Recording) then Multi-scrobbler can search using this MBID, only.
 
-[Stage Configuration](/configuration/transforms#configuring-stages) example:
-
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
-  // will only search using recording mbid
+  // [!ref] will only search using recording mbid
     "searchOrder": ["mbidrecording"]
   }
 ```
@@ -495,12 +502,11 @@ If your Scrobble data contains an [Track (Recording) MBID](https://musicbrainz.o
 
 Will search Musicbrainz using any/all available text fields from your scrobble: Album, Artists(s), and Title. Does not leverage any existing MBIDs.
 
-[Stage Configuration](/configuration/transforms#configuring-stages) example:
-
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
-    // will only search using album, artist(s), and title
+    // [!ref] will only search using album, artist(s), and title
     "searchOrder": ["basic"]
   }
 ```
@@ -513,12 +519,11 @@ Will search Musicbrainz using any/all available text fields from your scrobble: 
 
 This is the same as the above **Album, Artist, and Title Fields** search except that if the scrobble data contains any corresponding MBIDs it will use those instead of the plain text field.
 
-[Stage Configuration](/configuration/transforms#configuring-stages) example:
-
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
-    // will only search using album, artist(s), and title
+    // [!ref] will only search using album, artist(s), and title
     "searchOrder": ["basicOrIds"]
   }
 ```
@@ -528,7 +533,7 @@ Example:
 ```json
 {
     "title": "Endless Possibility (feat. Wheatus)",
-    "artists": ["Bowling For Soup"]
+    "artists": ["Bowling For Soup"],
     "albumMbid": "c9f91cdc-984e-4303-9a51-4ac0dfa2348f",
     "album": "My Cool Album"
 }
@@ -544,12 +549,11 @@ Multi-scrobbler will search Musicbrainz using `title`, `artists`, and `albumMbid
 
 If your Scrobble data contains a title, artist(s), and an album (all three fields) then Multi-scrobbler can search using only title and album by using `album` for `searchOrder`:
 
-[Stage Configuration](/configuration/transforms#configuring-stages) example:
-
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
-    // will only search using only title + album name
+    // [!ref] will only search using only title + album name
     "searchOrder": ["album"]
   }
 ```
@@ -564,12 +568,11 @@ If your scrobble data contains only **one** artist string then Multi-scrobbler c
 
 Use `artist` with `searchOrder` and optionally specify the extraction mode with `searchArtistMethod`:
 
-[Stage Configuration](/configuration/transforms#configuring-stages) example:
-
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
-    // will only search using title/album + extracted artists
+    // [!ref] will only search using title/album + extracted artists
     "searchOrder": ["artist"],
     //searchArtistMethod: 'native' // optional
   }
@@ -615,12 +618,11 @@ Use `artist` with `searchOrder` and optionally specify the extraction mode with 
 
     </details>
 
-    [Stage Configuration](/configuration/transforms#configuring-stages) example:
-
-    ```json5
-    // ...
+    ```json5 brackets
+    // [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+    // ...your Stage Configuration
     "defaults": {
-      // will only search using title/album + native extracted artists
+      // [!ref] will only search using title/album + native extracted artists
       "searchOrder": ["artist"],
       "searchArtistMethod": "native"
       }
@@ -654,12 +656,11 @@ Use `artist` with `searchOrder` and optionally specify the extraction mode with 
     ```
     </details>
 
-    [Stage Configuration](/configuration/transforms#configuring-stages) example:
-
-    ```json5
-    // ...
+    ```json5 brackets
+    // [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+    // ...your Stage Configuration
     "defaults": {
-      // will only search using title/album + naive extracted artists
+      // [!ref] will only search using title/album + naive extracted artists
       "searchOrder": ["artist"],
       "searchArtistMethod": "naive"
       }
@@ -689,13 +690,12 @@ If you know your Source's Play data is well organized you **should not** enable 
 
 :::
 
-[Stage Configuration](/configuration/transforms#configuring-stages) example:
-
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
     // ...
-    // will only search using free text search of all artist/album/title
+    // [!ref] will only search using free text search of all artist/album/title
     "searchOrder": ["freetext"],
   }
 ```
@@ -717,7 +717,7 @@ Each match returned by MusicBrainz contains a numeric score representing how clo
 ```json5
 {
   // ...
-  "score": 90 // matches must score 90 or higher to be considered
+  "score": 90 // [!ref] matches must score 90 or higher to be considered
 }
 ```
 
@@ -761,9 +761,9 @@ EX to exclude compilations
 
 When a release attributes has both types of filter (`allow` and `deny`), only `allow` is used:
 
-```
+```json5
 "releaseStatusAllow": ["official"],
-"releaseStatusDeny": ["bootleg","promotional"] // this is ignored!
+"releaseStatusDeny": ["bootleg","promotional"] // [!code warning] this is ignored!
 ```
 
 :::
@@ -774,7 +774,7 @@ The [Release Group **Secondary Type**](https://wiki.musicbrainz.org/Release_Grou
 
 When `releaseGroupSecondaryTypeDeny` is **not** defined it defaults to:
 
-```
+```json5
 "releaseGroupSecondaryTypeDeny": ["audiobook"]
 ```
 
@@ -782,7 +782,7 @@ which filters out audiobook results.
 
 If you *want* to include audiobook results then explicitly define this and set it to an empty array EX: 
 
-```
+```json5
 "releaseGroupSecondaryTypeDeny": []
 ```
 
@@ -798,12 +798,13 @@ If you want to include music videos in results then add this to your config: `"a
 
 <summary>Example</summary>
 
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
   //"releaseStatusAllow": ["official"],
   // ...etc
-  "allowMusicVideo": true
+  "allowMusicVideo": true // [!code highlight]
 }
 ```
 
@@ -819,11 +820,12 @@ You may want to filter the majority of your matches by releases but allow matchi
 
 <summary>Example</summary>
 
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
   // ...
-  "releaseAllowEmpty": true // don't remove a match during filtering just because it has no releases
+  "releaseAllowEmpty": true // [!ref] don't remove a match during filtering just because it has no releases
 }
 ```
 
@@ -884,15 +886,16 @@ Using `"albumWeight": 0.4` and `"artistWeight": 0.3` ensures that the releases t
 
 Add one or more of these weight properties to your [Stage Configuration](/configuration/transforms#configuring-stages) to enable Field Scoring:
 
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
     // ...
-    // enables album text similiarity scoring
+    // [!ref] enables album text similiarity scoring
     "albumWeight": 0.33,
-    // enables title text similiarity scoring
+    // [!ref] enables title text similiarity scoring
     "titleWeight": 0.33,
-    // enables artist text similiarity scoring
+    // [!ref] enables artist text similiarity scoring
     "artistWeight": 0.33
   }
 ```
@@ -921,14 +924,11 @@ Generally, the Musicbrainz Stage can be used without any of the [optional config
 
 For a more opinionated match that will mirror what you would expect from data from large music services:
 
-```json5
+```json5 brackets
 {
-    // use official release over anything else
-    "releaseStatusPriority": ["official"],
-    // prefer album, then single, then ep
-    "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
-    // prefer worldwide release
-    "releaseCountryPriority": ["XW"]
+    "releaseStatusPriority": ["official"], // [!ref] use official release over anything else
+    "releaseGroupPrimaryTypePriority": ["album", "single", "ep"], // [!ref] prefer album, then single, then ep
+    "releaseCountryPriority": ["XW"] // [!ref] prefer worldwide release
 }
 ```
 
@@ -936,15 +936,12 @@ Consider adding [Artist Extraction (`artist`)](#search-methods) in **Native Mode
 
 <details>
 
-```json5
+```json5 brackets
 {
-  // use official release over anything else
   "releaseStatusPriority": ["official"],
-  // prefer album, then single, then ep
   "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
-  // prefer worldwide release
   "releaseCountryPriority": ["XW"],
-  // search using extracted artist as last search attempt
+  // [!code ++:2] [!ref] search using extracted artist as last search attempt
   "searchOrder": ["isrc", "basic", "artist"],
   "searchArtistMethod": "native"
 }
@@ -966,8 +963,8 @@ Last.fm Scrobble returns an Artist in the title and combines two artists into on
 
 ```json
 {
-    "title": "Endless Possibility (feat. Wheatus)",
-    "artists": ["Bowling For Soup & Punk Rock Factory"]
+    "title": "Endless Possibility (feat. Wheatus)", // [!warning /(feat. Wheatus)/] Artist in the title
+    "artists": ["Bowling For Soup & Punk Rock Factory"] // [!warning /Bowling For Soup & Punk Rock Factory/] Two artists in one string
 }
 ```
 
@@ -1021,17 +1018,22 @@ With these Rules IDs are added to the title, album, and artists your Play alread
 
 <summary>Example</summary>
 
-```json5 title="subsonic.json"
+```json5 title="subsonic.json" brackets
 [
   { 
+    // [!link /Subsonic/ /configuration/sources/subsonic]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Subsonic File Config
     "name": "MySubsonic",
     "data": { /* ... */},
+    // [!code focus:15]
     "options": {
       "playTransform": {
         "preCompare": [
           {
             "type": "musicbrainz",
             "name": "MyMB",
+            // [!code highlight:5]
             "title": false,
             "artists": false,
             "album": false,
@@ -1063,13 +1065,15 @@ If you have multiple Modification Stages and need to see the diff for your Play 
 
 <summary>Example</summary>
 
-In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
-
-```json5 title="subsonic.json"
+```json5 title="subsonic.json" brackets
 [
   { 
+    // [!link /Subsonic/ /configuration/sources/subsonic]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Subsonic File Config
     "name": "MySubsonic",
     "data": { /* ... */},
+    // [!code focus:11]
     "options": {
       "playTransform": {
         // [!code highlight]
@@ -1098,13 +1102,15 @@ In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?co
 
 No [AIO Config](/configuration?configType=aio#configuration-types) is required when using the default configuration.
 
-In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
-
-```json5 title="subsonic.json"
+```json5 title="subsonic.json" brackets
 [
   { 
+    // [!link /Subsonic/ /configuration/sources/subsonic]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Subsonic File Config
     "name": "MySubsonic",
     "data": { /* ... */},
+    // [!code focus:9]
     "options": {
       "playTransform": {
         "preCompare": [
@@ -1127,9 +1133,11 @@ In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?co
 
 Your [AIO Config](/configuration?configType=aio#configuration-types):
 
-```json5 title="config.json"
+:::code-tabs
+```json5 label="config" title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "musicbrainz",
@@ -1141,14 +1149,15 @@ Your [AIO Config](/configuration?configType=aio#configuration-types):
   ]
 }
 ```
-
-In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
-
-```json5 title="subsonic.json"
+```json5 label="subsonic" title="subsonic.json" brackets
 [
   { 
+    // [!link /Subsonic/ /configuration/sources/subsonic]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Subsonic File Config
     "name": "MySubsonic",
     "data": { /* ... */},
+    // [!code focus:10]
     "options": {
       "playTransform": {
         "preCompare": [
@@ -1162,6 +1171,7 @@ In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?co
   }
 ]
 ```
+:::
 </details>
 
 ### Sensible Default
@@ -1172,33 +1182,38 @@ Using the config shown in [Sensible Default](#sensible-default) with File/AIO co
 
 <summary>Example</summary>
 
-* Using your [AIO Config](/configuration?configType=aio#configuration-types)
-* Using a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types)
+Your [AIO Config](/configuration?configType=aio#configuration-types):
 
 :::code-tabs
-```json label="config" title="config.json"
+```json5 label="config" title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "musicbrainz",
       "name": "MyMB",
+      // [!code highlight:7]
       "defaults": {
         "releaseStatusPriority": ["official"],
         "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
         "releaseCountryPriority": ["XW"],
-        "searchArtistMethod": "native"
+        "searchArtistMethod": "native",
         "searchOrder": ["isrc", "basic", "artist"]
       }
     }
   ]
 }
 ```
-```json label="sub" title="subsonic.json"
+```json5 label="subsonic" title="subsonic.json" brackets
 [
   { 
+    // [!link /Subsonic/ /configuration/sources/subsonic]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Subsonic File Config
     "name": "MySubsonic",
     "data": { /* ... */},
+    // [!code focus:10]
     "options": {
       "playTransform": {
         "preCompare": [
@@ -1225,39 +1240,44 @@ If you do not want your scrobble data to be modified (artists/album/title) but s
 
 Your [AIO Config](/configuration?configType=aio#configuration-types):
 
-```json5 title="config.json"
+:::code-tabs
+```json5 label="config" title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "musicbrainz",
       "name": "MyMB",
       "defaults": {
+        // [!link /Sensible Default/ #sensible-default]
         // maybe something like Sensible Default?
       }
     }
   ]
 }
 ```
-
-In a [Jellyfin](/configuration/sources/jellyfin) [File Config](/configuration?configType=file#configuration-types):
-
-```json5 title="jellyfin.json"
+```json5 label="jellyfin" title="jellyfin.json" brackets
 [
   { 
+    // [!link /Jellyfin/ /configuration/sources/jellyfin]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Jellyfin File Config
     "name": "MyJellyfin",
     "data": { /* ... */},
+    // [!code focus:15]
     "options": {
       "playTransform": {
         "preCompare": [
           {
             "type": "musicbrainz",
             "name": "MyMB",
+            // [!code highlight:4]
             "title": false,
             "artists": false,
             "album": false,
             "albumArtists": false,
-            "meta": true // only update scrobble metadata with MBIDs
+            "meta": true // [!code highlight] [!ref] only update scrobble metadata with MBIDs
           }
         ]
       }
@@ -1265,6 +1285,7 @@ In a [Jellyfin](/configuration/sources/jellyfin) [File Config](/configuration?co
   }
 ]
 ```
+:::
 </details>
 
 ### Use Native Stage if no Musicbrainz Matches
@@ -1281,9 +1302,11 @@ In a [Jellyfin](/configuration/sources/jellyfin) [File Config](/configuration?co
 
 Your [AIO Config](/configuration?configType=aio#configuration-types):
 
-```json5 title="config.json"
+:::code-tabs
+```json5 label="config" title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "musicbrainz",
@@ -1292,34 +1315,33 @@ Your [AIO Config](/configuration?configType=aio#configuration-types):
         "releaseStatusPriority": ["official"],
         "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
         "releaseCountryPriority": ["XW"],
-        "searchArtistMethod": "native",
+        "searchArtistMethod": "native", // [!ref] fallback search with Artist Extraction
         "searchOrder": ["isrc","basic", "artist"]
       }
     }
   ]
 }
 ```
-
-In a [Jellyfin](/configuration/sources/jellyfin) [File Config](/configuration?configType=file#configuration-types):
-
-```json5 title="jellyfin.json"
+```json5 label="jellyfin" title="jellyfin.json" brackets
 [
   { 
+    // [!link /Jellyfin/ /configuration/sources/jellyfin]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Jellyfin File Config
     "name": "MyJellyfin",
     "data": { /* ... */},
+    // [!code focus:15]
     "options": {
       "playTransform": {
         "preCompare": [
           {
-            // if musicbrainz is successful then do NOT run native,
-            // only run native if musicbrainz fails to find a match (onFailure)
             "type": "musicbrainz",
-            "name": "MyMB"
-            "onSuccess": "stop",
-            "onFailure": "continue"
+            "name": "MyMB",
+            "onSuccess": "stop", // [!code highlight] [!ref] if musicbrainz is successful then do NOT run native
+            "onFailure": "continue" // [!code highlight] [!ref] only run native if musicbrainz fails to find a match
           },
           {
-            "type": "native"
+            "type": "native" // [!link /native/ /configuration/transforms/native/#default-stage]
           }
         ]
       }
@@ -1327,6 +1349,7 @@ In a [Jellyfin](/configuration/sources/jellyfin) [File Config](/configuration?co
   }
 ]
 ```
+:::
 </details>
 
 ### Different Search Methods Based on Source (Last.fm and Spotify) {#override-stage-configuration-example}
@@ -1342,23 +1365,25 @@ Use [**Per Component Overrides**](#rules-and-hooks) with the default (or [sensib
 
 <summary>Example</summary>
 
-Stage Configuration
-
-```json5 title="lastfm.json"
+:::code-tabs
+```json5 label="lastfm" title="lastfm.json" brackets
 [
   { 
+    // [!link /Last.fm/ /configuration/sources/lastfm-source]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Last.fm File Config
     "name": "MyLFM",
-    "configureAs": "source"
+    "configureAs": "source",
     "data": { /* ... */},
+    // [!code focus:12]
     "options": {
       "playTransform": {
         "preCompare": [
           {
             "type": "musicbrainz",
             "name": "MyMB",
-            "searchArtistMethod": "native"
-            // does not use any ID searches
-            // fallback to more aggressive/broad searches
+            "searchArtistMethod": "native",
+            // [!code highlight] [!ref] does not use any ID searches, fallback to more aggressive/broad searches
             "searchOrder": ["basic", "artist", "freetext"]
           }
         ]
@@ -1367,21 +1392,23 @@ Stage Configuration
   }
 ]
 ```
-
-```json5 title="spotify.json"
+```json5 label="spotify" title="spotify.json" brackets
 [
   { 
+    // [!link /Spotify/ /configuration/sources/spotify]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Spotify File Config
     "name": "MySpotify",
     "data": { /* ... */},
+    // [!code focus:14]
     "options": {
       "playTransform": {
         "preCompare": [
           {
             "type": "musicbrainz",
             "name": "MyMB",
-            // use ISRC as first search
-            "searchOrder": ["isrc", "basic"]
-            // bias matches towards similarity to original data
+            "searchOrder": ["isrc", "basic"], // [!code highlight] [!ref] use ISRC as first search
+            // [!code highlight:3] [!ref] bias matches towards similarity to original data
             "albumWeight": 0.33,
             "titleWeight": 0.33,
             "artistWeight": 0.33
@@ -1392,6 +1419,7 @@ Stage Configuration
   }
 ]
 ```
+:::
 
 </details>
 
@@ -1415,14 +1443,17 @@ The [Discord](/configuration/clients/discord) Client can fetch album art images 
     <TabItem value="file" label="File">
     Your [AIO Config](/configuration?configType=aio#configuration-types):
 
-    ```json5 title="config.json"
+    :::code-tabs
+    ```json5 label="config" title="config.json" brackets
     {
-      // ...
+      // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+      // ...your AIO Config
       "transformers": [
         {
           "type": "musicbrainz",
           "name": "MyMB",
           "defaults": {
+            // [!link /sensible defaults/ #sensible-default]
             // sensible defaults
             "releaseStatusPriority": ["official"],
             "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
@@ -1434,14 +1465,15 @@ The [Discord](/configuration/clients/discord) Client can fetch album art images 
       ]
     }
     ```
-
-    In your [Discord](/configuration/clients/discord) [File Config](/configuration?configType=file#configuration-types):
-
-    ```json5 title="discord.json"
+    ```json5 label="discord" title="discord.json" brackets
     [
       { 
+        // [!link /Discord/ /configuration/clients/discord]
+        // [!link /File Config/ /configuration?configType=file#configuration-types]
+        // ...your Discord File Config
         "name": "MS",
         "data": { /* ... */},
+        // [!code focus:9]
         "options": {
           "playTransform": {
             "preCompare": [
@@ -1454,18 +1486,21 @@ The [Discord](/configuration/clients/discord) Client can fetch album art images 
       }
     ]
     ```
+    :::
     </TabItem>
     <TabItem value="aio" label="AIO">
     Your [AIO Config](/configuration?configType=aio#configuration-types):
 
-    ```json5 title="config.json"
+    ```json5 title="config.json" brackets
     {
-      // ...
+      // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+      // ...your AIO Config
       "transformers": [
         {
           "type": "musicbrainz",
           "name": "MyMB",
           "defaults": {
+            // [!link /sensible defaults/ #sensible-default]
             // sensible defaults
             "releaseStatusPriority": ["official"],
             "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
@@ -1475,11 +1510,12 @@ The [Discord](/configuration/clients/discord) Client can fetch album art images 
           }
         }
       ],
-      "sources": [
+      "clients": [
         { 
           "name": "MS",
           "type": "discord",
           "data": { /* ... */},
+          // [!code focus:9]
           "options": {
             "playTransform": {
               "preCompare": [
