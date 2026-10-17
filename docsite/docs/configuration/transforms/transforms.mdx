@@ -112,10 +112,11 @@ The `compare` [hook](#hook) is slightly different than `preCompare` and `postCom
     // ...
     "options": {
       "playTransform": {
+        // [!code focus:6]
         "compare": [
           {
-            "candidate": {/* ... */}, // modify the "new" Play being compared
-            "existing": {/* ... */}, // modify all "existing" Play/Scrobbles the new Play is being compared against
+            "candidate": {/* ... */}, // [!callout /candidate/] modify the "new" Play being compared
+            "existing": {/* ... */}, // [!callout /existing/] modify all "existing" Play/Scrobbles the new Play is being compared against
           }
         ],
       }
@@ -218,9 +219,11 @@ Multiple stages of the same type may be configured, allowing you to define sever
 
 Your [AIO Config](/configuration?configType=aio#configuration-types):
 
-```json5 title="config.json"
+:::code-tabs
+```json5 label="config" title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "native",
@@ -236,26 +239,27 @@ Your [AIO Config](/configuration?configType=aio#configuration-types):
       "type": "native",
       "name": "TitleOnly",
       "defaults": {
-        // extracts and uses *only* artists found in title string
+        // [!ref] extracts and uses *only* artists found in title string
         "artistsParseFrom": ["title"]
       }
     }
   ]
 }
 ```
-
-In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
-
-```json5 title="subsonic.json"
+```json5 label="subsonic" title="subsonic.json" brackets
 [
   { 
+    // [!link /Subsonic/ /configuration/sources/subsonic]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Subsonic File Config
     "name": "MySubsonic",
     "data": { /* ... */},
+    // [!code focus:10]
     "options": {
       "playTransform": {
         "preCompare": [
           {
-            "type": "native"
+            "type": "native",
             "name": "DotTransformer"
           }
         ]
@@ -264,19 +268,20 @@ In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?co
   }
 ]
 ```
-
-In a [VLC](/configuration/sources/vlc) [File Config](/configuration?configType=file#configuration-types):
-
-```json5 title="vlc.json"
+```json5 label="vlc" title="vlc.json" brackets
 [
   { 
+    // [!link /VLC/ /configuration/sources/vlc]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your VLC File Config
     "name": "MyVLC",
     "data": { /* ... */},
+    // [!code focus:10]
     "options": {
       "playTransform": {
         "preCompare": [
           {
-            "type": "native"
+            "type": "native",
             "name": "TitleOnly"
           }
         ]
@@ -285,6 +290,7 @@ In a [VLC](/configuration/sources/vlc) [File Config](/configuration?configType=f
   }
 ]
 ```
+:::
 
 </details>
 
@@ -298,17 +304,17 @@ If Stages exists for the `type` you want to use in the hook and you do not speci
 
 <summary>Example</summary>
 
-```json5 title="vlc.json"
+```json5 title="vlc.json" brackets
 [
   { 
     "name": "MyVLC",
     "data": { /* ... */},
+    // [!code focus:9]
     "options": {
       "playTransform": {
         "preCompare": [
           {
-            "type": "rocksky"
-            // no "name" is specified
+            "type": "rocksky" // [!callout /rocksky/] no `"name"` is specified
           }
         ]
       }
@@ -338,40 +344,43 @@ The default configuration you set for your Stage may be overridden in any usage 
 
 Your [AIO Config](/configuration?configType=aio#configuration-types):
 
-```json5 title="config.json"
+:::code-tabs
+```json5 label="config" title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "native",
       "name": "MyNativeTransformer",
       "defaults": {
-        // default delimiters when this Stage is used in a hook
+        // [!ref] default delimiters when this Stage is used in a hook
         "delimiters": [
           "•"
         ],
-        // default delimiters when this Stage is used in a hook
+        // [!ref] default artistsParseFrom when this Stage is used in a hook
         "artistsParseFrom": ["artists"]
       }
     }
   ]
 }
 ```
-
-In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
-
-```json5 title="subsonic.json"
+```json5 label="subsonic" title="subsonic.json" brackets
 [
   { 
+    // [!link /Subsonic/ /configuration/sources/subsonic]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Subsonic File Config
     "name": "MySubsonic",
     "data": { /* ... */},
+    // [!code focus:11]
     "options": {
       "playTransform": {
         "preCompare": [
           {
-            "type": "native"
+            "type": "native",
             "name": "MyNativeTransformer",
-            // overrides property from "defaults"
+            // [!code highlight] [!ref] overrides `"artistsParseFrom"` from `"defaults"`
             "artistsParseFrom": ["artists", "title"]
           }
         ]
@@ -380,6 +389,7 @@ In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?co
   }
 ]
 ```
+:::
 
 </details>
 
@@ -388,20 +398,21 @@ In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?co
 
 Each [Stage](#stage) may specify whether it should apply the resulting transformation to different parts of the Play data by specifying `title`, `artists` and/or `album` in the Stage object.
 
-```json5
+```json5 brackets
 {
     "type": "native",
     // ...
-    "title": false, // will not apply any changes to Play title
+    "title": false, // [!ref] will not apply any changes to Play title
     "artists": {
-      "when": {/* ... */}, // will only apply changes to Play artists if "when" is satisfied
+      // [!link /when/ #conditional-modification]
+      "when": {/* ... */}, // [!ref] will only apply changes to Play artists if `"when"` is satisfied
     /* ... */
     },
-    "albumArtists": true, // will always apply changes to Play album artists
-    "album": true, // will always apply changes to Play album
-    "duration": true, // will always apply changes to Play duration (length of track)
-    "meta": true, // will always apply changes to Play meta (MBIDs, spotify links, etc...)
-    "art": true // will always apply art to Play (if stage provides art)
+    "albumArtists": true, // [!ref] will always apply changes to Play album artists
+    "album": true, // [!ref] will always apply changes to Play album
+    "duration": true, // [!ref] will always apply changes to Play duration (length of track)
+    "meta": true, // [!ref] will always apply changes to Play meta (MBIDs, spotify links, etc...)
+    "art": true // [!ref] will always apply art to Play (if stage provides art)
 }
 ```
 
@@ -469,14 +480,13 @@ Specifying Flow Control is only necessary if the above assumptions are not true 
 
 <summary>Default Flow Control Example</summary>
 
-```json5 title="subsonic.json"
+```json5 title="subsonic.json" brackets
     // ...
     "options": {
       "playTransform": {
         "preCompare": [
           {
-            // if this stage is successful, native is run
-            // if this stage fails, native does not run
+            // [!ref] if this stage is successful, native is run. If this stage fails, native does not run
             "type": "musicbrainz",
             "name": "MyMB"
           },
@@ -498,18 +508,16 @@ Specifying Flow Control is only necessary if the above assumptions are not true 
 <summary>Customized Flow Control Example</summary>
 
 
-```json5 title="subsonic.json"
+```json5 title="subsonic.json" brackets
     // ...
     "options": {
       "playTransform": {
         "preCompare": [
           {
-            // if musicbrainz is successful then do NOT run native,
-            // only run native if musicbrainz fails to find a match (onFailure)
             "type": "musicbrainz",
-            "name": "MyMB"
-            "onSuccess": "stop",
-            "onFailure": "continue"
+            "name": "MyMB",
+            "onSuccess": "stop", // [!code highlight] [!ref] if musicbrainz is successful then do NOT run native
+            "onFailure": "continue" // [!code highlight] [!ref] only run native if musicbrainz fails to find a match
           },
           {
             "type": "native",
@@ -532,31 +540,32 @@ All parts of an individual `when` clause must test true to "pass" but if **any**
 
 If the `when` test does not pass then the Stage is [**skipped (`onSkip`)**](#flow-control).
 
-```json5
+:::code-tabs{sync="when"}
+```json5 label="Single condition"
 {
   "when":
     {
-      "artist": "Elephant Gym", // Play must have an artist matching "Elephant Gym" (AND)
-      "album": "Dreams" // Play object must have an album  matching "Dreams" (AND)
+      "artist": "Elephant Gym", // [!ref] Play must have an artist matching "Elephant Gym" (AND)
+      "album": "Dreams" // [!ref] Play object must have an album  matching "Dreams" (AND)
     }
 }
 ```
-
-```json5
+```json5 label="Multiple conditions (OR)"
 {
   "when": [
     {
-      "artist": "Elephant Gym", // Play must have an artist matching "Elephant Gym" (AND)
-      "album": "Dreams" // Play object must have an album  matching "Dreams" (AND)
+      "artist": "Elephant Gym", // [!ref] Play must have an artist matching "Elephant Gym" (AND)
+      "album": "Dreams" // [!ref] Play object must have an album  matching "Dreams" (AND)
     },
-    // OR
+    // [!ref] OR...
     {
-      "title": "/(Remastered)$/", // Play title must match regular expression (AND)
-      "album": "Various Artists" // Play album must match "Various Artists" (AND)
+      "title": "/(Remastered)$/", // [!ref] Play title must match regular expression (AND)
+      "album": "Various Artists" // [!ref] Play album must match "Various Artists" (AND)
     }
   ]
 }
 ```
+:::
 
 <DetailsAdmo type="tip" summary="Checking for Art">
 
@@ -566,7 +575,7 @@ To test if your Play/scrobble has *no* `art` associated with the data use an emp
 {
   "when": [
     {
-      "art": "", // run the stage when play has no art (album, track, or artist art)
+      "art": "", // [!callout /""/] run the stage when play has no artwork (album, track, or artist)
     },
   ]
 }
@@ -580,7 +589,7 @@ EX: only run stage if art does *not* come from deezer, use deezer's cdn in a not
 {
   "when": [
     {
-      "art": "/^((?!(dzcdn)).)*$/", // run the stage when play has no art (album, track, or artist art)
+      "art": "/^((?!(dzcdn)).)*$/", // [!callout /^/] run the stage when no art url comes from deezer (using this regex)
     },
   ]
 }
@@ -599,15 +608,14 @@ More succinctly:
 
 ```json5
 {
-  // IF the artist is Elephant Gym 
-  // THEN Run native stage
   "playTransform": {
     "preCompare": [
       {
         "type": "native",
+        // [!callout /when/] Only run `native` if these conditions are true...
         "when": [
           {
-            "artist": "/Elephant Gym/"
+            "artist": "/Elephant Gym/" // [!callout /Elephant/] if artist is `Elephant Gym` 
           }
         ]
       }
@@ -624,16 +632,12 @@ More succinctly:
 
 ```json5
 {
-  // Always run native Stage
-  //
-  //     IF artist matches "Elephant Gym"
-  //     THEN use result of native stage for "artists" of Play data
   "playTransform": {
     "preCompare": {
-      "type": "native",
-      "artists":
+      "type": "native", // [!callout /native/] Always run `native` stage since no `when` at this level
+      "artists": 
         {
-          "when": [
+          "when": [  // [!callout /when/] Only apply `artists` if Play artist was *originally* `Elephant Gym`
             {
               "artist": "/Elephant Gym/"
             }
@@ -654,7 +658,7 @@ MS can log a diff of Stage transformations if/when they occur. In the `playTrans
   * This can also be enabled by using [`DEBUG_MODE=true`](/configuration/#debug-mode)
 * `"log": "all"` => Output original play + final transformed output of **each** Stage in the array
 
-```json5
+```json5 {7}
 {
   "name": "myThing",
   "data": {/*...*/},
