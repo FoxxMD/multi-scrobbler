@@ -32,7 +32,7 @@ FROM ghcr.io/linuxserver/baseimage-debian:bookworm AS builder
 #
 # 
 
-ENV NODE_VERSION=24.14.0
+ENV NODE_VERSION=24.22.1
 
 RUN \
     ARCH= OPENSSL_ARCH= && dpkgArch="$(dpkg --print-architecture)" \
