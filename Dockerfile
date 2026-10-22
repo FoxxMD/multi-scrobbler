@@ -8,6 +8,7 @@ RUN \
     apt-get install --no-install-recommends -y \
         avahi-utils \
         curl && \
+    apt-get install --only-upgrade ca-certificates -y && \
   echo "**** cleanup ****" && \
     apt-get purge --auto-remove -y perl && \
     apt-get autoclean && \
