@@ -955,6 +955,11 @@ export default abstract class AbstractSource extends AbstractComponent implement
                      },
                      onError: async (e: Error, queueId) => {
                         consumedIds.delete(queueId);
+                        // cast avoids the type guard narrowing e to never below
+                        if(isAbortError(e as unknown)) {
+                            // processing was stopped, not a failure
+                            throw e;
+                        }
                         taskFailures++;
                         this.emitter.emit('discoveryQueueError', e);
                         if(taskFailures < maxRetries) {

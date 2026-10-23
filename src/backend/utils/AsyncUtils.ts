@@ -73,38 +73,6 @@ export function staggerMapper<Element, NewElement>(options: StaggerOptions) {
   }
 }
 
-export const consumeQueueOnce = async <T>(next: () => Promise<T | undefined>, process: (item: T) => Promise<void>, opts: {
-  concurrency: number;
-  signal: AbortSignal;
-  onError?: (e: Error) => Promise<void>, onSuccess?: () => void
-}): Promise<void> => {
-  const { concurrency, signal, onError } = opts;
-  signal.throwIfAborted();
-  const inFlight = new Set<Promise<void>>();
-  try {
-    while (true) {
-      signal.throwIfAborted();
-      if (inFlight.size >= concurrency) {
-        await Promise.race(inFlight);
-        continue;
-      }
-      const item = await next();
-      if (item === undefined) break;
-      const task = (async () => {
-        try {
-          await process(item);
-        } catch (err) {
-          await onError?.(err as Error); // swallow so one bad item doesn't kill the loop
-        }
-      })();
-      inFlight.add(task);
-      void task.then(() => inFlight.delete(task));
-    }
-  } finally {
-    await Promise.allSettled(inFlight); // drain before sleeping or rethrowing
-  }
-};
-
 export const consumeQueue = async <T>(
   next: (queueId: string) => Promise<T | undefined>,
   process: (item: T, queueId: string) => Promise<T | void>,
@@ -121,9 +89,12 @@ export const consumeQueue = async <T>(
   while (true) {
     signal.throwIfAborted();
     const inFlight = new Set<Promise<void>>();
+    // populated when onError rethrows, which means consuming should stop
+    const failures: unknown[] = [];
     try {
       while (true) {
         signal.throwIfAborted();
+        if (failures.length > 0) throw failures[0];
         if (inFlight.size >= concurrency) {
           await Promise.race(inFlight);
           continue;
@@ -136,15 +107,22 @@ export const consumeQueue = async <T>(
             await process(item, qId);
             onSuccess?.(item, qId);
           } catch (err) {
-            await onError?.(err as Error, qId); // swallow so one bad item doesn't kill the loop
+            await onError?.(err as Error, qId); // swallow so one bad item doesn't kill the loop, unless onError rethrows
           }
         })();
         inFlight.add(task);
-        void task.then(() => inFlight.delete(task));
+        // must handle rejection here, otherwise this derived promise is an unhandled rejection that crashes the app
+        void task
+          .catch((e) => {
+            failures.push(e);
+          })
+          .finally(() => inFlight.delete(task));
       }
     } finally {
       await Promise.allSettled(inFlight); // drain before sleeping or rethrowing
     }
+    // a task may have failed while draining after the queue emptied
+    if (failures.length > 0) throw failures[0];
     onEmpty?.();
     await sleep(idleMs, { signal });
   }
